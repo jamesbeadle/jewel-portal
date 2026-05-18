@@ -11,7 +11,9 @@
 | | |
 |---|---|
 | **Vision** | A master operating system for the business, with projects as the central organising concept. |
-| **Primary goals** | (1) Smooth project management end-to-end. (2) Robust finance workflows tied to projects. (3) A "second brain" of domain knowledge usable later as an API endpoint by Claude or similar. |
+| **Working name (initial software)** | **Project Program Scheduler** — manage the program of work for each project from tender through delivery to cash call. |
+| **Business context** | Construction. Jewel Enterprises delivers work commissioned by architects. See [`/docs/requirements/glossary.md`](docs/requirements/glossary.md) for domain terms (Tender, RFI, VO, Cash Call, etc.). |
+| **Primary goals** | (1) Smooth project management end-to-end. (2) Robust finance workflows tied to projects — **the Accountant's cashflow forecast accuracy is the primary pain point driving scope.** (3) A "second brain" of domain knowledge usable later as an API endpoint by Claude or similar. |
 | **Platform** | Progressive Web App (PWA), installable as a desktop/mobile app. |
 | **Tech stack** | Blazor (WebAssembly) front-end · ASP.NET Core back-end · Azure hosting · Azure SQL primary database · Microsoft Entra ID for auth · Microsoft Teams / Graph integrations. |
 | **Phase** | Discovery & scoping. |
@@ -31,11 +33,11 @@
     /_templates      Reference-only scaffolding
   /data-models       JSON Schemas + entity-relationship diagrams
     /_templates      Reference-only scaffolding
-  /requirements      Personas, permission matrix, non-functional requirements
+  /requirements      Personas, glossary, permission matrix, non-functional requirements
     /_templates      Reference-only scaffolding
   /meetings          Session notes + decisions log
     /_templates      Reference-only scaffolding
-/prototypes          Blazor SPA journey index + HTML demos (deferred — see folder README)
+/prototypes          Blazor PWA Journey Index + HTML demos
 /assets              Screenshots, icons, branding
 ```
 
@@ -63,29 +65,32 @@ Tick items off as we go. This is the single source of truth for "how scoped are 
 - [x] GitHub repository created
 - [x] Folder structure scaffolded
 - [x] Templates and worked examples in place under `_templates/`
-- [ ] Kick-off meeting with business owner (capture in `/docs/meetings/`)
-- [ ] Stakeholder list confirmed
-- [ ] Glossary of business terms started
+- [x] Kick-off / domain discovery meeting captured ([`2026-05-18-domain-discovery.md`](docs/meetings/2026-05-18-domain-discovery.md))
+- [x] Working name agreed: **Project Program Scheduler**
+- [ ] Stakeholder list confirmed (names against each role)
+- [x] Glossary of business terms started ([`glossary.md`](docs/requirements/glossary.md))
 
 ### 4.2 Current-State Mapping
+- [x] Primary pain point identified — cashflow forecast accuracy (Accountant)
 - [ ] Existing tools and spreadsheets inventoried
 - [ ] Pain points captured per role
 - [ ] Manual steps and workarounds documented
-- [ ] Existing finance processes mapped
-- [ ] Existing project lifecycle mapped
+- [ ] Existing finance processes mapped (cash calls, allocation, forecast cadence)
+- [ ] Existing project lifecycle mapped (tender → line items → delivery → cash call)
 
 ### 4.3 Personas
-- [ ] All user roles identified
-- [ ] Persona card drafted for each (in `/docs/requirements/personas.md`)
+- [x] Initial user roles identified — Architect, QS, Subcontractor, Accountant, MD
+- [x] Persona card drafted for each ([`personas.md`](docs/requirements/personas.md))
 - [ ] Each persona reviewed by an actual person in that role
+- [ ] Other roles checked (site manager, admin staff, subcontractor admin, external collaborators)
 
 ### 4.4 Business Entities
-- [ ] All domain entities listed
+- [ ] All domain entities listed (Tender, Line Item, RFI, VO, Cash Call, Cost Code, Timesheet, Project, Drawing, Cashflow Forecast)
 - [ ] JSON Schema drafted for each major entity
-- [ ] Entity-relationship diagram drawn (`/docs/data-models/entity-relationship.md`)
+- [ ] Entity-relationship diagram drawn ([`data-models/entity-relationship.md`](docs/data-models/) — to be created)
 
 ### 4.5 User Journeys
-- [ ] All major journeys identified
+- [ ] All major journeys identified (one list per persona)
 - [ ] Each journey drafted (Markdown + demo)
 - [ ] Edge cases captured per journey
 - [ ] Each journey walked through with an on-site stakeholder
@@ -102,6 +107,7 @@ Tick items off as we go. This is the single source of truth for "how scoped are 
 - [ ] Permission matrix populated (Role × Feature)
 - [ ] Non-functional requirements documented (performance, security, reporting, offline)
 - [ ] Integration points with Microsoft 365 / Teams documented
+- [ ] Cost-code propagation rules captured (must follow every architect's tender end-to-end)
 
 ### 4.8 Sign-off
 - [ ] All journeys confirmed by business owner
@@ -112,11 +118,15 @@ Tick items off as we go. This is the single source of truth for "how scoped are 
 
 ## 5. Personas
 
-> Add one row per persona as they emerge from discovery. Each row links to the card inside `/docs/requirements/personas.md` once that file exists.
+> Each row links to its card in [`docs/requirements/personas.md`](docs/requirements/personas.md).
 
 | # | Persona | Role summary | Card status | Reviewed by |
 |---|---|---|---|---|
-| _No personas yet — captured during discovery sessions._ | | | | |
+| P01 | [Architect](docs/requirements/personas.md#p01--architect) | External client who sends tenders with drawings and specs; defines cost codes carried through the system. | Draft | — |
+| P02 | [Quantity Surveyor](docs/requirements/personas.md#p02--quantity-surveyor-qs) | Prices tenders into line items; captures site measurements; updates line items on VOs. | Draft | — |
+| P03 | [Subcontractor](docs/requirements/personas.md#p03--subcontractor) | On-site delivery. Updates line-item completion, submits timesheets, raises RFIs, actions VOs. | Draft | — |
+| P04 | [Accountant](docs/requirements/personas.md#p04--accountant) | Produces cashflow forecast; issues cash calls; allocates incoming cash. **Drives the primary pain point.** | Draft | — |
+| P05 | [Managing Director](docs/requirements/personas.md#p05--managing-director-md) | Executive decisions. Consumes forecast and project status. | Draft | — |
 
 **Status legend:** Draft · In Review · Confirmed
 
@@ -128,17 +138,26 @@ Tick items off as we go. This is the single source of truth for "how scoped are 
 
 | # | Journey | Primary actor(s) | File | Status | Last reviewed |
 |---|---|---|---|---|---|
-| _No journeys yet — captured during discovery sessions._ | | | | | |
+| _No journeys yet — captured during discovery sessions, grouped by persona in the prototype Journey Index._ | | | | | |
 
 ---
 
 ## 7. Business Entities
 
-> One row per major domain entity. Link to its JSON Schema in `/docs/data-models/` once drafted.
+> Captured so far from the domain discovery. JSON Schemas will be created as journeys define them precisely.
 
 | Entity | Description | Schema | Owner |
 |---|---|---|---|
-| _No entities yet — uncovered as journeys are written._ | | | |
+| Tender | Package of drawings + specs sent by an Architect. | _to be created_ | Architect / QS |
+| Tender Line Item | Discrete unit of priced work within a tender. | _to be created_ | QS / Subcontractor |
+| RFI | Request for Information raised on site. | _to be created_ | Subcontractor / QS |
+| VO | Variation Order — updates to line items, billable when done. | _to be created_ | QS |
+| Cash Call | Request to client for payment, % completion-based. | _to be created_ | Accountant |
+| Cost Code | Architect's client-facing code, referenced throughout. | _to be created_ | Architect |
+| Timesheet | Subcontractor time record. | _to be created_ | Subcontractor |
+| Project | Unit of work delivered for an architect; central concept. | _to be created_ | All |
+| Drawing | Construction drawing attached to a tender. | _to be created_ | Architect / QS |
+| Cashflow Forecast | Accountant's projection for the MD. | _to be created_ | Accountant |
 
 ---
 
@@ -147,10 +166,10 @@ Tick items off as we go. This is the single source of truth for "how scoped are 
 - **Date:** _to be confirmed_
 - **Attendees:** _to be confirmed_
 - **Agenda placeholder:**
-  1. Walk through this scoping dashboard.
-  2. Confirm the list of user roles.
-  3. Pick the first three journeys to deep-dive.
-  4. Schedule the first on-site role-play session.
+  1. Review the draft personas; walk each one with someone in that role where possible.
+  2. Resolve the open questions in [`2026-05-18-domain-discovery.md`](docs/meetings/2026-05-18-domain-discovery.md).
+  3. Map the **Accountant's cashflow-forecast journey** first — it drives the whole platform's design.
+  4. Pick the next two journeys to deep-dive.
 
 Create the meeting note in `/docs/meetings/` from the template **before** the session.
 
@@ -171,10 +190,10 @@ Create the meeting note in `/docs/meetings/` from the template **before** the se
 ## 10. Quick Links
 
 - [User Journeys index](docs/user-journeys/README.md)
+- [Personas](docs/requirements/personas.md) · [Glossary](docs/requirements/glossary.md) · [Requirements index](docs/requirements/README.md)
 - [UI Components index](docs/ui-components/README.md)
 - [Workflows](docs/workflows/README.md)
 - [Data Models](docs/data-models/README.md)
-- [Requirements & Personas](docs/requirements/README.md)
-- [Meeting Notes](docs/meetings/README.md)
-- [Prototypes](prototypes/README.md)
+- [Meeting Notes](docs/meetings/README.md) · [Latest: domain discovery 2026-05-18](docs/meetings/2026-05-18-domain-discovery.md)
+- [Prototype Journey Index](prototypes/journey-index/README.md)
 - [Assets](assets/README.md)

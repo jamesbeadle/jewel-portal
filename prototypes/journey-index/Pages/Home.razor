@@ -5,45 +5,54 @@
 <section class="max-w-3xl mx-auto px-4 py-8 md:py-12">
 
     <div class="mb-8 md:mb-10">
-        <p class="text-xs uppercase tracking-wider text-slate-500 font-medium mb-2">Welcome</p>
+        <p class="text-xs uppercase tracking-wider text-slate-500 font-medium mb-2">Project Program Scheduler</p>
         <h1 class="text-3xl md:text-4xl font-semibold text-slate-900 leading-tight mb-4">
             The Jewel Enterprises<br class="hidden sm:block" /> Journey Index
         </h1>
         <p class="text-base md:text-lg text-slate-700 leading-relaxed">
-            A walkthrough menu of every user journey in the platform.
-            Use it on-site with stakeholders to validate processes with live, role-play-ready demos
+            Pick a user role to walk through the journeys they participate in.
+            Use this on-site with stakeholders to validate processes with role-play-ready demos
             before any production code is written.
         </p>
     </div>
 
-    <div class="grid gap-4 md:gap-5 md:grid-cols-2 mb-8">
-        <article class="rounded-xl border border-slate-200 bg-white p-5">
-            <div class="flex items-center gap-2 mb-2">
-                <span class="inline-block w-2 h-2 rounded-full bg-amber-400"></span>
-                <h2 class="text-sm font-medium text-slate-500 uppercase tracking-wide">Phase</h2>
-            </div>
-            <p class="text-slate-900 font-medium">Discovery &amp; scoping</p>
-            <p class="text-sm text-slate-600 mt-1">Capturing existing processes with the team on-site.</p>
+    <div class="grid grid-cols-3 gap-3 md:gap-4 mb-8">
+        <article class="rounded-xl border border-slate-200 bg-white p-4">
+            <p class="text-[11px] uppercase tracking-wider text-slate-500 font-medium mb-1">Phase</p>
+            <p class="text-slate-900 font-semibold text-sm">Discovery</p>
         </article>
-
-        <article class="rounded-xl border border-slate-200 bg-white p-5">
-            <div class="flex items-center gap-2 mb-2">
-                <span class="inline-block w-2 h-2 rounded-full bg-slate-400"></span>
-                <h2 class="text-sm font-medium text-slate-500 uppercase tracking-wide">Journeys</h2>
-            </div>
-            <p class="text-slate-900 font-medium">0 articulated</p>
-            <p class="text-sm text-slate-600 mt-1">They'll appear here as discovery sessions complete.</p>
+        <article class="rounded-xl border border-slate-200 bg-white p-4">
+            <p class="text-[11px] uppercase tracking-wider text-slate-500 font-medium mb-1">Users</p>
+            <p class="text-slate-900 font-semibold text-sm">@Personas.All.Count identified</p>
+        </article>
+        <article class="rounded-xl border border-slate-200 bg-white p-4">
+            <p class="text-[11px] uppercase tracking-wider text-slate-500 font-medium mb-1">Journeys</p>
+            <p class="text-slate-900 font-semibold text-sm">@TotalJourneys articulated</p>
         </article>
     </div>
 
-    <section class="rounded-xl border border-slate-200 bg-white overflow-hidden mb-6">
-        <header class="px-5 py-3 border-b border-slate-200 bg-slate-50">
-            <h2 class="text-sm font-medium text-slate-700">User journeys</h2>
+    <section class="mb-10">
+        <header class="flex items-baseline justify-between mb-3 md:mb-4">
+            <h2 class="text-lg md:text-xl font-semibold text-slate-900">Users</h2>
+            <span class="text-xs text-slate-500">Tap a card</span>
         </header>
-        <div class="p-5">
-            <p class="text-slate-500 italic text-sm">
-                No journeys yet. Once they're captured in <code class="text-slate-700 bg-slate-100 px-1.5 py-0.5 rounded text-xs">/docs/user-journeys/</code> and a demo is wired up, each one will appear as a tappable card here.
-            </p>
+
+        <div class="grid gap-3 md:gap-4 md:grid-cols-2">
+            @foreach (var p in Personas.All)
+            {
+                <a href="@($"users/{p.Slug}")"
+                   class="group block rounded-xl border border-slate-200 bg-white p-5 hover:border-slate-300 hover:shadow-sm transition">
+                    <div class="flex items-center justify-between mb-2">
+                        <div class="flex items-center gap-2">
+                            <span class="inline-block w-2 h-2 rounded-full @p.AccentDotClass"></span>
+                            <span class="text-[11px] uppercase tracking-wider text-slate-500 font-semibold">@p.Code</span>
+                        </div>
+                        <span class="text-xs text-slate-400 group-hover:text-slate-700 transition">@p.Journeys.Count journeys →</span>
+                    </div>
+                    <h3 class="text-lg font-semibold text-slate-900 mb-1">@p.Name</h3>
+                    <p class="text-sm text-slate-600 leading-snug">@p.ShortDescription</p>
+                </a>
+            }
         </div>
     </section>
 
@@ -53,11 +62,15 @@
         </header>
         <ol class="p-5 space-y-3 text-sm text-slate-700 list-decimal list-inside marker:text-slate-400">
             <li>Open this app on a tablet or laptop. Install it (PWA) for a full-screen feel.</li>
-            <li>Pick a journey from the index above.</li>
-            <li>Walk the stakeholder through each step. Pause at decision points and ask <em>"what happens if…?"</em>.</li>
+            <li>Pick the user type the stakeholder represents.</li>
+            <li>Walk them through each of their journeys. Pause at decision points and ask <em>"what happens if…?"</em>.</li>
             <li>Capture edge cases live in the matching <code class="text-slate-700 bg-slate-100 px-1.5 py-0.5 rounded text-xs">.md</code> file.</li>
             <li>Tick the confirmation checklist when the journey matches reality.</li>
         </ol>
     </section>
 
 </section>
+
+@code {
+    private int TotalJourneys => Personas.All.Sum(p => p.Journeys.Count);
+}
