@@ -1,0 +1,63 @@
+@page "/"
+
+<PageTitle>Jewel Enterprises · Journey Index</PageTitle>
+
+<section class="max-w-3xl mx-auto px-4 py-8 md:py-12">
+
+    <div class="mb-8 md:mb-10">
+        <p class="text-xs uppercase tracking-wider text-slate-500 font-medium mb-2">Welcome</p>
+        <h1 class="text-3xl md:text-4xl font-semibold text-slate-900 leading-tight mb-4">
+            The Jewel Enterprises<br class="hidden sm:block" /> Journey Index
+        </h1>
+        <p class="text-base md:text-lg text-slate-700 leading-relaxed">
+            A walkthrough menu of every user journey in the platform.
+            Use it on-site with stakeholders to validate processes with live, role-play-ready demos
+            before any production code is written.
+        </p>
+    </div>
+
+    <div class="grid gap-4 md:gap-5 md:grid-cols-2 mb-8">
+        <article class="rounded-xl border border-slate-200 bg-white p-5">
+            <div class="flex items-center gap-2 mb-2">
+                <span class="inline-block w-2 h-2 rounded-full bg-amber-400"></span>
+                <h2 class="text-sm font-medium text-slate-500 uppercase tracking-wide">Phase</h2>
+            </div>
+            <p class="text-slate-900 font-medium">Discovery &amp; scoping</p>
+            <p class="text-sm text-slate-600 mt-1">Capturing existing processes with the team on-site.</p>
+        </article>
+
+        <article class="rounded-xl border border-slate-200 bg-white p-5">
+            <div class="flex items-center gap-2 mb-2">
+                <span class="inline-block w-2 h-2 rounded-full bg-slate-400"></span>
+                <h2 class="text-sm font-medium text-slate-500 uppercase tracking-wide">Journeys</h2>
+            </div>
+            <p class="text-slate-900 font-medium">0 articulated</p>
+            <p class="text-sm text-slate-600 mt-1">They'll appear here as discovery sessions complete.</p>
+        </article>
+    </div>
+
+    <section class="rounded-xl border border-slate-200 bg-white overflow-hidden mb-6">
+        <header class="px-5 py-3 border-b border-slate-200 bg-slate-50">
+            <h2 class="text-sm font-medium text-slate-700">User journeys</h2>
+        </header>
+        <div class="p-5">
+            <p class="text-slate-500 italic text-sm">
+                No journeys yet. Once they're captured in <code class="text-slate-700 bg-slate-100 px-1.5 py-0.5 rounded text-xs">/docs/user-journeys/</code> and a demo is wired up, each one will appear as a tappable card here.
+            </p>
+        </div>
+    </section>
+
+    <section class="rounded-xl border border-slate-200 bg-white overflow-hidden">
+        <header class="px-5 py-3 border-b border-slate-200 bg-slate-50">
+            <h2 class="text-sm font-medium text-slate-700">How to use this in a session</h2>
+        </header>
+        <ol class="p-5 space-y-3 text-sm text-slate-700 list-decimal list-inside marker:text-slate-400">
+            <li>Open this app on a tablet or laptop. Install it (PWA) for a full-screen feel.</li>
+            <li>Pick a journey from the index above.</li>
+            <li>Walk the stakeholder through each step. Pause at decision points and ask <em>"what happens if…?"</em>.</li>
+            <li>Capture edge cases live in the matching <code class="text-slate-700 bg-slate-100 px-1.5 py-0.5 rounded text-xs">.md</code> file.</li>
+            <li>Tick the confirmation checklist when the journey matches reality.</li>
+        </ol>
+    </section>
+
+</section>
