@@ -79,6 +79,7 @@
 - [ ] Helpdesk vendor — selected or still in evaluation?
 - [ ] What FD-only governance items remain (vs delegable to helpdesk)?
 - [ ] Wiki platform — SharePoint pages, Notion, GitHub wiki?
+- [ ] **Policy review cadence** — add an annual review reminder for each governance policy (IT, AI, cybersecurity, GDPR) with sign-off capture? Driven by spreadsheet row 45 in [`automation-task-coverage.md`](../requirements/automation-task-coverage.md).
 
 ---
 

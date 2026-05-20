@@ -63,6 +63,8 @@ See [`personas.md`](personas.md) for the full card on each.
 | 19 | Fleet | — | — | — | **O** | C (driver) | — | A (insurance) | R | — |
 | 20 | Marketing & Brand | C (consent) | — | C (consent) | — | — | **O** | — | A | — |
 | 21 | Document Management | — | — | R | **O** (residual) | R | R | R | R | — |
+| 22 | Timesheet Management (cost-code) | R (client portal) | C (day-rate entries) | **O / A** (weekly approval) | C (back-office capture) | C (site capture) | — | A (payroll + overrun) | A (overrun above threshold) | — |
+| 23 | Project Completion Settlement & VAT | A (VAT agreement) | — | A (commercial sign-off) | — | — | — | **O** (settlement, VAT draft, retention trigger) | A (final VAT outcome) | — |
 
 ---
 

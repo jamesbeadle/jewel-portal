@@ -77,6 +77,7 @@
 - [ ] Broker integration — feasible, or stay portal-manual?
 - [ ] Evidence pack format — PDF only, or include source files?
 - [ ] Multi-entity policies — single register with entity tag?
+- [ ] **Toolbox Talks (TBT) reminders** — does the compliance register host the weekly TBT topic catalogue + acknowledgement capture, or does that sit in workflow 08? Driven by spreadsheet row 41 in [`automation-task-coverage.md`](../requirements/automation-task-coverage.md).
 
 ---
 

@@ -2,7 +2,7 @@
 
 First-cut ERD for the JPMS platform, derived from the entities surfaced by the twenty-one workflows in the JBB audit. Schemas are not yet written — this diagram exists so the workflows and journeys can reference entities by name and so the eventual schemas have a shape to grow into.
 
-**Sourced from:** [`/docs/meetings/2026-05-20-jbb-workflow-audit.md`](../meetings/2026-05-20-jbb-workflow-audit.md) and [`/docs/meetings/2026-05-18-domain-discovery.md`](../meetings/2026-05-18-domain-discovery.md).
+**Sourced from:** [`/docs/meetings/2026-05-20-jbb-workflow-audit.md`](../meetings/2026-05-20-jbb-workflow-audit.md), [`/docs/meetings/2026-05-20-coverage-audit-and-additions.md`](../meetings/2026-05-20-coverage-audit-and-additions.md), and [`/docs/meetings/2026-05-18-domain-discovery.md`](../meetings/2026-05-18-domain-discovery.md).
 
 **Status:** Draft — refined as each workflow moves Draft → In Review and each schema gets written.
 
@@ -10,7 +10,7 @@ First-cut ERD for the JPMS platform, derived from the entities surfaced by the t
 
 ## Diagram
 
-The ERD is split into four sub-diagrams so each renders cleanly. They share entities (especially `Project`, `Subcontractor`, `Person`) — the splits are for legibility, not data isolation.
+The ERD is split into five sub-diagrams so each renders cleanly. They share entities (especially `Project`, `Subcontractor`, `Person`, `Cost Code`) — the splits are for legibility, not data isolation.
 
 ### 1 · Project lifecycle (workflows 01–07)
 
@@ -35,10 +35,13 @@ erDiagram
     PROJECT ||--o{ PROGRAMME_TASK : "scheduled as"
     PROGRAMME_TASK }o--o{ BOQ_LINE_ITEM : "tracks progress on"
     PROJECT ||--o{ VALUATION : "produces"
+    PROJECT ||--o{ CLAIM_PERIOD : "is divided into"
+    VALUATION }o--|| CLAIM_PERIOD : "for"
     VALUATION }o--o{ VARIATION : "rolls up"
     PROJECT ||--o{ SITE_REPORT : "captures"
     PROJECT ||--o{ DEFECT : "carries"
     DEFECT }o--|| SUBCONTRACTOR : "assigned to"
+    VARIATION ||--o| BID_PACKAGE : "may trigger"
 
     PROJECT {
         string id PK
@@ -202,6 +205,64 @@ erDiagram
     }
 ```
 
+### 5 · Timesheets & project settlement (workflows 22, 23)
+
+```mermaid
+erDiagram
+    PROJECT ||--o{ COST_CODE : "has"
+    COST_CODE ||--|| COST_CODE_BUDGET : "has"
+    COST_CODE ||--o{ COST_CODE_ALLOCATION : "receives"
+    WORK_ORDER }o--|| COST_CODE : "draws against"
+
+    PERSON ||--o{ TIMESHEET : "submits"
+    SUBCONTRACTOR ||--o{ TIMESHEET : "submits (day-rate)"
+    TIMESHEET ||--o{ COST_CODE_ALLOCATION : "allocated via"
+    TIMESHEET_APPROVAL ||--o{ TIMESHEET : "approves batch of"
+
+    PROJECT ||--o| PRACTICAL_COMPLETION : "reaches"
+    PRACTICAL_COMPLETION ||--|| SETTLEMENT_RECORD : "triggers"
+    SETTLEMENT_RECORD ||--|| VAT_ANALYSIS : "includes"
+    VAT_ANALYSIS }o--|| ARCHITECT : "agreed by"
+    SETTLEMENT_RECORD ||--o| PAYMENT_RUN : "triggers retention release"
+
+    COST_CODE {
+        string id PK
+        string projectId FK
+        string clientCode
+        string discipline
+    }
+    COST_CODE_BUDGET {
+        string costCodeId PK
+        decimal allocated
+        decimal committed
+        decimal spent
+        decimal remaining
+    }
+    TIMESHEET {
+        string id PK
+        string projectId FK
+        string personId FK
+        date date
+        decimal hours
+        string status
+    }
+    SETTLEMENT_RECORD {
+        string id PK
+        string projectId FK
+        date pcDate
+        date settledDate
+        string status
+    }
+    VAT_ANALYSIS {
+        string id PK
+        string settlementId FK
+        decimal zeroRatedValue
+        decimal standardRatedValue
+        string clientAgreement
+        datetime agreedAt
+    }
+```
+
 ---
 
 ## Entity index
@@ -233,6 +294,19 @@ Sourced workflows shown in brackets. Schemas remain `to be created`.
 | `Valuation` | 05, 10 | Monthly; feeds sales invoice draft. |
 | `Site Report` | 06 | Daily capture from site app. |
 | `Defect` | 07 | Snag register per project. |
+| `Claim Period` | 05 | Contractual cycle for valuation reporting (typically monthly, per-contract overridable). |
+
+### Timesheets, cost codes & settlement
+
+| Entity | First surfaced in | Notes |
+|---|---|---|
+| `Cost Code` | 2026-05-18 (revisited 22) | Architect's client-facing code; threads through project / WO / timesheet / valuation. |
+| `Cost Code Budget` | 22 | Per-cost-code budget (allocated / committed / spent / remaining). The arbiter of the workflow 22 hard-block rule. |
+| `Cost Code Allocation` | 22 | Each timesheet entry's allocation against a cost code. |
+| `Timesheet Approval` | 22 | Weekly batch approval record. |
+| `Practical Completion` | 07, 23 | The PC event on a project. Triggers workflow 07 defects and workflow 23 settlement in parallel. |
+| `Settlement Record` | 23 | Final audit-grade summary of project commercial settlement. Triggers retention release. |
+| `VAT Analysis` | 23 | Zero-rated vs standard-rated breakdown; carries client agreement. |
 
 ### Subcontractor & compliance
 

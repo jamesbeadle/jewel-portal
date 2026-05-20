@@ -76,6 +76,7 @@
 - [ ] Consent capture — at handover, or per-asset?
 - [ ] Where lives the brand kit — JewelBB brand-voice skill, Canva, both?
 - [ ] Does the marketing tool need read-only access to JPMS project status?
+- [ ] **Scheduled content distribution** — add a rule for scheduling "shareable bulletins" (industry H&S notices, "Your Home, Your Safety", etc.) to defined target groups (clients, neighbours, staff)? Driven by spreadsheet row 38 in [`automation-task-coverage.md`](../requirements/automation-task-coverage.md).
 
 ---
 

@@ -46,6 +46,8 @@ Status legend: **Draft** · **In Review** · **Confirmed**.
 | 05 | Programme & Valuations | [`05-programme-and-valuations.md`](05-programme-and-valuations.md) | Project & Commercial Lead | ~10 | Draft |
 | 06 | Site Reporting & Progress | [`06-site-reporting-and-progress.md`](06-site-reporting-and-progress.md) | Site Team / Project Lead | ~25 | Draft |
 | 07 | Project Close-Out & Defects | [`07-project-close-out-and-defects.md`](07-project-close-out-and-defects.md) | Project & Commercial Lead | ~5 | Draft |
+| 22 | Timesheet Management (cost-code-aware) | [`22-timesheet-management.md`](22-timesheet-management.md) | Project & Commercial Lead | tbc | Draft |
+| 23 | Project Completion Settlement & VAT Analysis | [`23-project-completion-settlement.md`](23-project-completion-settlement.md) | Finance Director | tbc | Draft |
 
 ### Supplier & subcontractor management
 
@@ -83,10 +85,12 @@ Status legend: **Draft** · **In Review** · **Confirmed**.
 
 ---
 
-## Phased delivery (from the audit's recommended order)
+## Phased delivery
+
+Original phasing from the JBB workflow audit, with the two workflows added on the 2026-05-20 coverage-audit-and-additions note slotted in:
 
 1. **Phase 1 — Finance ROI:** 09, 10, 11, 13. Highest current-hour cost; primary pain-point anchor (workflow 11) sits here.
-2. **Phase 2 — JPMS project-lifecycle core:** 03, 04, 01, 05, 06.
-3. **Phase 3 — Everything else:** 02, 07, 08, 12, 14, 15, 16, 17, 18, 19, 20, 21.
+2. **Phase 2 — JPMS project-lifecycle core:** 03, 04, 01, 05, 06. **Workflow 22 (Timesheet Management)** joins phase 2 because it feeds 05 (valuations), 09 (AP for subcontractor day-rate), 11 (cashflow forward commitment) and 12 (payroll).
+3. **Phase 3 — Everything else:** 02, 07, 08, 12, 14, 15, 16, 17, 18, 19, 20, 21. **Workflow 23 (Project Completion Settlement & VAT Analysis)** joins phase 3 because it depends on workflows 03, 05, 09, 22 being in place first.
 
 This phasing is mirrored in root [`README.md`](../../README.md#116-roadmap-rough) §11.6.

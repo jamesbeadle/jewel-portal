@@ -92,7 +92,7 @@ Tick items off as we go. This is the single source of truth for "how scoped are 
 - [x] Entity-relationship diagram drawn (first cut, four sub-diagrams) — [`data-models/entity-relationship.md`](docs/data-models/entity-relationship.md)
 
 ### 4.5 User Journeys & Workflows
-- [x] All major workflows identified (21 from the JBB audit — see [`/docs/workflows/`](docs/workflows/))
+- [x] All major workflows identified (23 — 21 from the JBB audit plus workflows 22 and 23 added on 2026-05-20 — see [`/docs/workflows/`](docs/workflows/))
 - [x] Each workflow drafted (purpose, current state, target flow, JPMS functionality, integrations, acceptance criteria)
 - [x] Per-persona user-journey slices drafted for the highest-value actor cuts ([`/docs/user-journeys/`](docs/user-journeys/))
 - [ ] Edge cases captured per workflow (refined in deep-dives)
@@ -154,6 +154,8 @@ Workflows are the cross-actor process maps from the JBB audit (one per file unde
 | 05 | [Programme & Valuations](docs/workflows/05-programme-and-valuations.md) | Project lifecycle | P03 PCL | ~10 | Draft |
 | 06 | [Site Reporting](docs/workflows/06-site-reporting-and-progress.md) | Project lifecycle | P05 Site | ~25 | Draft |
 | 07 | [Close-Out & Defects](docs/workflows/07-project-close-out-and-defects.md) | Project lifecycle | P03 PCL | ~5 | Draft |
+| 22 | [Timesheet Management (cost-code-aware)](docs/workflows/22-timesheet-management.md) | Project lifecycle | P03 PCL | tbc | Draft |
+| 23 | [Project Completion Settlement & VAT Analysis](docs/workflows/23-project-completion-settlement.md) | Project lifecycle | P07 FD | tbc | Draft |
 | 08 | [Subcontractor Compliance](docs/workflows/08-subcontractor-compliance-and-onboarding.md) | Subcontractor | P04 OCC | ~10 | Draft |
 | 09 | [Accounts Payable](docs/workflows/09-accounts-payable.md) | Finance | P07 FD | **~80** | Draft |
 | 10 | [Accounts Receivable](docs/workflows/10-accounts-receivable.md) | Finance | P07 FD | ~25 | Draft |
@@ -210,6 +212,13 @@ Workflows are the cross-actor process maps from the JBB audit (one per file unde
 | Valuation | Monthly project valuation; feeds AR. | _to be created_ | 05 |
 | Site Report | Daily capture from site app. | _to be created_ | 06 |
 | Defect | Snag register per project. | _to be created_ | 07 |
+| Claim Period | Contractual cycle for valuation reporting (typically monthly). | _to be created_ | 05 |
+| Cost Code Budget | Per-cost-code budget (allocated / committed / spent / remaining). Arbiter of the workflow 22 hard-block rule. | _to be created_ | 22 |
+| Cost Code Allocation | Each timesheet entry's allocation to a cost code. | _to be created_ | 22 |
+| Timesheet Approval | Weekly batch approval record. | _to be created_ | 22 |
+| Practical Completion | The PC event on a project. Triggers workflows 07 and 23 in parallel. | _to be created_ | 07, 23 |
+| Settlement Record | Final audit-grade summary at project close. Triggers retention release. | _to be created_ | 23 |
+| VAT Analysis | Zero-rated vs standard-rated breakdown; carries client agreement. | _to be created_ | 23 |
 
 ### 7.2 Subcontractor & compliance entities
 
@@ -292,10 +301,10 @@ Create the meeting note in `/docs/meetings/` from the template **before** the se
 
 - [Workflows index](docs/workflows/README.md) — 21 workflow maps from the JBB audit
 - [User Journeys index](docs/user-journeys/README.md) — per-persona slices through workflows
-- [Personas](docs/requirements/personas.md) · [Permission Matrix](docs/requirements/permission-matrix.md) · [Integrations](docs/requirements/integrations.md) · [Glossary](docs/requirements/glossary.md) · [Requirements index](docs/requirements/README.md)
+- [Personas](docs/requirements/personas.md) · [Permission Matrix](docs/requirements/permission-matrix.md) · [Integrations](docs/requirements/integrations.md) · [Automation-task coverage](docs/requirements/automation-task-coverage.md) · [Glossary](docs/requirements/glossary.md) · [Requirements index](docs/requirements/README.md)
 - [UI Components index](docs/ui-components/README.md)
 - [Data Models index](docs/data-models/README.md) · [Entity-Relationship Diagram](docs/data-models/entity-relationship.md)
-- [Meeting Notes](docs/meetings/README.md) · [JBB workflow audit 2026-05-20](docs/meetings/2026-05-20-jbb-workflow-audit.md) · [Domain discovery 2026-05-18](docs/meetings/2026-05-18-domain-discovery.md)
+- [Meeting Notes](docs/meetings/README.md) · [Coverage audit + additions 2026-05-20](docs/meetings/2026-05-20-coverage-audit-and-additions.md) · [JBB workflow audit 2026-05-20](docs/meetings/2026-05-20-jbb-workflow-audit.md) · [Domain discovery 2026-05-18](docs/meetings/2026-05-18-domain-discovery.md)
 - [Prototype Journey Index](prototypes/journey-index/README.md)
 - [JPMS — production app](jpms/README.md)
 - [Assets](assets/README.md)
@@ -372,13 +381,15 @@ Driven by the FD's load (workflows 09 + 13 alone consume ~140 h/month today).
 
 #### Phase 2 — JPMS project-lifecycle core
 9. **Workflow 03 — Subcontractor Procurement** (~35 h/mo). Journey [03a](docs/user-journeys/03a-subcontractor-quote-return.md).
-10. **Workflow 04 — Variations / RFIs / Delays** (~25 h/mo). Journey [04a](docs/user-journeys/04a-architect-rfi-response.md).
+10. **Workflow 04 — Variations / RFIs / Delays** (~25 h/mo). Journey [04a](docs/user-journeys/04a-architect-rfi-response.md). Now includes explicit VO → bid-package loop into workflow 03.
 11. **Workflow 01 — Drawing Receipt & Distribution** (~15 h/mo).
-12. **Workflow 05 — Programme & Valuations** — feeds workflow 10 AR.
+12. **Workflow 05 — Programme & Valuations** — feeds workflow 10 AR. Now produces a named **Programme Valuation Report** per **Claim Period**, with a sibling Variation Orders list.
 13. **Workflow 06 — Site Reporting & Progress** — feeds workflow 05 and workflow 12. Journey [06a](docs/user-journeys/06a-site-team-daily-capture.md).
+14. **Workflow 22 — Timesheet Management (cost-code-aware)** — feeds 05 (valuations), 09 (AP for subcontractor day-rate), 11 (cashflow forward commitment), 12 (payroll). Carries the cost-code budget hard-block rule.
 
 #### Phase 3 — Everything else
-14. Workflows 02, 07, 08, 12, 14, 15, 16, 17, 18, 19, 20, 21 sequenced per stakeholder priority. Journeys [08a](docs/user-journeys/08a-subcontractor-compliance-upload.md) and [16a](docs/user-journeys/16a-coordinator-starter-day-one.md) already drafted.
+15. Workflows 02, 07, 08, 12, 14, 15, 16, 17, 18, 19, 20, 21 sequenced per stakeholder priority. Journeys [08a](docs/user-journeys/08a-subcontractor-compliance-upload.md) and [16a](docs/user-journeys/16a-coordinator-starter-day-one.md) already drafted.
+16. **Workflow 23 — Project Completion Settlement & VAT Analysis** — depends on workflows 03, 05, 07, 09, 22 being in place first. Settles open commercial items at PC, runs zero-rated VAT analysis with client agreement, triggers retention release.
 
 The full phased view (with current-hour cost per workflow) lives in [`docs/workflows/README.md`](docs/workflows/README.md#phased-delivery-from-the-audits-recommended-order).
 
