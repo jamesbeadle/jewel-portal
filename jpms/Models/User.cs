@@ -22,10 +22,11 @@ public sealed record AuthenticatedUser(
 
 /// <summary>
 /// Internal record of a user the company admin has approved for the platform.
-/// Source of truth (today) is the hard-coded list in <see cref="Services.AllowListUserDirectory"/>.
+/// Today this is held in-memory in <see cref="Services.AllowListUserDirectory"/>;
+/// once SQL lands it becomes a database row.
 /// </summary>
 public sealed record DirectoryUser(
     string Email,
     string DisplayName,
-    string Role
+    Role Role
 );

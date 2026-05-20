@@ -4,7 +4,7 @@ The production web app Jewel Enterprises and its clients will use day-to-day. Th
 
 - **Tech:** Blazor WebAssembly · .NET 8 LTS · PWA · Tailwind (via CDN for now)
 - **Hosts on:** Azure Static Web Apps (will move to App Service once an ASP.NET Core API is added)
-- **Auth (current):** mocked Microsoft + Google sign-in with a hard-coded internal allow-list
+- **Auth (current):** mocked Microsoft + Google sign-in with an in-memory directory + RBAC
 - **Auth (target):** Microsoft Entra ID + Google Identity Services, with an admin-managed user directory in the JPMS backend
 
 ---
@@ -14,20 +14,58 @@ The production web app Jewel Enterprises and its clients will use day-to-day. Th
 | Route | Page | Behaviour |
 |---|---|---|
 | `/` | `Pages/Login.razor` | Landing page. Two buttons: **Continue with Microsoft** and **Continue with Google**. The buttons currently open a mock prompt asking which email to sign in as. |
-| `/dashboard` | `Pages/Dashboard.razor` | After sign-in. Looks the user up in the internal allow-list. If approved → welcome dashboard. If not approved → renders the **Request access** view. |
+| `/dashboard` | `Pages/Dashboard.razor` | Role router. Looks the user up in the internal directory, then renders the right home view for their role. |
 
-The mock allow-list lives in `Services/AllowListUserDirectory.cs`. Add or remove approved emails there while we build the rest of the platform.
+The `/dashboard` route resolves to one of three states:
 
-### Sign-in flow
+| State | When | Renders |
+|---|---|---|
+| **Admin home** | Signed-in email is in the directory with `Role.Admin` | `Components/AdminHome.razor` — users panel, pending requests, stats |
+| **Role-specific home** | Signed-in email is in the directory with any other role | `Components/PlaceholderHome.razor` (one placeholder per non-admin role until each journey is signed off) |
+| **Request access** | Signed-in email isn't in the directory | `Components/RequestAccessView.razor` — submits a request to the admin queue |
+
+### Sign-in + RBAC flow
 
 ```
-Login screen  ──►  Pick provider  ──►  Enter email (mock)  ──►  Dashboard route
-                                                                  │
-                                                                  ├─ email is on allow-list ─►  Home dashboard
-                                                                  └─ email is NOT on list  ─►  Request access screen
+Login screen ──► Pick provider ──► Enter email (mock) ──► /dashboard
+                                                            │
+                                                            ├─ in directory, Role.Admin   ──► AdminHome
+                                                            ├─ in directory, other role   ──► PlaceholderHome
+                                                            └─ not in directory           ──► RequestAccessView ──► admin queue
 ```
 
-When real OAuth is wired up, the *"Enter email (mock)"* step disappears — the provider returns the email itself.
+When real OAuth is wired up, the *"Enter email (mock)"* step disappears — the provider returns the email itself; everything downstream stays the same.
+
+---
+
+## RBAC
+
+One role per user for now (`Models/Role.cs`). The current roles map directly to the scoping personas:
+
+| Role | Persona | Notes |
+|---|---|---|
+| `Admin` | — | Manages users + platform configuration. The only role that sees `AdminHome`. |
+| `ManagingDirector` | P05 | Top-level executive view (to be built). |
+| `Accountant` | P04 | Cashflow forecast, cash calls (to be built first per scoping priorities). |
+| `QuantitySurveyor` | P02 | Pricing + measurement workflows. |
+| `Architect` | P01 | External client view. |
+| `Subcontractor` | P03 | Mobile-first site workflows. |
+
+The `Role` enum lives in `Models/Role.cs` together with display-name, code, accent-colour and `IsAdministrative()` helpers, so UI components never `switch` on the enum directly.
+
+When SQL lands the model becomes many-to-many with no UI changes — `directoryUser.Role` becomes `directoryUser.Roles`, the access checks already go through helper methods.
+
+### Seeded users (edit `Services/AllowListUserDirectory.cs`)
+
+| Email | Role |
+|---|---|
+| `jamesbeadle1989@gmail.com` | Admin |
+| `admin@jewelgroup.co.uk` | Admin |
+| `nigel.reilly@jewelgroup.co.uk` | Managing Director |
+| `accountant@jewelgroup.co.uk` | Accountant |
+| `qs@jewelgroup.co.uk` | Quantity Surveyor |
+
+The list is mutable in-memory — when an Admin approves a pending access request, the new user is added live and shows up in the **Users** panel without a reload.
 
 ---
 
@@ -62,7 +100,13 @@ Then open the URL the console prints (typically `https://localhost:5001`). The P
 
 > **Hot reload:** use `dotnet watch` instead of `dotnet run` to auto-rebuild on file save.
 
-### 3. Build a production bundle
+### 3. Try the flows
+
+- Sign in with **`jamesbeadle1989@gmail.com`** → lands on the admin homepage.
+- Sign in with **`accountant@jewelgroup.co.uk`** → lands on the role placeholder home.
+- Sign in with any other email (e.g. `someone@example.com`) → lands on **Request access**. Click **Request access**, sign out, sign back in as the admin and you'll see the request in the queue. Approve it with a role and the new user appears in the Users panel.
+
+### 4. Build a production bundle
 
 ```bash
 dotnet publish -c Release -o publish
@@ -76,35 +120,42 @@ The deployable static site is at `publish/wwwroot/`.
 
 ```
 jpms/
-├── Jewel.JPMS.csproj          Project file — targets net8.0
-├── Program.cs                 App entry point. Registers AuthService + IUserDirectory.
-├── App.razor                  Top-level router
-├── _Imports.razor             Razor using directives (every .razor sees these)
+├── Jewel.JPMS.csproj            Project file — targets net8.0
+├── Program.cs                   App entry point. Registers Auth + directory + access-request services.
+├── App.razor                    Top-level router
+├── _Imports.razor               Razor using directives (every .razor sees these)
 ├── Layout/
-│   └── MainLayout.razor       Header (with sign-in/out) + footer
+│   └── MainLayout.razor         Header (with sign-in/out) + footer
 ├── Pages/
-│   ├── Login.razor            Landing page — provider buttons
-│   └── Dashboard.razor        Post-sign-in home (or request-access view if not approved)
+│   ├── Login.razor              Landing page — provider buttons
+│   └── Dashboard.razor          Slim role router → AdminHome / PlaceholderHome / RequestAccessView
 ├── Components/
-│   ├── ProviderButton.razor   Microsoft / Google sign-in button with its logo
-│   ├── RequestAccessView.razor   Shown when a signed-in user isn't on the allow-list
-│   └── Stat.razor             Small labelled stat card used on the dashboard
+│   ├── ProviderButton.razor     Microsoft / Google sign-in button with its logo
+│   ├── RequestAccessView.razor  Shown when a signed-in user isn't in the directory
+│   ├── AdminHome.razor          Admin homepage — users panel, pending requests, stats
+│   ├── PlaceholderHome.razor    Generic post-sign-in home for non-admin roles (until each is built)
+│   ├── RoleBadge.razor          Small coloured role chip
+│   └── Stat.razor               Small labelled stat card
 ├── Models/
-│   └── User.cs                AuthProvider, AuthenticatedUser, DirectoryUser records
+│   ├── Role.cs                  Role enum + display / RBAC helpers
+│   ├── User.cs                  AuthProvider, AuthenticatedUser, DirectoryUser records
+│   └── AccessRequest.cs         Pending-request record
 ├── Services/
-│   ├── AuthService.cs         Holds the current user + notifies subscribers on sign-in/out
-│   ├── IUserDirectory.cs      Backend-shaped contract for looking up approved users
-│   └── AllowListUserDirectory.cs   Hard-coded implementation — replace with API later
-└── wwwroot/                   Everything served to the browser (HTML, CSS, icons, SW)
+│   ├── AuthService.cs           Holds the current user + notifies subscribers on sign-in/out
+│   ├── IUserDirectory.cs        Backend-shaped contract for the approved-user directory
+│   ├── AllowListUserDirectory.cs   In-memory directory; seeded + mutable for the session
+│   ├── IAccessRequestStore.cs   Queue contract for pending access requests
+│   └── InMemoryAccessRequestStore.cs   Session-scoped queue
+└── wwwroot/                     Everything served to the browser (HTML, CSS, icons, SW)
 ```
 
-The style language matches the scoping prototype on purpose — same Tailwind palette (slate + accent dots), same rounded cards, same typography stack — so anything we already learned in the prototype carries over.
+The style language matches the scoping prototype on purpose — same Tailwind palette (slate + accent dots), same rounded cards, same typography stack — so design learnings from the prototype carry over.
 
 ---
 
 ## Replacing the mocks
 
-There are exactly two seams to wire up when we go live:
+There are three seams to wire up when we go live:
 
 ### 1. Real OAuth in `AuthService.SignInAsync(...)`
 
@@ -115,11 +166,17 @@ There are exactly two seams to wire up when we go live:
 
 ### 2. Real directory in `IUserDirectory`
 
-- Stand up an `/api/users/me` endpoint on the ASP.NET Core backend that returns the directory record (or 404) for the authenticated user.
-- Add a `HttpUserDirectory : IUserDirectory` implementation that calls that endpoint.
+- Stand up an `/api/users` set of endpoints on the ASP.NET Core backend (get me, list all, upsert, remove).
+- Add a `HttpUserDirectory : IUserDirectory` implementation that calls those endpoints.
 - Swap the DI registration in `Program.cs` — every page already talks to the interface, nothing else changes.
 
-Both swaps are intentionally isolated so we can promote the app to "real auth + real directory" in a single small PR each.
+### 3. Real access-request store in `IAccessRequestStore`
+
+- Add `/api/access-requests` endpoints (submit, list pending, remove).
+- Add an `HttpAccessRequestStore : IAccessRequestStore` implementation.
+- Swap the DI registration — UI is already wired to the interface.
+
+All three swaps are isolated so they can each land as a small focused PR.
 
 ---
 
@@ -132,7 +189,9 @@ Identical to the prototype's flow — same Blazor preset, just point at `/jpms` 
 ## Known limitations (today)
 
 - **Mock sign-in.** Any email you type is accepted. Wire OAuth before any real users see this.
-- **Hard-coded allow-list.** Lives in `Services/AllowListUserDirectory.cs`. Edit the list to test the two flows.
-- **No backend.** Dashboard tiles are placeholders.
+- **In-memory directory.** Lives in `Services/AllowListUserDirectory.cs`. Approvals during a session are real but vanish on refresh.
+- **In-memory access requests.** Same story — pending queue resets on refresh.
+- **One role per user.** Will become many-to-many once SQL lands.
+- **No backend.** AdminHome's "what's next" tiles are placeholders.
 - **Tailwind via CDN.** Convenient for dev, swap for the Tailwind CLI build before going live.
-- **No persisted session.** Refreshing the browser signs the user out. localStorage / a real OAuth token cache will fix this.
+- **No persisted session.** Refreshing the browser signs the user out. A real OAuth token cache fixes this.

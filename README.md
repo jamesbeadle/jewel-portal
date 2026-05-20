@@ -67,35 +67,38 @@ Tick items off as we go. This is the single source of truth for "how scoped are 
 - [x] Folder structure scaffolded
 - [x] Templates and worked examples in place under `_templates/`
 - [x] Kick-off / domain discovery meeting captured ([`2026-05-18-domain-discovery.md`](docs/meetings/2026-05-18-domain-discovery.md))
-- [x] Working name agreed: **Project Program Scheduler**
+- [x] JBB operational workflow audit ingested ([`2026-05-20-jbb-workflow-audit.md`](docs/meetings/2026-05-20-jbb-workflow-audit.md))
+- [x] Working name agreed: **Project Program Scheduler** (production brand: **JPMS**)
 - [ ] Stakeholder list confirmed (names against each role)
 - [x] Glossary of business terms started ([`glossary.md`](docs/requirements/glossary.md))
 
 ### 4.2 Current-State Mapping
-- [x] Primary pain point identified — cashflow forecast accuracy (Accountant)
-- [ ] Existing tools and spreadsheets inventoried
-- [ ] Pain points captured per role
-- [ ] Manual steps and workarounds documented
-- [ ] Existing finance processes mapped (cash calls, allocation, forecast cadence)
-- [ ] Existing project lifecycle mapped (tender → line items → delivery → cash call)
+- [x] Primary pain point identified — cashflow forecast accuracy (Finance Director — see §11 workflow 11)
+- [x] Existing tools and spreadsheets inventoried — see [`integrations.md`](docs/requirements/integrations.md)
+- [x] Pain points captured per role — see [`personas.md`](docs/requirements/personas.md) P06–P12 and per-workflow files in [`/docs/workflows/`](docs/workflows/)
+- [x] Manual steps and workarounds documented — current-state section of every workflow file
+- [x] Existing finance processes mapped — workflows [`09`](docs/workflows/09-accounts-payable.md), [`10`](docs/workflows/10-accounts-receivable.md), [`11`](docs/workflows/11-cashflow-and-management-reporting.md), [`12`](docs/workflows/12-payroll.md), [`13`](docs/workflows/13-accounts-inbox-triage.md)
+- [x] Existing project lifecycle mapped — workflows [`01`](docs/workflows/01-drawing-receipt.md) through [`07`](docs/workflows/07-project-close-out-and-defects.md)
 
 ### 4.3 Personas
 - [x] Initial user roles identified — Architect, QS, Subcontractor, Accountant, MD
-- [x] Persona card drafted for each ([`personas.md`](docs/requirements/personas.md))
+- [x] Operational roles identified from the JBB workflow audit — Project & Commercial Lead, Office & Compliance Coordinator, Site Team, Brand & Content, Finance Director, Directors / MD, Outsourced IT Helpdesk
+- [x] Persona card drafted for each (twelve total — [`personas.md`](docs/requirements/personas.md))
 - [ ] Each persona reviewed by an actual person in that role
-- [ ] Other roles checked (site manager, admin staff, subcontractor admin, external collaborators)
+- [x] Other roles checked (site manager, admin staff, subcontractor admin, external collaborators) — folded into P06–P12
 
 ### 4.4 Business Entities
-- [ ] All domain entities listed (Tender, Line Item, RFI, VO, Cash Call, Cost Code, Timesheet, Project, Drawing, Cashflow Forecast)
-- [ ] JSON Schema drafted for each major entity
-- [ ] Entity-relationship diagram drawn ([`data-models/entity-relationship.md`](docs/data-models/) — to be created)
+- [x] All domain entities listed — see [`data-models/entity-relationship.md`](docs/data-models/entity-relationship.md) entity index
+- [ ] JSON Schema drafted for each major entity _(written workflow-by-workflow as each moves Draft → In Review)_
+- [x] Entity-relationship diagram drawn (first cut, four sub-diagrams) — [`data-models/entity-relationship.md`](docs/data-models/entity-relationship.md)
 
-### 4.5 User Journeys
-- [ ] All major journeys identified (one list per persona)
-- [ ] Each journey drafted (Markdown + demo)
-- [ ] Edge cases captured per journey
-- [ ] Each journey walked through with an on-site stakeholder
-- [ ] Confirmation checklist signed off per journey
+### 4.5 User Journeys & Workflows
+- [x] All major workflows identified (21 from the JBB audit — see [`/docs/workflows/`](docs/workflows/))
+- [x] Each workflow drafted (purpose, current state, target flow, JPMS functionality, integrations, acceptance criteria)
+- [x] Per-persona user-journey slices drafted for the highest-value actor cuts ([`/docs/user-journeys/`](docs/user-journeys/))
+- [ ] Edge cases captured per workflow (refined in deep-dives)
+- [ ] Each workflow walked through with the named operational owner
+- [ ] Confirmation checklist signed off per workflow / journey
 
 ### 4.6 UI Component Library
 - [ ] Atoms inventoried
@@ -105,9 +108,9 @@ Tick items off as we go. This is the single source of truth for "how scoped are 
 - [ ] Accessibility notes added per component
 
 ### 4.7 Cross-cutting
-- [ ] Permission matrix populated (Role × Feature)
+- [x] Permission matrix drafted (Role × Workflow) — [`permission-matrix.md`](docs/requirements/permission-matrix.md) _(coarse; refined per workflow)_
 - [ ] Non-functional requirements documented (performance, security, reporting, offline)
-- [ ] Integration points with Microsoft 365 / Teams documented
+- [x] Integration points catalogued (Microsoft 365 / Teams / Xero / Dext / Brightpay / HMRC CIS / …) — [`integrations.md`](docs/requirements/integrations.md)
 - [ ] Cost-code propagation rules captured (must follow every architect's tender end-to-end)
 
 ### 4.8 Sign-off
@@ -119,46 +122,147 @@ Tick items off as we go. This is the single source of truth for "how scoped are 
 
 ## 5. Personas
 
-> Each row links to its card in [`docs/requirements/personas.md`](docs/requirements/personas.md).
+> Each row links to its card in [`docs/requirements/personas.md`](docs/requirements/personas.md). The Role × Workflow RBAC matrix is in [`permission-matrix.md`](docs/requirements/permission-matrix.md).
 
 | # | Persona | Role summary | Card status | Reviewed by |
 |---|---|---|---|---|
 | P01 | [Architect](docs/requirements/personas.md#p01--architect) | External client who sends tenders with drawings and specs; defines cost codes carried through the system. | Draft | — |
-| P02 | [Quantity Surveyor](docs/requirements/personas.md#p02--quantity-surveyor-qs) | Prices tenders into line items; captures site measurements; updates line items on VOs. | Draft | — |
+| P02 | [Quantity Surveyor](docs/requirements/personas.md#p02--quantity-surveyor-qs) | Prices tenders into line items; captures site measurements; updates line items on VOs. _Internal QS work largely folds into P06._ | Draft | — |
 | P03 | [Subcontractor](docs/requirements/personas.md#p03--subcontractor) | On-site delivery. Updates line-item completion, submits timesheets, raises RFIs, actions VOs. | Draft | — |
-| P04 | [Accountant](docs/requirements/personas.md#p04--accountant) | Produces cashflow forecast; issues cash calls; allocates incoming cash. **Drives the primary pain point.** | Draft | — |
-| P05 | [Managing Director](docs/requirements/personas.md#p05--managing-director-md) | Executive decisions. Consumes forecast and project status. | Draft | — |
+| P04 | [Accountant](docs/requirements/personas.md#p04--accountant) | _Now folded into P10 Finance Director._ Original card retained as historical anchor. | Draft | — |
+| P05 | [Managing Director](docs/requirements/personas.md#p05--managing-director-md) | _Now part of P11 Directors / MD._ Original card retained as historical anchor. | Draft | — |
+| P06 | [Project & Commercial Lead](docs/requirements/personas.md#p06--project--commercial-lead) | Internal PM + commercial. Owns project lifecycle workflows 02–05, 07. | Draft | — |
+| P07 | [Office & Compliance Coordinator](docs/requirements/personas.md#p07--office--compliance-coordinator) | Owns compliance, comms, materials, fleet, document upkeep. | Draft | — |
+| P08 | [Site Team](docs/requirements/personas.md#p08--site-team) | Site managers, foremen, operatives. The capture layer. | Draft | — |
+| P09 | [Brand & Content](docs/requirements/personas.md#p09--brand--content) | Marketing and brand custodian. | Draft | — |
+| P10 | [Finance Director (FD)](docs/requirements/personas.md#p10--finance-director-fd) | Owns finance across BB/PS/PFP. **Drives the primary pain point** (cashflow forecast accuracy). | Draft | — |
+| P11 | [Directors / MD](docs/requirements/personas.md#p11--directors--md) | Executive decisions. Approver on high-value commercial items. | Draft | — |
+| P12 | [Outsourced IT Helpdesk](docs/requirements/personas.md#p12--outsourced-it-helpdesk) | External tier-1 IT partner (target — not yet selected). | Draft | — |
 
 **Status legend:** Draft · In Review · Confirmed
 
 ---
 
-## 6. User Journeys
+## 6. User Journeys & Workflows
 
-> One row per journey. Status moves left-to-right: Draft → In Review → Confirmed.
+Workflows are the cross-actor process maps from the JBB audit (one per file under [`/docs/workflows/`](docs/workflows/)). Journeys are per-persona slices through those workflows where the actor experience deserves its own walkthrough (under [`/docs/user-journeys/`](docs/user-journeys/)). Status moves left-to-right: Draft → In Review → Confirmed.
 
-| # | Journey | Primary actor(s) | File | Status | Last reviewed |
+### 6.1 Workflows (process maps)
+
+| # | Workflow | Group | Owner | h/mo | Status |
 |---|---|---|---|---|---|
-| _No journeys yet — captured during discovery sessions, grouped by persona in the prototype Journey Index._ | | | | | |
+| 01 | [Drawing Receipt](docs/workflows/01-drawing-receipt.md) | Project lifecycle | P06 PCL | ~15 | Draft |
+| 02 | [Tender & BoQ](docs/workflows/02-preconstruction-tender-boq.md) | Project lifecycle | P06 PCL | ~50 | Draft |
+| 03 | [Subbie Procurement](docs/workflows/03-subcontractor-procurement.md) | Project lifecycle | P06 PCL | ~35 | Draft |
+| 04 | [Variations / RFIs / Delays](docs/workflows/04-variations-rfis-delays.md) | Project lifecycle | P06 PCL | ~25 | Draft |
+| 05 | [Programme & Valuations](docs/workflows/05-programme-and-valuations.md) | Project lifecycle | P06 PCL | ~10 | Draft |
+| 06 | [Site Reporting](docs/workflows/06-site-reporting-and-progress.md) | Project lifecycle | P08 Site | ~25 | Draft |
+| 07 | [Close-Out & Defects](docs/workflows/07-project-close-out-and-defects.md) | Project lifecycle | P06 PCL | ~5 | Draft |
+| 08 | [Subbie Compliance](docs/workflows/08-subcontractor-compliance-and-onboarding.md) | Subbie | P07 OCC | ~10 | Draft |
+| 09 | [Accounts Payable](docs/workflows/09-accounts-payable.md) | Finance | P10 FD | **~80** | Draft |
+| 10 | [Accounts Receivable](docs/workflows/10-accounts-receivable.md) | Finance | P10 FD | ~25 | Draft |
+| 11 | [Cashflow & Mgmt Reporting](docs/workflows/11-cashflow-and-management-reporting.md) _(primary pain-point anchor)_ | Finance | P10 FD | ~25 | Draft |
+| 12 | [Payroll](docs/workflows/12-payroll.md) | Finance | P10 FD | ~10 | Draft |
+| 13 | [Accounts Inbox Triage](docs/workflows/13-accounts-inbox-triage.md) | Finance | P10 FD | ~60 | Draft |
+| 14 | [Client & Reactive Comms](docs/workflows/14-client-and-reactive-comms.md) | Ops & comms | P07 OCC | ~20 | Draft |
+| 15 | [Materials & Deliveries](docs/workflows/15-materials-and-deliveries.md) | Ops & comms | P07 OCC | ~20 | Draft |
+| 16 | [HR / Onboarding / IT Access](docs/workflows/16-hr-onboarding-and-it-access.md) | People & systems | P07 OCC / P10 FD | ~10 | Draft |
+| 17 | [IT & Systems Admin](docs/workflows/17-it-and-systems-administration.md) | People & systems | P12 IT _(target)_ | ~50 | Draft |
+| 18 | [Compliance / Insurance / Accreditation](docs/workflows/18-compliance-insurance-accreditation.md) | People & systems | P07 OCC | ~5 | Draft |
+| 19 | [Fleet](docs/workflows/19-fleet-administration.md) | People & systems | P07 OCC | ~3 | Draft |
+| 20 | [Marketing & Brand](docs/workflows/20-marketing-and-brand.md) | People & systems | P09 Brand | ~20 | Draft |
+| 21 | [Document Management](docs/workflows/21-document-management.md) | People & systems | P07 OCC | ~10 | Draft |
+
+### 6.2 User journeys (per-persona slices)
+
+| # | Journey | Persona | Source workflow | Status |
+|---|---|---|---|---|
+| 03a | [Subcontractor: receive bid package and return a quote](docs/user-journeys/03a-subcontractor-quote-return.md) | P03 Subcontractor | 03 | Draft |
+| 04a | [Architect / CA: respond to an RFI](docs/user-journeys/04a-architect-rfi-response.md) | P01 Architect | 04 | Draft |
+| 06a | [Site Team: daily progress capture on mobile](docs/user-journeys/06a-site-team-daily-capture.md) | P08 Site Team | 06 | Draft |
+| 08a | [Subcontractor: upload renewed compliance document](docs/user-journeys/08a-subcontractor-compliance-upload.md) | P03 Subcontractor | 08 | Draft |
+| 09a | [Finance Director: AP exception review](docs/user-journeys/09a-fd-ap-exception-review.md) | P10 Finance Director | 09 | Draft |
+| 11a | [Finance Director: morning cashflow review](docs/user-journeys/11a-fd-cashflow-forecast.md) _(primary pain-point anchor)_ | P10 Finance Director | 11 | Draft |
+| 13a | [Finance Director: inbox triage exception review](docs/user-journeys/13a-fd-inbox-triage-exceptions.md) | P10 Finance Director | 13 | Draft |
+| 16a | [Coordinator: day-one starter onboarding](docs/user-journeys/16a-coordinator-starter-day-one.md) | P07 Office & Compliance Coordinator | 16 | Draft |
 
 ---
 
 ## 7. Business Entities
 
-> Captured so far from the domain discovery. JSON Schemas will be created as journeys define them precisely.
+> Surfaced from the 2026-05-18 domain discovery and the 2026-05-20 JBB workflow audit. JSON Schemas are written workflow-by-workflow as each workflow moves Draft → In Review. The first-cut ERD (four sub-diagrams) is in [`data-models/entity-relationship.md`](docs/data-models/entity-relationship.md).
 
-| Entity | Description | Schema | Owner |
+### 7.1 Project lifecycle entities
+
+| Entity | Description | Schema | First surfaced |
 |---|---|---|---|
-| Tender | Package of drawings + specs sent by an Architect. | _to be created_ | Architect / QS |
-| Tender Line Item | Discrete unit of priced work within a tender. | _to be created_ | QS / Subcontractor |
-| RFI | Request for Information raised on site. | _to be created_ | Subcontractor / QS |
-| VO | Variation Order — updates to line items, billable when done. | _to be created_ | QS |
-| Cash Call | Request to client for payment, % completion-based. | _to be created_ | Accountant |
-| Cost Code | Architect's client-facing code, referenced throughout. | _to be created_ | Architect |
-| Timesheet | Subcontractor time record. | _to be created_ | Subcontractor |
-| Project | Unit of work delivered for an architect; central concept. | _to be created_ | All |
-| Drawing | Construction drawing attached to a tender. | _to be created_ | Architect / QS |
-| Cashflow Forecast | Accountant's projection for the MD. | _to be created_ | Accountant |
+| Project | Unit of work delivered for an architect; central concept. | _to be created_ | All workflows |
+| Tender | Package of drawings + specs sent by an Architect. | _to be created_ | 02 |
+| Drawing | Construction drawing attached to a tender. | _to be created_ | 01, 02 |
+| Drawing Revision | Versioned drawing with supersede logic. | _to be created_ | 01 |
+| BoQ | Bill of Quantities (one per project; replaces standalone Excel). | _to be created_ | 02 |
+| BoQ Line Item | Discrete unit of priced and tracked work. | _to be created_ | 02, 04, 05 |
+| Rate / Rate Library | Pricing source for BoQ; versioned, supplier-linked. | _to be created_ | 02 |
+| Cost Code | Architect's client-facing code, referenced throughout. | _to be created_ | 2026-05-18 |
+| Bid Package | Trade-scoped bid issued to subbies. | _to be created_ | 03 |
+| Quote | Subbie's returned price against a bid package. | _to be created_ | 03 |
+| Work Order | Contract artefact post-award; matching key for AP. | _to be created_ | 03, 07, 09 |
+| Variation (VO) | Updates BoQ; rolls up into valuation. | _to be created_ | 04 |
+| RFI | Request for Information raised on site. | _to be created_ | 04 |
+| NoD | Notice of Delay — formal delay notice. | _to be created_ | 04 |
+| Programme Task | Schedule item; tied to BoQ line items. | _to be created_ | 05 |
+| Valuation | Monthly project valuation; feeds AR. | _to be created_ | 05 |
+| Site Report | Daily capture from site app. | _to be created_ | 06 |
+| Defect | Snag register per project. | _to be created_ | 07 |
+
+### 7.2 Subbie & compliance entities
+
+| Entity | Description | Schema | First surfaced |
+|---|---|---|---|
+| Subcontractor | Master record with trade tags. | _to be created_ | 03, 08 |
+| Compliance Document | Insurance, certs, tickets — with expiry. | _to be created_ | 08 |
+| Renewal Event | Generic renewal — used by compliance, fleet, insurance. | _to be created_ | 08, 18, 19 |
+| RAMS | Project-specific risk & method statement. | _to be created_ | 08 |
+| CIS Status | HMRC verification status. | _to be created_ | 08, 09 |
+
+### 7.3 Finance entities
+
+| Entity | Description | Schema | First surfaced |
+|---|---|---|---|
+| Supplier | Materials suppliers. | _to be created_ | 09, 15 |
+| Supplier Invoice | Captured via Dext, matched to Work Order. | _to be created_ | 09 |
+| Sales Invoice | Drafted from valuation / milestone in Xero. | _to be created_ | 10 |
+| Cash Call | Request to client for payment, % completion-based _(specialisation of Sales Invoice)_. | _to be created_ | 2026-05-18 |
+| Payment Run | Weekly approval bundle. | _to be created_ | 09 |
+| Cashflow Forecast | FD's projection across BB/PS/PFP. **Primary pain point.** | _to be created_ | 11, 2026-05-18 |
+| Timesheet | Site app + office check-in. | _to be created_ | 06, 12 |
+| Inbox Message | Generic inbound email/comm record. | _to be created_ | 01, 13, 14 |
+| Inbox Classification | Tag assigned by the AI classifier. | _to be created_ | 13 |
+| Statement | Supplier statement for reconciliation. | _to be created_ | 09, 13 |
+
+### 7.4 People, ops & support entities
+
+| Entity | Description | Schema | First surfaced |
+|---|---|---|---|
+| Organisation | The JBB / Jewel entity (BB, PS, PFP). | _to be created_ | All |
+| Person | Internal staff. | _to be created_ | 12, 16, 19 |
+| Role | Maps to permission matrix. | _to be created_ | 16 |
+| Contract | Generated from role template. | _to be created_ | 16 |
+| System Account | Cross-system audit. | _to be created_ | 16, 17 |
+| Onboarding Event | Triggers the full orchestration. | _to be created_ | 16 |
+| Procurement Request | Project or office materials request. | _to be created_ | 15 |
+| Communication Log | Call/email log against project + contact. | _to be created_ | 14 |
+| Contact | Lightweight CRM contact. | _to be created_ | 14 |
+| Compliance Policy | Insurance, accreditation. | _to be created_ | 18 |
+| Accreditation | Tender evidence asset. | _to be created_ | 18 |
+| Vehicle | Fleet register. | _to be created_ | 19 |
+| Driver Assignment | Person ↔ vehicle. | _to be created_ | 19 |
+| Fine | TfL / council. | _to be created_ | 19 |
+| Content Item | Marketing post or asset draft. | _to be created_ | 20 |
+| Consent Record | Client consent to publish project content. | _to be created_ | 20 |
+| Brand Asset | Version-controlled. | _to be created_ | 20 |
+| Document | Generic project/corporate doc. | _to be created_ | 21 |
+| Folder Template | Auto-creates project folders. | _to be created_ | 21 |
 
 ---
 
@@ -190,12 +294,12 @@ Create the meeting note in `/docs/meetings/` from the template **before** the se
 
 ## 10. Quick Links
 
-- [User Journeys index](docs/user-journeys/README.md)
-- [Personas](docs/requirements/personas.md) · [Glossary](docs/requirements/glossary.md) · [Requirements index](docs/requirements/README.md)
+- [Workflows index](docs/workflows/README.md) — 21 workflow maps from the JBB audit
+- [User Journeys index](docs/user-journeys/README.md) — per-persona slices through workflows
+- [Personas](docs/requirements/personas.md) · [Permission Matrix](docs/requirements/permission-matrix.md) · [Integrations](docs/requirements/integrations.md) · [Glossary](docs/requirements/glossary.md) · [Requirements index](docs/requirements/README.md)
 - [UI Components index](docs/ui-components/README.md)
-- [Workflows](docs/workflows/README.md)
-- [Data Models](docs/data-models/README.md)
-- [Meeting Notes](docs/meetings/README.md) · [Latest: domain discovery 2026-05-18](docs/meetings/2026-05-18-domain-discovery.md)
+- [Data Models index](docs/data-models/README.md) · [Entity-Relationship Diagram](docs/data-models/entity-relationship.md)
+- [Meeting Notes](docs/meetings/README.md) · [JBB workflow audit 2026-05-20](docs/meetings/2026-05-20-jbb-workflow-audit.md) · [Domain discovery 2026-05-18](docs/meetings/2026-05-18-domain-discovery.md)
 - [Prototype Journey Index](prototypes/journey-index/README.md)
 - [JPMS — production app](jpms/README.md)
 - [Assets](assets/README.md)
@@ -254,12 +358,33 @@ Both can land as small, focused PRs.
 
 ### 11.6 Roadmap (rough)
 
-1. Wire real Microsoft + Google sign-in.
+Re-ordered on 2026-05-20 to reflect the [JBB workflow audit](docs/meetings/2026-05-20-jbb-workflow-audit.md) recommended phasing: finance first (largest current-hour cost and clearest ROI), then project lifecycle (the JPMS core), then everything else.
+
+#### Platform foundations
+1. Wire real Microsoft + Google sign-in (Entra ID / MSAL primary).
 2. Stand up the ASP.NET Core API and Azure SQL schema.
 3. Replace the allow-list with an admin-managed directory.
-4. Build the **Accountant's cashflow-forecast journey** first (the primary pain point — see §1).
-5. Build out the journeys signed off in `/docs/user-journeys/` in priority order.
-6. Move hosting from Static Web Apps to App Service once an API is in place.
+4. Move hosting from Static Web Apps to App Service once an API is in place.
+
+#### Phase 1 — Finance ROI
+Driven by the FD's load (workflows 09 + 13 alone consume ~140 h/month today).
+
+5. **Workflow 11 — Cashflow & Management Reporting** — the primary pain-point anchor from [2026-05-18](docs/meetings/2026-05-18-domain-discovery.md). Journey [11a](docs/user-journeys/11a-fd-cashflow-forecast.md) is the first deep-dive.
+6. **Workflow 09 — Accounts Payable** — single largest workflow (~80 h/mo). Journey [09a](docs/user-journeys/09a-fd-ap-exception-review.md).
+7. **Workflow 10 — Accounts Receivable** — closes the loop with valuations and cashflow.
+8. **Workflow 13 — Accounts Inbox Triage** — ~60 h/mo today. Journey [13a](docs/user-journeys/13a-fd-inbox-triage-exceptions.md).
+
+#### Phase 2 — JPMS project-lifecycle core
+9. **Workflow 03 — Subcontractor Procurement** (~35 h/mo). Journey [03a](docs/user-journeys/03a-subcontractor-quote-return.md).
+10. **Workflow 04 — Variations / RFIs / Delays** (~25 h/mo). Journey [04a](docs/user-journeys/04a-architect-rfi-response.md).
+11. **Workflow 01 — Drawing Receipt & Distribution** (~15 h/mo).
+12. **Workflow 05 — Programme & Valuations** — feeds workflow 10 AR.
+13. **Workflow 06 — Site Reporting & Progress** — feeds workflow 05 and workflow 12. Journey [06a](docs/user-journeys/06a-site-team-daily-capture.md).
+
+#### Phase 3 — Everything else
+14. Workflows 02, 07, 08, 12, 14, 15, 16, 17, 18, 19, 20, 21 sequenced per stakeholder priority. Journeys [08a](docs/user-journeys/08a-subcontractor-compliance-upload.md) and [16a](docs/user-journeys/16a-coordinator-starter-day-one.md) already drafted.
+
+The full phased view (with current-hour cost per workflow) lives in [`docs/workflows/README.md`](docs/workflows/README.md#phased-delivery-from-the-audits-recommended-order).
 
 ### 11.7 Running JPMS locally
 

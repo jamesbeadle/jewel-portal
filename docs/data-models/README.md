@@ -34,12 +34,14 @@ Once journeys are signed off, these schemas are exported as the basis of:
 
 ## Entity Relationships
 
-Once at least two real entities are confirmed, create `entity-relationship.md` in this folder with a Mermaid `erDiagram`. Use the shape of [`_templates/entity-relationship-example.md`](_templates/entity-relationship-example.md) — reference only.
+First-cut ERD is in [`entity-relationship.md`](entity-relationship.md), sourced from the [JBB workflow audit](../meetings/2026-05-20-jbb-workflow-audit.md) and the [2026-05-18 domain discovery](../meetings/2026-05-18-domain-discovery.md). The diagram is split into four sub-diagrams (project lifecycle, subbie & compliance, finance, people & ops) for legibility. Schemas are written workflow-by-workflow as each workflow moves Draft → In Review.
 
 ---
 
 ## Entity index
 
+Full surfaced-entity list is in [`entity-relationship.md`](entity-relationship.md). Schemas are added here as each one is written.
+
 | Entity | Schema | Description |
 |---|---|---|
-| _No real entities yet — added as journeys uncover them._ | | |
+| _Schemas to be written workflow-by-workflow. See [`entity-relationship.md`](entity-relationship.md) for the full list of surfaced entities._ | | |

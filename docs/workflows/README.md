@@ -1,38 +1,92 @@
 # Workflows
 
-Process diagrams that complement user journeys. Where a journey describes **what one actor experiences**, a workflow describes **what happens across actors and systems** for a given process.
+Process maps that complement user journeys. Where a journey describes **what one actor experiences**, a workflow describes **what happens across actors and systems** for a given process.
 
 > 📁 **`_templates/`** holds reference-only example diagrams. Real workflows live in this folder root.
 
 ---
 
-## Notation
+## Where the workflows come from
 
-- **Mermaid** is the default — it renders natively on GitHub and is easy to edit in a meeting.
-- **BPMN** (via Camunda Modeler or bpmn.io) for finance / approval flows where formal notation is needed for audit.
-
----
-
-## Process for adding a real workflow
-
-1. A workflow is usually identified while writing or reviewing a journey. Capture which meeting it came from.
-2. Look at [`_templates/workflow-example.mmd`](_templates/workflow-example.mmd) for the shape of a Mermaid flowchart — reference only.
-3. Create the new file in this folder using the same number prefix as the journey it supports (e.g. `01-{slug}.mmd` for the journey `01-{slug}.md`).
-4. Add a one-paragraph description in a sibling `.md` file or at the top of the source file.
+The current twenty-one workflows were captured from the **JBB workflow audit (May 2026)** — `JBB_Workflow_Maps.docx`, ingested into the repo on 2026-05-20. Every workflow file in this folder is sourced from [`/docs/meetings/2026-05-20-jbb-workflow-audit.md`](../meetings/2026-05-20-jbb-workflow-audit.md). The audit produced acceptance criteria for each workflow; once the named operational owner confirms the file, those criteria become the JPMS test cases for that workflow.
 
 ---
 
 ## Conventions
 
-- File extensions:
-  - `.mmd` — Mermaid source (also viewable embedded in `.md`).
-  - `.bpmn` — BPMN XML.
-- File names: `NN-short-kebab.{mmd|bpmn|md}` mirroring the journey number where applicable.
+- One file per workflow: `NN-short-kebab.md` (e.g. `09-accounts-payable.md`).
+- Mirror the audit structure: purpose, trigger, frequency, owner, current monthly hours, current state, target flow, JPMS functionality required, integrations, acceptance criteria, entities touched, roles involved, open questions, confirmation checklist.
+- Mermaid is the default notation for any embedded diagrams (renders natively on GitHub).
+- BPMN (via Camunda Modeler or bpmn.io) for finance / approval flows where formal notation is needed for audit. Use `.bpmn` source files alongside the `.md`.
+
+---
+
+## Process for adding a real workflow
+
+1. A workflow is usually identified during an audit or while reviewing a journey. Capture which meeting it came from.
+2. Look at [`_templates/workflow-example.mmd`](_templates/workflow-example.mmd) for the shape of a Mermaid flowchart — reference only.
+3. Create the new file in this folder using the next number prefix.
+4. Add the row to the index below and to root [`README.md`](../../README.md#6-user-journeys--workflows) §6.
+5. Walk it with the named owner; tick the confirmation checklist when signed off.
 
 ---
 
 ## Index
 
-| File | Description |
-|---|---|
-| _No real workflows yet — created alongside journeys during discovery._ | |
+Status legend: **Draft** · **In Review** · **Confirmed**.
+
+### Project lifecycle
+
+| # | Workflow | File | Target owner | Current h/mo | Status |
+|---|---|---|---|---|---|
+| 01 | Drawing Receipt & Distribution | [`01-drawing-receipt.md`](01-drawing-receipt.md) | Project & Commercial Lead | ~15 | Draft |
+| 02 | Pre-Construction: Tender & BoQ | [`02-preconstruction-tender-boq.md`](02-preconstruction-tender-boq.md) | Project & Commercial Lead | ~50 | Draft |
+| 03 | Subcontractor Procurement (Bid → Award) | [`03-subcontractor-procurement.md`](03-subcontractor-procurement.md) | Project & Commercial Lead | ~35 | Draft |
+| 04 | Variations, RFIs & Delays | [`04-variations-rfis-delays.md`](04-variations-rfis-delays.md) | Project & Commercial Lead | ~25 | Draft |
+| 05 | Programme & Valuations | [`05-programme-and-valuations.md`](05-programme-and-valuations.md) | Project & Commercial Lead | ~10 | Draft |
+| 06 | Site Reporting & Progress | [`06-site-reporting-and-progress.md`](06-site-reporting-and-progress.md) | Site Team / Project Lead | ~25 | Draft |
+| 07 | Project Close-Out & Defects | [`07-project-close-out-and-defects.md`](07-project-close-out-and-defects.md) | Project & Commercial Lead | ~5 | Draft |
+
+### Supplier & subcontractor management
+
+| # | Workflow | File | Target owner | Current h/mo | Status |
+|---|---|---|---|---|---|
+| 08 | Subcontractor Compliance & Onboarding | [`08-subcontractor-compliance-and-onboarding.md`](08-subcontractor-compliance-and-onboarding.md) | Office & Compliance Coordinator | ~10 | Draft |
+
+### Finance
+
+| # | Workflow | File | Target owner | Current h/mo | Status |
+|---|---|---|---|---|---|
+| 09 | Accounts Payable | [`09-accounts-payable.md`](09-accounts-payable.md) | Finance Director | **~80** | Draft |
+| 10 | Accounts Receivable | [`10-accounts-receivable.md`](10-accounts-receivable.md) | Finance Director | ~25 | Draft |
+| 11 | Cashflow & Management Reporting | [`11-cashflow-and-management-reporting.md`](11-cashflow-and-management-reporting.md) | Finance Director | ~25 | Draft |
+| 12 | Payroll | [`12-payroll.md`](12-payroll.md) | Finance Director | ~10 | Draft |
+| 13 | Accounts Inbox Triage | [`13-accounts-inbox-triage.md`](13-accounts-inbox-triage.md) | Finance Director | ~60 | Draft |
+
+### Operations & comms
+
+| # | Workflow | File | Target owner | Current h/mo | Status |
+|---|---|---|---|---|---|
+| 14 | Client & Reactive Comms | [`14-client-and-reactive-comms.md`](14-client-and-reactive-comms.md) | Office & Compliance Coordinator | ~20 | Draft |
+| 15 | Materials & Deliveries | [`15-materials-and-deliveries.md`](15-materials-and-deliveries.md) | Office & Compliance Coordinator | ~20 | Draft |
+
+### People, systems & support
+
+| # | Workflow | File | Target owner | Current h/mo | Status |
+|---|---|---|---|---|---|
+| 16 | HR, Onboarding & IT Access | [`16-hr-onboarding-and-it-access.md`](16-hr-onboarding-and-it-access.md) | Office & Compliance Coordinator / FD | ~10 | Draft |
+| 17 | IT & Systems Administration | [`17-it-and-systems-administration.md`](17-it-and-systems-administration.md) | Outsourced IT Helpdesk (target) | ~50 | Draft |
+| 18 | Compliance, Insurance & Accreditation | [`18-compliance-insurance-accreditation.md`](18-compliance-insurance-accreditation.md) | Office & Compliance Coordinator | ~5 | Draft |
+| 19 | Fleet Administration | [`19-fleet-administration.md`](19-fleet-administration.md) | Office & Compliance Coordinator | ~3 | Draft |
+| 20 | Marketing & Brand | [`20-marketing-and-brand.md`](20-marketing-and-brand.md) | Brand & Content | ~20 | Draft |
+| 21 | Document Management & Filing | [`21-document-management.md`](21-document-management.md) | Office & Compliance Coordinator | ~10 | Draft |
+
+---
+
+## Phased delivery (from the audit's recommended order)
+
+1. **Phase 1 — Finance ROI:** 09, 10, 11, 13. Highest current-hour cost; primary pain-point anchor (workflow 11) sits here.
+2. **Phase 2 — JPMS project-lifecycle core:** 03, 04, 01, 05, 06.
+3. **Phase 3 — Everything else:** 02, 07, 08, 12, 14, 15, 16, 17, 18, 19, 20, 21.
+
+This phasing is mirrored in root [`README.md`](../../README.md#116-roadmap-rough) §11.6.

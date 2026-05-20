@@ -1,5 +1,6 @@
 @* Shown when a user has signed in successfully but isn't on the approved internal directory. *@
 @inject AuthService Auth
+@inject IAccessRequestStore Requests
 @inject NavigationManager Nav
 
 <section class="max-w-md mx-auto px-4 py-12 md:py-16">
@@ -76,7 +77,8 @@
 
     private void SubmitRequest()
     {
-        // Mock: real submission will POST to the admin queue API.
+        if (Auth.CurrentUser is null) return;
+        Requests.Submit(Auth.CurrentUser);
         submitted = true;
     }
 

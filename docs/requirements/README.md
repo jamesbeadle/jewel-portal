@@ -8,11 +8,11 @@ Cross-cutting requirements that are not specific to a single journey.
 
 ## Files
 
-- [`personas.md`](personas.md) — Persona cards for every confirmed user role. Five drafted from the 2026-05-18 domain discovery (P01 Architect, P02 QS, P03 Subcontractor, P04 Accountant, P05 MD). Each carries a `Sourced from:` link to the meeting that captured it.
+- [`personas.md`](personas.md) — Persona cards for every user role. Twelve cards drafted: P01–P05 from the 2026-05-18 domain discovery; P06–P12 from the 2026-05-20 JBB workflow audit. Each carries a `Sourced from:` link to the meeting that captured it.
 - [`glossary.md`](glossary.md) — Construction and Jewel-Enterprises-specific terms (Tender, RFI, VO, Cash Call, Cost Code, etc.).
-- _(to be created)_ `permission-matrix.md` — Role × Feature matrix. Shape reference in [`_templates/permission-matrix-example.md`](_templates/permission-matrix-example.md).
+- [`permission-matrix.md`](permission-matrix.md) — Role × Workflow RBAC matrix (coarse). Drafted from the workflow audit; refined per workflow as deep-dives confirm per-step CRUD.
+- [`integrations.md`](integrations.md) — Catalogue of every external/adjacent system named across the twenty-one workflows, with direction, target status (keep/replace/archive), and the phase-1 shortlist.
 - _(to be created)_ `non-functional.md` — performance, security, reporting, offline behaviour, audit, retention.
-- _(to be created)_ `integrations.md` — Microsoft 365, Teams, Graph, Power BI, accounting system.
 
 A requirement is "Confirmed" once it has been referenced from at least one journey and signed off by the relevant actor in the role-play session for that journey.
 
