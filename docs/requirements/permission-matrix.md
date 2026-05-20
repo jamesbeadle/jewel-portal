@@ -24,56 +24,55 @@ When two letters apply, list both (e.g. `O / A` for "owns and signs off"; `C (M)
 
 | ID | Role | Type |
 |---|---|---|
-| P01 | Architect | External |
-| P02 | Quantity Surveyor (QS) | Internal / external |
-| P03 | Subcontractor | External |
-| P06 | Project & Commercial Lead | Internal |
-| P07 | Office & Compliance Coordinator | Internal |
-| P08 | Site Team | Internal |
-| P09 | Brand & Content | Internal |
-| P10 | Finance Director (FD) | Internal exec |
-| P11 | Directors / MD | Internal exec |
-| P12 | Outsourced IT Helpdesk | External partner |
+| P01 | Architect | External client |
+| P02 | Subcontractor | External delivery partner |
+| P03 | Project & Commercial Lead | Internal |
+| P04 | Office & Compliance Coordinator | Internal |
+| P05 | Site Team | Internal field |
+| P06 | Brand & Content | Internal |
+| P07 | Finance Director (FD) | Internal executive |
+| P08 | Directors / MD | Internal executive |
+| P09 | Outsourced IT Helpdesk | External partner |
 
-> P04 Accountant folds into P10. P05 MD folds into P11. See [`personas.md`](personas.md).
+See [`personas.md`](personas.md) for the full card on each.
 
 ---
 
 ## Matrix
 
-| # | Workflow | P01 Architect | P02 QS | P03 Subbie | P06 PCL | P07 OCC | P08 Site | P09 Brand | P10 FD | P11 Dir | P12 IT |
-|---|---|---|---|---|---|---|---|---|---|---|---|
-| 01 | Drawing Receipt | C (source) | R | R | A | — | R (M) | — | — | R | — |
-| 02 | Tender & BoQ | C (source) | C | — | **O** | — | C (M) | — | R | A | — |
-| 03 | Subbie Procurement | — | R | C (source) | **O / A** | C | — | — | R | A (high value) | — |
-| 04 | Variations / RFIs / NoDs | A | C | C (source) | **O** | — | C | — | R | A (high value) | — |
-| 05 | Programme & Valuations | R (receives) | R | — | **O / A** | — | C | — | R | A | — |
-| 06 | Site Reporting | R (live dashboard) | R | C | A | — | **O** | — | — | R | — |
-| 07 | Close-Out & Defects | R | — | C | **O / A** | — | C | — | A (retention) | R | — |
-| 08 | Subbie Compliance | — | — | C (self-service) | R | **O** | — | — | R (gates pay) | R | — |
-| 09 | Accounts Payable | — | — | C (invoice) | R | R | — | — | **O / A** | A (above threshold) | — |
-| 10 | Accounts Receivable | R (recipient) | — | — | C (trigger) | — | — | — | **O / A** | R | — |
-| 11 | Cashflow & Mgmt Reporting | — | — | — | R (project slice) | — | — | — | **O** | A | — |
-| 12 | Payroll | — | — | — | — | C (starter/leaver) | C (timesheets) | — | **O / A** | A | — |
-| 13 | Accounts Inbox Triage | — | — | — | — | C (some queries) | — | — | **O** | — | — |
-| 14 | Client & Reactive Comms | C (source) | — | — | A (project) | **O** | — | — | — | R | — |
-| 15 | Materials & Deliveries | — | — | — | A (threshold) | **O** | C (req + GRN) | — | R | — | — |
-| 16 | HR, Onboarding, IT Access | — | — | — | — | **O** (admin) | — | — | A (IT access) | A (confirm) | C (provisioning) |
-| 17 | IT & Systems Admin | — | — | — | — | R | — | — | A (governance) | R | **O** (tier-1, target) |
-| 18 | Compliance / Insurance | — | — | — | R (tender evidence) | **O** | — | — | A | A (annual) | — |
-| 19 | Fleet | — | — | — | — | **O** | C (driver) | — | A (insurance) | R | — |
-| 20 | Marketing & Brand | C (consent) | — | — | C (consent) | — | — | **O** | — | A | — |
-| 21 | Document Management | — | — | — | R | **O** (residual) | R | R | R | R | — |
+| # | Workflow | P01 Architect | P02 Subcontractor | P03 PCL | P04 OCC | P05 Site | P06 Brand | P07 FD | P08 Directors | P09 IT |
+|---|---|---|---|---|---|---|---|---|---|---|
+| 01 | Drawing Receipt | C (source) | R | A | — | R (M) | — | — | R | — |
+| 02 | Tender & BoQ | C (source) | — | **O** | — | C (M) | — | R | A | — |
+| 03 | Subcontractor Procurement | — | C (source) | **O / A** | C | — | — | R | A (high value) | — |
+| 04 | Variations / RFIs / NoDs | A | C (source) | **O** | — | C | — | R | A (high value) | — |
+| 05 | Programme & Valuations | R (receives) | — | **O / A** | — | C | — | R | A | — |
+| 06 | Site Reporting | R (live dashboard) | C | A | — | **O** | — | — | R | — |
+| 07 | Close-Out & Defects | R | C | **O / A** | — | C | — | A (retention) | R | — |
+| 08 | Subcontractor Compliance | — | C (self-service) | R | **O** | — | — | R (gates pay) | R | — |
+| 09 | Accounts Payable | — | C (invoice) | R | R | — | — | **O / A** | A (above threshold) | — |
+| 10 | Accounts Receivable | R (recipient) | — | C (trigger) | — | — | — | **O / A** | R | — |
+| 11 | Cashflow & Mgmt Reporting | — | — | R (project slice) | — | — | — | **O** | A | — |
+| 12 | Payroll | — | — | — | C (starter / leaver) | C (timesheets) | — | **O / A** | A | — |
+| 13 | Accounts Inbox Triage | — | — | — | C (some queries) | — | — | **O** | — | — |
+| 14 | Client & Reactive Comms | C (source) | — | A (project) | **O** | — | — | — | R | — |
+| 15 | Materials & Deliveries | — | — | A (threshold) | **O** | C (req + GRN) | — | R | — | — |
+| 16 | HR, Onboarding, IT Access | — | — | — | **O** (admin) | — | — | A (IT access) | A (confirm) | C (provisioning) |
+| 17 | IT & Systems Admin | — | — | — | R | — | — | A (governance) | R | **O** (tier-1, target) |
+| 18 | Compliance / Insurance | — | — | R (tender evidence) | **O** | — | — | A | A (annual) | — |
+| 19 | Fleet | — | — | — | **O** | C (driver) | — | A (insurance) | R | — |
+| 20 | Marketing & Brand | C (consent) | — | C (consent) | — | — | **O** | — | A | — |
+| 21 | Document Management | — | — | R | **O** (residual) | R | R | R | R | — |
 
 ---
 
 ## Read across
 
-- **P10 Finance Director** is the busiest role on the matrix — owner on five workflows and approver on most of the rest. Aligns with the audit's finding that finance workloads (AP, inbox, cashflow) dominate current monthly hours.
-- **P06 Project & Commercial Lead** owns the project lifecycle group (02–05, 07) and is approver on the rest of it.
-- **P07 Office & Compliance Coordinator** owns the operational glue — compliance, comms, materials, fleet, document upkeep.
-- **External roles** (P01 Architect, P03 Subbie) are mostly source/recipient on JPMS, never owner. This shapes the external-portal scope: read what's published to them, write only their own contributions.
-- **P12 Outsourced IT Helpdesk** is the only role whose JPMS surface is deliberately narrow — provisioning hooks and audit reports only.
+- **P07 Finance Director** is the busiest role on the matrix — owner on five workflows and approver on most of the rest. Aligns with the audit's finding that finance workloads (AP, inbox, cashflow) dominate current monthly hours.
+- **P03 Project & Commercial Lead** owns the project lifecycle group (02–05, 07) and is approver on the rest of it. The role absorbs internal QS work.
+- **P04 Office & Compliance Coordinator** owns the operational glue — compliance, comms, materials, fleet, document upkeep.
+- **External roles** (P01 Architect, P02 Subcontractor) are mostly source / recipient on JPMS, never owner. This shapes the external-portal scope: read what's published to them, write only their own contributions.
+- **P09 Outsourced IT Helpdesk** is the only role whose JPMS surface is deliberately narrow — provisioning hooks and audit reports only.
 
 ---
 

@@ -2,7 +2,7 @@
 
 > Persona slice through [Workflow 16 — HR, Onboarding & IT Access](../workflows/16-hr-onboarding-and-it-access.md). The orchestration view — the Coordinator's screen during a new starter's first day.
 
-**Actors:** P07 Office & Compliance Coordinator (primary). Approvers: P10 Finance Director (IT access gate), P11 Directors (confirm starter). Contributor: P12 Outsourced IT Helpdesk (provisioning execution).
+**Actors:** P04 Office & Compliance Coordinator (primary). Approvers: P07 Finance Director (IT access gate), P08 Directors (confirm starter). Contributor: P09 Outsourced IT Helpdesk (provisioning execution).
 **Goal:** New starter walks in to a fully equipped day — contract signed, M365 account live, JPMS account live, system accounts in place — without three people coordinating by Teams chat.
 **Frequency:** Several events per quarter.
 **Success metric:** Starter day-one readiness checklist 100% green by 09:00 of the start date.
@@ -14,7 +14,7 @@
 
 ## Trigger
 
-A Director (P11) confirms the starter; the onboarding event is raised in JPMS.
+A Director (P08) confirms the starter; the onboarding event is raised in JPMS.
 
 ---
 
@@ -35,8 +35,8 @@ A Director (P11) confirms the starter; the onboarding event is raised in JPMS.
 - One click: contract drafted from the role template, sent for e-signature, status moves to "awaiting signature".
 
 ### 3. Trigger IT provisioning
-- Coordinator hits "request IT access" → routes to FD for approval (P10).
-- On FD approval, JPMS calls M365 Admin / Entra / Intune APIs (executed by P12 Outsourced IT Helpdesk where the integration requires it).
+- Coordinator hits "request IT access" → routes to FD for approval (P07).
+- On FD approval, JPMS calls M365 Admin / Entra / Intune APIs (executed by P09 Outsourced IT Helpdesk where the integration requires it).
 
 ### 4. Track day-one readiness
 - Real-time checklist updates as each item completes: signed / provisioned / first-login / equipment-issued.
@@ -65,10 +65,10 @@ A Director (P11) confirms the starter; the onboarding event is raised in JPMS.
 
 | Step | Role | Can do |
 |---|---|---|
-| 1–5 | P07 Office & Compliance Coordinator | Owner — orchestrate, generate, track |
-| 3 | P10 Finance Director | Approve IT access |
-| 1 | P11 Directors | Confirm starter; sign off the event |
-| 3 | P12 Outsourced IT Helpdesk | Execute provisioning items routed to them |
+| 1–5 | P04 Office & Compliance Coordinator | Owner — orchestrate, generate, track |
+| 3 | P07 Finance Director | Approve IT access |
+| 1 | P08 Directors | Confirm starter; sign off the event |
+| 3 | P09 Outsourced IT Helpdesk | Execute provisioning items routed to them |
 
 See [`/docs/requirements/permission-matrix.md`](../requirements/permission-matrix.md).
 

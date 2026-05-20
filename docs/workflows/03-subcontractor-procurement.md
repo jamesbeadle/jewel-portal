@@ -48,7 +48,7 @@
 
 ## Integrations & adjacent systems
 
-- **Email** (for subbies not on the system).
+- **Email** (for subcontractors not on the system).
 - **Xero** (for payment terms reference).
 - **Compliance workflow 08** (gated by compliance status).
 

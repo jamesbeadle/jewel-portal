@@ -25,7 +25,7 @@
 
 1. Defect register raised in JPMS against the project, with photos and BoQ references.
 2. Each defect auto-assigned to the responsible subcontractor with a deadline.
-3. Subbie updates status via JPMS portal or app; photos as evidence.
+3. Subcontractor updates status via JPMS portal or app; photos as evidence.
 4. Project Lead signs off each defect; final sign-off triggers retention release.
 5. Close-out pack (warranties, O&Ms, defect record) assembled by JPMS.
 

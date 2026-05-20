@@ -2,7 +2,7 @@
 
 > Persona slice through [Workflow 04 — Variations, RFIs & Delays](../workflows/04-variations-rfis-delays.md). The architect/CA-facing slice — an external user who may or may not be a full JPMS user.
 
-**Actors:** P01 Architect (primary, external). Sources: P03 Subcontractor (raises RFI on site). Consumer: P06 Project & Commercial Lead.
+**Actors:** P01 Architect (primary, external). Sources: P02 Subcontractor (raises RFI on site). Consumer: P03 Project & Commercial Lead.
 **Goal:** Architect receives an RFI, sees the right context (drawing, BoQ item, photo), replies in-flow, and the reply attaches to the project automatically.
 **Frequency:** Per RFI — multiple per active project per week.
 **Success metric:** Median RFI response time falls; zero RFI replies stuck in inboxes.
@@ -20,7 +20,7 @@ JPMS emails the architect with an RFI link (or notifies them in-portal if they'r
 
 ## Pre-conditions
 
-- RFI raised by site team / subbie via workflow 04 / 06.
+- RFI raised by site team / subcontractor via workflow 04 / 06.
 - Architect contact exists on the project.
 - Relevant drawing revision and BoQ item linked to the RFI.
 
@@ -62,8 +62,8 @@ JPMS emails the architect with an RFI link (or notifies them in-portal if they'r
 | Step | Role | Can do |
 |---|---|---|
 | 1–4 | P01 Architect | View RFIs on own projects; reply; flag for VO |
-| All | P06 Project & Commercial Lead | Read all; draft VO from flagged reply |
-| All | P03 Subcontractor | Read the resolution on their RFI |
+| All | P03 Project & Commercial Lead | Read all; draft VO from flagged reply |
+| All | P02 Subcontractor | Read the resolution on their RFI |
 
 See [`/docs/requirements/permission-matrix.md`](../requirements/permission-matrix.md).
 

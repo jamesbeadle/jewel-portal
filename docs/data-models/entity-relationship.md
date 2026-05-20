@@ -223,8 +223,8 @@ Sourced workflows shown in brackets. Schemas remain `to be created`.
 | `BoQ Line Item` | 02, 04, 05 | Discrete unit of priced and tracked work. |
 | `Rate` | 02 | Held in the rate library. |
 | `Rate Library` | 02 | Versioned, with supplier links. |
-| `Bid Package` | 03 | Issued to subbies per trade. |
-| `Quote` | 03 | Returned by subbies into JPMS. |
+| `Bid Package` | 03 | Issued to subcontractors per trade. |
+| `Quote` | 03 | Returned by subcontractors into JPMS. |
 | `Work Order` | 03, 07, 09 | The contract artefact; matching key for AP. |
 | `Variation` | 04, 05 | Updates BoQ line items, rolls up to valuation. |
 | `RFI` | 04 | Question to architect, response attaches automatically. |
@@ -234,7 +234,7 @@ Sourced workflows shown in brackets. Schemas remain `to be created`.
 | `Site Report` | 06 | Daily capture from site app. |
 | `Defect` | 07 | Snag register per project. |
 
-### Subbie & compliance
+### Subcontractor & compliance
 
 | Entity | First surfaced in | Notes |
 |---|---|---|

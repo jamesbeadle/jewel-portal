@@ -31,7 +31,7 @@ Single source of truth for every external or adjacent system named across the tw
 | **Brightpay** | JPMS → | 12 | Keep — core integration | Payroll engine. Fed from JPMS timesheets + starter/leaver. |
 | **Chaser HQ** | JPMS → | 09, 10 | Keep — peripheral | Collections sequence on AR; supplier disputes on AP. |
 | **Online banking** | (manual) | 09 | Keep — peripheral | Payment execution. No JPMS integration planned in phase 1. |
-| **HMRC CIS** | ↔ | 08, 09 | Keep — core integration | CIS verification on subbies; status held against record; gates payment. |
+| **HMRC CIS** | ↔ | 08, 09 | Keep — core integration | CIS verification on subcontractors; status held against record; gates payment. |
 
 ### Project lifecycle tools
 
@@ -43,7 +43,7 @@ Single source of truth for every external or adjacent system named across the tw
 | **Planyard** | (migration only) | 03 | Replace | Work-order contracting moves into JPMS. |
 | **Onetrace** | → JPMS | 06 | TBD | Where relevant for site capture; keep if it offers something the JPMS site app doesn't. |
 | **Dashpivot** | (migration only) | 06, 08 | Replace | Site capture + attendance + compliance move into JPMS. |
-| **Monday.com** | (migration only) | 03, 08, 19 | Replace | Subbie directory + compliance + fleet move into JPMS. |
+| **Monday.com** | (migration only) | 03, 08, 19 | Replace | Subcontractor directory + compliance + fleet move into JPMS. |
 | **RAMsApp** | (migration only) | 03, 08 | Replace | RAMS template engine moves into JPMS. |
 
 ### Microsoft 365 stack

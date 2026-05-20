@@ -2,7 +2,7 @@
 
 > Persona slice through [Workflow 06 — Site Reporting & Progress](../workflows/06-site-reporting-and-progress.md). The site-app side of the story: capture has to be fast, touch-friendly, and tolerant of poor signal, or it won't be used.
 
-**Actors:** P08 Site Team (primary — site manager / foreman). P03 Subcontractor (attendance). Consumer: P06 Project & Commercial Lead.
+**Actors:** P05 Site Team (primary — site manager / foreman). P02 Subcontractor (attendance). Consumer: P03 Project & Commercial Lead.
 **Goal:** End each day having captured progress, photos, attendance and any issues against the right BoQ sections, without opening a laptop.
 **Frequency:** Daily on every active site.
 **Success metric:** ≥90% of expected daily entries captured by end of shift. Zero photos lost to WhatsApp.
@@ -32,7 +32,7 @@ Site manager opens the JPMS site app on phone at start of shift.
 - Single sign-on; default to today's primary project; quick-switch to other assigned projects.
 
 ### 2. Run the attendance check-in
-- Subbie attendance via QR scan or geofence — see [Workflow 06](../workflows/06-site-reporting-and-progress.md) open questions.
+- Subcontractor attendance via QR scan or geofence — see [Workflow 06](../workflows/06-site-reporting-and-progress.md) open questions.
 - Manual override available for the site manager.
 
 ### 3. Update progress per BoQ section
@@ -56,7 +56,7 @@ Site manager opens the JPMS site app on phone at start of shift.
 
 - No signal for the whole day — all entries queued, sync on return to signal.
 - Wrong BoQ section tagged — back-office can re-tag without losing the photo.
-- Subbie forgets to check in but is on site — manual override with attestation.
+- Subcontractor forgets to check in but is on site — manual override with attestation.
 - Site manager off sick — deputy can capture against their projects.
 
 ---
@@ -71,9 +71,9 @@ Site manager opens the JPMS site app on phone at start of shift.
 
 | Step | Role | Can do |
 |---|---|---|
-| 1–6 | P08 Site Team | Capture, tag, raise snag |
-| 2 | P03 Subcontractor | Self check-in |
-| All | P06 Project & Commercial Lead | Read; re-tag; convert snag to defect |
+| 1–6 | P05 Site Team | Capture, tag, raise snag |
+| 2 | P02 Subcontractor | Self check-in |
+| All | P03 Project & Commercial Lead | Read; re-tag; convert snag to defect |
 
 See [`/docs/requirements/permission-matrix.md`](../requirements/permission-matrix.md).
 
@@ -81,7 +81,7 @@ See [`/docs/requirements/permission-matrix.md`](../requirements/permission-matri
 
 ## Open questions
 
-- [ ] QR vs geofence attendance — acceptable to subbies?
+- [ ] QR vs geofence attendance — acceptable to subcontractors?
 - [ ] Offline storage cap on the device — at what point do we ask the user to sync?
 - [ ] Photo retention — full-resolution on server, thumbnails on device?
 

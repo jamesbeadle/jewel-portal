@@ -28,7 +28,7 @@
 1. Invoice arrives → Dext OCRs → JPMS auto-matches to work order using PO/WO reference, supplier, and amount.
 2. Confidence-based routing: high-confidence matches coded automatically; low-confidence flagged for FD review.
 3. Payment run drafted from due invoices + cashflow constraints; FD reviews and approves in bulk.
-4. Subbie invoice errors detected automatically (CIS missing, wrong amount vs WO); error email auto-drafted for FD review.
+4. Subcontractor invoice errors detected automatically (CIS missing, wrong amount vs WO); error email auto-drafted for FD review.
 5. Statement reconciliation runs automatically each month; gaps flagged.
 
 ---
@@ -39,7 +39,7 @@
 - Project cost ledger updated by AP feed.
 - AP exception queue for FD review.
 - Payment run draft with cashflow check (consumes workflow 11).
-- Subbie invoice validation rules (CIS, WO match).
+- Subcontractor invoice validation rules (CIS, WO match).
 - Statement reconciliation engine.
 
 ---
@@ -58,7 +58,7 @@
 
 - FD spends time reviewing exceptions, not coding every invoice.
 - Project cost data is live, not weekly catch-up.
-- Subbie payment errors are caught before payment, not after.
+- Subcontractor payment errors are caught before payment, not after.
 
 ---
 

@@ -2,10 +2,10 @@
 
 > Persona slice through [Workflow 09 — Accounts Payable](../workflows/09-accounts-payable.md). The single largest workflow in the audit (~80 h/month today); reducing the FD's load here is the biggest finance-side ROI of phase 1.
 
-**Actors:** P10 Finance Director (primary). Sources: P03 Subcontractor (invoice), P06 Project & Commercial Lead (WO context). Approver: P11 Directors (above-threshold payments).
+**Actors:** P07 Finance Director (primary). Sources: P02 Subcontractor (invoice), P03 Project & Commercial Lead (WO context). Approver: P08 Directors (above-threshold payments).
 **Goal:** Clear the AP exception queue: review only the items the auto-matcher couldn't handle, fix or reject them, and release a clean payment-run draft.
 **Frequency:** Daily review; weekly payment run.
-**Success metric:** ≥90% of invoices auto-coded with no FD touch. Subbie invoice errors caught pre-payment, not post.
+**Success metric:** ≥90% of invoices auto-coded with no FD touch. Subcontractor invoice errors caught pre-payment, not post.
 **Status:** Draft
 **Last reviewed:** —
 **Sourced from:** [`/docs/meetings/2026-05-20-jbb-workflow-audit.md`](../meetings/2026-05-20-jbb-workflow-audit.md)
@@ -22,7 +22,7 @@ FD opens the AP exception queue (manually, or from the cashflow dashboard 11a st
 
 - Dext has OCR'd today's captured invoices.
 - JPMS work-order register is current (workflow 03).
-- HMRC CIS status is current per subbie (workflow 08).
+- HMRC CIS status is current per subcontractor (workflow 08).
 
 ---
 
@@ -38,23 +38,23 @@ FD opens the AP exception queue (manually, or from the cashflow dashboard 11a st
 - One click posts to Xero and clears the exception.
 
 ### 3. Resolve a CIS issue
-- JPMS shows the subbie's current CIS status and the invoice's CIS handling.
-- FD chooses: pay with adjusted CIS / hold pending verification / draft chase email to subbie.
+- JPMS shows the subcontractor's current CIS status and the invoice's CIS handling.
+- FD chooses: pay with adjusted CIS / hold pending verification / draft chase email to subcontractor.
 
 ### 4. Resolve an amount variance
 - JPMS shows side-by-side: invoice vs WO, vs prior interim certificates.
-- FD adjusts, queries the subbie via auto-drafted email, or approves anyway with reason.
+- FD adjusts, queries the subcontractor via auto-drafted email, or approves anyway with reason.
 
 ### 5. Release the payment-run draft
 - Payment-run draft already exists, filtered by due date and cashflow constraints (workflow 11).
-- FD bulk-approves; above-threshold items route to a Director for approval (P11) before payment.
+- FD bulk-approves; above-threshold items route to a Director for approval (P08) before payment.
 
 ---
 
 ## Edge cases & exceptions
 
 - Two invoices for the same WO arrive in the same period (duplicate detection).
-- Subbie sends a credit note (negative invoice).
+- Subcontractor sends a credit note (negative invoice).
 - WO has been varied since the invoice was raised — show variance against the variation, not the original WO.
 - Retention release on close-out (workflow 07) flagged as a special item in the run.
 
@@ -70,9 +70,9 @@ FD opens the AP exception queue (manually, or from the cashflow dashboard 11a st
 
 | Step | Role | Can do |
 |---|---|---|
-| 1–4 | P10 Finance Director | Read, code, approve, reject |
-| 5 | P10 Finance Director | Approve payment run up to threshold |
-| 5 | P11 Directors / MD | Approve above threshold |
+| 1–4 | P07 Finance Director | Read, code, approve, reject |
+| 5 | P07 Finance Director | Approve payment run up to threshold |
+| 5 | P08 Directors / MD | Approve above threshold |
 
 See [`/docs/requirements/permission-matrix.md`](../requirements/permission-matrix.md).
 

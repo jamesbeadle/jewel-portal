@@ -78,7 +78,7 @@
 ## Open questions
 
 - [ ] Offline capture — required for poor-signal sites?
-- [ ] Geofence vs QR for attendance — which is acceptable to subbies?
+- [ ] Geofence vs QR for attendance — which is acceptable to subcontractors?
 - [ ] Live dashboard scoping — which fields are exposed externally?
 
 ---

@@ -2,7 +2,7 @@
 
 > Persona slice through [Workflow 13 — Accounts Inbox Triage](../workflows/13-accounts-inbox-triage.md). Second-largest finance workload today (~60 h/month). The goal of this journey is for the FD to never read a regular invoice email again.
 
-**Actors:** P10 Finance Director (primary). System: JPMS classifier. Sources: external suppliers, clients, HMRC, internal staff.
+**Actors:** P07 Finance Director (primary). System: JPMS classifier. Sources: external suppliers, clients, HMRC, internal staff.
 **Goal:** Review the small set of inbox items the classifier wasn't confident about and the small set of judgement-calls that always need a human, then clear them.
 **Frequency:** Three times a day; aim for inbox-zero by end of day.
 **Success metric:** ≥85% of inbound finance email auto-classified and auto-actioned (Dext-route, statement queue, etc.). FD reads exceptions, not every email.
@@ -61,8 +61,8 @@ FD opens the inbox exception queue (or it's surfaced in the cashflow dashboard 1
 
 | Step | Role | Can do |
 |---|---|---|
-| 1–4 | P10 Finance Director | Confirm / override / action |
-| All | P07 Office & Compliance Coordinator | Read (where query routing affects them) |
+| 1–4 | P07 Finance Director | Confirm / override / action |
+| All | P04 Office & Compliance Coordinator | Read (where query routing affects them) |
 
 See [`/docs/requirements/permission-matrix.md`](../requirements/permission-matrix.md).
 

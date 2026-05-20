@@ -75,17 +75,16 @@ Tick items off as we go. This is the single source of truth for "how scoped are 
 ### 4.2 Current-State Mapping
 - [x] Primary pain point identified — cashflow forecast accuracy (Finance Director — see §11 workflow 11)
 - [x] Existing tools and spreadsheets inventoried — see [`integrations.md`](docs/requirements/integrations.md)
-- [x] Pain points captured per role — see [`personas.md`](docs/requirements/personas.md) P06–P12 and per-workflow files in [`/docs/workflows/`](docs/workflows/)
+- [x] Pain points captured per role — see [`personas.md`](docs/requirements/personas.md) (P01–P09) and per-workflow files in [`/docs/workflows/`](docs/workflows/)
 - [x] Manual steps and workarounds documented — current-state section of every workflow file
 - [x] Existing finance processes mapped — workflows [`09`](docs/workflows/09-accounts-payable.md), [`10`](docs/workflows/10-accounts-receivable.md), [`11`](docs/workflows/11-cashflow-and-management-reporting.md), [`12`](docs/workflows/12-payroll.md), [`13`](docs/workflows/13-accounts-inbox-triage.md)
 - [x] Existing project lifecycle mapped — workflows [`01`](docs/workflows/01-drawing-receipt.md) through [`07`](docs/workflows/07-project-close-out-and-defects.md)
 
 ### 4.3 Personas
-- [x] Initial user roles identified — Architect, QS, Subcontractor, Accountant, MD
-- [x] Operational roles identified from the JBB workflow audit — Project & Commercial Lead, Office & Compliance Coordinator, Site Team, Brand & Content, Finance Director, Directors / MD, Outsourced IT Helpdesk
-- [x] Persona card drafted for each (twelve total — [`personas.md`](docs/requirements/personas.md))
+- [x] Canonical user roles identified — nine personas (P01–P09): Architect, Subcontractor, Project & Commercial Lead, Office & Compliance Coordinator, Site Team, Brand & Content, Finance Director, Directors / MD, Outsourced IT Helpdesk
+- [x] Persona card drafted for each (nine total — [`personas.md`](docs/requirements/personas.md))
 - [ ] Each persona reviewed by an actual person in that role
-- [x] Other roles checked (site manager, admin staff, subcontractor admin, external collaborators) — folded into P06–P12
+- [x] Adjacent roles checked (site manager, admin staff, subcontractor admin, external collaborators, internal QS) — covered by P01–P09; external QS consultants treated as invited contacts rather than a separate persona
 
 ### 4.4 Business Entities
 - [x] All domain entities listed — see [`data-models/entity-relationship.md`](docs/data-models/entity-relationship.md) entity index
@@ -124,20 +123,17 @@ Tick items off as we go. This is the single source of truth for "how scoped are 
 
 > Each row links to its card in [`docs/requirements/personas.md`](docs/requirements/personas.md). The Role × Workflow RBAC matrix is in [`permission-matrix.md`](docs/requirements/permission-matrix.md).
 
-| # | Persona | Role summary | Card status | Reviewed by |
-|---|---|---|---|---|
-| P01 | [Architect](docs/requirements/personas.md#p01--architect) | External client who sends tenders with drawings and specs; defines cost codes carried through the system. | Draft | — |
-| P02 | [Quantity Surveyor](docs/requirements/personas.md#p02--quantity-surveyor-qs) | Prices tenders into line items; captures site measurements; updates line items on VOs. _Internal QS work largely folds into P06._ | Draft | — |
-| P03 | [Subcontractor](docs/requirements/personas.md#p03--subcontractor) | On-site delivery. Updates line-item completion, submits timesheets, raises RFIs, actions VOs. | Draft | — |
-| P04 | [Accountant](docs/requirements/personas.md#p04--accountant) | _Now folded into P10 Finance Director._ Original card retained as historical anchor. | Draft | — |
-| P05 | [Managing Director](docs/requirements/personas.md#p05--managing-director-md) | _Now part of P11 Directors / MD._ Original card retained as historical anchor. | Draft | — |
-| P06 | [Project & Commercial Lead](docs/requirements/personas.md#p06--project--commercial-lead) | Internal PM + commercial. Owns project lifecycle workflows 02–05, 07. | Draft | — |
-| P07 | [Office & Compliance Coordinator](docs/requirements/personas.md#p07--office--compliance-coordinator) | Owns compliance, comms, materials, fleet, document upkeep. | Draft | — |
-| P08 | [Site Team](docs/requirements/personas.md#p08--site-team) | Site managers, foremen, operatives. The capture layer. | Draft | — |
-| P09 | [Brand & Content](docs/requirements/personas.md#p09--brand--content) | Marketing and brand custodian. | Draft | — |
-| P10 | [Finance Director (FD)](docs/requirements/personas.md#p10--finance-director-fd) | Owns finance across BB/PS/PFP. **Drives the primary pain point** (cashflow forecast accuracy). | Draft | — |
-| P11 | [Directors / MD](docs/requirements/personas.md#p11--directors--md) | Executive decisions. Approver on high-value commercial items. | Draft | — |
-| P12 | [Outsourced IT Helpdesk](docs/requirements/personas.md#p12--outsourced-it-helpdesk) | External tier-1 IT partner (target — not yet selected). | Draft | — |
+| # | Persona | Type | Role summary | Card status | Reviewed by |
+|---|---|---|---|---|---|
+| P01 | [Architect](docs/requirements/personas.md#p01--architect) | External client | Sends tenders with drawings and specs; defines cost codes carried through the system; approves RFIs and variations. | Draft | — |
+| P02 | [Subcontractor](docs/requirements/personas.md#p02--subcontractor) | External delivery | On-site delivery. Returns quotes, updates progress, submits timesheets, raises RFIs, uploads compliance documents. | Draft | — |
+| P03 | [Project & Commercial Lead](docs/requirements/personas.md#p03--project--commercial-lead) | Internal | PM + commercial. Owns the project lifecycle (workflows 02–05, 07) and the internal QS function. | Draft | — |
+| P04 | [Office & Compliance Coordinator](docs/requirements/personas.md#p04--office--compliance-coordinator) | Internal | Owns compliance, comms, materials, fleet, document upkeep. | Draft | — |
+| P05 | [Site Team](docs/requirements/personas.md#p05--site-team) | Internal field | Site managers, foremen, operatives. The capture layer for site reality. | Draft | — |
+| P06 | [Brand & Content](docs/requirements/personas.md#p06--brand--content) | Internal | Marketing and brand custodian across Jewel entities. | Draft | — |
+| P07 | [Finance Director (FD)](docs/requirements/personas.md#p07--finance-director-fd) | Internal executive | Owns finance across BB / PS / PFP. **Drives the primary pain point** (cashflow forecast accuracy). | Draft | — |
+| P08 | [Directors / MD](docs/requirements/personas.md#p08--directors--md) | Internal executive | Executive decisions. Approver on high-value commercial items. | Draft | — |
+| P09 | [Outsourced IT Helpdesk](docs/requirements/personas.md#p09--outsourced-it-helpdesk) | External partner | Tier-1 IT support (target owner of workflow 17 — provider not yet selected). | Draft | — |
 
 **Status legend:** Draft · In Review · Confirmed
 
@@ -151,40 +147,40 @@ Workflows are the cross-actor process maps from the JBB audit (one per file unde
 
 | # | Workflow | Group | Owner | h/mo | Status |
 |---|---|---|---|---|---|
-| 01 | [Drawing Receipt](docs/workflows/01-drawing-receipt.md) | Project lifecycle | P06 PCL | ~15 | Draft |
-| 02 | [Tender & BoQ](docs/workflows/02-preconstruction-tender-boq.md) | Project lifecycle | P06 PCL | ~50 | Draft |
-| 03 | [Subbie Procurement](docs/workflows/03-subcontractor-procurement.md) | Project lifecycle | P06 PCL | ~35 | Draft |
-| 04 | [Variations / RFIs / Delays](docs/workflows/04-variations-rfis-delays.md) | Project lifecycle | P06 PCL | ~25 | Draft |
-| 05 | [Programme & Valuations](docs/workflows/05-programme-and-valuations.md) | Project lifecycle | P06 PCL | ~10 | Draft |
-| 06 | [Site Reporting](docs/workflows/06-site-reporting-and-progress.md) | Project lifecycle | P08 Site | ~25 | Draft |
-| 07 | [Close-Out & Defects](docs/workflows/07-project-close-out-and-defects.md) | Project lifecycle | P06 PCL | ~5 | Draft |
-| 08 | [Subbie Compliance](docs/workflows/08-subcontractor-compliance-and-onboarding.md) | Subbie | P07 OCC | ~10 | Draft |
-| 09 | [Accounts Payable](docs/workflows/09-accounts-payable.md) | Finance | P10 FD | **~80** | Draft |
-| 10 | [Accounts Receivable](docs/workflows/10-accounts-receivable.md) | Finance | P10 FD | ~25 | Draft |
-| 11 | [Cashflow & Mgmt Reporting](docs/workflows/11-cashflow-and-management-reporting.md) _(primary pain-point anchor)_ | Finance | P10 FD | ~25 | Draft |
-| 12 | [Payroll](docs/workflows/12-payroll.md) | Finance | P10 FD | ~10 | Draft |
-| 13 | [Accounts Inbox Triage](docs/workflows/13-accounts-inbox-triage.md) | Finance | P10 FD | ~60 | Draft |
-| 14 | [Client & Reactive Comms](docs/workflows/14-client-and-reactive-comms.md) | Ops & comms | P07 OCC | ~20 | Draft |
-| 15 | [Materials & Deliveries](docs/workflows/15-materials-and-deliveries.md) | Ops & comms | P07 OCC | ~20 | Draft |
-| 16 | [HR / Onboarding / IT Access](docs/workflows/16-hr-onboarding-and-it-access.md) | People & systems | P07 OCC / P10 FD | ~10 | Draft |
-| 17 | [IT & Systems Admin](docs/workflows/17-it-and-systems-administration.md) | People & systems | P12 IT _(target)_ | ~50 | Draft |
-| 18 | [Compliance / Insurance / Accreditation](docs/workflows/18-compliance-insurance-accreditation.md) | People & systems | P07 OCC | ~5 | Draft |
-| 19 | [Fleet](docs/workflows/19-fleet-administration.md) | People & systems | P07 OCC | ~3 | Draft |
-| 20 | [Marketing & Brand](docs/workflows/20-marketing-and-brand.md) | People & systems | P09 Brand | ~20 | Draft |
-| 21 | [Document Management](docs/workflows/21-document-management.md) | People & systems | P07 OCC | ~10 | Draft |
+| 01 | [Drawing Receipt](docs/workflows/01-drawing-receipt.md) | Project lifecycle | P03 PCL | ~15 | Draft |
+| 02 | [Tender & BoQ](docs/workflows/02-preconstruction-tender-boq.md) | Project lifecycle | P03 PCL | ~50 | Draft |
+| 03 | [Subcontractor Procurement](docs/workflows/03-subcontractor-procurement.md) | Project lifecycle | P03 PCL | ~35 | Draft |
+| 04 | [Variations / RFIs / Delays](docs/workflows/04-variations-rfis-delays.md) | Project lifecycle | P03 PCL | ~25 | Draft |
+| 05 | [Programme & Valuations](docs/workflows/05-programme-and-valuations.md) | Project lifecycle | P03 PCL | ~10 | Draft |
+| 06 | [Site Reporting](docs/workflows/06-site-reporting-and-progress.md) | Project lifecycle | P05 Site | ~25 | Draft |
+| 07 | [Close-Out & Defects](docs/workflows/07-project-close-out-and-defects.md) | Project lifecycle | P03 PCL | ~5 | Draft |
+| 08 | [Subcontractor Compliance](docs/workflows/08-subcontractor-compliance-and-onboarding.md) | Subcontractor | P04 OCC | ~10 | Draft |
+| 09 | [Accounts Payable](docs/workflows/09-accounts-payable.md) | Finance | P07 FD | **~80** | Draft |
+| 10 | [Accounts Receivable](docs/workflows/10-accounts-receivable.md) | Finance | P07 FD | ~25 | Draft |
+| 11 | [Cashflow & Mgmt Reporting](docs/workflows/11-cashflow-and-management-reporting.md) _(primary pain-point anchor)_ | Finance | P07 FD | ~25 | Draft |
+| 12 | [Payroll](docs/workflows/12-payroll.md) | Finance | P07 FD | ~10 | Draft |
+| 13 | [Accounts Inbox Triage](docs/workflows/13-accounts-inbox-triage.md) | Finance | P07 FD | ~60 | Draft |
+| 14 | [Client & Reactive Comms](docs/workflows/14-client-and-reactive-comms.md) | Ops & comms | P04 OCC | ~20 | Draft |
+| 15 | [Materials & Deliveries](docs/workflows/15-materials-and-deliveries.md) | Ops & comms | P04 OCC | ~20 | Draft |
+| 16 | [HR / Onboarding / IT Access](docs/workflows/16-hr-onboarding-and-it-access.md) | People & systems | P04 OCC / P07 FD | ~10 | Draft |
+| 17 | [IT & Systems Admin](docs/workflows/17-it-and-systems-administration.md) | People & systems | P09 IT _(target)_ | ~50 | Draft |
+| 18 | [Compliance / Insurance / Accreditation](docs/workflows/18-compliance-insurance-accreditation.md) | People & systems | P04 OCC | ~5 | Draft |
+| 19 | [Fleet](docs/workflows/19-fleet-administration.md) | People & systems | P04 OCC | ~3 | Draft |
+| 20 | [Marketing & Brand](docs/workflows/20-marketing-and-brand.md) | People & systems | P06 Brand | ~20 | Draft |
+| 21 | [Document Management](docs/workflows/21-document-management.md) | People & systems | P04 OCC | ~10 | Draft |
 
 ### 6.2 User journeys (per-persona slices)
 
 | # | Journey | Persona | Source workflow | Status |
 |---|---|---|---|---|
-| 03a | [Subcontractor: receive bid package and return a quote](docs/user-journeys/03a-subcontractor-quote-return.md) | P03 Subcontractor | 03 | Draft |
+| 03a | [Subcontractor: receive bid package and return a quote](docs/user-journeys/03a-subcontractor-quote-return.md) | P02 Subcontractor | 03 | Draft |
 | 04a | [Architect / CA: respond to an RFI](docs/user-journeys/04a-architect-rfi-response.md) | P01 Architect | 04 | Draft |
-| 06a | [Site Team: daily progress capture on mobile](docs/user-journeys/06a-site-team-daily-capture.md) | P08 Site Team | 06 | Draft |
-| 08a | [Subcontractor: upload renewed compliance document](docs/user-journeys/08a-subcontractor-compliance-upload.md) | P03 Subcontractor | 08 | Draft |
-| 09a | [Finance Director: AP exception review](docs/user-journeys/09a-fd-ap-exception-review.md) | P10 Finance Director | 09 | Draft |
-| 11a | [Finance Director: morning cashflow review](docs/user-journeys/11a-fd-cashflow-forecast.md) _(primary pain-point anchor)_ | P10 Finance Director | 11 | Draft |
-| 13a | [Finance Director: inbox triage exception review](docs/user-journeys/13a-fd-inbox-triage-exceptions.md) | P10 Finance Director | 13 | Draft |
-| 16a | [Coordinator: day-one starter onboarding](docs/user-journeys/16a-coordinator-starter-day-one.md) | P07 Office & Compliance Coordinator | 16 | Draft |
+| 06a | [Site Team: daily progress capture on mobile](docs/user-journeys/06a-site-team-daily-capture.md) | P05 Site Team | 06 | Draft |
+| 08a | [Subcontractor: upload renewed compliance document](docs/user-journeys/08a-subcontractor-compliance-upload.md) | P02 Subcontractor | 08 | Draft |
+| 09a | [Finance Director: AP exception review](docs/user-journeys/09a-fd-ap-exception-review.md) | P07 Finance Director | 09 | Draft |
+| 11a | [Finance Director: morning cashflow review](docs/user-journeys/11a-fd-cashflow-forecast.md) _(primary pain-point anchor)_ | P07 Finance Director | 11 | Draft |
+| 13a | [Finance Director: inbox triage exception review](docs/user-journeys/13a-fd-inbox-triage-exceptions.md) | P07 Finance Director | 13 | Draft |
+| 16a | [Coordinator: day-one starter onboarding](docs/user-journeys/16a-coordinator-starter-day-one.md) | P04 Office & Compliance Coordinator | 16 | Draft |
 
 ---
 
@@ -204,8 +200,8 @@ Workflows are the cross-actor process maps from the JBB audit (one per file unde
 | BoQ Line Item | Discrete unit of priced and tracked work. | _to be created_ | 02, 04, 05 |
 | Rate / Rate Library | Pricing source for BoQ; versioned, supplier-linked. | _to be created_ | 02 |
 | Cost Code | Architect's client-facing code, referenced throughout. | _to be created_ | 2026-05-18 |
-| Bid Package | Trade-scoped bid issued to subbies. | _to be created_ | 03 |
-| Quote | Subbie's returned price against a bid package. | _to be created_ | 03 |
+| Bid Package | Trade-scoped bid issued to subcontractors. | _to be created_ | 03 |
+| Quote | Subcontractor's returned price against a bid package. | _to be created_ | 03 |
 | Work Order | Contract artefact post-award; matching key for AP. | _to be created_ | 03, 07, 09 |
 | Variation (VO) | Updates BoQ; rolls up into valuation. | _to be created_ | 04 |
 | RFI | Request for Information raised on site. | _to be created_ | 04 |
@@ -215,7 +211,7 @@ Workflows are the cross-actor process maps from the JBB audit (one per file unde
 | Site Report | Daily capture from site app. | _to be created_ | 06 |
 | Defect | Snag register per project. | _to be created_ | 07 |
 
-### 7.2 Subbie & compliance entities
+### 7.2 Subcontractor & compliance entities
 
 | Entity | Description | Schema | First surfaced |
 |---|---|---|---|

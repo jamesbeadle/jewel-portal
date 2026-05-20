@@ -2,7 +2,7 @@
 
 > Persona slice through [Workflow 11 — Cashflow & Management Reporting](../workflows/11-cashflow-and-management-reporting.md). Anchored on the **primary platform pain point** identified in the [2026-05-18 domain discovery](../meetings/2026-05-18-domain-discovery.md).
 
-**Actors:** P10 Finance Director (primary). Consumers: P11 Directors / MD. Sources: P06 Project & Commercial Lead (forward commitments), P08 Site Team (timesheets via 06 → 12).
+**Actors:** P07 Finance Director (primary). Consumers: P08 Directors / MD. Sources: P03 Project & Commercial Lead (forward commitments), P05 Site Team (timesheets via 06 → 12).
 **Goal:** Walk in, see an accurate live cashflow forecast across BB/PS/PFP without rebuilding it in Excel, identify the items that need intervention, and act on them before the morning is over.
 **Frequency:** Daily morning review; weekly deep dive.
 **Success metric:** FD spends ≥80% of cashflow time on judgement/intervention, ≤20% on data assembly. Forecast accuracy at +1 week and +4 weeks within agreed tolerance.
@@ -35,7 +35,7 @@ FD opens JPMS at the start of the day (or any director opens the cashflow dashbo
 - KPI strip: opening cash, projected min cash in horizon, days-to-min, total exception count.
 
 ### 2. Drill into exceptions
-- Exception queue surfaces: late AR (workflow 10), AP invoices awaiting coding (workflow 09), subbie invoice errors (workflow 09), unresolved cross-entity charges (workflow 11), payroll variance alerts (workflow 12).
+- Exception queue surfaces: late AR (workflow 10), AP invoices awaiting coding (workflow 09), subcontractor invoice errors (workflow 09), unresolved cross-entity charges (workflow 11), payroll variance alerts (workflow 12).
 - Each exception is a one-click link to the underlying record.
 
 ### 3. Inspect a forward commitment
@@ -72,10 +72,10 @@ FD opens JPMS at the start of the day (or any director opens the cashflow dashbo
 
 | Step | Role | Can do |
 |---|---|---|
-| 1–4 | P10 Finance Director | Read all; drill |
-| 5 | P10 Finance Director | Approve payment runs, release AR, route inbox |
-| 6 | P11 Directors / MD | Read scoped Director view |
-| All | P12 Outsourced IT | — |
+| 1–4 | P07 Finance Director | Read all; drill |
+| 5 | P07 Finance Director | Approve payment runs, release AR, route inbox |
+| 6 | P08 Directors / MD | Read scoped Director view |
+| All | P09 Outsourced IT | — |
 
 See [`/docs/requirements/permission-matrix.md`](../requirements/permission-matrix.md).
 

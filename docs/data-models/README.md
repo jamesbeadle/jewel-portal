@@ -34,7 +34,7 @@ Once journeys are signed off, these schemas are exported as the basis of:
 
 ## Entity Relationships
 
-First-cut ERD is in [`entity-relationship.md`](entity-relationship.md), sourced from the [JBB workflow audit](../meetings/2026-05-20-jbb-workflow-audit.md) and the [2026-05-18 domain discovery](../meetings/2026-05-18-domain-discovery.md). The diagram is split into four sub-diagrams (project lifecycle, subbie & compliance, finance, people & ops) for legibility. Schemas are written workflow-by-workflow as each workflow moves Draft → In Review.
+First-cut ERD is in [`entity-relationship.md`](entity-relationship.md), sourced from the [JBB workflow audit](../meetings/2026-05-20-jbb-workflow-audit.md) and the [2026-05-18 domain discovery](../meetings/2026-05-18-domain-discovery.md). The diagram is split into four sub-diagrams (project lifecycle, subcontractor & compliance, finance, people & ops) for legibility. Schemas are written workflow-by-workflow as each workflow moves Draft → In Review.
 
 ---
 

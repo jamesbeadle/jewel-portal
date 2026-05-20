@@ -1,29 +1,22 @@
 # Personas
 
-The initial **Project Program Scheduler** (production brand: **JPMS**) is scoped against twelve user roles. The first five (P01–P05) were drafted from the 2026-05-18 domain discovery and frame the customer-and-craft side of the platform. P06–P12 were added on 2026-05-20 from the JBB workflow audit and represent the operational roles that own the twenty-one workflows (see [`/docs/workflows/`](../workflows/)).
+Nine canonical user roles for the **Project Program Scheduler** (production brand: **JPMS**). Each card stands alone — there is one source of truth per role.
 
-Each card is **Draft** until the named person in that role has reviewed and agreed it matches their day-to-day.
-
-The card template lives in [`_templates/personas-template.md`](_templates/personas-template.md). The Role × Workflow RBAC matrix lives in [`permission-matrix.md`](permission-matrix.md).
+Each card is **Draft** until the named person in that role has reviewed it and agreed it matches their day-to-day. The card template lives in [`_templates/personas-template.md`](_templates/personas-template.md). The Role × Workflow RBAC matrix lives in [`permission-matrix.md`](permission-matrix.md).
 
 ### Persona register
 
 | # | Persona | Type | Sourced from |
 |---|---|---|---|
 | P01 | Architect | External client | [2026-05-18](../meetings/2026-05-18-domain-discovery.md) |
-| P02 | Quantity Surveyor (QS) | Internal / external specialist | [2026-05-18](../meetings/2026-05-18-domain-discovery.md) |
-| P03 | Subcontractor | External delivery partner | [2026-05-18](../meetings/2026-05-18-domain-discovery.md) |
-| P04 | Accountant _(now folds into P10 Finance Director)_ | Internal | [2026-05-18](../meetings/2026-05-18-domain-discovery.md) |
-| P05 | Managing Director (MD) _(now part of P11 Directors)_ | Internal executive | [2026-05-18](../meetings/2026-05-18-domain-discovery.md) |
-| P06 | Project & Commercial Lead | Internal | [2026-05-20](../meetings/2026-05-20-jbb-workflow-audit.md) |
-| P07 | Office & Compliance Coordinator | Internal | [2026-05-20](../meetings/2026-05-20-jbb-workflow-audit.md) |
-| P08 | Site Team | Internal field | [2026-05-20](../meetings/2026-05-20-jbb-workflow-audit.md) |
-| P09 | Brand & Content | Internal | [2026-05-20](../meetings/2026-05-20-jbb-workflow-audit.md) |
-| P10 | Finance Director (FD) | Internal executive | [2026-05-20](../meetings/2026-05-20-jbb-workflow-audit.md) |
-| P11 | Directors / MD | Internal executive | [2026-05-20](../meetings/2026-05-20-jbb-workflow-audit.md) |
-| P12 | Outsourced IT Helpdesk | External service partner | [2026-05-20](../meetings/2026-05-20-jbb-workflow-audit.md) |
-
-> **Reconciliation note.** P04 Accountant and P05 MD were drafted before the workflow audit. The audit clarified that on the JBB operational structure these roles are better named **Finance Director** (P10) and **Directors / MD** (P11) respectively. The original P04/P05 cards are kept as historical anchors and inherit their goals/pain-points into the new cards; future updates land on P10/P11 first.
+| P02 | Subcontractor | External delivery partner | [2026-05-18](../meetings/2026-05-18-domain-discovery.md) |
+| P03 | Project & Commercial Lead | Internal | [2026-05-20](../meetings/2026-05-20-jbb-workflow-audit.md) |
+| P04 | Office & Compliance Coordinator | Internal | [2026-05-20](../meetings/2026-05-20-jbb-workflow-audit.md) |
+| P05 | Site Team | Internal field | [2026-05-20](../meetings/2026-05-20-jbb-workflow-audit.md) |
+| P06 | Brand & Content | Internal | [2026-05-20](../meetings/2026-05-20-jbb-workflow-audit.md) |
+| P07 | Finance Director (FD) | Internal executive | [2026-05-20](../meetings/2026-05-20-jbb-workflow-audit.md) |
+| P08 | Directors / MD | Internal executive | [2026-05-20](../meetings/2026-05-20-jbb-workflow-audit.md) |
+| P09 | Outsourced IT Helpdesk | External service partner | [2026-05-20](../meetings/2026-05-20-jbb-workflow-audit.md) |
 
 ---
 
@@ -46,57 +39,25 @@ The card template lives in [`_templates/personas-template.md`](_templates/person
 - No shared system; documents passed via email or portal handoffs.
 - Visibility into on-site progress is opaque.
 
-### Key journeys they participate in
-- _To be captured in discovery._ Candidates: submitting a tender, reviewing / approving a VO, signing off completion against cost codes.
+### Owns these workflows
+- Approver on 04 (RFI replies and variation sign-off). Source on 01 (issues drawings). Recipient on 05 (valuations) and 06 (live dashboard).
 
-### Permissions needed
-- _High level — feeds the permission matrix._ Likely: read on their own tenders and projects; write on tender submission; approve / reject VOs on their work; read on cash-call documentation for their projects.
+### Permissions needed (coarse)
+- Read on their own tenders and projects. Write on tender submission. Approve / reject VOs on their work. Read on cash-call documentation for their projects.
 
 ### Devices & environment
 - Desktop primarily. May use tablet on site visits.
 
 ### Notes
 - The architect's client-facing **cost codes** must be referenced consistently through every screen and report that touches that architect's tender. This is a cross-cutting requirement, not specific to one journey.
+- Where Jewel works with an external Quantity Surveyor (consultant), they are treated as an invited contact rather than a separate persona — internal QS work is owned by P03 Project & Commercial Lead.
 
 ---
 
-## P02 — Quantity Surveyor (QS)
-
-**Role:** Pricing and measurement specialist
-**Reports to:** Managing Director _(to confirm)_
-**Tooling today:** Spreadsheets, measurement tools, drawing review software
-**Frequency on platform:** Daily during tender phase; periodic during projects when VOs are raised
-**Status:** Draft
-**Reviewed by:** —
-**Sourced from:** [`/docs/meetings/2026-05-18-domain-discovery.md`](../meetings/2026-05-18-domain-discovery.md)
-
-### Goals
-- Produce accurate line-by-line pricing for tenders.
-- Capture site measurements quickly and accurately.
-- Keep line items in sync as scope changes via VOs.
-
-### Pain points (current state)
-- Line items live in spreadsheets disconnected from completion tracking and billing.
-- Manual reconciliation between tender pricing and actual work delivered.
-
-### Key journeys they participate in
-- _To be captured in discovery._ Candidates: pricing a new tender from drawings, a measurement site visit, updating line items in response to a VO.
-
-### Permissions needed
-- Create / edit tender line items. Initiate VOs. Read access across the project portfolio.
-
-### Devices & environment
-- Laptop in office, tablet on site.
-
-### Notes
-- Whether the QS is internal Jewel staff or an external consultant needs confirming. The platform may need to support both.
-
----
-
-## P03 — Subcontractor
+## P02 — Subcontractor
 
 **Role:** Field worker delivering work against tender line items
-**Reports to:** _to confirm_ — likely site manager or QS
+**Reports to:** Project & Commercial Lead (commercially); Site Team (operationally on site)
 **Tooling today:** Phone, paper, ad-hoc messaging
 **Frequency on platform:** Daily — on site
 **Status:** Draft
@@ -106,94 +67,32 @@ The card template lives in [`_templates/personas-template.md`](_templates/person
 ### Goals
 - Quickly log progress and time on site.
 - Get RFIs answered fast so work isn't blocked.
+- Bid for new work without learning a new tool.
 - Get paid on time and accurately.
 
 ### Pain points (current state)
 - Paper timesheets get lost or delayed.
 - RFI handling is slow and untracked.
-- No personal view of their progress against the tender.
+- No personal view of progress against the tender.
+- Compliance documentation scattered across systems; chased manually before expiry.
 
-### Key journeys they participate in
-- _To be captured in discovery._ Candidates: updating line-item completion, submitting a timesheet, raising an RFI, actioning a VO once approved.
+### Owns these workflows
+- Source on 03 (returns quote), 04 (raises RFIs from site), 06 (attendance + photos), 08 (uploads compliance documents). Contributor on 07 (defect resolution evidence).
 
-### Permissions needed
-- Update completion on line items assigned to them. Submit timesheets. Raise RFIs. Read drawings and specs for their assigned work.
+### Permissions needed (coarse)
+- Update completion on line items assigned to them. Submit timesheets. Raise RFIs. Read drawings and specs for their assigned work. Self-service upload of own compliance documents.
 
 ### Devices & environment
 - Mobile phone primarily. Touch-friendly UI is essential, including in poor connectivity (offline-tolerant fields where possible).
 
 ### Notes
-- Subcontractors are external to Jewel Enterprises. Onboarding needs to be lightweight — probably an invite link rather than a full account-creation flow.
+- Subcontractors are external to Jewel Enterprises. Onboarding needs to be lightweight — typically an invite link rather than a full account-creation flow.
 
 ---
 
-## P04 — Accountant
+## P03 — Project & Commercial Lead
 
-**Role:** On-site accountant — owns financial visibility for the business
-**Reports to:** Managing Director
-**Tooling today:** Excel; an accounting package _(to confirm which)_
-**Frequency on platform:** Daily / weekly
-**Status:** Draft
-**Reviewed by:** —
-**Sourced from:** [`/docs/meetings/2026-05-18-domain-discovery.md`](../meetings/2026-05-18-domain-discovery.md)
-
-### Goals
-- Produce an accurate cashflow forecast despite fast-moving project data.
-- Ring-fence incoming cash to the correct project.
-- Time cash calls to actual % completion so projects stay funded.
-
-### Pain points (current state) — **the platform's primary driver**
-- Forecast accuracy depends on knowing real completion %, which is currently unreliable because line-item completion isn't tracked consistently.
-- Incoming cash sometimes isn't clearly allocated to a job → projects get mis-funded.
-- Cash calls misaligned with completion → projects get under-funded and interrupted.
-
-### Key journeys they participate in
-- _To be captured in discovery._ Candidates: producing a cashflow forecast, issuing a cash call against a project, allocating incoming cash to projects.
-
-### Permissions needed
-- Read across all projects, line items, completion %, VO status. Create cash calls. Allocate received funds against projects.
-
-### Devices & environment
-- Desktop primary. Tablet for ad-hoc.
-
-### Notes
-- The Accountant persona is the **litmus test for every scoping decision**. If a proposed feature doesn't help the Accountant produce an accurate forecast, ask whether it belongs in the initial scope.
-
----
-
-## P05 — Managing Director (MD)
-
-**Role:** Business owner — executive decisions across all projects
-**Reports to:** —
-**Tooling today:** Email, Teams, reports from the Accountant
-**Frequency on platform:** Daily
-**Status:** Draft
-**Reviewed by:** —
-**Sourced from:** [`/docs/meetings/2026-05-18-domain-discovery.md`](../meetings/2026-05-18-domain-discovery.md)
-
-### Goals
-- At-a-glance view of business health.
-- Confidence in the cashflow forecast.
-- Identify at-risk projects early.
-
-### Pain points (current state)
-- Decisions rely on lagging or inaccurate cashflow data.
-- Pipeline and active-project visibility is fragmented across emails and spreadsheets.
-
-### Key journeys they participate in
-- _To be captured in discovery._ Candidates: reviewing the cashflow forecast, sign-off on major commercial decisions, opening / approving a new project.
-
-### Permissions needed
-- Read all. Approve high-value commercial decisions. Admin access to the platform (users, roles, integrations).
-
-### Devices & environment
-- Mobile + desktop.
-
----
-
-## P06 — Project & Commercial Lead
-
-**Role:** Internal project lead combining PM and commercial responsibilities — owns the project from BoQ through close-out
+**Role:** Internal project lead combining PM and commercial responsibilities — owns the project from BoQ through close-out, including the internal QS function
 **Reports to:** Directors / MD
 **Tooling today:** Bluebeam, MS Project, Excel BoQ, Buildertrend, Planyard, SharePoint, Outlook
 **Frequency on platform:** Daily
@@ -204,16 +103,18 @@ The card template lives in [`_templates/personas-template.md`](_templates/person
 ### Goals
 - Run the project programme and valuation cycle cleanly without manual reconciliation between MS Project and Excel.
 - Make award decisions on bids and variations with side-by-side data, not assembled spreadsheets.
+- Price tenders accurately into line items and keep them in sync as scope changes via VOs.
 - Stop being the human bridge between drawings, BoQ, RFIs, and the programme.
 
 ### Pain points (current state)
+- Line items live in spreadsheets disconnected from completion tracking and billing.
 - Programme and valuation reconciliation is manual and slow.
 - Three separate Excel logs for variations, RFIs and delay notices that don't talk to each other.
-- Bid packages are assembled by hand from SharePoint/Outlook/Excel.
+- Bid packages are assembled by hand from SharePoint / Outlook / Excel.
 - Drawing supersedure relies on memory.
 
 ### Owns these workflows
-- 02 (Tender & BoQ), 03 (Procurement), 04 (Variations/RFIs/Delays), 05 (Programme & Valuations), 07 (Close-Out & Defects). Reviewer on 01 and 06.
+- 02 (Tender & BoQ), 03 (Procurement), 04 (Variations / RFIs / Delays), 05 (Programme & Valuations), 07 (Close-Out & Defects). Reviewer on 01 (drawing supersede override) and 06 (site report sign-off).
 
 ### Permissions needed (coarse)
 - Owner on project records and BoQ. Approver on bids, variations, valuations, defect sign-off. Read across all projects.
@@ -221,12 +122,9 @@ The card template lives in [`_templates/personas-template.md`](_templates/person
 ### Devices & environment
 - Laptop primarily; tablet on site.
 
-### Notes
-- This role absorbs much of what the original P02 QS persona was assumed to do internally. Where Jewel uses an external QS, P02 remains the external-consultant view.
-
 ---
 
-## P07 — Office & Compliance Coordinator
+## P04 — Office & Compliance Coordinator
 
 **Role:** Internal office and compliance hub — keeps the operational machinery running
 **Reports to:** Directors / FD
@@ -241,23 +139,23 @@ The card template lives in [`_templates/personas-template.md`](_templates/person
 - Stop being the human router for documents and client enquiries.
 
 ### Pain points (current state)
-- Subbie compliance scattered across Monday, SharePoint and Excel.
-- Insurance/accreditation renewals tracked in Outlook calendar and chased manually.
-- Material orders raised via WhatsApp/email with no project linkage.
+- Subcontractor compliance scattered across Monday, SharePoint and Excel.
+- Insurance / accreditation renewals tracked in Outlook calendar and chased manually.
+- Material orders raised via WhatsApp / email with no project linkage.
 - Document filing in SharePoint is a never-ending tidy-up task.
 
 ### Owns these workflows
-- 08 (Subbie Compliance), 14 (Client & Reactive Comms), 15 (Materials & Deliveries), 18 (Compliance/Insurance/Accreditation), 19 (Fleet), 21 (Document Management). Co-owner on 16 (HR/Onboarding).
+- 08 (Subcontractor Compliance), 14 (Client & Reactive Comms), 15 (Materials & Deliveries), 18 (Compliance / Insurance / Accreditation), 19 (Fleet), 21 (Document Management). Co-owner on 16 (HR / Onboarding).
 
 ### Permissions needed (coarse)
-- Owner on supplier & subbie directory, compliance register, fleet register, procurement requests. Approver on routine renewals.
+- Owner on supplier & subcontractor directory, compliance register, fleet register, procurement requests. Approver on routine renewals.
 
 ### Devices & environment
 - Desktop primarily.
 
 ---
 
-## P08 — Site Team
+## P05 — Site Team
 
 **Role:** Internal site managers, foremen, and operatives — the capture layer for site reality
 **Reports to:** Project & Commercial Lead
@@ -274,11 +172,11 @@ The card template lives in [`_templates/personas-template.md`](_templates/person
 
 ### Pain points (current state)
 - Site information lives across WhatsApp, Photos and inboxes.
-- Attendance tracking is a separate Excel/Dashpivot/calendar.
+- Attendance tracking is a separate Excel / Dashpivot / calendar.
 - No personal view of progress against the BoQ.
 
 ### Owns these workflows
-- 06 (Site Reporting & Progress). Capture/source role on 12 (Payroll), 15 (Materials & Deliveries), 19 (Fleet — driver of record).
+- 06 (Site Reporting & Progress). Capture / source role on 12 (Payroll — timesheets), 15 (Materials & Deliveries — site requests and goods-in), 19 (Fleet — driver of record).
 
 ### Permissions needed (coarse)
 - Write on site reports, photos, attendance, snags. Read drawings and BoQ sections for their assigned project.
@@ -288,11 +186,11 @@ The card template lives in [`_templates/personas-template.md`](_templates/person
 
 ---
 
-## P09 — Brand & Content
+## P06 — Brand & Content
 
 **Role:** Marketing and brand custodian across Jewel entities
 **Reports to:** Directors
-**Tooling today:** Canva, Meta Business, LinkedIn, SharePoint/OneDrive
+**Tooling today:** Canva, Meta Business, LinkedIn, SharePoint / OneDrive
 **Frequency on platform:** Weekly
 **Status:** Draft
 **Reviewed by:** —
@@ -300,7 +198,7 @@ The card template lives in [`_templates/personas-template.md`](_templates/person
 
 ### Goals
 - Run the content calendar from current project data, not screenshot hunts.
-- Get director sign-off recorded against each post before publish.
+- Get Director sign-off recorded against each post before publish.
 
 ### Pain points (current state)
 - Brand assets duplicated across folders.
@@ -320,9 +218,9 @@ The card template lives in [`_templates/personas-template.md`](_templates/person
 
 ---
 
-## P10 — Finance Director (FD)
+## P07 — Finance Director (FD)
 
-**Role:** Owner of finance across BB/PS/PFP — replaces and broadens P04 Accountant
+**Role:** Internal owner of finance across BB / PS / PFP
 **Reports to:** Directors / MD
 **Tooling today:** Dext, Xero, Brightpay, Chaser HQ, online banking, Outlook, Excel
 **Frequency on platform:** Daily — heavy
@@ -331,34 +229,36 @@ The card template lives in [`_templates/personas-template.md`](_templates/person
 **Sourced from:** [`/docs/meetings/2026-05-20-jbb-workflow-audit.md`](../meetings/2026-05-20-jbb-workflow-audit.md)
 
 ### Goals — **the platform's primary driver**
+- Produce an accurate cashflow forecast across entities without rebuilding it weekly in Excel.
 - Spend time on judgement and intervention, not data assembly.
-- Hold an accurate cashflow forecast across entities without rebuilding it weekly in Excel.
-- Catch subbie invoice errors before payment, not after.
+- Catch subcontractor invoice errors before payment, not after.
+- Ring-fence incoming cash to the correct project; time cash calls to actual % completion.
 - Get out of the IT-helpdesk role.
 
 ### Pain points (current state)
-- AP coding and matching consumes ~80 h/month — the single largest workflow.
+- Forecast accuracy depends on knowing real completion %, which is currently unreliable because line-item completion isn't tracked consistently.
+- AP coding and matching consumes ~80 h/month — the single largest workflow in the audit.
 - Accounts inbox triage consumes ~60 h/month.
 - Cashflow forecast rebuilt weekly in Excel; cross-entity charges manual.
 - Currently doubling as IT support (~50 h/month) at the cost of finance focus.
 
 ### Owns these workflows
-- 09 (AP), 10 (AR), 11 (Cashflow & Management Reporting), 12 (Payroll), 13 (Accounts Inbox Triage). Approver on 16 (IT access gate). Current owner — target outsourced — on 17 (IT support).
+- 09 (Accounts Payable), 10 (Accounts Receivable), 11 (Cashflow & Management Reporting), 12 (Payroll), 13 (Accounts Inbox Triage). Approver on 16 (IT access gate). Current owner — target outsourced — on 17 (IT support).
 
 ### Permissions needed (coarse)
-- Owner on AP, AR, payroll, cashflow dashboard. Approver on payment runs above threshold. Read across all projects.
+- Owner on AP, AR, payroll, cashflow dashboard. Approver on payment runs up to threshold. Allocate received funds against projects. Read across all projects.
 
 ### Devices & environment
 - Desktop primary. Mobile for approvals.
 
 ### Notes
-- This is the **litmus test** for every scoping decision: if a proposed feature doesn't make the FD's cashflow forecast more accurate or remove inbox/AP load, ask whether it belongs in phase one.
+- This is the **litmus test** for every scoping decision: if a proposed feature doesn't make the FD's cashflow forecast more accurate or remove inbox / AP load, ask whether it belongs in phase one.
 
 ---
 
-## P11 — Directors / MD
+## P08 — Directors / MD
 
-**Role:** Business owners — executive decisions across BB/PS/PFP. Replaces and broadens P05 MD.
+**Role:** Business owners — executive decisions across BB / PS / PFP
 **Reports to:** —
 **Tooling today:** Email, Teams, reports from FD
 **Frequency on platform:** Daily
@@ -367,16 +267,18 @@ The card template lives in [`_templates/personas-template.md`](_templates/person
 **Sourced from:** [`/docs/meetings/2026-05-20-jbb-workflow-audit.md`](../meetings/2026-05-20-jbb-workflow-audit.md)
 
 ### Goals
-- See cashflow position independently, in real time, without asking FD.
+- See cashflow position independently, in real time, without asking the FD.
 - Sign-off on high-value commercial decisions in-system with audit trail.
 - See at-a-glance status across the project portfolio.
+- Identify at-risk projects early.
 
 ### Pain points (current state)
-- Cashflow visibility lives in FD's head until Excel is updated.
+- Cashflow visibility lives in the FD's head until Excel is updated.
 - Sign-offs scattered across email; no single audit trail.
+- Pipeline and active-project visibility is fragmented across emails and spreadsheets.
 
 ### Owns these workflows
-- Approver on 09, 10, 11, 16 (HR/IT), 17 (IT governance), 20 (Brand sign-off). Read on all.
+- Approver on 03 (high-value award), 04 (high-value variations), 09 (above-threshold payments), 10 (high-value AR), 11 (strategic cashflow decisions), 16 (confirm starter / leaver), 17 (IT governance), 18 (annual compliance review), 20 (brand sign-off). Read on all.
 
 ### Permissions needed (coarse)
 - Read all. Approve high-value commercial decisions. Admin on users, roles, integrations.
@@ -386,7 +288,7 @@ The card template lives in [`_templates/personas-template.md`](_templates/person
 
 ---
 
-## P12 — Outsourced IT Helpdesk
+## P09 — Outsourced IT Helpdesk
 
 **Role:** External tier-1 IT support partner — target owner of workflow 17
 **Reports to:** Finance Director (governance only)
@@ -397,7 +299,7 @@ The card template lives in [`_templates/personas-template.md`](_templates/person
 **Sourced from:** [`/docs/meetings/2026-05-20-jbb-workflow-audit.md`](../meetings/2026-05-20-jbb-workflow-audit.md)
 
 ### Goals
-- Resolve tier-1 IT issues from JBB staff without involving the FD.
+- Resolve tier-1 IT issues from staff without involving the FD.
 - Execute provisioning from JPMS workflow 16 triggers.
 
 ### Pain points (current state)
