@@ -64,6 +64,26 @@ The cashflow forecast in JPMS is built from **project data inside JPMS only**. I
 
 ---
 
+## User stories
+
+| ID | Role | Story | Status |
+|---|---|---|---|
+| US-10-01 | P06 Finance Director | As a Finance Director, I want a live 13-week rolling cashflow dashboard built from JPMS project data alone, so that I'm no longer rebuilding it in Excel every week. | Drafted |
+| US-10-02 | P06 Finance Director | As a Finance Director, I want to filter the cashflow view by entity (BB / PS / PFP / Consolidated), so that the view matches the question I'm asking. | Drafted |
+| US-10-03 | P06 Finance Director | As a Finance Director, I want every commitment and expected income line to carry a cross-entity flag at source, so that cross-entity charges are accurate without month-end correction. | Drafted |
+| US-10-04 | P06 Finance Director | As a Finance Director, I want an items-needing-attention queue (sliding completion %, shifting WO payment dates, late valuations, pending retention release), so that my attention goes to the exceptions instead of the whole portfolio. | Drafted |
+| US-10-05 | P06 Finance Director | As a Finance Director, I want to drill from a forecast number into the underlying project record in one click, so that I can investigate the root of a movement without leaving the dashboard. | Drafted |
+| US-10-06 | P06 Finance Director | As a Finance Director, I want a stress-test slider — "what if completion % slips by N%?" or "what if the next valuation is approved a week late?" — that re-runs the projection without changing source data, so that I can model risk in the moment. | Drafted |
+| US-10-07 | JPMS (system) | As JPMS, I want a snapshot of the cashflow forecast retained per Claim Period, so that historical comparison is possible later. | Drafted |
+| US-10-08 | JPMS (system) | As JPMS, I want completion-% prediction to blend site-reported % (workflow 06) with timesheet-vs-budget burn rate (workflow 09), so that the forecast reflects both reported and observed progress. | Drafted |
+| US-10-09 | P07 Directors / MD | As a Director, I want a scoped dashboard with the same totals as the FD but no FD-level intervention controls, so that I can read the cash position any time without asking the FD. | Drafted |
+| US-10-10 | P01 Architect | As an architect / client (where the contract provides), I want a project-scoped view that mirrors the in-team view of valuation, completion % and expected close, so that I have the same picture they do. | Drafted |
+| US-10-11 | P03 Project & Commercial Lead | As a Project & Commercial Lead, I want to see the cashflow slice for my own projects, so that I know where I stand commercially without asking the FD. | Drafted |
+
+Covers spreadsheet row 32 (track in-house costs and cross-charge costs between entities / projects).
+
+---
+
 ## Acceptance criteria — "done looks like"
 
 - The cashflow forecast is a live dashboard built from JPMS data, not an Excel rebuild.

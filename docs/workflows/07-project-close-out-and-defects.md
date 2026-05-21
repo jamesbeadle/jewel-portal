@@ -48,6 +48,23 @@
 
 ---
 
+## User stories
+
+| ID | Role | Story | Status |
+|---|---|---|---|
+| US-07-01 | P03 Project & Commercial Lead | As a Project & Commercial Lead, I want to raise a defect register on the project at Practical Completion with photos and BoQ references on each item, so that the snag list isn't trapped in an Excel sheet. | Drafted |
+| US-07-02 | P05 Site Team | As a site manager, I want to add a defect from the site app during the inspection walk, so that it's captured the moment I see it. | Drafted |
+| US-07-03 | P03 Project & Commercial Lead | As a Project & Commercial Lead, I want JPMS to auto-assign each defect to the responsible subcontractor based on the trade / BoQ section with a deadline, so that I'm not emailing subcontractors one by one. | Drafted |
+| US-07-04 | P02 Subcontractor | As a subcontractor, I want to update the status of a defect assigned to me through the portal with photo evidence of the fix, so that I can clear my list without phone calls. | Drafted |
+| US-07-05 | P03 Project & Commercial Lead | As a Project & Commercial Lead, I want to sign off each defect (or reject the subcontractor's evidence with a comment), so that resolution is auditable and not "we said it was done". | Drafted |
+| US-07-06 | P03 Project & Commercial Lead | As a Project & Commercial Lead, I want JPMS to assemble the close-out pack (warranties, O&Ms, defect record, final sign-offs) when the last defect is signed off, so that pack assembly isn't a separate manual job. | Drafted |
+| US-07-07 | P06 Finance Director | As a Finance Director, I want the retention release trigger to fire automatically when close-out is signed off, so that retention isn't held longer than necessary because nobody remembered to ask. | Drafted |
+| US-07-08 | P01 Architect | As an architect / client, I want to receive the close-out pack through the portal with all warranties and O&Ms in one place, so that I have everything I need to operate the building. | Drafted |
+
+Covers spreadsheet row 19 (Create Defect Schedules for completed product).
+
+---
+
 ## Acceptance criteria — "done looks like"
 
 - Defects are tracked to closure with photo evidence.

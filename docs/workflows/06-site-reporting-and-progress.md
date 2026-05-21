@@ -49,6 +49,27 @@
 
 ---
 
+## User stories
+
+| ID | Role | Story | Status |
+|---|---|---|---|
+| US-06-01 | P05 Site Team | As a site manager, I want to open the JPMS site app on my phone, see today's project list, and tap into the active one, so that I can start capturing within two taps of opening the app. | Drafted |
+| US-06-02 | P02 Subcontractor | As a subcontractor on site, I want to check in via QR scan or geofence on arrival, so that attendance is recorded without paper or chasing. | Drafted |
+| US-06-03 | P05 Site Team | As a site manager, I want a manual attendance override with attestation, so that I can record someone who's clearly on site but forgot to check in. | Drafted |
+| US-06-04 | P05 Site Team | As a site manager, I want to update progress per BoQ section by sliding a % indicator, with previous % and a suggested today % visible, so that progress capture is a two-tap action rather than a form to fill in. | Drafted |
+| US-06-05 | P05 Site Team | As a site manager, I want photos taken in-app to be auto-tagged with project, BoQ section, time and GPS, so that nothing important ends up untagged in someone's camera roll. | Drafted |
+| US-06-06 | P05 Site Team | As a site manager, I want to import photos from my phone's camera roll as a fallback, so that pictures taken outside the app aren't lost. | Drafted |
+| US-06-07 | P05 Site Team | As a site manager, I want to raise a snag with photo + voice note + auto-assigned trade in two taps, so that capture matches the speed at which problems appear on site. | Drafted |
+| US-06-08 | P05 Site Team | As a site manager, I want the app to work offline and sync on reconnect with an X-items-pending banner, so that poor signal doesn't lose entries. | Drafted |
+| US-06-09 | P03 Project & Commercial Lead | As a Project & Commercial Lead, I want JPMS to assemble the weekly/monthly progress report automatically from captured data with a narrative template ready to edit, so that report assembly is review, not creation. | Drafted |
+| US-06-10 | P03 Project & Commercial Lead | As a Project & Commercial Lead, I want to add narrative commentary and approve the report before it's issued, so that the client gets the right framing. | Drafted |
+| US-06-11 | P01 Architect | As an architect / CA, I want a live, scoped project dashboard so I can see progress and photos any time, so that I'm not chasing the project team for updates. | Drafted |
+| US-06-12 | P03 Project & Commercial Lead | As a Project & Commercial Lead, I want to re-tag a mis-tagged photo without losing it, so that mistakes from site are easy to fix from the office. | Drafted |
+
+Covers spreadsheet rows 11 (contractor report — photos to PDF, email to CAs), 46 (organise & monitor subcontractor attendance) and 47-partial (chase progress).
+
+---
+
 ## Acceptance criteria — "done looks like"
 
 - Weekly site reports take minutes of review, not hours of assembly.

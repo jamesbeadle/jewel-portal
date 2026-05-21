@@ -53,6 +53,25 @@ See [`/docs/requirements/integrations.md`](../requirements/integrations.md) for 
 
 ---
 
+## User stories
+
+Status per story: **Drafted** · **In Review** · **Confirmed**
+
+| ID | Role | Story | Status |
+|---|---|---|---|
+| US-01-01 | P01 Architect | As an architect, I want to issue a new or revised drawing into JPMS through a single channel (monitored inbox or upload portal), so that I don't have to chase the project team to confirm receipt. | Drafted |
+| US-01-02 | JPMS (system) | As JPMS, I want to auto-extract revision and title from drawing filename or metadata on ingest, so that the project team doesn't manually rename and re-file. | Drafted |
+| US-01-03 | JPMS (system) | As JPMS, I want to supersede the previous drawing revision automatically and flag the old one as archive, so that no-one can accidentally read the wrong version. | Drafted |
+| US-01-04 | P03 Project & Commercial Lead | As a Project & Commercial Lead, I want JPMS to alert me only when it can't confidently determine revision or supersedure, so that my attention goes to the ambiguous cases instead of every drawing. | Drafted |
+| US-01-05 | P03 Project & Commercial Lead | As a Project & Commercial Lead, I want to override the auto-supersedure decision when needed, so that I stay in control of the drawing register. | Drafted |
+| US-01-06 | P05 Site Team | As a site manager, I want the current drawing revision available on my phone for every assigned project, so that I never work from a superseded drawing. | Drafted |
+| US-01-07 | P02 Subcontractor | As a subcontractor, I want to be notified when a drawing on my assigned work has been revised, so that I don't carry on against the old version. | Drafted |
+| US-01-08 | P03 Project & Commercial Lead | As a Project & Commercial Lead, I want to see who has viewed which drawing revision (audit trail), so that I can prove distribution if a dispute arises. | Drafted |
+
+Covers spreadsheet row 6 (James Clark — PDF drawings from emails, save, upload, print).
+
+---
+
 ## Acceptance criteria — "done looks like"
 
 - PM no longer manually saves, renames or distributes drawings.

@@ -48,11 +48,30 @@
 
 ---
 
+## User stories
+
+| ID | Role | Story | Status |
+|---|---|---|---|
+| US-08-01 | P04 Office & Compliance Coordinator | As an Office & Compliance Coordinator, I want one master record per subcontractor with all compliance documents attached, so that I'm not chasing the same data across Monday, SharePoint and Excel. | Drafted |
+| US-08-02 | P04 Office & Compliance Coordinator | As an Office & Compliance Coordinator, I want JPMS to send expiry reminders to the subcontractor 60 / 30 / 7 days before each document expires, so that I'm not the human reminder service. | Drafted |
+| US-08-03 | P02 Subcontractor | As a subcontractor, I want to log into a self-service portal and see exactly which of my documents are current, expiring soon, expired or missing, so that I know what to upload. | Drafted |
+| US-08-04 | P02 Subcontractor | As a subcontractor, I want to upload a renewed document with drag-and-drop and have JPMS OCR the expiry date and pre-fill the form, so that I'm not retyping data the system can read. | Drafted |
+| US-08-05 | P02 Subcontractor | As a subcontractor, I want to refresh my CIS status with one click that calls HMRC, so that I don't have to manage that step manually. | Drafted |
+| US-08-06 | P04 Office & Compliance Coordinator | As an Office & Compliance Coordinator, I want to be notified when a subcontractor uploads a document that needs my sign-off, so that I review only the items that need review. | Drafted |
+| US-08-07 | P04 Office & Compliance Coordinator | As an Office & Compliance Coordinator, I want to draft RAMS from a template auto-populated with project + subcontractor data, so that producing RAMS takes minutes rather than redrafting each time. | Drafted |
+| US-08-08 | P04 Office & Compliance Coordinator | As an Office & Compliance Coordinator, I want to send RAMS to the client for approval through JPMS, so that the approval is captured in-system rather than in an inbox. | Drafted |
+| US-08-09 | P03 Project & Commercial Lead | As a Project & Commercial Lead, I want JPMS to block the workflow 03 award path if the chosen subcontractor's compliance is expired or missing, so that we can't accidentally award work to a non-compliant subcontractor. | Drafted |
+| US-08-10 | P06 Finance Director | As a Finance Director, I want CIS status visible against every subcontractor so the accountancy team has the information they need at the point of payment downstream. | Drafted |
+
+Covers spreadsheet rows 36 (send RAMS to client), 37 (draft RAMS), 48 (monitor expiry dates), 49 (maintain subcontractor details).
+
+---
+
 ## Acceptance criteria — "done looks like"
 
 - No subcontractor works on a project with expired documents.
 - RAMS produced in minutes from existing data, not redrafted each time.
-- CIS status is current and visible at the point of payment.
+- CIS status is current and visible to the accountancy team at the point of payment downstream.
 
 ---
 

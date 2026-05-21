@@ -60,6 +60,27 @@ Workflow 07 handles the **defects** side of close-out (snag register, subcontrac
 
 ---
 
+## User stories
+
+| ID | Role | Story | Status |
+|---|---|---|---|
+| US-11-01 | P06 Finance Director | As a Finance Director, I want JPMS to open a settlement workspace on the project automatically when Practical Completion is declared, so that I don't have to assemble it from scratch. | Drafted |
+| US-11-02 | P06 Finance Director | As a Finance Director, I want an open-items dashboard combining unapproved timesheets (09), zero-budget allocations, open WO tail (03), outstanding valuation items (05) in one view, so that nothing in commercial close-out lives only in someone's email. | Drafted |
+| US-11-03 | P06 Finance Director | As a Finance Director, I want inline resolution actions per open item (approve, re-allocate, write off, amend), so that I can clear the list from one surface. | Drafted |
+| US-11-04 | P03 Project & Commercial Lead | As a Project & Commercial Lead, I want to sign off the commercial items at close (final valuation, variation tail, WO closure), so that I'm explicitly accountable for the commercial close. | Drafted |
+| US-11-05 | P06 Finance Director | As a Finance Director, I want JPMS to produce a draft zero-rated VAT analysis from contract metadata + the settled cost ledger, identifying which BoQ items / cost codes qualify for zero-rating, so that I'm reviewing rather than building the analysis. | Drafted |
+| US-11-06 | P06 Finance Director | As a Finance Director, I want to adjust the draft VAT analysis before it goes to the client, so that I can apply judgement on edge cases. | Drafted |
+| US-11-07 | P01 Architect | As an architect / client, I want to receive the zero-rated VAT analysis through the portal and confirm agreement (or comment) in-system, so that the agreement is captured cleanly and not in an email chain. | Drafted |
+| US-11-08 | P06 Finance Director | As a Finance Director, when the client disputes the VAT analysis, I want disputes routed back to me for revision, so that revision rounds are tracked rather than scattered across emails. | Drafted |
+| US-11-09 | P07 Directors / MD | As a Director, I want to sign off the final VAT outcome with the client, so that the agreed position has the right authority behind it. | Drafted |
+| US-11-10 | P06 Finance Director | As a Finance Director, when all open items are settled and VAT is agreed, I want JPMS to produce the final settlement record as an audit-grade summary, so that the closed project has a defensible single source of truth. | Drafted |
+| US-11-11 | JPMS (system) | As JPMS, I want the settlement record to publish a retention-release trigger for the accountancy team to action in Xero, so that retention release happens on settlement completion rather than as a separate ask. | Drafted |
+| US-11-12 | P06 Finance Director | As a Finance Director, I want closed projects archived to a read-only state with director-override on writes, so that the project record stays defensible after close. | Drafted |
+
+This workflow is new scope from 2026-05-20 — it has no direct spreadsheet row.
+
+---
+
 ## Acceptance criteria — "done looks like"
 
 - Every project that reaches PC has a single settlement workspace; nothing is settled in email or Excel.

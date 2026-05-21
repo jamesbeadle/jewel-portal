@@ -40,19 +40,21 @@ Role × workflow responsibility: [`permission-matrix.md`](docs/requirements/perm
 
 Eleven workflows, sequenced as the project lifecycle. Click through for full detail.
 
-| # | Workflow | Notes |
-|---|---|---|
-| 01 | [Drawing Receipt & Distribution](docs/workflows/01-drawing-receipt.md) | |
-| 02 | [Pre-Construction: Tender & BoQ](docs/workflows/02-preconstruction-tender-boq.md) | |
-| 03 | [Subcontractor Procurement (Bid → Award)](docs/workflows/03-subcontractor-procurement.md) | Journey: [subcontractor quote return](docs/user-journeys/03a-subcontractor-quote-return.md) |
-| 04 | [Variations, RFIs & Delays](docs/workflows/04-variations-rfis-delays.md) | Journey: [architect RFI response](docs/user-journeys/04a-architect-rfi-response.md) |
-| 05 | [Programme & Valuations](docs/workflows/05-programme-and-valuations.md) | **Produces the Programme Valuation Report** |
-| 06 | [Site Reporting & Progress](docs/workflows/06-site-reporting-and-progress.md) | Journey: [site team daily capture](docs/user-journeys/06a-site-team-daily-capture.md) |
-| 07 | [Project Close-Out & Defects](docs/workflows/07-project-close-out-and-defects.md) | |
-| 08 | [Subcontractor Compliance & Onboarding](docs/workflows/08-subcontractor-compliance-and-onboarding.md) | Journey: [subcontractor compliance upload](docs/user-journeys/08a-subcontractor-compliance-upload.md) |
-| 09 | [Timesheet Management (cost-code-aware)](docs/workflows/09-timesheet-management.md) | |
-| 10 | [Cashflow & Project Forecasting](docs/workflows/10-cashflow-and-project-forecasting.md) | **Produces the cashflow forecast.** Journey: [FD morning review](docs/user-journeys/10a-fd-cashflow-forecast.md) |
-| 11 | [Project Completion Settlement & VAT Analysis](docs/workflows/11-project-completion-settlement.md) | |
+| # | Workflow | User stories | Notes |
+|---|---|---|---|
+| 01 | [Drawing Receipt & Distribution](docs/workflows/01-drawing-receipt.md) | ✅ 8 drafted | |
+| 02 | [Pre-Construction: Tender & BoQ](docs/workflows/02-preconstruction-tender-boq.md) | ✅ 9 drafted | |
+| 03 | [Subcontractor Procurement (Bid → Award)](docs/workflows/03-subcontractor-procurement.md) | ✅ 12 drafted | Journey: [subcontractor quote return](docs/user-journeys/03a-subcontractor-quote-return.md) |
+| 04 | [Variations, RFIs & Delays](docs/workflows/04-variations-rfis-delays.md) | ✅ 12 drafted | Journey: [architect RFI response](docs/user-journeys/04a-architect-rfi-response.md) |
+| 05 | [Programme & Valuations](docs/workflows/05-programme-and-valuations.md) | ✅ 10 drafted | **Produces the Programme Valuation Report** |
+| 06 | [Site Reporting & Progress](docs/workflows/06-site-reporting-and-progress.md) | ✅ 12 drafted | Journey: [site team daily capture](docs/user-journeys/06a-site-team-daily-capture.md) |
+| 07 | [Project Close-Out & Defects](docs/workflows/07-project-close-out-and-defects.md) | ✅ 8 drafted | |
+| 08 | [Subcontractor Compliance & Onboarding](docs/workflows/08-subcontractor-compliance-and-onboarding.md) | ✅ 10 drafted | Journey: [subcontractor compliance upload](docs/user-journeys/08a-subcontractor-compliance-upload.md) |
+| 09 | [Timesheet Management (cost-code-aware)](docs/workflows/09-timesheet-management.md) | ✅ 11 drafted | |
+| 10 | [Cashflow & Project Forecasting](docs/workflows/10-cashflow-and-project-forecasting.md) | ✅ 11 drafted | **Produces the cashflow forecast.** Journey: [FD morning review](docs/user-journeys/10a-fd-cashflow-forecast.md) |
+| 11 | [Project Completion Settlement & VAT Analysis](docs/workflows/11-project-completion-settlement.md) | ✅ 12 drafted | |
+
+**Total: 115 user stories drafted across 11 workflows.** Each story is in the format *"as X user I want Y, so that Z"* with a status flag (Drafted → In Review → Confirmed), and an `US-NN-MM` ID so screens and code can reference back to the story they're delivering. The stories are what drives UI design from here on.
 
 Twelve workflows from the original operational audit were considered and ruled out of JPMS scope because they are accountancy, HR, IT admin, facilities or marketing tasks JPMS isn't designed to handle. The scope decision is in [`2026-05-21-scope-refinement.md`](docs/meetings/2026-05-21-scope-refinement.md); the task-level coverage in [`automation-task-coverage.md`](docs/requirements/automation-task-coverage.md).
 
@@ -89,11 +91,12 @@ Full entity model and relationships: [`docs/data-models/entity-relationship.md`]
 4. **Workflow definition** — each of the eleven JPMS workflows captured with purpose, current state, target flow, JPMS functionality required, integrations, and acceptance criteria.
 5. **Domain concepts and permissions** — entity model drafted; Role × Workflow permission matrix drafted; each role's involvement reconciled with the matrix.
 6. **Integrations map** — what feeds JPMS, what JPMS replaces, what consumes JPMS data downstream.
+7. **User stories** — every workflow now carries the user stories that drive UI design, in the format *"as X user I want Y, so that Z"*. **115 stories drafted across the 11 workflows** (counts per workflow are in section 3 above). Each story has an `US-NN-MM` ID and a status flag (Drafted → In Review → Confirmed) so progress is trackable from this list and from the workflow files. Cross-checked against the in-scope rows of the task analysis spreadsheet.
 
 ### Next
 
-1. **User stories.** Convert each workflow into the user stories that drive UI design — *"as a Project & Commercial Lead I want to see remaining cost-code budget inline when allocating a timesheet, so that I never accidentally overrun"*. User stories are the bridge between the workflows defined in this repo and the actual screens.
-2. **UI scoping.** Each user story produces the screens needed to deliver it. The component library scaffold under [`docs/ui-components/`](docs/ui-components/) gets populated as stories land.
+1. **Story walkthroughs.** Each role-owner walks the stories for the workflows they own and moves them from Drafted → In Review → Confirmed. Confirmed stories are the contract for what the screen has to deliver.
+2. **UI scoping.** Each Confirmed story produces the screens needed to deliver it. The component library scaffold under [`docs/ui-components/`](docs/ui-components/) gets populated as stories land.
 3. **Build.** The JPMS production application in [`/jpms`](jpms/) is built screen-by-screen against the user stories. OAuth sign-in and the approved-user gate are already in place; data layer and per-workflow screens follow.
 
 ---

@@ -54,6 +54,27 @@
 
 ---
 
+## User stories
+
+| ID | Role | Story | Status |
+|---|---|---|---|
+| US-04-01 | P03 Project & Commercial Lead | As a Project & Commercial Lead, I want a single "project change" entry point that classifies the event into Variation / RFI / NoD, so that I'm not maintaining three separate Excel logs per project. | Drafted |
+| US-04-02 | P03 Project & Commercial Lead | As a Project & Commercial Lead, I want to raise and price a Variation against a BoQ line using the rate library, so that the change is properly costed without rebuilding pricing from scratch. | Drafted |
+| US-04-03 | P03 Project & Commercial Lead | As a Project & Commercial Lead, I want to hand a Variation that needs a subcontractor price straight into the workflow 03 bid loop with the BoQ items pre-populated, so that the procurement chain happens in one click. | Drafted |
+| US-04-04 | P03 Project & Commercial Lead | As a Project & Commercial Lead, I want the resulting Work Order to remain linked to the originating Variation, so that I can trace the commercial impact end-to-end. | Drafted |
+| US-04-05 | P02 Subcontractor | As a subcontractor on site, I want to raise an RFI from my phone with a photo and the affected BoQ line attached, so that the question reaches the architect with full context. | Drafted |
+| US-04-06 | P01 Architect | As an architect, I want to open an RFI from a single secure link and reply in-flow with the relevant drawing context visible, so that my reply attaches to the project automatically. | Drafted |
+| US-04-07 | P01 Architect | As an architect, I want to flag my RFI reply as "implies a variation", so that the Project & Commercial Lead can draft a VO directly from my response. | Drafted |
+| US-04-08 | P03 Project & Commercial Lead | As a Project & Commercial Lead, I want JPMS to chase open RFIs automatically after N days, so that I'm not the person manually nudging architects. | Drafted |
+| US-04-09 | P03 Project & Commercial Lead | As a Project & Commercial Lead, I want to capture the programme impact of a delay event and have JPMS draft the formal Notice of Delay from project data, so that the letter goes out the same day and the impact is reflected on the programme. | Drafted |
+| US-04-10 | P07 Directors / MD | As a Director, I want to approve any variation above the agreed value threshold before it goes out, so that high-value changes don't slip through. | Drafted |
+| US-04-11 | P03 Project & Commercial Lead | As a Project & Commercial Lead, I want the Variation Orders list report — filterable by status, value, claim period, subcontractor — alongside the Programme Valuation Report, so that I have one canonical VO view per project. | Drafted |
+| US-04-12 | JPMS (system) | As JPMS, I want approved Variations to feed the programme and the next valuation automatically, so that there's no manual rekey between workflows 04, 05 and 10. | Drafted |
+
+Covers spreadsheet row 15 (Create VORs).
+
+---
+
 ## Acceptance criteria — "done looks like"
 
 - Variations, RFIs and NoDs all live in JPMS, not standalone Excel logs.

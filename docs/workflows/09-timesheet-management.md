@@ -65,6 +65,26 @@ JPMS captures timesheets for **cost-code allocation and completion-% prediction 
 
 ---
 
+## User stories
+
+| ID | Role | Story | Status |
+|---|---|---|---|
+| US-09-01 | P05 Site Team | As a site team member, I want to log a daily timesheet entry from my phone with project + date + hours, so that capture takes seconds and I don't get chased. | Drafted |
+| US-09-02 | P02 Subcontractor | As a subcontractor on day-rate, I want to submit my hours through the portal against the right project, so that the accountancy team can reconcile my invoice against approved hours downstream. | Drafted |
+| US-09-03 | P05 Site Team | As a site team member, I want to allocate each timesheet entry to a cost code with remaining budget visible inline, so that I know what I'm spending against what's left. | Drafted |
+| US-09-04 | JPMS (system) | As JPMS, I want to block an allocation against a cost code with 0 remaining budget and offer exactly two paths — raise a Work Order against that cost code, or re-allocate to a different cost code — so that the budget rule is enforced at source. | Drafted |
+| US-09-05 | P05 Site Team | As a site team member, when budget hits zero I want a one-click "raise WO" action that hands off to workflow 03 with the cost code pre-filled, so that I'm not bouncing between screens to unblock myself. | Drafted |
+| US-09-06 | P03 Project & Commercial Lead | As a Project & Commercial Lead, I want a weekly bulk-approval surface for the project's timesheet batch, so that approval is one screen rather than a spreadsheet round-up. | Drafted |
+| US-09-07 | P03 Project & Commercial Lead | As a Project & Commercial Lead, I want every allocation, re-allocation, approval and budget-override decision audit-logged, so that the trail is defensible later. | Drafted |
+| US-09-08 | P01 Architect | As an architect / client (where the contract provides), I want to see approved timesheet totals per cost code in the client portal, so that I have the same view as the project team. | Drafted |
+| US-09-09 | P06 Finance Director | As a Finance Director, I want to approve cost-code overrun above the agreed threshold, so that overruns get visibility before they multiply. | Drafted |
+| US-09-10 | P07 Directors / MD | As a Director, I want to approve overrun above the higher threshold, so that material commitments are signed off at the right level. | Drafted |
+| US-09-11 | JPMS (system) | As JPMS, I want to publish approved subcontractor day-rate hours to the accountancy team in a clean shape, so that they can match invoices in Xero downstream without re-keying. | Drafted |
+
+This workflow is new scope from 2026-05-20 — it has no direct spreadsheet row but absorbs the cost-code-allocation work scattered across spreadsheet today.
+
+---
+
 ## Acceptance criteria — "done looks like"
 
 - No timesheet entry is ever booked to a cost code with no remaining budget without an explicit, audited resolution (WO raised, or re-allocation).

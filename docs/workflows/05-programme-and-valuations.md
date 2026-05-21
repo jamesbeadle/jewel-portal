@@ -51,11 +51,30 @@
 
 ---
 
+## User stories
+
+| ID | Role | Story | Status |
+|---|---|---|---|
+| US-05-01 | P03 Project & Commercial Lead | As a Project & Commercial Lead, I want the project programme to live in JPMS as a Gantt-style view tied to BoQ line items, so that progress flows through automatically from site reporting. | Drafted |
+| US-05-02 | P03 Project & Commercial Lead | As a Project & Commercial Lead, I want to define the Claim Period at contract setup (default monthly, overridable per contract), so that each project's valuation cadence matches its contract. | Drafted |
+| US-05-03 | P03 Project & Commercial Lead | As a Project & Commercial Lead, I want JPMS to auto-generate the Programme Valuation Report each Claim Period from contract + variations + current %, so that I'm reviewing rather than rebuilding the valuation each month. | Drafted |
+| US-05-04 | P03 Project & Commercial Lead | As a Project & Commercial Lead, I want the valuation report to roll up approved Variations automatically, so that nothing in scope is missed at billing time. | Drafted |
+| US-05-05 | P03 Project & Commercial Lead | As a Project & Commercial Lead, I want to add narrative commentary to the auto-generated valuation before issuing, so that the client gets context as well as numbers. | Drafted |
+| US-05-06 | P03 Project & Commercial Lead | As a Project & Commercial Lead, I want to issue the Programme Valuation Report from JPMS as a styled PDF and into the client portal, so that the same approved version reaches the architect/CA every time. | Drafted |
+| US-05-07 | P01 Architect | As an architect/CA, I want to receive each period's Programme Valuation Report with the Claim Value for that period stated up front, so that I can review the period's claim without piecing it together. | Drafted |
+| US-05-08 | P03 Project & Commercial Lead | As a Project & Commercial Lead, I want the historic valuation series per project with a prior-period diff on every line, so that I can defend any changes when the architect challenges them. | Drafted |
+| US-05-09 | P07 Directors / MD | As a Director, I want to approve each Programme Valuation Report before it's issued, so that high-value valuations aren't released without sign-off. | Drafted |
+| US-05-10 | JPMS (system) | As JPMS, I want approved valuations and their Claim Values to be published cleanly so the accountancy team can raise AR invoices in Xero downstream without re-keying. | Drafted |
+
+Covers spreadsheet rows 7 (update valuation Excel sheet) and 8 (update Excel programmes / MS Project).
+
+---
+
 ## Acceptance criteria — "done looks like"
 
 - Monthly valuation takes minutes to review, not hours to rebuild.
 - Programme reflects site reality without manual re-entry.
-- Valuation feeds directly into the sales-invoice draft (workflow 10).
+- Valuation data is published cleanly for the accountancy team to raise sales invoices in Xero downstream.
 
 ---
 

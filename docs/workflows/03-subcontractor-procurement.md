@@ -53,11 +53,32 @@
 
 ---
 
+## User stories
+
+| ID | Role | Story | Status |
+|---|---|---|---|
+| US-03-01 | P03 Project & Commercial Lead | As a Project & Commercial Lead, I want to assemble a bid package in one action from BoQ lines, drawings and standard T&Cs, so that I'm not stitching together SharePoint / Outlook / Excel each time. | Drafted |
+| US-03-02 | P03 Project & Commercial Lead | As a Project & Commercial Lead, I want JPMS to auto-create the tender document folder structure when a bid package is issued, so that document storage is consistent across projects. | Drafted |
+| US-03-03 | P03 Project & Commercial Lead | As a Project & Commercial Lead, I want to invite subcontractors to a bid package via the JPMS portal or a secure email-with-link, so that non-system subcontractors can still participate without extra tooling. | Drafted |
+| US-03-04 | P02 Subcontractor | As a subcontractor, I want to open a bid package from a single secure link and see the trade-relevant BoQ, drawings and deadline on one screen, so that I can decide whether to bid quickly. | Drafted |
+| US-03-05 | P02 Subcontractor | As a subcontractor, I want to enter my prices inline against each BoQ line and submit my quote without learning a new tool, so that my response lands directly in JPMS with no manual transcription. | Drafted |
+| US-03-06 | P02 Subcontractor | As a subcontractor, I want to attach qualifications, assumptions, exclusions and lead times to my quote, so that my commercial position is clear before award. | Drafted |
+| US-03-07 | P02 Subcontractor | As a subcontractor, I want to decline a bid package in one click with a reason, so that I'm not chased for a quote I'm not bidding on. | Drafted |
+| US-03-08 | P03 Project & Commercial Lead | As a Project & Commercial Lead, I want a side-by-side comparison of returned quotes, so that I can make an award decision without rebuilding the comparison in Excel. | Drafted |
+| US-03-09 | P04 Office & Compliance Coordinator | As an Office & Compliance Coordinator, I want JPMS to block the award path if the chosen subcontractor's compliance documents are expired, so that work isn't given to non-compliant subcontractors. | Drafted |
+| US-03-10 | P03 Project & Commercial Lead | As a Project & Commercial Lead, I want JPMS to auto-generate the work order when I award a bid, so that the contract artefact exists immediately and downstream AP can match against it. | Drafted |
+| US-03-11 | P07 Directors / MD | As a Director, I want to approve any award above the agreed threshold before it's issued, so that high-value commitments don't slip out without sign-off. | Drafted |
+| US-03-12 | P03 Project & Commercial Lead | As a Project & Commercial Lead, I want to see the full tender history per project (who quoted, who won, at what price), so that I can defend award decisions and inform future tenders. | Drafted |
+
+Covers spreadsheet rows 9 (email subcontractor quotes / bid packages), 10 (work-order contracts), 16 (send bid packages), 17 (tender document folders), 18 (compare submitted tenders), 47 (raise WOs).
+
+---
+
 ## Acceptance criteria — "done looks like"
 
 - Bid package is built in one action, not assembled across SharePoint / Outlook / Excel.
 - Subcontractor quotes appear in JPMS without manual transcription.
-- Awarded work orders flow directly into AP matching (workflow 09).
+- Awarded work orders are published cleanly so the accountancy team can match invoices against them in Xero (downstream).
 
 ---
 

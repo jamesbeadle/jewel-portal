@@ -52,6 +52,24 @@
 
 ---
 
+## User stories
+
+| ID | Role | Story | Status |
+|---|---|---|---|
+| US-02-01 | P03 Project & Commercial Lead | As a Project & Commercial Lead, I want to create a new project record from an incoming tender with the architect's drawings attached, so that everything else hangs off one project from day one. | Drafted |
+| US-02-02 | P03 Project & Commercial Lead | As a Project & Commercial Lead, I want to import quantities from Bluebeam take-offs straight into a JPMS BoQ, so that the take-off doesn't end up in a separate Excel that nobody updates. | Drafted |
+| US-02-03 | P03 Project & Commercial Lead | As a Project & Commercial Lead, I want a rate library inside JPMS with last-used rates per trade and supplier, so that I'm not researching rates from scratch on every tender. | Drafted |
+| US-02-04 | P03 Project & Commercial Lead | As a Project & Commercial Lead, I want JPMS to suggest updated rates against my rate library when it spots stale values, so that the BoQ reflects current pricing without me hunting. | Drafted |
+| US-02-05 | P03 Project & Commercial Lead | As a Project & Commercial Lead, I want to tag BoQ lines by discipline (including M&E), so that M&E pricing can be assembled through the same flow rather than a separate spreadsheet. | Drafted |
+| US-02-06 | P03 Project & Commercial Lead | As a Project & Commercial Lead, I want a re-tender comparison view showing last-priced vs current rates per line, so that re-tendering a previous project takes hours, not days. | Drafted |
+| US-02-07 | P05 Site Team | As a site manager doing a pre-construction walk-round, I want to capture notes, photos and voice notes against the project on mobile, so that the information is tied to the project record from day one. | Drafted |
+| US-02-08 | P03 Project & Commercial Lead | As a Project & Commercial Lead, I want to export the finalised BoQ from JPMS for external use, so that I can share it where needed while JPMS remains the master record. | Drafted |
+| US-02-09 | P07 Directors / MD | As a Director, I want to sign off the final tender before it's issued back to the architect, so that high-value commitments don't go out without approval. | Drafted |
+
+Covers spreadsheet rows 13 (Bluebeam take-off), 14 (research rates), 20 (re-tender), 21 (Bluebeam-formatted quants), 23 (M&E BoQ).
+
+---
+
 ## Acceptance criteria — "done looks like"
 
 - BoQ exists as a JPMS record, not a standalone Excel file.
