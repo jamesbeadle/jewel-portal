@@ -35,7 +35,7 @@ Tools currently in use for project management work. After JPMS rollout these are
 |---|---|---|
 | **MS Project** | Programme tracking; updated manually by the PM. | Programme module (workflow 05) — Gantt-style view tied to BoQ line items, updated automatically from site reporting. |
 | **Buildertrend** | Drawing distribution; work-order contracts. | Workflow 01 (drawing register with revisions) and workflow 03 (work-order generation on award). |
-| **Planyard** | Work-order contracting. | Workflow 03 — work orders are generated from the comparison-and-award flow inside JPMS. |
+| **Planyard** | Real-time cost control marketed as a replacement for Excel CVR workbooks: cost estimating, budgets, committed costs, CVR / margin tracking, CIS and VAT calculations. Currently piloted at JBB as the replacement for the old Excel CVR. | **Workflow 07 delivers the full CVR surface plus the three improvements over the Planyard-style pilot called out by the JBB QS lead:** (1) traceable Forecast Final Cost components — Cost Incurred / Cost Committed / QS Accruals / Prelim Forecast / Cost to Complete, not a black box; (2) Prelims and EOTs visible against tender separately with a weeks-ahead/behind tracker; (3) per-package variation margin alongside the central Variations Register, from the same underlying data. Plus the cashflow forecast and the Programme Valuation Report. **Planyard subscription not required.** Also covers the work-order side previously handled in Planyard (workflow 03). |
 | **Monday.com** | Subcontractor directory and attendance tracking. | Workflow 08 (subcontractor master record + compliance register) and workflow 06 (attendance check-in inside the site app). |
 | **Dashpivot** | Site capture (photos, attendance, snags). | Workflow 06 — site app captures progress, photos, attendance and snags against BoQ sections. |
 | **RAMsApp** | RAMS drafting. | Workflow 08 — RAMS template engine populated from project + subcontractor data and issued from JPMS. |
@@ -47,7 +47,8 @@ Tools currently in use for project management work. After JPMS rollout these are
 | **Excel — cashflow tracker** | FD rebuilds weekly. | Workflow 10 — live cashflow forecast built from JPMS project data alone. |
 | **Excel — subcontractor attendance tracker** | Per-project Excel / calendar. | Workflow 06 — attendance check-in via QR or geofence in the site app. |
 | **Excel — timesheet allocation tracker** | Manual cost-code allocation per period. | Workflow 09 — cost-code allocation enforced inline at timesheet entry with the budget hard-block rule. |
-| **Excel — settlement / VAT workbook** | Manual at project close. | Workflow 11 — settlement workspace with auto-generated zero-rated VAT analysis and in-system client agreement. |
+| **Excel — settlement / VAT workbook** | Manual at project close. | Workflow 08 — settlement workspace with auto-generated zero-rated VAT analysis and in-system client agreement. |
+| **Excel — CVR workbook** (e.g. JBB's "By France" CVR — both the old version and the new pilot) | Project Cost-Value Reconciliation rebuilt monthly per project, plus QS Accruals and Prelim Forecast on separate sheets. | Workflow 07 — JPMS CVR is live, computed from the same project data as the Programme Valuation Report and the cashflow forecast. Fixes the three issues James called out on the JBB pilot: forecast traceability, Prelims/EOTs against tender, per-package variation margin. |
 | **Word — RAMS template** | Per-project drafted RAMS. | Workflow 08. |
 | **Word — neighbour letter / contract drafts** | Drafted by hand. | Not in JPMS scope — these are office-admin tasks; the drafting tools stay where they are. |
 

@@ -89,16 +89,45 @@ Every domain concept JPMS talks about, grouped by the lifecycle stage where it f
 
 ## 07 — Valuations, Cashflow & Forecasting
 
+The three commercial outputs (Programme Valuation Report, CVR, Cashflow Forecast) and their supporting entities.
+
+### Programme Valuation Report
+
 | Entity | Notes |
 |---|---|
 | Valuation | Per Claim Period; feeds expected income on the cashflow forecast. |
 | Claim Period | Contractual cycle for valuation reporting. |
-| Programme Valuation Report | The issued artefact per Claim Period. |
+| Programme Valuation Report | The issued artefact per Claim Period — client-facing. |
+
+### CVR (Cost-Value Reconciliation)
+
+| Entity | Notes |
+|---|---|
+| CVR Snapshot | A computed CVR at a point in time (typically per Claim Period). Retained as a time series for trend analysis. |
+| Forecast Component | One of: Cost Incurred / Cost Committed / QS Accrual / Prelim Forecast Entry / Cost to Complete. The Forecast Final Cost is always the sum of explicit Forecast Components — never a single opaque number. |
+| Margin Trace | Per-package row in the CVR: Order (Cost / Value / Profit £ / %) + Variation (Cost / Value / Profit £ / %) + Combined (Cost / Value / Profit £ / %). Lets margin per package be visible including variations. |
+| QS Accrual | Manual QS judgement adjustment per category — Add / Omit / Liability, with description, value, sign-off, audit trail. Replicates the QS Accruals sheet on the old "By France" CVR. |
+| Prelim Item | A line in the prelim cost model — Project Manager, Site Manager, Welfare, Hoarding, Hire, Labour Hire, etc. |
+| Prelim Forecast Entry | Week × Prelim Item with Tendered £, Actual £, Forecast £, Difference £. Replicates the Prelim Forcast sheet on the old "By France" CVR. |
+| EOT (Extension of Time) | Reason, period granted, programme impact, any commercial recovery position. Surfaces on the CVR header alongside Weeks Ahead / Behind. |
+| Daywork | Labour / plant / materials charged outside the BoQ, fed into Cost Incurred. |
+| Contra Charge | Deduction against a subcontractor (e.g. damage, no-show, defective work). |
+| Subcontractor Retention | Retention held on subcontractor payments — tracked here and released through workflow 08. |
+
+### Cashflow Forecast
+
+| Entity | Notes |
+|---|---|
 | Cashflow Forecast Snapshot | A JPMS-produced forecast at a point in time. |
+
+### Timesheets and cost-code allocation
+
+| Entity | Notes |
+|---|---|
 | Person | Internal staff submitting timesheets. |
 | Timesheet | Daily entry per person × project × date. |
 | Timesheet Approval | Weekly batch approval record. |
-| Cost Code Budget | Per-cost-code budget (allocated / committed / spent / remaining). |
+| Cost Code Budget | Per-cost-code budget (allocated / committed / spent / remaining). Arbiter of the workflow 07 hard-block rule. |
 | Cost Code Allocation | Each timesheet entry's allocation against a cost code. |
 
 ## 08 — Quality, Snags, Handover & Aftercare
@@ -170,6 +199,17 @@ erDiagram
     CLAIM_PERIOD ||--|| VALUATION : produces
     PROJECT ||--o{ TIMESHEET : captures
     TIMESHEET }o--|| COST_CODE : "allocated to"
+    PROJECT ||--o{ CVR_SNAPSHOT : "produces (per Claim Period)"
+    CVR_SNAPSHOT ||--o{ FORECAST_COMPONENT : "made up of"
+    CVR_SNAPSHOT ||--o{ MARGIN_TRACE : "rolls up per package"
+    CVR_SNAPSHOT ||--o{ QS_ACCRUAL : "applies"
+    PROJECT ||--o{ PRELIM_ITEM : has
+    PRELIM_ITEM ||--o{ PRELIM_FORECAST_ENTRY : "week × item"
+    PROJECT ||--o{ EOT : tracks
+    PROJECT ||--o{ DAYWORK : captures
+    PROJECT ||--o{ CONTRA_CHARGE : "applies against subcontractor"
+    SUBCONTRACTOR ||--o{ SUBCONTRACTOR_RETENTION : "retention held against"
+    VARIATION }o--|| COST_CODE : "rolls up against"
     PROJECT ||--o| PRACTICAL_COMPLETION : reaches
     PRACTICAL_COMPLETION ||--|| SETTLEMENT_RECORD : triggers
     SETTLEMENT_RECORD ||--|| VAT_ANALYSIS : includes

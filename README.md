@@ -1,6 +1,6 @@
 # JPMS — Jewel Project Management System
 
-A construction project management system built for Jewel Bespoke Build. JPMS runs the full project lifecycle — from the first lead touchpoint through tender, procurement, mobilisation, site delivery, valuations, close-out and aftercare — and produces the two business-critical outputs that fall out of project data automatically: the **Programme Valuation Report** issued each claim period to the client, and the **cashflow forecast** that gives the directors a live view of where the business stands.
+A construction project management system built for Jewel Bespoke Build. JPMS runs the full project lifecycle — from the first lead touchpoint through tender, procurement, mobilisation, site delivery, valuations, close-out and aftercare — and produces the three business-critical commercial outputs that fall out of project data automatically: the **Programme Valuation Report** issued each claim period to the client, the **CVR (Cost-Value Reconciliation)** that gives the QS and PM live commercial control over margin per package, and the **cashflow forecast** that gives the directors a live view of where the business stands.
 
 ---
 
@@ -8,10 +8,13 @@ A construction project management system built for Jewel Bespoke Build. JPMS run
 
 JPMS owns the project lifecycle end-to-end. Every project artefact lives in one place: leads, drawings, BoQs, work orders, RFIs, submittals, variations, site reports, inspections, incidents, timesheets, defects, settlement records.
 
-Two outputs come out of that data:
+Three commercial outputs come out of that data, each for a different audience:
 
-- **The Programme Valuation Report.** Issued every claim period to the client. Built directly from approved progress and approved variations — review, not rebuild.
-- **The cashflow forecast.** A live picture of expected income, forward commitments and predicted project completion. Built purely from project data. Solving cashflow forecast accuracy is the primary reason JPMS exists.
+- **The Programme Valuation Report (PVR).** Issued every claim period to the client. Built directly from approved progress and approved variations — review, not rebuild.
+- **The CVR (Cost-Value Reconciliation).** Live commercial control for the QS and PM: actual vs forecast vs tender per package, margin by trade, Prelims and EOTs visible separately, variations rolled up against the original BoQ headings AND on the central register. **Replaces the Excel CVR workbooks JBB use today and removes any need for tools like Planyard.**
+- **The cashflow forecast.** A live picture of expected income, forward commitments and predicted project completion across the portfolio. Built purely from project data. Solving cashflow forecast accuracy is the primary reason JPMS exists.
+
+All three come from the same project data. The CVR, the PVR and the cashflow can never disagree because they share one source of truth.
 
 JPMS is not an accountancy tool. Xero, Brightpay, Dext and the rest of the back-office stack carry on doing AP, AR, payroll and bookkeeping; JPMS publishes the project data those tools need so the accountancy team can run their own workflows without re-keying anything from JPMS.
 
@@ -52,11 +55,11 @@ Ten lifecycle stages, in order. Click through for the detailed workflow.
 | 04 | [H&S Site Mobilisation & Compliance](docs/03-workflows/04-hs-site-mobilisation-compliance.md) | ✅ 16 drafted | Mobilisation gate, inspections engine, incidents & corrective actions. |
 | 05 | [RFIs, Submittals, Variations & Delays](docs/03-workflows/05-rfis-submittals-variations-delays.md) | ✅ 12 drafted | Unified change layer; submittals before installation. |
 | 06 | [Site Delivery, Programme & Reporting](docs/03-workflows/06-site-delivery-programme-reporting.md) | ✅ 12 drafted | Mobile-first site app. |
-| 07 | [Valuations, Cashflow & Forecasting](docs/03-workflows/07-valuations-cashflow-forecasting.md) | ✅ 32 drafted | **Produces the Programme Valuation Report and the cashflow forecast.** Includes timesheet cost-code allocation. |
+| 07 | [Valuations, Cashflow & Forecasting](docs/03-workflows/07-valuations-cashflow-forecasting.md) | ✅ 45 drafted | **Produces all three commercial outputs: Programme Valuation Report, CVR, and cashflow forecast.** Replaces JBB's Excel CVR and Planyard. Includes timesheet cost-code allocation. |
 | 08 | [Quality, Snags, Handover & Aftercare](docs/03-workflows/08-quality-snags-handover-aftercare.md) | ✅ 20 drafted | Snags, completion packs, Practical Completion, zero-rated VAT analysis, settlement, retention release, defects-period. |
 | 09 | [Portfolio Reporting & Analytics](docs/03-workflows/09-portfolio-reporting-analytics.md) | ✅ 12 drafted | Director / FD cross-project view. |
 
-**Total: 157 user stories drafted across 10 workflows.** Each story is in the format *"as X user I want Y, so that Z"* with a status flag (Drafted → In Review → Confirmed), and a `US-NN-MM` ID so screens and code reference back to the story they're delivering.
+**Total: 170 user stories drafted across 10 workflows.** Each story is in the format *"as X user I want Y, so that Z"* with a status flag (Drafted → In Review → Confirmed), and a `US-NN-MM` ID so screens and code reference back to the story they're delivering.
 
 The high-level lifecycle index is in [`/docs/02-lifecycle/`](docs/02-lifecycle/); the detailed workflow files in [`/docs/03-workflows/`](docs/03-workflows/); per-role journey slices in [`/docs/04-user-journeys/`](docs/04-user-journeys/).
 
@@ -73,9 +76,14 @@ The shared language between the business and the system. The most important conc
 - **Work Order** — the contract artefact when a subcontractor is awarded work.
 - **RFI / Submittal / Variation / NoD** — the change layer on a live project.
 - **Mobilisation Checklist / Inspection / Observation / Incident / Corrective Action** — the H&S engine that gates site delivery.
-- **Claim Period** — the contractual cycle (typically monthly) for issuing the Programme Valuation Report.
-- **Programme Valuation Report** — the per-claim-period valuation issued to the client.
-- **Cashflow Forecast** — the live view of forward income, commitments and predicted completion, from project data alone.
+- **Claim Period** — the contractual cycle (typically monthly) for issuing the Programme Valuation Report and the CVR.
+- **Programme Valuation Report (PVR)** — the per-claim-period valuation issued to the client.
+- **CVR (Cost-Value Reconciliation)** — internal commercial control per project: actual vs forecast vs tender per package, margin per trade. Built from the same data as the PVR, but framed for the QS and PM.
+- **Forecast Component** — every Forecast Final Cost in the CVR is the sum of explicit components (Cost Incurred / Cost Committed / QS Accruals / Prelim Forecast / Cost to Complete). Never a black-box number.
+- **QS Accrual** — explicit QS judgement adjustment (Add / Omit / Liability) that feeds the forecast with a sign-off and audit trail.
+- **Prelim Item** and **Prelim Forecast Entry** — Prelims live as a distinct CVR section above the BoQ packages, with Tendered vs Actual vs Difference per item.
+- **EOT (Extension of Time)** — tracked per project with programme impact, surfaced on the CVR header alongside Weeks Ahead / Behind.
+- **Cashflow Forecast** — the live view of forward income, commitments and predicted completion across the portfolio, from project data alone.
 - **Settlement Record** and **VAT Analysis** — the audit-grade summary and zero-rated VAT analysis at project completion.
 
 Full entity model: [`/docs/05-data-model/entities.md`](docs/05-data-model/entities.md). Construction glossary: [`/docs/00-business-context/glossary.md`](docs/00-business-context/glossary.md).
@@ -91,8 +99,9 @@ Full entity model: [`/docs/05-data-model/entities.md`](docs/05-data-model/entiti
 3. **Scope refinement** — defined what JPMS is and isn't. Accountancy, HR, IT admin, facilities and marketing are out of scope; project management is in.
 4. **Procore-style alignment pass** — restructured into 11 user roles and 10 lifecycle workflows with three new modules (CRM, H&S Mobilisation, Portfolio Analytics) and explicit cross-cutting engines (Inspections, Observations / Incidents, Submittals, Correspondence). See [2026-05-22 alignment note](docs/00-business-context/meetings/2026-05-22-procore-alignment.md).
 5. **Workflow definition** — each of the ten JPMS workflows captured with purpose, current state, target flow, JPMS functionality required, integrations, and acceptance criteria.
-6. **User stories** — every workflow now carries the user stories that drive UI design. **157 stories drafted across the 10 workflows** (counts per workflow are in section 3 above). Each story has a `US-NN-MM` ID and a status flag (Drafted → In Review → Confirmed).
+6. **User stories** — every workflow now carries the user stories that drive UI design. **170 stories drafted across the 10 workflows** (counts per workflow are in section 3 above). Each story has a `US-NN-MM` ID and a status flag (Drafted → In Review → Confirmed).
 7. **Domain concepts and permissions** — entity model, Role × Workflow permissions matrix, status models, approval flows.
+8. **CVR alignment pass** — workflow 07 expanded to deliver the CVR as a third primary output alongside the PVR and the cashflow forecast, fixing the three issues JBB's QS lead called out on the Planyard-style pilot workbook: traceable Forecast Final Cost components, Prelims and EOTs visible against tender separately, and per-package variation margin alongside the central register. Planyard subscription not required. See [2026-05-23 CVR alignment](docs/00-business-context/meetings/2026-05-23-cvr-alignment.md).
 
 ### Next
 

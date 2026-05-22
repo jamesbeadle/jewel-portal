@@ -15,7 +15,7 @@ For v1, we ship: correct role modelling, clear ownership boundaries, the right b
 - **04 H&S Mobilisation** — mobilisation checklist as a hard gate, inspections engine, observation/incident/corrective-action loop, toolbox talks, RAMS acceptance via portal.
 - **05 RFIs, Submittals, Variations, Delays** — unified change register, **submittal approvals**, VO → procurement loop, RFI portal for architects.
 - **06 Site Delivery, Programme & Reporting** — site app (progress, photos, attendance, snags), programme module, weekly/monthly report assembly.
-- **07 Valuations, Cashflow & Forecasting** — Programme Valuation Report per Claim Period, **cashflow forecast** from project data alone, timesheet management with cost-code hard-block.
+- **07 Valuations, Cashflow & Forecasting** — three primary outputs: **Programme Valuation Report** per Claim Period; **CVR (Cost-Value Reconciliation)** with traceable forecast components (Cost Incurred / Cost Committed / QS Accruals / Prelim Forecast / Cost to Complete), Prelims and EOTs visible against tender separately with weeks-ahead/behind tracker, per-package variation margin alongside the central register; **cashflow forecast** from project data alone. Plus timesheet management with cost-code hard-block. **Removes the need for Planyard.**
 - **08 Quality, Snags, Handover & Aftercare** — defect register, completion pack, Practical Completion, **zero-rated VAT analysis** agreed with client, retention release, defects-period tracking.
 - **09 Portfolio Reporting & Analytics** — Director dashboard, FD dashboard, leading indicators, threshold alerts.
 
