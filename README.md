@@ -1,17 +1,17 @@
 # JPMS — Jewel Project Management System
 
-A construction project management system built for Jewel Bespoke Build. From the moment an architect sends drawings, JPMS runs the project end-to-end — tender, BoQ, subcontractor procurement, on-site reporting, weekly valuations, and final settlement — and produces the two business-critical outputs that fall out of project data automatically: the **Programme Valuation Report** issued each claim period to the client, and the **cashflow forecast** that gives the directors a live view of where the business stands.
+A construction project management system built for Jewel Bespoke Build. JPMS runs the full project lifecycle — from the first lead touchpoint through tender, procurement, mobilisation, site delivery, valuations, close-out and aftercare — and produces the two business-critical outputs that fall out of project data automatically: the **Programme Valuation Report** issued each claim period to the client, and the **cashflow forecast** that gives the directors a live view of where the business stands.
 
 ---
 
 ## 1. What JPMS does
 
-JPMS owns the project lifecycle. Every project artefact — drawings, BoQ, work orders, RFIs, variations, site reports, timesheets, defects, settlement — lives in one place.
+JPMS owns the project lifecycle end-to-end. Every project artefact lives in one place: leads, drawings, BoQs, work orders, RFIs, submittals, variations, site reports, inspections, incidents, timesheets, defects, settlement records.
 
 Two outputs come out of that data:
 
-- **The Programme Valuation Report.** Issued every claim period to the client. Built directly from approved progress and approved variations, so the next valuation takes minutes to review rather than hours to rebuild.
-- **The cashflow forecast.** A live picture of expected income, forward commitments, and predicted project completion. Built purely from project data. Solving cashflow forecast accuracy is the primary reason JPMS exists.
+- **The Programme Valuation Report.** Issued every claim period to the client. Built directly from approved progress and approved variations — review, not rebuild.
+- **The cashflow forecast.** A live picture of expected income, forward commitments and predicted project completion. Built purely from project data. Solving cashflow forecast accuracy is the primary reason JPMS exists.
 
 JPMS is not an accountancy tool. Xero, Brightpay, Dext and the rest of the back-office stack carry on doing AP, AR, payroll and bookkeeping; JPMS publishes the project data those tools need so the accountancy team can run their own workflows without re-keying anything from JPMS.
 
@@ -19,65 +19,66 @@ JPMS is not an accountancy tool. Xero, Brightpay, Dext and the rest of the back-
 
 ## 2. User Roles
 
-Seven roles use JPMS. Click any name for the full role card.
+Eleven roles use JPMS. Each link opens the full role card.
 
-| Role | What they do in JPMS |
-|---|---|
-| [Architect](docs/requirements/personas.md#p01--architect) | Issues drawings and tenders. Approves RFIs and variations. Agrees the zero-rated VAT analysis at project close. Sees the live project dashboard and the Programme Valuation Report on their projects. |
-| [Subcontractor](docs/requirements/personas.md#p02--subcontractor) | Submits quotes against bid packages. Captures site progress and photos. Raises RFIs. Captures day-rate timesheets. Uploads compliance documents through a self-service portal. |
-| [Project & Commercial Lead](docs/requirements/personas.md#p03--project--commercial-lead) | Runs the project end-to-end — owns tender, BoQ, procurement, variations, programme & valuations, timesheet approval, close-out. |
-| [Office & Compliance Coordinator](docs/requirements/personas.md#p04--office--compliance-coordinator) | Owns subcontractor compliance: insurance, certifications, RAMS, CIS — current and visible before any award. |
-| [Site Team](docs/requirements/personas.md#p05--site-team) | Captures site reality daily on mobile — progress against BoQ sections, photos, attendance, snags, timesheets allocated to cost codes. |
-| [Finance Director](docs/requirements/personas.md#p06--finance-director-fd) | Owns the cashflow forecast and the project completion settlement. Produces the zero-rated VAT analysis. |
-| [Directors / MD](docs/requirements/personas.md#p07--directors--md) | Approves high-value commercial decisions, valuations, the final VAT outcome. Sees cashflow and project status in real time. |
+| # | Role | What they do in JPMS |
+|---|---|---|
+| P01 | [Director / MD](docs/01-personas/01-director-md.md) | Approves high-value commercial decisions and the final VAT outcome. Reads cashflow and portfolio status in real time. |
+| P02 | [Finance Director](docs/01-personas/02-finance-director.md) | Owns the cashflow forecast and the project completion settlement / zero-rated VAT analysis. Their accountancy day-job remains outside JPMS. |
+| P03 | [Project Manager](docs/01-personas/03-project-manager.md) | Owns drawings, programme coordination, the project change layer (RFIs / submittals / variations / NoDs), correspondence. |
+| P04 | [QS / Estimator](docs/01-personas/04-quantity-surveyor-estimator.md) | Owns tender, BoQ, valuations and variation pricing. |
+| P05 | [Site Manager](docs/01-personas/05-site-manager.md) | Owns live-site delivery — sequencing, quality, snag coordination, on-site H&S confirmation. |
+| P06 | [Health & Safety Officer (H&SO)](docs/01-personas/06-health-safety-officer.md) | Owns the H&S framework, inspections, audits, incident governance, corrective actions. |
+| P07 | [Office & Compliance Coordinator](docs/01-personas/07-office-compliance-coordinator.md) | Owns subcontractor compliance admin: onboarding records, insurance / cert / CIS / RAMS, expiry tracking. |
+| P08 | [Architect / Designer / Consultant](docs/01-personas/08-architect-designer-consultant.md) | Issues drawings and tenders. Approves RFIs, submittals, variations and the VAT analysis at project close. |
+| P09 | [Client / Homeowner](docs/01-personas/09-client-homeowner.md) | Selects, approves, instructs, pays, signs off Practical Completion and defects. |
+| P10 | [Subcontractor](docs/01-personas/10-subcontractor.md) | Submits quotes, captures site work and timesheets, uploads compliance documents, accepts RAMS / inductions / permits. |
+| P11 | [Foreman / Site Team](docs/01-personas/11-foreman-site-team.md) | Workface — daily progress, photos, attendance, immediate issue reporting up to Site Manager. |
 
-Full role cards: [`docs/requirements/personas.md`](docs/requirements/personas.md).
-Role × workflow responsibility: [`permission-matrix.md`](docs/requirements/permission-matrix.md).
+Full role cards live in [`/docs/01-personas/`](docs/01-personas/). The role × workflow responsibility matrix is in [`/docs/05-data-model/permissions-matrix.md`](docs/05-data-model/permissions-matrix.md).
 
 ---
 
 ## 3. Workflows JPMS handles
 
-Eleven workflows, sequenced as the project lifecycle. Click through for full detail.
+Ten lifecycle stages, in order. Click through for the detailed workflow.
 
 | # | Workflow | User stories | Notes |
 |---|---|---|---|
-| 01 | [Drawing Receipt & Distribution](docs/workflows/01-drawing-receipt.md) | ✅ 8 drafted | |
-| 02 | [Pre-Construction: Tender & BoQ](docs/workflows/02-preconstruction-tender-boq.md) | ✅ 9 drafted | |
-| 03 | [Subcontractor Procurement (Bid → Award)](docs/workflows/03-subcontractor-procurement.md) | ✅ 12 drafted | Journey: [subcontractor quote return](docs/user-journeys/03a-subcontractor-quote-return.md) |
-| 04 | [Variations, RFIs & Delays](docs/workflows/04-variations-rfis-delays.md) | ✅ 12 drafted | Journey: [architect RFI response](docs/user-journeys/04a-architect-rfi-response.md) |
-| 05 | [Programme & Valuations](docs/workflows/05-programme-and-valuations.md) | ✅ 10 drafted | **Produces the Programme Valuation Report** |
-| 06 | [Site Reporting & Progress](docs/workflows/06-site-reporting-and-progress.md) | ✅ 12 drafted | Journey: [site team daily capture](docs/user-journeys/06a-site-team-daily-capture.md) |
-| 07 | [Project Close-Out & Defects](docs/workflows/07-project-close-out-and-defects.md) | ✅ 8 drafted | |
-| 08 | [Subcontractor Compliance & Onboarding](docs/workflows/08-subcontractor-compliance-and-onboarding.md) | ✅ 10 drafted | Journey: [subcontractor compliance upload](docs/user-journeys/08a-subcontractor-compliance-upload.md) |
-| 09 | [Timesheet Management (cost-code-aware)](docs/workflows/09-timesheet-management.md) | ✅ 11 drafted | |
-| 10 | [Cashflow & Project Forecasting](docs/workflows/10-cashflow-and-project-forecasting.md) | ✅ 11 drafted | **Produces the cashflow forecast.** Journey: [FD morning review](docs/user-journeys/10a-fd-cashflow-forecast.md) |
-| 11 | [Project Completion Settlement & VAT Analysis](docs/workflows/11-project-completion-settlement.md) | ✅ 12 drafted | |
+| 00 | [Sales, Marketing & CRM](docs/03-workflows/00-sales-marketing-crm.md) | ✅ 14 drafted | Lifecycle starts here — lead → opportunity → won → project shell into 01. |
+| 01 | [Drawing Receipt & Document Control](docs/03-workflows/01-drawing-receipt-document-control.md) | ✅ 8 drafted | Live revision control + issue / acknowledgment register. |
+| 02 | [Pre-Construction: Tender & BoQ](docs/03-workflows/02-preconstruction-tender-boq.md) | ✅ 9 drafted | |
+| 03 | [Subcontractor Procurement & Onboarding](docs/03-workflows/03-subcontractor-procurement-onboarding.md) | ✅ 22 drafted | Procurement + compliance onboarding combined; compliance gate before award. |
+| 04 | [H&S Site Mobilisation & Compliance](docs/03-workflows/04-hs-site-mobilisation-compliance.md) | ✅ 16 drafted | Mobilisation gate, inspections engine, incidents & corrective actions. |
+| 05 | [RFIs, Submittals, Variations & Delays](docs/03-workflows/05-rfis-submittals-variations-delays.md) | ✅ 12 drafted | Unified change layer; submittals before installation. |
+| 06 | [Site Delivery, Programme & Reporting](docs/03-workflows/06-site-delivery-programme-reporting.md) | ✅ 12 drafted | Mobile-first site app. |
+| 07 | [Valuations, Cashflow & Forecasting](docs/03-workflows/07-valuations-cashflow-forecasting.md) | ✅ 32 drafted | **Produces the Programme Valuation Report and the cashflow forecast.** Includes timesheet cost-code allocation. |
+| 08 | [Quality, Snags, Handover & Aftercare](docs/03-workflows/08-quality-snags-handover-aftercare.md) | ✅ 20 drafted | Snags, completion packs, Practical Completion, zero-rated VAT analysis, settlement, retention release, defects-period. |
+| 09 | [Portfolio Reporting & Analytics](docs/03-workflows/09-portfolio-reporting-analytics.md) | ✅ 12 drafted | Director / FD cross-project view. |
 
-**Total: 115 user stories drafted across 11 workflows.** Each story is in the format *"as X user I want Y, so that Z"* with a status flag (Drafted → In Review → Confirmed), and an `US-NN-MM` ID so screens and code can reference back to the story they're delivering. The stories are what drives UI design from here on.
+**Total: 157 user stories drafted across 10 workflows.** Each story is in the format *"as X user I want Y, so that Z"* with a status flag (Drafted → In Review → Confirmed), and a `US-NN-MM` ID so screens and code reference back to the story they're delivering.
 
-Twelve workflows from the original operational audit were considered and ruled out of JPMS scope because they are accountancy, HR, IT admin, facilities or marketing tasks JPMS isn't designed to handle. The scope decision is in [`2026-05-21-scope-refinement.md`](docs/meetings/2026-05-21-scope-refinement.md); the task-level coverage in [`automation-task-coverage.md`](docs/requirements/automation-task-coverage.md).
+The high-level lifecycle index is in [`/docs/02-lifecycle/`](docs/02-lifecycle/); the detailed workflow files in [`/docs/03-workflows/`](docs/03-workflows/); per-role journey slices in [`/docs/04-user-journeys/`](docs/04-user-journeys/).
 
 ---
 
 ## 4. Domain Concepts
 
-The terms JPMS uses are shared between the business and the system. Agreement on this language is what lets everything else hang together.
+The shared language between the business and the system. The most important concepts:
 
-The most important concepts:
-
-- **Project** — central organising concept. Everything else belongs to a project.
-- **Tender** and **Bill of Quantities (BoQ)** — what the architect asks for, and the priced breakdown of how Jewel will deliver it.
-- **Cost Code** — the architect's client-facing code; threads through every screen and report touching their project.
+- **Project** — central organising concept; everything else belongs to a project.
+- **Lead** and **Opportunity** — the front end of the lifecycle, before a project exists.
+- **Tender** and **Bill of Quantities (BoQ)** — what the architect asks for and the priced breakdown of how Jewel will deliver it.
+- **Cost Code** — the architect's client-facing code that threads through every screen and report.
 - **Work Order** — the contract artefact when a subcontractor is awarded work.
-- **Variation** — a formal change to the BoQ; rolls up to the next valuation, and may trigger a fresh subcontractor procurement loop.
+- **RFI / Submittal / Variation / NoD** — the change layer on a live project.
+- **Mobilisation Checklist / Inspection / Observation / Incident / Corrective Action** — the H&S engine that gates site delivery.
 - **Claim Period** — the contractual cycle (typically monthly) for issuing the Programme Valuation Report.
 - **Programme Valuation Report** — the per-claim-period valuation issued to the client.
-- **Cashflow Forecast** — the live view of forward income, forward commitments and predicted completion, built from project data.
-- **Settlement Record** and **VAT Analysis** — the audit-grade summary and zero-rated VAT analysis produced at project completion, agreed with the client.
+- **Cashflow Forecast** — the live view of forward income, commitments and predicted completion, from project data alone.
+- **Settlement Record** and **VAT Analysis** — the audit-grade summary and zero-rated VAT analysis at project completion.
 
-Full domain vocabulary: [`docs/requirements/glossary.md`](docs/requirements/glossary.md).
-Full entity model and relationships: [`docs/data-models/entity-relationship.md`](docs/data-models/entity-relationship.md).
+Full entity model: [`/docs/05-data-model/entities.md`](docs/05-data-model/entities.md). Construction glossary: [`/docs/00-business-context/glossary.md`](docs/00-business-context/glossary.md).
 
 ---
 
@@ -87,30 +88,29 @@ Full entity model and relationships: [`docs/data-models/entity-relationship.md`]
 
 1. **Domain discovery** — established the construction context, the user roles, and the primary pain point (cashflow forecast accuracy).
 2. **Operational audit** — ingested the JBB operational task analysis covering every task the business handles today.
-3. **Scope refinement** — defined what JPMS is and isn't. Twelve out-of-scope workflows ruled out; eleven in-scope workflows kept; seven user roles confirmed.
-4. **Workflow definition** — each of the eleven JPMS workflows captured with purpose, current state, target flow, JPMS functionality required, integrations, and acceptance criteria.
-5. **Domain concepts and permissions** — entity model drafted; Role × Workflow permission matrix drafted; each role's involvement reconciled with the matrix.
-6. **Integrations map** — what feeds JPMS, what JPMS replaces, what consumes JPMS data downstream.
-7. **User stories** — every workflow now carries the user stories that drive UI design, in the format *"as X user I want Y, so that Z"*. **115 stories drafted across the 11 workflows** (counts per workflow are in section 3 above). Each story has an `US-NN-MM` ID and a status flag (Drafted → In Review → Confirmed) so progress is trackable from this list and from the workflow files. Cross-checked against the in-scope rows of the task analysis spreadsheet.
+3. **Scope refinement** — defined what JPMS is and isn't. Accountancy, HR, IT admin, facilities and marketing are out of scope; project management is in.
+4. **Procore-style alignment pass** — restructured into 11 user roles and 10 lifecycle workflows with three new modules (CRM, H&S Mobilisation, Portfolio Analytics) and explicit cross-cutting engines (Inspections, Observations / Incidents, Submittals, Correspondence). See [2026-05-22 alignment note](docs/00-business-context/meetings/2026-05-22-procore-alignment.md).
+5. **Workflow definition** — each of the ten JPMS workflows captured with purpose, current state, target flow, JPMS functionality required, integrations, and acceptance criteria.
+6. **User stories** — every workflow now carries the user stories that drive UI design. **157 stories drafted across the 10 workflows** (counts per workflow are in section 3 above). Each story has a `US-NN-MM` ID and a status flag (Drafted → In Review → Confirmed).
+7. **Domain concepts and permissions** — entity model, Role × Workflow permissions matrix, status models, approval flows.
 
 ### Next
 
 1. **Story walkthroughs.** Each role-owner walks the stories for the workflows they own and moves them from Drafted → In Review → Confirmed. Confirmed stories are the contract for what the screen has to deliver.
-2. **UI scoping.** Each Confirmed story produces the screens needed to deliver it. The component library scaffold under [`docs/ui-components/`](docs/ui-components/) gets populated as stories land.
+2. **UI scoping.** Each Confirmed story produces the screens needed to deliver it.
 3. **Build.** The JPMS production application in [`/jpms`](jpms/) is built screen-by-screen against the user stories. OAuth sign-in and the approved-user gate are already in place; data layer and per-workflow screens follow.
 
 ---
 
 ## 6. Technical summary
 
-JPMS is a Progressive Web App built on Blazor WebAssembly, talking to an ASP.NET Core API backed by Azure SQL. Authentication is OAuth — Google, Microsoft, or email/password. Users are invited by an admin or Project & Commercial Lead; on first access they pick a sign-in method. The JPMS account is identified by email, so a user who chose "Sign in with Google" with `alice@example.com` can equally use the email/password path against the same address later.
-
 - **Front-end:** Blazor WebAssembly · .NET 8 LTS · Tailwind.
-- **Back-end (next):** ASP.NET Core Web API · Azure SQL · Microsoft Graph for downstream integrations where needed.
+- **Back-end (next):** ASP.NET Core Web API · Azure SQL · Microsoft Graph integrations where needed.
+- **Auth:** OAuth — Google, Microsoft, or email/password. Users are invited by an admin or Project Manager; on first access they pick a sign-in method. The JPMS account is identified by email, so a user who first signs in with Google for `alice@example.com` can equally use the email/password path against the same address later.
 - **Hosting:** Azure Static Web Apps initially; Azure App Service once the API lands.
 - **PWA:** installable on desktop and mobile.
 
-The production application source lives in [`/jpms`](jpms/) — see [its README](jpms/README.md) for what's built today and how to run it locally.
+Production source: [`/jpms`](jpms/) — see [its README](jpms/README.md) for what's built today and how to run it locally.
 
 ---
 
@@ -118,25 +118,28 @@ The production application source lives in [`/jpms`](jpms/) — see [its README]
 
 ```
 /docs
-  /workflows         The 11 JPMS workflows
-  /user-journeys     Per-user-role slices through workflows where useful
-  /requirements      User roles, permission matrix, integrations, glossary, task coverage
-  /data-models       Entity relationship diagram + JSON Schemas (written workflow-by-workflow)
-  /meetings          Working decisions log
-  /ui-components     UI component library spec (populated as user stories land)
-/jpms                Production Blazor WebAssembly application
-/assets              Screenshots, icons, branding
+  /00-business-context     Business overview, operating model, delivery principles, commercial model, glossary, meeting notes archive
+  /01-personas             The 11 user-role cards (one file per role)
+  /02-lifecycle            The 10 lifecycle stages (high-level, one file per stage)
+  /03-workflows            The 10 detailed workflow files with user stories
+  /04-user-journeys        Per-role slices through workflows
+  /05-data-model           Entities, permissions matrix, status models, approval flows, integrations
+  /06-backlog              Must-have-v1, phase-2, consolidated open questions
+/jpms                      Production Blazor WebAssembly application
+/assets                    Screenshots, icons, branding
 ```
 
-Each folder has its own README explaining its content. `_templates/` subfolders inside each section hold blank reference scaffolding only — real content lives at the folder root.
+Each folder has its own README.
 
 ---
 
 ## 8. Find anything
 
-- **Workflows** — [index](docs/workflows/README.md) · the 11 workflow files in [`/docs/workflows/`](docs/workflows/)
-- **User journeys** — [index](docs/user-journeys/README.md) · the 5 journey files in [`/docs/user-journeys/`](docs/user-journeys/)
-- **Requirements** — [User roles](docs/requirements/personas.md) · [Permission matrix](docs/requirements/permission-matrix.md) · [Integrations](docs/requirements/integrations.md) · [Glossary](docs/requirements/glossary.md) · [Task coverage](docs/requirements/automation-task-coverage.md) · [Requirements index](docs/requirements/README.md)
-- **Data models** — [Entity relationship diagram](docs/data-models/entity-relationship.md) · [Data models index](docs/data-models/README.md)
-- **Meeting notes** — [Scope refinement 2026-05-21](docs/meetings/2026-05-21-scope-refinement.md) · [Coverage audit 2026-05-20](docs/meetings/2026-05-20-coverage-audit-and-additions.md) · [JBB workflow audit 2026-05-20](docs/meetings/2026-05-20-jbb-workflow-audit.md) · [Domain discovery 2026-05-18](docs/meetings/2026-05-18-domain-discovery.md) · [Meeting notes index](docs/meetings/README.md)
+- **Business context** — [Overview](docs/00-business-context/business-overview.md) · [Operating model](docs/00-business-context/operating-model.md) · [Delivery principles](docs/00-business-context/delivery-principles.md) · [Commercial model](docs/00-business-context/commercial-model.md) · [Glossary](docs/00-business-context/glossary.md) · [Meeting notes](docs/00-business-context/meetings/)
+- **User roles** — [Register](docs/01-personas/README.md) · 11 cards in [`/docs/01-personas/`](docs/01-personas/)
+- **Lifecycle** — [High-level stages](docs/02-lifecycle/README.md)
+- **Workflows** — [Index](docs/03-workflows/README.md) · 10 detailed files in [`/docs/03-workflows/`](docs/03-workflows/)
+- **User journeys** — [Index](docs/04-user-journeys/README.md) · 5 journey files in [`/docs/04-user-journeys/`](docs/04-user-journeys/)
+- **Data model** — [Entities + ERD](docs/05-data-model/entities.md) · [Permissions matrix](docs/05-data-model/permissions-matrix.md) · [Status models](docs/05-data-model/status-models.md) · [Approval flows](docs/05-data-model/approval-flows.md) · [Integrations](docs/05-data-model/integrations.md)
+- **Backlog** — [Must-have v1](docs/06-backlog/must-have-v1.md) · [Phase 2](docs/06-backlog/phase-2.md) · [Open questions](docs/06-backlog/open-questions.md)
 - **Production application** — [`/jpms`](jpms/README.md)
