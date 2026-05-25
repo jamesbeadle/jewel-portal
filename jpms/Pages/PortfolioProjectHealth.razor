@@ -37,8 +37,6 @@ else
 @code {
     private bool isLoaded;
 
-    private record HealthRow(string Reference, string Name, int OverdueRfis, int OpenVariations, int UnissuedValuations);
-
     private IReadOnlyList<HealthRow> HealthRows =>
         ProjectStore.All().Select(project => new HealthRow(
             project.Reference, project.Name,

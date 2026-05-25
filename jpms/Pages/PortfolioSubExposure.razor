@@ -36,8 +36,6 @@ else
 @code {
     private bool isLoaded;
 
-    private record ExposureRow(string CompanyName, string Trade, int WorkOrderCount, decimal TotalValue);
-
     private IReadOnlyList<ExposureRow> ExposureRows =>
         SubcontractorStore.All().Select(sub =>
         {
