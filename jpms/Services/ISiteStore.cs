@@ -7,5 +7,6 @@ public interface ISiteStore
     IReadOnlyList<SiteReport> ReportsFor(string projectId);
     IReadOnlyList<ProgrammeTask> ProgrammeFor(string projectId);
     SiteReport SaveReport(SiteReport report);
+    ProgrammeTask SaveProgrammeTask(ProgrammeTask task);
     event Action? OnChange;
 }

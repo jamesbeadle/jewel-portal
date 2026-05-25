@@ -33,10 +33,7 @@
 
     private void Bump(ProgrammeTask task, int delta)
     {
-        var next = Math.Clamp(task.ProgressPercent + delta, 0m, 100m);
-        StateHasChanged();
-        // Persistence path lives behind SiteStore; the in-memory store treats programme as read-only for now.
-        // When SQL lands, replace with SiteStore.UpdateProgress(task.ProgrammeTaskId, next).
-        _ = next;
+        var nextPercent = Math.Clamp(task.ProgressPercent + delta, 0m, 100m);
+        SiteStore.SaveProgrammeTask(task with { ProgressPercent = nextPercent });
     }
 }

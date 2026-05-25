@@ -1,4 +1,4 @@
-@inject ICommercialStore CommercialStore
+@inject ICvrStore CvrStore
 
 <div class="rounded-xl border border-slate-200 bg-white overflow-x-auto">
     <table class="w-full text-sm">
@@ -14,7 +14,7 @@
         <tbody class="divide-y divide-slate-200 text-right">
             @foreach (var item in Items)
             {
-                var entries = CommercialStore.PrelimEntriesFor(item.PrelimItemId);
+                var entries = CvrStore.PrelimEntriesFor(item.PrelimItemId);
                 <tr>
                     <td class="px-3 py-2 text-left text-slate-900 font-medium">@item.Description</td>
                     <td class="px-3 py-2 text-slate-700">@Money(entries.Sum(e => e.TenderedAmount))</td>

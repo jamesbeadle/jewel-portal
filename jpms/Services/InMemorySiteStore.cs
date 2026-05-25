@@ -36,4 +36,13 @@ public sealed class InMemorySiteStore : ISiteStore
         OnChange?.Invoke();
         return report;
     }
+
+    public ProgrammeTask SaveProgrammeTask(ProgrammeTask task)
+    {
+        var existing = tasks.FirstOrDefault(t => t.ProgrammeTaskId == task.ProgrammeTaskId);
+        if (existing is not null) tasks.Remove(existing);
+        tasks.Add(task);
+        OnChange?.Invoke();
+        return task;
+    }
 }

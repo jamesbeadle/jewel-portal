@@ -31,6 +31,12 @@ public sealed class HttpSiteStore : ISiteStore
         return report;
     }
 
+    public ProgrammeTask SaveProgrammeTask(ProgrammeTask task)
+    {
+        _ = PostTaskAsync(task);
+        return task;
+    }
+
     private async Task LoadReportsAsync(string projectId)
     {
         try
@@ -58,5 +64,12 @@ public sealed class HttpSiteStore : ISiteStore
         try { await httpClient.PostAsJsonAsync("/api/site-reports", report); } catch { return; }
         reportsByProject.Remove(report.ProjectId);
         await LoadReportsAsync(report.ProjectId);
+    }
+
+    private async Task PostTaskAsync(ProgrammeTask task)
+    {
+        try { await httpClient.PostAsJsonAsync("/api/programme-tasks", task); } catch { return; }
+        tasksByProject.Remove(task.ProjectId);
+        await LoadTasksAsync(task.ProjectId);
     }
 }

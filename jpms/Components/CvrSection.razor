@@ -1,19 +1,19 @@
-@inject ICommercialStore CommercialStore
+@inject ICvrStore CvrStore
 
 <div class="space-y-6">
-    <CvrSummaryPanel Snapshot="CommercialStore.LatestCvr(ProjectId)" />
+    <CvrSummaryPanel Snapshot="CvrStore.LatestSnapshot(ProjectId)" />
 
     <section>
         <h2 class="text-lg font-semibold text-slate-900 mb-3">Margin trace — per package</h2>
         <p class="text-sm text-slate-600 mb-3">
             Order × Variation × Combined breakdown. Movement column shows change since the last snapshot.
         </p>
-        <CvrPackageTable Rows="CommercialStore.CvrPackagesFor(ProjectId)" />
+        <CvrPackageTable Rows="CvrStore.PackagesFor(ProjectId)" />
     </section>
 
     <section>
         <h2 class="text-lg font-semibold text-slate-900 mb-3">Snapshot history</h2>
-        <CvrSnapshotHistoryTable Snapshots="CommercialStore.CvrSnapshotsFor(ProjectId)" />
+        <CvrSnapshotHistoryTable Snapshots="CvrStore.SnapshotsFor(ProjectId)" />
     </section>
 </div>
 
