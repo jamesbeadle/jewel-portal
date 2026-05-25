@@ -49,12 +49,6 @@ jobs:
       - name: Publish Blazor WASM bundle
         run: dotnet publish jpms/Jewel.JPMS.csproj -c Release -o publish --no-restore
 
-      - name: Restore API dependencies
-        run: dotnet restore api/JpmsApi.csproj
-
-      - name: Publish API
-        run: dotnet publish api/JpmsApi.csproj -c Release -o api-publish --no-restore
-
       - name: Deploy to Static Web Apps
         id: deploy
         uses: Azure/static-web-apps-deploy@v1
@@ -63,10 +57,9 @@ jobs:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           action: upload
           app_location: publish/wwwroot
-          api_location: api-publish
+          api_location: api
           output_location: ''
           skip_app_build: true
-          skip_api_build: true
 
   close_pull_request:
     if: github.event_name == 'pull_request' && github.event.action == 'closed'
