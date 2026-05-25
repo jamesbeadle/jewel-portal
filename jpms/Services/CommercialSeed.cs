@@ -18,12 +18,6 @@ internal static class CommercialSeed
         new("VL-003", claimPeriods[2].ClaimPeriodId, "PRJ-001",  380_000m, 3m, 368_600m, false, null)
     };
 
-    public static List<CvrSnapshot> CvrSnapshots(DateTimeOffset baseDate) => new()
-    {
-        new("CVR-001", "PRJ-001", baseDate.AddDays(56),  2_400_000m, 1_980_000m, 2_400_000m, 420_000m, 17.5m,  0),
-        new("CVR-002", "PRJ-001", baseDate.AddDays(28),  2_400_000m, 1_995_000m, 2_400_000m, 405_000m, 16.9m, -1)
-    };
-
     public static List<CostCodeBudget> Budgets() => new()
     {
         new("CB-001", "PRJ-001", "GW-100",   85_000m,  82_400m),
@@ -38,7 +32,9 @@ internal static class CommercialSeed
     {
         new("TS-001", "PRJ-001", ownerEmail, DateTimeOffset.UtcNow.AddDays(-1), 6m,  "GW-110", true),
         new("TS-002", "PRJ-001", ownerEmail, DateTimeOffset.UtcNow.AddDays(-2), 8m,  "EX-200", true),
-        new("TS-003", "PRJ-001", ownerEmail, DateTimeOffset.UtcNow.AddDays(-3), 5m,  "RF-300", false)
+        new("TS-003", "PRJ-001", ownerEmail, DateTimeOffset.UtcNow.AddDays(-3), 5m,  "RF-300", false),
+        new("TS-004", "PRJ-001", ownerEmail, DateTimeOffset.UtcNow.AddDays(-4), 7m,  "JN-500", false),
+        new("TS-005", "PRJ-001", ownerEmail, DateTimeOffset.UtcNow.AddDays(-5), 4m,  "EL-400", false)
     };
 
     public static CashflowSnapshot LatestCashflow() => new(

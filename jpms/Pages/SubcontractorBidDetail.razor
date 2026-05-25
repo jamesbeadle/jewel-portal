@@ -1,0 +1,40 @@
+@page "/portal/subcontractor/bids/{PackageId}"
+@layout PortalLayout
+@inject PortalContext PortalContext
+@inject IProcurementStore ProcurementStore
+@inject IProjectStore ProjectStore
+@inject NavigationManager Nav
+
+<PageTitle>Bid package · JPMS</PageTitle>
+
+<section class="max-w-3xl mx-auto px-4 py-8 md:py-12">
+    <nav class="mb-4 text-sm">
+        <a href="/portal/subcontractor/bids" class="text-slate-500 hover:text-slate-900 underline underline-offset-4">Bid invitations</a>
+        <span class="text-slate-400 mx-2">/</span>
+        <span class="text-slate-700 font-medium">@(package?.Title ?? PackageId)</span>
+    </nav>
+
+    @if (package is null)
+    {
+        <p class="text-sm text-slate-500 italic">Bid package not found.</p>
+    }
+    else
+    {
+        <header class="mb-6">
+            <p class="text-xs uppercase tracking-wider text-slate-500 font-medium mb-1">@(ProjectStore.Find(package.ProjectId)?.Name ?? package.ProjectId)</p>
+            <h1 class="text-2xl md:text-3xl font-semibold text-slate-900">@package.Title</h1>
+            <p class="text-sm text-slate-600 mt-1">Trade: @package.Trade</p>
+        </header>
+
+        <QuoteSubmissionForm Package="package"
+                             SubcontractorId="@(PortalContext.ActingSubcontractorId ?? "")" />
+    }
+</section>
+
+@code {
+    [Parameter] public string PackageId { get; set; } = "";
+
+    private BidPackage? package;
+
+    protected override void OnParametersSet() => package = ProcurementStore.FindPackage(PackageId);
+}

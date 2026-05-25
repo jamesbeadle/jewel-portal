@@ -1,0 +1,22 @@
+@inject ICommercialStore CommercialStore
+
+<div class="space-y-6">
+    <CvrSummaryPanel Snapshot="CommercialStore.LatestCvr(ProjectId)" />
+
+    <section>
+        <h2 class="text-lg font-semibold text-slate-900 mb-3">Margin trace — per package</h2>
+        <p class="text-sm text-slate-600 mb-3">
+            Order × Variation × Combined breakdown. Movement column shows change since the last snapshot.
+        </p>
+        <CvrPackageTable Rows="CommercialStore.CvrPackagesFor(ProjectId)" />
+    </section>
+
+    <section>
+        <h2 class="text-lg font-semibold text-slate-900 mb-3">Snapshot history</h2>
+        <CvrSnapshotHistoryTable Snapshots="CommercialStore.CvrSnapshotsFor(ProjectId)" />
+    </section>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public string ProjectId { get; set; } = "";
+}

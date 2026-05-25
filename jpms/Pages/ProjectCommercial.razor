@@ -1,4 +1,5 @@
 @page "/projects/{ProjectId}/commercial"
+@page "/projects/{ProjectId}/commercial/{Section}"
 @inject AuthService Auth
 @inject SessionService Session
 @inject ICommercialStore CommercialStore
@@ -18,26 +19,17 @@ else if (!Session.IsApproved)
 else
 {
     <ProjectPageShell ProjectId="@ProjectId" ActiveTab="commercial">
-        <div class="space-y-6">
-            <CvrSummaryPanel Snapshot="CommercialStore.LatestCvr(ProjectId)" />
-
-            <section>
-                <h2 class="text-lg font-semibold text-slate-900 mb-3">Programme Valuation Reports</h2>
-                <ValuationTable Valuations="CommercialStore.ValuationsFor(ProjectId)" />
-            </section>
-
-            <section>
-                <h2 class="text-lg font-semibold text-slate-900 mb-3">Cost code budgets</h2>
-                <CostCodeBudgetTable Budgets="CommercialStore.BudgetsFor(ProjectId)" />
-            </section>
-        </div>
+        <CommercialSubNav ProjectId="@ProjectId" ActiveTab="@ActiveSection" />
+        <CommercialSectionBody ProjectId="@ProjectId" Section="@ActiveSection" />
     </ProjectPageShell>
 }
 
 @code {
     [Parameter] public string ProjectId { get; set; } = "";
+    [Parameter] public string? Section { get; set; }
 
     private bool isLoaded;
+    private string ActiveSection => string.IsNullOrWhiteSpace(Section) ? "summary" : Section.ToLowerInvariant();
 
     protected override async Task OnInitializedAsync()
     {

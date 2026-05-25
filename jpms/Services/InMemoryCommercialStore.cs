@@ -9,7 +9,6 @@ public sealed class InMemoryCommercialStore : ICommercialStore
 
     private readonly List<ClaimPeriod> claimPeriods;
     private readonly List<Valuation> valuations;
-    private readonly List<CvrSnapshot> cvrSnapshots;
     private readonly List<CostCodeBudget> budgets;
     private readonly List<Timesheet> timesheets;
 
@@ -17,7 +16,6 @@ public sealed class InMemoryCommercialStore : ICommercialStore
     {
         claimPeriods = CommercialSeed.ClaimPeriods(baseDate);
         valuations = CommercialSeed.Valuations(claimPeriods);
-        cvrSnapshots = CommercialSeed.CvrSnapshots(baseDate);
         budgets = CommercialSeed.Budgets();
         timesheets = CommercialSeed.Timesheets(NigelEmail);
     }
@@ -32,12 +30,14 @@ public sealed class InMemoryCommercialStore : ICommercialStore
         valuations.Where(v => Match(v.ProjectId, projectId))
                   .OrderByDescending(v => v.IssuedAt ?? DateTimeOffset.MinValue).ToList().AsReadOnly();
 
-    public IReadOnlyList<CvrSnapshot> CvrSnapshotsFor(string projectId) =>
-        cvrSnapshots.Where(c => Match(c.ProjectId, projectId))
-                    .OrderByDescending(c => c.SnapshotAt).ToList().AsReadOnly();
-
-    public CvrSnapshot? LatestCvr(string projectId) =>
-        CvrSnapshotsFor(projectId).FirstOrDefault();
+    public Valuation SaveValuation(Valuation valuation)
+    {
+        var existing = valuations.FirstOrDefault(v => v.ValuationId == valuation.ValuationId);
+        if (existing is not null) valuations.Remove(existing);
+        valuations.Add(valuation);
+        OnChange?.Invoke();
+        return valuation;
+    }
 
     public IReadOnlyList<CostCodeBudget> BudgetsFor(string projectId) =>
         budgets.Where(b => Match(b.ProjectId, projectId))
@@ -54,6 +54,12 @@ public sealed class InMemoryCommercialStore : ICommercialStore
         timesheets.Add(timesheet);
         OnChange?.Invoke();
         return timesheet;
+    }
+
+    public Timesheet ApproveTimesheet(string timesheetId)
+    {
+        var existing = timesheets.First(t => t.TimesheetId == timesheetId);
+        return SaveTimesheet(existing with { IsApproved = true });
     }
 
     public CashflowSnapshot LatestCashflow() => CommercialSeed.LatestCashflow();

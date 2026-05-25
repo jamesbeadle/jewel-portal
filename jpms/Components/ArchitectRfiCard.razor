@@ -1,0 +1,63 @@
+@inject IChangeRegister ChangeRegister
+
+<div class="p-5">
+    <div class="flex items-start justify-between gap-3 mb-2">
+        <div>
+            <p class="text-xs uppercase tracking-wider text-slate-500 font-medium mb-1">@Rfi.Reference · @ProjectName</p>
+            <h3 class="text-sm font-semibold text-slate-900">@Rfi.Title</h3>
+        </div>
+        <span class="text-[11px] font-medium text-amber-700">@Rfi.Status</span>
+    </div>
+    <p class="text-sm text-slate-700 mb-3">@Rfi.Description</p>
+
+    @if (showReplyForm)
+    {
+        <form @onsubmit="HandleReply" @onsubmit:preventDefault="true" class="space-y-3">
+            <textarea @bind="reply" rows="3" required
+                      placeholder="Your response…"
+                      class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"></textarea>
+            <label class="inline-flex items-center gap-2 text-sm text-slate-700">
+                <input type="checkbox" @bind="impliesVariation" />
+                This change implies a variation order
+            </label>
+            <div class="flex items-center gap-2">
+                <button type="submit"
+                        class="rounded-lg bg-slate-900 text-white font-medium text-sm px-3 py-2 hover:bg-slate-800 transition">
+                    Send reply
+                </button>
+                <button type="button" @onclick="() => showReplyForm = false"
+                        class="text-sm text-slate-500 hover:text-slate-900 underline underline-offset-4">
+                    Cancel
+                </button>
+            </div>
+        </form>
+    }
+    else
+    {
+        <button type="button" @onclick="() => showReplyForm = true"
+                class="rounded-lg bg-slate-900 text-white font-medium text-sm px-3 py-2 hover:bg-slate-800 transition">
+            Reply
+        </button>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public ChangeRecord Rfi { get; set; } = default!;
+    [Parameter, EditorRequired] public string ProjectName { get; set; } = "";
+
+    private bool showReplyForm;
+    private string reply = "";
+    private bool impliesVariation;
+
+    private void HandleReply()
+    {
+        var resolved = Rfi with
+        {
+            Status = ChangeStatus.Closed,
+            RespondedAt = DateTimeOffset.UtcNow,
+            Description = $"{Rfi.Description}\n\nArchitect reply:\n{reply}"
+        };
+        ChangeRegister.Upsert(resolved);
+        showReplyForm = false;
+    }
+}

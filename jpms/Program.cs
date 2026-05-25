@@ -27,7 +27,9 @@ builder.Services.AddScoped<IMobilisationStore, InMemoryMobilisationStore>();
 builder.Services.AddScoped<IChangeRegister, InMemoryChangeRegister>();
 builder.Services.AddScoped<ISiteStore, InMemorySiteStore>();
 builder.Services.AddScoped<ICommercialStore, InMemoryCommercialStore>();
+builder.Services.AddScoped<ICvrStore, InMemoryCvrStore>();
 builder.Services.AddScoped<ICloseoutStore, InMemoryCloseoutStore>();
+builder.Services.AddScoped<PortalContext>();
 builder.Services.AddScoped<AuthService>();
 builder.Services.AddScoped<SessionService>();
 

@@ -1,4 +1,4 @@
-@inject ICommercialStore CommercialStore
+@inject ICvrStore CvrStore
 
 <div class="rounded-xl border border-slate-200 bg-white overflow-hidden">
     <table class="w-full text-sm">
@@ -15,7 +15,7 @@
         <tbody class="divide-y divide-slate-200">
             @foreach (var project in Projects)
             {
-                var snapshot = CommercialStore.LatestCvr(project.ProjectId);
+                var snapshot = CvrStore.LatestSnapshot(project.ProjectId);
                 <tr>
                     <td class="px-4 py-3 font-mono text-xs text-slate-700">@project.Reference</td>
                     <td class="px-4 py-3 text-slate-900 font-medium">@project.Name</td>

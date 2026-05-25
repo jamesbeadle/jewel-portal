@@ -1,0 +1,40 @@
+@inject ICommercialStore CommercialStore
+@inject ICvrStore CvrStore
+
+@switch (Section)
+{
+    case "pvr":
+        <PvrSection ProjectId="@ProjectId" />
+        break;
+    case "cvr":
+        <CvrSection ProjectId="@ProjectId" />
+        break;
+    case "accruals":
+        <h2 class="text-lg font-semibold text-slate-900 mb-3">QS Accruals</h2>
+        <QsAccrualsTable Accruals="CvrStore.AccrualsFor(ProjectId)" />
+        break;
+    case "prelims":
+        <h2 class="text-lg font-semibold text-slate-900 mb-3">Prelim forecast</h2>
+        <PrelimForecastGrid Items="CvrStore.PrelimsFor(ProjectId)" />
+        break;
+    case "eots":
+        <h2 class="text-lg font-semibold text-slate-900 mb-3">Extensions of Time</h2>
+        <EotTable Eots="CvrStore.EotsFor(ProjectId)" />
+        break;
+    case "budgets":
+        <h2 class="text-lg font-semibold text-slate-900 mb-3">Cost code budgets</h2>
+        <CostCodeBudgetTable Budgets="CommercialStore.BudgetsFor(ProjectId)" />
+        break;
+    case "timesheets":
+        <h2 class="text-lg font-semibold text-slate-900 mb-3">Timesheets — weekly approval</h2>
+        <TimesheetApprovalGrid Timesheets="CommercialStore.TimesheetsFor(ProjectId)" />
+        break;
+    default:
+        <CommercialSummary ProjectId="@ProjectId" />
+        break;
+}
+
+@code {
+    [Parameter, EditorRequired] public string ProjectId { get; set; } = "";
+    [Parameter, EditorRequired] public string Section { get; set; } = "summary";
+}

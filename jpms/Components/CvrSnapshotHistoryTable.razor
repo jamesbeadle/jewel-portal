@@ -1,0 +1,38 @@
+<div class="rounded-xl border border-slate-200 bg-white overflow-hidden">
+    <table class="w-full text-sm">
+        <thead class="bg-slate-50 border-b border-slate-200">
+            <tr class="text-right text-[11px] uppercase tracking-wider text-slate-500 font-semibold">
+                <th class="px-4 py-3 text-left">Snapshot</th>
+                <th class="px-4 py-3">Tender</th>
+                <th class="px-4 py-3">Forecast cost</th>
+                <th class="px-4 py-3">Forecast value</th>
+                <th class="px-4 py-3">Margin £</th>
+                <th class="px-4 py-3">Margin %</th>
+                <th class="px-4 py-3">Weeks ±</th>
+            </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-200 text-right">
+            @foreach (var snapshot in Snapshots)
+            {
+                <tr>
+                    <td class="px-4 py-3 text-left text-slate-900 font-medium">@snapshot.SnapshotAt.LocalDateTime.ToString("d MMM yyyy")</td>
+                    <td class="px-4 py-3 text-slate-700">@Money(snapshot.TenderValue)</td>
+                    <td class="px-4 py-3 text-slate-700">@Money(snapshot.ForecastFinalCost)</td>
+                    <td class="px-4 py-3 text-slate-700">@Money(snapshot.ForecastFinalValue)</td>
+                    <td class="px-4 py-3 text-slate-900 font-medium">@Money(snapshot.MarginPounds)</td>
+                    <td class="px-4 py-3 text-slate-700">@snapshot.MarginPercent.ToString("0.0")%</td>
+                    <td class="px-4 py-3 font-medium @(snapshot.WeeksAheadOrBehind >= 0 ? "text-emerald-700" : "text-rose-700")">
+                        @snapshot.WeeksAheadOrBehind
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public IReadOnlyList<CvrSnapshot> Snapshots { get; set; } = Array.Empty<CvrSnapshot>();
+
+    private static string Money(decimal value) =>
+        value.ToString("C0", System.Globalization.CultureInfo.GetCultureInfo("en-GB"));
+}
