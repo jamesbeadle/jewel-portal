@@ -15,22 +15,22 @@ builder.Services.AddScoped(serviceProvider => new HttpClient
 
 builder.Services.AddScoped<IUserDirectory, AllowListUserDirectory>();
 builder.Services.AddScoped<IAccessRequestStore, InMemoryAccessRequestStore>();
-// Swap InMemoryProjectStore -> HttpProjectStore when the SQL API is deployed.
-// HttpProjectStore reads/writes via /api/projects (Azure SQL via EF Core).
-builder.Services.AddScoped<IProjectStore, InMemoryProjectStore>();
-builder.Services.AddScoped<ILeadStore, InMemoryLeadStore>();
-builder.Services.AddScoped<IRateLibrary, InMemoryRateLibrary>();
-builder.Services.AddScoped<IBoqStore, InMemoryBoqStore>();
-builder.Services.AddScoped<IDrawingStore, InMemoryDrawingStore>();
-builder.Services.AddScoped<ISubcontractorStore, InMemorySubcontractorStore>();
-builder.Services.AddScoped<IHsRegister, InMemoryHsRegister>();
-builder.Services.AddScoped<IProcurementStore, InMemoryProcurementStore>();
-builder.Services.AddScoped<IMobilisationStore, InMemoryMobilisationStore>();
-builder.Services.AddScoped<IChangeRegister, InMemoryChangeRegister>();
-builder.Services.AddScoped<ISiteStore, InMemorySiteStore>();
-builder.Services.AddScoped<ICommercialStore, InMemoryCommercialStore>();
-builder.Services.AddScoped<ICvrStore, InMemoryCvrStore>();
-builder.Services.AddScoped<ICloseoutStore, InMemoryCloseoutStore>();
+
+builder.Services.AddScoped<IProjectStore, HttpProjectStore>();
+builder.Services.AddScoped<ILeadStore, HttpLeadStore>();
+builder.Services.AddScoped<IRateLibrary, HttpRateLibrary>();
+builder.Services.AddScoped<IBoqStore, HttpBoqStore>();
+builder.Services.AddScoped<IDrawingStore, HttpDrawingStore>();
+builder.Services.AddScoped<ISubcontractorStore, HttpSubcontractorStore>();
+builder.Services.AddScoped<IHsRegister, HttpHsRegister>();
+builder.Services.AddScoped<IProcurementStore, HttpProcurementStore>();
+builder.Services.AddScoped<IMobilisationStore, HttpMobilisationStore>();
+builder.Services.AddScoped<IChangeRegister, HttpChangeRegister>();
+builder.Services.AddScoped<ISiteStore, HttpSiteStore>();
+builder.Services.AddScoped<ICommercialStore, HttpCommercialStore>();
+builder.Services.AddScoped<ICvrStore, HttpCvrStore>();
+builder.Services.AddScoped<ICloseoutStore, HttpCloseoutStore>();
+
 builder.Services.AddScoped<PortalContext>();
 builder.Services.AddScoped<AuthService>();
 builder.Services.AddScoped<SessionService>();

@@ -37,3 +37,12 @@ public sealed class HsRecordEntity
     public DateTimeOffset? DueAt { get; set; }
     public DateTimeOffset? ClosedAt { get; set; }
 }
+
+public sealed class HsRecordAttendanceEntity
+{
+    [Key, MaxLength(64)] public string HsRecordAttendanceId { get; set; } = "";
+    [MaxLength(64)]      public string HsRecordId { get; set; } = "";
+    [MaxLength(256)]     public string AttendeeName { get; set; } = "";
+    [MaxLength(256)]     public string SignatureBlobRef { get; set; } = "";
+    public DateTimeOffset SignedAt { get; set; }
+}

@@ -49,4 +49,7 @@ public sealed class ChangeRecordEntity
     [MaxLength(256)]     public string RaisedByEmail { get; set; } = "";
     public DateTimeOffset RaisedAt { get; set; }
     public DateTimeOffset? RespondedAt { get; set; }
+    [MaxLength(2048)]    public string? ResponseText { get; set; }
+    [MaxLength(256)]     public string? RespondedByEmail { get; set; }
+    public bool ImpliesVariation { get; set; }
 }
