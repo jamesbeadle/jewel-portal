@@ -1,0 +1,29 @@
+@switch (ActiveTab)
+{
+    case "qualification":
+        <LeadQualificationTab Lead="Lead" />
+        break;
+    case "site-visits":
+        <LeadSiteVisitsTab Lead="Lead" />
+        break;
+    case "info-chase":
+        <LeadInfoChaseTab Lead="Lead" />
+        break;
+    case "bid-decision":
+        <LeadBidDecisionTab Lead="Lead" />
+        break;
+    case "proposal":
+        <LeadProposalTab Lead="Lead" />
+        break;
+    case "outcome":
+        <LeadOutcomeTab Lead="Lead" />
+        break;
+    default:
+        <LeadOverviewTab Lead="Lead" />
+        break;
+}
+
+@code {
+    [Parameter, EditorRequired] public Lead Lead { get; set; } = default!;
+    [Parameter, EditorRequired] public string ActiveTab { get; set; } = "overview";
+}

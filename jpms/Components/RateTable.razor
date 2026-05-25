@@ -1,0 +1,36 @@
+<div class="rounded-xl border border-slate-200 bg-white overflow-hidden">
+    <table class="w-full text-sm">
+        <thead class="bg-slate-50 border-b border-slate-200">
+            <tr class="text-left text-[11px] uppercase tracking-wider text-slate-500 font-semibold">
+                <th class="px-4 py-3">Trade</th>
+                <th class="px-4 py-3">Description</th>
+                <th class="px-4 py-3 hidden md:table-cell">Supplier</th>
+                <th class="px-4 py-3 text-right">Unit</th>
+                <th class="px-4 py-3 text-right">Rate</th>
+                <th class="px-4 py-3 hidden lg:table-cell">Last priced</th>
+            </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-200">
+            @foreach (var rate in Rates)
+            {
+                <tr>
+                    <td class="px-4 py-3 text-slate-900 font-medium">@rate.Trade</td>
+                    <td class="px-4 py-3 text-slate-700">@rate.Description</td>
+                    <td class="px-4 py-3 text-slate-600 hidden md:table-cell">@rate.SupplierName</td>
+                    <td class="px-4 py-3 text-right text-slate-500">@rate.Unit</td>
+                    <td class="px-4 py-3 text-right text-slate-900 font-medium">@Money(rate.Value)</td>
+                    <td class="px-4 py-3 text-slate-600 hidden lg:table-cell">
+                        @rate.LastPricedAt.LocalDateTime.ToString("d MMM yyyy")
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public IReadOnlyList<Rate> Rates { get; set; } = Array.Empty<Rate>();
+
+    private static string Money(decimal value) =>
+        value.ToString("C0", System.Globalization.CultureInfo.GetCultureInfo("en-GB"));
+}

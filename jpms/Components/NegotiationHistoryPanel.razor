@@ -1,0 +1,69 @@
+@inject ILeadStore LeadStore
+
+<section class="rounded-xl border border-slate-200 bg-white p-5 mb-5">
+    <h2 class="text-sm font-medium text-slate-700 mb-3">Log negotiation round</h2>
+    <form @onsubmit="HandleLog" @onsubmit:preventDefault="true" class="flex flex-wrap items-end gap-2">
+        <div>
+            <label class="block text-xs uppercase tracking-wider text-slate-500 font-semibold mb-1">Revised value</label>
+            <input type="number" min="0" @bind="revisedValue"
+                   class="w-48 rounded-lg border border-slate-300 px-3 py-2 text-sm" />
+        </div>
+        <div class="flex-1 min-w-[14rem]">
+            <label class="block text-xs uppercase tracking-wider text-slate-500 font-semibold mb-1">Notes</label>
+            <input type="text" @bind="notes"
+                   class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" />
+        </div>
+        <button type="submit"
+                class="rounded-lg bg-slate-900 text-white font-medium text-sm px-4 py-2 hover:bg-slate-800 transition">
+            Log
+        </button>
+    </form>
+</section>
+
+<section class="rounded-xl border border-slate-200 bg-white overflow-hidden">
+    <header class="px-5 py-3 border-b border-slate-200 bg-slate-50">
+        <h2 class="text-sm font-medium text-slate-700">Negotiation history</h2>
+    </header>
+    @if (Proposal.NegotiationRounds.Count == 0)
+    {
+        <p class="p-5 text-sm text-slate-500 italic">No rounds logged.</p>
+    }
+    else
+    {
+        <ul class="divide-y divide-slate-200">
+            @foreach (var round in Proposal.NegotiationRounds.Reverse())
+            {
+                <li class="p-4 text-sm">
+                    <p class="font-medium text-slate-900">@FormatValue(round.RevisedValue)</p>
+                    <p class="text-slate-700">@round.Notes</p>
+                    <p class="text-xs text-slate-500 mt-1">@round.At.LocalDateTime.ToString("d MMM yyyy HH:mm")</p>
+                </li>
+            }
+        </ul>
+    }
+</section>
+
+@code {
+    [Parameter, EditorRequired] public Lead Lead { get; set; } = default!;
+    [Parameter, EditorRequired] public Proposal Proposal { get; set; } = default!;
+
+    private decimal revisedValue;
+    private string notes = "";
+
+    private void HandleLog()
+    {
+        var newRounds = Proposal.NegotiationRounds
+            .Append(new NegotiationRound(DateTimeOffset.UtcNow, revisedValue, notes))
+            .ToList()
+            .AsReadOnly();
+        LeadStore.SaveProposal(Proposal with { NegotiationRounds = newRounds });
+        notes = "";
+        if (Lead.Stage == LeadStage.ProposalIssued)
+        {
+            LeadStore.Upsert(Lead with { Stage = LeadStage.Negotiation });
+        }
+    }
+
+    private static string FormatValue(decimal value) =>
+        value.ToString("C0", System.Globalization.CultureInfo.GetCultureInfo("en-GB"));
+}

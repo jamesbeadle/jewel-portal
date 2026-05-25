@@ -8,5 +8,7 @@ public interface IProjectStore
 
     Project? Find(string projectId);
 
+    Project Upsert(Project project);
+
     event Action? OnChange;
 }

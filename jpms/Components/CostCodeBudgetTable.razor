@@ -1,0 +1,43 @@
+<div class="rounded-xl border border-slate-200 bg-white overflow-hidden">
+    <table class="w-full text-sm">
+        <thead class="bg-slate-50 border-b border-slate-200">
+            <tr class="text-left text-[11px] uppercase tracking-wider text-slate-500 font-semibold">
+                <th class="px-4 py-3">Cost code</th>
+                <th class="px-4 py-3 text-right">Allocated</th>
+                <th class="px-4 py-3 text-right">Spent</th>
+                <th class="px-4 py-3 text-right">Remaining</th>
+                <th class="px-4 py-3">Status</th>
+            </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-200">
+            @foreach (var budget in Budgets)
+            {
+                <tr>
+                    <td class="px-4 py-3"><CostCodeChip Code="@budget.CostCode" /></td>
+                    <td class="px-4 py-3 text-right text-slate-700">@Money(budget.AllocatedAmount)</td>
+                    <td class="px-4 py-3 text-right text-slate-700">@Money(budget.SpentAmount)</td>
+                    <td class="px-4 py-3 text-right @(budget.IsOverrun ? "text-rose-700 font-medium" : "text-slate-900 font-medium")">
+                        @Money(budget.RemainingAmount)
+                    </td>
+                    <td class="px-4 py-3">
+                        @if (budget.IsOverrun)
+                        {
+                            <span class="text-[11px] font-medium text-rose-700">Overrun</span>
+                        }
+                        else
+                        {
+                            <span class="text-[11px] font-medium text-emerald-700">Within budget</span>
+                        }
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public IReadOnlyList<CostCodeBudget> Budgets { get; set; } = Array.Empty<CostCodeBudget>();
+
+    private static string Money(decimal value) =>
+        value.ToString("C0", System.Globalization.CultureInfo.GetCultureInfo("en-GB"));
+}

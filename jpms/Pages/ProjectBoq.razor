@@ -1,0 +1,71 @@
+@page "/projects/{ProjectId}/boq"
+@inject AuthService Auth
+@inject SessionService Session
+@inject IBoqStore BoqStore
+@inject NavigationManager Nav
+@implements IDisposable
+
+<PageTitle>BoQ · JPMS</PageTitle>
+
+@if (!isLoaded)
+{
+    <section class="max-w-5xl mx-auto px-4 py-12 text-slate-500 text-sm">Loading…</section>
+}
+else if (!Session.IsApproved)
+{
+    <RequestAccessView Email="@Auth.CurrentUser!.Email" DisplayName="@Auth.CurrentUser.DisplayName" />
+}
+else
+{
+    <ProjectPageShell ProjectId="@ProjectId" ActiveTab="boq">
+        <div class="flex flex-wrap items-end justify-between gap-3 mb-5">
+            <div>
+                <h2 class="text-lg font-semibold text-slate-900">Bill of Quantities</h2>
+                <p class="text-sm text-slate-600">@Lines.Count line items · <span class="font-medium">@Money(Total)</span></p>
+            </div>
+            <button type="button" @onclick="() => isAddingLine = !isAddingLine"
+                    class="rounded-lg bg-slate-900 text-white font-medium text-sm px-3 py-2 hover:bg-slate-800 transition">
+                @(isAddingLine ? "Cancel" : "+ Add line item")
+            </button>
+        </div>
+
+        @if (isAddingLine)
+        {
+            <div class="mb-5">
+                <BoqLineForm ProjectId="@ProjectId" OnAdded="() => isAddingLine = false" />
+            </div>
+        }
+
+        @if (Lines.Count == 0)
+        {
+            <p class="text-sm text-slate-500 italic">No BoQ line items yet. Add one to get started.</p>
+        }
+        else
+        {
+            <BoqLineTable Lines="Lines" />
+        }
+    </ProjectPageShell>
+}
+
+@code {
+    [Parameter] public string ProjectId { get; set; } = "";
+
+    private bool isLoaded;
+    private bool isAddingLine;
+
+    private IReadOnlyList<BoqLineItem> Lines => BoqStore.LinesFor(ProjectId);
+    private decimal Total => BoqStore.TotalFor(ProjectId);
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Session.EnsureLoadedAsync();
+        if (!Auth.IsSignedIn) { Nav.NavigateTo("/login", forceLoad: true); return; }
+        BoqStore.OnChange += StateHasChanged;
+        isLoaded = true;
+    }
+
+    public void Dispose() => BoqStore.OnChange -= StateHasChanged;
+
+    private static string Money(decimal value) =>
+        value.ToString("C0", System.Globalization.CultureInfo.GetCultureInfo("en-GB"));
+}

@@ -1,0 +1,47 @@
+<div class="rounded-xl border border-slate-200 bg-white overflow-hidden">
+    <table class="w-full text-sm">
+        <thead class="bg-slate-50 border-b border-slate-200">
+            <tr class="text-left text-[11px] uppercase tracking-wider text-slate-500 font-semibold">
+                <th class="px-4 py-3">Kind</th>
+                <th class="px-4 py-3">Summary</th>
+                <th class="px-4 py-3 hidden md:table-cell">Severity</th>
+                <th class="px-4 py-3">Status</th>
+                <th class="px-4 py-3 hidden lg:table-cell">Raised</th>
+                <th class="px-4 py-3 hidden lg:table-cell">Due</th>
+            </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-200">
+            @foreach (var record in Records)
+            {
+                <tr>
+                    <td class="px-4 py-3 text-slate-700">@record.Kind.KindDisplayName()</td>
+                    <td class="px-4 py-3 text-slate-900 font-medium">@record.Summary</td>
+                    <td class="px-4 py-3 hidden md:table-cell">
+                        <span class="inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-medium @record.Severity.SeverityPillClass()">
+                            @record.Severity
+                        </span>
+                    </td>
+                    <td class="px-4 py-3">
+                        <span class="text-[11px] font-medium @StatusColour(record.Status)">@record.Status</span>
+                    </td>
+                    <td class="px-4 py-3 text-slate-500 hidden lg:table-cell">@record.RaisedAt.LocalDateTime.ToString("d MMM")</td>
+                    <td class="px-4 py-3 text-slate-500 hidden lg:table-cell">
+                        @(record.DueAt is null ? "—" : record.DueAt.Value.LocalDateTime.ToString("d MMM"))
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public IReadOnlyList<HsRecord> Records { get; set; } = Array.Empty<HsRecord>();
+
+    private static string StatusColour(HsStatus status) => status switch
+    {
+        HsStatus.Open       => "text-rose-700",
+        HsStatus.InProgress => "text-amber-700",
+        HsStatus.Closed     => "text-emerald-700",
+        _ => "text-slate-700"
+    };
+}

@@ -1,0 +1,40 @@
+<div class="rounded-xl border border-slate-200 bg-white overflow-hidden">
+    <table class="w-full text-sm">
+        <thead class="bg-slate-50 border-b border-slate-200">
+            <tr class="text-left text-[11px] uppercase tracking-wider text-slate-500 font-semibold">
+                <th class="px-4 py-3">Ref</th>
+                <th class="px-4 py-3 hidden sm:table-cell">Kind</th>
+                <th class="px-4 py-3">Title</th>
+                <th class="px-4 py-3 text-right hidden md:table-cell">Value</th>
+                <th class="px-4 py-3">Status</th>
+                <th class="px-4 py-3 hidden lg:table-cell">Raised</th>
+            </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-200">
+            @foreach (var record in Records)
+            {
+                <tr>
+                    <td class="px-4 py-3 font-mono text-xs text-slate-700">@record.Reference</td>
+                    <td class="px-4 py-3 text-slate-700 hidden sm:table-cell">@record.Kind.DisplayName()</td>
+                    <td class="px-4 py-3 text-slate-900 font-medium">@record.Title</td>
+                    <td class="px-4 py-3 text-right text-slate-700 hidden md:table-cell">
+                        @(record.Value is null ? "—" : Money(record.Value.Value))
+                    </td>
+                    <td class="px-4 py-3">
+                        <span class="inline-flex items-center rounded-full bg-slate-50 border border-slate-200 px-2 py-0.5 text-[11px] font-medium text-slate-700">
+                            @record.Status
+                        </span>
+                    </td>
+                    <td class="px-4 py-3 text-slate-500 hidden lg:table-cell">@record.RaisedAt.LocalDateTime.ToString("d MMM yyyy")</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public IReadOnlyList<ChangeRecord> Records { get; set; } = Array.Empty<ChangeRecord>();
+
+    private static string Money(decimal value) =>
+        value.ToString("C0", System.Globalization.CultureInfo.GetCultureInfo("en-GB"));
+}

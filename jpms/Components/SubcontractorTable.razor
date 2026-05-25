@@ -1,0 +1,42 @@
+@inject NavigationManager Nav
+@inject ISubcontractorStore SubcontractorStore
+
+<div class="rounded-xl border border-slate-200 bg-white overflow-hidden">
+    <table class="w-full text-sm">
+        <thead class="bg-slate-50 border-b border-slate-200">
+            <tr class="text-left text-[11px] uppercase tracking-wider text-slate-500 font-semibold">
+                <th class="px-4 py-3">Company</th>
+                <th class="px-4 py-3 hidden sm:table-cell">Trade</th>
+                <th class="px-4 py-3 hidden md:table-cell">Primary contact</th>
+                <th class="px-4 py-3 hidden lg:table-cell">CIS</th>
+                <th class="px-4 py-3">Compliance</th>
+            </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-200">
+            @foreach (var sub in Subcontractors)
+            {
+                <tr class="hover:bg-slate-50 cursor-pointer transition"
+                    @onclick="() => Open(sub.SubcontractorId)">
+                    <td class="px-4 py-3 text-slate-900 font-medium">@sub.CompanyName</td>
+                    <td class="px-4 py-3 text-slate-700 hidden sm:table-cell">@sub.PrimaryTrade</td>
+                    <td class="px-4 py-3 text-slate-600 hidden md:table-cell">@sub.ContactName</td>
+                    <td class="px-4 py-3 text-slate-600 hidden lg:table-cell">@sub.CisStatus</td>
+                    <td class="px-4 py-3"><ComplianceStatusPill Status="@WorstStatus(sub)" /></td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public IReadOnlyList<Subcontractor> Subcontractors { get; set; } = Array.Empty<Subcontractor>();
+
+    private void Open(string subcontractorId) => Nav.NavigateTo($"/subcontractors/{subcontractorId}");
+
+    private ComplianceStatus WorstStatus(Subcontractor sub)
+    {
+        var documents = SubcontractorStore.ComplianceFor(sub.SubcontractorId);
+        if (documents.Count == 0) return ComplianceStatus.Missing;
+        return documents.Select(d => d.Status()).Max();
+    }
+}

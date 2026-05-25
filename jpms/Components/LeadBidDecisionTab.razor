@@ -1,0 +1,69 @@
+@inject AuthService Auth
+@inject ILeadStore LeadStore
+
+<section class="rounded-xl border border-slate-200 bg-white p-5">
+    <h2 class="text-sm font-medium text-slate-700 mb-3">Bid / no-bid decision</h2>
+
+    @if (existing is not null)
+    {
+        <div class="rounded-lg border border-slate-200 bg-slate-50 p-4 mb-4">
+            <p class="text-sm font-medium text-slate-900">
+                Decision: @(existing.ShouldBid ? "Bid" : "No bid")
+            </p>
+            <p class="text-sm text-slate-700 mt-1">@existing.Reason</p>
+            <p class="text-xs text-slate-500 mt-2">
+                @existing.DecidedAt.LocalDateTime.ToString("d MMM yyyy HH:mm") by @existing.DecidedByEmail
+            </p>
+        </div>
+    }
+
+    <form @onsubmit="HandleSave" @onsubmit:preventDefault="true" class="space-y-3">
+        <div class="flex items-center gap-4">
+            <label class="inline-flex items-center gap-2 text-sm">
+                <input type="radio" name="bidChoice" value="true" checked="@shouldBid"
+                       @onchange="() => shouldBid = true" />
+                Bid
+            </label>
+            <label class="inline-flex items-center gap-2 text-sm">
+                <input type="radio" name="bidChoice" value="false" checked="@(!shouldBid)"
+                       @onchange="() => shouldBid = false" />
+                No bid
+            </label>
+        </div>
+        <div>
+            <label class="block text-xs uppercase tracking-wider text-slate-500 font-semibold mb-1">Reason</label>
+            <textarea @bind="reason" rows="3"
+                      class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"></textarea>
+        </div>
+        <button type="submit"
+                class="rounded-lg bg-slate-900 text-white font-medium text-sm px-4 py-2 hover:bg-slate-800 transition">
+            Record decision
+        </button>
+    </form>
+</section>
+
+@code {
+    [Parameter, EditorRequired] public Lead Lead { get; set; } = default!;
+
+    private bool shouldBid = true;
+    private string reason = "";
+    private BidDecision? existing;
+
+    protected override void OnParametersSet()
+    {
+        existing = LeadStore.GetBidDecision(Lead.LeadId);
+        shouldBid = existing?.ShouldBid ?? true;
+        reason = existing?.Reason ?? "";
+    }
+
+    private void HandleSave()
+    {
+        var decision = new BidDecision(
+            Lead.LeadId, shouldBid, reason,
+            Auth.CurrentUser?.Email ?? "unknown", DateTimeOffset.UtcNow);
+        LeadStore.SaveBidDecision(decision);
+
+        var newStage = shouldBid ? LeadStage.Tendering : LeadStage.Lost;
+        LeadStore.Upsert(Lead with { Stage = newStage });
+    }
+}

@@ -1,0 +1,57 @@
+@inject ILeadStore LeadStore
+
+<form @onsubmit="HandleSubmit" @onsubmit:preventDefault="true"
+      class="rounded-2xl border border-slate-200 bg-white p-6 space-y-4">
+
+    <FormField Label="Contact name" Value="@contactName" OnChange="value => contactName = value" Required="true" />
+    <FormField Label="Contact email" Value="@contactEmail" OnChange="value => contactEmail = value" InputType="email" />
+    <FormField Label="Contact phone" Value="@contactPhone" OnChange="value => contactPhone = value" />
+    <FormField Label="Company / Trust (optional)" Value="@companyName" OnChange="value => companyName = value" />
+    <FormField Label="Site address" Value="@siteAddress" OnChange="value => siteAddress = value" Required="true" />
+    <FormField Label="Estimated value (GBP)" Value="@estimatedValue" OnChange="value => estimatedValue = value" InputType="number" />
+
+    <div>
+        <label class="block text-xs uppercase tracking-wider text-slate-500 font-semibold mb-1">Source</label>
+        <select @bind="source"
+                class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm">
+            @foreach (var option in Enum.GetValues<LeadSource>())
+            {
+                <option value="@option">@option.DisplayName()</option>
+            }
+        </select>
+    </div>
+
+    <button type="submit"
+            class="w-full rounded-lg bg-slate-900 text-white font-medium px-4 py-2.5 hover:bg-slate-800 disabled:bg-slate-300 transition"
+            disabled="@(!CanSubmit)">
+        Capture lead
+    </button>
+</form>
+
+@code {
+    [Parameter, EditorRequired] public string CurrentUserEmail { get; set; } = "";
+    [Parameter] public EventCallback<Lead> OnCreated { get; set; }
+
+    private string contactName = "";
+    private string contactEmail = "";
+    private string contactPhone = "";
+    private string companyName = "";
+    private string siteAddress = "";
+    private string estimatedValue = "";
+    private LeadSource source = LeadSource.Manual;
+
+    private bool CanSubmit =>
+        !string.IsNullOrWhiteSpace(contactName) && !string.IsNullOrWhiteSpace(siteAddress);
+
+    private async Task HandleSubmit()
+    {
+        if (!CanSubmit) return;
+        var leadId = $"LD-{Guid.NewGuid().ToString("N")[..8].ToUpperInvariant()}";
+        var reference = $"LD-{DateTime.UtcNow:yyyy}-{LeadStore.All().Count + 1:000}";
+        var value = decimal.TryParse(estimatedValue, out var parsed) ? (decimal?)parsed : null;
+        var lead = new Lead(leadId, reference, contactName, contactEmail, contactPhone,
+            companyName, siteAddress, value, source, LeadStage.NewLead, CurrentUserEmail, DateTimeOffset.UtcNow);
+        LeadStore.Upsert(lead);
+        await OnCreated.InvokeAsync(lead);
+    }
+}

@@ -1,0 +1,39 @@
+@inject NavigationManager Nav
+
+<div class="rounded-xl border border-slate-200 bg-white overflow-hidden">
+    <table class="w-full text-sm">
+        <thead class="bg-slate-50 border-b border-slate-200">
+            <tr class="text-left text-[11px] uppercase tracking-wider text-slate-500 font-semibold">
+                <th class="px-4 py-3">Code</th>
+                <th class="px-4 py-3">Title</th>
+                <th class="px-4 py-3 text-center">Current rev</th>
+                <th class="px-4 py-3 hidden md:table-cell">First received</th>
+            </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-200">
+            @foreach (var drawing in Drawings)
+            {
+                <tr class="hover:bg-slate-50 cursor-pointer transition"
+                    @onclick="() => OpenDrawing(drawing)">
+                    <td class="px-4 py-3 font-mono text-xs text-slate-700">@drawing.DrawingCode</td>
+                    <td class="px-4 py-3 text-slate-900 font-medium">@drawing.Title</td>
+                    <td class="px-4 py-3 text-center">
+                        <span class="inline-flex items-center justify-center rounded bg-slate-100 border border-slate-200 px-2 py-0.5 text-xs font-mono font-medium text-slate-700">
+                            @drawing.CurrentRevision
+                        </span>
+                    </td>
+                    <td class="px-4 py-3 text-slate-600 hidden md:table-cell">
+                        @drawing.CreatedAt.LocalDateTime.ToString("d MMM yyyy")
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public IReadOnlyList<Drawing> Drawings { get; set; } = Array.Empty<Drawing>();
+
+    private void OpenDrawing(Drawing drawing) =>
+        Nav.NavigateTo($"/projects/{drawing.ProjectId}/drawings/{drawing.DrawingId}");
+}

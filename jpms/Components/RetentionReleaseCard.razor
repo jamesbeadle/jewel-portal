@@ -1,0 +1,27 @@
+<section class="rounded-xl border border-slate-200 bg-white p-5">
+    @if (Release is null)
+    {
+        <p class="text-sm text-slate-500 italic">Retention is held until end of defects period.</p>
+    }
+    else
+    {
+        <div class="flex items-start justify-between gap-3">
+            <div>
+                <p class="text-sm font-medium text-slate-900">@Money(Release.Amount)</p>
+                <p class="text-xs text-slate-500 mt-1">
+                    Released @Release.ReleasedAt.LocalDateTime.ToString("d MMM yyyy")
+                </p>
+            </div>
+            <span class="text-[11px] font-medium @(Release.IsPublishedDownstream ? "text-emerald-700" : "text-amber-700")">
+                @(Release.IsPublishedDownstream ? "Published downstream" : "Awaiting publish")
+            </span>
+        </div>
+    }
+</section>
+
+@code {
+    [Parameter] public RetentionRelease? Release { get; set; }
+
+    private static string Money(decimal value) =>
+        value.ToString("C0", System.Globalization.CultureInfo.GetCultureInfo("en-GB"));
+}

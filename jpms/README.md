@@ -13,12 +13,43 @@ The production web app for Jewel Enterprises and its clients. Blazor WebAssembly
 
 ## What's built today
 
+The whole site map's Phase-1 internal scope is shipped as a navigable shell with seeded in-memory data. SQL persistence replaces the in-memory stores in the next layer; nothing in the UI changes.
+
+### Top-level navigation
+
+| Route | Workflow | What it does |
+|---|---|---|
+| `/` | — | Microsoft sign-in landing |
+| `/dashboard` | — | Role-aware home (Admin / placeholder / request-access) |
+| `/leads` + `/leads/{id}/{tab}` | 00 CRM | Lead pipeline with seven tabs (overview / qualification / site-visits / info-chase / bid-decision / proposal / outcome) |
+| `/leads/new` | 00 CRM | Capture-lead form |
+| `/estimating-queue` | 00 CRM | QS prioritised queue |
+| `/nurture` | 00 CRM | Lost leads kept warm |
+| `/sales-analytics` | 00 CRM | Source attribution + win rate |
+| `/projects` + `/projects/{id}` | All | Portfolio + project hub with tabbed sub-areas |
+| `/projects/{id}/drawings` (+`/{drawingId}`) | 01 Drawings | Drawing register, upload, revision history |
+| `/projects/{id}/boq` | 02 BoQ | Line items, direct add, totals |
+| `/projects/{id}/procurement` | 03 Procurement | Bid packages + work orders awarded |
+| `/projects/{id}/mobilisation` | 04 Mobilisation | Site mobilisation checklist (hard gate) |
+| `/projects/{id}/changes` (+`/{kind}`) | 05 Changes | Unified RFI/submittal/variation/NoD register |
+| `/projects/{id}/site` | 06 Site | Programme + site reports |
+| `/projects/{id}/commercial` | 07 Commercial | CVR snapshot + PVR valuations + cost-code budgets |
+| `/projects/{id}/closeout` | 08 Close-out | Defects + settlement + VAT analysis + retention |
+| `/subcontractors` + `/subcontractors/{id}` | 03 Procurement | Master directory + per-sub compliance docs |
+| `/work-orders` | 03 Procurement | Portfolio-wide WO list (FD view) |
+| `/hs` | 04 H&S | Cross-project H&S register (observations, incidents, corrective actions, toolbox talks, permits) |
+| `/cashflow` | 07 Cashflow | FD cashflow snapshot (13-week net) |
+| `/portfolio` | 09 Portfolio | Director / FD cross-project view (margin, exceptions) |
+| `/rate-library` + `/rate-library/stale` | 02 Rates | Rate library and stale-rate queue |
+
+### Auth + admin
+
 | Route | Page | Behaviour |
 |---|---|---|
-| `/` | `Pages/Login.razor` | Landing page with a single **Continue with Microsoft** button. Redirects authenticated users straight to `/dashboard`. |
-| `/dashboard` | `Pages/Dashboard.razor` | Reads `/.auth/me`, then routes to the admin home, the placeholder role home, or the request-access view. |
-| `/login` | (config) | Redirects to `/.auth/login/aad?post_login_redirect_uri=/dashboard`. |
-| `/logout` | (config) | Redirects to `/.auth/logout?post_logout_redirect_uri=/`. |
+| `/login` | (config) | Redirects to `/.auth/login/aad?post_login_redirect_uri=/dashboard` |
+| `/logout` | (config) | Redirects to `/.auth/logout?post_logout_redirect_uri=/` |
+
+The dashboard resolves to one of three states based on `EffectiveRoles.For(email, directoryEntry)`:
 
 The dashboard resolves to one of three states:
 

@@ -1,0 +1,47 @@
+@inject IBoqStore BoqStore
+
+<div class="rounded-xl border border-slate-200 bg-white overflow-hidden">
+    <table class="w-full text-sm">
+        <thead class="bg-slate-50 border-b border-slate-200">
+            <tr class="text-left text-[11px] uppercase tracking-wider text-slate-500 font-semibold">
+                <th class="px-4 py-3">Description</th>
+                <th class="px-4 py-3 hidden md:table-cell">Cost code</th>
+                <th class="px-4 py-3 hidden lg:table-cell">Discipline</th>
+                <th class="px-4 py-3 text-right">Qty</th>
+                <th class="px-4 py-3 text-right hidden sm:table-cell">Unit</th>
+                <th class="px-4 py-3 text-right">Rate</th>
+                <th class="px-4 py-3 text-right">Line total</th>
+                <th class="px-4 py-3"></th>
+            </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-200">
+            @foreach (var line in Lines)
+            {
+                <tr>
+                    <td class="px-4 py-3 text-slate-900">@line.Description</td>
+                    <td class="px-4 py-3 hidden md:table-cell"><CostCodeChip Code="@line.CostCode" /></td>
+                    <td class="px-4 py-3 hidden lg:table-cell"><DisciplineBadge Discipline="line.Discipline" /></td>
+                    <td class="px-4 py-3 text-right text-slate-700">@line.Quantity.ToString("0.##")</td>
+                    <td class="px-4 py-3 text-right text-slate-500 hidden sm:table-cell">@line.Unit</td>
+                    <td class="px-4 py-3 text-right text-slate-700">@Money(line.RateValue)</td>
+                    <td class="px-4 py-3 text-right text-slate-900 font-medium">@Money(line.LineTotal)</td>
+                    <td class="px-4 py-3 text-right">
+                        <button type="button" @onclick="() => Remove(line)"
+                                class="text-xs text-slate-500 hover:text-rose-700 underline underline-offset-4">
+                            Remove
+                        </button>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public IReadOnlyList<BoqLineItem> Lines { get; set; } = Array.Empty<BoqLineItem>();
+
+    private void Remove(BoqLineItem line) => BoqStore.Remove(line.BoqLineItemId);
+
+    private static string Money(decimal value) =>
+        value.ToString("C0", System.Globalization.CultureInfo.GetCultureInfo("en-GB"));
+}

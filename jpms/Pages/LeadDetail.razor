@@ -1,0 +1,67 @@
+@page "/leads/{LeadId}"
+@page "/leads/{LeadId}/{Tab}"
+@inject AuthService Auth
+@inject SessionService Session
+@inject ILeadStore LeadStore
+@inject NavigationManager Nav
+@implements IDisposable
+
+<PageTitle>@PageTitleText · JPMS</PageTitle>
+
+@if (!isLoaded)
+{
+    <section class="max-w-4xl mx-auto px-4 py-12 text-slate-500 text-sm">Loading lead…</section>
+}
+else if (!Session.IsApproved)
+{
+    <RequestAccessView Email="@Auth.CurrentUser!.Email" DisplayName="@Auth.CurrentUser.DisplayName" />
+}
+else if (lead is null)
+{
+    <section class="max-w-3xl mx-auto px-4 py-12">
+        <h1 class="text-2xl font-semibold text-slate-900 mb-2">Lead not found</h1>
+        <p class="text-slate-700">
+            <a class="text-slate-900 underline" href="/leads">Back to leads</a>.
+        </p>
+    </section>
+}
+else
+{
+    <section class="max-w-4xl mx-auto px-4 py-8 md:py-12">
+        <LeadDetailHeader Lead="lead" />
+        <LeadTabNav LeadId="lead.LeadId" ActiveTab="@ActiveTab" />
+        <LeadTabBody Lead="lead" ActiveTab="@ActiveTab" />
+    </section>
+}
+
+@code {
+    [Parameter] public string LeadId { get; set; } = "";
+    [Parameter] public string? Tab { get; set; }
+
+    private bool isLoaded;
+    private Lead? lead;
+
+    private string ActiveTab => string.IsNullOrWhiteSpace(Tab) ? "overview" : Tab.ToLowerInvariant();
+    private string PageTitleText => lead?.ContactName ?? "Lead";
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Session.EnsureLoadedAsync();
+        if (!Auth.IsSignedIn) { Nav.NavigateTo("/login", forceLoad: true); return; }
+        LeadStore.OnChange += HandleStoreChange;
+        Reload();
+        isLoaded = true;
+    }
+
+    protected override void OnParametersSet() => Reload();
+
+    private void Reload() => lead = LeadStore.Find(LeadId);
+
+    private void HandleStoreChange()
+    {
+        Reload();
+        StateHasChanged();
+    }
+
+    public void Dispose() => LeadStore.OnChange -= HandleStoreChange;
+}

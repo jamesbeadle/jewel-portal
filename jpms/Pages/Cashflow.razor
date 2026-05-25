@@ -1,0 +1,56 @@
+@page "/cashflow"
+@inject AuthService Auth
+@inject SessionService Session
+@inject ICommercialStore CommercialStore
+@inject NavigationManager Nav
+
+<PageTitle>Cashflow · JPMS</PageTitle>
+
+@if (!isLoaded)
+{
+    <section class="max-w-5xl mx-auto px-4 py-12 text-slate-500 text-sm">Loading…</section>
+}
+else if (!Session.IsApproved)
+{
+    <RequestAccessView Email="@Auth.CurrentUser!.Email" DisplayName="@Auth.CurrentUser.DisplayName" />
+}
+else
+{
+    <section class="max-w-5xl mx-auto px-4 py-8 md:py-12">
+        <header class="mb-6 md:mb-8">
+            <p class="text-xs uppercase tracking-wider text-slate-500 font-medium mb-1">JPMS · Finance Director</p>
+            <h1 class="text-2xl md:text-3xl font-semibold text-slate-900 leading-tight">Cashflow forecast</h1>
+            <p class="text-sm text-slate-600 mt-2">Rolling 13-week view across the portfolio, generated from project data.</p>
+        </header>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4 mb-6">
+            <Stat Label="Expected income (13w)"    Value="@Money(Snapshot.ExpectedIncome13Week)" />
+            <Stat Label="Committed spend (13w)"    Value="@Money(Snapshot.CommittedSpend13Week)" />
+            <Stat Label="Net position"             Value="@Money(Snapshot.NetPosition13Week)" />
+        </div>
+
+        <section class="rounded-xl border border-slate-200 bg-white p-5">
+            <h2 class="text-sm font-medium text-slate-700 mb-3">Snapshot</h2>
+            <p class="text-sm text-slate-600">
+                Generated @Snapshot.GeneratedAt.LocalDateTime.ToString("d MMM yyyy HH:mm"). Live data feed will land
+                when the SQL persistence layer ships; current values are derived from in-memory project data.
+            </p>
+        </section>
+    </section>
+}
+
+@code {
+    private bool isLoaded;
+
+    private CashflowSnapshot Snapshot => CommercialStore.LatestCashflow();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Session.EnsureLoadedAsync();
+        if (!Auth.IsSignedIn) { Nav.NavigateTo("/login", forceLoad: true); return; }
+        isLoaded = true;
+    }
+
+    private static string Money(decimal value) =>
+        value.ToString("C0", System.Globalization.CultureInfo.GetCultureInfo("en-GB"));
+}

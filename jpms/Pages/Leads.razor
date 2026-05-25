@@ -1,0 +1,66 @@
+@page "/leads"
+@inject AuthService Auth
+@inject SessionService Session
+@inject ILeadStore LeadStore
+@inject NavigationManager Nav
+@implements IDisposable
+
+<PageTitle>Leads · JPMS</PageTitle>
+
+@if (!isLoaded)
+{
+    <section class="max-w-5xl mx-auto px-4 py-12 text-slate-500 text-sm">Loading leads…</section>
+}
+else if (!Session.IsApproved)
+{
+    <RequestAccessView Email="@Auth.CurrentUser!.Email" DisplayName="@Auth.CurrentUser.DisplayName" />
+}
+else
+{
+    <section class="max-w-5xl mx-auto px-4 py-8 md:py-12">
+        <header class="mb-6 md:mb-8 flex items-end justify-between gap-4">
+            <div>
+                <p class="text-xs uppercase tracking-wider text-slate-500 font-medium mb-1">JPMS · CRM</p>
+                <h1 class="text-2xl md:text-3xl font-semibold text-slate-900 leading-tight">Leads</h1>
+                <p class="text-sm text-slate-600 mt-2">@Active.Count active · @Closed.Count closed.</p>
+            </div>
+            <a href="/leads/new"
+               class="rounded-lg bg-slate-900 text-white font-medium px-4 py-2 hover:bg-slate-800 transition">
+                + New lead
+            </a>
+        </header>
+
+        <LeadsTable Leads="Active" />
+
+        @if (Closed.Count > 0)
+        {
+            <h2 class="text-sm font-medium text-slate-700 mt-8 mb-3">Closed</h2>
+            <LeadsTable Leads="Closed" />
+        }
+    </section>
+}
+
+@code {
+    private bool isLoaded;
+
+    private IReadOnlyList<Lead> Active =>
+        LeadStore.All().Where(lead => lead.Stage.IsActive()).ToList().AsReadOnly();
+
+    private IReadOnlyList<Lead> Closed =>
+        LeadStore.All().Where(lead => !lead.Stage.IsActive()).ToList().AsReadOnly();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Session.EnsureLoadedAsync();
+        if (!Auth.IsSignedIn) { Nav.NavigateTo("/login", forceLoad: true); return; }
+        LeadStore.OnChange += StateHasChanged;
+        Session.OnChange += StateHasChanged;
+        isLoaded = true;
+    }
+
+    public void Dispose()
+    {
+        LeadStore.OnChange -= StateHasChanged;
+        Session.OnChange -= StateHasChanged;
+    }
+}

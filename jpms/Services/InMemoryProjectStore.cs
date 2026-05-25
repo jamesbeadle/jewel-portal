@@ -44,4 +44,13 @@ public sealed class InMemoryProjectStore : IProjectStore
     public Project? Find(string projectId) =>
         projects.FirstOrDefault(project =>
             string.Equals(project.ProjectId, projectId, StringComparison.OrdinalIgnoreCase));
+
+    public Project Upsert(Project project)
+    {
+        var existing = Find(project.ProjectId);
+        if (existing is not null) projects.Remove(existing);
+        projects.Add(project);
+        OnChange?.Invoke();
+        return project;
+    }
 }
