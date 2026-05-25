@@ -14,11 +14,14 @@ Consolidated from the workflow files. Each workflow file retains its own Open Qu
 - Nurture cadence — fixed (e.g. 30 / 90 / 180 days) or per-lead?
 
 ## 01 — Drawing & Doc Control
+- One Bluebeam Studio Project per JPMS project, or a single Studio Project per Organisation (BB / PS / PFP) with folder-per-project inside?
+- Studio Project provisioning — does JPMS create the Studio Project via API on project creation, or link to one the QS has already set up?
 - Drawing supersedure — what's the fall-back when auto-extract fails?
 - Retention policy on superseded revisions (forever, project lifetime, or N years post close-out)?
 
 ## 02 — Tender & BoQ
-- Bluebeam — direct API integration available, or ship via export/import file?
+- ~~Bluebeam — direct API integration available, or ship via export/import file?~~ **Decided 2026-05-25:** Both, in two phases. v1 = CSV import from Markups List. Phase 2 = Markups API direct. See [`/00-business-context/meetings/2026-05-25-bluebeam-integration.md`](../00-business-context/meetings/2026-05-25-bluebeam-integration.md).
+- Bluebeam tool-set distribution — published as a `.btx` file the QS imports manually, or auto-provisioned per machine when JPMS detects Bluebeam Revu?
 - AI rate suggestion — confidence threshold to auto-apply vs flag for review?
 
 ## 03 — Procurement & Onboarding

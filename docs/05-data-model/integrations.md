@@ -19,8 +19,11 @@ The short list of systems JPMS actually integrates with. Anything not on this li
 | **Google OAuth** | → JPMS | Sign-in: one of three options offered to invited users. | Required (auth foundation) |
 | **Microsoft OAuth** | → JPMS | Sign-in: one of three options offered to invited users. | Required (auth foundation) |
 | **Email + password** | → JPMS | Sign-in: one of three options. JPMS itself is the identity provider for this path. | Required (auth foundation) |
-| **Bluebeam** | → JPMS | Take-off quantities imported into the BoQ (workflow 02). Mark-up handoff to QS work. | Phase 2 |
-| **Monitored email inboxes (Outlook / IMAP)** | → JPMS | Inbound channel for drawings (workflow 01) and architect replies on RFIs (workflow 04). | Phase 2 |
+| **Bluebeam Studio Projects** | ↔ JPMS | Canonical drawing store. JPMS provisions or links to a Studio Project per JPMS project, lists/fetches drawing revisions via the Studio Projects API, and subscribes to webhooks for file-added / file-revised events. Drawings flow from Studio into the JPMS drawing register without a PM upload (workflow 01). | **v1** |
+| **Bluebeam Markups List (CSV)** | → JPMS | v1 take-off path. QS exports the Markups List from Bluebeam Revu; JPMS ingests via a single import screen with column mapping to BoQ + cost code (workflow 02). | **v1** |
+| **Bluebeam Markups API** | → JPMS | Phase 2 take-off path. JPMS reads take-off markups directly from the linked Studio Project, lands BoQ line items, and refreshes on demand or on revision change. Depends on QS adopting the JPMS-published tool-set (cost-code custom column on every take-off). | Phase 2 |
+| **Bluebeam Sessions Roundtrip** | ↔ | Phase 2. Launch a Studio Session from inside JPMS, invite the architect / CA, and run real-time mark-up review without leaving JPMS. Useful for architects who don't already use Bluebeam day-to-day. | Phase 2 |
+| **Monitored email inboxes (Outlook / IMAP)** | → JPMS | Fall-back inbound channel for drawings (workflow 01 — for architects not on Studio Projects, JPMS re-publishes into the linked Studio Project) and architect replies on RFIs (workflow 05). | v1 (drawings fall-back); Phase 2 (RFI replies) |
 | **HMRC CIS verification** | ↔ | Subcontractor compliance gate before award (workflow 08). | Phase 2 |
 
 Auth identifies a user by their email address. A user who first signs in with Google for `alice@example.com` can equally use the email+password path with the same address — the JPMS account is the email, not the OAuth provider chosen on first access. Admins and Project & Commercial Leads invite users by email; the user picks a sign-in method on first access.
@@ -76,8 +79,11 @@ If any of these systems later need a direct integration into JPMS (rather than a
 Just the inputs that must be live for JPMS phase 1:
 
 1. **OAuth sign-in** — Google, Microsoft, email/password (auth foundation).
-2. **Monitored email inboxes** — drawings (workflow 01) and RFI replies (workflow 04).
-3. **HMRC CIS verification** — subcontractor compliance gate (workflow 08).
-4. **Bluebeam** — take-off import (workflow 02; can land slightly later if needed).
+2. **Bluebeam Studio Projects** — canonical drawing store, Studio Projects API + webhooks (workflow 01).
+3. **Bluebeam Markups List CSV import** — take-off into BoQ (workflow 02).
+4. **Monitored email inboxes** — fall-back drawing ingest for architects not on Studio (workflow 01).
+5. **HMRC CIS verification** — subcontractor compliance gate (workflow 03).
+
+Phase 2 adds **Bluebeam Markups API** for direct take-off, **Sessions Roundtrip** for in-JPMS mark-up review, and the email-inbox RFI-reply channel (workflow 05).
 
 Everything else (Section 2 replacements and Section 3 downstream consumers) is unaffected by JPMS phase 1 and unfolds naturally over time.

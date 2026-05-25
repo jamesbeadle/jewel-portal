@@ -9,8 +9,8 @@ For v1, we ship: correct role modelling, clear ownership boundaries, the right b
 
 ## Lifecycle workflows (v1 cut)
 - **00 CRM** — pipeline stages, lead capture, site visit, drawings chase, bid/no-bid, proposal, won/lost, project-shell handoff to 01.
-- **01 Drawing & Doc Control** — drawing register, revisions, issue records, acknowledgments.
-- **02 Tender & BoQ** — Bluebeam take-off import, rate library, BoQ module, M&E discipline tagging, re-tender comparison.
+- **01 Drawing & Doc Control** — **Bluebeam Studio Projects as the canonical drawing store** (Studio Projects API + webhooks; the QS never re-uploads a drawing), drawing register, revisions, issue records, acknowledgments, fall-back email-inbox channel.
+- **02 Tender & BoQ** — Bluebeam take-off via Markups List CSV import (JPMS publishes a Bluebeam tool-set with a cost-code custom column so every take-off is tagged at source), rate library, BoQ module, M&E discipline tagging, re-tender comparison.
 - **03 Procurement & Onboarding** — bid package builder, comparison & award, work order generation, **subcontractor compliance gate** before award (insurance / RAMS / CIS).
 - **04 H&S Mobilisation** — mobilisation checklist as a hard gate, inspections engine, observation/incident/corrective-action loop, toolbox talks, RAMS acceptance via portal.
 - **05 RFIs, Submittals, Variations, Delays** — unified change register, **submittal approvals**, VO → procurement loop, RFI portal for architects.

@@ -102,6 +102,7 @@ Full entity model: [`/docs/05-data-model/entities.md`](docs/05-data-model/entiti
 6. **User stories** — every workflow now carries the user stories that drive UI design. **170 stories drafted across the 10 workflows** (counts per workflow are in section 3 above). Each story has a `US-NN-MM` ID and a status flag (Drafted → In Review → Confirmed).
 7. **Domain concepts and permissions** — entity model, Role × Workflow permissions matrix, status models, approval flows.
 8. **CVR alignment pass** — workflow 07 expanded to deliver the CVR as a third primary output alongside the PVR and the cashflow forecast, fixing the three issues JBB's QS lead called out on the Planyard-style pilot workbook: traceable Forecast Final Cost components, Prelims and EOTs visible against tender separately, and per-package variation margin alongside the central register. Planyard subscription not required. See [2026-05-23 CVR alignment](docs/00-business-context/meetings/2026-05-23-cvr-alignment.md).
+9. **Bluebeam integration pass** — Bluebeam Studio Projects designated as the canonical drawing store from day one. JPMS reads new drawing revisions automatically via the Studio Projects API + webhooks (workflow 01 — the QS never re-uploads a drawing). Take-off lands in JPMS via Bluebeam Markups List CSV import in v1, with the Markups API direct path planned for phase 2 once the QS has adopted the JPMS-published Bluebeam tool-set consistently. See [2026-05-25 Bluebeam integration](docs/00-business-context/meetings/2026-05-25-bluebeam-integration.md).
 
 ### Next
 
