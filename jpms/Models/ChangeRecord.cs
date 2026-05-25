@@ -28,7 +28,10 @@ public sealed record ChangeRecord(
     decimal? Value,
     string RaisedByEmail,
     DateTimeOffset RaisedAt,
-    DateTimeOffset? RespondedAt);
+    DateTimeOffset? RespondedAt,
+    string? ResponseText = null,
+    string? RespondedByEmail = null,
+    bool ImpliesVariation = false);
 
 public static class ChangeKindExtensions
 {

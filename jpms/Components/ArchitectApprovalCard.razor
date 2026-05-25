@@ -1,3 +1,4 @@
+@inject AuthService Auth
 @inject IChangeRegister ChangeRegister
 
 <div class="p-5">
@@ -32,7 +33,14 @@
 
     private void Decide(ChangeStatus status)
     {
-        ChangeRegister.Upsert(Record with { Status = status, RespondedAt = DateTimeOffset.UtcNow });
+        var responseText = status == ChangeStatus.Approved ? "Approved." : "Rejected.";
+        ChangeRegister.Upsert(Record with
+        {
+            Status = status,
+            RespondedAt = DateTimeOffset.UtcNow,
+            ResponseText = responseText,
+            RespondedByEmail = Auth.CurrentUser?.Email ?? "architect@unknown"
+        });
     }
 
     private static string Money(decimal value) =>

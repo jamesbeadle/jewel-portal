@@ -41,4 +41,22 @@ public sealed class InMemoryHsRegister : IHsRegister
         OnChange?.Invoke();
         return record;
     }
+
+    private readonly List<HsRecordAttendance> attendance = new()
+    {
+        new("AT-001", "HS-004", "Pete Maynard",  "sig-pete.png",  DateTimeOffset.UtcNow.AddDays(-7)),
+        new("AT-002", "HS-004", "Linda Hampton", "sig-linda.png", DateTimeOffset.UtcNow.AddDays(-7)),
+        new("AT-003", "HS-004", "Raj Patel",     "sig-raj.png",   DateTimeOffset.UtcNow.AddDays(-7))
+    };
+
+    public IReadOnlyList<HsRecordAttendance> AttendanceFor(string hsRecordId) =>
+        attendance.Where(a => a.HsRecordId == hsRecordId).ToList().AsReadOnly();
+
+    public void SaveAttendance(HsRecordAttendance entry)
+    {
+        var existing = attendance.FirstOrDefault(a => a.HsRecordAttendanceId == entry.HsRecordAttendanceId);
+        if (existing is not null) attendance.Remove(existing);
+        attendance.Add(entry);
+        OnChange?.Invoke();
+    }
 }

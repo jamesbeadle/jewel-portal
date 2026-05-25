@@ -1,3 +1,4 @@
+@inject AuthService Auth
 @inject IChangeRegister ChangeRegister
 
 <div class="p-5">
@@ -55,7 +56,9 @@
         {
             Status = ChangeStatus.Closed,
             RespondedAt = DateTimeOffset.UtcNow,
-            Description = $"{Rfi.Description}\n\nArchitect reply:\n{reply}"
+            ResponseText = reply,
+            RespondedByEmail = Auth.CurrentUser?.Email ?? "architect@unknown",
+            ImpliesVariation = impliesVariation
         };
         ChangeRegister.Upsert(resolved);
         showReplyForm = false;

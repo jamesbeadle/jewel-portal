@@ -37,6 +37,13 @@ public sealed record HsRecord(
     DateTimeOffset? DueAt,
     DateTimeOffset? ClosedAt);
 
+public sealed record HsRecordAttendance(
+    string HsRecordAttendanceId,
+    string HsRecordId,
+    string AttendeeName,
+    string SignatureBlobRef,
+    DateTimeOffset SignedAt);
+
 public static class HsRecordExtensions
 {
     public static string KindDisplayName(this HsRecordKind kind) => kind switch

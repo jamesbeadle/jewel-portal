@@ -2,7 +2,6 @@
 @inject AuthService Auth
 @inject SessionService Session
 @inject IBoqStore BoqStore
-@inject IProjectStore ProjectStore
 @inject NavigationManager Nav
 
 <PageTitle>Tender sign-off · JPMS</PageTitle>
@@ -35,11 +34,14 @@ else
                 <Stat Label="Tender total" Value="@Money(Total)" />
             </div>
 
-            @if (isSignedOff)
+            @if (existingSignOff is not null)
             {
                 <div class="rounded-lg border border-emerald-200 bg-emerald-50 p-4">
                     <p class="text-sm font-semibold text-emerald-900">Tender signed off</p>
-                    <p class="text-xs text-emerald-800 mt-1">Approved @signedOffAt.LocalDateTime.ToString("d MMM yyyy HH:mm") by @signedOffBy</p>
+                    <p class="text-xs text-emerald-800 mt-1">
+                        Approved @existingSignOff.SignedOffAt.LocalDateTime.ToString("d MMM yyyy HH:mm")
+                        by @existingSignOff.SignedOffByEmail at @Money(existingSignOff.TenderTotalAtSignOff)
+                    </p>
                 </div>
             }
             else
@@ -57,24 +59,27 @@ else
     [Parameter] public string ProjectId { get; set; } = "";
 
     private bool isLoaded;
-    private bool isSignedOff;
-    private DateTimeOffset signedOffAt;
-    private string signedOffBy = "";
+    private BoqSignOff? existingSignOff;
 
     private int LineCount => BoqStore.LinesFor(ProjectId).Count;
     private decimal Total => BoqStore.TotalFor(ProjectId);
 
     private void HandleSignOff()
     {
-        isSignedOff = true;
-        signedOffAt = DateTimeOffset.UtcNow;
-        signedOffBy = Auth.CurrentUser?.Email ?? "unknown";
+        var signOff = new BoqSignOff(
+            $"SO-{Guid.NewGuid().ToString("N")[..8].ToUpperInvariant()}",
+            ProjectId,
+            Auth.CurrentUser?.Email ?? "unknown",
+            DateTimeOffset.UtcNow,
+            Total);
+        existingSignOff = BoqStore.RecordSignOff(signOff);
     }
 
     protected override async Task OnInitializedAsync()
     {
         await Session.EnsureLoadedAsync();
         if (!Auth.IsSignedIn) { Nav.NavigateTo("/login", forceLoad: true); return; }
+        existingSignOff = BoqStore.SignOffFor(ProjectId);
         isLoaded = true;
     }
 

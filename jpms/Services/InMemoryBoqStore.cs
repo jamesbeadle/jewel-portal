@@ -42,4 +42,16 @@ public sealed class InMemoryBoqStore : IBoqStore
 
     public decimal TotalFor(string projectId) =>
         LinesFor(projectId).Sum(line => line.LineTotal);
+
+    private readonly Dictionary<string, BoqSignOff> signOffs = new();
+
+    public BoqSignOff? SignOffFor(string projectId) =>
+        signOffs.TryGetValue(projectId, out var signOff) ? signOff : null;
+
+    public BoqSignOff RecordSignOff(BoqSignOff signOff)
+    {
+        signOffs[signOff.ProjectId] = signOff;
+        OnChange?.Invoke();
+        return signOff;
+    }
 }

@@ -18,6 +18,22 @@ public sealed record Defect(
     DateTimeOffset RaisedAt,
     DateTimeOffset? ResolvedAt);
 
+public sealed record PracticalCompletion(
+    string PracticalCompletionId,
+    string ProjectId,
+    DateTimeOffset AchievedAt,
+    string? CertificateBlobRef,
+    string IssuedByEmail,
+    bool IsClientSigned);
+
+public sealed record HandoverPackItem(
+    string HandoverPackItemId,
+    string ProjectId,
+    string Label,
+    string Detail,
+    bool IsReady,
+    string? EvidenceBlobRef);
+
 public sealed record SettlementRecord(
     string SettlementRecordId,
     string ProjectId,

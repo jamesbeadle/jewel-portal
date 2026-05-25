@@ -13,6 +13,7 @@
     {
         <div class="rounded-2xl border border-emerald-200 bg-emerald-50 p-5 text-center">
             <p class="text-sm font-semibold text-emerald-900">Toolbox talk recorded</p>
+            <p class="text-xs text-emerald-800 mt-1">@attendeeNames.Count attendees signed in</p>
             <a href="@($"/site/projects/{ProjectId}")"
                class="inline-block mt-3 rounded-xl bg-slate-900 text-white text-sm font-medium px-4 py-2">
                 Back to project
@@ -28,13 +29,14 @@
                        class="w-full rounded-xl border border-slate-300 px-4 py-3 text-base" />
             </div>
             <div>
-                <label class="block text-xs uppercase tracking-wider text-slate-500 font-semibold mb-1">Attendee count</label>
-                <input type="number" min="1" max="50" @bind="attendees" required
-                       class="w-full rounded-xl border border-slate-300 px-4 py-3 text-base" />
+                <label class="block text-xs uppercase tracking-wider text-slate-500 font-semibold mb-1">Attendees (one per line)</label>
+                <textarea @bind="attendeesText" rows="4" required
+                          placeholder="Pete Maynard&#10;Linda Hampton&#10;Raj Patel"
+                          class="w-full rounded-xl border border-slate-300 px-4 py-3 text-base"></textarea>
             </div>
             <button type="submit"
                     class="w-full rounded-xl bg-slate-900 text-white font-semibold text-base px-4 py-4 active:bg-slate-800"
-                    disabled="@(string.IsNullOrWhiteSpace(topic) || attendees < 1)">
+                    disabled="@(string.IsNullOrWhiteSpace(topic) || attendeeNames.Count == 0)">
                 Record talk
             </button>
         </form>
@@ -45,18 +47,30 @@
     [Parameter] public string ProjectId { get; set; } = "";
 
     private string topic = "";
-    private int attendees = 1;
+    private string attendeesText = "";
     private bool isSaved;
+
+    private IReadOnlyList<string> attendeeNames =>
+        attendeesText
+            .Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .ToList()
+            .AsReadOnly();
 
     private void HandleSave()
     {
-        var summary = $"{topic} ({attendees} attendees)";
+        var recordId = $"HS-{Guid.NewGuid().ToString("N")[..8].ToUpperInvariant()}";
         var record = new HsRecord(
-            $"HS-{Guid.NewGuid().ToString("N")[..8].ToUpperInvariant()}",
-            ProjectId, HsRecordKind.ToolboxTalk, summary, HsSeverity.Low, HsStatus.Closed,
+            recordId, ProjectId, HsRecordKind.ToolboxTalk, topic, HsSeverity.Low, HsStatus.Closed,
             Auth.CurrentUser?.Email ?? "site.manager@jewelenterprises.co.uk",
             DateTimeOffset.UtcNow, null, DateTimeOffset.UtcNow);
         HsRegister.Upsert(record);
+
+        foreach (var attendeeName in attendeeNames)
+        {
+            HsRegister.SaveAttendance(new HsRecordAttendance(
+                $"AT-{Guid.NewGuid().ToString("N")[..8].ToUpperInvariant()}",
+                recordId, attendeeName, "signature-pending.png", DateTimeOffset.UtcNow));
+        }
         isSaved = true;
     }
 }
