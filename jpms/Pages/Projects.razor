@@ -24,18 +24,18 @@ else
             <div>
                 <p class="text-xs uppercase tracking-wider text-slate-500 font-medium mb-1">JPMS · Projects</p>
                 <h1 class="text-2xl md:text-3xl font-semibold text-slate-900 leading-tight">Project portfolio</h1>
-                <p class="text-sm text-slate-600 mt-2">@Projects.Count active. New projects are created from a won lead.</p>
+                <p class="text-sm text-slate-600 mt-2">@ActiveProjects.Count active. New projects are created from a won lead.</p>
             </div>
         </header>
 
-        <ProjectsTable Projects="Projects" />
+        <ProjectsTable Projects="ActiveProjects" />
     </section>
 }
 
 @code {
     private bool isLoaded;
 
-    private IReadOnlyList<Project> Projects => ProjectStore.All();
+    private IReadOnlyList<Project> ActiveProjects => ProjectStore.All();
 
     protected override async Task OnInitializedAsync()
     {
