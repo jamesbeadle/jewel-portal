@@ -1,4 +1,5 @@
 @inherits LayoutComponentBase
+@inject AuthService Auth
 @inject NavigationManager Nav
 
 <div class="min-h-dvh flex flex-col bg-slate-50 text-slate-900 antialiased">
@@ -8,7 +9,14 @@
                 <span class="inline-flex items-center justify-center w-7 h-7 rounded-md bg-slate-900 text-white text-xs">JP</span>
                 <span>JPMS Portal</span>
             </a>
-            <span class="text-[11px] uppercase tracking-wider text-slate-500 font-medium">External access</span>
+            @if (Auth.IsSignedIn)
+            {
+                <RoleSwitcher />
+            }
+            else
+            {
+                <span class="text-[11px] uppercase tracking-wider text-slate-500 font-medium">External access</span>
+            }
         </div>
     </header>
 

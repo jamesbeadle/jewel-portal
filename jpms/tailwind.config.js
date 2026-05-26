@@ -2,6 +2,7 @@
 module.exports = {
   content: [
     './**/*.razor',
+    './**/*.cs',
     './wwwroot/index.html'
   ],
   theme: {

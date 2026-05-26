@@ -1,10 +1,12 @@
 @inject AuthService Auth
+@inject SessionService Session
 @inject NavigationManager Nav
+@implements IDisposable
 
 <div class="h-full flex flex-col bg-white">
 
     <div class="px-5 py-4 border-b border-slate-200">
-        <a href="/dashboard" @onclick="HandleNavigate" @onclick:preventDefault="false"
+        <a href="@HomeHref" @onclick="HandleNavigate" @onclick:preventDefault="false"
            class="flex items-center gap-2 font-semibold text-slate-900">
             <span class="inline-flex items-center justify-center w-7 h-7 rounded-md bg-slate-900 text-white text-xs">JP</span>
             <span>JPMS</span>
@@ -13,7 +15,7 @@
 
     <nav class="flex-1 px-3 py-4 overflow-y-auto">
         <ul class="space-y-1 text-sm">
-            @foreach (var item in NavigationItems)
+            @foreach (var item in VisibleItems)
             {
                 <li>
                     <a href="@item.Href" @onclick="HandleNavigate" @onclick:preventDefault="false"
@@ -42,34 +44,27 @@
 @code {
     [Parameter] public EventCallback OnNavigate { get; set; }
 
-    private record NavigationItem(string Label, string Href);
+    private IReadOnlyList<NavigationItem> VisibleItems =>
+        Session.ActiveRole is null
+            ? Array.Empty<NavigationItem>()
+            : NavigationCatalog.ItemsFor(Session.ActiveRole.Value);
 
-    private static readonly NavigationItem[] NavigationItems =
-    {
-        new("Dashboard",       "/dashboard"),
-        new("Leads",           "/leads"),
-        new("Projects",        "/projects"),
-        new("Subcontractors",  "/subcontractors"),
-        new("Work orders",     "/work-orders"),
-        new("H&S",             "/hs"),
-        new("Cashflow",        "/cashflow"),
-        new("Portfolio",       "/portfolio"),
-        new("Reports",         "/reports"),
-        new("Rates",           "/rate-library")
-    };
+    private string HomeHref =>
+        Session.ActiveRole is null ? "/dashboard" : NavigationCatalog.HomeRouteFor(Session.ActiveRole.Value);
+
+    protected override void OnInitialized() => Session.OnChange += StateHasChanged;
 
     private string LinkClassFor(string href)
     {
         var current = new Uri(Nav.Uri).AbsolutePath;
         var isActive = current == href || current.StartsWith(href + "/");
-        if (isActive)
-        {
-            return "block px-3 py-2 rounded-md bg-slate-900 text-white font-medium transition";
-        }
+        if (isActive) return "block px-3 py-2 rounded-md bg-slate-900 text-white font-medium transition";
         return "block px-3 py-2 rounded-md text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition";
     }
 
     private Task HandleNavigate() => OnNavigate.InvokeAsync();
 
     private void SignOut() => Nav.NavigateTo("/logout", forceLoad: true);
+
+    public void Dispose() => Session.OnChange -= StateHasChanged;
 }

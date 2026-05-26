@@ -1,4 +1,5 @@
 @inject SessionService Session
+@inject NavigationManager Nav
 @implements IDisposable
 
 @if (Session.HasMultipleRoles && Session.ActiveRole is not null)
@@ -45,6 +46,7 @@
     {
         Session.SwitchTo(role);
         isOpen = false;
+        Nav.NavigateTo(NavigationCatalog.HomeRouteFor(role));
     }
 
     public void Dispose() => Session.OnChange -= StateHasChanged;
