@@ -65,8 +65,8 @@ namespace Jewel.JPMS.Api.Migrations
                     ProjectId = table.Column<string>(type: "nvarchar(64)", maxLength: 64, nullable: false),
                     Description = table.Column<string>(type: "nvarchar(512)", maxLength: 512, nullable: false),
                     Unit = table.Column<string>(type: "nvarchar(32)", maxLength: 32, nullable: false),
-                    Quantity = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
-                    RateValue = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
+                    Quantity = table.Column<decimal>(type: "decimal(18,4)", precision: 18, scale: 4, nullable: false),
+                    RateValue = table.Column<decimal>(type: "decimal(18,4)", precision: 18, scale: 4, nullable: false),
                     CostCode = table.Column<string>(type: "nvarchar(32)", maxLength: 32, nullable: false),
                     Discipline = table.Column<int>(type: "int", nullable: false)
                 },
@@ -83,7 +83,7 @@ namespace Jewel.JPMS.Api.Migrations
                     ProjectId = table.Column<string>(type: "nvarchar(64)", maxLength: 64, nullable: false),
                     SignedOffByEmail = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: false),
                     SignedOffAt = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: false),
-                    TenderTotalAtSignOff = table.Column<decimal>(type: "decimal(18,2)", nullable: false)
+                    TenderTotalAtSignOff = table.Column<decimal>(type: "decimal(18,4)", precision: 18, scale: 4, nullable: false)
                 },
                 constraints: table =>
                 {
@@ -96,9 +96,9 @@ namespace Jewel.JPMS.Api.Migrations
                 {
                     CashflowSnapshotId = table.Column<string>(type: "nvarchar(64)", maxLength: 64, nullable: false),
                     GeneratedAt = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: false),
-                    ExpectedIncome13Week = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
-                    CommittedSpend13Week = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
-                    NetPosition13Week = table.Column<decimal>(type: "decimal(18,2)", nullable: false)
+                    ExpectedIncome13Week = table.Column<decimal>(type: "decimal(18,4)", precision: 18, scale: 4, nullable: false),
+                    CommittedSpend13Week = table.Column<decimal>(type: "decimal(18,4)", precision: 18, scale: 4, nullable: false),
+                    NetPosition13Week = table.Column<decimal>(type: "decimal(18,4)", precision: 18, scale: 4, nullable: false)
                 },
                 constraints: table =>
                 {
@@ -116,7 +116,7 @@ namespace Jewel.JPMS.Api.Migrations
                     Title = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: false),
                     Description = table.Column<string>(type: "nvarchar(2048)", maxLength: 2048, nullable: false),
                     Status = table.Column<int>(type: "int", nullable: false),
-                    Value = table.Column<decimal>(type: "decimal(18,2)", nullable: true),
+                    Value = table.Column<decimal>(type: "decimal(18,4)", precision: 18, scale: 4, nullable: true),
                     RaisedByEmail = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: false),
                     RaisedAt = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: false),
                     RespondedAt = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: true),
@@ -170,9 +170,9 @@ namespace Jewel.JPMS.Api.Migrations
                     RaisedOn = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: false),
                     Description = table.Column<string>(type: "nvarchar(512)", maxLength: 512, nullable: false),
                     Category = table.Column<string>(type: "nvarchar(128)", maxLength: 128, nullable: false),
-                    Amount = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
+                    Amount = table.Column<decimal>(type: "decimal(18,4)", precision: 18, scale: 4, nullable: false),
                     Status = table.Column<string>(type: "nvarchar(32)", maxLength: 32, nullable: false),
-                    RecoveredAmount = table.Column<decimal>(type: "decimal(18,2)", nullable: false)
+                    RecoveredAmount = table.Column<decimal>(type: "decimal(18,4)", precision: 18, scale: 4, nullable: false)
                 },
                 constraints: table =>
                 {
@@ -186,8 +186,8 @@ namespace Jewel.JPMS.Api.Migrations
                     CostCodeBudgetId = table.Column<string>(type: "nvarchar(64)", maxLength: 64, nullable: false),
                     ProjectId = table.Column<string>(type: "nvarchar(64)", maxLength: 64, nullable: false),
                     CostCode = table.Column<string>(type: "nvarchar(32)", maxLength: 32, nullable: false),
-                    AllocatedAmount = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
-                    SpentAmount = table.Column<decimal>(type: "decimal(18,2)", nullable: false)
+                    AllocatedAmount = table.Column<decimal>(type: "decimal(18,4)", precision: 18, scale: 4, nullable: false),
+                    SpentAmount = table.Column<decimal>(type: "decimal(18,4)", precision: 18, scale: 4, nullable: false)
                 },
                 constraints: table =>
                 {
@@ -215,11 +215,11 @@ namespace Jewel.JPMS.Api.Migrations
                     CvrPackageRowId = table.Column<string>(type: "nvarchar(64)", maxLength: 64, nullable: false),
                     ProjectId = table.Column<string>(type: "nvarchar(64)", maxLength: 64, nullable: false),
                     PackageName = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: false),
-                    OrderCost = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
-                    OrderValue = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
-                    VariationCost = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
-                    VariationValue = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
-                    MovementSinceLastSnapshot = table.Column<decimal>(type: "decimal(18,2)", nullable: false)
+                    OrderCost = table.Column<decimal>(type: "decimal(18,4)", precision: 18, scale: 4, nullable: false),
+                    OrderValue = table.Column<decimal>(type: "decimal(18,4)", precision: 18, scale: 4, nullable: false),
+                    VariationCost = table.Column<decimal>(type: "decimal(18,4)", precision: 18, scale: 4, nullable: false),
+                    VariationValue = table.Column<decimal>(type: "decimal(18,4)", precision: 18, scale: 4, nullable: false),
+                    MovementSinceLastSnapshot = table.Column<decimal>(type: "decimal(18,4)", precision: 18, scale: 4, nullable: false)
                 },
                 constraints: table =>
                 {
@@ -233,11 +233,11 @@ namespace Jewel.JPMS.Api.Migrations
                     CvrSnapshotId = table.Column<string>(type: "nvarchar(64)", maxLength: 64, nullable: false),
                     ProjectId = table.Column<string>(type: "nvarchar(64)", maxLength: 64, nullable: false),
                     SnapshotAt = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: false),
-                    TenderValue = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
-                    ForecastFinalCost = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
-                    ForecastFinalValue = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
-                    MarginPounds = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
-                    MarginPercent = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
+                    TenderValue = table.Column<decimal>(type: "decimal(18,4)", precision: 18, scale: 4, nullable: false),
+                    ForecastFinalCost = table.Column<decimal>(type: "decimal(18,4)", precision: 18, scale: 4, nullable: false),
+                    ForecastFinalValue = table.Column<decimal>(type: "decimal(18,4)", precision: 18, scale: 4, nullable: false),
+                    MarginPounds = table.Column<decimal>(type: "decimal(18,4)", precision: 18, scale: 4, nullable: false),
+                    MarginPercent = table.Column<decimal>(type: "decimal(18,4)", precision: 18, scale: 4, nullable: false),
                     WeeksAheadOrBehind = table.Column<int>(type: "int", nullable: false)
                 },
                 constraints: table =>
@@ -255,13 +255,13 @@ namespace Jewel.JPMS.Api.Migrations
                     SubcontractorReference = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: false),
                     Description = table.Column<string>(type: "nvarchar(512)", maxLength: 512, nullable: false),
                     InstructedBy = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: false),
-                    Hours = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
-                    HourlyRate = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
-                    LabourCost = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
-                    PlantCost = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
-                    MaterialsCost = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
-                    UpliftPercent = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
-                    ChargeableAmount = table.Column<decimal>(type: "decimal(18,2)", nullable: false)
+                    Hours = table.Column<decimal>(type: "decimal(18,4)", precision: 18, scale: 4, nullable: false),
+                    HourlyRate = table.Column<decimal>(type: "decimal(18,4)", precision: 18, scale: 4, nullable: false),
+                    LabourCost = table.Column<decimal>(type: "decimal(18,4)", precision: 18, scale: 4, nullable: false),
+                    PlantCost = table.Column<decimal>(type: "decimal(18,4)", precision: 18, scale: 4, nullable: false),
+                    MaterialsCost = table.Column<decimal>(type: "decimal(18,4)", precision: 18, scale: 4, nullable: false),
+                    UpliftPercent = table.Column<decimal>(type: "decimal(18,4)", precision: 18, scale: 4, nullable: false),
+                    ChargeableAmount = table.Column<decimal>(type: "decimal(18,4)", precision: 18, scale: 4, nullable: false)
                 },
                 constraints: table =>
                 {
@@ -370,7 +370,7 @@ namespace Jewel.JPMS.Api.Migrations
                     ProjectId = table.Column<string>(type: "nvarchar(64)", maxLength: 64, nullable: false),
                     Reason = table.Column<string>(type: "nvarchar(1024)", maxLength: 1024, nullable: false),
                     DaysGranted = table.Column<int>(type: "int", nullable: false),
-                    CommercialRecovery = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
+                    CommercialRecovery = table.Column<decimal>(type: "decimal(18,4)", precision: 18, scale: 4, nullable: false),
                     GrantedAt = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: false)
                 },
                 constraints: table =>
@@ -385,11 +385,11 @@ namespace Jewel.JPMS.Api.Migrations
                     ForecastComponentId = table.Column<string>(type: "nvarchar(64)", maxLength: 64, nullable: false),
                     ProjectId = table.Column<string>(type: "nvarchar(64)", maxLength: 64, nullable: false),
                     PackageName = table.Column<string>(type: "nvarchar(128)", maxLength: 128, nullable: false),
-                    CostIncurred = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
-                    CostCommitted = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
-                    QsAccrualAmount = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
-                    PrelimForecast = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
-                    CostToComplete = table.Column<decimal>(type: "decimal(18,2)", nullable: false)
+                    CostIncurred = table.Column<decimal>(type: "decimal(18,4)", precision: 18, scale: 4, nullable: false),
+                    CostCommitted = table.Column<decimal>(type: "decimal(18,4)", precision: 18, scale: 4, nullable: false),
+                    QsAccrualAmount = table.Column<decimal>(type: "decimal(18,4)", precision: 18, scale: 4, nullable: false),
+                    PrelimForecast = table.Column<decimal>(type: "decimal(18,4)", precision: 18, scale: 4, nullable: false),
+                    CostToComplete = table.Column<decimal>(type: "decimal(18,4)", precision: 18, scale: 4, nullable: false)
                 },
                 constraints: table =>
                 {
@@ -490,7 +490,7 @@ namespace Jewel.JPMS.Api.Migrations
                     ContactPhone = table.Column<string>(type: "nvarchar(64)", maxLength: 64, nullable: false),
                     CompanyName = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: false),
                     SiteAddress = table.Column<string>(type: "nvarchar(512)", maxLength: 512, nullable: false),
-                    EstimatedValue = table.Column<decimal>(type: "decimal(18,2)", nullable: true),
+                    EstimatedValue = table.Column<decimal>(type: "decimal(18,4)", precision: 18, scale: 4, nullable: true),
                     Source = table.Column<int>(type: "int", nullable: false),
                     Stage = table.Column<int>(type: "int", nullable: false),
                     OwnerEmail = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: false),
@@ -529,8 +529,8 @@ namespace Jewel.JPMS.Api.Migrations
                     Caption = table.Column<string>(type: "nvarchar(512)", maxLength: 512, nullable: false),
                     TakenByEmail = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: false),
                     TakenAt = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: false),
-                    GpsLatitude = table.Column<decimal>(type: "decimal(18,2)", nullable: true),
-                    GpsLongitude = table.Column<decimal>(type: "decimal(18,2)", nullable: true)
+                    GpsLatitude = table.Column<decimal>(type: "decimal(18,4)", precision: 18, scale: 4, nullable: true),
+                    GpsLongitude = table.Column<decimal>(type: "decimal(18,4)", precision: 18, scale: 4, nullable: true)
                 },
                 constraints: table =>
                 {
@@ -560,9 +560,9 @@ namespace Jewel.JPMS.Api.Migrations
                     PrelimForecastEntryId = table.Column<string>(type: "nvarchar(64)", maxLength: 64, nullable: false),
                     PrelimItemId = table.Column<string>(type: "nvarchar(64)", maxLength: 64, nullable: false),
                     WeekNumber = table.Column<int>(type: "int", nullable: false),
-                    TenderedAmount = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
-                    ActualAmount = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
-                    ForecastAmount = table.Column<decimal>(type: "decimal(18,2)", nullable: false)
+                    TenderedAmount = table.Column<decimal>(type: "decimal(18,4)", precision: 18, scale: 4, nullable: false),
+                    ActualAmount = table.Column<decimal>(type: "decimal(18,4)", precision: 18, scale: 4, nullable: false),
+                    ForecastAmount = table.Column<decimal>(type: "decimal(18,4)", precision: 18, scale: 4, nullable: false)
                 },
                 constraints: table =>
                 {
@@ -591,7 +591,7 @@ namespace Jewel.JPMS.Api.Migrations
                     Title = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: false),
                     PlannedStart = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: false),
                     PlannedEnd = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: false),
-                    ProgressPercent = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
+                    ProgressPercent = table.Column<decimal>(type: "decimal(18,4)", precision: 18, scale: 4, nullable: false),
                     BoqLineItemId = table.Column<string>(type: "nvarchar(64)", maxLength: 64, nullable: true)
                 },
                 constraints: table =>
@@ -623,7 +623,7 @@ namespace Jewel.JPMS.Api.Migrations
                 {
                     ProposalId = table.Column<string>(type: "nvarchar(64)", maxLength: 64, nullable: false),
                     LeadId = table.Column<string>(type: "nvarchar(64)", maxLength: 64, nullable: false),
-                    Value = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
+                    Value = table.Column<decimal>(type: "decimal(18,4)", precision: 18, scale: 4, nullable: false),
                     IssuedAt = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: false),
                     NegotiationRoundsJson = table.Column<string>(type: "nvarchar(max)", maxLength: 8192, nullable: false)
                 },
@@ -640,9 +640,9 @@ namespace Jewel.JPMS.Api.Migrations
                     ProjectId = table.Column<string>(type: "nvarchar(64)", maxLength: 64, nullable: false),
                     Category = table.Column<string>(type: "nvarchar(128)", maxLength: 128, nullable: false),
                     Description = table.Column<string>(type: "nvarchar(1024)", maxLength: 1024, nullable: false),
-                    AddAmount = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
-                    OmitAmount = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
-                    LiabilityAmount = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
+                    AddAmount = table.Column<decimal>(type: "decimal(18,4)", precision: 18, scale: 4, nullable: false),
+                    OmitAmount = table.Column<decimal>(type: "decimal(18,4)", precision: 18, scale: 4, nullable: false),
+                    LiabilityAmount = table.Column<decimal>(type: "decimal(18,4)", precision: 18, scale: 4, nullable: false),
                     SignedOffByEmail = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: false),
                     SignedOffAt = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: false)
                 },
@@ -673,7 +673,7 @@ namespace Jewel.JPMS.Api.Migrations
                     QuoteId = table.Column<string>(type: "nvarchar(64)", maxLength: 64, nullable: false),
                     BidPackageId = table.Column<string>(type: "nvarchar(64)", maxLength: 64, nullable: false),
                     SubcontractorId = table.Column<string>(type: "nvarchar(64)", maxLength: 64, nullable: false),
-                    Value = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
+                    Value = table.Column<decimal>(type: "decimal(18,4)", precision: 18, scale: 4, nullable: false),
                     Notes = table.Column<string>(type: "nvarchar(1024)", maxLength: 1024, nullable: false),
                     ReceivedAt = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: false),
                     IsDeclined = table.Column<bool>(type: "bit", nullable: false)
@@ -691,7 +691,7 @@ namespace Jewel.JPMS.Api.Migrations
                     Trade = table.Column<string>(type: "nvarchar(64)", maxLength: 64, nullable: false),
                     Description = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: false),
                     Unit = table.Column<string>(type: "nvarchar(16)", maxLength: 16, nullable: false),
-                    Value = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
+                    Value = table.Column<decimal>(type: "decimal(18,4)", precision: 18, scale: 4, nullable: false),
                     SupplierName = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: false),
                     LastPricedAt = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: false)
                 },
@@ -706,7 +706,7 @@ namespace Jewel.JPMS.Api.Migrations
                 {
                     RetentionReleaseId = table.Column<string>(type: "nvarchar(64)", maxLength: 64, nullable: false),
                     ProjectId = table.Column<string>(type: "nvarchar(64)", maxLength: 64, nullable: false),
-                    Amount = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
+                    Amount = table.Column<decimal>(type: "decimal(18,4)", precision: 18, scale: 4, nullable: false),
                     ReleasedAt = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: false),
                     IsPublishedDownstream = table.Column<bool>(type: "bit", nullable: false)
                 },
@@ -721,9 +721,9 @@ namespace Jewel.JPMS.Api.Migrations
                 {
                     SettlementRecordId = table.Column<string>(type: "nvarchar(64)", maxLength: 64, nullable: false),
                     ProjectId = table.Column<string>(type: "nvarchar(64)", maxLength: 64, nullable: false),
-                    FinalContractValue = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
-                    FinalCost = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
-                    FinalMargin = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
+                    FinalContractValue = table.Column<decimal>(type: "decimal(18,4)", precision: 18, scale: 4, nullable: false),
+                    FinalCost = table.Column<decimal>(type: "decimal(18,4)", precision: 18, scale: 4, nullable: false),
+                    FinalMargin = table.Column<decimal>(type: "decimal(18,4)", precision: 18, scale: 4, nullable: false),
                     AgreedAt = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: false),
                     IsClientSigned = table.Column<bool>(type: "bit", nullable: false)
                 },
@@ -742,7 +742,7 @@ namespace Jewel.JPMS.Api.Migrations
                     Narrative = table.Column<string>(type: "nvarchar(max)", maxLength: 4096, nullable: false),
                     AttendanceDays = table.Column<int>(type: "int", nullable: false),
                     OpenSnags = table.Column<int>(type: "int", nullable: false),
-                    ProgressPercent = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
+                    ProgressPercent = table.Column<decimal>(type: "decimal(18,4)", precision: 18, scale: 4, nullable: false),
                     IsIssued = table.Column<bool>(type: "bit", nullable: false)
                 },
                 constraints: table =>
@@ -774,10 +774,10 @@ namespace Jewel.JPMS.Api.Migrations
                     SubcontractorRetentionId = table.Column<string>(type: "nvarchar(64)", maxLength: 64, nullable: false),
                     ProjectId = table.Column<string>(type: "nvarchar(64)", maxLength: 64, nullable: false),
                     SubcontractorReference = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: false),
-                    CertifiedAmount = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
-                    RetentionPercent = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
-                    FirstReleasedAmount = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
-                    FinalReleasedAmount = table.Column<decimal>(type: "decimal(18,2)", nullable: false)
+                    CertifiedAmount = table.Column<decimal>(type: "decimal(18,4)", precision: 18, scale: 4, nullable: false),
+                    RetentionPercent = table.Column<decimal>(type: "decimal(18,4)", precision: 18, scale: 4, nullable: false),
+                    FirstReleasedAmount = table.Column<decimal>(type: "decimal(18,4)", precision: 18, scale: 4, nullable: false),
+                    FinalReleasedAmount = table.Column<decimal>(type: "decimal(18,4)", precision: 18, scale: 4, nullable: false)
                 },
                 constraints: table =>
                 {
@@ -810,7 +810,7 @@ namespace Jewel.JPMS.Api.Migrations
                     ProjectId = table.Column<string>(type: "nvarchar(64)", maxLength: 64, nullable: false),
                     PersonEmail = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: false),
                     WorkedOn = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: false),
-                    Hours = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
+                    Hours = table.Column<decimal>(type: "decimal(18,4)", precision: 18, scale: 4, nullable: false),
                     CostCode = table.Column<string>(type: "nvarchar(32)", maxLength: 32, nullable: false),
                     IsApproved = table.Column<bool>(type: "bit", nullable: false)
                 },
@@ -826,9 +826,9 @@ namespace Jewel.JPMS.Api.Migrations
                     ValuationId = table.Column<string>(type: "nvarchar(64)", maxLength: 64, nullable: false),
                     ClaimPeriodId = table.Column<string>(type: "nvarchar(64)", maxLength: 64, nullable: false),
                     ProjectId = table.Column<string>(type: "nvarchar(64)", maxLength: 64, nullable: false),
-                    GrossValue = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
-                    RetentionPercent = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
-                    NetValue = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
+                    GrossValue = table.Column<decimal>(type: "decimal(18,4)", precision: 18, scale: 4, nullable: false),
+                    RetentionPercent = table.Column<decimal>(type: "decimal(18,4)", precision: 18, scale: 4, nullable: false),
+                    NetValue = table.Column<decimal>(type: "decimal(18,4)", precision: 18, scale: 4, nullable: false),
                     IsIssued = table.Column<bool>(type: "bit", nullable: false),
                     IssuedAt = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: true)
                 },
@@ -843,8 +843,8 @@ namespace Jewel.JPMS.Api.Migrations
                 {
                     VatAnalysisId = table.Column<string>(type: "nvarchar(64)", maxLength: 64, nullable: false),
                     ProjectId = table.Column<string>(type: "nvarchar(64)", maxLength: 64, nullable: false),
-                    ZeroRatedAmount = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
-                    StandardRatedAmount = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
+                    ZeroRatedAmount = table.Column<decimal>(type: "decimal(18,4)", precision: 18, scale: 4, nullable: false),
+                    StandardRatedAmount = table.Column<decimal>(type: "decimal(18,4)", precision: 18, scale: 4, nullable: false),
                     Notes = table.Column<string>(type: "nvarchar(2048)", maxLength: 2048, nullable: false),
                     IsClientConfirmed = table.Column<bool>(type: "bit", nullable: false),
                     IsArchitectConfirmed = table.Column<bool>(type: "bit", nullable: false)
@@ -878,7 +878,7 @@ namespace Jewel.JPMS.Api.Migrations
                     ProjectId = table.Column<string>(type: "nvarchar(64)", maxLength: 64, nullable: false),
                     BidPackageId = table.Column<string>(type: "nvarchar(64)", maxLength: 64, nullable: false),
                     SubcontractorId = table.Column<string>(type: "nvarchar(64)", maxLength: 64, nullable: false),
-                    Value = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
+                    Value = table.Column<decimal>(type: "decimal(18,4)", precision: 18, scale: 4, nullable: false),
                     Scope = table.Column<string>(type: "nvarchar(1024)", maxLength: 1024, nullable: false),
                     AwardedAt = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: false),
                     AwardedByEmail = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: false)

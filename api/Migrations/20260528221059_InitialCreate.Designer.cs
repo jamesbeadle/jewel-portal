@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Jewel.JPMS.Api.Migrations
 {
     [DbContext(typeof(JpmsContext))]
-    [Migration("20260528215857_InitialCreate")]
+    [Migration("20260528221059_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -136,10 +136,12 @@ namespace Jewel.JPMS.Api.Migrations
                         .HasColumnType("nvarchar(64)");
 
                     b.Property<decimal>("Quantity")
-                        .HasColumnType("decimal(18,2)");
+                        .HasPrecision(18, 4)
+                        .HasColumnType("decimal(18,4)");
 
                     b.Property<decimal>("RateValue")
-                        .HasColumnType("decimal(18,2)");
+                        .HasPrecision(18, 4)
+                        .HasColumnType("decimal(18,4)");
 
                     b.Property<string>("Unit")
                         .IsRequired()
@@ -171,7 +173,8 @@ namespace Jewel.JPMS.Api.Migrations
                         .HasColumnType("nvarchar(256)");
 
                     b.Property<decimal>("TenderTotalAtSignOff")
-                        .HasColumnType("decimal(18,2)");
+                        .HasPrecision(18, 4)
+                        .HasColumnType("decimal(18,4)");
 
                     b.HasKey("BoqSignOffId");
 
@@ -185,16 +188,19 @@ namespace Jewel.JPMS.Api.Migrations
                         .HasColumnType("nvarchar(64)");
 
                     b.Property<decimal>("CommittedSpend13Week")
-                        .HasColumnType("decimal(18,2)");
+                        .HasPrecision(18, 4)
+                        .HasColumnType("decimal(18,4)");
 
                     b.Property<decimal>("ExpectedIncome13Week")
-                        .HasColumnType("decimal(18,2)");
+                        .HasPrecision(18, 4)
+                        .HasColumnType("decimal(18,4)");
 
                     b.Property<DateTimeOffset>("GeneratedAt")
                         .HasColumnType("datetimeoffset");
 
                     b.Property<decimal>("NetPosition13Week")
-                        .HasColumnType("decimal(18,2)");
+                        .HasPrecision(18, 4)
+                        .HasColumnType("decimal(18,4)");
 
                     b.HasKey("CashflowSnapshotId");
 
@@ -256,7 +262,8 @@ namespace Jewel.JPMS.Api.Migrations
                         .HasColumnType("nvarchar(256)");
 
                     b.Property<decimal?>("Value")
-                        .HasColumnType("decimal(18,2)");
+                        .HasPrecision(18, 4)
+                        .HasColumnType("decimal(18,4)");
 
                     b.HasKey("ChangeRecordId");
 
@@ -327,7 +334,8 @@ namespace Jewel.JPMS.Api.Migrations
                         .HasColumnType("nvarchar(64)");
 
                     b.Property<decimal>("Amount")
-                        .HasColumnType("decimal(18,2)");
+                        .HasPrecision(18, 4)
+                        .HasColumnType("decimal(18,4)");
 
                     b.Property<string>("Category")
                         .IsRequired()
@@ -348,7 +356,8 @@ namespace Jewel.JPMS.Api.Migrations
                         .HasColumnType("datetimeoffset");
 
                     b.Property<decimal>("RecoveredAmount")
-                        .HasColumnType("decimal(18,2)");
+                        .HasPrecision(18, 4)
+                        .HasColumnType("decimal(18,4)");
 
                     b.Property<string>("Status")
                         .IsRequired()
@@ -372,7 +381,8 @@ namespace Jewel.JPMS.Api.Migrations
                         .HasColumnType("nvarchar(64)");
 
                     b.Property<decimal>("AllocatedAmount")
-                        .HasColumnType("decimal(18,2)");
+                        .HasPrecision(18, 4)
+                        .HasColumnType("decimal(18,4)");
 
                     b.Property<string>("CostCode")
                         .IsRequired()
@@ -385,7 +395,8 @@ namespace Jewel.JPMS.Api.Migrations
                         .HasColumnType("nvarchar(64)");
 
                     b.Property<decimal>("SpentAmount")
-                        .HasColumnType("decimal(18,2)");
+                        .HasPrecision(18, 4)
+                        .HasColumnType("decimal(18,4)");
 
                     b.HasKey("CostCodeBudgetId");
 
@@ -425,13 +436,16 @@ namespace Jewel.JPMS.Api.Migrations
                         .HasColumnType("nvarchar(64)");
 
                     b.Property<decimal>("MovementSinceLastSnapshot")
-                        .HasColumnType("decimal(18,2)");
+                        .HasPrecision(18, 4)
+                        .HasColumnType("decimal(18,4)");
 
                     b.Property<decimal>("OrderCost")
-                        .HasColumnType("decimal(18,2)");
+                        .HasPrecision(18, 4)
+                        .HasColumnType("decimal(18,4)");
 
                     b.Property<decimal>("OrderValue")
-                        .HasColumnType("decimal(18,2)");
+                        .HasPrecision(18, 4)
+                        .HasColumnType("decimal(18,4)");
 
                     b.Property<string>("PackageName")
                         .IsRequired()
@@ -444,10 +458,12 @@ namespace Jewel.JPMS.Api.Migrations
                         .HasColumnType("nvarchar(64)");
 
                     b.Property<decimal>("VariationCost")
-                        .HasColumnType("decimal(18,2)");
+                        .HasPrecision(18, 4)
+                        .HasColumnType("decimal(18,4)");
 
                     b.Property<decimal>("VariationValue")
-                        .HasColumnType("decimal(18,2)");
+                        .HasPrecision(18, 4)
+                        .HasColumnType("decimal(18,4)");
 
                     b.HasKey("CvrPackageRowId");
 
@@ -461,16 +477,20 @@ namespace Jewel.JPMS.Api.Migrations
                         .HasColumnType("nvarchar(64)");
 
                     b.Property<decimal>("ForecastFinalCost")
-                        .HasColumnType("decimal(18,2)");
+                        .HasPrecision(18, 4)
+                        .HasColumnType("decimal(18,4)");
 
                     b.Property<decimal>("ForecastFinalValue")
-                        .HasColumnType("decimal(18,2)");
+                        .HasPrecision(18, 4)
+                        .HasColumnType("decimal(18,4)");
 
                     b.Property<decimal>("MarginPercent")
-                        .HasColumnType("decimal(18,2)");
+                        .HasPrecision(18, 4)
+                        .HasColumnType("decimal(18,4)");
 
                     b.Property<decimal>("MarginPounds")
-                        .HasColumnType("decimal(18,2)");
+                        .HasPrecision(18, 4)
+                        .HasColumnType("decimal(18,4)");
 
                     b.Property<string>("ProjectId")
                         .IsRequired()
@@ -481,7 +501,8 @@ namespace Jewel.JPMS.Api.Migrations
                         .HasColumnType("datetimeoffset");
 
                     b.Property<decimal>("TenderValue")
-                        .HasColumnType("decimal(18,2)");
+                        .HasPrecision(18, 4)
+                        .HasColumnType("decimal(18,4)");
 
                     b.Property<int>("WeeksAheadOrBehind")
                         .HasColumnType("int");
@@ -498,7 +519,8 @@ namespace Jewel.JPMS.Api.Migrations
                         .HasColumnType("nvarchar(64)");
 
                     b.Property<decimal>("ChargeableAmount")
-                        .HasColumnType("decimal(18,2)");
+                        .HasPrecision(18, 4)
+                        .HasColumnType("decimal(18,4)");
 
                     b.Property<string>("Description")
                         .IsRequired()
@@ -506,10 +528,12 @@ namespace Jewel.JPMS.Api.Migrations
                         .HasColumnType("nvarchar(512)");
 
                     b.Property<decimal>("HourlyRate")
-                        .HasColumnType("decimal(18,2)");
+                        .HasPrecision(18, 4)
+                        .HasColumnType("decimal(18,4)");
 
                     b.Property<decimal>("Hours")
-                        .HasColumnType("decimal(18,2)");
+                        .HasPrecision(18, 4)
+                        .HasColumnType("decimal(18,4)");
 
                     b.Property<string>("InstructedBy")
                         .IsRequired()
@@ -517,13 +541,16 @@ namespace Jewel.JPMS.Api.Migrations
                         .HasColumnType("nvarchar(256)");
 
                     b.Property<decimal>("LabourCost")
-                        .HasColumnType("decimal(18,2)");
+                        .HasPrecision(18, 4)
+                        .HasColumnType("decimal(18,4)");
 
                     b.Property<decimal>("MaterialsCost")
-                        .HasColumnType("decimal(18,2)");
+                        .HasPrecision(18, 4)
+                        .HasColumnType("decimal(18,4)");
 
                     b.Property<decimal>("PlantCost")
-                        .HasColumnType("decimal(18,2)");
+                        .HasPrecision(18, 4)
+                        .HasColumnType("decimal(18,4)");
 
                     b.Property<string>("ProjectId")
                         .IsRequired()
@@ -536,7 +563,8 @@ namespace Jewel.JPMS.Api.Migrations
                         .HasColumnType("nvarchar(256)");
 
                     b.Property<decimal>("UpliftPercent")
-                        .HasColumnType("decimal(18,2)");
+                        .HasPrecision(18, 4)
+                        .HasColumnType("decimal(18,4)");
 
                     b.Property<DateTimeOffset>("WorkedOn")
                         .HasColumnType("datetimeoffset");
@@ -739,7 +767,8 @@ namespace Jewel.JPMS.Api.Migrations
                         .HasColumnType("nvarchar(64)");
 
                     b.Property<decimal>("CommercialRecovery")
-                        .HasColumnType("decimal(18,2)");
+                        .HasPrecision(18, 4)
+                        .HasColumnType("decimal(18,4)");
 
                     b.Property<int>("DaysGranted")
                         .HasColumnType("int");
@@ -769,13 +798,16 @@ namespace Jewel.JPMS.Api.Migrations
                         .HasColumnType("nvarchar(64)");
 
                     b.Property<decimal>("CostCommitted")
-                        .HasColumnType("decimal(18,2)");
+                        .HasPrecision(18, 4)
+                        .HasColumnType("decimal(18,4)");
 
                     b.Property<decimal>("CostIncurred")
-                        .HasColumnType("decimal(18,2)");
+                        .HasPrecision(18, 4)
+                        .HasColumnType("decimal(18,4)");
 
                     b.Property<decimal>("CostToComplete")
-                        .HasColumnType("decimal(18,2)");
+                        .HasPrecision(18, 4)
+                        .HasColumnType("decimal(18,4)");
 
                     b.Property<string>("PackageName")
                         .IsRequired()
@@ -783,7 +815,8 @@ namespace Jewel.JPMS.Api.Migrations
                         .HasColumnType("nvarchar(128)");
 
                     b.Property<decimal>("PrelimForecast")
-                        .HasColumnType("decimal(18,2)");
+                        .HasPrecision(18, 4)
+                        .HasColumnType("decimal(18,4)");
 
                     b.Property<string>("ProjectId")
                         .IsRequired()
@@ -791,7 +824,8 @@ namespace Jewel.JPMS.Api.Migrations
                         .HasColumnType("nvarchar(64)");
 
                     b.Property<decimal>("QsAccrualAmount")
-                        .HasColumnType("decimal(18,2)");
+                        .HasPrecision(18, 4)
+                        .HasColumnType("decimal(18,4)");
 
                     b.HasKey("ForecastComponentId");
 
@@ -966,7 +1000,8 @@ namespace Jewel.JPMS.Api.Migrations
                         .HasColumnType("nvarchar(64)");
 
                     b.Property<decimal?>("EstimatedValue")
-                        .HasColumnType("decimal(18,2)");
+                        .HasPrecision(18, 4)
+                        .HasColumnType("decimal(18,4)");
 
                     b.Property<string>("OwnerEmail")
                         .IsRequired()
@@ -1081,10 +1116,12 @@ namespace Jewel.JPMS.Api.Migrations
                         .HasColumnType("nvarchar(512)");
 
                     b.Property<decimal?>("GpsLatitude")
-                        .HasColumnType("decimal(18,2)");
+                        .HasPrecision(18, 4)
+                        .HasColumnType("decimal(18,4)");
 
                     b.Property<decimal?>("GpsLongitude")
-                        .HasColumnType("decimal(18,2)");
+                        .HasPrecision(18, 4)
+                        .HasColumnType("decimal(18,4)");
 
                     b.Property<string>("ProjectId")
                         .IsRequired()
@@ -1142,10 +1179,12 @@ namespace Jewel.JPMS.Api.Migrations
                         .HasColumnType("nvarchar(64)");
 
                     b.Property<decimal>("ActualAmount")
-                        .HasColumnType("decimal(18,2)");
+                        .HasPrecision(18, 4)
+                        .HasColumnType("decimal(18,4)");
 
                     b.Property<decimal>("ForecastAmount")
-                        .HasColumnType("decimal(18,2)");
+                        .HasPrecision(18, 4)
+                        .HasColumnType("decimal(18,4)");
 
                     b.Property<string>("PrelimItemId")
                         .IsRequired()
@@ -1153,7 +1192,8 @@ namespace Jewel.JPMS.Api.Migrations
                         .HasColumnType("nvarchar(64)");
 
                     b.Property<decimal>("TenderedAmount")
-                        .HasColumnType("decimal(18,2)");
+                        .HasPrecision(18, 4)
+                        .HasColumnType("decimal(18,4)");
 
                     b.Property<int>("WeekNumber")
                         .HasColumnType("int");
@@ -1201,7 +1241,8 @@ namespace Jewel.JPMS.Api.Migrations
                         .HasColumnType("datetimeoffset");
 
                     b.Property<decimal>("ProgressPercent")
-                        .HasColumnType("decimal(18,2)");
+                        .HasPrecision(18, 4)
+                        .HasColumnType("decimal(18,4)");
 
                     b.Property<string>("ProjectId")
                         .IsRequired()
@@ -1278,7 +1319,8 @@ namespace Jewel.JPMS.Api.Migrations
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<decimal>("Value")
-                        .HasColumnType("decimal(18,2)");
+                        .HasPrecision(18, 4)
+                        .HasColumnType("decimal(18,4)");
 
                     b.HasKey("ProposalId");
 
@@ -1292,7 +1334,8 @@ namespace Jewel.JPMS.Api.Migrations
                         .HasColumnType("nvarchar(64)");
 
                     b.Property<decimal>("AddAmount")
-                        .HasColumnType("decimal(18,2)");
+                        .HasPrecision(18, 4)
+                        .HasColumnType("decimal(18,4)");
 
                     b.Property<string>("Category")
                         .IsRequired()
@@ -1305,10 +1348,12 @@ namespace Jewel.JPMS.Api.Migrations
                         .HasColumnType("nvarchar(1024)");
 
                     b.Property<decimal>("LiabilityAmount")
-                        .HasColumnType("decimal(18,2)");
+                        .HasPrecision(18, 4)
+                        .HasColumnType("decimal(18,4)");
 
                     b.Property<decimal>("OmitAmount")
-                        .HasColumnType("decimal(18,2)");
+                        .HasPrecision(18, 4)
+                        .HasColumnType("decimal(18,4)");
 
                     b.Property<string>("ProjectId")
                         .IsRequired()
@@ -1383,7 +1428,8 @@ namespace Jewel.JPMS.Api.Migrations
                         .HasColumnType("nvarchar(64)");
 
                     b.Property<decimal>("Value")
-                        .HasColumnType("decimal(18,2)");
+                        .HasPrecision(18, 4)
+                        .HasColumnType("decimal(18,4)");
 
                     b.HasKey("QuoteId");
 
@@ -1420,7 +1466,8 @@ namespace Jewel.JPMS.Api.Migrations
                         .HasColumnType("nvarchar(16)");
 
                     b.Property<decimal>("Value")
-                        .HasColumnType("decimal(18,2)");
+                        .HasPrecision(18, 4)
+                        .HasColumnType("decimal(18,4)");
 
                     b.HasKey("RateId");
 
@@ -1434,7 +1481,8 @@ namespace Jewel.JPMS.Api.Migrations
                         .HasColumnType("nvarchar(64)");
 
                     b.Property<decimal>("Amount")
-                        .HasColumnType("decimal(18,2)");
+                        .HasPrecision(18, 4)
+                        .HasColumnType("decimal(18,4)");
 
                     b.Property<bool>("IsPublishedDownstream")
                         .HasColumnType("bit");
@@ -1462,13 +1510,16 @@ namespace Jewel.JPMS.Api.Migrations
                         .HasColumnType("datetimeoffset");
 
                     b.Property<decimal>("FinalContractValue")
-                        .HasColumnType("decimal(18,2)");
+                        .HasPrecision(18, 4)
+                        .HasColumnType("decimal(18,4)");
 
                     b.Property<decimal>("FinalCost")
-                        .HasColumnType("decimal(18,2)");
+                        .HasPrecision(18, 4)
+                        .HasColumnType("decimal(18,4)");
 
                     b.Property<decimal>("FinalMargin")
-                        .HasColumnType("decimal(18,2)");
+                        .HasPrecision(18, 4)
+                        .HasColumnType("decimal(18,4)");
 
                     b.Property<bool>("IsClientSigned")
                         .HasColumnType("bit");
@@ -1507,7 +1558,8 @@ namespace Jewel.JPMS.Api.Migrations
                         .HasColumnType("datetimeoffset");
 
                     b.Property<decimal>("ProgressPercent")
-                        .HasColumnType("decimal(18,2)");
+                        .HasPrecision(18, 4)
+                        .HasColumnType("decimal(18,4)");
 
                     b.Property<string>("ProjectId")
                         .IsRequired()
@@ -1605,13 +1657,16 @@ namespace Jewel.JPMS.Api.Migrations
                         .HasColumnType("nvarchar(64)");
 
                     b.Property<decimal>("CertifiedAmount")
-                        .HasColumnType("decimal(18,2)");
+                        .HasPrecision(18, 4)
+                        .HasColumnType("decimal(18,4)");
 
                     b.Property<decimal>("FinalReleasedAmount")
-                        .HasColumnType("decimal(18,2)");
+                        .HasPrecision(18, 4)
+                        .HasColumnType("decimal(18,4)");
 
                     b.Property<decimal>("FirstReleasedAmount")
-                        .HasColumnType("decimal(18,2)");
+                        .HasPrecision(18, 4)
+                        .HasColumnType("decimal(18,4)");
 
                     b.Property<string>("ProjectId")
                         .IsRequired()
@@ -1619,7 +1674,8 @@ namespace Jewel.JPMS.Api.Migrations
                         .HasColumnType("nvarchar(64)");
 
                     b.Property<decimal>("RetentionPercent")
-                        .HasColumnType("decimal(18,2)");
+                        .HasPrecision(18, 4)
+                        .HasColumnType("decimal(18,4)");
 
                     b.Property<string>("SubcontractorReference")
                         .IsRequired()
@@ -1643,7 +1699,8 @@ namespace Jewel.JPMS.Api.Migrations
                         .HasColumnType("nvarchar(32)");
 
                     b.Property<decimal>("Hours")
-                        .HasColumnType("decimal(18,2)");
+                        .HasPrecision(18, 4)
+                        .HasColumnType("decimal(18,4)");
 
                     b.Property<bool>("IsApproved")
                         .HasColumnType("bit");
@@ -1678,7 +1735,8 @@ namespace Jewel.JPMS.Api.Migrations
                         .HasColumnType("nvarchar(64)");
 
                     b.Property<decimal>("GrossValue")
-                        .HasColumnType("decimal(18,2)");
+                        .HasPrecision(18, 4)
+                        .HasColumnType("decimal(18,4)");
 
                     b.Property<bool>("IsIssued")
                         .HasColumnType("bit");
@@ -1687,7 +1745,8 @@ namespace Jewel.JPMS.Api.Migrations
                         .HasColumnType("datetimeoffset");
 
                     b.Property<decimal>("NetValue")
-                        .HasColumnType("decimal(18,2)");
+                        .HasPrecision(18, 4)
+                        .HasColumnType("decimal(18,4)");
 
                     b.Property<string>("ProjectId")
                         .IsRequired()
@@ -1695,7 +1754,8 @@ namespace Jewel.JPMS.Api.Migrations
                         .HasColumnType("nvarchar(64)");
 
                     b.Property<decimal>("RetentionPercent")
-                        .HasColumnType("decimal(18,2)");
+                        .HasPrecision(18, 4)
+                        .HasColumnType("decimal(18,4)");
 
                     b.HasKey("ValuationId");
 
@@ -1725,10 +1785,12 @@ namespace Jewel.JPMS.Api.Migrations
                         .HasColumnType("nvarchar(64)");
 
                     b.Property<decimal>("StandardRatedAmount")
-                        .HasColumnType("decimal(18,2)");
+                        .HasPrecision(18, 4)
+                        .HasColumnType("decimal(18,4)");
 
                     b.Property<decimal>("ZeroRatedAmount")
-                        .HasColumnType("decimal(18,2)");
+                        .HasPrecision(18, 4)
+                        .HasColumnType("decimal(18,4)");
 
                     b.HasKey("VatAnalysisId");
 
@@ -1802,7 +1864,8 @@ namespace Jewel.JPMS.Api.Migrations
                         .HasColumnType("nvarchar(64)");
 
                     b.Property<decimal>("Value")
-                        .HasColumnType("decimal(18,2)");
+                        .HasPrecision(18, 4)
+                        .HasColumnType("decimal(18,4)");
 
                     b.HasKey("WorkOrderId");
 
