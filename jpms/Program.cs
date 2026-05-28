@@ -4,6 +4,7 @@ using Jewel.JPMS.Features.Boq;
 using Jewel.JPMS.Features.Changes;
 using Jewel.JPMS.Features.Closeout;
 using Jewel.JPMS.Features.Commercial;
+using Jewel.JPMS.Features.CommercialInputs;
 using Jewel.JPMS.Features.Cvr;
 using Jewel.JPMS.Features.Directory;
 using Jewel.JPMS.Features.Drawings;
@@ -86,6 +87,7 @@ using (var routeScope = app.Services.CreateScope())
     MobilisationRouteRegistration.RegisterMobilisationRoutes(queryRoutes, commandRoutes);
     SiteRouteRegistration.RegisterSiteRoutes(queryRoutes, commandRoutes);
     CommercialRouteRegistration.RegisterCommercialRoutes(queryRoutes, commandRoutes);
+    CommercialInputsRouteRegistration.RegisterCommercialInputsRoutes(queryRoutes, commandRoutes);
     CvrRouteRegistration.RegisterCvrRoutes(queryRoutes, commandRoutes);
     CloseoutRouteRegistration.RegisterCloseoutRoutes(queryRoutes, commandRoutes);
     ChangesRouteRegistration.RegisterChangesRoutes(queryRoutes, commandRoutes);

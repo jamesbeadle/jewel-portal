@@ -4,6 +4,7 @@ using Jewel.JPMS.Api.Features.Boq;
 using Jewel.JPMS.Api.Features.Changes;
 using Jewel.JPMS.Api.Features.Closeout;
 using Jewel.JPMS.Api.Features.Commercial;
+using Jewel.JPMS.Api.Features.CommercialInputs;
 using Jewel.JPMS.Api.Features.Cvr;
 using Jewel.JPMS.Api.Features.Directory;
 using Jewel.JPMS.Api.Features.Drawings;
@@ -46,6 +47,7 @@ var host = new HostBuilder()
         services.AddMobilisationFeature();
         services.AddSiteFeature();
         services.AddCommercialFeature();
+        services.AddCommercialInputsFeature();
         services.AddCvrFeature();
         services.AddCloseoutFeature();
         services.AddChangesFeature();
