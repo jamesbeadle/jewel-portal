@@ -67,9 +67,10 @@ Prelim Forcast / Header sheets. These override earlier guesses where they differ
 - **Tendered cost** is value at a 20% on-cost markup (Net Tender Cost 1,193,810 = Net Tender
   Value 1,432,573 ÷ 1.2). So a package's Order Cost can be derived from its sell value and the
   tendered margin when an explicit cost is absent.
-- **Prelim Difference = Tendered − Actual-to-date** (a saving is positive): on the Prelim Forcast
-  sheet, Project Manager Tendered 20,000 − Total 2,500 = 17,500. Note this is the opposite sign to
-  the current `PrelimForecastEntry.DifferenceAmount` (Forecast − Tendered) — reconcile when wiring.
+- **Prelim Difference = Tendered − Forecast** (a saving is positive): on the Prelim Forcast sheet,
+  Project Manager 20,000 − 2,500 = +17,500; Site Manager 45,000 − 94,650 = −49,650.
+  **Corrected** — `PrelimForecastEntry.DifferenceAmount` now uses this sign and the prelim grid
+  colours saving green / overspend red accordingly.
 - **Header carries** EOT count (4), Weeks Ahead/Behind (−6, **negative = behind**), Anticipated vs
   Contract Completion, Valuation Certificate No, Retention @ 5%, retention release date. The
   Weeks Ahead/Behind figure is not a simple (anticipated − contract) ÷ 7 — derivation still to

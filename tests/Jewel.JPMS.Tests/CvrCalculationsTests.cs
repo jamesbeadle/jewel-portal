@@ -48,6 +48,15 @@ public sealed class CvrCalculationsTests
         Assert.Equal(0m, CvrCalculations.TimeRelatedPrelimOverspend(-3m, 2_500m));
 
     [Fact]
+    public void PrelimDifference_isSavingPositiveAndOverspendNegative()
+    {
+        var saving = new PrelimForecastEntry("e1", "p1", 1, 20_000m, 2_500m, 2_500m);
+        Assert.Equal(17_500m, saving.DifferenceAmount);
+        var overspend = new PrelimForecastEntry("e2", "p1", 1, 45_000m, 94_650m, 94_650m);
+        Assert.Equal(-49_650m, overspend.DifferenceAmount);
+    }
+
+    [Fact]
     public void WeeksBehind_isPositiveWhenAnticipatedAfterContract()
     {
         var contractCompletion = new DateTimeOffset(2026, 1, 1, 0, 0, 0, TimeSpan.Zero);

@@ -62,7 +62,7 @@ public sealed record PrelimForecastEntry(
     decimal ActualAmount,
     decimal ForecastAmount)
 {
-    public decimal DifferenceAmount => ForecastAmount - TenderedAmount;
+    public decimal DifferenceAmount => TenderedAmount - ForecastAmount;
 }
 
 public sealed record Eot(
