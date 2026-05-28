@@ -5,6 +5,7 @@ using Jewel.JPMS.Features.Changes;
 using Jewel.JPMS.Features.Closeout;
 using Jewel.JPMS.Features.Commercial;
 using Jewel.JPMS.Features.Cvr;
+using Jewel.JPMS.Features.Directory;
 using Jewel.JPMS.Features.Drawings;
 using Jewel.JPMS.Features.Hs;
 using Jewel.JPMS.Features.Leads;
@@ -29,6 +30,7 @@ builder.Services.AddScoped(serviceProvider => new HttpClient
 });
 
 builder.Services.AddCqrsTransport();
+builder.Services.AddDirectoryReadModels();
 builder.Services.AddProjectsReadModels();
 builder.Services.AddLeadsReadModels();
 builder.Services.AddBoqReadModels();
@@ -44,8 +46,8 @@ builder.Services.AddCvrReadModels();
 builder.Services.AddCloseoutReadModels();
 builder.Services.AddChangesReadModels();
 
-builder.Services.AddScoped<IUserDirectory, AllowListUserDirectory>();
-builder.Services.AddScoped<IAccessRequestStore, InMemoryAccessRequestStore>();
+builder.Services.AddScoped<IUserDirectory, HttpUserDirectory>();
+builder.Services.AddScoped<IAccessRequestStore, HttpAccessRequestStore>();
 
 builder.Services.AddScoped<ILeadStore, HttpLeadStore>();
 builder.Services.AddScoped<IRateLibrary, HttpRateLibrary>();
@@ -72,6 +74,7 @@ using (var routeScope = app.Services.CreateScope())
 {
     var queryRoutes = routeScope.ServiceProvider.GetRequiredService<QueryRouteTable>();
     var commandRoutes = routeScope.ServiceProvider.GetRequiredService<CommandRouteTable>();
+    DirectoryRouteRegistration.RegisterDirectoryRoutes(queryRoutes, commandRoutes);
     ProjectsRouteRegistration.RegisterProjectsRoutes(queryRoutes, commandRoutes);
     LeadsRouteRegistration.RegisterLeadsRoutes(queryRoutes, commandRoutes);
     BoqRouteRegistration.RegisterBoqRoutes(queryRoutes, commandRoutes);

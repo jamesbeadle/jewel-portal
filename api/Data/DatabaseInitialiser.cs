@@ -5,9 +5,9 @@ namespace Jewel.JPMS.Api.Data;
 
 public sealed class DatabaseInitialiser
 {
-    public async Task EnsureCreatedAsync(IServiceProvider services)
+    public async Task ApplyMigrationsAsync(IServiceProvider services)
     {
         var context = services.GetRequiredService<JpmsContext>();
-        await context.Database.EnsureCreatedAsync();
+        await context.Database.MigrateAsync();
     }
 }

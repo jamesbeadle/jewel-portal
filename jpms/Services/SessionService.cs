@@ -35,7 +35,7 @@ public sealed class SessionService
         if (!auth.IsSignedIn) return;
 
         var signedInUser = auth.CurrentUser!;
-        var directoryEntry = directory.Find(signedInUser.Email);
+        var directoryEntry = await directory.FindAsync(signedInUser.Email, CancellationToken.None);
         var roles = EffectiveRoles.For(signedInUser.Email, directoryEntry);
         var displayName = string.IsNullOrWhiteSpace(directoryEntry?.DisplayName)
             ? signedInUser.DisplayName

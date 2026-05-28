@@ -6,6 +6,8 @@ public interface IUserDirectory
 {
     DirectoryUser? Find(string email);
 
+    Task<DirectoryUser?> FindAsync(string email, CancellationToken cancellationToken);
+
     bool IsApproved(string email) => Find(email) is not null;
 
     IReadOnlyList<DirectoryUser> All();

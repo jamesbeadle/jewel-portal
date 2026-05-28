@@ -55,7 +55,7 @@ var host = new HostBuilder()
 await using (var scope = host.Services.CreateAsyncScope())
 {
     var initialiser = scope.ServiceProvider.GetRequiredService<DatabaseInitialiser>();
-    await initialiser.EnsureCreatedAsync(scope.ServiceProvider);
+    await initialiser.ApplyMigrationsAsync(scope.ServiceProvider);
 }
 
 await host.RunAsync();
