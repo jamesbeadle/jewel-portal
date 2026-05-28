@@ -15,5 +15,21 @@ public static class CommercialInputsRouteRegistration
         commands.Register<LogDaywork, Daywork>(
             new CommandRoute("POST", "/api/projects/{projectId}/dayworks",
                 command => $"/api/projects/{((LogDaywork)command).ProjectId}/dayworks"));
+
+        queries.Register<ListContraChargesForProject, IReadOnlyList<ContraCharge>>(
+            new QueryRoute("/api/projects/{projectId}/contra-charges",
+                query => $"/api/projects/{((ListContraChargesForProject)query).ProjectId}/contra-charges"));
+
+        commands.Register<RecordContraCharge, ContraCharge>(
+            new CommandRoute("POST", "/api/projects/{projectId}/contra-charges",
+                command => $"/api/projects/{((RecordContraCharge)command).ProjectId}/contra-charges"));
+
+        queries.Register<ListSubcontractorRetentionsForProject, IReadOnlyList<SubcontractorRetention>>(
+            new QueryRoute("/api/projects/{projectId}/subcontractor-retentions",
+                query => $"/api/projects/{((ListSubcontractorRetentionsForProject)query).ProjectId}/subcontractor-retentions"));
+
+        commands.Register<RecordSubcontractorRetention, SubcontractorRetention>(
+            new CommandRoute("POST", "/api/projects/{projectId}/subcontractor-retentions",
+                command => $"/api/projects/{((RecordSubcontractorRetention)command).ProjectId}/subcontractor-retentions"));
     }
 }
