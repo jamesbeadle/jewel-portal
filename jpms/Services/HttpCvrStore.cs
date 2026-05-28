@@ -85,6 +85,15 @@ public sealed class HttpCvrStore : ICvrStore
     public IReadOnlyList<PrelimForecastEntry> PrelimEntriesFor(string prelimItemId) =>
         queries.AskAsync(new ListPrelimEntriesForItem(prelimItemId), CancellationToken.None).GetAwaiter().GetResult();
 
+    public PrelimForecastEntry SavePrelimForecast(string projectId, string prelimDescription, PrelimForecastEntry entry)
+    {
+        _ = commands.SendAsync(
+            new RecordPrelimForecastForWeek(projectId, prelimDescription, entry.WeekNumber, entry.TenderedAmount, entry.ActualAmount, entry.ForecastAmount),
+            CancellationToken.None);
+        OnChange?.Invoke();
+        return entry;
+    }
+
     public IReadOnlyList<Eot> EotsFor(string projectId) =>
         queries.AskAsync(new ListEotsForProject(projectId), CancellationToken.None).GetAwaiter().GetResult();
 

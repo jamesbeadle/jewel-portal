@@ -55,6 +55,10 @@ public static class CvrRouteRegistration
             new CommandRoute("POST", "/api/projects/{projectId}/forecast-components",
                 command => $"/api/projects/{((RecordForecastComponent)command).ProjectId}/forecast-components"));
 
+        commands.Register<RecordPrelimForecastForWeek, PrelimForecastEntry>(
+            new CommandRoute("POST", "/api/projects/{projectId}/prelim-forecasts",
+                command => $"/api/projects/{((RecordPrelimForecastForWeek)command).ProjectId}/prelim-forecasts"));
+
         commands.Register<RecordQsAccrual, QsAccrual>(
             new CommandRoute("POST", "/api/projects/{projectId}/qs-accruals",
                 command => $"/api/projects/{((RecordQsAccrual)command).ProjectId}/qs-accruals"));

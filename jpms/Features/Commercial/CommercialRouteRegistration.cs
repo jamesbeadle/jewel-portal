@@ -29,6 +29,10 @@ public static class CommercialRouteRegistration
             new CommandRoute("POST", "/api/projects/{projectId}/claim-periods",
                 command => $"/api/projects/{((AddClaimPeriod)command).ProjectId}/claim-periods"));
 
+        commands.Register<SetCostCodeBudget, CostCodeBudget>(
+            new CommandRoute("POST", "/api/projects/{projectId}/cost-code-budgets",
+                command => $"/api/projects/{((SetCostCodeBudget)command).ProjectId}/cost-code-budgets"));
+
         queries.Register<ListCostCodeBudgetsForProject, IReadOnlyList<CostCodeBudget>>(
             new QueryRoute("/api/projects/{projectId}/cost-code-budgets",
                 query => $"/api/projects/{((ListCostCodeBudgetsForProject)query).ProjectId}/cost-code-budgets"));

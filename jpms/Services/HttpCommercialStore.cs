@@ -59,6 +59,18 @@ public sealed class HttpCommercialStore : ICommercialStore
         return budgetsReadModel.Current(projectId);
     }
 
+    public CostCodeBudget SaveBudget(CostCodeBudget budget)
+    {
+        _ = SetBudgetAsync(budget);
+        return budget;
+    }
+
+    private async Task SetBudgetAsync(CostCodeBudget budget)
+    {
+        await commands.SendAsync(new SetCostCodeBudget(budget.ProjectId, budget.CostCode, budget.AllocatedAmount, budget.SpentAmount), CancellationToken.None);
+        await budgetsReadModel.RefreshAsync(budget.ProjectId, CancellationToken.None);
+    }
+
     public IReadOnlyList<Timesheet> TimesheetsFor(string projectId)
     {
         if (timesheetsReadModel.Current(projectId).Count == 0) _ = timesheetsReadModel.RefreshAsync(projectId, CancellationToken.None);

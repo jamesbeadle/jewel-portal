@@ -10,6 +10,7 @@ public interface ICommercialStore
     Valuation SaveValuation(Valuation valuation);
 
     IReadOnlyList<CostCodeBudget> BudgetsFor(string projectId);
+    CostCodeBudget SaveBudget(CostCodeBudget budget);
 
     IReadOnlyList<Timesheet> TimesheetsFor(string projectId);
     Timesheet SaveTimesheet(Timesheet timesheet);

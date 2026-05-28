@@ -16,6 +16,7 @@
         break;
     case "prelims":
         <h2 class="text-lg font-semibold text-slate-900 mb-3">Prelim forecast</h2>
+        <PrelimForecastForm ProjectId="@ProjectId" />
         <PrelimForecastGrid Items="CvrStore.PrelimsFor(ProjectId)" />
         break;
     case "eots":
@@ -25,6 +26,7 @@
         break;
     case "budgets":
         <h2 class="text-lg font-semibold text-slate-900 mb-3">Cost code budgets</h2>
+        <CostCodeBudgetForm ProjectId="@ProjectId" />
         <CostCodeBudgetTable Budgets="CommercialStore.BudgetsFor(ProjectId)" />
         break;
     case "timesheets":

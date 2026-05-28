@@ -9,4 +9,6 @@ internal static class CvrIdentifierFactory
     public static string NextSnapshotId() => Guid.NewGuid().ToString(CompactGuidFormat);
     public static string NextPackageRowId() => Guid.NewGuid().ToString(CompactGuidFormat);
     public static string NextForecastComponentId() => Guid.NewGuid().ToString(CompactGuidFormat);
+    public static string NextPrelimItemId() => Guid.NewGuid().ToString(CompactGuidFormat);
+    public static string NextPrelimForecastEntryId() => Guid.NewGuid().ToString(CompactGuidFormat);
 }

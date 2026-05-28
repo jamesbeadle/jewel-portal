@@ -32,6 +32,10 @@ public static class CvrFeatureRegistration
         services.AddScoped<RecordForecastComponentAuthorisation>();
         services.AddScoped<RecordForecastComponentValidation>();
 
+        services.AddScoped<ICommandHandler<RecordPrelimForecastForWeek, PrelimForecastEntry>, RecordPrelimForecastForWeekHandler>();
+        services.AddScoped<RecordPrelimForecastForWeekAuthorisation>();
+        services.AddScoped<RecordPrelimForecastForWeekValidation>();
+
         services.AddScoped<ICommandHandler<RecordQsAccrual, QsAccrual>, RecordQsAccrualHandler>();
         services.AddScoped<RecordQsAccrualAuthorisation>();
         services.AddScoped<RecordQsAccrualValidation>();
