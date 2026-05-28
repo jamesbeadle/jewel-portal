@@ -33,7 +33,6 @@ var host = new HostBuilder()
         services.AddDbContext<JpmsContext>(options =>
             options.UseSqlServer(connectionString));
 
-        services.AddSingleton<DatabaseInitialiser>();
         services.AddScoped<SignedInUserResolver>();
         services.AddDirectoryFeature();
         services.AddAccessRequestsFeature();
@@ -55,11 +54,5 @@ var host = new HostBuilder()
         services.AddChangesFeature();
     })
     .Build();
-
-await using (var scope = host.Services.CreateAsyncScope())
-{
-    var initialiser = scope.ServiceProvider.GetRequiredService<DatabaseInitialiser>();
-    await initialiser.ApplyMigrationsAsync(scope.ServiceProvider);
-}
 
 await host.RunAsync();
