@@ -58,6 +58,15 @@ public sealed class HttpCvrStore : ICvrStore
     public IReadOnlyList<ForecastComponent> ForecastComponentsFor(string projectId) =>
         queries.AskAsync(new ListForecastComponentsForProject(projectId), CancellationToken.None).GetAwaiter().GetResult();
 
+    public ForecastComponent SaveForecastComponent(ForecastComponent component)
+    {
+        _ = commands.SendAsync(
+            new RecordForecastComponent(component.ProjectId, component.PackageName, component.CostIncurred, component.CostCommitted, component.QsAccrualAmount, component.PrelimForecast, component.CostToComplete),
+            CancellationToken.None);
+        OnChange?.Invoke();
+        return component;
+    }
+
     public IReadOnlyList<QsAccrual> AccrualsFor(string projectId) =>
         queries.AskAsync(new ListQsAccrualsForProject(projectId), CancellationToken.None).GetAwaiter().GetResult();
 

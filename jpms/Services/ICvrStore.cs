@@ -11,6 +11,7 @@ public interface ICvrStore
     IReadOnlyList<CvrPackageRow> PackagesFor(string projectId);
     CvrPackageRow SavePackageRow(CvrPackageRow row);
     IReadOnlyList<ForecastComponent> ForecastComponentsFor(string projectId);
+    ForecastComponent SaveForecastComponent(ForecastComponent component);
 
     IReadOnlyList<QsAccrual> AccrualsFor(string projectId);
     QsAccrual SaveAccrual(QsAccrual accrual);

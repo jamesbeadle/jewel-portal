@@ -28,6 +28,10 @@ public static class CvrFeatureRegistration
         services.AddScoped<RecordCvrPackageRowAuthorisation>();
         services.AddScoped<RecordCvrPackageRowValidation>();
 
+        services.AddScoped<ICommandHandler<RecordForecastComponent, ForecastComponent>, RecordForecastComponentHandler>();
+        services.AddScoped<RecordForecastComponentAuthorisation>();
+        services.AddScoped<RecordForecastComponentValidation>();
+
         services.AddScoped<ICommandHandler<RecordQsAccrual, QsAccrual>, RecordQsAccrualHandler>();
         services.AddScoped<RecordQsAccrualAuthorisation>();
         services.AddScoped<RecordQsAccrualValidation>();

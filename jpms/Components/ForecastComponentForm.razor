@@ -1,0 +1,44 @@
+@inject ICvrStore CvrStore
+
+<section class="rounded-xl border border-slate-200 bg-white p-5 mb-4">
+    <h3 class="text-sm font-medium text-slate-700 mb-3">Record a forecast final cost component</h3>
+    <form @onsubmit="Save" @onsubmit:preventDefault="true" class="space-y-3">
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            <FormField Label="Package" Value="@packageName" OnChange="@(value => packageName = value)" Required="true" />
+            <FormField Label="Cost incurred £" InputType="number" Value="@costIncurred" OnChange="@(value => costIncurred = value)" />
+            <FormField Label="Cost committed £" InputType="number" Value="@costCommitted" OnChange="@(value => costCommitted = value)" />
+            <FormField Label="QS accrual £" InputType="number" Value="@qsAccrualAmount" OnChange="@(value => qsAccrualAmount = value)" />
+            <FormField Label="Prelim forecast £" InputType="number" Value="@prelimForecast" OnChange="@(value => prelimForecast = value)" />
+            <FormField Label="Cost to complete £" InputType="number" Value="@costToComplete" OnChange="@(value => costToComplete = value)" />
+        </div>
+        <button type="submit" class="rounded-lg bg-slate-900 text-white font-medium text-sm px-4 py-2 hover:bg-slate-800 transition">
+            Record component
+        </button>
+    </form>
+</section>
+
+@code {
+    [Parameter, EditorRequired] public string ProjectId { get; set; } = "";
+
+    private string packageName = "";
+    private string costIncurred = "0";
+    private string costCommitted = "0";
+    private string qsAccrualAmount = "0";
+    private string prelimForecast = "0";
+    private string costToComplete = "0";
+
+    private void Save()
+    {
+        if (string.IsNullOrWhiteSpace(packageName)) return;
+        CvrStore.SaveForecastComponent(new ForecastComponent(
+            "", ProjectId, packageName,
+            FormNumber.ParseAmount(costIncurred), FormNumber.ParseAmount(costCommitted), FormNumber.ParseAmount(qsAccrualAmount),
+            FormNumber.ParseAmount(prelimForecast), FormNumber.ParseAmount(costToComplete)));
+        packageName = "";
+        costIncurred = "0";
+        costCommitted = "0";
+        qsAccrualAmount = "0";
+        prelimForecast = "0";
+        costToComplete = "0";
+    }
+}

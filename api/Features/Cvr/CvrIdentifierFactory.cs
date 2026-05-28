@@ -8,4 +8,5 @@ internal static class CvrIdentifierFactory
     public static string NextEotId() => Guid.NewGuid().ToString(CompactGuidFormat);
     public static string NextSnapshotId() => Guid.NewGuid().ToString(CompactGuidFormat);
     public static string NextPackageRowId() => Guid.NewGuid().ToString(CompactGuidFormat);
+    public static string NextForecastComponentId() => Guid.NewGuid().ToString(CompactGuidFormat);
 }

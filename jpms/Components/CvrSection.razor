@@ -13,6 +13,15 @@
     </section>
 
     <section>
+        <h2 class="text-lg font-semibold text-slate-900 mb-3">Forecast Final Cost — by package</h2>
+        <p class="text-sm text-slate-600 mb-3">
+            Every FFC is the sum of explicit components — never a black-box number.
+        </p>
+        <ForecastComponentForm ProjectId="@ProjectId" />
+        <ForecastComponentTable Rows="CvrStore.ForecastComponentsFor(ProjectId)" />
+    </section>
+
+    <section>
         <h2 class="text-lg font-semibold text-slate-900 mb-3">Snapshot history</h2>
         <CvrSnapshotForm ProjectId="@ProjectId" />
         <CvrSnapshotHistoryTable Snapshots="CvrStore.SnapshotsFor(ProjectId)" />
