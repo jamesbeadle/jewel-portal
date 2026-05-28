@@ -7,6 +7,11 @@ public sealed class JpmsContext : DbContext
 {
     public JpmsContext(DbContextOptions<JpmsContext> options) : base(options) { }
 
+    protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
+    {
+        configurationBuilder.Properties<decimal>().HavePrecision(18, 4);
+    }
+
     public DbSet<DirectoryUserEntity> DirectoryUsers => Set<DirectoryUserEntity>();
     public DbSet<DirectoryUserRoleEntity> DirectoryUserRoles => Set<DirectoryUserRoleEntity>();
     public DbSet<AccessRequestEntity> AccessRequests => Set<AccessRequestEntity>();
