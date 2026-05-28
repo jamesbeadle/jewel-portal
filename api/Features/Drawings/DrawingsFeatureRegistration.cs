@@ -12,6 +12,7 @@ public static class DrawingsFeatureRegistration
     public static IServiceCollection AddDrawingsFeature(this IServiceCollection services)
     {
         services.AddScoped<IQueryHandler<ListDrawingsForProject, IReadOnlyList<Drawing>>, ListDrawingsForProjectHandler>();
+        services.AddScoped<IQueryHandler<GetDrawingById, Drawing?>, GetDrawingByIdHandler>();
         services.AddScoped<IQueryHandler<ListRevisionsForDrawing, IReadOnlyList<DrawingRevision>>, ListRevisionsForDrawingHandler>();
 
         services.AddScoped<ICommandHandler<RegisterDrawing, Drawing>, RegisterDrawingHandler>();

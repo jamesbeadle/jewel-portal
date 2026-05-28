@@ -19,6 +19,10 @@ public static class DrawingsRouteRegistration
             new QueryRoute("/api/projects/{projectId}/drawings",
                 query => $"/api/projects/{((ListDrawingsForProject)query).ProjectId}/drawings"));
 
+        queries.Register<GetDrawingById, Drawing?>(
+            new QueryRoute("/api/drawings/{drawingId}",
+                query => $"/api/drawings/{((GetDrawingById)query).DrawingId}"));
+
         queries.Register<ListRevisionsForDrawing, IReadOnlyList<DrawingRevision>>(
             new QueryRoute("/api/drawings/{drawingId}/revisions",
                 query => $"/api/drawings/{((ListRevisionsForDrawing)query).DrawingId}/revisions"));

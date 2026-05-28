@@ -8,11 +8,13 @@ namespace Jewel.JPMS.Services;
 public sealed class HttpDrawingStore : IDrawingStore
 {
     private readonly DrawingsReadModel readModel;
+    private readonly IQueryClient queries;
     private readonly ICommandSender commands;
 
-    public HttpDrawingStore(DrawingsReadModel readModel, ICommandSender commands)
+    public HttpDrawingStore(DrawingsReadModel readModel, IQueryClient queries, ICommandSender commands)
     {
         this.readModel = readModel;
+        this.queries = queries;
         this.commands = commands;
         readModel.OnChanged += () => OnChange?.Invoke();
     }
@@ -25,7 +27,8 @@ public sealed class HttpDrawingStore : IDrawingStore
         return readModel.DrawingsCurrent(projectId);
     }
 
-    public Drawing? Find(string drawingId) => null;
+    public Drawing? Find(string drawingId) =>
+        queries.AskAsync(new GetDrawingById(drawingId), CancellationToken.None).GetAwaiter().GetResult();
 
     public Drawing Upsert(Drawing drawing)
     {
