@@ -4,8 +4,7 @@ public static class JpmsAdministrators
 {
     private static readonly IReadOnlySet<string> Emails = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
     {
-        "admin.james@jewelenterprises.co.uk",
-        "Nigel.Reilly@jewelenterprises.co.uk"
+        "nigel.reilly@jewelgroup.co.uk"
     };
 
     public static bool Contains(string email) =>

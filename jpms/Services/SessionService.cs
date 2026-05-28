@@ -35,7 +35,7 @@ public sealed class SessionService
         if (!auth.IsSignedIn) return;
 
         var signedInUser = auth.CurrentUser!;
-        var directoryEntry = await directory.FindAsync(signedInUser.Email, CancellationToken.None);
+        var directoryEntry = await ResolveDirectoryEntryAsync(signedInUser.Email);
         var roles = EffectiveRoles.For(signedInUser.Email, directoryEntry);
         var displayName = string.IsNullOrWhiteSpace(directoryEntry?.DisplayName)
             ? signedInUser.DisplayName
@@ -43,6 +43,18 @@ public sealed class SessionService
         var resolvedUser = signedInUser with { DisplayName = displayName };
         var persistedRole = await roleStorage.ReadAsync(resolvedUser.Email);
         Adopt(resolvedUser, roles, persistedRole);
+    }
+
+    private async Task<DirectoryUser?> ResolveDirectoryEntryAsync(string email)
+    {
+        try
+        {
+            return await directory.FindAsync(email, CancellationToken.None);
+        }
+        catch
+        {
+            return null;
+        }
     }
 
     public void SwitchTo(Role role)
