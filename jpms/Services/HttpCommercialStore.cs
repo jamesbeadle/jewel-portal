@@ -14,14 +14,16 @@ public sealed class HttpCommercialStore : ICommercialStore
     private readonly CostCodeBudgetsReadModel budgetsReadModel;
     private readonly TimesheetsReadModel timesheetsReadModel;
     private readonly CashflowReadModel cashflowReadModel;
+    private readonly IQueryClient queries;
     private readonly ICommandSender commands;
 
-    public HttpCommercialStore(ValuationsReadModel valuationsReadModel, CostCodeBudgetsReadModel budgetsReadModel, TimesheetsReadModel timesheetsReadModel, CashflowReadModel cashflowReadModel, ICommandSender commands)
+    public HttpCommercialStore(ValuationsReadModel valuationsReadModel, CostCodeBudgetsReadModel budgetsReadModel, TimesheetsReadModel timesheetsReadModel, CashflowReadModel cashflowReadModel, IQueryClient queries, ICommandSender commands)
     {
         this.valuationsReadModel = valuationsReadModel;
         this.budgetsReadModel = budgetsReadModel;
         this.timesheetsReadModel = timesheetsReadModel;
         this.cashflowReadModel = cashflowReadModel;
+        this.queries = queries;
         this.commands = commands;
         valuationsReadModel.OnChanged += () => OnChange?.Invoke();
         budgetsReadModel.OnChanged += () => OnChange?.Invoke();
@@ -31,7 +33,8 @@ public sealed class HttpCommercialStore : ICommercialStore
 
     public event Action? OnChange;
 
-    public IReadOnlyList<ClaimPeriod> ClaimPeriodsFor(string projectId) => Array.Empty<ClaimPeriod>();
+    public IReadOnlyList<ClaimPeriod> ClaimPeriodsFor(string projectId) =>
+        queries.AskAsync(new ListClaimPeriodsForProject(projectId), CancellationToken.None).GetAwaiter().GetResult();
 
     public IReadOnlyList<Valuation> ValuationsFor(string projectId)
     {

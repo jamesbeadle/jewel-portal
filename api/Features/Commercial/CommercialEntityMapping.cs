@@ -13,4 +13,7 @@ internal static class CommercialEntityMapping
 
     public static Timesheet ToModel(this TimesheetEntity entity) =>
         new(entity.TimesheetId, entity.ProjectId, entity.PersonEmail, entity.WorkedOn, entity.Hours, entity.CostCode, entity.IsApproved);
+
+    public static ClaimPeriod ToModel(this ClaimPeriodEntity entity) =>
+        new(entity.ClaimPeriodId, entity.ProjectId, entity.PeriodNumber, entity.StartDate, entity.EndDate);
 }

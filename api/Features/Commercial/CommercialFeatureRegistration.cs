@@ -14,6 +14,11 @@ public static class CommercialFeatureRegistration
         services.AddScoped<IQueryHandler<ListValuationsForProject, IReadOnlyList<Valuation>>, ListValuationsForProjectHandler>();
         services.AddScoped<IQueryHandler<ListCostCodeBudgetsForProject, IReadOnlyList<CostCodeBudget>>, ListCostCodeBudgetsForProjectHandler>();
         services.AddScoped<IQueryHandler<ListTimesheetsForProject, IReadOnlyList<Timesheet>>, ListTimesheetsForProjectHandler>();
+        services.AddScoped<IQueryHandler<ListClaimPeriodsForProject, IReadOnlyList<ClaimPeriod>>, ListClaimPeriodsForProjectHandler>();
+
+        services.AddScoped<ICommandHandler<AddClaimPeriod, ClaimPeriod>, AddClaimPeriodHandler>();
+        services.AddScoped<AddClaimPeriodAuthorisation>();
+        services.AddScoped<AddClaimPeriodValidation>();
 
         services.AddScoped<ICommandHandler<DraftValuation, Valuation>, DraftValuationHandler>();
         services.AddScoped<DraftValuationAuthorisation>();

@@ -6,4 +6,5 @@ internal static class CommercialIdentifierFactory
 
     public static string NextValuationId() => Guid.NewGuid().ToString(CompactGuidFormat);
     public static string NextTimesheetId() => Guid.NewGuid().ToString(CompactGuidFormat);
+    public static string NextClaimPeriodId() => Guid.NewGuid().ToString(CompactGuidFormat);
 }
