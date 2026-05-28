@@ -6,7 +6,7 @@ namespace Jewel.JPMS.Api.Features.Subcontractors.Commands;
 public sealed class UpdateSubcontractorAuthorisation
 {
     private static readonly RoleSet RolesThatMayUpdateSubcontractors =
-        RoleSet.Of(JpmsRoles.Director, JpmsRoles.ProcurementLead);
+        RoleSet.Of(JpmsRoles.Director, JpmsRoles.OfficeComplianceCoordinator);
 
     public bool Allows(SignedInUser user, UpdateSubcontractor command) => RolesThatMayUpdateSubcontractors.Includes(user.Role);
 }

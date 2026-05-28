@@ -6,7 +6,7 @@ namespace Jewel.JPMS.Api.Features.Procurement.Commands;
 public sealed class UpdateBidPackageScopeAuthorisation
 {
     private static readonly RoleSet RolesThatMayEditPackages =
-        RoleSet.Of(JpmsRoles.Director, JpmsRoles.ProjectManager, JpmsRoles.ProcurementLead);
+        RoleSet.Of(JpmsRoles.Director, JpmsRoles.ProjectManager, JpmsRoles.OfficeComplianceCoordinator);
 
     public bool Allows(SignedInUser user, UpdateBidPackageScope command) => RolesThatMayEditPackages.Includes(user.Role);
 }

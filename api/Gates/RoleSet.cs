@@ -22,9 +22,9 @@ public static class JpmsRoles
     public const string Estimator = "P04";
     public const string SiteManager = "P05";
     public const string HealthAndSafetyLead = "P06";
-    public const string ProcurementLead = "P07";
+    public const string OfficeComplianceCoordinator = "P07";
     public const string Architect = "P08";
     public const string Client = "P09";
     public const string Subcontractor = "P10";
-    public const string Administrator = "P11";
+    public const string Foreman = "P11";
 }

@@ -6,7 +6,7 @@ namespace Jewel.JPMS.Api.Features.Subcontractors.Commands;
 public sealed class AddSubcontractorToDirectoryAuthorisation
 {
     private static readonly RoleSet RolesThatMayAddSubcontractors =
-        RoleSet.Of(JpmsRoles.Director, JpmsRoles.ProcurementLead);
+        RoleSet.Of(JpmsRoles.Director, JpmsRoles.OfficeComplianceCoordinator);
 
     public bool Allows(SignedInUser user, AddSubcontractorToDirectory command) => RolesThatMayAddSubcontractors.Includes(user.Role);
 }

@@ -6,7 +6,7 @@ namespace Jewel.JPMS.Api.Features.Procurement.Commands;
 public sealed class UpdateWorkOrderAuthorisation
 {
     private static readonly RoleSet RolesThatMayUpdateWorkOrders =
-        RoleSet.Of(JpmsRoles.Director, JpmsRoles.ProjectManager, JpmsRoles.ProcurementLead);
+        RoleSet.Of(JpmsRoles.Director, JpmsRoles.ProjectManager, JpmsRoles.OfficeComplianceCoordinator);
 
     public bool Allows(SignedInUser user, UpdateWorkOrder command) => RolesThatMayUpdateWorkOrders.Includes(user.Role);
 }

@@ -6,7 +6,7 @@ namespace Jewel.JPMS.Api.Features.Procurement.Commands;
 public sealed class ReviseQuoteAuthorisation
 {
     private static readonly RoleSet RolesThatMayReviseQuotes =
-        RoleSet.Of(JpmsRoles.Director, JpmsRoles.ProjectManager, JpmsRoles.ProcurementLead, JpmsRoles.Subcontractor);
+        RoleSet.Of(JpmsRoles.Director, JpmsRoles.ProjectManager, JpmsRoles.OfficeComplianceCoordinator, JpmsRoles.Subcontractor);
 
     public bool Allows(SignedInUser user, ReviseQuote command) => RolesThatMayReviseQuotes.Includes(user.Role);
 }
