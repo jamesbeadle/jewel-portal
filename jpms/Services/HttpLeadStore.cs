@@ -64,7 +64,8 @@ public sealed class HttpLeadStore : ILeadStore
             new RecordInformationChaseItem(item.LeadId, item.Kind, item.Description, item.IsReceived),
             CancellationToken.None);
 
-    public BidDecision? GetBidDecision(string leadId) => null;
+    public BidDecision? GetBidDecision(string leadId) =>
+        queries.AskAsync(new GetBidDecisionForLead(leadId), CancellationToken.None).GetAwaiter().GetResult();
 
     public void SaveBidDecision(BidDecision decision) =>
         _ = commands.SendAsync(

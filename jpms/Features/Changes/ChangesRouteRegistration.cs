@@ -19,6 +19,10 @@ public static class ChangesRouteRegistration
             new QueryRoute("/api/projects/{projectId}/changes",
                 query => $"/api/projects/{((ListChangesForProject)query).ProjectId}/changes"));
 
+        queries.Register<GetChangeById, ChangeRecord?>(
+            new QueryRoute("/api/changes/{changeRecordId}",
+                query => $"/api/changes/{((GetChangeById)query).ChangeRecordId}"));
+
         commands.Register<RaiseChange, ChangeRecord>(
             new CommandRoute("POST", "/api/projects/{projectId}/changes",
                 command => $"/api/projects/{((RaiseChange)command).ProjectId}/changes"));

@@ -54,7 +54,8 @@ public sealed class HttpCloseoutStore : ICloseoutStore
         return analysis;
     }
 
-    public RetentionRelease? RetentionFor(string projectId) => null;
+    public RetentionRelease? RetentionFor(string projectId) =>
+        queries.AskAsync(new GetRetentionForProject(projectId), CancellationToken.None).GetAwaiter().GetResult();
 
     public RetentionRelease SaveRetention(RetentionRelease release)
     {

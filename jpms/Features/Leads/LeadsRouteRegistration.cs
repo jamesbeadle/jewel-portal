@@ -21,6 +21,10 @@ public static class LeadsRouteRegistration
             new QueryRoute("/api/leads/{leadId}/qualification",
                 query => $"/api/leads/{((GetLeadQualification)query).LeadId}/qualification"));
 
+        queries.Register<GetBidDecisionForLead, BidDecision?>(
+            new QueryRoute("/api/leads/{leadId}/bid-decision",
+                query => $"/api/leads/{((GetBidDecisionForLead)query).LeadId}/bid-decision"));
+
         queries.Register<ListSiteVisitsForLead, IReadOnlyList<SiteVisit>>(
             new QueryRoute("/api/leads/{leadId}/site-visits",
                 query => $"/api/leads/{((ListSiteVisitsForLead)query).LeadId}/site-visits"));

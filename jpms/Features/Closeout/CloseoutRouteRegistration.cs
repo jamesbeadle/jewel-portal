@@ -27,6 +27,10 @@ public static class CloseoutRouteRegistration
             new QueryRoute("/api/projects/{projectId}/vat",
                 query => $"/api/projects/{((GetVatAnalysisForProject)query).ProjectId}/vat"));
 
+        queries.Register<GetRetentionForProject, RetentionRelease?>(
+            new QueryRoute("/api/projects/{projectId}/retention",
+                query => $"/api/projects/{((GetRetentionForProject)query).ProjectId}/retention"));
+
         commands.Register<RaiseDefect, Defect>(
             new CommandRoute("POST", "/api/projects/{projectId}/defects",
                 command => $"/api/projects/{((RaiseDefect)command).ProjectId}/defects"));

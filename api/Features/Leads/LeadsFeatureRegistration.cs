@@ -12,6 +12,7 @@ public static class LeadsFeatureRegistration
     public static IServiceCollection AddLeadsFeature(this IServiceCollection services)
     {
         services.AddScoped<IQueryHandler<ListLeadsInPipeline, IReadOnlyList<Lead>>, ListLeadsInPipelineHandler>();
+        services.AddScoped<IQueryHandler<GetBidDecisionForLead, BidDecision?>, GetBidDecisionForLeadHandler>();
         services.AddScoped<IQueryHandler<GetLeadQualification, QualificationAssessment?>, GetLeadQualificationHandler>();
         services.AddScoped<IQueryHandler<ListSiteVisitsForLead, IReadOnlyList<SiteVisit>>, ListSiteVisitsForLeadHandler>();
         services.AddScoped<IQueryHandler<ListInformationChaseItemsForLead, IReadOnlyList<InfoChaseItem>>, ListInformationChaseItemsForLeadHandler>();

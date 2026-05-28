@@ -8,11 +8,13 @@ namespace Jewel.JPMS.Services;
 public sealed class HttpChangeRegister : IChangeRegister
 {
     private readonly ChangesReadModel readModel;
+    private readonly IQueryClient queries;
     private readonly ICommandSender commands;
 
-    public HttpChangeRegister(ChangesReadModel readModel, ICommandSender commands)
+    public HttpChangeRegister(ChangesReadModel readModel, IQueryClient queries, ICommandSender commands)
     {
         this.readModel = readModel;
+        this.queries = queries;
         this.commands = commands;
         readModel.OnChanged += () => OnChange?.Invoke();
     }
@@ -28,7 +30,8 @@ public sealed class HttpChangeRegister : IChangeRegister
     public IReadOnlyList<ChangeRecord> ForProject(string projectId, ChangeKind kind) =>
         ForProject(projectId).Where(record => record.Kind == kind).ToList().AsReadOnly();
 
-    public ChangeRecord? Find(string changeRecordId) => null;
+    public ChangeRecord? Find(string changeRecordId) =>
+        queries.AskAsync(new GetChangeById(changeRecordId), CancellationToken.None).GetAwaiter().GetResult();
 
     public ChangeRecord Upsert(ChangeRecord record)
     {

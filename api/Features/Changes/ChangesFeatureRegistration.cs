@@ -12,6 +12,7 @@ public static class ChangesFeatureRegistration
     public static IServiceCollection AddChangesFeature(this IServiceCollection services)
     {
         services.AddScoped<IQueryHandler<ListChangesForProject, IReadOnlyList<ChangeRecord>>, ListChangesForProjectHandler>();
+        services.AddScoped<IQueryHandler<GetChangeById, ChangeRecord?>, GetChangeByIdHandler>();
 
         services.AddScoped<ICommandHandler<RaiseChange, ChangeRecord>, RaiseChangeHandler>();
         services.AddScoped<RaiseChangeAuthorisation>();

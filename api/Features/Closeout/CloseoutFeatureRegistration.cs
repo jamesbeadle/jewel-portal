@@ -12,6 +12,7 @@ public static class CloseoutFeatureRegistration
     public static IServiceCollection AddCloseoutFeature(this IServiceCollection services)
     {
         services.AddScoped<IQueryHandler<ListDefectsForProject, IReadOnlyList<Defect>>, ListDefectsForProjectHandler>();
+        services.AddScoped<IQueryHandler<GetRetentionForProject, RetentionRelease?>, GetRetentionForProjectHandler>();
         services.AddScoped<IQueryHandler<GetSettlementForProject, SettlementRecord?>, GetSettlementForProjectHandler>();
         services.AddScoped<IQueryHandler<GetVatAnalysisForProject, VatAnalysis?>, GetVatAnalysisForProjectHandler>();
 
