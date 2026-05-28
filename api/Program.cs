@@ -1,9 +1,11 @@
 using Jewel.JPMS.Api.Data;
+using Jewel.JPMS.Api.Features.AccessRequests;
 using Jewel.JPMS.Api.Features.Boq;
 using Jewel.JPMS.Api.Features.Changes;
 using Jewel.JPMS.Api.Features.Closeout;
 using Jewel.JPMS.Api.Features.Commercial;
 using Jewel.JPMS.Api.Features.Cvr;
+using Jewel.JPMS.Api.Features.Directory;
 using Jewel.JPMS.Api.Features.Drawings;
 using Jewel.JPMS.Api.Features.Hs;
 using Jewel.JPMS.Api.Features.Leads;
@@ -31,6 +33,8 @@ var host = new HostBuilder()
 
         services.AddSingleton<DatabaseInitialiser>();
         services.AddScoped<SignedInUserResolver>();
+        services.AddDirectoryFeature();
+        services.AddAccessRequestsFeature();
         services.AddProjectsFeature();
         services.AddLeadsFeature();
         services.AddBoqFeature();
