@@ -8,6 +8,7 @@
         <p class="text-sm text-slate-600 mb-3">
             Order × Variation × Combined breakdown. Movement column shows change since the last snapshot.
         </p>
+        <CvrPackageRowForm ProjectId="@ProjectId" />
         <CvrPackageTable Rows="CvrStore.PackagesFor(ProjectId)" />
     </section>
 

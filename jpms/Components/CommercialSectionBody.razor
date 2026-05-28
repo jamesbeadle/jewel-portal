@@ -11,6 +11,7 @@
         break;
     case "accruals":
         <h2 class="text-lg font-semibold text-slate-900 mb-3">QS Accruals</h2>
+        <QsAccrualForm ProjectId="@ProjectId" />
         <QsAccrualsTable Accruals="CvrStore.AccrualsFor(ProjectId)" />
         break;
     case "prelims":
@@ -19,6 +20,7 @@
         break;
     case "eots":
         <h2 class="text-lg font-semibold text-slate-900 mb-3">Extensions of Time</h2>
+        <EotForm ProjectId="@ProjectId" />
         <EotTable Eots="CvrStore.EotsFor(ProjectId)" />
         break;
     case "budgets":

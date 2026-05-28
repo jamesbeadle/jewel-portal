@@ -1,0 +1,34 @@
+@inject ICvrStore CvrStore
+
+<section class="rounded-xl border border-slate-200 bg-white p-5 mb-4">
+    <h3 class="text-sm font-medium text-slate-700 mb-3">Grant an extension of time</h3>
+    <form @onsubmit="Save" @onsubmit:preventDefault="true" class="space-y-3">
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <FormField Label="Reason" Value="@reason" OnChange="@(value => reason = value)" Required="true" />
+            <FormField Label="Days granted" InputType="number" Value="@daysGranted" OnChange="@(value => daysGranted = value)" />
+            <FormField Label="Commercial recovery £" InputType="number" Value="@commercialRecovery" OnChange="@(value => commercialRecovery = value)" />
+        </div>
+        <button type="submit" class="rounded-lg bg-slate-900 text-white font-medium text-sm px-4 py-2 hover:bg-slate-800 transition">
+            Grant EOT
+        </button>
+    </form>
+</section>
+
+@code {
+    [Parameter, EditorRequired] public string ProjectId { get; set; } = "";
+
+    private string reason = "";
+    private string daysGranted = "0";
+    private string commercialRecovery = "0";
+
+    private void Save()
+    {
+        if (string.IsNullOrWhiteSpace(reason)) return;
+        CvrStore.SaveEot(new Eot(
+            "", ProjectId, reason,
+            FormNumber.ParseCount(daysGranted), FormNumber.ParseAmount(commercialRecovery), DateTimeOffset.UtcNow));
+        reason = "";
+        daysGranted = "0";
+        commercialRecovery = "0";
+    }
+}
