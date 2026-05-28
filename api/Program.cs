@@ -22,6 +22,7 @@ using Microsoft.Azure.Functions.Worker;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 
 var host = new HostBuilder()
     .ConfigureFunctionsWebApplication()
@@ -55,4 +56,22 @@ var host = new HostBuilder()
     })
     .Build();
 
+await ApplyDatabaseMigrations(host.Services);
+
 await host.RunAsync();
+
+static async Task ApplyDatabaseMigrations(IServiceProvider services)
+{
+    await using var scope = services.CreateAsyncScope();
+    try
+    {
+        var context = scope.ServiceProvider.GetRequiredService<JpmsContext>();
+        await context.Database.MigrateAsync();
+    }
+    catch (Exception migrationError)
+    {
+        scope.ServiceProvider.GetRequiredService<ILoggerFactory>()
+            .CreateLogger("DatabaseMigration")
+            .LogError(migrationError, "Startup database migration failed; the host will continue and retry on the next start.");
+    }
+}
