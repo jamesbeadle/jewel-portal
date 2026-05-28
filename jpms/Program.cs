@@ -1,4 +1,19 @@
 using Jewel.JPMS;
+using Jewel.JPMS.Cqrs;
+using Jewel.JPMS.Features.Boq;
+using Jewel.JPMS.Features.Changes;
+using Jewel.JPMS.Features.Closeout;
+using Jewel.JPMS.Features.Commercial;
+using Jewel.JPMS.Features.Cvr;
+using Jewel.JPMS.Features.Drawings;
+using Jewel.JPMS.Features.Hs;
+using Jewel.JPMS.Features.Leads;
+using Jewel.JPMS.Features.Mobilisation;
+using Jewel.JPMS.Features.Procurement;
+using Jewel.JPMS.Features.Projects;
+using Jewel.JPMS.Features.Rates;
+using Jewel.JPMS.Features.Site;
+using Jewel.JPMS.Features.Subcontractors;
 using Jewel.JPMS.Services;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
@@ -12,6 +27,22 @@ builder.Services.AddScoped(serviceProvider => new HttpClient
 {
     BaseAddress = new Uri(builder.HostEnvironment.BaseAddress)
 });
+
+builder.Services.AddCqrsTransport();
+builder.Services.AddProjectsReadModels();
+builder.Services.AddLeadsReadModels();
+builder.Services.AddBoqReadModels();
+builder.Services.AddRatesReadModels();
+builder.Services.AddDrawingsReadModels();
+builder.Services.AddProcurementReadModels();
+builder.Services.AddSubcontractorsReadModels();
+builder.Services.AddHsReadModels();
+builder.Services.AddMobilisationReadModels();
+builder.Services.AddSiteReadModels();
+builder.Services.AddCommercialReadModels();
+builder.Services.AddCvrReadModels();
+builder.Services.AddCloseoutReadModels();
+builder.Services.AddChangesReadModels();
 
 builder.Services.AddScoped<IUserDirectory, AllowListUserDirectory>();
 builder.Services.AddScoped<IAccessRequestStore, InMemoryAccessRequestStore>();
@@ -36,4 +67,26 @@ builder.Services.AddScoped<AuthService>();
 builder.Services.AddScoped<ActiveRoleStorage>();
 builder.Services.AddScoped<SessionService>();
 
-await builder.Build().RunAsync();
+var app = builder.Build();
+
+using (var routeScope = app.Services.CreateScope())
+{
+    var queryRoutes = routeScope.ServiceProvider.GetRequiredService<QueryRouteTable>();
+    var commandRoutes = routeScope.ServiceProvider.GetRequiredService<CommandRouteTable>();
+    ProjectsRouteRegistration.RegisterProjectsRoutes(queryRoutes, commandRoutes);
+    LeadsRouteRegistration.RegisterLeadsRoutes(queryRoutes, commandRoutes);
+    BoqRouteRegistration.RegisterBoqRoutes(queryRoutes, commandRoutes);
+    RatesRouteRegistration.RegisterRatesRoutes(queryRoutes, commandRoutes);
+    DrawingsRouteRegistration.RegisterDrawingsRoutes(queryRoutes, commandRoutes);
+    ProcurementRouteRegistration.RegisterProcurementRoutes(queryRoutes, commandRoutes);
+    SubcontractorsRouteRegistration.RegisterSubcontractorsRoutes(queryRoutes, commandRoutes);
+    HsRouteRegistration.RegisterHsRoutes(queryRoutes, commandRoutes);
+    MobilisationRouteRegistration.RegisterMobilisationRoutes(queryRoutes, commandRoutes);
+    SiteRouteRegistration.RegisterSiteRoutes(queryRoutes, commandRoutes);
+    CommercialRouteRegistration.RegisterCommercialRoutes(queryRoutes, commandRoutes);
+    CvrRouteRegistration.RegisterCvrRoutes(queryRoutes, commandRoutes);
+    CloseoutRouteRegistration.RegisterCloseoutRoutes(queryRoutes, commandRoutes);
+    ChangesRouteRegistration.RegisterChangesRoutes(queryRoutes, commandRoutes);
+}
+
+await app.RunAsync();

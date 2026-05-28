@@ -1,78 +1,71 @@
-using System.Net.Http.Json;
+using Jewel.JPMS.Contracts.Boq;
+using Jewel.JPMS.Cqrs;
+using Jewel.JPMS.Features.Boq;
 using Jewel.JPMS.Models;
 
 namespace Jewel.JPMS.Services;
 
 public sealed class HttpBoqStore : IBoqStore
 {
-    private readonly HttpClient httpClient;
-    private readonly Dictionary<string, IReadOnlyList<BoqLineItem>> linesByProject = new();
-    private readonly Dictionary<string, BoqSignOff?> signOffsByProject = new();
+    private readonly BoqLinesReadModel readModel;
+    private readonly IQueryClient queries;
+    private readonly ICommandSender commands;
 
-    public HttpBoqStore(HttpClient httpClient) { this.httpClient = httpClient; }
+    public HttpBoqStore(BoqLinesReadModel readModel, IQueryClient queries, ICommandSender commands)
+    {
+        this.readModel = readModel;
+        this.queries = queries;
+        this.commands = commands;
+        readModel.OnChanged += () => OnChange?.Invoke();
+    }
 
     public event Action? OnChange;
 
     public IReadOnlyList<BoqLineItem> LinesFor(string projectId)
     {
-        if (!linesByProject.ContainsKey(projectId)) _ = LoadLinesAsync(projectId);
-        return linesByProject.TryGetValue(projectId, out var lines) ? lines : Array.Empty<BoqLineItem>();
+        if (readModel.Current(projectId).Count == 0) _ = readModel.RefreshAsync(projectId, CancellationToken.None);
+        return readModel.Current(projectId);
     }
 
     public BoqLineItem Upsert(BoqLineItem line)
     {
-        _ = PostAsync("/api/boq", line, line.ProjectId);
+        if (string.IsNullOrEmpty(line.BoqLineItemId)) _ = AddAsync(line);
+        else _ = UpdateAsync(line);
         return line;
     }
 
     public bool Remove(string boqLineItemId)
     {
-        _ = httpClient.DeleteAsync($"/api/boq/{boqLineItemId}");
-        OnChange?.Invoke();
+        _ = commands.SendAsync(new RemoveBoqLine(boqLineItemId), CancellationToken.None);
         return true;
     }
 
-    public decimal TotalFor(string projectId) =>
-        LinesFor(projectId).Sum(line => line.LineTotal);
+    public decimal TotalFor(string projectId) => LinesFor(projectId).Sum(line => line.LineTotal);
 
-    public BoqSignOff? SignOffFor(string projectId)
-    {
-        if (!signOffsByProject.ContainsKey(projectId)) _ = LoadSignOffAsync(projectId);
-        return signOffsByProject.TryGetValue(projectId, out var s) ? s : null;
-    }
+    public BoqSignOff? SignOffFor(string projectId) =>
+        queries.AskAsync(new GetBoqSignOffForProject(projectId), CancellationToken.None).GetAwaiter().GetResult();
 
     public BoqSignOff RecordSignOff(BoqSignOff signOff)
     {
-        _ = PostAsync("/api/boq/sign-offs", signOff, signOff.ProjectId);
-        signOffsByProject[signOff.ProjectId] = signOff;
+        _ = commands.SendAsync(
+            new SignOffBoqForProject(signOff.ProjectId, signOff.SignedOffByEmail, signOff.TenderTotalAtSignOff),
+            CancellationToken.None);
         return signOff;
     }
 
-    private async Task LoadLinesAsync(string projectId)
+    private async Task AddAsync(BoqLineItem line)
     {
-        try
-        {
-            var response = await httpClient.GetFromJsonAsync<List<BoqLineItem>>($"/api/projects/{projectId}/boq");
-            linesByProject[projectId] = response?.AsReadOnly() ?? (IReadOnlyList<BoqLineItem>)Array.Empty<BoqLineItem>();
-            OnChange?.Invoke();
-        }
-        catch { linesByProject[projectId] = Array.Empty<BoqLineItem>(); }
+        await commands.SendAsync(
+            new AddBoqLine(line.ProjectId, line.Description, line.Unit, line.Quantity, line.RateValue, line.CostCode, line.Discipline),
+            CancellationToken.None);
+        await readModel.RefreshAsync(line.ProjectId, CancellationToken.None);
     }
 
-    private async Task LoadSignOffAsync(string projectId)
+    private async Task UpdateAsync(BoqLineItem line)
     {
-        try
-        {
-            signOffsByProject[projectId] = await httpClient.GetFromJsonAsync<BoqSignOff?>($"/api/projects/{projectId}/boq/sign-off");
-            OnChange?.Invoke();
-        }
-        catch { signOffsByProject[projectId] = null; }
-    }
-
-    private async Task PostAsync<T>(string url, T body, string projectId)
-    {
-        try { await httpClient.PostAsJsonAsync(url, body); } catch { return; }
-        linesByProject.Remove(projectId);
-        await LoadLinesAsync(projectId);
+        await commands.SendAsync(
+            new UpdateBoqLine(line.BoqLineItemId, line.Description, line.Unit, line.Quantity, line.RateValue, line.CostCode, line.Discipline),
+            CancellationToken.None);
+        await readModel.RefreshAsync(line.ProjectId, CancellationToken.None);
     }
 }

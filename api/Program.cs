@@ -1,4 +1,19 @@
 using Jewel.JPMS.Api.Data;
+using Jewel.JPMS.Api.Features.Boq;
+using Jewel.JPMS.Api.Features.Changes;
+using Jewel.JPMS.Api.Features.Closeout;
+using Jewel.JPMS.Api.Features.Commercial;
+using Jewel.JPMS.Api.Features.Cvr;
+using Jewel.JPMS.Api.Features.Drawings;
+using Jewel.JPMS.Api.Features.Hs;
+using Jewel.JPMS.Api.Features.Leads;
+using Jewel.JPMS.Api.Features.Mobilisation;
+using Jewel.JPMS.Api.Features.Procurement;
+using Jewel.JPMS.Api.Features.Projects;
+using Jewel.JPMS.Api.Features.Rates;
+using Jewel.JPMS.Api.Features.Site;
+using Jewel.JPMS.Api.Features.Subcontractors;
+using Jewel.JPMS.Api.Gates;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -15,6 +30,21 @@ var host = new HostBuilder()
             options.UseSqlServer(connectionString));
 
         services.AddSingleton<DatabaseInitialiser>();
+        services.AddScoped<SignedInUserResolver>();
+        services.AddProjectsFeature();
+        services.AddLeadsFeature();
+        services.AddBoqFeature();
+        services.AddRatesFeature();
+        services.AddDrawingsFeature();
+        services.AddProcurementFeature();
+        services.AddSubcontractorsFeature();
+        services.AddHsFeature();
+        services.AddMobilisationFeature();
+        services.AddSiteFeature();
+        services.AddCommercialFeature();
+        services.AddCvrFeature();
+        services.AddCloseoutFeature();
+        services.AddChangesFeature();
     })
     .Build();
 

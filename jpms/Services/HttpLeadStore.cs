@@ -1,82 +1,109 @@
-using System.Net.Http.Json;
+using Jewel.JPMS.Contracts.Leads;
+using Jewel.JPMS.Cqrs;
+using Jewel.JPMS.Features.Leads;
 using Jewel.JPMS.Models;
 
 namespace Jewel.JPMS.Services;
 
-public sealed partial class HttpLeadStore : ILeadStore
+public sealed class HttpLeadStore : ILeadStore
 {
-    private readonly HttpClient httpClient;
-    private IReadOnlyList<Lead> cachedLeads = Array.Empty<Lead>();
-    private bool hasLoadedLeads;
+    private readonly LeadPipelineReadModel readModel;
+    private readonly IQueryClient queries;
+    private readonly ICommandSender commands;
 
-    public HttpLeadStore(HttpClient httpClient) { this.httpClient = httpClient; }
+    public HttpLeadStore(LeadPipelineReadModel readModel, IQueryClient queries, ICommandSender commands)
+    {
+        this.readModel = readModel;
+        this.queries = queries;
+        this.commands = commands;
+        readModel.OnChanged += () => OnChange?.Invoke();
+    }
 
     public event Action? OnChange;
 
     public IReadOnlyList<Lead> All()
     {
-        if (!hasLoadedLeads) _ = LoadLeadsAsync();
-        return cachedLeads;
+        if (readModel.Current is null) _ = readModel.RefreshAsync(CancellationToken.None);
+        return readModel.Current ?? Array.Empty<Lead>();
     }
 
     public Lead? Find(string leadId) =>
-        cachedLeads.FirstOrDefault(lead =>
-            string.Equals(lead.LeadId, leadId, StringComparison.OrdinalIgnoreCase));
+        All().FirstOrDefault(lead => string.Equals(lead.LeadId, leadId, StringComparison.OrdinalIgnoreCase));
 
     public Lead Upsert(Lead lead)
     {
-        _ = PostAndRefreshLeadsAsync("/api/leads", lead);
+        if (Find(lead.LeadId) is null) _ = CaptureLeadAsync(lead);
+        else _ = UpdateLeadAsync(lead);
         return lead;
     }
 
-    private async Task LoadLeadsAsync()
+    public QualificationAssessment? GetQualification(string leadId) =>
+        queries.AskAsync(new GetLeadQualification(leadId), CancellationToken.None).GetAwaiter().GetResult();
+
+    public void SaveQualification(QualificationAssessment assessment) =>
+        _ = commands.SendAsync(
+            new RecordLeadQualificationScore(assessment.LeadId, assessment.Score, assessment.Notes, assessment.AssessedByEmail),
+            CancellationToken.None);
+
+    public IReadOnlyList<SiteVisit> SiteVisitsFor(string leadId) =>
+        queries.AskAsync(new ListSiteVisitsForLead(leadId), CancellationToken.None).GetAwaiter().GetResult();
+
+    public void SaveSiteVisit(SiteVisit visit)
     {
-        hasLoadedLeads = true;
-        try { cachedLeads = (await httpClient.GetFromJsonAsync<List<Lead>>("/api/leads"))?.AsReadOnly() ?? (IReadOnlyList<Lead>)Array.Empty<Lead>(); OnChange?.Invoke(); }
-        catch { cachedLeads = Array.Empty<Lead>(); }
+        if (string.IsNullOrEmpty(visit.SiteVisitId))
+            _ = commands.SendAsync(new BookSiteVisit(visit.LeadId, visit.ScheduledAt, visit.AttendeeEmails), CancellationToken.None);
+        else
+            _ = commands.SendAsync(new RecordSiteVisitNotes(visit.SiteVisitId, visit.Notes, visit.PhotoCount, visit.IsComplete), CancellationToken.None);
     }
 
-    private async Task PostAndRefreshLeadsAsync<T>(string url, T body)
+    public IReadOnlyList<InfoChaseItem> InfoChaseFor(string leadId) =>
+        queries.AskAsync(new ListInformationChaseItemsForLead(leadId), CancellationToken.None).GetAwaiter().GetResult();
+
+    public void SaveInfoChaseItem(InfoChaseItem item) =>
+        _ = commands.SendAsync(
+            new RecordInformationChaseItem(item.LeadId, item.Kind, item.Description, item.IsReceived),
+            CancellationToken.None);
+
+    public BidDecision? GetBidDecision(string leadId) => null;
+
+    public void SaveBidDecision(BidDecision decision) =>
+        _ = commands.SendAsync(
+            new RecordBidDecision(decision.LeadId, decision.ShouldBid, decision.Reason, decision.DecidedByEmail),
+            CancellationToken.None);
+
+    public Proposal? GetProposal(string leadId) =>
+        queries.AskAsync(new GetProposalForLead(leadId), CancellationToken.None).GetAwaiter().GetResult();
+
+    public void SaveProposal(Proposal proposal)
     {
-        try { await httpClient.PostAsJsonAsync(url, body); } catch { return; }
-        await LoadLeadsAsync();
+        if (string.IsNullOrEmpty(proposal.ProposalId))
+            _ = commands.SendAsync(new IssueProposal(proposal.LeadId, proposal.Value), CancellationToken.None);
+        else
+            _ = commands.SendAsync(new ReviseProposal(proposal.LeadId, proposal.Value, "Revised via legacy shim"), CancellationToken.None);
     }
 
-    private T? CachedScalar<T>(Dictionary<string, T?> cache, string key, string url) where T : class
+    public LeadOutcome? GetOutcome(string leadId) =>
+        queries.AskAsync(new GetLeadOutcome(leadId), CancellationToken.None).GetAwaiter().GetResult();
+
+    public void SaveOutcome(LeadOutcome outcome)
     {
-        if (!cache.ContainsKey(key)) _ = LoadScalarAsync(cache, key, url);
-        return cache.TryGetValue(key, out var value) ? value : null;
+        if (outcome.IsWon) _ = commands.SendAsync(new MarkLeadAsWon(outcome.LeadId, outcome.DecidedByEmail), CancellationToken.None);
+        else _ = commands.SendAsync(new MarkLeadAsLost(outcome.LeadId, outcome.Reason, outcome.DecidedByEmail), CancellationToken.None);
     }
 
-    private IReadOnlyList<T> CachedList<T>(Dictionary<string, IReadOnlyList<T>> cache, string key, string url)
+    private async Task CaptureLeadAsync(Lead lead)
     {
-        if (!cache.ContainsKey(key)) _ = LoadListAsync(cache, key, url);
-        return cache.TryGetValue(key, out var list) ? list : Array.Empty<T>();
+        await commands.SendAsync(
+            new CaptureLead(lead.Reference, lead.ContactName, lead.ContactEmail, lead.ContactPhone, lead.CompanyName, lead.SiteAddress, lead.EstimatedValue, lead.Source, lead.OwnerEmail),
+            CancellationToken.None);
+        await readModel.RefreshAsync(CancellationToken.None);
     }
 
-    private async Task LoadScalarAsync<T>(Dictionary<string, T?> cache, string key, string url) where T : class
+    private async Task UpdateLeadAsync(Lead lead)
     {
-        try { cache[key] = await httpClient.GetFromJsonAsync<T?>(url); OnChange?.Invoke(); }
-        catch { cache[key] = null; }
-    }
-
-    private async Task LoadListAsync<T>(Dictionary<string, IReadOnlyList<T>> cache, string key, string url)
-    {
-        try { cache[key] = (await httpClient.GetFromJsonAsync<List<T>>(url))?.AsReadOnly() ?? (IReadOnlyList<T>)Array.Empty<T>(); OnChange?.Invoke(); }
-        catch { cache[key] = Array.Empty<T>(); }
-    }
-
-    private async Task PostScalarAsync<T>(string url, T body, string key, Dictionary<string, T?> cache, string refreshUrl) where T : class
-    {
-        try { await httpClient.PostAsJsonAsync(url, body); } catch { return; }
-        cache.Remove(key);
-        await LoadScalarAsync(cache, key, refreshUrl);
-    }
-
-    private async Task PostListAsync<T>(string url, T body, string key, Dictionary<string, IReadOnlyList<T>> cache, string refreshUrl)
-    {
-        try { await httpClient.PostAsJsonAsync(url, body); } catch { return; }
-        cache.Remove(key);
-        await LoadListAsync(cache, key, refreshUrl);
+        await commands.SendAsync(
+            new UpdateLeadDetails(lead.LeadId, lead.Reference, lead.ContactName, lead.ContactEmail, lead.ContactPhone, lead.CompanyName, lead.SiteAddress, lead.EstimatedValue, lead.Source, lead.Stage, lead.OwnerEmail),
+            CancellationToken.None);
+        await readModel.RefreshAsync(CancellationToken.None);
     }
 }

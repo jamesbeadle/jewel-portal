@@ -1,72 +1,67 @@
-using System.Net.Http.Json;
+using Jewel.JPMS.Contracts.Cvr;
+using Jewel.JPMS.Cqrs;
+using Jewel.JPMS.Features.Cvr;
 using Jewel.JPMS.Models;
 
 namespace Jewel.JPMS.Services;
 
 public sealed class HttpCvrStore : ICvrStore
 {
-    private readonly HttpClient httpClient;
-    private readonly Dictionary<string, IReadOnlyList<CvrSnapshot>> snapshotsByProject = new();
-    private readonly Dictionary<string, IReadOnlyList<ForecastComponent>> forecastByProject = new();
-    private readonly Dictionary<string, IReadOnlyList<QsAccrual>> accrualsByProject = new();
-    private readonly Dictionary<string, IReadOnlyList<PrelimItem>> prelimsByProject = new();
-    private readonly Dictionary<string, IReadOnlyList<PrelimForecastEntry>> entriesByPrelim = new();
-    private readonly Dictionary<string, IReadOnlyList<Eot>> eotsByProject = new();
+    private readonly CvrSnapshotsReadModel snapshotsReadModel;
+    private readonly IQueryClient queries;
+    private readonly ICommandSender commands;
 
-    public HttpCvrStore(HttpClient httpClient) { this.httpClient = httpClient; }
+    public HttpCvrStore(CvrSnapshotsReadModel snapshotsReadModel, IQueryClient queries, ICommandSender commands)
+    {
+        this.snapshotsReadModel = snapshotsReadModel;
+        this.queries = queries;
+        this.commands = commands;
+        snapshotsReadModel.OnChanged += () => OnChange?.Invoke();
+    }
 
     public event Action? OnChange;
 
-    public IReadOnlyList<CvrSnapshot> SnapshotsFor(string projectId) =>
-        Cached(snapshotsByProject, projectId, $"/api/projects/{projectId}/cvr-snapshots");
+    public IReadOnlyList<CvrSnapshot> SnapshotsFor(string projectId)
+    {
+        if (snapshotsReadModel.Current(projectId).Count == 0) _ = snapshotsReadModel.RefreshAsync(projectId, CancellationToken.None);
+        return snapshotsReadModel.Current(projectId);
+    }
 
-    public CvrSnapshot? LatestSnapshot(string projectId) => SnapshotsFor(projectId).FirstOrDefault();
+    public CvrSnapshot? LatestSnapshot(string projectId) =>
+        SnapshotsFor(projectId).FirstOrDefault();
 
     public IReadOnlyList<CvrPackageRow> PackagesFor(string projectId) => Array.Empty<CvrPackageRow>();
 
     public IReadOnlyList<ForecastComponent> ForecastComponentsFor(string projectId) =>
-        Cached(forecastByProject, projectId, $"/api/projects/{projectId}/forecast-components");
+        queries.AskAsync(new ListForecastComponentsForProject(projectId), CancellationToken.None).GetAwaiter().GetResult();
 
     public IReadOnlyList<QsAccrual> AccrualsFor(string projectId) =>
-        Cached(accrualsByProject, projectId, $"/api/projects/{projectId}/qs-accruals");
+        queries.AskAsync(new ListQsAccrualsForProject(projectId), CancellationToken.None).GetAwaiter().GetResult();
 
     public QsAccrual SaveAccrual(QsAccrual accrual)
     {
-        _ = PostAndRefreshAsync("/api/qs-accruals", accrual, accrual.ProjectId, accrualsByProject, $"/api/projects/{accrual.ProjectId}/qs-accruals");
+        if (string.IsNullOrEmpty(accrual.QsAccrualId))
+            _ = commands.SendAsync(new RecordQsAccrual(accrual.ProjectId, accrual.Category, accrual.Description, accrual.AddAmount, accrual.OmitAmount, accrual.LiabilityAmount, accrual.SignedOffByEmail), CancellationToken.None);
+        else
+            _ = commands.SendAsync(new UpdateQsAccrual(accrual.QsAccrualId, accrual.Category, accrual.Description, accrual.AddAmount, accrual.OmitAmount, accrual.LiabilityAmount, accrual.SignedOffByEmail), CancellationToken.None);
         return accrual;
     }
 
     public IReadOnlyList<PrelimItem> PrelimsFor(string projectId) =>
-        Cached(prelimsByProject, projectId, $"/api/projects/{projectId}/prelims");
+        queries.AskAsync(new ListPrelimItemsForProject(projectId), CancellationToken.None).GetAwaiter().GetResult();
 
     public IReadOnlyList<PrelimForecastEntry> PrelimEntriesFor(string prelimItemId) =>
-        Cached(entriesByPrelim, prelimItemId, $"/api/prelims/{prelimItemId}/entries");
+        queries.AskAsync(new ListPrelimEntriesForItem(prelimItemId), CancellationToken.None).GetAwaiter().GetResult();
 
     public IReadOnlyList<Eot> EotsFor(string projectId) =>
-        Cached(eotsByProject, projectId, $"/api/projects/{projectId}/eots");
+        queries.AskAsync(new ListEotsForProject(projectId), CancellationToken.None).GetAwaiter().GetResult();
 
     public Eot SaveEot(Eot eot)
     {
-        _ = PostAndRefreshAsync("/api/eots", eot, eot.ProjectId, eotsByProject, $"/api/projects/{eot.ProjectId}/eots");
+        if (string.IsNullOrEmpty(eot.EotId))
+            _ = commands.SendAsync(new GrantEot(eot.ProjectId, eot.Reason, eot.DaysGranted, eot.CommercialRecovery), CancellationToken.None);
+        else
+            _ = commands.SendAsync(new UpdateEot(eot.EotId, eot.Reason, eot.DaysGranted, eot.CommercialRecovery), CancellationToken.None);
         return eot;
-    }
-
-    private IReadOnlyList<T> Cached<T>(Dictionary<string, IReadOnlyList<T>> store, string key, string url)
-    {
-        if (!store.ContainsKey(key)) _ = LoadAsync(store, key, url);
-        return store.TryGetValue(key, out var list) ? list : Array.Empty<T>();
-    }
-
-    private async Task LoadAsync<T>(Dictionary<string, IReadOnlyList<T>> store, string key, string url)
-    {
-        try { store[key] = (await httpClient.GetFromJsonAsync<List<T>>(url))?.AsReadOnly() ?? (IReadOnlyList<T>)Array.Empty<T>(); OnChange?.Invoke(); }
-        catch { store[key] = Array.Empty<T>(); }
-    }
-
-    private async Task PostAndRefreshAsync<T>(string url, T body, string key, Dictionary<string, IReadOnlyList<T>> store, string refreshUrl)
-    {
-        try { await httpClient.PostAsJsonAsync(url, body); } catch { return; }
-        store.Remove(key);
-        await LoadAsync(store, key, refreshUrl);
     }
 }

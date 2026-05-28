@@ -1,77 +1,60 @@
-using System.Net.Http.Json;
+using Jewel.JPMS.Contracts.Subcontractors;
+using Jewel.JPMS.Cqrs;
+using Jewel.JPMS.Features.Subcontractors;
 using Jewel.JPMS.Models;
 
 namespace Jewel.JPMS.Services;
 
 public sealed class HttpSubcontractorStore : ISubcontractorStore
 {
-    private readonly HttpClient httpClient;
-    private IReadOnlyList<Subcontractor> cached = Array.Empty<Subcontractor>();
-    private bool hasLoaded;
-    private readonly Dictionary<string, IReadOnlyList<ComplianceDocument>> complianceBySubId = new();
+    private readonly SubcontractorsReadModel readModel;
+    private readonly IQueryClient queries;
+    private readonly ICommandSender commands;
 
-    public HttpSubcontractorStore(HttpClient httpClient) { this.httpClient = httpClient; }
+    public HttpSubcontractorStore(SubcontractorsReadModel readModel, IQueryClient queries, ICommandSender commands)
+    {
+        this.readModel = readModel;
+        this.queries = queries;
+        this.commands = commands;
+        readModel.OnChanged += () => OnChange?.Invoke();
+    }
 
     public event Action? OnChange;
 
     public IReadOnlyList<Subcontractor> All()
     {
-        if (!hasLoaded) _ = LoadAsync();
-        return cached;
+        if (readModel.Current is null) _ = readModel.RefreshAsync(CancellationToken.None);
+        return readModel.Current ?? Array.Empty<Subcontractor>();
     }
 
     public Subcontractor? Find(string subcontractorId) =>
-        cached.FirstOrDefault(sub =>
-            string.Equals(sub.SubcontractorId, subcontractorId, StringComparison.OrdinalIgnoreCase));
+        All().FirstOrDefault(sub => string.Equals(sub.SubcontractorId, subcontractorId, StringComparison.OrdinalIgnoreCase));
 
     public Subcontractor Upsert(Subcontractor subcontractor)
     {
-        _ = PostSubAsync(subcontractor);
+        if (string.IsNullOrEmpty(subcontractor.SubcontractorId))
+            _ = AddAsync(subcontractor);
+        else _ = UpdateAsync(subcontractor);
         return subcontractor;
     }
 
-    public IReadOnlyList<ComplianceDocument> ComplianceFor(string subcontractorId)
-    {
-        if (!complianceBySubId.ContainsKey(subcontractorId)) _ = LoadComplianceAsync(subcontractorId);
-        return complianceBySubId.TryGetValue(subcontractorId, out var list) ? list : Array.Empty<ComplianceDocument>();
-    }
+    public IReadOnlyList<ComplianceDocument> ComplianceFor(string subcontractorId) =>
+        queries.AskAsync(new ListComplianceDocumentsForSubcontractor(subcontractorId), CancellationToken.None).GetAwaiter().GetResult();
 
     public void SaveCompliance(ComplianceDocument document) =>
-        _ = SaveComplianceAsync(document);
+        _ = commands.SendAsync(
+            new UploadComplianceDocument(document.SubcontractorId, document.Kind, document.FileName, document.ExpiresAt),
+            CancellationToken.None);
 
-    private async Task LoadAsync()
+    private async Task AddAsync(Subcontractor sub)
     {
-        hasLoaded = true;
-        try
-        {
-            var response = await httpClient.GetFromJsonAsync<List<Subcontractor>>("/api/subcontractors");
-            cached = response?.AsReadOnly() ?? (IReadOnlyList<Subcontractor>)Array.Empty<Subcontractor>();
-            OnChange?.Invoke();
-        }
-        catch { cached = Array.Empty<Subcontractor>(); }
+        await commands.SendAsync(new AddSubcontractorToDirectory(sub.CompanyName, sub.PrimaryTrade, sub.ContactName, sub.ContactEmail, sub.ContactPhone, sub.CisStatus), CancellationToken.None);
+        await readModel.RefreshAsync(CancellationToken.None);
     }
 
-    private async Task LoadComplianceAsync(string subcontractorId)
+    private async Task UpdateAsync(Subcontractor sub)
     {
-        try
-        {
-            var response = await httpClient.GetFromJsonAsync<List<ComplianceDocument>>($"/api/subcontractors/{subcontractorId}/compliance");
-            complianceBySubId[subcontractorId] = response?.AsReadOnly() ?? (IReadOnlyList<ComplianceDocument>)Array.Empty<ComplianceDocument>();
-            OnChange?.Invoke();
-        }
-        catch { complianceBySubId[subcontractorId] = Array.Empty<ComplianceDocument>(); }
-    }
-
-    private async Task PostSubAsync(Subcontractor sub)
-    {
-        try { await httpClient.PostAsJsonAsync("/api/subcontractors", sub); } catch { return; }
-        await LoadAsync();
-    }
-
-    private async Task SaveComplianceAsync(ComplianceDocument document)
-    {
-        try { await httpClient.PostAsJsonAsync("/api/subcontractors/compliance", document); } catch { return; }
-        complianceBySubId.Remove(document.SubcontractorId);
-        await LoadComplianceAsync(document.SubcontractorId);
+        await commands.SendAsync(new UpdateSubcontractor(sub.SubcontractorId, sub.CompanyName, sub.PrimaryTrade, sub.ContactName, sub.ContactEmail, sub.ContactPhone, sub.CisStatus), CancellationToken.None);
+        await readModel.RefreshAsync(CancellationToken.None);
     }
 }

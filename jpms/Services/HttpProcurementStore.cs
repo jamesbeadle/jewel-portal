@@ -1,97 +1,90 @@
-using System.Net.Http.Json;
+using Jewel.JPMS.Contracts.Procurement;
+using Jewel.JPMS.Cqrs;
+using Jewel.JPMS.Features.Procurement;
 using Jewel.JPMS.Models;
 
 namespace Jewel.JPMS.Services;
 
 public sealed class HttpProcurementStore : IProcurementStore
 {
-    private readonly HttpClient httpClient;
-    private IReadOnlyList<BidPackage> cachedPackages = Array.Empty<BidPackage>();
-    private IReadOnlyList<WorkOrder> cachedWorkOrders = Array.Empty<WorkOrder>();
-    private bool hasLoadedPackages;
-    private bool hasLoadedWorkOrders;
-    private readonly Dictionary<string, IReadOnlyList<Quote>> quotesByPackage = new();
+    private readonly BidPackagesReadModel packagesReadModel;
+    private readonly WorkOrdersReadModel workOrdersReadModel;
+    private readonly IQueryClient queries;
+    private readonly ICommandSender commands;
 
-    public HttpProcurementStore(HttpClient httpClient) { this.httpClient = httpClient; }
+    public HttpProcurementStore(BidPackagesReadModel packagesReadModel, WorkOrdersReadModel workOrdersReadModel, IQueryClient queries, ICommandSender commands)
+    {
+        this.packagesReadModel = packagesReadModel;
+        this.workOrdersReadModel = workOrdersReadModel;
+        this.queries = queries;
+        this.commands = commands;
+        packagesReadModel.OnChanged += () => OnChange?.Invoke();
+        workOrdersReadModel.OnChanged += () => OnChange?.Invoke();
+    }
 
     public event Action? OnChange;
 
     public IReadOnlyList<BidPackage> PackagesFor(string projectId)
     {
-        if (!hasLoadedPackages) _ = LoadPackagesAsync();
-        return cachedPackages.Where(p => string.Equals(p.ProjectId, projectId, StringComparison.OrdinalIgnoreCase)).ToList().AsReadOnly();
+        if (packagesReadModel.Current(projectId).Count == 0) _ = packagesReadModel.RefreshAsync(projectId, CancellationToken.None);
+        return packagesReadModel.Current(projectId);
     }
 
-    public BidPackage? FindPackage(string bidPackageId) =>
-        cachedPackages.FirstOrDefault(p => string.Equals(p.BidPackageId, bidPackageId, StringComparison.OrdinalIgnoreCase));
+    public BidPackage? FindPackage(string bidPackageId) => null;
 
     public BidPackage Upsert(BidPackage package)
     {
-        _ = PostAsync("/api/bid-packages", package, isPackage: true);
+        if (string.IsNullOrEmpty(package.BidPackageId))
+            _ = CreatePackageAsync(package);
+        else _ = UpdatePackageAsync(package);
         return package;
     }
 
-    public IReadOnlyList<Quote> QuotesFor(string bidPackageId)
-    {
-        if (!quotesByPackage.ContainsKey(bidPackageId)) _ = LoadQuotesAsync(bidPackageId);
-        return quotesByPackage.TryGetValue(bidPackageId, out var list) ? list : Array.Empty<Quote>();
-    }
+    public IReadOnlyList<Quote> QuotesFor(string bidPackageId) =>
+        queries.AskAsync(new ListQuotesForBidPackage(bidPackageId), CancellationToken.None).GetAwaiter().GetResult();
 
     public Quote SaveQuote(Quote quote)
     {
-        _ = PostQuoteAsync(quote);
+        if (string.IsNullOrEmpty(quote.QuoteId))
+            _ = commands.SendAsync(new SubmitQuoteForBidPackage(quote.BidPackageId, quote.SubcontractorId, quote.Value, quote.Notes), CancellationToken.None);
+        else
+            _ = commands.SendAsync(new ReviseQuote(quote.QuoteId, quote.Value, quote.Notes), CancellationToken.None);
         return quote;
     }
 
     public IReadOnlyList<WorkOrder> AllWorkOrders()
     {
-        if (!hasLoadedWorkOrders) _ = LoadWorkOrdersAsync();
-        return cachedWorkOrders;
+        if (workOrdersReadModel.Current is null) _ = workOrdersReadModel.RefreshAsync(CancellationToken.None);
+        return workOrdersReadModel.Current ?? Array.Empty<WorkOrder>();
     }
 
     public IReadOnlyList<WorkOrder> WorkOrdersFor(string projectId) =>
-        AllWorkOrders().Where(w => string.Equals(w.ProjectId, projectId, StringComparison.OrdinalIgnoreCase)).ToList().AsReadOnly();
+        AllWorkOrders().Where(workOrder => string.Equals(workOrder.ProjectId, projectId, StringComparison.OrdinalIgnoreCase)).ToList().AsReadOnly();
 
     public WorkOrder? FindWorkOrder(string workOrderId) =>
-        cachedWorkOrders.FirstOrDefault(w => string.Equals(w.WorkOrderId, workOrderId, StringComparison.OrdinalIgnoreCase));
+        AllWorkOrders().FirstOrDefault(workOrder => string.Equals(workOrder.WorkOrderId, workOrderId, StringComparison.OrdinalIgnoreCase));
 
     public WorkOrder Award(WorkOrder workOrder)
     {
-        _ = PostAsync("/api/work-orders", workOrder, isPackage: false);
+        _ = AwardAsync(workOrder);
         return workOrder;
     }
 
-    private async Task LoadPackagesAsync()
+    private async Task CreatePackageAsync(BidPackage package)
     {
-        hasLoadedPackages = true;
-        try { cachedPackages = (await httpClient.GetFromJsonAsync<List<BidPackage>>("/api/bid-packages"))?.AsReadOnly() ?? (IReadOnlyList<BidPackage>)Array.Empty<BidPackage>(); OnChange?.Invoke(); }
-        catch { cachedPackages = Array.Empty<BidPackage>(); }
+        await commands.SendAsync(new CreateBidPackage(package.ProjectId, package.Title, package.Trade, package.OwnerEmail), CancellationToken.None);
+        await packagesReadModel.RefreshAsync(package.ProjectId, CancellationToken.None);
     }
 
-    private async Task LoadWorkOrdersAsync()
+    private async Task UpdatePackageAsync(BidPackage package)
     {
-        hasLoadedWorkOrders = true;
-        try { cachedWorkOrders = (await httpClient.GetFromJsonAsync<List<WorkOrder>>("/api/work-orders"))?.AsReadOnly() ?? (IReadOnlyList<WorkOrder>)Array.Empty<WorkOrder>(); OnChange?.Invoke(); }
-        catch { cachedWorkOrders = Array.Empty<WorkOrder>(); }
+        await commands.SendAsync(new UpdateBidPackageScope(package.BidPackageId, package.Title, package.Trade, package.Status, package.OwnerEmail), CancellationToken.None);
+        await packagesReadModel.RefreshAsync(package.ProjectId, CancellationToken.None);
     }
 
-    private async Task LoadQuotesAsync(string bidPackageId)
+    private async Task AwardAsync(WorkOrder workOrder)
     {
-        try { quotesByPackage[bidPackageId] = (await httpClient.GetFromJsonAsync<List<Quote>>($"/api/bid-packages/{bidPackageId}/quotes"))?.AsReadOnly() ?? (IReadOnlyList<Quote>)Array.Empty<Quote>(); OnChange?.Invoke(); }
-        catch { quotesByPackage[bidPackageId] = Array.Empty<Quote>(); }
-    }
-
-    private async Task PostAsync<T>(string url, T body, bool isPackage)
-    {
-        try { await httpClient.PostAsJsonAsync(url, body); } catch { return; }
-        if (isPackage) await LoadPackagesAsync();
-        else await LoadWorkOrdersAsync();
-    }
-
-    private async Task PostQuoteAsync(Quote quote)
-    {
-        try { await httpClient.PostAsJsonAsync("/api/quotes", quote); } catch { return; }
-        quotesByPackage.Remove(quote.BidPackageId);
-        await LoadQuotesAsync(quote.BidPackageId);
+        await commands.SendAsync(new AwardBidPackage(workOrder.BidPackageId, workOrder.ProjectId, workOrder.SubcontractorId, workOrder.Value, workOrder.Scope, workOrder.AwardedByEmail), CancellationToken.None);
+        await workOrdersReadModel.RefreshAsync(CancellationToken.None);
     }
 }

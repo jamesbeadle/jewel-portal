@@ -1,16 +1,27 @@
-using System.Net.Http.Json;
+using Jewel.JPMS.Contracts.Commercial;
+using Jewel.JPMS.Cqrs;
+using Jewel.JPMS.Features.Commercial;
 using Jewel.JPMS.Models;
 
 namespace Jewel.JPMS.Services;
 
 public sealed class HttpCommercialStore : ICommercialStore
 {
-    private readonly HttpClient httpClient;
-    private readonly Dictionary<string, IReadOnlyList<Valuation>> valuationsByProject = new();
-    private readonly Dictionary<string, IReadOnlyList<CostCodeBudget>> budgetsByProject = new();
-    private readonly Dictionary<string, IReadOnlyList<Timesheet>> timesheetsByProject = new();
+    private readonly ValuationsReadModel valuationsReadModel;
+    private readonly CostCodeBudgetsReadModel budgetsReadModel;
+    private readonly TimesheetsReadModel timesheetsReadModel;
+    private readonly ICommandSender commands;
 
-    public HttpCommercialStore(HttpClient httpClient) { this.httpClient = httpClient; }
+    public HttpCommercialStore(ValuationsReadModel valuationsReadModel, CostCodeBudgetsReadModel budgetsReadModel, TimesheetsReadModel timesheetsReadModel, ICommandSender commands)
+    {
+        this.valuationsReadModel = valuationsReadModel;
+        this.budgetsReadModel = budgetsReadModel;
+        this.timesheetsReadModel = timesheetsReadModel;
+        this.commands = commands;
+        valuationsReadModel.OnChanged += () => OnChange?.Invoke();
+        budgetsReadModel.OnChanged += () => OnChange?.Invoke();
+        timesheetsReadModel.OnChanged += () => OnChange?.Invoke();
+    }
 
     public event Action? OnChange;
 
@@ -18,64 +29,70 @@ public sealed class HttpCommercialStore : ICommercialStore
 
     public IReadOnlyList<Valuation> ValuationsFor(string projectId)
     {
-        if (!valuationsByProject.ContainsKey(projectId)) _ = LoadValuationsAsync(projectId);
-        return valuationsByProject.TryGetValue(projectId, out var list) ? list : Array.Empty<Valuation>();
+        if (valuationsReadModel.Current(projectId).Count == 0) _ = valuationsReadModel.RefreshAsync(projectId, CancellationToken.None);
+        return valuationsReadModel.Current(projectId);
     }
 
     public Valuation SaveValuation(Valuation valuation)
     {
-        _ = PostAndRefreshAsync("/api/valuations", valuation, valuation.ProjectId, LoadValuationsAsync);
+        if (string.IsNullOrEmpty(valuation.ValuationId))
+            _ = DraftAsync(valuation);
+        else if (valuation.IsIssued)
+            _ = IssueAsync(valuation);
+        else
+            _ = ReviseAsync(valuation);
         return valuation;
     }
 
     public IReadOnlyList<CostCodeBudget> BudgetsFor(string projectId)
     {
-        if (!budgetsByProject.ContainsKey(projectId)) _ = LoadBudgetsAsync(projectId);
-        return budgetsByProject.TryGetValue(projectId, out var list) ? list : Array.Empty<CostCodeBudget>();
+        if (budgetsReadModel.Current(projectId).Count == 0) _ = budgetsReadModel.RefreshAsync(projectId, CancellationToken.None);
+        return budgetsReadModel.Current(projectId);
     }
 
     public IReadOnlyList<Timesheet> TimesheetsFor(string projectId)
     {
-        if (!timesheetsByProject.ContainsKey(projectId)) _ = LoadTimesheetsAsync(projectId);
-        return timesheetsByProject.TryGetValue(projectId, out var list) ? list : Array.Empty<Timesheet>();
+        if (timesheetsReadModel.Current(projectId).Count == 0) _ = timesheetsReadModel.RefreshAsync(projectId, CancellationToken.None);
+        return timesheetsReadModel.Current(projectId);
     }
 
     public Timesheet SaveTimesheet(Timesheet timesheet)
     {
-        _ = PostAndRefreshAsync("/api/timesheets", timesheet, timesheet.ProjectId, LoadTimesheetsAsync);
+        if (string.IsNullOrEmpty(timesheet.TimesheetId))
+            _ = SubmitAsync(timesheet);
         return timesheet;
     }
 
     public Timesheet ApproveTimesheet(string timesheetId)
     {
-        var existing = timesheetsByProject.Values.SelectMany(list => list).First(t => t.TimesheetId == timesheetId);
-        return SaveTimesheet(existing with { IsApproved = true });
+        _ = commands.SendAsync(new ApproveTimesheet(timesheetId), CancellationToken.None);
+        return new Timesheet(timesheetId, "", "", DateTimeOffset.UtcNow, 0, "", true);
     }
 
     public CashflowSnapshot LatestCashflow() =>
         new("CF-001", DateTimeOffset.UtcNow, 1_180_000m, 920_000m, 260_000m);
 
-    private async Task LoadValuationsAsync(string projectId)
+    private async Task DraftAsync(Valuation valuation)
     {
-        try { valuationsByProject[projectId] = (await httpClient.GetFromJsonAsync<List<Valuation>>($"/api/projects/{projectId}/valuations"))?.AsReadOnly() ?? (IReadOnlyList<Valuation>)Array.Empty<Valuation>(); OnChange?.Invoke(); }
-        catch { valuationsByProject[projectId] = Array.Empty<Valuation>(); }
+        await commands.SendAsync(new DraftValuation(valuation.ProjectId, valuation.ClaimPeriodId, valuation.GrossValue, valuation.RetentionPercent), CancellationToken.None);
+        await valuationsReadModel.RefreshAsync(valuation.ProjectId, CancellationToken.None);
     }
 
-    private async Task LoadBudgetsAsync(string projectId)
+    private async Task IssueAsync(Valuation valuation)
     {
-        try { budgetsByProject[projectId] = (await httpClient.GetFromJsonAsync<List<CostCodeBudget>>($"/api/projects/{projectId}/cost-code-budgets"))?.AsReadOnly() ?? (IReadOnlyList<CostCodeBudget>)Array.Empty<CostCodeBudget>(); OnChange?.Invoke(); }
-        catch { budgetsByProject[projectId] = Array.Empty<CostCodeBudget>(); }
+        await commands.SendAsync(new IssueValuation(valuation.ValuationId), CancellationToken.None);
+        await valuationsReadModel.RefreshAsync(valuation.ProjectId, CancellationToken.None);
     }
 
-    private async Task LoadTimesheetsAsync(string projectId)
+    private async Task ReviseAsync(Valuation valuation)
     {
-        try { timesheetsByProject[projectId] = (await httpClient.GetFromJsonAsync<List<Timesheet>>($"/api/projects/{projectId}/timesheets"))?.AsReadOnly() ?? (IReadOnlyList<Timesheet>)Array.Empty<Timesheet>(); OnChange?.Invoke(); }
-        catch { timesheetsByProject[projectId] = Array.Empty<Timesheet>(); }
+        await commands.SendAsync(new ReviseValuation(valuation.ValuationId, valuation.GrossValue, valuation.RetentionPercent), CancellationToken.None);
+        await valuationsReadModel.RefreshAsync(valuation.ProjectId, CancellationToken.None);
     }
 
-    private async Task PostAndRefreshAsync<T>(string url, T body, string projectId, Func<string, Task> refresh)
+    private async Task SubmitAsync(Timesheet timesheet)
     {
-        try { await httpClient.PostAsJsonAsync(url, body); } catch { return; }
-        await refresh(projectId);
+        await commands.SendAsync(new SubmitTimesheet(timesheet.ProjectId, timesheet.PersonEmail, timesheet.WorkedOn, timesheet.Hours, timesheet.CostCode), CancellationToken.None);
+        await timesheetsReadModel.RefreshAsync(timesheet.ProjectId, CancellationToken.None);
     }
 }

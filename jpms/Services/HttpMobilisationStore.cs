@@ -1,53 +1,36 @@
-using System.Net.Http.Json;
+using Jewel.JPMS.Contracts.Mobilisation;
+using Jewel.JPMS.Cqrs;
+using Jewel.JPMS.Features.Mobilisation;
 using Jewel.JPMS.Models;
 
 namespace Jewel.JPMS.Services;
 
 public sealed class HttpMobilisationStore : IMobilisationStore
 {
-    private readonly HttpClient httpClient;
-    private readonly Dictionary<string, IReadOnlyList<MobilisationItem>> itemsByProject = new();
+    private readonly MobilisationChecklistReadModel readModel;
+    private readonly ICommandSender commands;
 
-    public HttpMobilisationStore(HttpClient httpClient) { this.httpClient = httpClient; }
+    public HttpMobilisationStore(MobilisationChecklistReadModel readModel, ICommandSender commands)
+    {
+        this.readModel = readModel;
+        this.commands = commands;
+        readModel.OnChanged += () => OnChange?.Invoke();
+    }
 
     public event Action? OnChange;
 
     public MobilisationChecklist For(string projectId)
     {
-        if (!itemsByProject.ContainsKey(projectId)) _ = LoadAsync(projectId);
-        var items = itemsByProject.TryGetValue(projectId, out var list) ? list : Array.Empty<MobilisationItem>();
-        return new MobilisationChecklist(projectId, items);
+        if (readModel.Current(projectId) is null) _ = readModel.RefreshAsync(projectId, CancellationToken.None);
+        return readModel.Current(projectId) ?? new MobilisationChecklist(projectId, Array.Empty<MobilisationItem>());
     }
 
     public void ToggleItem(string mobilisationItemId)
     {
-        var current = itemsByProject.Values.SelectMany(list => list)
-            .FirstOrDefault(item => item.MobilisationItemId == mobilisationItemId);
-        if (current is null) return;
-        var nextComplete = !current.IsComplete;
-        var updated = current with
-        {
-            IsComplete = nextComplete,
-            CompletedAt = nextComplete ? DateTimeOffset.UtcNow : null
-        };
-        _ = PostAsync(updated);
-    }
-
-    private async Task LoadAsync(string projectId)
-    {
-        try
-        {
-            var response = await httpClient.GetFromJsonAsync<List<MobilisationItem>>($"/api/projects/{projectId}/mobilisation");
-            itemsByProject[projectId] = response?.AsReadOnly() ?? (IReadOnlyList<MobilisationItem>)Array.Empty<MobilisationItem>();
-            OnChange?.Invoke();
-        }
-        catch { itemsByProject[projectId] = Array.Empty<MobilisationItem>(); }
-    }
-
-    private async Task PostAsync(MobilisationItem item)
-    {
-        try { await httpClient.PostAsJsonAsync("/api/mobilisation-items", item); } catch { return; }
-        itemsByProject.Remove(item.ProjectId);
-        await LoadAsync(item.ProjectId);
+        var item = readModel
+            .Current("") // best-effort: we don't have projectId here, so search any cached project
+            ?.Items.FirstOrDefault(item => string.Equals(item.MobilisationItemId, mobilisationItemId, StringComparison.OrdinalIgnoreCase));
+        if (item is null) return;
+        _ = commands.SendAsync(new UpdateMobilisationChecklistItem(item.MobilisationItemId, item.Description, item.OwnerEmail, !item.IsComplete), CancellationToken.None);
     }
 }

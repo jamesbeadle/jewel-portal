@@ -1,7 +1,8 @@
 @page "/projects"
+@using Jewel.JPMS.Features.Projects
 @inject AuthService Auth
 @inject SessionService Session
-@inject IProjectStore ProjectStore
+@inject ProjectListReadModel ProjectsReadModel
 @inject NavigationManager Nav
 @implements IDisposable
 
@@ -35,7 +36,8 @@ else
 @code {
     private bool isLoaded;
 
-    private IReadOnlyList<Project> ActiveProjects => ProjectStore.All();
+    private IReadOnlyList<Project> ActiveProjects =>
+        ProjectsReadModel.Current ?? Array.Empty<Project>();
 
     protected override async Task OnInitializedAsync()
     {
@@ -45,14 +47,15 @@ else
             Nav.NavigateTo("/login", forceLoad: true);
             return;
         }
-        ProjectStore.OnChange += StateHasChanged;
+        ProjectsReadModel.OnChanged += StateHasChanged;
         Session.OnChange += StateHasChanged;
+        await ProjectsReadModel.RefreshAsync(CancellationToken.None);
         isLoaded = true;
     }
 
     public void Dispose()
     {
-        ProjectStore.OnChange -= StateHasChanged;
+        ProjectsReadModel.OnChanged -= StateHasChanged;
         Session.OnChange -= StateHasChanged;
     }
 }

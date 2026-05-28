@@ -1,55 +1,52 @@
-using System.Net.Http.Json;
+using Jewel.JPMS.Contracts.Rates;
+using Jewel.JPMS.Cqrs;
+using Jewel.JPMS.Features.Rates;
 using Jewel.JPMS.Models;
 
 namespace Jewel.JPMS.Services;
 
 public sealed class HttpRateLibrary : IRateLibrary
 {
-    private readonly HttpClient httpClient;
-    private IReadOnlyList<Rate> cached = Array.Empty<Rate>();
-    private bool hasLoaded;
+    private readonly RateLibraryReadModel readModel;
+    private readonly ICommandSender commands;
 
-    public HttpRateLibrary(HttpClient httpClient) { this.httpClient = httpClient; }
+    public HttpRateLibrary(RateLibraryReadModel readModel, ICommandSender commands)
+    {
+        this.readModel = readModel;
+        this.commands = commands;
+        readModel.OnChanged += () => OnChange?.Invoke();
+    }
 
     public event Action? OnChange;
 
     public IReadOnlyList<Rate> All()
     {
-        if (!hasLoaded) _ = LoadAsync();
-        return cached;
+        if (readModel.Current is null) _ = readModel.RefreshAsync(CancellationToken.None);
+        return readModel.Current ?? Array.Empty<Rate>();
     }
 
     public Rate? Find(string rateId) =>
-        cached.FirstOrDefault(rate =>
-            string.Equals(rate.RateId, rateId, StringComparison.OrdinalIgnoreCase));
+        All().FirstOrDefault(rate => string.Equals(rate.RateId, rateId, StringComparison.OrdinalIgnoreCase));
 
     public Rate Upsert(Rate rate)
     {
-        _ = PostAsync(rate);
+        if (Find(rate.RateId) is null) _ = AddAsync(rate);
+        else _ = ReviseAsync(rate);
         return rate;
     }
 
     public IReadOnlyList<Rate> Stale(int dayThreshold) =>
-        cached.Where(rate => rate.IsStale(dayThreshold))
-              .OrderBy(rate => rate.LastPricedAt)
-              .ToList()
-              .AsReadOnly();
+        All().Where(rate => rate.IsStale(dayThreshold)).ToList().AsReadOnly();
 
-    private async Task LoadAsync()
+    private async Task AddAsync(Rate rate)
     {
-        hasLoaded = true;
-        try
-        {
-            var response = await httpClient.GetFromJsonAsync<List<Rate>>("/api/rates");
-            cached = response?.AsReadOnly() ?? (IReadOnlyList<Rate>)Array.Empty<Rate>();
-            OnChange?.Invoke();
-        }
-        catch { cached = Array.Empty<Rate>(); }
+        await commands.SendAsync(new AddRate(rate.Trade, rate.Description, rate.Unit, rate.Value, rate.SupplierName), CancellationToken.None);
+        await readModel.RefreshAsync(CancellationToken.None);
     }
 
-    private async Task PostAsync(Rate rate)
+    private async Task ReviseAsync(Rate rate)
     {
-        try { await httpClient.PostAsJsonAsync("/api/rates", rate); } catch { return; }
-        await LoadAsync();
+        await commands.SendAsync(new ReviseRate(rate.RateId, rate.Trade, rate.Description, rate.Unit, rate.Value, rate.SupplierName), CancellationToken.None);
+        await readModel.RefreshAsync(CancellationToken.None);
     }
 }

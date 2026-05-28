@@ -1,75 +1,78 @@
-using System.Net.Http.Json;
+using Jewel.JPMS.Contracts.Site;
+using Jewel.JPMS.Cqrs;
+using Jewel.JPMS.Features.Site;
 using Jewel.JPMS.Models;
 
 namespace Jewel.JPMS.Services;
 
 public sealed class HttpSiteStore : ISiteStore
 {
-    private readonly HttpClient httpClient;
-    private readonly Dictionary<string, IReadOnlyList<SiteReport>> reportsByProject = new();
-    private readonly Dictionary<string, IReadOnlyList<ProgrammeTask>> tasksByProject = new();
+    private readonly SiteReportsReadModel reportsReadModel;
+    private readonly ProgrammeReadModel programmeReadModel;
+    private readonly ICommandSender commands;
 
-    public HttpSiteStore(HttpClient httpClient) { this.httpClient = httpClient; }
+    public HttpSiteStore(SiteReportsReadModel reportsReadModel, ProgrammeReadModel programmeReadModel, ICommandSender commands)
+    {
+        this.reportsReadModel = reportsReadModel;
+        this.programmeReadModel = programmeReadModel;
+        this.commands = commands;
+        reportsReadModel.OnChanged += () => OnChange?.Invoke();
+        programmeReadModel.OnChanged += () => OnChange?.Invoke();
+    }
 
     public event Action? OnChange;
 
     public IReadOnlyList<SiteReport> ReportsFor(string projectId)
     {
-        if (!reportsByProject.ContainsKey(projectId)) _ = LoadReportsAsync(projectId);
-        return reportsByProject.TryGetValue(projectId, out var list) ? list : Array.Empty<SiteReport>();
+        if (reportsReadModel.Current(projectId).Count == 0) _ = reportsReadModel.RefreshAsync(projectId, CancellationToken.None);
+        return reportsReadModel.Current(projectId);
     }
 
     public IReadOnlyList<ProgrammeTask> ProgrammeFor(string projectId)
     {
-        if (!tasksByProject.ContainsKey(projectId)) _ = LoadTasksAsync(projectId);
-        return tasksByProject.TryGetValue(projectId, out var list) ? list : Array.Empty<ProgrammeTask>();
+        if (programmeReadModel.Current(projectId).Count == 0) _ = programmeReadModel.RefreshAsync(projectId, CancellationToken.None);
+        return programmeReadModel.Current(projectId);
     }
 
     public SiteReport SaveReport(SiteReport report)
     {
-        _ = PostReportAsync(report);
+        if (string.IsNullOrEmpty(report.SiteReportId))
+            _ = AssembleAsync(report);
+        else if (report.IsIssued)
+            _ = ApproveAsync(report);
         return report;
     }
 
     public ProgrammeTask SaveProgrammeTask(ProgrammeTask task)
     {
-        _ = PostTaskAsync(task);
+        if (string.IsNullOrEmpty(task.ProgrammeTaskId))
+            _ = AddTaskAsync(task);
+        else
+            _ = UpdateTaskAsync(task);
         return task;
     }
 
-    private async Task LoadReportsAsync(string projectId)
+    private async Task AssembleAsync(SiteReport report)
     {
-        try
-        {
-            var response = await httpClient.GetFromJsonAsync<List<SiteReport>>($"/api/projects/{projectId}/site-reports");
-            reportsByProject[projectId] = response?.AsReadOnly() ?? (IReadOnlyList<SiteReport>)Array.Empty<SiteReport>();
-            OnChange?.Invoke();
-        }
-        catch { reportsByProject[projectId] = Array.Empty<SiteReport>(); }
+        await commands.SendAsync(new AssembleSiteReport(report.ProjectId, report.PeriodEnd, report.Narrative, report.AttendanceDays, report.OpenSnags, report.ProgressPercent), CancellationToken.None);
+        await reportsReadModel.RefreshAsync(report.ProjectId, CancellationToken.None);
     }
 
-    private async Task LoadTasksAsync(string projectId)
+    private async Task ApproveAsync(SiteReport report)
     {
-        try
-        {
-            var response = await httpClient.GetFromJsonAsync<List<ProgrammeTask>>($"/api/projects/{projectId}/programme");
-            tasksByProject[projectId] = response?.AsReadOnly() ?? (IReadOnlyList<ProgrammeTask>)Array.Empty<ProgrammeTask>();
-            OnChange?.Invoke();
-        }
-        catch { tasksByProject[projectId] = Array.Empty<ProgrammeTask>(); }
+        await commands.SendAsync(new ApproveSiteReport(report.SiteReportId), CancellationToken.None);
+        await reportsReadModel.RefreshAsync(report.ProjectId, CancellationToken.None);
     }
 
-    private async Task PostReportAsync(SiteReport report)
+    private async Task AddTaskAsync(ProgrammeTask task)
     {
-        try { await httpClient.PostAsJsonAsync("/api/site-reports", report); } catch { return; }
-        reportsByProject.Remove(report.ProjectId);
-        await LoadReportsAsync(report.ProjectId);
+        await commands.SendAsync(new AddProgrammeTask(task.ProjectId, task.Title, task.PlannedStart, task.PlannedEnd, task.BoqLineItemId), CancellationToken.None);
+        await programmeReadModel.RefreshAsync(task.ProjectId, CancellationToken.None);
     }
 
-    private async Task PostTaskAsync(ProgrammeTask task)
+    private async Task UpdateTaskAsync(ProgrammeTask task)
     {
-        try { await httpClient.PostAsJsonAsync("/api/programme-tasks", task); } catch { return; }
-        tasksByProject.Remove(task.ProjectId);
-        await LoadTasksAsync(task.ProjectId);
+        await commands.SendAsync(new UpdateProgrammeTask(task.ProgrammeTaskId, task.Title, task.PlannedStart, task.PlannedEnd, task.ProgressPercent, task.BoqLineItemId), CancellationToken.None);
+        await programmeReadModel.RefreshAsync(task.ProjectId, CancellationToken.None);
     }
 }

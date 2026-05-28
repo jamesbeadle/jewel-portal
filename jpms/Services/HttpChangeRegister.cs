@@ -1,52 +1,53 @@
-using System.Net.Http.Json;
+using Jewel.JPMS.Contracts.Changes;
+using Jewel.JPMS.Cqrs;
+using Jewel.JPMS.Features.Changes;
 using Jewel.JPMS.Models;
 
 namespace Jewel.JPMS.Services;
 
 public sealed class HttpChangeRegister : IChangeRegister
 {
-    private readonly HttpClient httpClient;
-    private IReadOnlyList<ChangeRecord> cached = Array.Empty<ChangeRecord>();
-    private bool hasLoaded;
+    private readonly ChangesReadModel readModel;
+    private readonly ICommandSender commands;
 
-    public HttpChangeRegister(HttpClient httpClient) { this.httpClient = httpClient; }
+    public HttpChangeRegister(ChangesReadModel readModel, ICommandSender commands)
+    {
+        this.readModel = readModel;
+        this.commands = commands;
+        readModel.OnChanged += () => OnChange?.Invoke();
+    }
 
     public event Action? OnChange;
 
     public IReadOnlyList<ChangeRecord> ForProject(string projectId)
     {
-        if (!hasLoaded) _ = LoadAsync();
-        return cached.Where(r => string.Equals(r.ProjectId, projectId, StringComparison.OrdinalIgnoreCase)).ToList().AsReadOnly();
+        if (readModel.Current(projectId).Count == 0) _ = readModel.RefreshAsync(projectId, CancellationToken.None);
+        return readModel.Current(projectId);
     }
 
     public IReadOnlyList<ChangeRecord> ForProject(string projectId, ChangeKind kind) =>
-        ForProject(projectId).Where(r => r.Kind == kind).ToList().AsReadOnly();
+        ForProject(projectId).Where(record => record.Kind == kind).ToList().AsReadOnly();
 
-    public ChangeRecord? Find(string changeRecordId) =>
-        cached.FirstOrDefault(r =>
-            string.Equals(r.ChangeRecordId, changeRecordId, StringComparison.OrdinalIgnoreCase));
+    public ChangeRecord? Find(string changeRecordId) => null;
 
     public ChangeRecord Upsert(ChangeRecord record)
     {
-        _ = PostAsync(record);
+        if (string.IsNullOrEmpty(record.ChangeRecordId))
+            _ = RaiseAsync(record);
+        else
+            _ = UpdateAsync(record);
         return record;
     }
 
-    private async Task LoadAsync()
+    private async Task RaiseAsync(ChangeRecord record)
     {
-        hasLoaded = true;
-        try
-        {
-            var response = await httpClient.GetFromJsonAsync<List<ChangeRecord>>("/api/changes");
-            cached = response?.AsReadOnly() ?? (IReadOnlyList<ChangeRecord>)Array.Empty<ChangeRecord>();
-            OnChange?.Invoke();
-        }
-        catch { cached = Array.Empty<ChangeRecord>(); }
+        await commands.SendAsync(new RaiseChange(record.ProjectId, record.Kind, record.Reference, record.Title, record.Description, record.Value, record.RaisedByEmail), CancellationToken.None);
+        await readModel.RefreshAsync(record.ProjectId, CancellationToken.None);
     }
 
-    private async Task PostAsync(ChangeRecord record)
+    private async Task UpdateAsync(ChangeRecord record)
     {
-        try { await httpClient.PostAsJsonAsync("/api/changes", record); } catch { return; }
-        await LoadAsync();
+        await commands.SendAsync(new UpdateChangeDetails(record.ChangeRecordId, record.Reference, record.Title, record.Description, record.Status, record.Value, record.ResponseText, record.RespondedByEmail, record.ImpliesVariation), CancellationToken.None);
+        await readModel.RefreshAsync(record.ProjectId, CancellationToken.None);
     }
 }
