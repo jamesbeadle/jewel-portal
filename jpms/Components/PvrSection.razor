@@ -9,6 +9,11 @@
         </p>
     </section>
 
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+        <ClaimPeriodForm ProjectId="@ProjectId" OnAdded="StateHasChanged" />
+        <ValuationDraftForm ProjectId="@ProjectId" />
+    </div>
+
     <ValuationTable Valuations="Valuations" />
 
     @if (Draft is not null)
