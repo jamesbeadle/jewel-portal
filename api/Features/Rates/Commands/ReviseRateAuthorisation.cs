@@ -8,5 +8,5 @@ public sealed class ReviseRateAuthorisation
     private static readonly RoleSet RolesThatMayReviseRates =
         RoleSet.Of(JpmsRoles.Director, JpmsRoles.Estimator);
 
-    public bool Allows(SignedInUser user, ReviseRate command) => RolesThatMayReviseRates.Includes(user.Role);
+    public bool Allows(SignedInUser user, ReviseRate command) => RolesThatMayReviseRates.IncludesAny(user.Roles);
 }

@@ -7,5 +7,5 @@ public sealed class ApproveSiteReportAuthorisation
 {
     private static readonly RoleSet RolesThatMayApproveReports = RoleSet.Of(JpmsRoles.Director, JpmsRoles.ProjectManager);
 
-    public bool Allows(SignedInUser user, ApproveSiteReport command) => RolesThatMayApproveReports.Includes(user.Role);
+    public bool Allows(SignedInUser user, ApproveSiteReport command) => RolesThatMayApproveReports.IncludesAny(user.Roles);
 }

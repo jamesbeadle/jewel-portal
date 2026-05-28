@@ -20,7 +20,7 @@ public sealed class UpdateDefectEndpoint
     [Function(nameof(UpdateDefect))]
     public async Task<IActionResult> Run([HttpTrigger(AuthorizationLevel.Anonymous, "put", Route = "defects/{defectId}")] HttpRequest request, string defectId)
     {
-        var signedInUser = users.Resolve(request);
+        var signedInUser = await users.ResolveAsync(request, request.HttpContext.RequestAborted);
         if (signedInUser is null) return new UnauthorizedResult();
         var command = await request.ReadFromJsonAsync<UpdateDefect>();
         if (command is null) return new BadRequestResult();

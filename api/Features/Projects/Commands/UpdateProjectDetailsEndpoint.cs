@@ -32,7 +32,7 @@ public sealed class UpdateProjectDetailsEndpoint
         [HttpTrigger(AuthorizationLevel.Anonymous, "put", Route = "projects/{projectId}")] HttpRequest request,
         string projectId)
     {
-        var signedInUser = users.Resolve(request);
+        var signedInUser = await users.ResolveAsync(request, request.HttpContext.RequestAborted);
         if (signedInUser is null) return new UnauthorizedResult();
 
         var command = await request.ReadFromJsonAsync<UpdateProjectDetails>();

@@ -8,5 +8,5 @@ public sealed class UpdateBoqLineAuthorisation
     private static readonly RoleSet RolesThatMayEditBoq =
         RoleSet.Of(JpmsRoles.Director, JpmsRoles.ProjectManager, JpmsRoles.Estimator);
 
-    public bool Allows(SignedInUser user, UpdateBoqLine command) => RolesThatMayEditBoq.Includes(user.Role);
+    public bool Allows(SignedInUser user, UpdateBoqLine command) => RolesThatMayEditBoq.IncludesAny(user.Roles);
 }

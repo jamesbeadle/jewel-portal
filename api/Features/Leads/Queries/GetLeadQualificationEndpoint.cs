@@ -26,7 +26,7 @@ public sealed class GetLeadQualificationEndpoint
         [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "leads/{leadId}/qualification")] HttpRequest request,
         string leadId)
     {
-        var signedInUser = users.Resolve(request);
+        var signedInUser = await users.ResolveAsync(request, request.HttpContext.RequestAborted);
         if (signedInUser is null) return new UnauthorizedResult();
 
         var qualification = await handler.HandleAsync(new GetLeadQualification(leadId), request.HttpContext.RequestAborted);

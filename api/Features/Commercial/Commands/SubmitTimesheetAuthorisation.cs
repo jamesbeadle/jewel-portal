@@ -8,5 +8,5 @@ public sealed class SubmitTimesheetAuthorisation
     private static readonly RoleSet RolesThatMaySubmitTimesheets =
         RoleSet.Of(JpmsRoles.Director, JpmsRoles.ProjectManager, JpmsRoles.SiteManager, JpmsRoles.Subcontractor);
 
-    public bool Allows(SignedInUser user, SubmitTimesheet command) => RolesThatMaySubmitTimesheets.Includes(user.Role);
+    public bool Allows(SignedInUser user, SubmitTimesheet command) => RolesThatMaySubmitTimesheets.IncludesAny(user.Roles);
 }

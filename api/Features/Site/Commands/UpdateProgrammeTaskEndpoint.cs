@@ -20,7 +20,7 @@ public sealed class UpdateProgrammeTaskEndpoint
     [Function(nameof(UpdateProgrammeTask))]
     public async Task<IActionResult> Run([HttpTrigger(AuthorizationLevel.Anonymous, "put", Route = "programme-tasks/{programmeTaskId}")] HttpRequest request, string programmeTaskId)
     {
-        var signedInUser = users.Resolve(request);
+        var signedInUser = await users.ResolveAsync(request, request.HttpContext.RequestAborted);
         if (signedInUser is null) return new UnauthorizedResult();
         var command = await request.ReadFromJsonAsync<UpdateProgrammeTask>();
         if (command is null) return new BadRequestResult();

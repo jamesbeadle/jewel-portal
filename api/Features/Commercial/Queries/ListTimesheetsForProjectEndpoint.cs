@@ -17,7 +17,7 @@ public sealed class ListTimesheetsForProjectEndpoint
     [Function(nameof(ListTimesheetsForProject))]
     public async Task<IActionResult> Run([HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "projects/{projectId}/timesheets")] HttpRequest request, string projectId)
     {
-        if (users.Resolve(request) is null) return new UnauthorizedResult();
+        if (await users.ResolveAsync(request, request.HttpContext.RequestAborted) is null) return new UnauthorizedResult();
         return new OkObjectResult(await handler.HandleAsync(new ListTimesheetsForProject(projectId), request.HttpContext.RequestAborted));
     }
 }

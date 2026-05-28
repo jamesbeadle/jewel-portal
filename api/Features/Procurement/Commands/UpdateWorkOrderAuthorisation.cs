@@ -8,5 +8,5 @@ public sealed class UpdateWorkOrderAuthorisation
     private static readonly RoleSet RolesThatMayUpdateWorkOrders =
         RoleSet.Of(JpmsRoles.Director, JpmsRoles.ProjectManager, JpmsRoles.OfficeComplianceCoordinator);
 
-    public bool Allows(SignedInUser user, UpdateWorkOrder command) => RolesThatMayUpdateWorkOrders.Includes(user.Role);
+    public bool Allows(SignedInUser user, UpdateWorkOrder command) => RolesThatMayUpdateWorkOrders.IncludesAny(user.Roles);
 }

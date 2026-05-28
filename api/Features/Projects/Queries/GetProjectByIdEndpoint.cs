@@ -26,7 +26,7 @@ public sealed class GetProjectByIdEndpoint
         [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "projects/{projectId}")] HttpRequest request,
         string projectId)
     {
-        var signedInUser = users.Resolve(request);
+        var signedInUser = await users.ResolveAsync(request, request.HttpContext.RequestAborted);
         if (signedInUser is null) return new UnauthorizedResult();
 
         var project = await handler.HandleAsync(new GetProjectById(projectId), request.HttpContext.RequestAborted);

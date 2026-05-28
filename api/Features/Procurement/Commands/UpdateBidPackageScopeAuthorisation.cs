@@ -8,5 +8,5 @@ public sealed class UpdateBidPackageScopeAuthorisation
     private static readonly RoleSet RolesThatMayEditPackages =
         RoleSet.Of(JpmsRoles.Director, JpmsRoles.ProjectManager, JpmsRoles.OfficeComplianceCoordinator);
 
-    public bool Allows(SignedInUser user, UpdateBidPackageScope command) => RolesThatMayEditPackages.Includes(user.Role);
+    public bool Allows(SignedInUser user, UpdateBidPackageScope command) => RolesThatMayEditPackages.IncludesAny(user.Roles);
 }

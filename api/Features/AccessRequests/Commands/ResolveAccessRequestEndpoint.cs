@@ -32,7 +32,7 @@ public sealed class ResolveAccessRequestEndpoint
         [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "access-requests/{email}/resolve")] HttpRequest request,
         string email)
     {
-        var signedInUser = users.Resolve(request);
+        var signedInUser = await users.ResolveAsync(request, request.HttpContext.RequestAborted);
         if (signedInUser is null) return new UnauthorizedResult();
 
         var command = new ResolveAccessRequest(email);

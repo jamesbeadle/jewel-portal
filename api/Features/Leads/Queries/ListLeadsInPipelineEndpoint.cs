@@ -25,7 +25,7 @@ public sealed class ListLeadsInPipelineEndpoint
     public async Task<IActionResult> Run(
         [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "leads")] HttpRequest request)
     {
-        var signedInUser = users.Resolve(request);
+        var signedInUser = await users.ResolveAsync(request, request.HttpContext.RequestAborted);
         if (signedInUser is null) return new UnauthorizedResult();
 
         var leads = await handler.HandleAsync(new ListLeadsInPipeline(), request.HttpContext.RequestAborted);

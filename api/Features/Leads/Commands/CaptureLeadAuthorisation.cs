@@ -9,5 +9,5 @@ public sealed class CaptureLeadAuthorisation
         RoleSet.Of(JpmsRoles.Director, JpmsRoles.ProjectManager, JpmsRoles.Estimator);
 
     public bool Allows(SignedInUser user, CaptureLead command) =>
-        RolesThatMayCaptureLeads.Includes(user.Role);
+        RolesThatMayCaptureLeads.IncludesAny(user.Roles);
 }

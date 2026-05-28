@@ -24,7 +24,7 @@ public sealed class ListQuotesForBidPackageEndpoint
         [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "bid-packages/{bidPackageId}/quotes")] HttpRequest request,
         string bidPackageId)
     {
-        if (users.Resolve(request) is null) return new UnauthorizedResult();
+        if (await users.ResolveAsync(request, request.HttpContext.RequestAborted) is null) return new UnauthorizedResult();
         return new OkObjectResult(await handler.HandleAsync(new ListQuotesForBidPackage(bidPackageId), request.HttpContext.RequestAborted));
     }
 }

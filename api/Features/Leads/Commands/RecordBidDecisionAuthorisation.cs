@@ -9,5 +9,5 @@ public sealed class RecordBidDecisionAuthorisation
         RoleSet.Of(JpmsRoles.Director, JpmsRoles.ProjectManager);
 
     public bool Allows(SignedInUser user, RecordBidDecision command) =>
-        RolesThatMayDecideBids.Includes(user.Role);
+        RolesThatMayDecideBids.IncludesAny(user.Roles);
 }

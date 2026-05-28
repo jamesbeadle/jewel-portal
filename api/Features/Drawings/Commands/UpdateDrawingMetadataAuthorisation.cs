@@ -9,5 +9,5 @@ public sealed class UpdateDrawingMetadataAuthorisation
         RoleSet.Of(JpmsRoles.Director, JpmsRoles.ProjectManager);
 
     public bool Allows(SignedInUser user, UpdateDrawingMetadata command) =>
-        RolesThatMayEditDrawings.Includes(user.Role);
+        RolesThatMayEditDrawings.IncludesAny(user.Roles);
 }

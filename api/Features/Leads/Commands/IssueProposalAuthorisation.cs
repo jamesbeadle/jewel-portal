@@ -9,5 +9,5 @@ public sealed class IssueProposalAuthorisation
         RoleSet.Of(JpmsRoles.Director, JpmsRoles.ProjectManager, JpmsRoles.Estimator);
 
     public bool Allows(SignedInUser user, IssueProposal command) =>
-        RolesThatMayIssueProposals.Includes(user.Role);
+        RolesThatMayIssueProposals.IncludesAny(user.Roles);
 }

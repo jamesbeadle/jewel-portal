@@ -17,7 +17,7 @@ public sealed class GetProgrammeForProjectEndpoint
     [Function(nameof(GetProgrammeForProject))]
     public async Task<IActionResult> Run([HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "projects/{projectId}/programme")] HttpRequest request, string projectId)
     {
-        if (users.Resolve(request) is null) return new UnauthorizedResult();
+        if (await users.ResolveAsync(request, request.HttpContext.RequestAborted) is null) return new UnauthorizedResult();
         return new OkObjectResult(await handler.HandleAsync(new GetProgrammeForProject(projectId), request.HttpContext.RequestAborted));
     }
 }

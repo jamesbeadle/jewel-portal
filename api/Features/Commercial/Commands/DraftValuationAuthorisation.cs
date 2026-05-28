@@ -8,5 +8,5 @@ public sealed class DraftValuationAuthorisation
     private static readonly RoleSet RolesThatMayDraftValuations =
         RoleSet.Of(JpmsRoles.Director, JpmsRoles.ProjectManager, JpmsRoles.Estimator);
 
-    public bool Allows(SignedInUser user, DraftValuation command) => RolesThatMayDraftValuations.Includes(user.Role);
+    public bool Allows(SignedInUser user, DraftValuation command) => RolesThatMayDraftValuations.IncludesAny(user.Roles);
 }

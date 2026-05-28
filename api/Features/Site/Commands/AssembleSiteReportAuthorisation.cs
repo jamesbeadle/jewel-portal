@@ -8,5 +8,5 @@ public sealed class AssembleSiteReportAuthorisation
     private static readonly RoleSet RolesThatMayAssembleReports =
         RoleSet.Of(JpmsRoles.Director, JpmsRoles.ProjectManager, JpmsRoles.SiteManager);
 
-    public bool Allows(SignedInUser user, AssembleSiteReport command) => RolesThatMayAssembleReports.Includes(user.Role);
+    public bool Allows(SignedInUser user, AssembleSiteReport command) => RolesThatMayAssembleReports.IncludesAny(user.Roles);
 }

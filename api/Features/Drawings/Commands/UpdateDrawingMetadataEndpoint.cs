@@ -32,7 +32,7 @@ public sealed class UpdateDrawingMetadataEndpoint
         [HttpTrigger(AuthorizationLevel.Anonymous, "put", Route = "drawings/{drawingId}")] HttpRequest request,
         string drawingId)
     {
-        var signedInUser = users.Resolve(request);
+        var signedInUser = await users.ResolveAsync(request, request.HttpContext.RequestAborted);
         if (signedInUser is null) return new UnauthorizedResult();
 
         var command = await request.ReadFromJsonAsync<UpdateDrawingMetadata>();

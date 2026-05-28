@@ -9,5 +9,5 @@ public sealed class UpdateProjectDetailsAuthorisation
         RoleSet.Of(JpmsRoles.Director, JpmsRoles.ProjectManager);
 
     public bool Allows(SignedInUser user, UpdateProjectDetails command) =>
-        RolesThatMayUpdateProjects.Includes(user.Role);
+        RolesThatMayUpdateProjects.IncludesAny(user.Roles);
 }

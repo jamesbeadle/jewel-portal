@@ -20,7 +20,7 @@ public sealed class AssembleSiteReportEndpoint
     [Function(nameof(AssembleSiteReport))]
     public async Task<IActionResult> Run([HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "projects/{projectId}/site-reports")] HttpRequest request, string projectId)
     {
-        var signedInUser = users.Resolve(request);
+        var signedInUser = await users.ResolveAsync(request, request.HttpContext.RequestAborted);
         if (signedInUser is null) return new UnauthorizedResult();
         var command = await request.ReadFromJsonAsync<AssembleSiteReport>();
         if (command is null) return new BadRequestResult();

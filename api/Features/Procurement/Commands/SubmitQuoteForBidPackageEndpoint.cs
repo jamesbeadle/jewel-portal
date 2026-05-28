@@ -25,7 +25,7 @@ public sealed class SubmitQuoteForBidPackageEndpoint
         [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "bid-packages/{bidPackageId}/quotes")] HttpRequest request,
         string bidPackageId)
     {
-        var signedInUser = users.Resolve(request);
+        var signedInUser = await users.ResolveAsync(request, request.HttpContext.RequestAborted);
         if (signedInUser is null) return new UnauthorizedResult();
 
         var command = await request.ReadFromJsonAsync<SubmitQuoteForBidPackage>();

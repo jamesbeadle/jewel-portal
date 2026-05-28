@@ -9,5 +9,5 @@ public sealed class RegisterDrawingAuthorisation
         RoleSet.Of(JpmsRoles.Director, JpmsRoles.ProjectManager, JpmsRoles.Estimator);
 
     public bool Allows(SignedInUser user, RegisterDrawing command) =>
-        RolesThatMayRegisterDrawings.Includes(user.Role);
+        RolesThatMayRegisterDrawings.IncludesAny(user.Roles);
 }

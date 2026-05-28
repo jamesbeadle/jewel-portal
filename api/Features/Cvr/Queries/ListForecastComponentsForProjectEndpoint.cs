@@ -17,7 +17,7 @@ public sealed class ListForecastComponentsForProjectEndpoint
     [Function(nameof(ListForecastComponentsForProject))]
     public async Task<IActionResult> Run([HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "projects/{projectId}/forecast-components")] HttpRequest request, string projectId)
     {
-        if (users.Resolve(request) is null) return new UnauthorizedResult();
+        if (await users.ResolveAsync(request, request.HttpContext.RequestAborted) is null) return new UnauthorizedResult();
         return new OkObjectResult(await handler.HandleAsync(new ListForecastComponentsForProject(projectId), request.HttpContext.RequestAborted));
     }
 }

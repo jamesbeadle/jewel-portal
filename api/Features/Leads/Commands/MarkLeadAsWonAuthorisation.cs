@@ -9,5 +9,5 @@ public sealed class MarkLeadAsWonAuthorisation
         RoleSet.Of(JpmsRoles.Director, JpmsRoles.ProjectManager);
 
     public bool Allows(SignedInUser user, MarkLeadAsWon command) =>
-        RolesThatMayMarkLeadsAsWon.Includes(user.Role);
+        RolesThatMayMarkLeadsAsWon.IncludesAny(user.Roles);
 }

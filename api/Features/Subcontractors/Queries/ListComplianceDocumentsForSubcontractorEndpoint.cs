@@ -24,7 +24,7 @@ public sealed class ListComplianceDocumentsForSubcontractorEndpoint
         [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "subcontractors/{subcontractorId}/compliance")] HttpRequest request,
         string subcontractorId)
     {
-        if (users.Resolve(request) is null) return new UnauthorizedResult();
+        if (await users.ResolveAsync(request, request.HttpContext.RequestAborted) is null) return new UnauthorizedResult();
         return new OkObjectResult(await handler.HandleAsync(new ListComplianceDocumentsForSubcontractor(subcontractorId), request.HttpContext.RequestAborted));
     }
 }

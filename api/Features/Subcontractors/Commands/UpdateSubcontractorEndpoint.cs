@@ -25,7 +25,7 @@ public sealed class UpdateSubcontractorEndpoint
         [HttpTrigger(AuthorizationLevel.Anonymous, "put", Route = "subcontractors/{subcontractorId}")] HttpRequest request,
         string subcontractorId)
     {
-        var signedInUser = users.Resolve(request);
+        var signedInUser = await users.ResolveAsync(request, request.HttpContext.RequestAborted);
         if (signedInUser is null) return new UnauthorizedResult();
 
         var command = await request.ReadFromJsonAsync<UpdateSubcontractor>();

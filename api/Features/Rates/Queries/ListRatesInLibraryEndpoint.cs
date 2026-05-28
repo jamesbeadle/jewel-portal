@@ -25,7 +25,7 @@ public sealed class ListRatesInLibraryEndpoint
     public async Task<IActionResult> Run(
         [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "rates")] HttpRequest request)
     {
-        var signedInUser = users.Resolve(request);
+        var signedInUser = await users.ResolveAsync(request, request.HttpContext.RequestAborted);
         if (signedInUser is null) return new UnauthorizedResult();
 
         var rates = await handler.HandleAsync(new ListRatesInLibrary(), request.HttpContext.RequestAborted);

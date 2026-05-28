@@ -23,7 +23,7 @@ public sealed class ListSubcontractorsEndpoint
     public async Task<IActionResult> Run(
         [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "subcontractors")] HttpRequest request)
     {
-        if (users.Resolve(request) is null) return new UnauthorizedResult();
+        if (await users.ResolveAsync(request, request.HttpContext.RequestAborted) is null) return new UnauthorizedResult();
         return new OkObjectResult(await handler.HandleAsync(new ListSubcontractors(), request.HttpContext.RequestAborted));
     }
 }

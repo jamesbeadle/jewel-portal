@@ -20,7 +20,7 @@ public sealed class UpdateChangeDetailsEndpoint
     [Function(nameof(UpdateChangeDetails))]
     public async Task<IActionResult> Run([HttpTrigger(AuthorizationLevel.Anonymous, "put", Route = "changes/{changeRecordId}")] HttpRequest request, string changeRecordId)
     {
-        var signedInUser = users.Resolve(request);
+        var signedInUser = await users.ResolveAsync(request, request.HttpContext.RequestAborted);
         if (signedInUser is null) return new UnauthorizedResult();
         var command = await request.ReadFromJsonAsync<UpdateChangeDetails>();
         if (command is null) return new BadRequestResult();

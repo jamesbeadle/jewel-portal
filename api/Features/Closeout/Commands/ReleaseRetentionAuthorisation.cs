@@ -6,5 +6,5 @@ namespace Jewel.JPMS.Api.Features.Closeout.Commands;
 public sealed class ReleaseRetentionAuthorisation
 {
     private static readonly RoleSet RolesThatMayReleaseRetention = RoleSet.Of(JpmsRoles.Director, JpmsRoles.FinanceDirector);
-    public bool Allows(SignedInUser user, ReleaseRetention command) => RolesThatMayReleaseRetention.Includes(user.Role);
+    public bool Allows(SignedInUser user, ReleaseRetention command) => RolesThatMayReleaseRetention.IncludesAny(user.Roles);
 }

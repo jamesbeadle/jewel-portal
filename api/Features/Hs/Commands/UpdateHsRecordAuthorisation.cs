@@ -8,5 +8,5 @@ public sealed class UpdateHsRecordAuthorisation
     private static readonly RoleSet RolesThatMayUpdateHsRecords =
         RoleSet.Of(JpmsRoles.Director, JpmsRoles.ProjectManager, JpmsRoles.SiteManager, JpmsRoles.HealthAndSafetyLead);
 
-    public bool Allows(SignedInUser user, UpdateHsRecord command) => RolesThatMayUpdateHsRecords.Includes(user.Role);
+    public bool Allows(SignedInUser user, UpdateHsRecord command) => RolesThatMayUpdateHsRecords.IncludesAny(user.Roles);
 }

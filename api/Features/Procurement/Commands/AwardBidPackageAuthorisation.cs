@@ -8,5 +8,5 @@ public sealed class AwardBidPackageAuthorisation
     private static readonly RoleSet RolesThatMayAwardPackages =
         RoleSet.Of(JpmsRoles.Director, JpmsRoles.ProjectManager);
 
-    public bool Allows(SignedInUser user, AwardBidPackage command) => RolesThatMayAwardPackages.Includes(user.Role);
+    public bool Allows(SignedInUser user, AwardBidPackage command) => RolesThatMayAwardPackages.IncludesAny(user.Roles);
 }

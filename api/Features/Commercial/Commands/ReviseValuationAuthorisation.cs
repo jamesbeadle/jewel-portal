@@ -8,5 +8,5 @@ public sealed class ReviseValuationAuthorisation
     private static readonly RoleSet RolesThatMayReviseValuations =
         RoleSet.Of(JpmsRoles.Director, JpmsRoles.ProjectManager, JpmsRoles.Estimator);
 
-    public bool Allows(SignedInUser user, ReviseValuation command) => RolesThatMayReviseValuations.Includes(user.Role);
+    public bool Allows(SignedInUser user, ReviseValuation command) => RolesThatMayReviseValuations.IncludesAny(user.Roles);
 }

@@ -9,5 +9,5 @@ public sealed class RecordSiteVisitNotesAuthorisation
         RoleSet.Of(JpmsRoles.Director, JpmsRoles.ProjectManager, JpmsRoles.Estimator, JpmsRoles.SiteManager);
 
     public bool Allows(SignedInUser user, RecordSiteVisitNotes command) =>
-        RolesThatMayRecordVisitNotes.Includes(user.Role);
+        RolesThatMayRecordVisitNotes.IncludesAny(user.Roles);
 }

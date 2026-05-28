@@ -7,5 +7,5 @@ public sealed class IssueValuationAuthorisation
 {
     private static readonly RoleSet RolesThatMayIssueValuations = RoleSet.Of(JpmsRoles.Director);
 
-    public bool Allows(SignedInUser user, IssueValuation command) => RolesThatMayIssueValuations.Includes(user.Role);
+    public bool Allows(SignedInUser user, IssueValuation command) => RolesThatMayIssueValuations.IncludesAny(user.Roles);
 }

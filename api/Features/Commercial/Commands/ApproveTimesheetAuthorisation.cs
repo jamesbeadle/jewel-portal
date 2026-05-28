@@ -8,5 +8,5 @@ public sealed class ApproveTimesheetAuthorisation
     private static readonly RoleSet RolesThatMayApproveTimesheets =
         RoleSet.Of(JpmsRoles.Director, JpmsRoles.ProjectManager);
 
-    public bool Allows(SignedInUser user, ApproveTimesheet command) => RolesThatMayApproveTimesheets.Includes(user.Role);
+    public bool Allows(SignedInUser user, ApproveTimesheet command) => RolesThatMayApproveTimesheets.IncludesAny(user.Roles);
 }

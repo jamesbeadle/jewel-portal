@@ -21,7 +21,7 @@ public sealed class UpdateMobilisationChecklistItemEndpoint
     [Function(nameof(UpdateMobilisationChecklistItem))]
     public async Task<IActionResult> Run([HttpTrigger(AuthorizationLevel.Anonymous, "put", Route = "mobilisation-items/{mobilisationItemId}")] HttpRequest request, string mobilisationItemId)
     {
-        var signedInUser = users.Resolve(request);
+        var signedInUser = await users.ResolveAsync(request, request.HttpContext.RequestAborted);
         if (signedInUser is null) return new UnauthorizedResult();
         var command = await request.ReadFromJsonAsync<UpdateMobilisationChecklistItem>();
         if (command is null) return new BadRequestResult();

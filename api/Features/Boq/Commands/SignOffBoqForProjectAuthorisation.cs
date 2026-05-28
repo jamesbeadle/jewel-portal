@@ -8,5 +8,5 @@ public sealed class SignOffBoqForProjectAuthorisation
     private static readonly RoleSet RolesThatMaySignOffBoq = RoleSet.Of(JpmsRoles.Director);
 
     public bool Allows(SignedInUser user, SignOffBoqForProject command) =>
-        RolesThatMaySignOffBoq.Includes(user.Role);
+        RolesThatMaySignOffBoq.IncludesAny(user.Roles);
 }

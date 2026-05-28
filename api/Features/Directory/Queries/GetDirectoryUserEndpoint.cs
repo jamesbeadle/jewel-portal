@@ -26,7 +26,7 @@ public sealed class GetDirectoryUserEndpoint
         [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "directory/{email}")] HttpRequest request,
         string email)
     {
-        var signedInUser = users.Resolve(request);
+        var signedInUser = await users.ResolveAsync(request, request.HttpContext.RequestAborted);
         if (signedInUser is null) return new UnauthorizedResult();
 
         var isOwnEntry = string.Equals(signedInUser.Email, email, StringComparison.OrdinalIgnoreCase);

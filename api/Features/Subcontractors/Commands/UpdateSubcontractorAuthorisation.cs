@@ -8,5 +8,5 @@ public sealed class UpdateSubcontractorAuthorisation
     private static readonly RoleSet RolesThatMayUpdateSubcontractors =
         RoleSet.Of(JpmsRoles.Director, JpmsRoles.OfficeComplianceCoordinator);
 
-    public bool Allows(SignedInUser user, UpdateSubcontractor command) => RolesThatMayUpdateSubcontractors.Includes(user.Role);
+    public bool Allows(SignedInUser user, UpdateSubcontractor command) => RolesThatMayUpdateSubcontractors.IncludesAny(user.Roles);
 }

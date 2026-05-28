@@ -8,5 +8,5 @@ public sealed class UpdateMobilisationChecklistItemAuthorisation
     private static readonly RoleSet RolesThatMayUpdateMobilisation =
         RoleSet.Of(JpmsRoles.Director, JpmsRoles.ProjectManager, JpmsRoles.SiteManager, JpmsRoles.HealthAndSafetyLead);
 
-    public bool Allows(SignedInUser user, UpdateMobilisationChecklistItem command) => RolesThatMayUpdateMobilisation.Includes(user.Role);
+    public bool Allows(SignedInUser user, UpdateMobilisationChecklistItem command) => RolesThatMayUpdateMobilisation.IncludesAny(user.Roles);
 }

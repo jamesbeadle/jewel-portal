@@ -25,7 +25,7 @@ public sealed class ListProjectsVisibleToUserEndpoint
     public async Task<IActionResult> Run(
         [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "projects")] HttpRequest request)
     {
-        var signedInUser = users.Resolve(request);
+        var signedInUser = await users.ResolveAsync(request, request.HttpContext.RequestAborted);
         if (signedInUser is null) return new UnauthorizedResult();
 
         var projects = await handler.HandleAsync(new ListProjectsVisibleToUser(), request.HttpContext.RequestAborted);

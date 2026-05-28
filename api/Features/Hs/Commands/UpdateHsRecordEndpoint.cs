@@ -21,7 +21,7 @@ public sealed class UpdateHsRecordEndpoint
     [Function(nameof(UpdateHsRecord))]
     public async Task<IActionResult> Run([HttpTrigger(AuthorizationLevel.Anonymous, "put", Route = "hs-records/{hsRecordId}")] HttpRequest request, string hsRecordId)
     {
-        var signedInUser = users.Resolve(request);
+        var signedInUser = await users.ResolveAsync(request, request.HttpContext.RequestAborted);
         if (signedInUser is null) return new UnauthorizedResult();
         var command = await request.ReadFromJsonAsync<UpdateHsRecord>();
         if (command is null) return new BadRequestResult();

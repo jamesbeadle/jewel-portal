@@ -8,5 +8,5 @@ public sealed class UploadComplianceDocumentAuthorisation
     private static readonly RoleSet RolesThatMayUploadCompliance =
         RoleSet.Of(JpmsRoles.Director, JpmsRoles.OfficeComplianceCoordinator, JpmsRoles.Subcontractor);
 
-    public bool Allows(SignedInUser user, UploadComplianceDocument command) => RolesThatMayUploadCompliance.Includes(user.Role);
+    public bool Allows(SignedInUser user, UploadComplianceDocument command) => RolesThatMayUploadCompliance.IncludesAny(user.Roles);
 }

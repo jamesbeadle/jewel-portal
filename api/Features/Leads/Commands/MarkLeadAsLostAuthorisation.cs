@@ -9,5 +9,5 @@ public sealed class MarkLeadAsLostAuthorisation
         RoleSet.Of(JpmsRoles.Director, JpmsRoles.ProjectManager);
 
     public bool Allows(SignedInUser user, MarkLeadAsLost command) =>
-        RolesThatMayMarkLeadsAsLost.Includes(user.Role);
+        RolesThatMayMarkLeadsAsLost.IncludesAny(user.Roles);
 }

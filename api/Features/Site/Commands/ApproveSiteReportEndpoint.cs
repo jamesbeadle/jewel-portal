@@ -20,7 +20,7 @@ public sealed class ApproveSiteReportEndpoint
     [Function(nameof(ApproveSiteReport))]
     public async Task<IActionResult> Run([HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "site-reports/{siteReportId}/approval")] HttpRequest request, string siteReportId)
     {
-        var signedInUser = users.Resolve(request);
+        var signedInUser = await users.ResolveAsync(request, request.HttpContext.RequestAborted);
         if (signedInUser is null) return new UnauthorizedResult();
         var command = new ApproveSiteReport(siteReportId);
         if (!authorisation.Allows(signedInUser, command)) return new ForbidResult();

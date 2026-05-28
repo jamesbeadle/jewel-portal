@@ -32,7 +32,7 @@ public sealed class ReviseRateEndpoint
         [HttpTrigger(AuthorizationLevel.Anonymous, "put", Route = "rates/{rateId}")] HttpRequest request,
         string rateId)
     {
-        var signedInUser = users.Resolve(request);
+        var signedInUser = await users.ResolveAsync(request, request.HttpContext.RequestAborted);
         if (signedInUser is null) return new UnauthorizedResult();
 
         var command = await request.ReadFromJsonAsync<ReviseRate>();

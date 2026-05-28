@@ -8,5 +8,5 @@ public sealed class AddSubcontractorToDirectoryAuthorisation
     private static readonly RoleSet RolesThatMayAddSubcontractors =
         RoleSet.Of(JpmsRoles.Director, JpmsRoles.OfficeComplianceCoordinator);
 
-    public bool Allows(SignedInUser user, AddSubcontractorToDirectory command) => RolesThatMayAddSubcontractors.Includes(user.Role);
+    public bool Allows(SignedInUser user, AddSubcontractorToDirectory command) => RolesThatMayAddSubcontractors.IncludesAny(user.Roles);
 }

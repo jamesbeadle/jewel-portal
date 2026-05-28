@@ -32,7 +32,7 @@ public sealed class RecordBidDecisionEndpoint
         [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "leads/{leadId}/bid-decision")] HttpRequest request,
         string leadId)
     {
-        var signedInUser = users.Resolve(request);
+        var signedInUser = await users.ResolveAsync(request, request.HttpContext.RequestAborted);
         if (signedInUser is null) return new UnauthorizedResult();
 
         var command = await request.ReadFromJsonAsync<RecordBidDecision>();

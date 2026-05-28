@@ -9,5 +9,5 @@ public sealed class CreateProjectShellAuthorisation
         RoleSet.Of(JpmsRoles.Director, JpmsRoles.ProjectManager);
 
     public bool Allows(SignedInUser user, CreateProjectShell command) =>
-        RolesThatMayCreateProjects.Includes(user.Role);
+        RolesThatMayCreateProjects.IncludesAny(user.Roles);
 }

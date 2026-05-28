@@ -32,7 +32,7 @@ public sealed class UpdateBoqLineEndpoint
         [HttpTrigger(AuthorizationLevel.Anonymous, "put", Route = "boq-lines/{boqLineItemId}")] HttpRequest request,
         string boqLineItemId)
     {
-        var signedInUser = users.Resolve(request);
+        var signedInUser = await users.ResolveAsync(request, request.HttpContext.RequestAborted);
         if (signedInUser is null) return new UnauthorizedResult();
 
         var command = await request.ReadFromJsonAsync<UpdateBoqLine>();

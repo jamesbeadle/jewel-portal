@@ -9,5 +9,5 @@ public sealed class BookSiteVisitAuthorisation
         RoleSet.Of(JpmsRoles.Director, JpmsRoles.ProjectManager, JpmsRoles.Estimator);
 
     public bool Allows(SignedInUser user, BookSiteVisit command) =>
-        RolesThatMayBookSiteVisits.Includes(user.Role);
+        RolesThatMayBookSiteVisits.IncludesAny(user.Roles);
 }

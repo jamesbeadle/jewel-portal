@@ -9,5 +9,5 @@ public sealed class RecordLeadQualificationScoreAuthorisation
         RoleSet.Of(JpmsRoles.Director, JpmsRoles.ProjectManager, JpmsRoles.Estimator);
 
     public bool Allows(SignedInUser user, RecordLeadQualificationScore command) =>
-        RolesThatMayQualifyLeads.Includes(user.Role);
+        RolesThatMayQualifyLeads.IncludesAny(user.Roles);
 }

@@ -20,7 +20,7 @@ public sealed class ReleaseRetentionEndpoint
     [Function(nameof(ReleaseRetention))]
     public async Task<IActionResult> Run([HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "projects/{projectId}/retention/release")] HttpRequest request, string projectId)
     {
-        var signedInUser = users.Resolve(request);
+        var signedInUser = await users.ResolveAsync(request, request.HttpContext.RequestAborted);
         if (signedInUser is null) return new UnauthorizedResult();
         var command = await request.ReadFromJsonAsync<ReleaseRetention>();
         if (command is null) return new BadRequestResult();

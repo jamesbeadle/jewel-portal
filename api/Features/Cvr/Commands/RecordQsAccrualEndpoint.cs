@@ -20,7 +20,7 @@ public sealed class RecordQsAccrualEndpoint
     [Function(nameof(RecordQsAccrual))]
     public async Task<IActionResult> Run([HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "projects/{projectId}/qs-accruals")] HttpRequest request, string projectId)
     {
-        var signedInUser = users.Resolve(request);
+        var signedInUser = await users.ResolveAsync(request, request.HttpContext.RequestAborted);
         if (signedInUser is null) return new UnauthorizedResult();
         var command = await request.ReadFromJsonAsync<RecordQsAccrual>();
         if (command is null) return new BadRequestResult();

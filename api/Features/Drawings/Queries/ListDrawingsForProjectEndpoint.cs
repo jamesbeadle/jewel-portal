@@ -26,7 +26,7 @@ public sealed class ListDrawingsForProjectEndpoint
         [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "projects/{projectId}/drawings")] HttpRequest request,
         string projectId)
     {
-        var signedInUser = users.Resolve(request);
+        var signedInUser = await users.ResolveAsync(request, request.HttpContext.RequestAborted);
         if (signedInUser is null) return new UnauthorizedResult();
 
         var drawings = await handler.HandleAsync(new ListDrawingsForProject(projectId), request.HttpContext.RequestAborted);

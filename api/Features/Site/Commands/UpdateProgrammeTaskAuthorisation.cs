@@ -7,5 +7,5 @@ public sealed class UpdateProgrammeTaskAuthorisation
 {
     private static readonly RoleSet RolesThatMayEditProgramme = RoleSet.Of(JpmsRoles.Director, JpmsRoles.ProjectManager, JpmsRoles.SiteManager);
 
-    public bool Allows(SignedInUser user, UpdateProgrammeTask command) => RolesThatMayEditProgramme.Includes(user.Role);
+    public bool Allows(SignedInUser user, UpdateProgrammeTask command) => RolesThatMayEditProgramme.IncludesAny(user.Roles);
 }

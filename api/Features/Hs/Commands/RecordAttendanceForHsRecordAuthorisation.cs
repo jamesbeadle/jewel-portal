@@ -8,5 +8,5 @@ public sealed class RecordAttendanceForHsRecordAuthorisation
     private static readonly RoleSet RolesThatMayRecordAttendance =
         RoleSet.Of(JpmsRoles.Director, JpmsRoles.ProjectManager, JpmsRoles.SiteManager, JpmsRoles.HealthAndSafetyLead);
 
-    public bool Allows(SignedInUser user, RecordAttendanceForHsRecord command) => RolesThatMayRecordAttendance.Includes(user.Role);
+    public bool Allows(SignedInUser user, RecordAttendanceForHsRecord command) => RolesThatMayRecordAttendance.IncludesAny(user.Roles);
 }

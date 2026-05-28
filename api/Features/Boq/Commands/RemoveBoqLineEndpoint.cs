@@ -32,7 +32,7 @@ public sealed class RemoveBoqLineEndpoint
         [HttpTrigger(AuthorizationLevel.Anonymous, "delete", Route = "boq-lines/{boqLineItemId}")] HttpRequest request,
         string boqLineItemId)
     {
-        var signedInUser = users.Resolve(request);
+        var signedInUser = await users.ResolveAsync(request, request.HttpContext.RequestAborted);
         if (signedInUser is null) return new UnauthorizedResult();
 
         var command = new RemoveBoqLine(boqLineItemId);

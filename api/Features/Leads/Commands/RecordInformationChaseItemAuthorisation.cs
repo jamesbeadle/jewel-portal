@@ -9,5 +9,5 @@ public sealed class RecordInformationChaseItemAuthorisation
         RoleSet.Of(JpmsRoles.Director, JpmsRoles.ProjectManager, JpmsRoles.Estimator);
 
     public bool Allows(SignedInUser user, RecordInformationChaseItem command) =>
-        RolesThatMayChaseInformation.Includes(user.Role);
+        RolesThatMayChaseInformation.IncludesAny(user.Roles);
 }

@@ -1,30 +1,32 @@
+using Jewel.JPMS.Models;
+
 namespace Jewel.JPMS.Api.Gates;
 
 public sealed class RoleSet
 {
-    private readonly HashSet<string> allowedRoles;
+    private readonly HashSet<Role> allowedRoles;
 
-    public RoleSet(params string[] allowedRoles)
+    public RoleSet(params Role[] allowedRoles)
     {
-        this.allowedRoles = new HashSet<string>(allowedRoles, StringComparer.OrdinalIgnoreCase);
+        this.allowedRoles = new HashSet<Role>(allowedRoles);
     }
 
-    public bool Includes(string role) => allowedRoles.Contains(role);
+    public bool IncludesAny(IEnumerable<Role> roles) => roles.Any(allowedRoles.Contains);
 
-    public static RoleSet Of(params string[] allowedRoles) => new(allowedRoles);
+    public static RoleSet Of(params Role[] allowedRoles) => new(allowedRoles);
 }
 
 public static class JpmsRoles
 {
-    public const string Director = "P01";
-    public const string FinanceDirector = "P02";
-    public const string ProjectManager = "P03";
-    public const string Estimator = "P04";
-    public const string SiteManager = "P05";
-    public const string HealthAndSafetyLead = "P06";
-    public const string OfficeComplianceCoordinator = "P07";
-    public const string Architect = "P08";
-    public const string Client = "P09";
-    public const string Subcontractor = "P10";
-    public const string Foreman = "P11";
+    public const Role Director = Role.ManagingDirector;
+    public const Role FinanceDirector = Role.FinanceDirector;
+    public const Role ProjectManager = Role.ProjectManager;
+    public const Role Estimator = Role.QuantitySurveyor;
+    public const Role SiteManager = Role.SiteManager;
+    public const Role HealthAndSafetyLead = Role.HealthSafetyOfficer;
+    public const Role OfficeComplianceCoordinator = Role.OfficeComplianceCoordinator;
+    public const Role Architect = Role.Architect;
+    public const Role Client = Role.Client;
+    public const Role Subcontractor = Role.Subcontractor;
+    public const Role Foreman = Role.Foreman;
 }

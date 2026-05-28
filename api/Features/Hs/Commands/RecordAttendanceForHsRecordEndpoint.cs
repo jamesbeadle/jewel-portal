@@ -21,7 +21,7 @@ public sealed class RecordAttendanceForHsRecordEndpoint
     [Function(nameof(RecordAttendanceForHsRecord))]
     public async Task<IActionResult> Run([HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "hs-records/{hsRecordId}/attendance")] HttpRequest request, string hsRecordId)
     {
-        var signedInUser = users.Resolve(request);
+        var signedInUser = await users.ResolveAsync(request, request.HttpContext.RequestAborted);
         if (signedInUser is null) return new UnauthorizedResult();
         var command = await request.ReadFromJsonAsync<RecordAttendanceForHsRecord>();
         if (command is null) return new BadRequestResult();

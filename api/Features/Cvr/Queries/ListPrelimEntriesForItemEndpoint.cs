@@ -17,7 +17,7 @@ public sealed class ListPrelimEntriesForItemEndpoint
     [Function(nameof(ListPrelimEntriesForItem))]
     public async Task<IActionResult> Run([HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "prelims/{prelimItemId}/entries")] HttpRequest request, string prelimItemId)
     {
-        if (users.Resolve(request) is null) return new UnauthorizedResult();
+        if (await users.ResolveAsync(request, request.HttpContext.RequestAborted) is null) return new UnauthorizedResult();
         return new OkObjectResult(await handler.HandleAsync(new ListPrelimEntriesForItem(prelimItemId), request.HttpContext.RequestAborted));
     }
 }

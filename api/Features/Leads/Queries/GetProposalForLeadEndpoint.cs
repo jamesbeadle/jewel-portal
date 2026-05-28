@@ -26,7 +26,7 @@ public sealed class GetProposalForLeadEndpoint
         [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "leads/{leadId}/proposal")] HttpRequest request,
         string leadId)
     {
-        var signedInUser = users.Resolve(request);
+        var signedInUser = await users.ResolveAsync(request, request.HttpContext.RequestAborted);
         if (signedInUser is null) return new UnauthorizedResult();
 
         var proposal = await handler.HandleAsync(new GetProposalForLead(leadId), request.HttpContext.RequestAborted);

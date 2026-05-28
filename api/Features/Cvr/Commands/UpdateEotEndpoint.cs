@@ -20,7 +20,7 @@ public sealed class UpdateEotEndpoint
     [Function(nameof(UpdateEot))]
     public async Task<IActionResult> Run([HttpTrigger(AuthorizationLevel.Anonymous, "put", Route = "eots/{eotId}")] HttpRequest request, string eotId)
     {
-        var signedInUser = users.Resolve(request);
+        var signedInUser = await users.ResolveAsync(request, request.HttpContext.RequestAborted);
         if (signedInUser is null) return new UnauthorizedResult();
         var command = await request.ReadFromJsonAsync<UpdateEot>();
         if (command is null) return new BadRequestResult();

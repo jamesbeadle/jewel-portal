@@ -8,5 +8,5 @@ public sealed class LogHsRecordAuthorisation
     private static readonly RoleSet RolesThatMayLogHsRecords =
         RoleSet.Of(JpmsRoles.Director, JpmsRoles.ProjectManager, JpmsRoles.SiteManager, JpmsRoles.HealthAndSafetyLead);
 
-    public bool Allows(SignedInUser user, LogHsRecord command) => RolesThatMayLogHsRecords.Includes(user.Role);
+    public bool Allows(SignedInUser user, LogHsRecord command) => RolesThatMayLogHsRecords.IncludesAny(user.Roles);
 }

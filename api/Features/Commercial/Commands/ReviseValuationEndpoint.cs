@@ -20,7 +20,7 @@ public sealed class ReviseValuationEndpoint
     [Function(nameof(ReviseValuation))]
     public async Task<IActionResult> Run([HttpTrigger(AuthorizationLevel.Anonymous, "put", Route = "valuations/{valuationId}")] HttpRequest request, string valuationId)
     {
-        var signedInUser = users.Resolve(request);
+        var signedInUser = await users.ResolveAsync(request, request.HttpContext.RequestAborted);
         if (signedInUser is null) return new UnauthorizedResult();
         var command = await request.ReadFromJsonAsync<ReviseValuation>();
         if (command is null) return new BadRequestResult();

@@ -26,7 +26,7 @@ public sealed class ListInformationChaseItemsForLeadEndpoint
         [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "leads/{leadId}/info-chase")] HttpRequest request,
         string leadId)
     {
-        var signedInUser = users.Resolve(request);
+        var signedInUser = await users.ResolveAsync(request, request.HttpContext.RequestAborted);
         if (signedInUser is null) return new UnauthorizedResult();
 
         var items = await handler.HandleAsync(new ListInformationChaseItemsForLead(leadId), request.HttpContext.RequestAborted);

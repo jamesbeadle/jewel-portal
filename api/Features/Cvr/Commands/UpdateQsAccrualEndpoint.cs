@@ -20,7 +20,7 @@ public sealed class UpdateQsAccrualEndpoint
     [Function(nameof(UpdateQsAccrual))]
     public async Task<IActionResult> Run([HttpTrigger(AuthorizationLevel.Anonymous, "put", Route = "qs-accruals/{qsAccrualId}")] HttpRequest request, string qsAccrualId)
     {
-        var signedInUser = users.Resolve(request);
+        var signedInUser = await users.ResolveAsync(request, request.HttpContext.RequestAborted);
         if (signedInUser is null) return new UnauthorizedResult();
         var command = await request.ReadFromJsonAsync<UpdateQsAccrual>();
         if (command is null) return new BadRequestResult();

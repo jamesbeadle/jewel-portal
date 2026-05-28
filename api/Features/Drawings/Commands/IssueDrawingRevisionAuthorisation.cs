@@ -9,5 +9,5 @@ public sealed class IssueDrawingRevisionAuthorisation
         RoleSet.Of(JpmsRoles.Director, JpmsRoles.ProjectManager, JpmsRoles.Architect);
 
     public bool Allows(SignedInUser user, IssueDrawingRevision command) =>
-        RolesThatMayIssueRevisions.Includes(user.Role);
+        RolesThatMayIssueRevisions.IncludesAny(user.Roles);
 }

@@ -26,7 +26,7 @@ public sealed class GetLeadOutcomeEndpoint
         [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "leads/{leadId}/outcome")] HttpRequest request,
         string leadId)
     {
-        var signedInUser = users.Resolve(request);
+        var signedInUser = await users.ResolveAsync(request, request.HttpContext.RequestAborted);
         if (signedInUser is null) return new UnauthorizedResult();
 
         var outcome = await handler.HandleAsync(new GetLeadOutcome(leadId), request.HttpContext.RequestAborted);

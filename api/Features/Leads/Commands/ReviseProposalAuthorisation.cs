@@ -9,5 +9,5 @@ public sealed class ReviseProposalAuthorisation
         RoleSet.Of(JpmsRoles.Director, JpmsRoles.ProjectManager, JpmsRoles.Estimator);
 
     public bool Allows(SignedInUser user, ReviseProposal command) =>
-        RolesThatMayReviseProposals.Includes(user.Role);
+        RolesThatMayReviseProposals.IncludesAny(user.Roles);
 }

@@ -26,7 +26,7 @@ public sealed class ListRevisionsForDrawingEndpoint
         [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "drawings/{drawingId}/revisions")] HttpRequest request,
         string drawingId)
     {
-        var signedInUser = users.Resolve(request);
+        var signedInUser = await users.ResolveAsync(request, request.HttpContext.RequestAborted);
         if (signedInUser is null) return new UnauthorizedResult();
 
         var revisions = await handler.HandleAsync(new ListRevisionsForDrawing(drawingId), request.HttpContext.RequestAborted);

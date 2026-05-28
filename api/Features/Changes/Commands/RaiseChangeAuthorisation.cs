@@ -7,5 +7,5 @@ public sealed class RaiseChangeAuthorisation
 {
     private static readonly RoleSet RolesThatMayRaiseChanges =
         RoleSet.Of(JpmsRoles.Director, JpmsRoles.ProjectManager, JpmsRoles.SiteManager, JpmsRoles.Architect, JpmsRoles.Subcontractor);
-    public bool Allows(SignedInUser user, RaiseChange command) => RolesThatMayRaiseChanges.Includes(user.Role);
+    public bool Allows(SignedInUser user, RaiseChange command) => RolesThatMayRaiseChanges.IncludesAny(user.Roles);
 }

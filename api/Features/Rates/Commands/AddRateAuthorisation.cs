@@ -8,5 +8,5 @@ public sealed class AddRateAuthorisation
     private static readonly RoleSet RolesThatMayEditRates =
         RoleSet.Of(JpmsRoles.Director, JpmsRoles.Estimator);
 
-    public bool Allows(SignedInUser user, AddRate command) => RolesThatMayEditRates.Includes(user.Role);
+    public bool Allows(SignedInUser user, AddRate command) => RolesThatMayEditRates.IncludesAny(user.Roles);
 }
