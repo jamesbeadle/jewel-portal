@@ -1,7 +1,8 @@
 @page "/portfolio/commercial"
+@using Jewel.JPMS.Features.Projects
 @inject AuthService Auth
 @inject SessionService Session
-@inject IProjectStore ProjectStore
+@inject ProjectListReadModel Projects
 @inject ICvrStore CvrStore
 @inject NavigationManager Nav
 
@@ -35,17 +36,18 @@ else
             <Stat Label="Portfolio margin"  Value="@($"{PortfolioMarginPercent:0.0}%")" />
         </div>
 
-        <PortfolioMarginTable Projects="ProjectStore.All()" />
+        <PortfolioMarginTable Projects="@(Projects.Current ?? Array.Empty<Project>())" />
     </section>
 }
 
 @code {
     private bool isLoaded;
 
+    private IReadOnlyList<Project> AllProjects => Projects.Current ?? Array.Empty<Project>();
     private decimal TenderTotal =>
-        ProjectStore.All().Sum(p => CvrStore.LatestSnapshot(p.ProjectId)?.TenderValue ?? 0);
+        AllProjects.Sum(p => CvrStore.LatestSnapshot(p.ProjectId)?.TenderValue ?? 0);
     private decimal MarginTotal =>
-        ProjectStore.All().Sum(p => CvrStore.LatestSnapshot(p.ProjectId)?.MarginPounds ?? 0);
+        AllProjects.Sum(p => CvrStore.LatestSnapshot(p.ProjectId)?.MarginPounds ?? 0);
     private decimal PortfolioMarginPercent =>
         TenderTotal == 0 ? 0 : (MarginTotal / TenderTotal) * 100m;
 
@@ -53,6 +55,7 @@ else
     {
         await Session.EnsureLoadedAsync();
         if (!Auth.IsSignedIn) { Nav.NavigateTo("/login", forceLoad: true); return; }
+        if (Projects.Current is null) await Projects.RefreshAsync(CancellationToken.None);
         isLoaded = true;
     }
 

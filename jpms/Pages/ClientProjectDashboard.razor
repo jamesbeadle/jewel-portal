@@ -1,6 +1,7 @@
 @page "/portal/client/project/{ProjectId}/dashboard"
 @layout PortalLayout
-@inject IProjectStore ProjectStore
+@using Jewel.JPMS.Features.Projects
+@inject ProjectListReadModel Projects
 @inject ISiteStore SiteStore
 @inject IChangeRegister ChangeRegister
 
@@ -46,5 +47,10 @@
         ChangeRegister.ForProject(ProjectId).Count(c => c.Status != ChangeStatus.Closed);
     private int ReportCount => SiteStore.ReportsFor(ProjectId).Count;
 
-    protected override void OnParametersSet() => project = ProjectStore.Find(ProjectId);
+    protected override async Task OnInitializedAsync()
+    {
+        if (Projects.Current is null) await Projects.RefreshAsync(CancellationToken.None);
+    }
+
+    protected override void OnParametersSet() => project = Projects.Find(ProjectId);
 }

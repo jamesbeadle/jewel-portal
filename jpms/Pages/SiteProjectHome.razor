@@ -1,6 +1,7 @@
 @page "/site/projects/{ProjectId}"
 @layout SiteLayout
-@inject IProjectStore ProjectStore
+@using Jewel.JPMS.Features.Projects
+@inject ProjectListReadModel Projects
 @inject NavigationManager Nav
 
 <PageTitle>Site · Project · JPMS</PageTitle>
@@ -30,5 +31,10 @@ else
 
     private Project? project;
 
-    protected override void OnParametersSet() => project = ProjectStore.Find(ProjectId);
+    protected override async Task OnInitializedAsync()
+    {
+        if (Projects.Current is null) await Projects.RefreshAsync(CancellationToken.None);
+    }
+
+    protected override void OnParametersSet() => project = Projects.Find(ProjectId);
 }

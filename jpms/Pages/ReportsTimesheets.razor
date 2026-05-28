@@ -1,8 +1,9 @@
 @page "/reports/timesheets"
 @inject AuthService Auth
 @inject SessionService Session
+@using Jewel.JPMS.Features.Projects
 @inject ICommercialStore CommercialStore
-@inject IProjectStore ProjectStore
+@inject ProjectListReadModel Projects
 @inject NavigationManager Nav
 
 <PageTitle>Timesheets report · JPMS</PageTitle>
@@ -43,7 +44,7 @@ else
     private bool isLoaded;
 
     private IReadOnlyList<Timesheet> ApprovedTimesheets =>
-        ProjectStore.All()
+        (Projects.Current ?? Array.Empty<Project>())
             .SelectMany(project => CommercialStore.TimesheetsFor(project.ProjectId))
             .Where(timesheet => timesheet.IsApproved)
             .OrderByDescending(timesheet => timesheet.WorkedOn)
@@ -61,7 +62,7 @@ else
             var headers = new[] { "TimesheetId", "ProjectReference", "Person", "WorkedOn", "Hours", "CostCode" };
             var rows = ApprovedTimesheets.Select(timesheet =>
             {
-                var project = ProjectStore.Find(timesheet.ProjectId);
+                var project = Projects.Find(timesheet.ProjectId);
                 return new object?[]
                 {
                     timesheet.TimesheetId, project?.Reference ?? timesheet.ProjectId,
@@ -76,6 +77,7 @@ else
     {
         await Session.EnsureLoadedAsync();
         if (!Auth.IsSignedIn) { Nav.NavigateTo("/login", forceLoad: true); return; }
+        if (Projects.Current is null) await Projects.RefreshAsync(CancellationToken.None);
         isLoaded = true;
     }
 }

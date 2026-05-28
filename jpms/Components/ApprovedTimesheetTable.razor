@@ -1,4 +1,5 @@
-@inject IProjectStore ProjectStore
+@using Jewel.JPMS.Features.Projects
+@inject ProjectListReadModel Projects
 
 <div class="rounded-xl border border-slate-200 bg-white overflow-hidden">
     <table class="w-full text-sm">
@@ -30,5 +31,5 @@
     [Parameter, EditorRequired] public IReadOnlyList<Timesheet> Timesheets { get; set; } = Array.Empty<Timesheet>();
 
     private string ProjectReference(string projectId) =>
-        ProjectStore.Find(projectId)?.Reference ?? projectId;
+        Projects.Find(projectId)?.Reference ?? projectId;
 }

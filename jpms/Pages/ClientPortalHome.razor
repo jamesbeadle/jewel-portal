@@ -1,7 +1,8 @@
 @page "/portal/client"
 @layout PortalLayout
+@using Jewel.JPMS.Features.Projects
 @inject PortalContext PortalContext
-@inject IProjectStore ProjectStore
+@inject ProjectListReadModel Projects
 @implements IDisposable
 
 <PageTitle>Client portal · JPMS</PageTitle>
@@ -35,8 +36,18 @@
     private Project? Project =>
         string.IsNullOrEmpty(PortalContext.ActingClientProjectId)
             ? null
-            : ProjectStore.Find(PortalContext.ActingClientProjectId);
+            : Projects.Find(PortalContext.ActingClientProjectId);
 
-    protected override void OnInitialized() => PortalContext.OnChange += StateHasChanged;
-    public void Dispose() => PortalContext.OnChange -= StateHasChanged;
+    protected override async Task OnInitializedAsync()
+    {
+        PortalContext.OnChange += StateHasChanged;
+        Projects.OnChanged += StateHasChanged;
+        if (Projects.Current is null) await Projects.RefreshAsync(CancellationToken.None);
+    }
+
+    public void Dispose()
+    {
+        PortalContext.OnChange -= StateHasChanged;
+        Projects.OnChanged -= StateHasChanged;
+    }
 }

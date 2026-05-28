@@ -1,7 +1,8 @@
 @page "/portfolio/alerts"
+@using Jewel.JPMS.Features.Projects
 @inject AuthService Auth
 @inject SessionService Session
-@inject IProjectStore ProjectStore
+@inject ProjectListReadModel Projects
 @inject IChangeRegister ChangeRegister
 @inject IHsRegister HsRegister
 @inject ICommercialStore CommercialStore
@@ -62,7 +63,7 @@ else
         get
         {
             var alerts = new List<AlertRow>();
-            foreach (var project in ProjectStore.All())
+            foreach (var project in Projects.Current ?? Array.Empty<Project>())
             {
                 var openRfis = ChangeRegister.ForProject(project.ProjectId, ChangeKind.Rfi).Count(c => c.Status != ChangeStatus.Closed);
                 if (openRfis >= 2) alerts.Add(new($"{project.Name} — {openRfis} open RFIs", "Long-standing RFIs delay programme."));
@@ -81,6 +82,7 @@ else
     {
         await Session.EnsureLoadedAsync();
         if (!Auth.IsSignedIn) { Nav.NavigateTo("/login", forceLoad: true); return; }
+        if (Projects.Current is null) await Projects.RefreshAsync(CancellationToken.None);
         isLoaded = true;
     }
 }

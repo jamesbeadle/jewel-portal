@@ -14,6 +14,10 @@ public sealed class ProjectListReadModel : IReadModelStore<IReadOnlyList<Project
 
     public event Action? OnChanged;
 
+    public Project? Find(string projectId) =>
+        Current?.FirstOrDefault(project =>
+            string.Equals(project.ProjectId, projectId, StringComparison.OrdinalIgnoreCase));
+
     public async Task RefreshAsync(CancellationToken cancellationToken)
     {
         Current = await queries.AskAsync(new ListProjectsVisibleToUser(), cancellationToken);

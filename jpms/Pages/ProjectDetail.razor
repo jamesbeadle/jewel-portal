@@ -1,7 +1,8 @@
 @page "/projects/{ProjectId}"
+@using Jewel.JPMS.Features.Projects
 @inject AuthService Auth
 @inject SessionService Session
-@inject IProjectStore ProjectStore
+@inject ProjectListReadModel Projects
 @inject NavigationManager Nav
 
 <PageTitle>@PageTitleText · JPMS</PageTitle>
@@ -25,12 +26,13 @@ else
     [Parameter] public string ProjectId { get; set; } = "";
 
     private bool isLoaded;
-    private string PageTitleText => ProjectStore.Find(ProjectId)?.Name ?? "Project";
+    private string PageTitleText => Projects.Find(ProjectId)?.Name ?? "Project";
 
     protected override async Task OnInitializedAsync()
     {
         await Session.EnsureLoadedAsync();
         if (!Auth.IsSignedIn) { Nav.NavigateTo("/login", forceLoad: true); return; }
+        if (Projects.Current is null) await Projects.RefreshAsync(CancellationToken.None);
         isLoaded = true;
     }
 }

@@ -1,8 +1,9 @@
 @page "/cashflow/director"
 @inject AuthService Auth
 @inject SessionService Session
+@using Jewel.JPMS.Features.Projects
 @inject ICommercialStore CommercialStore
-@inject IProjectStore ProjectStore
+@inject ProjectListReadModel Projects
 @inject NavigationManager Nav
 
 <PageTitle>Cashflow — Director · JPMS</PageTitle>
@@ -35,7 +36,7 @@ else
             <Stat Label="Net position"             Value="@Money(Snapshot.NetPosition13Week)" />
         </div>
 
-        <CashflowByProjectTable Projects="ProjectStore.All()" />
+        <CashflowByProjectTable Projects="@(Projects.Current ?? Array.Empty<Project>())" />
     </section>
 }
 
@@ -47,6 +48,7 @@ else
     {
         await Session.EnsureLoadedAsync();
         if (!Auth.IsSignedIn) { Nav.NavigateTo("/login", forceLoad: true); return; }
+        if (Projects.Current is null) await Projects.RefreshAsync(CancellationToken.None);
         isLoaded = true;
     }
 

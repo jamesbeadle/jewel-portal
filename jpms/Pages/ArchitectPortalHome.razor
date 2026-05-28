@@ -1,8 +1,9 @@
 @page "/portal/architect"
 @layout PortalLayout
+@using Jewel.JPMS.Features.Projects
 @inject PortalContext PortalContext
 @inject IChangeRegister ChangeRegister
-@inject IProjectStore ProjectStore
+@inject ProjectListReadModel Projects
 @implements IDisposable
 
 <PageTitle>Architect portal · JPMS</PageTitle>
@@ -38,13 +39,24 @@
 </section>
 
 @code {
+    private IReadOnlyList<Project> AllProjects => Projects.Current ?? Array.Empty<Project>();
     private int OpenRfis =>
-        ProjectStore.All().Sum(p => ChangeRegister.ForProject(p.ProjectId, ChangeKind.Rfi).Count(c => c.Status != ChangeStatus.Closed));
+        AllProjects.Sum(p => ChangeRegister.ForProject(p.ProjectId, ChangeKind.Rfi).Count(c => c.Status != ChangeStatus.Closed));
     private int OpenSubmittals =>
-        ProjectStore.All().Sum(p => ChangeRegister.ForProject(p.ProjectId, ChangeKind.Submittal).Count(c => c.Status != ChangeStatus.Closed));
+        AllProjects.Sum(p => ChangeRegister.ForProject(p.ProjectId, ChangeKind.Submittal).Count(c => c.Status != ChangeStatus.Closed));
     private int OpenVariations =>
-        ProjectStore.All().Sum(p => ChangeRegister.ForProject(p.ProjectId, ChangeKind.Variation).Count(c => c.Status != ChangeStatus.Closed));
+        AllProjects.Sum(p => ChangeRegister.ForProject(p.ProjectId, ChangeKind.Variation).Count(c => c.Status != ChangeStatus.Closed));
 
-    protected override void OnInitialized() => PortalContext.OnChange += StateHasChanged;
-    public void Dispose() => PortalContext.OnChange -= StateHasChanged;
+    protected override async Task OnInitializedAsync()
+    {
+        PortalContext.OnChange += StateHasChanged;
+        Projects.OnChanged += StateHasChanged;
+        if (Projects.Current is null) await Projects.RefreshAsync(CancellationToken.None);
+    }
+
+    public void Dispose()
+    {
+        PortalContext.OnChange -= StateHasChanged;
+        Projects.OnChanged -= StateHasChanged;
+    }
 }

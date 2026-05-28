@@ -1,4 +1,6 @@
-@inject IProjectStore ProjectStore
+@using Jewel.JPMS.Features.Projects
+@inject ProjectListReadModel Projects
+@implements IDisposable
 
 @if (Project is null)
 {
@@ -35,5 +37,13 @@ else
     [Parameter, EditorRequired] public string ActiveTab { get; set; } = "overview";
     [Parameter] public RenderFragment? ChildContent { get; set; }
 
-    private Project? Project => ProjectStore.Find(ProjectId);
+    private Project? Project => Projects.Find(ProjectId);
+
+    protected override async Task OnInitializedAsync()
+    {
+        Projects.OnChanged += StateHasChanged;
+        if (Projects.Current is null) await Projects.RefreshAsync(CancellationToken.None);
+    }
+
+    public void Dispose() => Projects.OnChanged -= StateHasChanged;
 }

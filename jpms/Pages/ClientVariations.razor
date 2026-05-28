@@ -1,6 +1,7 @@
 @page "/portal/client/project/{ProjectId}/variations"
 @layout PortalLayout
-@inject IProjectStore ProjectStore
+@using Jewel.JPMS.Features.Projects
+@inject ProjectListReadModel Projects
 @inject IChangeRegister ChangeRegister
 @implements IDisposable
 
@@ -47,7 +48,18 @@
                       .ToList()
                       .AsReadOnly();
 
-    protected override void OnInitialized() => ChangeRegister.OnChange += StateHasChanged;
-    protected override void OnParametersSet() => project = ProjectStore.Find(ProjectId);
-    public void Dispose() => ChangeRegister.OnChange -= StateHasChanged;
+    protected override async Task OnInitializedAsync()
+    {
+        ChangeRegister.OnChange += StateHasChanged;
+        Projects.OnChanged += StateHasChanged;
+        if (Projects.Current is null) await Projects.RefreshAsync(CancellationToken.None);
+    }
+
+    protected override void OnParametersSet() => project = Projects.Find(ProjectId);
+
+    public void Dispose()
+    {
+        ChangeRegister.OnChange -= StateHasChanged;
+        Projects.OnChanged -= StateHasChanged;
+    }
 }

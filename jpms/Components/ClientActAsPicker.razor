@@ -1,5 +1,7 @@
-@inject IProjectStore ProjectStore
+@using Jewel.JPMS.Features.Projects
+@inject ProjectListReadModel Projects
 @inject PortalContext PortalContext
+@implements IDisposable
 
 <section class="rounded-xl border border-slate-200 bg-white p-5 mb-5">
     <p class="text-xs uppercase tracking-wider text-slate-500 font-semibold mb-2">Demo mode</p>
@@ -10,7 +12,7 @@
     <div class="flex flex-wrap items-center gap-2">
         <select @bind="selectedId" class="rounded-lg border border-slate-300 px-3 py-2 text-sm">
             <option value="">— Select project —</option>
-            @foreach (var project in ProjectStore.All())
+            @foreach (var project in Projects.Current ?? Array.Empty<Project>())
             {
                 <option value="@project.ProjectId">@project.Name · @project.ClientName</option>
             }
@@ -26,8 +28,14 @@
 @code {
     private string selectedId = "";
 
-    protected override void OnInitialized() =>
+    protected override async Task OnInitializedAsync()
+    {
         selectedId = PortalContext.ActingClientProjectId ?? "";
+        Projects.OnChanged += StateHasChanged;
+        if (Projects.Current is null) await Projects.RefreshAsync(CancellationToken.None);
+    }
+
+    public void Dispose() => Projects.OnChanged -= StateHasChanged;
 
     private void Apply()
     {

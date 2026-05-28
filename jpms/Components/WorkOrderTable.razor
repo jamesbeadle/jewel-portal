@@ -1,5 +1,6 @@
+@using Jewel.JPMS.Features.Projects
 @inject ISubcontractorStore SubcontractorStore
-@inject IProjectStore ProjectStore
+@inject ProjectListReadModel Projects
 
 <div class="rounded-xl border border-slate-200 bg-white overflow-hidden">
     <table class="w-full text-sm">
@@ -41,7 +42,7 @@
         SubcontractorStore.Find(subcontractorId)?.CompanyName ?? subcontractorId;
 
     private string ProjectReference(string projectId) =>
-        ProjectStore.Find(projectId)?.Reference ?? projectId;
+        Projects.Find(projectId)?.Reference ?? projectId;
 
     private static string Money(decimal value) =>
         value.ToString("C0", System.Globalization.CultureInfo.GetCultureInfo("en-GB"));

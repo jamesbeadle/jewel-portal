@@ -1,7 +1,8 @@
 @page "/portfolio/project-health"
+@using Jewel.JPMS.Features.Projects
 @inject AuthService Auth
 @inject SessionService Session
-@inject IProjectStore ProjectStore
+@inject ProjectListReadModel Projects
 @inject IChangeRegister ChangeRegister
 @inject ICommercialStore CommercialStore
 @inject NavigationManager Nav
@@ -38,7 +39,7 @@ else
     private bool isLoaded;
 
     private IReadOnlyList<HealthRow> HealthRows =>
-        ProjectStore.All().Select(project => new HealthRow(
+        (Projects.Current ?? Array.Empty<Project>()).Select(project => new HealthRow(
             project.Reference, project.Name,
             ChangeRegister.ForProject(project.ProjectId, ChangeKind.Rfi).Count(c => c.Status != ChangeStatus.Closed),
             ChangeRegister.ForProject(project.ProjectId, ChangeKind.Variation).Count(c => c.Status is ChangeStatus.Open or ChangeStatus.AwaitingResponse),
@@ -49,6 +50,7 @@ else
     {
         await Session.EnsureLoadedAsync();
         if (!Auth.IsSignedIn) { Nav.NavigateTo("/login", forceLoad: true); return; }
+        if (Projects.Current is null) await Projects.RefreshAsync(CancellationToken.None);
         isLoaded = true;
     }
 }

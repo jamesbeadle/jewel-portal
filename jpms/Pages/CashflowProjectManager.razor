@@ -1,8 +1,9 @@
 @page "/cashflow/pm"
 @inject AuthService Auth
 @inject SessionService Session
+@using Jewel.JPMS.Features.Projects
 @inject ICommercialStore CommercialStore
-@inject IProjectStore ProjectStore
+@inject ProjectListReadModel Projects
 @inject NavigationManager Nav
 
 <PageTitle>Cashflow — PM · JPMS</PageTitle>
@@ -44,7 +45,7 @@ else
     private bool isLoaded;
 
     private IReadOnlyList<Project> MyProjects =>
-        ProjectStore.All()
+        (Projects.Current ?? Array.Empty<Project>())
             .Where(project => string.Equals(project.ProjectManagerEmail, Auth.CurrentUser?.Email, StringComparison.OrdinalIgnoreCase))
             .ToList()
             .AsReadOnly();
@@ -53,6 +54,7 @@ else
     {
         await Session.EnsureLoadedAsync();
         if (!Auth.IsSignedIn) { Nav.NavigateTo("/login", forceLoad: true); return; }
+        if (Projects.Current is null) await Projects.RefreshAsync(CancellationToken.None);
         isLoaded = true;
     }
 }

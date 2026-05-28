@@ -1,9 +1,11 @@
 @page "/portal/subcontractor/bids/{PackageId}"
 @layout PortalLayout
+@using Jewel.JPMS.Features.Projects
 @inject PortalContext PortalContext
 @inject IProcurementStore ProcurementStore
-@inject IProjectStore ProjectStore
+@inject ProjectListReadModel Projects
 @inject NavigationManager Nav
+@implements IDisposable
 
 <PageTitle>Bid package · JPMS</PageTitle>
 
@@ -21,7 +23,7 @@
     else
     {
         <header class="mb-6">
-            <p class="text-xs uppercase tracking-wider text-slate-500 font-medium mb-1">@(ProjectStore.Find(package.ProjectId)?.Name ?? package.ProjectId)</p>
+            <p class="text-xs uppercase tracking-wider text-slate-500 font-medium mb-1">@(Projects.Find(package.ProjectId)?.Name ?? package.ProjectId)</p>
             <h1 class="text-2xl md:text-3xl font-semibold text-slate-900">@package.Title</h1>
             <p class="text-sm text-slate-600 mt-1">Trade: @package.Trade</p>
         </header>
@@ -37,4 +39,12 @@
     private BidPackage? package;
 
     protected override void OnParametersSet() => package = ProcurementStore.FindPackage(PackageId);
+
+    protected override async Task OnInitializedAsync()
+    {
+        Projects.OnChanged += StateHasChanged;
+        if (Projects.Current is null) await Projects.RefreshAsync(CancellationToken.None);
+    }
+
+    public void Dispose() => Projects.OnChanged -= StateHasChanged;
 }

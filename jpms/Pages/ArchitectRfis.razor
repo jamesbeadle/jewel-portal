@@ -1,8 +1,9 @@
 @page "/portal/architect/rfis"
 @layout PortalLayout
+@using Jewel.JPMS.Features.Projects
 @inject PortalContext PortalContext
 @inject IChangeRegister ChangeRegister
-@inject IProjectStore ProjectStore
+@inject ProjectListReadModel Projects
 @implements IDisposable
 
 <PageTitle>RFIs · Architect portal</PageTitle>
@@ -36,13 +37,23 @@
 
 @code {
     private IReadOnlyList<(ChangeRecord Rfi, Project Project)> OpenRfis =>
-        ProjectStore.All()
+        (Projects.Current ?? Array.Empty<Project>())
             .SelectMany(project => ChangeRegister.ForProject(project.ProjectId, ChangeKind.Rfi)
                 .Where(rfi => rfi.Status != ChangeStatus.Closed)
                 .Select(rfi => (rfi, project)))
             .ToList()
             .AsReadOnly();
 
-    protected override void OnInitialized() => ChangeRegister.OnChange += StateHasChanged;
-    public void Dispose() => ChangeRegister.OnChange -= StateHasChanged;
+    protected override async Task OnInitializedAsync()
+    {
+        ChangeRegister.OnChange += StateHasChanged;
+        Projects.OnChanged += StateHasChanged;
+        if (Projects.Current is null) await Projects.RefreshAsync(CancellationToken.None);
+    }
+
+    public void Dispose()
+    {
+        ChangeRegister.OnChange -= StateHasChanged;
+        Projects.OnChanged -= StateHasChanged;
+    }
 }

@@ -1,9 +1,10 @@
 @page "/portal/subcontractor/bids"
 @layout PortalLayout
+@using Jewel.JPMS.Features.Projects
 @inject PortalContext PortalContext
 @inject ISubcontractorStore SubcontractorStore
 @inject IProcurementStore ProcurementStore
-@inject IProjectStore ProjectStore
+@inject ProjectListReadModel Projects
 @inject NavigationManager Nav
 @implements IDisposable
 
@@ -42,7 +43,7 @@
                             <div>
                                 <p class="text-sm font-medium text-slate-900">@package.Title</p>
                                 <p class="text-xs text-slate-500 mt-1">
-                                    @(ProjectStore.Find(package.ProjectId)?.Name ?? package.ProjectId) · @package.Trade
+                                    @(Projects.Find(package.ProjectId)?.Name ?? package.ProjectId) · @package.Trade
                                 </p>
                             </div>
                             <span class="text-[11px] font-medium text-slate-500">@package.Status</span>
@@ -65,7 +66,7 @@
         get
         {
             if (Subcontractor is null) return Array.Empty<BidPackage>();
-            return ProjectStore.All()
+            return (Projects.Current ?? Array.Empty<Project>())
                 .SelectMany(project => ProcurementStore.PackagesFor(project.ProjectId))
                 .Where(package => package.Status is BidPackageStatus.Inviting or BidPackageStatus.QuotesReceived)
                 .Where(package => string.Equals(package.Trade, Subcontractor.PrimaryTrade, StringComparison.OrdinalIgnoreCase))
@@ -74,6 +75,16 @@
         }
     }
 
-    protected override void OnInitialized() => PortalContext.OnChange += StateHasChanged;
-    public void Dispose() => PortalContext.OnChange -= StateHasChanged;
+    protected override async Task OnInitializedAsync()
+    {
+        PortalContext.OnChange += StateHasChanged;
+        Projects.OnChanged += StateHasChanged;
+        if (Projects.Current is null) await Projects.RefreshAsync(CancellationToken.None);
+    }
+
+    public void Dispose()
+    {
+        PortalContext.OnChange -= StateHasChanged;
+        Projects.OnChanged -= StateHasChanged;
+    }
 }

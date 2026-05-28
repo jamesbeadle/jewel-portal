@@ -47,7 +47,6 @@ builder.Services.AddChangesReadModels();
 builder.Services.AddScoped<IUserDirectory, AllowListUserDirectory>();
 builder.Services.AddScoped<IAccessRequestStore, InMemoryAccessRequestStore>();
 
-builder.Services.AddScoped<IProjectStore, HttpProjectStore>();
 builder.Services.AddScoped<ILeadStore, HttpLeadStore>();
 builder.Services.AddScoped<IRateLibrary, HttpRateLibrary>();
 builder.Services.AddScoped<IBoqStore, HttpBoqStore>();

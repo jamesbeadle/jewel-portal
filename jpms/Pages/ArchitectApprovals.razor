@@ -1,9 +1,10 @@
 @page "/portal/architect/submittals"
 @page "/portal/architect/variations"
 @layout PortalLayout
+@using Jewel.JPMS.Features.Projects
 @inject PortalContext PortalContext
 @inject IChangeRegister ChangeRegister
-@inject IProjectStore ProjectStore
+@inject ProjectListReadModel Projects
 @inject NavigationManager Nav
 @implements IDisposable
 
@@ -45,13 +46,23 @@
         : "Material and sample submittals pending approval before installation.";
 
     private IReadOnlyList<(ChangeRecord Record, Project Project)> Pending =>
-        ProjectStore.All()
+        (Projects.Current ?? Array.Empty<Project>())
             .SelectMany(project => ChangeRegister.ForProject(project.ProjectId, Kind)
                 .Where(record => record.Status is ChangeStatus.Open or ChangeStatus.AwaitingResponse)
                 .Select(record => (record, project)))
             .ToList()
             .AsReadOnly();
 
-    protected override void OnInitialized() => ChangeRegister.OnChange += StateHasChanged;
-    public void Dispose() => ChangeRegister.OnChange -= StateHasChanged;
+    protected override async Task OnInitializedAsync()
+    {
+        ChangeRegister.OnChange += StateHasChanged;
+        Projects.OnChanged += StateHasChanged;
+        if (Projects.Current is null) await Projects.RefreshAsync(CancellationToken.None);
+    }
+
+    public void Dispose()
+    {
+        ChangeRegister.OnChange -= StateHasChanged;
+        Projects.OnChanged -= StateHasChanged;
+    }
 }

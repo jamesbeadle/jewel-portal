@@ -1,8 +1,9 @@
 @page "/reports/valuations"
 @inject AuthService Auth
 @inject SessionService Session
+@using Jewel.JPMS.Features.Projects
 @inject ICommercialStore CommercialStore
-@inject IProjectStore ProjectStore
+@inject ProjectListReadModel Projects
 @inject NavigationManager Nav
 
 <PageTitle>Valuations report · JPMS</PageTitle>
@@ -43,7 +44,7 @@ else
     private bool isLoaded;
 
     private IReadOnlyList<Valuation> IssuedValuations =>
-        ProjectStore.All()
+        (Projects.Current ?? Array.Empty<Project>())
             .SelectMany(project => CommercialStore.ValuationsFor(project.ProjectId))
             .Where(valuation => valuation.IsIssued)
             .OrderByDescending(valuation => valuation.IssuedAt ?? DateTimeOffset.MinValue)
@@ -59,7 +60,7 @@ else
             var headers = new[] { "ValuationId", "ProjectReference", "ProjectName", "GrossValue", "RetentionPercent", "NetValue", "IssuedAt" };
             var rows = IssuedValuations.Select(valuation =>
             {
-                var project = ProjectStore.Find(valuation.ProjectId);
+                var project = Projects.Find(valuation.ProjectId);
                 return new object?[]
                 {
                     valuation.ValuationId, project?.Reference ?? valuation.ProjectId, project?.Name ?? "",
@@ -74,6 +75,7 @@ else
     {
         await Session.EnsureLoadedAsync();
         if (!Auth.IsSignedIn) { Nav.NavigateTo("/login", forceLoad: true); return; }
+        if (Projects.Current is null) await Projects.RefreshAsync(CancellationToken.None);
         isLoaded = true;
     }
 }

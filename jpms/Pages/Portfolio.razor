@@ -1,7 +1,8 @@
 @page "/portfolio"
+@using Jewel.JPMS.Features.Projects
 @inject AuthService Auth
 @inject SessionService Session
-@inject IProjectStore ProjectStore
+@inject ProjectListReadModel Projects
 @inject ICommercialStore CommercialStore
 @inject ICvrStore CvrStore
 @inject IHsRegister HsRegister
@@ -34,17 +35,18 @@ else
             <Stat Label="Cashflow net (13w)"     Value="@Money(CommercialStore.LatestCashflow().NetPosition13Week)" />
         </div>
 
-        <PortfolioMarginTable Projects="ProjectStore.All()" />
+        <PortfolioMarginTable Projects="@(Projects.Current ?? Array.Empty<Project>())" />
     </section>
 }
 
 @code {
     private bool isLoaded;
 
+    private IReadOnlyList<Project> AllProjects => Projects.Current ?? Array.Empty<Project>();
     private int ActiveProjects =>
-        ProjectStore.All().Count(p => p.Stage != ProjectStage.Completed);
+        AllProjects.Count(p => p.Stage != ProjectStage.Completed);
     private int OpenChanges =>
-        ProjectStore.All().Sum(p => ChangeRegister.ForProject(p.ProjectId).Count(c => c.Status != ChangeStatus.Closed));
+        AllProjects.Sum(p => ChangeRegister.ForProject(p.ProjectId).Count(c => c.Status != ChangeStatus.Closed));
     private int OpenHs =>
         HsRegister.All().Count(r => r.Status != HsStatus.Closed);
 
@@ -52,6 +54,7 @@ else
     {
         await Session.EnsureLoadedAsync();
         if (!Auth.IsSignedIn) { Nav.NavigateTo("/login", forceLoad: true); return; }
+        if (Projects.Current is null) await Projects.RefreshAsync(CancellationToken.None);
         isLoaded = true;
     }
 
