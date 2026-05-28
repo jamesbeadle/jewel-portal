@@ -32,7 +32,7 @@ var host = new HostBuilder()
             ?? throw new InvalidOperationException("SqlConnectionString application setting missing.");
 
         services.AddDbContext<JpmsContext>(options =>
-            options.UseSqlServer(connectionString));
+            options.UseSqlServer(connectionString, sqlServer => sqlServer.EnableRetryOnFailure()));
 
         services.AddScoped<SignedInUserResolver>();
         services.AddDirectoryFeature();
