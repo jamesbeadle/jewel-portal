@@ -1,21 +1,5 @@
 namespace Jewel.JPMS.Models;
 
-public enum Role
-{
-    Admin,
-    ManagingDirector,
-    FinanceDirector,
-    ProjectManager,
-    QuantitySurveyor,
-    SiteManager,
-    HealthSafetyOfficer,
-    OfficeComplianceCoordinator,
-    Architect,
-    Client,
-    Subcontractor,
-    Foreman
-}
-
 public static class RoleExtensions
 {
     public static string DisplayName(this Role role) => RolePresentations.For(role).DisplayName;
