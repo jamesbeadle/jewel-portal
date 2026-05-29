@@ -52,11 +52,11 @@
     }
 
     .field {
-        @apply w-full rounded-lg border border-line bg-surface-field px-3 py-2 text-sm text-content placeholder:text-content-faint focus:border-line-strong focus:outline-none;
+        @apply w-full rounded-md border border-line bg-surface-field px-3 py-2 text-sm text-content placeholder:text-content-faint focus:border-line-strong focus:outline-none;
     }
 
     .btn {
-        @apply inline-flex items-center justify-center gap-2 rounded-lg px-3.5 py-2 text-sm font-medium transition;
+        @apply inline-flex items-center justify-center gap-2 rounded-md px-3.5 py-2 text-sm font-medium transition;
     }
 
     .btn-primary {

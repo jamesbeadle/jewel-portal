@@ -14,7 +14,15 @@
 
     <div class="@ShellClass">
         <header class="sticky top-0 z-30 h-14 bg-canvas/80 backdrop-blur border-b border-line">
-            <div class="h-full px-4 flex items-center justify-end gap-3">
+            <div class="h-full px-4 flex items-center justify-between gap-3">
+                @if (CanSeeNavigation)
+                {
+                    <PageHeading />
+                }
+                else
+                {
+                    <span></span>
+                }
                 @if (Auth.IsSignedIn)
                 {
                     <RoleSwitcher />

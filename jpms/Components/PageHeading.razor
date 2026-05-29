@@ -1,0 +1,31 @@
+@inject NavigationManager Nav
+@inject SessionService Session
+@implements IDisposable
+
+<h1 class="text-xl font-semibold text-content truncate">@CurrentTitle</h1>
+
+@code {
+    protected override void OnInitialized() => Nav.LocationChanged += HandleLocationChanged;
+
+    private string CurrentTitle
+    {
+        get
+        {
+            var path = new Uri(Nav.Uri).AbsolutePath.TrimEnd('/');
+            if (path is "" or "/dashboard") return "Home";
+            if (Session.ActiveRole is null) return "";
+            return MatchedLabel(path) ?? "";
+        }
+    }
+
+    private string? MatchedLabel(string path) =>
+        NavigationCatalog.ItemsFor(Session.ActiveRole!.Value)
+            .Where(item => path == item.Href || path.StartsWith(item.Href + "/"))
+            .OrderByDescending(item => item.Href.Length)
+            .Select(item => item.Label)
+            .FirstOrDefault();
+
+    private void HandleLocationChanged(object? sender, EventArgs args) => StateHasChanged();
+
+    public void Dispose() => Nav.LocationChanged -= HandleLocationChanged;
+}

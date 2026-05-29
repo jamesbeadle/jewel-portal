@@ -8,8 +8,8 @@
     <div class="h-14 px-3 flex items-center justify-between border-b border-line">
         <a href="@HomeHref" @onclick="HandleNavigate" @onclick:preventDefault="false"
            class="flex items-center gap-2.5 font-semibold text-content overflow-hidden">
-            <JewelIcon Class="w-7 h-7 text-accent shrink-0" />
-            <span class="@LabelClass">JPMS</span>
+            <JewelIcon Class="w-9 h-9 text-content shrink-0" />
+            <span class="@LabelClass">Jewel</span>
         </a>
         <button type="button" @onclick="OnToggleExpand"
                 class="hidden md:inline-flex items-center justify-center w-8 h-8 rounded-md text-content-subtle hover:text-content hover:bg-surface-raised"
@@ -75,9 +75,9 @@
         var current = new Uri(Nav.Uri).AbsolutePath;
         var isActive = current == href || current.StartsWith(href + "/");
         var layout = IsExpanded ? "md:justify-start" : "";
-        var baseClass = $"flex items-center gap-3 justify-center {layout} px-3 py-2 rounded-lg text-sm font-medium transition";
-        if (isActive) return $"{baseClass} bg-accent text-accent-ink";
-        return $"{baseClass} text-content-muted hover:text-content hover:bg-surface-raised";
+        var baseClass = $"flex items-center gap-3 justify-center {layout} px-3 py-2 rounded-lg text-sm transition";
+        if (isActive) return $"{baseClass} text-content font-semibold";
+        return $"{baseClass} text-content-subtle font-medium hover:text-content hover:bg-surface-raised";
     }
 
     private Task HandleNavigate() => OnNavigate.InvokeAsync();
