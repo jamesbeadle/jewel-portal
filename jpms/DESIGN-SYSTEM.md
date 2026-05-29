@@ -84,7 +84,7 @@ grep -rnE "slate-|bg-white|text-white" Pages Components Layout
 
 **Phase 2 — shared components (~115 in `Components/`).** Convert the reused building blocks first: every `*Table`, `*Form`, `*Badge`, `*Panel`, `*Card`, the tab navs and `FormField`. Because pages compose these, most pages visually update for free. Route table-heavy components through `data-table` + `Panel` + `Pagination`.
 
-**Phase 3 — page wrappers (68 in `Pages/`).** Mostly the `max-w-* px-* py-*` section headers and loading states. Apply the conversion map; replace header eyebrows with `eyebrow` and figures with `MetricStat` where a page shows totals.
+**Phase 3 — page wrappers (68 in `Pages/`).** Mostly the `max-w-* px-* py-*` section headers and loading states. Standardise the page gutter: replace `max-w-* mx-auto px-4 py-8 md:py-12` (narrow, centred, over-padded) with `px-6 py-6 md:px-8` (near-full-width, modest gutter) to match the design. Apply the conversion map; replace header eyebrows with `eyebrow` and figures with `MetricStat` where a page shows totals.
 
 **Phase 4 — field app + portal + dialogs.** The `/site/*` mobile pages (their bodies are still light), external portal pages, and any inline modals → the `Modal` primitive and date-picker styling from the Figma.
 

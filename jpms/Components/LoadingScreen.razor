@@ -1,0 +1,11 @@
+<div class="fixed inset-0 z-50 flex flex-col items-center justify-center gap-5 bg-canvas">
+    <div class="relative w-16 h-16 grid place-items-center">
+        <div class="absolute inset-0 rounded-full border-2 border-surface-field border-t-content/70 animate-spin"></div>
+        <JewelIcon Class="w-6 h-6 animate-jewel-pulse" />
+    </div>
+    <p class="text-sm text-content-subtle">@Label</p>
+</div>
+
+@code {
+    [Parameter] public string Label { get; set; } = "Loading";
+}

@@ -17,6 +17,15 @@ module.exports = {
           'sans-serif'
         ]
       },
+      keyframes: {
+        'jewel-pulse': {
+          '0%, 100%': { color: '#FFFFFF' },
+          '50%': { color: '#9AA0A8' }
+        }
+      },
+      animation: {
+        'jewel-pulse': 'jewel-pulse 1.6s ease-in-out infinite'
+      },
       colors: {
         canvas: '#0B0B0C',
         surface: {

@@ -5,15 +5,15 @@
 
 <div class="h-full flex flex-col bg-surface">
 
-    <div class="h-14 px-3 flex items-center justify-between border-b border-line">
+    <div class="@HeaderLayout border-b border-line">
         <a href="@HomeHref" @onclick="HandleNavigate" @onclick:preventDefault="false"
-           class="flex items-center gap-2.5 font-semibold text-content overflow-hidden">
+           class="flex items-center gap-3 px-3 font-semibold text-content overflow-hidden">
             <JewelIcon Class="w-5 h-5 text-content shrink-0" />
             <span class="@LabelClass">Jewel</span>
         </a>
         <button type="button" @onclick="OnToggleExpand"
                 class="hidden md:inline-flex items-center justify-center w-8 h-8 rounded-md text-content-subtle hover:text-content hover:bg-surface-raised"
-                aria-label="Collapse navigation">
+                aria-label="Toggle navigation">
             <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                  stroke-linecap="round" stroke-linejoin="round">
                 <path d="@(IsExpanded ? "M15 6l-6 6 6 6" : "M9 6l6 6-6 6")" />
@@ -39,7 +39,7 @@
     @if (Auth.IsSignedIn)
     {
         <div class="border-t border-line px-3 py-3">
-            <div class="@(IsExpanded ? "block" : "hidden") mb-3">
+            <div class="@(IsExpanded ? "hidden md:block" : "hidden") mb-3">
                 <p class="eyebrow mb-1">Signed in as</p>
                 <p class="text-content text-sm font-medium truncate" title="@Auth.CurrentUser!.Email">@Auth.CurrentUser.DisplayName</p>
                 <p class="text-xs text-content-subtle truncate" title="@Auth.CurrentUser.Email">@Auth.CurrentUser.Email</p>
@@ -59,6 +59,10 @@
     [Parameter] public EventCallback OnToggleExpand { get; set; }
 
     private string LabelClass => IsExpanded ? "hidden md:inline truncate" : "hidden";
+
+    private string HeaderLayout => IsExpanded
+        ? "h-14 px-2 flex items-center justify-center md:justify-between"
+        : "px-2 py-3 flex flex-col items-center gap-2";
 
     private IReadOnlyList<NavigationItem> VisibleItems =>
         Session.ActiveRole is null
