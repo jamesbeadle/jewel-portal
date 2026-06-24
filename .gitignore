@@ -37,6 +37,7 @@ yarn-error.log*
 *.pem
 *.key
 infra/.azure-output.env
+infra/.azure-prod-output.env
 
 # Build artefacts
 publish/
