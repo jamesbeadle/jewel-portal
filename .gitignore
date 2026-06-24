@@ -39,6 +39,10 @@ yarn-error.log*
 infra/.azure-output.env
 infra/.azure-prod-output.env
 
+# Master-admin seed (contains the password hash + plaintext login, references prod secrets)
+api/Migrations/seed-master-admin.sql
+infra/seed-master-admin.sh
+
 # Build artefacts
 publish/
 jpms/wwwroot/css/app.built.css

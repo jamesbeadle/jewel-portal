@@ -4,6 +4,7 @@ using Jewel.JPMS.Api.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,10 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Jewel.JPMS.Api.Migrations
 {
     [DbContext(typeof(JpmsContext))]
-    partial class JpmsContextModelSnapshot : ModelSnapshot
+    [Migration("20260624120000_AddLocalAuth")]
+    partial class AddLocalAuth
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -32,6 +34,9 @@ namespace Jewel.JPMS.Api.Migrations
                         .IsRequired()
                         .HasMaxLength(256)
                         .HasColumnType("nvarchar(256)");
+
+                    b.Property<int>("Provider")
+                        .HasColumnType("int");
 
                     b.Property<DateTimeOffset>("RequestedAt")
                         .HasColumnType("datetimeoffset");
@@ -1086,34 +1091,6 @@ namespace Jewel.JPMS.Api.Migrations
                     b.ToTable("MobilisationItems");
                 });
 
-            modelBuilder.Entity("Jewel.JPMS.Api.Data.Entities.PasswordResetTokenEntity", b =>
-                {
-                    b.Property<string>("TokenHash")
-                        .HasMaxLength(128)
-                        .HasColumnType("nvarchar(128)");
-
-                    b.Property<DateTimeOffset?>("ConsumedAt")
-                        .HasColumnType("datetimeoffset");
-
-                    b.Property<DateTimeOffset>("CreatedAt")
-                        .HasColumnType("datetimeoffset");
-
-                    b.Property<string>("Email")
-                        .IsRequired()
-                        .HasMaxLength(256)
-                        .HasColumnType("nvarchar(256)");
-
-                    b.Property<DateTimeOffset>("ExpiresAt")
-                        .HasColumnType("datetimeoffset");
-
-                    b.Property<int>("Purpose")
-                        .HasColumnType("int");
-
-                    b.HasKey("TokenHash");
-
-                    b.ToTable("PasswordResetTokens");
-                });
-
             modelBuilder.Entity("Jewel.JPMS.Api.Data.Entities.PhotoEntity", b =>
                 {
                     b.Property<string>("PhotoId")
@@ -1745,61 +1722,6 @@ namespace Jewel.JPMS.Api.Migrations
                     b.ToTable("Timesheets");
                 });
 
-            modelBuilder.Entity("Jewel.JPMS.Api.Data.Entities.UserCredentialEntity", b =>
-                {
-                    b.Property<string>("Email")
-                        .HasMaxLength(256)
-                        .HasColumnType("nvarchar(256)");
-
-                    b.Property<DateTimeOffset>("CreatedAt")
-                        .HasColumnType("datetimeoffset");
-
-                    b.Property<int>("FailedAttempts")
-                        .HasColumnType("int");
-
-                    b.Property<DateTimeOffset?>("LockedUntil")
-                        .HasColumnType("datetimeoffset");
-
-                    b.Property<string>("PasswordHash")
-                        .HasMaxLength(512)
-                        .HasColumnType("nvarchar(512)");
-
-                    b.Property<DateTimeOffset?>("PasswordSetAt")
-                        .HasColumnType("datetimeoffset");
-
-                    b.Property<int>("Status")
-                        .HasColumnType("int");
-
-                    b.HasKey("Email");
-
-                    b.ToTable("UserCredentials");
-                });
-
-            modelBuilder.Entity("Jewel.JPMS.Api.Data.Entities.UserSessionEntity", b =>
-                {
-                    b.Property<string>("SessionId")
-                        .HasMaxLength(128)
-                        .HasColumnType("nvarchar(128)");
-
-                    b.Property<DateTimeOffset>("CreatedAt")
-                        .HasColumnType("datetimeoffset");
-
-                    b.Property<string>("Email")
-                        .IsRequired()
-                        .HasMaxLength(256)
-                        .HasColumnType("nvarchar(256)");
-
-                    b.Property<DateTimeOffset>("ExpiresAt")
-                        .HasColumnType("datetimeoffset");
-
-                    b.Property<DateTimeOffset?>("RevokedAt")
-                        .HasColumnType("datetimeoffset");
-
-                    b.HasKey("SessionId");
-
-                    b.ToTable("UserSessions");
-                });
-
             modelBuilder.Entity("Jewel.JPMS.Api.Data.Entities.ValuationEntity", b =>
                 {
                     b.Property<string>("ValuationId")
@@ -1947,6 +1869,88 @@ namespace Jewel.JPMS.Api.Migrations
                     b.HasKey("WorkOrderId");
 
                     b.ToTable("WorkOrders");
+                });
+            modelBuilder.Entity("Jewel.JPMS.Api.Data.Entities.UserCredentialEntity", b =>
+                {
+                    b.Property<string>("Email")
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<int>("FailedAttempts")
+                        .HasColumnType("int");
+
+                    b.Property<DateTimeOffset?>("LockedUntil")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("PasswordHash")
+                        .HasMaxLength(512)
+                        .HasColumnType("nvarchar(512)");
+
+                    b.Property<DateTimeOffset?>("PasswordSetAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.HasKey("Email");
+
+                    b.ToTable("UserCredentials");
+                });
+
+            modelBuilder.Entity("Jewel.JPMS.Api.Data.Entities.PasswordResetTokenEntity", b =>
+                {
+                    b.Property<string>("TokenHash")
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.Property<DateTimeOffset?>("ConsumedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<DateTimeOffset>("ExpiresAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<int>("Purpose")
+                        .HasColumnType("int");
+
+                    b.HasKey("TokenHash");
+
+                    b.ToTable("PasswordResetTokens");
+                });
+
+            modelBuilder.Entity("Jewel.JPMS.Api.Data.Entities.UserSessionEntity", b =>
+                {
+                    b.Property<string>("SessionId")
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<DateTimeOffset>("ExpiresAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<DateTimeOffset?>("RevokedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.HasKey("SessionId");
+
+                    b.ToTable("UserSessions");
                 });
 #pragma warning restore 612, 618
         }

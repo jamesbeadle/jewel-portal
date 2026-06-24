@@ -8,6 +8,5 @@ internal static class AccessRequestEntityMapping
     public static AccessRequest ToModel(this AccessRequestEntity entity) => new(
         Email: entity.Email,
         DisplayName: entity.DisplayName,
-        Provider: (AuthProvider)entity.Provider,
         RequestedAt: entity.RequestedAt);
 }

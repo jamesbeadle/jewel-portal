@@ -28,7 +28,7 @@ public sealed class HttpAccessRequestStore : IAccessRequestStore
     public AccessRequest Submit(AuthenticatedUser user)
     {
         _ = SubmitAsync(user);
-        return new AccessRequest(user.Email, user.DisplayName, user.Provider, DateTimeOffset.UtcNow);
+        return new AccessRequest(user.Email, user.DisplayName, DateTimeOffset.UtcNow);
     }
 
     public bool Remove(string email)
@@ -39,7 +39,7 @@ public sealed class HttpAccessRequestStore : IAccessRequestStore
 
     private async Task SubmitAsync(AuthenticatedUser user)
     {
-        await commands.SendAsync(new SubmitAccessRequest(user.Email, user.DisplayName, user.Provider), CancellationToken.None);
+        await commands.SendAsync(new SubmitAccessRequest(user.Email, user.DisplayName), CancellationToken.None);
         await readModel.RefreshAsync(CancellationToken.None);
     }
 

@@ -108,15 +108,15 @@ Full entity model: [`/docs/05-data-model/entities.md`](docs/05-data-model/entiti
 
 1. **Story walkthroughs.** Each role-owner walks the stories for the workflows they own and moves them from Drafted → In Review → Confirmed. Confirmed stories are the contract for what the screen has to deliver.
 2. **UI scoping.** Each Confirmed story produces the screens needed to deliver it.
-3. **Build.** The JPMS production application in [`/jpms`](jpms/) is built screen-by-screen against the user stories. OAuth sign-in and the approved-user gate are already in place; data layer and per-workflow screens follow.
+3. **Build.** The JPMS production application in [`/jpms`](jpms/) is built screen-by-screen against the user stories. Email/password sign-in and the approved-user gate are already in place; data layer and per-workflow screens follow.
 
 ---
 
 ## 6. Technical summary
 
 - **Front-end:** Blazor WebAssembly · .NET 8 LTS · Tailwind.
-- **Back-end (next):** ASP.NET Core Web API · Azure SQL · Microsoft Graph integrations where needed.
-- **Auth:** OAuth — Google, Microsoft, or email/password. Users are invited by an admin or Project Manager; on first access they pick a sign-in method. The JPMS account is identified by email, so a user who first signs in with Google for `alice@example.com` can equally use the email/password path against the same address later.
+- **Back-end:** Azure Functions (.NET 8 isolated) · Azure SQL.
+- **Auth:** Database-backed email/password. Admins invite a user by email; the invitee receives a single-use link to set their password, then signs in with email + password. Sessions are HTTP-only secure cookies; passwords are stored as PBKDF2-SHA256 hashes.
 - **Hosting:** Azure Static Web Apps initially; Azure App Service once the API lands.
 - **PWA:** installable on desktop and mobile.
 

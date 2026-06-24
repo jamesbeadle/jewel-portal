@@ -1,6 +1,6 @@
 # JPMS — Jewel Project Management System (Blazor WebAssembly PWA)
 
-The production web app for Jewel Enterprises and its clients. Blazor WebAssembly + Tailwind, hosted on Azure Static Web Apps with Microsoft Entra ID authentication and Azure SQL Serverless for persistence.
+The production web app for Jewel Enterprises and its clients. Blazor WebAssembly + Tailwind, hosted on Azure Static Web Apps with database-backed email/password authentication and Azure SQL Serverless for persistence.
 
 ## Stack
 
@@ -8,8 +8,8 @@ The production web app for Jewel Enterprises and its clients. Blazor WebAssembly
 |---|---|---|
 | Front-end | Blazor WebAssembly · .NET 8 LTS · PWA | Azure Static Web Apps (Free tier, West Europe) |
 | Styling | Tailwind v3 CLI build | compiled at `dotnet publish` time |
-| Authentication | Microsoft Entra ID via SWA managed auth (`/.auth/login/aad`) | Static Web Apps |
-| Database (next) | Azure SQL Database GP_S_Gen5 Serverless, Free-Limit if available | UK South |
+| Authentication | Database-backed email/password (sessions + invite tokens) via the `api` Functions app | Static Web Apps managed Functions |
+| Database | Azure SQL Database GP_S_Gen5 Serverless, Free-Limit if available | UK South |
 
 ## What's built today
 
@@ -19,7 +19,7 @@ The whole site map's Phase-1 internal scope is shipped as a navigable shell with
 
 | Route | Workflow | What it does |
 |---|---|---|
-| `/` | — | Microsoft sign-in landing |
+| `/` | — | Email/password sign-in landing |
 | `/dashboard` | — | Role-aware home (Admin / placeholder / request-access) |
 | `/leads` + `/leads/{id}/{tab}` | 00 CRM | Lead pipeline with seven tabs (overview / qualification / site-visits / info-chase / bid-decision / proposal / outcome) |
 | `/leads/new` | 00 CRM | Capture-lead form |
@@ -46,12 +46,11 @@ The whole site map's Phase-1 internal scope is shipped as a navigable shell with
 
 | Route | Page | Behaviour |
 |---|---|---|
-| `/login` | (config) | Redirects to `/.auth/login/aad?post_login_redirect_uri=/dashboard` |
-| `/logout` | (config) | Redirects to `/.auth/logout?post_logout_redirect_uri=/` |
+| `/` · `/login` | `Login.razor` | Email + password form; posts to `/api/auth/login`, then navigates to `/dashboard` |
+| `/set-password` | `SetPassword.razor` | Validates an invite token (`/api/auth/invite/{token}`) and sets the password via `/api/auth/set-password` |
+| `/logout` | `Logout.razor` | Calls `/api/auth/logout`, clears the session, redirects to `/` |
 
-The dashboard resolves to one of three states based on `EffectiveRoles.For(email, directoryEntry)`:
-
-The dashboard resolves to one of three states:
+Admins invite users from the directory panel; the invitee receives a single-use link to `/set-password?token=…`. The dashboard resolves to one of three states:
 
 | State | When | Renders |
 |---|---|---|
@@ -62,19 +61,21 @@ The dashboard resolves to one of three states:
 ## Authentication flow
 
 ```
-/ ──► Continue with Microsoft ──► /login (redirect) ──► /.auth/login/aad ──► Entra ID
-                                                                                │
-/dashboard ◄── set auth cookies ◄── /.auth/login/aad/callback ◄─────────────────┘
+/ ──► email + password ──► POST /api/auth/login ──► verify hash + open session
+                                                          │
+/dashboard ◄── session cookie set ◄───────────────────────┘
        │
-       ├─ fetch /.auth/me
-       ├─ AuthService.CurrentUser = email + provider
-       ├─ UserDirectory.Find(email)
+       ├─ GET /api/auth/me  (email + display name + roles, resolved server-side)
+       ├─ AuthService.CurrentUser = email + roles
        │     ├─ Admin    ──► AdminHome
        │     ├─ Other    ──► RoleHome
        │     └─ Missing  ──► RequestAccessView
+
+Invite:  admin invites email ──► POST /api/auth/invite ──► single-use link
+         ──► /set-password?token=… ──► POST /api/auth/set-password
 ```
 
-When the user clicks **Sign out**, the app navigates to `/logout`, which the SWA configuration rewrites to `/.auth/logout?post_logout_redirect_uri=/`.
+Sessions are HTTP-only secure cookies; passwords are stored as PBKDF2-SHA256 hashes and invite tokens only as their SHA-256 hashes. When the user clicks **Sign out**, the app navigates to `/logout`, which calls `/api/auth/logout`.
 
 ## Run locally on macOS
 
@@ -86,11 +87,11 @@ dotnet restore
 dotnet run
 ```
 
-Open the URL printed in the console. Locally there is no SWA emulator and no real `/.auth/me` endpoint, so the AuthService returns `null` and the dashboard redirects to `/login` (which 404s locally). To exercise the full sign-in flow, install the SWA CLI:
+Open the URL printed in the console. The auth endpoints live in the `api` Functions app; to exercise the full sign-in flow locally, run the API alongside the front-end (e.g. with the SWA CLI):
 
 ```bash
 npm install -g @azure/static-web-apps-cli
-swa start http://localhost:5000 --run "dotnet run --project jpms"
+swa start http://localhost:5000 --run "dotnet run --project jpms" --api-location api
 ```
 
 Hot reload:
@@ -131,7 +132,7 @@ jpms/
 ├── Program.cs                     App entry point — registers HttpClient + RBAC services
 ├── App.razor                      Top-level router
 ├── _Imports.razor                 Razor using directives
-├── staticwebapp.config.json       SWA routes + AAD identity provider
+├── staticwebapp.config.json       SWA platform + navigation fallback config
 ├── package.json                   Tailwind CSS toolchain
 ├── tailwind.config.js             Tailwind theme + content paths
 ├── Styles/
@@ -142,7 +143,9 @@ jpms/
 │   ├── PortalLayout.razor         External portal shell (subcontractor/architect/client)
 │   └── SiteLayout.razor           Mobile site-PWA shell
 ├── Pages/
-│   ├── Login.razor                Landing page — Microsoft sign-in
+│   ├── Login.razor                Landing page — email/password sign-in
+│   ├── SetPassword.razor          Invite-token password setup (/set-password)
+│   ├── Logout.razor               Ends the session and redirects to /
 │   ├── Dashboard.razor            Role router
 │   ├── Projects.razor             /projects — portfolio list
 │   └── ProjectDetail.razor        /projects/{id} — project detail hub
@@ -160,25 +163,25 @@ jpms/
 │   ├── ProjectDetailView.razor    Project detail page body
 │   ├── ProjectStageBadge.razor    Coloured project stage chip
 │   ├── RoleSwitcher.razor         Header role dropdown for multi-role users
-│   ├── ProviderButton.razor       OAuth provider sign-in button
+│   ├── InviteUserForm.razor       Admin invite form (email + display name + roles)
 │   ├── RequestAccessView.razor    For signed-in users not yet on the directory
 │   ├── RoleBadge.razor            Small coloured role chip
 │   ├── Stat.razor                 Small labelled stat card
 │   └── Icons/
-│       ├── MicrosoftLogoIcon.razor
-│       └── GoogleLogoIcon.razor
+│       ├── JewelIcon.razor
+│       └── NavIcon.razor
 ├── Models/
 │   ├── Role.cs                    Role enum + display / RBAC helpers
 │   ├── User.cs                    AuthProvider, AuthenticatedUser, DirectoryUser records
 │   ├── AccessRequest.cs           Pending-request record
-│   ├── ClientPrincipal.cs         Shape of /.auth/me response
 │   ├── JpmsAdministrators.cs      Hardcoded admin email allowlist
 │   ├── Project.cs                 Project record
 │   ├── ProjectStage.cs            Project lifecycle stage enum + display
 │   └── Organisation.cs            Jewel entity enum (JBB / JPS / JPF)
 ├── Services/
-│   ├── AuthService.cs             Fetches /.auth/me, exposes CurrentUser
-│   ├── SessionService.cs          Holds active role + computed effective roles
+│   ├── AuthService.cs             Calls /api/auth/* (login, me, logout, set-password, invite); exposes CurrentUser + roles
+│   ├── UserInviteService.cs       Admin-side invite call (POST /api/auth/invite)
+│   ├── SessionService.cs          Holds active role for the signed-in user
 │   ├── EffectiveRoles.cs          Merges hardcoded admin + directory roles
 │   ├── IUserDirectory.cs          Directory contract
 │   ├── AllowListUserDirectory.cs  In-memory directory (mutable for the session)
@@ -187,7 +190,7 @@ jpms/
 │   ├── IProjectStore.cs           Project store contract
 │   └── InMemoryProjectStore.cs    Seeded in-memory project store
 └── wwwroot/                       Everything served to the browser
-    └── staticwebapp.config.json   SWA routes + AAD identity provider
+    └── staticwebapp.config.json   SWA platform + navigation fallback config
 ```
 
 ## Code style
@@ -205,9 +208,7 @@ When adding new code, run mentally through CLAUDE.md's pre-commit checklist befo
 ## What lands next
 
 1. **Azure SQL persistence.** Replace `AllowListUserDirectory` and `InMemoryAccessRequestStore` with implementations that call a new API (running on Static Web Apps managed Functions).
-2. **Invite-by-email.** Admin can pre-approve a user; the SWA AAD role assignment then surfaces them as a `DirectoryUser` on first sign-in.
-3. **Google + email/password.** Add the Google identity provider to `staticwebapp.config.json`; the UI already renders a Google logo button.
-4. **First domain screen.** The Programme Valuation Report is the highest-value module — that's the first screen wired to real entities.
+2. **First domain screen.** The Programme Valuation Report is the highest-value module — that's the first screen wired to real entities.
 
 Source of truth for what to build next is the user-story register in `/docs/03-workflows/`.
 
@@ -217,6 +218,5 @@ Source of truth for what to build next is the user-story register in `/docs/03-w
 |---|---|---|
 | Static Web App (Free tier) | £0 | £0 up to 250GB/month bandwidth |
 | Azure SQL Serverless (with Free-Limit) | £0 (paused) | £0 up to 100k vCore-sec + 32GB/month |
-| Entra ID app registration | £0 | £0 |
 
 If the Free-Limit flag isn't accepted on the subscription, the SQL falls back to standard Serverless: ~£3-5/month idle (storage only), pennies per active hour.

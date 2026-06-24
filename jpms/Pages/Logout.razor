@@ -1,0 +1,20 @@
+@page "/logout"
+@layout LandingLayout
+@inject AuthService Auth
+@inject SessionService Session
+@inject NavigationManager Nav
+
+<PageTitle>Signing out · JPMS</PageTitle>
+
+<div class="min-h-dvh flex items-center justify-center">
+    <p class="text-content-muted text-sm">Signing you out…</p>
+</div>
+
+@code {
+    protected override async Task OnInitializedAsync()
+    {
+        await Auth.LogoutAsync();
+        Session.Clear();
+        Nav.NavigateTo("/", replace: true);
+    }
+}

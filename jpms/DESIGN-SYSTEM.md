@@ -80,7 +80,7 @@ grep -rnE "slate-|bg-white|text-white" Pages Components Layout
 
 ## 5. Phased rollout
 
-**Phase 1 — foundation (done).** Tokens, Poppins, jewel icon + favicon, reusable classes and primitives, app shell (the three layouts + the collapsible icon-rail side nav), and reference conversions: `Dashboard`/`RoleHome`, `ProjectsTable`, `Projects`, `WhatsNextPanel`, `RoleSwitcher`, `Login`, `ProviderButton`.
+**Phase 1 — foundation (done).** Tokens, Poppins, jewel icon + favicon, reusable classes and primitives, app shell (the three layouts + the collapsible icon-rail side nav), and reference conversions: `Dashboard`/`RoleHome`, `ProjectsTable`, `Projects`, `WhatsNextPanel`, `RoleSwitcher`, `Login`.
 
 **Phase 2 — shared components (~115 in `Components/`).** Convert the reused building blocks first: every `*Table`, `*Form`, `*Badge`, `*Panel`, `*Card`, the tab navs and `FormField`. Because pages compose these, most pages visually update for free. Route table-heavy components through `data-table` + `Panel` + `Pagination`.
 

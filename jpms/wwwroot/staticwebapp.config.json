@@ -12,25 +12,5 @@
     ".blat": "application/octet-stream",
     ".wasm": "application/wasm",
     ".webmanifest": "application/manifest+json"
-  },
-  "routes": [
-    {
-      "route": "/login",
-      "redirect": "/.auth/login/aad?post_login_redirect_uri=/dashboard"
-    },
-    {
-      "route": "/logout",
-      "redirect": "/.auth/logout?post_logout_redirect_uri=/"
-    },
-    {
-      "route": "/dashboard",
-      "allowedRoles": ["authenticated"]
-    }
-  ],
-  "responseOverrides": {
-    "401": {
-      "redirect": "/.auth/login/aad?post_login_redirect_uri=/dashboard",
-      "statusCode": 302
-    }
   }
 }

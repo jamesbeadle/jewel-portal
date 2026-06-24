@@ -24,7 +24,6 @@ public sealed class SubmitAccessRequestHandler
             context.AccessRequests.Add(entity);
         }
         entity.DisplayName = command.DisplayName;
-        entity.Provider = (int)command.Provider;
         entity.RequestedAt = DateTimeOffset.UtcNow;
 
         await context.SaveChangesAsync(cancellationToken);

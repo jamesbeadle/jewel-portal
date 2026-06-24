@@ -1,4 +1,5 @@
 @page "/"
+@page "/login"
 @layout LandingLayout
 @inject AuthService Auth
 @inject NavigationManager Nav
@@ -18,17 +19,39 @@
             <span class="font-semibold text-content">Jewel Project Management System</span>
         </div>
 
-        <div class="flex-1 flex flex-col items-center justify-center text-center w-full max-w-sm mx-auto py-10">
-            <h1 class="text-4xl font-semibold text-content leading-tight mb-3">Welcome back</h1>
-            <p class="text-base text-content-muted leading-relaxed mb-8">
-                Use your Microsoft work account to continue.
+        <div class="flex-1 flex flex-col items-center justify-center w-full max-w-sm mx-auto py-10">
+            <h1 class="text-4xl font-semibold text-content leading-tight mb-3 text-center">Welcome back</h1>
+            <p class="text-base text-content-muted leading-relaxed mb-8 text-center">
+                Sign in with your email and password.
             </p>
-            <div class="w-full">
-                <ProviderButton Provider="AuthProvider.Microsoft" OnClick="SignInWithMicrosoft" />
-            </div>
-            <p class="mt-6 text-xs text-content-subtle leading-relaxed">
-                By signing in you agree to the JPMS acceptable-use policy.
-                New here? Sign in first — you'll be able to request access on the next screen.
+
+            <form @onsubmit="HandleSubmit" @onsubmit:preventDefault="true" class="w-full space-y-4">
+                <div>
+                    <label for="email" class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Email</label>
+                    <input id="email" type="email" autocomplete="username"
+                           value="@email" @oninput="e => email = e.Value?.ToString() ?? string.Empty"
+                           class="w-full rounded-lg border border-line bg-surface-raised px-3 py-2.5 text-sm text-content placeholder:text-content-faint focus:outline-none focus:ring-2 focus:ring-accent focus:border-line-strong" />
+                </div>
+                <div>
+                    <label for="password" class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Password</label>
+                    <input id="password" type="password" autocomplete="current-password"
+                           value="@password" @oninput="e => password = e.Value?.ToString() ?? string.Empty"
+                           class="w-full rounded-lg border border-line bg-surface-raised px-3 py-2.5 text-sm text-content placeholder:text-content-faint focus:outline-none focus:ring-2 focus:ring-accent focus:border-line-strong" />
+                </div>
+
+                @if (error is not null)
+                {
+                    <p class="text-sm text-negative">@error</p>
+                }
+
+                <button type="submit" disabled="@(busy || !CanSubmit)"
+                        class="w-full rounded-lg bg-accent text-accent-ink font-medium px-4 py-2.5 hover:bg-accent-hover disabled:opacity-50 disabled:cursor-not-allowed transition">
+                    @(busy ? "Signing in…" : "Sign in")
+                </button>
+            </form>
+
+            <p class="mt-6 text-xs text-content-subtle leading-relaxed text-center">
+                Need access? Ask a Jewel administrator to invite you — you'll get a link to set your password.
             </p>
         </div>
 
@@ -43,12 +66,27 @@
 </div>
 
 @code {
+    private string email = "";
+    private string password = "";
+    private string? error;
+    private bool busy;
+
+    private bool CanSubmit =>
+        !string.IsNullOrWhiteSpace(email) && !string.IsNullOrWhiteSpace(password);
+
     protected override async Task OnInitializedAsync()
     {
         await Auth.EnsureInitialisedAsync();
         if (Auth.IsSignedIn) Nav.NavigateTo("/dashboard", replace: true);
     }
 
-    private void SignInWithMicrosoft() =>
-        Nav.NavigateTo("/login", forceLoad: true);
+    private async Task HandleSubmit()
+    {
+        if (!CanSubmit || busy) return;
+        busy = true;
+        error = null;
+        error = await Auth.LoginAsync(email.Trim(), password);
+        busy = false;
+        if (error is null) Nav.NavigateTo("/dashboard", replace: true);
+    }
 }

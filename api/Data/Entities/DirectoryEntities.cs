@@ -19,6 +19,5 @@ public sealed class AccessRequestEntity
 {
     [Key, MaxLength(256)] public string Email { get; set; } = "";
     [MaxLength(256)]      public string DisplayName { get; set; } = "";
-    public int Provider { get; set; }
     public DateTimeOffset RequestedAt { get; set; }
 }

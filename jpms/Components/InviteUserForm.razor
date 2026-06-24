@@ -1,0 +1,144 @@
+@inject UserInviteService Invites
+@inject IJSRuntime Js
+
+<div class="rounded-lg border border-slate-200 bg-slate-50 p-4">
+
+    @if (outcome?.Success == true && outcome.Result is not null)
+    {
+        <p class="text-xs uppercase tracking-wider text-slate-500 font-medium mb-2">Invite created</p>
+        <p class="text-sm text-slate-700 leading-relaxed mb-3">
+            We've emailed a single-use sign-in link to <span class="font-medium text-slate-900">@outcome.Result.Email</span>.
+            You can also copy it below to send yourself. It expires @outcome.Result.ExpiresAt.ToLocalTime().ToString("d MMM yyyy, HH:mm").
+        </p>
+        <div class="flex items-stretch gap-2 mb-3">
+            <input readonly value="@outcome.Result.InviteLink"
+                   class="flex-1 rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs text-slate-700" />
+            <button type="button" @onclick="CopyLink"
+                    class="rounded-lg bg-slate-900 text-white font-medium text-sm px-3 py-2 hover:bg-slate-800 transition">
+                @(copied ? "Copied" : "Copy")
+            </button>
+        </div>
+        <div class="flex items-center gap-3">
+            <button type="button" @onclick="Reset"
+                    class="text-xs font-medium text-slate-600 hover:text-slate-900 underline underline-offset-4">
+                Invite another
+            </button>
+            <button type="button" @onclick="Close"
+                    class="text-xs font-medium text-slate-600 hover:text-slate-900 underline underline-offset-4">
+                Done
+            </button>
+        </div>
+    }
+    else
+    {
+        <p class="text-xs uppercase tracking-wider text-slate-500 font-medium mb-3">Invite a user</p>
+
+        <div class="space-y-3">
+            <div>
+                <label class="block text-xs uppercase tracking-wider text-slate-500 font-semibold mb-1">Email *</label>
+                <input type="email" value="@email" @oninput="e => email = e.Value?.ToString() ?? string.Empty"
+                       class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-slate-900" />
+            </div>
+            <div>
+                <label class="block text-xs uppercase tracking-wider text-slate-500 font-semibold mb-1">Display name</label>
+                <input type="text" value="@displayName" @oninput="e => displayName = e.Value?.ToString() ?? string.Empty"
+                       class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-slate-900" />
+            </div>
+            <div>
+                <label class="block text-xs uppercase tracking-wider text-slate-500 font-semibold mb-2">Roles</label>
+                <div class="grid grid-cols-2 gap-x-4 gap-y-1.5">
+                    @foreach (var role in AllRoles)
+                    {
+                        <label class="flex items-center gap-2 text-sm text-slate-700">
+                            <input type="checkbox" checked="@selected.Contains(role)"
+                                   @onchange="e => ToggleRole(role, e.Value)"
+                                   class="rounded border-slate-300 text-slate-900 focus:ring-slate-900" />
+                            @role.DisplayName()
+                        </label>
+                    }
+                </div>
+            </div>
+
+            @if (error is not null)
+            {
+                <p class="text-sm text-red-600">@error</p>
+            }
+
+            <div class="flex items-center gap-2 pt-1">
+                <button type="button" @onclick="Submit" disabled="@(busy || !CanSubmit)"
+                        class="rounded-lg bg-slate-900 text-white font-medium text-sm px-3 py-2 hover:bg-slate-800 disabled:bg-slate-300 transition">
+                    @(busy ? "Creating…" : "Create invite")
+                </button>
+                <button type="button" @onclick="Close"
+                        class="rounded-lg border border-slate-200 bg-white text-slate-700 font-medium text-sm px-3 py-2 hover:border-slate-300 transition">
+                    Cancel
+                </button>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public EventCallback OnClosed { get; set; }
+    [Parameter] public EventCallback<DirectoryUser> OnInvited { get; set; }
+
+    private static readonly Role[] AllRoles = Enum.GetValues<Role>();
+
+    private string email = "";
+    private string displayName = "";
+    private readonly HashSet<Role> selected = new();
+    private string? error;
+    private bool busy;
+    private bool copied;
+    private UserInviteService.InviteOutcome? outcome;
+
+    private bool CanSubmit => !string.IsNullOrWhiteSpace(email);
+
+    private void ToggleRole(Role role, object? value)
+    {
+        if (value is bool isChecked && isChecked) selected.Add(role);
+        else selected.Remove(role);
+    }
+
+    private async Task Submit()
+    {
+        if (!CanSubmit || busy) return;
+        busy = true;
+        error = null;
+        var result = await Invites.InviteAsync(email.Trim(), displayName.Trim(), selected.ToList());
+        busy = false;
+        if (result.Success && result.Result is not null)
+        {
+            outcome = result;
+            var invited = new DirectoryUser(result.Result.Email, result.Result.DisplayName, selected.ToList());
+            await OnInvited.InvokeAsync(invited);
+        }
+        else
+        {
+            error = result.Error;
+        }
+    }
+
+    private async Task CopyLink()
+    {
+        if (outcome?.Result is null) return;
+        try
+        {
+            await Js.InvokeVoidAsync("navigator.clipboard.writeText", outcome.Result.InviteLink);
+            copied = true;
+        }
+        catch { /* clipboard may be unavailable; the link is still shown for manual copy */ }
+    }
+
+    private void Reset()
+    {
+        email = "";
+        displayName = "";
+        selected.Clear();
+        error = null;
+        copied = false;
+        outcome = null;
+    }
+
+    private Task Close() => OnClosed.InvokeAsync();
+}

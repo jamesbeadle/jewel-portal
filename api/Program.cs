@@ -1,5 +1,8 @@
+using Azure.Communication.Email;
+using Jewel.JPMS.Api.Auth;
 using Jewel.JPMS.Api.Data;
 using Jewel.JPMS.Api.Features.AccessRequests;
+using Jewel.JPMS.Api.Features.Auth;
 using Jewel.JPMS.Api.Features.Boq;
 using Jewel.JPMS.Api.Features.Cashflow;
 using Jewel.JPMS.Api.Features.Changes;
@@ -20,6 +23,7 @@ using Jewel.JPMS.Api.Features.Subcontractors;
 using Jewel.JPMS.Api.Gates;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -34,7 +38,11 @@ var host = new HostBuilder()
         services.AddDbContext<JpmsContext>(options =>
             options.UseSqlServer(connectionString, sqlServer => sqlServer.EnableRetryOnFailure()));
 
+        services.AddScoped<SessionManager>();
         services.AddScoped<SignedInUserResolver>();
+        services.AddScoped<InviteDirectoryWriter>();
+        services.AddScoped<UserInviter>();
+        RegisterInviteNotifier(services, context.Configuration);
         services.AddDirectoryFeature();
         services.AddAccessRequestsFeature();
         services.AddProjectsFeature();
@@ -59,6 +67,21 @@ var host = new HostBuilder()
 await ApplyDatabaseMigrations(host.Services);
 
 await host.RunAsync();
+
+static void RegisterInviteNotifier(IServiceCollection services, IConfiguration configuration)
+{
+    var connectionString = configuration["CommunicationServicesConnectionString"];
+    if (string.IsNullOrWhiteSpace(connectionString))
+    {
+        services.AddScoped<IInviteNotifier, LoggingInviteNotifier>();
+        return;
+    }
+
+    var senderAddress = configuration["InviteEmailSender"] ?? InviteSettings.DefaultSenderAddress;
+    services.AddSingleton(new EmailClient(connectionString));
+    services.AddScoped<IInviteNotifier>(provider =>
+        new AzureEmailInviteNotifier(provider.GetRequiredService<EmailClient>(), senderAddress));
+}
 
 static async Task ApplyDatabaseMigrations(IServiceProvider services)
 {

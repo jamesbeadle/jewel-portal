@@ -5,5 +5,4 @@ namespace Jewel.JPMS.Contracts.AccessRequests;
 
 public sealed record SubmitAccessRequest(
     string Email,
-    string DisplayName,
-    AuthProvider Provider) : ICommand<AccessRequest>;
+    string DisplayName) : ICommand<AccessRequest>;

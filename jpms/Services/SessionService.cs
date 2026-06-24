@@ -5,13 +5,11 @@ namespace Jewel.JPMS.Services;
 public sealed class SessionService
 {
     private readonly AuthService auth;
-    private readonly IUserDirectory directory;
     private readonly ActiveRoleStorage roleStorage;
 
-    public SessionService(AuthService auth, IUserDirectory directory, ActiveRoleStorage roleStorage)
+    public SessionService(AuthService auth, ActiveRoleStorage roleStorage)
     {
         this.auth = auth;
-        this.directory = directory;
         this.roleStorage = roleStorage;
     }
 
@@ -34,27 +32,11 @@ public sealed class SessionService
         await auth.EnsureInitialisedAsync();
         if (!auth.IsSignedIn) return;
 
+        // Roles and display name are resolved server-side and returned by /api/auth/me.
         var signedInUser = auth.CurrentUser!;
-        var directoryEntry = await ResolveDirectoryEntryAsync(signedInUser.Email);
-        var roles = EffectiveRoles.For(signedInUser.Email, directoryEntry);
-        var displayName = string.IsNullOrWhiteSpace(directoryEntry?.DisplayName)
-            ? signedInUser.DisplayName
-            : directoryEntry!.DisplayName;
-        var resolvedUser = signedInUser with { DisplayName = displayName };
-        var persistedRole = await roleStorage.ReadAsync(resolvedUser.Email);
-        Adopt(resolvedUser, roles, persistedRole);
-    }
-
-    private async Task<DirectoryUser?> ResolveDirectoryEntryAsync(string email)
-    {
-        try
-        {
-            return await directory.FindAsync(email, CancellationToken.None);
-        }
-        catch
-        {
-            return null;
-        }
+        var roles = auth.CurrentRoles;
+        var persistedRole = await roleStorage.ReadAsync(signedInUser.Email);
+        Adopt(signedInUser, roles, persistedRole);
     }
 
     public void SwitchTo(Role role)

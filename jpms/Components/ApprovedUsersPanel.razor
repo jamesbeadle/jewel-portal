@@ -5,13 +5,19 @@
         <h2 class="text-sm font-medium text-content">Users</h2>
         <div class="flex items-center gap-3">
             <span class="text-xs text-content-subtle">@ApprovedUsers.Count</span>
-            <button type="button" disabled
-                    title="Coming soon — invite a user by email"
-                    class="text-xs font-medium text-content-faint cursor-not-allowed">
-                + Add user
+            <button type="button" @onclick="ToggleForm"
+                    class="text-xs font-medium text-accent hover:text-accent-hover">
+                @(showForm ? "Close" : "+ Add user")
             </button>
         </div>
     </header>
+
+    @if (showForm)
+    {
+        <div class="p-4 border-b border-line">
+            <InviteUserForm OnInvited="HandleInvited" OnClosed="CloseForm" />
+        </div>
+    }
 
     <ul class="divide-y divide-line">
         @foreach (var user in ApprovedUsers)
@@ -24,8 +30,20 @@
 @code {
     [Parameter, EditorRequired] public string CurrentUserEmail { get; set; } = "";
 
+    private bool showForm;
+
     private IReadOnlyList<DirectoryUser> ApprovedUsers => UserDirectory.All();
 
     private bool IsCurrentUser(string email) =>
         string.Equals(email, CurrentUserEmail, StringComparison.OrdinalIgnoreCase);
+
+    private void ToggleForm() => showForm = !showForm;
+
+    private void CloseForm() => showForm = false;
+
+    private void HandleInvited(DirectoryUser invited)
+    {
+        // Reflect the new user immediately; the API has already persisted them.
+        UserDirectory.Upsert(invited);
+    }
 }

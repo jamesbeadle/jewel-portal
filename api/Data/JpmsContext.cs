@@ -16,6 +16,10 @@ public sealed class JpmsContext : DbContext
     public DbSet<DirectoryUserRoleEntity> DirectoryUserRoles => Set<DirectoryUserRoleEntity>();
     public DbSet<AccessRequestEntity> AccessRequests => Set<AccessRequestEntity>();
 
+    public DbSet<UserCredentialEntity> UserCredentials => Set<UserCredentialEntity>();
+    public DbSet<PasswordResetTokenEntity> PasswordResetTokens => Set<PasswordResetTokenEntity>();
+    public DbSet<UserSessionEntity> UserSessions => Set<UserSessionEntity>();
+
     public DbSet<ProjectEntity> Projects => Set<ProjectEntity>();
     public DbSet<LeadEntity> Leads => Set<LeadEntity>();
     public DbSet<QualificationAssessmentEntity> QualificationAssessments => Set<QualificationAssessmentEntity>();

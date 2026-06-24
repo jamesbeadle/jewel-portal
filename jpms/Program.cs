@@ -69,6 +69,7 @@ builder.Services.AddScoped<ICloseoutStore, HttpCloseoutStore>();
 
 builder.Services.AddScoped<PortalContext>();
 builder.Services.AddScoped<AuthService>();
+builder.Services.AddScoped<UserInviteService>();
 builder.Services.AddScoped<ActiveRoleStorage>();
 builder.Services.AddScoped<SessionService>();
 

@@ -39,10 +39,6 @@
                     <dt class="text-slate-500">Email</dt>
                     <dd class="text-slate-900 font-medium text-right break-all">@Email</dd>
                 </div>
-                <div class="flex justify-between gap-3">
-                    <dt class="text-slate-500">Signed in via</dt>
-                    <dd class="text-slate-900 font-medium text-right">@ProviderName</dd>
-                </div>
             </dl>
 
             <button type="button" @onclick="SubmitRequest"
@@ -63,13 +59,6 @@
     [Parameter, EditorRequired] public string DisplayName { get; set; } = "";
 
     private bool isSubmitted;
-
-    private string ProviderName => Auth.CurrentUser?.Provider switch
-    {
-        AuthProvider.Microsoft => "Microsoft",
-        AuthProvider.Google    => "Google",
-        _ => "—"
-    };
 
     private void SubmitRequest()
     {
