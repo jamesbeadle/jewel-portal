@@ -1,15 +1,15 @@
-<section class="rounded-xl border border-slate-200 bg-white p-5">
+<section class="rounded-xl border border-line bg-surface p-5">
     <header class="flex items-center justify-between mb-3">
-        <h2 class="text-sm font-medium text-slate-700">Cost-Value Reconciliation</h2>
+        <h2 class="text-sm font-medium text-content-muted">Cost-Value Reconciliation</h2>
         @if (Snapshot is not null)
         {
-            <span class="text-xs text-slate-500">@Snapshot.SnapshotAt.LocalDateTime.ToString("d MMM yyyy")</span>
+            <span class="text-xs text-content-subtle">@Snapshot.SnapshotAt.LocalDateTime.ToString("d MMM yyyy")</span>
         }
     </header>
 
     @if (Snapshot is null)
     {
-        <p class="text-sm text-slate-500 italic">No CVR snapshot yet.</p>
+        <p class="text-sm text-content-subtle italic">No CVR snapshot yet.</p>
     }
     else
     {
@@ -20,7 +20,7 @@
             <Stat Label="Margin"            Value="@($"{Money(Snapshot.MarginPounds)} ({Snapshot.MarginPercent:0.0}%)")" />
         </div>
 
-        <div class="mt-4 text-sm text-slate-600">
+        <div class="mt-4 text-sm text-content-muted">
             <span class="font-medium @(Snapshot.WeeksAheadOrBehind >= 0 ? "text-emerald-700" : "text-rose-700")">
                 @(Snapshot.WeeksAheadOrBehind == 0
                     ? "On programme"

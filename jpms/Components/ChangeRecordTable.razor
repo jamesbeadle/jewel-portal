@@ -1,7 +1,7 @@
-<div class="rounded-xl border border-slate-200 bg-white overflow-hidden">
+<div class="rounded-xl border border-line bg-surface overflow-hidden">
     <table class="w-full text-sm">
-        <thead class="bg-slate-50 border-b border-slate-200">
-            <tr class="text-left text-[11px] uppercase tracking-wider text-slate-500 font-semibold">
+        <thead class="bg-surface-raised border-b border-line">
+            <tr class="text-left text-[11px] uppercase tracking-wider text-content-subtle font-semibold">
                 <th class="px-4 py-3">Ref</th>
                 <th class="px-4 py-3 hidden sm:table-cell">Kind</th>
                 <th class="px-4 py-3">Title</th>
@@ -10,22 +10,22 @@
                 <th class="px-4 py-3 hidden lg:table-cell">Raised</th>
             </tr>
         </thead>
-        <tbody class="divide-y divide-slate-200">
+        <tbody class="divide-y divide-line">
             @foreach (var record in Records)
             {
                 <tr>
-                    <td class="px-4 py-3 font-mono text-xs text-slate-700">@record.Reference</td>
-                    <td class="px-4 py-3 text-slate-700 hidden sm:table-cell">@record.Kind.DisplayName()</td>
-                    <td class="px-4 py-3 text-slate-900 font-medium">@record.Title</td>
-                    <td class="px-4 py-3 text-right text-slate-700 hidden md:table-cell">
+                    <td class="px-4 py-3 font-mono text-xs text-content-muted">@record.Reference</td>
+                    <td class="px-4 py-3 text-content-muted hidden sm:table-cell">@record.Kind.DisplayName()</td>
+                    <td class="px-4 py-3 text-content font-medium">@record.Title</td>
+                    <td class="px-4 py-3 text-right text-content-muted hidden md:table-cell">
                         @(record.Value is null ? "—" : Money(record.Value.Value))
                     </td>
                     <td class="px-4 py-3">
-                        <span class="inline-flex items-center rounded-full bg-slate-50 border border-slate-200 px-2 py-0.5 text-[11px] font-medium text-slate-700">
+                        <span class="inline-flex items-center rounded-full bg-surface-raised border border-line px-2 py-0.5 text-[11px] font-medium text-content-muted">
                             @record.Status
                         </span>
                     </td>
-                    <td class="px-4 py-3 text-slate-500 hidden lg:table-cell">@record.RaisedAt.LocalDateTime.ToString("d MMM yyyy")</td>
+                    <td class="px-4 py-3 text-content-subtle hidden lg:table-cell">@record.RaisedAt.LocalDateTime.ToString("d MMM yyyy")</td>
                 </tr>
             }
         </tbody>

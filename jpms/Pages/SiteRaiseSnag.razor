@@ -14,7 +14,7 @@
         <div class="rounded-2xl border border-emerald-200 bg-emerald-50 p-5 text-center">
             <p class="text-sm font-semibold text-emerald-900">Snag saved</p>
             <a href="@($"/site/projects/{ProjectId}")"
-               class="inline-block mt-3 rounded-xl bg-slate-900 text-white text-sm font-medium px-4 py-2">
+               class="inline-block mt-3 rounded-xl bg-accent text-accent-ink text-sm font-medium px-4 py-2">
                 Back to project
             </a>
         </div>
@@ -23,18 +23,18 @@
     {
         <form @onsubmit="HandleSave" @onsubmit:preventDefault="true" class="space-y-3">
             <div>
-                <label class="block text-xs uppercase tracking-wider text-slate-500 font-semibold mb-1">Location</label>
+                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Location</label>
                 <input type="text" @bind="location" required placeholder="Room or area"
-                       class="w-full rounded-xl border border-slate-300 px-4 py-3 text-base" />
+                       class="w-full rounded-xl border border-line-strong px-4 py-3 text-base" />
             </div>
             <div>
-                <label class="block text-xs uppercase tracking-wider text-slate-500 font-semibold mb-1">Description</label>
+                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Description</label>
                 <textarea @bind="description" required rows="4"
                           placeholder="What needs fixing?"
-                          class="w-full rounded-xl border border-slate-300 px-4 py-3 text-base"></textarea>
+                          class="w-full rounded-xl border border-line-strong px-4 py-3 text-base"></textarea>
             </div>
             <button type="submit"
-                    class="w-full rounded-xl bg-slate-900 text-white font-semibold text-base px-4 py-4 active:bg-slate-800"
+                    class="w-full rounded-xl bg-accent text-accent-ink font-semibold text-base px-4 py-4 active:bg-accent-hover"
                     disabled="@(!CanSubmit)">
                 Save snag
             </button>

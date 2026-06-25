@@ -1,36 +1,36 @@
 @inject AuthService Auth
 @inject ILeadStore LeadStore
 
-<section class="rounded-xl border border-slate-200 bg-white p-5">
-    <h2 class="text-sm font-medium text-slate-700 mb-3">Qualification scorecard</h2>
+<section class="rounded-xl border border-line bg-surface p-5">
+    <h2 class="text-sm font-medium text-content-muted mb-3">Qualification scorecard</h2>
 
     <form @onsubmit="HandleSave" @onsubmit:preventDefault="true" class="space-y-4">
         <div>
-            <label class="block text-xs uppercase tracking-wider text-slate-500 font-semibold mb-1">
+            <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">
                 Score (0–100)
             </label>
             <input type="number" min="0" max="100" @bind="score"
-                   class="w-32 rounded-lg border border-slate-300 px-3 py-2 text-sm" />
+                   class="w-32 rounded-lg border border-line-strong px-3 py-2 text-sm" />
         </div>
 
         <div>
-            <label class="block text-xs uppercase tracking-wider text-slate-500 font-semibold mb-1">
+            <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">
                 Notes
             </label>
             <textarea @bind="notes" rows="5"
                       placeholder="Budget alignment, client readiness, design maturity, decision-maker access, fit with delivery capacity…"
-                      class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"></textarea>
+                      class="w-full rounded-lg border border-line-strong px-3 py-2 text-sm"></textarea>
         </div>
 
         <div class="flex items-center justify-between">
-            <p class="text-xs text-slate-500">
+            <p class="text-xs text-content-subtle">
                 @if (existing is not null)
                 {
                     <text>Last assessed @existing.AssessedAt.LocalDateTime.ToString("d MMM yyyy HH:mm") by @existing.AssessedByEmail.</text>
                 }
             </p>
             <button type="submit"
-                    class="rounded-lg bg-slate-900 text-white font-medium text-sm px-4 py-2 hover:bg-slate-800 transition">
+                    class="rounded-lg bg-accent text-accent-ink font-medium text-sm px-4 py-2 hover:bg-accent-hover transition">
                 Save assessment
             </button>
         </div>

@@ -5,15 +5,15 @@
     <CvrSummaryPanel Snapshot="CvrStore.LatestSnapshot(ProjectId)" />
 
     <section>
-        <h2 class="text-lg font-semibold text-slate-900 mb-3">Forecast Final Cost — by package</h2>
-        <p class="text-sm text-slate-600 mb-3">
+        <h2 class="text-lg font-semibold text-content mb-3">Forecast Final Cost — by package</h2>
+        <p class="text-sm text-content-muted mb-3">
             Every FFC is the sum of explicit components — never a black-box number.
         </p>
         <ForecastComponentTable Rows="CvrStore.ForecastComponentsFor(ProjectId)" />
     </section>
 
     <section>
-        <h2 class="text-lg font-semibold text-slate-900 mb-3">Programme Valuation Report — recent periods</h2>
+        <h2 class="text-lg font-semibold text-content mb-3">Programme Valuation Report — recent periods</h2>
         <ValuationTable Valuations="CommercialStore.ValuationsFor(ProjectId)" />
     </section>
 </div>

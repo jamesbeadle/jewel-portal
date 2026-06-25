@@ -1,19 +1,19 @@
-<div class="rounded-lg border border-slate-200 bg-slate-50 p-4 mt-2">
-    <p class="text-xs uppercase tracking-wider text-slate-500 font-medium mb-2">Assign a role</p>
+<div class="rounded-lg border border-line bg-surface-raised p-4 mt-2">
+    <p class="text-xs uppercase tracking-wider text-content-subtle font-medium mb-2">Assign a role</p>
     <div class="flex flex-wrap items-center gap-2">
         <select @bind="selectedRole"
-                class="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-slate-900">
+                class="rounded-lg border border-line-strong bg-surface px-3 py-2 text-sm text-content focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent">
             @foreach (var role in AllRoles)
             {
                 <option value="@role">@role.DisplayName()</option>
             }
         </select>
         <button type="button" @onclick="Confirm"
-                class="rounded-lg bg-slate-900 text-white font-medium text-sm px-3 py-2 hover:bg-slate-800 transition">
+                class="rounded-lg bg-accent text-accent-ink font-medium text-sm px-3 py-2 hover:bg-accent-hover transition">
             Confirm
         </button>
         <button type="button" @onclick="OnCancel"
-                class="rounded-lg border border-slate-200 bg-white text-slate-700 font-medium text-sm px-3 py-2 hover:border-slate-300 transition">
+                class="rounded-lg border border-line bg-surface text-content-muted font-medium text-sm px-3 py-2 hover:border-line-strong transition">
             Cancel
         </button>
     </div>

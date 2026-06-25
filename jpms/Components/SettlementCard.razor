@@ -1,7 +1,7 @@
-<section class="rounded-xl border border-slate-200 bg-white p-5">
+<section class="rounded-xl border border-line bg-surface p-5">
     @if (Settlement is null)
     {
-        <p class="text-sm text-slate-500 italic">No settlement record yet. Created at Practical Completion.</p>
+        <p class="text-sm text-content-subtle italic">No settlement record yet. Created at Practical Completion.</p>
     }
     else
     {
@@ -10,7 +10,7 @@
             <Stat Label="Final cost"   Value="@Money(Settlement.FinalCost)" />
             <Stat Label="Final margin" Value="@Money(Settlement.FinalMargin)" />
         </div>
-        <p class="text-xs text-slate-500 mt-3">
+        <p class="text-xs text-content-subtle mt-3">
             Agreed @Settlement.AgreedAt.LocalDateTime.ToString("d MMM yyyy") ·
             <span class="@(Settlement.IsClientSigned ? "text-emerald-700" : "text-amber-700") font-medium">
                 @(Settlement.IsClientSigned ? "Client signed" : "Pending client signature")

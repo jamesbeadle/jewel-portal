@@ -10,7 +10,7 @@
 
 @if (!isLoaded)
 {
-    <section class="max-w-4xl mx-auto px-4 py-12 text-slate-500 text-sm">Loading lead…</section>
+    <section class="max-w-4xl mx-auto px-4 py-12 text-content-subtle text-sm">Loading lead…</section>
 }
 else if (!Session.IsApproved)
 {
@@ -19,9 +19,9 @@ else if (!Session.IsApproved)
 else if (lead is null)
 {
     <section class="max-w-3xl mx-auto px-4 py-12">
-        <h1 class="text-2xl font-semibold text-slate-900 mb-2">Lead not found</h1>
-        <p class="text-slate-700">
-            <a class="text-slate-900 underline" href="/leads">Back to leads</a>.
+        <h1 class="text-2xl font-semibold text-content mb-2">Lead not found</h1>
+        <p class="text-content-muted">
+            <a class="text-content underline" href="/leads">Back to leads</a>.
         </p>
     </section>
 }

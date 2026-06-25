@@ -4,8 +4,8 @@
     <CvrSummaryPanel Snapshot="CvrStore.LatestSnapshot(ProjectId)" />
 
     <section>
-        <h2 class="text-lg font-semibold text-slate-900 mb-3">Margin trace — per package</h2>
-        <p class="text-sm text-slate-600 mb-3">
+        <h2 class="text-lg font-semibold text-content mb-3">Margin trace — per package</h2>
+        <p class="text-sm text-content-muted mb-3">
             Order × Variation × Combined breakdown. Movement column shows change since the last snapshot.
         </p>
         <CvrPackageRowForm ProjectId="@ProjectId" />
@@ -13,8 +13,8 @@
     </section>
 
     <section>
-        <h2 class="text-lg font-semibold text-slate-900 mb-3">Forecast Final Cost — by package</h2>
-        <p class="text-sm text-slate-600 mb-3">
+        <h2 class="text-lg font-semibold text-content mb-3">Forecast Final Cost — by package</h2>
+        <p class="text-sm text-content-muted mb-3">
             Every FFC is the sum of explicit components — never a black-box number.
         </p>
         <ForecastComponentForm ProjectId="@ProjectId" />
@@ -22,7 +22,7 @@
     </section>
 
     <section>
-        <h2 class="text-lg font-semibold text-slate-900 mb-3">Snapshot history</h2>
+        <h2 class="text-lg font-semibold text-content mb-3">Snapshot history</h2>
         <CvrSnapshotForm ProjectId="@ProjectId" />
         <CvrSnapshotHistoryTable Snapshots="CvrStore.SnapshotsFor(ProjectId)" />
     </section>

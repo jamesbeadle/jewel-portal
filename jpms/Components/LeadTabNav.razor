@@ -1,4 +1,4 @@
-<nav class="border-b border-slate-200 mb-6 overflow-x-auto">
+<nav class="border-b border-line mb-6 overflow-x-auto">
     <ul class="flex items-center gap-1 text-sm whitespace-nowrap">
         @foreach (var tab in Tabs)
         {
@@ -36,8 +36,8 @@
         var isActive = slug == ActiveTab;
         if (isActive)
         {
-            return "inline-block px-3 py-2 border-b-2 border-slate-900 text-slate-900 font-medium";
+            return "inline-block px-3 py-2 border-b-2 border-accent text-content font-medium";
         }
-        return "inline-block px-3 py-2 border-b-2 border-transparent text-slate-500 hover:text-slate-900 hover:border-slate-300";
+        return "inline-block px-3 py-2 border-b-2 border-transparent text-content-subtle hover:text-content hover:border-line-strong";
     }
 }

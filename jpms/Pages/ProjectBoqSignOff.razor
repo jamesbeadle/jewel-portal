@@ -8,7 +8,7 @@
 
 @if (!isLoaded)
 {
-    <section class="max-w-5xl mx-auto px-4 py-12 text-slate-500 text-sm">Loading…</section>
+    <section class="max-w-5xl mx-auto px-4 py-12 text-content-subtle text-sm">Loading…</section>
 }
 else if (!Session.IsApproved)
 {
@@ -18,17 +18,17 @@ else
 {
     <ProjectPageShell ProjectId="@ProjectId" ActiveTab="boq">
         <nav class="mb-4 text-sm">
-            <a href="@($"/projects/{ProjectId}/boq")" class="text-slate-500 hover:text-slate-900 underline underline-offset-4">BoQ</a>
-            <span class="text-slate-400 mx-2">/</span>
-            <span class="text-slate-700 font-medium">Director sign-off</span>
+            <a href="@($"/projects/{ProjectId}/boq")" class="text-content-subtle hover:text-content underline underline-offset-4">BoQ</a>
+            <span class="text-content-subtle mx-2">/</span>
+            <span class="text-content-muted font-medium">Director sign-off</span>
         </nav>
 
-        <h2 class="text-lg font-semibold text-slate-900 mb-3">Tender sign-off</h2>
-        <p class="text-sm text-slate-600 mb-5">
+        <h2 class="text-lg font-semibold text-content mb-3">Tender sign-off</h2>
+        <p class="text-sm text-content-muted mb-5">
             High-value tenders require Director approval before issue to the architect.
         </p>
 
-        <section class="rounded-xl border border-slate-200 bg-white p-5 space-y-3">
+        <section class="rounded-xl border border-line bg-surface p-5 space-y-3">
             <div class="grid grid-cols-2 gap-3">
                 <Stat Label="Line items" Value="@LineCount.ToString()" />
                 <Stat Label="Tender total" Value="@Money(Total)" />
@@ -47,7 +47,7 @@ else
             else
             {
                 <button type="button" @onclick="HandleSignOff"
-                        class="rounded-lg bg-slate-900 text-white font-medium text-sm px-4 py-2 hover:bg-slate-800 transition">
+                        class="rounded-lg bg-accent text-accent-ink font-medium text-sm px-4 py-2 hover:bg-accent-hover transition">
                     Sign off tender
                 </button>
             }

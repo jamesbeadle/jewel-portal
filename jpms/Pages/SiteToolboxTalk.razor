@@ -15,7 +15,7 @@
             <p class="text-sm font-semibold text-emerald-900">Toolbox talk recorded</p>
             <p class="text-xs text-emerald-800 mt-1">@attendeeNames.Count attendees signed in</p>
             <a href="@($"/site/projects/{ProjectId}")"
-               class="inline-block mt-3 rounded-xl bg-slate-900 text-white text-sm font-medium px-4 py-2">
+               class="inline-block mt-3 rounded-xl bg-accent text-accent-ink text-sm font-medium px-4 py-2">
                 Back to project
             </a>
         </div>
@@ -24,18 +24,18 @@
     {
         <form @onsubmit="HandleSave" @onsubmit:preventDefault="true" class="space-y-3">
             <div>
-                <label class="block text-xs uppercase tracking-wider text-slate-500 font-semibold mb-1">Topic</label>
+                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Topic</label>
                 <input type="text" @bind="topic" required placeholder="Working at height refresher"
-                       class="w-full rounded-xl border border-slate-300 px-4 py-3 text-base" />
+                       class="w-full rounded-xl border border-line-strong px-4 py-3 text-base" />
             </div>
             <div>
-                <label class="block text-xs uppercase tracking-wider text-slate-500 font-semibold mb-1">Attendees (one per line)</label>
+                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Attendees (one per line)</label>
                 <textarea @bind="attendeesText" rows="4" required
                           placeholder="Pete Maynard&#10;Linda Hampton&#10;Raj Patel"
-                          class="w-full rounded-xl border border-slate-300 px-4 py-3 text-base"></textarea>
+                          class="w-full rounded-xl border border-line-strong px-4 py-3 text-base"></textarea>
             </div>
             <button type="submit"
-                    class="w-full rounded-xl bg-slate-900 text-white font-semibold text-base px-4 py-4 active:bg-slate-800"
+                    class="w-full rounded-xl bg-accent text-accent-ink font-semibold text-base px-4 py-4 active:bg-accent-hover"
                     disabled="@(string.IsNullOrWhiteSpace(topic) || attendeeNames.Count == 0)">
                 Record talk
             </button>

@@ -1,8 +1,8 @@
 @inject IBoqStore BoqStore
 
-<section class="rounded-xl border border-slate-200 bg-white p-5">
-    <h2 class="text-sm font-medium text-slate-700 mb-2">Bulk import BoQ from CSV</h2>
-    <p class="text-sm text-slate-600 mb-3">
+<section class="rounded-xl border border-line bg-surface p-5">
+    <h2 class="text-sm font-medium text-content-muted mb-2">Bulk import BoQ from CSV</h2>
+    <p class="text-sm text-content-muted mb-3">
         Paste CSV with columns: <span class="font-mono text-xs">description, unit, quantity, rate, costCode, discipline</span>.
         Header row required.
     </p>
@@ -12,7 +12,7 @@
                   placeholder="description,unit,quantity,rate,costCode,discipline
 Strip foundations,m³,60,185,GW-100,Structural
 …"
-                  class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm font-mono"></textarea>
+                  class="w-full rounded-lg border border-line-strong px-3 py-2 text-sm font-mono"></textarea>
 
         @if (!string.IsNullOrEmpty(message))
         {
@@ -20,7 +20,7 @@ Strip foundations,m³,60,185,GW-100,Structural
         }
 
         <button type="submit"
-                class="rounded-lg bg-slate-900 text-white font-medium text-sm px-4 py-2 hover:bg-slate-800 transition"
+                class="rounded-lg bg-accent text-accent-ink font-medium text-sm px-4 py-2 hover:bg-accent-hover transition"
                 disabled="@string.IsNullOrWhiteSpace(csvText)">
             Import lines
         </button>

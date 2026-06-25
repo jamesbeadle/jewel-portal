@@ -1,11 +1,11 @@
-<div class="rounded-xl border border-slate-200 bg-white overflow-hidden">
-    <ul class="divide-y divide-slate-200">
+<div class="rounded-xl border border-line bg-surface overflow-hidden">
+    <ul class="divide-y divide-line">
         @foreach (var item in Items)
         {
             <li class="p-4 flex items-center justify-between gap-3 text-sm">
                 <div>
-                    <p class="font-medium text-slate-900">@item.Label</p>
-                    <p class="text-xs text-slate-500 mt-1">@item.Detail</p>
+                    <p class="font-medium text-content">@item.Label</p>
+                    <p class="text-xs text-content-subtle mt-1">@item.Detail</p>
                 </div>
                 <span class="text-[11px] font-medium @(item.IsReady ? "text-emerald-700" : "text-amber-700")">
                     @(item.IsReady ? "Ready" : "Pending")

@@ -9,7 +9,7 @@
 
 @if (!isLoaded)
 {
-    <section class="max-w-5xl mx-auto px-4 py-12 text-slate-500 text-sm">Loading…</section>
+    <section class="max-w-5xl mx-auto px-4 py-12 text-content-subtle text-sm">Loading…</section>
 }
 else if (!Session.IsApproved)
 {
@@ -18,8 +18,8 @@ else if (!Session.IsApproved)
 else
 {
     <ProjectPageShell ProjectId="@ProjectId" ActiveTab="hs">
-        <h2 class="text-lg font-semibold text-slate-900 mb-3">Golden thread of H&S evidence</h2>
-        <p class="text-sm text-slate-600 mb-5">
+        <h2 class="text-lg font-semibold text-content mb-3">Golden thread of H&S evidence</h2>
+        <p class="text-sm text-content-muted mb-5">
             Complete record of safety decisions, inspections and corrective actions for Building Safety Act compliance.
         </p>
 

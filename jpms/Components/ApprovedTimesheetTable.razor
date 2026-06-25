@@ -1,10 +1,10 @@
 @using Jewel.JPMS.Features.Projects
 @inject ProjectListReadModel Projects
 
-<div class="rounded-xl border border-slate-200 bg-white overflow-hidden">
+<div class="rounded-xl border border-line bg-surface overflow-hidden">
     <table class="w-full text-sm">
-        <thead class="bg-slate-50 border-b border-slate-200">
-            <tr class="text-left text-[11px] uppercase tracking-wider text-slate-500 font-semibold">
+        <thead class="bg-surface-raised border-b border-line">
+            <tr class="text-left text-[11px] uppercase tracking-wider text-content-subtle font-semibold">
                 <th class="px-4 py-3">Person</th>
                 <th class="px-4 py-3 hidden sm:table-cell">Project</th>
                 <th class="px-4 py-3">Worked on</th>
@@ -12,15 +12,15 @@
                 <th class="px-4 py-3 text-right">Hours</th>
             </tr>
         </thead>
-        <tbody class="divide-y divide-slate-200">
+        <tbody class="divide-y divide-line">
             @foreach (var timesheet in Timesheets)
             {
                 <tr>
-                    <td class="px-4 py-3 text-slate-900 font-medium break-all">@timesheet.PersonEmail</td>
-                    <td class="px-4 py-3 text-slate-600 hidden sm:table-cell">@ProjectReference(timesheet.ProjectId)</td>
-                    <td class="px-4 py-3 text-slate-600">@timesheet.WorkedOn.LocalDateTime.ToString("d MMM yyyy")</td>
+                    <td class="px-4 py-3 text-content font-medium break-all">@timesheet.PersonEmail</td>
+                    <td class="px-4 py-3 text-content-muted hidden sm:table-cell">@ProjectReference(timesheet.ProjectId)</td>
+                    <td class="px-4 py-3 text-content-muted">@timesheet.WorkedOn.LocalDateTime.ToString("d MMM yyyy")</td>
                     <td class="px-4 py-3"><CostCodeChip Code="@timesheet.CostCode" /></td>
-                    <td class="px-4 py-3 text-right text-slate-900 font-medium">@timesheet.Hours.ToString("0.#")</td>
+                    <td class="px-4 py-3 text-right text-content font-medium">@timesheet.Hours.ToString("0.#")</td>
                 </tr>
             }
         </tbody>

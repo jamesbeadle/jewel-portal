@@ -12,7 +12,7 @@
 
 @if (!isLoaded)
 {
-    <section class="max-w-md mx-auto px-4 py-12 text-slate-500 text-sm">Loading…</section>
+    <section class="max-w-md mx-auto px-4 py-12 text-content-subtle text-sm">Loading…</section>
 }
 else if (!Session.IsApproved)
 {
@@ -25,18 +25,18 @@ else
     <section class="max-w-md mx-auto px-4 py-6 space-y-3">
         @if (LiveProjects.Count == 0)
         {
-            <p class="text-sm text-slate-500 italic">No live projects today.</p>
+            <p class="text-sm text-content-subtle italic">No live projects today.</p>
         }
         else
         {
             @foreach (var project in LiveProjects)
             {
                 <a href="@($"/site/projects/{project.ProjectId}")"
-                   class="block rounded-2xl border border-slate-200 bg-white p-5 active:bg-slate-100 transition">
-                    <p class="font-mono text-[10px] text-slate-500">@project.Reference</p>
-                    <p class="text-base font-semibold text-slate-900 mt-1">@project.Name</p>
+                   class="block rounded-2xl border border-line bg-surface p-5 active:bg-surface-raised transition">
+                    <p class="font-mono text-[10px] text-content-subtle">@project.Reference</p>
+                    <p class="text-base font-semibold text-content mt-1">@project.Name</p>
                     <div class="flex items-center justify-between mt-2">
-                        <p class="text-xs text-slate-500">@project.ClientName</p>
+                        <p class="text-xs text-content-subtle">@project.ClientName</p>
                         <ProjectStageBadge Stage="project.Stage" />
                     </div>
                 </a>
