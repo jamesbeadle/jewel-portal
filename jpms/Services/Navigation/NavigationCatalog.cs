@@ -6,7 +6,9 @@ public static class NavigationCatalog
 {
     public static IReadOnlyList<NavigationItem> ItemsFor(Role role)
     {
-        if (role.IsExternal()) return PortalNavigation.ItemsFor(role);
+        // Every role uses the same navigation, filtered by RBAC. External roles
+        // (architect, client, subcontractor) are not special-cased onto a separate
+        // portal route — what they see is governed by per-entry role visibility.
         return DesktopNavigation.ItemsVisibleTo(role);
     }
 

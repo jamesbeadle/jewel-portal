@@ -22,9 +22,16 @@ public static class DesktopNavigation
         Role.Foreman
     };
 
+    private static readonly Role[] AllRoles =
+        AllInternalRoles
+            .Append(Role.Architect)
+            .Append(Role.Client)
+            .Append(Role.Subcontractor)
+            .ToArray();
+
     private static readonly IReadOnlyList<DesktopNavigationEntry> Entries = new DesktopNavigationEntry[]
     {
-        Entry("Dashboard",      "/dashboard",      AllInternalRoles),
+        Entry("Dashboard",      "/dashboard",      AllRoles),
         Entry("Leads",          "/leads",          Role.ManagingDirector, Role.FinanceDirector, Role.ProjectManager, Role.QuantitySurveyor),
         Entry("Projects",       "/projects",       Role.ManagingDirector, Role.FinanceDirector, Role.ProjectManager, Role.QuantitySurveyor, Role.SiteManager, Role.HealthSafetyOfficer, Role.OfficeComplianceCoordinator),
         Entry("Subcontractors", "/subcontractors", Role.ManagingDirector, Role.FinanceDirector, Role.ProjectManager, Role.HealthSafetyOfficer, Role.OfficeComplianceCoordinator),
