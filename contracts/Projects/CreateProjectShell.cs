@@ -8,4 +8,5 @@ public sealed record CreateProjectShell(
     string Name,
     string ClientName,
     Organisation Organisation,
-    string ProjectManagerEmail) : ICommand<Project>;
+    string ProjectManagerEmail,
+    ProjectStage Stage = ProjectStage.PreConstruction) : ICommand<Project>;

@@ -22,7 +22,7 @@ public sealed class CreateProjectShellHandler
             Name = command.Name,
             ClientName = command.ClientName,
             Organisation = (int)command.Organisation,
-            Stage = (int)ProjectStage.PreConstruction,
+            Stage = (int)command.Stage,
             ProjectManagerEmail = command.ProjectManagerEmail,
             CreatedAt = DateTimeOffset.UtcNow
         };

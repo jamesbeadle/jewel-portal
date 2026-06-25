@@ -25,19 +25,54 @@ else
             <div>
                 <p class="eyebrow mb-1">JPMS · Projects</p>
                 <h1 class="text-2xl md:text-3xl font-semibold text-content leading-tight">Project portfolio</h1>
-                <p class="text-sm text-content-muted mt-2">@ActiveProjects.Count active. New projects are created from a won lead.</p>
+                <p class="text-sm text-content-muted mt-2">
+                    @ActiveProjects.Count active.
+                    @if (CanCreateProjects)
+                    {
+                        <span>Projects are created from a won lead, or add one directly.</span>
+                    }
+                    else
+                    {
+                        <span>New projects are created from a won lead.</span>
+                    }
+                </p>
             </div>
+            @if (CanCreateProjects)
+            {
+                <button type="button" @onclick="OpenForm" class="btn-primary shrink-0">+ New project</button>
+            }
         </header>
 
         <ProjectsTable Projects="ActiveProjects" />
     </section>
+
+    <Modal IsOpen="showForm" Title="New project" ShowFooter="false" OnCancel="CloseForm">
+        <NewProjectForm OnCreated="HandleCreated" OnClosed="CloseForm" />
+    </Modal>
 }
 
 @code {
     private bool isLoaded;
+    private bool showForm;
 
     private IReadOnlyList<Project> ActiveProjects =>
         ProjectsReadModel.Current ?? Array.Empty<Project>();
+
+    // Mirrors the server-side authorisation (CreateProjectShellAuthorisation):
+    // Managing Director and Project Manager. Master admins hold every role and so qualify too.
+    private bool CanCreateProjects =>
+        Session.AvailableRoles.Any(role => role is Role.ManagingDirector or Role.ProjectManager);
+
+    private void OpenForm() => showForm = true;
+
+    private void CloseForm() => showForm = false;
+
+    private void HandleCreated(Project project)
+    {
+        // The form has already refreshed the read model; just close and surface the new project.
+        showForm = false;
+        Nav.NavigateTo($"/projects/{project.ProjectId}");
+    }
 
     protected override async Task OnInitializedAsync()
     {
