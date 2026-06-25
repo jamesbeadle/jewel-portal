@@ -446,6 +446,33 @@ namespace Jewel.JPMS.Api.Migrations
                     b.ToTable("CostCodes");
                 });
 
+            modelBuilder.Entity("Jewel.JPMS.Api.Data.Entities.CostCenterEntity", b =>
+                {
+                    b.Property<string>("CostCenterId")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("int");
+
+                    b.HasKey("CostCenterId");
+
+                    b.ToTable("CostCenters");
+                });
+
             modelBuilder.Entity("Jewel.JPMS.Api.Data.Entities.CvrPackageRowEntity", b =>
                 {
                     b.Property<string>("CvrPackageRowId")

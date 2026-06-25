@@ -50,6 +50,7 @@ public sealed class JpmsContext : DbContext
     public DbSet<QuoteEntity> Quotes => Set<QuoteEntity>();
     public DbSet<WorkOrderEntity> WorkOrders => Set<WorkOrderEntity>();
     public DbSet<RequestEntity> Requests => Set<RequestEntity>();
+    public DbSet<CostCenterEntity> CostCenters => Set<CostCenterEntity>();
 
     public DbSet<SiteReportEntity> SiteReports => Set<SiteReportEntity>();
     public DbSet<ProgrammeTaskEntity> ProgrammeTasks => Set<ProgrammeTaskEntity>();

@@ -1,0 +1,72 @@
+@using Jewel.JPMS.Models
+
+<div class="rounded-xl border border-line bg-surface overflow-x-auto">
+    <table class="w-full text-sm border-collapse">
+        <thead class="bg-surface-raised border-b border-line">
+            <tr class="text-left text-[11px] uppercase tracking-wider text-content-subtle font-semibold">
+                <th class="sticky left-0 z-10 bg-surface-raised px-4 py-3 min-w-[200px]">Cost Centre</th>
+                @foreach (var col in Columns)
+                {
+                    <th class="px-4 py-3 text-right whitespace-nowrap">@col.Label</th>
+                }
+            </tr>
+        </thead>
+        <tbody class="divide-y divide-line">
+            @foreach (var centre in CostCenters)
+            {
+                <tr>
+                    <td class="sticky left-0 z-10 bg-surface px-4 py-3 text-content font-medium whitespace-nowrap">
+                        <span class="font-mono text-[11px] text-content-subtle mr-2">@centre.Code</span>@centre.Name
+                    </td>
+                    @foreach (var col in Columns)
+                    {
+                        <td class="px-4 py-3 text-right text-content-muted">@col.Zero</td>
+                    }
+                </tr>
+            }
+        </tbody>
+        <tfoot class="border-t-2 border-line-strong bg-surface-raised">
+            <tr class="font-semibold text-content">
+                <td class="sticky left-0 z-10 bg-surface-raised px-4 py-3 whitespace-nowrap">Total</td>
+                @foreach (var col in Columns)
+                {
+                    <td class="px-4 py-3 text-right">@col.Zero</td>
+                }
+            </tr>
+        </tfoot>
+    </table>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public IReadOnlyList<CostCenter> CostCenters { get; set; } = Array.Empty<CostCenter>();
+
+    private enum Format { Money, Percent }
+
+    private sealed record Column(string Label, Format Format)
+    {
+        // Placeholder until the costing engine is wired in — every cell shows zero.
+        public string Zero => Format == Format.Percent
+            ? "0%"
+            : 0m.ToString("C0", System.Globalization.CultureInfo.GetCultureInfo("en-GB"));
+    }
+
+    // Budget allocation model (FD-agreed):
+    //   Assigned Budget    = sum of purchase orders raised to suppliers (committed cost)
+    //   Unallocated Budget = Budgeted Cost - Assigned Budget (still available to assign)
+    //   Under/Over Budget  = measured against PO commitments, since no invoice arrives without a PO
+    private static readonly Column[] Columns =
+    {
+        new("Budgeted Cost",         Format.Money),
+        new("Assigned Budget",       Format.Money),
+        new("Unallocated Budget",    Format.Money),
+        new("Completion %",          Format.Percent),
+        new("Expected Actual Cost",  Format.Money),
+        new("Actual Cost",           Format.Money),
+        new("Under/Over Budget",     Format.Money),
+        new("Budgeted Sales",        Format.Money),
+        new("Expected Actual Sales", Format.Money),
+        new("Actual Sales",          Format.Money),
+        new("Under/Over Billed",     Format.Money),
+        new("Gross Profit",          Format.Money)
+    };
+}

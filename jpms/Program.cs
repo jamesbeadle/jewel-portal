@@ -2,6 +2,7 @@ using Jewel.JPMS;
 using Jewel.JPMS.Cqrs;
 using Jewel.JPMS.Features.Boq;
 using Jewel.JPMS.Features.Cashflow;
+using Jewel.JPMS.Features.CostCenters;
 using Jewel.JPMS.Features.Requests;
 using Jewel.JPMS.Features.Closeout;
 using Jewel.JPMS.Features.Commercial;
@@ -48,6 +49,7 @@ builder.Services.AddCashflowReadModels();
 builder.Services.AddCvrReadModels();
 builder.Services.AddCloseoutReadModels();
 builder.Services.AddRequestsReadModels();
+builder.Services.AddCostCentersReadModels();
 
 builder.Services.AddScoped<IUserDirectory, HttpUserDirectory>();
 builder.Services.AddScoped<IAccessRequestStore, HttpAccessRequestStore>();
@@ -96,6 +98,7 @@ using (var routeScope = app.Services.CreateScope())
     CvrRouteRegistration.RegisterCvrRoutes(queryRoutes, commandRoutes);
     CloseoutRouteRegistration.RegisterCloseoutRoutes(queryRoutes, commandRoutes);
     RequestsRouteRegistration.RegisterRequestsRoutes(queryRoutes, commandRoutes);
+    CostCentersRouteRegistration.RegisterCostCentersRoutes(queryRoutes, commandRoutes);
 }
 
 await app.RunAsync();

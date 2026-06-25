@@ -22,9 +22,10 @@
 
     private record Tab(string Slug, string Label, bool Enabled);
 
-    // Only Overview and Requests are live while the rest of the project view is re-scoped.
+    // Only Financials, Overview and Requests are live while the rest of the project view is re-scoped.
     private static readonly Tab[] Tabs =
     {
+        new("financials",   "Financials",   true),
         new("overview",     "Overview",     true),
         new("drawings",     "Drawings",     false),
         new("boq",          "BoQ",          false),

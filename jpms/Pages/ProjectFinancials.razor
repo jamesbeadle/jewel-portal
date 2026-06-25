@@ -1,0 +1,52 @@
+@page "/projects/{ProjectId}/financials"
+@using Jewel.JPMS.Features.CostCenters
+@inject AuthService Auth
+@inject SessionService Session
+@inject CostCentersReadModel CostCenters
+@inject NavigationManager Nav
+@implements IDisposable
+
+<PageTitle>Financials · JPMS</PageTitle>
+
+@if (!isLoaded)
+{
+    <section class="max-w-5xl mx-auto px-4 py-12 text-content-subtle text-sm">Loading…</section>
+}
+else if (!Session.IsApproved)
+{
+    <RequestAccessView Email="@Auth.CurrentUser!.Email" DisplayName="@Auth.CurrentUser.DisplayName" />
+}
+else
+{
+    <ProjectPageShell ProjectId="@ProjectId" ActiveTab="financials">
+        <h2 class="text-lg font-semibold text-content mb-3">Financial summary</h2>
+
+        @if (CostCenters.Current.Count == 0)
+        {
+            <p class="text-sm text-content-subtle italic">
+                No cost centres found. Run the cost-centre seed script against the database to populate the master list.
+            </p>
+        }
+        else
+        {
+            <FinancialsTable CostCenters="CostCenters.Current" />
+        }
+    </ProjectPageShell>
+}
+
+@code {
+    [Parameter] public string ProjectId { get; set; } = "";
+
+    private bool isLoaded;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Session.EnsureLoadedAsync();
+        if (!Auth.IsSignedIn) { Nav.NavigateTo("/login", forceLoad: true); return; }
+        CostCenters.OnChanged += StateHasChanged;
+        await CostCenters.RefreshAsync(CancellationToken.None);
+        isLoaded = true;
+    }
+
+    public void Dispose() => CostCenters.OnChanged -= StateHasChanged;
+}
