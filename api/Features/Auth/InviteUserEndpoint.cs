@@ -4,6 +4,7 @@ using Jewel.JPMS.Models;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.Functions.Worker;
+using Microsoft.Extensions.Configuration;
 
 namespace Jewel.JPMS.Api.Features.Auth;
 
@@ -17,11 +18,13 @@ public sealed class InviteUserEndpoint
 {
     private readonly SignedInUserResolver users;
     private readonly UserInviter inviter;
+    private readonly IConfiguration configuration;
 
-    public InviteUserEndpoint(SignedInUserResolver users, UserInviter inviter)
+    public InviteUserEndpoint(SignedInUserResolver users, UserInviter inviter, IConfiguration configuration)
     {
         this.users = users;
         this.inviter = inviter;
+        this.configuration = configuration;
     }
 
     [Function("AuthInviteUser")]
@@ -45,10 +48,19 @@ public sealed class InviteUserEndpoint
 
         var displayName = string.IsNullOrWhiteSpace(body.DisplayName) ? email : body.DisplayName.Trim();
         var roles = (body.Roles ?? Array.Empty<Role>()).Distinct().ToList();
-        var baseUrl = $"{request.Scheme}://{request.Host.Value}";
+        var baseUrl = ResolveSiteBaseUrl(request);
 
         var result = await inviter.InviteAsync(email, displayName, roles, baseUrl, cancellationToken);
         return new OkObjectResult(result);
+    }
+
+    /// <summary>The public site the set-password link should point at. Prefers the configured
+    /// PublicSiteUrl so links survive being served from the raw Function App host.</summary>
+    private string ResolveSiteBaseUrl(HttpRequest request)
+    {
+        var configured = configuration["PublicSiteUrl"];
+        if (!string.IsNullOrWhiteSpace(configured)) return configured.TrimEnd('/');
+        return $"{request.Scheme}://{request.Host.Value}";
     }
 
     private static bool LooksLikeEmail(string value) =>

@@ -88,6 +88,15 @@ SQL_PITR_DAYS="${SQL_PITR_DAYS:-35}"          # short-term (point-in-time) reten
 BUDGET_AMOUNT="${BUDGET_AMOUNT:-150}"
 BUDGET_ALERT_EMAIL="${BUDGET_ALERT_EMAIL:-nigel.reilly@jewelgroup.co.uk}"
 
+# Invite email (Azure Communication Services). The Communication Services
+# resource and its verified mail.jewelbb.co.uk domain are provisioned in the
+# portal; this script only reads the resource's connection string and wires it,
+# the sender, and the public site URL into the app settings. Email is optional:
+# if the resource is absent the app falls back to returning the link in the UI.
+COMMS_RESOURCE_NAME="${COMMS_RESOURCE_NAME:-jpms-comms-prod}"
+INVITE_EMAIL_SENDER="${INVITE_EMAIL_SENDER:-DoNotReply@mail.jewelbb.co.uk}"
+PUBLIC_SITE_URL="${PUBLIC_SITE_URL:-https://portal.jewelbb.co.uk}"
+
 # Test SQL server to retire after prod is verified (left in place by default).
 TEST_SQL_SERVER="${TEST_SQL_SERVER:-}"
 TEST_RESOURCE_GROUP="${TEST_RESOURCE_GROUP:-rg-jpms-test}"
@@ -272,13 +281,25 @@ fi
 # --- Wire all settings into the Static Web App ------------------------------
 SQL_CONNECTION_STRING="Server=tcp:${SQL_SERVER}.database.windows.net,1433;Database=${SQL_DATABASE};User ID=${SQL_ADMIN_USER};Password=${SQL_ADMIN_PASSWORD};Encrypt=true;TrustServerCertificate=false;Connection Timeout=30;"
 
-echo "Wiring SqlConnectionString + AAD client id/secret into the Static Web App..."
+# Read the Communication Services connection string for invite emails. Optional:
+# if the resource is missing the variable stays empty and the app uses its
+# logging fallback (the link is still shown to the admin in the UI).
+COMMS_CONNECTION_STRING="$(az communication list-key --name "${COMMS_RESOURCE_NAME}" \
+  --resource-group "${RESOURCE_GROUP}" --query primaryConnectionString --output tsv 2>/dev/null || true)"
+if [ -z "${COMMS_CONNECTION_STRING}" ]; then
+  echo "  (no Communication Services resource '${COMMS_RESOURCE_NAME}' found — invite emails will be disabled)"
+fi
+
+echo "Wiring SqlConnectionString + AAD client id/secret + invite email into the Static Web App..."
 az staticwebapp appsettings set --name "${SWA_NAME}" --resource-group "${RESOURCE_GROUP}" \
   --setting-names \
     "SqlConnectionString=${SQL_CONNECTION_STRING}" \
     "AAD_CLIENT_ID=${ENTRA_APP_ID}" \
     "AAD_CLIENT_SECRET=${ENTRA_SECRET}" \
     "APPLICATIONINSIGHTS_CONNECTION_STRING=${APPINSIGHTS_CONNECTION_STRING}" \
+    "CommunicationServicesConnectionString=${COMMS_CONNECTION_STRING}" \
+    "InviteEmailSender=${INVITE_EMAIL_SENDER}" \
+    "PublicSiteUrl=${PUBLIC_SITE_URL}" \
   --output none
 
 SWA_DEPLOYMENT_TOKEN="$(az staticwebapp secrets list --name "${SWA_NAME}" --resource-group "${RESOURCE_GROUP}" \
