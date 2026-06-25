@@ -4,7 +4,8 @@
     <table class="w-full text-sm border-collapse">
         <thead class="bg-surface-raised border-b border-line">
             <tr class="text-left text-[11px] uppercase tracking-wider text-content-subtle font-semibold">
-                <th class="sticky left-0 z-10 bg-surface-raised px-4 py-3 min-w-[200px]">Cost Centre</th>
+                <th class="sticky left-0 z-10 bg-surface-raised px-4 py-3 w-[88px]">Code</th>
+                <th class="sticky left-[88px] z-10 bg-surface-raised px-4 py-3 min-w-[200px]">Cost Centre</th>
                 @foreach (var col in Columns)
                 {
                     <th class="px-4 py-3 text-right whitespace-nowrap">@col.Label</th>
@@ -15,9 +16,8 @@
             @foreach (var centre in CostCenters)
             {
                 <tr>
-                    <td class="sticky left-0 z-10 bg-surface px-4 py-3 text-content font-medium whitespace-nowrap">
-                        <span class="font-mono text-[11px] text-content-subtle mr-2">@centre.Code</span>@centre.Name
-                    </td>
+                    <td class="sticky left-0 z-10 bg-surface px-4 py-3 font-mono text-[11px] text-content-subtle whitespace-nowrap">@centre.Code</td>
+                    <td class="sticky left-[88px] z-10 bg-surface px-4 py-3 text-content font-medium whitespace-nowrap">@centre.Name</td>
                     @foreach (var col in Columns)
                     {
                         <td class="px-4 py-3 text-right text-content-muted">@col.Zero</td>
@@ -27,7 +27,8 @@
         </tbody>
         <tfoot class="border-t-2 border-line-strong bg-surface-raised">
             <tr class="font-semibold text-content">
-                <td class="sticky left-0 z-10 bg-surface-raised px-4 py-3 whitespace-nowrap">Total</td>
+                <td class="sticky left-0 z-10 bg-surface-raised px-4 py-3"></td>
+                <td class="sticky left-[88px] z-10 bg-surface-raised px-4 py-3 whitespace-nowrap">Total</td>
                 @foreach (var col in Columns)
                 {
                     <td class="px-4 py-3 text-right">@col.Zero</td>
