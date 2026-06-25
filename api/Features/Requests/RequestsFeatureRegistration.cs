@@ -1,26 +1,26 @@
 using Jewel.JPMS.Api.Cqrs;
-using Jewel.JPMS.Api.Features.Changes.Commands;
-using Jewel.JPMS.Api.Features.Changes.Queries;
-using Jewel.JPMS.Contracts.Changes;
+using Jewel.JPMS.Api.Features.Requests.Commands;
+using Jewel.JPMS.Api.Features.Requests.Queries;
+using Jewel.JPMS.Contracts.Requests;
 using Jewel.JPMS.Models;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace Jewel.JPMS.Api.Features.Changes;
+namespace Jewel.JPMS.Api.Features.Requests;
 
-public static class ChangesFeatureRegistration
+public static class RequestsFeatureRegistration
 {
-    public static IServiceCollection AddChangesFeature(this IServiceCollection services)
+    public static IServiceCollection AddRequestsFeature(this IServiceCollection services)
     {
-        services.AddScoped<IQueryHandler<ListChangesForProject, IReadOnlyList<ChangeRecord>>, ListChangesForProjectHandler>();
-        services.AddScoped<IQueryHandler<GetChangeById, ChangeRecord?>, GetChangeByIdHandler>();
+        services.AddScoped<IQueryHandler<ListRequestsForProject, IReadOnlyList<Request>>, ListRequestsForProjectHandler>();
+        services.AddScoped<IQueryHandler<GetRequestById, Request?>, GetRequestByIdHandler>();
 
-        services.AddScoped<ICommandHandler<RaiseChange, ChangeRecord>, RaiseChangeHandler>();
-        services.AddScoped<RaiseChangeAuthorisation>();
-        services.AddScoped<RaiseChangeValidation>();
+        services.AddScoped<ICommandHandler<RaiseRequest, Request>, RaiseRequestHandler>();
+        services.AddScoped<RaiseRequestAuthorisation>();
+        services.AddScoped<RaiseRequestValidation>();
 
-        services.AddScoped<ICommandHandler<UpdateChangeDetails, ChangeRecord>, UpdateChangeDetailsHandler>();
-        services.AddScoped<UpdateChangeDetailsAuthorisation>();
-        services.AddScoped<UpdateChangeDetailsValidation>();
+        services.AddScoped<ICommandHandler<UpdateRequestDetails, Request>, UpdateRequestDetailsHandler>();
+        services.AddScoped<UpdateRequestDetailsAuthorisation>();
+        services.AddScoped<UpdateRequestDetailsValidation>();
 
         return services;
     }

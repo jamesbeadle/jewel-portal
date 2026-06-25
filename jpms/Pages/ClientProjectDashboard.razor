@@ -3,7 +3,7 @@
 @using Jewel.JPMS.Features.Projects
 @inject ProjectListReadModel Projects
 @inject ISiteStore SiteStore
-@inject IChangeRegister ChangeRegister
+@inject IRequestRegister RequestRegister
 
 <PageTitle>Progress · Client portal</PageTitle>
 
@@ -44,7 +44,7 @@
     private decimal LatestProgress =>
         SiteStore.ReportsFor(ProjectId).FirstOrDefault()?.ProgressPercent ?? 0;
     private int OpenChangeCount =>
-        ChangeRegister.ForProject(ProjectId).Count(c => c.Status != ChangeStatus.Closed);
+        RequestRegister.ForProject(ProjectId).Count(c => c.Status != RequestStatus.Closed);
     private int ReportCount => SiteStore.ReportsFor(ProjectId).Count;
 
     protected override async Task OnInitializedAsync()

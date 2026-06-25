@@ -1,14 +1,14 @@
 using Jewel.JPMS.Api.Cqrs;
-using Jewel.JPMS.Contracts.Changes;
+using Jewel.JPMS.Contracts.Requests;
 
-namespace Jewel.JPMS.Api.Features.Changes.Commands;
+namespace Jewel.JPMS.Api.Features.Requests.Commands;
 
-public sealed class UpdateChangeDetailsValidation
+public sealed class UpdateRequestDetailsValidation
 {
-    public ValidationOutcome Check(UpdateChangeDetails command)
+    public ValidationOutcome Check(UpdateRequestDetails command)
     {
         var errors = new List<string>();
-        if (string.IsNullOrWhiteSpace(command.ChangeRecordId)) errors.Add("ChangeRecordId is required.");
+        if (string.IsNullOrWhiteSpace(command.RequestId)) errors.Add("RequestId is required.");
         if (string.IsNullOrWhiteSpace(command.Reference)) errors.Add("Reference is required.");
         if (string.IsNullOrWhiteSpace(command.Title)) errors.Add("Title is required.");
         if (errors.Count == 0) return ValidationOutcome.Passed;

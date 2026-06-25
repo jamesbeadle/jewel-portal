@@ -1,31 +1,54 @@
-<div class="rounded-xl border border-line bg-surface overflow-hidden">
+<div class="rounded-xl border border-line bg-surface overflow-x-auto">
     <table class="w-full text-sm">
         <thead class="bg-surface-raised border-b border-line">
             <tr class="text-left text-[11px] uppercase tracking-wider text-content-subtle font-semibold">
                 <th class="px-4 py-3">Ref</th>
                 <th class="px-4 py-3 hidden sm:table-cell">Kind</th>
-                <th class="px-4 py-3">Title</th>
+                <th class="px-4 py-3">Subject</th>
+                <th class="px-4 py-3 hidden lg:table-cell">Raised To</th>
+                <th class="px-4 py-3 hidden xl:table-cell">Drawing / Detail</th>
+                <th class="px-4 py-3 hidden lg:table-cell">Issued</th>
+                <th class="px-4 py-3 hidden lg:table-cell">Response Due</th>
+                <th class="px-4 py-3 text-right hidden md:table-cell">Days Out</th>
                 <th class="px-4 py-3 text-right hidden md:table-cell">Value</th>
                 <th class="px-4 py-3">Status</th>
-                <th class="px-4 py-3 hidden lg:table-cell">Raised</th>
             </tr>
         </thead>
         <tbody class="divide-y divide-line">
             @foreach (var record in Records)
             {
-                <tr>
-                    <td class="px-4 py-3 font-mono text-xs text-content-muted">@record.Reference</td>
-                    <td class="px-4 py-3 text-content-muted hidden sm:table-cell">@record.Kind.DisplayName()</td>
-                    <td class="px-4 py-3 text-content font-medium">@record.Title</td>
-                    <td class="px-4 py-3 text-right text-content-muted hidden md:table-cell">
+                <tr class="align-top">
+                    <td class="px-4 py-3 font-mono text-xs text-content-muted whitespace-nowrap">@record.Reference</td>
+                    <td class="px-4 py-3 text-content-muted hidden sm:table-cell whitespace-nowrap" title="@record.Kind.LongName()">@record.Kind.DisplayName()</td>
+                    <td class="px-4 py-3 text-content font-medium">
+                        @record.Title
+                        @if (record.ImpliesVariation)
+                        {
+                            <span class="ml-1.5 inline-flex items-center rounded bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-600">Variation</span>
+                        }
+                    </td>
+                    <td class="px-4 py-3 text-content-muted hidden lg:table-cell whitespace-nowrap">@Dash(record.RaisedTo)</td>
+                    <td class="px-4 py-3 text-content-subtle hidden xl:table-cell font-mono text-xs">@Dash(record.DrawingRef)</td>
+                    <td class="px-4 py-3 text-content-subtle hidden lg:table-cell whitespace-nowrap">@record.RaisedAt.LocalDateTime.ToString("d MMM yyyy")</td>
+                    <td class="px-4 py-3 text-content-subtle hidden lg:table-cell whitespace-nowrap">@Date(record.ResponseDue)</td>
+                    <td class="px-4 py-3 text-right hidden md:table-cell whitespace-nowrap">
+                        @if (record.DaysOutstanding is int days)
+                        {
+                            <span class="@(record.IsOverdue ? "text-red-600 font-semibold" : "text-content-muted")">@days</span>
+                        }
+                        else
+                        {
+                            <span class="text-content-subtle">—</span>
+                        }
+                    </td>
+                    <td class="px-4 py-3 text-right text-content-muted hidden md:table-cell whitespace-nowrap">
                         @(record.Value is null ? "—" : Money(record.Value.Value))
                     </td>
                     <td class="px-4 py-3">
-                        <span class="inline-flex items-center rounded-full bg-surface-raised border border-line px-2 py-0.5 text-[11px] font-medium text-content-muted">
-                            @record.Status
+                        <span class="inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium @StatusClass(record.Status)">
+                            @StatusLabel(record.Status)
                         </span>
                     </td>
-                    <td class="px-4 py-3 text-content-subtle hidden lg:table-cell">@record.RaisedAt.LocalDateTime.ToString("d MMM yyyy")</td>
                 </tr>
             }
         </tbody>
@@ -33,8 +56,30 @@
 </div>
 
 @code {
-    [Parameter, EditorRequired] public IReadOnlyList<ChangeRecord> Records { get; set; } = Array.Empty<ChangeRecord>();
+    [Parameter, EditorRequired] public IReadOnlyList<Request> Records { get; set; } = Array.Empty<Request>();
+
+    private static string Dash(string? value) => string.IsNullOrWhiteSpace(value) ? "—" : value;
+
+    private static string Date(DateTimeOffset? value) =>
+        value is null ? "—" : value.Value.LocalDateTime.ToString("d MMM yyyy");
 
     private static string Money(decimal value) =>
         value.ToString("C0", System.Globalization.CultureInfo.GetCultureInfo("en-GB"));
+
+    private static string StatusLabel(RequestStatus status) => status switch
+    {
+        RequestStatus.AwaitingResponse => "Awaiting response",
+        _ => status.ToString()
+    };
+
+    private static string StatusClass(RequestStatus status) => status switch
+    {
+        RequestStatus.Open             => "bg-blue-500/10 text-blue-600",
+        RequestStatus.AwaitingResponse => "bg-amber-500/10 text-amber-600",
+        RequestStatus.Approved         => "bg-emerald-500/10 text-emerald-600",
+        RequestStatus.Responded        => "bg-emerald-500/10 text-emerald-600",
+        RequestStatus.Rejected         => "bg-red-500/10 text-red-600",
+        RequestStatus.Closed           => "bg-surface-raised border border-line text-content-muted",
+        _                              => "bg-surface-raised border border-line text-content-muted"
+    };
 }

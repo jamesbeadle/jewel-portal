@@ -6,7 +6,7 @@
 @inject ICommercialStore CommercialStore
 @inject ICvrStore CvrStore
 @inject IHsRegister HsRegister
-@inject IChangeRegister ChangeRegister
+@inject IRequestRegister RequestRegister
 @inject NavigationManager Nav
 
 <PageTitle>Portfolio · JPMS</PageTitle>
@@ -46,7 +46,7 @@ else
     private int ActiveProjects =>
         AllProjects.Count(p => p.Stage != ProjectStage.Completed);
     private int OpenChanges =>
-        AllProjects.Sum(p => ChangeRegister.ForProject(p.ProjectId).Count(c => c.Status != ChangeStatus.Closed));
+        AllProjects.Sum(p => RequestRegister.ForProject(p.ProjectId).Count(c => c.Status != RequestStatus.Closed));
     private int OpenHs =>
         HsRegister.All().Count(r => r.Status != HsStatus.Closed);
 

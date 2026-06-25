@@ -1,6 +1,6 @@
-namespace Jewel.JPMS.Api.Features.Changes;
+namespace Jewel.JPMS.Api.Features.Requests;
 
-internal static class ChangesIdentifierFactory
+internal static class RequestsIdentifierFactory
 {
     private const string CompactGuidFormat = "N";
 

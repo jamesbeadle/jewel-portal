@@ -1,23 +1,23 @@
 using Jewel.JPMS.Api.Cqrs;
 using Jewel.JPMS.Api.Gates;
-using Jewel.JPMS.Contracts.Changes;
+using Jewel.JPMS.Contracts.Requests;
 using Jewel.JPMS.Models;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.Functions.Worker;
 
-namespace Jewel.JPMS.Api.Features.Changes.Queries;
+namespace Jewel.JPMS.Api.Features.Requests.Queries;
 
-public sealed class ListChangesForProjectEndpoint
+public sealed class ListRequestsForProjectEndpoint
 {
     private readonly SignedInUserResolver users;
-    private readonly IQueryHandler<ListChangesForProject, IReadOnlyList<ChangeRecord>> handler;
-    public ListChangesForProjectEndpoint(SignedInUserResolver users, IQueryHandler<ListChangesForProject, IReadOnlyList<ChangeRecord>> handler) { this.users = users; this.handler = handler; }
+    private readonly IQueryHandler<ListRequestsForProject, IReadOnlyList<Request>> handler;
+    public ListRequestsForProjectEndpoint(SignedInUserResolver users, IQueryHandler<ListRequestsForProject, IReadOnlyList<Request>> handler) { this.users = users; this.handler = handler; }
 
-    [Function(nameof(ListChangesForProject))]
-    public async Task<IActionResult> Run([HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "projects/{projectId}/changes")] HttpRequest request, string projectId)
+    [Function(nameof(ListRequestsForProject))]
+    public async Task<IActionResult> Run([HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "projects/{projectId}/requests")] HttpRequest request, string projectId)
     {
         if (await users.ResolveAsync(request, request.HttpContext.RequestAborted) is null) return new UnauthorizedResult();
-        return new OkObjectResult(await handler.HandleAsync(new ListChangesForProject(projectId), request.HttpContext.RequestAborted));
+        return new OkObjectResult(await handler.HandleAsync(new ListRequestsForProject(projectId), request.HttpContext.RequestAborted));
     }
 }

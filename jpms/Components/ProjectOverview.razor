@@ -1,6 +1,5 @@
 @using Jewel.JPMS.Features.Projects
 @inject ProjectListReadModel Projects
-@inject IBoqStore BoqStore
 
 @if (Project is not null)
 {
@@ -9,33 +8,10 @@
         <Stat Label="Entity"          Value="@Project.Organisation.ShortCode()" />
         <Stat Label="Project Manager" Value="@Project.ProjectManagerEmail" />
     </div>
-
-    <section class="rounded-xl border border-line bg-surface p-5 mb-6">
-        <h2 class="text-sm font-medium text-content-muted mb-3">Commercial snapshot</h2>
-        <dl class="text-sm space-y-2">
-            <div class="flex justify-between gap-3">
-                <dt class="text-content-subtle">BoQ line items</dt>
-                <dd class="text-content font-medium">@BoqLineCount</dd>
-            </div>
-            <div class="flex justify-between gap-3">
-                <dt class="text-content-subtle">BoQ total</dt>
-                <dd class="text-content font-medium">@Money(BoqTotal)</dd>
-            </div>
-            <div class="flex justify-between gap-3">
-                <dt class="text-content-subtle">Created</dt>
-                <dd class="text-content">@Project.CreatedAt.LocalDateTime.ToString("d MMM yyyy")</dd>
-            </div>
-        </dl>
-    </section>
 }
 
 @code {
     [Parameter, EditorRequired] public string ProjectId { get; set; } = "";
 
     private Project? Project => Projects.Find(ProjectId);
-    private int BoqLineCount => BoqStore.LinesFor(ProjectId).Count;
-    private decimal BoqTotal => BoqStore.TotalFor(ProjectId);
-
-    private static string Money(decimal value) =>
-        value.ToString("C0", System.Globalization.CultureInfo.GetCultureInfo("en-GB"));
 }

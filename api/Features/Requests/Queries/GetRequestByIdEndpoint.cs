@@ -1,35 +1,35 @@
 using Jewel.JPMS.Api.Cqrs;
 using Jewel.JPMS.Api.Gates;
-using Jewel.JPMS.Contracts.Changes;
+using Jewel.JPMS.Contracts.Requests;
 using Jewel.JPMS.Models;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.Functions.Worker;
 
-namespace Jewel.JPMS.Api.Features.Changes.Queries;
+namespace Jewel.JPMS.Api.Features.Requests.Queries;
 
-public sealed class GetChangeByIdEndpoint
+public sealed class GetRequestByIdEndpoint
 {
     private readonly SignedInUserResolver users;
-    private readonly IQueryHandler<GetChangeById, ChangeRecord?> handler;
+    private readonly IQueryHandler<GetRequestById, Request?> handler;
 
-    public GetChangeByIdEndpoint(
+    public GetRequestByIdEndpoint(
         SignedInUserResolver users,
-        IQueryHandler<GetChangeById, ChangeRecord?> handler)
+        IQueryHandler<GetRequestById, Request?> handler)
     {
         this.users = users;
         this.handler = handler;
     }
 
-    [Function(nameof(GetChangeById))]
+    [Function(nameof(GetRequestById))]
     public async Task<IActionResult> Run(
-        [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "changes/{changeRecordId}")] HttpRequest request,
-        string changeRecordId)
+        [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "requests/{requestId}")] HttpRequest request,
+        string requestId)
     {
         var signedInUser = await users.ResolveAsync(request, request.HttpContext.RequestAborted);
         if (signedInUser is null) return new UnauthorizedResult();
 
-        var change = await handler.HandleAsync(new GetChangeById(changeRecordId), request.HttpContext.RequestAborted);
+        var change = await handler.HandleAsync(new GetRequestById(requestId), request.HttpContext.RequestAborted);
         return new OkObjectResult(change);
     }
 }

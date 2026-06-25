@@ -5,7 +5,7 @@ using Jewel.JPMS.Api.Features.AccessRequests;
 using Jewel.JPMS.Api.Features.Auth;
 using Jewel.JPMS.Api.Features.Boq;
 using Jewel.JPMS.Api.Features.Cashflow;
-using Jewel.JPMS.Api.Features.Changes;
+using Jewel.JPMS.Api.Features.Requests;
 using Jewel.JPMS.Api.Features.Closeout;
 using Jewel.JPMS.Api.Features.Commercial;
 using Jewel.JPMS.Api.Features.CommercialInputs;
@@ -60,7 +60,7 @@ var host = new HostBuilder()
         services.AddCashflowFeature();
         services.AddCvrFeature();
         services.AddCloseoutFeature();
-        services.AddChangesFeature();
+        services.AddRequestsFeature();
     })
     .Build();
 

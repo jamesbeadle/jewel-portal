@@ -1,6 +1,6 @@
 using Jewel.JPMS.Contracts.Cqrs;
 using Jewel.JPMS.Models;
 
-namespace Jewel.JPMS.Contracts.Changes;
+namespace Jewel.JPMS.Contracts.Requests;
 
-public sealed record GetChangeById(string ChangeRecordId) : IQuery<ChangeRecord?>;
+public sealed record GetRequestById(string RequestId) : IQuery<Request?>;

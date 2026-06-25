@@ -1,6 +1,6 @@
 using Jewel.JPMS.Contracts.Cqrs;
 using Jewel.JPMS.Models;
 
-namespace Jewel.JPMS.Contracts.Changes;
+namespace Jewel.JPMS.Contracts.Requests;
 
-public sealed record ListChangesForProject(string ProjectId) : IQuery<IReadOnlyList<ChangeRecord>>;
+public sealed record ListRequestsForProject(string ProjectId) : IQuery<IReadOnlyList<Request>>;

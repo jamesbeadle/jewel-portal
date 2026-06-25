@@ -2,7 +2,7 @@
 @layout PortalLayout
 @using Jewel.JPMS.Features.Projects
 @inject PortalContext PortalContext
-@inject IChangeRegister ChangeRegister
+@inject IRequestRegister RequestRegister
 @inject ProjectListReadModel Projects
 @implements IDisposable
 
@@ -41,11 +41,11 @@
 @code {
     private IReadOnlyList<Project> AllProjects => Projects.Current ?? Array.Empty<Project>();
     private int OpenRfis =>
-        AllProjects.Sum(p => ChangeRegister.ForProject(p.ProjectId, ChangeKind.Rfi).Count(c => c.Status != ChangeStatus.Closed));
+        AllProjects.Sum(p => RequestRegister.ForProject(p.ProjectId, RequestType.Rfi).Count(c => c.Status != RequestStatus.Closed));
     private int OpenSubmittals =>
-        AllProjects.Sum(p => ChangeRegister.ForProject(p.ProjectId, ChangeKind.Submittal).Count(c => c.Status != ChangeStatus.Closed));
+        AllProjects.Sum(p => RequestRegister.ForProject(p.ProjectId, RequestType.Rfa).Count(c => c.Status != RequestStatus.Closed));
     private int OpenVariations =>
-        AllProjects.Sum(p => ChangeRegister.ForProject(p.ProjectId, ChangeKind.Variation).Count(c => c.Status != ChangeStatus.Closed));
+        AllProjects.Sum(p => RequestRegister.ForProject(p.ProjectId, RequestType.Rfc).Count(c => c.Status != RequestStatus.Closed));
 
     protected override async Task OnInitializedAsync()
     {

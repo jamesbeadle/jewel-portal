@@ -3,7 +3,7 @@
 @layout PortalLayout
 @using Jewel.JPMS.Features.Projects
 @inject PortalContext PortalContext
-@inject IChangeRegister ChangeRegister
+@inject IRequestRegister RequestRegister
 @inject ProjectListReadModel Projects
 @inject NavigationManager Nav
 @implements IDisposable
@@ -38,31 +38,31 @@
 </section>
 
 @code {
-    private ChangeKind Kind => CurrentPath.EndsWith("variations") ? ChangeKind.Variation : ChangeKind.Submittal;
+    private RequestType Kind => CurrentPath.EndsWith("variations") ? RequestType.Rfc : RequestType.Rfa;
     private string CurrentPath => new Uri(Nav.Uri).AbsolutePath;
-    private string PageHeading => Kind == ChangeKind.Variation ? "Variation orders" : "Submittals";
-    private string PageSubheading => Kind == ChangeKind.Variation
+    private string PageHeading => Kind == RequestType.Rfc ? "Variation orders" : "Submittals";
+    private string PageSubheading => Kind == RequestType.Rfc
         ? "Cost-impacting changes pending your sign-off."
         : "Material and sample submittals pending approval before installation.";
 
-    private IReadOnlyList<(ChangeRecord Record, Project Project)> Pending =>
+    private IReadOnlyList<(Request Record, Project Project)> Pending =>
         (Projects.Current ?? Array.Empty<Project>())
-            .SelectMany(project => ChangeRegister.ForProject(project.ProjectId, Kind)
-                .Where(record => record.Status is ChangeStatus.Open or ChangeStatus.AwaitingResponse)
+            .SelectMany(project => RequestRegister.ForProject(project.ProjectId, Kind)
+                .Where(record => record.Status is RequestStatus.Open or RequestStatus.AwaitingResponse)
                 .Select(record => (record, project)))
             .ToList()
             .AsReadOnly();
 
     protected override async Task OnInitializedAsync()
     {
-        ChangeRegister.OnChange += StateHasChanged;
+        RequestRegister.OnChange += StateHasChanged;
         Projects.OnChanged += StateHasChanged;
         if (Projects.Current is null) await Projects.RefreshAsync(CancellationToken.None);
     }
 
     public void Dispose()
     {
-        ChangeRegister.OnChange -= StateHasChanged;
+        RequestRegister.OnChange -= StateHasChanged;
         Projects.OnChanged -= StateHasChanged;
     }
 }

@@ -2,7 +2,7 @@ using Jewel.JPMS;
 using Jewel.JPMS.Cqrs;
 using Jewel.JPMS.Features.Boq;
 using Jewel.JPMS.Features.Cashflow;
-using Jewel.JPMS.Features.Changes;
+using Jewel.JPMS.Features.Requests;
 using Jewel.JPMS.Features.Closeout;
 using Jewel.JPMS.Features.Commercial;
 using Jewel.JPMS.Features.CommercialInputs;
@@ -47,7 +47,7 @@ builder.Services.AddCommercialReadModels();
 builder.Services.AddCashflowReadModels();
 builder.Services.AddCvrReadModels();
 builder.Services.AddCloseoutReadModels();
-builder.Services.AddChangesReadModels();
+builder.Services.AddRequestsReadModels();
 
 builder.Services.AddScoped<IUserDirectory, HttpUserDirectory>();
 builder.Services.AddScoped<IAccessRequestStore, HttpAccessRequestStore>();
@@ -60,7 +60,7 @@ builder.Services.AddScoped<ISubcontractorStore, HttpSubcontractorStore>();
 builder.Services.AddScoped<IHsRegister, HttpHsRegister>();
 builder.Services.AddScoped<IProcurementStore, HttpProcurementStore>();
 builder.Services.AddScoped<IMobilisationStore, HttpMobilisationStore>();
-builder.Services.AddScoped<IChangeRegister, HttpChangeRegister>();
+builder.Services.AddScoped<IRequestRegister, HttpRequestRegister>();
 builder.Services.AddScoped<ISiteStore, HttpSiteStore>();
 builder.Services.AddScoped<ICommercialStore, HttpCommercialStore>();
 builder.Services.AddScoped<ICvrStore, HttpCvrStore>();
@@ -95,7 +95,7 @@ using (var routeScope = app.Services.CreateScope())
     CashflowRouteRegistration.RegisterCashflowRoutes(queryRoutes, commandRoutes);
     CvrRouteRegistration.RegisterCvrRoutes(queryRoutes, commandRoutes);
     CloseoutRouteRegistration.RegisterCloseoutRoutes(queryRoutes, commandRoutes);
-    ChangesRouteRegistration.RegisterChangesRoutes(queryRoutes, commandRoutes);
+    RequestsRouteRegistration.RegisterRequestsRoutes(queryRoutes, commandRoutes);
 }
 
 await app.RunAsync();

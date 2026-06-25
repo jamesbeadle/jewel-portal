@@ -1,28 +1,28 @@
 using Jewel.JPMS.Api.Cqrs;
 using Jewel.JPMS.Api.Gates;
-using Jewel.JPMS.Contracts.Changes;
+using Jewel.JPMS.Contracts.Requests;
 using Jewel.JPMS.Models;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.Functions.Worker;
 
-namespace Jewel.JPMS.Api.Features.Changes.Commands;
+namespace Jewel.JPMS.Api.Features.Requests.Commands;
 
-public sealed class RaiseChangeEndpoint
+public sealed class RaiseRequestEndpoint
 {
     private readonly SignedInUserResolver users;
-    private readonly RaiseChangeAuthorisation authorisation;
-    private readonly RaiseChangeValidation validation;
-    private readonly ICommandHandler<RaiseChange, ChangeRecord> handler;
-    public RaiseChangeEndpoint(SignedInUserResolver users, RaiseChangeAuthorisation authorisation, RaiseChangeValidation validation, ICommandHandler<RaiseChange, ChangeRecord> handler)
+    private readonly RaiseRequestAuthorisation authorisation;
+    private readonly RaiseRequestValidation validation;
+    private readonly ICommandHandler<RaiseRequest, Request> handler;
+    public RaiseRequestEndpoint(SignedInUserResolver users, RaiseRequestAuthorisation authorisation, RaiseRequestValidation validation, ICommandHandler<RaiseRequest, Request> handler)
     { this.users = users; this.authorisation = authorisation; this.validation = validation; this.handler = handler; }
 
-    [Function(nameof(RaiseChange))]
-    public async Task<IActionResult> Run([HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "projects/{projectId}/changes")] HttpRequest request, string projectId)
+    [Function(nameof(RaiseRequest))]
+    public async Task<IActionResult> Run([HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "projects/{projectId}/requests")] HttpRequest request, string projectId)
     {
         var signedInUser = await users.ResolveAsync(request, request.HttpContext.RequestAborted);
         if (signedInUser is null) return new UnauthorizedResult();
-        var command = await request.ReadFromJsonAsync<RaiseChange>();
+        var command = await request.ReadFromJsonAsync<RaiseRequest>();
         if (command is null) return new BadRequestResult();
         if (command.ProjectId != projectId) return new BadRequestObjectResult("Route projectId does not match body.");
         if (!authorisation.Allows(signedInUser, command)) return new ForbidResult();

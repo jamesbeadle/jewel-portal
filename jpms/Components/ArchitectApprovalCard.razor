@@ -1,5 +1,5 @@
 @inject AuthService Auth
-@inject IChangeRegister ChangeRegister
+@inject IRequestRegister RequestRegister
 
 <div class="p-5">
     <div class="flex items-start justify-between gap-3 mb-2">
@@ -16,11 +16,11 @@
     <p class="text-sm text-content-muted mb-3">@Record.Description</p>
 
     <div class="flex items-center gap-2">
-        <button type="button" @onclick="() => Decide(ChangeStatus.Approved)"
+        <button type="button" @onclick="() => Decide(RequestStatus.Approved)"
                 class="rounded-lg bg-emerald-600 text-white font-medium text-sm px-3 py-2 hover:bg-emerald-700 transition">
             Approve
         </button>
-        <button type="button" @onclick="() => Decide(ChangeStatus.Rejected)"
+        <button type="button" @onclick="() => Decide(RequestStatus.Rejected)"
                 class="rounded-lg border border-line bg-surface text-content-muted font-medium text-sm px-3 py-2 hover:border-line-strong transition">
             Reject
         </button>
@@ -28,13 +28,13 @@
 </div>
 
 @code {
-    [Parameter, EditorRequired] public ChangeRecord Record { get; set; } = default!;
+    [Parameter, EditorRequired] public Request Record { get; set; } = default!;
     [Parameter, EditorRequired] public string ProjectName { get; set; } = "";
 
-    private void Decide(ChangeStatus status)
+    private void Decide(RequestStatus status)
     {
-        var responseText = status == ChangeStatus.Approved ? "Approved." : "Rejected.";
-        ChangeRegister.Upsert(Record with
+        var responseText = status == RequestStatus.Approved ? "Approved." : "Rejected.";
+        RequestRegister.Upsert(Record with
         {
             Status = status,
             RespondedAt = DateTimeOffset.UtcNow,

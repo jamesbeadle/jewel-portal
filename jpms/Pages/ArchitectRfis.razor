@@ -2,7 +2,7 @@
 @layout PortalLayout
 @using Jewel.JPMS.Features.Projects
 @inject PortalContext PortalContext
-@inject IChangeRegister ChangeRegister
+@inject IRequestRegister RequestRegister
 @inject ProjectListReadModel Projects
 @implements IDisposable
 
@@ -36,24 +36,24 @@
 </section>
 
 @code {
-    private IReadOnlyList<(ChangeRecord Rfi, Project Project)> OpenRfis =>
+    private IReadOnlyList<(Request Rfi, Project Project)> OpenRfis =>
         (Projects.Current ?? Array.Empty<Project>())
-            .SelectMany(project => ChangeRegister.ForProject(project.ProjectId, ChangeKind.Rfi)
-                .Where(rfi => rfi.Status != ChangeStatus.Closed)
+            .SelectMany(project => RequestRegister.ForProject(project.ProjectId, RequestType.Rfi)
+                .Where(rfi => rfi.Status != RequestStatus.Closed)
                 .Select(rfi => (rfi, project)))
             .ToList()
             .AsReadOnly();
 
     protected override async Task OnInitializedAsync()
     {
-        ChangeRegister.OnChange += StateHasChanged;
+        RequestRegister.OnChange += StateHasChanged;
         Projects.OnChanged += StateHasChanged;
         if (Projects.Current is null) await Projects.RefreshAsync(CancellationToken.None);
     }
 
     public void Dispose()
     {
-        ChangeRegister.OnChange -= StateHasChanged;
+        RequestRegister.OnChange -= StateHasChanged;
         Projects.OnChanged -= StateHasChanged;
     }
 }

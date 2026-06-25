@@ -11,9 +11,10 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Jewel.JPMS.Api.Migrations
 {
     [DbContext(typeof(JpmsContext))]
-    partial class JpmsContextModelSnapshot : ModelSnapshot
+    [Migration("20260625090000_RenameChangesToRequests")]
+    partial class RenameChangesToRequests
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder

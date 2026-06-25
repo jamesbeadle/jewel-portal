@@ -3,7 +3,7 @@
 @inject AuthService Auth
 @inject SessionService Session
 @inject ProjectListReadModel Projects
-@inject IChangeRegister ChangeRegister
+@inject IRequestRegister RequestRegister
 @inject IHsRegister HsRegister
 @inject ICommercialStore CommercialStore
 @inject NavigationManager Nav
@@ -65,7 +65,7 @@ else
             var alerts = new List<AlertRow>();
             foreach (var project in Projects.Current ?? Array.Empty<Project>())
             {
-                var openRfis = ChangeRegister.ForProject(project.ProjectId, ChangeKind.Rfi).Count(c => c.Status != ChangeStatus.Closed);
+                var openRfis = RequestRegister.ForProject(project.ProjectId, RequestType.Rfi).Count(c => c.Status != RequestStatus.Closed);
                 if (openRfis >= 2) alerts.Add(new($"{project.Name} — {openRfis} open RFIs", "Long-standing RFIs delay programme."));
 
                 var highHs = HsRegister.ForProject(project.ProjectId).Count(r => r.Status != HsStatus.Closed && r.Severity >= HsSeverity.High);

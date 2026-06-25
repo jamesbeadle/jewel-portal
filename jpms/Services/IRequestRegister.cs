@@ -2,11 +2,11 @@ using Jewel.JPMS.Models;
 
 namespace Jewel.JPMS.Services;
 
-public interface IChangeRegister
+public interface IRequestRegister
 {
-    IReadOnlyList<ChangeRecord> ForProject(string projectId);
-    IReadOnlyList<ChangeRecord> ForProject(string projectId, ChangeKind kind);
-    ChangeRecord? Find(string changeRecordId);
-    ChangeRecord Upsert(ChangeRecord record);
+    IReadOnlyList<Request> ForProject(string projectId);
+    IReadOnlyList<Request> ForProject(string projectId, RequestType kind);
+    Request? Find(string requestId);
+    Request Upsert(Request record);
     event Action? OnChange;
 }

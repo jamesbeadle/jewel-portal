@@ -1,19 +1,19 @@
 using Jewel.JPMS.Api.Cqrs;
 using Jewel.JPMS.Api.Data;
-using Jewel.JPMS.Contracts.Changes;
+using Jewel.JPMS.Contracts.Requests;
 using Jewel.JPMS.Models;
 
-namespace Jewel.JPMS.Api.Features.Changes.Commands;
+namespace Jewel.JPMS.Api.Features.Requests.Commands;
 
-public sealed class UpdateChangeDetailsHandler : ICommandHandler<UpdateChangeDetails, ChangeRecord>
+public sealed class UpdateRequestDetailsHandler : ICommandHandler<UpdateRequestDetails, Request>
 {
     private readonly JpmsContext context;
-    public UpdateChangeDetailsHandler(JpmsContext context) { this.context = context; }
+    public UpdateRequestDetailsHandler(JpmsContext context) { this.context = context; }
 
-    public async Task<ChangeRecord> HandleAsync(UpdateChangeDetails command, CancellationToken cancellationToken)
+    public async Task<Request> HandleAsync(UpdateRequestDetails command, CancellationToken cancellationToken)
     {
-        var entity = await context.ChangeRecords.FindAsync(new object[] { command.ChangeRecordId }, cancellationToken);
-        if (entity is null) throw new InvalidOperationException($"Change record {command.ChangeRecordId} not found.");
+        var entity = await context.Requests.FindAsync(new object[] { command.RequestId }, cancellationToken);
+        if (entity is null) throw new InvalidOperationException($"Request {command.RequestId} not found.");
 
         entity.Reference = command.Reference;
         entity.Title = command.Title;
@@ -23,6 +23,12 @@ public sealed class UpdateChangeDetailsHandler : ICommandHandler<UpdateChangeDet
         entity.ResponseText = command.ResponseText;
         entity.RespondedByEmail = command.RespondedByEmail;
         entity.ImpliesVariation = command.ImpliesVariation;
+        entity.RaisedTo = command.RaisedTo;
+        entity.DrawingRef = command.DrawingRef;
+        entity.ResponseDue = command.ResponseDue;
+        entity.RelatedDrawingSpec = command.RelatedDrawingSpec;
+        entity.InternalNotes = command.InternalNotes;
+        entity.ClientNotes = command.ClientNotes;
         if (entity.RespondedAt is null && !string.IsNullOrWhiteSpace(command.ResponseText)) entity.RespondedAt = DateTimeOffset.UtcNow;
 
         await context.SaveChangesAsync(cancellationToken);

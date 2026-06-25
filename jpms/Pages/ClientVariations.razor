@@ -2,7 +2,7 @@
 @layout PortalLayout
 @using Jewel.JPMS.Features.Projects
 @inject ProjectListReadModel Projects
-@inject IChangeRegister ChangeRegister
+@inject IRequestRegister RequestRegister
 @implements IDisposable
 
 <PageTitle>Variations · Client portal</PageTitle>
@@ -42,15 +42,15 @@
     [Parameter] public string ProjectId { get; set; } = "";
 
     private Project? project;
-    private IReadOnlyList<ChangeRecord> Pending =>
-        ChangeRegister.ForProject(ProjectId, ChangeKind.Variation)
-                      .Where(record => record.Status is ChangeStatus.Open or ChangeStatus.AwaitingResponse)
+    private IReadOnlyList<Request> Pending =>
+        RequestRegister.ForProject(ProjectId, RequestType.Rfc)
+                      .Where(record => record.Status is RequestStatus.Open or RequestStatus.AwaitingResponse)
                       .ToList()
                       .AsReadOnly();
 
     protected override async Task OnInitializedAsync()
     {
-        ChangeRegister.OnChange += StateHasChanged;
+        RequestRegister.OnChange += StateHasChanged;
         Projects.OnChanged += StateHasChanged;
         if (Projects.Current is null) await Projects.RefreshAsync(CancellationToken.None);
     }
@@ -59,7 +59,7 @@
 
     public void Dispose()
     {
-        ChangeRegister.OnChange -= StateHasChanged;
+        RequestRegister.OnChange -= StateHasChanged;
         Projects.OnChanged -= StateHasChanged;
     }
 }

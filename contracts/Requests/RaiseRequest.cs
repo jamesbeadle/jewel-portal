@@ -1,13 +1,18 @@
 using Jewel.JPMS.Contracts.Cqrs;
 using Jewel.JPMS.Models;
 
-namespace Jewel.JPMS.Contracts.Changes;
+namespace Jewel.JPMS.Contracts.Requests;
 
-public sealed record RaiseChange(
+public sealed record RaiseRequest(
     string ProjectId,
-    ChangeKind Kind,
+    RequestType Kind,
     string Reference,
     string Title,
     string Description,
     decimal? Value,
-    string RaisedByEmail) : ICommand<ChangeRecord>;
+    string RaisedByEmail,
+    string? RaisedTo = null,
+    string? DrawingRef = null,
+    DateTimeOffset? ResponseDue = null,
+    string? InternalNotes = null,
+    string? ClientNotes = null) : ICommand<Request>;

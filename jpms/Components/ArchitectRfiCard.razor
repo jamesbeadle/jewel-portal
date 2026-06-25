@@ -1,5 +1,5 @@
 @inject AuthService Auth
-@inject IChangeRegister ChangeRegister
+@inject IRequestRegister RequestRegister
 
 <div class="p-5">
     <div class="flex items-start justify-between gap-3 mb-2">
@@ -43,7 +43,7 @@
 </div>
 
 @code {
-    [Parameter, EditorRequired] public ChangeRecord Rfi { get; set; } = default!;
+    [Parameter, EditorRequired] public Request Rfi { get; set; } = default!;
     [Parameter, EditorRequired] public string ProjectName { get; set; } = "";
 
     private bool showReplyForm;
@@ -54,13 +54,13 @@
     {
         var resolved = Rfi with
         {
-            Status = ChangeStatus.Closed,
+            Status = RequestStatus.Closed,
             RespondedAt = DateTimeOffset.UtcNow,
             ResponseText = reply,
             RespondedByEmail = Auth.CurrentUser?.Email ?? "architect@unknown",
             ImpliesVariation = impliesVariation
         };
-        ChangeRegister.Upsert(resolved);
+        RequestRegister.Upsert(resolved);
         showReplyForm = false;
     }
 }

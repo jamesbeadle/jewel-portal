@@ -1,12 +1,12 @@
-@page "/projects/{ProjectId}/changes"
-@page "/projects/{ProjectId}/changes/{Kind}"
+@page "/projects/{ProjectId}/requests"
+@page "/projects/{ProjectId}/requests/{Kind}"
 @inject AuthService Auth
 @inject SessionService Session
-@inject IChangeRegister ChangeRegister
+@inject IRequestRegister RequestRegister
 @inject NavigationManager Nav
 @implements IDisposable
 
-<PageTitle>Changes · JPMS</PageTitle>
+<PageTitle>Requests · JPMS</PageTitle>
 
 @if (!isLoaded)
 {
@@ -18,8 +18,8 @@ else if (!Session.IsApproved)
 }
 else
 {
-    <ProjectPageShell ProjectId="@ProjectId" ActiveTab="changes">
-        <h2 class="text-lg font-semibold text-content mb-3">Change register</h2>
+    <ProjectPageShell ProjectId="@ProjectId" ActiveTab="requests">
+        <h2 class="text-lg font-semibold text-content mb-3">Request register</h2>
 
         <div class="flex flex-wrap items-center gap-2 mb-5 text-sm">
             @foreach (var filter in Filters)
@@ -32,11 +32,11 @@ else
 
         @if (FilteredRecords.Count == 0)
         {
-            <p class="text-sm text-content-subtle italic">No changes recorded.</p>
+            <p class="text-sm text-content-subtle italic">No requests recorded.</p>
         }
         else
         {
-            <ChangeRecordTable Records="FilteredRecords" />
+            <RequestTable Records="FilteredRecords" />
         }
     </ProjectPageShell>
 }
@@ -47,31 +47,34 @@ else
 
     private bool isLoaded;
 
-    private record Filter(string Slug, string Label, ChangeKind? Kind);
+    private record Filter(string Slug, string Label, RequestType? Kind);
 
     private static readonly Filter[] Filters =
     {
-        new("all",        "All",          null),
-        new("rfis",       "RFIs",         ChangeKind.Rfi),
-        new("submittals", "Submittals",   ChangeKind.Submittal),
-        new("variations", "Variations",   ChangeKind.Variation),
-        new("delays",     "Delays",       ChangeKind.NoticeOfDelay)
+        new("all",        "All",  null),
+        new("rfis",       "RFIs", RequestType.Rfi),
+        new("rfqs",       "RFQs", RequestType.Rfq),
+        new("rfps",       "RFPs", RequestType.Rfp),
+        new("rfcs",       "RFCs", RequestType.Rfc),
+        new("rfas",       "RFAs", RequestType.Rfa),
+        new("delays",     "NODs", RequestType.NoticeOfDelay),
+        new("eots",       "EOTs", RequestType.ExtensionOfTime)
     };
 
     private string ActiveSlug => string.IsNullOrWhiteSpace(Kind) ? "all" : Kind.ToLowerInvariant();
 
-    private IReadOnlyList<ChangeRecord> FilteredRecords
+    private IReadOnlyList<Request> FilteredRecords
     {
         get
         {
             var filter = Filters.FirstOrDefault(f => f.Slug == ActiveSlug);
-            if (filter?.Kind is null) return ChangeRegister.ForProject(ProjectId);
-            return ChangeRegister.ForProject(ProjectId, filter.Kind.Value);
+            if (filter?.Kind is null) return RequestRegister.ForProject(ProjectId);
+            return RequestRegister.ForProject(ProjectId, filter.Kind.Value);
         }
     }
 
     private string HrefFor(string slug) =>
-        slug == "all" ? $"/projects/{ProjectId}/changes" : $"/projects/{ProjectId}/changes/{slug}";
+        slug == "all" ? $"/projects/{ProjectId}/requests" : $"/projects/{ProjectId}/requests/{slug}";
 
     private string FilterClass(string slug)
     {
@@ -83,9 +86,9 @@ else
     {
         await Session.EnsureLoadedAsync();
         if (!Auth.IsSignedIn) { Nav.NavigateTo("/login", forceLoad: true); return; }
-        ChangeRegister.OnChange += StateHasChanged;
+        RequestRegister.OnChange += StateHasChanged;
         isLoaded = true;
     }
 
-    public void Dispose() => ChangeRegister.OnChange -= StateHasChanged;
+    public void Dispose() => RequestRegister.OnChange -= StateHasChanged;
 }

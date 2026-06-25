@@ -3,7 +3,7 @@
 @inject AuthService Auth
 @inject SessionService Session
 @inject ProjectListReadModel Projects
-@inject IChangeRegister ChangeRegister
+@inject IRequestRegister RequestRegister
 @inject ICommercialStore CommercialStore
 @inject NavigationManager Nav
 
@@ -41,8 +41,8 @@ else
     private IReadOnlyList<HealthRow> HealthRows =>
         (Projects.Current ?? Array.Empty<Project>()).Select(project => new HealthRow(
             project.Reference, project.Name,
-            ChangeRegister.ForProject(project.ProjectId, ChangeKind.Rfi).Count(c => c.Status != ChangeStatus.Closed),
-            ChangeRegister.ForProject(project.ProjectId, ChangeKind.Variation).Count(c => c.Status is ChangeStatus.Open or ChangeStatus.AwaitingResponse),
+            RequestRegister.ForProject(project.ProjectId, RequestType.Rfi).Count(c => c.Status != RequestStatus.Closed),
+            RequestRegister.ForProject(project.ProjectId, RequestType.Rfc).Count(c => c.Status is RequestStatus.Open or RequestStatus.AwaitingResponse),
             CommercialStore.ValuationsFor(project.ProjectId).Count(v => !v.IsIssued)
         )).ToList().AsReadOnly();
 

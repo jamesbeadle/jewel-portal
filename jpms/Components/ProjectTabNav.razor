@@ -3,7 +3,14 @@
         @foreach (var tab in Tabs)
         {
             <li>
-                <a href="@HrefFor(tab.Slug)" class="@ClassFor(tab.Slug)">@tab.Label</a>
+                @if (tab.Enabled)
+                {
+                    <a href="@HrefFor(tab.Slug)" class="@ClassFor(tab.Slug)">@tab.Label</a>
+                }
+                else
+                {
+                    <span class="@DisabledClass" title="Coming soon" aria-disabled="true">@tab.Label</span>
+                }
             </li>
         }
     </ul>
@@ -13,24 +20,28 @@
     [Parameter, EditorRequired] public string ProjectId { get; set; } = "";
     [Parameter, EditorRequired] public string ActiveTab { get; set; } = "overview";
 
-    private record Tab(string Slug, string Label);
+    private record Tab(string Slug, string Label, bool Enabled);
 
+    // Only Overview and Requests are live while the rest of the project view is re-scoped.
     private static readonly Tab[] Tabs =
     {
-        new("overview",     "Overview"),
-        new("drawings",     "Drawings"),
-        new("boq",          "BoQ"),
-        new("procurement",  "Procurement"),
-        new("mobilisation", "Mobilisation"),
-        new("hs",           "H&S"),
-        new("changes",      "Changes"),
-        new("site",         "Site"),
-        new("commercial",   "Commercial"),
-        new("closeout",     "Close-out")
+        new("overview",     "Overview",     true),
+        new("drawings",     "Drawings",     false),
+        new("boq",          "BoQ",          false),
+        new("procurement",  "Procurement",  false),
+        new("mobilisation", "Mobilisation", false),
+        new("hs",           "H&S",          false),
+        new("requests",     "Requests",     true),
+        new("site",         "Site",         false),
+        new("commercial",   "Commercial",   false),
+        new("closeout",     "Close-out",    false)
     };
 
     private string HrefFor(string slug) =>
         slug == "overview" ? $"/projects/{ProjectId}" : $"/projects/{ProjectId}/{slug}";
+
+    private const string DisabledClass =
+        "inline-block px-3 py-2 border-b-2 border-transparent text-content-subtle/40 cursor-not-allowed select-none";
 
     private string ClassFor(string slug)
     {

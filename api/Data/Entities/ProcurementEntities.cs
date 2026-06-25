@@ -36,9 +36,9 @@ public sealed class WorkOrderEntity
     [MaxLength(256)]     public string AwardedByEmail { get; set; } = "";
 }
 
-public sealed class ChangeRecordEntity
+public sealed class RequestEntity
 {
-    [Key, MaxLength(64)] public string ChangeRecordId { get; set; } = "";
+    [Key, MaxLength(64)] public string RequestId { get; set; } = "";
     [MaxLength(64)]      public string ProjectId { get; set; } = "";
     public int Kind { get; set; }
     [MaxLength(64)]      public string Reference { get; set; } = "";
@@ -52,4 +52,10 @@ public sealed class ChangeRecordEntity
     [MaxLength(2048)]    public string? ResponseText { get; set; }
     [MaxLength(256)]     public string? RespondedByEmail { get; set; }
     public bool ImpliesVariation { get; set; }
+    [MaxLength(256)]     public string? RaisedTo { get; set; }
+    [MaxLength(256)]     public string? DrawingRef { get; set; }
+    public DateTimeOffset? ResponseDue { get; set; }
+    [MaxLength(512)]     public string? RelatedDrawingSpec { get; set; }
+    [MaxLength(4000)]    public string? InternalNotes { get; set; }
+    [MaxLength(4000)]    public string? ClientNotes { get; set; }
 }

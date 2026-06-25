@@ -49,7 +49,7 @@ public sealed class JpmsContext : DbContext
     public DbSet<BidPackageEntity> BidPackages => Set<BidPackageEntity>();
     public DbSet<QuoteEntity> Quotes => Set<QuoteEntity>();
     public DbSet<WorkOrderEntity> WorkOrders => Set<WorkOrderEntity>();
-    public DbSet<ChangeRecordEntity> ChangeRecords => Set<ChangeRecordEntity>();
+    public DbSet<RequestEntity> Requests => Set<RequestEntity>();
 
     public DbSet<SiteReportEntity> SiteReports => Set<SiteReportEntity>();
     public DbSet<ProgrammeTaskEntity> ProgrammeTasks => Set<ProgrammeTaskEntity>();

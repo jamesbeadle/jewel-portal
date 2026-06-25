@@ -1,34 +1,34 @@
-using Jewel.JPMS.Contracts.Changes;
+using Jewel.JPMS.Contracts.Requests;
 using Jewel.JPMS.Cqrs;
 using Jewel.JPMS.Models;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace Jewel.JPMS.Features.Changes;
+namespace Jewel.JPMS.Features.Requests;
 
-public static class ChangesRouteRegistration
+public static class RequestsRouteRegistration
 {
-    public static IServiceCollection AddChangesReadModels(this IServiceCollection services)
+    public static IServiceCollection AddRequestsReadModels(this IServiceCollection services)
     {
-        services.AddScoped<ChangesReadModel>();
+        services.AddScoped<RequestsReadModel>();
         return services;
     }
 
-    public static void RegisterChangesRoutes(QueryRouteTable queries, CommandRouteTable commands)
+    public static void RegisterRequestsRoutes(QueryRouteTable queries, CommandRouteTable commands)
     {
-        queries.Register<ListChangesForProject, IReadOnlyList<ChangeRecord>>(
-            new QueryRoute("/api/projects/{projectId}/changes",
-                query => $"/api/projects/{((ListChangesForProject)query).ProjectId}/changes"));
+        queries.Register<ListRequestsForProject, IReadOnlyList<Request>>(
+            new QueryRoute("/api/projects/{projectId}/requests",
+                query => $"/api/projects/{((ListRequestsForProject)query).ProjectId}/requests"));
 
-        queries.Register<GetChangeById, ChangeRecord?>(
-            new QueryRoute("/api/changes/{changeRecordId}",
-                query => $"/api/changes/{((GetChangeById)query).ChangeRecordId}"));
+        queries.Register<GetRequestById, Request?>(
+            new QueryRoute("/api/requests/{requestId}",
+                query => $"/api/requests/{((GetRequestById)query).RequestId}"));
 
-        commands.Register<RaiseChange, ChangeRecord>(
-            new CommandRoute("POST", "/api/projects/{projectId}/changes",
-                command => $"/api/projects/{((RaiseChange)command).ProjectId}/changes"));
+        commands.Register<RaiseRequest, Request>(
+            new CommandRoute("POST", "/api/projects/{projectId}/requests",
+                command => $"/api/projects/{((RaiseRequest)command).ProjectId}/requests"));
 
-        commands.Register<UpdateChangeDetails, ChangeRecord>(
-            new CommandRoute("PUT", "/api/changes/{changeRecordId}",
-                command => $"/api/changes/{((UpdateChangeDetails)command).ChangeRecordId}"));
+        commands.Register<UpdateRequestDetails, Request>(
+            new CommandRoute("PUT", "/api/requests/{requestId}",
+                command => $"/api/requests/{((UpdateRequestDetails)command).RequestId}"));
     }
 }

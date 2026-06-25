@@ -5,7 +5,7 @@ public enum PhotoAttachedKind
     Project,
     Defect,
     HsRecord,
-    ChangeRecord,
+    Request,
     WalkRoundNote,
     SiteReport
 }

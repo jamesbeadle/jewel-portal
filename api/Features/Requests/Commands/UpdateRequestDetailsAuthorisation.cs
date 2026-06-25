@@ -1,11 +1,11 @@
 using Jewel.JPMS.Api.Gates;
-using Jewel.JPMS.Contracts.Changes;
+using Jewel.JPMS.Contracts.Requests;
 
-namespace Jewel.JPMS.Api.Features.Changes.Commands;
+namespace Jewel.JPMS.Api.Features.Requests.Commands;
 
-public sealed class UpdateChangeDetailsAuthorisation
+public sealed class UpdateRequestDetailsAuthorisation
 {
-    private static readonly RoleSet RolesThatMayUpdateChanges =
+    private static readonly RoleSet RolesThatMayUpdateRequests =
         RoleSet.Of(JpmsRoles.Director, JpmsRoles.ProjectManager, JpmsRoles.Architect);
-    public bool Allows(SignedInUser user, UpdateChangeDetails command) => RolesThatMayUpdateChanges.IncludesAny(user.Roles);
+    public bool Allows(SignedInUser user, UpdateRequestDetails command) => RolesThatMayUpdateRequests.IncludesAny(user.Roles);
 }

@@ -1,36 +1,42 @@
 using Jewel.JPMS.Api.Cqrs;
 using Jewel.JPMS.Api.Data;
 using Jewel.JPMS.Api.Data.Entities;
-using Jewel.JPMS.Contracts.Changes;
+using Jewel.JPMS.Contracts.Requests;
 using Jewel.JPMS.Models;
 
-namespace Jewel.JPMS.Api.Features.Changes.Commands;
+namespace Jewel.JPMS.Api.Features.Requests.Commands;
 
-public sealed class RaiseChangeHandler : ICommandHandler<RaiseChange, ChangeRecord>
+public sealed class RaiseRequestHandler : ICommandHandler<RaiseRequest, Request>
 {
     private readonly JpmsContext context;
-    public RaiseChangeHandler(JpmsContext context) { this.context = context; }
+    public RaiseRequestHandler(JpmsContext context) { this.context = context; }
 
-    public async Task<ChangeRecord> HandleAsync(RaiseChange command, CancellationToken cancellationToken)
+    public async Task<Request> HandleAsync(RaiseRequest command, CancellationToken cancellationToken)
     {
-        var entity = new ChangeRecordEntity
+        var entity = new RequestEntity
         {
-            ChangeRecordId = ChangesIdentifierFactory.Next(),
+            RequestId = RequestsIdentifierFactory.Next(),
             ProjectId = command.ProjectId,
             Kind = (int)command.Kind,
             Reference = command.Reference,
             Title = command.Title,
             Description = command.Description,
-            Status = (int)ChangeStatus.Open,
+            Status = (int)RequestStatus.Open,
             Value = command.Value,
             RaisedByEmail = command.RaisedByEmail,
             RaisedAt = DateTimeOffset.UtcNow,
             RespondedAt = null,
             ResponseText = null,
             RespondedByEmail = null,
-            ImpliesVariation = false
+            ImpliesVariation = false,
+            RaisedTo = command.RaisedTo,
+            DrawingRef = command.DrawingRef,
+            ResponseDue = command.ResponseDue,
+            RelatedDrawingSpec = null,
+            InternalNotes = command.InternalNotes,
+            ClientNotes = command.ClientNotes
         };
-        context.ChangeRecords.Add(entity);
+        context.Requests.Add(entity);
         await context.SaveChangesAsync(cancellationToken);
         return entity.ToModel();
     }

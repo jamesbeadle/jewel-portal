@@ -1,11 +1,11 @@
 using Jewel.JPMS.Api.Cqrs;
-using Jewel.JPMS.Contracts.Changes;
+using Jewel.JPMS.Contracts.Requests;
 
-namespace Jewel.JPMS.Api.Features.Changes.Commands;
+namespace Jewel.JPMS.Api.Features.Requests.Commands;
 
-public sealed class RaiseChangeValidation
+public sealed class RaiseRequestValidation
 {
-    public ValidationOutcome Check(RaiseChange command)
+    public ValidationOutcome Check(RaiseRequest command)
     {
         var errors = new List<string>();
         if (string.IsNullOrWhiteSpace(command.ProjectId)) errors.Add("ProjectId is required.");
