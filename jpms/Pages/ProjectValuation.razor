@@ -25,7 +25,7 @@ else
                 @if (Claims.Count > 0)
                 {
                     <select @bind="selectedClaimId"
-                            class="rounded-lg border border-line-strong px-3 py-2 text-sm text-content focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent">
+                            class="rounded-lg border border-line-strong bg-surface-field px-3 py-2 text-sm text-content focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent">
                         @foreach (var claim in Claims)
                         {
                             <option value="@claim.ValuationClaimId">Claim @claim.ClaimNumber — @claim.Status (@claim.ClaimDate.ToString("dd MMM yyyy"))</option>
@@ -83,7 +83,7 @@ else
                     <div>
                         <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Claim date</label>
                         <input type="date" @bind="newClaimDate"
-                               class="w-full rounded-lg border border-line-strong px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent" />
+                               class="w-full rounded-lg border border-line-strong bg-surface-field px-3 py-2 text-sm text-content focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent" />
                     </div>
                     <FormField Label="Retention %" InputType="number" Value="@newRetentionPercent" OnChange="@(v => newRetentionPercent = v)" />
                     <FormField Label="Retention release %" InputType="number" Value="@newRetentionReleasePercent" OnChange="@(v => newRetentionReleasePercent = v)" />
@@ -101,14 +101,23 @@ else
             </section>
         }
 
-        <ValuationReportTable ProjectId="@ProjectId" SelectedClaim="@Selected" OnEditLine="StartEditLine" />
-
         @if (Selected is null or { Status: ValuationClaimStatus.Draft })
         {
-            <div class="mt-4">
-                <ValuationLineForm ProjectId="@ProjectId" Editing="@editingLine" OnSaved="OnLineSaved" OnCancel="CancelEdit" />
+            <div class="flex justify-end mb-2">
+                <button @onclick="OpenAddLine"
+                        class="rounded-lg bg-accent text-accent-ink font-medium text-sm px-3 py-2 hover:bg-accent-hover transition">
+                    Add line
+                </button>
             </div>
         }
+
+        <ValuationReportTable ProjectId="@ProjectId" SelectedClaim="@Selected" OnEditLine="StartEditLine" />
+
+        <Modal IsOpen="@(showLineForm || editingLine is not null)"
+               Title="@(editingLine is null ? "Add a line" : "Edit line")"
+               ShowFooter="false" Class="max-w-3xl" OnCancel="CloseLineForm">
+            <ValuationLineForm ProjectId="@ProjectId" Editing="@editingLine" OnSaved="OnLineSaved" OnCancel="CloseLineForm" />
+        </Modal>
     </ProjectPageShell>
 }
 
@@ -118,6 +127,7 @@ else
     private bool isLoaded;
     private bool busy;
     private bool showStartClaim;
+    private bool showLineForm;
     private string selectedClaimId = "";
     private ValuationLineItem? editingLine;
 
@@ -174,9 +184,29 @@ else
         busy = false;
     }
 
-    private void StartEditLine(ValuationLineItem line) => editingLine = line;
-    private void CancelEdit() => editingLine = null;
-    private void OnLineSaved() => editingLine = null;
+    private void OpenAddLine()
+    {
+        editingLine = null;
+        showLineForm = true;
+    }
+
+    private void StartEditLine(ValuationLineItem line)
+    {
+        showLineForm = false;
+        editingLine = line;
+    }
+
+    private void CloseLineForm()
+    {
+        showLineForm = false;
+        editingLine = null;
+    }
+
+    // After an edit, close the modal. After an add, keep it open so several lines can be entered in a row.
+    private void OnLineSaved()
+    {
+        if (editingLine is not null) editingLine = null;
+    }
 
     public void Dispose() => Store.OnChange -= OnStoreChanged;
 }
