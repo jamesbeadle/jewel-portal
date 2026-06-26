@@ -1,0 +1,222 @@
+@using Jewel.JPMS.Contracts.Requests
+@inject AuthService Auth
+@inject IRequestRegister RequestRegister
+
+<Modal IsOpen="IsOpen"
+       Title="Raise a request"
+       ConfirmLabel="@(saving ? "Raising…" : "Raise request")"
+       OnCancel="Cancel"
+       OnConfirm="Submit"
+       Class="max-w-2xl">
+    <div class="space-y-4">
+        @if (error is not null)
+        {
+            <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@error</p>
+        }
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Type *</label>
+                <select class="field" value="@((int)kind)" @onchange="OnKindChanged">
+                    @foreach (var option in KindOptions)
+                    {
+                        <option value="@((int)option)">@option.DisplayName() — @option.LongName()</option>
+                    }
+                </select>
+            </div>
+            <FormField Label="Reference" Value="@reference" OnChange="v => reference = v" Required="true" />
+        </div>
+
+        <FormField Label="Subject" Value="@title" OnChange="v => title = v" Required="true" />
+
+        <div>
+            <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Detail</label>
+            <textarea class="field" rows="4" value="@description" @oninput="OnDescriptionInput"
+                      placeholder="Describe the information being requested…"></textarea>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <FormField Label="Raised to" Value="@raisedTo" OnChange="v => raisedTo = v" />
+            <FormField Label="Drawing / detail ref" Value="@drawingRef" OnChange="v => drawingRef = v" />
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <FormField Label="Response due" Value="@responseDue" OnChange="v => responseDue = v" InputType="date" />
+            <FormField Label="Value (£)" Value="@valueText" OnChange="v => valueText = v" InputType="number" />
+        </div>
+
+        <div class="pt-1 border-t border-line">
+            <label class="inline-flex items-center gap-2 mt-3 text-sm text-content-muted cursor-pointer">
+                <input type="checkbox" checked="@backfill" @onchange="OnBackfillChanged" class="rounded border-line-strong" />
+                Log a historical request (set issue date &amp; status)
+            </label>
+
+            @if (backfill)
+            {
+                <div class="mt-3 space-y-4">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <FormField Label="Date issued" Value="@raisedAt" OnChange="v => raisedAt = v" InputType="date" />
+                        <div>
+                            <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Status</label>
+                            <select class="field" value="@((int)status)" @onchange="OnStatusChanged">
+                                @foreach (var option in StatusOptions)
+                                {
+                                    <option value="@((int)option)">@StatusLabel(option)</option>
+                                }
+                            </select>
+                        </div>
+                    </div>
+                    <FormField Label="Response date" Value="@respondedAt" OnChange="v => respondedAt = v" InputType="date" />
+                    <div>
+                        <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Response</label>
+                        <textarea class="field" rows="3" value="@responseText" @oninput="OnResponseTextInput"
+                                  placeholder="The answer received, if already closed…"></textarea>
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+</Modal>
+
+@code {
+    [Parameter] public string ProjectId { get; set; } = "";
+    [Parameter] public bool IsOpen { get; set; }
+    [Parameter] public EventCallback OnClose { get; set; }
+    [Parameter] public EventCallback<Request> OnRaised { get; set; }
+
+    private static readonly RequestType[] KindOptions =
+    {
+        RequestType.Rfi, RequestType.Rfq, RequestType.Rfp,
+        RequestType.Rfc, RequestType.Rfa
+    };
+
+    private static readonly RequestStatus[] StatusOptions =
+    {
+        RequestStatus.Open, RequestStatus.AwaitingResponse, RequestStatus.Responded,
+        RequestStatus.Approved, RequestStatus.Rejected, RequestStatus.Closed
+    };
+
+    private RequestType kind = RequestType.Rfi;
+    private string reference = "";
+    private string title = "";
+    private string description = "";
+    private string raisedTo = "";
+    private string drawingRef = "";
+    private string responseDue = "";
+    private string valueText = "";
+
+    private bool backfill;
+    private string raisedAt = "";
+    private string respondedAt = "";
+    private string responseText = "";
+    private RequestStatus status = RequestStatus.Open;
+
+    private bool saving;
+    private string? error;
+    private bool wasOpen;
+
+    protected override void OnParametersSet()
+    {
+        if (IsOpen && !wasOpen) Reset();
+        wasOpen = IsOpen;
+    }
+
+    private void Reset()
+    {
+        kind = RequestType.Rfi;
+        reference = SuggestReference(RequestType.Rfi);
+        title = description = raisedTo = drawingRef = responseDue = valueText = "";
+        backfill = false;
+        raisedAt = respondedAt = responseText = "";
+        status = RequestStatus.Open;
+        saving = false;
+        error = null;
+    }
+
+    private string SuggestReference(RequestType k)
+    {
+        var existing = RequestRegister.ForProject(ProjectId, k).Count;
+        return $"{k.DisplayName()}-{existing + 1:000}";
+    }
+
+    private void OnKindChanged(ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), out var raw))
+        {
+            kind = (RequestType)raw;
+            reference = SuggestReference(kind);
+        }
+    }
+
+    private void OnStatusChanged(ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), out var raw)) status = (RequestStatus)raw;
+    }
+
+    private void OnBackfillChanged(ChangeEventArgs e) => backfill = e.Value is true;
+
+    private void OnDescriptionInput(ChangeEventArgs e) => description = e.Value?.ToString() ?? "";
+
+    private void OnResponseTextInput(ChangeEventArgs e) => responseText = e.Value?.ToString() ?? "";
+
+    private async Task Cancel() => await OnClose.InvokeAsync();
+
+    private async Task Submit()
+    {
+        if (saving) return;
+        error = null;
+
+        if (string.IsNullOrWhiteSpace(reference)) { error = "A reference is required."; return; }
+        if (string.IsNullOrWhiteSpace(title)) { error = "A subject is required."; return; }
+
+        var email = Auth.CurrentUser?.Email;
+        if (string.IsNullOrWhiteSpace(email)) { error = "You must be signed in to raise a request."; return; }
+
+        decimal? value = null;
+        if (!string.IsNullOrWhiteSpace(valueText))
+        {
+            if (!decimal.TryParse(valueText, out var parsed)) { error = "Value must be a number."; return; }
+            value = parsed;
+        }
+
+        var command = new RaiseRequest(
+            ProjectId,
+            kind,
+            reference.Trim(),
+            title.Trim(),
+            description?.Trim() ?? "",
+            value,
+            email,
+            RaisedTo: NullIfBlank(raisedTo),
+            DrawingRef: NullIfBlank(drawingRef),
+            ResponseDue: ParseDate(responseDue),
+            RaisedAt: backfill ? ParseDate(raisedAt) : null,
+            RespondedAt: backfill ? ParseDate(respondedAt) : null,
+            ResponseText: backfill ? NullIfBlank(responseText) : null,
+            RespondedByEmail: backfill && !string.IsNullOrWhiteSpace(responseText) ? email : null,
+            Status: backfill ? status : null);
+
+        try
+        {
+            saving = true;
+            var raised = await RequestRegister.RaiseAsync(command);
+            await OnRaised.InvokeAsync(raised);
+        }
+        catch
+        {
+            error = "Couldn't raise the request. Please try again.";
+            saving = false;
+        }
+    }
+
+    private static string? NullIfBlank(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+
+    private static DateTimeOffset? ParseDate(string value) =>
+        DateTimeOffset.TryParse(value, out var parsed) ? parsed : null;
+
+    private static string StatusLabel(RequestStatus status) => status switch
+    {
+        RequestStatus.AwaitingResponse => "Awaiting response",
+        _ => status.ToString()
+    };
+}

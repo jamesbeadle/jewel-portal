@@ -23,6 +23,10 @@ public static class RequestsRouteRegistration
             new QueryRoute("/api/requests/{requestId}",
                 query => $"/api/requests/{((GetRequestById)query).RequestId}"));
 
+        queries.Register<ListRequestMessages, IReadOnlyList<RequestMessage>>(
+            new QueryRoute("/api/requests/{requestId}/messages",
+                query => $"/api/requests/{((ListRequestMessages)query).RequestId}/messages"));
+
         commands.Register<RaiseRequest, Request>(
             new CommandRoute("POST", "/api/projects/{projectId}/requests",
                 command => $"/api/projects/{((RaiseRequest)command).ProjectId}/requests"));
@@ -30,5 +34,9 @@ public static class RequestsRouteRegistration
         commands.Register<UpdateRequestDetails, Request>(
             new CommandRoute("PUT", "/api/requests/{requestId}",
                 command => $"/api/requests/{((UpdateRequestDetails)command).RequestId}"));
+
+        commands.Register<PostRequestMessage, RequestMessage>(
+            new CommandRoute("POST", "/api/requests/{requestId}/messages",
+                command => $"/api/requests/{((PostRequestMessage)command).RequestId}/messages"));
     }
 }

@@ -1,0 +1,210 @@
+@page "/projects/{ProjectId}/requests/view/{RequestId}"
+@using Jewel.JPMS.Contracts.Requests
+@inject AuthService Auth
+@inject SessionService Session
+@inject IRequestRegister RequestRegister
+@inject NavigationManager Nav
+
+<PageTitle>Request · JPMS</PageTitle>
+
+@if (!isLoaded)
+{
+    <section class="max-w-5xl mx-auto px-4 py-12 text-content-subtle text-sm">Loading…</section>
+}
+else if (!Session.IsApproved)
+{
+    <RequestAccessView Email="@Auth.CurrentUser!.Email" DisplayName="@Auth.CurrentUser.DisplayName" />
+}
+else if (record is null)
+{
+    <ProjectPageShell ProjectId="@ProjectId" ActiveTab="requests">
+        <p class="text-sm text-content-subtle italic">That request could not be found.</p>
+        <a href="@RegisterHref" class="btn-secondary mt-4">Back to register</a>
+    </ProjectPageShell>
+}
+else
+{
+    <ProjectPageShell ProjectId="@ProjectId" ActiveTab="requests">
+        <a href="@RegisterHref" class="text-sm text-content-muted hover:text-content inline-flex items-center gap-1 mb-4">
+            &larr; Request register
+        </a>
+
+        <div class="flex flex-wrap items-start justify-between gap-3 mb-1">
+            <div class="flex items-center gap-3">
+                <span class="font-mono text-sm text-content-muted">@record.Reference</span>
+                <span class="text-content-subtle text-xs uppercase tracking-wide" title="@record.Kind.LongName()">@record.Kind.DisplayName()</span>
+                <span class="inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium @StatusClass(record.Status)">@StatusLabel(record.Status)</span>
+                @if (record.ImpliesVariation)
+                {
+                    <span class="inline-flex items-center rounded bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-600">Variation</span>
+                }
+            </div>
+        </div>
+        <h2 class="text-xl font-semibold text-content mb-5">@record.Title</h2>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
+            <div class="lg:col-span-2 space-y-5">
+                <div class="panel p-5">
+                    <h3 class="eyebrow mb-2">Detail</h3>
+                    <p class="text-sm text-content whitespace-pre-wrap">@(string.IsNullOrWhiteSpace(record.Description) ? "—" : record.Description)</p>
+                </div>
+
+                @if (!string.IsNullOrWhiteSpace(record.ResponseText))
+                {
+                    <div class="panel p-5">
+                        <h3 class="eyebrow mb-2">Response</h3>
+                        <p class="text-sm text-content whitespace-pre-wrap">@record.ResponseText</p>
+                        @if (!string.IsNullOrWhiteSpace(record.RespondedByEmail))
+                        {
+                            <p class="text-xs text-content-subtle mt-2">@record.RespondedByEmail · @Date(record.RespondedAt)</p>
+                        }
+                    </div>
+                }
+
+                <RequestConversation RequestId="@RequestId" />
+            </div>
+
+            <div class="space-y-5">
+                <div class="panel p-5 space-y-3 text-sm">
+                    <MetaRow Label="Raised by" Value="@record.RaisedByEmail" />
+                    <MetaRow Label="Date issued" Value="@Date(record.RaisedAt)" />
+                    <MetaRow Label="Raised to" Value="@Dash(record.RaisedTo)" />
+                    <MetaRow Label="Drawing / detail" Value="@Dash(record.DrawingRef)" />
+                    <MetaRow Label="Response due" Value="@Date(record.ResponseDue)" />
+                    <MetaRow Label="Days outstanding" Value="@(record.DaysOutstanding is int d ? d.ToString() : "—")" />
+                    <MetaRow Label="Value" Value="@(record.Value is null ? "—" : Money(record.Value.Value))" />
+                    <MetaRow Label="Related drawing / spec" Value="@Dash(record.RelatedDrawingSpec)" />
+                </div>
+
+                <div class="panel p-5">
+                    <h3 class="eyebrow mb-3">Manage</h3>
+                    @if (actionError is not null)
+                    {
+                        <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-3">@actionError</p>
+                    }
+
+                    @if (record.Status is not RequestStatus.Closed)
+                    {
+                        <label class="eyebrow block mb-1">Record a response</label>
+                        <textarea class="field mb-2" rows="3" value="@responseDraft" @oninput="OnResponseDraftInput"
+                                  placeholder="The answer or decision…"></textarea>
+                        <div class="flex flex-wrap gap-2">
+                            <button type="button" class="btn-secondary" disabled="@busy" @onclick="SaveResponse">Save response</button>
+                            <button type="button" class="btn-primary" disabled="@busy" @onclick="CloseRequest">Close request</button>
+                        </div>
+                    }
+                    else
+                    {
+                        <p class="text-sm text-content-subtle mb-3">This request is closed.</p>
+                        <button type="button" class="btn-secondary" disabled="@busy" @onclick="ReopenRequest">Reopen</button>
+                    }
+                </div>
+            </div>
+        </div>
+    </ProjectPageShell>
+}
+
+@code {
+    [Parameter] public string ProjectId { get; set; } = "";
+    [Parameter] public string RequestId { get; set; } = "";
+
+    private bool isLoaded;
+    private Request? record;
+    private string responseDraft = "";
+    private bool busy;
+    private string? actionError;
+
+    private string RegisterHref => $"/projects/{ProjectId}/requests";
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Session.EnsureLoadedAsync();
+        if (!Auth.IsSignedIn) { Nav.NavigateTo("/login", forceLoad: true); return; }
+        await LoadAsync();
+        isLoaded = true;
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (isLoaded) await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        record = await RequestRegister.GetAsync(RequestId);
+        responseDraft = record?.ResponseText ?? "";
+    }
+
+    private void OnResponseDraftInput(ChangeEventArgs e) => responseDraft = e.Value?.ToString() ?? "";
+
+    private async Task SaveResponse() => await Apply(RequestStatus.Responded, responseDraft);
+
+    private async Task CloseRequest() => await Apply(RequestStatus.Closed, responseDraft);
+
+    private async Task ReopenRequest() => await Apply(RequestStatus.Open, record?.ResponseText);
+
+    private async Task Apply(RequestStatus status, string? responseText)
+    {
+        if (record is null || busy) return;
+        actionError = null;
+        var email = Auth.CurrentUser?.Email;
+        var hasResponse = !string.IsNullOrWhiteSpace(responseText);
+
+        var command = new UpdateRequestDetails(
+            record.RequestId,
+            record.Reference,
+            record.Title,
+            record.Description,
+            status,
+            record.Value,
+            hasResponse ? responseText!.Trim() : null,
+            hasResponse ? (record.RespondedByEmail ?? email) : record.RespondedByEmail,
+            record.ImpliesVariation,
+            record.RaisedTo,
+            record.DrawingRef,
+            record.ResponseDue,
+            record.RelatedDrawingSpec,
+            record.InternalNotes,
+            record.ClientNotes);
+
+        try
+        {
+            busy = true;
+            record = await RequestRegister.UpdateAsync(command);
+            responseDraft = record.ResponseText ?? "";
+        }
+        catch
+        {
+            actionError = "Couldn't update the request. Please try again.";
+        }
+        finally
+        {
+            busy = false;
+        }
+    }
+
+    private static string Dash(string? value) => string.IsNullOrWhiteSpace(value) ? "—" : value;
+
+    private static string Date(DateTimeOffset? value) =>
+        value is null ? "—" : value.Value.LocalDateTime.ToString("d MMM yyyy");
+
+    private static string Money(decimal value) =>
+        value.ToString("C0", System.Globalization.CultureInfo.GetCultureInfo("en-GB"));
+
+    private static string StatusLabel(RequestStatus status) => status switch
+    {
+        RequestStatus.AwaitingResponse => "Awaiting response",
+        _ => status.ToString()
+    };
+
+    private static string StatusClass(RequestStatus status) => status switch
+    {
+        RequestStatus.Open             => "bg-blue-500/10 text-blue-600",
+        RequestStatus.AwaitingResponse => "bg-amber-500/10 text-amber-600",
+        RequestStatus.Approved         => "bg-emerald-500/10 text-emerald-600",
+        RequestStatus.Responded        => "bg-emerald-500/10 text-emerald-600",
+        RequestStatus.Rejected         => "bg-red-500/10 text-red-600",
+        RequestStatus.Closed           => "bg-surface-raised border border-line text-content-muted",
+        _                              => "bg-surface-raised border border-line text-content-muted"
+    };
+}

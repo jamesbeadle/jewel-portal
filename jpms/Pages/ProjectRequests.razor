@@ -19,7 +19,15 @@ else if (!Session.IsApproved)
 else
 {
     <ProjectPageShell ProjectId="@ProjectId" ActiveTab="requests">
-        <h2 class="text-lg font-semibold text-content mb-3">Request register</h2>
+        <div class="flex flex-wrap items-start justify-between gap-3 mb-4">
+            <div>
+                <h2 class="text-lg font-semibold text-content">Request register</h2>
+                <p class="text-sm text-content-subtle mt-0.5">
+                    @AllRecords.Count total · @OpenCount open · @OverdueCount overdue
+                </p>
+            </div>
+            <button type="button" class="btn-primary" @onclick="OpenRaiseDialog">Raise request</button>
+        </div>
 
         <div class="flex flex-wrap items-center gap-2 mb-5 text-sm">
             @foreach (var filter in Filters)
@@ -36,9 +44,14 @@ else
         }
         else
         {
-            <RequestTable Records="FilteredRecords" />
+            <RequestTable Records="FilteredRecords" ProjectId="@ProjectId" />
         }
     </ProjectPageShell>
+
+    <RaiseRequestDialog ProjectId="@ProjectId"
+                        IsOpen="raiseDialogOpen"
+                        OnClose="CloseRaiseDialog"
+                        OnRaised="OnRaised" />
 }
 
 @code {
@@ -46,6 +59,20 @@ else
     [Parameter] public string? Kind { get; set; }
 
     private bool isLoaded;
+    private bool raiseDialogOpen;
+
+    private IReadOnlyList<Request> AllRecords => RequestRegister.ForProject(ProjectId);
+    private int OpenCount => AllRecords.Count(r => r.Status is not RequestStatus.Closed);
+    private int OverdueCount => AllRecords.Count(r => r.IsOverdue);
+
+    private void OpenRaiseDialog() => raiseDialogOpen = true;
+    private void CloseRaiseDialog() => raiseDialogOpen = false;
+
+    private void OnRaised(Request raised)
+    {
+        raiseDialogOpen = false;
+        Nav.NavigateTo($"/projects/{ProjectId}/requests/view/{raised.RequestId}");
+    }
 
     private record Filter(string Slug, string Label, RequestType? Kind);
 

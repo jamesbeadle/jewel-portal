@@ -36,19 +36,42 @@ public sealed class HttpRequestRegister : IRequestRegister
     public Request Upsert(Request record)
     {
         if (string.IsNullOrEmpty(record.RequestId))
-            _ = RaiseAsync(record);
+            _ = RaiseRecordAsync(record);
         else
-            _ = UpdateAsync(record);
+            _ = UpdateRecordAsync(record);
         return record;
     }
 
-    private async Task RaiseAsync(Request record)
+    public Task<Request?> GetAsync(string requestId, CancellationToken cancellationToken = default) =>
+        queries.AskAsync(new GetRequestById(requestId), cancellationToken);
+
+    public async Task<Request> RaiseAsync(RaiseRequest command, CancellationToken cancellationToken = default)
+    {
+        var raised = await commands.SendAsync(command, cancellationToken);
+        await readModel.RefreshAsync(command.ProjectId, cancellationToken);
+        return raised;
+    }
+
+    public async Task<Request> UpdateAsync(UpdateRequestDetails command, CancellationToken cancellationToken = default)
+    {
+        var updated = await commands.SendAsync(command, cancellationToken);
+        await readModel.RefreshAsync(updated.ProjectId, cancellationToken);
+        return updated;
+    }
+
+    public Task<IReadOnlyList<RequestMessage>> ListMessagesAsync(string requestId, CancellationToken cancellationToken = default) =>
+        queries.AskAsync(new ListRequestMessages(requestId), cancellationToken);
+
+    public Task<RequestMessage> PostMessageAsync(PostRequestMessage command, CancellationToken cancellationToken = default) =>
+        commands.SendAsync(command, cancellationToken);
+
+    private async Task RaiseRecordAsync(Request record)
     {
         await commands.SendAsync(new RaiseRequest(record.ProjectId, record.Kind, record.Reference, record.Title, record.Description, record.Value, record.RaisedByEmail, record.RaisedTo, record.DrawingRef, record.ResponseDue, record.InternalNotes, record.ClientNotes), CancellationToken.None);
         await readModel.RefreshAsync(record.ProjectId, CancellationToken.None);
     }
 
-    private async Task UpdateAsync(Request record)
+    private async Task UpdateRecordAsync(Request record)
     {
         await commands.SendAsync(new UpdateRequestDetails(record.RequestId, record.Reference, record.Title, record.Description, record.Status, record.Value, record.ResponseText, record.RespondedByEmail, record.ImpliesVariation, record.RaisedTo, record.DrawingRef, record.ResponseDue, record.RelatedDrawingSpec, record.InternalNotes, record.ClientNotes), CancellationToken.None);
         await readModel.RefreshAsync(record.ProjectId, CancellationToken.None);

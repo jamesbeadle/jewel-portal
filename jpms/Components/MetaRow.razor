@@ -1,0 +1,9 @@
+<div class="flex items-start justify-between gap-3">
+    <span class="text-content-subtle">@Label</span>
+    <span class="text-content text-right">@Value</span>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public string Label { get; set; } = "";
+    [Parameter] public string Value { get; set; } = "";
+}

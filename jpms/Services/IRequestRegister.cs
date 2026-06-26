@@ -1,3 +1,4 @@
+using Jewel.JPMS.Contracts.Requests;
 using Jewel.JPMS.Models;
 
 namespace Jewel.JPMS.Services;
@@ -9,4 +10,10 @@ public interface IRequestRegister
     Request? Find(string requestId);
     Request Upsert(Request record);
     event Action? OnChange;
+
+    Task<Request?> GetAsync(string requestId, CancellationToken cancellationToken = default);
+    Task<Request> RaiseAsync(RaiseRequest command, CancellationToken cancellationToken = default);
+    Task<Request> UpdateAsync(UpdateRequestDetails command, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<RequestMessage>> ListMessagesAsync(string requestId, CancellationToken cancellationToken = default);
+    Task<RequestMessage> PostMessageAsync(PostRequestMessage command, CancellationToken cancellationToken = default);
 }

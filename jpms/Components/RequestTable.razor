@@ -1,5 +1,7 @@
+@inject NavigationManager Nav
+
 <div class="rounded-xl border border-line bg-surface overflow-x-auto">
-    <table class="w-full text-sm">
+    <table class="w-full text-sm data-table">
         <thead class="bg-surface-raised border-b border-line">
             <tr class="text-left text-[11px] uppercase tracking-wider text-content-subtle font-semibold">
                 <th class="px-4 py-3">Ref</th>
@@ -17,7 +19,7 @@
         <tbody class="divide-y divide-line">
             @foreach (var record in Records)
             {
-                <tr class="align-top">
+                <tr class="align-top @(CanOpen ? "is-clickable cursor-pointer" : "")" @onclick="() => Open(record)">
                     <td class="px-4 py-3 font-mono text-xs text-content-muted whitespace-nowrap">@record.Reference</td>
                     <td class="px-4 py-3 text-content-muted hidden sm:table-cell whitespace-nowrap" title="@record.Kind.LongName()">@record.Kind.DisplayName()</td>
                     <td class="px-4 py-3 text-content font-medium">
@@ -57,6 +59,15 @@
 
 @code {
     [Parameter, EditorRequired] public IReadOnlyList<Request> Records { get; set; } = Array.Empty<Request>();
+    [Parameter] public string? ProjectId { get; set; }
+
+    private bool CanOpen => !string.IsNullOrWhiteSpace(ProjectId);
+
+    private void Open(Request record)
+    {
+        if (CanOpen)
+            Nav.NavigateTo($"/projects/{ProjectId}/requests/view/{record.RequestId}");
+    }
 
     private static string Dash(string? value) => string.IsNullOrWhiteSpace(value) ? "—" : value;
 

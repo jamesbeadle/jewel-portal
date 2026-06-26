@@ -1,0 +1,120 @@
+@using Jewel.JPMS.Contracts.Requests
+@inject AuthService Auth
+@inject IRequestRegister RequestRegister
+
+<div class="panel p-5">
+    <h3 class="eyebrow mb-4">Conversation</h3>
+
+    @if (!loaded)
+    {
+        <p class="text-sm text-content-subtle">Loading…</p>
+    }
+    else
+    {
+        @if (messages.Count == 0)
+        {
+            <p class="text-sm text-content-subtle italic mb-4">No messages yet. Start the discussion below.</p>
+        }
+        else
+        {
+            <ol class="space-y-4 mb-5">
+                @foreach (var message in messages)
+                {
+                    <li class="border-l-2 pl-3 @(message.Visibility == MessageVisibility.Internal ? "border-amber-500/50" : "border-line-strong")">
+                        <div class="flex flex-wrap items-center gap-2 mb-0.5">
+                            <span class="text-sm font-medium text-content">@AuthorLabel(message)</span>
+                            <span class="text-xs text-content-subtle">@message.PostedAt.LocalDateTime.ToString("d MMM yyyy, HH:mm")</span>
+                            @if (message.Visibility == MessageVisibility.Internal)
+                            {
+                                <span class="inline-flex items-center rounded bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-600">Internal</span>
+                            }
+                            else
+                            {
+                                <span class="inline-flex items-center rounded bg-surface-raised border border-line px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-content-muted">Shared</span>
+                            }
+                        </div>
+                        <p class="text-sm text-content whitespace-pre-wrap">@message.Body</p>
+                    </li>
+                }
+            </ol>
+        }
+
+        <div class="border-t border-line pt-4">
+            @if (error is not null)
+            {
+                <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-3">@error</p>
+            }
+            <textarea class="field mb-2" rows="3" value="@draft" @oninput="OnDraftInput"
+                      placeholder="Add to the conversation…"></textarea>
+            <div class="flex flex-wrap items-center justify-between gap-3">
+                <label class="inline-flex items-center gap-2 text-sm text-content-muted cursor-pointer">
+                    <input type="checkbox" checked="@internalOnly" @onchange="OnVisibilityChanged" class="rounded border-line-strong" />
+                    Internal only (hide from client &amp; external parties)
+                </label>
+                <button type="button" class="btn-primary" disabled="@(busy || string.IsNullOrWhiteSpace(draft))" @onclick="Post">
+                    @(busy ? "Posting…" : "Post message")
+                </button>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public string RequestId { get; set; } = "";
+
+    private bool loaded;
+    private bool busy;
+    private string? error;
+    private string draft = "";
+    private bool internalOnly;
+    private IReadOnlyList<RequestMessage> messages = Array.Empty<RequestMessage>();
+
+    protected override async Task OnParametersSetAsync() => await LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        messages = await RequestRegister.ListMessagesAsync(RequestId);
+        loaded = true;
+    }
+
+    private void OnDraftInput(ChangeEventArgs e) => draft = e.Value?.ToString() ?? "";
+
+    private void OnVisibilityChanged(ChangeEventArgs e) => internalOnly = e.Value is true;
+
+    private async Task Post()
+    {
+        if (busy || string.IsNullOrWhiteSpace(draft)) return;
+        error = null;
+        var user = Auth.CurrentUser;
+        if (user is null) { error = "You must be signed in to post."; return; }
+
+        // Author is set authoritatively by the API from the signed-in session; the
+        // values supplied here are placeholders the server overrides.
+        var command = new PostRequestMessage(
+            RequestId,
+            draft.Trim(),
+            internalOnly ? MessageVisibility.Internal : MessageVisibility.Shared,
+            user.Email,
+            user.DisplayName);
+
+        try
+        {
+            busy = true;
+            await RequestRegister.PostMessageAsync(command);
+            draft = "";
+            internalOnly = false;
+            await LoadAsync();
+        }
+        catch
+        {
+            error = "Couldn't post your message. Please try again.";
+        }
+        finally
+        {
+            busy = false;
+        }
+    }
+
+    private static string AuthorLabel(RequestMessage message) =>
+        string.IsNullOrWhiteSpace(message.AuthorName) ? message.AuthorEmail : message.AuthorName;
+}

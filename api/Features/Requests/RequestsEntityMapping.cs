@@ -26,4 +26,13 @@ internal static class RequestsEntityMapping
         RelatedDrawingSpec: entity.RelatedDrawingSpec,
         InternalNotes: entity.InternalNotes,
         ClientNotes: entity.ClientNotes);
+
+    public static RequestMessage ToModel(this RequestMessageEntity entity) => new(
+        MessageId: entity.MessageId,
+        RequestId: entity.RequestId,
+        AuthorEmail: entity.AuthorEmail,
+        AuthorName: entity.AuthorName,
+        Body: entity.Body,
+        Visibility: (MessageVisibility)entity.Visibility,
+        PostedAt: entity.PostedAt);
 }

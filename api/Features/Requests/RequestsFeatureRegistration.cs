@@ -13,6 +13,7 @@ public static class RequestsFeatureRegistration
     {
         services.AddScoped<IQueryHandler<ListRequestsForProject, IReadOnlyList<Request>>, ListRequestsForProjectHandler>();
         services.AddScoped<IQueryHandler<GetRequestById, Request?>, GetRequestByIdHandler>();
+        services.AddScoped<IQueryHandler<ListRequestMessages, IReadOnlyList<RequestMessage>>, ListRequestMessagesHandler>();
 
         services.AddScoped<ICommandHandler<RaiseRequest, Request>, RaiseRequestHandler>();
         services.AddScoped<RaiseRequestAuthorisation>();
@@ -21,6 +22,10 @@ public static class RequestsFeatureRegistration
         services.AddScoped<ICommandHandler<UpdateRequestDetails, Request>, UpdateRequestDetailsHandler>();
         services.AddScoped<UpdateRequestDetailsAuthorisation>();
         services.AddScoped<UpdateRequestDetailsValidation>();
+
+        services.AddScoped<ICommandHandler<PostRequestMessage, RequestMessage>, PostRequestMessageHandler>();
+        services.AddScoped<PostRequestMessageAuthorisation>();
+        services.AddScoped<PostRequestMessageValidation>();
 
         return services;
     }
