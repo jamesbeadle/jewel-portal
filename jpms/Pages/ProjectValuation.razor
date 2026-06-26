@@ -121,7 +121,7 @@ else
     private string selectedClaimId = "";
     private ValuationLineItem? editingLine;
 
-    private string newClaimDate = DateTime.Today.ToString("yyyy-MM-dd");
+    private DateTime newClaimDate = DateTime.Today;
     private string newRetentionPercent = "5";
     private string newRetentionReleasePercent = "0";
 
@@ -149,7 +149,7 @@ else
     private async Task StartClaimAsync()
     {
         busy = true;
-        var date = DateTime.TryParse(newClaimDate, out var d) ? new DateTimeOffset(d, TimeSpan.Zero) : DateTimeOffset.UtcNow;
+        var date = new DateTimeOffset(newClaimDate.Date, TimeSpan.Zero);
         var claim = await Store.StartClaimAsync(new StartValuationClaim(
             ProjectId, NextClaimNumber, date,
             FormNumber.ParseAmount(newRetentionPercent), FormNumber.ParseAmount(newRetentionReleasePercent)));
