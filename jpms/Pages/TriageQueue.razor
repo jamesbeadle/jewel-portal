@@ -1,0 +1,514 @@
+@page "/requests/triage"
+@using Jewel.JPMS.Contracts.Requests
+@inject AuthService Auth
+@inject SessionService Session
+@inject NavigationManager Nav
+@inject IIntakeQueue Intake
+@inject IRequestRegister RequestRegister
+@inject Jewel.JPMS.Features.Projects.ProjectListReadModel Projects
+@implements IDisposable
+
+<PageTitle>Triage · JPMS</PageTitle>
+
+@if (!isLoaded)
+{
+    <section class="max-w-6xl mx-auto px-4 py-12 text-content-subtle text-sm">Loading…</section>
+}
+else if (!Session.IsApproved)
+{
+    <RequestAccessView Email="@Auth.CurrentUser!.Email" DisplayName="@Auth.CurrentUser.DisplayName" />
+}
+else
+{
+    <section class="max-w-6xl mx-auto px-4 py-8 md:py-12">
+        <header class="mb-6">
+            <p class="text-xs uppercase tracking-wider text-content-subtle font-medium mb-1">JPMS · requests@@jewelbb.co.uk</p>
+            <h1 class="text-2xl md:text-3xl font-semibold text-content leading-tight">Mailbox triage</h1>
+            <p class="text-sm text-content-muted mt-2">
+                @items.Count email@(items.Count == 1 ? "" : "s") waiting to be assigned to a request.
+            </p>
+        </header>
+
+        @if (loadError is not null)
+        {
+            <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-4">@loadError</p>
+        }
+
+        @if (items.Count == 0)
+        {
+            <div class="panel p-8 text-center">
+                <p class="text-sm text-content">Nothing in the queue.</p>
+                <p class="text-xs text-content-subtle mt-1">Every email from the requests mailbox has been dealt with.</p>
+            </div>
+        }
+        else
+        {
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
+                <div class="space-y-2 lg:col-span-1">
+                    @foreach (var item in items)
+                    {
+                        <button type="button" @key="item.IntakeId" @onclick="() => Select(item)"
+                                class="@RowClass(item)">
+                            <div class="flex items-center justify-between gap-2">
+                                <span class="text-sm font-medium text-content truncate">@DisplayFrom(item)</span>
+                                <span class="@StatusChipClass(item.Status)">@StatusLabel(item)</span>
+                            </div>
+                            <p class="text-sm text-content-muted truncate mt-0.5">@Dash(item.Subject)</p>
+                            <div class="flex items-center gap-2 mt-1 text-[11px] text-content-subtle">
+                                <span>@Date(item.ReceivedAt)</span>
+                                @if (item.HasAttachments)
+                                {
+                                    <span title="Has attachments">· attachment</span>
+                                }
+                            </div>
+                        </button>
+                    }
+                </div>
+
+                <div class="lg:col-span-2">
+                    @if (selected is null)
+                    {
+                        <div class="panel p-8 text-center text-sm text-content-subtle">
+                            Select an email to triage it.
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="panel p-5 space-y-4">
+                            @if (actionError is not null)
+                            {
+                                <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@actionError</p>
+                            }
+
+                            <div>
+                                <div class="flex items-center justify-between gap-3">
+                                    <h2 class="text-lg font-semibold text-content">@Dash(selected.Subject)</h2>
+                                    <span class="@StatusChipClass(selected.Status)">@StatusLabel(selected)</span>
+                                </div>
+                                <p class="text-sm text-content-muted mt-1">
+                                    From @DisplayFrom(selected) · @Date(selected.ReceivedAt)
+                                </p>
+                            </div>
+
+                            <div class="rounded-lg bg-surface-raised border border-line p-3">
+                                <p class="text-sm text-content whitespace-pre-wrap">@Dash(selected.BodyPreview)</p>
+                            </div>
+
+                            @if (selected.Status == IntakeStatus.NeedsTriage)
+                            {
+                                <button type="button" class="btn-secondary" disabled="@busy" @onclick="Claim">Claim this email</button>
+                            }
+                            else if (selected.Status == IntakeStatus.Claimed && !string.IsNullOrWhiteSpace(selected.ClaimedByEmail))
+                            {
+                                <p class="text-xs text-content-subtle">Claimed by @selected.ClaimedByEmail</p>
+                            }
+
+                            <div class="pt-3 border-t border-line">
+                                <div class="flex flex-wrap gap-2 mb-4">
+                                    <button type="button" class="@ModeTabClass(TriageMode.Link)" @onclick="() => SetMode(TriageMode.Link)">Link to existing</button>
+                                    <button type="button" class="@ModeTabClass(TriageMode.Create)" @onclick="() => SetMode(TriageMode.Create)">Create new request</button>
+                                    <button type="button" class="@ModeTabClass(TriageMode.Discard)" @onclick="() => SetMode(TriageMode.Discard)">Discard</button>
+                                </div>
+
+                                @if (mode == TriageMode.Link)
+                                {
+                                    <div class="space-y-3">
+                                        <div>
+                                            <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Project</label>
+                                            <select class="field" value="@linkProjectId" @onchange="OnLinkProjectChanged">
+                                                <option value="">Select a project…</option>
+                                                @foreach (var project in ProjectOptions)
+                                                {
+                                                    <option value="@project.ProjectId">@project.Reference — @project.Name</option>
+                                                }
+                                            </select>
+                                        </div>
+
+                                        @if (!string.IsNullOrWhiteSpace(linkProjectId))
+                                        {
+                                            var candidates = DuplicateCandidates();
+                                            var others = ProjectRequests().Except(candidates).ToList();
+
+                                            @if (candidates.Count > 0)
+                                            {
+                                                <div>
+                                                    <p class="text-xs font-semibold text-amber-600 mb-1">Possible matches for this email</p>
+                                                    <div class="space-y-1">
+                                                        @foreach (var request in candidates)
+                                                        {
+                                                            <button type="button" @onclick="() => linkRequestId = request.RequestId" class="@RequestPickClass(request, true)">
+                                                                <span class="font-mono text-xs text-content-muted">@request.Reference</span>
+                                                                <span class="text-sm text-content">@request.Title</span>
+                                                            </button>
+                                                        }
+                                                    </div>
+                                                </div>
+                                            }
+
+                                            @if (others.Count > 0)
+                                            {
+                                                <div>
+                                                    <p class="text-xs font-semibold text-content-subtle mb-1">Other requests on this project</p>
+                                                    <div class="space-y-1 max-h-56 overflow-y-auto">
+                                                        @foreach (var request in others)
+                                                        {
+                                                            <button type="button" @onclick="() => linkRequestId = request.RequestId" class="@RequestPickClass(request, false)">
+                                                                <span class="font-mono text-xs text-content-muted">@request.Reference</span>
+                                                                <span class="text-sm text-content">@request.Title</span>
+                                                            </button>
+                                                        }
+                                                    </div>
+                                                </div>
+                                            }
+
+                                            @if (candidates.Count == 0 && others.Count == 0)
+                                            {
+                                                <p class="text-sm text-content-subtle italic">No requests on this project yet — use “Create new request” instead.</p>
+                                            }
+                                        }
+
+                                        <button type="button" class="btn-primary" disabled="@(busy || string.IsNullOrWhiteSpace(linkRequestId))" @onclick="DoLink">
+                                            Link email to selected request
+                                        </button>
+                                    </div>
+                                }
+                                else if (mode == TriageMode.Create)
+                                {
+                                    <div class="space-y-4">
+                                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                            <div>
+                                                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Project *</label>
+                                                <select class="field" value="@createProjectId" @onchange="OnCreateProjectChanged">
+                                                    <option value="">Select a project…</option>
+                                                    @foreach (var project in ProjectOptions)
+                                                    {
+                                                        <option value="@project.ProjectId">@project.Reference — @project.Name</option>
+                                                    }
+                                                </select>
+                                            </div>
+                                            <div>
+                                                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Type *</label>
+                                                <select class="field" value="@((int)createKind)" @onchange="OnCreateKindChanged">
+                                                    @foreach (var option in KindOptions)
+                                                    {
+                                                        <option value="@((int)option)">@option.DisplayName() — @option.LongName()</option>
+                                                    }
+                                                </select>
+                                            </div>
+                                        </div>
+
+                                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                            <FormField Label="Reference" Value="@createReference" OnChange="v => createReference = v" Required="true" />
+                                            <FormField Label="Raised to" Value="@createRaisedTo" OnChange="v => createRaisedTo = v" />
+                                        </div>
+
+                                        <FormField Label="Subject" Value="@createTitle" OnChange="v => createTitle = v" Required="true" />
+
+                                        <div>
+                                            <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Detail</label>
+                                            <textarea class="field" rows="4" value="@createDescription" @oninput="OnCreateDescriptionInput"></textarea>
+                                        </div>
+
+                                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                            <FormField Label="Drawing / detail ref" Value="@createDrawingRef" OnChange="v => createDrawingRef = v" />
+                                            <FormField Label="Response due" Value="@createResponseDue" OnChange="v => createResponseDue = v" InputType="date" />
+                                        </div>
+
+                                        <button type="button" class="btn-primary" disabled="@busy" @onclick="DoCreate">Create request from email</button>
+                                    </div>
+                                }
+                                else if (mode == TriageMode.Discard)
+                                {
+                                    <div class="space-y-3">
+                                        <p class="text-sm text-content-muted">Discard this email if it isn’t a request (spam, an auto-reply, or sent to the wrong place). It stays on record but leaves the queue.</p>
+                                        <div>
+                                            <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Reason (optional)</label>
+                                            <textarea class="field" rows="2" value="@discardNotes" @oninput="OnDiscardNotesInput"></textarea>
+                                        </div>
+                                        <button type="button" class="btn-secondary border-negative/40 text-negative hover:border-negative" disabled="@busy" @onclick="DoDiscard">Discard email</button>
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+        }
+    </section>
+}
+
+@code {
+    private enum TriageMode { None, Link, Create, Discard }
+
+    private static readonly RequestType[] KindOptions =
+    {
+        RequestType.Rfi, RequestType.Rfq, RequestType.Rfp, RequestType.Rfc, RequestType.Rfa
+    };
+
+    private bool isLoaded;
+    private string? loadError;
+    private IReadOnlyList<IntakeEmail> items = Array.Empty<IntakeEmail>();
+    private IntakeEmail? selected;
+
+    private bool busy;
+    private string? actionError;
+    private TriageMode mode = TriageMode.None;
+
+    // Link-to-existing state
+    private string linkProjectId = "";
+    private string linkRequestId = "";
+
+    // Create-new state
+    private string createProjectId = "";
+    private RequestType createKind = RequestType.Rfi;
+    private string createReference = "";
+    private string createTitle = "";
+    private string createDescription = "";
+    private string createRaisedTo = "";
+    private string createDrawingRef = "";
+    private string createResponseDue = "";
+
+    // Discard state
+    private string discardNotes = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Session.EnsureLoadedAsync();
+        if (!Auth.IsSignedIn) { Nav.NavigateTo("/login", forceLoad: true); return; }
+        RequestRegister.OnChange += StateHasChanged;
+        await Projects.RefreshAsync(CancellationToken.None);
+        await LoadAsync();
+        isLoaded = true;
+    }
+
+    private async Task LoadAsync()
+    {
+        loadError = null;
+        try
+        {
+            items = await Intake.ListOpenAsync();
+        }
+        catch
+        {
+            loadError = "Couldn't load the triage queue. Please try again.";
+            items = Array.Empty<IntakeEmail>();
+        }
+    }
+
+    private void Select(IntakeEmail item)
+    {
+        selected = item;
+        mode = TriageMode.None;
+        actionError = null;
+        linkProjectId = linkRequestId = "";
+        createProjectId = "";
+        createKind = RequestType.Rfi;
+        createReference = "";
+        createTitle = item.Subject;
+        createDescription = item.BodyPreview;
+        createRaisedTo = createDrawingRef = createResponseDue = "";
+        discardNotes = "";
+    }
+
+    private void SetMode(TriageMode next)
+    {
+        mode = next;
+        actionError = null;
+    }
+
+    private async Task Claim()
+    {
+        if (selected is null || busy) return;
+        await RunAction(async () =>
+        {
+            await Intake.ClaimAsync(selected.IntakeId);
+        }, keepSelection: true);
+    }
+
+    private void OnLinkProjectChanged(ChangeEventArgs e)
+    {
+        linkProjectId = e.Value?.ToString() ?? "";
+        linkRequestId = "";
+        if (!string.IsNullOrWhiteSpace(linkProjectId)) _ = RequestRegister.ForProject(linkProjectId);
+    }
+
+    private void OnCreateProjectChanged(ChangeEventArgs e)
+    {
+        createProjectId = e.Value?.ToString() ?? "";
+        createReference = SuggestReference();
+    }
+
+    private void OnCreateKindChanged(ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), out var raw)) createKind = (RequestType)raw;
+        createReference = SuggestReference();
+    }
+
+    private void OnCreateDescriptionInput(ChangeEventArgs e) => createDescription = e.Value?.ToString() ?? "";
+
+    private void OnDiscardNotesInput(ChangeEventArgs e) => discardNotes = e.Value?.ToString() ?? "";
+
+    private string SuggestReference()
+    {
+        if (string.IsNullOrWhiteSpace(createProjectId)) return $"{createKind.DisplayName()}-001";
+        var existing = RequestRegister.ForProject(createProjectId, createKind).Count;
+        return $"{createKind.DisplayName()}-{existing + 1:000}";
+    }
+
+    private async Task DoLink()
+    {
+        if (selected is null || busy || string.IsNullOrWhiteSpace(linkRequestId)) return;
+        await RunAction(async () =>
+        {
+            await Intake.LinkAsync(selected.IntakeId, linkRequestId);
+        });
+    }
+
+    private async Task DoCreate()
+    {
+        if (selected is null || busy) return;
+        if (string.IsNullOrWhiteSpace(createProjectId)) { actionError = "Choose a project."; return; }
+        if (string.IsNullOrWhiteSpace(createReference)) { actionError = "A reference is required."; return; }
+        if (string.IsNullOrWhiteSpace(createTitle)) { actionError = "A subject is required."; return; }
+
+        var command = new CreateRequestFromIntake(
+            selected.IntakeId,
+            createProjectId,
+            createKind,
+            createReference.Trim(),
+            createTitle.Trim(),
+            createDescription?.Trim() ?? "",
+            RaisedTo: NullIfBlank(createRaisedTo),
+            DrawingRef: NullIfBlank(createDrawingRef),
+            ResponseDue: ParseDate(createResponseDue));
+
+        await RunAction(async () =>
+        {
+            await Intake.CreateRequestAsync(command);
+        });
+    }
+
+    private async Task DoDiscard()
+    {
+        if (selected is null || busy) return;
+        await RunAction(async () =>
+        {
+            await Intake.DiscardAsync(selected.IntakeId, NullIfBlank(discardNotes));
+        });
+    }
+
+    private async Task RunAction(Func<Task> action, bool keepSelection = false)
+    {
+        actionError = null;
+        try
+        {
+            busy = true;
+            await action();
+            var keepId = keepSelection ? selected?.IntakeId : null;
+            await LoadAsync();
+            selected = keepId is null ? null : items.FirstOrDefault(i => i.IntakeId == keepId);
+            if (!keepSelection) mode = TriageMode.None;
+        }
+        catch
+        {
+            actionError = "That action didn't complete. Please try again.";
+        }
+        finally
+        {
+            busy = false;
+        }
+    }
+
+    private IReadOnlyList<Project> ProjectOptions =>
+        Projects.Current ?? (IReadOnlyList<Project>)Array.Empty<Project>();
+
+    private IReadOnlyList<Request> ProjectRequests() =>
+        string.IsNullOrWhiteSpace(linkProjectId)
+            ? Array.Empty<Request>()
+            : RequestRegister.ForProject(linkProjectId);
+
+    // Requests on the chosen project whose reference or title overlaps the email subject —
+    // surfaced first so a second request isn't raised for something already being tracked.
+    private List<Request> DuplicateCandidates()
+    {
+        var subject = selected?.Subject ?? "";
+        var tokens = Tokenise(subject);
+        return ProjectRequests()
+            .Select(r => (r, score: Overlap(r, subject, tokens)))
+            .Where(x => x.score > 0)
+            .OrderByDescending(x => x.score)
+            .Select(x => x.r)
+            .ToList();
+    }
+
+    private static int Overlap(Request request, string subject, HashSet<string> subjectTokens)
+    {
+        var score = 0;
+        if (!string.IsNullOrWhiteSpace(request.Reference) &&
+            subject.Contains(request.Reference, StringComparison.OrdinalIgnoreCase))
+            score += 10;
+        foreach (var token in Tokenise(request.Title))
+            if (subjectTokens.Contains(token)) score++;
+        return score;
+    }
+
+    private static HashSet<string> Tokenise(string text) =>
+        text.Split(new[] { ' ', '\t', '\n', '\r', '-', '_', '.', ',', ':', ';', '[', ']', '(', ')', '/' },
+                   StringSplitOptions.RemoveEmptyEntries)
+            .Select(w => w.ToLowerInvariant())
+            .Where(w => w.Length > 3)
+            .ToHashSet();
+
+    private string RowClass(IntakeEmail item)
+    {
+        var baseClass = "w-full text-left rounded-lg border px-3 py-2 transition";
+        return selected?.IntakeId == item.IntakeId
+            ? $"{baseClass} border-accent bg-surface-raised"
+            : $"{baseClass} border-line hover:border-line-strong hover:bg-surface-raised";
+    }
+
+    private string ModeTabClass(TriageMode tab)
+    {
+        var baseClass = "rounded-lg px-3 py-1.5 text-sm font-medium border transition";
+        return mode == tab
+            ? $"{baseClass} border-accent text-content bg-surface-raised"
+            : $"{baseClass} border-line text-content-muted hover:text-content hover:border-line-strong";
+    }
+
+    private string RequestPickClass(Request request, bool candidate)
+    {
+        var baseClass = "w-full text-left rounded-lg border px-3 py-2 flex flex-col gap-0.5 transition";
+        if (linkRequestId == request.RequestId) return $"{baseClass} border-accent bg-surface-raised";
+        return candidate
+            ? $"{baseClass} border-amber-500/40 hover:border-amber-500"
+            : $"{baseClass} border-line hover:border-line-strong";
+    }
+
+    private static string DisplayFrom(IntakeEmail item) =>
+        string.IsNullOrWhiteSpace(item.FromName) ? item.FromEmail : item.FromName;
+
+    private static string StatusLabel(IntakeEmail item) => item.Status switch
+    {
+        IntakeStatus.NeedsTriage => "Needs triage",
+        IntakeStatus.Claimed     => "Claimed",
+        _                        => item.Status.ToString()
+    };
+
+    private static string StatusChipClass(IntakeStatus status) => status switch
+    {
+        IntakeStatus.NeedsTriage => "inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium bg-amber-500/10 text-amber-600",
+        IntakeStatus.Claimed     => "inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium bg-blue-500/10 text-blue-600",
+        _                        => "inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium bg-surface-raised border border-line text-content-muted"
+    };
+
+    private static string Dash(string? value) => string.IsNullOrWhiteSpace(value) ? "—" : value;
+
+    private static string Date(DateTimeOffset value) => value.LocalDateTime.ToString("d MMM yyyy, HH:mm");
+
+    private static string? NullIfBlank(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+
+    private static DateTimeOffset? ParseDate(string value) =>
+        DateTimeOffset.TryParse(value, out var parsed) ? parsed : null;
+
+    public void Dispose() => RequestRegister.OnChange -= StateHasChanged;
+}

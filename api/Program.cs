@@ -15,6 +15,7 @@ using Jewel.JPMS.Api.Features.Directory;
 using Jewel.JPMS.Api.Features.Drawings;
 using Jewel.JPMS.Api.Features.Hs;
 using Jewel.JPMS.Api.Features.Leads;
+using Jewel.JPMS.Api.Features.MailboxIntake;
 using Jewel.JPMS.Api.Features.Mobilisation;
 using Jewel.JPMS.Api.Features.Procurement;
 using Jewel.JPMS.Api.Features.Projects;
@@ -63,6 +64,7 @@ var host = new HostBuilder()
         services.AddCloseoutFeature();
         services.AddRequestsFeature();
         services.AddCostCentersFeature();
+        services.AddMailboxIntakeFeature(context.Configuration);
     })
     .Build();
 

@@ -15,6 +15,7 @@ public static class RequestsFeatureRegistration
         services.AddScoped<IQueryHandler<ListRequestsForProject, IReadOnlyList<Request>>, ListRequestsForProjectHandler>();
         services.AddScoped<IQueryHandler<GetRequestById, Request?>, GetRequestByIdHandler>();
         services.AddScoped<IQueryHandler<ListRequestMessages, IReadOnlyList<RequestMessage>>, ListRequestMessagesHandler>();
+        services.AddScoped<IQueryHandler<ListOpenIntake, IReadOnlyList<IntakeEmail>>, ListOpenIntakeHandler>();
 
         services.AddScoped<ICommandHandler<RaiseRequest, Request>, RaiseRequestHandler>();
         services.AddScoped<RaiseRequestAuthorisation>();
@@ -31,6 +32,22 @@ public static class RequestsFeatureRegistration
         services.AddScoped<ICommandHandler<DeleteRequest, Acknowledgement>, DeleteRequestHandler>();
         services.AddScoped<DeleteRequestAuthorisation>();
         services.AddScoped<DeleteRequestValidation>();
+
+        services.AddScoped<ICommandHandler<ClaimIntakeEmail, IntakeEmail>, ClaimIntakeEmailHandler>();
+        services.AddScoped<ClaimIntakeEmailAuthorisation>();
+        services.AddScoped<ClaimIntakeEmailValidation>();
+
+        services.AddScoped<ICommandHandler<DiscardIntakeEmail, IntakeEmail>, DiscardIntakeEmailHandler>();
+        services.AddScoped<DiscardIntakeEmailAuthorisation>();
+        services.AddScoped<DiscardIntakeEmailValidation>();
+
+        services.AddScoped<ICommandHandler<LinkIntakeToRequest, IntakeEmail>, LinkIntakeToRequestHandler>();
+        services.AddScoped<LinkIntakeToRequestAuthorisation>();
+        services.AddScoped<LinkIntakeToRequestValidation>();
+
+        services.AddScoped<ICommandHandler<CreateRequestFromIntake, Request>, CreateRequestFromIntakeHandler>();
+        services.AddScoped<CreateRequestFromIntakeAuthorisation>();
+        services.AddScoped<CreateRequestFromIntakeValidation>();
 
         return services;
     }

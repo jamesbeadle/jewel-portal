@@ -11,4 +11,12 @@ public sealed class RequestMessageEntity
     [MaxLength(4000)]    public string Body { get; set; } = "";
     public int Visibility { get; set; }
     public DateTimeOffset PostedAt { get; set; }
+
+    // Mailbox automation metadata. Direction/SentStatus default to 0 (System/NotApplicable)
+    // for in-app messages; the threading identifiers are populated only for emailed legs.
+    public int Direction { get; set; }
+    [MaxLength(450)] public string? EmailMessageId { get; set; }
+    [MaxLength(998)] public string? InReplyTo { get; set; }
+    [MaxLength(998)] public string? ConversationId { get; set; }
+    public int SentStatus { get; set; }
 }

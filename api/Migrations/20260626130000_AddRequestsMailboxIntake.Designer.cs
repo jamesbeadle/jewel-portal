@@ -4,6 +4,7 @@ using Jewel.JPMS.Api.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,10 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Jewel.JPMS.Api.Migrations
 {
     [DbContext(typeof(JpmsContext))]
-    partial class JpmsContextModelSnapshot : ModelSnapshot
+    [Migration("20260626130000_AddRequestsMailboxIntake")]
+    partial class AddRequestsMailboxIntake
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -413,9 +415,6 @@ namespace Jewel.JPMS.Api.Migrations
                         .HasColumnType("nvarchar(512)");
 
                     b.HasKey("IntakeId");
-
-                    b.HasIndex("InternetMessageId")
-                        .IsUnique();
 
                     b.ToTable("IntakeEmails");
                 });
@@ -1235,33 +1234,6 @@ namespace Jewel.JPMS.Api.Migrations
                     b.HasKey("LeadId");
 
                     b.ToTable("LeadOutcomes");
-                });
-
-            modelBuilder.Entity("Jewel.JPMS.Api.Data.Entities.MailboxSyncStateEntity", b =>
-                {
-                    b.Property<string>("Mailbox")
-                        .HasMaxLength(256)
-                        .HasColumnType("nvarchar(256)");
-
-                    b.Property<bool>("BacklogImported")
-                        .HasColumnType("bit");
-
-                    b.Property<string>("DeltaLink")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTimeOffset?>("LastSyncedAt")
-                        .HasColumnType("datetimeoffset");
-
-                    b.Property<DateTimeOffset?>("SubscriptionExpiresAt")
-                        .HasColumnType("datetimeoffset");
-
-                    b.Property<string>("SubscriptionId")
-                        .HasMaxLength(450)
-                        .HasColumnType("nvarchar(450)");
-
-                    b.HasKey("Mailbox");
-
-                    b.ToTable("MailboxSyncStates");
                 });
 
             modelBuilder.Entity("Jewel.JPMS.Api.Data.Entities.MobilisationItemEntity", b =>

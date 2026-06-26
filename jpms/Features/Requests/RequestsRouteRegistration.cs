@@ -28,6 +28,10 @@ public static class RequestsRouteRegistration
             new QueryRoute("/api/requests/{requestId}/messages",
                 query => $"/api/requests/{((ListRequestMessages)query).RequestId}/messages"));
 
+        queries.Register<ListOpenIntake, IReadOnlyList<IntakeEmail>>(
+            new QueryRoute("/api/intake",
+                _ => "/api/intake"));
+
         commands.Register<RaiseRequest, Request>(
             new CommandRoute("POST", "/api/projects/{projectId}/requests",
                 command => $"/api/projects/{((RaiseRequest)command).ProjectId}/requests"));
@@ -43,5 +47,21 @@ public static class RequestsRouteRegistration
         commands.Register<DeleteRequest, Acknowledgement>(
             new CommandRoute("DELETE", "/api/requests/{requestId}",
                 command => $"/api/requests/{((DeleteRequest)command).RequestId}"));
+
+        commands.Register<ClaimIntakeEmail, IntakeEmail>(
+            new CommandRoute("POST", "/api/intake/{intakeId}/claim",
+                command => $"/api/intake/{((ClaimIntakeEmail)command).IntakeId}/claim"));
+
+        commands.Register<DiscardIntakeEmail, IntakeEmail>(
+            new CommandRoute("POST", "/api/intake/{intakeId}/discard",
+                command => $"/api/intake/{((DiscardIntakeEmail)command).IntakeId}/discard"));
+
+        commands.Register<LinkIntakeToRequest, IntakeEmail>(
+            new CommandRoute("POST", "/api/intake/{intakeId}/link",
+                command => $"/api/intake/{((LinkIntakeToRequest)command).IntakeId}/link"));
+
+        commands.Register<CreateRequestFromIntake, Request>(
+            new CommandRoute("POST", "/api/intake/{intakeId}/create-request",
+                command => $"/api/intake/{((CreateRequestFromIntake)command).IntakeId}/create-request"));
     }
 }

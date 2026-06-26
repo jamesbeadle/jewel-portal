@@ -1,0 +1,260 @@
+using System.Net;
+using System.Net.Http.Headers;
+using System.Net.Http.Json;
+using System.Text.Json;
+using Microsoft.Extensions.Logging;
+
+namespace Jewel.JPMS.Api.Features.MailboxIntake.Graph;
+
+/// <summary>
+/// Microsoft Graph REST client (HttpClient + app-only token). Deliberately uses raw REST rather
+/// than the Graph SDK to keep the dependency surface small and the calls explicit.
+/// </summary>
+public sealed class GraphMailClient : IGraphMailClient
+{
+    private const string GraphBase = "https://graph.microsoft.com/v1.0";
+
+    // Fields requested on every message. internetMessageHeaders is only returned when explicitly
+    // selected; we use it to recover In-Reply-To / References for thread matching.
+    private const string MessageSelect =
+        "id,internetMessageId,conversationId,subject,bodyPreview,from,receivedDateTime,hasAttachments,internetMessageHeaders";
+
+    private readonly HttpClient _http;
+    private readonly GraphTokenProvider _tokens;
+    private readonly MailboxIntakeOptions _options;
+    private readonly ILogger<GraphMailClient> _logger;
+
+    public GraphMailClient(
+        HttpClient http,
+        GraphTokenProvider tokens,
+        MailboxIntakeOptions options,
+        ILogger<GraphMailClient> logger)
+    {
+        _http = http;
+        _tokens = tokens;
+        _options = options;
+        _logger = logger;
+    }
+
+    private string Mailbox => Uri.EscapeDataString(_options.Mailbox);
+
+    public async Task<GraphMessagePage> GetDeltaPageAsync(string? link, CancellationToken ct)
+    {
+        var url = link ?? $"{GraphBase}/users/{Mailbox}/mailFolders/inbox/messages/delta"
+            + $"?$select={MessageSelect}&$top=50";
+
+        using var response = await SendAsync(HttpMethod.Get, url, content: null, ct);
+        await using var stream = await response.Content.ReadAsStreamAsync(ct);
+        using var doc = await JsonDocument.ParseAsync(stream, cancellationToken: ct);
+        var root = doc.RootElement;
+
+        var messages = new List<GraphMessage>();
+        if (root.TryGetProperty("value", out var value) && value.ValueKind == JsonValueKind.Array)
+        {
+            foreach (var item in value.EnumerateArray())
+            {
+                var parsed = ParseMessage(item);
+                if (parsed is not null)
+                    messages.Add(parsed);
+            }
+        }
+
+        string? nextLink = root.TryGetProperty("@odata.nextLink", out var n) ? n.GetString() : null;
+        string? deltaLink = root.TryGetProperty("@odata.deltaLink", out var d) ? d.GetString() : null;
+        return new GraphMessagePage(messages, nextLink, deltaLink);
+    }
+
+    public async Task<GraphMessage?> GetMessageAsync(string graphMessageId, CancellationToken ct)
+    {
+        var url = $"{GraphBase}/users/{Mailbox}/messages/{Uri.EscapeDataString(graphMessageId)}?$select={MessageSelect}";
+        using var response = await SendAsync(HttpMethod.Get, url, content: null, ct, allowNotFound: true);
+        if (response.StatusCode == HttpStatusCode.NotFound)
+            return null;
+
+        await using var stream = await response.Content.ReadAsStreamAsync(ct);
+        using var doc = await JsonDocument.ParseAsync(stream, cancellationToken: ct);
+        return ParseMessage(doc.RootElement);
+    }
+
+    public async Task<string> MoveMessageAsync(string graphMessageId, string destinationFolderId, CancellationToken ct)
+    {
+        var url = $"{GraphBase}/users/{Mailbox}/messages/{Uri.EscapeDataString(graphMessageId)}/move";
+        var body = JsonContent.Create(new { destinationId = destinationFolderId });
+        using var response = await SendAsync(HttpMethod.Post, url, body, ct);
+
+        await using var stream = await response.Content.ReadAsStreamAsync(ct);
+        using var doc = await JsonDocument.ParseAsync(stream, cancellationToken: ct);
+        var newId = doc.RootElement.TryGetProperty("id", out var id) ? id.GetString() : null;
+        if (string.IsNullOrEmpty(newId))
+            throw new InvalidOperationException("Graph move did not return a new message id.");
+        return newId;
+    }
+
+    public async Task SendMailAsync(GraphOutboundMessage message, CancellationToken ct)
+    {
+        var url = $"{GraphBase}/users/{Mailbox}/sendMail";
+        var payload = new
+        {
+            message = new
+            {
+                subject = message.Subject,
+                body = new { contentType = "HTML", content = message.HtmlBody },
+                toRecipients = new[]
+                {
+                    new { emailAddress = new { address = message.ToEmail, name = message.ToName ?? message.ToEmail } }
+                }
+            },
+            saveToSentItems = true
+        };
+        using var response = await SendAsync(HttpMethod.Post, url, JsonContent.Create(payload), ct);
+        _ = response;
+    }
+
+    public async Task ReplyAsync(string graphMessageId, string htmlBody, CancellationToken ct)
+    {
+        // createReply -> draft with a new id, then set the HTML body, then send. This gives full
+        // control of the body while preserving conversation threading.
+        var createUrl = $"{GraphBase}/users/{Mailbox}/messages/{Uri.EscapeDataString(graphMessageId)}/createReply";
+        string draftId;
+        using (var created = await SendAsync(HttpMethod.Post, createUrl, content: null, ct))
+        {
+            await using var stream = await created.Content.ReadAsStreamAsync(ct);
+            using var doc = await JsonDocument.ParseAsync(stream, cancellationToken: ct);
+            draftId = doc.RootElement.GetProperty("id").GetString()
+                ?? throw new InvalidOperationException("Graph createReply did not return a draft id.");
+        }
+
+        var patchUrl = $"{GraphBase}/users/{Mailbox}/messages/{Uri.EscapeDataString(draftId)}";
+        var patchBody = JsonContent.Create(new { body = new { contentType = "HTML", content = htmlBody } });
+        using (await SendAsync(HttpMethod.Patch, patchUrl, patchBody, ct)) { }
+
+        var sendUrl = $"{GraphBase}/users/{Mailbox}/messages/{Uri.EscapeDataString(draftId)}/send";
+        using (await SendAsync(HttpMethod.Post, sendUrl, content: null, ct)) { }
+    }
+
+    public async Task<GraphSubscription> CreateSubscriptionAsync(
+        string notificationUrl, string clientState, DateTimeOffset expiry, CancellationToken ct)
+    {
+        var url = $"{GraphBase}/subscriptions";
+        var payload = new
+        {
+            changeType = "created",
+            notificationUrl,
+            resource = $"users/{_options.Mailbox}/mailFolders('inbox')/messages",
+            expirationDateTime = expiry.UtcDateTime.ToString("o"),
+            clientState
+        };
+        using var response = await SendAsync(HttpMethod.Post, url, JsonContent.Create(payload), ct);
+        return await ReadSubscriptionAsync(response, ct);
+    }
+
+    public async Task<GraphSubscription> RenewSubscriptionAsync(
+        string subscriptionId, DateTimeOffset expiry, CancellationToken ct)
+    {
+        var url = $"{GraphBase}/subscriptions/{Uri.EscapeDataString(subscriptionId)}";
+        var payload = new { expirationDateTime = expiry.UtcDateTime.ToString("o") };
+        using var response = await SendAsync(HttpMethod.Patch, url, JsonContent.Create(payload), ct);
+        return await ReadSubscriptionAsync(response, ct);
+    }
+
+    public async Task DeleteSubscriptionAsync(string subscriptionId, CancellationToken ct)
+    {
+        var url = $"{GraphBase}/subscriptions/{Uri.EscapeDataString(subscriptionId)}";
+        using var response = await SendAsync(HttpMethod.Delete, url, content: null, ct, allowNotFound: true);
+        _ = response;
+    }
+
+    private static async Task<GraphSubscription> ReadSubscriptionAsync(HttpResponseMessage response, CancellationToken ct)
+    {
+        await using var stream = await response.Content.ReadAsStreamAsync(ct);
+        using var doc = await JsonDocument.ParseAsync(stream, cancellationToken: ct);
+        var root = doc.RootElement;
+        var id = root.GetProperty("id").GetString() ?? "";
+        var expires = root.TryGetProperty("expirationDateTime", out var e) && e.TryGetDateTimeOffset(out var dt)
+            ? dt
+            : DateTimeOffset.UtcNow;
+        return new GraphSubscription(id, expires);
+    }
+
+    private async Task<HttpResponseMessage> SendAsync(
+        HttpMethod method, string url, HttpContent? content, CancellationToken ct, bool allowNotFound = false)
+    {
+        var token = await _tokens.GetTokenAsync(ct);
+        using var request = new HttpRequestMessage(method, url) { Content = content };
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+        var response = await _http.SendAsync(request, ct);
+        if (response.IsSuccessStatusCode)
+            return response;
+        if (allowNotFound && response.StatusCode == HttpStatusCode.NotFound)
+            return response;
+
+        var detail = await SafeReadAsync(response, ct);
+        response.Dispose();
+        throw new GraphRequestException(
+            $"Graph {method} {Sanitise(url)} failed: {(int)response.StatusCode} {response.StatusCode}. {detail}");
+    }
+
+    private static async Task<string> SafeReadAsync(HttpResponseMessage response, CancellationToken ct)
+    {
+        try { return await response.Content.ReadAsStringAsync(ct); }
+        catch { return "(no body)"; }
+    }
+
+    // Strip the mailbox address out of logged URLs.
+    private string Sanitise(string url) => url.Replace(Mailbox, "{mailbox}").Replace(_options.Mailbox, "{mailbox}");
+
+    private static GraphMessage? ParseMessage(JsonElement item)
+    {
+        if (item.ValueKind != JsonValueKind.Object)
+            return null;
+
+        var id = item.TryGetProperty("id", out var idEl) ? idEl.GetString() : null;
+        if (string.IsNullOrEmpty(id))
+            return null;
+
+        // Deleted/removed entries in a delta feed carry an @removed annotation and little else.
+        if (item.TryGetProperty("@removed", out _))
+            return new GraphMessage(id, "", null, null, null, "", "", "", "", false, default, IsRemoved: true);
+
+        string internetMessageId = item.TryGetProperty("internetMessageId", out var imid) ? imid.GetString() ?? "" : "";
+        string? conversationId = item.TryGetProperty("conversationId", out var conv) ? conv.GetString() : null;
+        string subject = item.TryGetProperty("subject", out var subj) ? subj.GetString() ?? "" : "";
+        string bodyPreview = item.TryGetProperty("bodyPreview", out var bp) ? bp.GetString() ?? "" : "";
+        bool hasAttachments = item.TryGetProperty("hasAttachments", out var ha) && ha.ValueKind == JsonValueKind.True;
+
+        DateTimeOffset receivedAt = default;
+        if (item.TryGetProperty("receivedDateTime", out var rdt) && rdt.TryGetDateTimeOffset(out var parsed))
+            receivedAt = parsed;
+
+        string fromEmail = "", fromName = "";
+        if (item.TryGetProperty("from", out var from) && from.ValueKind == JsonValueKind.Object
+            && from.TryGetProperty("emailAddress", out var addr) && addr.ValueKind == JsonValueKind.Object)
+        {
+            fromEmail = addr.TryGetProperty("address", out var a) ? a.GetString() ?? "" : "";
+            fromName = addr.TryGetProperty("name", out var nm) ? nm.GetString() ?? "" : "";
+        }
+
+        string? inReplyTo = null, references = null;
+        if (item.TryGetProperty("internetMessageHeaders", out var headers) && headers.ValueKind == JsonValueKind.Array)
+        {
+            foreach (var h in headers.EnumerateArray())
+            {
+                var name = h.TryGetProperty("name", out var hn) ? hn.GetString() : null;
+                var hv = h.TryGetProperty("value", out var hvEl) ? hvEl.GetString() : null;
+                if (string.Equals(name, "In-Reply-To", StringComparison.OrdinalIgnoreCase)) inReplyTo = hv;
+                else if (string.Equals(name, "References", StringComparison.OrdinalIgnoreCase)) references = hv;
+            }
+        }
+
+        return new GraphMessage(
+            id, internetMessageId, conversationId, inReplyTo, references,
+            fromEmail, fromName, subject, bodyPreview, hasAttachments, receivedAt, IsRemoved: false);
+    }
+}
+
+/// <summary>Raised when a Graph REST call returns a non-success status. Carries a sanitised message.</summary>
+public sealed class GraphRequestException : Exception
+{
+    public GraphRequestException(string message) : base(message) { }
+}

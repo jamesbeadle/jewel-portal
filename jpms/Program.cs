@@ -63,6 +63,7 @@ builder.Services.AddScoped<IHsRegister, HttpHsRegister>();
 builder.Services.AddScoped<IProcurementStore, HttpProcurementStore>();
 builder.Services.AddScoped<IMobilisationStore, HttpMobilisationStore>();
 builder.Services.AddScoped<IRequestRegister, HttpRequestRegister>();
+builder.Services.AddScoped<IIntakeQueue, HttpIntakeQueue>();
 builder.Services.AddScoped<ISiteStore, HttpSiteStore>();
 builder.Services.AddScoped<ICommercialStore, HttpCommercialStore>();
 builder.Services.AddScoped<ICvrStore, HttpCvrStore>();

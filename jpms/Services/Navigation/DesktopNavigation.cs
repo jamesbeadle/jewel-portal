@@ -36,6 +36,7 @@ public static class DesktopNavigation
         Entry("Projects",       "/projects",       Role.ManagingDirector, Role.FinanceDirector, Role.ProjectManager, Role.QuantitySurveyor, Role.SiteManager, Role.HealthSafetyOfficer, Role.OfficeComplianceCoordinator),
         Entry("Subcontractors", "/subcontractors", Role.ManagingDirector, Role.FinanceDirector, Role.ProjectManager, Role.HealthSafetyOfficer, Role.OfficeComplianceCoordinator),
         Entry("Work orders",    "/work-orders",    Role.ManagingDirector, Role.FinanceDirector, Role.ProjectManager, Role.QuantitySurveyor, Role.OfficeComplianceCoordinator),
+        Entry("Triage",         "/requests/triage", Role.ManagingDirector, Role.ProjectManager, Role.QuantitySurveyor, Role.SiteManager, Role.HealthSafetyOfficer, Role.OfficeComplianceCoordinator, Role.Foreman),
         Entry("H&S",            "/hs",             Role.ManagingDirector, Role.HealthSafetyOfficer),
         Entry("Cashflow",       "/cashflow",       Role.ManagingDirector, Role.FinanceDirector, Role.ProjectManager),
         Entry("Portfolio",      "/portfolio",      Role.ManagingDirector, Role.FinanceDirector, Role.ProjectManager, Role.QuantitySurveyor, Role.HealthSafetyOfficer),
