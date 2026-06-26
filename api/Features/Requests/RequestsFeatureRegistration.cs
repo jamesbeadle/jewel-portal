@@ -1,6 +1,7 @@
 using Jewel.JPMS.Api.Cqrs;
 using Jewel.JPMS.Api.Features.Requests.Commands;
 using Jewel.JPMS.Api.Features.Requests.Queries;
+using Jewel.JPMS.Contracts.Cqrs;
 using Jewel.JPMS.Contracts.Requests;
 using Jewel.JPMS.Models;
 using Microsoft.Extensions.DependencyInjection;
@@ -26,6 +27,10 @@ public static class RequestsFeatureRegistration
         services.AddScoped<ICommandHandler<PostRequestMessage, RequestMessage>, PostRequestMessageHandler>();
         services.AddScoped<PostRequestMessageAuthorisation>();
         services.AddScoped<PostRequestMessageValidation>();
+
+        services.AddScoped<ICommandHandler<DeleteRequest, Acknowledgement>, DeleteRequestHandler>();
+        services.AddScoped<DeleteRequestAuthorisation>();
+        services.AddScoped<DeleteRequestValidation>();
 
         return services;
     }

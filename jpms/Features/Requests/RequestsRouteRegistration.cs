@@ -1,3 +1,4 @@
+using Jewel.JPMS.Contracts.Cqrs;
 using Jewel.JPMS.Contracts.Requests;
 using Jewel.JPMS.Cqrs;
 using Jewel.JPMS.Models;
@@ -38,5 +39,9 @@ public static class RequestsRouteRegistration
         commands.Register<PostRequestMessage, RequestMessage>(
             new CommandRoute("POST", "/api/requests/{requestId}/messages",
                 command => $"/api/requests/{((PostRequestMessage)command).RequestId}/messages"));
+
+        commands.Register<DeleteRequest, Acknowledgement>(
+            new CommandRoute("DELETE", "/api/requests/{requestId}",
+                command => $"/api/requests/{((DeleteRequest)command).RequestId}"));
     }
 }

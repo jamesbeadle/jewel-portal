@@ -16,4 +16,5 @@ public interface IRequestRegister
     Task<Request> UpdateAsync(UpdateRequestDetails command, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<RequestMessage>> ListMessagesAsync(string requestId, CancellationToken cancellationToken = default);
     Task<RequestMessage> PostMessageAsync(PostRequestMessage command, CancellationToken cancellationToken = default);
+    Task DeleteAsync(string requestId, string projectId, CancellationToken cancellationToken = default);
 }

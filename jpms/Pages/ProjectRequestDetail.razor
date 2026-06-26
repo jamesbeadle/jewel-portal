@@ -98,10 +98,31 @@ else
                         <p class="text-sm text-content-subtle mb-3">This request is closed.</p>
                         <button type="button" class="btn-secondary" disabled="@busy" @onclick="ReopenRequest">Reopen</button>
                     }
+
+                    @if (IsAdmin)
+                    {
+                        <div class="mt-4 pt-4 border-t border-line">
+                            <h4 class="eyebrow mb-1 text-negative">Danger zone</h4>
+                            <p class="text-xs text-content-subtle mb-2">Permanently deletes this request and its conversation. Administrators only.</p>
+                            <button type="button" class="btn-secondary border-negative/40 text-negative hover:border-negative" disabled="@busy" @onclick="() => confirmingDelete = true">
+                                Delete request
+                            </button>
+                        </div>
+                    }
                 </div>
             </div>
         </div>
     </ProjectPageShell>
+
+    <Modal IsOpen="confirmingDelete"
+           Title="Delete this request?"
+           ConfirmLabel="@(busy ? "Deleting…" : "Delete request")"
+           OnCancel="CancelDelete"
+           OnConfirm="PerformDelete">
+        <p class="text-sm text-content">
+            This will permanently remove <span class="font-mono">@record?.Reference</span> — “@record?.Title” — and its entire conversation. This cannot be undone.
+        </p>
+    </Modal>
 }
 
 @code {
@@ -113,8 +134,11 @@ else
     private string responseDraft = "";
     private bool busy;
     private string? actionError;
+    private bool confirmingDelete;
 
     private string RegisterHref => $"/projects/{ProjectId}/requests";
+
+    private bool IsAdmin => Auth.CurrentUser is not null && JpmsAdministrators.Contains(Auth.CurrentUser.Email);
 
     protected override async Task OnInitializedAsync()
     {
@@ -179,6 +203,26 @@ else
         }
         finally
         {
+            busy = false;
+        }
+    }
+
+    private void CancelDelete() => confirmingDelete = false;
+
+    private async Task PerformDelete()
+    {
+        if (record is null || busy || !IsAdmin) return;
+        actionError = null;
+        try
+        {
+            busy = true;
+            await RequestRegister.DeleteAsync(record.RequestId, ProjectId);
+            Nav.NavigateTo(RegisterHref);
+        }
+        catch
+        {
+            actionError = "Couldn't delete the request. Please try again.";
+            confirmingDelete = false;
             busy = false;
         }
     }
