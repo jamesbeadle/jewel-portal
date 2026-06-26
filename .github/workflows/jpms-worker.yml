@@ -1,0 +1,49 @@
+name: Deploy JPMS Mailbox Worker to Azure Functions
+
+# The mailbox-intake background workers (timer + queue triggers) cannot run inside the Static Web
+# Apps managed Functions API (HTTP triggers only). They are deployed here, to a standalone Azure
+# Function App, separately from the SWA frontend+API workflow (jpms-swa.yml).
+#
+# Required repository configuration:
+#   - Variable  JPMS_WORKER_APP_NAME            = the Function App name in Azure
+#   - Secret    AZURE_FUNCTIONAPP_PUBLISH_PROFILE = the app's publish profile (Download from the
+#               Function App > Overview > Get publish profile)
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'worker/**'
+      - 'contracts/**'
+      # The worker compiles shared source from these api paths via linked includes, so changes
+      # to them must redeploy the worker too.
+      - 'api/Data/**'
+      - 'api/Features/MailboxIntake/MailboxIntakeOptions.cs'
+      - 'api/Features/MailboxIntake/Queue/MailboxQueues.cs'
+      - 'api/Features/Requests/RequestsIdentifierFactory.cs'
+      - '.github/workflows/jpms-worker.yml'
+  workflow_dispatch:
+
+jobs:
+  build_and_deploy:
+    runs-on: ubuntu-latest
+    name: Build and deploy worker
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Publish worker
+        run: dotnet publish worker/Jewel.JPMS.Worker.csproj -c Release -o ./worker-publish
+
+      - name: Deploy to Azure Functions
+        uses: Azure/functions-action@v1
+        with:
+          app-name: ${{ vars.JPMS_WORKER_APP_NAME }}
+          package: ./worker-publish
+          publish-profile: ${{ secrets.AZURE_FUNCTIONAPP_PUBLISH_PROFILE }}

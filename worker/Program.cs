@@ -1,0 +1,49 @@
+using Jewel.JPMS.Api.Data;
+using Jewel.JPMS.Api.Features.MailboxIntake;
+using Jewel.JPMS.Api.Features.MailboxIntake.Graph;
+using Jewel.JPMS.Api.Features.MailboxIntake.Ingestion;
+using Jewel.JPMS.Api.Features.MailboxIntake.Subscriptions;
+using Microsoft.Azure.Functions.Worker;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+
+// The mailbox-intake background workers (timer + queue triggers) live here, in a standalone
+// Azure Function App. They cannot run inside the Static Web Apps managed Functions API, which
+// only supports HTTP triggers. The SWA API keeps the HTTP webhook + the triage-side producers;
+// this worker owns ingestion, the delta sweep, subscription renewal, and folder/outbound actions.
+//
+// This app does NOT apply EF migrations — the SWA API owns the schema. The worker shares the
+// identical JpmsContext (via linked source) and only reads/updates existing tables.
+var host = new HostBuilder()
+    .ConfigureFunctionsWorkerDefaults()
+    .ConfigureServices((context, services) =>
+    {
+        var connectionString = context.Configuration["SqlConnectionString"]
+            ?? throw new InvalidOperationException("SqlConnectionString application setting missing.");
+
+        services.AddDbContext<JpmsContext>(options =>
+            options.UseSqlServer(connectionString, sqlServer => sqlServer.EnableRetryOnFailure()));
+
+        var mailboxOptions = MailboxIntakeOptions.FromConfiguration(context.Configuration);
+        services.AddSingleton(mailboxOptions);
+
+        // Graph client: real when configured, otherwise a logged no-op (so the host always starts).
+        if (mailboxOptions.Enabled && mailboxOptions.IsConfigured)
+        {
+            services.AddSingleton<GraphTokenProvider>();
+            services.AddSingleton<HttpClient>();
+            services.AddSingleton<IGraphMailClient, GraphMailClient>();
+        }
+        else
+        {
+            services.AddSingleton<IGraphMailClient, NullGraphMailClient>();
+        }
+
+        services.AddScoped<MailboxSyncStateStore>();
+        services.AddScoped<IntakeIngestionService>();
+        services.AddScoped<MailboxSubscriptionManager>();
+    })
+    .Build();
+
+await host.RunAsync();

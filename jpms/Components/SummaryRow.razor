@@ -1,0 +1,10 @@
+<div class="flex items-baseline justify-between gap-4 @(Strong ? "border-t border-line-strong pt-1.5 mt-0.5" : "")">
+    <dt class="@(Strong ? "text-content font-semibold" : "text-content-muted")">@Label</dt>
+    <dd class="@(Strong ? "text-content font-semibold" : "text-content") font-mono tabular-nums whitespace-nowrap">@Value</dd>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public string Label { get; set; } = "";
+    [Parameter, EditorRequired] public string Value { get; set; } = "";
+    [Parameter] public bool Strong { get; set; }
+}

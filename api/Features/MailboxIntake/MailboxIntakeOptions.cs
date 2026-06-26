@@ -1,3 +1,5 @@
+using Microsoft.Extensions.Configuration;
+
 namespace Jewel.JPMS.Api.Features.MailboxIntake;
 
 /// <summary>
@@ -68,6 +70,43 @@ public sealed class MailboxIntakeOptions
         && !string.IsNullOrWhiteSpace(ClientId)
         && !string.IsNullOrWhiteSpace(ClientSecret)
         && !string.IsNullOrWhiteSpace(Mailbox);
+
+    /// <summary>
+    /// Binds options from the "MailboxIntake" configuration section. Shared by the SWA API
+    /// (producer/webhook side) and the worker Function App (consumer side) so both read the
+    /// exact same values. Manual binding (no Configuration.Binder dependency).
+    /// </summary>
+    public static MailboxIntakeOptions FromConfiguration(IConfiguration configuration)
+    {
+        var section = configuration.GetSection(SectionName);
+        var options = new MailboxIntakeOptions
+        {
+            TenantId = section["TenantId"],
+            ClientId = section["ClientId"],
+            ClientSecret = section["ClientSecret"],
+            NotificationUrl = section["NotificationUrl"],
+            ClientState = section["ClientState"],
+            Enabled = ParseBool(section["Enabled"], true),
+            EnableDeltaSweep = ParseBool(section["EnableDeltaSweep"], true),
+            EnableWebhook = ParseBool(section["EnableWebhook"], false),
+            EnableFolderMoves = ParseBool(section["EnableFolderMoves"], true),
+            EnableOutboundSend = ParseBool(section["EnableOutboundSend"], false)
+        };
+
+        var mailbox = section["Mailbox"];
+        if (!string.IsNullOrWhiteSpace(mailbox))
+            options.Mailbox = mailbox;
+
+        options.Folders.InProgress = section["Folders:InProgress"];
+        options.Folders.Logged = section["Folders:Logged"];
+        options.Folders.NotActioned = section["Folders:NotActioned"];
+        options.Folders.NeedsAttention = section["Folders:NeedsAttention"];
+
+        return options;
+    }
+
+    private static bool ParseBool(string? value, bool fallback) =>
+        bool.TryParse(value, out var parsed) ? parsed : fallback;
 }
 
 /// <summary>Graph folder ids for each triage outcome. NeedsTriage stays in the Inbox.</summary>

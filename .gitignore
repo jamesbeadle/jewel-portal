@@ -36,6 +36,11 @@ yarn-error.log*
 !.env.example
 *.pem
 *.key
+
+# Azure Functions local settings — may contain the Graph client secret. Never commit.
+local.settings.json
+**/local.settings.json
+!**/local.settings.json.example
 infra/.azure-output.env
 infra/.azure-prod-output.env
 

@@ -27,7 +27,7 @@ public sealed class IntakeNotificationWorker
 
     [Function(nameof(IntakeNotificationWorker))]
     public async Task Run(
-        [QueueTrigger(MailboxQueues.IntakeNotifications, Connection = "AzureWebJobsStorage")] string graphMessageId,
+        [QueueTrigger(MailboxQueues.IntakeNotifications, Connection = "MailboxQueuesConnection")] string graphMessageId,
         CancellationToken ct)
     {
         var message = await _graph.GetMessageAsync(graphMessageId, ct);

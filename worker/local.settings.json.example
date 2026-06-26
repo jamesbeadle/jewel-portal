@@ -1,0 +1,23 @@
+{
+  "IsEncrypted": false,
+  "Values": {
+    "FUNCTIONS_WORKER_RUNTIME": "dotnet-isolated",
+    "AzureWebJobsStorage": "UseDevelopmentStorage=true",
+    "MailboxQueuesConnection": "UseDevelopmentStorage=true",
+    "SqlConnectionString": "Server=localhost;Database=Jpms;Trusted_Connection=True;TrustServerCertificate=True;",
+
+    "MailboxIntake:TenantId": "7d8d8afa-d7a8-468c-bf2f-12a8515c6b3b",
+    "MailboxIntake:ClientId": "63f25a40-eb24-4e2d-b4c4-bd6b6ede32ce",
+    "MailboxIntake:ClientSecret": "<dev-only secret here; NEVER commit a real one>",
+    "MailboxIntake:Mailbox": "projects@jewelbb.co.uk",
+    "MailboxIntake:EnableDeltaSweep": "true",
+    "MailboxIntake:EnableFolderMoves": "true",
+    "MailboxIntake:EnableWebhook": "false",
+    "MailboxIntake:EnableOutboundSend": "false",
+    "MailboxIntake:ClientState": "<long-random-string>",
+    "MailboxIntake:Folders:InProgress": "",
+    "MailboxIntake:Folders:Logged": "",
+    "MailboxIntake:Folders:NotActioned": "",
+    "MailboxIntake:Folders:NeedsAttention": ""
+  }
+}

@@ -8,4 +8,7 @@ internal static class CommercialIdentifierFactory
     public static string NextTimesheetId() => Guid.NewGuid().ToString(CompactGuidFormat);
     public static string NextClaimPeriodId() => Guid.NewGuid().ToString(CompactGuidFormat);
     public static string NextCostCodeBudgetId() => Guid.NewGuid().ToString(CompactGuidFormat);
+    public static string NextValuationLineItemId() => Guid.NewGuid().ToString(CompactGuidFormat);
+    public static string NextValuationClaimId() => Guid.NewGuid().ToString(CompactGuidFormat);
+    public static string NextClaimLineId() => Guid.NewGuid().ToString(CompactGuidFormat);
 }

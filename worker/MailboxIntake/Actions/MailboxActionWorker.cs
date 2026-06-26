@@ -31,7 +31,7 @@ public sealed class MailboxActionWorker
 
     [Function(nameof(MailboxActionWorker))]
     public async Task Run(
-        [QueueTrigger(MailboxQueues.MailboxActions, Connection = "AzureWebJobsStorage")] MailboxActionMessage action,
+        [QueueTrigger(MailboxQueues.MailboxActions, Connection = "MailboxQueuesConnection")] MailboxActionMessage action,
         CancellationToken ct)
     {
         switch (action.Type)

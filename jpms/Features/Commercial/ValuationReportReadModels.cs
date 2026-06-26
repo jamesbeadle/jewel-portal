@@ -1,0 +1,62 @@
+using Jewel.JPMS.Contracts.Commercial;
+using Jewel.JPMS.Cqrs;
+using Jewel.JPMS.Models;
+
+namespace Jewel.JPMS.Features.Commercial;
+
+public sealed class ValuationLinesReadModel
+{
+    private readonly IQueryClient queries;
+    private readonly Dictionary<string, IReadOnlyList<ValuationLineItem>> linesByProject = new();
+
+    public ValuationLinesReadModel(IQueryClient queries) { this.queries = queries; }
+
+    public event Action? OnChanged;
+
+    public IReadOnlyList<ValuationLineItem> Current(string projectId) =>
+        linesByProject.TryGetValue(projectId, out var list) ? list : Array.Empty<ValuationLineItem>();
+
+    public async Task RefreshAsync(string projectId, CancellationToken cancellationToken)
+    {
+        linesByProject[projectId] = await queries.AskAsync(new ListValuationLinesForProject(projectId), cancellationToken);
+        OnChanged?.Invoke();
+    }
+}
+
+public sealed class ValuationClaimsReadModel
+{
+    private readonly IQueryClient queries;
+    private readonly Dictionary<string, IReadOnlyList<ValuationClaim>> claimsByProject = new();
+
+    public ValuationClaimsReadModel(IQueryClient queries) { this.queries = queries; }
+
+    public event Action? OnChanged;
+
+    public IReadOnlyList<ValuationClaim> Current(string projectId) =>
+        claimsByProject.TryGetValue(projectId, out var list) ? list : Array.Empty<ValuationClaim>();
+
+    public async Task RefreshAsync(string projectId, CancellationToken cancellationToken)
+    {
+        claimsByProject[projectId] = await queries.AskAsync(new ListValuationClaimsForProject(projectId), cancellationToken);
+        OnChanged?.Invoke();
+    }
+}
+
+public sealed class ClaimLinesReadModel
+{
+    private readonly IQueryClient queries;
+    private readonly Dictionary<string, IReadOnlyList<ClaimLine>> linesByClaim = new();
+
+    public ClaimLinesReadModel(IQueryClient queries) { this.queries = queries; }
+
+    public event Action? OnChanged;
+
+    public IReadOnlyList<ClaimLine> Current(string claimId) =>
+        linesByClaim.TryGetValue(claimId, out var list) ? list : Array.Empty<ClaimLine>();
+
+    public async Task RefreshAsync(string claimId, CancellationToken cancellationToken)
+    {
+        linesByClaim[claimId] = await queries.AskAsync(new ListClaimLines(claimId), cancellationToken);
+        OnChanged?.Invoke();
+    }
+}

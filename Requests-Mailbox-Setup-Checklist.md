@@ -67,9 +67,11 @@ Policy propagation can take up to ~30 minutes.
 
 ---
 
-## 5. Ingestion layer — BUILT (Azure Functions, in the `api` app)
+## 5. Ingestion layer — BUILT (standalone `worker` Function App)
 
-This is now implemented in `api/Features/MailboxIntake/` and runs inside the existing Functions app, reusing Azure Storage Queues. It's built around the reliability invariant: **every message reaches a tracked state, nothing is missed, nothing is duplicated.** It stays dormant (logged no-op fallbacks) until you supply the Graph credentials in app settings — see §5g below. The sub-sections (a–f) describe what the code does.
+> **Hosting note (important).** The JPMS API runs as **Static Web Apps managed functions**, which only support **HTTP triggers**. The ingestion background workers use **timer and queue triggers**, so they live in a **separate, standalone Azure Function App** (the `worker/` project), deployed by its own workflow (`.github/workflows/jpms-worker.yml`). The SWA `api` keeps only the HTTP webhook endpoint and the triage-side producers (it enqueues; the worker consumes). The two apps talk over Storage Queues on a shared storage account (`MailboxQueuesConnection`, see §5g).
+
+The worker is implemented in `worker/MailboxIntake/` and shares the API's EF model + option/queue contracts via linked source (single source of truth in `api/`). It's built around the reliability invariant: **every message reaches a tracked state, nothing is missed, nothing is duplicated.** It stays dormant (logged no-op fallbacks) until you supply the Graph credentials in the worker's app settings — see §5g below. The sub-sections (a–f) describe what the code does.
 
 **a. Change notification subscription (near-real-time)**
 - Graph webhook subscription on `/users/projects@jewelbb.co.uk/mailFolders('Inbox')/messages`, `changeType=created`.
@@ -94,15 +96,23 @@ This is now implemented in `api/Features/MailboxIntake/` and runs inside the exi
 - After this, the large backlog appears in the triage queue ready to work through, and §6a's folder moves will steadily empty the Inbox as you triage.
 
 **f. Queue + retries + dead-lettering**
-- Webhook/delta handlers enqueue work onto Storage Queues (`mailbox-intake-notifications`, `mailbox-actions`) rather than doing DB writes inline, so transient failures retry.
+- The webhook (in the SWA `api`) and the triage handlers enqueue work onto Storage Queues (`mailbox-intake-notifications`, `mailbox-actions`); the **worker** consumes them via queue triggers. Nothing does DB writes inline, so transient failures retry.
 - The Functions host gives each queue automatic retries and a `-poison` queue after max dequeues — **alert on the poison queues**; a poison message must surface, never silently vanish.
 
-**g. App settings to configure (this is the switch that turns it on)**
+**g. Provision the worker app + configure settings (this is the switch that turns it on)**
 
-Add these to the **Functions app** configuration (Key Vault references for anything secret). Until `ClientSecret` is present the feature runs as logged no-ops and nothing touches the mailbox.
+Two pieces of one-time infra plus the settings:
+
+1. **Create a standalone Azure Function App** (Linux or Windows, .NET 8 isolated) for the worker — separate from the SWA. Give it a storage account; this is its `AzureWebJobsStorage`.
+2. **Wire the deploy workflow** `jpms-worker.yml`: add repo **variable** `JPMS_WORKER_APP_NAME` (the Function App name) and **secret** `AZURE_FUNCTIONAPP_PUBLISH_PROFILE` (Function App → Get publish profile). Pushes touching `worker/**` (or the shared `api` source) then deploy it automatically.
+
+**Worker** app settings (Key Vault references for anything secret). Until `ClientSecret` is present the worker runs as logged no-ops and nothing touches the mailbox.
 
 | Setting | Value |
 |---|---|
+| `SqlConnectionString` | same JPMS database connection string the API uses |
+| `AzureWebJobsStorage` | the worker's own storage account (required by the Functions host) |
+| `MailboxQueuesConnection` | **the shared queue storage account** — must be the *same account* set on the SWA API (below). Simplest: set it to the worker's `AzureWebJobsStorage` value |
 | `MailboxIntake:TenantId` | `7d8d8afa-d7a8-468c-bf2f-12a8515c6b3b` |
 | `MailboxIntake:ClientId` | `63f25a40-eb24-4e2d-b4c4-bd6b6ede32ce` |
 | `MailboxIntake:ClientSecret` | **the secret you created — Key Vault reference only, never in source/repo** |
@@ -110,7 +120,7 @@ Add these to the **Functions app** configuration (Key Vault references for anyth
 | `MailboxIntake:EnableDeltaSweep` | `true` (the safety net + one-time backlog import; runs every 5 min) |
 | `MailboxIntake:EnableFolderMoves` | `true` (move emails into outcome folders as you triage — §6) |
 | `MailboxIntake:EnableWebhook` | `false` to start (delta sweep alone is enough); set `true` once the webhook URL is public |
-| `MailboxIntake:NotificationUrl` | public HTTPS URL of the webhook Function: `https://<app>/api/mailbox/webhook` (only needed if webhook enabled) |
+| `MailboxIntake:NotificationUrl` | public HTTPS URL of the webhook Function on the **SWA API**: `https://<swa-app>/api/mailbox/webhook` (only needed if webhook enabled) |
 | `MailboxIntake:ClientState` | any long random string (echoed back by Graph to prove a notification is genuine) |
 | `MailboxIntake:EnableOutboundSend` | `false` (leave off until you deliberately want JPMS emailing Shared replies — §7) |
 | `MailboxIntake:Folders:InProgress` | folder id for "In progress" (see §6) |
@@ -118,7 +128,16 @@ Add these to the **Functions app** configuration (Key Vault references for anyth
 | `MailboxIntake:Folders:NotActioned` | folder id for "Not actioned" |
 | `MailboxIntake:Folders:NeedsAttention` | (optional) folder id for "Needs attention"; if unset, failures stay in the Inbox |
 
-`AzureWebJobsStorage` (already set for the app) is reused for the queues. The delta sweep alone will seed the whole Inbox backlog into the triage queue on first run, then keep it current — so you can leave the webhook off until you're ready.
+**SWA API** app settings (the producer side — it only enqueues):
+
+| Setting | Value |
+|---|---|
+| `MailboxQueuesConnection` | the **same** storage account connection string as the worker's `MailboxQueuesConnection`, so the API's enqueues land where the worker is listening |
+| `MailboxIntake:EnableFolderMoves` | `true` (so triage actions enqueue folder moves) |
+| `MailboxIntake:EnableOutboundSend` | `false` (match the worker) |
+| `MailboxIntake:ClientState` | same value as the worker (the webhook validates it) |
+
+> The webhook lives in the SWA API (it's HTTP, which SWA allows). Everything with a timer or queue trigger is in the worker. The delta sweep alone will seed the whole Inbox backlog into the triage queue on first run, then keep it current — so you can leave the webhook off until you're ready, and the API needs no `NotificationUrl` until then.
 
 ---
 

@@ -1,0 +1,182 @@
+@page "/projects/{ProjectId}/valuation"
+@using Jewel.JPMS.Contracts.Commercial
+@inject AuthService Auth
+@inject SessionService Session
+@inject IValuationReportStore Store
+@inject NavigationManager Nav
+@implements IDisposable
+
+<PageTitle>Valuation Report · JPMS</PageTitle>
+
+@if (!isLoaded)
+{
+    <section class="max-w-5xl mx-auto px-4 py-12 text-content-subtle text-sm">Loading…</section>
+}
+else if (!Session.IsApproved)
+{
+    <RequestAccessView Email="@Auth.CurrentUser!.Email" DisplayName="@Auth.CurrentUser.DisplayName" />
+}
+else
+{
+    <ProjectPageShell ProjectId="@ProjectId" ActiveTab="valuation">
+        <div class="flex items-center justify-between gap-4 mb-4 flex-wrap">
+            <h2 class="text-lg font-semibold text-content">Valuation Report</h2>
+            <div class="flex items-center gap-2 flex-wrap">
+                @if (Claims.Count > 0)
+                {
+                    <select @bind="selectedClaimId"
+                            class="rounded-lg border border-line-strong px-3 py-2 text-sm text-content focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent">
+                        @foreach (var claim in Claims)
+                        {
+                            <option value="@claim.ValuationClaimId">Claim @claim.ClaimNumber — @claim.Status (@claim.ClaimDate.ToString("dd MMM yyyy"))</option>
+                        }
+                    </select>
+                }
+                <button @onclick="ToggleStartClaim"
+                        class="rounded-lg border border-line bg-surface text-content-muted font-medium text-sm px-3 py-2 hover:border-line-strong transition">
+                    New claim
+                </button>
+                @if (Selected is { Status: ValuationClaimStatus.Draft })
+                {
+                    <button @onclick="PreapproveAsync" disabled="@busy"
+                            class="rounded-lg bg-accent text-accent-ink font-medium text-sm px-3 py-2 hover:bg-accent-hover disabled:bg-surface-field transition">
+                        We're claiming this
+                    </button>
+                }
+                else if (Selected is { Status: ValuationClaimStatus.Preapproved })
+                {
+                    <button @onclick="ConfirmAsync" disabled="@busy"
+                            class="rounded-lg bg-accent text-accent-ink font-medium text-sm px-3 py-2 hover:bg-accent-hover disabled:bg-surface-field transition">
+                        Confirm payment received
+                    </button>
+                }
+            </div>
+        </div>
+
+        @if (Selected is { } s)
+        {
+            <p class="text-sm text-content-muted mb-4">
+                @switch (s.Status)
+                {
+                    case ValuationClaimStatus.Draft:
+                        <span>Draft — edit % complete per line, then mark <em>We're claiming this</em> to lock the claim.</span>
+                        break;
+                    case ValuationClaimStatus.Preapproved:
+                        <span>Preapproved on @(s.PreapprovedAt?.ToString("dd MMM yyyy")) — awaiting the client. Confirm once payment is received.</span>
+                        break;
+                    case ValuationClaimStatus.Confirmed:
+                        <span>Confirmed on @(s.ConfirmedAt?.ToString("dd MMM yyyy")) — amounts are final and carried into the next claim.</span>
+                        break;
+                }
+            </p>
+        }
+        else
+        {
+            <p class="text-sm text-content-subtle italic mb-4">No claim selected. Build the bill below, then start a claim to value works complete.</p>
+        }
+
+        @if (showStartClaim)
+        {
+            <section class="rounded-xl border border-line bg-surface p-5 mb-4">
+                <h3 class="text-sm font-medium text-content-muted mb-3">Start claim @NextClaimNumber</h3>
+                <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                    <div>
+                        <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Claim date</label>
+                        <input type="date" @bind="newClaimDate"
+                               class="w-full rounded-lg border border-line-strong px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent" />
+                    </div>
+                    <FormField Label="Retention %" InputType="number" Value="@newRetentionPercent" OnChange="@(v => newRetentionPercent = v)" />
+                    <FormField Label="Retention release %" InputType="number" Value="@newRetentionReleasePercent" OnChange="@(v => newRetentionReleasePercent = v)" />
+                </div>
+                <div class="flex items-center gap-2 mt-3">
+                    <button @onclick="StartClaimAsync" disabled="@busy"
+                            class="rounded-lg bg-accent text-accent-ink font-medium text-sm px-4 py-2 hover:bg-accent-hover disabled:bg-surface-field transition">
+                        Start claim
+                    </button>
+                    <button @onclick="@(() => showStartClaim = false)"
+                            class="rounded-lg border border-line bg-surface text-content-muted font-medium text-sm px-3 py-2 hover:border-line-strong transition">
+                        Cancel
+                    </button>
+                </div>
+            </section>
+        }
+
+        <ValuationReportTable ProjectId="@ProjectId" SelectedClaim="@Selected" OnEditLine="StartEditLine" />
+
+        @if (Selected is null or { Status: ValuationClaimStatus.Draft })
+        {
+            <div class="mt-4">
+                <ValuationLineForm ProjectId="@ProjectId" Editing="@editingLine" OnSaved="OnLineSaved" OnCancel="CancelEdit" />
+            </div>
+        }
+    </ProjectPageShell>
+}
+
+@code {
+    [Parameter] public string ProjectId { get; set; } = "";
+
+    private bool isLoaded;
+    private bool busy;
+    private bool showStartClaim;
+    private string selectedClaimId = "";
+    private ValuationLineItem? editingLine;
+
+    private string newClaimDate = DateTime.Today.ToString("yyyy-MM-dd");
+    private string newRetentionPercent = "5";
+    private string newRetentionReleasePercent = "0";
+
+    private IReadOnlyList<ValuationClaim> Claims => Store.ClaimsFor(ProjectId);
+    private ValuationClaim? Selected => Claims.FirstOrDefault(c => c.ValuationClaimId == selectedClaimId);
+    private int NextClaimNumber => Claims.Count == 0 ? 1 : Claims.Max(c => c.ClaimNumber) + 1;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Session.EnsureLoadedAsync();
+        if (!Auth.IsSignedIn) { Nav.NavigateTo("/login", forceLoad: true); return; }
+        Store.OnChange += OnStoreChanged;
+        isLoaded = true;
+    }
+
+    private void OnStoreChanged()
+    {
+        if (string.IsNullOrEmpty(selectedClaimId) && Claims.Count > 0)
+            selectedClaimId = Claims[0].ValuationClaimId;
+        StateHasChanged();
+    }
+
+    private void ToggleStartClaim() => showStartClaim = !showStartClaim;
+
+    private async Task StartClaimAsync()
+    {
+        busy = true;
+        var date = DateTime.TryParse(newClaimDate, out var d) ? new DateTimeOffset(d, TimeSpan.Zero) : DateTimeOffset.UtcNow;
+        var claim = await Store.StartClaimAsync(new StartValuationClaim(
+            ProjectId, NextClaimNumber, date,
+            FormNumber.ParseAmount(newRetentionPercent), FormNumber.ParseAmount(newRetentionReleasePercent)));
+        selectedClaimId = claim.ValuationClaimId;
+        showStartClaim = false;
+        busy = false;
+    }
+
+    private async Task PreapproveAsync()
+    {
+        if (Selected is null) return;
+        busy = true;
+        await Store.PreapproveClaimAsync(ProjectId, Selected.ValuationClaimId);
+        busy = false;
+    }
+
+    private async Task ConfirmAsync()
+    {
+        if (Selected is null) return;
+        busy = true;
+        await Store.ConfirmClaimAsync(ProjectId, Selected.ValuationClaimId);
+        busy = false;
+    }
+
+    private void StartEditLine(ValuationLineItem line) => editingLine = line;
+    private void CancelEdit() => editingLine = null;
+    private void OnLineSaved() => editingLine = null;
+
+    public void Dispose() => Store.OnChange -= OnStoreChanged;
+}

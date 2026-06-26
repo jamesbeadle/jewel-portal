@@ -66,6 +66,7 @@ builder.Services.AddScoped<IRequestRegister, HttpRequestRegister>();
 builder.Services.AddScoped<IIntakeQueue, HttpIntakeQueue>();
 builder.Services.AddScoped<ISiteStore, HttpSiteStore>();
 builder.Services.AddScoped<ICommercialStore, HttpCommercialStore>();
+builder.Services.AddScoped<IValuationReportStore, HttpValuationReportStore>();
 builder.Services.AddScoped<ICvrStore, HttpCvrStore>();
 builder.Services.AddScoped<ICommercialInputsStore, HttpCommercialInputsStore>();
 builder.Services.AddScoped<ICloseoutStore, HttpCloseoutStore>();

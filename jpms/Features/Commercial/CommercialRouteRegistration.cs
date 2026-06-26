@@ -1,4 +1,5 @@
 using Jewel.JPMS.Contracts.Commercial;
+using Jewel.JPMS.Contracts.Cqrs;
 using Jewel.JPMS.Cqrs;
 using Jewel.JPMS.Models;
 using Microsoft.Extensions.DependencyInjection;
@@ -12,6 +13,9 @@ public static class CommercialRouteRegistration
         services.AddScoped<ValuationsReadModel>();
         services.AddScoped<CostCodeBudgetsReadModel>();
         services.AddScoped<TimesheetsReadModel>();
+        services.AddScoped<ValuationLinesReadModel>();
+        services.AddScoped<ValuationClaimsReadModel>();
+        services.AddScoped<ClaimLinesReadModel>();
         return services;
     }
 
@@ -58,5 +62,46 @@ public static class CommercialRouteRegistration
         commands.Register<ApproveTimesheet, Timesheet>(
             new CommandRoute("POST", "/api/timesheets/{timesheetId}/approval",
                 command => $"/api/timesheets/{((ApproveTimesheet)command).TimesheetId}/approval"));
+
+        // Valuation Report — bill lines, claims, claim entries, and the claim lifecycle.
+        queries.Register<ListValuationLinesForProject, IReadOnlyList<ValuationLineItem>>(
+            new QueryRoute("/api/projects/{projectId}/valuation-lines",
+                query => $"/api/projects/{((ListValuationLinesForProject)query).ProjectId}/valuation-lines"));
+
+        queries.Register<ListValuationClaimsForProject, IReadOnlyList<ValuationClaim>>(
+            new QueryRoute("/api/projects/{projectId}/valuation-claims",
+                query => $"/api/projects/{((ListValuationClaimsForProject)query).ProjectId}/valuation-claims"));
+
+        queries.Register<ListClaimLines, IReadOnlyList<ClaimLine>>(
+            new QueryRoute("/api/valuation-claims/{claimId}/entries",
+                query => $"/api/valuation-claims/{((ListClaimLines)query).ValuationClaimId}/entries"));
+
+        commands.Register<AddValuationLineItem, ValuationLineItem>(
+            new CommandRoute("POST", "/api/projects/{projectId}/valuation-lines",
+                command => $"/api/projects/{((AddValuationLineItem)command).ProjectId}/valuation-lines"));
+
+        commands.Register<UpdateValuationLineItem, ValuationLineItem>(
+            new CommandRoute("PUT", "/api/valuation-lines/{lineItemId}",
+                command => $"/api/valuation-lines/{((UpdateValuationLineItem)command).ValuationLineItemId}"));
+
+        commands.Register<RemoveValuationLineItem, Acknowledgement>(
+            new CommandRoute("DELETE", "/api/valuation-lines/{lineItemId}",
+                command => $"/api/valuation-lines/{((RemoveValuationLineItem)command).ValuationLineItemId}"));
+
+        commands.Register<StartValuationClaim, ValuationClaim>(
+            new CommandRoute("POST", "/api/projects/{projectId}/valuation-claims",
+                command => $"/api/projects/{((StartValuationClaim)command).ProjectId}/valuation-claims"));
+
+        commands.Register<RecordClaimEntry, ClaimLine>(
+            new CommandRoute("POST", "/api/valuation-claims/{claimId}/entries",
+                command => $"/api/valuation-claims/{((RecordClaimEntry)command).ValuationClaimId}/entries"));
+
+        commands.Register<PreapproveValuationClaim, ValuationClaim>(
+            new CommandRoute("POST", "/api/valuation-claims/{claimId}/preapproval",
+                command => $"/api/valuation-claims/{((PreapproveValuationClaim)command).ValuationClaimId}/preapproval"));
+
+        commands.Register<ConfirmValuationClaim, ValuationClaim>(
+            new CommandRoute("POST", "/api/valuation-claims/{claimId}/confirmation",
+                command => $"/api/valuation-claims/{((ConfirmValuationClaim)command).ValuationClaimId}/confirmation"));
     }
 }

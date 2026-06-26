@@ -2,6 +2,7 @@ using Jewel.JPMS.Api.Cqrs;
 using Jewel.JPMS.Api.Features.Commercial.Commands;
 using Jewel.JPMS.Api.Features.Commercial.Queries;
 using Jewel.JPMS.Contracts.Commercial;
+using Jewel.JPMS.Contracts.Cqrs;
 using Jewel.JPMS.Models;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -43,6 +44,30 @@ public static class CommercialFeatureRegistration
         services.AddScoped<ICommandHandler<ApproveTimesheet, Timesheet>, ApproveTimesheetHandler>();
         services.AddScoped<ApproveTimesheetAuthorisation>();
         services.AddScoped<ApproveTimesheetValidation>();
+
+        // Valuation Report — the bill, its claims, and the claim lifecycle.
+        services.AddScoped<IQueryHandler<ListValuationLinesForProject, IReadOnlyList<ValuationLineItem>>, ListValuationLinesForProjectHandler>();
+        services.AddScoped<IQueryHandler<ListValuationClaimsForProject, IReadOnlyList<ValuationClaim>>, ListValuationClaimsForProjectHandler>();
+        services.AddScoped<IQueryHandler<ListClaimLines, IReadOnlyList<ClaimLine>>, ListClaimLinesHandler>();
+
+        services.AddScoped<ValuationReportAuthorisation>();
+
+        services.AddScoped<ICommandHandler<AddValuationLineItem, ValuationLineItem>, AddValuationLineItemHandler>();
+        services.AddScoped<AddValuationLineItemValidation>();
+
+        services.AddScoped<ICommandHandler<UpdateValuationLineItem, ValuationLineItem>, UpdateValuationLineItemHandler>();
+        services.AddScoped<UpdateValuationLineItemValidation>();
+
+        services.AddScoped<ICommandHandler<RemoveValuationLineItem, Acknowledgement>, RemoveValuationLineItemHandler>();
+
+        services.AddScoped<ICommandHandler<StartValuationClaim, ValuationClaim>, StartValuationClaimHandler>();
+        services.AddScoped<StartValuationClaimValidation>();
+
+        services.AddScoped<ICommandHandler<RecordClaimEntry, ClaimLine>, RecordClaimEntryHandler>();
+        services.AddScoped<RecordClaimEntryValidation>();
+
+        services.AddScoped<ICommandHandler<PreapproveValuationClaim, ValuationClaim>, PreapproveValuationClaimHandler>();
+        services.AddScoped<ICommandHandler<ConfirmValuationClaim, ValuationClaim>, ConfirmValuationClaimHandler>();
 
         return services;
     }
