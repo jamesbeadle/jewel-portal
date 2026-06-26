@@ -13,7 +13,7 @@
             </tr>
         </thead>
         <tbody class="divide-y divide-line">
-            @foreach (var centre in CostCenters)
+            @foreach (var centre in CostCenters.OrderBy(c => c.Name, StringComparer.OrdinalIgnoreCase))
             {
                 <tr>
                     <td class="sticky left-0 z-10 bg-surface px-4 py-3 font-mono text-[11px] text-content-subtle whitespace-nowrap">@centre.Code</td>
