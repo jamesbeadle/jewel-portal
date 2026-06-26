@@ -10,7 +10,7 @@ public static class InviteEmailBody
 
     public static string PlainText(string displayName, string inviteLink) =>
         $"Hello {displayName},\n\n" +
-        "An administrator has invited you to Jewel JPMS. " +
+        "An administrator has invited you to the Jewel Project Management System. " +
         "Open the link below to choose your password and sign in:\n\n" +
         $"{inviteLink}\n\n" +
         $"This link can only be used once and expires in {ExpiryInDays} days.\n";
@@ -19,7 +19,7 @@ public static class InviteEmailBody
         $"""
         <div style="font-family:Arial,Helvetica,sans-serif;font-size:15px;color:#0f172a;line-height:1.6">
           <p>Hello {displayName},</p>
-          <p>An administrator has invited you to <strong>Jewel JPMS</strong>. Choose your password to sign in:</p>
+          <p>An administrator has invited you to the <strong>Jewel Project Management System</strong>. Choose your password to sign in:</p>
           <p style="margin:24px 0">
             <a href="{inviteLink}" style="background:#0f172a;color:#ffffff;text-decoration:none;padding:12px 20px;border-radius:8px;display:inline-block">Set your password</a>
           </p>
