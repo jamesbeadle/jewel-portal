@@ -1,6 +1,9 @@
 @page "/dashboard"
+@using Jewel.JPMS.Features.Directory
 @inject AuthService Auth
 @inject SessionService Session
+@inject DirectoryReadModel Directory
+@inject AccessRequestsReadModel AccessRequests
 @inject NavigationManager Nav
 @implements IDisposable
 
@@ -38,6 +41,17 @@ else if (Session.ActiveRole is not null)
             return;
         }
         Session.OnChange += StateHasChanged;
+
+        // The admin home reads the user directory and pending access requests.
+        // Load them before we drop the spinner so the panels are populated on the
+        // first paint instead of rendering empty until the user navigates away
+        // and back. (Other roles' home views load their own data.)
+        if (Session.ActiveRole == Role.Admin)
+        {
+            if (Directory.Current is null) await Directory.RefreshAsync(CancellationToken.None);
+            if (AccessRequests.Current is null) await AccessRequests.RefreshAsync(CancellationToken.None);
+        }
+
         isLoaded = true;
     }
 

@@ -1,6 +1,7 @@
 @inherits LayoutComponentBase
 @inject AuthService Auth
 @inject SessionService Session
+@inject StoreChangeHub Stores
 @implements IDisposable
 
 <div class="min-h-dvh bg-canvas text-content antialiased">
@@ -76,13 +77,20 @@
     {
         Auth.OnChange += StateHasChanged;
         Session.OnChange += StateHasChanged;
+        // Repaint the current page whenever any data store finishes a background
+        // load, so views that read lazily-loaded data fill in on their own instead
+        // of staying empty until the user navigates away and back.
+        Stores.OnAnyChange += Repaint;
     }
 
     private void ToggleSideNav() => isSideNavExpanded = !isSideNavExpanded;
+
+    private void Repaint() => InvokeAsync(StateHasChanged);
 
     public void Dispose()
     {
         Auth.OnChange -= StateHasChanged;
         Session.OnChange -= StateHasChanged;
+        Stores.OnAnyChange -= Repaint;
     }
 }

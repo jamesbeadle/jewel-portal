@@ -1,6 +1,7 @@
 @inherits LayoutComponentBase
 @inject AuthService Auth
 @inject NavigationManager Nav
+@inject StoreChangeHub Stores
 @implements IDisposable
 
 <div class="min-h-dvh flex flex-col bg-canvas text-content antialiased">
@@ -33,9 +34,20 @@
 </div>
 
 @code {
-    protected override void OnInitialized() => Auth.OnChange += StateHasChanged;
+    protected override void OnInitialized()
+    {
+        Auth.OnChange += StateHasChanged;
+        // Repaint when any store finishes a background load (see MainLayout).
+        Stores.OnAnyChange += Repaint;
+    }
+
+    private void Repaint() => InvokeAsync(StateHasChanged);
 
     private void SignOut() => Nav.NavigateTo("/logout", forceLoad: true);
 
-    public void Dispose() => Auth.OnChange -= StateHasChanged;
+    public void Dispose()
+    {
+        Auth.OnChange -= StateHasChanged;
+        Stores.OnAnyChange -= Repaint;
+    }
 }

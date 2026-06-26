@@ -69,6 +69,7 @@ builder.Services.AddScoped<ICvrStore, HttpCvrStore>();
 builder.Services.AddScoped<ICommercialInputsStore, HttpCommercialInputsStore>();
 builder.Services.AddScoped<ICloseoutStore, HttpCloseoutStore>();
 
+builder.Services.AddScoped<StoreChangeHub>();
 builder.Services.AddScoped<AuthService>();
 builder.Services.AddScoped<UserInviteService>();
 builder.Services.AddScoped<ActiveRoleStorage>();
