@@ -220,24 +220,82 @@ public sealed class GraphMailClient : IGraphMailClient
         return new GraphSubscription(id, expires);
     }
 
+    // Exchange Online throttles per-mailbox concurrency/rate with 429 (and occasionally 503). We
+    // honour the server's Retry-After and retry a bounded number of times so a transient throttle
+    // self-heals inside the invocation rather than failing the queue message.
+    private const int MaxAttempts = 5;
+    private static readonly TimeSpan MaxRetryDelay = TimeSpan.FromSeconds(30);
+
     private async Task<HttpResponseMessage> SendAsync(
         HttpMethod method, string url, HttpContent? content, CancellationToken ct, bool allowNotFound = false)
     {
-        var token = await _tokens.GetTokenAsync(ct);
-        using var request = new HttpRequestMessage(method, url) { Content = content };
-        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        // Buffer the body once: an HttpContent instance can only be sent a single time, but a
+        // throttled request must be re-sent, so we rebuild the content from bytes on each attempt.
+        byte[]? body = null;
+        MediaTypeHeaderValue? contentType = null;
+        if (content is not null)
+        {
+            body = await content.ReadAsByteArrayAsync(ct);
+            contentType = content.Headers.ContentType;
+            content.Dispose();
+        }
 
-        var response = await _http.SendAsync(request, ct);
-        if (response.IsSuccessStatusCode)
-            return response;
-        if (allowNotFound && response.StatusCode == HttpStatusCode.NotFound)
-            return response;
+        for (var attempt = 1; ; attempt++)
+        {
+            var token = await _tokens.GetTokenAsync(ct);
+            using var request = new HttpRequestMessage(method, url);
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+            if (body is not null)
+            {
+                request.Content = new ByteArrayContent(body);
+                request.Content.Headers.ContentType = contentType;
+            }
 
-        var detail = await SafeReadAsync(response, ct);
-        response.Dispose();
-        throw new GraphRequestException(
-            $"Graph {method} {Sanitise(url)} failed: {(int)response.StatusCode} {response.StatusCode}. {detail}");
+            var response = await _http.SendAsync(request, ct);
+            if (response.IsSuccessStatusCode)
+                return response;
+            if (allowNotFound && response.StatusCode == HttpStatusCode.NotFound)
+                return response;
+
+            var throttled = response.StatusCode == HttpStatusCode.TooManyRequests
+                || response.StatusCode == HttpStatusCode.ServiceUnavailable;
+            if (throttled && attempt < MaxAttempts)
+            {
+                var delay = RetryDelay(response, attempt);
+                _logger.LogWarning(
+                    "Graph {Method} throttled ({Status}); attempt {Attempt}/{Max}, backing off {DelaySeconds:0.0}s.",
+                    method, (int)response.StatusCode, attempt, MaxAttempts, delay.TotalSeconds);
+                response.Dispose();
+                await Task.Delay(delay, ct);
+                continue;
+            }
+
+            var detail = await SafeReadAsync(response, ct);
+            response.Dispose();
+            throw new GraphRequestException(
+                $"Graph {method} {Sanitise(url)} failed: {(int)response.StatusCode} {response.StatusCode}. {detail}");
+        }
     }
+
+    private static TimeSpan RetryDelay(HttpResponseMessage response, int attempt)
+    {
+        // Prefer the server's Retry-After hint (delta seconds or an absolute date); fall back to
+        // exponential backoff with a little jitter to avoid every parallel worker waking together.
+        var retryAfter = response.Headers.RetryAfter;
+        if (retryAfter?.Delta is { } delta && delta > TimeSpan.Zero)
+            return Cap(delta);
+        if (retryAfter?.Date is { } date)
+        {
+            var until = date - DateTimeOffset.UtcNow;
+            if (until > TimeSpan.Zero)
+                return Cap(until);
+        }
+
+        var seconds = Math.Min(MaxRetryDelay.TotalSeconds, Math.Pow(2, attempt)); // 2, 4, 8, 16, 30
+        return TimeSpan.FromSeconds(seconds + Random.Shared.NextDouble());
+    }
+
+    private static TimeSpan Cap(TimeSpan value) => value > MaxRetryDelay ? MaxRetryDelay : value;
 
     private static async Task<string> SafeReadAsync(HttpResponseMessage response, CancellationToken ct)
     {
