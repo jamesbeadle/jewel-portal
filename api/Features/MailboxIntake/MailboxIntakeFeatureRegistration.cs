@@ -1,4 +1,5 @@
 using Jewel.JPMS.Api.Features.MailboxIntake.Actions;
+using Jewel.JPMS.Api.Features.MailboxIntake.Graph;
 using Jewel.JPMS.Api.Features.MailboxIntake.Queue;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -42,6 +43,22 @@ public static class MailboxIntakeFeatureRegistration
 
         // Always available so the triage handlers can depend on it; it self-gates on the flags.
         services.AddSingleton<IMailboxActionScheduler, MailboxActionScheduler>();
+
+        // On-demand intake message reader: lets the triage detail endpoint pull an email's full body
+        // + attachment names live from Graph when a triager opens it. Real when Graph credentials are
+        // configured for the API app, otherwise a no-op so callers fall back to the stored preview.
+        // NOTE: this requires MailboxIntake:TenantId / ClientId / ClientSecret to be present in the
+        // SWA API app settings (the client secret is a mailbox password — app settings / Key Vault only).
+        if (options.Enabled && options.IsConfigured)
+        {
+            services.AddSingleton<GraphTokenProvider>();
+            services.AddSingleton<HttpClient>();
+            services.AddSingleton<IIntakeMessageReader, GraphIntakeMessageReader>();
+        }
+        else
+        {
+            services.AddSingleton<IIntakeMessageReader, NullIntakeMessageReader>();
+        }
 
         return services;
     }

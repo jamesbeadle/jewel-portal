@@ -32,6 +32,10 @@ public static class RequestsRouteRegistration
             new QueryRoute("/api/intake",
                 _ => "/api/intake"));
 
+        queries.Register<GetIntakeEmailDetail, IntakeEmailDetail>(
+            new QueryRoute("/api/intake/{intakeId}/detail",
+                query => $"/api/intake/{((GetIntakeEmailDetail)query).IntakeId}/detail"));
+
         commands.Register<RaiseRequest, Request>(
             new CommandRoute("POST", "/api/projects/{projectId}/requests",
                 command => $"/api/projects/{((RaiseRequest)command).ProjectId}/requests"));

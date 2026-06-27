@@ -13,6 +13,13 @@
   <ItemGroup>
     <PackageReference Include="Azure.Communication.Email" Version="1.0.1" />
     <!--
+      Azure.Identity provides the app-only Graph token (client-credentials) used by the on-demand
+      intake message reader, which fetches an email's full body + attachment names live when a
+      triager opens it. Ganss.Xss sanitises that untrusted HTML body before it is rendered.
+    -->
+    <PackageReference Include="Azure.Identity" Version="1.12.1" />
+    <PackageReference Include="HtmlSanitizer" Version="8.1.870" />
+    <!--
       Azure.Storage.Queues is the producer SDK used by StorageMailboxQueue to enqueue work for the
       worker Function App. The Functions queue/timer *trigger* extensions and Azure.Identity (Graph)
       live in the worker project — SWA managed functions only support HTTP triggers.

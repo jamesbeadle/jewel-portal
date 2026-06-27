@@ -106,9 +106,49 @@ else
                                 </p>
                             </div>
 
-                            <div class="rounded-lg bg-surface-raised border border-line p-3">
-                                <p class="text-sm text-content whitespace-pre-wrap">@Dash(selected.BodyPreview)</p>
+                            <div class="rounded-lg bg-surface-raised border border-line p-3 max-h-[28rem] overflow-y-auto">
+                                @if (detailLoading)
+                                {
+                                    <p class="text-sm text-content-subtle italic">Loading message…</p>
+                                }
+                                else if (detail is not null && !string.IsNullOrWhiteSpace(detail.BodyHtml) && detail.BodyIsHtml)
+                                {
+                                    <div class="rounded bg-white text-gray-900 p-3 text-sm overflow-x-auto">@((MarkupString)detail.BodyHtml)</div>
+                                }
+                                else if (detail is not null && !string.IsNullOrWhiteSpace(detail.BodyHtml))
+                                {
+                                    <p class="text-sm text-content whitespace-pre-wrap">@detail.BodyHtml</p>
+                                }
+                                else
+                                {
+                                    <p class="text-sm text-content whitespace-pre-wrap">@Dash(selected.BodyPreview)</p>
+                                }
                             </div>
+
+                            @if (detail is not null && detail.Attachments.Count > 0)
+                            {
+                                <div class="rounded-lg bg-surface-raised border border-line p-3">
+                                    <p class="text-xs uppercase tracking-wider text-content-subtle font-semibold mb-2">
+                                        @detail.Attachments.Count attachment@(detail.Attachments.Count == 1 ? "" : "s")
+                                    </p>
+                                    <ul class="space-y-1">
+                                        @foreach (var att in detail.Attachments)
+                                        {
+                                            <li class="flex items-center justify-between gap-3 text-sm text-content">
+                                                <span class="truncate">@att.Name</span>
+                                                @if (att.Size > 0)
+                                                {
+                                                    <span class="text-xs text-content-subtle whitespace-nowrap">@FormatSize(att.Size)</span>
+                                                }
+                                            </li>
+                                        }
+                                    </ul>
+                                </div>
+                            }
+                            else if (selected.HasAttachments && detail is not null)
+                            {
+                                <p class="text-xs text-content-subtle italic">This email has attachments, but their names couldn't be retrieved.</p>
+                            }
 
                             <div class="pt-3 border-t border-line">
                                 <div class="flex flex-wrap gap-2 mb-4">
@@ -258,6 +298,9 @@ else
     private string? loadError;
     private IReadOnlyList<IntakeEmail> items = Array.Empty<IntakeEmail>();
     private IntakeEmail? selected;
+    private IntakeEmailDetail? detail;
+    private bool detailLoading;
+    private CancellationTokenSource? detailCts;
     private int page = 1;
 
     // Triage is restricted to administrators and project managers. Administrators are granted
@@ -328,7 +371,7 @@ else
         if (page > PageCount) page = PageCount;
     }
 
-    private void Select(IntakeEmail item)
+    private async Task Select(IntakeEmail item)
     {
         selected = item;
         mode = TriageMode.None;
@@ -341,6 +384,45 @@ else
         createDescription = item.BodyPreview;
         createRaisedTo = createDrawingRef = createResponseDue = "";
         discardNotes = "";
+        await LoadDetailAsync(item);
+    }
+
+    // Fetch the full body + attachment names on demand when an email is opened. Cancels any in-flight
+    // fetch so rapid clicking can't race a stale result onto the newly selected email.
+    private async Task LoadDetailAsync(IntakeEmail item)
+    {
+        detailCts?.Cancel();
+        var cts = new CancellationTokenSource();
+        detailCts = cts;
+
+        detail = null;
+        detailLoading = true;
+        try
+        {
+            var loaded = await Intake.GetDetailAsync(item.IntakeId, cts.Token);
+            if (!cts.IsCancellationRequested && selected?.IntakeId == item.IntakeId)
+                detail = loaded;
+        }
+        catch (OperationCanceledException)
+        {
+            // superseded by a newer selection — ignore
+        }
+        catch
+        {
+            // leave detail null so the view falls back to the stored preview
+        }
+        finally
+        {
+            if (selected?.IntakeId == item.IntakeId)
+                detailLoading = false;
+        }
+    }
+
+    private static string FormatSize(long bytes)
+    {
+        if (bytes >= 1_048_576) return $"{bytes / 1_048_576.0:0.#} MB";
+        if (bytes >= 1024) return $"{bytes / 1024.0:0.#} KB";
+        return $"{bytes} B";
     }
 
     private void SetMode(TriageMode next)
@@ -431,6 +513,7 @@ else
             var keepId = keepSelection ? selected?.IntakeId : null;
             await LoadAsync();
             selected = keepId is null ? null : items.FirstOrDefault(i => i.IntakeId == keepId);
+            if (selected is null) { detail = null; detailLoading = false; }
             if (!keepSelection) mode = TriageMode.None;
         }
         catch

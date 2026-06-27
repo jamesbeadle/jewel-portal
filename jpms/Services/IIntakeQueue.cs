@@ -9,6 +9,7 @@ namespace Jewel.JPMS.Services;
 public interface IIntakeQueue
 {
     Task<IReadOnlyList<IntakeEmail>> ListOpenAsync(CancellationToken cancellationToken = default);
+    Task<IntakeEmailDetail> GetDetailAsync(string intakeId, CancellationToken cancellationToken = default);
     Task<IntakeEmail> ClaimAsync(string intakeId, CancellationToken cancellationToken = default);
     Task<IntakeEmail> DiscardAsync(string intakeId, string? notes, CancellationToken cancellationToken = default);
     Task<IntakeEmail> LinkAsync(string intakeId, string requestId, CancellationToken cancellationToken = default);
