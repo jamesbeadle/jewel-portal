@@ -77,6 +77,9 @@ public sealed class HttpRequestRegister : IRequestRegister
         await readModel.RefreshAsync(projectId, cancellationToken);
     }
 
+    public Task<IReadOnlyList<Request>> ListUnassignedAsync(CancellationToken cancellationToken = default) =>
+        queries.AskAsync(new ListUnassignedRequests(), cancellationToken);
+
     private async Task RaiseRecordAsync(Request record)
     {
         await commands.SendAsync(new RaiseRequest(record.ProjectId, record.Kind, record.Reference, record.Title, record.Description, record.Value, record.RaisedByEmail, record.RaisedTo, record.DrawingRef, record.ResponseDue, record.InternalNotes, record.ClientNotes), CancellationToken.None);

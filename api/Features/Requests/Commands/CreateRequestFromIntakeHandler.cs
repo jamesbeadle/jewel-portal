@@ -19,6 +19,11 @@ public sealed class CreateRequestFromIntakeHandler : ICommandHandler<CreateReque
         var intake = await context.IntakeEmails.FirstOrDefaultAsync(e => e.IntakeId == command.IntakeId, cancellationToken)
             ?? throw new InvalidOperationException($"Intake email {command.IntakeId} not found.");
 
+        // A request must always belong to a real project — guard against a blank or stale project id
+        // so we can never strand a request where no project register can show it.
+        var projectExists = await context.Projects.AnyAsync(p => p.ProjectId == command.ProjectId, cancellationToken);
+        if (!projectExists) throw new InvalidOperationException($"Project '{command.ProjectId}' not found.");
+
         var nextNumber = (await context.Requests.MaxAsync(r => (int?)r.Number, cancellationToken) ?? 0) + 1;
 
         var request = new RequestEntity

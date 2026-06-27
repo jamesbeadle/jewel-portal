@@ -28,6 +28,10 @@ public static class RequestsRouteRegistration
             new QueryRoute("/api/requests/{requestId}/messages",
                 query => $"/api/requests/{((ListRequestMessages)query).RequestId}/messages"));
 
+        queries.Register<ListUnassignedRequests, IReadOnlyList<Request>>(
+            new QueryRoute("/api/requests/unassigned",
+                _ => "/api/requests/unassigned"));
+
         queries.Register<ListOpenIntake, IReadOnlyList<IntakeEmail>>(
             new QueryRoute("/api/intake",
                 _ => "/api/intake"));

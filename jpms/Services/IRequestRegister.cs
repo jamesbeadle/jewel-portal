@@ -18,4 +18,5 @@ public interface IRequestRegister
     Task<RequestMessage> PostMessageAsync(PostRequestMessage command, CancellationToken cancellationToken = default);
     Task DeleteAsync(string requestId, string projectId, CancellationToken cancellationToken = default);
     Task ReturnToTriageAsync(string requestId, string projectId, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<Request>> ListUnassignedAsync(CancellationToken cancellationToken = default);
 }
