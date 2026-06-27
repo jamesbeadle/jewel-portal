@@ -316,7 +316,9 @@ else
         loadError = null;
         try
         {
-            items = await Intake.ListOpenAsync();
+            items = (await Intake.ListOpenAsync())
+                .OrderByDescending(x => x.ReceivedAt)
+                .ToList();
         }
         catch
         {
