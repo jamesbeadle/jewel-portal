@@ -21,6 +21,9 @@ public sealed class HttpIntakeQueue : IIntakeQueue
     public Task<IntakeEmailDetail> GetDetailAsync(string intakeId, CancellationToken cancellationToken = default) =>
         queries.AskAsync(new GetIntakeEmailDetail(intakeId), cancellationToken);
 
+    public Task<RequestSuggestion> SuggestAsync(string intakeId, CancellationToken cancellationToken = default) =>
+        queries.AskAsync(new SuggestRequestFromIntake(intakeId), cancellationToken);
+
     public Task<IntakeEmail> ClaimAsync(string intakeId, CancellationToken cancellationToken = default) =>
         commands.SendAsync(new ClaimIntakeEmail(intakeId), cancellationToken);
 

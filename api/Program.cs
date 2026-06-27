@@ -2,6 +2,7 @@ using Azure.Communication.Email;
 using Jewel.JPMS.Api.Auth;
 using Jewel.JPMS.Api.Data;
 using Jewel.JPMS.Api.Features.AccessRequests;
+using Jewel.JPMS.Api.Features.Ai;
 using Jewel.JPMS.Api.Features.Auth;
 using Jewel.JPMS.Api.Features.Boq;
 using Jewel.JPMS.Api.Features.Cashflow;
@@ -65,6 +66,7 @@ var host = new HostBuilder()
         services.AddRequestsFeature();
         services.AddCostCentersFeature();
         services.AddMailboxIntakeFeature(context.Configuration);
+        services.AddAiFeature(context.Configuration);
     })
     .Build();
 

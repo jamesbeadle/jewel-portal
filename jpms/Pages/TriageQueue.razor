@@ -222,6 +222,28 @@ else
                                 else if (mode == TriageMode.Create)
                                 {
                                     <div class="space-y-4">
+                                        <div class="flex items-center justify-between gap-3 rounded-lg bg-surface-raised border border-line px-3 py-2">
+                                            <div class="min-w-0">
+                                                <p class="text-xs font-semibold text-content">Let Claude draft this request</p>
+                                                @if (suggestRationale is not null)
+                                                {
+                                                    <p class="text-[11px] text-content-subtle truncate">@suggestRationale</p>
+                                                }
+                                                else
+                                                {
+                                                    <p class="text-[11px] text-content-subtle">Reads the email and fills in the fields below — check before creating.</p>
+                                                }
+                                            </div>
+                                            <button type="button" class="btn-secondary text-xs whitespace-nowrap" disabled="@(busy || suggesting)" @onclick="DoSuggest">
+                                                @(suggesting ? "Thinking…" : "Suggest with AI")
+                                            </button>
+                                        </div>
+
+                                        @if (suggestError is not null)
+                                        {
+                                            <p class="rounded-lg bg-amber-500/10 border border-amber-500/30 px-3 py-2 text-xs text-amber-700">@suggestError</p>
+                                        }
+
                                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                             <div>
                                                 <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Project *</label>
@@ -341,6 +363,11 @@ else
     private string createDrawingRef = "";
     private string createResponseDue = "";
 
+    // AI-suggestion state (Create mode)
+    private bool suggesting;
+    private string? suggestError;
+    private string? suggestRationale;
+
     // Discard state
     private string discardNotes = "";
 
@@ -383,6 +410,9 @@ else
         createTitle = item.Subject;
         createDescription = item.BodyPreview;
         createRaisedTo = createDrawingRef = createResponseDue = "";
+        suggesting = false;
+        suggestError = null;
+        suggestRationale = null;
         discardNotes = "";
         await LoadDetailAsync(item);
     }
@@ -468,6 +498,55 @@ else
         {
             await Intake.LinkAsync(selected.IntakeId, linkRequestId);
         });
+    }
+
+    // Ask Claude to read the email and propose the request. One call, only when clicked. The result is
+    // advisory: it pre-fills the form and the triager reviews/edits before creating. Degrades to the
+    // plain subject/body if AI isn't configured, and never blocks manual entry on failure.
+    private async Task DoSuggest()
+    {
+        if (selected is null || busy || suggesting) return;
+        suggesting = true;
+        suggestError = null;
+        suggestRationale = null;
+        try
+        {
+            var suggestion = await Intake.SuggestAsync(selected.IntakeId);
+            if (!suggestion.Available)
+            {
+                suggestError = "AI suggestions aren't switched on yet — fill the form in manually.";
+                if (!string.IsNullOrWhiteSpace(suggestion.Title)) createTitle = suggestion.Title;
+                if (!string.IsNullOrWhiteSpace(suggestion.Description)) createDescription = suggestion.Description;
+                return;
+            }
+            ApplySuggestion(suggestion);
+        }
+        catch
+        {
+            suggestError = "Couldn't get a suggestion. Please try again or fill the form in manually.";
+        }
+        finally
+        {
+            suggesting = false;
+        }
+    }
+
+    private void ApplySuggestion(RequestSuggestion suggestion)
+    {
+        // Only accept a project we actually offer in the dropdown.
+        if (suggestion.ProjectId is not null && ProjectOptions.Any(p => p.ProjectId == suggestion.ProjectId))
+            createProjectId = suggestion.ProjectId;
+
+        createKind = suggestion.Kind;
+        if (!string.IsNullOrWhiteSpace(suggestion.Title)) createTitle = suggestion.Title;
+        if (!string.IsNullOrWhiteSpace(suggestion.Description)) createDescription = suggestion.Description;
+        if (!string.IsNullOrWhiteSpace(suggestion.RaisedTo)) createRaisedTo = suggestion.RaisedTo;
+        if (!string.IsNullOrWhiteSpace(suggestion.DrawingRef)) createDrawingRef = suggestion.DrawingRef;
+        if (suggestion.ResponseDue is { } due) createResponseDue = due.ToString("yyyy-MM-dd");
+
+        // Re-derive the reference now that project + type are known (matches OnCreateProjectChanged).
+        createReference = SuggestReference();
+        suggestRationale = suggestion.Rationale;
     }
 
     private async Task DoCreate()
