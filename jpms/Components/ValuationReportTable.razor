@@ -24,7 +24,7 @@
             {
                 <tr>
                     <td colspan="@ColumnCount" class="px-3 py-6 text-center text-content-subtle italic">
-                        No lines yet. Add contract works, PC sums, contingency and variation lines to build the report.
+                        No lines yet. Add contract works, provisional sums, contingency and variation lines to build the report.
                     </td>
                 </tr>
             }
@@ -187,17 +187,19 @@
             return new[]
             {
                 Make("Contract works", ValuationElementType.ContractWorks),
-                Make("PC sums", ValuationElementType.PcSum),
+                Make("Provisional Sums", ValuationElementType.PcSum),
                 Make("Contingency", ValuationElementType.Contingency),
                 Make("Variations", ValuationElementType.Variation)
             }.Where(b => b is not null)!.Cast<Block>();
         }
     }
 
+    // Non-variation lines show the Jewel cost-centre code (JBB-*); fall back to the
+    // NRM2 section ref only if a line has no cost code mapped.
     private static string CodeFor(ValuationLineItem line) =>
         line.ElementType == ValuationElementType.Variation
             ? (string.IsNullOrWhiteSpace(line.VariationRef) ? line.CostCode : line.VariationRef)
-            : (string.IsNullOrWhiteSpace(line.SectionCode) ? line.CostCode : line.SectionCode);
+            : (string.IsNullOrWhiteSpace(line.CostCode) ? line.SectionCode : line.CostCode);
 
     private static string TitleFor(ValuationLineItem line)
     {

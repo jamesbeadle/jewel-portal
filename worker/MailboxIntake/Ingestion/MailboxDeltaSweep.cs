@@ -49,11 +49,15 @@ public sealed class MailboxDeltaSweep
 
         var link = state.DeltaLink; // null => fresh delta enumeration (backlog import)
         var ingested = 0;
+        var pageNumber = 0;
+        var seen = 0;
         string? deltaLink = null;
 
         do
         {
             var page = await _graph.GetDeltaPageAsync(link, ct);
+            pageNumber++;
+            seen += page.Messages.Count;
             foreach (var message in page.Messages)
             {
                 if (await _ingestion.IngestAsync(message, ct))
@@ -62,6 +66,14 @@ public sealed class MailboxDeltaSweep
 
             link = page.NextLink;
             deltaLink = page.DeltaLink ?? deltaLink;
+
+            // Diagnostic: per-page shape of the Graph delta feed. hasNextLink=true means more pages
+            // follow; hasDeltaLink=true means Graph considers the enumeration complete. This is how
+            // we tell a genuine "only N messages in this folder" from a paging problem.
+            _logger.LogInformation(
+                "Mailbox delta page {Page}: {PageCount} message(s), running total seen {Seen}, hasNextLink={HasNext}, hasDeltaLink={HasDelta}.",
+                pageNumber, page.Messages.Count, seen,
+                !string.IsNullOrEmpty(page.NextLink), !string.IsNullOrEmpty(page.DeltaLink));
         }
         while (!string.IsNullOrEmpty(link));
 
