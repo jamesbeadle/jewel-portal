@@ -1,6 +1,8 @@
 using Jewel.JPMS.Api.Data;
+using Jewel.JPMS.Api.Data.Entities;
 using Jewel.JPMS.Api.Features.MailboxIntake.Graph;
 using Jewel.JPMS.Api.Features.MailboxIntake.Queue;
+using Jewel.JPMS.Api.Features.Requests;
 using Jewel.JPMS.Models;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.EntityFrameworkCore;
@@ -67,10 +69,10 @@ public sealed class MailboxActionWorker
         }
 
         var status = (IntakeStatus)(action.TargetStatus ?? intake.Status);
-        var folderId = OutcomeFolders.ResolveFolderId(status, _options.Folders);
+        var folderId = await ResolveFolderAsync(intake, status, ct);
         if (string.IsNullOrEmpty(folderId))
         {
-            _logger.LogDebug("No outcome folder configured for status {Status}; leaving in place.", status);
+            _logger.LogDebug("No outcome folder for status {Status}; leaving intake {IntakeId} in place.", status, action.IntakeId);
             return;
         }
 
@@ -79,6 +81,62 @@ public sealed class MailboxActionWorker
         intake.GraphMessageId = newGraphId;
         await _context.SaveChangesAsync(ct);
         _logger.LogInformation("Moved intake {IntakeId} to folder for {Status}.", action.IntakeId, status);
+    }
+
+    /// <summary>
+    /// Resolves the destination folder for a triage outcome:
+    ///   Linked    -> the request's own subfolder (REQ-0001) under the "Requests" parent, created on first use;
+    ///   Discarded -> the shared "Not relevant" folder under the same parent;
+    ///   otherwise -> any statically-configured outcome folder (e.g. Failed -> Needs attention) as a safety net.
+    /// Returns null when there is nothing to move to (e.g. unconfigured Graph, or a Linked email with no request).
+    /// </summary>
+    private async Task<string?> ResolveFolderAsync(IntakeEmailEntity intake, IntakeStatus status, CancellationToken ct)
+    {
+        switch (status)
+        {
+            case IntakeStatus.Linked:
+            {
+                if (string.IsNullOrEmpty(intake.LinkedRequestId))
+                {
+                    _logger.LogWarning("Move skipped: intake {IntakeId} is Linked but has no request id.", intake.IntakeId);
+                    return null;
+                }
+
+                var request = await _context.Requests.FirstOrDefaultAsync(r => r.RequestId == intake.LinkedRequestId, ct);
+                if (request is null)
+                {
+                    _logger.LogWarning("Move skipped: request {RequestId} for intake {IntakeId} not found.",
+                        intake.LinkedRequestId, intake.IntakeId);
+                    return null;
+                }
+
+                if (string.IsNullOrEmpty(request.MailboxFolderId))
+                {
+                    var parentId = await _graph.EnsureFolderAsync(_options.RequestsParentFolder, null, ct);
+                    if (string.IsNullOrEmpty(parentId))
+                        return null;
+
+                    request.MailboxFolderId =
+                        await _graph.EnsureFolderAsync(RequestsIdentifierFactory.FolderName(request.Number), parentId, ct);
+                    await _context.SaveChangesAsync(ct);
+                }
+
+                return request.MailboxFolderId;
+            }
+
+            case IntakeStatus.Discarded:
+            {
+                var parentId = await _graph.EnsureFolderAsync(_options.RequestsParentFolder, null, ct);
+                if (string.IsNullOrEmpty(parentId))
+                    return null;
+
+                return await _graph.EnsureFolderAsync(_options.NotRelevantFolder, parentId, ct);
+            }
+
+            default:
+                // Claimed / Failed etc. fall back to any configured static outcome folder.
+                return OutcomeFolders.ResolveFolderId(status, _options.Folders);
+        }
     }
 
     private async Task SendAsync(MailboxActionMessage action, CancellationToken ct)

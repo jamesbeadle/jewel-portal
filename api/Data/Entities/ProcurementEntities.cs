@@ -58,4 +58,12 @@ public sealed class RequestEntity
     [MaxLength(512)]     public string? RelatedDrawingSpec { get; set; }
     [MaxLength(4000)]    public string? InternalNotes { get; set; }
     [MaxLength(4000)]    public string? ClientNotes { get; set; }
+
+    // Sequential, human-readable request number (rendered as REQ-0001). Used as the name of the
+    // request's Outlook folder in the projects@ mailbox so triaged emails can be grouped per request.
+    public int Number { get; set; }
+
+    // Graph id of this request's mailbox folder, set the first time an email is filed against it.
+    // Cached so subsequent emails for the same request reuse the folder rather than recreating it.
+    [MaxLength(450)]     public string? MailboxFolderId { get; set; }
 }

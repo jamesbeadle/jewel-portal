@@ -31,6 +31,12 @@ public sealed class NullGraphMailClient : IGraphMailClient
         return Task.FromResult(graphMessageId);
     }
 
+    public Task<string> EnsureFolderAsync(string displayName, string? parentFolderId, CancellationToken ct)
+    {
+        _logger.LogWarning("Mailbox intake not configured; skipping Graph ensure-folder.");
+        return Task.FromResult(string.Empty);
+    }
+
     public Task SendMailAsync(GraphOutboundMessage message, CancellationToken ct)
     {
         _logger.LogWarning("Mailbox intake not configured; skipping Graph sendMail.");

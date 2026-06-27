@@ -30,6 +30,15 @@ public sealed class MailboxIntakeOptions
     public string Mailbox { get; set; } = "projects@jewelbb.co.uk";
 
     /// <summary>
+    /// Top-level mailbox folder that holds one subfolder per request (named REQ-0001 etc.) plus the
+    /// "not relevant" folder. Created on demand by the worker; no folder ids need configuring.
+    /// </summary>
+    public string RequestsParentFolder { get; set; } = "Requests";
+
+    /// <summary>Subfolder of <see cref="RequestsParentFolder"/> that discarded ("not relevant") emails move into.</summary>
+    public string NotRelevantFolder { get; set; } = "Not relevant";
+
+    /// <summary>
     /// Public HTTPS URL of the webhook Function that Graph posts change notifications to.
     /// Required only when <see cref="EnableWebhook"/> is true.
     /// </summary>
@@ -96,6 +105,14 @@ public sealed class MailboxIntakeOptions
         var mailbox = section["Mailbox"];
         if (!string.IsNullOrWhiteSpace(mailbox))
             options.Mailbox = mailbox;
+
+        var requestsParent = section["Folders:RequestsParent"];
+        if (!string.IsNullOrWhiteSpace(requestsParent))
+            options.RequestsParentFolder = requestsParent;
+
+        var notRelevant = section["Folders:NotRelevant"];
+        if (!string.IsNullOrWhiteSpace(notRelevant))
+            options.NotRelevantFolder = notRelevant;
 
         options.Folders.InProgress = section["Folders:InProgress"];
         options.Folders.Logged = section["Folders:Logged"];

@@ -22,6 +22,12 @@ public interface IGraphMailClient
     /// </summary>
     Task<string> MoveMessageAsync(string graphMessageId, string destinationFolderId, CancellationToken ct);
 
+    /// <summary>
+    /// Find a child folder by display name under the given parent (pass null for the mailbox root),
+    /// creating it if it does not exist. Returns the folder's Graph id. Idempotent.
+    /// </summary>
+    Task<string> EnsureFolderAsync(string displayName, string? parentFolderId, CancellationToken ct);
+
     /// <summary>Send a brand-new message (new thread).</summary>
     Task SendMailAsync(GraphOutboundMessage message, CancellationToken ct);
 

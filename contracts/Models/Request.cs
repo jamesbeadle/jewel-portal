@@ -44,8 +44,12 @@ public sealed record Request(
     DateTimeOffset? ResponseDue = null, // contractual response-due date
     string? RelatedDrawingSpec = null,  // related drawing / spec issued with the response
     string? InternalNotes = null,       // notes kept internal to Jewel
-    string? ClientNotes = null)         // notes shared with client / external parties
+    string? ClientNotes = null,         // notes shared with client / external parties
+    int Number = 0)                     // sequential request number; rendered as REQ-0001
 {
+    // Human-readable request number / mailbox folder name (e.g. "REQ-0001"). Empty until assigned.
+    public string DisplayNumber => Number > 0 ? $"REQ-{Number:0000}" : "";
+
     // Working days a still-open request has been outstanding since it was issued.
     public int? DaysOutstanding =>
         Status is RequestStatus.Closed || RespondedAt is not null

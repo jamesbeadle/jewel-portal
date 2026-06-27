@@ -31,6 +31,10 @@ else
 
         <div class="flex flex-wrap items-start justify-between gap-3 mb-1">
             <div class="flex items-center gap-3">
+                @if (!string.IsNullOrEmpty(record.DisplayNumber))
+                {
+                    <span class="font-mono text-sm font-semibold text-content" title="Mailbox folder name">@record.DisplayNumber</span>
+                }
                 <span class="font-mono text-sm text-content-muted">@record.Reference</span>
                 <span class="text-content-subtle text-xs uppercase tracking-wide" title="@record.Kind.LongName()">@record.Kind.DisplayName()</span>
                 <span class="inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium @StatusClass(record.Status)">@StatusLabel(record.Status)</span>

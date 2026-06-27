@@ -95,6 +95,45 @@ public sealed class GraphMailClient : IGraphMailClient
         return newId;
     }
 
+    public async Task<string> EnsureFolderAsync(string displayName, string? parentFolderId, CancellationToken ct)
+    {
+        // Root-level folders live under /mailFolders; nested ones under the parent's /childFolders.
+        var collectionUrl = string.IsNullOrEmpty(parentFolderId)
+            ? $"{GraphBase}/users/{Mailbox}/mailFolders"
+            : $"{GraphBase}/users/{Mailbox}/mailFolders/{Uri.EscapeDataString(parentFolderId)}/childFolders";
+
+        // Find an existing folder with this exact name first so repeated triage never duplicates it.
+        var escapedName = displayName.Replace("'", "''");
+        var filter = Uri.EscapeDataString($"displayName eq '{escapedName}'");
+        var findUrl = $"{collectionUrl}?$select=id,displayName&$filter={filter}";
+        using (var found = await SendAsync(HttpMethod.Get, findUrl, content: null, ct))
+        {
+            await using var stream = await found.Content.ReadAsStreamAsync(ct);
+            using var doc = await JsonDocument.ParseAsync(stream, cancellationToken: ct);
+            if (doc.RootElement.TryGetProperty("value", out var arr) && arr.ValueKind == JsonValueKind.Array)
+            {
+                foreach (var f in arr.EnumerateArray())
+                {
+                    var existing = f.TryGetProperty("id", out var idEl) ? idEl.GetString() : null;
+                    if (!string.IsNullOrEmpty(existing))
+                        return existing;
+                }
+            }
+        }
+
+        // Not present: create it.
+        var createBody = JsonContent.Create(new { displayName });
+        using (var created = await SendAsync(HttpMethod.Post, collectionUrl, createBody, ct))
+        {
+            await using var stream = await created.Content.ReadAsStreamAsync(ct);
+            using var doc = await JsonDocument.ParseAsync(stream, cancellationToken: ct);
+            var id = doc.RootElement.TryGetProperty("id", out var idEl) ? idEl.GetString() : null;
+            if (string.IsNullOrEmpty(id))
+                throw new InvalidOperationException("Graph create folder did not return an id.");
+            return id;
+        }
+    }
+
     public async Task SendMailAsync(GraphOutboundMessage message, CancellationToken ct)
     {
         var url = $"{GraphBase}/users/{Mailbox}/sendMail";

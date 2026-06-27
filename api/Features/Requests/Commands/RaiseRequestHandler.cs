@@ -3,6 +3,7 @@ using Jewel.JPMS.Api.Data;
 using Jewel.JPMS.Api.Data.Entities;
 using Jewel.JPMS.Contracts.Requests;
 using Jewel.JPMS.Models;
+using Microsoft.EntityFrameworkCore;
 
 namespace Jewel.JPMS.Api.Features.Requests.Commands;
 
@@ -13,9 +14,12 @@ public sealed class RaiseRequestHandler : ICommandHandler<RaiseRequest, Request>
 
     public async Task<Request> HandleAsync(RaiseRequest command, CancellationToken cancellationToken)
     {
+        var nextNumber = (await context.Requests.MaxAsync(r => (int?)r.Number, cancellationToken) ?? 0) + 1;
+
         var entity = new RequestEntity
         {
             RequestId = RequestsIdentifierFactory.Next(),
+            Number = nextNumber,
             ProjectId = command.ProjectId,
             Kind = (int)command.Kind,
             Reference = command.Reference,

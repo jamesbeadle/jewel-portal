@@ -19,9 +19,12 @@ public sealed class CreateRequestFromIntakeHandler : ICommandHandler<CreateReque
         var intake = await context.IntakeEmails.FirstOrDefaultAsync(e => e.IntakeId == command.IntakeId, cancellationToken)
             ?? throw new InvalidOperationException($"Intake email {command.IntakeId} not found.");
 
+        var nextNumber = (await context.Requests.MaxAsync(r => (int?)r.Number, cancellationToken) ?? 0) + 1;
+
         var request = new RequestEntity
         {
             RequestId = RequestsIdentifierFactory.Next(),
+            Number = nextNumber,
             ProjectId = command.ProjectId,
             Kind = (int)command.Kind,
             Reference = command.Reference,
