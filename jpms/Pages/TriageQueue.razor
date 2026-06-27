@@ -18,6 +18,15 @@ else if (!Session.IsApproved)
 {
     <RequestAccessView Email="@Auth.CurrentUser!.Email" DisplayName="@Auth.CurrentUser.DisplayName" />
 }
+else if (!CanTriage)
+{
+    <section class="max-w-6xl mx-auto px-4 py-12">
+        <div class="panel p-8 text-center">
+            <p class="text-sm text-content">You don't have access to mailbox triage.</p>
+            <p class="text-xs text-content-subtle mt-1">Triage is available to administrators and project managers.</p>
+        </div>
+    </section>
+}
 else
 {
     <section class="max-w-6xl mx-auto px-4 py-8 md:py-12">
@@ -45,13 +54,12 @@ else
         {
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
                 <div class="space-y-2 lg:col-span-1">
-                    @foreach (var item in items)
+                    @foreach (var item in PagedItems)
                     {
                         <button type="button" @key="item.IntakeId" @onclick="() => Select(item)"
                                 class="@RowClass(item)">
                             <div class="flex items-center justify-between gap-2">
                                 <span class="text-sm font-medium text-content truncate">@DisplayFrom(item)</span>
-                                <span class="@StatusChipClass(item.Status)">@StatusLabel(item)</span>
                             </div>
                             <p class="text-sm text-content-muted truncate mt-0.5">@Dash(item.Subject)</p>
                             <div class="flex items-center gap-2 mt-1 text-[11px] text-content-subtle">
@@ -62,6 +70,17 @@ else
                                 }
                             </div>
                         </button>
+                    }
+
+                    @if (PageCount > 1)
+                    {
+                        <div class="flex items-center justify-between gap-2 pt-2">
+                            <button type="button" class="btn-secondary text-xs px-2.5 py-1.5"
+                                    disabled="@(page <= 1)" @onclick="PreviousPage">Previous</button>
+                            <span class="text-[11px] text-content-subtle">Page @page of @PageCount</span>
+                            <button type="button" class="btn-secondary text-xs px-2.5 py-1.5"
+                                    disabled="@(page >= PageCount)" @onclick="NextPage">Next</button>
+                        </div>
                     }
                 </div>
 
@@ -81,10 +100,7 @@ else
                             }
 
                             <div>
-                                <div class="flex items-center justify-between gap-3">
-                                    <h2 class="text-lg font-semibold text-content">@Dash(selected.Subject)</h2>
-                                    <span class="@StatusChipClass(selected.Status)">@StatusLabel(selected)</span>
-                                </div>
+                                <h2 class="text-lg font-semibold text-content">@Dash(selected.Subject)</h2>
                                 <p class="text-sm text-content-muted mt-1">
                                     From @DisplayFrom(selected) · @Date(selected.ReceivedAt)
                                 </p>
@@ -93,15 +109,6 @@ else
                             <div class="rounded-lg bg-surface-raised border border-line p-3">
                                 <p class="text-sm text-content whitespace-pre-wrap">@Dash(selected.BodyPreview)</p>
                             </div>
-
-                            @if (selected.Status == IntakeStatus.NeedsTriage)
-                            {
-                                <button type="button" class="btn-secondary" disabled="@busy" @onclick="Claim">Claim this email</button>
-                            }
-                            else if (selected.Status == IntakeStatus.Claimed && !string.IsNullOrWhiteSpace(selected.ClaimedByEmail))
-                            {
-                                <p class="text-xs text-content-subtle">Claimed by @selected.ClaimedByEmail</p>
-                            }
 
                             <div class="pt-3 border-t border-line">
                                 <div class="flex flex-wrap gap-2 mb-4">
@@ -245,10 +252,33 @@ else
         RequestType.Rfi, RequestType.Rfq, RequestType.Rfp, RequestType.Rfc, RequestType.Rfa
     };
 
+    private const int PageSize = 5;
+
     private bool isLoaded;
     private string? loadError;
     private IReadOnlyList<IntakeEmail> items = Array.Empty<IntakeEmail>();
     private IntakeEmail? selected;
+    private int page = 1;
+
+    // Triage is restricted to administrators and project managers. Administrators are granted
+    // every role server-side, so they always carry Role.ProjectManager too.
+    private bool CanTriage =>
+        Session.AvailableRoles.Any(role => role is Role.Admin or Role.ProjectManager);
+
+    private int PageCount => Math.Max(1, (int)Math.Ceiling(items.Count / (double)PageSize));
+
+    private IEnumerable<IntakeEmail> PagedItems =>
+        items.Skip((page - 1) * PageSize).Take(PageSize);
+
+    private void PreviousPage()
+    {
+        if (page > 1) page--;
+    }
+
+    private void NextPage()
+    {
+        if (page < PageCount) page++;
+    }
 
     private bool busy;
     private string? actionError;
@@ -293,6 +323,7 @@ else
             loadError = "Couldn't load the triage queue. Please try again.";
             items = Array.Empty<IntakeEmail>();
         }
+        if (page > PageCount) page = PageCount;
     }
 
     private void Select(IntakeEmail item)
@@ -314,15 +345,6 @@ else
     {
         mode = next;
         actionError = null;
-    }
-
-    private async Task Claim()
-    {
-        if (selected is null || busy) return;
-        await RunAction(async () =>
-        {
-            await Intake.ClaimAsync(selected.IntakeId);
-        }, keepSelection: true);
     }
 
     private void OnLinkProjectChanged(ChangeEventArgs e)
@@ -486,20 +508,6 @@ else
 
     private static string DisplayFrom(IntakeEmail item) =>
         string.IsNullOrWhiteSpace(item.FromName) ? item.FromEmail : item.FromName;
-
-    private static string StatusLabel(IntakeEmail item) => item.Status switch
-    {
-        IntakeStatus.NeedsTriage => "Needs triage",
-        IntakeStatus.Claimed     => "Claimed",
-        _                        => item.Status.ToString()
-    };
-
-    private static string StatusChipClass(IntakeStatus status) => status switch
-    {
-        IntakeStatus.NeedsTriage => "inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium bg-amber-500/10 text-amber-600",
-        IntakeStatus.Claimed     => "inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium bg-blue-500/10 text-blue-600",
-        _                        => "inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium bg-surface-raised border border-line text-content-muted"
-    };
 
     private static string Dash(string? value) => string.IsNullOrWhiteSpace(value) ? "—" : value;
 

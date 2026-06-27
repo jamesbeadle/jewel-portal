@@ -40,8 +40,13 @@ public sealed class GraphMailClient : IGraphMailClient
 
     public async Task<GraphMessagePage> GetDeltaPageAsync(string? link, CancellationToken ct)
     {
+        // IMPORTANT: do NOT add $top to a /messages/delta query. On delta, Graph treats $top as a
+        // cap on the *entire* initial enumeration (not a page size): it returns up to $top items,
+        // then issues the @odata.deltaLink and declares the backlog complete — silently dropping the
+        // rest of the folder. We rely on Graph's default delta paging via @odata.nextLink instead,
+        // which the caller drains until the real deltaLink appears, so the whole Inbox is imported.
         var url = link ?? $"{GraphBase}/users/{Mailbox}/mailFolders/inbox/messages/delta"
-            + $"?$select={MessageSelect}&$top=50";
+            + $"?$select={MessageSelect}";
 
         using var response = await SendAsync(HttpMethod.Get, url, content: null, ct);
         await using var stream = await response.Content.ReadAsStreamAsync(ct);
