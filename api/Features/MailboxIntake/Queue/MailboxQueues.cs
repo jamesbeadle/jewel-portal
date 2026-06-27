@@ -24,5 +24,7 @@ public sealed record MailboxActionMessage(
 public enum MailboxActionType
 {
     MoveToOutcomeFolder = 0,
-    SendOutbound = 1
+    SendOutbound = 1,
+    // Move an email back to the Inbox so it re-enters the triage queue (used by return-to-triage undo).
+    ReturnToInbox = 2
 }

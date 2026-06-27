@@ -103,6 +103,17 @@ else
                         <button type="button" class="btn-secondary" disabled="@busy" @onclick="ReopenRequest">Reopen</button>
                     }
 
+                    @if (CanTriage)
+                    {
+                        <div class="mt-4 pt-4 border-t border-line">
+                            <h4 class="eyebrow mb-1">Return to triage</h4>
+                            <p class="text-xs text-content-subtle mb-2">Sends every email linked to this request back to the triage queue so the whole thread can be processed again. If that empties the request, it is removed.</p>
+                            <button type="button" class="btn-secondary" disabled="@busy" @onclick="() => confirmingReturn = true">
+                                Return to triage
+                            </button>
+                        </div>
+                    }
+
                     @if (IsAdmin)
                     {
                         <div class="mt-4 pt-4 border-t border-line">
@@ -127,6 +138,16 @@ else
             This will permanently remove <span class="font-mono">@record?.Reference</span> — “@record?.Title” — and its entire conversation. This cannot be undone.
         </p>
     </Modal>
+
+    <Modal IsOpen="confirmingReturn"
+           Title="Return this request to triage?"
+           ConfirmLabel="@(busy ? "Returning…" : "Return to triage")"
+           OnCancel="CancelReturn"
+           OnConfirm="PerformReturn">
+        <p class="text-sm text-content">
+            Every email linked to <span class="font-mono">@record?.Reference</span> — “@record?.Title” — will go back to the triage queue so the thread can be triaged again from scratch. As this empties the request, it will be removed from the register.
+        </p>
+    </Modal>
 }
 
 @code {
@@ -139,10 +160,15 @@ else
     private bool busy;
     private string? actionError;
     private bool confirmingDelete;
+    private bool confirmingReturn;
 
     private string RegisterHref => $"/projects/{ProjectId}/requests";
 
     private bool IsAdmin => Auth.CurrentUser is not null && JpmsAdministrators.Contains(Auth.CurrentUser.Email);
+
+    // Returning to triage is a triage action, open to administrators and project managers (admins
+    // carry every role server-side, so they always satisfy this too).
+    private bool CanTriage => Session.AvailableRoles.Any(role => role is Role.Admin or Role.ProjectManager);
 
     protected override async Task OnInitializedAsync()
     {
@@ -227,6 +253,26 @@ else
         {
             actionError = "Couldn't delete the request. Please try again.";
             confirmingDelete = false;
+            busy = false;
+        }
+    }
+
+    private void CancelReturn() => confirmingReturn = false;
+
+    private async Task PerformReturn()
+    {
+        if (record is null || busy || !CanTriage) return;
+        actionError = null;
+        try
+        {
+            busy = true;
+            await RequestRegister.ReturnToTriageAsync(record.RequestId, ProjectId);
+            Nav.NavigateTo(RegisterHref);
+        }
+        catch
+        {
+            actionError = "Couldn't return the request to triage. Please try again.";
+            confirmingReturn = false;
             busy = false;
         }
     }

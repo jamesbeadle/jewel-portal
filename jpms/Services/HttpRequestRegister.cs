@@ -71,6 +71,12 @@ public sealed class HttpRequestRegister : IRequestRegister
         await readModel.RefreshAsync(projectId, cancellationToken);
     }
 
+    public async Task ReturnToTriageAsync(string requestId, string projectId, CancellationToken cancellationToken = default)
+    {
+        await commands.SendAsync(new ReturnRequestToTriage(requestId), cancellationToken);
+        await readModel.RefreshAsync(projectId, cancellationToken);
+    }
+
     private async Task RaiseRecordAsync(Request record)
     {
         await commands.SendAsync(new RaiseRequest(record.ProjectId, record.Kind, record.Reference, record.Title, record.Description, record.Value, record.RaisedByEmail, record.RaisedTo, record.DrawingRef, record.ResponseDue, record.InternalNotes, record.ClientNotes), CancellationToken.None);

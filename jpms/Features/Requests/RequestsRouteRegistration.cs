@@ -56,6 +56,10 @@ public static class RequestsRouteRegistration
             new CommandRoute("DELETE", "/api/requests/{requestId}",
                 command => $"/api/requests/{((DeleteRequest)command).RequestId}"));
 
+        commands.Register<ReturnRequestToTriage, Acknowledgement>(
+            new CommandRoute("POST", "/api/requests/{requestId}/return-to-triage",
+                command => $"/api/requests/{((ReturnRequestToTriage)command).RequestId}/return-to-triage"));
+
         commands.Register<ClaimIntakeEmail, IntakeEmail>(
             new CommandRoute("POST", "/api/intake/{intakeId}/claim",
                 command => $"/api/intake/{((ClaimIntakeEmail)command).IntakeId}/claim"));

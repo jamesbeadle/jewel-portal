@@ -50,6 +50,10 @@ public sealed class CreateRequestFromIntakeHandler : ICommandHandler<CreateReque
         await context.SaveChangesAsync(cancellationToken);
 
         await mailbox.ScheduleOutcomeMoveAsync(intake.IntakeId, IntakeStatus.Linked, cancellationToken);
+
+        // Pull any other still-untriaged emails from the same thread onto this request too.
+        await ThreadGather.SweepSiblingsAsync(context, mailbox, intake, request.RequestId, cancellationToken);
+
         return request.ToModel();
     }
 

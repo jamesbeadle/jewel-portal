@@ -35,6 +35,10 @@ public static class RequestsFeatureRegistration
         services.AddScoped<DeleteRequestAuthorisation>();
         services.AddScoped<DeleteRequestValidation>();
 
+        services.AddScoped<ICommandHandler<ReturnRequestToTriage, Acknowledgement>, ReturnRequestToTriageHandler>();
+        services.AddScoped<ReturnRequestToTriageAuthorisation>();
+        services.AddScoped<ReturnRequestToTriageValidation>();
+
         services.AddScoped<ICommandHandler<ClaimIntakeEmail, IntakeEmail>, ClaimIntakeEmailHandler>();
         services.AddScoped<ClaimIntakeEmailAuthorisation>();
         services.AddScoped<ClaimIntakeEmailValidation>();

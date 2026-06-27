@@ -44,6 +44,9 @@ public sealed class MailboxActionWorker
             case MailboxActionType.SendOutbound:
                 await SendAsync(action, ct);
                 break;
+            case MailboxActionType.ReturnToInbox:
+                await ReturnToInboxAsync(action, ct);
+                break;
             default:
                 _logger.LogWarning("Unknown mailbox action type {Type}.", action.Type);
                 break;
@@ -137,6 +140,31 @@ public sealed class MailboxActionWorker
                 // Claimed / Failed etc. fall back to any configured static outcome folder.
                 return OutcomeFolders.ResolveFolderId(status, _options.Folders);
         }
+    }
+
+    private async Task ReturnToInboxAsync(MailboxActionMessage action, CancellationToken ct)
+    {
+        if (!_options.EnableFolderMoves)
+            return;
+
+        var intake = await _context.IntakeEmails.FirstOrDefaultAsync(e => e.IntakeId == action.IntakeId, ct);
+        if (intake is null)
+        {
+            _logger.LogWarning("Return-to-inbox skipped: intake {IntakeId} not found.", action.IntakeId);
+            return;
+        }
+
+        if (string.IsNullOrEmpty(intake.GraphMessageId))
+        {
+            _logger.LogWarning("Return-to-inbox skipped: intake {IntakeId} has no Graph message id.", action.IntakeId);
+            return;
+        }
+
+        // "inbox" is a Graph well-known folder name accepted as a destination id.
+        var newGraphId = await _graph.MoveMessageAsync(intake.GraphMessageId, "inbox", ct);
+        intake.GraphMessageId = newGraphId;
+        await _context.SaveChangesAsync(ct);
+        _logger.LogInformation("Returned intake {IntakeId} to the Inbox for re-triage.", action.IntakeId);
     }
 
     private async Task SendAsync(MailboxActionMessage action, CancellationToken ct)

@@ -1,12 +1,15 @@
 using Jewel.JPMS.Api.Data;
 using Jewel.JPMS.Api.Features.MailboxIntake;
+using Jewel.JPMS.Api.Features.MailboxIntake.Actions;
 using Jewel.JPMS.Api.Features.MailboxIntake.Graph;
 using Jewel.JPMS.Api.Features.MailboxIntake.Ingestion;
+using Jewel.JPMS.Api.Features.MailboxIntake.Queue;
 using Jewel.JPMS.Api.Features.MailboxIntake.Subscriptions;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 
 // The mailbox-intake background workers (timer + queue triggers) live here, in a standalone
 // Azure Function App. They cannot run inside the Static Web Apps managed Functions API, which
@@ -39,6 +42,22 @@ var host = new HostBuilder()
         {
             services.AddSingleton<IGraphMailClient, NullGraphMailClient>();
         }
+
+        // Queue producer + action scheduler: ingestion auto-link enqueues a folder move onto the
+        // same mailbox-actions queue the MailboxActionWorker consumes. Mirrors the SWA API wiring;
+        // both apps must point MailboxQueuesConnection at the same storage account.
+        var queueConnection = context.Configuration["MailboxQueuesConnection"]
+            ?? context.Configuration["AzureWebJobsStorage"];
+        if (mailboxOptions.Enabled && !string.IsNullOrWhiteSpace(queueConnection))
+        {
+            services.AddSingleton<IMailboxQueue>(sp =>
+                new StorageMailboxQueue(queueConnection!, sp.GetRequiredService<ILogger<StorageMailboxQueue>>()));
+        }
+        else
+        {
+            services.AddSingleton<IMailboxQueue, NullMailboxQueue>();
+        }
+        services.AddSingleton<IMailboxActionScheduler, MailboxActionScheduler>();
 
         services.AddScoped<MailboxSyncStateStore>();
         services.AddScoped<IntakeIngestionService>();

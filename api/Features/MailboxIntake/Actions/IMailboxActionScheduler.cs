@@ -17,6 +17,9 @@ public interface IMailboxActionScheduler
 
     /// <summary>Enqueue an outbound (Shared) reply send for a request message.</summary>
     Task ScheduleOutboundSendAsync(string intakeId, string requestMessageId, CancellationToken ct);
+
+    /// <summary>Enqueue a move of the intake email back to the Inbox (return-to-triage undo).</summary>
+    Task ScheduleReturnToInboxAsync(string intakeId, CancellationToken ct);
 }
 
 /// <summary>Default scheduler: enqueues onto the mailbox-actions queue, honouring the feature flags.</summary>
@@ -49,5 +52,14 @@ public sealed class MailboxActionScheduler : IMailboxActionScheduler
 
         return _queue.EnqueueMailboxActionAsync(
             new MailboxActionMessage(MailboxActionType.SendOutbound, intakeId, RequestMessageId: requestMessageId), ct);
+    }
+
+    public Task ScheduleReturnToInboxAsync(string intakeId, CancellationToken ct)
+    {
+        if (!_options.Enabled || !_options.EnableFolderMoves)
+            return Task.CompletedTask;
+
+        return _queue.EnqueueMailboxActionAsync(
+            new MailboxActionMessage(MailboxActionType.ReturnToInbox, intakeId), ct);
     }
 }
