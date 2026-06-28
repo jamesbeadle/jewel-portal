@@ -29,12 +29,21 @@ else
             <button type="button" class="btn-primary" @onclick="OpenRaiseDialog">Raise request</button>
         </div>
 
-        <div class="flex flex-wrap items-center gap-2 mb-5 text-sm">
+        <div class="flex flex-wrap items-center gap-2 mb-3 text-sm">
             @foreach (var filter in Filters)
             {
                 <a href="@HrefFor(filter.Slug)" class="@FilterClass(filter.Slug)">
                     @filter.Label
                 </a>
+            }
+        </div>
+
+        <div class="flex flex-wrap items-center gap-2 mb-5 text-sm">
+            @foreach (var option in StatusViews)
+            {
+                <button type="button" class="@StatusViewClass(option)" @onclick="() => statusView = option">
+                    @StatusViewLabel(option) · @StatusViewCount(option)
+                </button>
             }
         </div>
 
@@ -90,7 +99,15 @@ else
 
     private string ActiveSlug => string.IsNullOrWhiteSpace(Kind) ? "all" : Kind.ToLowerInvariant();
 
-    private IReadOnlyList<Request> FilteredRecords
+    private enum StatusView { Open, Closed, All }
+
+    private static readonly StatusView[] StatusViews = { StatusView.Open, StatusView.Closed, StatusView.All };
+
+    // Status filter defaults to Open so the register opens on outstanding work.
+    private StatusView statusView = StatusView.Open;
+
+    // Records for the active kind tab, before the open/closed filter is applied.
+    private IReadOnlyList<Request> KindRecords
     {
         get
         {
@@ -99,6 +116,32 @@ else
             return RequestRegister.ForProject(ProjectId, filter.Kind.Value);
         }
     }
+
+    private IReadOnlyList<Request> FilteredRecords => statusView switch
+    {
+        StatusView.Open   => KindRecords.Where(r => r.Status is not RequestStatus.Closed).ToList(),
+        StatusView.Closed => KindRecords.Where(r => r.Status is RequestStatus.Closed).ToList(),
+        _                 => KindRecords
+    };
+
+    private int StatusViewCount(StatusView view) => view switch
+    {
+        StatusView.Open   => KindRecords.Count(r => r.Status is not RequestStatus.Closed),
+        StatusView.Closed => KindRecords.Count(r => r.Status is RequestStatus.Closed),
+        _                 => KindRecords.Count
+    };
+
+    private static string StatusViewLabel(StatusView view) => view switch
+    {
+        StatusView.Open   => "Open",
+        StatusView.Closed => "Closed",
+        _                 => "All"
+    };
+
+    private string StatusViewClass(StatusView view) =>
+        view == statusView
+            ? "px-3 py-1.5 rounded-md bg-accent text-accent-ink font-medium"
+            : "px-3 py-1.5 rounded-md text-content-muted hover:text-content hover:bg-surface-raised";
 
     private string HrefFor(string slug) =>
         slug == "all" ? $"/projects/{ProjectId}/requests" : $"/projects/{ProjectId}/requests/{slug}";

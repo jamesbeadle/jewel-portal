@@ -29,6 +29,7 @@ public sealed class UpdateRequestDetailsHandler : ICommandHandler<UpdateRequestD
         entity.RelatedDrawingSpec = command.RelatedDrawingSpec;
         entity.InternalNotes = command.InternalNotes;
         entity.ClientNotes = command.ClientNotes;
+        if (command.RaisedAt is { } issued) entity.RaisedAt = issued;
         if (entity.RespondedAt is null && !string.IsNullOrWhiteSpace(command.ResponseText)) entity.RespondedAt = DateTimeOffset.UtcNow;
 
         await context.SaveChangesAsync(cancellationToken);

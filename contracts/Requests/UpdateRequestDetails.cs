@@ -18,4 +18,5 @@ public sealed record UpdateRequestDetails(
     DateTimeOffset? ResponseDue = null,
     string? RelatedDrawingSpec = null,
     string? InternalNotes = null,
-    string? ClientNotes = null) : ICommand<Request>;
+    string? ClientNotes = null,
+    DateTimeOffset? RaisedAt = null) : ICommand<Request>;

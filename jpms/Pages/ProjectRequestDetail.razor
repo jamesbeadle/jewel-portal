@@ -76,7 +76,10 @@ else
                     <MetaRow Label="Drawing / detail" Value="@Dash(record.DrawingRef)" />
                     <MetaRow Label="Response due" Value="@Date(record.ResponseDue)" />
                     <MetaRow Label="Days outstanding" Value="@(record.DaysOutstanding is int d ? d.ToString() : "—")" />
-                    <MetaRow Label="Value" Value="@(record.Value is null ? "—" : Money(record.Value.Value))" />
+                    @if (record.Kind is not RequestType.Rfi)
+                    {
+                        <MetaRow Label="Value" Value="@(record.Value is null ? "—" : Money(record.Value.Value))" />
+                    }
                     <MetaRow Label="Related drawing / spec" Value="@Dash(record.RelatedDrawingSpec)" />
                 </div>
 
@@ -85,6 +88,13 @@ else
                     @if (actionError is not null)
                     {
                         <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-3">@actionError</p>
+                    }
+
+                    @if (CanEditDetails)
+                    {
+                        <div class="mb-4 pb-4 border-b border-line">
+                            <button type="button" class="btn-secondary w-full" disabled="@busy" @onclick="OpenEdit">Edit details</button>
+                        </div>
                     }
 
                     @if (record.Status is not RequestStatus.Closed)
@@ -148,6 +158,52 @@ else
             Every email linked to <span class="font-mono">@record?.Reference</span> — “@record?.Title” — will go back to the triage queue so the thread can be triaged again from scratch. As this empties the request, it will be removed from the register.
         </p>
     </Modal>
+
+    <Modal IsOpen="editing"
+           Title="Edit request details"
+           ConfirmLabel="@(busy ? "Saving…" : "Save changes")"
+           OnCancel="CancelEdit"
+           OnConfirm="SaveEdit"
+           Class="max-w-2xl">
+        <div class="space-y-4">
+            @if (editError is not null)
+            {
+                <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@editError</p>
+            }
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <FormField Label="Reference" Value="@editReference" OnChange="v => editReference = v" Required="true" />
+                <div>
+                    <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Status</label>
+                    <select class="field" value="@((int)editStatus)" @onchange="OnEditStatusChanged">
+                        @foreach (var option in StatusOptions)
+                        {
+                            <option value="@((int)option)">@StatusLabel(option)</option>
+                        }
+                    </select>
+                </div>
+            </div>
+
+            <FormField Label="Subject" Value="@editTitle" OnChange="v => editTitle = v" Required="true" />
+
+            <div>
+                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Detail</label>
+                <textarea class="field" rows="4" value="@editDescription" @oninput="OnEditDescriptionInput"></textarea>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <FormField Label="Date issued" Value="@editRaisedAt" OnChange="v => editRaisedAt = v" InputType="date" />
+                <FormField Label="Response due" Value="@editResponseDue" OnChange="v => editResponseDue = v" InputType="date" />
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <FormField Label="Raised to" Value="@editRaisedTo" OnChange="v => editRaisedTo = v" />
+                <FormField Label="Drawing / detail ref" Value="@editDrawingRef" OnChange="v => editDrawingRef = v" />
+            </div>
+
+            <FormField Label="Related drawing / spec" Value="@editRelatedSpec" OnChange="v => editRelatedSpec = v" />
+        </div>
+    </Modal>
 }
 
 @code {
@@ -169,6 +225,28 @@ else
     // Returning to triage is a triage action, open to administrators and project managers (admins
     // carry every role server-side, so they always satisfy this too).
     private bool CanTriage => Session.AvailableRoles.Any(role => role is Role.Admin or Role.ProjectManager);
+
+    // Editing request field values (date issued, references, status, etc.) is open to project
+    // managers and administrators. Admins carry every role server-side, so they always qualify.
+    private bool CanEditDetails => Session.AvailableRoles.Any(role => role is Role.Admin or Role.ProjectManager);
+
+    private static readonly RequestStatus[] StatusOptions =
+    {
+        RequestStatus.Open, RequestStatus.AwaitingResponse, RequestStatus.Responded,
+        RequestStatus.Approved, RequestStatus.Rejected, RequestStatus.Closed
+    };
+
+    private bool editing;
+    private string editReference = "";
+    private string editTitle = "";
+    private string editDescription = "";
+    private string editRaisedAt = "";
+    private string editResponseDue = "";
+    private string editRaisedTo = "";
+    private string editDrawingRef = "";
+    private string editRelatedSpec = "";
+    private RequestStatus editStatus = RequestStatus.Open;
+    private string? editError;
 
     protected override async Task OnInitializedAsync()
     {
@@ -237,6 +315,76 @@ else
         }
     }
 
+    private void OpenEdit()
+    {
+        if (record is null) return;
+        editReference = record.Reference;
+        editTitle = record.Title;
+        editDescription = record.Description ?? "";
+        editRaisedAt = record.RaisedAt.LocalDateTime.ToString("yyyy-MM-dd");
+        editResponseDue = record.ResponseDue?.LocalDateTime.ToString("yyyy-MM-dd") ?? "";
+        editRaisedTo = record.RaisedTo ?? "";
+        editDrawingRef = record.DrawingRef ?? "";
+        editRelatedSpec = record.RelatedDrawingSpec ?? "";
+        editStatus = record.Status;
+        editError = null;
+        editing = true;
+    }
+
+    private void CancelEdit() => editing = false;
+
+    private void OnEditStatusChanged(ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), out var raw)) editStatus = (RequestStatus)raw;
+    }
+
+    private void OnEditDescriptionInput(ChangeEventArgs e) => editDescription = e.Value?.ToString() ?? "";
+
+    private async Task SaveEdit()
+    {
+        if (record is null || busy || !CanEditDetails) return;
+        editError = null;
+
+        if (string.IsNullOrWhiteSpace(editReference)) { editError = "A reference is required."; return; }
+        if (string.IsNullOrWhiteSpace(editTitle)) { editError = "A subject is required."; return; }
+
+        var issued = ParseDate(editRaisedAt) ?? record.RaisedAt;
+
+        var command = new UpdateRequestDetails(
+            record.RequestId,
+            editReference.Trim(),
+            editTitle.Trim(),
+            editDescription?.Trim() ?? "",
+            editStatus,
+            record.Value,
+            record.ResponseText,
+            record.RespondedByEmail,
+            record.ImpliesVariation,
+            NullIfBlank(editRaisedTo),
+            NullIfBlank(editDrawingRef),
+            ParseDate(editResponseDue),
+            NullIfBlank(editRelatedSpec),
+            record.InternalNotes,
+            record.ClientNotes,
+            issued);
+
+        try
+        {
+            busy = true;
+            record = await RequestRegister.UpdateAsync(command);
+            responseDraft = record.ResponseText ?? "";
+            editing = false;
+        }
+        catch
+        {
+            editError = "Couldn't save the changes. Please try again.";
+        }
+        finally
+        {
+            busy = false;
+        }
+    }
+
     private void CancelDelete() => confirmingDelete = false;
 
     private async Task PerformDelete()
@@ -278,6 +426,11 @@ else
     }
 
     private static string Dash(string? value) => string.IsNullOrWhiteSpace(value) ? "—" : value;
+
+    private static string? NullIfBlank(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+
+    private static DateTimeOffset? ParseDate(string value) =>
+        DateTimeOffset.TryParse(value, out var parsed) ? parsed : null;
 
     private static string Date(DateTimeOffset? value) =>
         value is null ? "—" : value.Value.LocalDateTime.ToString("d MMM yyyy");
