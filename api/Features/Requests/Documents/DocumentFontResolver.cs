@@ -1,4 +1,7 @@
 using PdfSharp.Fonts;
+// Alias because the unqualified name "Directory" otherwise binds to the sibling
+// Jewel.JPMS.Api.Features.Directory namespace instead of System.IO.Directory.
+using IODirectory = System.IO.Directory;
 
 namespace Jewel.JPMS.Api.Features.Requests.Documents;
 
@@ -95,7 +98,7 @@ public sealed class DocumentFontResolver : IFontResolver
             // The override may point at a single .ttf or at a directory of fonts.
             if (File.Exists(configured))
                 dirs.Add(Path.GetDirectoryName(configured)!);
-            else if (Directory.Exists(configured))
+            else if (IODirectory.Exists(configured))
                 dirs.Add(configured);
         }
 
@@ -123,7 +126,7 @@ public sealed class DocumentFontResolver : IFontResolver
         // First try exact file names in each directory (cheap, predictable).
         foreach (var dir in directories)
         {
-            if (string.IsNullOrEmpty(dir) || !Directory.Exists(dir))
+            if (string.IsNullOrEmpty(dir) || !IODirectory.Exists(dir))
                 continue;
 
             foreach (var name in fileNames)
@@ -139,11 +142,11 @@ public sealed class DocumentFontResolver : IFontResolver
         var wanted = new HashSet<string>(fileNames, StringComparer.OrdinalIgnoreCase);
         foreach (var dir in directories)
         {
-            if (string.IsNullOrEmpty(dir) || !Directory.Exists(dir))
+            if (string.IsNullOrEmpty(dir) || !IODirectory.Exists(dir))
                 continue;
 
             IEnumerable<string> files;
-            try { files = Directory.EnumerateFiles(dir, "*.ttf", SearchOption.AllDirectories); }
+            try { files = IODirectory.EnumerateFiles(dir, "*.ttf", SearchOption.AllDirectories); }
             catch { continue; }
 
             foreach (var path in files)

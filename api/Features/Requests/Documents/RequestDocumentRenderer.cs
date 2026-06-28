@@ -433,9 +433,10 @@ public static class RequestDocumentRenderer
     private static void HeaderCell(Cell cell, string text)
     {
         cell.Format.LeftIndent = Unit.FromMillimeter(1.5);
-        cell.TopPadding = Unit.FromMillimeter(1);
-        cell.BottomPadding = Unit.FromMillimeter(1);
         var p = cell.AddParagraph(text);
+        // MigraDoc cell padding lives on the Row; emulate vertical padding via paragraph spacing.
+        p.Format.SpaceBefore = Unit.FromMillimeter(1);
+        p.Format.SpaceAfter = Unit.FromMillimeter(1);
         p.Format.Font.Size = 8;
         p.Format.Font.Bold = true;
         p.Format.Font.Color = White;
@@ -444,9 +445,9 @@ public static class RequestDocumentRenderer
     private static void BodyCell(Cell cell, string text)
     {
         cell.Format.LeftIndent = Unit.FromMillimeter(1.5);
-        cell.TopPadding = Unit.FromMillimeter(0.8);
-        cell.BottomPadding = Unit.FromMillimeter(0.8);
         var p = cell.AddParagraph(string.IsNullOrWhiteSpace(text) ? "—" : text);
+        p.Format.SpaceBefore = Unit.FromMillimeter(0.8);
+        p.Format.SpaceAfter = Unit.FromMillimeter(0.8);
         p.Format.Font.Size = 8.5;
         p.Format.Font.Color = Ink;
     }
