@@ -17,7 +17,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="PDFsharp.MigraDoc" Version="6.1.1" />
+    <PackageReference Include="PDFsharp-MigraDoc" Version="6.1.1" />
   </ItemGroup>
 
   <!-- contracts supplies the Jewel.JPMS.Models namespace the linked Documents files reference. -->

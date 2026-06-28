@@ -34,7 +34,7 @@
       (no -gdi / -wpf suffix) is the right choice for the Linux Azure Functions host; a custom
       IFontResolver (DocumentFontResolver) supplies the TrueType faces it needs there.
     -->
-    <PackageReference Include="PDFsharp.MigraDoc" Version="6.1.1" />
+    <PackageReference Include="PDFsharp-MigraDoc" Version="6.1.1" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="8.0.10" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="8.0.10">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
