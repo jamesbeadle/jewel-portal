@@ -17,6 +17,13 @@ public interface IGraphMailClient
     Task<GraphMessage?> GetMessageAsync(string graphMessageId, CancellationToken ct);
 
     /// <summary>
+    /// List the identity (current Graph id + stable internetMessageId) of every message currently in
+    /// the Inbox. Used by reconciliation to mirror the Inbox against the intake table: anything in the
+    /// queue but no longer here has left the Inbox. Pages through the whole folder.
+    /// </summary>
+    Task<IReadOnlyList<GraphInboxItem>> ListInboxMessageIdentitiesAsync(CancellationToken ct);
+
+    /// <summary>
     /// Move a message into a destination folder. Returns the message's NEW Graph id
     /// (the id changes on every move and must be persisted afresh).
     /// </summary>
@@ -59,6 +66,9 @@ public sealed record GraphMessage(
     bool HasAttachments,
     DateTimeOffset ReceivedAt,
     bool IsRemoved);
+
+/// <summary>A message's identity in the Inbox: its current (move-volatile) Graph id and its stable internetMessageId.</summary>
+public sealed record GraphInboxItem(string Id, string InternetMessageId);
 
 public sealed record GraphSubscription(string Id, DateTimeOffset ExpiresAt);
 

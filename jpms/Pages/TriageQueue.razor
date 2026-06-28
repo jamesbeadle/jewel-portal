@@ -34,7 +34,7 @@ else
             <p class="text-xs uppercase tracking-wider text-content-subtle font-medium mb-1">JPMS · projects@@jewelbb.co.uk</p>
             <h1 class="text-2xl md:text-3xl font-semibold text-content leading-tight">Mailbox triage</h1>
             <p class="text-sm text-content-muted mt-2">
-                @items.Count email@(items.Count == 1 ? "" : "s") waiting to be assigned to a request.
+                @total email@(total == 1 ? "" : "s") waiting to be assigned to a request.
             </p>
         </header>
 
@@ -77,7 +77,7 @@ else
             </div>
         }
 
-        @if (items.Count == 0)
+        @if (total == 0)
         {
             <div class="panel p-8 text-center">
                 <p class="text-sm text-content">Nothing in the queue.</p>
@@ -88,7 +88,7 @@ else
         {
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
                 <div class="space-y-2 lg:col-span-1">
-                    @foreach (var item in PagedItems)
+                    @foreach (var item in items)
                     {
                         <button type="button" @key="item.IntakeId" @onclick="() => Select(item)"
                                 class="@RowClass(item)">
@@ -348,11 +348,13 @@ else
         RequestType.Rfi, RequestType.Rfq, RequestType.Rfp, RequestType.Rfc, RequestType.Rfa
     };
 
-    private const int PageSize = 5;
+    private const int PageSize = 25;
 
     private bool isLoaded;
     private string? loadError;
+    // The current page only — the server pages the queue, so `items` is one page, not the whole queue.
     private IReadOnlyList<IntakeEmail> items = Array.Empty<IntakeEmail>();
+    private int total;
     private IntakeEmail? selected;
     private IReadOnlyList<Request> unassigned = Array.Empty<Request>();
     private string? unassignedError;
@@ -366,19 +368,20 @@ else
     private bool CanTriage =>
         Session.AvailableRoles.Any(role => role is Role.Admin or Role.ProjectManager);
 
-    private int PageCount => Math.Max(1, (int)Math.Ceiling(items.Count / (double)PageSize));
+    private int PageCount => Math.Max(1, (int)Math.Ceiling(total / (double)PageSize));
 
-    private IEnumerable<IntakeEmail> PagedItems =>
-        items.Skip((page - 1) * PageSize).Take(PageSize);
-
-    private void PreviousPage()
+    private async Task PreviousPage()
     {
-        if (page > 1) page--;
+        if (page <= 1) return;
+        page--;
+        await LoadAsync();
     }
 
-    private void NextPage()
+    private async Task NextPage()
     {
-        if (page < PageCount) page++;
+        if (page >= PageCount) return;
+        page++;
+        await LoadAsync();
     }
 
     private bool busy;
@@ -458,16 +461,27 @@ else
         loadError = null;
         try
         {
-            items = (await Intake.ListOpenAsync())
-                .OrderByDescending(x => x.ReceivedAt)
-                .ToList();
+            if (page < 1) page = 1;
+            var result = await Intake.ListOpenAsync((page - 1) * PageSize, PageSize);
+            items = result.Items;
+            total = result.Total;
+
+            // If the queue shrank (e.g. emails reconciled out) the current page may now be past the
+            // end — clamp to the last page and refetch so we never show an empty page mid-queue.
+            if (page > PageCount)
+            {
+                page = PageCount;
+                var clamped = await Intake.ListOpenAsync((page - 1) * PageSize, PageSize);
+                items = clamped.Items;
+                total = clamped.Total;
+            }
         }
         catch
         {
             loadError = "Couldn't load the triage queue. Please try again.";
             items = Array.Empty<IntakeEmail>();
+            total = 0;
         }
-        if (page > PageCount) page = PageCount;
     }
 
     private async Task Select(IntakeEmail item)

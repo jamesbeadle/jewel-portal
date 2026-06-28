@@ -1,14 +1,15 @@
+using Jewel.JPMS.Contracts.Cqrs;
 using Jewel.JPMS.Contracts.Requests;
 using Jewel.JPMS.Models;
 
 namespace Jewel.JPMS.Services;
 
-// Frontend access to the requests@ mailbox triage queue: list everything still awaiting a
-// decision, and the four resolutions a triager can take (claim, link to an existing request,
+// Frontend access to the requests@ mailbox triage queue: list a page of everything still awaiting
+// a decision, and the four resolutions a triager can take (claim, link to an existing request,
 // create a new request, or discard).
 public interface IIntakeQueue
 {
-    Task<IReadOnlyList<IntakeEmail>> ListOpenAsync(CancellationToken cancellationToken = default);
+    Task<PagedResult<IntakeEmail>> ListOpenAsync(int skip = 0, int take = 25, CancellationToken cancellationToken = default);
     Task<IntakeEmailDetail> GetDetailAsync(string intakeId, CancellationToken cancellationToken = default);
     Task<RequestSuggestion> SuggestAsync(string intakeId, CancellationToken cancellationToken = default);
     Task<IntakeEmail> ClaimAsync(string intakeId, CancellationToken cancellationToken = default);

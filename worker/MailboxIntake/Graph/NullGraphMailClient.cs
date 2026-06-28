@@ -25,6 +25,12 @@ public sealed class NullGraphMailClient : IGraphMailClient
         return Task.FromResult<GraphMessage?>(null);
     }
 
+    public Task<IReadOnlyList<GraphInboxItem>> ListInboxMessageIdentitiesAsync(CancellationToken ct)
+    {
+        _logger.LogWarning("Mailbox intake not configured; skipping Graph inbox listing.");
+        return Task.FromResult<IReadOnlyList<GraphInboxItem>>(Array.Empty<GraphInboxItem>());
+    }
+
     public Task<string> MoveMessageAsync(string graphMessageId, string destinationFolderId, CancellationToken ct)
     {
         _logger.LogWarning("Mailbox intake not configured; skipping Graph move.");

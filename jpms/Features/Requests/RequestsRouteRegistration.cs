@@ -32,9 +32,13 @@ public static class RequestsRouteRegistration
             new QueryRoute("/api/requests/unassigned",
                 _ => "/api/requests/unassigned"));
 
-        queries.Register<ListOpenIntake, IReadOnlyList<IntakeEmail>>(
+        queries.Register<ListOpenIntake, PagedResult<IntakeEmail>>(
             new QueryRoute("/api/intake",
-                _ => "/api/intake"));
+                query =>
+                {
+                    var q = (ListOpenIntake)query;
+                    return $"/api/intake?skip={q.Skip}&take={q.Take}";
+                }));
 
         queries.Register<GetIntakeEmailDetail, IntakeEmailDetail>(
             new QueryRoute("/api/intake/{intakeId}/detail",

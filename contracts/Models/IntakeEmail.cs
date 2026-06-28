@@ -10,7 +10,8 @@ public enum IntakeStatus
     Claimed = 1,     // a staff member has taken ownership to work it
     Linked = 2,      // attached to a request (existing or newly created)
     Discarded = 3,   // spam / not relevant
-    Failed = 4       // processing error; needs attention
+    Failed = 4,      // processing error; needs attention
+    RemovedFromMailbox = 5 // vanished from the Inbox before triage; auto-filed to No-action-required. Excluded from the triage queue.
 }
 
 // One inbound email captured from the shared projects@ mailbox, awaiting or having

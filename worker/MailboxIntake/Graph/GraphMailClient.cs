@@ -81,6 +81,40 @@ public sealed class GraphMailClient : IGraphMailClient
         return ParseMessage(doc.RootElement);
     }
 
+    public async Task<IReadOnlyList<GraphInboxItem>> ListInboxMessageIdentitiesAsync(CancellationToken ct)
+    {
+        // A normal (non-delta) collection read, so $top IS a real page size here (unlike delta). We
+        // page via @odata.nextLink until the whole Inbox is enumerated. Only the two identity fields
+        // are selected to keep the payload small.
+        var items = new List<GraphInboxItem>();
+        string? url = $"{GraphBase}/users/{Mailbox}/mailFolders/inbox/messages"
+            + "?$select=id,internetMessageId&$top=100";
+
+        while (!string.IsNullOrEmpty(url))
+        {
+            using var response = await SendAsync(HttpMethod.Get, url, content: null, ct);
+            await using var stream = await response.Content.ReadAsStreamAsync(ct);
+            using var doc = await JsonDocument.ParseAsync(stream, cancellationToken: ct);
+            var root = doc.RootElement;
+
+            if (root.TryGetProperty("value", out var value) && value.ValueKind == JsonValueKind.Array)
+            {
+                foreach (var item in value.EnumerateArray())
+                {
+                    if (item.ValueKind != JsonValueKind.Object) continue;
+                    var id = item.TryGetProperty("id", out var idEl) ? idEl.GetString() : null;
+                    var imid = item.TryGetProperty("internetMessageId", out var imidEl) ? imidEl.GetString() : null;
+                    if (!string.IsNullOrEmpty(id) && !string.IsNullOrEmpty(imid))
+                        items.Add(new GraphInboxItem(id, imid));
+                }
+            }
+
+            url = root.TryGetProperty("@odata.nextLink", out var n) ? n.GetString() : null;
+        }
+
+        return items;
+    }
+
     public async Task<string> MoveMessageAsync(string graphMessageId, string destinationFolderId, CancellationToken ct)
     {
         var url = $"{GraphBase}/users/{Mailbox}/messages/{Uri.EscapeDataString(graphMessageId)}/move";

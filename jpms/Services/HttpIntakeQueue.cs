@@ -1,3 +1,4 @@
+using Jewel.JPMS.Contracts.Cqrs;
 using Jewel.JPMS.Contracts.Requests;
 using Jewel.JPMS.Cqrs;
 using Jewel.JPMS.Models;
@@ -15,8 +16,8 @@ public sealed class HttpIntakeQueue : IIntakeQueue
         this.commands = commands;
     }
 
-    public Task<IReadOnlyList<IntakeEmail>> ListOpenAsync(CancellationToken cancellationToken = default) =>
-        queries.AskAsync(new ListOpenIntake(), cancellationToken);
+    public Task<PagedResult<IntakeEmail>> ListOpenAsync(int skip = 0, int take = 25, CancellationToken cancellationToken = default) =>
+        queries.AskAsync(new ListOpenIntake(skip, take), cancellationToken);
 
     public Task<IntakeEmailDetail> GetDetailAsync(string intakeId, CancellationToken cancellationToken = default) =>
         queries.AskAsync(new GetIntakeEmailDetail(intakeId), cancellationToken);

@@ -17,7 +17,7 @@ public static class RequestsFeatureRegistration
         services.AddScoped<IQueryHandler<GetRequestDocument, RequestDocumentFile?>, GetRequestDocumentHandler>();
         services.AddScoped<IQueryHandler<ListRequestMessages, IReadOnlyList<RequestMessage>>, ListRequestMessagesHandler>();
         services.AddScoped<IQueryHandler<ListUnassignedRequests, IReadOnlyList<Request>>, ListUnassignedRequestsHandler>();
-        services.AddScoped<IQueryHandler<ListOpenIntake, IReadOnlyList<IntakeEmail>>, ListOpenIntakeHandler>();
+        services.AddScoped<IQueryHandler<ListOpenIntake, PagedResult<IntakeEmail>>, ListOpenIntakeHandler>();
         services.AddScoped<IQueryHandler<GetIntakeEmailDetail, IntakeEmailDetail>, GetIntakeEmailDetailHandler>();
         services.AddScoped<IQueryHandler<SuggestRequestFromIntake, RequestSuggestion>, SuggestRequestFromIntakeHandler>();
 

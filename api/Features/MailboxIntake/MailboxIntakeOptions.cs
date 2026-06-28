@@ -64,6 +64,12 @@ public sealed class MailboxIntakeOptions
     /// <summary>Run the delta sweep timer (the completeness safety net + backlog import).</summary>
     public bool EnableDeltaSweep { get; set; } = true;
 
+    /// <summary>
+    /// Run the inbox-reconcile timer: mirror the Inbox against the triage queue so emails removed
+    /// from the Inbox drop out of triage, and re-drive any outcome moves that never landed.
+    /// </summary>
+    public bool EnableReconcile { get; set; } = true;
+
     /// <summary>Create/renew the Graph change-notification subscription (near-real-time speed).</summary>
     public bool EnableWebhook { get; set; }
 
@@ -105,6 +111,7 @@ public sealed class MailboxIntakeOptions
             ClientState = section["ClientState"],
             Enabled = ParseBool(section["Enabled"], true),
             EnableDeltaSweep = ParseBool(section["EnableDeltaSweep"], true),
+            EnableReconcile = ParseBool(section["EnableReconcile"], true),
             EnableWebhook = ParseBool(section["EnableWebhook"], false),
             EnableFolderMoves = ParseBool(section["EnableFolderMoves"], true),
             EnableOutboundSend = ParseBool(section["EnableOutboundSend"], false),
