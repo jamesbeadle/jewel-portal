@@ -56,6 +56,10 @@ public sealed class CreateRequestFromIntakeHandler : ICommandHandler<CreateReque
 
         await mailbox.ScheduleOutcomeMoveAsync(intake.IntakeId, IntakeStatus.Linked, cancellationToken);
 
+        // Issue the rendered document to the project's contacts now the request exists (no-op when the
+        // mailbox feature is unconfigured, or when the project has no flagged contacts).
+        await mailbox.ScheduleRequestDocumentSendAsync(request.RequestId, recipientOverride: null, cancellationToken);
+
         // Pull any other still-untriaged emails from the same thread onto this request too.
         await ThreadGather.SweepSiblingsAsync(context, mailbox, intake, request.RequestId, cancellationToken);
 

@@ -1,6 +1,8 @@
 using Jewel.JPMS.Api.Cqrs;
 using Jewel.JPMS.Api.Features.Projects.Commands;
+using Jewel.JPMS.Api.Features.Projects.Contacts;
 using Jewel.JPMS.Api.Features.Projects.Queries;
+using Jewel.JPMS.Contracts.Cqrs;
 using Jewel.JPMS.Contracts.Projects;
 using Jewel.JPMS.Models;
 using Microsoft.Extensions.DependencyInjection;
@@ -21,6 +23,13 @@ public static class ProjectsFeatureRegistration
         services.AddScoped<ICommandHandler<UpdateProjectDetails, Project>, UpdateProjectDetailsHandler>();
         services.AddScoped<UpdateProjectDetailsAuthorisation>();
         services.AddScoped<UpdateProjectDetailsValidation>();
+
+        // Project contacts — the clients/architects a project's RFIs and requests are issued to.
+        services.AddScoped<IQueryHandler<ListProjectContacts, IReadOnlyList<ProjectContact>>, ListProjectContactsHandler>();
+        services.AddScoped<ICommandHandler<UpsertProjectContact, ProjectContact>, UpsertProjectContactHandler>();
+        services.AddScoped<ICommandHandler<RemoveProjectContact, Acknowledgement>, RemoveProjectContactHandler>();
+        services.AddScoped<ProjectContactAuthorisation>();
+        services.AddScoped<UpsertProjectContactValidation>();
 
         return services;
     }

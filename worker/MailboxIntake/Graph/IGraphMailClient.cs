@@ -62,9 +62,26 @@ public sealed record GraphMessage(
 
 public sealed record GraphSubscription(string Id, DateTimeOffset ExpiresAt);
 
-/// <summary>A new outbound email to send via Graph.</summary>
+/// <summary>A single email recipient (address plus an optional display name).</summary>
+public sealed record GraphRecipient(string Email, string? Name = null);
+
+/// <summary>
+/// A file to attach to an outbound message. Sent as a Graph fileAttachment (base64 contentBytes);
+/// suitable for the small request-document PDFs, which sit well under the sendMail size limit.
+/// </summary>
+public sealed record GraphAttachment(string FileName, string ContentType, byte[] Content);
+
+/// <summary>
+/// A new outbound email to send via Graph. Supports one or more recipients and zero or more
+/// attachments (e.g. the request-document PDF).
+/// </summary>
 public sealed record GraphOutboundMessage(
-    string ToEmail,
-    string? ToName,
+    IReadOnlyList<GraphRecipient> To,
     string Subject,
-    string HtmlBody);
+    string HtmlBody,
+    IReadOnlyList<GraphAttachment>? Attachments = null)
+{
+    /// <summary>Convenience constructor for a single recipient with no attachments.</summary>
+    public GraphOutboundMessage(string toEmail, string? toName, string subject, string htmlBody)
+        : this(new[] { new GraphRecipient(toEmail, toName) }, subject, htmlBody) { }
+}

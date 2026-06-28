@@ -20,6 +20,13 @@ public interface IMailboxActionScheduler
 
     /// <summary>Enqueue a move of the intake email back to the Inbox (return-to-triage undo).</summary>
     Task ScheduleReturnToInboxAsync(string intakeId, CancellationToken ct);
+
+    /// <summary>
+    /// Enqueue sending a request's rendered document (RFI etc.) to the project's flagged contacts.
+    /// Pass <paramref name="recipientOverride"/> to email a single ad-hoc address instead (a resend).
+    /// The PDF is regenerated from SQL by the worker, so this carries only the request id.
+    /// </summary>
+    Task ScheduleRequestDocumentSendAsync(string requestId, string? recipientOverride, CancellationToken ct);
 }
 
 /// <summary>Default scheduler: enqueues onto the mailbox-actions queue, honouring the feature flags.</summary>
@@ -61,5 +68,19 @@ public sealed class MailboxActionScheduler : IMailboxActionScheduler
 
         return _queue.EnqueueMailboxActionAsync(
             new MailboxActionMessage(MailboxActionType.ReturnToInbox, intakeId), ct);
+    }
+
+    public Task ScheduleRequestDocumentSendAsync(string requestId, string? recipientOverride, CancellationToken ct)
+    {
+        if (!_options.Enabled || !_options.EnableRequestDocuments)
+            return Task.CompletedTask;
+
+        return _queue.EnqueueMailboxActionAsync(
+            new MailboxActionMessage(
+                MailboxActionType.SendRequestDocument,
+                IntakeId: string.Empty,
+                RequestId: requestId,
+                RecipientOverride: recipientOverride),
+            ct);
     }
 }

@@ -14,6 +14,7 @@ public static class RequestsFeatureRegistration
     {
         services.AddScoped<IQueryHandler<ListRequestsForProject, IReadOnlyList<Request>>, ListRequestsForProjectHandler>();
         services.AddScoped<IQueryHandler<GetRequestById, Request?>, GetRequestByIdHandler>();
+        services.AddScoped<IQueryHandler<GetRequestDocument, RequestDocumentFile?>, GetRequestDocumentHandler>();
         services.AddScoped<IQueryHandler<ListRequestMessages, IReadOnlyList<RequestMessage>>, ListRequestMessagesHandler>();
         services.AddScoped<IQueryHandler<ListUnassignedRequests, IReadOnlyList<Request>>, ListUnassignedRequestsHandler>();
         services.AddScoped<IQueryHandler<ListOpenIntake, IReadOnlyList<IntakeEmail>>, ListOpenIntakeHandler>();
@@ -55,6 +56,10 @@ public static class RequestsFeatureRegistration
         services.AddScoped<ICommandHandler<CreateRequestFromIntake, Request>, CreateRequestFromIntakeHandler>();
         services.AddScoped<CreateRequestFromIntakeAuthorisation>();
         services.AddScoped<CreateRequestFromIntakeValidation>();
+
+        services.AddScoped<ICommandHandler<ResendRequestDocument, Acknowledgement>, ResendRequestDocumentHandler>();
+        services.AddScoped<ResendRequestDocumentAuthorisation>();
+        services.AddScoped<ResendRequestDocumentValidation>();
 
         return services;
     }

@@ -73,6 +73,14 @@ public sealed class MailboxIntakeOptions
     /// <summary>Send outbound (Shared) replies via Graph. Off by default — enable deliberately.</summary>
     public bool EnableOutboundSend { get; set; }
 
+    /// <summary>
+    /// Email the rendered request (RFI etc.) document to the project's flagged contacts: automatically
+    /// when a request is raised, and on demand when a triager resends it. On by default so "send the
+    /// document whenever a new RFI is created" is honoured out of the box — but it is a complete no-op
+    /// when Graph is unconfigured (the scheduler is wired to a NullMailboxQueue), so it is safe on.
+    /// </summary>
+    public bool EnableRequestDocuments { get; set; } = true;
+
     /// <summary>True when the minimum Graph credentials are present.</summary>
     public bool IsConfigured =>
         !string.IsNullOrWhiteSpace(TenantId)
@@ -99,7 +107,8 @@ public sealed class MailboxIntakeOptions
             EnableDeltaSweep = ParseBool(section["EnableDeltaSweep"], true),
             EnableWebhook = ParseBool(section["EnableWebhook"], false),
             EnableFolderMoves = ParseBool(section["EnableFolderMoves"], true),
-            EnableOutboundSend = ParseBool(section["EnableOutboundSend"], false)
+            EnableOutboundSend = ParseBool(section["EnableOutboundSend"], false),
+            EnableRequestDocuments = ParseBool(section["EnableRequestDocuments"], true)
         };
 
         var mailbox = section["Mailbox"];

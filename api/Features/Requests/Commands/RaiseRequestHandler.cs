@@ -1,6 +1,7 @@
 using Jewel.JPMS.Api.Cqrs;
 using Jewel.JPMS.Api.Data;
 using Jewel.JPMS.Api.Data.Entities;
+using Jewel.JPMS.Api.Features.MailboxIntake.Actions;
 using Jewel.JPMS.Contracts.Requests;
 using Jewel.JPMS.Models;
 using Microsoft.EntityFrameworkCore;
@@ -10,7 +11,8 @@ namespace Jewel.JPMS.Api.Features.Requests.Commands;
 public sealed class RaiseRequestHandler : ICommandHandler<RaiseRequest, Request>
 {
     private readonly JpmsContext context;
-    public RaiseRequestHandler(JpmsContext context) { this.context = context; }
+    private readonly IMailboxActionScheduler mailbox;
+    public RaiseRequestHandler(JpmsContext context, IMailboxActionScheduler mailbox) { this.context = context; this.mailbox = mailbox; }
 
     public async Task<Request> HandleAsync(RaiseRequest command, CancellationToken cancellationToken)
     {
@@ -42,6 +44,13 @@ public sealed class RaiseRequestHandler : ICommandHandler<RaiseRequest, Request>
         };
         context.Requests.Add(entity);
         await context.SaveChangesAsync(cancellationToken);
+
+        // Issue the document to the project's contacts when a fresh (Open) request is raised. Requests
+        // imported in an already-resolved state are skipped, and the send is a no-op when the mailbox
+        // feature is unconfigured, so this is safe to call unconditionally on the creation path.
+        if (entity.Status == (int)RequestStatus.Open)
+            await mailbox.ScheduleRequestDocumentSendAsync(entity.RequestId, recipientOverride: null, cancellationToken);
+
         return entity.ToModel();
     }
 }

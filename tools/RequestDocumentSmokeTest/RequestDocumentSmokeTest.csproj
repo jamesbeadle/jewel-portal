@@ -1,0 +1,34 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Standalone smoke test for the request-document renderer. It links the SAME source files the api and
+    worker compile (RequestDocumentModel, RequestDocumentRenderer, DocumentFontResolver), so a successful
+    render here proves those files compile and that a PDF is produced with the fonts available on this
+    machine. Run it with:  dotnet run --project tools/RequestDocumentSmokeTest
+    The PDF is written to tools/RequestDocumentSmokeTest/REQ-0001-smoke.pdf (or a path passed as arg 1).
+  -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>Jewel.JPMS.Tools.RequestDocumentSmokeTest</RootNamespace>
+    <AssemblyName>RequestDocumentSmokeTest</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="PDFsharp.MigraDoc" Version="6.1.1" />
+  </ItemGroup>
+
+  <!-- contracts supplies the Jewel.JPMS.Models namespace the linked Documents files reference. -->
+  <ItemGroup>
+    <ProjectReference Include="..\..\contracts\Jewel.JPMS.Contracts.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Include="..\..\api\Features\Requests\Documents\RequestDocumentModel.cs" Link="Documents\RequestDocumentModel.cs" />
+    <Compile Include="..\..\api\Features\Requests\Documents\RequestDocumentRenderer.cs" Link="Documents\RequestDocumentRenderer.cs" />
+    <Compile Include="..\..\api\Features\Requests\Documents\DocumentFontResolver.cs" Link="Documents\DocumentFontResolver.cs" />
+  </ItemGroup>
+
+</Project>

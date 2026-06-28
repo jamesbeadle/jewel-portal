@@ -137,19 +137,33 @@ public sealed class GraphMailClient : IGraphMailClient
     public async Task SendMailAsync(GraphOutboundMessage message, CancellationToken ct)
     {
         var url = $"{GraphBase}/users/{Mailbox}/sendMail";
-        var payload = new
-        {
-            message = new
+
+        var toRecipients = message.To
+            .Select(r => new { emailAddress = new { address = r.Email, name = r.Name ?? r.Email } })
+            .ToArray();
+
+        // Graph attachments need the "@odata.type" property name, which an anonymous type cannot
+        // express, so each attachment is built as a dictionary that serialises to the right shape.
+        var attachments = (message.Attachments ?? Array.Empty<GraphAttachment>())
+            .Select(a => new Dictionary<string, object>
             {
-                subject = message.Subject,
-                body = new { contentType = "HTML", content = message.HtmlBody },
-                toRecipients = new[]
-                {
-                    new { emailAddress = new { address = message.ToEmail, name = message.ToName ?? message.ToEmail } }
-                }
-            },
-            saveToSentItems = true
+                ["@odata.type"] = "#microsoft.graph.fileAttachment",
+                ["name"] = a.FileName,
+                ["contentType"] = a.ContentType,
+                ["contentBytes"] = Convert.ToBase64String(a.Content)
+            })
+            .ToArray();
+
+        var messageBody = new Dictionary<string, object?>
+        {
+            ["subject"] = message.Subject,
+            ["body"] = new { contentType = "HTML", content = message.HtmlBody },
+            ["toRecipients"] = toRecipients
         };
+        if (attachments.Length > 0)
+            messageBody["attachments"] = attachments;
+
+        var payload = new { message = messageBody, saveToSentItems = true };
         using var response = await SendAsync(HttpMethod.Post, url, JsonContent.Create(payload), ct);
         _ = response;
     }

@@ -18,6 +18,8 @@
     <PackageReference Include="Microsoft.Azure.Functions.Worker.Extensions.Timer" Version="4.3.1" />
     <PackageReference Include="Microsoft.Azure.Functions.Worker.Sdk" Version="1.17.4" />
     <PackageReference Include="Microsoft.Azure.Functions.Worker.ApplicationInsights" Version="1.2.0" />
+    <!-- PDFsharp/MigraDoc (MIT): the worker renders the same branded request document before emailing it. -->
+    <PackageReference Include="PDFsharp.MigraDoc" Version="6.1.1" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="8.0.10" />
   </ItemGroup>
 
@@ -41,6 +43,12 @@
     <Compile Include="..\api\Features\MailboxIntake\Queue\NullMailboxQueue.cs" Link="Shared\NullMailboxQueue.cs" />
     <Compile Include="..\api\Features\MailboxIntake\Actions\IMailboxActionScheduler.cs" Link="Shared\IMailboxActionScheduler.cs" />
     <Compile Include="..\api\Features\Requests\IntakeConversation.cs" Link="Shared\IntakeConversation.cs" />
+    <!-- Shared request-document renderer: built in the api project, compiled into the worker so the
+         emailed PDF is byte-for-byte the same as the one downloaded through the platform. -->
+    <Compile Include="..\api\Features\Requests\Documents\RequestDocumentModel.cs" Link="Shared\Documents\RequestDocumentModel.cs" />
+    <Compile Include="..\api\Features\Requests\Documents\RequestDocumentBuilder.cs" Link="Shared\Documents\RequestDocumentBuilder.cs" />
+    <Compile Include="..\api\Features\Requests\Documents\RequestDocumentRenderer.cs" Link="Shared\Documents\RequestDocumentRenderer.cs" />
+    <Compile Include="..\api\Features\Requests\Documents\DocumentFontResolver.cs" Link="Shared\Documents\DocumentFontResolver.cs" />
   </ItemGroup>
 
   <ItemGroup>

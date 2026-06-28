@@ -19,12 +19,19 @@ public sealed record MailboxActionMessage(
     // For moves: the triage outcome whose folder we move into. For sends: ignored.
     int? TargetStatus = null,
     // For outbound sends only.
-    string? RequestMessageId = null);
+    string? RequestMessageId = null,
+    // For SendRequestDocument only: the request whose document to render + email.
+    string? RequestId = null,
+    // For SendRequestDocument only: when set, the document is emailed to this single address
+    // (an ad-hoc resend) instead of the project's flagged contacts.
+    string? RecipientOverride = null);
 
 public enum MailboxActionType
 {
     MoveToOutcomeFolder = 0,
     SendOutbound = 1,
     // Move an email back to the Inbox so it re-enters the triage queue (used by return-to-triage undo).
-    ReturnToInbox = 2
+    ReturnToInbox = 2,
+    // Render a request's document (RFI etc.) from SQL and email it to the project's contacts.
+    SendRequestDocument = 3
 }
