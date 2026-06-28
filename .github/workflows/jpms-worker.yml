@@ -17,11 +17,12 @@ on:
       - 'worker/**'
       - 'contracts/**'
       # The worker compiles shared source from these api paths via linked includes, so changes
-      # to them must redeploy the worker too.
+      # to them must redeploy the worker too. These globs cover every file the worker csproj links
+      # (MailboxIntake queues/actions/options, the Requests identifier + intake conversation, and the
+      # whole Requests/Documents renderer) so a fix to any linked source rebuilds the worker.
       - 'api/Data/**'
-      - 'api/Features/MailboxIntake/MailboxIntakeOptions.cs'
-      - 'api/Features/MailboxIntake/Queue/MailboxQueues.cs'
-      - 'api/Features/Requests/RequestsIdentifierFactory.cs'
+      - 'api/Features/MailboxIntake/**'
+      - 'api/Features/Requests/**'
       - '.github/workflows/jpms-worker.yml'
   workflow_dispatch:
 
