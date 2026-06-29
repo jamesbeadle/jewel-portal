@@ -1,5 +1,6 @@
 using Jewel.JPMS;
 using Jewel.JPMS.Cqrs;
+using Jewel.JPMS.Features.Agents;
 using Jewel.JPMS.Features.Boq;
 using Jewel.JPMS.Features.Cashflow;
 using Jewel.JPMS.Features.CostCenters;
@@ -50,6 +51,7 @@ builder.Services.AddCvrReadModels();
 builder.Services.AddCloseoutReadModels();
 builder.Services.AddRequestsReadModels();
 builder.Services.AddCostCentersReadModels();
+builder.Services.AddAgentsReadModels();
 
 builder.Services.AddScoped<IUserDirectory, HttpUserDirectory>();
 builder.Services.AddScoped<IAccessRequestStore, HttpAccessRequestStore>();
@@ -70,6 +72,7 @@ builder.Services.AddScoped<IValuationReportStore, HttpValuationReportStore>();
 builder.Services.AddScoped<ICvrStore, HttpCvrStore>();
 builder.Services.AddScoped<ICommercialInputsStore, HttpCommercialInputsStore>();
 builder.Services.AddScoped<ICloseoutStore, HttpCloseoutStore>();
+builder.Services.AddScoped<IAgentDesk, HttpAgentDesk>();
 
 builder.Services.AddScoped<StoreChangeHub>();
 builder.Services.AddScoped<AuthService>();
@@ -101,6 +104,7 @@ using (var routeScope = app.Services.CreateScope())
     CloseoutRouteRegistration.RegisterCloseoutRoutes(queryRoutes, commandRoutes);
     RequestsRouteRegistration.RegisterRequestsRoutes(queryRoutes, commandRoutes);
     CostCentersRouteRegistration.RegisterCostCentersRoutes(queryRoutes, commandRoutes);
+    AgentsRouteRegistration.RegisterAgentsRoutes(queryRoutes, commandRoutes);
 }
 
 await app.RunAsync();

@@ -1,0 +1,335 @@
+@using Jewel.JPMS.Contracts.Agents
+@using Jewel.JPMS.Models
+@implements IDisposable
+@inject IAgentDesk Agents
+@inject SessionService Session
+
+<div class="panel p-5">
+    <div class="flex items-center justify-between mb-4">
+        <h3 class="eyebrow">Agents</h3>
+        <span class="text-xs text-content-subtle">@applied.Count applied</span>
+    </div>
+
+    @if (!loaded)
+    {
+        <p class="text-sm text-content-subtle">Loading…</p>
+    }
+    else
+    {
+        @if (error is not null)
+        {
+            <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-3">@error</p>
+        }
+
+        @* Applied agents *@
+        @if (applied.Count == 0)
+        {
+            <p class="text-sm text-content-subtle italic mb-4">No agents applied. Apply one below to start watching this request.</p>
+        }
+        else
+        {
+            <ul class="space-y-2 mb-4">
+                @foreach (var agent in applied)
+                {
+                    <li class="flex items-start justify-between gap-3 rounded-lg border border-line bg-surface-raised px-3 py-2">
+                        <div class="min-w-0">
+                            <div class="flex items-center gap-2">
+                                <span class="text-sm font-medium text-content">@agent.DisplayName</span>
+                                <span class="inline-flex items-center rounded bg-accent/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-accent">@agent.Discipline.DisplayName()</span>
+                                @if (agent.IsComplete)
+                                {
+                                    <span class="inline-flex items-center rounded bg-emerald-500/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-emerald-600">Complete</span>
+                                }
+                                else
+                                {
+                                    <span class="inline-flex items-center rounded bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-600">Active</span>
+                                }
+                            </div>
+                            <p class="text-xs text-content-subtle mt-0.5">@agent.StatusMessage</p>
+                        </div>
+                        @if (CanOperate)
+                        {
+                            <button type="button" class="text-xs text-content-muted hover:text-negative shrink-0" disabled="@busy" @onclick="() => Remove(agent)">Remove</button>
+                        }
+                    </li>
+                }
+            </ul>
+        }
+
+        @* Apply an agent *@
+        @if (CanOperate && Unapplied().Any())
+        {
+            <div class="flex flex-wrap items-end gap-2 mb-5 pb-5 border-b border-line">
+                <div class="grow min-w-[12rem]">
+                    <label class="eyebrow block mb-1">Apply an agent</label>
+                    <select class="field" value="@applyKey" @onchange="OnApplyKeyChanged">
+                        <option value="">Choose an agent…</option>
+                        @foreach (var descriptor in Unapplied())
+                        {
+                            <option value="@descriptor.Key">@descriptor.DisplayName — @descriptor.Discipline.DisplayName()</option>
+                        }
+                    </select>
+                </div>
+                <button type="button" class="btn-primary" disabled="@(busy || string.IsNullOrEmpty(applyKey))" @onclick="Apply">Apply</button>
+            </div>
+        }
+
+        @* Chat with a selected agent *@
+        @if (applied.Count > 0)
+        {
+            <div class="mb-2">
+                <label class="eyebrow block mb-1">Chat with</label>
+                <select class="field" value="@selectedKey" @onchange="OnSelectedKeyChanged">
+                    @foreach (var agent in applied)
+                    {
+                        <option value="@agent.AgentKey">@agent.DisplayName</option>
+                    }
+                </select>
+            </div>
+
+            @if (!string.IsNullOrEmpty(selectedKey))
+            {
+                <div class="rounded-lg border border-line bg-surface-raised p-3 mb-3">
+                    @if (chatLoading)
+                    {
+                        <p class="text-sm text-content-subtle">Loading conversation…</p>
+                    }
+                    else if (chat.Count == 0)
+                    {
+                        <p class="text-sm text-content-subtle italic">No messages yet. Ask the agent a question below.</p>
+                    }
+                    else
+                    {
+                        <ol class="space-y-3">
+                            @foreach (var message in chat)
+                            {
+                                <li class="border-l-2 pl-3 @(message.Role == AgentChatRole.Agent ? "border-accent/60" : message.Role == AgentChatRole.System ? "border-line-strong" : "border-blue-500/50")">
+                                    <div class="flex flex-wrap items-center gap-2 mb-0.5">
+                                        <span class="text-sm font-medium text-content">@RoleLabel(message)</span>
+                                        <span class="text-xs text-content-subtle">@message.PostedAt.LocalDateTime.ToString("d MMM yyyy, HH:mm")</span>
+                                    </div>
+                                    <p class="text-sm text-content whitespace-pre-wrap">@message.Body</p>
+                                </li>
+                            }
+                        </ol>
+                    }
+                </div>
+
+                <textarea class="field mb-2" rows="2" value="@draft" @oninput="OnDraftInput"
+                          placeholder="Ask @SelectedName a question…"></textarea>
+                <div class="flex flex-wrap items-center justify-between gap-2">
+                    <button type="button" class="btn-secondary" disabled="@(busy || string.IsNullOrEmpty(selectedKey))" @onclick="RunAnalysis">
+                        @(busy ? "Working…" : "Run analysis")
+                    </button>
+                    <button type="button" class="btn-primary" disabled="@(busy || string.IsNullOrWhiteSpace(draft))" @onclick="Send">
+                        @(busy ? "Sending…" : "Send")
+                    </button>
+                </div>
+            }
+        }
+
+        @* Proposals awaiting a human decision *@
+        @if (proposals.Count > 0)
+        {
+            <div class="mt-5 pt-5 border-t border-line">
+                <h4 class="eyebrow mb-3">Proposals</h4>
+                <ul class="space-y-3">
+                    @foreach (var proposal in proposals)
+                    {
+                        <li class="rounded-lg border border-line bg-surface-raised p-3">
+                            <div class="flex flex-wrap items-center gap-2 mb-1">
+                                <span class="text-sm font-medium text-content">@proposal.DisplayName</span>
+                                <span class="inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide @ProposalClass(proposal.Status)">@ProposalLabel(proposal.Status)</span>
+                                <span class="text-xs text-content-subtle">@proposal.CreatedAt.LocalDateTime.ToString("d MMM yyyy, HH:mm")</span>
+                            </div>
+                            <p class="text-sm text-content whitespace-pre-wrap mb-1">@proposal.Summary</p>
+                            @if (!string.IsNullOrWhiteSpace(proposal.Rationale))
+                            {
+                                <p class="text-xs text-content-subtle whitespace-pre-wrap mb-2">@proposal.Rationale</p>
+                            }
+                            @if (proposal.IsPending && CanOperate)
+                            {
+                                <div class="flex flex-wrap gap-2 mt-2">
+                                    <button type="button" class="btn-primary" disabled="@busy" @onclick="() => Decide(proposal, true)">Accept</button>
+                                    <button type="button" class="btn-secondary border-negative/40 text-negative hover:border-negative" disabled="@busy" @onclick="() => Decide(proposal, false)">Reject</button>
+                                </div>
+                            }
+                            else if (!proposal.IsPending && !string.IsNullOrWhiteSpace(proposal.DecidedByEmail))
+                            {
+                                <p class="text-xs text-content-subtle mt-1">@proposal.DecidedByEmail · @(proposal.DecidedAt?.LocalDateTime.ToString("d MMM yyyy, HH:mm"))</p>
+                            }
+                        </li>
+                    }
+                </ul>
+            </div>
+        }
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public string RequestId { get; set; } = "";
+    [Parameter] public EventCallback OnChanged { get; set; }
+
+    private bool loaded;
+    private bool busy;
+    private bool chatLoading;
+    private string? error;
+    private string applyKey = "";
+    private string selectedKey = "";
+    private string draft = "";
+
+    private IReadOnlyList<RequestAgent> applied = Array.Empty<RequestAgent>();
+    private IReadOnlyList<AgentChatMessage> chat = Array.Empty<AgentChatMessage>();
+    private IReadOnlyList<AgentProposal> proposals = Array.Empty<AgentProposal>();
+
+    // Mirrors the API's AgentRoles.AllowedToOperateAgents gate (Director, project manager,
+    // estimator/QS, site manager). Admins carry every role, so they always qualify.
+    private bool CanOperate => Session.AvailableRoles.Any(r =>
+        r is Role.Admin or Role.ManagingDirector or Role.ProjectManager or Role.QuantitySurveyor or Role.SiteManager);
+
+    private string SelectedName => applied.FirstOrDefault(a => a.AgentKey == selectedKey)?.DisplayName ?? "the agent";
+
+    protected override void OnInitialized() => Agents.OnChange += OnStoreChanged;
+
+    public void Dispose() => Agents.OnChange -= OnStoreChanged;
+
+    private void OnStoreChanged() => InvokeAsync(StateHasChanged);
+
+    protected override async Task OnParametersSetAsync() => await LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        await Agents.LoadAvailableAsync();
+        applied = await Agents.LoadRequestAgentsAsync(RequestId);
+        proposals = await Agents.ListProposalsAsync(RequestId);
+        if (string.IsNullOrEmpty(selectedKey) || applied.All(a => a.AgentKey != selectedKey))
+            selectedKey = applied.FirstOrDefault()?.AgentKey ?? "";
+        await LoadChatAsync();
+        loaded = true;
+    }
+
+    private async Task LoadChatAsync()
+    {
+        if (string.IsNullOrEmpty(selectedKey)) { chat = Array.Empty<AgentChatMessage>(); return; }
+        chatLoading = true;
+        chat = await Agents.ListChatAsync(RequestId, selectedKey);
+        chatLoading = false;
+    }
+
+    private IEnumerable<AgentDescriptor> Unapplied() =>
+        Agents.Available().Where(d => applied.All(a => a.AgentKey != d.Key));
+
+    private void OnApplyKeyChanged(ChangeEventArgs e) => applyKey = e.Value?.ToString() ?? "";
+
+    private async Task OnSelectedKeyChanged(ChangeEventArgs e)
+    {
+        selectedKey = e.Value?.ToString() ?? "";
+        await LoadChatAsync();
+    }
+
+    private void OnDraftInput(ChangeEventArgs e) => draft = e.Value?.ToString() ?? "";
+
+    private async Task Apply()
+    {
+        if (busy || string.IsNullOrEmpty(applyKey) || !CanOperate) return;
+        error = null;
+        try
+        {
+            busy = true;
+            var assigned = await Agents.AssignAsync(RequestId, applyKey);
+            applied = Agents.ForRequest(RequestId);
+            selectedKey = assigned.AgentKey;
+            applyKey = "";
+            await LoadChatAsync();
+            await OnChanged.InvokeAsync();
+        }
+        catch { error = "Couldn't apply that agent. Please try again."; }
+        finally { busy = false; }
+    }
+
+    private async Task Remove(RequestAgent agent)
+    {
+        if (busy || !CanOperate) return;
+        error = null;
+        try
+        {
+            busy = true;
+            await Agents.RemoveAsync(RequestId, agent.RequestAgentId);
+            applied = Agents.ForRequest(RequestId);
+            if (selectedKey == agent.AgentKey) selectedKey = applied.FirstOrDefault()?.AgentKey ?? "";
+            await LoadChatAsync();
+            await OnChanged.InvokeAsync();
+        }
+        catch { error = "Couldn't remove that agent. Please try again."; }
+        finally { busy = false; }
+    }
+
+    private async Task Send()
+    {
+        if (busy || string.IsNullOrWhiteSpace(draft) || string.IsNullOrEmpty(selectedKey)) return;
+        error = null;
+        try
+        {
+            busy = true;
+            await Agents.SendMessageAsync(RequestId, selectedKey, draft.Trim());
+            draft = "";
+            await LoadChatAsync();
+        }
+        catch { error = "Couldn't send your message. Please try again."; }
+        finally { busy = false; }
+    }
+
+    private async Task RunAnalysis()
+    {
+        if (busy || string.IsNullOrEmpty(selectedKey)) return;
+        error = null;
+        try
+        {
+            busy = true;
+            await Agents.RunAnalysisAsync(RequestId, selectedKey);
+            proposals = await Agents.ListProposalsAsync(RequestId);
+            await LoadChatAsync();
+        }
+        catch { error = "Couldn't run the analysis. Please try again."; }
+        finally { busy = false; }
+    }
+
+    private async Task Decide(AgentProposal proposal, bool accept)
+    {
+        if (busy || !CanOperate) return;
+        error = null;
+        try
+        {
+            busy = true;
+            await Agents.DecideAsync(proposal.ProposalId, accept);
+            proposals = await Agents.ListProposalsAsync(RequestId);
+        }
+        catch { error = "Couldn't record that decision. Please try again."; }
+        finally { busy = false; }
+    }
+
+    private string RoleLabel(AgentChatMessage message) => message.Role switch
+    {
+        AgentChatRole.Agent => string.IsNullOrWhiteSpace(message.AuthorName) ? "Agent" : message.AuthorName,
+        AgentChatRole.System => "System",
+        _ => string.IsNullOrWhiteSpace(message.AuthorName) ? message.AuthorEmail : message.AuthorName
+    };
+
+    private static string ProposalLabel(AgentProposalStatus status) => status switch
+    {
+        AgentProposalStatus.Pending => "Pending",
+        AgentProposalStatus.Accepted => "Accepted",
+        AgentProposalStatus.Rejected => "Rejected",
+        AgentProposalStatus.Superseded => "Superseded",
+        AgentProposalStatus.Unavailable => "Unavailable",
+        _ => status.ToString()
+    };
+
+    private static string ProposalClass(AgentProposalStatus status) => status switch
+    {
+        AgentProposalStatus.Pending => "bg-amber-500/10 text-amber-600",
+        AgentProposalStatus.Accepted => "bg-emerald-500/10 text-emerald-600",
+        AgentProposalStatus.Rejected => "bg-red-500/10 text-red-600",
+        _ => "bg-surface-raised border border-line text-content-muted"
+    };
+}

@@ -3,6 +3,7 @@
 @inject AuthService Auth
 @inject SessionService Session
 @inject IRequestRegister RequestRegister
+@inject IAgentDesk Agents
 @inject NavigationManager Nav
 
 <PageTitle>Request · JPMS</PageTitle>
@@ -66,6 +67,8 @@ else
                 }
 
                 <RequestConversation RequestId="@RequestId" />
+
+                <AgentWorkspace RequestId="@RequestId" OnChanged="OnAgentsChanged" />
             </div>
 
             <div class="space-y-5">
@@ -94,6 +97,20 @@ else
                     {
                         <div class="mb-4 pb-4 border-b border-line">
                             <button type="button" class="btn-secondary w-full" disabled="@busy" @onclick="OpenEdit">Edit details</button>
+                        </div>
+                    }
+
+                    @if (blockingAgents.Count > 0)
+                    {
+                        <div class="rounded-lg bg-amber-500/10 border border-amber-500/30 px-3 py-2 mb-3">
+                            <p class="text-sm font-medium text-amber-700 mb-1">This request can't be closed yet.</p>
+                            <p class="text-xs text-content-subtle mb-2">The following agents have outstanding work:</p>
+                            <ul class="space-y-1">
+                                @foreach (var blocker in blockingAgents)
+                                {
+                                    <li class="text-xs text-content"><span class="font-medium">@blocker.DisplayName</span> — @blocker.Message</li>
+                                }
+                            </ul>
                         </div>
                     }
 
@@ -217,6 +234,7 @@ else
     private string? actionError;
     private bool confirmingDelete;
     private bool confirmingReturn;
+    private IReadOnlyList<AgentCompletionState> blockingAgents = Array.Empty<AgentCompletionState>();
 
     private string RegisterHref => $"/projects/{ProjectId}/requests";
 
@@ -271,7 +289,44 @@ else
 
     private async Task SaveResponse() => await Apply(RequestStatus.Responded, responseDraft);
 
-    private async Task CloseRequest() => await Apply(RequestStatus.Closed, responseDraft);
+    // Closing goes through the agent gate: the request only closes if every applied agent agrees
+    // its work is complete. Any drafted response is persisted first so it isn't lost. The stub
+    // agents always report incomplete, so a request with an applied agent stays open by design.
+    private async Task CloseRequest()
+    {
+        if (record is null || busy) return;
+        actionError = null;
+        blockingAgents = Array.Empty<AgentCompletionState>();
+
+        if (!string.IsNullOrWhiteSpace(responseDraft) && responseDraft.Trim() != (record.ResponseText ?? "").Trim())
+            await Apply(RequestStatus.Responded, responseDraft);
+        if (record is null) return;
+
+        try
+        {
+            busy = true;
+            var outcome = await Agents.AttemptCloseAsync(record.RequestId);
+            if (outcome.Closed)
+            {
+                record = await RequestRegister.GetAsync(RequestId);
+                responseDraft = record?.ResponseText ?? "";
+            }
+            else
+            {
+                blockingAgents = outcome.BlockingAgents;
+            }
+        }
+        catch
+        {
+            actionError = "Couldn't close the request. Please try again.";
+        }
+        finally
+        {
+            busy = false;
+        }
+    }
+
+    private void OnAgentsChanged() => blockingAgents = Array.Empty<AgentCompletionState>();
 
     private async Task ReopenRequest() => await Apply(RequestStatus.Open, record?.ResponseText);
 

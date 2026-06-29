@@ -1,0 +1,280 @@
+<svg viewBox="0 0 1340 1690" xmlns="http://www.w3.org/2000/svg">
+<rect x="0" y="0" width="1340" height="1690" rx="0" fill="#1A1E29" stroke="none" stroke-width="1"/>
+<defs><marker id="ar" markerWidth="9" markerHeight="9" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#C09A51"/></marker><marker id="aro" markerWidth="9" markerHeight="9" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#FF8300"/></marker></defs>
+<text x="670.0" y="62" font-family="Helvetica,Arial,sans-serif" font-size="22" fill="#FF8300" font-weight="700" text-anchor="middle" letter-spacing="6">JEWEL BESPOKE BUILD</text>
+<line x1="520.0" y1="76" x2="820.0" y2="76" stroke="#FF8300" stroke-width="2"  />
+<text x="670.0" y="104" font-family="Helvetica,Arial,sans-serif" font-size="13" fill="#C09A51" font-weight="600" text-anchor="middle" letter-spacing="4">AUTOMATED PROJECT DELIVERY  ·  AGENT SYSTEM</text>
+<text x="670.0" y="150" font-family="Helvetica,Arial,sans-serif" font-size="34" fill="#FFFFFF" font-weight="700" text-anchor="middle" letter-spacing="0">Roles fan out. Agents follow the work.</text>
+<text x="670.0" y="178" font-family="Helvetica,Arial,sans-serif" font-size="14" fill="#9aa3b2" font-weight="400" text-anchor="middle" letter-spacing="0">The framework defines 5 roles. The work is really ~14 processes — so the agents map to the processes, and each role's tasks spread across many of them.</text>
+<rect x="70" y="215" width="200" height="92" rx="14" fill="#222838" stroke="#FFFFFF" stroke-width="2"/>
+<text x="170.0" y="249" font-family="Helvetica,Arial,sans-serif" font-size="16" fill="#FFFFFF" font-weight="700" text-anchor="middle" letter-spacing="0">Email</text>
+<text x="170.0" y="271" font-family="Helvetica,Arial,sans-serif" font-size="11.5" fill="#9aa3b2" font-weight="400" text-anchor="middle" letter-spacing="0">incoming message</text>
+<rect x="318" y="233" width="250" height="56" rx="28" fill="#1f2433" stroke="#C09A51" stroke-width="2"/>
+<text x="443" y="257" font-family="Helvetica,Arial,sans-serif" font-size="11.5" fill="#9aa3b2" font-weight="400" text-anchor="middle" letter-spacing="0">sent to</text>
+<text x="443" y="275" font-family="Helvetica,Arial,sans-serif" font-size="13" fill="#FFFFFF" font-weight="600" text-anchor="middle" letter-spacing="0">projects@jewelbb.co.uk</text>
+<rect x="618" y="215" width="210" height="92" rx="14" fill="#222838" stroke="#FF8300" stroke-width="2"/>
+<text x="723.0" y="249" font-family="Helvetica,Arial,sans-serif" font-size="16" fill="#FFFFFF" font-weight="700" text-anchor="middle" letter-spacing="0">Mailbox Triage</text>
+<text x="723.0" y="271" font-family="Helvetica,Arial,sans-serif" font-size="11.5" fill="#9aa3b2" font-weight="400" text-anchor="middle" letter-spacing="0">reads · classifies · routes</text>
+<text x="723.0" y="287" font-family="Helvetica,Arial,sans-serif" font-size="11.5" fill="#9aa3b2" font-weight="400" text-anchor="middle" letter-spacing="0">status · RFI no. · action</text>
+<rect x="900" y="215" width="200" height="92" rx="14" fill="#222838" stroke="#FFFFFF" stroke-width="2"/>
+<text x="1000.0" y="249" font-family="Helvetica,Arial,sans-serif" font-size="16" fill="#FFFFFF" font-weight="700" text-anchor="middle" letter-spacing="0">Result</text>
+<text x="1000.0" y="271" font-family="Helvetica,Arial,sans-serif" font-size="11.5" fill="#9aa3b2" font-weight="400" text-anchor="middle" letter-spacing="0">notify architect / client</text>
+<text x="1000.0" y="287" font-family="Helvetica,Arial,sans-serif" font-size="11.5" fill="#9aa3b2" font-weight="400" text-anchor="middle" letter-spacing="0">route to the right agent</text>
+<line x1="270" y1="261.0" x2="316" y2="261.0" stroke="#C09A51" stroke-width="2" stroke-dasharray="6 5" marker-end="url(#ar)"/>
+<line x1="568" y1="261.0" x2="616" y2="261.0" stroke="#C09A51" stroke-width="2" stroke-dasharray="6 5" marker-end="url(#ar)"/>
+<line x1="828" y1="261.0" x2="898" y2="261.0" stroke="#C09A51" stroke-width="2" stroke-dasharray="6 5" marker-end="url(#ar)"/>
+<line x1="723" y1="307" x2="723" y2="341" stroke="#FF8300" stroke-width="2.5"  marker-end="url(#aro)"/>
+<line x1="70" y1="355" x2="1270" y2="355" stroke="#3a4256" stroke-width="1"  />
+<text x="670.0" y="341" font-family="Helvetica,Arial,sans-serif" font-size="12" fill="#FF8300" font-weight="700" text-anchor="middle" letter-spacing="3">ONE INBOX  ·  MANY PROCESSES — THE TRIAGE ENABLES WHICHEVER AGENTS A MESSAGE TOUCHES</text>
+<text x="74" y="400" font-family="Helvetica,Arial,sans-serif" font-size="13" fill="#C09A51" font-weight="700" text-anchor="start" letter-spacing="2">CONTRACT MACHINE</text>
+<text x="74" y="418" font-family="Helvetica,Arial,sans-serif" font-size="11" fill="#9aa3b2" font-weight="400" text-anchor="start" letter-spacing="0">The JCT correspondence loop · single voice to the CA</text>
+<rect x="70" y="434" width="400" height="156" rx="12" fill="#222838" stroke="#3a4256" stroke-width="1"/>
+<rect x="70" y="434" width="400" height="30" rx="12" fill="#FF8300" stroke="none" stroke-width="1"/>
+<rect x="70" y="452" width="400" height="12" rx="0" fill="#FF8300" stroke="none" stroke-width="1"/>
+<text x="86" y="454" font-family="Helvetica,Arial,sans-serif" font-size="14.5" fill="#1A1E29" font-weight="700" text-anchor="start" letter-spacing="0.3">RFI Agent</text>
+<circle cx="88" cy="482" r="2" fill="#C09A51"/>
+<text x="98" y="486" font-family="Helvetica,Arial,sans-serif" font-size="11.3" fill="#cdd3df" font-weight="400" text-anchor="start" letter-spacing="0">One RFI register per project — log, number, route to CA</text>
+<circle cx="88" cy="500" r="2" fill="#C09A51"/>
+<text x="98" y="504" font-family="Helvetica,Arial,sans-serif" font-size="11.3" fill="#cdd3df" font-weight="400" text-anchor="start" letter-spacing="0">Flag cost impact → Variations Agent</text>
+<circle cx="88" cy="518" r="2" fill="#C09A51"/>
+<text x="98" y="522" font-family="Helvetica,Arial,sans-serif" font-size="11.3" fill="#cdd3df" font-weight="400" text-anchor="start" letter-spacing="0">Flag programme impact → Delay &amp; Claims Agent</text>
+<line x1="84" y1="544" x2="456" y2="544" stroke="#3a4256" stroke-width="1"  />
+<text x="86" y="562" font-family="Helvetica,Arial,sans-serif" font-size="9.5" fill="#C09A51" font-weight="700" text-anchor="start" letter-spacing="1.5">FROM</text>
+<text x="128" y="562" font-family="Helvetica,Arial,sans-serif" font-size="11" fill="#FFFFFF" font-weight="600" text-anchor="start" letter-spacing="0">PM (time-side) · QS (cost flag)</text>
+<text x="86" y="579" font-family="Helvetica,Arial,sans-serif" font-size="9.5" fill="#FF8300" font-weight="700" text-anchor="start" letter-spacing="1.5">GATE</text>
+<text x="128" y="579" font-family="Helvetica,Arial,sans-serif" font-size="10.5" fill="#f0a766" font-weight="600" text-anchor="start" letter-spacing="0">Human: PM owns register</text>
+<rect x="70" y="606" width="400" height="156" rx="12" fill="#222838" stroke="#3a4256" stroke-width="1"/>
+<rect x="70" y="606" width="400" height="30" rx="12" fill="#FF8300" stroke="none" stroke-width="1"/>
+<rect x="70" y="624" width="400" height="12" rx="0" fill="#FF8300" stroke="none" stroke-width="1"/>
+<text x="86" y="626" font-family="Helvetica,Arial,sans-serif" font-size="14.5" fill="#1A1E29" font-weight="700" text-anchor="start" letter-spacing="0.3">Variations Agent</text>
+<circle cx="88" cy="654" r="2" fill="#C09A51"/>
+<text x="98" y="658" font-family="Helvetica,Arial,sans-serif" font-size="11.3" fill="#cdd3df" font-weight="400" text-anchor="start" letter-spacing="0">Raise &amp; price VO — cost + margin + prelims</text>
+<circle cx="88" cy="672" r="2" fill="#C09A51"/>
+<text x="98" y="676" font-family="Helvetica,Arial,sans-serif" font-size="11.3" fill="#cdd3df" font-weight="400" text-anchor="start" letter-spacing="0">Assemble QS Thu/Fri review · maintain VO register</text>
+<circle cx="88" cy="690" r="2" fill="#C09A51"/>
+<text x="98" y="694" font-family="Helvetica,Arial,sans-serif" font-size="11.3" fill="#cdd3df" font-weight="400" text-anchor="start" letter-spacing="0">&lt;£1k PM issues; &gt;£1k to CEO; then issue to CA</text>
+<line x1="84" y1="716" x2="456" y2="716" stroke="#3a4256" stroke-width="1"  />
+<text x="86" y="734" font-family="Helvetica,Arial,sans-serif" font-size="9.5" fill="#C09A51" font-weight="700" text-anchor="start" letter-spacing="1.5">FROM</text>
+<text x="128" y="734" font-family="Helvetica,Arial,sans-serif" font-size="11" fill="#FFFFFF" font-weight="600" text-anchor="start" letter-spacing="0">PM (raise/issue) · QS (review) · CEO</text>
+<text x="86" y="751" font-family="Helvetica,Arial,sans-serif" font-size="9.5" fill="#FF8300" font-weight="700" text-anchor="start" letter-spacing="1.5">GATE</text>
+<text x="128" y="751" font-family="Helvetica,Arial,sans-serif" font-size="10.5" fill="#f0a766" font-weight="600" text-anchor="start" letter-spacing="0">Human: CEO Friday batch sign-off</text>
+<rect x="70" y="778" width="400" height="156" rx="12" fill="#222838" stroke="#3a4256" stroke-width="1"/>
+<rect x="70" y="778" width="400" height="30" rx="12" fill="#FF8300" stroke="none" stroke-width="1"/>
+<rect x="70" y="796" width="400" height="12" rx="0" fill="#FF8300" stroke="none" stroke-width="1"/>
+<text x="86" y="798" font-family="Helvetica,Arial,sans-serif" font-size="14.5" fill="#1A1E29" font-weight="700" text-anchor="start" letter-spacing="0.3">Delay &amp; Claims Agent</text>
+<circle cx="88" cy="826" r="2" fill="#C09A51"/>
+<text x="98" y="830" font-family="Helvetica,Arial,sans-serif" font-size="11.3" fill="#cdd3df" font-weight="400" text-anchor="start" letter-spacing="0">Convert delay events → NOD / EOT / L&amp;E in JCT time bars</text>
+<circle cx="88" cy="844" r="2" fill="#C09A51"/>
+<text x="98" y="848" font-family="Helvetica,Arial,sans-serif" font-size="11.3" fill="#cdd3df" font-weight="400" text-anchor="start" letter-spacing="0">Capture cause-and-effect contemporaneously</text>
+<circle cx="88" cy="862" r="2" fill="#C09A51"/>
+<text x="98" y="866" font-family="Helvetica,Arial,sans-serif" font-size="11.3" fill="#cdd3df" font-weight="400" text-anchor="start" letter-spacing="0">QS commercial build · issue to CA · close register</text>
+<line x1="84" y1="888" x2="456" y2="888" stroke="#3a4256" stroke-width="1"  />
+<text x="86" y="906" font-family="Helvetica,Arial,sans-serif" font-size="9.5" fill="#C09A51" font-weight="700" text-anchor="start" letter-spacing="1.5">FROM</text>
+<text x="128" y="906" font-family="Helvetica,Arial,sans-serif" font-size="11" fill="#FFFFFF" font-weight="600" text-anchor="start" letter-spacing="0">PM (author) · QS (build) · CEO</text>
+<text x="86" y="923" font-family="Helvetica,Arial,sans-serif" font-size="9.5" fill="#FF8300" font-weight="700" text-anchor="start" letter-spacing="1.5">GATE</text>
+<text x="128" y="923" font-family="Helvetica,Arial,sans-serif" font-size="10.5" fill="#f0a766" font-weight="600" text-anchor="start" letter-spacing="0">Human: CEO signs every NOD/EOT</text>
+<rect x="70" y="950" width="400" height="156" rx="12" fill="#222838" stroke="#3a4256" stroke-width="1"/>
+<rect x="70" y="950" width="400" height="30" rx="12" fill="#FF8300" stroke="none" stroke-width="1"/>
+<rect x="70" y="968" width="400" height="12" rx="0" fill="#FF8300" stroke="none" stroke-width="1"/>
+<text x="86" y="970" font-family="Helvetica,Arial,sans-serif" font-size="14.5" fill="#1A1E29" font-weight="700" text-anchor="start" letter-spacing="0.3">Valuations &amp; Final Account Agent</text>
+<circle cx="88" cy="998" r="2" fill="#C09A51"/>
+<text x="98" y="1002" font-family="Helvetica,Arial,sans-serif" font-size="11.3" fill="#cdd3df" font-weight="400" text-anchor="start" letter-spacing="0">Interim valuations to CA (cl 4.7–4.14)</text>
+<circle cx="88" cy="1016" r="2" fill="#C09A51"/>
+<text x="98" y="1020" font-family="Helvetica,Arial,sans-serif" font-size="11.3" fill="#cdd3df" font-weight="400" text-anchor="start" letter-spacing="0">Prep valuation-meeting certification</text>
+<circle cx="88" cy="1034" r="2" fill="#C09A51"/>
+<text x="98" y="1038" font-family="Helvetica,Arial,sans-serif" font-size="11.3" fill="#cdd3df" font-weight="400" text-anchor="start" letter-spacing="0">Lead final account; QS produces commercial build</text>
+<line x1="84" y1="1060" x2="456" y2="1060" stroke="#3a4256" stroke-width="1"  />
+<text x="86" y="1078" font-family="Helvetica,Arial,sans-serif" font-size="9.5" fill="#C09A51" font-weight="700" text-anchor="start" letter-spacing="1.5">FROM</text>
+<text x="128" y="1078" font-family="Helvetica,Arial,sans-serif" font-size="11" fill="#FFFFFF" font-weight="600" text-anchor="start" letter-spacing="0">PM (lead/issue) · QS (build)</text>
+<text x="86" y="1095" font-family="Helvetica,Arial,sans-serif" font-size="9.5" fill="#FF8300" font-weight="700" text-anchor="start" letter-spacing="1.5">GATE</text>
+<text x="128" y="1095" font-family="Helvetica,Arial,sans-serif" font-size="10.5" fill="#f0a766" font-weight="600" text-anchor="start" letter-spacing="0">Human: PM authors &amp; issues</text>
+<text x="494" y="400" font-family="Helvetica,Arial,sans-serif" font-size="13" fill="#C09A51" font-weight="700" text-anchor="start" letter-spacing="2">DELIVERY &amp; TECHNICAL</text>
+<text x="494" y="418" font-family="Helvetica,Arial,sans-serif" font-size="11" fill="#9aa3b2" font-weight="400" text-anchor="start" letter-spacing="0">Programme · procurement · supply chain · design &amp; PC</text>
+<rect x="490" y="434" width="400" height="156" rx="12" fill="#222838" stroke="#3a4256" stroke-width="1"/>
+<rect x="490" y="434" width="400" height="30" rx="12" fill="#FF8300" stroke="none" stroke-width="1"/>
+<rect x="490" y="452" width="400" height="12" rx="0" fill="#FF8300" stroke="none" stroke-width="1"/>
+<text x="506" y="454" font-family="Helvetica,Arial,sans-serif" font-size="14.5" fill="#1A1E29" font-weight="700" text-anchor="start" letter-spacing="0.3">Programme Agent</text>
+<circle cx="508" cy="482" r="2" fill="#C09A51"/>
+<text x="518" y="486" font-family="Helvetica,Arial,sans-serif" font-size="11.3" fill="#cdd3df" font-weight="400" text-anchor="start" letter-spacing="0">Maintain logic-linked MS Project programme, weekly</text>
+<circle cx="508" cy="500" r="2" fill="#C09A51"/>
+<text x="518" y="504" font-family="Helvetica,Arial,sans-serif" font-size="11.3" fill="#cdd3df" font-weight="400" text-anchor="start" letter-spacing="0">Detect delay events → Delay &amp; Claims Agent</text>
+<circle cx="508" cy="518" r="2" fill="#C09A51"/>
+<text x="518" y="522" font-family="Helvetica,Arial,sans-serif" font-size="11.3" fill="#cdd3df" font-weight="400" text-anchor="start" letter-spacing="0">Drive look-ahead, sub call-offs, material &amp; RFI timing</text>
+<line x1="504" y1="544" x2="876" y2="544" stroke="#3a4256" stroke-width="1"  />
+<text x="506" y="562" font-family="Helvetica,Arial,sans-serif" font-size="9.5" fill="#C09A51" font-weight="700" text-anchor="start" letter-spacing="1.5">FROM</text>
+<text x="548" y="562" font-family="Helvetica,Arial,sans-serif" font-size="11" fill="#FFFFFF" font-weight="600" text-anchor="start" letter-spacing="0">PM (programme domain)</text>
+<text x="506" y="579" font-family="Helvetica,Arial,sans-serif" font-size="9.5" fill="#FF8300" font-weight="700" text-anchor="start" letter-spacing="1.5">GATE</text>
+<text x="548" y="579" font-family="Helvetica,Arial,sans-serif" font-size="10.5" fill="#f0a766" font-weight="600" text-anchor="start" letter-spacing="0">Human: PM owns the baseline</text>
+<rect x="490" y="606" width="400" height="176" rx="12" fill="#222838" stroke="#3a4256" stroke-width="1"/>
+<rect x="490" y="606" width="400" height="30" rx="12" fill="#FF8300" stroke="none" stroke-width="1"/>
+<rect x="490" y="624" width="400" height="12" rx="0" fill="#FF8300" stroke="none" stroke-width="1"/>
+<text x="506" y="626" font-family="Helvetica,Arial,sans-serif" font-size="14.5" fill="#1A1E29" font-weight="700" text-anchor="start" letter-spacing="0.3">Bid &amp; Award Agent</text>
+<circle cx="508" cy="654" r="2" fill="#C09A51"/>
+<text x="518" y="658" font-family="Helvetica,Arial,sans-serif" font-size="11.3" fill="#cdd3df" font-weight="400" text-anchor="start" letter-spacing="0">Issue bid packages · build QS comparison register</text>
+<circle cx="508" cy="672" r="2" fill="#C09A51"/>
+<text x="518" y="676" font-family="Helvetica,Arial,sans-serif" font-size="11.3" fill="#cdd3df" font-weight="400" text-anchor="start" letter-spacing="0">Friday joint award decision</text>
+<circle cx="508" cy="690" r="2" fill="#C09A51"/>
+<text x="518" y="694" font-family="Helvetica,Arial,sans-serif" font-size="11.3" fill="#cdd3df" font-weight="400" text-anchor="start" letter-spacing="0">Hard RAMS / insurance gate before any WO</text>
+<circle cx="508" cy="708" r="2" fill="#C09A51"/>
+<text x="518" y="712" font-family="Helvetica,Arial,sans-serif" font-size="11.3" fill="#cdd3df" font-weight="400" text-anchor="start" letter-spacing="0">Three-way handover: PM prog · QS £ · SM site</text>
+<circle cx="508" cy="726" r="2" fill="#C09A51"/>
+<text x="518" y="730" font-family="Helvetica,Arial,sans-serif" font-size="11.3" fill="#cdd3df" font-weight="400" text-anchor="start" letter-spacing="0">Sub orders back-to-back; &gt;£5k to CEO</text>
+<line x1="504" y1="736" x2="876" y2="736" stroke="#3a4256" stroke-width="1"  />
+<text x="506" y="754" font-family="Helvetica,Arial,sans-serif" font-size="9.5" fill="#C09A51" font-weight="700" text-anchor="start" letter-spacing="1.5">FROM</text>
+<text x="548" y="754" font-family="Helvetica,Arial,sans-serif" font-size="11" fill="#FFFFFF" font-weight="600" text-anchor="start" letter-spacing="0">PM · QS · SM (handover) · CEO</text>
+<text x="506" y="771" font-family="Helvetica,Arial,sans-serif" font-size="9.5" fill="#FF8300" font-weight="700" text-anchor="start" letter-spacing="1.5">GATE</text>
+<text x="548" y="771" font-family="Helvetica,Arial,sans-serif" font-size="10.5" fill="#f0a766" font-weight="600" text-anchor="start" letter-spacing="0">Human: RAMS gate + CEO &gt;£5k</text>
+<rect x="490" y="798" width="400" height="176" rx="12" fill="#222838" stroke="#3a4256" stroke-width="1"/>
+<rect x="490" y="798" width="400" height="30" rx="12" fill="#FF8300" stroke="none" stroke-width="1"/>
+<rect x="490" y="816" width="400" height="12" rx="0" fill="#FF8300" stroke="none" stroke-width="1"/>
+<text x="506" y="818" font-family="Helvetica,Arial,sans-serif" font-size="14.5" fill="#1A1E29" font-weight="700" text-anchor="start" letter-spacing="0.3">Subcontractor Commercial Agent</text>
+<circle cx="508" cy="846" r="2" fill="#C09A51"/>
+<text x="518" y="850" font-family="Helvetica,Arial,sans-serif" font-size="11.3" fill="#cdd3df" font-weight="400" text-anchor="start" letter-spacing="0">Valuation every cycle on every sub — no threshold</text>
+<circle cx="508" cy="864" r="2" fill="#C09A51"/>
+<text x="518" y="868" font-family="Helvetica,Arial,sans-serif" font-size="11.3" fill="#cdd3df" font-weight="400" text-anchor="start" letter-spacing="0">Issue pay-less notices where required</text>
+<circle cx="508" cy="882" r="2" fill="#C09A51"/>
+<text x="518" y="886" font-family="Helvetica,Arial,sans-serif" font-size="11.3" fill="#cdd3df" font-weight="400" text-anchor="start" letter-spacing="0">Track &amp; claim retentions at milestones</text>
+<circle cx="508" cy="900" r="2" fill="#C09A51"/>
+<text x="518" y="904" font-family="Helvetica,Arial,sans-serif" font-size="11.3" fill="#cdd3df" font-weight="400" text-anchor="start" letter-spacing="0">Three-signature payment: QS rec → CEO auth → FD pay</text>
+<circle cx="508" cy="918" r="2" fill="#C09A51"/>
+<text x="518" y="922" font-family="Helvetica,Arial,sans-serif" font-size="11.3" fill="#cdd3df" font-weight="400" text-anchor="start" letter-spacing="0">Close sub final account ≤60 days of PC</text>
+<line x1="504" y1="928" x2="876" y2="928" stroke="#3a4256" stroke-width="1"  />
+<text x="506" y="946" font-family="Helvetica,Arial,sans-serif" font-size="9.5" fill="#C09A51" font-weight="700" text-anchor="start" letter-spacing="1.5">FROM</text>
+<text x="548" y="946" font-family="Helvetica,Arial,sans-serif" font-size="11" fill="#FFFFFF" font-weight="600" text-anchor="start" letter-spacing="0">QS (owns) · CEO · FD</text>
+<text x="506" y="963" font-family="Helvetica,Arial,sans-serif" font-size="9.5" fill="#FF8300" font-weight="700" text-anchor="start" letter-spacing="1.5">GATE</text>
+<text x="548" y="963" font-family="Helvetica,Arial,sans-serif" font-size="10.5" fill="#f0a766" font-weight="600" text-anchor="start" letter-spacing="0">Human: 3-signature payment gate</text>
+<rect x="490" y="990" width="400" height="156" rx="12" fill="#222838" stroke="#3a4256" stroke-width="1"/>
+<rect x="490" y="990" width="400" height="30" rx="12" fill="#FF8300" stroke="none" stroke-width="1"/>
+<rect x="490" y="1008" width="400" height="12" rx="0" fill="#FF8300" stroke="none" stroke-width="1"/>
+<text x="506" y="1010" font-family="Helvetica,Arial,sans-serif" font-size="14.5" fill="#1A1E29" font-weight="700" text-anchor="start" letter-spacing="0.3">Technical &amp; Handover Agent</text>
+<circle cx="508" cy="1038" r="2" fill="#C09A51"/>
+<text x="518" y="1042" font-family="Helvetica,Arial,sans-serif" font-size="11.3" fill="#cdd3df" font-weight="400" text-anchor="start" letter-spacing="0">Review design info — errors, omissions, conflicts pre-site</text>
+<circle cx="508" cy="1056" r="2" fill="#C09A51"/>
+<text x="518" y="1060" font-family="Helvetica,Arial,sans-serif" font-size="11.3" fill="#cdd3df" font-weight="400" text-anchor="start" letter-spacing="0">Manage CDP submissions through the CA window</text>
+<circle cx="508" cy="1074" r="2" fill="#C09A51"/>
+<text x="518" y="1078" font-family="Helvetica,Arial,sans-serif" font-size="11.3" fill="#cdd3df" font-weight="400" text-anchor="start" letter-spacing="0">Manage PC (cl 2.21) · collate O&amp;M / as-built / warranty pack</text>
+<line x1="504" y1="1100" x2="876" y2="1100" stroke="#3a4256" stroke-width="1"  />
+<text x="506" y="1118" font-family="Helvetica,Arial,sans-serif" font-size="9.5" fill="#C09A51" font-weight="700" text-anchor="start" letter-spacing="1.5">FROM</text>
+<text x="548" y="1118" font-family="Helvetica,Arial,sans-serif" font-size="11" fill="#FFFFFF" font-weight="600" text-anchor="start" letter-spacing="0">PM (technical lead) · SM (handover docs)</text>
+<text x="506" y="1135" font-family="Helvetica,Arial,sans-serif" font-size="9.5" fill="#FF8300" font-weight="700" text-anchor="start" letter-spacing="1.5">GATE</text>
+<text x="548" y="1135" font-family="Helvetica,Arial,sans-serif" font-size="10.5" fill="#f0a766" font-weight="600" text-anchor="start" letter-spacing="0">Human: PM makes the PC case</text>
+<text x="914" y="400" font-family="Helvetica,Arial,sans-serif" font-size="13" fill="#C09A51" font-weight="700" text-anchor="start" letter-spacing="2">COMMERCIAL TRUTH &amp; SITE</text>
+<text x="914" y="418" font-family="Helvetica,Arial,sans-serif" font-size="11" fill="#9aa3b2" font-weight="400" text-anchor="start" letter-spacing="0">Independent commercial record · day-to-day site</text>
+<rect x="910" y="434" width="400" height="156" rx="12" fill="#222838" stroke="#3a4256" stroke-width="1"/>
+<rect x="910" y="434" width="400" height="30" rx="12" fill="#FF8300" stroke="none" stroke-width="1"/>
+<rect x="910" y="452" width="400" height="12" rx="0" fill="#FF8300" stroke="none" stroke-width="1"/>
+<text x="926" y="454" font-family="Helvetica,Arial,sans-serif" font-size="14.5" fill="#1A1E29" font-weight="700" text-anchor="start" letter-spacing="0.3">CVR / FFA &amp; Cashflow Agent</text>
+<circle cx="928" cy="482" r="2" fill="#C09A51"/>
+<text x="938" y="486" font-family="Helvetica,Arial,sans-serif" font-size="11.3" fill="#cdd3df" font-weight="400" text-anchor="start" letter-spacing="0">Monthly CVR per project — cost, value, accruals, FCC</text>
+<circle cx="928" cy="500" r="2" fill="#C09A51"/>
+<text x="938" y="504" font-family="Helvetica,Arial,sans-serif" font-size="11.3" fill="#cdd3df" font-weight="400" text-anchor="start" letter-spacing="0">FFA defended with workings · 13-wk rolling cashflow</text>
+<circle cx="928" cy="518" r="2" fill="#C09A51"/>
+<text x="938" y="522" font-family="Helvetica,Arial,sans-serif" font-size="11.3" fill="#cdd3df" font-weight="400" text-anchor="start" letter-spacing="0">Monthly Commercial Report — spot-check ready</text>
+<line x1="924" y1="544" x2="1296" y2="544" stroke="#3a4256" stroke-width="1"  />
+<text x="926" y="562" font-family="Helvetica,Arial,sans-serif" font-size="9.5" fill="#C09A51" font-weight="700" text-anchor="start" letter-spacing="1.5">FROM</text>
+<text x="968" y="562" font-family="Helvetica,Arial,sans-serif" font-size="11" fill="#FFFFFF" font-weight="600" text-anchor="start" letter-spacing="0">QS (owns) · FD (receives)</text>
+<text x="926" y="579" font-family="Helvetica,Arial,sans-serif" font-size="9.5" fill="#FF8300" font-weight="700" text-anchor="start" letter-spacing="1.5">GATE</text>
+<text x="968" y="579" font-family="Helvetica,Arial,sans-serif" font-size="10.5" fill="#f0a766" font-weight="600" text-anchor="start" letter-spacing="0">Human: QS signs CVR/FFA</text>
+<rect x="910" y="606" width="400" height="156" rx="12" fill="#222838" stroke="#3a4256" stroke-width="1"/>
+<rect x="910" y="606" width="400" height="30" rx="12" fill="#FF8300" stroke="none" stroke-width="1"/>
+<rect x="910" y="624" width="400" height="12" rx="0" fill="#FF8300" stroke="none" stroke-width="1"/>
+<text x="926" y="626" font-family="Helvetica,Arial,sans-serif" font-size="14.5" fill="#1A1E29" font-weight="700" text-anchor="start" letter-spacing="0.3">Pre-construction &amp; Estimating Agent</text>
+<circle cx="928" cy="654" r="2" fill="#C09A51"/>
+<text x="938" y="658" font-family="Helvetica,Arial,sans-serif" font-size="11.3" fill="#cdd3df" font-weight="400" text-anchor="start" letter-spacing="0">Cost plan &amp; risk-adjusted tender pricing</text>
+<circle cx="928" cy="672" r="2" fill="#C09A51"/>
+<text x="938" y="676" font-family="Helvetica,Arial,sans-serif" font-size="11.3" fill="#cdd3df" font-weight="400" text-anchor="start" letter-spacing="0">Review contract terms — flag risk-shifting amendments</text>
+<circle cx="928" cy="690" r="2" fill="#C09A51"/>
+<text x="938" y="694" font-family="Helvetica,Arial,sans-serif" font-size="11.3" fill="#cdd3df" font-weight="400" text-anchor="start" letter-spacing="0">Sign-off cashflow &amp; tender programme pre-submission</text>
+<line x1="924" y1="716" x2="1296" y2="716" stroke="#3a4256" stroke-width="1"  />
+<text x="926" y="734" font-family="Helvetica,Arial,sans-serif" font-size="9.5" fill="#C09A51" font-weight="700" text-anchor="start" letter-spacing="1.5">FROM</text>
+<text x="968" y="734" font-family="Helvetica,Arial,sans-serif" font-size="11" fill="#FFFFFF" font-weight="600" text-anchor="start" letter-spacing="0">QS (lead) · PM</text>
+<text x="926" y="751" font-family="Helvetica,Arial,sans-serif" font-size="9.5" fill="#FF8300" font-weight="700" text-anchor="start" letter-spacing="1.5">GATE</text>
+<text x="968" y="751" font-family="Helvetica,Arial,sans-serif" font-size="10.5" fill="#f0a766" font-weight="600" text-anchor="start" letter-spacing="0">Human: QS signs before submission</text>
+<rect x="910" y="778" width="400" height="156" rx="12" fill="#222838" stroke="#3a4256" stroke-width="1"/>
+<rect x="910" y="778" width="400" height="30" rx="12" fill="#FF8300" stroke="none" stroke-width="1"/>
+<rect x="910" y="796" width="400" height="12" rx="0" fill="#FF8300" stroke="none" stroke-width="1"/>
+<text x="926" y="798" font-family="Helvetica,Arial,sans-serif" font-size="14.5" fill="#1A1E29" font-weight="700" text-anchor="start" letter-spacing="0.3">Site Diary &amp; Quality Agent</text>
+<circle cx="928" cy="826" r="2" fill="#C09A51"/>
+<text x="938" y="830" font-family="Helvetica,Arial,sans-serif" font-size="11.3" fill="#cdd3df" font-weight="400" text-anchor="start" letter-spacing="0">Daily diary — weather, labour, deliveries, photos</text>
+<circle cx="928" cy="844" r="2" fill="#C09A51"/>
+<text x="938" y="848" font-family="Helvetica,Arial,sans-serif" font-size="11.3" fill="#cdd3df" font-weight="400" text-anchor="start" letter-spacing="0">Snagging register · induction records</text>
+<circle cx="928" cy="862" r="2" fill="#C09A51"/>
+<text x="938" y="866" font-family="Helvetica,Arial,sans-serif" font-size="11.3" fill="#cdd3df" font-weight="400" text-anchor="start" letter-spacing="0">Convert VO-flagged site items → RFI / Variations / Delay</text>
+<line x1="924" y1="888" x2="1296" y2="888" stroke="#3a4256" stroke-width="1"  />
+<text x="926" y="906" font-family="Helvetica,Arial,sans-serif" font-size="9.5" fill="#C09A51" font-weight="700" text-anchor="start" letter-spacing="1.5">FROM</text>
+<text x="968" y="906" font-family="Helvetica,Arial,sans-serif" font-size="11" fill="#FFFFFF" font-weight="600" text-anchor="start" letter-spacing="0">SM (owns) · PM (converts)</text>
+<text x="926" y="923" font-family="Helvetica,Arial,sans-serif" font-size="9.5" fill="#FF8300" font-weight="700" text-anchor="start" letter-spacing="1.5">GATE</text>
+<text x="968" y="923" font-family="Helvetica,Arial,sans-serif" font-size="10.5" fill="#f0a766" font-weight="600" text-anchor="start" letter-spacing="0">Human: SM records, PM converts</text>
+<rect x="910" y="950" width="400" height="156" rx="12" fill="#222838" stroke="#3a4256" stroke-width="1"/>
+<rect x="910" y="950" width="400" height="30" rx="12" fill="#FF8300" stroke="none" stroke-width="1"/>
+<rect x="910" y="968" width="400" height="12" rx="0" fill="#FF8300" stroke="none" stroke-width="1"/>
+<text x="926" y="970" font-family="Helvetica,Arial,sans-serif" font-size="14.5" fill="#1A1E29" font-weight="700" text-anchor="start" letter-spacing="0.3">H&amp;S Incident Agent</text>
+<circle cx="928" cy="998" r="2" fill="#C09A51"/>
+<text x="938" y="1002" font-family="Helvetica,Arial,sans-serif" font-size="11.3" fill="#cdd3df" font-weight="400" text-anchor="start" letter-spacing="0">Cascade SM → PM → H&amp;S → CEO; verbal now, written 24h</text>
+<circle cx="928" cy="1016" r="2" fill="#C09A51"/>
+<text x="938" y="1020" font-family="Helvetica,Arial,sans-serif" font-size="11.3" fill="#cdd3df" font-weight="400" text-anchor="start" letter-spacing="0">RIDDOR statutory branch on HSE deadlines</text>
+<circle cx="928" cy="1034" r="2" fill="#C09A51"/>
+<text x="938" y="1038" font-family="Helvetica,Arial,sans-serif" font-size="11.3" fill="#cdd3df" font-weight="400" text-anchor="start" letter-spacing="0">Track CDM / Construction Phase Plan &amp; RAMS currency</text>
+<line x1="924" y1="1060" x2="1296" y2="1060" stroke="#3a4256" stroke-width="1"  />
+<text x="926" y="1078" font-family="Helvetica,Arial,sans-serif" font-size="9.5" fill="#C09A51" font-weight="700" text-anchor="start" letter-spacing="1.5">FROM</text>
+<text x="968" y="1078" font-family="Helvetica,Arial,sans-serif" font-size="11" fill="#FFFFFF" font-weight="600" text-anchor="start" letter-spacing="0">SM · H&amp;S Officer · CEO</text>
+<text x="926" y="1095" font-family="Helvetica,Arial,sans-serif" font-size="9.5" fill="#FF8300" font-weight="700" text-anchor="start" letter-spacing="1.5">GATE</text>
+<text x="968" y="1095" font-family="Helvetica,Arial,sans-serif" font-size="10.5" fill="#f0a766" font-weight="600" text-anchor="start" letter-spacing="0">Human: stop-work + RIDDOR call</text>
+<text x="670.0" y="1176" font-family="Helvetica,Arial,sans-serif" font-size="13" fill="#C09A51" font-weight="700" text-anchor="middle" letter-spacing="2">ORCHESTRATION &amp; GOVERNANCE  —  RUN ACROSS EVERY AGENT ABOVE</text>
+<rect x="70" y="1190" width="620" height="150" rx="12" fill="#222838" stroke="#3a4256" stroke-width="1"/>
+<rect x="70" y="1190" width="620" height="30" rx="12" fill="#FF8300" stroke="none" stroke-width="1"/>
+<rect x="70" y="1208" width="620" height="12" rx="0" fill="#FF8300" stroke="none" stroke-width="1"/>
+<text x="86" y="1210" font-family="Helvetica,Arial,sans-serif" font-size="14.5" fill="#1A1E29" font-weight="700" text-anchor="start" letter-spacing="0.3">Weekly Cadence Agent</text>
+<circle cx="88" cy="1238" r="2" fill="#C09A51"/>
+<text x="98" y="1242" font-family="Helvetica,Arial,sans-serif" font-size="11.3" fill="#cdd3df" font-weight="400" text-anchor="start" letter-spacing="0">5-step chain: SM Site Report (Mon) → QS input (Wed) → PM Project</text>
+<circle cx="88" cy="1256" r="2" fill="#C09A51"/>
+<text x="98" y="1260" font-family="Helvetica,Arial,sans-serif" font-size="11.3" fill="#cdd3df" font-weight="400" text-anchor="start" letter-spacing="0">Report (Fri 5pm) → Client Report (Fri) → CEO 1:1 (Mon 9am)</text>
+<circle cx="88" cy="1274" r="2" fill="#C09A51"/>
+<text x="98" y="1278" font-family="Helvetica,Arial,sans-serif" font-size="11.3" fill="#cdd3df" font-weight="400" text-anchor="start" letter-spacing="0">RAG status · RED-flag any missed report · monthly board summary</text>
+<circle cx="88" cy="1292" r="2" fill="#C09A51"/>
+<text x="98" y="1296" font-family="Helvetica,Arial,sans-serif" font-size="11.3" fill="#cdd3df" font-weight="400" text-anchor="start" letter-spacing="0">Live risk register · file &amp; name to SharePoint convention</text>
+<line x1="84" y1="1294" x2="676" y2="1294" stroke="#3a4256" stroke-width="1"  />
+<text x="86" y="1312" font-family="Helvetica,Arial,sans-serif" font-size="9.5" fill="#C09A51" font-weight="700" text-anchor="start" letter-spacing="1.5">FROM</text>
+<text x="128" y="1312" font-family="Helvetica,Arial,sans-serif" font-size="11" fill="#FFFFFF" font-weight="600" text-anchor="start" letter-spacing="0">SM · QS · PM · CEO</text>
+<text x="86" y="1329" font-family="Helvetica,Arial,sans-serif" font-size="9.5" fill="#FF8300" font-weight="700" text-anchor="start" letter-spacing="1.5">GATE</text>
+<text x="128" y="1329" font-family="Helvetica,Arial,sans-serif" font-size="10.5" fill="#f0a766" font-weight="600" text-anchor="start" letter-spacing="0">Human: each report has one named author</text>
+<rect x="720" y="1190" width="620" height="150" rx="12" fill="#222838" stroke="#3a4256" stroke-width="1"/>
+<rect x="720" y="1190" width="620" height="30" rx="12" fill="#FF8300" stroke="none" stroke-width="1"/>
+<rect x="720" y="1208" width="620" height="12" rx="0" fill="#FF8300" stroke="none" stroke-width="1"/>
+<text x="736" y="1210" font-family="Helvetica,Arial,sans-serif" font-size="14.5" fill="#1A1E29" font-weight="700" text-anchor="start" letter-spacing="0.3">Gate &amp; Governance Agent</text>
+<circle cx="738" cy="1238" r="2" fill="#C09A51"/>
+<text x="748" y="1242" font-family="Helvetica,Arial,sans-serif" font-size="11.3" fill="#cdd3df" font-weight="400" text-anchor="start" letter-spacing="0">Log every CEO sign-off · notify FD within 24h</text>
+<circle cx="738" cy="1256" r="2" fill="#C09A51"/>
+<text x="748" y="1260" font-family="Helvetica,Arial,sans-serif" font-size="11.3" fill="#cdd3df" font-weight="400" text-anchor="start" letter-spacing="0">Hold threshold register (£1k VO / £5k sub) for June review</text>
+<circle cx="738" cy="1274" r="2" fill="#C09A51"/>
+<text x="748" y="1278" font-family="Helvetica,Arial,sans-serif" font-size="11.3" fill="#cdd3df" font-weight="400" text-anchor="start" letter-spacing="0">“Definition of done” live-file audit — AMBER if gaps found</text>
+<circle cx="738" cy="1292" r="2" fill="#C09A51"/>
+<text x="748" y="1296" font-family="Helvetica,Arial,sans-serif" font-size="11.3" fill="#cdd3df" font-weight="400" text-anchor="start" letter-spacing="0">Version control, distribution, acknowledgement, quarterly scorecards</text>
+<line x1="734" y1="1294" x2="1326" y2="1294" stroke="#3a4256" stroke-width="1"  />
+<text x="736" y="1312" font-family="Helvetica,Arial,sans-serif" font-size="9.5" fill="#C09A51" font-weight="700" text-anchor="start" letter-spacing="1.5">FROM</text>
+<text x="778" y="1312" font-family="Helvetica,Arial,sans-serif" font-size="11" fill="#FFFFFF" font-weight="600" text-anchor="start" letter-spacing="0">FD · CEO · cross-role</text>
+<text x="736" y="1329" font-family="Helvetica,Arial,sans-serif" font-size="9.5" fill="#FF8300" font-weight="700" text-anchor="start" letter-spacing="1.5">GATE</text>
+<text x="778" y="1329" font-family="Helvetica,Arial,sans-serif" font-size="10.5" fill="#f0a766" font-weight="600" text-anchor="start" letter-spacing="0">Human: CEO owns the gates</text>
+<line x1="70" y1="1368" x2="1270" y2="1368" stroke="#3a4256" stroke-width="1"  />
+<text x="670.0" y="1390" font-family="Helvetica,Arial,sans-serif" font-size="14" fill="#FF8300" font-weight="700" text-anchor="middle" letter-spacing="2">THE POINT: ONE ROLE → MANY AGENTS</text>
+<rect x="70" y="1399" width="58" height="22" rx="5" fill="none" stroke="#FF8300" stroke-width="1.5"/>
+<text x="99" y="1414" font-family="Helvetica,Arial,sans-serif" font-size="12" fill="#FF8300" font-weight="700" text-anchor="middle" letter-spacing="0">PM</text>
+<text x="146" y="1414" font-family="Helvetica,Arial,sans-serif" font-size="11.5" fill="#cdd3df" font-weight="400" text-anchor="start" letter-spacing="0">spreads across 9 agents — RFI, Variations, Delay, Valuations, Programme, Bid &amp; Award, Technical &amp; Handover, Site-item conversion, Cadence</text>
+<rect x="70" y="1429" width="58" height="22" rx="5" fill="none" stroke="#FF8300" stroke-width="1.5"/>
+<text x="99" y="1444" font-family="Helvetica,Arial,sans-serif" font-size="12" fill="#FF8300" font-weight="700" text-anchor="middle" letter-spacing="0">QS</text>
+<text x="146" y="1444" font-family="Helvetica,Arial,sans-serif" font-size="11.5" fill="#cdd3df" font-weight="400" text-anchor="start" letter-spacing="0">spreads across 9 agents — RFI cost-flag, Variations review, Delay build, Valuations build, Bid comparison, Sub Commercial, CVR/FFA, Pre-con, Cadence</text>
+<rect x="70" y="1459" width="58" height="22" rx="5" fill="none" stroke="#FF8300" stroke-width="1.5"/>
+<text x="99" y="1474" font-family="Helvetica,Arial,sans-serif" font-size="12" fill="#FF8300" font-weight="700" text-anchor="middle" letter-spacing="0">SM</text>
+<text x="146" y="1474" font-family="Helvetica,Arial,sans-serif" font-size="11.5" fill="#cdd3df" font-weight="400" text-anchor="start" letter-spacing="0">spreads across 5 agents — Site Diary &amp; Quality, H&amp;S Incident, Bid handover, Technical handover, Weekly Site Report</text>
+<rect x="70" y="1489" width="58" height="22" rx="5" fill="none" stroke="#FF8300" stroke-width="1.5"/>
+<text x="99" y="1504" font-family="Helvetica,Arial,sans-serif" font-size="12" fill="#FF8300" font-weight="700" text-anchor="middle" letter-spacing="0">FD</text>
+<text x="146" y="1504" font-family="Helvetica,Arial,sans-serif" font-size="11.5" fill="#cdd3df" font-weight="400" text-anchor="start" letter-spacing="0">spreads across 3 agents — Sub payment gate, CVR/FFA recipient, Gate &amp; Governance</text>
+<rect x="70" y="1519" width="58" height="22" rx="5" fill="none" stroke="#FF8300" stroke-width="1.5"/>
+<text x="99" y="1534" font-family="Helvetica,Arial,sans-serif" font-size="12" fill="#FF8300" font-weight="700" text-anchor="middle" letter-spacing="0">H&amp;S</text>
+<text x="146" y="1534" font-family="Helvetica,Arial,sans-serif" font-size="11.5" fill="#cdd3df" font-weight="400" text-anchor="start" letter-spacing="0">1 agent — H&amp;S Incident (its own time-critical path)</text>
+<rect x="70" y="1549" width="58" height="22" rx="5" fill="none" stroke="#FF8300" stroke-width="1.5"/>
+<text x="99" y="1564" font-family="Helvetica,Arial,sans-serif" font-size="12" fill="#FF8300" font-weight="700" text-anchor="middle" letter-spacing="0">CEO</text>
+<text x="146" y="1564" font-family="Helvetica,Arial,sans-serif" font-size="11.5" fill="#cdd3df" font-weight="400" text-anchor="start" letter-spacing="0">the human gate inside Variations, Delay, Bid, Sub payment, Cadence 1:1, Governance</text>
+<text x="670.0" y="1618" font-family="Helvetica,Arial,sans-serif" font-size="15" fill="#FFFFFF" font-weight="700" text-anchor="middle" letter-spacing="4">JEWEL BESPOKE BUILD</text>
+<text x="670.0" y="1638" font-family="Helvetica,Arial,sans-serif" font-size="11" fill="#C09A51" font-weight="600" text-anchor="middle" letter-spacing="3">WWW.JEWELBB.CO.UK</text>
+</svg>

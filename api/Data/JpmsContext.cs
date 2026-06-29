@@ -52,6 +52,9 @@ public sealed class JpmsContext : DbContext
     public DbSet<WorkOrderEntity> WorkOrders => Set<WorkOrderEntity>();
     public DbSet<RequestEntity> Requests => Set<RequestEntity>();
     public DbSet<RequestMessageEntity> RequestMessages => Set<RequestMessageEntity>();
+    public DbSet<RequestAgentEntity> RequestAgents => Set<RequestAgentEntity>();
+    public DbSet<AgentChatMessageEntity> AgentChatMessages => Set<AgentChatMessageEntity>();
+    public DbSet<AgentProposalEntity> AgentProposals => Set<AgentProposalEntity>();
     public DbSet<IntakeEmailEntity> IntakeEmails => Set<IntakeEmailEntity>();
     public DbSet<MailboxSyncStateEntity> MailboxSyncStates => Set<MailboxSyncStateEntity>();
     public DbSet<CostCenterEntity> CostCenters => Set<CostCenterEntity>();
