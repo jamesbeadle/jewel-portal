@@ -16,11 +16,11 @@ public sealed class HttpIntakeQueue : IIntakeQueue
         this.commands = commands;
     }
 
-    public Task<PagedResult<MailboxMessage>> ListInboxLiveAsync(int skip = 0, int take = 25, CancellationToken cancellationToken = default) =>
-        queries.AskAsync(new ListInboxMessages(skip, take), cancellationToken);
+    public Task<MailboxPage> ListInboxLiveAsync(string? cursor = null, int take = 25, CancellationToken cancellationToken = default) =>
+        queries.AskAsync(new ListInboxMessages(cursor, take), cancellationToken);
 
-    public Task<PagedResult<MailboxMessage>> ListDiscardedLiveAsync(int skip = 0, int take = 25, CancellationToken cancellationToken = default) =>
-        queries.AskAsync(new ListDiscardedMessages(skip, take), cancellationToken);
+    public Task<MailboxPage> ListDiscardedLiveAsync(string? cursor = null, int take = 25, CancellationToken cancellationToken = default) =>
+        queries.AskAsync(new ListDiscardedMessages(cursor, take), cancellationToken);
 
     public Task<MailboxMessageDetail> GetMessageDetailAsync(string messageId, string? internetMessageId, CancellationToken cancellationToken = default) =>
         queries.AskAsync(new GetMailboxMessageDetail(messageId, internetMessageId), cancellationToken);

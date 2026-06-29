@@ -26,9 +26,8 @@ public sealed class ReturnRequestToTriageHandler : ICommandHandler<ReturnRequest
         if (request is null)
             return new Acknowledgement(command.RequestId);
 
-        // Move the request's emails back to the Inbox so they re-enter triage (best-effort).
-        if (!string.IsNullOrEmpty(request.MailboxFolderId))
-            await graph.ReturnFolderMessagesToInboxAsync(request.MailboxFolderId, cancellationToken);
+        // Clear the request's tags from its emails so they re-enter the triage queue (best-effort).
+        await graph.ClearRequestTagsAsync(TriageCategories.ForRequest(request.Number), cancellationToken);
 
         // Drop the request's conversation history and the request itself.
         var messages = await context.RequestMessages

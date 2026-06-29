@@ -16,10 +16,17 @@ public sealed record MailboxMessage(
     DateTimeOffset ReceivedAt);
 
 // The full, on-demand content of one mailbox message (sanitised HTML body + non-inline attachment
-// metadata), fetched live when a triager opens it. Mirrors IntakeEmailDetail but keyed by the live
-// message id rather than a stored intake id.
+// metadata), fetched live when a triager opens it. Keyed by the live message id.
 public sealed record MailboxMessageDetail(
     string MessageId,
     string BodyHtml,
     bool BodyIsHtml,
     IReadOnlyList<IntakeAttachment> Attachments);
+
+// One page of a live, server-side-filtered mailbox read. Graph pages these with an opaque cursor
+// (skiptoken) rather than an offset, so NextCursor — when non-null — is passed back to fetch the
+// next page. Total is the count of all messages matching the filter (the whole queue / pile size).
+public sealed record MailboxPage(
+    IReadOnlyList<MailboxMessage> Items,
+    string? NextCursor,
+    int Total);

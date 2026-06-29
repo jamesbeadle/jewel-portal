@@ -18,8 +18,8 @@ namespace Jewel.JPMS.Api.Features.Requests;
 public sealed class MailboxTriageEndpoints
 {
     private readonly SignedInUserResolver users;
-    private readonly IQueryHandler<ListInboxMessages, PagedResult<MailboxMessage>> listInbox;
-    private readonly IQueryHandler<ListDiscardedMessages, PagedResult<MailboxMessage>> listDiscarded;
+    private readonly IQueryHandler<ListInboxMessages, MailboxPage> listInbox;
+    private readonly IQueryHandler<ListDiscardedMessages, MailboxPage> listDiscarded;
     private readonly IQueryHandler<GetMailboxMessageDetail, MailboxMessageDetail> detail;
     private readonly ICommandHandler<DiscardMessage, Acknowledgement> discard;
     private readonly ICommandHandler<RestoreMessage, Acknowledgement> restore;
@@ -28,8 +28,8 @@ public sealed class MailboxTriageEndpoints
 
     public MailboxTriageEndpoints(
         SignedInUserResolver users,
-        IQueryHandler<ListInboxMessages, PagedResult<MailboxMessage>> listInbox,
-        IQueryHandler<ListDiscardedMessages, PagedResult<MailboxMessage>> listDiscarded,
+        IQueryHandler<ListInboxMessages, MailboxPage> listInbox,
+        IQueryHandler<ListDiscardedMessages, MailboxPage> listDiscarded,
         IQueryHandler<GetMailboxMessageDetail, MailboxMessageDetail> detail,
         ICommandHandler<DiscardMessage, Acknowledgement> discard,
         ICommandHandler<RestoreMessage, Acknowledgement> restore,
@@ -51,8 +51,8 @@ public sealed class MailboxTriageEndpoints
         [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "mailbox/inbox")] HttpRequest request)
     {
         if (await Gate(request) is { } deny) return deny;
-        var (skip, take) = Paging(request);
-        return new OkObjectResult(await listInbox.HandleAsync(new ListInboxMessages(skip, take), request.HttpContext.RequestAborted));
+        var (cursor, take) = Paging(request);
+        return new OkObjectResult(await listInbox.HandleAsync(new ListInboxMessages(cursor, take), request.HttpContext.RequestAborted));
     }
 
     [Function(nameof(ListDiscardedMessages))]
@@ -60,8 +60,8 @@ public sealed class MailboxTriageEndpoints
         [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "mailbox/discarded")] HttpRequest request)
     {
         if (await Gate(request) is { } deny) return deny;
-        var (skip, take) = Paging(request);
-        return new OkObjectResult(await listDiscarded.HandleAsync(new ListDiscardedMessages(skip, take), request.HttpContext.RequestAborted));
+        var (cursor, take) = Paging(request);
+        return new OkObjectResult(await listDiscarded.HandleAsync(new ListDiscardedMessages(cursor, take), request.HttpContext.RequestAborted));
     }
 
     [Function(nameof(GetMailboxMessageDetail))]
@@ -135,11 +135,11 @@ public sealed class MailboxTriageEndpoints
         return null;
     }
 
-    private static (int Skip, int Take) Paging(HttpRequest request)
+    private static (string? Cursor, int Take) Paging(HttpRequest request)
     {
-        var skip = int.TryParse(request.Query["skip"], out var s) ? s : 0;
+        var cursor = request.Query["cursor"].ToString();
         var take = int.TryParse(request.Query["take"], out var t) ? t : 25;
-        return (skip, take);
+        return (string.IsNullOrWhiteSpace(cursor) ? null : cursor, take);
     }
 
     private static async Task<T?> ReadBody<T>(HttpRequest request) where T : class

@@ -181,14 +181,14 @@ else
                         </button>
                     }
 
-                    @if (PageCount > 1)
+                    @if (queueIndex > 0 || queueNext is not null)
                     {
                         <div class="flex items-center justify-between gap-2 pt-2">
                             <button type="button" class="btn-secondary text-xs px-2.5 py-1.5"
-                                    disabled="@(page <= 1)" @onclick="PreviousPage">Previous</button>
-                            <span class="text-[11px] text-content-subtle">Page @(page) of @PageCount</span>
+                                    disabled="@(queueIndex <= 0)" @onclick="PreviousPage">Previous</button>
+                            <span class="text-[11px] text-content-subtle">Page @(queueIndex + 1)</span>
                             <button type="button" class="btn-secondary text-xs px-2.5 py-1.5"
-                                    disabled="@(page >= PageCount)" @onclick="NextPage">Next</button>
+                                    disabled="@(queueNext is null)" @onclick="NextPage">Next</button>
                         </div>
                     }
                 </div>
@@ -375,14 +375,14 @@ else
                             </button>
                         }
 
-                        @if (DiscardedPageCount > 1)
+                        @if (discardedIndex > 0 || discardedNext is not null)
                         {
                             <div class="flex items-center justify-between gap-2 pt-2">
                                 <button type="button" class="btn-secondary text-xs px-2.5 py-1.5"
-                                        disabled="@(discardedPage <= 1)" @onclick="PreviousDiscarded">Previous</button>
-                                <span class="text-[11px] text-content-subtle">Page @(discardedPage) of @DiscardedPageCount</span>
+                                        disabled="@(discardedIndex <= 0)" @onclick="PreviousDiscarded">Previous</button>
+                                <span class="text-[11px] text-content-subtle">Page @(discardedIndex + 1)</span>
                                 <button type="button" class="btn-secondary text-xs px-2.5 py-1.5"
-                                        disabled="@(discardedPage >= DiscardedPageCount)" @onclick="NextDiscarded">Next</button>
+                                        disabled="@(discardedNext is null)" @onclick="NextDiscarded">Next</button>
                             </div>
                         }
                     </div>
@@ -443,14 +443,19 @@ else
     private bool isLoaded;
     private string? loadError;
 
-    // The current page only — the server pages the live folder read, so these are one page each.
+    // The current page only. Graph pages with an opaque cursor, so we keep a small stack of the
+    // cursors we've walked (index 0 = first page, cursor null) to support Previous/Next.
     private IReadOnlyList<MailboxMessage> items = Array.Empty<MailboxMessage>();
     private int total;
-    private int page = 1;
+    private List<string?> queueCursors = new() { null };
+    private int queueIndex;
+    private string? queueNext;
 
     private IReadOnlyList<MailboxMessage> discardedItems = Array.Empty<MailboxMessage>();
     private int discardedTotal;
-    private int discardedPage = 1;
+    private List<string?> discardedCursors = new() { null };
+    private int discardedIndex;
+    private string? discardedNext;
 
     private MailboxMessage? selected;
     private MailboxMessageDetail? detail;
@@ -464,9 +469,6 @@ else
     // role server-side, so they always carry Role.ProjectManager too.
     private bool CanTriage =>
         Session.AvailableRoles.Any(role => role is Role.Admin or Role.ProjectManager);
-
-    private int PageCount => Math.Max(1, (int)Math.Ceiling(total / (double)PageSize));
-    private int DiscardedPageCount => Math.Max(1, (int)Math.Ceiling(discardedTotal / (double)PageSize));
 
     private bool busy;
     private string? actionError;
@@ -506,33 +508,32 @@ else
         detailLoading = false;
         mode = TriageMode.None;
         actionError = null;
-        if (next == QueueView.Discarded) await LoadDiscardedAsync();
-        else await LoadAsync();
+        if (next == QueueView.Discarded) { ResetDiscardedPaging(); await LoadDiscardedAsync(); }
+        else { ResetQueuePaging(); await LoadAsync(); }
     }
+
+    private void ResetQueuePaging() { queueCursors = new() { null }; queueIndex = 0; queueNext = null; }
+    private void ResetDiscardedPaging() { discardedCursors = new() { null }; discardedIndex = 0; discardedNext = null; }
 
     private async Task LoadAsync()
     {
         loadError = null;
         try
         {
-            if (page < 1) page = 1;
-            var result = await Intake.ListInboxLiveAsync((page - 1) * PageSize, PageSize);
+            var result = await Intake.ListInboxLiveAsync(queueCursors[queueIndex], PageSize);
             items = result.Items;
             total = result.Total;
-
-            if (page > PageCount)
-            {
-                page = PageCount;
-                var clamped = await Intake.ListInboxLiveAsync((page - 1) * PageSize, PageSize);
-                items = clamped.Items;
-                total = clamped.Total;
-            }
+            queueNext = result.NextCursor;
+            // Record the cursor for the next page so Next can advance to it.
+            if (queueNext is not null && queueIndex == queueCursors.Count - 1)
+                queueCursors.Add(queueNext);
         }
         catch
         {
             loadError = "Couldn't load the inbox. Please try again.";
             items = Array.Empty<MailboxMessage>();
             total = 0;
+            queueNext = null;
         }
     }
 
@@ -541,52 +542,47 @@ else
         loadError = null;
         try
         {
-            if (discardedPage < 1) discardedPage = 1;
-            var result = await Intake.ListDiscardedLiveAsync((discardedPage - 1) * PageSize, PageSize);
+            var result = await Intake.ListDiscardedLiveAsync(discardedCursors[discardedIndex], PageSize);
             discardedItems = result.Items;
             discardedTotal = result.Total;
-
-            if (discardedPage > DiscardedPageCount)
-            {
-                discardedPage = DiscardedPageCount;
-                var clamped = await Intake.ListDiscardedLiveAsync((discardedPage - 1) * PageSize, PageSize);
-                discardedItems = clamped.Items;
-                discardedTotal = clamped.Total;
-            }
+            discardedNext = result.NextCursor;
+            if (discardedNext is not null && discardedIndex == discardedCursors.Count - 1)
+                discardedCursors.Add(discardedNext);
         }
         catch
         {
             loadError = "Couldn't load discarded emails. Please try again.";
             discardedItems = Array.Empty<MailboxMessage>();
             discardedTotal = 0;
+            discardedNext = null;
         }
     }
 
     private async Task PreviousPage()
     {
-        if (page <= 1) return;
-        page--;
+        if (queueIndex <= 0) return;
+        queueIndex--;
         await LoadAsync();
     }
 
     private async Task NextPage()
     {
-        if (page >= PageCount) return;
-        page++;
+        if (queueNext is null) return;
+        queueIndex++;
         await LoadAsync();
     }
 
     private async Task PreviousDiscarded()
     {
-        if (discardedPage <= 1) return;
-        discardedPage--;
+        if (discardedIndex <= 0) return;
+        discardedIndex--;
         await LoadDiscardedAsync();
     }
 
     private async Task NextDiscarded()
     {
-        if (discardedPage >= DiscardedPageCount) return;
-        discardedPage++;
+        if (discardedNext is null) return;
+        discardedIndex++;
         await LoadDiscardedAsync();
     }
 
@@ -741,6 +737,7 @@ else
             selected = null;
             detail = null;
             detailLoading = false;
+            ResetDiscardedPaging();
             await LoadDiscardedAsync();
         }
         catch
@@ -759,6 +756,7 @@ else
         {
             busy = true;
             await action();
+            ResetQueuePaging();
             await LoadAsync();
             selected = null;
             detail = null;

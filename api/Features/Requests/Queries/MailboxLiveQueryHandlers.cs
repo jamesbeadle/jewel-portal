@@ -7,24 +7,24 @@ using Jewel.JPMS.Models;
 
 namespace Jewel.JPMS.Api.Features.Requests.Queries;
 
-/// <summary>The triage queue, read live from the Inbox. No database.</summary>
-public sealed class ListInboxMessagesHandler : IQueryHandler<ListInboxMessages, PagedResult<MailboxMessage>>
+/// <summary>The triage queue, read live from the Inbox (messages not tagged triaged). No database.</summary>
+public sealed class ListInboxMessagesHandler : IQueryHandler<ListInboxMessages, MailboxPage>
 {
     private readonly IMailboxGraphClient graph;
     public ListInboxMessagesHandler(IMailboxGraphClient graph) { this.graph = graph; }
 
-    public Task<PagedResult<MailboxMessage>> HandleAsync(ListInboxMessages query, CancellationToken cancellationToken) =>
-        graph.ListInboxAsync(query.Skip, query.Take, cancellationToken);
+    public Task<MailboxPage> HandleAsync(ListInboxMessages query, CancellationToken cancellationToken) =>
+        graph.ListInboxAsync(query.Cursor, query.Take, cancellationToken);
 }
 
-/// <summary>The discarded pile, read live from the "General" folder.</summary>
-public sealed class ListDiscardedMessagesHandler : IQueryHandler<ListDiscardedMessages, PagedResult<MailboxMessage>>
+/// <summary>The discarded pile, read live from the Inbox (messages tagged discarded).</summary>
+public sealed class ListDiscardedMessagesHandler : IQueryHandler<ListDiscardedMessages, MailboxPage>
 {
     private readonly IMailboxGraphClient graph;
     public ListDiscardedMessagesHandler(IMailboxGraphClient graph) { this.graph = graph; }
 
-    public Task<PagedResult<MailboxMessage>> HandleAsync(ListDiscardedMessages query, CancellationToken cancellationToken) =>
-        graph.ListDiscardedAsync(query.Skip, query.Take, cancellationToken);
+    public Task<MailboxPage> HandleAsync(ListDiscardedMessages query, CancellationToken cancellationToken) =>
+        graph.ListDiscardedAsync(query.Cursor, query.Take, cancellationToken);
 }
 
 /// <summary>

@@ -9,8 +9,8 @@ namespace Jewel.JPMS.Services;
 // a single mailbox move (discard, restore, assign to a request, or create a request).
 public interface IIntakeQueue
 {
-    Task<PagedResult<MailboxMessage>> ListInboxLiveAsync(int skip = 0, int take = 25, CancellationToken cancellationToken = default);
-    Task<PagedResult<MailboxMessage>> ListDiscardedLiveAsync(int skip = 0, int take = 25, CancellationToken cancellationToken = default);
+    Task<MailboxPage> ListInboxLiveAsync(string? cursor = null, int take = 25, CancellationToken cancellationToken = default);
+    Task<MailboxPage> ListDiscardedLiveAsync(string? cursor = null, int take = 25, CancellationToken cancellationToken = default);
     Task<MailboxMessageDetail> GetMessageDetailAsync(string messageId, string? internetMessageId, CancellationToken cancellationToken = default);
     Task<Acknowledgement> DiscardMessageAsync(string messageId, string? internetMessageId, CancellationToken cancellationToken = default);
     Task<Acknowledgement> RestoreMessageAsync(string messageId, string? internetMessageId, CancellationToken cancellationToken = default);

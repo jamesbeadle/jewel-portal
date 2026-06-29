@@ -11,8 +11,8 @@ using Microsoft.EntityFrameworkCore;
 namespace Jewel.JPMS.Api.Features.Requests.Commands;
 
 /// <summary>
-/// Assign a mailbox message to an existing request (live-read model). Records the email on the
-/// request's shared conversation and moves the message out of the Inbox into the request's folder.
+/// Assign a mailbox message to an existing request (category model). Tags the email triaged +
+/// REQ-xxxx (verified) and records it on the request's shared conversation. The email never moves.
 /// </summary>
 public sealed class AssignMessageToRequestHandler : ICommandHandler<AssignMessageToRequest, Acknowledgement>
 {
@@ -28,17 +28,14 @@ public sealed class AssignMessageToRequestHandler : ICommandHandler<AssignMessag
         var snapshot = await graph.GetSnapshotAsync(command.MessageId, command.InternetMessageId, cancellationToken)
             ?? throw new InvalidOperationException("The email could not be read from the mailbox.");
 
+        // Tag the email to this request first, verified by read-back; only record it once that sticks.
+        var tagged = await graph.AssignAsync(
+            command.MessageId, snapshot.InternetMessageId, TriageCategories.ForRequest(request.Number), cancellationToken);
+        if (!tagged)
+            throw new InvalidOperationException("The email couldn't be tagged to the request. Please try again.");
+
         context.RequestMessages.Add(MailboxRequestMessage.From(snapshot, request.RequestId));
         await context.SaveChangesAsync(cancellationToken);
-
-        // Move the email into the request's folder; remember the folder on first use.
-        var folderId = await graph.MoveToRequestFolderAsync(
-            command.MessageId, snapshot.InternetMessageId, RequestsIdentifierFactory.FolderName(request.Number), cancellationToken);
-        if (!string.IsNullOrEmpty(folderId) && string.IsNullOrEmpty(request.MailboxFolderId))
-        {
-            request.MailboxFolderId = folderId;
-            await context.SaveChangesAsync(cancellationToken);
-        }
 
         return new Acknowledgement(request.RequestId);
     }
@@ -85,14 +82,15 @@ public sealed class CreateRequestFromMessageHandler : ICommandHandler<CreateRequ
             DrawingRef = command.DrawingRef,
             ResponseDue = command.ResponseDue
         };
+        // Tag the email to this new request first, verified by read-back; only persist the request
+        // once the tag sticks, so we never create a request whose email is still sitting in the queue.
+        var tagged = await graph.AssignAsync(
+            command.MessageId, snapshot.InternetMessageId, TriageCategories.ForRequest(nextNumber), cancellationToken);
+        if (!tagged)
+            throw new InvalidOperationException("The email couldn't be tagged to the new request. Please try again.");
+
         context.Requests.Add(request);
         context.RequestMessages.Add(MailboxRequestMessage.From(snapshot, request.RequestId));
-
-        var folderId = await graph.MoveToRequestFolderAsync(
-            command.MessageId, snapshot.InternetMessageId, RequestsIdentifierFactory.FolderName(request.Number), cancellationToken);
-        if (!string.IsNullOrEmpty(folderId))
-            request.MailboxFolderId = folderId;
-
         await context.SaveChangesAsync(cancellationToken);
 
         // Issue the rendered document to the project's contacts (no-op when unconfigured / no contacts).

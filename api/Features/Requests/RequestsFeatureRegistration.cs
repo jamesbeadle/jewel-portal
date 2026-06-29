@@ -20,8 +20,8 @@ public static class RequestsFeatureRegistration
 
         // Live-read triage: read the Inbox (queue) / General (discarded) folder straight from the
         // mailbox, move messages (discard/restore), and assign/create requests from a message.
-        services.AddScoped<IQueryHandler<ListInboxMessages, PagedResult<MailboxMessage>>, ListInboxMessagesHandler>();
-        services.AddScoped<IQueryHandler<ListDiscardedMessages, PagedResult<MailboxMessage>>, ListDiscardedMessagesHandler>();
+        services.AddScoped<IQueryHandler<ListInboxMessages, MailboxPage>, ListInboxMessagesHandler>();
+        services.AddScoped<IQueryHandler<ListDiscardedMessages, MailboxPage>, ListDiscardedMessagesHandler>();
         services.AddScoped<IQueryHandler<GetMailboxMessageDetail, MailboxMessageDetail>, GetMailboxMessageDetailHandler>();
         services.AddScoped<ICommandHandler<DiscardMessage, Acknowledgement>, DiscardMessageHandler>();
         services.AddScoped<ICommandHandler<RestoreMessage, Acknowledgement>, RestoreMessageHandler>();

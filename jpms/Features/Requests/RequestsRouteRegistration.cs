@@ -34,20 +34,20 @@ public static class RequestsRouteRegistration
 
         // Live-read triage: read the Inbox (queue) and General (discarded) folders straight from the
         // mailbox. Message ids go in the query string, not the path (Graph ids contain path-unsafe chars).
-        queries.Register<ListInboxMessages, PagedResult<MailboxMessage>>(
+        queries.Register<ListInboxMessages, MailboxPage>(
             new QueryRoute("/api/mailbox/inbox",
                 query =>
                 {
                     var q = (ListInboxMessages)query;
-                    return $"/api/mailbox/inbox?skip={q.Skip}&take={q.Take}";
+                    return $"/api/mailbox/inbox?cursor={Uri.EscapeDataString(q.Cursor ?? string.Empty)}&take={q.Take}";
                 }));
 
-        queries.Register<ListDiscardedMessages, PagedResult<MailboxMessage>>(
+        queries.Register<ListDiscardedMessages, MailboxPage>(
             new QueryRoute("/api/mailbox/discarded",
                 query =>
                 {
                     var q = (ListDiscardedMessages)query;
-                    return $"/api/mailbox/discarded?skip={q.Skip}&take={q.Take}";
+                    return $"/api/mailbox/discarded?cursor={Uri.EscapeDataString(q.Cursor ?? string.Empty)}&take={q.Take}";
                 }));
 
         queries.Register<GetMailboxMessageDetail, MailboxMessageDetail>(

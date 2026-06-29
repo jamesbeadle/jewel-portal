@@ -15,7 +15,10 @@ public sealed class DiscardMessageHandler : ICommandHandler<DiscardMessage, Ackn
 
     public async Task<Acknowledgement> HandleAsync(DiscardMessage command, CancellationToken cancellationToken)
     {
-        await graph.DiscardAsync(command.MessageId, command.InternetMessageId, cancellationToken);
+        // Tag, then read back to confirm. Only report success once it's verified; otherwise fail so
+        // the screen surfaces an error rather than a false "done".
+        var ok = await graph.DiscardAsync(command.MessageId, command.InternetMessageId, cancellationToken);
+        if (!ok) throw new InvalidOperationException("The email couldn't be tagged as discarded. Please try again.");
         return new Acknowledgement(command.MessageId);
     }
 }
@@ -28,7 +31,8 @@ public sealed class RestoreMessageHandler : ICommandHandler<RestoreMessage, Ackn
 
     public async Task<Acknowledgement> HandleAsync(RestoreMessage command, CancellationToken cancellationToken)
     {
-        await graph.RestoreAsync(command.MessageId, command.InternetMessageId, cancellationToken);
+        var ok = await graph.RestoreAsync(command.MessageId, command.InternetMessageId, cancellationToken);
+        if (!ok) throw new InvalidOperationException("The email couldn't be restored to the queue. Please try again.");
         return new Acknowledgement(command.MessageId);
     }
 }

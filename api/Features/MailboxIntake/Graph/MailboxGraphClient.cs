@@ -2,51 +2,59 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
-using Jewel.JPMS.Contracts.Cqrs;
 using Jewel.JPMS.Models;
 using Microsoft.Extensions.Logging;
 
 namespace Jewel.JPMS.Api.Features.MailboxIntake.Graph;
 
+/// <summary>The categories the triage system stamps on a mailbox message. Triage never moves an
+/// email — it tags it — so the Inbox stays whole and each view is a category filter.</summary>
+public static class TriageCategories
+{
+    /// <summary>Present on any email that has been triaged (the queue = Inbox without this).</summary>
+    public const string Triaged = "JPMS/Triaged";
+
+    /// <summary>Present on a discarded ("not a request") email.</summary>
+    public const string Discarded = "JPMS/Discarded";
+
+    /// <summary>The category for an email assigned to a request, e.g. "JPMS/REQ-0014".</summary>
+    public static string ForRequest(int number) => $"JPMS/REQ-{number:0000}";
+}
+
 /// <summary>
-/// Live mailbox access for the triage screen: read a page of a folder's messages and move a message
-/// between folders. This is the engine of the live-read model — the Inbox is the triage queue and
-/// the "General" folder is the discarded pile, both read fresh on each request, and every triage
-/// action is a single move. No state is mirrored in the database.
+/// Live mailbox access for triage, category-based: read folder pages filtered by category, and tag
+/// messages. Every tag operation is <b>verified</b> — it writes the categories and then reads them
+/// back, only reporting success if the change actually stuck. Nothing is ever moved or deleted, so
+/// duplication and lost mail are impossible by construction.
 ///
-/// All calls request immutable ids (<c>Prefer: IdType="ImmutableId"</c>) so a message's id stays
-/// valid across a move; a move additionally re-finds the message by its stable internetMessageId if
-/// the supplied id has gone stale, and skips a move into the folder the message already occupies
-/// (Graph duplicates a same-folder move).
+/// All calls request immutable ids (<c>Prefer: IdType="ImmutableId"</c>) so a message id stays valid.
 /// </summary>
 public interface IMailboxGraphClient
 {
-    Task<PagedResult<MailboxMessage>> ListInboxAsync(int skip, int take, CancellationToken ct);
-    Task<PagedResult<MailboxMessage>> ListDiscardedAsync(int skip, int take, CancellationToken ct);
+    /// <summary>One page of the triage queue: Inbox messages NOT tagged triaged, newest first.</summary>
+    Task<MailboxPage> ListInboxAsync(string? cursor, int take, CancellationToken ct);
 
-    /// <summary>Move a message from the Inbox into the "General" (discarded) folder. Returns false if it can't be found.</summary>
+    /// <summary>One page of the discarded pile: Inbox messages tagged discarded, newest first.</summary>
+    Task<MailboxPage> ListDiscardedAsync(string? cursor, int take, CancellationToken ct);
+
+    /// <summary>Tag an email triaged + discarded. Returns true only once the tags are read back present.</summary>
     Task<bool> DiscardAsync(string messageId, string? internetMessageId, CancellationToken ct);
 
-    /// <summary>Move a message from "General" back into the Inbox. Returns false if it can't be found.</summary>
+    /// <summary>Remove the triaged + discarded tags (undo a discard). Verified by read-back.</summary>
     Task<bool> RestoreAsync(string messageId, string? internetMessageId, CancellationToken ct);
 
-    /// <summary>Read the fields needed to record a message against a request, or null if it's gone.</summary>
+    /// <summary>Tag an email triaged + assigned to the given request category. Verified by read-back.</summary>
+    Task<bool> AssignAsync(string messageId, string? internetMessageId, string requestCategory, CancellationToken ct);
+
+    /// <summary>Remove the triaged + request tags from every email assigned to a request (return-to-triage).
+    /// Returns how many were cleared.</summary>
+    Task<int> ClearRequestTagsAsync(string requestCategory, CancellationToken ct);
+
+    /// <summary>Read the fields needed to record an email against a request, or null if it's gone.</summary>
     Task<MailboxSnapshot?> GetSnapshotAsync(string messageId, string? internetMessageId, CancellationToken ct);
-
-    /// <summary>
-    /// Ensure the request's folder (named e.g. "REQ-0001" under the "Requests" parent) and move the
-    /// message into it. Returns the folder id so it can be stored on the request, or null on failure.
-    /// </summary>
-    Task<string?> MoveToRequestFolderAsync(string messageId, string? internetMessageId, string requestFolderName, CancellationToken ct);
-
-    /// <summary>Move every message in a folder back into the Inbox (used to return a request to triage).
-    /// Returns the number of messages moved.</summary>
-    Task<int> ReturnFolderMessagesToInboxAsync(string folderId, CancellationToken ct);
 }
 
-/// <summary>The subset of a mailbox message recorded against a request when an email is assigned to
-/// it: the author, the (preview) body, the received time, and the threading ids so later replies can
-/// be stitched back.</summary>
+/// <summary>The subset of a mailbox message recorded against a request when an email is assigned.</summary>
 public sealed record MailboxSnapshot(
     string InternetMessageId,
     string? ConversationId,
@@ -57,28 +65,22 @@ public sealed record MailboxSnapshot(
     string BodyPreview,
     DateTimeOffset ReceivedAt);
 
-/// <summary>No-op client used when Graph credentials aren't configured for the API: triage shows
-/// empty and actions report no-op rather than failing.</summary>
+/// <summary>No-op client used when Graph credentials aren't configured: triage shows empty and tag
+/// operations report failure (so the UI shows an error rather than a false success).</summary>
 public sealed class NullMailboxGraphClient : IMailboxGraphClient
 {
-    private static PagedResult<MailboxMessage> Empty(int skip, int take) =>
-        new(Array.Empty<MailboxMessage>(), 0, skip, take);
-
-    public Task<PagedResult<MailboxMessage>> ListInboxAsync(int skip, int take, CancellationToken ct) =>
-        Task.FromResult(Empty(skip, take));
-
-    public Task<PagedResult<MailboxMessage>> ListDiscardedAsync(int skip, int take, CancellationToken ct) =>
-        Task.FromResult(Empty(skip, take));
-
+    public Task<MailboxPage> ListInboxAsync(string? cursor, int take, CancellationToken ct) =>
+        Task.FromResult(new MailboxPage(Array.Empty<MailboxMessage>(), null, 0));
+    public Task<MailboxPage> ListDiscardedAsync(string? cursor, int take, CancellationToken ct) =>
+        Task.FromResult(new MailboxPage(Array.Empty<MailboxMessage>(), null, 0));
     public Task<bool> DiscardAsync(string messageId, string? internetMessageId, CancellationToken ct) => Task.FromResult(false);
     public Task<bool> RestoreAsync(string messageId, string? internetMessageId, CancellationToken ct) => Task.FromResult(false);
+    public Task<bool> AssignAsync(string messageId, string? internetMessageId, string requestCategory, CancellationToken ct) => Task.FromResult(false);
+    public Task<int> ClearRequestTagsAsync(string requestCategory, CancellationToken ct) => Task.FromResult(0);
     public Task<MailboxSnapshot?> GetSnapshotAsync(string messageId, string? internetMessageId, CancellationToken ct) => Task.FromResult<MailboxSnapshot?>(null);
-    public Task<string?> MoveToRequestFolderAsync(string messageId, string? internetMessageId, string requestFolderName, CancellationToken ct) => Task.FromResult<string?>(null);
-    public Task<int> ReturnFolderMessagesToInboxAsync(string folderId, CancellationToken ct) => Task.FromResult(0);
 }
 
-/// <summary>Graph REST implementation (HttpClient + app-only token), in the same style as the API's
-/// message reader.</summary>
+/// <summary>Graph REST implementation (HttpClient + app-only token).</summary>
 public sealed class MailboxGraphClient : IMailboxGraphClient
 {
     private const string GraphBase = "https://graph.microsoft.com/v1.0";
@@ -101,110 +103,215 @@ public sealed class MailboxGraphClient : IMailboxGraphClient
 
     private string Mailbox => Uri.EscapeDataString(_options.Mailbox);
 
-    public Task<PagedResult<MailboxMessage>> ListInboxAsync(int skip, int take, CancellationToken ct) =>
-        ListFolderAsync("inbox", skip, take, ct);
+    public Task<MailboxPage> ListInboxAsync(string? cursor, int take, CancellationToken ct) =>
+        ListFilteredAsync($"not categories/any(c:c eq '{TriageCategories.Triaged}')", cursor, take, ct);
 
-    public async Task<PagedResult<MailboxMessage>> ListDiscardedAsync(int skip, int take, CancellationToken ct)
+    public Task<MailboxPage> ListDiscardedAsync(string? cursor, int take, CancellationToken ct) =>
+        ListFilteredAsync($"categories/any(c:c eq '{TriageCategories.Discarded}')", cursor, take, ct);
+
+    private async Task<MailboxPage> ListFilteredAsync(string filter, string? cursor, int take, CancellationToken ct)
     {
-        // The discarded pile is a top-level folder (sibling of the Inbox); if it doesn't exist yet
-        // there is nothing discarded.
-        var discardFolder = await EnsureFolderAsync(_options.DiscardFolder, parent: null, ct);
-        if (string.IsNullOrEmpty(discardFolder))
-            return new PagedResult<MailboxMessage>(Array.Empty<MailboxMessage>(), 0, skip, take);
-
-        return await ListFolderAsync(discardFolder, skip, take, ct);
-    }
-
-    private async Task<PagedResult<MailboxMessage>> ListFolderAsync(string folder, int skip, int take, CancellationToken ct)
-    {
-        skip = Math.Max(0, skip);
         take = Math.Clamp(take, 1, 100);
-
-        var url = $"{GraphBase}/users/{Mailbox}/mailFolders/{Uri.EscapeDataString(folder)}/messages"
-            + $"?$select={Summary}&$orderby=receivedDateTime%20desc&$top={take}&$skip={skip}";
+        var url = $"{GraphBase}/users/{Mailbox}/mailFolders/inbox/messages"
+            + $"?$filter={Uri.EscapeDataString(filter)}"
+            + "&$orderby=receivedDateTime%20desc"
+            + $"&$select={Summary}"
+            + $"&$top={take}&$count=true";
+        if (!string.IsNullOrEmpty(cursor))
+            url += $"&$skiptoken={Uri.EscapeDataString(cursor)}";
 
         var items = new List<MailboxMessage>();
-        using (var response = await SendAsync(HttpMethod.Get, url, content: null, ct, allowNotFound: true))
-        {
-            if (response.StatusCode == HttpStatusCode.NotFound)
-                return new PagedResult<MailboxMessage>(items, 0, skip, take);
-            if (!response.IsSuccessStatusCode)
-            {
-                _logger.LogWarning("Mailbox list {Folder} failed: {Status}.", folder, (int)response.StatusCode);
-                return new PagedResult<MailboxMessage>(items, 0, skip, take);
-            }
+        int total = 0;
+        string? nextCursor = null;
 
-            await using var stream = await response.Content.ReadAsStreamAsync(ct);
-            using var doc = await JsonDocument.ParseAsync(stream, cancellationToken: ct);
-            if (doc.RootElement.TryGetProperty("value", out var arr) && arr.ValueKind == JsonValueKind.Array)
-                foreach (var item in arr.EnumerateArray())
-                    if (Parse(item) is { } message)
-                        items.Add(message);
-        }
-
-        var total = await CountFolderAsync(folder, ct) ?? (skip + items.Count);
-        return new PagedResult<MailboxMessage>(items, total, skip, take);
-    }
-
-    private async Task<int?> CountFolderAsync(string folder, CancellationToken ct)
-    {
-        var url = $"{GraphBase}/users/{Mailbox}/mailFolders/{Uri.EscapeDataString(folder)}/messages/$count";
+        // $count + the negated filter require advanced-query mode (ConsistencyLevel: eventual), which
+        // pages by skiptoken rather than $skip — see the probe results.
         using var response = await SendAsync(HttpMethod.Get, url, content: null, ct, allowNotFound: true, consistencyEventual: true);
         if (!response.IsSuccessStatusCode)
-            return null;
-        var text = await response.Content.ReadAsStringAsync(ct);
-        return int.TryParse(text, out var count) ? count : null;
+        {
+            _logger.LogWarning("Mailbox list failed: {Status}. {Detail}",
+                (int)response.StatusCode, await SafeBodyAsync(response, ct));
+            return new MailboxPage(items, null, 0);
+        }
+
+        await using var stream = await response.Content.ReadAsStreamAsync(ct);
+        using var doc = await JsonDocument.ParseAsync(stream, cancellationToken: ct);
+        var root = doc.RootElement;
+
+        if (root.TryGetProperty("@odata.count", out var countEl) && countEl.TryGetInt32(out var c))
+            total = c;
+        if (root.TryGetProperty("value", out var arr) && arr.ValueKind == JsonValueKind.Array)
+            foreach (var item in arr.EnumerateArray())
+                if (Parse(item) is { } m)
+                    items.Add(m);
+        if (root.TryGetProperty("@odata.nextLink", out var nl) && nl.GetString() is { } link)
+            nextCursor = ExtractSkipToken(link);
+
+        return new MailboxPage(items, nextCursor, total);
     }
 
-    public async Task<bool> DiscardAsync(string messageId, string? internetMessageId, CancellationToken ct)
+    // The continuation token is carried in the nextLink's $skiptoken query parameter.
+    private static string? ExtractSkipToken(string nextLink)
     {
-        // Top-level folder (sibling of the Inbox), found-or-created on demand.
-        var discardFolder = await EnsureFolderAsync(_options.DiscardFolder, parent: null, ct);
-        if (string.IsNullOrEmpty(discardFolder))
+        const string marker = "$skiptoken=";
+        var i = nextLink.IndexOf(marker, StringComparison.OrdinalIgnoreCase);
+        if (i < 0) return null;
+        var rest = nextLink[(i + marker.Length)..];
+        var amp = rest.IndexOf('&');
+        var token = amp >= 0 ? rest[..amp] : rest;
+        return Uri.UnescapeDataString(token);
+    }
+
+    public Task<bool> DiscardAsync(string messageId, string? internetMessageId, CancellationToken ct) =>
+        AddCategoriesAsync(messageId, internetMessageId, new[] { TriageCategories.Triaged, TriageCategories.Discarded }, ct);
+
+    public Task<bool> RestoreAsync(string messageId, string? internetMessageId, CancellationToken ct) =>
+        RemoveCategoriesAsync(messageId, internetMessageId, new[] { TriageCategories.Triaged, TriageCategories.Discarded }, ct);
+
+    public Task<bool> AssignAsync(string messageId, string? internetMessageId, string requestCategory, CancellationToken ct) =>
+        AddCategoriesAsync(messageId, internetMessageId, new[] { TriageCategories.Triaged, requestCategory }, ct);
+
+    public async Task<int> ClearRequestTagsAsync(string requestCategory, CancellationToken ct)
+    {
+        var cleared = 0;
+        for (var guard = 0; guard < 20; guard++)
         {
-            _logger.LogWarning("Discard skipped: could not resolve the '{Folder}' folder.", _options.DiscardFolder);
+            var ids = await FindInboxIdsByCategoryAsync(requestCategory, ct);
+            if (ids.Count == 0)
+                break;
+
+            var any = false;
+            foreach (var id in ids)
+                if (await RemoveCategoriesAsync(id, null, new[] { TriageCategories.Triaged, requestCategory }, ct))
+                {
+                    cleared++;
+                    any = true;
+                }
+
+            if (!any)
+                break;
+        }
+        return cleared;
+    }
+
+    // --- Verified tag operations: write the categories, then read them back to confirm. ---
+
+    private async Task<bool> AddCategoriesAsync(string messageId, string? imid, string[] add, CancellationToken ct)
+    {
+        var loaded = await LoadAsync(messageId, imid, ct);
+        if (loaded is not { } m)
+        {
+            _logger.LogWarning("Tag-add skipped: message {MessageId} not found.", messageId);
             return false;
         }
 
-        var moved = await MoveAsync(messageId, internetMessageId, discardFolder, ct);
+        var updated = m.Categories.Concat(add).Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
+        if (!await PatchCategoriesAsync(m.Id, updated, ct))
+            return false;
 
-        // Sweep any *other* copies of the same email still in the Inbox (duplicates left over from
-        // earlier) so a discard always clears the Inbox of this message entirely, not just the one
-        // copy the user clicked.
-        if (!string.IsNullOrEmpty(internetMessageId))
-        {
-            for (var guard = 0; guard < 5; guard++)
-            {
-                var copies = await FindInboxMessageIdsAsync(internetMessageId!, ct);
-                if (copies.Count == 0)
-                    break;
-
-                var movedThisPass = false;
-                foreach (var id in copies)
-                    if (await MoveAsync(id, internetMessageId, discardFolder, ct))
-                    {
-                        moved = true;
-                        movedThisPass = true;
-                    }
-
-                if (!movedThisPass)
-                    break;
-            }
-        }
-
-        return moved;
+        var after = await GetCategoriesAsync(m.Id, ct);
+        var ok = after is not null && add.All(a => after.Contains(a, StringComparer.OrdinalIgnoreCase));
+        if (!ok) _logger.LogWarning("Tag-add for {MessageId} did not verify.", messageId);
+        return ok;
     }
 
-    public Task<bool> RestoreAsync(string messageId, string? internetMessageId, CancellationToken ct) =>
-        MoveAsync(messageId, internetMessageId, "inbox", ct);
+    private async Task<bool> RemoveCategoriesAsync(string messageId, string? imid, string[] remove, CancellationToken ct)
+    {
+        var loaded = await LoadAsync(messageId, imid, ct);
+        if (loaded is not { } m)
+        {
+            _logger.LogWarning("Tag-remove skipped: message {MessageId} not found.", messageId);
+            return false;
+        }
+
+        var updated = m.Categories.Where(c => !remove.Contains(c, StringComparer.OrdinalIgnoreCase)).ToArray();
+        if (!await PatchCategoriesAsync(m.Id, updated, ct))
+            return false;
+
+        var after = await GetCategoriesAsync(m.Id, ct);
+        var ok = after is not null && !remove.Any(r => after.Contains(r, StringComparer.OrdinalIgnoreCase));
+        if (!ok) _logger.LogWarning("Tag-remove for {MessageId} did not verify.", messageId);
+        return ok;
+    }
+
+    // Resolve the live id + current categories, re-finding by internetMessageId if the id is stale.
+    private async Task<(string Id, string[] Categories)?> LoadAsync(string messageId, string? imid, CancellationToken ct)
+    {
+        var cats = await GetCategoriesAsync(messageId, ct);
+        if (cats is not null) return (messageId, cats);
+
+        if (string.IsNullOrEmpty(imid)) return null;
+        var found = await FindByInternetMessageIdAsync(imid, ct);
+        if (string.IsNullOrEmpty(found)) return null;
+        cats = await GetCategoriesAsync(found, ct);
+        return cats is null ? null : (found, cats);
+    }
+
+    private async Task<string[]?> GetCategoriesAsync(string messageId, CancellationToken ct)
+    {
+        var url = $"{GraphBase}/users/{Mailbox}/messages/{Uri.EscapeDataString(messageId)}?$select=categories";
+        using var response = await SendAsync(HttpMethod.Get, url, content: null, ct, allowNotFound: true);
+        if (!response.IsSuccessStatusCode) return null;
+
+        await using var stream = await response.Content.ReadAsStreamAsync(ct);
+        using var doc = await JsonDocument.ParseAsync(stream, cancellationToken: ct);
+        if (doc.RootElement.TryGetProperty("categories", out var arr) && arr.ValueKind == JsonValueKind.Array)
+            return arr.EnumerateArray().Select(e => e.GetString() ?? "").Where(s => s.Length > 0).ToArray();
+        return Array.Empty<string>();
+    }
+
+    private async Task<bool> PatchCategoriesAsync(string messageId, string[] categories, CancellationToken ct)
+    {
+        var url = $"{GraphBase}/users/{Mailbox}/messages/{Uri.EscapeDataString(messageId)}";
+        using var response = await SendAsync(HttpMethod.Patch, url, JsonContent.Create(new { categories }), ct);
+        if (!response.IsSuccessStatusCode)
+            _logger.LogWarning("Category PATCH failed for {MessageId}: {Status}.", messageId, (int)response.StatusCode);
+        return response.IsSuccessStatusCode;
+    }
+
+    private async Task<IReadOnlyList<string>> FindInboxIdsByCategoryAsync(string category, CancellationToken ct)
+    {
+        var filter = Uri.EscapeDataString($"categories/any(c:c eq '{category}')");
+        var url = $"{GraphBase}/users/{Mailbox}/mailFolders/inbox/messages?$filter={filter}&$select=id&$top=50&$count=true";
+        var ids = new List<string>();
+        using var response = await SendAsync(HttpMethod.Get, url, content: null, ct, allowNotFound: true, consistencyEventual: true);
+        if (!response.IsSuccessStatusCode) return ids;
+
+        await using var stream = await response.Content.ReadAsStreamAsync(ct);
+        using var doc = await JsonDocument.ParseAsync(stream, cancellationToken: ct);
+        if (doc.RootElement.TryGetProperty("value", out var arr) && arr.ValueKind == JsonValueKind.Array)
+            foreach (var item in arr.EnumerateArray())
+                if (item.TryGetProperty("id", out var idEl) && idEl.GetString() is { Length: > 0 } id)
+                    ids.Add(id);
+        return ids;
+    }
+
+    private async Task<string?> FindByInternetMessageIdAsync(string internetMessageId, CancellationToken ct)
+    {
+        var escaped = internetMessageId.Replace("'", "''");
+        var filter = Uri.EscapeDataString($"internetMessageId eq '{escaped}'");
+        var url = $"{GraphBase}/users/{Mailbox}/messages?$filter={filter}&$select=id&$top=1";
+        using var response = await SendAsync(HttpMethod.Get, url, content: null, ct, allowNotFound: true);
+        if (!response.IsSuccessStatusCode) return null;
+
+        await using var stream = await response.Content.ReadAsStreamAsync(ct);
+        using var doc = await JsonDocument.ParseAsync(stream, cancellationToken: ct);
+        if (doc.RootElement.TryGetProperty("value", out var arr) && arr.ValueKind == JsonValueKind.Array)
+            foreach (var item in arr.EnumerateArray())
+                if (item.TryGetProperty("id", out var idEl) && idEl.GetString() is { Length: > 0 } id)
+                    return id;
+        return null;
+    }
 
     public async Task<MailboxSnapshot?> GetSnapshotAsync(string messageId, string? internetMessageId, CancellationToken ct)
     {
-        var (liveId, _) = await ResolveLiveAsync(messageId, internetMessageId, ct);
-        if (string.IsNullOrEmpty(liveId))
+        var id = await GetCategoriesAsync(messageId, ct) is not null
+            ? messageId
+            : (string.IsNullOrEmpty(internetMessageId) ? null : await FindByInternetMessageIdAsync(internetMessageId, ct));
+        if (string.IsNullOrEmpty(id))
             return null;
 
-        var url = $"{GraphBase}/users/{Mailbox}/messages/{Uri.EscapeDataString(liveId)}"
+        var url = $"{GraphBase}/users/{Mailbox}/messages/{Uri.EscapeDataString(id)}"
             + "?$select=internetMessageId,conversationId,subject,bodyPreview,from,receivedDateTime,internetMessageHeaders";
         using var response = await SendAsync(HttpMethod.Get, url, content: null, ct, allowNotFound: true);
         if (!response.IsSuccessStatusCode)
@@ -242,187 +349,6 @@ public sealed class MailboxGraphClient : IMailboxGraphClient
         return new MailboxSnapshot(imid, conversationId, inReplyTo, fromEmail, fromName, subject, preview, receivedAt);
     }
 
-    public async Task<string?> MoveToRequestFolderAsync(string messageId, string? internetMessageId, string requestFolderName, CancellationToken ct)
-    {
-        // The request folder is "<requestFolderName>" (e.g. REQ-0001) under the top-level "Requests" parent.
-        var parentId = await EnsureFolderAsync(_options.RequestsParentFolder, parent: null, ct);
-        if (string.IsNullOrEmpty(parentId))
-            return null;
-        var folderId = await EnsureFolderAsync(requestFolderName, parentId, ct);
-        if (string.IsNullOrEmpty(folderId))
-            return null;
-        return await MoveAsync(messageId, internetMessageId, folderId, ct) ? folderId : null;
-    }
-
-    public async Task<int> ReturnFolderMessagesToInboxAsync(string folderId, CancellationToken ct)
-    {
-        var moved = 0;
-        // Each move removes a message from the folder, so re-read from the start each pass. Bounded so
-        // a persistently-failing move can't spin forever.
-        for (var guard = 0; guard < 100; guard++)
-        {
-            var page = await ListFolderAsync(folderId, 0, 50, ct);
-            if (page.Items.Count == 0)
-                break;
-
-            var movedThisPass = 0;
-            foreach (var m in page.Items)
-                if (await MoveAsync(m.Id, m.InternetMessageId, "inbox", ct))
-                {
-                    moved++;
-                    movedThisPass++;
-                }
-
-            if (movedThisPass == 0)
-                break;
-        }
-        return moved;
-    }
-
-    /// <summary>
-    /// Move a message to a destination folder, healing a stale id and refusing a same-folder move.
-    /// Returns false when the message cannot be found at all (already deleted) so callers don't fail.
-    /// </summary>
-    private async Task<bool> MoveAsync(string messageId, string? internetMessageId, string destination, CancellationToken ct)
-    {
-        var (liveId, currentFolderId) = await ResolveLiveAsync(messageId, internetMessageId, ct);
-        if (string.IsNullOrEmpty(liveId))
-        {
-            _logger.LogWarning("Move skipped: message {MessageId} not found in the mailbox.", messageId);
-            return false;
-        }
-
-        // Same-folder guard: Graph's /move duplicates a message when the destination is the folder it
-        // already occupies, so resolve the destination to a concrete id and compare.
-        var destinationId = await GetFolderIdAsync(destination, ct) ?? destination;
-        if (!string.IsNullOrEmpty(currentFolderId) && string.Equals(currentFolderId, destinationId, StringComparison.Ordinal))
-            return true;
-
-        var url = $"{GraphBase}/users/{Mailbox}/messages/{Uri.EscapeDataString(liveId)}/move";
-        var body = JsonContent.Create(new { destinationId = destination });
-        using var response = await SendAsync(HttpMethod.Post, url, body, ct);
-        if (!response.IsSuccessStatusCode)
-        {
-            _logger.LogWarning("Move of message {MessageId} to {Destination} failed: {Status}.",
-                messageId, destination, (int)response.StatusCode);
-            return false;
-        }
-        return true;
-    }
-
-    /// <summary>Resolve the message's live id + current folder, re-finding it by internetMessageId if
-    /// the supplied id no longer resolves. Returns (null, null) if it cannot be found at all.</summary>
-    private async Task<(string? Id, string? FolderId)> ResolveLiveAsync(string messageId, string? internetMessageId, CancellationToken ct)
-    {
-        var folderId = await GetParentFolderIdAsync(messageId, ct);
-        if (!string.IsNullOrEmpty(folderId))
-            return (messageId, folderId);
-
-        if (string.IsNullOrEmpty(internetMessageId))
-            return (null, null);
-
-        var foundId = await FindByInternetMessageIdAsync(internetMessageId, ct);
-        if (string.IsNullOrEmpty(foundId))
-            return (null, null);
-
-        return (foundId, await GetParentFolderIdAsync(foundId, ct));
-    }
-
-    private async Task<string?> GetParentFolderIdAsync(string messageId, CancellationToken ct)
-    {
-        var url = $"{GraphBase}/users/{Mailbox}/messages/{Uri.EscapeDataString(messageId)}?$select=parentFolderId";
-        using var response = await SendAsync(HttpMethod.Get, url, content: null, ct, allowNotFound: true);
-        if (!response.IsSuccessStatusCode)
-            return null;
-        await using var stream = await response.Content.ReadAsStreamAsync(ct);
-        using var doc = await JsonDocument.ParseAsync(stream, cancellationToken: ct);
-        return doc.RootElement.TryGetProperty("parentFolderId", out var p) ? p.GetString() : null;
-    }
-
-    private async Task<string?> GetFolderIdAsync(string wellKnownName, CancellationToken ct)
-    {
-        var url = $"{GraphBase}/users/{Mailbox}/mailFolders/{Uri.EscapeDataString(wellKnownName)}?$select=id";
-        using var response = await SendAsync(HttpMethod.Get, url, content: null, ct, allowNotFound: true);
-        if (!response.IsSuccessStatusCode)
-            return null;
-        await using var stream = await response.Content.ReadAsStreamAsync(ct);
-        using var doc = await JsonDocument.ParseAsync(stream, cancellationToken: ct);
-        return doc.RootElement.TryGetProperty("id", out var id) ? id.GetString() : null;
-    }
-
-    /// <summary>Every message currently in the Inbox sharing the given internetMessageId — i.e. the
-    /// email plus any duplicate copies of it. Used so a discard clears them all out of the Inbox.</summary>
-    private async Task<IReadOnlyList<string>> FindInboxMessageIdsAsync(string internetMessageId, CancellationToken ct)
-    {
-        var escaped = internetMessageId.Replace("'", "''");
-        var filter = Uri.EscapeDataString($"internetMessageId eq '{escaped}'");
-        var url = $"{GraphBase}/users/{Mailbox}/mailFolders/inbox/messages?$filter={filter}&$select=id&$top=50";
-        var ids = new List<string>();
-        using var response = await SendAsync(HttpMethod.Get, url, content: null, ct, allowNotFound: true);
-        if (!response.IsSuccessStatusCode)
-            return ids;
-
-        await using var stream = await response.Content.ReadAsStreamAsync(ct);
-        using var doc = await JsonDocument.ParseAsync(stream, cancellationToken: ct);
-        if (doc.RootElement.TryGetProperty("value", out var arr) && arr.ValueKind == JsonValueKind.Array)
-            foreach (var item in arr.EnumerateArray())
-                if (item.TryGetProperty("id", out var idEl) && idEl.GetString() is { Length: > 0 } id)
-                    ids.Add(id);
-        return ids;
-    }
-
-    private async Task<string?> FindByInternetMessageIdAsync(string internetMessageId, CancellationToken ct)
-    {
-        var escaped = internetMessageId.Replace("'", "''");
-        var filter = Uri.EscapeDataString($"internetMessageId eq '{escaped}'");
-        var url = $"{GraphBase}/users/{Mailbox}/messages?$filter={filter}&$select=id&$top=1";
-        using var response = await SendAsync(HttpMethod.Get, url, content: null, ct, allowNotFound: true);
-        if (!response.IsSuccessStatusCode)
-            return null;
-        await using var stream = await response.Content.ReadAsStreamAsync(ct);
-        using var doc = await JsonDocument.ParseAsync(stream, cancellationToken: ct);
-        if (doc.RootElement.TryGetProperty("value", out var arr) && arr.ValueKind == JsonValueKind.Array)
-            foreach (var item in arr.EnumerateArray())
-                if (item.TryGetProperty("id", out var idEl) && idEl.GetString() is { Length: > 0 } id)
-                    return id;
-        return null;
-    }
-
-    /// <summary>Find-or-create a folder by name. A null/empty parent means a top-level (mailbox-root)
-    /// folder; otherwise the parent is a folder id or a well-known name like "inbox". Returns the
-    /// folder's id, or null on failure.</summary>
-    private async Task<string?> EnsureFolderAsync(string displayName, string? parent, CancellationToken ct)
-    {
-        var collection = string.IsNullOrEmpty(parent)
-            ? $"{GraphBase}/users/{Mailbox}/mailFolders"
-            : $"{GraphBase}/users/{Mailbox}/mailFolders/{Uri.EscapeDataString(parent)}/childFolders";
-
-        var escaped = displayName.Replace("'", "''");
-        var findUrl = $"{collection}?$select=id,displayName&$filter={Uri.EscapeDataString($"displayName eq '{escaped}'")}";
-        using (var found = await SendAsync(HttpMethod.Get, findUrl, content: null, ct, allowNotFound: true))
-        {
-            if (found.IsSuccessStatusCode)
-            {
-                await using var stream = await found.Content.ReadAsStreamAsync(ct);
-                using var doc = await JsonDocument.ParseAsync(stream, cancellationToken: ct);
-                if (doc.RootElement.TryGetProperty("value", out var arr) && arr.ValueKind == JsonValueKind.Array)
-                    foreach (var f in arr.EnumerateArray())
-                        if (f.TryGetProperty("id", out var idEl) && idEl.GetString() is { Length: > 0 } existing)
-                            return existing;
-            }
-        }
-
-        using var created = await SendAsync(HttpMethod.Post, collection, JsonContent.Create(new { displayName }), ct);
-        if (!created.IsSuccessStatusCode)
-        {
-            _logger.LogWarning("Ensure-folder '{Name}' failed: {Status}.", displayName, (int)created.StatusCode);
-            return null;
-        }
-        await using var cstream = await created.Content.ReadAsStreamAsync(ct);
-        using var cdoc = await JsonDocument.ParseAsync(cstream, cancellationToken: ct);
-        return cdoc.RootElement.TryGetProperty("id", out var cid) ? cid.GetString() : null;
-    }
-
     private static MailboxMessage? Parse(JsonElement item)
     {
         if (item.ValueKind != JsonValueKind.Object) return null;
@@ -456,18 +382,14 @@ public sealed class MailboxGraphClient : IMailboxGraphClient
         var token = await _tokens.GetTokenAsync(ct);
         using var request = new HttpRequestMessage(method, url) { Content = content };
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
-        // Immutable ids so a stored id keeps resolving across moves (see class summary).
+        // Immutable ids so a stored id keeps resolving; eventual consistency for $count + negated filters.
         request.Headers.TryAddWithoutValidation("Prefer", "IdType=\"ImmutableId\"");
         if (consistencyEventual)
             request.Headers.TryAddWithoutValidation("ConsistencyLevel", "eventual");
 
         var response = await _http.SendAsync(request, ct);
         if (!response.IsSuccessStatusCode && !(allowNotFound && response.StatusCode == HttpStatusCode.NotFound))
-        {
-            var detail = await SafeBodyAsync(response, ct);
-            _logger.LogWarning("Graph {Method} {Status} for a mailbox call. {Detail}",
-                method, (int)response.StatusCode, detail);
-        }
+            _logger.LogWarning("Graph {Method} {Status}.", method, (int)response.StatusCode);
         return response;
     }
 
