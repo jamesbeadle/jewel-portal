@@ -106,13 +106,13 @@ public sealed class MailboxGraphClient : IMailboxGraphClient
 
     public async Task<PagedResult<MailboxMessage>> ListDiscardedAsync(int skip, int take, CancellationToken ct)
     {
-        // The discarded pile is the "General" folder under the Inbox; if it doesn't exist yet there is
-        // nothing discarded.
-        var general = await EnsureFolderAsync(_options.DiscardFolder, "inbox", ct);
-        if (string.IsNullOrEmpty(general))
+        // The discarded pile is a top-level folder (sibling of the Inbox); if it doesn't exist yet
+        // there is nothing discarded.
+        var discardFolder = await EnsureFolderAsync(_options.DiscardFolder, parent: null, ct);
+        if (string.IsNullOrEmpty(discardFolder))
             return new PagedResult<MailboxMessage>(Array.Empty<MailboxMessage>(), 0, skip, take);
 
-        return await ListFolderAsync(general, skip, take, ct);
+        return await ListFolderAsync(discardFolder, skip, take, ct);
     }
 
     private async Task<PagedResult<MailboxMessage>> ListFolderAsync(string folder, int skip, int take, CancellationToken ct)
@@ -158,13 +158,14 @@ public sealed class MailboxGraphClient : IMailboxGraphClient
 
     public async Task<bool> DiscardAsync(string messageId, string? internetMessageId, CancellationToken ct)
     {
-        var general = await EnsureFolderAsync(_options.DiscardFolder, "inbox", ct);
-        if (string.IsNullOrEmpty(general))
+        // Top-level folder (sibling of the Inbox), found-or-created on demand.
+        var discardFolder = await EnsureFolderAsync(_options.DiscardFolder, parent: null, ct);
+        if (string.IsNullOrEmpty(discardFolder))
         {
             _logger.LogWarning("Discard skipped: could not resolve the '{Folder}' folder.", _options.DiscardFolder);
             return false;
         }
-        return await MoveAsync(messageId, internetMessageId, general, ct);
+        return await MoveAsync(messageId, internetMessageId, discardFolder, ct);
     }
 
     public Task<bool> RestoreAsync(string messageId, string? internetMessageId, CancellationToken ct) =>

@@ -36,10 +36,11 @@ public sealed class MailboxIntakeOptions
     public string RequestsParentFolder { get; set; } = "Requests";
 
     /// <summary>
-    /// Folder under the Inbox that discarded ("not a request") emails are filed into, so they leave
-    /// the triage queue but stay in the mailbox. Found-or-created on demand. Defaults to "General".
+    /// Top-level folder (a sibling of the Inbox, NOT nested under it) that discarded ("not a request")
+    /// emails are filed into, so they leave the triage queue but stay in the mailbox. Kept out of the
+    /// Inbox subtree so Outlook's Inbox/conversation view never shows them. Found-or-created on demand.
     /// </summary>
-    public string DiscardFolder { get; set; } = "General";
+    public string DiscardFolder { get; set; } = "Discarded";
 
     /// <summary>
     /// Public HTTPS URL of the webhook Function that Graph posts change notifications to.
