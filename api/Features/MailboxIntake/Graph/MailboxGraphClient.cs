@@ -111,21 +111,37 @@ public sealed class MailboxGraphClient : IMailboxGraphClient
 
     private async Task<MailboxPage> ListFilteredAsync(string filter, string? cursor, int take, CancellationToken ct)
     {
-        take = Math.Clamp(take, 1, 100);
-        var url = $"{GraphBase}/users/{Mailbox}/mailFolders/inbox/messages"
-            + $"?$filter={Uri.EscapeDataString(filter)}"
-            + "&$orderby=receivedDateTime%20desc"
-            + $"&$select={Summary}"
-            + $"&$top={take}&$count=true";
-        if (!string.IsNullOrEmpty(cursor))
-            url += $"&$skiptoken={Uri.EscapeDataString(cursor)}";
+        // The Inbox-messages URL this read is allowed to touch. The cursor is Graph's own @odata.nextLink,
+        // which we follow as-is for reliable continuation — but only if it points here, never an arbitrary
+        // URL (so a forged cursor can't make the server fetch other data with the app token).
+        var allowedPrefix = $"{GraphBase}/users/{Mailbox}/mailFolders/inbox/messages";
+
+        string url;
+        if (string.IsNullOrEmpty(cursor))
+        {
+            take = Math.Clamp(take, 1, 100);
+            url = allowedPrefix
+                + $"?$filter={Uri.EscapeDataString(filter)}"
+                + "&$orderby=receivedDateTime%20desc"
+                + $"&$select={Summary}"
+                + $"&$top={take}&$count=true";
+        }
+        else if (cursor.StartsWith(allowedPrefix, StringComparison.OrdinalIgnoreCase))
+        {
+            url = cursor;
+        }
+        else
+        {
+            _logger.LogWarning("Ignoring an unexpected mailbox paging cursor.");
+            return new MailboxPage(Array.Empty<MailboxMessage>(), null, 0);
+        }
 
         var items = new List<MailboxMessage>();
         int total = 0;
         string? nextCursor = null;
 
         // $count + the negated filter require advanced-query mode (ConsistencyLevel: eventual), which
-        // pages by skiptoken rather than $skip — see the probe results.
+        // pages by the nextLink cursor rather than $skip — see the probe results.
         using var response = await SendAsync(HttpMethod.Get, url, content: null, ct, allowNotFound: true, consistencyEventual: true);
         if (!response.IsSuccessStatusCode)
         {
@@ -144,22 +160,10 @@ public sealed class MailboxGraphClient : IMailboxGraphClient
             foreach (var item in arr.EnumerateArray())
                 if (Parse(item) is { } m)
                     items.Add(m);
-        if (root.TryGetProperty("@odata.nextLink", out var nl) && nl.GetString() is { } link)
-            nextCursor = ExtractSkipToken(link);
+        if (root.TryGetProperty("@odata.nextLink", out var nl) && nl.GetString() is { Length: > 0 } link)
+            nextCursor = link;
 
         return new MailboxPage(items, nextCursor, total);
-    }
-
-    // The continuation token is carried in the nextLink's $skiptoken query parameter.
-    private static string? ExtractSkipToken(string nextLink)
-    {
-        const string marker = "$skiptoken=";
-        var i = nextLink.IndexOf(marker, StringComparison.OrdinalIgnoreCase);
-        if (i < 0) return null;
-        var rest = nextLink[(i + marker.Length)..];
-        var amp = rest.IndexOf('&');
-        var token = amp >= 0 ? rest[..amp] : rest;
-        return Uri.UnescapeDataString(token);
     }
 
     public Task<bool> DiscardAsync(string messageId, string? internetMessageId, CancellationToken ct) =>

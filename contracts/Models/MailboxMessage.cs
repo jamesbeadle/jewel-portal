@@ -24,8 +24,8 @@ public sealed record MailboxMessageDetail(
     IReadOnlyList<IntakeAttachment> Attachments);
 
 // One page of a live, server-side-filtered mailbox read. Graph pages these with an opaque cursor
-// (skiptoken) rather than an offset, so NextCursor — when non-null — is passed back to fetch the
-// next page. Total is the count of all messages matching the filter (the whole queue / pile size).
+// (its own nextLink) rather than an offset, so NextCursor — when non-null — is passed straight back
+// to fetch the next page. Total is the count of all messages matching the filter (the whole pile).
 public sealed record MailboxPage(
     IReadOnlyList<MailboxMessage> Items,
     string? NextCursor,
