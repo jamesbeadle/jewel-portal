@@ -41,23 +41,4 @@ internal static class RequestsEntityMapping
         InReplyTo: entity.InReplyTo,
         ConversationId: entity.ConversationId,
         SentStatus: (MessageSentStatus)entity.SentStatus);
-
-    public static IntakeEmail ToModel(this IntakeEmailEntity entity) => new(
-        IntakeId: entity.IntakeId,
-        InternetMessageId: entity.InternetMessageId,
-        ConversationId: entity.ConversationId,
-        InReplyTo: entity.InReplyTo,
-        ReferencesHeader: entity.ReferencesHeader,
-        FromEmail: entity.FromEmail,
-        FromName: entity.FromName,
-        Subject: entity.Subject,
-        BodyPreview: entity.BodyPreview,
-        HasAttachments: entity.HasAttachments,
-        ReceivedAt: entity.ReceivedAt,
-        Status: (IntakeStatus)entity.Status,
-        ClaimedByEmail: entity.ClaimedByEmail,
-        ClaimedAt: entity.ClaimedAt,
-        LinkedRequestId: entity.LinkedRequestId,
-        Notes: entity.Notes,
-        GraphMessageId: entity.GraphMessageId);
 }

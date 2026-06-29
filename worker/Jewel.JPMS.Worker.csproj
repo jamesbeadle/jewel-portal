@@ -42,7 +42,6 @@
     <Compile Include="..\api\Features\MailboxIntake\Queue\StorageMailboxQueue.cs" Link="Shared\StorageMailboxQueue.cs" />
     <Compile Include="..\api\Features\MailboxIntake\Queue\NullMailboxQueue.cs" Link="Shared\NullMailboxQueue.cs" />
     <Compile Include="..\api\Features\MailboxIntake\Actions\IMailboxActionScheduler.cs" Link="Shared\IMailboxActionScheduler.cs" />
-    <Compile Include="..\api\Features\Requests\IntakeConversation.cs" Link="Shared\IntakeConversation.cs" />
     <!-- Shared request-document renderer: built in the api project, compiled into the worker so the
          emailed PDF is byte-for-byte the same as the one downloaded through the platform. -->
     <Compile Include="..\api\Features\Requests\Documents\RequestDocumentModel.cs" Link="Shared\Documents\RequestDocumentModel.cs" />

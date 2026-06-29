@@ -2,9 +2,7 @@ using Jewel.JPMS.Api.Data;
 using Jewel.JPMS.Api.Features.MailboxIntake;
 using Jewel.JPMS.Api.Features.MailboxIntake.Actions;
 using Jewel.JPMS.Api.Features.MailboxIntake.Graph;
-using Jewel.JPMS.Api.Features.MailboxIntake.Ingestion;
 using Jewel.JPMS.Api.Features.MailboxIntake.Queue;
-using Jewel.JPMS.Api.Features.MailboxIntake.Subscriptions;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -58,10 +56,6 @@ var host = new HostBuilder()
             services.AddSingleton<IMailboxQueue, NullMailboxQueue>();
         }
         services.AddSingleton<IMailboxActionScheduler, MailboxActionScheduler>();
-
-        services.AddScoped<MailboxSyncStateStore>();
-        services.AddScoped<IntakeIngestionService>();
-        services.AddScoped<MailboxSubscriptionManager>();
     })
     .Build();
 

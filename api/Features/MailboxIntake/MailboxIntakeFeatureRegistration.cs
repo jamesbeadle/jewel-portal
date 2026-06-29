@@ -54,10 +54,14 @@ public static class MailboxIntakeFeatureRegistration
             services.AddSingleton<GraphTokenProvider>();
             services.AddSingleton<HttpClient>();
             services.AddSingleton<IIntakeMessageReader, GraphIntakeMessageReader>();
+            // Live-read triage client: list Inbox/General messages and move them. Shares the same
+            // app-only token + HttpClient as the on-demand reader.
+            services.AddSingleton<IMailboxGraphClient, MailboxGraphClient>();
         }
         else
         {
             services.AddSingleton<IIntakeMessageReader, NullIntakeMessageReader>();
+            services.AddSingleton<IMailboxGraphClient, NullMailboxGraphClient>();
         }
 
         return services;

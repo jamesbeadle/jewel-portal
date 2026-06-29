@@ -10,6 +10,65 @@
 
 <PageTitle>Triage · JPMS</PageTitle>
 
+@*
+    Live-read triage. The mailbox is the single source of truth: the Queue is the Inbox read live and
+    the Discarded tab is the "General" folder read live. Every action is a single mailbox move —
+    discard (Inbox -> General), restore (General -> Inbox), assign/create (Inbox -> request folder).
+    Nothing about un-triaged mail is mirrored in the database.
+*@
+
+@*
+    Shared message body + attachments, used by both the Queue and Discarded detail panes. Declared
+    before first use; reads the live `detail` / `selected` fields each time it is rendered.
+*@
+@{
+    RenderFragment MessageBody =@<text>
+        <div class="rounded-lg bg-surface-raised border border-line p-3 max-h-[28rem] overflow-y-auto">
+            @if (detailLoading)
+            {
+                <p class="text-sm text-content-subtle italic">Loading message…</p>
+            }
+            else if (detail is not null && !string.IsNullOrWhiteSpace(detail.BodyHtml) && detail.BodyIsHtml)
+            {
+                <div class="rounded bg-white text-gray-900 p-3 text-sm overflow-x-auto">@((MarkupString)detail.BodyHtml)</div>
+            }
+            else if (detail is not null && !string.IsNullOrWhiteSpace(detail.BodyHtml))
+            {
+                <p class="text-sm text-content whitespace-pre-wrap">@detail.BodyHtml</p>
+            }
+            else
+            {
+                <p class="text-sm text-content-subtle italic">@(selected is null ? "" : Dash(selected.BodyPreview))</p>
+            }
+        </div>
+
+        @if (detail is not null && detail.Attachments.Count > 0)
+        {
+            <div class="rounded-lg bg-surface-raised border border-line p-3">
+                <p class="text-xs uppercase tracking-wider text-content-subtle font-semibold mb-2">
+                    @detail.Attachments.Count attachment@(detail.Attachments.Count == 1 ? "" : "s")
+                </p>
+                <ul class="space-y-1">
+                    @foreach (var att in detail.Attachments)
+                    {
+                        <li class="flex items-center justify-between gap-3 text-sm text-content">
+                            <span class="truncate">@att.Name</span>
+                            @if (att.Size > 0)
+                            {
+                                <span class="text-xs text-content-subtle whitespace-nowrap">@FormatSize(att.Size)</span>
+                            }
+                        </li>
+                    }
+                </ul>
+            </div>
+        }
+        else if (selected is not null && selected.HasAttachments && detail is not null)
+        {
+            <p class="text-xs text-content-subtle italic">This email has attachments, but their names couldn't be retrieved.</p>
+        }
+    </text>;
+}
+
 @if (!isLoaded)
 {
     <section class="max-w-6xl mx-auto px-4 py-12 text-content-subtle text-sm">Loading…</section>
@@ -36,7 +95,7 @@ else
             @if (view == QueueView.Active)
             {
                 <p class="text-sm text-content-muted mt-2">
-                    @total email@(total == 1 ? "" : "s") waiting to be assigned to a request.
+                    @total email@(total == 1 ? "" : "s") in the inbox waiting to be assigned to a request.
                 </p>
             }
             else
@@ -97,7 +156,7 @@ else
         {
             <div class="panel p-8 text-center">
                 <p class="text-sm text-content">Nothing in the queue.</p>
-                <p class="text-xs text-content-subtle mt-1">Every email from the requests mailbox has been dealt with.</p>
+                <p class="text-xs text-content-subtle mt-1">Every email in the requests mailbox has been dealt with.</p>
             </div>
         }
         else
@@ -106,7 +165,7 @@ else
                 <div class="space-y-2 lg:col-span-1">
                     @foreach (var item in items)
                     {
-                        <button type="button" @key="item.IntakeId" @onclick="() => Select(item)"
+                        <button type="button" @key="item.Id" @onclick="() => Select(item)"
                                 class="@RowClass(item)">
                             <div class="flex items-center justify-between gap-2">
                                 <span class="text-sm font-medium text-content truncate">@DisplayFrom(item)</span>
@@ -156,49 +215,7 @@ else
                                 </p>
                             </div>
 
-                            <div class="rounded-lg bg-surface-raised border border-line p-3 max-h-[28rem] overflow-y-auto">
-                                @if (detailLoading)
-                                {
-                                    <p class="text-sm text-content-subtle italic">Loading message…</p>
-                                }
-                                else if (detail is not null && !string.IsNullOrWhiteSpace(detail.BodyHtml) && detail.BodyIsHtml)
-                                {
-                                    <div class="rounded bg-white text-gray-900 p-3 text-sm overflow-x-auto">@((MarkupString)detail.BodyHtml)</div>
-                                }
-                                else if (detail is not null && !string.IsNullOrWhiteSpace(detail.BodyHtml))
-                                {
-                                    <p class="text-sm text-content whitespace-pre-wrap">@detail.BodyHtml</p>
-                                }
-                                else
-                                {
-                                    <p class="text-sm text-content whitespace-pre-wrap">@Dash(selected.BodyPreview)</p>
-                                }
-                            </div>
-
-                            @if (detail is not null && detail.Attachments.Count > 0)
-                            {
-                                <div class="rounded-lg bg-surface-raised border border-line p-3">
-                                    <p class="text-xs uppercase tracking-wider text-content-subtle font-semibold mb-2">
-                                        @detail.Attachments.Count attachment@(detail.Attachments.Count == 1 ? "" : "s")
-                                    </p>
-                                    <ul class="space-y-1">
-                                        @foreach (var att in detail.Attachments)
-                                        {
-                                            <li class="flex items-center justify-between gap-3 text-sm text-content">
-                                                <span class="truncate">@att.Name</span>
-                                                @if (att.Size > 0)
-                                                {
-                                                    <span class="text-xs text-content-subtle whitespace-nowrap">@FormatSize(att.Size)</span>
-                                                }
-                                            </li>
-                                        }
-                                    </ul>
-                                </div>
-                            }
-                            else if (selected.HasAttachments && detail is not null)
-                            {
-                                <p class="text-xs text-content-subtle italic">This email has attachments, but their names couldn't be retrieved.</p>
-                            }
+                            @MessageBody
 
                             <div class="pt-3 border-t border-line">
                                 <div class="flex flex-wrap gap-2 mb-4">
@@ -272,28 +289,6 @@ else
                                 else if (mode == TriageMode.Create)
                                 {
                                     <div class="space-y-4">
-                                        <div class="flex items-center justify-between gap-3 rounded-lg bg-surface-raised border border-line px-3 py-2">
-                                            <div class="min-w-0">
-                                                <p class="text-xs font-semibold text-content">Let Claude draft this request</p>
-                                                @if (suggestRationale is not null)
-                                                {
-                                                    <p class="text-[11px] text-content-subtle truncate">@suggestRationale</p>
-                                                }
-                                                else
-                                                {
-                                                    <p class="text-[11px] text-content-subtle">Reads the email and fills in the fields below — check before creating.</p>
-                                                }
-                                            </div>
-                                            <button type="button" class="btn-secondary text-xs whitespace-nowrap" disabled="@(busy || suggesting)" @onclick="DoSuggest">
-                                                @(suggesting ? "Thinking…" : "Suggest with AI")
-                                            </button>
-                                        </div>
-
-                                        @if (suggestError is not null)
-                                        {
-                                            <p class="rounded-lg bg-amber-500/10 border border-amber-500/30 px-3 py-2 text-xs text-amber-700">@suggestError</p>
-                                        }
-
                                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                             <div>
                                                 <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Project *</label>
@@ -339,11 +334,7 @@ else
                                 else if (mode == TriageMode.Discard)
                                 {
                                     <div class="space-y-3">
-                                        <p class="text-sm text-content-muted">Discard this email if it isn’t a request (spam, an auto-reply, or sent to the wrong place). It stays on record but leaves the queue.</p>
-                                        <div>
-                                            <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Reason (optional)</label>
-                                            <textarea class="field" rows="2" value="@discardNotes" @oninput="OnDiscardNotesInput"></textarea>
-                                        </div>
+                                        <p class="text-sm text-content-muted">Discard this email if it isn’t a request (spam, an auto-reply, or sent to the wrong place). It moves to the General folder and leaves the queue — you can restore it from the Discarded tab.</p>
                                         <button type="button" class="btn-secondary border-negative/40 text-negative hover:border-negative" disabled="@busy" @onclick="DoDiscard">Discard email</button>
                                     </div>
                                 }
@@ -369,7 +360,7 @@ else
                     <div class="space-y-2 lg:col-span-1">
                         @foreach (var item in discardedItems)
                         {
-                            <button type="button" @key="item.IntakeId" @onclick="() => Select(item)" class="@RowClass(item)">
+                            <button type="button" @key="item.Id" @onclick="() => Select(item)" class="@RowClass(item)">
                                 <div class="flex items-center justify-between gap-2">
                                     <span class="text-sm font-medium text-content truncate">@DisplayFrom(item)</span>
                                 </div>
@@ -416,55 +407,13 @@ else
                                     <p class="text-sm text-content-muted mt-1">
                                         From @DisplayFrom(selected) · @Date(selected.ReceivedAt)
                                     </p>
-                                    @if (!string.IsNullOrWhiteSpace(selected.Notes))
-                                    {
-                                        <p class="text-xs text-content-subtle mt-1">Discard reason: @selected.Notes</p>
-                                    }
                                 </div>
 
-                                <div class="rounded-lg bg-surface-raised border border-line p-3 max-h-[28rem] overflow-y-auto">
-                                    @if (detailLoading)
-                                    {
-                                        <p class="text-sm text-content-subtle italic">Loading message…</p>
-                                    }
-                                    else if (detail is not null && !string.IsNullOrWhiteSpace(detail.BodyHtml) && detail.BodyIsHtml)
-                                    {
-                                        <div class="rounded bg-white text-gray-900 p-3 text-sm overflow-x-auto">@((MarkupString)detail.BodyHtml)</div>
-                                    }
-                                    else if (detail is not null && !string.IsNullOrWhiteSpace(detail.BodyHtml))
-                                    {
-                                        <p class="text-sm text-content whitespace-pre-wrap">@detail.BodyHtml</p>
-                                    }
-                                    else
-                                    {
-                                        <p class="text-sm text-content whitespace-pre-wrap">@Dash(selected.BodyPreview)</p>
-                                    }
-                                </div>
-
-                                @if (detail is not null && detail.Attachments.Count > 0)
-                                {
-                                    <div class="rounded-lg bg-surface-raised border border-line p-3">
-                                        <p class="text-xs uppercase tracking-wider text-content-subtle font-semibold mb-2">
-                                            @detail.Attachments.Count attachment@(detail.Attachments.Count == 1 ? "" : "s")
-                                        </p>
-                                        <ul class="space-y-1">
-                                            @foreach (var att in detail.Attachments)
-                                            {
-                                                <li class="flex items-center justify-between gap-3 text-sm text-content">
-                                                    <span class="truncate">@att.Name</span>
-                                                    @if (att.Size > 0)
-                                                    {
-                                                        <span class="text-xs text-content-subtle whitespace-nowrap">@FormatSize(att.Size)</span>
-                                                    }
-                                                </li>
-                                            }
-                                        </ul>
-                                    </div>
-                                }
+                                @MessageBody
 
                                 <div class="pt-3 border-t border-line">
                                     <p class="text-sm text-content-muted mb-3">
-                                        This email was discarded. Restore it to put it back in the triage queue and move the mailbox copy back to the Inbox.
+                                        This email was discarded. Restore it to put it back in the triage queue (moves it from General back to the Inbox).
                                     </p>
                                     <button type="button" class="btn-primary" disabled="@busy" @onclick="DoRestore">Restore to triage</button>
                                 </div>
@@ -480,15 +429,9 @@ else
 @code {
     private enum TriageMode { None, Link, Create, Discard }
 
-    // The page shows either the live queue or the discarded pile; the detail pane is shared.
+    // The page shows either the live queue (Inbox) or the discarded pile (General); the detail pane is shared.
     private enum QueueView { Active, Discarded }
     private QueueView view = QueueView.Active;
-
-    // Discarded pile — loaded lazily when its tab is first opened, paged independently of the queue.
-    private IReadOnlyList<IntakeEmail> discardedItems = Array.Empty<IntakeEmail>();
-    private int discardedTotal;
-    private int discardedPage = 1;
-    private int DiscardedPageCount => Math.Max(1, (int)Math.Ceiling(discardedTotal / (double)PageSize));
 
     private static readonly RequestType[] KindOptions =
     {
@@ -499,117 +442,31 @@ else
 
     private bool isLoaded;
     private string? loadError;
-    // The current page only — the server pages the queue, so `items` is one page, not the whole queue.
-    private IReadOnlyList<IntakeEmail> items = Array.Empty<IntakeEmail>();
+
+    // The current page only — the server pages the live folder read, so these are one page each.
+    private IReadOnlyList<MailboxMessage> items = Array.Empty<MailboxMessage>();
     private int total;
-    private IntakeEmail? selected;
-    private IReadOnlyList<Request> unassigned = Array.Empty<Request>();
-    private string? unassignedError;
-    private IntakeEmailDetail? detail;
-    private bool detailLoading;
-    private CancellationTokenSource? detailCts;
     private int page = 1;
 
-    // Triage is restricted to administrators and project managers. Administrators are granted
-    // every role server-side, so they always carry Role.ProjectManager too.
+    private IReadOnlyList<MailboxMessage> discardedItems = Array.Empty<MailboxMessage>();
+    private int discardedTotal;
+    private int discardedPage = 1;
+
+    private MailboxMessage? selected;
+    private MailboxMessageDetail? detail;
+    private bool detailLoading;
+    private CancellationTokenSource? detailCts;
+
+    private IReadOnlyList<Request> unassigned = Array.Empty<Request>();
+    private string? unassignedError;
+
+    // Triage is restricted to administrators and project managers. Administrators are granted every
+    // role server-side, so they always carry Role.ProjectManager too.
     private bool CanTriage =>
         Session.AvailableRoles.Any(role => role is Role.Admin or Role.ProjectManager);
 
     private int PageCount => Math.Max(1, (int)Math.Ceiling(total / (double)PageSize));
-
-    private async Task PreviousPage()
-    {
-        if (page <= 1) return;
-        page--;
-        await LoadAsync();
-    }
-
-    private async Task NextPage()
-    {
-        if (page >= PageCount) return;
-        page++;
-        await LoadAsync();
-    }
-
-    private async Task SwitchView(QueueView next)
-    {
-        if (view == next) return;
-        view = next;
-        // The detail pane is shared between the two views; clear it so we don't show a queue email
-        // selected while looking at the discarded pile (or vice versa).
-        selected = null;
-        detail = null;
-        detailLoading = false;
-        mode = TriageMode.None;
-        actionError = null;
-        if (next == QueueView.Discarded) await LoadDiscardedAsync();
-        else await LoadAsync();
-    }
-
-    private async Task LoadDiscardedAsync()
-    {
-        loadError = null;
-        try
-        {
-            if (discardedPage < 1) discardedPage = 1;
-            var result = await Intake.ListDiscardedAsync((discardedPage - 1) * PageSize, PageSize);
-            discardedItems = result.Items;
-            discardedTotal = result.Total;
-
-            // If the pile shrank (e.g. an email was restored) the current page may now be past the
-            // end — clamp to the last page and refetch so we never show an empty page mid-list.
-            if (discardedPage > DiscardedPageCount)
-            {
-                discardedPage = DiscardedPageCount;
-                var clamped = await Intake.ListDiscardedAsync((discardedPage - 1) * PageSize, PageSize);
-                discardedItems = clamped.Items;
-                discardedTotal = clamped.Total;
-            }
-        }
-        catch
-        {
-            loadError = "Couldn't load discarded emails. Please try again.";
-            discardedItems = Array.Empty<IntakeEmail>();
-            discardedTotal = 0;
-        }
-    }
-
-    private async Task PreviousDiscarded()
-    {
-        if (discardedPage <= 1) return;
-        discardedPage--;
-        await LoadDiscardedAsync();
-    }
-
-    private async Task NextDiscarded()
-    {
-        if (discardedPage >= DiscardedPageCount) return;
-        discardedPage++;
-        await LoadDiscardedAsync();
-    }
-
-    private async Task DoRestore()
-    {
-        if (selected is null || busy) return;
-        actionError = null;
-        try
-        {
-            busy = true;
-            await Intake.RestoreAsync(selected.IntakeId);
-            selected = null;
-            detail = null;
-            detailLoading = false;
-            await LoadDiscardedAsync();
-        }
-        catch
-        {
-            actionError = "Couldn't restore that email. Please try again.";
-        }
-        finally
-        {
-            busy = false;
-        }
-    }
+    private int DiscardedPageCount => Math.Max(1, (int)Math.Ceiling(discardedTotal / (double)PageSize));
 
     private bool busy;
     private string? actionError;
@@ -629,14 +486,6 @@ else
     private string createDrawingRef = "";
     private string createResponseDue = "";
 
-    // AI-suggestion state (Create mode)
-    private bool suggesting;
-    private string? suggestError;
-    private string? suggestRationale;
-
-    // Discard state
-    private string discardNotes = "";
-
     protected override async Task OnInitializedAsync()
     {
         await Session.EnsureLoadedAsync();
@@ -648,17 +497,104 @@ else
         isLoaded = true;
     }
 
-    private async Task LoadUnassignedAsync()
+    private async Task SwitchView(QueueView next)
     {
-        unassignedError = null;
+        if (view == next) return;
+        view = next;
+        selected = null;
+        detail = null;
+        detailLoading = false;
+        mode = TriageMode.None;
+        actionError = null;
+        if (next == QueueView.Discarded) await LoadDiscardedAsync();
+        else await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        loadError = null;
         try
         {
-            unassigned = await RequestRegister.ListUnassignedAsync();
+            if (page < 1) page = 1;
+            var result = await Intake.ListInboxLiveAsync((page - 1) * PageSize, PageSize);
+            items = result.Items;
+            total = result.Total;
+
+            if (page > PageCount)
+            {
+                page = PageCount;
+                var clamped = await Intake.ListInboxLiveAsync((page - 1) * PageSize, PageSize);
+                items = clamped.Items;
+                total = clamped.Total;
+            }
         }
         catch
         {
-            unassigned = Array.Empty<Request>();
+            loadError = "Couldn't load the inbox. Please try again.";
+            items = Array.Empty<MailboxMessage>();
+            total = 0;
         }
+    }
+
+    private async Task LoadDiscardedAsync()
+    {
+        loadError = null;
+        try
+        {
+            if (discardedPage < 1) discardedPage = 1;
+            var result = await Intake.ListDiscardedLiveAsync((discardedPage - 1) * PageSize, PageSize);
+            discardedItems = result.Items;
+            discardedTotal = result.Total;
+
+            if (discardedPage > DiscardedPageCount)
+            {
+                discardedPage = DiscardedPageCount;
+                var clamped = await Intake.ListDiscardedLiveAsync((discardedPage - 1) * PageSize, PageSize);
+                discardedItems = clamped.Items;
+                discardedTotal = clamped.Total;
+            }
+        }
+        catch
+        {
+            loadError = "Couldn't load discarded emails. Please try again.";
+            discardedItems = Array.Empty<MailboxMessage>();
+            discardedTotal = 0;
+        }
+    }
+
+    private async Task PreviousPage()
+    {
+        if (page <= 1) return;
+        page--;
+        await LoadAsync();
+    }
+
+    private async Task NextPage()
+    {
+        if (page >= PageCount) return;
+        page++;
+        await LoadAsync();
+    }
+
+    private async Task PreviousDiscarded()
+    {
+        if (discardedPage <= 1) return;
+        discardedPage--;
+        await LoadDiscardedAsync();
+    }
+
+    private async Task NextDiscarded()
+    {
+        if (discardedPage >= DiscardedPageCount) return;
+        discardedPage++;
+        await LoadDiscardedAsync();
+    }
+
+    private async Task LoadUnassignedAsync()
+    {
+        unassignedError = null;
+        try { unassigned = await RequestRegister.ListUnassignedAsync(); }
+        catch { unassigned = Array.Empty<Request>(); }
     }
 
     private async Task ReturnUnassigned(Request request)
@@ -668,7 +604,6 @@ else
         try
         {
             busy = true;
-            // The orphan has no live project, so the projectId here is just used for a (harmless) register refresh.
             await RequestRegister.ReturnToTriageAsync(request.RequestId, request.ProjectId);
             await LoadAsync();
             await LoadUnassignedAsync();
@@ -677,41 +612,10 @@ else
         {
             unassignedError = "Couldn't return that request to triage. Please try again.";
         }
-        finally
-        {
-            busy = false;
-        }
+        finally { busy = false; }
     }
 
-    private async Task LoadAsync()
-    {
-        loadError = null;
-        try
-        {
-            if (page < 1) page = 1;
-            var result = await Intake.ListOpenAsync((page - 1) * PageSize, PageSize);
-            items = result.Items;
-            total = result.Total;
-
-            // If the queue shrank (e.g. emails reconciled out) the current page may now be past the
-            // end — clamp to the last page and refetch so we never show an empty page mid-queue.
-            if (page > PageCount)
-            {
-                page = PageCount;
-                var clamped = await Intake.ListOpenAsync((page - 1) * PageSize, PageSize);
-                items = clamped.Items;
-                total = clamped.Total;
-            }
-        }
-        catch
-        {
-            loadError = "Couldn't load the triage queue. Please try again.";
-            items = Array.Empty<IntakeEmail>();
-            total = 0;
-        }
-    }
-
-    private async Task Select(IntakeEmail item)
+    private async Task Select(MailboxMessage item)
     {
         selected = item;
         mode = TriageMode.None;
@@ -723,16 +627,12 @@ else
         createTitle = item.Subject;
         createDescription = item.BodyPreview;
         createRaisedTo = createDrawingRef = createResponseDue = "";
-        suggesting = false;
-        suggestError = null;
-        suggestRationale = null;
-        discardNotes = "";
         await LoadDetailAsync(item);
     }
 
     // Fetch the full body + attachment names on demand when an email is opened. Cancels any in-flight
     // fetch so rapid clicking can't race a stale result onto the newly selected email.
-    private async Task LoadDetailAsync(IntakeEmail item)
+    private async Task LoadDetailAsync(MailboxMessage item)
     {
         detailCts?.Cancel();
         var cts = new CancellationTokenSource();
@@ -742,21 +642,15 @@ else
         detailLoading = true;
         try
         {
-            var loaded = await Intake.GetDetailAsync(item.IntakeId, cts.Token);
-            if (!cts.IsCancellationRequested && selected?.IntakeId == item.IntakeId)
+            var loaded = await Intake.GetMessageDetailAsync(item.Id, item.InternetMessageId, cts.Token);
+            if (!cts.IsCancellationRequested && selected?.Id == item.Id)
                 detail = loaded;
         }
-        catch (OperationCanceledException)
-        {
-            // superseded by a newer selection — ignore
-        }
-        catch
-        {
-            // leave detail null so the view falls back to the stored preview
-        }
+        catch (OperationCanceledException) { /* superseded by a newer selection */ }
+        catch { /* leave detail null so the view falls back to the preview */ }
         finally
         {
-            if (selected?.IntakeId == item.IntakeId)
+            if (selected?.Id == item.Id)
                 detailLoading = false;
         }
     }
@@ -795,8 +689,6 @@ else
 
     private void OnCreateDescriptionInput(ChangeEventArgs e) => createDescription = e.Value?.ToString() ?? "";
 
-    private void OnDiscardNotesInput(ChangeEventArgs e) => discardNotes = e.Value?.ToString() ?? "";
-
     private string SuggestReference()
     {
         if (string.IsNullOrWhiteSpace(createProjectId)) return $"{createKind.DisplayName()}-001";
@@ -807,59 +699,7 @@ else
     private async Task DoLink()
     {
         if (selected is null || busy || string.IsNullOrWhiteSpace(linkRequestId)) return;
-        await RunAction(async () =>
-        {
-            await Intake.LinkAsync(selected.IntakeId, linkRequestId);
-        });
-    }
-
-    // Ask Claude to read the email and propose the request. One call, only when clicked. The result is
-    // advisory: it pre-fills the form and the triager reviews/edits before creating. Degrades to the
-    // plain subject/body if AI isn't configured, and never blocks manual entry on failure.
-    private async Task DoSuggest()
-    {
-        if (selected is null || busy || suggesting) return;
-        suggesting = true;
-        suggestError = null;
-        suggestRationale = null;
-        try
-        {
-            var suggestion = await Intake.SuggestAsync(selected.IntakeId);
-            if (!suggestion.Available)
-            {
-                suggestError = "AI suggestions aren't switched on yet — fill the form in manually.";
-                if (!string.IsNullOrWhiteSpace(suggestion.Title)) createTitle = suggestion.Title;
-                if (!string.IsNullOrWhiteSpace(suggestion.Description)) createDescription = suggestion.Description;
-                return;
-            }
-            ApplySuggestion(suggestion);
-        }
-        catch
-        {
-            suggestError = "Couldn't get a suggestion. Please try again or fill the form in manually.";
-        }
-        finally
-        {
-            suggesting = false;
-        }
-    }
-
-    private void ApplySuggestion(RequestSuggestion suggestion)
-    {
-        // Only accept a project we actually offer in the dropdown.
-        if (suggestion.ProjectId is not null && ProjectOptions.Any(p => p.ProjectId == suggestion.ProjectId))
-            createProjectId = suggestion.ProjectId;
-
-        createKind = suggestion.Kind;
-        if (!string.IsNullOrWhiteSpace(suggestion.Title)) createTitle = suggestion.Title;
-        if (!string.IsNullOrWhiteSpace(suggestion.Description)) createDescription = suggestion.Description;
-        if (!string.IsNullOrWhiteSpace(suggestion.RaisedTo)) createRaisedTo = suggestion.RaisedTo;
-        if (!string.IsNullOrWhiteSpace(suggestion.DrawingRef)) createDrawingRef = suggestion.DrawingRef;
-        if (suggestion.ResponseDue is { } due) createResponseDue = due.ToString("yyyy-MM-dd");
-
-        // Re-derive the reference now that project + type are known (matches OnCreateProjectChanged).
-        createReference = SuggestReference();
-        suggestRationale = suggestion.Rationale;
+        await RunAction(async () => await Intake.AssignMessageAsync(selected.Id, selected.InternetMessageId, linkRequestId));
     }
 
     private async Task DoCreate()
@@ -869,8 +709,8 @@ else
         if (string.IsNullOrWhiteSpace(createReference)) { actionError = "A reference is required."; return; }
         if (string.IsNullOrWhiteSpace(createTitle)) { actionError = "A subject is required."; return; }
 
-        var command = new CreateRequestFromIntake(
-            selected.IntakeId,
+        var command = new CreateRequestFromMessage(
+            selected.Id,
             createProjectId,
             createKind,
             createReference.Trim(),
@@ -878,44 +718,58 @@ else
             createDescription?.Trim() ?? "",
             RaisedTo: NullIfBlank(createRaisedTo),
             DrawingRef: NullIfBlank(createDrawingRef),
-            ResponseDue: ParseDate(createResponseDue));
+            ResponseDue: ParseDate(createResponseDue),
+            InternetMessageId: selected.InternetMessageId);
 
-        await RunAction(async () =>
-        {
-            await Intake.CreateRequestAsync(command);
-        });
+        await RunAction(async () => await Intake.CreateRequestFromMessageAsync(command));
     }
 
     private async Task DoDiscard()
     {
         if (selected is null || busy) return;
-        await RunAction(async () =>
-        {
-            await Intake.DiscardAsync(selected.IntakeId, NullIfBlank(discardNotes));
-        });
+        await RunAction(async () => await Intake.DiscardMessageAsync(selected.Id, selected.InternetMessageId));
     }
 
-    private async Task RunAction(Func<Task> action, bool keepSelection = false)
+    private async Task DoRestore()
+    {
+        if (selected is null || busy) return;
+        actionError = null;
+        try
+        {
+            busy = true;
+            await Intake.RestoreMessageAsync(selected.Id, selected.InternetMessageId);
+            selected = null;
+            detail = null;
+            detailLoading = false;
+            await LoadDiscardedAsync();
+        }
+        catch
+        {
+            actionError = "Couldn't restore that email. Please try again.";
+        }
+        finally { busy = false; }
+    }
+
+    // Runs a Queue-tab action (assign / create / discard), then refreshes the inbox and clears the
+    // selection — the message has left the Inbox, so it drops out of the live read.
+    private async Task RunAction(Func<Task> action)
     {
         actionError = null;
         try
         {
             busy = true;
             await action();
-            var keepId = keepSelection ? selected?.IntakeId : null;
             await LoadAsync();
-            selected = keepId is null ? null : items.FirstOrDefault(i => i.IntakeId == keepId);
-            if (selected is null) { detail = null; detailLoading = false; }
-            if (!keepSelection) mode = TriageMode.None;
+            selected = null;
+            detail = null;
+            detailLoading = false;
+            mode = TriageMode.None;
         }
         catch
         {
             actionError = "That action didn't complete. Please try again.";
         }
-        finally
-        {
-            busy = false;
-        }
+        finally { busy = false; }
     }
 
     private IReadOnlyList<Project> ProjectOptions =>
@@ -926,8 +780,8 @@ else
             ? Array.Empty<Request>()
             : RequestRegister.ForProject(linkProjectId);
 
-    // Requests on the chosen project whose reference or title overlaps the email subject —
-    // surfaced first so a second request isn't raised for something already being tracked.
+    // Requests on the chosen project whose reference or title overlaps the email subject — surfaced
+    // first so a second request isn't raised for something already being tracked.
     private List<Request> DuplicateCandidates()
     {
         var subject = selected?.Subject ?? "";
@@ -958,10 +812,10 @@ else
             .Where(w => w.Length > 3)
             .ToHashSet();
 
-    private string RowClass(IntakeEmail item)
+    private string RowClass(MailboxMessage item)
     {
         var baseClass = "w-full text-left rounded-lg border px-3 py-2 transition";
-        return selected?.IntakeId == item.IntakeId
+        return selected?.Id == item.Id
             ? $"{baseClass} border-accent bg-surface-raised"
             : $"{baseClass} border-line hover:border-line-strong hover:bg-surface-raised";
     }
@@ -991,7 +845,7 @@ else
             : $"{baseClass} border-line hover:border-line-strong";
     }
 
-    private static string DisplayFrom(IntakeEmail item) =>
+    private static string DisplayFrom(MailboxMessage item) =>
         string.IsNullOrWhiteSpace(item.FromName) ? item.FromEmail : item.FromName;
 
     private static string Dash(string? value) => string.IsNullOrWhiteSpace(value) ? "—" : value;

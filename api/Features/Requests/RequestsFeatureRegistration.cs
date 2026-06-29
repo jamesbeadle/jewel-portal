@@ -17,10 +17,16 @@ public static class RequestsFeatureRegistration
         services.AddScoped<IQueryHandler<GetRequestDocument, RequestDocumentFile?>, GetRequestDocumentHandler>();
         services.AddScoped<IQueryHandler<ListRequestMessages, IReadOnlyList<RequestMessage>>, ListRequestMessagesHandler>();
         services.AddScoped<IQueryHandler<ListUnassignedRequests, IReadOnlyList<Request>>, ListUnassignedRequestsHandler>();
-        services.AddScoped<IQueryHandler<ListOpenIntake, PagedResult<IntakeEmail>>, ListOpenIntakeHandler>();
-        services.AddScoped<IQueryHandler<ListDiscardedIntake, PagedResult<IntakeEmail>>, ListDiscardedIntakeHandler>();
-        services.AddScoped<IQueryHandler<GetIntakeEmailDetail, IntakeEmailDetail>, GetIntakeEmailDetailHandler>();
-        services.AddScoped<IQueryHandler<SuggestRequestFromIntake, RequestSuggestion>, SuggestRequestFromIntakeHandler>();
+
+        // Live-read triage: read the Inbox (queue) / General (discarded) folder straight from the
+        // mailbox, move messages (discard/restore), and assign/create requests from a message.
+        services.AddScoped<IQueryHandler<ListInboxMessages, PagedResult<MailboxMessage>>, ListInboxMessagesHandler>();
+        services.AddScoped<IQueryHandler<ListDiscardedMessages, PagedResult<MailboxMessage>>, ListDiscardedMessagesHandler>();
+        services.AddScoped<IQueryHandler<GetMailboxMessageDetail, MailboxMessageDetail>, GetMailboxMessageDetailHandler>();
+        services.AddScoped<ICommandHandler<DiscardMessage, Acknowledgement>, DiscardMessageHandler>();
+        services.AddScoped<ICommandHandler<RestoreMessage, Acknowledgement>, RestoreMessageHandler>();
+        services.AddScoped<ICommandHandler<AssignMessageToRequest, Acknowledgement>, AssignMessageToRequestHandler>();
+        services.AddScoped<ICommandHandler<CreateRequestFromMessage, Request>, CreateRequestFromMessageHandler>();
 
         services.AddScoped<ICommandHandler<RaiseRequest, Request>, RaiseRequestHandler>();
         services.AddScoped<RaiseRequestAuthorisation>();
@@ -41,26 +47,6 @@ public static class RequestsFeatureRegistration
         services.AddScoped<ICommandHandler<ReturnRequestToTriage, Acknowledgement>, ReturnRequestToTriageHandler>();
         services.AddScoped<ReturnRequestToTriageAuthorisation>();
         services.AddScoped<ReturnRequestToTriageValidation>();
-
-        services.AddScoped<ICommandHandler<ClaimIntakeEmail, IntakeEmail>, ClaimIntakeEmailHandler>();
-        services.AddScoped<ClaimIntakeEmailAuthorisation>();
-        services.AddScoped<ClaimIntakeEmailValidation>();
-
-        services.AddScoped<ICommandHandler<DiscardIntakeEmail, IntakeEmail>, DiscardIntakeEmailHandler>();
-        services.AddScoped<DiscardIntakeEmailAuthorisation>();
-        services.AddScoped<DiscardIntakeEmailValidation>();
-
-        services.AddScoped<ICommandHandler<RestoreIntakeEmail, IntakeEmail>, RestoreIntakeEmailHandler>();
-        services.AddScoped<RestoreIntakeEmailAuthorisation>();
-        services.AddScoped<RestoreIntakeEmailValidation>();
-
-        services.AddScoped<ICommandHandler<LinkIntakeToRequest, IntakeEmail>, LinkIntakeToRequestHandler>();
-        services.AddScoped<LinkIntakeToRequestAuthorisation>();
-        services.AddScoped<LinkIntakeToRequestValidation>();
-
-        services.AddScoped<ICommandHandler<CreateRequestFromIntake, Request>, CreateRequestFromIntakeHandler>();
-        services.AddScoped<CreateRequestFromIntakeAuthorisation>();
-        services.AddScoped<CreateRequestFromIntakeValidation>();
 
         services.AddScoped<ICommandHandler<ResendRequestDocument, Acknowledgement>, ResendRequestDocumentHandler>();
         services.AddScoped<ResendRequestDocumentAuthorisation>();

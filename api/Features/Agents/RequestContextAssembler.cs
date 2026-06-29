@@ -25,9 +25,10 @@ public sealed class RequestContextAssembler
 
         var header = BuildHeader(request);
         var conversation = await BuildConversationAsync(requestId, cancellationToken);
-        var intake = await BuildIntakeAsync(requestId, cancellationToken);
 
-        return new RequestAgentContext(requestId, header, conversation, intake);
+        // In the live-read model the originating email is captured into the conversation (RequestMessages)
+        // when it is assigned/created, so there is no separate intake-email section to assemble.
+        return new RequestAgentContext(requestId, header, conversation, "");
     }
 
     private static string BuildHeader(Data.Entities.RequestEntity r)
@@ -75,26 +76,4 @@ public sealed class RequestContextAssembler
         return sb.ToString().TrimEnd();
     }
 
-    private async Task<string> BuildIntakeAsync(string requestId, CancellationToken cancellationToken)
-    {
-        var emails = await context.IntakeEmails
-            .Where(e => e.LinkedRequestId == requestId)
-            .OrderBy(e => e.ReceivedAt)
-            .ToListAsync(cancellationToken);
-
-        if (emails.Count == 0) return "";
-
-        var sb = new StringBuilder();
-        foreach (var e in emails)
-        {
-            sb.AppendLine($"From: {e.FromName} <{e.FromEmail}>");
-            sb.AppendLine($"Received: {e.ReceivedAt:yyyy-MM-dd}");
-            sb.AppendLine($"Subject: {e.Subject}");
-            if (e.HasAttachments) sb.AppendLine("(has attachments — metadata only for now)");
-            sb.AppendLine("Body:");
-            sb.AppendLine(e.BodyPreview);
-            sb.AppendLine();
-        }
-        return sb.ToString().TrimEnd();
-    }
 }

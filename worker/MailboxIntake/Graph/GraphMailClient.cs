@@ -48,7 +48,10 @@ public sealed class GraphMailClient : IGraphMailClient
         var url = link ?? $"{GraphBase}/users/{Mailbox}/mailFolders/inbox/messages/delta"
             + $"?$select={MessageSelect}";
 
-        using var response = await SendAsync(HttpMethod.Get, url, content: null, ct);
+        // Keep the delta feed on its existing id type — its cursor is tied to the id type it was
+        // created with. The ingested id is reconciled to an immutable one the first time the message
+        // is acted on (the reconcile sweep refreshes a stale id).
+        using var response = await SendAsync(HttpMethod.Get, url, content: null, ct, preferImmutableIds: false);
         await using var stream = await response.Content.ReadAsStreamAsync(ct);
         using var doc = await JsonDocument.ParseAsync(stream, cancellationToken: ct);
         var root = doc.RootElement;
@@ -327,7 +330,8 @@ public sealed class GraphMailClient : IGraphMailClient
     private static readonly TimeSpan MaxRetryDelay = TimeSpan.FromSeconds(30);
 
     private async Task<HttpResponseMessage> SendAsync(
-        HttpMethod method, string url, HttpContent? content, CancellationToken ct, bool allowNotFound = false)
+        HttpMethod method, string url, HttpContent? content, CancellationToken ct,
+        bool allowNotFound = false, bool preferImmutableIds = true)
     {
         // Buffer the body once: an HttpContent instance can only be sent a single time, but a
         // throttled request must be re-sent, so we rebuild the content from bytes on each attempt.
@@ -345,6 +349,14 @@ public sealed class GraphMailClient : IGraphMailClient
             var token = await _tokens.GetTokenAsync(ct);
             using var request = new HttpRequestMessage(method, url);
             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+            // Ask Graph for immutable message/folder ids. By default Graph returns "default" ids that
+            // change whenever a message moves or the mailbox changes, which makes a freshly-stored id
+            // go stale within seconds and makes move/lookup operations land on the wrong copy. Immutable
+            // ids never change across moves, so a stored id keeps resolving and moves stay deterministic.
+            // NOT applied to the /messages/delta call: a delta cursor is tied to the id type it was
+            // created with, and Graph rejects a mismatched id type mid-enumeration.
+            if (preferImmutableIds)
+                request.Headers.TryAddWithoutValidation("Prefer", "IdType=\"ImmutableId\"");
             if (body is not null)
             {
                 request.Content = new ByteArrayContent(body);

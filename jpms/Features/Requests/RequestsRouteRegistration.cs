@@ -32,29 +32,31 @@ public static class RequestsRouteRegistration
             new QueryRoute("/api/requests/unassigned",
                 _ => "/api/requests/unassigned"));
 
-        queries.Register<ListOpenIntake, PagedResult<IntakeEmail>>(
-            new QueryRoute("/api/intake",
+        // Live-read triage: read the Inbox (queue) and General (discarded) folders straight from the
+        // mailbox. Message ids go in the query string, not the path (Graph ids contain path-unsafe chars).
+        queries.Register<ListInboxMessages, PagedResult<MailboxMessage>>(
+            new QueryRoute("/api/mailbox/inbox",
                 query =>
                 {
-                    var q = (ListOpenIntake)query;
-                    return $"/api/intake?skip={q.Skip}&take={q.Take}";
+                    var q = (ListInboxMessages)query;
+                    return $"/api/mailbox/inbox?skip={q.Skip}&take={q.Take}";
                 }));
 
-        queries.Register<ListDiscardedIntake, PagedResult<IntakeEmail>>(
-            new QueryRoute("/api/intake/discarded",
+        queries.Register<ListDiscardedMessages, PagedResult<MailboxMessage>>(
+            new QueryRoute("/api/mailbox/discarded",
                 query =>
                 {
-                    var q = (ListDiscardedIntake)query;
-                    return $"/api/intake/discarded?skip={q.Skip}&take={q.Take}";
+                    var q = (ListDiscardedMessages)query;
+                    return $"/api/mailbox/discarded?skip={q.Skip}&take={q.Take}";
                 }));
 
-        queries.Register<GetIntakeEmailDetail, IntakeEmailDetail>(
-            new QueryRoute("/api/intake/{intakeId}/detail",
-                query => $"/api/intake/{((GetIntakeEmailDetail)query).IntakeId}/detail"));
-
-        queries.Register<SuggestRequestFromIntake, RequestSuggestion>(
-            new QueryRoute("/api/intake/{intakeId}/suggest",
-                query => $"/api/intake/{((SuggestRequestFromIntake)query).IntakeId}/suggest"));
+        queries.Register<GetMailboxMessageDetail, MailboxMessageDetail>(
+            new QueryRoute("/api/mailbox/message/detail",
+                query =>
+                {
+                    var q = (GetMailboxMessageDetail)query;
+                    return $"/api/mailbox/message/detail?id={Uri.EscapeDataString(q.MessageId)}&imid={Uri.EscapeDataString(q.InternetMessageId ?? string.Empty)}";
+                }));
 
         commands.Register<RaiseRequest, Request>(
             new CommandRoute("POST", "/api/projects/{projectId}/requests",
@@ -76,24 +78,18 @@ public static class RequestsRouteRegistration
             new CommandRoute("POST", "/api/requests/{requestId}/return-to-triage",
                 command => $"/api/requests/{((ReturnRequestToTriage)command).RequestId}/return-to-triage"));
 
-        commands.Register<ClaimIntakeEmail, IntakeEmail>(
-            new CommandRoute("POST", "/api/intake/{intakeId}/claim",
-                command => $"/api/intake/{((ClaimIntakeEmail)command).IntakeId}/claim"));
+        // Live-read triage moves: discard (Inbox -> General) and restore (General -> Inbox). The
+        // message id + internetMessageId travel in the JSON body, so the route is static.
+        commands.Register<DiscardMessage, Acknowledgement>(
+            new CommandRoute("POST", "/api/mailbox/message/discard", _ => "/api/mailbox/message/discard"));
 
-        commands.Register<DiscardIntakeEmail, IntakeEmail>(
-            new CommandRoute("POST", "/api/intake/{intakeId}/discard",
-                command => $"/api/intake/{((DiscardIntakeEmail)command).IntakeId}/discard"));
+        commands.Register<RestoreMessage, Acknowledgement>(
+            new CommandRoute("POST", "/api/mailbox/message/restore", _ => "/api/mailbox/message/restore"));
 
-        commands.Register<RestoreIntakeEmail, IntakeEmail>(
-            new CommandRoute("POST", "/api/intake/{intakeId}/restore",
-                command => $"/api/intake/{((RestoreIntakeEmail)command).IntakeId}/restore"));
+        commands.Register<AssignMessageToRequest, Acknowledgement>(
+            new CommandRoute("POST", "/api/mailbox/message/assign", _ => "/api/mailbox/message/assign"));
 
-        commands.Register<LinkIntakeToRequest, IntakeEmail>(
-            new CommandRoute("POST", "/api/intake/{intakeId}/link",
-                command => $"/api/intake/{((LinkIntakeToRequest)command).IntakeId}/link"));
-
-        commands.Register<CreateRequestFromIntake, Request>(
-            new CommandRoute("POST", "/api/intake/{intakeId}/create-request",
-                command => $"/api/intake/{((CreateRequestFromIntake)command).IntakeId}/create-request"));
+        commands.Register<CreateRequestFromMessage, Request>(
+            new CommandRoute("POST", "/api/mailbox/message/create-request", _ => "/api/mailbox/message/create-request"));
     }
 }
