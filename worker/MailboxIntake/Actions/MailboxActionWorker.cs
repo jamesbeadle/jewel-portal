@@ -86,12 +86,21 @@ public sealed class MailboxActionWorker
             return;
         }
 
-        // Guard against a same-folder move: Graph's /move duplicates a message when the destination
-        // is the folder it already lives in. If it's already there, there is nothing to do.
-        var currentFolderId = await _graph.GetMessageParentFolderIdAsync(intake.GraphMessageId, ct);
+        // Resolve the message's live id + current folder, healing a stale stored id. If it can't be
+        // found at all, there is nothing to move — skip rather than 404 and poison the queue.
+        var (messageId, currentFolderId) = await ResolveLiveMessageAsync(intake, ct);
+        if (string.IsNullOrEmpty(messageId))
+        {
+            _logger.LogWarning("Move skipped: intake {IntakeId} message not found in the mailbox.", action.IntakeId);
+            return;
+        }
+
         _logger.LogInformation(
             "Move intake {IntakeId} for {Status}: current folder {CurrentFolder}, target folder {TargetFolder}.",
             action.IntakeId, status, currentFolderId, folderId);
+
+        // Guard against a same-folder move: Graph's /move duplicates a message when the destination
+        // is the folder it already lives in. If it's already there, there is nothing to do.
         if (!string.IsNullOrEmpty(currentFolderId) && string.Equals(currentFolderId, folderId, StringComparison.Ordinal))
         {
             _logger.LogInformation("Intake {IntakeId} already in the folder for {Status}; no move needed.", action.IntakeId, status);
@@ -99,10 +108,37 @@ public sealed class MailboxActionWorker
         }
 
         // The id changes on move — persist the new one so future moves/replies use the right handle.
-        var newGraphId = await _graph.MoveMessageAsync(intake.GraphMessageId, folderId, ct);
+        var newGraphId = await _graph.MoveMessageAsync(messageId, folderId, ct);
         intake.GraphMessageId = newGraphId;
         await _context.SaveChangesAsync(ct);
         _logger.LogInformation("Moved intake {IntakeId} to folder for {Status}.", action.IntakeId, status);
+    }
+
+    /// <summary>
+    /// Resolves a message's live Graph id and current parent folder, healing a stale stored id. A
+    /// message's folder-scoped id changes every time it moves, so the id we hold can stop resolving
+    /// (404). When that happens we re-find the message by its stable internetMessageId — which never
+    /// changes — and persist the fresh id. Returns (null, null) when the message cannot be found at
+    /// all (e.g. it was deleted), so callers can skip the move rather than throw and poison the queue.
+    /// </summary>
+    private async Task<(string? MessageId, string? FolderId)> ResolveLiveMessageAsync(IntakeEmailEntity intake, CancellationToken ct)
+    {
+        var folderId = await _graph.GetMessageParentFolderIdAsync(intake.GraphMessageId!, ct);
+        if (!string.IsNullOrEmpty(folderId))
+            return (intake.GraphMessageId, folderId);
+
+        if (string.IsNullOrEmpty(intake.InternetMessageId))
+            return (null, null);
+
+        var foundId = await _graph.FindMessageIdByInternetMessageIdAsync(intake.InternetMessageId, ct);
+        if (string.IsNullOrEmpty(foundId))
+            return (null, null);
+
+        var foundFolderId = await _graph.GetMessageParentFolderIdAsync(foundId, ct);
+        intake.GraphMessageId = foundId;
+        await _context.SaveChangesAsync(ct);
+        _logger.LogInformation("Healed stale Graph id for intake {IntakeId} via internetMessageId.", intake.IntakeId);
+        return (foundId, foundFolderId);
     }
 
     /// <summary>
@@ -179,12 +215,20 @@ public sealed class MailboxActionWorker
             return;
         }
 
-        // Guard against a same-folder move. If the discard/outcome move never actually filed the
-        // email out of the Inbox, its id still points at an Inbox message — and Graph's /move would
-        // DUPLICATE it (copy into the Inbox without removing the original). If it's already in the
-        // Inbox there is nothing to return; leave the single copy in place.
         var inboxId = await _graph.GetFolderIdAsync("inbox", ct);
-        var currentFolderId = await _graph.GetMessageParentFolderIdAsync(intake.GraphMessageId, ct);
+
+        // Resolve the message's live id + current folder, healing a stale stored id. If it can't be
+        // found at all, skip rather than 404 and poison the queue — the DB already has it back as
+        // NeedsTriage, so it's in the triage queue regardless of the mailbox mirror.
+        var (messageId, currentFolderId) = await ResolveLiveMessageAsync(intake, ct);
+        if (string.IsNullOrEmpty(messageId))
+        {
+            _logger.LogWarning("Return-to-inbox skipped: intake {IntakeId} message not found in the mailbox.", action.IntakeId);
+            return;
+        }
+
+        // Guard against a same-folder move. If the message is already in the Inbox, Graph's /move would
+        // DUPLICATE it (copy in, original not removed). Already there → nothing to return.
         if (!string.IsNullOrEmpty(inboxId) && string.Equals(currentFolderId, inboxId, StringComparison.Ordinal))
         {
             _logger.LogInformation("Intake {IntakeId} is already in the Inbox; no return move needed.", action.IntakeId);
@@ -192,7 +236,7 @@ public sealed class MailboxActionWorker
         }
 
         // "inbox" is a Graph well-known folder name accepted as a destination id.
-        var newGraphId = await _graph.MoveMessageAsync(intake.GraphMessageId, "inbox", ct);
+        var newGraphId = await _graph.MoveMessageAsync(messageId, "inbox", ct);
         intake.GraphMessageId = newGraphId;
         await _context.SaveChangesAsync(ct);
         _logger.LogInformation("Returned intake {IntakeId} to the Inbox for re-triage.", action.IntakeId);

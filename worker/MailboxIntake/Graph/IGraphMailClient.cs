@@ -43,6 +43,13 @@ public interface IGraphMailClient
     Task<string?> GetFolderIdAsync(string wellKnownName, CancellationToken ct);
 
     /// <summary>
+    /// Find a message anywhere in the mailbox by its stable internetMessageId, returning its current
+    /// folder-scoped Graph id, or null if no message matches. Used to heal a stale stored id: a
+    /// message's Graph id changes on every move, but its internetMessageId never does.
+    /// </summary>
+    Task<string?> FindMessageIdByInternetMessageIdAsync(string internetMessageId, CancellationToken ct);
+
+    /// <summary>
     /// Find a child folder by display name under the given parent (pass null for the mailbox root),
     /// creating it if it does not exist. Returns the folder's Graph id. Idempotent.
     /// </summary>

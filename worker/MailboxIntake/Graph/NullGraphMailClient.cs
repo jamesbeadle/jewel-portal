@@ -49,6 +49,12 @@ public sealed class NullGraphMailClient : IGraphMailClient
         return Task.FromResult<string?>(null);
     }
 
+    public Task<string?> FindMessageIdByInternetMessageIdAsync(string internetMessageId, CancellationToken ct)
+    {
+        _logger.LogWarning("Mailbox intake not configured; skipping Graph message lookup.");
+        return Task.FromResult<string?>(null);
+    }
+
     public Task<string> EnsureFolderAsync(string displayName, string? parentFolderId, CancellationToken ct)
     {
         _logger.LogWarning("Mailbox intake not configured; skipping Graph ensure-folder.");

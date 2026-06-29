@@ -153,6 +153,34 @@ public sealed class GraphMailClient : IGraphMailClient
         return doc.RootElement.TryGetProperty("id", out var id) ? id.GetString() : null;
     }
 
+    public async Task<string?> FindMessageIdByInternetMessageIdAsync(string internetMessageId, CancellationToken ct)
+    {
+        // internetMessageId is stable across folder moves; search the whole mailbox for it. The value
+        // contains angle brackets and must be OData-escaped (double any single quote inside the literal).
+        var escaped = internetMessageId.Replace("'", "''");
+        var filter = Uri.EscapeDataString($"internetMessageId eq '{escaped}'");
+        var url = $"{GraphBase}/users/{Mailbox}/messages?$filter={filter}&$select=id&$top=1";
+        using var response = await SendAsync(HttpMethod.Get, url, content: null, ct, allowNotFound: true);
+        if (response.StatusCode == HttpStatusCode.NotFound)
+            return null;
+
+        await using var stream = await response.Content.ReadAsStreamAsync(ct);
+        using var doc = await JsonDocument.ParseAsync(stream, cancellationToken: ct);
+        if (doc.RootElement.TryGetProperty("value", out var arr) && arr.ValueKind == JsonValueKind.Array)
+        {
+            foreach (var item in arr.EnumerateArray())
+            {
+                if (item.TryGetProperty("id", out var idEl))
+                {
+                    var id = idEl.GetString();
+                    if (!string.IsNullOrEmpty(id))
+                        return id;
+                }
+            }
+        }
+        return null;
+    }
+
     public async Task<string> EnsureFolderAsync(string displayName, string? parentFolderId, CancellationToken ct)
     {
         // Root-level folders live under /mailFolders; nested ones under the parent's /childFolders.
