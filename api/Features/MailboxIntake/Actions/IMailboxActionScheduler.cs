@@ -46,8 +46,14 @@ public sealed class MailboxActionScheduler : IMailboxActionScheduler
     public Task ScheduleOutcomeMoveAsync(string intakeId, IntakeStatus status, CancellationToken ct)
     {
         if (!_options.Enabled || !_options.EnableFolderMoves)
+        {
+            _logger.LogWarning(
+                "Outcome move NOT enqueued for intake {IntakeId} ({Status}): Enabled={Enabled}, EnableFolderMoves={EnableFolderMoves}.",
+                intakeId, status, _options.Enabled, _options.EnableFolderMoves);
             return Task.CompletedTask;
+        }
 
+        _logger.LogInformation("Enqueuing outcome move for intake {IntakeId} ({Status}).", intakeId, status);
         return _queue.EnqueueMailboxActionAsync(
             new MailboxActionMessage(MailboxActionType.MoveToOutcomeFolder, intakeId, (int)status), ct);
     }

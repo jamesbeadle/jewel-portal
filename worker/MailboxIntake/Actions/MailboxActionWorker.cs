@@ -60,7 +60,10 @@ public sealed class MailboxActionWorker
     private async Task MoveAsync(MailboxActionMessage action, CancellationToken ct)
     {
         if (!_options.EnableFolderMoves)
+        {
+            _logger.LogWarning("Move skipped for intake {IntakeId}: EnableFolderMoves is off in the worker config.", action.IntakeId);
             return;
+        }
 
         var intake = await _context.IntakeEmails.FirstOrDefaultAsync(e => e.IntakeId == action.IntakeId, ct);
         if (intake is null)
@@ -79,16 +82,19 @@ public sealed class MailboxActionWorker
         var folderId = await ResolveFolderAsync(intake, status, ct);
         if (string.IsNullOrEmpty(folderId))
         {
-            _logger.LogDebug("No outcome folder for status {Status}; leaving intake {IntakeId} in place.", status, action.IntakeId);
+            _logger.LogWarning("No outcome folder resolved for status {Status}; leaving intake {IntakeId} in place.", status, action.IntakeId);
             return;
         }
 
         // Guard against a same-folder move: Graph's /move duplicates a message when the destination
         // is the folder it already lives in. If it's already there, there is nothing to do.
         var currentFolderId = await _graph.GetMessageParentFolderIdAsync(intake.GraphMessageId, ct);
+        _logger.LogInformation(
+            "Move intake {IntakeId} for {Status}: current folder {CurrentFolder}, target folder {TargetFolder}.",
+            action.IntakeId, status, currentFolderId, folderId);
         if (!string.IsNullOrEmpty(currentFolderId) && string.Equals(currentFolderId, folderId, StringComparison.Ordinal))
         {
-            _logger.LogDebug("Intake {IntakeId} already in the folder for {Status}; no move needed.", action.IntakeId, status);
+            _logger.LogInformation("Intake {IntakeId} already in the folder for {Status}; no move needed.", action.IntakeId, status);
             return;
         }
 
@@ -144,11 +150,9 @@ public sealed class MailboxActionWorker
             {
                 // File the discarded email into a folder under the Inbox (defaults to "General"), so it
                 // drops out of the triage queue while staying in the mailbox where it can be found.
-                var inboxId = await _graph.GetFolderIdAsync("inbox", ct);
-                if (string.IsNullOrEmpty(inboxId))
-                    return null;
-
-                return await _graph.EnsureFolderAsync(_options.DiscardFolder, inboxId, ct);
+                // "inbox" is a well-known folder name Graph accepts wherever a folder id is expected,
+                // so we can address its child folders directly without resolving the Inbox id first.
+                return await _graph.EnsureFolderAsync(_options.DiscardFolder, "inbox", ct);
             }
 
             default:
