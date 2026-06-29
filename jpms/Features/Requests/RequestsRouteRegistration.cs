@@ -40,6 +40,14 @@ public static class RequestsRouteRegistration
                     return $"/api/intake?skip={q.Skip}&take={q.Take}";
                 }));
 
+        queries.Register<ListDiscardedIntake, PagedResult<IntakeEmail>>(
+            new QueryRoute("/api/intake/discarded",
+                query =>
+                {
+                    var q = (ListDiscardedIntake)query;
+                    return $"/api/intake/discarded?skip={q.Skip}&take={q.Take}";
+                }));
+
         queries.Register<GetIntakeEmailDetail, IntakeEmailDetail>(
             new QueryRoute("/api/intake/{intakeId}/detail",
                 query => $"/api/intake/{((GetIntakeEmailDetail)query).IntakeId}/detail"));
@@ -75,6 +83,10 @@ public static class RequestsRouteRegistration
         commands.Register<DiscardIntakeEmail, IntakeEmail>(
             new CommandRoute("POST", "/api/intake/{intakeId}/discard",
                 command => $"/api/intake/{((DiscardIntakeEmail)command).IntakeId}/discard"));
+
+        commands.Register<RestoreIntakeEmail, IntakeEmail>(
+            new CommandRoute("POST", "/api/intake/{intakeId}/restore",
+                command => $"/api/intake/{((RestoreIntakeEmail)command).IntakeId}/restore"));
 
         commands.Register<LinkIntakeToRequest, IntakeEmail>(
             new CommandRoute("POST", "/api/intake/{intakeId}/link",

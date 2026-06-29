@@ -33,16 +33,32 @@ else
         <header class="mb-6">
             <p class="text-xs uppercase tracking-wider text-content-subtle font-medium mb-1">JPMS · projects@@jewelbb.co.uk</p>
             <h1 class="text-2xl md:text-3xl font-semibold text-content leading-tight">Mailbox triage</h1>
-            <p class="text-sm text-content-muted mt-2">
-                @total email@(total == 1 ? "" : "s") waiting to be assigned to a request.
-            </p>
+            @if (view == QueueView.Active)
+            {
+                <p class="text-sm text-content-muted mt-2">
+                    @total email@(total == 1 ? "" : "s") waiting to be assigned to a request.
+                </p>
+            }
+            else
+            {
+                <p class="text-sm text-content-muted mt-2">
+                    @discardedTotal discarded email@(discardedTotal == 1 ? "" : "s") — restore one to put it back in the queue.
+                </p>
+            }
         </header>
+
+        <div class="flex gap-2 mb-6 border-b border-line">
+            <button type="button" class="@ViewTabClass(QueueView.Active)" @onclick="() => SwitchView(QueueView.Active)">Queue</button>
+            <button type="button" class="@ViewTabClass(QueueView.Discarded)" @onclick="() => SwitchView(QueueView.Discarded)">Discarded</button>
+        </div>
 
         @if (loadError is not null)
         {
             <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-4">@loadError</p>
         }
 
+        @if (view == QueueView.Active)
+        {
         @if (unassigned.Count > 0)
         {
             <div class="panel p-5 mb-6 border-amber-500/40">
@@ -337,11 +353,142 @@ else
                 </div>
             </div>
         }
+        }
+        else
+        {
+            @if (discardedTotal == 0)
+            {
+                <div class="panel p-8 text-center">
+                    <p class="text-sm text-content">No discarded emails.</p>
+                    <p class="text-xs text-content-subtle mt-1">Emails you discard from the queue show up here, and can be restored.</p>
+                </div>
+            }
+            else
+            {
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
+                    <div class="space-y-2 lg:col-span-1">
+                        @foreach (var item in discardedItems)
+                        {
+                            <button type="button" @key="item.IntakeId" @onclick="() => Select(item)" class="@RowClass(item)">
+                                <div class="flex items-center justify-between gap-2">
+                                    <span class="text-sm font-medium text-content truncate">@DisplayFrom(item)</span>
+                                </div>
+                                <p class="text-sm text-content-muted truncate mt-0.5">@Dash(item.Subject)</p>
+                                <div class="flex items-center gap-2 mt-1 text-[11px] text-content-subtle">
+                                    <span>@Date(item.ReceivedAt)</span>
+                                    @if (item.HasAttachments)
+                                    {
+                                        <span title="Has attachments">· attachment</span>
+                                    }
+                                </div>
+                            </button>
+                        }
+
+                        @if (DiscardedPageCount > 1)
+                        {
+                            <div class="flex items-center justify-between gap-2 pt-2">
+                                <button type="button" class="btn-secondary text-xs px-2.5 py-1.5"
+                                        disabled="@(discardedPage <= 1)" @onclick="PreviousDiscarded">Previous</button>
+                                <span class="text-[11px] text-content-subtle">Page @(discardedPage) of @DiscardedPageCount</span>
+                                <button type="button" class="btn-secondary text-xs px-2.5 py-1.5"
+                                        disabled="@(discardedPage >= DiscardedPageCount)" @onclick="NextDiscarded">Next</button>
+                            </div>
+                        }
+                    </div>
+
+                    <div class="lg:col-span-2">
+                        @if (selected is null)
+                        {
+                            <div class="panel p-8 text-center text-sm text-content-subtle">
+                                Select a discarded email to view it.
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="panel p-5 space-y-4">
+                                @if (actionError is not null)
+                                {
+                                    <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@actionError</p>
+                                }
+
+                                <div>
+                                    <h2 class="text-lg font-semibold text-content">@Dash(selected.Subject)</h2>
+                                    <p class="text-sm text-content-muted mt-1">
+                                        From @DisplayFrom(selected) · @Date(selected.ReceivedAt)
+                                    </p>
+                                    @if (!string.IsNullOrWhiteSpace(selected.Notes))
+                                    {
+                                        <p class="text-xs text-content-subtle mt-1">Discard reason: @selected.Notes</p>
+                                    }
+                                </div>
+
+                                <div class="rounded-lg bg-surface-raised border border-line p-3 max-h-[28rem] overflow-y-auto">
+                                    @if (detailLoading)
+                                    {
+                                        <p class="text-sm text-content-subtle italic">Loading message…</p>
+                                    }
+                                    else if (detail is not null && !string.IsNullOrWhiteSpace(detail.BodyHtml) && detail.BodyIsHtml)
+                                    {
+                                        <div class="rounded bg-white text-gray-900 p-3 text-sm overflow-x-auto">@((MarkupString)detail.BodyHtml)</div>
+                                    }
+                                    else if (detail is not null && !string.IsNullOrWhiteSpace(detail.BodyHtml))
+                                    {
+                                        <p class="text-sm text-content whitespace-pre-wrap">@detail.BodyHtml</p>
+                                    }
+                                    else
+                                    {
+                                        <p class="text-sm text-content whitespace-pre-wrap">@Dash(selected.BodyPreview)</p>
+                                    }
+                                </div>
+
+                                @if (detail is not null && detail.Attachments.Count > 0)
+                                {
+                                    <div class="rounded-lg bg-surface-raised border border-line p-3">
+                                        <p class="text-xs uppercase tracking-wider text-content-subtle font-semibold mb-2">
+                                            @detail.Attachments.Count attachment@(detail.Attachments.Count == 1 ? "" : "s")
+                                        </p>
+                                        <ul class="space-y-1">
+                                            @foreach (var att in detail.Attachments)
+                                            {
+                                                <li class="flex items-center justify-between gap-3 text-sm text-content">
+                                                    <span class="truncate">@att.Name</span>
+                                                    @if (att.Size > 0)
+                                                    {
+                                                        <span class="text-xs text-content-subtle whitespace-nowrap">@FormatSize(att.Size)</span>
+                                                    }
+                                                </li>
+                                            }
+                                        </ul>
+                                    </div>
+                                }
+
+                                <div class="pt-3 border-t border-line">
+                                    <p class="text-sm text-content-muted mb-3">
+                                        This email was discarded. Restore it to put it back in the triage queue and move the mailbox copy back to the Inbox.
+                                    </p>
+                                    <button type="button" class="btn-primary" disabled="@busy" @onclick="DoRestore">Restore to triage</button>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </div>
+            }
+        }
     </section>
 }
 
 @code {
     private enum TriageMode { None, Link, Create, Discard }
+
+    // The page shows either the live queue or the discarded pile; the detail pane is shared.
+    private enum QueueView { Active, Discarded }
+    private QueueView view = QueueView.Active;
+
+    // Discarded pile — loaded lazily when its tab is first opened, paged independently of the queue.
+    private IReadOnlyList<IntakeEmail> discardedItems = Array.Empty<IntakeEmail>();
+    private int discardedTotal;
+    private int discardedPage = 1;
+    private int DiscardedPageCount => Math.Max(1, (int)Math.Ceiling(discardedTotal / (double)PageSize));
 
     private static readonly RequestType[] KindOptions =
     {
@@ -382,6 +529,86 @@ else
         if (page >= PageCount) return;
         page++;
         await LoadAsync();
+    }
+
+    private async Task SwitchView(QueueView next)
+    {
+        if (view == next) return;
+        view = next;
+        // The detail pane is shared between the two views; clear it so we don't show a queue email
+        // selected while looking at the discarded pile (or vice versa).
+        selected = null;
+        detail = null;
+        detailLoading = false;
+        mode = TriageMode.None;
+        actionError = null;
+        if (next == QueueView.Discarded) await LoadDiscardedAsync();
+        else await LoadAsync();
+    }
+
+    private async Task LoadDiscardedAsync()
+    {
+        loadError = null;
+        try
+        {
+            if (discardedPage < 1) discardedPage = 1;
+            var result = await Intake.ListDiscardedAsync((discardedPage - 1) * PageSize, PageSize);
+            discardedItems = result.Items;
+            discardedTotal = result.Total;
+
+            // If the pile shrank (e.g. an email was restored) the current page may now be past the
+            // end — clamp to the last page and refetch so we never show an empty page mid-list.
+            if (discardedPage > DiscardedPageCount)
+            {
+                discardedPage = DiscardedPageCount;
+                var clamped = await Intake.ListDiscardedAsync((discardedPage - 1) * PageSize, PageSize);
+                discardedItems = clamped.Items;
+                discardedTotal = clamped.Total;
+            }
+        }
+        catch
+        {
+            loadError = "Couldn't load discarded emails. Please try again.";
+            discardedItems = Array.Empty<IntakeEmail>();
+            discardedTotal = 0;
+        }
+    }
+
+    private async Task PreviousDiscarded()
+    {
+        if (discardedPage <= 1) return;
+        discardedPage--;
+        await LoadDiscardedAsync();
+    }
+
+    private async Task NextDiscarded()
+    {
+        if (discardedPage >= DiscardedPageCount) return;
+        discardedPage++;
+        await LoadDiscardedAsync();
+    }
+
+    private async Task DoRestore()
+    {
+        if (selected is null || busy) return;
+        actionError = null;
+        try
+        {
+            busy = true;
+            await Intake.RestoreAsync(selected.IntakeId);
+            selected = null;
+            detail = null;
+            detailLoading = false;
+            await LoadDiscardedAsync();
+        }
+        catch
+        {
+            actionError = "Couldn't restore that email. Please try again.";
+        }
+        finally
+        {
+            busy = false;
+        }
     }
 
     private bool busy;
@@ -737,6 +964,14 @@ else
         return selected?.IntakeId == item.IntakeId
             ? $"{baseClass} border-accent bg-surface-raised"
             : $"{baseClass} border-line hover:border-line-strong hover:bg-surface-raised";
+    }
+
+    private string ViewTabClass(QueueView tab)
+    {
+        var baseClass = "px-3 py-2 text-sm font-medium border-b-2 -mb-px transition";
+        return view == tab
+            ? $"{baseClass} border-accent text-content"
+            : $"{baseClass} border-transparent text-content-muted hover:text-content";
     }
 
     private string ModeTabClass(TriageMode tab)

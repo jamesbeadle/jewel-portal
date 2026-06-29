@@ -18,6 +18,7 @@ public static class RequestsFeatureRegistration
         services.AddScoped<IQueryHandler<ListRequestMessages, IReadOnlyList<RequestMessage>>, ListRequestMessagesHandler>();
         services.AddScoped<IQueryHandler<ListUnassignedRequests, IReadOnlyList<Request>>, ListUnassignedRequestsHandler>();
         services.AddScoped<IQueryHandler<ListOpenIntake, PagedResult<IntakeEmail>>, ListOpenIntakeHandler>();
+        services.AddScoped<IQueryHandler<ListDiscardedIntake, PagedResult<IntakeEmail>>, ListDiscardedIntakeHandler>();
         services.AddScoped<IQueryHandler<GetIntakeEmailDetail, IntakeEmailDetail>, GetIntakeEmailDetailHandler>();
         services.AddScoped<IQueryHandler<SuggestRequestFromIntake, RequestSuggestion>, SuggestRequestFromIntakeHandler>();
 
@@ -48,6 +49,10 @@ public static class RequestsFeatureRegistration
         services.AddScoped<ICommandHandler<DiscardIntakeEmail, IntakeEmail>, DiscardIntakeEmailHandler>();
         services.AddScoped<DiscardIntakeEmailAuthorisation>();
         services.AddScoped<DiscardIntakeEmailValidation>();
+
+        services.AddScoped<ICommandHandler<RestoreIntakeEmail, IntakeEmail>, RestoreIntakeEmailHandler>();
+        services.AddScoped<RestoreIntakeEmailAuthorisation>();
+        services.AddScoped<RestoreIntakeEmailValidation>();
 
         services.AddScoped<ICommandHandler<LinkIntakeToRequest, IntakeEmail>, LinkIntakeToRequestHandler>();
         services.AddScoped<LinkIntakeToRequestAuthorisation>();

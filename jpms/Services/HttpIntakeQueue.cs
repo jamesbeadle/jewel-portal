@@ -19,6 +19,9 @@ public sealed class HttpIntakeQueue : IIntakeQueue
     public Task<PagedResult<IntakeEmail>> ListOpenAsync(int skip = 0, int take = 25, CancellationToken cancellationToken = default) =>
         queries.AskAsync(new ListOpenIntake(skip, take), cancellationToken);
 
+    public Task<PagedResult<IntakeEmail>> ListDiscardedAsync(int skip = 0, int take = 25, CancellationToken cancellationToken = default) =>
+        queries.AskAsync(new ListDiscardedIntake(skip, take), cancellationToken);
+
     public Task<IntakeEmailDetail> GetDetailAsync(string intakeId, CancellationToken cancellationToken = default) =>
         queries.AskAsync(new GetIntakeEmailDetail(intakeId), cancellationToken);
 
@@ -30,6 +33,9 @@ public sealed class HttpIntakeQueue : IIntakeQueue
 
     public Task<IntakeEmail> DiscardAsync(string intakeId, string? notes, CancellationToken cancellationToken = default) =>
         commands.SendAsync(new DiscardIntakeEmail(intakeId, notes), cancellationToken);
+
+    public Task<IntakeEmail> RestoreAsync(string intakeId, CancellationToken cancellationToken = default) =>
+        commands.SendAsync(new RestoreIntakeEmail(intakeId), cancellationToken);
 
     public Task<IntakeEmail> LinkAsync(string intakeId, string requestId, CancellationToken cancellationToken = default) =>
         commands.SendAsync(new LinkIntakeToRequest(intakeId, requestId), cancellationToken);
