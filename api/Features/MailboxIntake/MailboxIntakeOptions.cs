@@ -35,8 +35,11 @@ public sealed class MailboxIntakeOptions
     /// </summary>
     public string RequestsParentFolder { get; set; } = "Requests";
 
-    /// <summary>Subfolder of <see cref="RequestsParentFolder"/> that discarded ("not relevant") emails move into.</summary>
-    public string NotRelevantFolder { get; set; } = "Not relevant";
+    /// <summary>
+    /// Folder under the Inbox that discarded ("not a request") emails are filed into, so they leave
+    /// the triage queue but stay in the mailbox. Found-or-created on demand. Defaults to "General".
+    /// </summary>
+    public string DiscardFolder { get; set; } = "General";
 
     /// <summary>
     /// Public HTTPS URL of the webhook Function that Graph posts change notifications to.
@@ -126,9 +129,10 @@ public sealed class MailboxIntakeOptions
         if (!string.IsNullOrWhiteSpace(requestsParent))
             options.RequestsParentFolder = requestsParent;
 
-        var notRelevant = section["Folders:NotRelevant"];
-        if (!string.IsNullOrWhiteSpace(notRelevant))
-            options.NotRelevantFolder = notRelevant;
+        // Accept the new "Discard" key, falling back to the legacy "NotRelevant" key if present.
+        var discardFolder = section["Folders:Discard"] ?? section["Folders:NotRelevant"];
+        if (!string.IsNullOrWhiteSpace(discardFolder))
+            options.DiscardFolder = discardFolder;
 
         options.Folders.InProgress = section["Folders:InProgress"];
         options.Folders.Logged = section["Folders:Logged"];

@@ -30,6 +30,19 @@ public interface IGraphMailClient
     Task<string> MoveMessageAsync(string graphMessageId, string destinationFolderId, CancellationToken ct);
 
     /// <summary>
+    /// The id of the folder a message currently lives in, or null if the message no longer exists.
+    /// Used to avoid a same-folder move: Graph's /move duplicates a message when the destination is
+    /// the folder it is already in, so callers compare this against the destination first.
+    /// </summary>
+    Task<string?> GetMessageParentFolderIdAsync(string graphMessageId, CancellationToken ct);
+
+    /// <summary>
+    /// Resolve a well-known folder name (e.g. "inbox") to its concrete folder id, or null if it
+    /// cannot be resolved. Lets callers compare a message's parent folder against the Inbox.
+    /// </summary>
+    Task<string?> GetFolderIdAsync(string wellKnownName, CancellationToken ct);
+
+    /// <summary>
     /// Find a child folder by display name under the given parent (pass null for the mailbox root),
     /// creating it if it does not exist. Returns the folder's Graph id. Idempotent.
     /// </summary>

@@ -83,6 +83,15 @@ public sealed class MailboxActionWorker
             return;
         }
 
+        // Guard against a same-folder move: Graph's /move duplicates a message when the destination
+        // is the folder it already lives in. If it's already there, there is nothing to do.
+        var currentFolderId = await _graph.GetMessageParentFolderIdAsync(intake.GraphMessageId, ct);
+        if (!string.IsNullOrEmpty(currentFolderId) && string.Equals(currentFolderId, folderId, StringComparison.Ordinal))
+        {
+            _logger.LogDebug("Intake {IntakeId} already in the folder for {Status}; no move needed.", action.IntakeId, status);
+            return;
+        }
+
         // The id changes on move — persist the new one so future moves/replies use the right handle.
         var newGraphId = await _graph.MoveMessageAsync(intake.GraphMessageId, folderId, ct);
         intake.GraphMessageId = newGraphId;
@@ -93,7 +102,7 @@ public sealed class MailboxActionWorker
     /// <summary>
     /// Resolves the destination folder for a triage outcome:
     ///   Linked    -> the request's own subfolder (REQ-0001) under the "Requests" parent, created on first use;
-    ///   Discarded -> the shared "Not relevant" folder under the same parent;
+    ///   Discarded -> a folder under the Inbox (defaults to "General"), found-or-created on demand;
     ///   otherwise -> any statically-configured outcome folder (e.g. Failed -> Needs attention) as a safety net.
     /// Returns null when there is nothing to move to (e.g. unconfigured Graph, or a Linked email with no request).
     /// </summary>
@@ -133,11 +142,13 @@ public sealed class MailboxActionWorker
 
             case IntakeStatus.Discarded:
             {
-                var parentId = await _graph.EnsureFolderAsync(_options.RequestsParentFolder, null, ct);
-                if (string.IsNullOrEmpty(parentId))
+                // File the discarded email into a folder under the Inbox (defaults to "General"), so it
+                // drops out of the triage queue while staying in the mailbox where it can be found.
+                var inboxId = await _graph.GetFolderIdAsync("inbox", ct);
+                if (string.IsNullOrEmpty(inboxId))
                     return null;
 
-                return await _graph.EnsureFolderAsync(_options.NotRelevantFolder, parentId, ct);
+                return await _graph.EnsureFolderAsync(_options.DiscardFolder, inboxId, ct);
             }
 
             default:
@@ -161,6 +172,18 @@ public sealed class MailboxActionWorker
         if (string.IsNullOrEmpty(intake.GraphMessageId))
         {
             _logger.LogWarning("Return-to-inbox skipped: intake {IntakeId} has no Graph message id.", action.IntakeId);
+            return;
+        }
+
+        // Guard against a same-folder move. If the discard/outcome move never actually filed the
+        // email out of the Inbox, its id still points at an Inbox message — and Graph's /move would
+        // DUPLICATE it (copy into the Inbox without removing the original). If it's already in the
+        // Inbox there is nothing to return; leave the single copy in place.
+        var inboxId = await _graph.GetFolderIdAsync("inbox", ct);
+        var currentFolderId = await _graph.GetMessageParentFolderIdAsync(intake.GraphMessageId, ct);
+        if (!string.IsNullOrEmpty(inboxId) && string.Equals(currentFolderId, inboxId, StringComparison.Ordinal))
+        {
+            _logger.LogInformation("Intake {IntakeId} is already in the Inbox; no return move needed.", action.IntakeId);
             return;
         }
 

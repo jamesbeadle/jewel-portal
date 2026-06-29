@@ -129,6 +129,30 @@ public sealed class GraphMailClient : IGraphMailClient
         return newId;
     }
 
+    public async Task<string?> GetMessageParentFolderIdAsync(string graphMessageId, CancellationToken ct)
+    {
+        var url = $"{GraphBase}/users/{Mailbox}/messages/{Uri.EscapeDataString(graphMessageId)}?$select=parentFolderId";
+        using var response = await SendAsync(HttpMethod.Get, url, content: null, ct, allowNotFound: true);
+        if (response.StatusCode == HttpStatusCode.NotFound)
+            return null;
+
+        await using var stream = await response.Content.ReadAsStreamAsync(ct);
+        using var doc = await JsonDocument.ParseAsync(stream, cancellationToken: ct);
+        return doc.RootElement.TryGetProperty("parentFolderId", out var p) ? p.GetString() : null;
+    }
+
+    public async Task<string?> GetFolderIdAsync(string wellKnownName, CancellationToken ct)
+    {
+        var url = $"{GraphBase}/users/{Mailbox}/mailFolders/{Uri.EscapeDataString(wellKnownName)}?$select=id";
+        using var response = await SendAsync(HttpMethod.Get, url, content: null, ct, allowNotFound: true);
+        if (response.StatusCode == HttpStatusCode.NotFound)
+            return null;
+
+        await using var stream = await response.Content.ReadAsStreamAsync(ct);
+        using var doc = await JsonDocument.ParseAsync(stream, cancellationToken: ct);
+        return doc.RootElement.TryGetProperty("id", out var id) ? id.GetString() : null;
+    }
+
     public async Task<string> EnsureFolderAsync(string displayName, string? parentFolderId, CancellationToken ct)
     {
         // Root-level folders live under /mailFolders; nested ones under the parent's /childFolders.
