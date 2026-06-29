@@ -165,7 +165,34 @@ public sealed class MailboxGraphClient : IMailboxGraphClient
             _logger.LogWarning("Discard skipped: could not resolve the '{Folder}' folder.", _options.DiscardFolder);
             return false;
         }
-        return await MoveAsync(messageId, internetMessageId, discardFolder, ct);
+
+        var moved = await MoveAsync(messageId, internetMessageId, discardFolder, ct);
+
+        // Sweep any *other* copies of the same email still in the Inbox (duplicates left over from
+        // earlier) so a discard always clears the Inbox of this message entirely, not just the one
+        // copy the user clicked.
+        if (!string.IsNullOrEmpty(internetMessageId))
+        {
+            for (var guard = 0; guard < 5; guard++)
+            {
+                var copies = await FindInboxMessageIdsAsync(internetMessageId!, ct);
+                if (copies.Count == 0)
+                    break;
+
+                var movedThisPass = false;
+                foreach (var id in copies)
+                    if (await MoveAsync(id, internetMessageId, discardFolder, ct))
+                    {
+                        moved = true;
+                        movedThisPass = true;
+                    }
+
+                if (!movedThisPass)
+                    break;
+            }
+        }
+
+        return moved;
     }
 
     public Task<bool> RestoreAsync(string messageId, string? internetMessageId, CancellationToken ct) =>
@@ -321,6 +348,27 @@ public sealed class MailboxGraphClient : IMailboxGraphClient
         await using var stream = await response.Content.ReadAsStreamAsync(ct);
         using var doc = await JsonDocument.ParseAsync(stream, cancellationToken: ct);
         return doc.RootElement.TryGetProperty("id", out var id) ? id.GetString() : null;
+    }
+
+    /// <summary>Every message currently in the Inbox sharing the given internetMessageId — i.e. the
+    /// email plus any duplicate copies of it. Used so a discard clears them all out of the Inbox.</summary>
+    private async Task<IReadOnlyList<string>> FindInboxMessageIdsAsync(string internetMessageId, CancellationToken ct)
+    {
+        var escaped = internetMessageId.Replace("'", "''");
+        var filter = Uri.EscapeDataString($"internetMessageId eq '{escaped}'");
+        var url = $"{GraphBase}/users/{Mailbox}/mailFolders/inbox/messages?$filter={filter}&$select=id&$top=50";
+        var ids = new List<string>();
+        using var response = await SendAsync(HttpMethod.Get, url, content: null, ct, allowNotFound: true);
+        if (!response.IsSuccessStatusCode)
+            return ids;
+
+        await using var stream = await response.Content.ReadAsStreamAsync(ct);
+        using var doc = await JsonDocument.ParseAsync(stream, cancellationToken: ct);
+        if (doc.RootElement.TryGetProperty("value", out var arr) && arr.ValueKind == JsonValueKind.Array)
+            foreach (var item in arr.EnumerateArray())
+                if (item.TryGetProperty("id", out var idEl) && idEl.GetString() is { Length: > 0 } id)
+                    ids.Add(id);
+        return ids;
     }
 
     private async Task<string?> FindByInternetMessageIdAsync(string internetMessageId, CancellationToken ct)
