@@ -1,0 +1,318 @@
+@page "/projects/{ProjectId}/bid-package-invites/{BidPackageId}"
+@using Jewel.JPMS.Contracts.Procurement
+@using Jewel.JPMS.Cqrs
+@inject AuthService Auth
+@inject SessionService Session
+@inject IQueryClient Queries
+@inject ICommandSender Commands
+@inject ISubcontractorStore Subs
+@inject NavigationManager Nav
+@implements IDisposable
+
+<PageTitle>Bid Package Invite · JPMS</PageTitle>
+
+@if (!isLoaded)
+{
+    <section class="max-w-5xl mx-auto px-4 py-12 text-content-subtle text-sm">Loading…</section>
+}
+else if (!Session.IsApproved)
+{
+    <RequestAccessView Email="@Auth.CurrentUser!.Email" DisplayName="@Auth.CurrentUser.DisplayName" />
+}
+else
+{
+    <ProjectPageShell ProjectId="@ProjectId" ActiveTab="bid-package-invites">
+        <nav class="mb-4 text-sm">
+            <a href="@($"/projects/{ProjectId}/bid-package-invites")" class="text-content-subtle hover:text-content underline underline-offset-4">Bid package invites</a>
+        </nav>
+
+        @if (package is null)
+        {
+            <p class="text-sm text-content-subtle italic">That bid package could not be found.</p>
+        }
+        else
+        {
+            <header class="mb-6">
+                <div class="flex items-center gap-3">
+                    <h2 class="text-lg font-semibold text-content">@package.Title</h2>
+                    <span class="inline-flex items-center rounded-full bg-surface-raised border border-line px-2 py-0.5 text-[11px] font-medium text-content-muted">@package.Status</span>
+                </div>
+                <p class="text-sm text-content-muted">@package.Trade</p>
+            </header>
+
+            @if (error is not null)
+            {
+                <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-4">@error</p>
+            }
+
+            @* ---- Invited subcontractors ---- *@
+            <section class="mb-8">
+                <h3 class="eyebrow mb-3">Invited to tender</h3>
+
+                @if (recipients.Count == 0)
+                {
+                    <p class="text-sm text-content-subtle italic mb-4">No subcontractors invited yet.</p>
+                }
+                else
+                {
+                    <div class="rounded-xl border border-line bg-surface overflow-hidden mb-4">
+                        <table class="w-full text-sm">
+                            <thead class="bg-surface-raised border-b border-line">
+                                <tr class="text-left text-[11px] uppercase tracking-wider text-content-subtle font-semibold">
+                                    <th class="px-4 py-3">Subcontractor</th>
+                                    <th class="px-4 py-3 hidden sm:table-cell">Trade</th>
+                                    <th class="px-4 py-3">Invited</th>
+                                    <th class="px-4 py-3">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-line">
+                                @foreach (var recipient in recipients)
+                                {
+                                    var sub = Subs.Find(recipient.SubcontractorId);
+                                    <tr>
+                                        <td class="px-4 py-3 text-content font-medium">@(sub?.CompanyName ?? recipient.SubcontractorId)</td>
+                                        <td class="px-4 py-3 text-content-muted hidden sm:table-cell">@(sub?.PrimaryTrade ?? "")</td>
+                                        <td class="px-4 py-3 text-content-subtle">@recipient.InvitedAt.LocalDateTime.ToString("d MMM yyyy, HH:mm")</td>
+                                        <td class="px-4 py-3 text-content-muted">@recipient.Status</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+
+                @if (CanManage)
+                {
+                    <div class="rounded-xl border border-line bg-surface-raised p-4">
+                        <label class="eyebrow block mb-2">Invite subcontractors</label>
+                        @if (Invitable().Count == 0)
+                        {
+                            <p class="text-sm text-content-subtle italic">Every subcontractor in the directory has already been invited.</p>
+                        }
+                        else
+                        {
+                            <div class="space-y-1 mb-3 max-h-64 overflow-y-auto">
+                                @foreach (var sub in Invitable())
+                                {
+                                    <label class="flex items-center gap-2 text-sm text-content">
+                                        <input type="checkbox" checked="@selected.Contains(sub.SubcontractorId)"
+                                               @onchange="e => Toggle(sub.SubcontractorId, e)" />
+                                        <span class="font-medium">@sub.CompanyName</span>
+                                        <span class="text-content-subtle">· @sub.PrimaryTrade</span>
+                                    </label>
+                                }
+                            </div>
+                            <button type="button" class="btn-primary" disabled="@(busy || selected.Count == 0)" @onclick="Invite">
+                                @(busy ? "Inviting…" : $"Invite {selected.Count} subcontractor{(selected.Count == 1 ? "" : "s")}")
+                            </button>
+                        }
+                    </div>
+                }
+            </section>
+
+            @* ---- Line items, grouped by trade ---- *@
+            <section>
+                <div class="flex items-center justify-between mb-3">
+                    <h3 class="eyebrow">Line items</h3>
+                    @if (CanManage && !editingLines)
+                    {
+                        <button type="button" class="text-xs text-content-muted hover:text-content" @onclick="EditLines">Edit</button>
+                    }
+                </div>
+
+                @if (editingLines)
+                {
+                    <div class="rounded-xl border border-line bg-surface overflow-hidden mb-3">
+                        <table class="w-full text-sm">
+                            <thead class="bg-surface-raised border-b border-line">
+                                <tr class="text-left text-[11px] uppercase tracking-wider text-content-subtle font-semibold">
+                                    <th class="px-3 py-2">Trade</th>
+                                    <th class="px-3 py-2">Description</th>
+                                    <th class="px-3 py-2 hidden sm:table-cell">Unit</th>
+                                    <th class="px-3 py-2">Qty</th>
+                                    <th class="px-3 py-2"></th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-line">
+                                @for (var i = 0; i < lineDrafts.Count; i++)
+                                {
+                                    var draft = lineDrafts[i];
+                                    <tr>
+                                        <td class="px-3 py-2"><input class="field" @bind="draft.Trade" placeholder="e.g. Electrical" /></td>
+                                        <td class="px-3 py-2"><input class="field" @bind="draft.Description" placeholder="Description" /></td>
+                                        <td class="px-3 py-2 hidden sm:table-cell"><input class="field" @bind="draft.Unit" placeholder="e.g. m²" /></td>
+                                        <td class="px-3 py-2"><input class="field" type="number" step="any" @bind="draft.Quantity" /></td>
+                                        <td class="px-3 py-2 text-right">
+                                            <button type="button" class="text-xs text-content-muted hover:text-negative" @onclick="() => RemoveLine(draft)">Remove</button>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <button type="button" class="btn-secondary" disabled="@busy" @onclick="AddLine">Add line</button>
+                        <button type="button" class="btn-primary" disabled="@busy" @onclick="SaveLines">@(busy ? "Saving…" : "Save line items")</button>
+                        <button type="button" class="text-sm text-content-muted hover:text-content" disabled="@busy" @onclick="CancelLines">Cancel</button>
+                    </div>
+                }
+                else if (lineItems.Count == 0)
+                {
+                    <p class="text-sm text-content-subtle italic">No line items on this package yet.</p>
+                }
+                else
+                {
+                    @foreach (var group in lineItems.GroupBy(item => item.Trade).OrderBy(g => g.Key))
+                    {
+                        <div class="mb-4">
+                            <p class="text-xs font-semibold uppercase tracking-wide text-content-subtle mb-1">@(string.IsNullOrWhiteSpace(group.Key) ? "Unspecified" : group.Key)</p>
+                            <div class="rounded-xl border border-line bg-surface overflow-hidden">
+                                <table class="w-full text-sm">
+                                    <thead class="bg-surface-raised border-b border-line">
+                                        <tr class="text-left text-[11px] uppercase tracking-wider text-content-subtle font-semibold">
+                                            <th class="px-4 py-2">Description</th>
+                                            <th class="px-4 py-2 hidden sm:table-cell">Unit</th>
+                                            <th class="px-4 py-2">Qty</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="divide-y divide-line">
+                                        @foreach (var item in group)
+                                        {
+                                            <tr>
+                                                <td class="px-4 py-2 text-content">@item.Description</td>
+                                                <td class="px-4 py-2 text-content-muted hidden sm:table-cell">@item.Unit</td>
+                                                <td class="px-4 py-2 text-content-muted">@item.Quantity</td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    }
+                }
+            </section>
+        }
+    </ProjectPageShell>
+}
+
+@code {
+    [Parameter] public string ProjectId { get; set; } = "";
+    [Parameter] public string BidPackageId { get; set; } = "";
+
+    private bool isLoaded;
+    private bool busy;
+    private string? error;
+
+    private BidPackage? package;
+    private IReadOnlyList<BidPackageRecipient> recipients = Array.Empty<BidPackageRecipient>();
+    private IReadOnlyList<BidPackageLineItem> lineItems = Array.Empty<BidPackageLineItem>();
+    private readonly HashSet<string> selected = new(StringComparer.OrdinalIgnoreCase);
+
+    private bool CanManage => Session.AvailableRoles.Any(r =>
+        r is Role.Admin or Role.ManagingDirector or Role.ProjectManager);
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Session.EnsureLoadedAsync();
+        if (!Auth.IsSignedIn) { Nav.NavigateTo("/login", forceLoad: true); return; }
+        Subs.OnChange += OnStoreChanged;
+        _ = Subs.All(); // kick off directory load if needed
+        await LoadAsync();
+        isLoaded = true;
+    }
+
+    public void Dispose() => Subs.OnChange -= OnStoreChanged;
+
+    private void OnStoreChanged() => InvokeAsync(StateHasChanged);
+
+    private async Task LoadAsync()
+    {
+        package = await Queries.AskAsync(new GetBidPackageById(BidPackageId), CancellationToken.None);
+        recipients = await Queries.AskAsync(new ListBidPackageRecipients(BidPackageId), CancellationToken.None);
+        lineItems = await Queries.AskAsync(new ListBidPackageLineItems(BidPackageId), CancellationToken.None);
+    }
+
+    private IReadOnlyList<Subcontractor> Invitable()
+    {
+        var invited = recipients.Select(r => r.SubcontractorId).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        return Subs.All().Where(s => !invited.Contains(s.SubcontractorId)).ToList();
+    }
+
+    private void Toggle(string subcontractorId, ChangeEventArgs e)
+    {
+        if (e.Value is true) selected.Add(subcontractorId);
+        else selected.Remove(subcontractorId);
+    }
+
+    private async Task Invite()
+    {
+        if (busy || selected.Count == 0 || !CanManage) return;
+        error = null;
+        try
+        {
+            busy = true;
+            recipients = await Commands.SendAsync(
+                new InviteSubcontractorsToBidPackage(BidPackageId, selected.ToList()), CancellationToken.None);
+            selected.Clear();
+            // Reflect the package moving Draft -> Inviting.
+            package = await Queries.AskAsync(new GetBidPackageById(BidPackageId), CancellationToken.None);
+        }
+        catch { error = "Couldn't send those invites. Please try again."; }
+        finally { busy = false; }
+    }
+
+    // ---- Line-item editing ----
+
+    private sealed class LineDraft
+    {
+        public string Trade { get; set; } = "";
+        public string Description { get; set; } = "";
+        public string Unit { get; set; } = "";
+        public decimal Quantity { get; set; }
+    }
+
+    private bool editingLines;
+    private List<LineDraft> lineDrafts = new();
+
+    private void EditLines()
+    {
+        lineDrafts = lineItems
+            .Select(item => new LineDraft { Trade = item.Trade, Description = item.Description, Unit = item.Unit, Quantity = item.Quantity })
+            .ToList();
+        if (lineDrafts.Count == 0) lineDrafts.Add(new LineDraft());
+        editingLines = true;
+    }
+
+    private void AddLine() => lineDrafts.Add(new LineDraft());
+
+    private void RemoveLine(LineDraft draft) => lineDrafts.Remove(draft);
+
+    private void CancelLines()
+    {
+        editingLines = false;
+        lineDrafts.Clear();
+    }
+
+    private async Task SaveLines()
+    {
+        if (busy || !CanManage) return;
+        error = null;
+        try
+        {
+            busy = true;
+            var inputs = lineDrafts
+                .Where(draft => !string.IsNullOrWhiteSpace(draft.Description))
+                .Select(draft => new BidPackageLineItemInput(
+                    draft.Description.Trim(),
+                    (draft.Unit ?? "").Trim(),
+                    draft.Quantity,
+                    (draft.Trade ?? "").Trim()))
+                .ToList();
+            lineItems = await Commands.SendAsync(new SetBidPackageLineItems(BidPackageId, inputs), CancellationToken.None);
+            editingLines = false;
+            lineDrafts.Clear();
+        }
+        catch { error = "Couldn't save the line items. Please try again."; }
+        finally { busy = false; }
+    }
+}

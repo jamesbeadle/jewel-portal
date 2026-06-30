@@ -22,6 +22,10 @@ public static class ProcurementFeatureRegistration
         services.AddScoped<CreateBidPackageAuthorisation>();
         services.AddScoped<CreateBidPackageValidation>();
 
+        services.AddScoped<ICommandHandler<CreateBidPackageFromMessage, BidPackage>, CreateBidPackageFromMessageHandler>();
+        services.AddScoped<CreateBidPackageFromMessageAuthorisation>();
+        services.AddScoped<CreateBidPackageFromMessageValidation>();
+
         services.AddScoped<ICommandHandler<InviteSubcontractorsToBidPackage, IReadOnlyList<BidPackageRecipient>>, InviteSubcontractorsToBidPackageHandler>();
         services.AddScoped<InviteSubcontractorsToBidPackageAuthorisation>();
         services.AddScoped<InviteSubcontractorsToBidPackageValidation>();

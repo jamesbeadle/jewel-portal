@@ -33,7 +33,34 @@ else
         }
         else
         {
-            <BidPackageTable Packages="Packages" />
+            <div class="rounded-xl border border-line bg-surface overflow-hidden">
+                <table class="w-full text-sm">
+                    <thead class="bg-surface-raised border-b border-line">
+                        <tr class="text-left text-[11px] uppercase tracking-wider text-content-subtle font-semibold">
+                            <th class="px-4 py-3">Package</th>
+                            <th class="px-4 py-3 hidden sm:table-cell">Trade</th>
+                            <th class="px-4 py-3">Status</th>
+                            <th class="px-4 py-3 hidden lg:table-cell">Created</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-line">
+                        @foreach (var package in Packages)
+                        {
+                            <tr class="hover:bg-surface-raised">
+                                <td class="px-4 py-3">
+                                    <a class="text-content font-medium hover:underline underline-offset-4"
+                                       href="@($"/projects/{ProjectId}/bid-package-invites/{package.BidPackageId}")">@package.Title</a>
+                                </td>
+                                <td class="px-4 py-3 text-content-muted hidden sm:table-cell">@package.Trade</td>
+                                <td class="px-4 py-3">
+                                    <span class="inline-flex items-center rounded-full bg-surface-raised border border-line px-2 py-0.5 text-[11px] font-medium text-content-muted">@package.Status</span>
+                                </td>
+                                <td class="px-4 py-3 text-content-subtle hidden lg:table-cell">@package.CreatedAt.LocalDateTime.ToString("d MMM yyyy")</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
         }
     </ProjectPageShell>
 }

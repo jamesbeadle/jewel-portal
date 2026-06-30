@@ -238,13 +238,23 @@ else
                             <div class="pt-3 border-t border-line">
                                 <div class="flex flex-wrap gap-2 mb-4">
                                     <button type="button" class="@ModeTabClass(TriageMode.Link)" @onclick="() => SetMode(TriageMode.Link)">Link to existing</button>
-                                    <button type="button" class="@ModeTabClass(TriageMode.Create)" @onclick="() => SetMode(TriageMode.Create)">Create new request</button>
+                                    <button type="button" class="@ModeTabClass(TriageMode.Create)" @onclick="() => SetMode(TriageMode.Create)">Create new</button>
                                     <button type="button" class="@ModeTabClass(TriageMode.Discard)" @onclick="() => SetMode(TriageMode.Discard)">Discard</button>
                                 </div>
 
                                 @if (mode == TriageMode.Link)
                                 {
                                     <div class="space-y-3">
+                                        <div>
+                                            <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Record type</label>
+                                            <select class="field" value="@((int)linkRecordType)" @onchange="OnLinkRecordTypeChanged">
+                                                @foreach (var recordType in RecordTypeOptions)
+                                                {
+                                                    <option value="@((int)recordType)">@RecordTypeLabel(recordType)</option>
+                                                }
+                                            </select>
+                                        </div>
+
                                         <div>
                                             <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Project</label>
                                             <select class="field" value="@linkProjectId" @onchange="OnLinkProjectChanged">
@@ -258,49 +268,56 @@ else
 
                                         @if (!string.IsNullOrWhiteSpace(linkProjectId))
                                         {
-                                            var candidates = DuplicateCandidates();
-                                            var others = ProjectRequests().Except(candidates).ToList();
-
-                                            @if (candidates.Count > 0)
+                                            if (linkRecordsLoading)
                                             {
-                                                <div>
-                                                    <p class="text-xs font-semibold text-amber-600 mb-1">Possible matches for this email</p>
-                                                    <div class="space-y-1">
-                                                        @foreach (var request in candidates)
-                                                        {
-                                                            <button type="button" @onclick="() => linkRequestId = request.RequestId" class="@RequestPickClass(request, true)">
-                                                                <span class="font-mono text-xs text-content-muted">@request.Reference</span>
-                                                                <span class="text-sm text-content">@request.Title</span>
-                                                            </button>
-                                                        }
-                                                    </div>
-                                                </div>
+                                                <p class="text-sm text-content-subtle italic">Loading @(RecordTypeLabel(linkRecordType).ToLowerInvariant())s…</p>
                                             }
-
-                                            @if (others.Count > 0)
+                                            else
                                             {
-                                                <div>
-                                                    <p class="text-xs font-semibold text-content-subtle mb-1">Other requests on this project</p>
-                                                    <div class="space-y-1 max-h-56 overflow-y-auto">
-                                                        @foreach (var request in others)
-                                                        {
-                                                            <button type="button" @onclick="() => linkRequestId = request.RequestId" class="@RequestPickClass(request, false)">
-                                                                <span class="font-mono text-xs text-content-muted">@request.Reference</span>
-                                                                <span class="text-sm text-content">@request.Title</span>
-                                                            </button>
-                                                        }
+                                                var candidates = DuplicateCandidates();
+                                                var others = ProjectRecords().Except(candidates).ToList();
+
+                                                @if (candidates.Count > 0)
+                                                {
+                                                    <div>
+                                                        <p class="text-xs font-semibold text-amber-600 mb-1">Possible matches for this email</p>
+                                                        <div class="space-y-1">
+                                                            @foreach (var record in candidates)
+                                                            {
+                                                                <button type="button" @onclick="() => linkRecordId = record.RecordId" class="@RecordPickClass(record, true)">
+                                                                    <span class="font-mono text-xs text-content-muted">@record.Reference</span>
+                                                                    <span class="text-sm text-content">@record.Title</span>
+                                                                </button>
+                                                            }
+                                                        </div>
                                                     </div>
-                                                </div>
-                                            }
+                                                }
 
-                                            @if (candidates.Count == 0 && others.Count == 0)
-                                            {
-                                                <p class="text-sm text-content-subtle italic">No requests on this project yet — use “Create new request” instead.</p>
+                                                @if (others.Count > 0)
+                                                {
+                                                    <div>
+                                                        <p class="text-xs font-semibold text-content-subtle mb-1">Other @(RecordTypeLabel(linkRecordType).ToLowerInvariant())s on this project</p>
+                                                        <div class="space-y-1 max-h-56 overflow-y-auto">
+                                                            @foreach (var record in others)
+                                                            {
+                                                                <button type="button" @onclick="() => linkRecordId = record.RecordId" class="@RecordPickClass(record, false)">
+                                                                    <span class="font-mono text-xs text-content-muted">@record.Reference</span>
+                                                                    <span class="text-sm text-content">@record.Title</span>
+                                                                </button>
+                                                            }
+                                                        </div>
+                                                    </div>
+                                                }
+
+                                                @if (candidates.Count == 0 && others.Count == 0)
+                                                {
+                                                    <p class="text-sm text-content-subtle italic">No @(RecordTypeLabel(linkRecordType).ToLowerInvariant())s on this project yet.</p>
+                                                }
                                             }
                                         }
 
-                                        <button type="button" class="btn-primary" disabled="@(busy || string.IsNullOrWhiteSpace(linkRequestId))" @onclick="DoLink">
-                                            Link email to selected request
+                                        <button type="button" class="btn-primary" disabled="@(busy || string.IsNullOrWhiteSpace(linkRecordId))" @onclick="DoLink">
+                                            Link email to selected record
                                         </button>
                                     </div>
                                 }
@@ -308,6 +325,15 @@ else
                                 {
                                     <div class="space-y-4">
                                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                            <div>
+                                                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Record type *</label>
+                                                <select class="field" value="@((int)createRecordType)" @onchange="OnCreateRecordTypeChanged">
+                                                    @foreach (var recordType in RecordTypeOptions)
+                                                    {
+                                                        <option value="@((int)recordType)">@RecordTypeLabel(recordType)</option>
+                                                    }
+                                                </select>
+                                            </div>
                                             <div>
                                                 <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Project *</label>
                                                 <select class="field" value="@createProjectId" @onchange="OnCreateProjectChanged">
@@ -318,6 +344,10 @@ else
                                                     }
                                                 </select>
                                             </div>
+                                        </div>
+
+                                        @if (createRecordType == RecordType.Request)
+                                        {
                                             <div>
                                                 <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Type *</label>
                                                 <select class="field" value="@((int)createKind)" @onchange="OnCreateKindChanged">
@@ -327,26 +357,35 @@ else
                                                     }
                                                 </select>
                                             </div>
-                                        </div>
 
-                                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                            <FormField Label="Reference" Value="@createReference" OnChange="v => createReference = v" Required="true" />
-                                            <FormField Label="Raised to" Value="@createRaisedTo" OnChange="v => createRaisedTo = v" />
-                                        </div>
+                                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                                <FormField Label="Reference" Value="@createReference" OnChange="v => createReference = v" Required="true" />
+                                                <FormField Label="Raised to" Value="@createRaisedTo" OnChange="v => createRaisedTo = v" />
+                                            </div>
 
-                                        <FormField Label="Subject" Value="@createTitle" OnChange="v => createTitle = v" Required="true" />
+                                            <FormField Label="Subject" Value="@createTitle" OnChange="v => createTitle = v" Required="true" />
 
-                                        <div>
-                                            <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Detail</label>
-                                            <textarea class="field" rows="4" value="@createDescription" @oninput="OnCreateDescriptionInput"></textarea>
-                                        </div>
+                                            <div>
+                                                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Detail</label>
+                                                <textarea class="field" rows="4" value="@createDescription" @oninput="OnCreateDescriptionInput"></textarea>
+                                            </div>
 
-                                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                            <FormField Label="Drawing / detail ref" Value="@createDrawingRef" OnChange="v => createDrawingRef = v" />
-                                            <FormField Label="Response due" Value="@createResponseDue" OnChange="v => createResponseDue = v" InputType="date" />
-                                        </div>
+                                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                                <FormField Label="Drawing / detail ref" Value="@createDrawingRef" OnChange="v => createDrawingRef = v" />
+                                                <FormField Label="Response due" Value="@createResponseDue" OnChange="v => createResponseDue = v" InputType="date" />
+                                            </div>
 
-                                        <button type="button" class="btn-primary" disabled="@(busy || string.IsNullOrWhiteSpace(createProjectId))" @onclick="DoCreate">Create request from email</button>
+                                            <button type="button" class="btn-primary" disabled="@(busy || string.IsNullOrWhiteSpace(createProjectId))" @onclick="DoCreate">Create request from email</button>
+                                        }
+                                        else if (createRecordType == RecordType.BidPackageInvite)
+                                        {
+                                            <FormField Label="Title" Value="@createTitle" OnChange="v => createTitle = v" Required="true" />
+                                            <FormField Label="Trade" Value="@createTrade" OnChange="v => createTrade = v" />
+
+                                            <p class="text-xs text-content-subtle">A draft bid package is created and this email is linked to it. Invite subcontractors and add line items from the bid package page.</p>
+
+                                            <button type="button" class="btn-primary" disabled="@(busy || string.IsNullOrWhiteSpace(createProjectId) || string.IsNullOrWhiteSpace(createTitle))" @onclick="DoCreateBidPackage">Create bid package from email</button>
+                                        }
                                     </div>
                                 }
                                 else if (mode == TriageMode.Discard)
@@ -599,8 +638,15 @@ else
                                     </div>
 
                                     <div>
-                                        <p class="text-xs uppercase tracking-wider text-content-subtle font-semibold mb-2">Add to another request</p>
+                                        <p class="text-xs uppercase tracking-wider text-content-subtle font-semibold mb-2">Link to another record</p>
                                         <div class="space-y-3">
+                                            <select class="field" value="@((int)linkRecordType)" @onchange="OnLinkRecordTypeChanged">
+                                                @foreach (var recordType in RecordTypeOptions)
+                                                {
+                                                    <option value="@((int)recordType)">@RecordTypeLabel(recordType)</option>
+                                                }
+                                            </select>
+
                                             <select class="field" value="@linkProjectId" @onchange="OnLinkProjectChanged">
                                                 <option value="">Select a project…</option>
                                                 @foreach (var project in ProjectOptions)
@@ -611,17 +657,24 @@ else
 
                                             @if (!string.IsNullOrWhiteSpace(linkProjectId))
                                             {
-                                                <select class="field" value="@linkRequestId" @onchange="OnTaggedRequestChanged">
-                                                    <option value="">Select a request…</option>
-                                                    @foreach (var request in ProjectRequests())
-                                                    {
-                                                        <option value="@request.RequestId">@request.Reference — @request.Title</option>
-                                                    }
-                                                </select>
+                                                @if (linkRecordsLoading)
+                                                {
+                                                    <p class="text-sm text-content-subtle italic">Loading @(RecordTypeLabel(linkRecordType).ToLowerInvariant())s…</p>
+                                                }
+                                                else
+                                                {
+                                                    <select class="field" value="@linkRecordId" @onchange="OnTaggedRecordChanged">
+                                                        <option value="">Select a @(RecordTypeLabel(linkRecordType).ToLowerInvariant())…</option>
+                                                        @foreach (var record in ProjectRecords())
+                                                        {
+                                                            <option value="@record.RecordId">@record.Reference — @record.Title</option>
+                                                        }
+                                                    </select>
+                                                }
                                             }
 
-                                            <button type="button" class="btn-primary" disabled="@(busy || string.IsNullOrWhiteSpace(linkRequestId))" @onclick="DoAddTagLink">
-                                                Add tag (link to request)
+                                            <button type="button" class="btn-primary" disabled="@(busy || string.IsNullOrWhiteSpace(linkRecordId))" @onclick="DoAddTagLink">
+                                                Link to selected record
                                             </button>
                                         </div>
                                     </div>
@@ -646,6 +699,20 @@ else
     private static readonly RequestType[] KindOptions =
     {
         RequestType.Rfi, RequestType.Rfq, RequestType.Rfp, RequestType.Rfc, RequestType.Rfa
+    };
+
+    // The record types an email can be linked to, in the order shown in the category picker. Driven by
+    // the providers registered server-side; adding a type here surfaces it once its provider exists.
+    private static readonly RecordType[] RecordTypeOptions =
+    {
+        RecordType.Request, RecordType.BidPackageInvite
+    };
+
+    private static string RecordTypeLabel(RecordType type) => type switch
+    {
+        RecordType.Request          => "Request",
+        RecordType.BidPackageInvite => "Bid Package Invite",
+        _                           => type.ToString()
     };
 
     private const int PageSize = 25;
@@ -701,11 +768,16 @@ else
     private string? actionError;
     private TriageMode mode = TriageMode.None;
 
-    // Link-to-existing state
+    // Link-to-existing state. The record type is chosen first (Request, Bid Package Invite, …), then a
+    // project, then a record of that type — linking is record-agnostic (tags "JPMS/<ref>" either way).
+    private RecordType linkRecordType = RecordType.Request;
     private string linkProjectId = "";
-    private string linkRequestId = "";
+    private string linkRecordId = "";
+    private IReadOnlyList<LinkableRecord> linkRecords = Array.Empty<LinkableRecord>();
+    private bool linkRecordsLoading;
 
     // Create-new state
+    private RecordType createRecordType = RecordType.Request;
     private string createProjectId = "";
     private RequestType createKind = RequestType.Rfi;
     private string createReference = "";
@@ -714,6 +786,8 @@ else
     private string createRaisedTo = "";
     private string createDrawingRef = "";
     private string createResponseDue = "";
+    // Bid Package Invite create fields (shares createProjectId + createTitle with the Request form).
+    private string createTrade = "";
 
     protected override async Task OnInitializedAsync()
     {
@@ -911,13 +985,15 @@ else
         selected = item;
         mode = TriageMode.None;
         actionError = null;
-        linkProjectId = linkRequestId = "";
+        ResetLinkState();
+        createRecordType = RecordType.Request;
         createProjectId = "";
         createKind = RequestType.Rfi;
         createReference = "";
         createTitle = item.Subject;
         createDescription = item.BodyPreview;
         createRaisedTo = createDrawingRef = createResponseDue = "";
+        createTrade = "";
         await LoadDetailAsync(item);
     }
 
@@ -959,11 +1035,54 @@ else
         actionError = null;
     }
 
-    private void OnLinkProjectChanged(ChangeEventArgs e)
+    private async Task OnLinkRecordTypeChanged(ChangeEventArgs e)
+    {
+        if (Enum.TryParse<RecordType>(e.Value?.ToString(), out var type)) linkRecordType = type;
+        linkRecordId = "";
+        await LoadLinkRecordsAsync();
+    }
+
+    private async Task OnLinkProjectChanged(ChangeEventArgs e)
     {
         linkProjectId = e.Value?.ToString() ?? "";
-        linkRequestId = "";
-        if (!string.IsNullOrWhiteSpace(linkProjectId)) _ = RequestRegister.ForProject(linkProjectId);
+        linkRecordId = "";
+        await LoadLinkRecordsAsync();
+    }
+
+    // Load the chosen project's records of the chosen type for the picker. Record-agnostic: the same
+    // call backs both the Link panel and the Tagged tab's "link to another record" control.
+    private async Task LoadLinkRecordsAsync()
+    {
+        if (string.IsNullOrWhiteSpace(linkProjectId))
+        {
+            linkRecords = Array.Empty<LinkableRecord>();
+            return;
+        }
+        try
+        {
+            linkRecordsLoading = true;
+            linkRecordId = "";
+            StateHasChanged(); // show the loading state while the fetch is in flight
+            linkRecords = await Intake.ListLinkableRecordsAsync(linkProjectId, linkRecordType);
+        }
+        catch
+        {
+            linkRecords = Array.Empty<LinkableRecord>();
+        }
+        finally
+        {
+            linkRecordsLoading = false;
+        }
+    }
+
+    // Clear the link picker back to its defaults (type resets to Request) after a selection changes or
+    // a link action completes.
+    private void ResetLinkState()
+    {
+        linkRecordType = RecordType.Request;
+        linkProjectId = "";
+        linkRecordId = "";
+        linkRecords = Array.Empty<LinkableRecord>();
     }
 
     private void OnCreateProjectChanged(ChangeEventArgs e)
@@ -989,8 +1108,8 @@ else
 
     private async Task DoLink()
     {
-        if (selected is null || busy || string.IsNullOrWhiteSpace(linkRequestId)) return;
-        await RunAction(async () => await Intake.AssignMessageAsync(selected.Id, selected.InternetMessageId, linkRequestId));
+        if (selected is null || busy || string.IsNullOrWhiteSpace(linkRecordId)) return;
+        await RunAction(async () => await Intake.LinkMessageToRecordAsync(selected.Id, selected.InternetMessageId, linkRecordType, linkRecordId));
     }
 
     private async Task DoCreate()
@@ -1013,6 +1132,27 @@ else
             InternetMessageId: selected.InternetMessageId);
 
         await RunAction(async () => await Intake.CreateRequestFromMessageAsync(command));
+    }
+
+    private void OnCreateRecordTypeChanged(ChangeEventArgs e)
+    {
+        if (Enum.TryParse<RecordType>(e.Value?.ToString(), out var type)) createRecordType = type;
+    }
+
+    private async Task DoCreateBidPackage()
+    {
+        if (selected is null || busy) return;
+        if (string.IsNullOrWhiteSpace(createProjectId)) { actionError = "Choose a project."; return; }
+        if (string.IsNullOrWhiteSpace(createTitle)) { actionError = "A title is required."; return; }
+
+        var command = new CreateBidPackageFromMessage(
+            selected.Id,
+            createProjectId,
+            createTitle.Trim(),
+            createTrade?.Trim() ?? "",
+            InternetMessageId: selected.InternetMessageId);
+
+        await RunAction(async () => await Intake.CreateBidPackageFromMessageAsync(command));
     }
 
     private async Task DoDiscard()
@@ -1079,7 +1219,7 @@ else
             selected = null;
             detail = null;
             detailLoading = false;
-            linkProjectId = linkRequestId = "";
+            ResetLinkState();
         }
         catch
         {
@@ -1088,12 +1228,12 @@ else
         finally { busy = false; }
     }
 
-    // Add another workflow tag by linking this already-tagged email to a second request (so it feeds
-    // more than one process). Reuses the same assign command as the queue's "Link to existing".
+    // Add another workflow tag by linking this already-tagged email to a second record of any type (so
+    // it feeds more than one record). Reuses the same generic link command as the queue's "Link to existing".
     private async Task DoAddTagLink()
     {
-        if (selected is null || busy || string.IsNullOrWhiteSpace(linkRequestId)) return;
-        await RunTaggedAction(async () => await Intake.AssignMessageAsync(selected.Id, selected.InternetMessageId, linkRequestId));
+        if (selected is null || busy || string.IsNullOrWhiteSpace(linkRecordId)) return;
+        await RunTaggedAction(async () => await Intake.LinkMessageToRecordAsync(selected.Id, selected.InternetMessageId, linkRecordType, linkRecordId));
     }
 
     private async Task DoRemoveTag(string tag)
@@ -1102,7 +1242,7 @@ else
         await RunTaggedAction(async () => await Intake.RemoveTagFromMessageAsync(selected.Id, selected.InternetMessageId, tag));
     }
 
-    private void OnTaggedRequestChanged(ChangeEventArgs e) => linkRequestId = e.Value?.ToString() ?? "";
+    private void OnTaggedRecordChanged(ChangeEventArgs e) => linkRecordId = e.Value?.ToString() ?? "";
 
     // Display label for a workflow tag chip: drop the "JPMS/" prefix (e.g. "JPMS/RFI-001" -> "RFI-001").
     private static string TagLabel(string tag) =>
@@ -1111,18 +1251,16 @@ else
     private IReadOnlyList<Project> ProjectOptions =>
         Projects.Current ?? (IReadOnlyList<Project>)Array.Empty<Project>();
 
-    private IReadOnlyList<Request> ProjectRequests() =>
-        string.IsNullOrWhiteSpace(linkProjectId)
-            ? Array.Empty<Request>()
-            : RequestRegister.ForProject(linkProjectId);
+    // The loaded records for the chosen type + project (empty until both are chosen and the load runs).
+    private IReadOnlyList<LinkableRecord> ProjectRecords() => linkRecords;
 
-    // Requests on the chosen project whose reference or title overlaps the email subject — surfaced
-    // first so a second request isn't raised for something already being tracked.
-    private List<Request> DuplicateCandidates()
+    // Records on the chosen project whose reference or title overlaps the email subject — surfaced
+    // first so a duplicate record isn't created for something already being tracked. Type-agnostic.
+    private List<LinkableRecord> DuplicateCandidates()
     {
         var subject = selected?.Subject ?? "";
         var tokens = Tokenise(subject);
-        return ProjectRequests()
+        return ProjectRecords()
             .Select(r => (r, score: Overlap(r, subject, tokens)))
             .Where(x => x.score > 0)
             .OrderByDescending(x => x.score)
@@ -1130,13 +1268,13 @@ else
             .ToList();
     }
 
-    private static int Overlap(Request request, string subject, HashSet<string> subjectTokens)
+    private static int Overlap(LinkableRecord record, string subject, HashSet<string> subjectTokens)
     {
         var score = 0;
-        if (!string.IsNullOrWhiteSpace(request.Reference) &&
-            subject.Contains(request.Reference, StringComparison.OrdinalIgnoreCase))
+        if (!string.IsNullOrWhiteSpace(record.Reference) &&
+            subject.Contains(record.Reference, StringComparison.OrdinalIgnoreCase))
             score += 10;
-        foreach (var token in Tokenise(request.Title))
+        foreach (var token in Tokenise(record.Title))
             if (subjectTokens.Contains(token)) score++;
         return score;
     }
@@ -1172,10 +1310,10 @@ else
             : $"{baseClass} border-line text-content-muted hover:text-content hover:border-line-strong";
     }
 
-    private string RequestPickClass(Request request, bool candidate)
+    private string RecordPickClass(LinkableRecord record, bool candidate)
     {
         var baseClass = "w-full text-left rounded-lg border px-3 py-2 flex flex-col gap-0.5 transition";
-        if (linkRequestId == request.RequestId) return $"{baseClass} border-accent bg-surface-raised";
+        if (linkRecordId == record.RecordId) return $"{baseClass} border-accent bg-surface-raised";
         return candidate
             ? $"{baseClass} border-amber-500/40 hover:border-amber-500"
             : $"{baseClass} border-line hover:border-line-strong";

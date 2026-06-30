@@ -18,6 +18,7 @@ public static class RecordLinksFeatureRegistration
     {
         // One provider per record type. Registered as the interface so the registry collects them all.
         services.AddScoped<ILinkableRecordProvider, RequestLinkProvider>();
+        services.AddScoped<ILinkableRecordProvider, BidPackageInviteLinkProvider>();
 
         services.AddScoped<RecordProviderRegistry>();
         services.AddScoped<RecordEmailReader>();

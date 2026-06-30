@@ -42,6 +42,10 @@ public static class ProcurementRouteRegistration
             new CommandRoute("POST", "/api/projects/{projectId}/bid-packages",
                 command => $"/api/projects/{((CreateBidPackage)command).ProjectId}/bid-packages"));
 
+        commands.Register<CreateBidPackageFromMessage, BidPackage>(
+            new CommandRoute("POST", "/api/mailbox/message/create-bid-package",
+                _ => "/api/mailbox/message/create-bid-package"));
+
         commands.Register<InviteSubcontractorsToBidPackage, IReadOnlyList<BidPackageRecipient>>(
             new CommandRoute("POST", "/api/bid-packages/{bidPackageId}/recipients",
                 command => $"/api/bid-packages/{((InviteSubcontractorsToBidPackage)command).BidPackageId}/recipients"));

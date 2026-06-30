@@ -1,6 +1,16 @@
 # Linkable Record Container — Implementation Plan
 
-Status: **Draft for review** · Date: 2026‑06‑30 · Relates to: `docs/Bid-Package-Invite-and-Agent-System-Spec.md` (Part B, Phase 1)
+Status: **PRs 1–3 implemented (static‑verified; CI build pending)** · Date: 2026‑06‑30 · Relates to: `docs/Bid-Package-Invite-and-Agent-System-Spec.md` (Part B, Phase 1)
+
+## Build status (2026‑06‑30)
+
+- **PR 1 — seam (done).** `LinkableRecord`, `ILinkableRecordProvider`, `RecordProviderRegistry`, `RequestLinkProvider`, generic `LinkMessageToRecord` + `ListLinkableRecords` (handlers + endpoints), `RecordEmailReader`. `AssignMessageToRequest` re‑routed as a Request adapter over the generic handler; `TriageCategories.ForRequest` → `ForRecord` (alias kept). `RequestEmailReader` left self‑contained (worker compiles it via linked source).
+- **PR 2 — category‑first triage (done).** Link panel and Tagged‑tab "link to another record" now go record‑type → project → record, via `IIntakeQueue.ListLinkableRecordsAsync` / `LinkMessageToRecordAsync` + client routes.
+- **PR 3 — BPI first‑class + Create generalised (done).** `BidPackageInviteLinkProvider` (from the in‑flight bid‑package work) is registered, so Bid Package Invite is a live second category. The triage **Create** tab is now category‑first too: Request → `CreateRequestFromMessage`, Bid Package Invite → existing `CreateBidPackageFromMessage` (Draft package + shared link), exposed via `IIntakeQueue.CreateBidPackageFromMessageAsync`.
+- **Not done (deliberately):** sequential `BPI‑NNNN` references (would change the in‑flight `BidPackageEntity`; provider derives `BPI‑XXXXXXXX` from the id for now) and the Bid Packages agent reading its linked mail (their Phase 2 / AI work). No compiler in the authoring environment — `dotnet build` + tests are the CI gate.
+
+---
+
 
 ## 1. What we're building
 
