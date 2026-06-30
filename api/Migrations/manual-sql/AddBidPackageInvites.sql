@@ -3,16 +3,20 @@
 -- ============================================================================
 -- Two new tables backing BidPackageRecipientEntity and BidPackageLineItemEntity.
 --
--- PREFERRED: regenerate a proper EF migration in your environment (it also
--- updates the .Designer.cs and JpmsContextModelSnapshot.cs, keeping the
--- migration chain consistent):
+-- ⚠️ THIS APP AUTO-APPLIES MIGRATIONS ON STARTUP (Program.cs: context.Database.MigrateAsync()).
+-- So you must add a REAL EF migration, not run this SQL by hand — otherwise the next deploy's
+-- auto-migrate will try to CreateTable on tables that already exist and fail on startup.
+--
+-- REQUIRED FIX (in your dev environment, which has the .NET SDK):
 --
 --     dotnet ef migrations add AddBidPackageInvites --project api
---     dotnet ef database update --project api
+--     # review the generated migration creates exactly BidPackageRecipients + BidPackageLineItems
+--     # then deploy — startup MigrateAsync() applies it automatically
+--     # (or apply now without deploy:)  dotnet ef database update --project api
 --
--- This .sql is provided so the schema can be reviewed and, if you apply
--- migrations manually, run directly. It matches the columns EF infers from the
--- entities' data annotations (SQL Server provider). It does NOT create indexes,
+-- The SQL below is REFERENCE ONLY (the schema the migration should produce). Do not run it against
+-- an environment that auto-migrates. It matches the columns EF infers from the entities' data
+-- annotations (SQL Server provider). It does NOT create indexes,
 -- mirroring exactly what the scaffolded migration would produce; adding
 -- IX_BidPackageRecipients_BidPackageId / IX_BidPackageLineItems_BidPackageId is
 -- a recommended follow-up for query performance.

@@ -26,9 +26,14 @@ else
             <a href="@($"/projects/{ProjectId}/bid-package-invites")" class="text-content-subtle hover:text-content underline underline-offset-4">Bid package invites</a>
         </nav>
 
+        @if (error is not null)
+        {
+            <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-4 whitespace-pre-wrap">@error</p>
+        }
+
         @if (package is null)
         {
-            <p class="text-sm text-content-subtle italic">That bid package could not be found.</p>
+            <p class="text-sm text-content-subtle italic">That bid package could not be loaded.</p>
         }
         else
         {
@@ -39,11 +44,6 @@ else
                 </div>
                 <p class="text-sm text-content-muted">@package.Trade</p>
             </header>
-
-            @if (error is not null)
-            {
-                <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-4">@error</p>
-            }
 
             @* ---- Invited subcontractors ---- *@
             <section class="mb-8">
@@ -213,24 +213,45 @@ else
 
     protected override async Task OnInitializedAsync()
     {
-        await Session.EnsureLoadedAsync();
-        if (!Auth.IsSignedIn) { Nav.NavigateTo("/login", forceLoad: true); return; }
-        Subs.OnChange += OnStoreChanged;
-        _ = Subs.All(); // kick off directory load if needed
-        await LoadAsync();
-        isLoaded = true;
+        try
+        {
+            await Session.EnsureLoadedAsync();
+            if (!Auth.IsSignedIn) { Nav.NavigateTo("/login", forceLoad: true); return; }
+            Subs.OnChange += OnStoreChanged;
+            try { _ = Subs.All(); } catch { /* directory load is best-effort */ }
+            await LoadAsync();
+        }
+        catch (Exception ex)
+        {
+            error = $"Couldn't load this page: {ex.Message}";
+        }
+        finally
+        {
+            // Always leave the loading state, so a failure shows the error instead of spinning forever.
+            isLoaded = true;
+        }
     }
 
     public void Dispose() => Subs.OnChange -= OnStoreChanged;
 
     private void OnStoreChanged() => InvokeAsync(StateHasChanged);
 
+    // Each piece loads independently so one failing query (e.g. a table not yet migrated) doesn't take
+    // down the whole view; the specific failure is surfaced in the error banner.
     private async Task LoadAsync()
     {
-        package = await Queries.AskAsync(new GetBidPackageById(BidPackageId), CancellationToken.None);
-        recipients = await Queries.AskAsync(new ListBidPackageRecipients(BidPackageId), CancellationToken.None);
-        lineItems = await Queries.AskAsync(new ListBidPackageLineItems(BidPackageId), CancellationToken.None);
+        try { package = await Queries.AskAsync(new GetBidPackageById(BidPackageId), CancellationToken.None); }
+        catch (Exception ex) { error = $"Couldn't load the bid package: {ex.Message}"; }
+
+        try { recipients = await Queries.AskAsync(new ListBidPackageRecipients(BidPackageId), CancellationToken.None); }
+        catch (Exception ex) { error = Append(error, $"Couldn't load invited subcontractors: {ex.Message}"); }
+
+        try { lineItems = await Queries.AskAsync(new ListBidPackageLineItems(BidPackageId), CancellationToken.None); }
+        catch (Exception ex) { error = Append(error, $"Couldn't load line items: {ex.Message}"); }
     }
+
+    private static string Append(string? existing, string line) =>
+        string.IsNullOrEmpty(existing) ? line : existing + "\n" + line;
 
     private IReadOnlyList<Subcontractor> Invitable()
     {

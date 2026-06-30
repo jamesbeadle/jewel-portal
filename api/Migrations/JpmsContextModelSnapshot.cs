@@ -105,6 +105,73 @@ namespace Jewel.JPMS.Api.Migrations
                     b.ToTable("BidPackages");
                 });
 
+            modelBuilder.Entity("Jewel.JPMS.Api.Data.Entities.BidPackageRecipientEntity", b =>
+                {
+                    b.Property<string>("RecipientId")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<string>("BidPackageId")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<DateTimeOffset>("InvitedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<DateTimeOffset?>("RespondedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.Property<string>("SubcontractorId")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.HasKey("RecipientId");
+
+                    b.ToTable("BidPackageRecipients");
+                });
+
+            modelBuilder.Entity("Jewel.JPMS.Api.Data.Entities.BidPackageLineItemEntity", b =>
+                {
+                    b.Property<string>("LineItemId")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<string>("BidPackageId")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(512)
+                        .HasColumnType("nvarchar(512)");
+
+                    b.Property<decimal>("Quantity")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Trade")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<string>("Unit")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)");
+
+                    b.HasKey("LineItemId");
+
+                    b.ToTable("BidPackageLineItems");
+                });
+
             modelBuilder.Entity("Jewel.JPMS.Api.Data.Entities.BoqLineItemEntity", b =>
                 {
                     b.Property<string>("BoqLineItemId")
