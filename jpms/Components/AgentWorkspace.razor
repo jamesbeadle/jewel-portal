@@ -7,7 +7,7 @@
 <div class="panel p-5">
     <div class="flex items-center justify-between mb-4">
         <h3 class="eyebrow">Agents</h3>
-        <span class="text-xs text-content-subtle">@applied.Count applied</span>
+        <span class="text-xs text-content-subtle">@applied.Count available</span>
     </div>
 
     @if (!loaded)
@@ -21,14 +21,14 @@
             <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-3">@error</p>
         }
 
-        @* Applied agents *@
+        @* Applicable agents — predefined by this record's type; no assignment step *@
         @if (applied.Count == 0)
         {
-            <p class="text-sm text-content-subtle italic mb-4">No agents applied. Apply one below to start watching this request.</p>
+            <p class="text-sm text-content-subtle italic mb-4">No agents apply to this record type.</p>
         }
         else
         {
-            <ul class="space-y-2 mb-4">
+            <ul class="space-y-2 mb-5 pb-5 border-b border-line">
                 @foreach (var agent in applied)
                 {
                     <li class="flex items-start justify-between gap-3 rounded-lg border border-line bg-surface-raised px-3 py-2">
@@ -47,31 +47,9 @@
                             </div>
                             <p class="text-xs text-content-subtle mt-0.5">@agent.StatusMessage</p>
                         </div>
-                        @if (CanOperate)
-                        {
-                            <button type="button" class="text-xs text-content-muted hover:text-negative shrink-0" disabled="@busy" @onclick="() => Remove(agent)">Remove</button>
-                        }
                     </li>
                 }
             </ul>
-        }
-
-        @* Apply an agent *@
-        @if (CanOperate && Unapplied().Any())
-        {
-            <div class="flex flex-wrap items-end gap-2 mb-5 pb-5 border-b border-line">
-                <div class="grow min-w-[12rem]">
-                    <label class="eyebrow block mb-1">Apply an agent</label>
-                    <select class="field" value="@applyKey" @onchange="OnApplyKeyChanged">
-                        <option value="">Choose an agent…</option>
-                        @foreach (var descriptor in Unapplied())
-                        {
-                            <option value="@descriptor.Key">@descriptor.DisplayName — @descriptor.Discipline.DisplayName()</option>
-                        }
-                    </select>
-                </div>
-                <button type="button" class="btn-primary" disabled="@(busy || string.IsNullOrEmpty(applyKey))" @onclick="Apply">Apply</button>
-            </div>
         }
 
         @* Chat with a selected agent *@
@@ -174,7 +152,6 @@
     private bool busy;
     private bool chatLoading;
     private string? error;
-    private string applyKey = "";
     private string selectedKey = "";
     private string draft = "";
 
@@ -199,7 +176,6 @@
 
     private async Task LoadAsync()
     {
-        await Agents.LoadAvailableAsync();
         applied = await Agents.LoadRequestAgentsAsync(RequestId);
         proposals = await Agents.ListProposalsAsync(RequestId);
         if (string.IsNullOrEmpty(selectedKey) || applied.All(a => a.AgentKey != selectedKey))
@@ -216,11 +192,6 @@
         chatLoading = false;
     }
 
-    private IEnumerable<AgentDescriptor> Unapplied() =>
-        Agents.Available().Where(d => applied.All(a => a.AgentKey != d.Key));
-
-    private void OnApplyKeyChanged(ChangeEventArgs e) => applyKey = e.Value?.ToString() ?? "";
-
     private async Task OnSelectedKeyChanged(ChangeEventArgs e)
     {
         selectedKey = e.Value?.ToString() ?? "";
@@ -228,41 +199,6 @@
     }
 
     private void OnDraftInput(ChangeEventArgs e) => draft = e.Value?.ToString() ?? "";
-
-    private async Task Apply()
-    {
-        if (busy || string.IsNullOrEmpty(applyKey) || !CanOperate) return;
-        error = null;
-        try
-        {
-            busy = true;
-            var assigned = await Agents.AssignAsync(RequestId, applyKey);
-            applied = Agents.ForRequest(RequestId);
-            selectedKey = assigned.AgentKey;
-            applyKey = "";
-            await LoadChatAsync();
-            await OnChanged.InvokeAsync();
-        }
-        catch { error = "Couldn't apply that agent. Please try again."; }
-        finally { busy = false; }
-    }
-
-    private async Task Remove(RequestAgent agent)
-    {
-        if (busy || !CanOperate) return;
-        error = null;
-        try
-        {
-            busy = true;
-            await Agents.RemoveAsync(RequestId, agent.RequestAgentId);
-            applied = Agents.ForRequest(RequestId);
-            if (selectedKey == agent.AgentKey) selectedKey = applied.FirstOrDefault()?.AgentKey ?? "";
-            await LoadChatAsync();
-            await OnChanged.InvokeAsync();
-        }
-        catch { error = "Couldn't remove that agent. Please try again."; }
-        finally { busy = false; }
-    }
 
     private async Task Send()
     {

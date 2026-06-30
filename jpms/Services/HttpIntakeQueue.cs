@@ -22,8 +22,8 @@ public sealed class HttpIntakeQueue : IIntakeQueue
     public Task<MailboxPage> ListDiscardedLiveAsync(string? cursor = null, int take = 25, CancellationToken cancellationToken = default) =>
         queries.AskAsync(new ListDiscardedMessages(cursor, take), cancellationToken);
 
-    public Task<MailboxPage> ListTaggedLiveAsync(string? cursor = null, int take = 25, CancellationToken cancellationToken = default) =>
-        queries.AskAsync(new ListTaggedMessages(cursor, take), cancellationToken);
+    public Task<MailboxPage> ListTaggedLiveAsync(string? cursor = null, int take = 25, string? tag = null, CancellationToken cancellationToken = default) =>
+        queries.AskAsync(new ListTaggedMessages(cursor, take, tag), cancellationToken);
 
     public Task<MailboxMessageDetail> GetMessageDetailAsync(string messageId, string? internetMessageId, CancellationToken cancellationToken = default) =>
         queries.AskAsync(new GetMailboxMessageDetail(messageId, internetMessageId), cancellationToken);

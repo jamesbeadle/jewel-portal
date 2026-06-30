@@ -13,7 +13,8 @@ public static class AgentsFeatureRegistration
     public static IServiceCollection AddAgentsFeature(this IServiceCollection services)
     {
         // The agents themselves. Each is a singleton; the registry collects them all. Adding a new
-        // agent is a single line here — its key, chat, analysis and close-gate wiring follow.
+        // agent is a single line here — plus declaring the record type(s) it serves via AppliesTo.
+        services.AddSingleton<IRequestAgent, RequestsAgent>();
         services.AddSingleton<IRequestAgent, BidPackagesAgent>();
         services.AddSingleton<IRequestAgent, SchedulingAgent>();
         services.AddSingleton<IRequestAgent, ValuationsAgent>();
@@ -21,22 +22,16 @@ public static class AgentsFeatureRegistration
 
         services.AddScoped<RequestContextAssembler>();
 
+        // Provisions a record's predefined agents (type-derived) on demand. No manual assignment.
+        services.AddScoped<AgentProvisioning>();
+
         // Queries
-        services.AddScoped<IQueryHandler<ListAvailableAgents, IReadOnlyList<AgentDescriptor>>, ListAvailableAgentsHandler>();
         services.AddScoped<IQueryHandler<ListRequestAgents, IReadOnlyList<RequestAgent>>, ListRequestAgentsHandler>();
         services.AddScoped<IQueryHandler<ListAgentChat, IReadOnlyList<AgentChatMessage>>, ListAgentChatHandler>();
         services.AddScoped<IQueryHandler<ListAgentProposals, IReadOnlyList<AgentProposal>>, ListAgentProposalsHandler>();
         services.AddScoped<IQueryHandler<ListAgentQueue, IReadOnlyList<AgentQueueItem>>, ListAgentQueueHandler>();
 
         // Commands
-        services.AddScoped<ICommandHandler<AssignAgent, RequestAgent>, AssignAgentHandler>();
-        services.AddScoped<AssignAgentAuthorisation>();
-        services.AddScoped<AssignAgentValidation>();
-
-        services.AddScoped<ICommandHandler<RemoveRequestAgent, Acknowledgement>, RemoveRequestAgentHandler>();
-        services.AddScoped<RemoveRequestAgentAuthorisation>();
-        services.AddScoped<RemoveRequestAgentValidation>();
-
         services.AddScoped<ICommandHandler<SendAgentMessage, AgentChatMessage>, SendAgentMessageHandler>();
         services.AddScoped<SendAgentMessageAuthorisation>();
         services.AddScoped<SendAgentMessageValidation>();

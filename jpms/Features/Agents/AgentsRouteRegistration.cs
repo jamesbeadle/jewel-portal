@@ -16,9 +16,6 @@ public static class AgentsRouteRegistration
 
     public static void RegisterAgentsRoutes(QueryRouteTable queries, CommandRouteTable commands)
     {
-        queries.Register<ListAvailableAgents, IReadOnlyList<AgentDescriptor>>(
-            new QueryRoute("/api/agents", _ => "/api/agents"));
-
         queries.Register<ListRequestAgents, IReadOnlyList<RequestAgent>>(
             new QueryRoute("/api/requests/{requestId}/agents",
                 query => $"/api/requests/{((ListRequestAgents)query).RequestId}/agents"));
@@ -37,18 +34,6 @@ public static class AgentsRouteRegistration
 
         queries.Register<ListAgentQueue, IReadOnlyList<AgentQueueItem>>(
             new QueryRoute("/api/agent-queue", _ => "/api/agent-queue"));
-
-        commands.Register<AssignAgent, RequestAgent>(
-            new CommandRoute("POST", "/api/requests/{requestId}/agents",
-                command => $"/api/requests/{((AssignAgent)command).RequestId}/agents"));
-
-        commands.Register<RemoveRequestAgent, Acknowledgement>(
-            new CommandRoute("DELETE", "/api/requests/{requestId}/agents/{requestAgentId}",
-                command =>
-                {
-                    var c = (RemoveRequestAgent)command;
-                    return $"/api/requests/{c.RequestId}/agents/{c.RequestAgentId}";
-                }));
 
         commands.Register<SendAgentMessage, AgentChatMessage>(
             new CommandRoute("POST", "/api/requests/{requestId}/agents/{agentKey}/messages",

@@ -11,6 +11,8 @@ public sealed class ValuationsAgent : StubAgent
     public override string Key => AgentKey;
     public override string DisplayName => "Valuations Agent";
     public override AgentDiscipline Discipline => AgentDiscipline.Commercial;
+    // No dedicated record type yet — provisioned nowhere until a valuation record exists.
+    public override IReadOnlyCollection<RecordType> AppliesTo => Array.Empty<RecordType>();
     public override string Summary =>
         "Creates and confirms variation-order quotes and pulls the latest project financials.";
 }

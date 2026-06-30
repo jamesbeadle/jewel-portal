@@ -76,7 +76,9 @@ public sealed class MailboxTriageEndpoints
     {
         if (await Gate(request) is { } deny) return deny;
         var (cursor, take) = Paging(request);
-        return new OkObjectResult(await listTagged.HandleAsync(new ListTaggedMessages(cursor, take), request.HttpContext.RequestAborted));
+        var tag = request.Query["tag"].ToString();
+        var query = new ListTaggedMessages(cursor, take, string.IsNullOrWhiteSpace(tag) ? null : tag);
+        return new OkObjectResult(await listTagged.HandleAsync(query, request.HttpContext.RequestAborted));
     }
 
     [Function(nameof(GetMailboxMessageDetail))]

@@ -10,6 +10,8 @@ public sealed class SchedulingAgent : StubAgent
     public override string Key => AgentKey;
     public override string DisplayName => "Scheduling Agent";
     public override AgentDiscipline Discipline => AgentDiscipline.Programme;
+    // No dedicated record type yet — provisioned nowhere until a programme/notice record exists.
+    public override IReadOnlyCollection<RecordType> AppliesTo => Array.Empty<RecordType>();
     public override string Summary =>
         "Schedules all work and issues extension-of-time and notice-of-delay notices.";
 }

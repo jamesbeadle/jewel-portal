@@ -11,6 +11,7 @@ public sealed class BidPackagesAgent : StubAgent
     public override string Key => AgentKey;
     public override string DisplayName => "Bid Packages Agent";
     public override AgentDiscipline Discipline => AgentDiscipline.Procurement;
+    public override IReadOnlyCollection<RecordType> AppliesTo => new[] { RecordType.BidPackageInvite };
     public override string Summary =>
         "Issues bid packages, selects bids, raises purchase orders, and hands off to scheduling.";
 }

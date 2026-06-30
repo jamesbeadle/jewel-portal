@@ -1,12 +1,24 @@
 namespace Jewel.JPMS.Models;
 
-// The discipline an agent belongs to. Mirrors the three columns of the request-agent
-// flow diagram: procurement (bid packages), programme (scheduling), commercial (valuations).
+// The kind of record an agent can attach to. A record's type — not a human — decides which
+// agent(s) are applicable to it: agents declare the record type(s) they serve (IRequestAgent.AppliesTo)
+// and the applicable set is derived, never assigned. Today every request-family record is a Request;
+// Bid Package Invites are the first additional record type (built in a later phase).
+public enum RecordType
+{
+    Request = 0,           // the RF* family (RFI/RFA/RFC/RFQ/RFP) plus NOD/EOT
+    BidPackageInvite = 1   // a bid package and the subcontractors invited to tender (Part B)
+}
+
+// The discipline an agent belongs to. Mirrors the columns of the request-agent flow diagram:
+// procurement (bid packages), programme (scheduling), commercial (valuations), plus the general
+// requests desk that serves the RF* record family.
 public enum AgentDiscipline
 {
     Procurement = 0, // bid packages, purchase orders
     Programme = 1,   // scheduling, EoT / NoD notices
-    Commercial = 2   // valuations, variation-order quotes
+    Commercial = 2,  // valuations, variation-order quotes
+    Requests = 3     // RFI/RFA/RFC desk for request records
 }
 
 // Where an applied agent sits on a request. An agent is Active while it still has work to
@@ -123,6 +135,7 @@ public static class AgentDisciplineExtensions
         AgentDiscipline.Procurement => "Procurement",
         AgentDiscipline.Programme   => "Programme",
         AgentDiscipline.Commercial  => "Commercial",
+        AgentDiscipline.Requests    => "Requests",
         _ => discipline.ToString()
     };
 }

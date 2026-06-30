@@ -13,6 +13,9 @@ public abstract class StubAgent : IRequestAgent
     public abstract AgentDiscipline Discipline { get; }
     public abstract string Summary { get; }
 
+    // The record type(s) this agent is the predefined agent for. Declared per concrete agent.
+    public abstract IReadOnlyCollection<RecordType> AppliesTo { get; }
+
     public virtual bool IsImplemented => false;
 
     // The line a human sees in the agent chat and, verbatim, as the close-gate blocking reason.

@@ -21,12 +21,6 @@ public sealed class HttpAgentDesk : IAgentDesk
 
     public event Action? OnChange;
 
-    public IReadOnlyList<AgentDescriptor> Available()
-    {
-        if (readModel.Available.Count == 0) _ = readModel.RefreshAvailableAsync(CancellationToken.None);
-        return readModel.Available;
-    }
-
     public IReadOnlyList<RequestAgent> ForRequest(string requestId)
     {
         if (readModel.ForRequest(requestId).Count == 0) _ = readModel.RefreshRequestAsync(requestId, CancellationToken.None);
@@ -39,12 +33,6 @@ public sealed class HttpAgentDesk : IAgentDesk
         return readModel.Queue;
     }
 
-    public async Task<IReadOnlyList<AgentDescriptor>> LoadAvailableAsync(CancellationToken cancellationToken = default)
-    {
-        await readModel.RefreshAvailableAsync(cancellationToken);
-        return readModel.Available;
-    }
-
     public async Task<IReadOnlyList<RequestAgent>> LoadRequestAgentsAsync(string requestId, CancellationToken cancellationToken = default)
     {
         await readModel.RefreshRequestAsync(requestId, cancellationToken);
@@ -55,19 +43,6 @@ public sealed class HttpAgentDesk : IAgentDesk
     {
         await readModel.RefreshQueueAsync(cancellationToken);
         return readModel.Queue;
-    }
-
-    public async Task<RequestAgent> AssignAsync(string requestId, string agentKey, bool isPrimary = false, CancellationToken cancellationToken = default)
-    {
-        var assigned = await commands.SendAsync(new AssignAgent(requestId, agentKey, isPrimary), cancellationToken);
-        await readModel.RefreshRequestAsync(requestId, cancellationToken);
-        return assigned;
-    }
-
-    public async Task RemoveAsync(string requestId, string requestAgentId, CancellationToken cancellationToken = default)
-    {
-        await commands.SendAsync(new RemoveRequestAgent(requestId, requestAgentId), cancellationToken);
-        await readModel.RefreshRequestAsync(requestId, cancellationToken);
     }
 
     public Task<IReadOnlyList<AgentChatMessage>> ListChatAsync(string requestId, string agentKey, CancellationToken cancellationToken = default) =>

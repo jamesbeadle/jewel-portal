@@ -115,7 +115,6 @@ else
         <div class="flex gap-2 mb-6 border-b border-line">
             <button type="button" class="@ViewTabClass(QueueView.Active)" @onclick="() => SwitchView(QueueView.Active)">Queue</button>
             <button type="button" class="@ViewTabClass(QueueView.Tagged)" @onclick="() => SwitchView(QueueView.Tagged)">Tagged</button>
-            <button type="button" class="@ViewTabClass(QueueView.Discarded)" @onclick="() => SwitchView(QueueView.Discarded)">Discarded</button>
         </div>
 
         @if (loadError is not null)
@@ -456,10 +455,22 @@ else
         }
         else
         {
+            @if (knownTags.Count > 0)
+            {
+                <div class="flex flex-wrap items-center gap-2 mb-5">
+                    <span class="text-xs uppercase tracking-wider text-content-subtle font-semibold mr-1">Filter</span>
+                    <button type="button" class="@TagFilterClass(null)" @onclick="() => SetTaggedFilter(null)">All</button>
+                    @foreach (var tag in knownTags)
+                    {
+                        <button type="button" class="@TagFilterClass(tag)" @onclick="() => SetTaggedFilter(tag)">@TagLabel(tag)</button>
+                    }
+                </div>
+            }
+
             @if (taggedTotal == 0)
             {
                 <div class="panel p-8 text-center">
-                    <p class="text-sm text-content">No tagged emails.</p>
+                    <p class="text-sm text-content">@(taggedFilter is null ? "No tagged emails." : "No emails with this tag.")</p>
                     <p class="text-xs text-content-subtle mt-1">Emails linked to a request (or discarded) appear here. Open one to add it to another request or remove a tag.</p>
                 </div>
             }
@@ -636,6 +647,10 @@ else
     private List<string?> taggedCursors = new() { null };
     private int taggedIndex;
     private string? taggedNext;
+    // The active tag filter on the Tagged tab (null = every tagged email), and the set of tags we've
+    // seen so far — used to offer quick-filter buttons. Tags accumulate as the user pages/explores.
+    private string? taggedFilter;
+    private readonly SortedSet<string> knownTags = new(StringComparer.OrdinalIgnoreCase);
 
     private MailboxMessage? selected;
     private MailboxMessageDetail? detail;
@@ -694,7 +709,7 @@ else
         mode = TriageMode.None;
         actionError = null;
         if (next == QueueView.Discarded) { ResetDiscardedPaging(); await LoadDiscardedAsync(); }
-        else if (next == QueueView.Tagged) { ResetTaggedPaging(); await LoadTaggedAsync(); }
+        else if (next == QueueView.Tagged) { taggedFilter = null; ResetTaggedPaging(); await LoadTaggedAsync(); }
         else { ResetQueuePaging(); await LoadAsync(); }
     }
 
@@ -778,12 +793,16 @@ else
         loadError = null;
         try
         {
-            var result = await Intake.ListTaggedLiveAsync(taggedCursors[taggedIndex], PageSize);
+            var result = await Intake.ListTaggedLiveAsync(taggedCursors[taggedIndex], PageSize, taggedFilter);
             taggedItems = result.Items;
             taggedTotal = result.Total;
             taggedNext = result.NextCursor;
             if (taggedNext is not null && taggedIndex == taggedCursors.Count - 1)
                 taggedCursors.Add(taggedNext);
+            // Remember every tag we see so the quick-filter buttons can offer them.
+            foreach (var message in taggedItems)
+                foreach (var tag in message.Categories)
+                    knownTags.Add(tag);
         }
         catch
         {
@@ -792,6 +811,16 @@ else
             taggedTotal = 0;
             taggedNext = null;
         }
+    }
+
+    private async Task SetTaggedFilter(string? tag)
+    {
+        taggedFilter = tag;
+        selected = null;
+        detail = null;
+        detailLoading = false;
+        ResetTaggedPaging();
+        await LoadTaggedAsync();
     }
 
     private async Task PreviousTagged()
@@ -1089,6 +1118,15 @@ else
         return view == tab
             ? $"{baseClass} border-accent text-content"
             : $"{baseClass} border-transparent text-content-muted hover:text-content";
+    }
+
+    private string TagFilterClass(string? tag)
+    {
+        var baseClass = "rounded-full border px-3 py-1 text-xs font-medium transition";
+        var active = string.Equals(taggedFilter ?? "", tag ?? "", StringComparison.OrdinalIgnoreCase);
+        return active
+            ? $"{baseClass} border-accent text-content bg-surface-raised"
+            : $"{baseClass} border-line text-content-muted hover:text-content hover:border-line-strong";
     }
 
     private string ModeTabClass(TriageMode tab)

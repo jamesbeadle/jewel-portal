@@ -27,14 +27,16 @@ public sealed class ListDiscardedMessagesHandler : IQueryHandler<ListDiscardedMe
         graph.ListDiscardedAsync(query.Cursor, query.Take, cancellationToken);
 }
 
-/// <summary>Every tagged email, read live from the Inbox (messages carrying the JPMS marker).</summary>
+/// <summary>Every tagged email (JPMS marker), or — when a Tag is given — just that one workflow.</summary>
 public sealed class ListTaggedMessagesHandler : IQueryHandler<ListTaggedMessages, MailboxPage>
 {
     private readonly IMailboxGraphClient graph;
     public ListTaggedMessagesHandler(IMailboxGraphClient graph) { this.graph = graph; }
 
     public Task<MailboxPage> HandleAsync(ListTaggedMessages query, CancellationToken cancellationToken) =>
-        graph.ListTaggedAsync(query.Cursor, query.Take, cancellationToken);
+        string.IsNullOrWhiteSpace(query.Tag)
+            ? graph.ListTaggedAsync(query.Cursor, query.Take, cancellationToken)
+            : graph.ListByTagAsync(query.Tag, query.Cursor, query.Take, cancellationToken);
 }
 
 /// <summary>

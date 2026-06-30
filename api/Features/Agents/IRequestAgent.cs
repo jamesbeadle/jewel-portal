@@ -17,6 +17,11 @@ public interface IRequestAgent
     string Summary { get; }
     bool IsImplemented { get; }
 
+    // The record type(s) this agent serves. Applicability is derived from this — a record of one of
+    // these types has this agent available by default, with no assignment step. An agent that serves
+    // no record type yet (its record type is not built) returns an empty set and is provisioned nowhere.
+    IReadOnlyCollection<RecordType> AppliesTo { get; }
+
     Task<string> RespondAsync(RequestAgentContext context, string userMessage, CancellationToken cancellationToken);
 
     Task<AgentAnalysisResult> AnalyseAsync(RequestAgentContext context, CancellationToken cancellationToken);
