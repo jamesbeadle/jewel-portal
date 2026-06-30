@@ -2,6 +2,26 @@
 
 Status: **Draft for review** · Author: assisted draft · Date: 2026‑06‑30
 
+> **Captured requirements — bid-package detail view & invite content (2026‑06‑30, from client review):**
+>
+> *Detail view (UI built this round):* the bid-package page now shows **Invited to tender** (with add via a searchable/filterable **directory modal**, and remove), **Line items** (grouped by trade, editable), a **Documents** section (placeholder — see below), **Related emails** (emails tagged to the package, read live), and a **Generate using AI** button (UI stub only — will later send related emails + drawings to Claude and draft the package).
+>
+> *Address-book modal:* should cover not just subcontractors/suppliers but also **clients and architects** (ties to open decision D3 — a Client/Architect directory is not built yet; the modal currently lists the subcontractor directory).
+>
+> *Documents section (to build):* manage the **drawings/documents** used for the package — uploaded files **and** cloud-storage links — that can be sent to people **directly or via a cloud link**. Needs a small data model (file/link records) + storage; deferred pending design.
+>
+> *Creating a bid package invite:*
+> - **Do not** capture client details on the package.
+> - The invite asks subcontractors the following, **making Jewel's preferences explicit**:
+>   - **Deposit:** we prefer **not** to be asked for a deposit upfront — but if one is required for you to submit a bid / do the work, add it.
+>   - **Duration:** how long the work will take to complete.
+>   - **Availability:** if selected, when you can start.
+>   - **Insurances:** confirm you hold all required insurances.
+>   - **RAMS:** confirm you have all required RAMS documentation.
+>   - **Portfolio:** share any prior work portfolios that help us decide.
+> - The package references a **scope of work** and may include **drawing files or cloud links** to drawings.
+> - These questions define the invite/RFQ structure and the (future) subcontractor response form; exact output to be confirmed.
+
 This spec covers two related changes:
 
 - **Part A — Foundational change.** Move from *manually assigning* agents to records, to agents being **predefined by record type**. This is the system change to make now, before more document types arrive.

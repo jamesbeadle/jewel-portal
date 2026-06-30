@@ -38,6 +38,10 @@ public static class ProcurementRouteRegistration
             new QueryRoute("/api/bid-packages/{bidPackageId}/line-items",
                 query => $"/api/bid-packages/{((ListBidPackageLineItems)query).BidPackageId}/line-items"));
 
+        queries.Register<ListBidPackageEmails, IReadOnlyList<MailboxMessage>>(
+            new QueryRoute("/api/bid-packages/{bidPackageId}/emails",
+                query => $"/api/bid-packages/{((ListBidPackageEmails)query).BidPackageId}/emails"));
+
         commands.Register<CreateBidPackage, BidPackage>(
             new CommandRoute("POST", "/api/projects/{projectId}/bid-packages",
                 command => $"/api/projects/{((CreateBidPackage)command).ProjectId}/bid-packages"));
@@ -49,6 +53,14 @@ public static class ProcurementRouteRegistration
         commands.Register<InviteSubcontractorsToBidPackage, IReadOnlyList<BidPackageRecipient>>(
             new CommandRoute("POST", "/api/bid-packages/{bidPackageId}/recipients",
                 command => $"/api/bid-packages/{((InviteSubcontractorsToBidPackage)command).BidPackageId}/recipients"));
+
+        commands.Register<RemoveBidPackageRecipient, IReadOnlyList<BidPackageRecipient>>(
+            new CommandRoute("DELETE", "/api/bid-packages/{bidPackageId}/recipients/{recipientId}",
+                command =>
+                {
+                    var c = (RemoveBidPackageRecipient)command;
+                    return $"/api/bid-packages/{c.BidPackageId}/recipients/{c.RecipientId}";
+                }));
 
         commands.Register<SetBidPackageLineItems, IReadOnlyList<BidPackageLineItem>>(
             new CommandRoute("PUT", "/api/bid-packages/{bidPackageId}/line-items",

@@ -37,25 +37,45 @@ else
         }
         else
         {
-            <header class="mb-6">
-                <div class="flex items-center gap-3">
-                    <h2 class="text-lg font-semibold text-content">@package.Title</h2>
-                    <span class="inline-flex items-center rounded-full bg-surface-raised border border-line px-2 py-0.5 text-[11px] font-medium text-content-muted">@package.Status</span>
+            <header class="mb-6 flex flex-wrap items-start justify-between gap-3">
+                <div>
+                    <div class="flex items-center gap-3">
+                        <h2 class="text-lg font-semibold text-content">@package.Title</h2>
+                        <span class="inline-flex items-center rounded-full bg-surface-raised border border-line px-2 py-0.5 text-[11px] font-medium text-content-muted">@package.Status</span>
+                    </div>
+                    <p class="text-sm text-content-muted">@package.Trade</p>
                 </div>
-                <p class="text-sm text-content-muted">@package.Trade</p>
+                @if (CanManage)
+                {
+                    <button type="button" class="btn-secondary inline-flex items-center gap-2" disabled="@busy" @onclick="GenerateWithAi">
+                        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.9 4.6L18.5 9l-4.6 1.9L12 15l-1.9-4.1L5.5 9l4.6-1.4z"/></svg>
+                        Generate using AI
+                    </button>
+                }
             </header>
+
+            @if (aiNote is not null)
+            {
+                <p class="rounded-lg bg-accent/10 border border-accent/30 px-3 py-2 text-sm text-content mb-6">@aiNote</p>
+            }
 
             @* ---- Invited subcontractors ---- *@
             <section class="mb-8">
-                <h3 class="eyebrow mb-3">Invited to tender</h3>
+                <div class="flex items-center justify-between mb-3">
+                    <h3 class="eyebrow">Invited to tender</h3>
+                    @if (CanManage)
+                    {
+                        <button type="button" class="text-xs text-accent hover:underline" @onclick="OpenInviteModal">+ Add subcontractor</button>
+                    }
+                </div>
 
                 @if (recipients.Count == 0)
                 {
-                    <p class="text-sm text-content-subtle italic mb-4">No subcontractors invited yet.</p>
+                    <p class="text-sm text-content-subtle italic">No subcontractors invited yet.</p>
                 }
                 else
                 {
-                    <div class="rounded-xl border border-line bg-surface overflow-hidden mb-4">
+                    <div class="rounded-xl border border-line bg-surface overflow-hidden">
                         <table class="w-full text-sm">
                             <thead class="bg-surface-raised border-b border-line">
                                 <tr class="text-left text-[11px] uppercase tracking-wider text-content-subtle font-semibold">
@@ -63,6 +83,7 @@ else
                                     <th class="px-4 py-3 hidden sm:table-cell">Trade</th>
                                     <th class="px-4 py-3">Invited</th>
                                     <th class="px-4 py-3">Status</th>
+                                    <th class="px-4 py-3"></th>
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-line">
@@ -74,44 +95,22 @@ else
                                         <td class="px-4 py-3 text-content-muted hidden sm:table-cell">@(sub?.PrimaryTrade ?? "")</td>
                                         <td class="px-4 py-3 text-content-subtle">@recipient.InvitedAt.LocalDateTime.ToString("d MMM yyyy, HH:mm")</td>
                                         <td class="px-4 py-3 text-content-muted">@recipient.Status</td>
+                                        <td class="px-4 py-3 text-right">
+                                            @if (CanManage)
+                                            {
+                                                <button type="button" class="text-xs text-content-muted hover:text-negative" disabled="@busy" @onclick="() => RemoveRecipient(recipient)">Remove</button>
+                                            }
+                                        </td>
                                     </tr>
                                 }
                             </tbody>
                         </table>
                     </div>
                 }
-
-                @if (CanManage)
-                {
-                    <div class="rounded-xl border border-line bg-surface-raised p-4">
-                        <label class="eyebrow block mb-2">Invite subcontractors</label>
-                        @if (Invitable().Count == 0)
-                        {
-                            <p class="text-sm text-content-subtle italic">Every subcontractor in the directory has already been invited.</p>
-                        }
-                        else
-                        {
-                            <div class="space-y-1 mb-3 max-h-64 overflow-y-auto">
-                                @foreach (var sub in Invitable())
-                                {
-                                    <label class="flex items-center gap-2 text-sm text-content">
-                                        <input type="checkbox" checked="@selected.Contains(sub.SubcontractorId)"
-                                               @onchange="e => Toggle(sub.SubcontractorId, e)" />
-                                        <span class="font-medium">@sub.CompanyName</span>
-                                        <span class="text-content-subtle">· @sub.PrimaryTrade</span>
-                                    </label>
-                                }
-                            </div>
-                            <button type="button" class="btn-primary" disabled="@(busy || selected.Count == 0)" @onclick="Invite">
-                                @(busy ? "Inviting…" : $"Invite {selected.Count} subcontractor{(selected.Count == 1 ? "" : "s")}")
-                            </button>
-                        }
-                    </div>
-                }
             </section>
 
             @* ---- Line items, grouped by trade ---- *@
-            <section>
+            <section class="mb-8">
                 <div class="flex items-center justify-between mb-3">
                     <h3 class="eyebrow">Line items</h3>
                     @if (CanManage && !editingLines)
@@ -191,8 +190,78 @@ else
                     }
                 }
             </section>
+
+            @* ---- Documents (placeholder) ---- *@
+            <section class="mb-8">
+                <h3 class="eyebrow mb-3">Documents</h3>
+                <div class="rounded-xl border border-dashed border-line bg-surface-raised px-4 py-5 text-sm text-content-subtle">
+                    Drawings and supporting documents for this package will live here — uploaded files and cloud-storage links you can send to invited subcontractors. Not wired up yet.
+                </div>
+            </section>
+
+            @* ---- Related emails ---- *@
+            <section>
+                <h3 class="eyebrow mb-3">Related emails</h3>
+                @if (emails.Count == 0)
+                {
+                    <p class="text-sm text-content-subtle italic">No emails tagged to this bid package.</p>
+                }
+                else
+                {
+                    <ul class="space-y-2">
+                        @foreach (var email in emails)
+                        {
+                            <li class="rounded-lg border border-line bg-surface px-4 py-3">
+                                <div class="flex flex-wrap items-center justify-between gap-2">
+                                    <span class="text-sm font-medium text-content">@(string.IsNullOrWhiteSpace(email.FromName) ? email.FromEmail : email.FromName)</span>
+                                    <span class="text-xs text-content-subtle">@email.ReceivedAt.LocalDateTime.ToString("d MMM yyyy, HH:mm")</span>
+                                </div>
+                                <p class="text-sm text-content mt-0.5">
+                                    @email.Subject
+                                    @if (email.HasAttachments)
+                                    {
+                                        <span class="ml-2 inline-flex items-center rounded bg-surface-raised border border-line px-1.5 py-0.5 text-[10px] text-content-subtle">attachment</span>
+                                    }
+                                </p>
+                                @if (!string.IsNullOrWhiteSpace(email.BodyPreview))
+                                {
+                                    <p class="text-xs text-content-subtle mt-1 line-clamp-2">@email.BodyPreview</p>
+                                }
+                            </li>
+                        }
+                    </ul>
+                }
+            </section>
         }
     </ProjectPageShell>
+
+    @* ---- Add-subcontractor modal: the directory, searchable ---- *@
+    <Modal IsOpen="showInviteModal" Title="Invite subcontractors" ShowFooter="true"
+           ConfirmLabel="@($"Invite {selected.Count}")" CancelLabel="Cancel"
+           OnCancel="CloseInviteModal" OnConfirm="ConfirmInvite" Class="max-w-lg w-full">
+        <div class="mb-3">
+            <input class="field" placeholder="Search by company, trade or contact…"
+                   value="@subSearch" @oninput="OnSearchInput" />
+        </div>
+        @if (Invitable().Count == 0)
+        {
+            <p class="text-sm text-content-subtle italic">No matching subcontractors in the directory.</p>
+        }
+        else
+        {
+            <div class="space-y-1 max-h-80 overflow-y-auto">
+                @foreach (var sub in Invitable())
+                {
+                    <label class="flex items-center gap-2 text-sm text-content py-1">
+                        <input type="checkbox" checked="@selected.Contains(sub.SubcontractorId)"
+                               @onchange="e => Toggle(sub.SubcontractorId, e)" />
+                        <span class="font-medium">@sub.CompanyName</span>
+                        <span class="text-content-subtle">· @sub.PrimaryTrade</span>
+                    </label>
+                }
+            </div>
+        }
+    </Modal>
 }
 
 @code {
@@ -202,10 +271,15 @@ else
     private bool isLoaded;
     private bool busy;
     private string? error;
+    private string? aiNote;
 
     private BidPackage? package;
     private IReadOnlyList<BidPackageRecipient> recipients = Array.Empty<BidPackageRecipient>();
     private IReadOnlyList<BidPackageLineItem> lineItems = Array.Empty<BidPackageLineItem>();
+    private IReadOnlyList<MailboxMessage> emails = Array.Empty<MailboxMessage>();
+
+    private bool showInviteModal;
+    private string subSearch = "";
     private readonly HashSet<string> selected = new(StringComparer.OrdinalIgnoreCase);
 
     private bool CanManage => Session.AvailableRoles.Any(r =>
@@ -227,7 +301,6 @@ else
         }
         finally
         {
-            // Always leave the loading state, so a failure shows the error instead of spinning forever.
             isLoaded = true;
         }
     }
@@ -236,8 +309,7 @@ else
 
     private void OnStoreChanged() => InvokeAsync(StateHasChanged);
 
-    // Each piece loads independently so one failing query (e.g. a table not yet migrated) doesn't take
-    // down the whole view; the specific failure is surfaced in the error banner.
+    // Each piece loads independently so one failing query doesn't take down the whole view.
     private async Task LoadAsync()
     {
         try { package = await Queries.AskAsync(new GetBidPackageById(BidPackageId), CancellationToken.None); }
@@ -248,15 +320,41 @@ else
 
         try { lineItems = await Queries.AskAsync(new ListBidPackageLineItems(BidPackageId), CancellationToken.None); }
         catch (Exception ex) { error = Append(error, $"Couldn't load line items: {ex.Message}"); }
+
+        try { emails = await Queries.AskAsync(new ListBidPackageEmails(BidPackageId), CancellationToken.None); }
+        catch (Exception ex) { error = Append(error, $"Couldn't load related emails: {ex.Message}"); }
     }
 
     private static string Append(string? existing, string line) =>
         string.IsNullOrEmpty(existing) ? line : existing + "\n" + line;
 
+    private void GenerateWithAi() =>
+        aiNote = "AI generation isn't wired up yet. When enabled, this will send the related emails and any drawings to Claude and draft the bid package — scope, line items and suggested subcontractors — for you to review.";
+
+    // ---- Invite (modal over the directory) ----
+
+    private void OpenInviteModal()
+    {
+        selected.Clear();
+        subSearch = "";
+        showInviteModal = true;
+    }
+
+    private void CloseInviteModal() => showInviteModal = false;
+
+    private void OnSearchInput(ChangeEventArgs e) => subSearch = e.Value?.ToString() ?? "";
+
     private IReadOnlyList<Subcontractor> Invitable()
     {
         var invited = recipients.Select(r => r.SubcontractorId).ToHashSet(StringComparer.OrdinalIgnoreCase);
-        return Subs.All().Where(s => !invited.Contains(s.SubcontractorId)).ToList();
+        var q = (subSearch ?? "").Trim();
+        return Subs.All()
+            .Where(s => !invited.Contains(s.SubcontractorId))
+            .Where(s => q.Length == 0
+                || (s.CompanyName ?? "").Contains(q, StringComparison.OrdinalIgnoreCase)
+                || (s.PrimaryTrade ?? "").Contains(q, StringComparison.OrdinalIgnoreCase)
+                || (s.ContactName ?? "").Contains(q, StringComparison.OrdinalIgnoreCase))
+            .ToList();
     }
 
     private void Toggle(string subcontractorId, ChangeEventArgs e)
@@ -265,7 +363,7 @@ else
         else selected.Remove(subcontractorId);
     }
 
-    private async Task Invite()
+    private async Task ConfirmInvite()
     {
         if (busy || selected.Count == 0 || !CanManage) return;
         error = null;
@@ -275,10 +373,24 @@ else
             recipients = await Commands.SendAsync(
                 new InviteSubcontractorsToBidPackage(BidPackageId, selected.ToList()), CancellationToken.None);
             selected.Clear();
-            // Reflect the package moving Draft -> Inviting.
+            showInviteModal = false;
             package = await Queries.AskAsync(new GetBidPackageById(BidPackageId), CancellationToken.None);
         }
         catch { error = "Couldn't send those invites. Please try again."; }
+        finally { busy = false; }
+    }
+
+    private async Task RemoveRecipient(BidPackageRecipient recipient)
+    {
+        if (busy || !CanManage) return;
+        error = null;
+        try
+        {
+            busy = true;
+            recipients = await Commands.SendAsync(
+                new RemoveBidPackageRecipient(BidPackageId, recipient.RecipientId), CancellationToken.None);
+        }
+        catch { error = "Couldn't remove that subcontractor. Please try again."; }
         finally { busy = false; }
     }
 

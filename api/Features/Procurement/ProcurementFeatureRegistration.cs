@@ -17,6 +17,7 @@ public static class ProcurementFeatureRegistration
         services.AddScoped<IQueryHandler<ListWorkOrders, IReadOnlyList<WorkOrder>>, ListWorkOrdersHandler>();
         services.AddScoped<IQueryHandler<ListBidPackageRecipients, IReadOnlyList<BidPackageRecipient>>, ListBidPackageRecipientsHandler>();
         services.AddScoped<IQueryHandler<ListBidPackageLineItems, IReadOnlyList<BidPackageLineItem>>, ListBidPackageLineItemsHandler>();
+        services.AddScoped<IQueryHandler<ListBidPackageEmails, IReadOnlyList<MailboxMessage>>, ListBidPackageEmailsHandler>();
 
         services.AddScoped<ICommandHandler<CreateBidPackage, BidPackage>, CreateBidPackageHandler>();
         services.AddScoped<CreateBidPackageAuthorisation>();
@@ -29,6 +30,10 @@ public static class ProcurementFeatureRegistration
         services.AddScoped<ICommandHandler<InviteSubcontractorsToBidPackage, IReadOnlyList<BidPackageRecipient>>, InviteSubcontractorsToBidPackageHandler>();
         services.AddScoped<InviteSubcontractorsToBidPackageAuthorisation>();
         services.AddScoped<InviteSubcontractorsToBidPackageValidation>();
+
+        services.AddScoped<ICommandHandler<RemoveBidPackageRecipient, IReadOnlyList<BidPackageRecipient>>, RemoveBidPackageRecipientHandler>();
+        services.AddScoped<RemoveBidPackageRecipientAuthorisation>();
+        services.AddScoped<RemoveBidPackageRecipientValidation>();
 
         services.AddScoped<ICommandHandler<SetBidPackageLineItems, IReadOnlyList<BidPackageLineItem>>, SetBidPackageLineItemsHandler>();
         services.AddScoped<SetBidPackageLineItemsAuthorisation>();
