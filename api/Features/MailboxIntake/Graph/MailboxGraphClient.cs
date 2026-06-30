@@ -135,13 +135,13 @@ public sealed class MailboxGraphClient : IMailboxGraphClient
         {
             // The cursor is base64url(nextLink) — opaque + URL-safe so it survives the query string
             // intact (Graph's nextLink contains '&', which a plain URL param would split/truncate).
-            var link = Base64UrlDecode(cursor);
-            if (link is null || !CursorTargetsThisInbox(link))
+            var decoded = Base64UrlDecode(cursor);
+            if (decoded is null || !CursorTargetsThisInbox(decoded))
             {
                 _logger.LogWarning("Ignoring an unexpected mailbox paging cursor.");
                 return new MailboxPage(Array.Empty<MailboxMessage>(), null, 0);
             }
-            url = link;
+            url = decoded;
         }
 
         var items = new List<MailboxMessage>();
@@ -224,17 +224,18 @@ public sealed class MailboxGraphClient : IMailboxGraphClient
     private async Task<bool> AddCategoriesAsync(string messageId, string? imid, string[] add, CancellationToken ct)
     {
         var loaded = await LoadAsync(messageId, imid, ct);
-        if (loaded is not { } m)
+        if (loaded is null)
         {
             _logger.LogWarning("Tag-add skipped: message {MessageId} not found.", messageId);
             return false;
         }
+        var (id, current) = loaded.Value;
 
-        var updated = m.Categories.Concat(add).Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
-        if (!await PatchCategoriesAsync(m.Id, updated, ct))
+        var updated = current.Concat(add).Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
+        if (!await PatchCategoriesAsync(id, updated, ct))
             return false;
 
-        var after = await GetCategoriesAsync(m.Id, ct);
+        var after = await GetCategoriesAsync(id, ct);
         var ok = after is not null && add.All(a => after.Contains(a, StringComparer.OrdinalIgnoreCase));
         if (!ok) _logger.LogWarning("Tag-add for {MessageId} did not verify.", messageId);
         return ok;
@@ -243,17 +244,18 @@ public sealed class MailboxGraphClient : IMailboxGraphClient
     private async Task<bool> RemoveCategoriesAsync(string messageId, string? imid, string[] remove, CancellationToken ct)
     {
         var loaded = await LoadAsync(messageId, imid, ct);
-        if (loaded is not { } m)
+        if (loaded is null)
         {
             _logger.LogWarning("Tag-remove skipped: message {MessageId} not found.", messageId);
             return false;
         }
+        var (id, current) = loaded.Value;
 
-        var updated = m.Categories.Where(c => !remove.Contains(c, StringComparer.OrdinalIgnoreCase)).ToArray();
-        if (!await PatchCategoriesAsync(m.Id, updated, ct))
+        var updated = current.Where(c => !remove.Contains(c, StringComparer.OrdinalIgnoreCase)).ToArray();
+        if (!await PatchCategoriesAsync(id, updated, ct))
             return false;
 
-        var after = await GetCategoriesAsync(m.Id, ct);
+        var after = await GetCategoriesAsync(id, ct);
         var ok = after is not null && !remove.Any(r => after.Contains(r, StringComparer.OrdinalIgnoreCase));
         if (!ok) _logger.LogWarning("Tag-remove for {MessageId} did not verify.", messageId);
         return ok;
