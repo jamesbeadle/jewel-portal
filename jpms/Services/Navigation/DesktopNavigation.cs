@@ -34,7 +34,7 @@ public static class DesktopNavigation
         Entry("Dashboard",      "/dashboard",      AllRoles),
         Entry("Leads",          "/leads",          Role.ManagingDirector, Role.FinanceDirector, Role.ProjectManager, Role.QuantitySurveyor),
         Entry("Projects",       "/projects",       Role.ManagingDirector, Role.FinanceDirector, Role.ProjectManager, Role.QuantitySurveyor, Role.SiteManager, Role.HealthSafetyOfficer, Role.OfficeComplianceCoordinator),
-        Entry("Subcontractors", "/subcontractors", Role.ManagingDirector, Role.FinanceDirector, Role.ProjectManager, Role.HealthSafetyOfficer, Role.OfficeComplianceCoordinator),
+        Entry("Directory",      "/subcontractors", Role.ManagingDirector, Role.FinanceDirector, Role.ProjectManager, Role.HealthSafetyOfficer, Role.OfficeComplianceCoordinator),
         Entry("Work orders",    "/work-orders",    Role.ManagingDirector, Role.FinanceDirector, Role.ProjectManager, Role.QuantitySurveyor, Role.OfficeComplianceCoordinator),
         // Triage is restricted to administrators (who see everything via the early return above)
         // and project managers for now. A dedicated triage-visibility role can be added later.
