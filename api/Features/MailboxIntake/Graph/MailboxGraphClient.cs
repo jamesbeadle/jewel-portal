@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using System.Text;
 using System.Text.Json;
 using Jewel.JPMS.Models;
 using Microsoft.Extensions.Logging;
@@ -130,14 +131,17 @@ public sealed class MailboxGraphClient : IMailboxGraphClient
                 + $"&$select={Summary}"
                 + $"&$top={take}&$count=true";
         }
-        else if (CursorTargetsThisInbox(cursor))
-        {
-            url = cursor;
-        }
         else
         {
-            _logger.LogWarning("Ignoring an unexpected mailbox paging cursor.");
-            return new MailboxPage(Array.Empty<MailboxMessage>(), null, 0);
+            // The cursor is base64url(nextLink) — opaque + URL-safe so it survives the query string
+            // intact (Graph's nextLink contains '&', which a plain URL param would split/truncate).
+            var link = Base64UrlDecode(cursor);
+            if (link is null || !CursorTargetsThisInbox(link))
+            {
+                _logger.LogWarning("Ignoring an unexpected mailbox paging cursor.");
+                return new MailboxPage(Array.Empty<MailboxMessage>(), null, 0);
+            }
+            url = link;
         }
 
         var items = new List<MailboxMessage>();
@@ -165,9 +169,22 @@ public sealed class MailboxGraphClient : IMailboxGraphClient
                 if (Parse(item) is { } m)
                     items.Add(m);
         if (root.TryGetProperty("@odata.nextLink", out var nl) && nl.GetString() is { Length: > 0 } link)
-            nextCursor = link;
+            nextCursor = Base64UrlEncode(link);
 
         return new MailboxPage(items, nextCursor, total);
+    }
+
+    // URL-safe base64 so a cursor (Graph's nextLink, which contains '&', '=' etc.) survives our own
+    // query string without being unescaped/split by the URL layer.
+    private static string Base64UrlEncode(string value) =>
+        Convert.ToBase64String(Encoding.UTF8.GetBytes(value)).TrimEnd('=').Replace('+', '-').Replace('/', '_');
+
+    private static string? Base64UrlDecode(string value)
+    {
+        var s = value.Replace('-', '+').Replace('_', '/');
+        s += (s.Length % 4) switch { 2 => "==", 3 => "=", _ => "" };
+        try { return Encoding.UTF8.GetString(Convert.FromBase64String(s)); }
+        catch { return null; }
     }
 
     public Task<bool> DiscardAsync(string messageId, string? internetMessageId, CancellationToken ct) =>
