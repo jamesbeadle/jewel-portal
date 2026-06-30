@@ -22,14 +22,17 @@ public sealed class MailboxActionWorker
 {
     private readonly JpmsContext _context;
     private readonly IGraphMailClient _graph;
+    private readonly RequestEmailReader _emails;
     private readonly MailboxIntakeOptions _options;
     private readonly ILogger<MailboxActionWorker> _logger;
 
     public MailboxActionWorker(
-        JpmsContext context, IGraphMailClient graph, MailboxIntakeOptions options, ILogger<MailboxActionWorker> logger)
+        JpmsContext context, IGraphMailClient graph, RequestEmailReader emails,
+        MailboxIntakeOptions options, ILogger<MailboxActionWorker> logger)
     {
         _context = context;
         _graph = graph;
+        _emails = emails;
         _options = options;
         _logger = logger;
     }
@@ -61,7 +64,8 @@ public sealed class MailboxActionWorker
         if (!_options.EnableRequestDocuments || string.IsNullOrEmpty(action.RequestId))
             return;
 
-        var model = await RequestDocumentBuilder.BuildAsync(_context, action.RequestId, ct);
+        var tagged = await _emails.ForRequestAsync(action.RequestId, ct);
+        var model = await RequestDocumentBuilder.BuildAsync(_context, action.RequestId, tagged, ct);
         if (model is null)
         {
             _logger.LogWarning("Request-document send skipped: request {RequestId} not found.", action.RequestId);

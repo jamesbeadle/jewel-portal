@@ -28,14 +28,12 @@ public sealed class AssignMessageToRequestHandler : ICommandHandler<AssignMessag
         var snapshot = await graph.GetSnapshotAsync(command.MessageId, command.InternetMessageId, cancellationToken)
             ?? throw new InvalidOperationException("The email could not be read from the mailbox.");
 
-        // Tag the email to this request first, verified by read-back; only record it once that sticks.
+        // Tag the email to this request, verified by read-back. The tag IS the association — no copy of
+        // the email is stored; the request reads its emails live by tag (RequestEmailReader).
         var tagged = await graph.AssignAsync(
             command.MessageId, snapshot.InternetMessageId, TriageCategories.ForRequest(request.TagReference), cancellationToken);
         if (!tagged)
             throw new InvalidOperationException("The email couldn't be tagged to the request. Please try again.");
-
-        context.RequestMessages.Add(MailboxRequestMessage.From(snapshot, request.RequestId));
-        await context.SaveChangesAsync(cancellationToken);
 
         return new Acknowledgement(request.RequestId);
     }
@@ -89,8 +87,9 @@ public sealed class CreateRequestFromMessageHandler : ICommandHandler<CreateRequ
         if (!tagged)
             throw new InvalidOperationException("The email couldn't be tagged to the new request. Please try again.");
 
+        // The tag is the only link to the email — no copy is stored. The request reads its emails live
+        // by tag (RequestEmailReader) for the conversation view, LLM context, and document.
         context.Requests.Add(request);
-        context.RequestMessages.Add(MailboxRequestMessage.From(snapshot, request.RequestId));
         await context.SaveChangesAsync(cancellationToken);
 
         // Issue the rendered document to the project's contacts (no-op when unconfigured / no contacts).
@@ -102,25 +101,4 @@ public sealed class CreateRequestFromMessageHandler : ICommandHandler<CreateRequ
     // Email subjects/bodies can exceed the request column limits; clamp so a long email can't throw on save.
     private static string Clamp(string value, int maxLength) =>
         string.IsNullOrEmpty(value) || value.Length <= maxLength ? value : value[..maxLength];
-}
-
-/// <summary>Builds the inbound, shared conversation entry that records a mailbox message against a
-/// request — the live-read equivalent of IntakeConversation, sourced from a live snapshot.</summary>
-internal static class MailboxRequestMessage
-{
-    public static RequestMessageEntity From(MailboxSnapshot s, string requestId) => new()
-    {
-        MessageId = RequestsIdentifierFactory.Next(),
-        RequestId = requestId,
-        AuthorEmail = s.FromEmail,
-        AuthorName = string.IsNullOrWhiteSpace(s.FromName) ? s.FromEmail : s.FromName,
-        Body = string.IsNullOrWhiteSpace(s.BodyPreview) ? "(no message body)" : s.BodyPreview,
-        Visibility = (int)MessageVisibility.Shared,
-        PostedAt = s.ReceivedAt,
-        Direction = (int)MessageDirection.Inbound,
-        EmailMessageId = s.InternetMessageId,
-        InReplyTo = s.InReplyTo,
-        ConversationId = s.ConversationId,
-        SentStatus = (int)MessageSentStatus.NotApplicable
-    };
 }

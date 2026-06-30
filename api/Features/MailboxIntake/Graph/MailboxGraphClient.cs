@@ -49,6 +49,10 @@ public interface IMailboxGraphClient
     /// <summary>One page of the discarded pile: Inbox messages tagged discarded, newest first.</summary>
     Task<MailboxPage> ListDiscardedAsync(string? cursor, int take, CancellationToken ct);
 
+    /// <summary>One page of the emails tagged to a specific record (its workflow tag), newest first.
+    /// This is how a record reads its associated emails live — no copies are stored.</summary>
+    Task<MailboxPage> ListByTagAsync(string tag, string? cursor, int take, CancellationToken ct);
+
     /// <summary>Tag an email triaged + discarded. Returns true only once the tags are read back present.</summary>
     Task<bool> DiscardAsync(string messageId, string? internetMessageId, CancellationToken ct);
 
@@ -85,6 +89,8 @@ public sealed class NullMailboxGraphClient : IMailboxGraphClient
         Task.FromResult(new MailboxPage(Array.Empty<MailboxMessage>(), null, 0));
     public Task<MailboxPage> ListDiscardedAsync(string? cursor, int take, CancellationToken ct) =>
         Task.FromResult(new MailboxPage(Array.Empty<MailboxMessage>(), null, 0));
+    public Task<MailboxPage> ListByTagAsync(string tag, string? cursor, int take, CancellationToken ct) =>
+        Task.FromResult(new MailboxPage(Array.Empty<MailboxMessage>(), null, 0));
     public Task<bool> DiscardAsync(string messageId, string? internetMessageId, CancellationToken ct) => Task.FromResult(false);
     public Task<bool> RestoreAsync(string messageId, string? internetMessageId, CancellationToken ct) => Task.FromResult(false);
     public Task<bool> AssignAsync(string messageId, string? internetMessageId, string requestCategory, CancellationToken ct) => Task.FromResult(false);
@@ -120,6 +126,9 @@ public sealed class MailboxGraphClient : IMailboxGraphClient
 
     public Task<MailboxPage> ListDiscardedAsync(string? cursor, int take, CancellationToken ct) =>
         ListFilteredAsync($"categories/any(c:c eq '{TriageCategories.Discarded}')", cursor, take, ct);
+
+    public Task<MailboxPage> ListByTagAsync(string tag, string? cursor, int take, CancellationToken ct) =>
+        ListFilteredAsync($"categories/any(c:c eq '{tag}')", cursor, take, ct);
 
     private async Task<MailboxPage> ListFilteredAsync(string filter, string? cursor, int take, CancellationToken ct)
     {
@@ -262,24 +271,41 @@ public sealed class MailboxGraphClient : IMailboxGraphClient
     // Categories we've already ensured exist in the mailbox master list this process (load-once cache).
     private HashSet<string>? _masterCategories;
     private readonly SemaphoreSlim _masterCategoryGate = new(1, 1);
+    // Set once if the app lacks MailboxSettings.ReadWrite (403): we then stop trying entirely so a missing
+    // permission doesn't add a failing Graph call to every single tag operation.
+    private bool _masterCategoriesDisabled;
 
     /// <summary>Ensure a category exists in the mailbox's master category list (so Outlook shows it as a
     /// coloured label). Idempotent and best-effort: tagging still works if this fails — the label just
-    /// won't be coloured. The master list is read once per process and cached.</summary>
+    /// won't be coloured. Needs the <c>MailboxSettings.ReadWrite</c> app permission; without it we get a
+    /// 403 and quietly disable this step. The master list is read once per process and cached.</summary>
     private async Task EnsureMasterCategoryAsync(string name, CancellationToken ct)
     {
+        if (_masterCategoriesDisabled)
+            return;
         if (_masterCategories is not null && _masterCategories.Contains(name))
             return;
 
         await _masterCategoryGate.WaitAsync(ct);
         try
         {
+            if (_masterCategoriesDisabled)
+                return;
+
             var listUrl = $"{GraphBase}/users/{Mailbox}/outlook/masterCategories";
 
             if (_masterCategories is null)
             {
                 _masterCategories = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
                 using var existing = await SendAsync(HttpMethod.Get, listUrl, content: null, ct, allowNotFound: true);
+                if (existing.StatusCode == HttpStatusCode.Forbidden)
+                {
+                    _masterCategoriesDisabled = true;
+                    _logger.LogInformation(
+                        "Mailbox master categories not writable (needs MailboxSettings.ReadWrite). Tags still apply; "
+                        + "they just won't show as coloured labels in Outlook.");
+                    return;
+                }
                 if (existing.IsSuccessStatusCode)
                 {
                     await using var stream = await existing.Content.ReadAsStreamAsync(ct);
@@ -296,6 +322,11 @@ public sealed class MailboxGraphClient : IMailboxGraphClient
 
             var payload = JsonContent.Create(new { displayName = name, color = ColourFor(name) });
             using var create = await SendAsync(HttpMethod.Post, listUrl, payload, ct, allowNotFound: true);
+            if (create.StatusCode == HttpStatusCode.Forbidden)
+            {
+                _masterCategoriesDisabled = true;
+                return;
+            }
             if (!create.IsSuccessStatusCode)
                 _logger.LogWarning("Master-category create for {Name} failed: {Status} (tagging continues).",
                     name, (int)create.StatusCode);

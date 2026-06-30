@@ -3,6 +3,7 @@ using Jewel.JPMS.Api.Features.MailboxIntake;
 using Jewel.JPMS.Api.Features.MailboxIntake.Actions;
 using Jewel.JPMS.Api.Features.MailboxIntake.Graph;
 using Jewel.JPMS.Api.Features.MailboxIntake.Queue;
+using Jewel.JPMS.Api.Features.Requests;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -29,17 +30,24 @@ var host = new HostBuilder()
         var mailboxOptions = MailboxIntakeOptions.FromConfiguration(context.Configuration);
         services.AddSingleton(mailboxOptions);
 
-        // Graph client: real when configured, otherwise a logged no-op (so the host always starts).
+        // Graph clients: real when configured, otherwise logged no-ops (so the host always starts).
+        // IGraphMailClient sends; IMailboxGraphClient reads a request's emails live by tag for the
+        // document the worker emails (so the sent PDF matches the one downloaded in the app).
         if (mailboxOptions.Enabled && mailboxOptions.IsConfigured)
         {
             services.AddSingleton<GraphTokenProvider>();
             services.AddSingleton<HttpClient>();
             services.AddSingleton<IGraphMailClient, GraphMailClient>();
+            services.AddSingleton<IMailboxGraphClient, MailboxGraphClient>();
         }
         else
         {
             services.AddSingleton<IGraphMailClient, NullGraphMailClient>();
+            services.AddSingleton<IMailboxGraphClient, NullMailboxGraphClient>();
         }
+
+        // Reads a request's emails live by tag (shared with the API). Scoped: one per queue invocation.
+        services.AddScoped<RequestEmailReader>();
 
         // Queue producer + action scheduler: ingestion auto-link enqueues a folder move onto the
         // same mailbox-actions queue the MailboxActionWorker consumes. Mirrors the SWA API wiring;

@@ -48,6 +48,11 @@
     <Compile Include="..\api\Features\Requests\Documents\RequestDocumentBuilder.cs" Link="Shared\Documents\RequestDocumentBuilder.cs" />
     <Compile Include="..\api\Features\Requests\Documents\RequestDocumentRenderer.cs" Link="Shared\Documents\RequestDocumentRenderer.cs" />
     <Compile Include="..\api\Features\Requests\Documents\DocumentFontResolver.cs" Link="Shared\Documents\DocumentFontResolver.cs" />
+    <!-- Live mailbox read-by-tag: the worker builds the same document the app downloads, so it needs to
+         read a request's tagged emails live (RequestEmailReader -> MailboxGraphClient). Binds to the
+         worker's own GraphTokenProvider (same namespace + signature). -->
+    <Compile Include="..\api\Features\MailboxIntake\Graph\MailboxGraphClient.cs" Link="Shared\Graph\MailboxGraphClient.cs" />
+    <Compile Include="..\api\Features\Requests\RequestEmailReader.cs" Link="Shared\RequestEmailReader.cs" />
   </ItemGroup>
 
   <ItemGroup>

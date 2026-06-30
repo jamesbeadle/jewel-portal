@@ -12,7 +12,7 @@ namespace Jewel.JPMS.Api.Features.Requests.Documents;
 public static class RequestDocumentBuilder
 {
     public static async Task<RequestDocumentModel?> BuildAsync(
-        JpmsContext context, string requestId, CancellationToken ct)
+        JpmsContext context, string requestId, IReadOnlyList<MailboxMessage> emails, CancellationToken ct)
     {
         var request = await context.Requests
             .FirstOrDefaultAsync(r => r.RequestId == requestId, ct);
@@ -33,13 +33,23 @@ public static class RequestDocumentBuilder
             .ToListAsync(ct);
 
         // Only the Shared leg of the thread belongs on a client-facing document; internal Jewel
-        // discussion never leaves the platform.
-        var activity = await context.RequestMessages
-            .Where(m => m.RequestId == requestId && m.Visibility == (int)MessageVisibility.Shared)
-            .OrderBy(m => m.PostedAt)
-            .Select(m => new RequestDocumentActivity(
-                m.AuthorName, m.Body, m.PostedAt, m.Direction == (int)MessageDirection.Inbound))
+        // discussion never leaves the platform. In-app Shared activity comes from SQL; the inbound
+        // email leg is the emails tagged to this request, read live (legacy stored Inbound rows are
+        // excluded so they don't double up). The two are merged and ordered by time.
+        var storedActivity = await context.RequestMessages
+            .Where(m => m.RequestId == requestId
+                && m.Visibility == (int)MessageVisibility.Shared
+                && m.Direction != (int)MessageDirection.Inbound)
+            .Select(m => new RequestDocumentActivity(m.AuthorName, m.Body, m.PostedAt, false))
             .ToListAsync(ct);
+
+        var activity = storedActivity
+            .Concat(emails.Select(e => new RequestDocumentActivity(
+                string.IsNullOrWhiteSpace(e.FromName) ? e.FromEmail : e.FromName,
+                string.IsNullOrWhiteSpace(e.BodyPreview) ? "(no message body)" : e.BodyPreview,
+                e.ReceivedAt, true)))
+            .OrderBy(a => a.PostedAt)
+            .ToList();
 
         var kind = (RequestType)request.Kind;
         var status = (RequestStatus)request.Status;

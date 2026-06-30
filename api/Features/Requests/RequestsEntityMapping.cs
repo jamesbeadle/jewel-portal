@@ -41,4 +41,21 @@ internal static class RequestsEntityMapping
         InReplyTo: entity.InReplyTo,
         ConversationId: entity.ConversationId,
         SentStatus: (MessageSentStatus)entity.SentStatus);
+
+    // A mailbox email read live by tag, presented as the inbound, Shared leg of a request's
+    // conversation. The body is the preview text (parity with the old snapshot); full bodies are
+    // fetched on demand elsewhere. Never persisted — built fresh on every read.
+    public static RequestMessage ToInboundMessage(this MailboxMessage e, string requestId) => new(
+        MessageId: string.IsNullOrEmpty(e.InternetMessageId) ? e.Id : e.InternetMessageId,
+        RequestId: requestId,
+        AuthorEmail: e.FromEmail,
+        AuthorName: string.IsNullOrWhiteSpace(e.FromName) ? e.FromEmail : e.FromName,
+        Body: string.IsNullOrWhiteSpace(e.BodyPreview) ? "(no message body)" : e.BodyPreview,
+        Visibility: MessageVisibility.Shared,
+        PostedAt: e.ReceivedAt,
+        Direction: MessageDirection.Inbound,
+        EmailMessageId: e.InternetMessageId,
+        InReplyTo: null,
+        ConversationId: null,
+        SentStatus: MessageSentStatus.NotApplicable);
 }

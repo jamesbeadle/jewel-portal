@@ -1,5 +1,6 @@
 using System.Text;
 using Jewel.JPMS.Api.Data;
+using Jewel.JPMS.Api.Features.Requests;
 using Jewel.JPMS.Models;
 using Microsoft.EntityFrameworkCore;
 
@@ -14,8 +15,10 @@ namespace Jewel.JPMS.Api.Features.Agents;
 public sealed class RequestContextAssembler
 {
     private readonly JpmsContext context;
+    private readonly RequestEmailReader emails;
 
-    public RequestContextAssembler(JpmsContext context) { this.context = context; }
+    public RequestContextAssembler(JpmsContext context, RequestEmailReader emails)
+    { this.context = context; this.emails = emails; }
 
     public async Task<RequestAgentContext?> AssembleAsync(string requestId, CancellationToken cancellationToken)
     {
@@ -26,8 +29,8 @@ public sealed class RequestContextAssembler
         var header = BuildHeader(request);
         var conversation = await BuildConversationAsync(requestId, cancellationToken);
 
-        // In the live-read model the originating email is captured into the conversation (RequestMessages)
-        // when it is assigned/created, so there is no separate intake-email section to assemble.
+        // The conversation already weaves in the emails tagged to this request (read live by tag), so
+        // there is no separate intake-email section to assemble.
         return new RequestAgentContext(requestId, header, conversation, "");
     }
 
@@ -58,18 +61,26 @@ public sealed class RequestContextAssembler
 
     private async Task<string> BuildConversationAsync(string requestId, CancellationToken cancellationToken)
     {
-        var messages = await context.RequestMessages
-            .Where(m => m.RequestId == requestId)
-            .OrderBy(m => m.PostedAt)
+        // In-app activity (notes, outbound sends) from SQL, plus the emails tagged to this request read
+        // live by tag — merged and ordered by time. Legacy stored Inbound rows are excluded; the email
+        // leg now comes from the mailbox, not a stored copy.
+        var stored = await context.RequestMessages
+            .Where(m => m.RequestId == requestId && m.Direction != (int)MessageDirection.Inbound)
             .ToListAsync(cancellationToken);
+
+        var live = await emails.ForRequestAsync(requestId, cancellationToken);
+
+        var messages = stored.Select(m => m.ToModel())
+            .Concat(live.Select(e => e.ToInboundMessage(requestId)))
+            .OrderBy(m => m.PostedAt)
+            .ToList();
 
         if (messages.Count == 0) return "";
 
         var sb = new StringBuilder();
         foreach (var m in messages)
         {
-            var direction = (MessageDirection)m.Direction;
-            sb.AppendLine($"[{m.PostedAt:yyyy-MM-dd HH:mm}] {m.AuthorName} <{m.AuthorEmail}> ({direction}):");
+            sb.AppendLine($"[{m.PostedAt:yyyy-MM-dd HH:mm}] {m.AuthorName} <{m.AuthorEmail}> ({m.Direction}):");
             sb.AppendLine(m.Body);
             sb.AppendLine();
         }
