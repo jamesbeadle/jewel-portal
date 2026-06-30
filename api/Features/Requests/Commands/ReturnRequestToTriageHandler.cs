@@ -27,7 +27,7 @@ public sealed class ReturnRequestToTriageHandler : ICommandHandler<ReturnRequest
             return new Acknowledgement(command.RequestId);
 
         // Clear the request's tags from its emails so they re-enter the triage queue (best-effort).
-        await graph.ClearRequestTagsAsync(TriageCategories.ForRequest(request.Number), cancellationToken);
+        await graph.ClearRequestTagsAsync(TriageCategories.ForRequest(request.TagReference), cancellationToken);
 
         // Drop the request's conversation history and the request itself.
         var messages = await context.RequestMessages

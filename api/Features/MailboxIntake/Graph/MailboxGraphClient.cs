@@ -11,14 +11,26 @@ namespace Jewel.JPMS.Api.Features.MailboxIntake.Graph;
 /// email — it tags it — so the Inbox stays whole and each view is a category filter.</summary>
 public static class TriageCategories
 {
-    /// <summary>Present on any email that has been triaged (the queue = Inbox without this).</summary>
-    public const string Triaged = "JPMS/Triaged";
+    /// <summary>The marker present on any email that carries a JPMS workflow tag. The triage queue is
+    /// Inbox WITHOUT this; the Tagged view is Inbox WITH it. Graph only filters categories by exact
+    /// match (no "starts-with"), so this single marker is how we express "has any JPMS tag".</summary>
+    public const string Marker = "JPMS";
+
+    /// <summary>Prefix shared by every workflow tag (e.g. "JPMS/Discarded", "JPMS/RFI-001"). The bare
+    /// <see cref="Marker"/> has no trailing slash, so it never matches this — that's how RemoveTag
+    /// decides whether any workflow tags remain.</summary>
+    public const string WorkflowPrefix = "JPMS/";
 
     /// <summary>Present on a discarded ("not a request") email.</summary>
     public const string Discarded = "JPMS/Discarded";
 
-    /// <summary>The category for an email assigned to a request, e.g. "JPMS/REQ-0014".</summary>
-    public static string ForRequest(int number) => $"JPMS/REQ-{number:0000}";
+    /// <summary>The workflow tag for an email assigned to a record, from its reference
+    /// (e.g. "RFI-001" -> "JPMS/RFI-001"). The record reads its emails back by this exact tag.</summary>
+    public static string ForRequest(string reference) => $"JPMS/{reference.Trim()}";
+
+    /// <summary>True if a category is a JPMS workflow tag (not the bare marker, not a user category).</summary>
+    public static bool IsWorkflowTag(string category) =>
+        category.StartsWith(WorkflowPrefix, StringComparison.OrdinalIgnoreCase);
 }
 
 /// <summary>
@@ -104,7 +116,7 @@ public sealed class MailboxGraphClient : IMailboxGraphClient
     private string Mailbox => Uri.EscapeDataString(_options.Mailbox);
 
     public Task<MailboxPage> ListInboxAsync(string? cursor, int take, CancellationToken ct) =>
-        ListFilteredAsync($"not categories/any(c:c eq '{TriageCategories.Triaged}')", cursor, take, ct);
+        ListFilteredAsync($"not categories/any(c:c eq '{TriageCategories.Marker}')", cursor, take, ct);
 
     public Task<MailboxPage> ListDiscardedAsync(string? cursor, int take, CancellationToken ct) =>
         ListFilteredAsync($"categories/any(c:c eq '{TriageCategories.Discarded}')", cursor, take, ct);
@@ -154,13 +166,13 @@ public sealed class MailboxGraphClient : IMailboxGraphClient
     }
 
     public Task<bool> DiscardAsync(string messageId, string? internetMessageId, CancellationToken ct) =>
-        AddCategoriesAsync(messageId, internetMessageId, new[] { TriageCategories.Triaged, TriageCategories.Discarded }, ct);
+        AddTagAsync(messageId, internetMessageId, TriageCategories.Discarded, ct);
 
     public Task<bool> RestoreAsync(string messageId, string? internetMessageId, CancellationToken ct) =>
-        RemoveCategoriesAsync(messageId, internetMessageId, new[] { TriageCategories.Triaged, TriageCategories.Discarded }, ct);
+        RemoveTagAsync(messageId, internetMessageId, TriageCategories.Discarded, ct);
 
     public Task<bool> AssignAsync(string messageId, string? internetMessageId, string requestCategory, CancellationToken ct) =>
-        AddCategoriesAsync(messageId, internetMessageId, new[] { TriageCategories.Triaged, requestCategory }, ct);
+        AddTagAsync(messageId, internetMessageId, requestCategory, ct);
 
     public async Task<int> ClearRequestTagsAsync(string requestCategory, CancellationToken ct)
     {
@@ -173,7 +185,7 @@ public sealed class MailboxGraphClient : IMailboxGraphClient
 
             var any = false;
             foreach (var id in ids)
-                if (await RemoveCategoriesAsync(id, null, new[] { TriageCategories.Triaged, requestCategory }, ct))
+                if (await RemoveTagAsync(id, null, requestCategory, ct))
                 {
                     cleared++;
                     any = true;
@@ -186,9 +198,16 @@ public sealed class MailboxGraphClient : IMailboxGraphClient
     }
 
     // --- Verified tag operations: write the categories, then read them back to confirm. ---
+    // A single tag is added/removed at a time, and the marker is kept in lockstep: present whenever
+    // the email has at least one JPMS/ workflow tag, absent (→ back to triage) when the last one goes.
 
-    private async Task<bool> AddCategoriesAsync(string messageId, string? imid, string[] add, CancellationToken ct)
+    /// <summary>Add a workflow tag (ensuring the marker), verified by read-back. Registers the tag and
+    /// marker in the mailbox master category list so they show as coloured labels in Outlook.</summary>
+    private async Task<bool> AddTagAsync(string messageId, string? imid, string tag, CancellationToken ct)
     {
+        await EnsureMasterCategoryAsync(TriageCategories.Marker, ct);
+        await EnsureMasterCategoryAsync(tag, ct);
+
         var loaded = await LoadAsync(messageId, imid, ct);
         if (loaded is null)
         {
@@ -197,17 +216,24 @@ public sealed class MailboxGraphClient : IMailboxGraphClient
         }
         var (id, current) = loaded.Value;
 
-        var updated = current.Concat(add).Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
+        var updated = current
+            .Concat(new[] { TriageCategories.Marker, tag })
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
         if (!await PatchCategoriesAsync(id, updated, ct))
             return false;
 
         var after = await GetCategoriesAsync(id, ct);
-        var ok = after is not null && add.All(a => after.Contains(a, StringComparer.OrdinalIgnoreCase));
-        if (!ok) _logger.LogWarning("Tag-add for {MessageId} did not verify.", messageId);
+        var ok = after is not null
+            && after.Contains(tag, StringComparer.OrdinalIgnoreCase)
+            && after.Contains(TriageCategories.Marker, StringComparer.OrdinalIgnoreCase);
+        if (!ok) _logger.LogWarning("Tag-add ({Tag}) for {MessageId} did not verify.", tag, messageId);
         return ok;
     }
 
-    private async Task<bool> RemoveCategoriesAsync(string messageId, string? imid, string[] remove, CancellationToken ct)
+    /// <summary>Remove a workflow tag; if no JPMS/ workflow tags remain afterwards, also remove the
+    /// marker so the email returns to the triage queue. Verified by read-back.</summary>
+    private async Task<bool> RemoveTagAsync(string messageId, string? imid, string tag, CancellationToken ct)
     {
         var loaded = await LoadAsync(messageId, imid, ct);
         if (loaded is null)
@@ -217,15 +243,77 @@ public sealed class MailboxGraphClient : IMailboxGraphClient
         }
         var (id, current) = loaded.Value;
 
-        var updated = current.Where(c => !remove.Contains(c, StringComparer.OrdinalIgnoreCase)).ToArray();
-        if (!await PatchCategoriesAsync(id, updated, ct))
+        var remaining = current
+            .Where(c => !c.Equals(tag, StringComparison.OrdinalIgnoreCase))
+            .ToList();
+        // No workflow tags left → drop the marker too (back to triage).
+        if (!remaining.Any(TriageCategories.IsWorkflowTag))
+            remaining.RemoveAll(c => c.Equals(TriageCategories.Marker, StringComparison.OrdinalIgnoreCase));
+
+        if (!await PatchCategoriesAsync(id, remaining.ToArray(), ct))
             return false;
 
         var after = await GetCategoriesAsync(id, ct);
-        var ok = after is not null && !remove.Any(r => after.Contains(r, StringComparer.OrdinalIgnoreCase));
-        if (!ok) _logger.LogWarning("Tag-remove for {MessageId} did not verify.", messageId);
+        var ok = after is not null && !after.Contains(tag, StringComparer.OrdinalIgnoreCase);
+        if (!ok) _logger.LogWarning("Tag-remove ({Tag}) for {MessageId} did not verify.", tag, messageId);
         return ok;
     }
+
+    // Categories we've already ensured exist in the mailbox master list this process (load-once cache).
+    private HashSet<string>? _masterCategories;
+    private readonly SemaphoreSlim _masterCategoryGate = new(1, 1);
+
+    /// <summary>Ensure a category exists in the mailbox's master category list (so Outlook shows it as a
+    /// coloured label). Idempotent and best-effort: tagging still works if this fails — the label just
+    /// won't be coloured. The master list is read once per process and cached.</summary>
+    private async Task EnsureMasterCategoryAsync(string name, CancellationToken ct)
+    {
+        if (_masterCategories is not null && _masterCategories.Contains(name))
+            return;
+
+        await _masterCategoryGate.WaitAsync(ct);
+        try
+        {
+            var listUrl = $"{GraphBase}/users/{Mailbox}/outlook/masterCategories";
+
+            if (_masterCategories is null)
+            {
+                _masterCategories = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                using var existing = await SendAsync(HttpMethod.Get, listUrl, content: null, ct, allowNotFound: true);
+                if (existing.IsSuccessStatusCode)
+                {
+                    await using var stream = await existing.Content.ReadAsStreamAsync(ct);
+                    using var doc = await JsonDocument.ParseAsync(stream, cancellationToken: ct);
+                    if (doc.RootElement.TryGetProperty("value", out var arr) && arr.ValueKind == JsonValueKind.Array)
+                        foreach (var item in arr.EnumerateArray())
+                            if (item.TryGetProperty("displayName", out var dn) && dn.GetString() is { Length: > 0 } d)
+                                _masterCategories.Add(d);
+                }
+            }
+
+            if (_masterCategories.Contains(name))
+                return;
+
+            var payload = JsonContent.Create(new { displayName = name, color = ColourFor(name) });
+            using var create = await SendAsync(HttpMethod.Post, listUrl, payload, ct, allowNotFound: true);
+            if (!create.IsSuccessStatusCode)
+                _logger.LogWarning("Master-category create for {Name} failed: {Status} (tagging continues).",
+                    name, (int)create.StatusCode);
+
+            // Cache regardless, so we don't hammer Graph retrying a category that can't be created.
+            _masterCategories.Add(name);
+        }
+        finally
+        {
+            _masterCategoryGate.Release();
+        }
+    }
+
+    // Outlook category colour presets: marker grey, discarded red, workflow tags blue.
+    private static string ColourFor(string name) =>
+        name.Equals(TriageCategories.Marker, StringComparison.OrdinalIgnoreCase) ? "preset8"
+        : name.Equals(TriageCategories.Discarded, StringComparison.OrdinalIgnoreCase) ? "preset0"
+        : "preset5";
 
     // Resolve the live id + current categories, re-finding by internetMessageId if the id is stale.
     private async Task<(string Id, string[] Categories)?> LoadAsync(string messageId, string? imid, CancellationToken ct)

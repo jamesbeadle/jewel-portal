@@ -11,10 +11,10 @@
 <PageTitle>Triage · JPMS</PageTitle>
 
 @*
-    Live-read triage. The mailbox is the single source of truth: the Queue is the Inbox read live and
-    the Discarded tab is the "General" folder read live. Every action is a single mailbox move —
-    discard (Inbox -> General), restore (General -> Inbox), assign/create (Inbox -> request folder).
-    Nothing about un-triaged mail is mirrored in the database.
+    Live-read triage. The mailbox is the single source of truth and nothing ever moves — triage just
+    adds/removes category tags on the email. The Queue is Inbox messages with no JPMS tag (read live);
+    the Discarded tab is messages tagged "JPMS/Discarded". Discard/restore/assign add or remove tags,
+    each verified by reading the categories back. Nothing about un-triaged mail is stored in the database.
 *@
 
 @*
@@ -346,7 +346,7 @@ else
                                 else if (mode == TriageMode.Discard)
                                 {
                                     <div class="space-y-3">
-                                        <p class="text-sm text-content-muted">Discard this email if it isn’t a request (spam, an auto-reply, or sent to the wrong place). It moves to the General folder and leaves the queue — you can restore it from the Discarded tab.</p>
+                                        <p class="text-sm text-content-muted">Discard this email if it isn’t a request (spam, an auto-reply, or sent to the wrong place). This adds a “discarded” category tag to it — the email stays put in the mailbox — and removes it from the queue. You can restore it from the Discarded tab.</p>
                                         <button type="button" class="btn-secondary border-negative/40 text-negative hover:border-negative" disabled="@busy" @onclick="DoDiscard">Discard email</button>
                                     </div>
                                 }
@@ -437,7 +437,7 @@ else
 
                                 <div class="pt-3 border-t border-line">
                                     <p class="text-sm text-content-muted mb-3">
-                                        This email was discarded. Restore it to put it back in the triage queue (moves it from General back to the Inbox).
+                                        This email was discarded. Restore it to remove the “discarded” tag and put it back in the triage queue.
                                     </p>
                                     <button type="button" class="btn-primary" disabled="@busy" @onclick="DoRestore">Restore to triage</button>
                                 </div>

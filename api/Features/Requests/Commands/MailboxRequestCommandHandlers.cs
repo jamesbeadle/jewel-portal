@@ -30,7 +30,7 @@ public sealed class AssignMessageToRequestHandler : ICommandHandler<AssignMessag
 
         // Tag the email to this request first, verified by read-back; only record it once that sticks.
         var tagged = await graph.AssignAsync(
-            command.MessageId, snapshot.InternetMessageId, TriageCategories.ForRequest(request.Number), cancellationToken);
+            command.MessageId, snapshot.InternetMessageId, TriageCategories.ForRequest(request.TagReference), cancellationToken);
         if (!tagged)
             throw new InvalidOperationException("The email couldn't be tagged to the request. Please try again.");
 
@@ -85,7 +85,7 @@ public sealed class CreateRequestFromMessageHandler : ICommandHandler<CreateRequ
         // Tag the email to this new request first, verified by read-back; only persist the request
         // once the tag sticks, so we never create a request whose email is still sitting in the queue.
         var tagged = await graph.AssignAsync(
-            command.MessageId, snapshot.InternetMessageId, TriageCategories.ForRequest(nextNumber), cancellationToken);
+            command.MessageId, snapshot.InternetMessageId, TriageCategories.ForRequest(request.TagReference), cancellationToken);
         if (!tagged)
             throw new InvalidOperationException("The email couldn't be tagged to the new request. Please try again.");
 

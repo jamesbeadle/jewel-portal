@@ -66,4 +66,11 @@ public sealed class RequestEntity
     // Graph id of this request's mailbox folder, set the first time an email is filed against it.
     // Cached so subsequent emails for the same request reuse the folder rather than recreating it.
     [MaxLength(450)]     public string? MailboxFolderId { get; set; }
+
+    // The canonical reference this record's emails are tagged with in the mailbox (e.g. "RFI-001" ->
+    // category "JPMS/RFI-001"). Prefers the human reference; falls back to REQ-NNNN when blank so a tag
+    // is always well-formed. Computed, not stored.
+    [System.ComponentModel.DataAnnotations.Schema.NotMapped]
+    public string TagReference =>
+        string.IsNullOrWhiteSpace(Reference) ? $"REQ-{Number:0000}" : Reference.Trim();
 }
