@@ -1,37 +1,49 @@
 using Jewel.JPMS.Api.Cqrs;
 using Jewel.JPMS.Api.Features.MailboxIntake.Graph;
+using Jewel.JPMS.Api.Features.RecordLinks;
 using Jewel.JPMS.Contracts.Cqrs;
 using Jewel.JPMS.Contracts.Requests;
 
 namespace Jewel.JPMS.Api.Features.Requests.Commands;
 
-/// <summary>Discard = move the message out of the Inbox into the "General" folder. Best-effort and
-/// idempotent: a message that has already gone is a no-op. The screen re-reads the Inbox live, so the
-/// move result is reflected without any stored state.</summary>
+/// <summary>Discard = tag the email "not a request". Like linking to a record, this applies across the
+/// WHOLE Inbox conversation (the email + its replies share a Graph conversationId), so discarding a
+/// thread removes all of it from the queue, not just the one message. The anchor tag is verified;
+/// sibling tagging is best-effort. The screen re-reads the Inbox live, so the result shows immediately.</summary>
 public sealed class DiscardMessageHandler : ICommandHandler<DiscardMessage, Acknowledgement>
 {
     private readonly IMailboxGraphClient graph;
-    public DiscardMessageHandler(IMailboxGraphClient graph) { this.graph = graph; }
+    private readonly RecordThreadTagger threadTagger;
+    public DiscardMessageHandler(IMailboxGraphClient graph, RecordThreadTagger threadTagger)
+    { this.graph = graph; this.threadTagger = threadTagger; }
 
     public async Task<Acknowledgement> HandleAsync(DiscardMessage command, CancellationToken cancellationToken)
     {
-        // Tag, then read back to confirm. Only report success once it's verified; otherwise fail so
-        // the screen surfaces an error rather than a false "done".
-        var ok = await graph.DiscardAsync(command.MessageId, command.InternetMessageId, cancellationToken);
+        // Read the email back to pick up its conversation id, then tag the whole thread discarded
+        // (verified on the anchor). Fail loudly if the anchor doesn't stick, so the screen shows an
+        // error rather than a false "done".
+        var snapshot = await graph.GetSnapshotAsync(command.MessageId, command.InternetMessageId, cancellationToken);
+        var ok = await threadTagger.TagThreadAsync(
+            command.MessageId, command.InternetMessageId, snapshot?.ConversationId, TriageCategories.Discarded, cancellationToken);
         if (!ok) throw new InvalidOperationException("The email couldn't be tagged as discarded. Please try again.");
         return new Acknowledgement(command.MessageId);
     }
 }
 
-/// <summary>Restore = move the message from "General" back into the Inbox.</summary>
+/// <summary>Restore = the inverse of discard: remove the discarded tag from the email AND the rest of
+/// its conversation, putting the whole thread back into the triage queue.</summary>
 public sealed class RestoreMessageHandler : ICommandHandler<RestoreMessage, Acknowledgement>
 {
     private readonly IMailboxGraphClient graph;
-    public RestoreMessageHandler(IMailboxGraphClient graph) { this.graph = graph; }
+    private readonly RecordThreadTagger threadTagger;
+    public RestoreMessageHandler(IMailboxGraphClient graph, RecordThreadTagger threadTagger)
+    { this.graph = graph; this.threadTagger = threadTagger; }
 
     public async Task<Acknowledgement> HandleAsync(RestoreMessage command, CancellationToken cancellationToken)
     {
-        var ok = await graph.RestoreAsync(command.MessageId, command.InternetMessageId, cancellationToken);
+        var snapshot = await graph.GetSnapshotAsync(command.MessageId, command.InternetMessageId, cancellationToken);
+        var ok = await threadTagger.UntagThreadAsync(
+            command.MessageId, command.InternetMessageId, snapshot?.ConversationId, TriageCategories.Discarded, cancellationToken);
         if (!ok) throw new InvalidOperationException("The email couldn't be restored to the queue. Please try again.");
         return new Acknowledgement(command.MessageId);
     }

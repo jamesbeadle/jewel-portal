@@ -56,4 +56,23 @@ public sealed class RecordThreadTagger
                 tagged++;
         return tagged;
     }
+
+    // The inverse of TagThreadAsync: remove the category from the anchor (verified) and from every
+    // other Inbox message in its conversation that still carries it. Used to reverse a thread-wide tag,
+    // e.g. restoring a discarded thread. Returns false only if the anchor couldn't be un-tagged.
+    public async Task<bool> UntagThreadAsync(
+        string anchorMessageId, string? internetMessageId, string? conversationId, string category, CancellationToken ct)
+    {
+        var anchorCleared = await graph.RemoveTagAsync(anchorMessageId, internetMessageId, category, ct);
+        if (!anchorCleared)
+            return false;
+
+        if (!string.IsNullOrWhiteSpace(conversationId))
+        {
+            var ids = await graph.ListTaggedInboxIdsInConversationAsync(conversationId, category, ct);
+            foreach (var id in ids)
+                await graph.RemoveTagAsync(id, null, category, ct); // best-effort
+        }
+        return true;
+    }
 }

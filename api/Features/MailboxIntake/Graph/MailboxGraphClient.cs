@@ -93,6 +93,10 @@ public interface IMailboxGraphClient
     /// <summary>Inbox message ids in the given conversation that do NOT yet carry the category — i.e. the
     /// thread members still to be tagged (e.g. replies that arrived after the original link).</summary>
     Task<IReadOnlyList<string>> ListUntaggedInboxIdsInConversationAsync(string conversationId, string category, CancellationToken ct);
+
+    /// <summary>Inbox message ids in the given conversation that currently carry the category — i.e. the
+    /// thread members to un-tag when reversing a thread-wide tag (e.g. restoring a discarded thread).</summary>
+    Task<IReadOnlyList<string>> ListTaggedInboxIdsInConversationAsync(string conversationId, string category, CancellationToken ct);
 }
 
 /// <summary>The subset of a mailbox message recorded against a request when an email is assigned.</summary>
@@ -129,6 +133,8 @@ public sealed class NullMailboxGraphClient : IMailboxGraphClient
     public Task<IReadOnlyList<string>> ListInboxConversationIdsByCategoryAsync(string category, CancellationToken ct) =>
         Task.FromResult<IReadOnlyList<string>>(Array.Empty<string>());
     public Task<IReadOnlyList<string>> ListUntaggedInboxIdsInConversationAsync(string conversationId, string category, CancellationToken ct) =>
+        Task.FromResult<IReadOnlyList<string>>(Array.Empty<string>());
+    public Task<IReadOnlyList<string>> ListTaggedInboxIdsInConversationAsync(string conversationId, string category, CancellationToken ct) =>
         Task.FromResult<IReadOnlyList<string>>(Array.Empty<string>());
 }
 
@@ -459,6 +465,14 @@ public sealed class MailboxGraphClient : IMailboxGraphClient
         // to be tagged. The negated category clause needs eventual consistency (handled in CollectInboxFieldAsync).
         var filter = $"conversationId eq '{conversationId.Replace("'", "''")}' "
             + $"and not categories/any(c:c eq '{category.Replace("'", "''")}')";
+        return CollectInboxFieldAsync(filter, "id", ct);
+    }
+
+    public Task<IReadOnlyList<string>> ListTaggedInboxIdsInConversationAsync(string conversationId, string category, CancellationToken ct)
+    {
+        // conversationId eq '…' AND the email carries the tag → the thread members to un-tag.
+        var filter = $"conversationId eq '{conversationId.Replace("'", "''")}' "
+            + $"and categories/any(c:c eq '{category.Replace("'", "''")}')";
         return CollectInboxFieldAsync(filter, "id", ct);
     }
 
