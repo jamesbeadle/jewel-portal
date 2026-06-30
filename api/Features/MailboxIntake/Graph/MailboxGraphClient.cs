@@ -1,7 +1,6 @@
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
-using System.Text;
 using System.Text.Json;
 using Jewel.JPMS.Models;
 using Microsoft.Extensions.Logging;
@@ -112,44 +111,24 @@ public sealed class MailboxGraphClient : IMailboxGraphClient
 
     private async Task<MailboxPage> ListFilteredAsync(string filter, string? cursor, int take, CancellationToken ct)
     {
-        // The cursor is Graph's own @odata.nextLink, followed as-is for reliable continuation — but only
-        // if it targets THIS mailbox's inbox messages, never an arbitrary URL (so a forged cursor can't
-        // make the server fetch other data with the app token). Graph may echo the mailbox address either
-        // escaped ("projects%40…") or not ("projects@…"), so accept both forms.
-        var requestBase = $"{GraphBase}/users/{Mailbox}/mailFolders/inbox/messages";
-        bool CursorTargetsThisInbox(string c) =>
-            c.StartsWith(requestBase, StringComparison.OrdinalIgnoreCase)
-            || c.StartsWith($"{GraphBase}/users/{_options.Mailbox}/mailFolders/inbox/messages", StringComparison.OrdinalIgnoreCase);
+        take = Math.Clamp(take, 1, 100);
 
-        string url;
-        if (string.IsNullOrEmpty(cursor))
-        {
-            take = Math.Clamp(take, 1, 100);
-            url = requestBase
-                + $"?$filter={Uri.EscapeDataString(filter)}"
-                + "&$orderby=receivedDateTime%20desc"
-                + $"&$select={Summary}"
-                + $"&$top={take}&$count=true";
-        }
-        else
-        {
-            // The cursor is base64url(nextLink) — opaque + URL-safe so it survives the query string
-            // intact (Graph's nextLink contains '&', which a plain URL param would split/truncate).
-            var decoded = Base64UrlDecode(cursor);
-            if (decoded is null || !CursorTargetsThisInbox(decoded))
-            {
-                _logger.LogWarning("Ignoring an unexpected mailbox paging cursor.");
-                return new MailboxPage(Array.Empty<MailboxMessage>(), null, 0);
-            }
-            url = decoded;
-        }
+        // The cursor is simply the offset of the next page (a small number) — URL-safe and impossible
+        // to mangle in transit, unlike Graph's long nextLink. The probe confirmed $skip + $orderby +
+        // $count (eventual) pages this filter correctly.
+        var skip = 0;
+        if (!string.IsNullOrEmpty(cursor) && int.TryParse(cursor, out var s) && s > 0)
+            skip = s;
+
+        var url = $"{GraphBase}/users/{Mailbox}/mailFolders/inbox/messages"
+            + $"?$filter={Uri.EscapeDataString(filter)}"
+            + "&$orderby=receivedDateTime%20desc"
+            + $"&$select={Summary}"
+            + $"&$top={take}&$skip={skip}&$count=true";
 
         var items = new List<MailboxMessage>();
         int total = 0;
-        string? nextCursor = null;
 
-        // $count + the negated filter require advanced-query mode (ConsistencyLevel: eventual), which
-        // pages by the nextLink cursor rather than $skip — see the probe results.
         using var response = await SendAsync(HttpMethod.Get, url, content: null, ct, allowNotFound: true, consistencyEventual: true);
         if (!response.IsSuccessStatusCode)
         {
@@ -168,23 +147,10 @@ public sealed class MailboxGraphClient : IMailboxGraphClient
             foreach (var item in arr.EnumerateArray())
                 if (Parse(item) is { } m)
                     items.Add(m);
-        if (root.TryGetProperty("@odata.nextLink", out var nl) && nl.GetString() is { Length: > 0 } link)
-            nextCursor = Base64UrlEncode(link);
 
+        // There's another page when we haven't reached the total yet; the next cursor is just the offset.
+        var nextCursor = (skip + items.Count) < total ? (skip + take).ToString() : null;
         return new MailboxPage(items, nextCursor, total);
-    }
-
-    // URL-safe base64 so a cursor (Graph's nextLink, which contains '&', '=' etc.) survives our own
-    // query string without being unescaped/split by the URL layer.
-    private static string Base64UrlEncode(string value) =>
-        Convert.ToBase64String(Encoding.UTF8.GetBytes(value)).TrimEnd('=').Replace('+', '-').Replace('/', '_');
-
-    private static string? Base64UrlDecode(string value)
-    {
-        var s = value.Replace('-', '+').Replace('_', '/');
-        s += (s.Length % 4) switch { 2 => "==", 3 => "=", _ => "" };
-        try { return Encoding.UTF8.GetString(Convert.FromBase64String(s)); }
-        catch { return null; }
     }
 
     public Task<bool> DiscardAsync(string messageId, string? internetMessageId, CancellationToken ct) =>
