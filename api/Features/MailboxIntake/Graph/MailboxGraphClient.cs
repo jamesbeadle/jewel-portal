@@ -111,22 +111,26 @@ public sealed class MailboxGraphClient : IMailboxGraphClient
 
     private async Task<MailboxPage> ListFilteredAsync(string filter, string? cursor, int take, CancellationToken ct)
     {
-        // The Inbox-messages URL this read is allowed to touch. The cursor is Graph's own @odata.nextLink,
-        // which we follow as-is for reliable continuation — but only if it points here, never an arbitrary
-        // URL (so a forged cursor can't make the server fetch other data with the app token).
-        var allowedPrefix = $"{GraphBase}/users/{Mailbox}/mailFolders/inbox/messages";
+        // The cursor is Graph's own @odata.nextLink, followed as-is for reliable continuation — but only
+        // if it targets THIS mailbox's inbox messages, never an arbitrary URL (so a forged cursor can't
+        // make the server fetch other data with the app token). Graph may echo the mailbox address either
+        // escaped ("projects%40…") or not ("projects@…"), so accept both forms.
+        var requestBase = $"{GraphBase}/users/{Mailbox}/mailFolders/inbox/messages";
+        bool CursorTargetsThisInbox(string c) =>
+            c.StartsWith(requestBase, StringComparison.OrdinalIgnoreCase)
+            || c.StartsWith($"{GraphBase}/users/{_options.Mailbox}/mailFolders/inbox/messages", StringComparison.OrdinalIgnoreCase);
 
         string url;
         if (string.IsNullOrEmpty(cursor))
         {
             take = Math.Clamp(take, 1, 100);
-            url = allowedPrefix
+            url = requestBase
                 + $"?$filter={Uri.EscapeDataString(filter)}"
                 + "&$orderby=receivedDateTime%20desc"
                 + $"&$select={Summary}"
                 + $"&$top={take}&$count=true";
         }
-        else if (cursor.StartsWith(allowedPrefix, StringComparison.OrdinalIgnoreCase))
+        else if (CursorTargetsThisInbox(cursor))
         {
             url = cursor;
         }
