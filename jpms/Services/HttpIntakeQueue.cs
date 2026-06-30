@@ -22,6 +22,9 @@ public sealed class HttpIntakeQueue : IIntakeQueue
     public Task<MailboxPage> ListDiscardedLiveAsync(string? cursor = null, int take = 25, CancellationToken cancellationToken = default) =>
         queries.AskAsync(new ListDiscardedMessages(cursor, take), cancellationToken);
 
+    public Task<MailboxPage> ListTaggedLiveAsync(string? cursor = null, int take = 25, CancellationToken cancellationToken = default) =>
+        queries.AskAsync(new ListTaggedMessages(cursor, take), cancellationToken);
+
     public Task<MailboxMessageDetail> GetMessageDetailAsync(string messageId, string? internetMessageId, CancellationToken cancellationToken = default) =>
         queries.AskAsync(new GetMailboxMessageDetail(messageId, internetMessageId), cancellationToken);
 
@@ -30,6 +33,9 @@ public sealed class HttpIntakeQueue : IIntakeQueue
 
     public Task<Acknowledgement> RestoreMessageAsync(string messageId, string? internetMessageId, CancellationToken cancellationToken = default) =>
         commands.SendAsync(new RestoreMessage(messageId, internetMessageId), cancellationToken);
+
+    public Task<Acknowledgement> RemoveTagFromMessageAsync(string messageId, string? internetMessageId, string tag, CancellationToken cancellationToken = default) =>
+        commands.SendAsync(new RemoveTagFromMessage(messageId, internetMessageId, tag), cancellationToken);
 
     public Task<Acknowledgement> AssignMessageAsync(string messageId, string? internetMessageId, string requestId, CancellationToken cancellationToken = default) =>
         commands.SendAsync(new AssignMessageToRequest(messageId, requestId, internetMessageId), cancellationToken);

@@ -20,9 +20,11 @@ public sealed class MailboxTriageEndpoints
     private readonly SignedInUserResolver users;
     private readonly IQueryHandler<ListInboxMessages, MailboxPage> listInbox;
     private readonly IQueryHandler<ListDiscardedMessages, MailboxPage> listDiscarded;
+    private readonly IQueryHandler<ListTaggedMessages, MailboxPage> listTagged;
     private readonly IQueryHandler<GetMailboxMessageDetail, MailboxMessageDetail> detail;
     private readonly ICommandHandler<DiscardMessage, Acknowledgement> discard;
     private readonly ICommandHandler<RestoreMessage, Acknowledgement> restore;
+    private readonly ICommandHandler<RemoveTagFromMessage, Acknowledgement> removeTag;
     private readonly ICommandHandler<AssignMessageToRequest, Acknowledgement> assign;
     private readonly ICommandHandler<CreateRequestFromMessage, Request> create;
 
@@ -30,18 +32,22 @@ public sealed class MailboxTriageEndpoints
         SignedInUserResolver users,
         IQueryHandler<ListInboxMessages, MailboxPage> listInbox,
         IQueryHandler<ListDiscardedMessages, MailboxPage> listDiscarded,
+        IQueryHandler<ListTaggedMessages, MailboxPage> listTagged,
         IQueryHandler<GetMailboxMessageDetail, MailboxMessageDetail> detail,
         ICommandHandler<DiscardMessage, Acknowledgement> discard,
         ICommandHandler<RestoreMessage, Acknowledgement> restore,
+        ICommandHandler<RemoveTagFromMessage, Acknowledgement> removeTag,
         ICommandHandler<AssignMessageToRequest, Acknowledgement> assign,
         ICommandHandler<CreateRequestFromMessage, Request> create)
     {
         this.users = users;
         this.listInbox = listInbox;
         this.listDiscarded = listDiscarded;
+        this.listTagged = listTagged;
         this.detail = detail;
         this.discard = discard;
         this.restore = restore;
+        this.removeTag = removeTag;
         this.assign = assign;
         this.create = create;
     }
@@ -62,6 +68,15 @@ public sealed class MailboxTriageEndpoints
         if (await Gate(request) is { } deny) return deny;
         var (cursor, take) = Paging(request);
         return new OkObjectResult(await listDiscarded.HandleAsync(new ListDiscardedMessages(cursor, take), request.HttpContext.RequestAborted));
+    }
+
+    [Function(nameof(ListTaggedMessages))]
+    public async Task<IActionResult> Tagged(
+        [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "mailbox/tagged")] HttpRequest request)
+    {
+        if (await Gate(request) is { } deny) return deny;
+        var (cursor, take) = Paging(request);
+        return new OkObjectResult(await listTagged.HandleAsync(new ListTaggedMessages(cursor, take), request.HttpContext.RequestAborted));
     }
 
     [Function(nameof(GetMailboxMessageDetail))]
@@ -96,6 +111,17 @@ public sealed class MailboxTriageEndpoints
         if (command is null || string.IsNullOrWhiteSpace(command.MessageId))
             return new BadRequestObjectResult("messageId is required.");
         return new OkObjectResult(await restore.HandleAsync(command, request.HttpContext.RequestAborted));
+    }
+
+    [Function(nameof(RemoveTagFromMessage))]
+    public async Task<IActionResult> RemoveTag(
+        [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "mailbox/message/remove-tag")] HttpRequest request)
+    {
+        if (await Gate(request) is { } deny) return deny;
+        var command = await ReadBody<RemoveTagFromMessage>(request);
+        if (command is null || string.IsNullOrWhiteSpace(command.MessageId) || string.IsNullOrWhiteSpace(command.Tag))
+            return new BadRequestObjectResult("messageId and tag are required.");
+        return new OkObjectResult(await removeTag.HandleAsync(command, request.HttpContext.RequestAborted));
     }
 
     [Function(nameof(AssignMessageToRequest))]

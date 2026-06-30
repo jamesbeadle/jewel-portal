@@ -98,16 +98,23 @@ else
                     @total email@(total == 1 ? "" : "s") in the inbox waiting to be assigned to a request.
                 </p>
             }
-            else
+            else if (view == QueueView.Discarded)
             {
                 <p class="text-sm text-content-muted mt-2">
                     @discardedTotal discarded email@(discardedTotal == 1 ? "" : "s") — restore one to put it back in the queue.
+                </p>
+            }
+            else
+            {
+                <p class="text-sm text-content-muted mt-2">
+                    @taggedTotal tagged email@(taggedTotal == 1 ? "" : "s") — add or remove tags to manage which processes use them.
                 </p>
             }
         </header>
 
         <div class="flex gap-2 mb-6 border-b border-line">
             <button type="button" class="@ViewTabClass(QueueView.Active)" @onclick="() => SwitchView(QueueView.Active)">Queue</button>
+            <button type="button" class="@ViewTabClass(QueueView.Tagged)" @onclick="() => SwitchView(QueueView.Tagged)">Tagged</button>
             <button type="button" class="@ViewTabClass(QueueView.Discarded)" @onclick="() => SwitchView(QueueView.Discarded)">Discarded</button>
         </div>
 
@@ -357,7 +364,7 @@ else
             </div>
         }
         }
-        else
+        else if (view == QueueView.Discarded)
         {
             @if (discardedTotal == 0)
             {
@@ -447,14 +454,157 @@ else
                 </div>
             }
         }
+        else
+        {
+            @if (taggedTotal == 0)
+            {
+                <div class="panel p-8 text-center">
+                    <p class="text-sm text-content">No tagged emails.</p>
+                    <p class="text-xs text-content-subtle mt-1">Emails linked to a request (or discarded) appear here. Open one to add it to another request or remove a tag.</p>
+                </div>
+            }
+            else
+            {
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
+                    <div class="space-y-2 lg:col-span-1">
+                        @foreach (var item in taggedItems)
+                        {
+                            <button type="button" @key="item.Id" @onclick="() => Select(item)" class="@RowClass(item)">
+                                <div class="flex items-center justify-between gap-2">
+                                    <span class="text-sm font-medium text-content truncate">@DisplayFrom(item)</span>
+                                </div>
+                                <p class="text-sm text-content-muted truncate mt-0.5">@Dash(item.Subject)</p>
+                                @if (item.Categories.Count > 0)
+                                {
+                                    <div class="flex flex-wrap items-center gap-1 mt-1">
+                                        @foreach (var tag in item.Categories)
+                                        {
+                                            <span class="inline-flex items-center rounded-full bg-accent/10 text-accent text-[10px] font-medium px-2 py-0.5">@TagLabel(tag)</span>
+                                        }
+                                    </div>
+                                }
+                                <div class="flex items-center gap-2 mt-1 text-[11px] text-content-subtle">
+                                    <span>@Date(item.ReceivedAt)</span>
+                                    @if (item.HasAttachments)
+                                    {
+                                        <span title="Has attachments">· attachment</span>
+                                    }
+                                </div>
+                            </button>
+                        }
+
+                        @if (TaggedPageCount > 1)
+                        {
+                            <div class="flex items-center justify-between gap-2 pt-2">
+                                @if (taggedIndex > 0)
+                                {
+                                    <button type="button" class="btn-secondary text-xs px-2.5 py-1.5" @onclick="PreviousTagged">Previous</button>
+                                }
+                                else
+                                {
+                                    <span></span>
+                                }
+                                <span class="text-[11px] text-content-subtle">Page @(taggedIndex + 1) / @TaggedPageCount</span>
+                                @if (taggedNext is not null)
+                                {
+                                    <button type="button" class="btn-secondary text-xs px-2.5 py-1.5" @onclick="NextTagged">Next</button>
+                                }
+                                else
+                                {
+                                    <span></span>
+                                }
+                            </div>
+                        }
+                    </div>
+
+                    <div class="lg:col-span-2">
+                        @if (selected is null)
+                        {
+                            <div class="panel p-8 text-center text-sm text-content-subtle">
+                                Select a tagged email to manage its tags.
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="panel p-5 space-y-4">
+                                @if (actionError is not null)
+                                {
+                                    <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@actionError</p>
+                                }
+
+                                <div>
+                                    <h2 class="text-lg font-semibold text-content">@Dash(selected.Subject)</h2>
+                                    <p class="text-sm text-content-muted mt-1">
+                                        From @DisplayFrom(selected) · @Date(selected.ReceivedAt)
+                                    </p>
+                                </div>
+
+                                @MessageBody
+
+                                <div class="pt-3 border-t border-line space-y-4">
+                                    <div>
+                                        <p class="text-xs uppercase tracking-wider text-content-subtle font-semibold mb-2">Tags on this email</p>
+                                        @if (selected.Categories.Count == 0)
+                                        {
+                                            <p class="text-sm text-content-subtle italic">No workflow tags. (Refresh if you just changed them.)</p>
+                                        }
+                                        else
+                                        {
+                                            <div class="flex flex-wrap gap-2">
+                                                @foreach (var tag in selected.Categories)
+                                                {
+                                                    <span class="inline-flex items-center gap-1.5 rounded-full border border-line bg-surface-raised px-2.5 py-1 text-xs text-content">
+                                                        @TagLabel(tag)
+                                                        <button type="button" class="text-content-subtle hover:text-negative" disabled="@busy" @onclick="() => DoRemoveTag(tag)" title="Remove this tag">✕</button>
+                                                    </span>
+                                                }
+                                            </div>
+                                        }
+                                    </div>
+
+                                    <div>
+                                        <p class="text-xs uppercase tracking-wider text-content-subtle font-semibold mb-2">Add to another request</p>
+                                        <div class="space-y-3">
+                                            <select class="field" value="@linkProjectId" @onchange="OnLinkProjectChanged">
+                                                <option value="">Select a project…</option>
+                                                @foreach (var project in ProjectOptions)
+                                                {
+                                                    <option value="@project.ProjectId">@project.Reference — @project.Name</option>
+                                                }
+                                            </select>
+
+                                            @if (!string.IsNullOrWhiteSpace(linkProjectId))
+                                            {
+                                                <select class="field" value="@linkRequestId" @onchange="OnTaggedRequestChanged">
+                                                    <option value="">Select a request…</option>
+                                                    @foreach (var request in ProjectRequests())
+                                                    {
+                                                        <option value="@request.RequestId">@request.Reference — @request.Title</option>
+                                                    }
+                                                </select>
+                                            }
+
+                                            <button type="button" class="btn-primary" disabled="@(busy || string.IsNullOrWhiteSpace(linkRequestId))" @onclick="DoAddTagLink">
+                                                Add tag (link to request)
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </div>
+            }
+        }
     </section>
 }
 
 @code {
     private enum TriageMode { None, Link, Create, Discard }
 
-    // The page shows either the live queue (Inbox) or the discarded pile (General); the detail pane is shared.
-    private enum QueueView { Active, Discarded }
+    // The page shows the live queue (untagged Inbox), the discarded pile, or every tagged email (the
+    // management surface for adding/removing workflow tags). The detail pane is shared.
+    private enum QueueView { Active, Discarded, Tagged }
     private QueueView view = QueueView.Active;
 
     private static readonly RequestType[] KindOptions =
@@ -481,6 +631,12 @@ else
     private int discardedIndex;
     private string? discardedNext;
 
+    private IReadOnlyList<MailboxMessage> taggedItems = Array.Empty<MailboxMessage>();
+    private int taggedTotal;
+    private List<string?> taggedCursors = new() { null };
+    private int taggedIndex;
+    private string? taggedNext;
+
     private MailboxMessage? selected;
     private MailboxMessageDetail? detail;
     private bool detailLoading;
@@ -497,6 +653,7 @@ else
     // Total pages for each list, derived from the server-reported total count.
     private int QueuePageCount => Math.Max(1, (int)Math.Ceiling(total / (double)PageSize));
     private int DiscardedPageCount => Math.Max(1, (int)Math.Ceiling(discardedTotal / (double)PageSize));
+    private int TaggedPageCount => Math.Max(1, (int)Math.Ceiling(taggedTotal / (double)PageSize));
 
     private bool busy;
     private string? actionError;
@@ -537,11 +694,13 @@ else
         mode = TriageMode.None;
         actionError = null;
         if (next == QueueView.Discarded) { ResetDiscardedPaging(); await LoadDiscardedAsync(); }
+        else if (next == QueueView.Tagged) { ResetTaggedPaging(); await LoadTaggedAsync(); }
         else { ResetQueuePaging(); await LoadAsync(); }
     }
 
     private void ResetQueuePaging() { queueCursors = new() { null }; queueIndex = 0; queueNext = null; }
     private void ResetDiscardedPaging() { discardedCursors = new() { null }; discardedIndex = 0; discardedNext = null; }
+    private void ResetTaggedPaging() { taggedCursors = new() { null }; taggedIndex = 0; taggedNext = null; }
 
     private async Task LoadAsync()
     {
@@ -612,6 +771,41 @@ else
         if (discardedNext is null) return;
         discardedIndex++;
         await LoadDiscardedAsync();
+    }
+
+    private async Task LoadTaggedAsync()
+    {
+        loadError = null;
+        try
+        {
+            var result = await Intake.ListTaggedLiveAsync(taggedCursors[taggedIndex], PageSize);
+            taggedItems = result.Items;
+            taggedTotal = result.Total;
+            taggedNext = result.NextCursor;
+            if (taggedNext is not null && taggedIndex == taggedCursors.Count - 1)
+                taggedCursors.Add(taggedNext);
+        }
+        catch
+        {
+            loadError = "Couldn't load tagged emails. Please try again.";
+            taggedItems = Array.Empty<MailboxMessage>();
+            taggedTotal = 0;
+            taggedNext = null;
+        }
+    }
+
+    private async Task PreviousTagged()
+    {
+        if (taggedIndex <= 0) return;
+        taggedIndex--;
+        await LoadTaggedAsync();
+    }
+
+    private async Task NextTagged()
+    {
+        if (taggedNext is null) return;
+        taggedIndex++;
+        await LoadTaggedAsync();
     }
 
     private async Task LoadUnassignedAsync()
@@ -797,6 +991,49 @@ else
         }
         finally { busy = false; }
     }
+
+    // Runs a Tagged-tab action (add a tag, remove a tag), then refreshes the tagged list and clears the
+    // selection — the email's tag set has changed, so re-read it live.
+    private async Task RunTaggedAction(Func<Task> action)
+    {
+        actionError = null;
+        try
+        {
+            busy = true;
+            await action();
+            ResetTaggedPaging();
+            await LoadTaggedAsync();
+            selected = null;
+            detail = null;
+            detailLoading = false;
+            linkProjectId = linkRequestId = "";
+        }
+        catch
+        {
+            actionError = "That action didn't complete. Please try again.";
+        }
+        finally { busy = false; }
+    }
+
+    // Add another workflow tag by linking this already-tagged email to a second request (so it feeds
+    // more than one process). Reuses the same assign command as the queue's "Link to existing".
+    private async Task DoAddTagLink()
+    {
+        if (selected is null || busy || string.IsNullOrWhiteSpace(linkRequestId)) return;
+        await RunTaggedAction(async () => await Intake.AssignMessageAsync(selected.Id, selected.InternetMessageId, linkRequestId));
+    }
+
+    private async Task DoRemoveTag(string tag)
+    {
+        if (selected is null || busy) return;
+        await RunTaggedAction(async () => await Intake.RemoveTagFromMessageAsync(selected.Id, selected.InternetMessageId, tag));
+    }
+
+    private void OnTaggedRequestChanged(ChangeEventArgs e) => linkRequestId = e.Value?.ToString() ?? "";
+
+    // Display label for a workflow tag chip: drop the "JPMS/" prefix (e.g. "JPMS/RFI-001" -> "RFI-001").
+    private static string TagLabel(string tag) =>
+        tag.StartsWith("JPMS/", StringComparison.OrdinalIgnoreCase) ? tag["JPMS/".Length..] : tag;
 
     private IReadOnlyList<Project> ProjectOptions =>
         Projects.Current ?? (IReadOnlyList<Project>)Array.Empty<Project>();

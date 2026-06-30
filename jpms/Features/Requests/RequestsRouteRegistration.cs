@@ -50,6 +50,14 @@ public static class RequestsRouteRegistration
                     return $"/api/mailbox/discarded?cursor={Uri.EscapeDataString(q.Cursor ?? string.Empty)}&take={q.Take}";
                 }));
 
+        queries.Register<ListTaggedMessages, MailboxPage>(
+            new QueryRoute("/api/mailbox/tagged",
+                query =>
+                {
+                    var q = (ListTaggedMessages)query;
+                    return $"/api/mailbox/tagged?cursor={Uri.EscapeDataString(q.Cursor ?? string.Empty)}&take={q.Take}";
+                }));
+
         queries.Register<GetMailboxMessageDetail, MailboxMessageDetail>(
             new QueryRoute("/api/mailbox/message/detail",
                 query =>
@@ -85,6 +93,9 @@ public static class RequestsRouteRegistration
 
         commands.Register<RestoreMessage, Acknowledgement>(
             new CommandRoute("POST", "/api/mailbox/message/restore", _ => "/api/mailbox/message/restore"));
+
+        commands.Register<RemoveTagFromMessage, Acknowledgement>(
+            new CommandRoute("POST", "/api/mailbox/message/remove-tag", _ => "/api/mailbox/message/remove-tag"));
 
         commands.Register<AssignMessageToRequest, Acknowledgement>(
             new CommandRoute("POST", "/api/mailbox/message/assign", _ => "/api/mailbox/message/assign"));

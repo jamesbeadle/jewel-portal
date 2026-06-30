@@ -36,3 +36,18 @@ public sealed class RestoreMessageHandler : ICommandHandler<RestoreMessage, Ackn
         return new Acknowledgement(command.MessageId);
     }
 }
+
+/// <summary>Remove one workflow tag from an email (unlink it from that process). If it was the last
+/// tag the email returns to the triage queue. Verified by read-back; fails loudly if it doesn't stick.</summary>
+public sealed class RemoveTagFromMessageHandler : ICommandHandler<RemoveTagFromMessage, Acknowledgement>
+{
+    private readonly IMailboxGraphClient graph;
+    public RemoveTagFromMessageHandler(IMailboxGraphClient graph) { this.graph = graph; }
+
+    public async Task<Acknowledgement> HandleAsync(RemoveTagFromMessage command, CancellationToken cancellationToken)
+    {
+        var ok = await graph.RemoveTagAsync(command.MessageId, command.InternetMessageId, command.Tag, cancellationToken);
+        if (!ok) throw new InvalidOperationException("The tag couldn't be removed from the email. Please try again.");
+        return new Acknowledgement(command.MessageId);
+    }
+}

@@ -53,6 +53,14 @@ public interface IMailboxGraphClient
     /// This is how a record reads its associated emails live — no copies are stored.</summary>
     Task<MailboxPage> ListByTagAsync(string tag, string? cursor, int take, CancellationToken ct);
 
+    /// <summary>One page of every tagged email (anything carrying the JPMS marker), newest first —
+    /// the management surface for the Tagged tab.</summary>
+    Task<MailboxPage> ListTaggedAsync(string? cursor, int take, CancellationToken ct);
+
+    /// <summary>Remove a single workflow tag from an email; if it was the last one, the email returns
+    /// to the triage queue (the marker is dropped too). Verified by read-back.</summary>
+    Task<bool> RemoveTagAsync(string messageId, string? internetMessageId, string tag, CancellationToken ct);
+
     /// <summary>Tag an email triaged + discarded. Returns true only once the tags are read back present.</summary>
     Task<bool> DiscardAsync(string messageId, string? internetMessageId, CancellationToken ct);
 
@@ -91,6 +99,9 @@ public sealed class NullMailboxGraphClient : IMailboxGraphClient
         Task.FromResult(new MailboxPage(Array.Empty<MailboxMessage>(), null, 0));
     public Task<MailboxPage> ListByTagAsync(string tag, string? cursor, int take, CancellationToken ct) =>
         Task.FromResult(new MailboxPage(Array.Empty<MailboxMessage>(), null, 0));
+    public Task<MailboxPage> ListTaggedAsync(string? cursor, int take, CancellationToken ct) =>
+        Task.FromResult(new MailboxPage(Array.Empty<MailboxMessage>(), null, 0));
+    public Task<bool> RemoveTagAsync(string messageId, string? internetMessageId, string tag, CancellationToken ct) => Task.FromResult(false);
     public Task<bool> DiscardAsync(string messageId, string? internetMessageId, CancellationToken ct) => Task.FromResult(false);
     public Task<bool> RestoreAsync(string messageId, string? internetMessageId, CancellationToken ct) => Task.FromResult(false);
     public Task<bool> AssignAsync(string messageId, string? internetMessageId, string requestCategory, CancellationToken ct) => Task.FromResult(false);
@@ -103,7 +114,7 @@ public sealed class MailboxGraphClient : IMailboxGraphClient
 {
     private const string GraphBase = "https://graph.microsoft.com/v1.0";
     private const string Summary =
-        "id,internetMessageId,subject,bodyPreview,from,receivedDateTime,hasAttachments";
+        "id,internetMessageId,subject,bodyPreview,from,receivedDateTime,hasAttachments,categories";
 
     private readonly HttpClient _http;
     private readonly GraphTokenProvider _tokens;
@@ -129,6 +140,9 @@ public sealed class MailboxGraphClient : IMailboxGraphClient
 
     public Task<MailboxPage> ListByTagAsync(string tag, string? cursor, int take, CancellationToken ct) =>
         ListFilteredAsync($"categories/any(c:c eq '{tag}')", cursor, take, ct);
+
+    public Task<MailboxPage> ListTaggedAsync(string? cursor, int take, CancellationToken ct) =>
+        ListFilteredAsync($"categories/any(c:c eq '{TriageCategories.Marker}')", cursor, take, ct);
 
     private async Task<MailboxPage> ListFilteredAsync(string filter, string? cursor, int take, CancellationToken ct)
     {
@@ -242,7 +256,7 @@ public sealed class MailboxGraphClient : IMailboxGraphClient
 
     /// <summary>Remove a workflow tag; if no JPMS/ workflow tags remain afterwards, also remove the
     /// marker so the email returns to the triage queue. Verified by read-back.</summary>
-    private async Task<bool> RemoveTagAsync(string messageId, string? imid, string tag, CancellationToken ct)
+    public async Task<bool> RemoveTagAsync(string messageId, string? imid, string tag, CancellationToken ct)
     {
         var loaded = await LoadAsync(messageId, imid, ct);
         if (loaded is null)
@@ -484,7 +498,15 @@ public sealed class MailboxGraphClient : IMailboxGraphClient
             fromName = addr.TryGetProperty("name", out var nm) ? nm.GetString() ?? "" : "";
         }
 
-        return new MailboxMessage(id, imid, fromEmail, fromName, subject, preview, hasAttachments, receivedAt);
+        // Only the JPMS workflow tags become chips (e.g. "JPMS/Discarded", "JPMS/RFI-001"); the bare
+        // "JPMS" marker and any of the user's own Outlook categories are left out.
+        var categories = new List<string>();
+        if (item.TryGetProperty("categories", out var cats) && cats.ValueKind == JsonValueKind.Array)
+            foreach (var c in cats.EnumerateArray())
+                if (c.GetString() is { Length: > 0 } cat && TriageCategories.IsWorkflowTag(cat))
+                    categories.Add(cat);
+
+        return new MailboxMessage(id, imid, fromEmail, fromName, subject, preview, hasAttachments, receivedAt, categories);
     }
 
     private async Task<HttpResponseMessage> SendAsync(

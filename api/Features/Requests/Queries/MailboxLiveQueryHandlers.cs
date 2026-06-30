@@ -27,6 +27,16 @@ public sealed class ListDiscardedMessagesHandler : IQueryHandler<ListDiscardedMe
         graph.ListDiscardedAsync(query.Cursor, query.Take, cancellationToken);
 }
 
+/// <summary>Every tagged email, read live from the Inbox (messages carrying the JPMS marker).</summary>
+public sealed class ListTaggedMessagesHandler : IQueryHandler<ListTaggedMessages, MailboxPage>
+{
+    private readonly IMailboxGraphClient graph;
+    public ListTaggedMessagesHandler(IMailboxGraphClient graph) { this.graph = graph; }
+
+    public Task<MailboxPage> HandleAsync(ListTaggedMessages query, CancellationToken cancellationToken) =>
+        graph.ListTaggedAsync(query.Cursor, query.Take, cancellationToken);
+}
+
 /// <summary>
 /// Full body + attachments for one mailbox message, read live and sanitised before it leaves the
 /// server. Reuses the existing on-demand message reader; the id is fresh (the list was just rendered)
