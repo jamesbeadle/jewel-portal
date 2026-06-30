@@ -22,9 +22,13 @@ public static class RecordLinksFeatureRegistration
 
         services.AddScoped<RecordProviderRegistry>();
         services.AddScoped<RecordEmailReader>();
+        // Tags an email's whole conversation (not just the clicked message) to a record, and re-tags
+        // replies that arrive later (catch-up).
+        services.AddScoped<RecordThreadTagger>();
 
         services.AddScoped<IQueryHandler<ListLinkableRecords, IReadOnlyList<LinkableRecord>>, ListLinkableRecordsHandler>();
         services.AddScoped<ICommandHandler<LinkMessageToRecord, Acknowledgement>, LinkMessageToRecordHandler>();
+        services.AddScoped<ICommandHandler<SyncRecordThreadTags, Acknowledgement>, SyncRecordThreadTagsHandler>();
 
         return services;
     }

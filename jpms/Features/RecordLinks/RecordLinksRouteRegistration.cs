@@ -22,5 +22,8 @@ public static class RecordLinksRouteRegistration
 
         commands.Register<LinkMessageToRecord, Acknowledgement>(
             new CommandRoute("POST", "/api/mailbox/message/link", _ => "/api/mailbox/message/link"));
+
+        commands.Register<SyncRecordThreadTags, Acknowledgement>(
+            new CommandRoute("POST", "/api/mailbox/record/sync-thread-tags", _ => "/api/mailbox/record/sync-thread-tags"));
     }
 }

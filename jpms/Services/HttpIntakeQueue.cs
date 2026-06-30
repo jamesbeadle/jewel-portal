@@ -51,6 +51,9 @@ public sealed class HttpIntakeQueue : IIntakeQueue
     public Task<Acknowledgement> LinkMessageToRecordAsync(string messageId, string? internetMessageId, RecordType type, string recordId, CancellationToken cancellationToken = default) =>
         commands.SendAsync(new LinkMessageToRecord(messageId, type, recordId, internetMessageId), cancellationToken);
 
+    public Task<Acknowledgement> SyncRecordThreadTagsAsync(RecordType type, string recordId, CancellationToken cancellationToken = default) =>
+        commands.SendAsync(new SyncRecordThreadTags(type, recordId), cancellationToken);
+
     public Task<BidPackage> CreateBidPackageFromMessageAsync(CreateBidPackageFromMessage command, CancellationToken cancellationToken = default) =>
         commands.SendAsync(command, cancellationToken);
 }

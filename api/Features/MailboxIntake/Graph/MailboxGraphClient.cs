@@ -85,6 +85,14 @@ public interface IMailboxGraphClient
 
     /// <summary>Read the fields needed to record an email against a request, or null if it's gone.</summary>
     Task<MailboxSnapshot?> GetSnapshotAsync(string messageId, string? internetMessageId, CancellationToken ct);
+
+    /// <summary>The distinct conversation ids of the Inbox messages currently carrying a record's tag.
+    /// These are the email threads the record already touches — used to find new replies to pull in.</summary>
+    Task<IReadOnlyList<string>> ListInboxConversationIdsByCategoryAsync(string category, CancellationToken ct);
+
+    /// <summary>Inbox message ids in the given conversation that do NOT yet carry the category — i.e. the
+    /// thread members still to be tagged (e.g. replies that arrived after the original link).</summary>
+    Task<IReadOnlyList<string>> ListUntaggedInboxIdsInConversationAsync(string conversationId, string category, CancellationToken ct);
 }
 
 /// <summary>The subset of a mailbox message recorded against a request when an email is assigned.</summary>
@@ -118,6 +126,10 @@ public sealed class NullMailboxGraphClient : IMailboxGraphClient
     public Task<bool> AssignAsync(string messageId, string? internetMessageId, string requestCategory, CancellationToken ct) => Task.FromResult(false);
     public Task<int> ClearRequestTagsAsync(string requestCategory, CancellationToken ct) => Task.FromResult(0);
     public Task<MailboxSnapshot?> GetSnapshotAsync(string messageId, string? internetMessageId, CancellationToken ct) => Task.FromResult<MailboxSnapshot?>(null);
+    public Task<IReadOnlyList<string>> ListInboxConversationIdsByCategoryAsync(string category, CancellationToken ct) =>
+        Task.FromResult<IReadOnlyList<string>>(Array.Empty<string>());
+    public Task<IReadOnlyList<string>> ListUntaggedInboxIdsInConversationAsync(string conversationId, string category, CancellationToken ct) =>
+        Task.FromResult<IReadOnlyList<string>>(Array.Empty<string>());
 }
 
 /// <summary>Graph REST implementation (HttpClient + app-only token).</summary>
@@ -432,6 +444,53 @@ public sealed class MailboxGraphClient : IMailboxGraphClient
                 if (item.TryGetProperty("id", out var idEl) && idEl.GetString() is { Length: > 0 } id)
                     ids.Add(id);
         return ids;
+    }
+
+    public async Task<IReadOnlyList<string>> ListInboxConversationIdsByCategoryAsync(string category, CancellationToken ct)
+    {
+        var filter = $"categories/any(c:c eq '{category.Replace("'", "''")}')";
+        var conversationIds = await CollectInboxFieldAsync(filter, "conversationId", ct);
+        return conversationIds.Distinct(StringComparer.Ordinal).ToList();
+    }
+
+    public Task<IReadOnlyList<string>> ListUntaggedInboxIdsInConversationAsync(string conversationId, string category, CancellationToken ct)
+    {
+        // conversationId eq '…' AND the email doesn't already carry the tag → the thread members still
+        // to be tagged. The negated category clause needs eventual consistency (handled in CollectInboxFieldAsync).
+        var filter = $"conversationId eq '{conversationId.Replace("'", "''")}' "
+            + $"and not categories/any(c:c eq '{category.Replace("'", "''")}')";
+        return CollectInboxFieldAsync(filter, "id", ct);
+    }
+
+    // Page through Inbox messages matching the filter and collect one string field ("id" /
+    // "conversationId") from each. Mirrors ListFilteredAsync's $skip paging; eventual consistency for
+    // $count + negated filters. Guard-bounded so a pathological thread can't loop forever.
+    private async Task<IReadOnlyList<string>> CollectInboxFieldAsync(string filter, string field, CancellationToken ct)
+    {
+        var results = new List<string>();
+        var skip = 0;
+        for (var guard = 0; guard < 20; guard++)
+        {
+            var url = $"{GraphBase}/users/{Mailbox}/mailFolders/inbox/messages"
+                + $"?$filter={Uri.EscapeDataString(filter)}"
+                + $"&$select={field}&$top=100&$skip={skip}&$count=true";
+            using var response = await SendAsync(HttpMethod.Get, url, content: null, ct, allowNotFound: true, consistencyEventual: true);
+            if (!response.IsSuccessStatusCode) break;
+
+            await using var stream = await response.Content.ReadAsStreamAsync(ct);
+            using var doc = await JsonDocument.ParseAsync(stream, cancellationToken: ct);
+            var pageCount = 0;
+            if (doc.RootElement.TryGetProperty("value", out var arr) && arr.ValueKind == JsonValueKind.Array)
+                foreach (var item in arr.EnumerateArray())
+                {
+                    pageCount++;
+                    if (item.TryGetProperty(field, out var el) && el.GetString() is { Length: > 0 } value)
+                        results.Add(value);
+                }
+            if (pageCount < 100) break;
+            skip += 100;
+        }
+        return results;
     }
 
     private async Task<string?> FindByInternetMessageIdAsync(string internetMessageId, CancellationToken ct)

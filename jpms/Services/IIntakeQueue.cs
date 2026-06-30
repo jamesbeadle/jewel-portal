@@ -27,6 +27,10 @@ public interface IIntakeQueue
     Task<IReadOnlyList<LinkableRecord>> ListLinkableRecordsAsync(string projectId, RecordType type, CancellationToken cancellationToken = default);
     Task<Acknowledgement> LinkMessageToRecordAsync(string messageId, string? internetMessageId, RecordType type, string recordId, CancellationToken cancellationToken = default);
 
+    // Catch-up: re-tag any Inbox replies that joined a record's threads after it was linked, so the
+    // record's tag keeps spanning the whole conversation. Safe to call when a record is opened.
+    Task<Acknowledgement> SyncRecordThreadTagsAsync(RecordType type, string recordId, CancellationToken cancellationToken = default);
+
     // Create a new Bid Package Invite from an email (Draft package + link the email to it). The Request
     // equivalent is CreateRequestFromMessageAsync; both are the "create a new record from this email"
     // half of triage, one per record type.

@@ -13,11 +13,13 @@ public sealed class LinkMessageToRecordHandler : ICommandHandler<LinkMessageToRe
 {
     private readonly RecordProviderRegistry providers;
     private readonly IMailboxGraphClient graph;
+    private readonly RecordThreadTagger threadTagger;
 
-    public LinkMessageToRecordHandler(RecordProviderRegistry providers, IMailboxGraphClient graph)
+    public LinkMessageToRecordHandler(RecordProviderRegistry providers, IMailboxGraphClient graph, RecordThreadTagger threadTagger)
     {
         this.providers = providers;
         this.graph = graph;
+        this.threadTagger = threadTagger;
     }
 
     public async Task<Acknowledgement> HandleAsync(LinkMessageToRecord command, CancellationToken cancellationToken)
@@ -27,13 +29,16 @@ public sealed class LinkMessageToRecordHandler : ICommandHandler<LinkMessageToRe
         var record = await provider.FindAsync(command.RecordId, cancellationToken)
             ?? throw new InvalidOperationException($"{command.Type} record '{command.RecordId}' not found.");
 
-        // Read the email back from the mailbox to confirm it's there and pick up a fresh threading id.
+        // Read the email back from the mailbox to confirm it's there and pick up a fresh threading id +
+        // its conversation id (so we can tag the whole thread, not just this message).
         var snapshot = await graph.GetSnapshotAsync(command.MessageId, command.InternetMessageId, cancellationToken)
             ?? throw new InvalidOperationException("The email could not be read from the mailbox.");
 
-        // The tag is the only link to the email — identical mechanism for every record type.
-        var tagged = await graph.AssignAsync(
-            command.MessageId, snapshot.InternetMessageId,
+        // The tag is the only link — and we apply it across the entire conversation so the record sees
+        // the full thread context, not just the one clicked message. The anchor tag is verified; sibling
+        // (reply/forward) tagging is best-effort.
+        var tagged = await threadTagger.TagThreadAsync(
+            command.MessageId, snapshot.InternetMessageId, snapshot.ConversationId,
             TriageCategories.ForRecord(record.TagReference), cancellationToken);
         if (!tagged)
             throw new InvalidOperationException("The email couldn't be tagged to the record. Please try again.");
