@@ -181,14 +181,26 @@ else
                         </button>
                     }
 
-                    @if (queueIndex > 0 || queueNext is not null)
+                    @if (QueuePageCount > 1)
                     {
                         <div class="flex items-center justify-between gap-2 pt-2">
-                            <button type="button" class="btn-secondary text-xs px-2.5 py-1.5"
-                                    disabled="@(queueIndex <= 0)" @onclick="PreviousPage">Previous</button>
-                            <span class="text-[11px] text-content-subtle">Page @(queueIndex + 1)</span>
-                            <button type="button" class="btn-secondary text-xs px-2.5 py-1.5"
-                                    disabled="@(queueNext is null)" @onclick="NextPage">Next</button>
+                            @if (queueIndex > 0)
+                            {
+                                <button type="button" class="btn-secondary text-xs px-2.5 py-1.5" @onclick="PreviousPage">Previous</button>
+                            }
+                            else
+                            {
+                                <span></span>
+                            }
+                            <span class="text-[11px] text-content-subtle">Page @(queueIndex + 1) / @QueuePageCount</span>
+                            @if (queueNext is not null)
+                            {
+                                <button type="button" class="btn-secondary text-xs px-2.5 py-1.5" @onclick="NextPage">Next</button>
+                            }
+                            else
+                            {
+                                <span></span>
+                            }
                         </div>
                     }
                 </div>
@@ -375,14 +387,26 @@ else
                             </button>
                         }
 
-                        @if (discardedIndex > 0 || discardedNext is not null)
+                        @if (DiscardedPageCount > 1)
                         {
                             <div class="flex items-center justify-between gap-2 pt-2">
-                                <button type="button" class="btn-secondary text-xs px-2.5 py-1.5"
-                                        disabled="@(discardedIndex <= 0)" @onclick="PreviousDiscarded">Previous</button>
-                                <span class="text-[11px] text-content-subtle">Page @(discardedIndex + 1)</span>
-                                <button type="button" class="btn-secondary text-xs px-2.5 py-1.5"
-                                        disabled="@(discardedNext is null)" @onclick="NextDiscarded">Next</button>
+                                @if (discardedIndex > 0)
+                                {
+                                    <button type="button" class="btn-secondary text-xs px-2.5 py-1.5" @onclick="PreviousDiscarded">Previous</button>
+                                }
+                                else
+                                {
+                                    <span></span>
+                                }
+                                <span class="text-[11px] text-content-subtle">Page @(discardedIndex + 1) / @DiscardedPageCount</span>
+                                @if (discardedNext is not null)
+                                {
+                                    <button type="button" class="btn-secondary text-xs px-2.5 py-1.5" @onclick="NextDiscarded">Next</button>
+                                }
+                                else
+                                {
+                                    <span></span>
+                                }
                             </div>
                         }
                     </div>
@@ -469,6 +493,10 @@ else
     // role server-side, so they always carry Role.ProjectManager too.
     private bool CanTriage =>
         Session.AvailableRoles.Any(role => role is Role.Admin or Role.ProjectManager);
+
+    // Total pages for each list, derived from the server-reported total count.
+    private int QueuePageCount => Math.Max(1, (int)Math.Ceiling(total / (double)PageSize));
+    private int DiscardedPageCount => Math.Max(1, (int)Math.Ceiling(discardedTotal / (double)PageSize));
 
     private bool busy;
     private string? actionError;
