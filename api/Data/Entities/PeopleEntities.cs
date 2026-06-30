@@ -12,6 +12,16 @@ public sealed class SubcontractorEntity
     [MaxLength(64)]      public string ContactPhone { get; set; } = "";
     [MaxLength(32)]      public string CisStatus { get; set; } = "";
     public DateTimeOffset OnboardedAt { get; set; }
+
+    // Company-directory fields. Category drives filtering (0 = Subcontractor by default). The rest
+    // mirror the master-sheet columns.
+    public int Category { get; set; }
+    [MaxLength(64)]      public string MobileNumber { get; set; } = "";
+    [MaxLength(128)]     public string Town { get; set; } = "";
+    [MaxLength(128)]     public string County { get; set; } = "";
+    [MaxLength(512)]     public string Website { get; set; } = "";
+    [MaxLength(128)]     public string Pli { get; set; } = "";
+    [MaxLength(64)]      public string PliExpiry { get; set; } = "";
 }
 
 public sealed class ComplianceDocumentEntity

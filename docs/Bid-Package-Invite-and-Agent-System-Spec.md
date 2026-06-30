@@ -207,7 +207,7 @@ New entities (companion to the reused request record, or first‑class per D2):
 
 - **D1.** Add a dedicated Requests/RFI agent, or map Request records to an existing discipline agent? (A.6)
 - **D2.** Is a BPI a `Request` subtype reusing the request pipeline, or a first‑class record with its own tables? (B.2)
-- **D3.** Separate Client directory, or one generalised address book with a party‑type? (B.6)
+- **D3. DECIDED (2026‑06‑30):** one **unified company directory** with a `DirectoryCategory` property (Subcontractor / Client / Architect / Supplier / Other, extensible). Built by **extending the existing `SubcontractorEntity`** (added `Category` + master-sheet columns: MobileNumber, Town, County, Website, Pli, PliExpiry) rather than forking a new table — keeps existing subcontractors, compliance docs and bid-package recipient links intact. Migration `20260630130000_AddCompanyDirectory` adds the columns only (auto-applied on deploy). The **246-record seed is NOT committed** — it's third-party contact data, so it lives in **`scripts/seed-subcontractors.sql`** (git-ignored) and is loaded manually with `sqlcmd -S sql-jpms-prod-54cf9e.database.windows.net -d jpms -U jpmsadmin -i scripts/seed-subcontractors.sql` (idempotent, after the migration has added the columns). ⏳ Next: directory page category filter + search-all + add Client/Architect entries via UI; bid-invite modal to filter to Subcontractor/Supplier.
 - **D4.** Extend the existing `BidPackage`/`Quote`/`WorkOrder` entities, or introduce BPI entities alongside them? (B.7)
 - **D5.** Allocate PO value to `SpentAmount`, or add a `CommittedAmount` column? (B.13)
 - **D6.** Confirm the Anthropic Claude API as the LLM, and where credentials live (Key Vault). (B.4)

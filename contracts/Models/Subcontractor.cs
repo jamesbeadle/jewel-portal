@@ -1,5 +1,17 @@
 namespace Jewel.JPMS.Models;
 
+// The kind of company a directory record is. Used for filtering — e.g. only Subcontractor (and
+// Supplier) records are offered when inviting to a bid package, never Clients or Architects.
+// Extensible: add values as more company types are tracked. Subcontractor is the default.
+public enum DirectoryCategory
+{
+    Subcontractor = 0,
+    Client = 1,
+    Architect = 2,
+    Supplier = 3,
+    Other = 4
+}
+
 public enum ComplianceStatus
 {
     Current,
@@ -8,6 +20,9 @@ public enum ComplianceStatus
     Missing
 }
 
+// A company directory record. Originally subcontractor-only; now any company type (see Category).
+// The id/field names keep the "Subcontractor" prefix for back-compat with existing references
+// (bid-package recipients, compliance docs) while the directory is unified by Category.
 public sealed record Subcontractor(
     string SubcontractorId,
     string CompanyName,
@@ -16,7 +31,14 @@ public sealed record Subcontractor(
     string ContactEmail,
     string ContactPhone,
     string CisStatus,
-    DateTimeOffset OnboardedAt);
+    DateTimeOffset OnboardedAt,
+    DirectoryCategory Category = DirectoryCategory.Subcontractor,
+    string MobileNumber = "",
+    string Town = "",
+    string County = "",
+    string Website = "",
+    string Pli = "",
+    string PliExpiry = "");
 
 public sealed record ComplianceDocument(
     string ComplianceDocumentId,

@@ -56,3 +56,6 @@ jpms/wwwroot/css/app.built.css
 *.log
 *.tmp
 .cache/
+
+# Subcontractor / company directory seed (third-party contact data — load via sqlcmd, never commit)
+scripts/seed-subcontractors.sql
