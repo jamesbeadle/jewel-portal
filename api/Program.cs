@@ -22,6 +22,7 @@ using Jewel.JPMS.Api.Features.Mobilisation;
 using Jewel.JPMS.Api.Features.Procurement;
 using Jewel.JPMS.Api.Features.Projects;
 using Jewel.JPMS.Api.Features.Rates;
+using Jewel.JPMS.Api.Features.RecordLinks;
 using Jewel.JPMS.Api.Features.Site;
 using Jewel.JPMS.Api.Features.Subcontractors;
 using Jewel.JPMS.Api.Gates;
@@ -65,6 +66,7 @@ var host = new HostBuilder()
         services.AddCvrFeature();
         services.AddCloseoutFeature();
         services.AddRequestsFeature();
+        services.AddRecordLinksFeature();
         services.AddAgentsFeature();
         services.AddCostCentersFeature();
         services.AddMailboxIntakeFeature(context.Configuration);

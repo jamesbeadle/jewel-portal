@@ -13,6 +13,29 @@ public sealed class BidPackageEntity
     [MaxLength(256)]     public string OwnerEmail { get; set; } = "";
 }
 
+// A subcontractor invited to tender for a bid package. One row per (package, subcontractor).
+public sealed class BidPackageRecipientEntity
+{
+    [Key, MaxLength(64)] public string RecipientId { get; set; } = "";
+    [MaxLength(64)]      public string BidPackageId { get; set; } = "";
+    [MaxLength(64)]      public string SubcontractorId { get; set; } = "";
+    public int Status { get; set; }
+    public DateTimeOffset InvitedAt { get; set; }
+    public DateTimeOffset? RespondedAt { get; set; }
+}
+
+// A scope line on a bid package, grouped by Trade/speciality. Pricing is captured per response.
+public sealed class BidPackageLineItemEntity
+{
+    [Key, MaxLength(64)] public string LineItemId { get; set; } = "";
+    [MaxLength(64)]      public string BidPackageId { get; set; } = "";
+    [MaxLength(512)]     public string Description { get; set; } = "";
+    [MaxLength(32)]      public string Unit { get; set; } = "";
+    public decimal Quantity { get; set; }
+    [MaxLength(64)]      public string Trade { get; set; } = "";
+    public int SortOrder { get; set; }
+}
+
 public sealed class QuoteEntity
 {
     [Key, MaxLength(64)] public string QuoteId { get; set; } = "";

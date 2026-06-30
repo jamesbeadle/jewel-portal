@@ -10,6 +10,12 @@ namespace Jewel.JPMS.Api.Features.Requests;
 /// Nothing is stored — the tag is the only link. So removing the tag removes the email from the
 /// record's context, and an email tagged to several records feeds all of them. Replaces the old
 /// snapshot-into-RequestMessages approach: a request no longer keeps a copy of its emails.
+///
+/// NB: this stays self-contained (reads the request entity + graph directly) rather than delegating to
+/// the record-agnostic <see cref="RecordLinks.RecordEmailReader"/>, because this file is compiled into
+/// the worker via linked source (see Jewel.JPMS.Worker.csproj) and the worker does not share the
+/// provider seam. RecordEmailReader is the generic reader for in-app code; the two share the same tag
+/// convention (TriageCategories.ForRecord/ForRequest) and produce identical results for a request.
 /// </summary>
 public sealed class RequestEmailReader
 {
@@ -31,7 +37,7 @@ public sealed class RequestEmailReader
         if (request is null)
             return Array.Empty<MailboxMessage>();
 
-        var tag = TriageCategories.ForRequest(request.TagReference);
+        var tag = TriageCategories.ForRecord(request.TagReference);
 
         var emails = new List<MailboxMessage>();
         string? cursor = null;

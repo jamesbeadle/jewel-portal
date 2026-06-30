@@ -99,8 +99,10 @@ Email arrives → triager tags it "Bid Package Invite" (reuses JPMS tag system)
 
 ### B.2 Record type & project tab
 
-- Add `RecordType.BidPackageInvite` (Part A) and, if treated as a request kind for triage reuse, a `RequestType.BidPackageInvite` value — *Open decision D2: is a BPI a `Request` subtype reusing the request pipeline, or its own first‑class record?* The triage pipeline (`CreateRequestFromMessage`, live‑read by tag) is generic and the cheapest path is to reuse it; the BPI’s richer data then hangs off a companion table keyed by the record id.
-- **New project tab "Bid Package Invites", placed immediately after "Requests"** in `jpms/Components/ProjectTabNav.razor` (insert between `requests` and `valuation`). The tab lists BPIs for the project, each click‑through to a detail page showing the package, recipients invited + when, responses, and management actions.
+> **DECIDED (D2).** A Bid Package Invite is **not** a request. Requests are inbound, project‑level items. A bid package is an **outbound** artifact Jewel authors and issues to potential subcontractors to tender. The BPI is therefore a **first‑class record in the procurement/bid‑package domain** — it is *not* a `RequestType`. It only *borrows* the email‑tag/triage mechanism to seed creation (an email tagged "Bid Package Invite" is the trigger), but the record, its lifecycle, tables and UI are its own.
+
+- Add `RecordType.BidPackageInvite` (already in Part A) as the agent‑applicability key; the Bid Packages agent applies to it.
+- **New project tab "Bid Package Invites", placed immediately after "Requests"** in `jpms/Components/ProjectTabNav.razor` (insert between `requests` and `valuation`). The tab lists bid packages for the project with who has been invited to tender and when, each click‑through to a detail page showing the package, recipients, line items, responses, and management actions (update / retrigger).
 
 ### B.3 Tag / triage reuse
 
@@ -172,7 +174,7 @@ New entities (companion to the reused request record, or first‑class per D2):
 ## Phasing & sequencing
 
 1. **Phase 0 — Foundational agent change (Part A). ✅ Implemented 2026‑06‑30.** Added `RecordType` + `IRequestAgent.AppliesTo` + `AgentRegistry.ForRecordType`; new non‑blocking `RequestsAgent` for `RecordType.Request`; `AgentProvisioning` lazily materialises a record's predefined agent state (no DB migration — reuses `RequestAgents`); `ListRequestAgents` and the close‑gate now provision + read type‑derived agents; deleted `AssignAgent`/`RemoveRequestAgent`/`ListAvailableAgents` end‑to‑end (contracts, endpoints, handlers, routes, client desk, read model) and removed the "Apply an agent"/Remove UI. *Note: built static‑verified only — run `dotnet build` to confirm in CI.*
-2. **Phase 1 — BPI record + tab + triage tag.** New record type, "Bid Package Invites" tab after Requests, tag + triage creation, basic stored BPI (no AI yet). Bid Packages agent auto‑applies via Phase 0.
+2. **Phase 1 — BPI record + tab + triage tag.** *In progress.* ✅ "Bid Package Invites" tab added after Requests (`ProjectBidPackageInvites.razor`, lists the project's packages). ✅ Data layer: `BidPackageRecipient` + `BidPackageLineItem` entities/models/mapping, contracts (`InviteSubcontractorsToBidPackage`, `SetBidPackageLineItems`, `ListBidPackageRecipients`, `ListBidPackageLineItems`), API handlers/endpoints/validation/auth, DI + client routes, and `api/Migrations/manual-sql/AddBidPackageInvites.sql` (run `dotnet ef migrations add AddBidPackageInvites` to scaffold properly). ⏳ Remaining: invite/line-item UI on the tab (show "who's invited & when", manage), and the email‑tag → BPI creation path (deferred toward Phase 2 with AI). Bid Packages agent auto‑applies via Phase 0.
 3. **Phase 2 — LLM extraction.** Wire `ILlmClient`, real `BidPackagesAgent.AnalyseAsync`, structured proposal (project/cost‑centre/line items), drawing‑file input, human accept → BPI populated.
 4. **Phase 3 — Address book + recipients.** Client directory (or generalise), multi‑subcontractor selection, trade filtering.
 5. **Phase 4 — Outbound: draft email + Excel + blob.** Draft generation, ClosedXML workbook, blob storage of key files, send path.

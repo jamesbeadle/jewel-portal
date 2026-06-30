@@ -30,9 +30,25 @@ public static class ProcurementRouteRegistration
 
         queries.Register<ListWorkOrders, IReadOnlyList<WorkOrder>>(QueryRoute.Static("/api/work-orders"));
 
+        queries.Register<ListBidPackageRecipients, IReadOnlyList<BidPackageRecipient>>(
+            new QueryRoute("/api/bid-packages/{bidPackageId}/recipients",
+                query => $"/api/bid-packages/{((ListBidPackageRecipients)query).BidPackageId}/recipients"));
+
+        queries.Register<ListBidPackageLineItems, IReadOnlyList<BidPackageLineItem>>(
+            new QueryRoute("/api/bid-packages/{bidPackageId}/line-items",
+                query => $"/api/bid-packages/{((ListBidPackageLineItems)query).BidPackageId}/line-items"));
+
         commands.Register<CreateBidPackage, BidPackage>(
             new CommandRoute("POST", "/api/projects/{projectId}/bid-packages",
                 command => $"/api/projects/{((CreateBidPackage)command).ProjectId}/bid-packages"));
+
+        commands.Register<InviteSubcontractorsToBidPackage, IReadOnlyList<BidPackageRecipient>>(
+            new CommandRoute("POST", "/api/bid-packages/{bidPackageId}/recipients",
+                command => $"/api/bid-packages/{((InviteSubcontractorsToBidPackage)command).BidPackageId}/recipients"));
+
+        commands.Register<SetBidPackageLineItems, IReadOnlyList<BidPackageLineItem>>(
+            new CommandRoute("PUT", "/api/bid-packages/{bidPackageId}/line-items",
+                command => $"/api/bid-packages/{((SetBidPackageLineItems)command).BidPackageId}/line-items"));
 
         commands.Register<UpdateBidPackageScope, BidPackage>(
             new CommandRoute("PUT", "/api/bid-packages/{bidPackageId}",

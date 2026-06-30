@@ -4,6 +4,7 @@ using Jewel.JPMS.Api.Data.Entities;
 using Jewel.JPMS.Api.Features.MailboxIntake.Actions;
 using Jewel.JPMS.Api.Features.MailboxIntake.Graph;
 using Jewel.JPMS.Contracts.Cqrs;
+using Jewel.JPMS.Contracts.RecordLinks;
 using Jewel.JPMS.Contracts.Requests;
 using Jewel.JPMS.Models;
 using Microsoft.EntityFrameworkCore;
@@ -11,32 +12,21 @@ using Microsoft.EntityFrameworkCore;
 namespace Jewel.JPMS.Api.Features.Requests.Commands;
 
 /// <summary>
-/// Assign a mailbox message to an existing request (category model). Tags the email triaged +
-/// REQ-xxxx (verified) and records it on the request's shared conversation. The email never moves.
+/// Assign a mailbox message to an existing request. This is now a thin Request-typed adapter over the
+/// record-agnostic <see cref="LinkMessageToRecord"/> path: it forwards to the generic handler with
+/// <see cref="RecordType.Request"/>. Behaviour is identical (tag "JPMS/&lt;ref&gt;", verified, no copy);
+/// the adapter is kept so existing callers (the triage "link to existing" / "add tag" flows) keep
+/// working while the UI migrates to the generic command.
 /// </summary>
 public sealed class AssignMessageToRequestHandler : ICommandHandler<AssignMessageToRequest, Acknowledgement>
 {
-    private readonly JpmsContext context;
-    private readonly IMailboxGraphClient graph;
-    public AssignMessageToRequestHandler(JpmsContext context, IMailboxGraphClient graph) { this.context = context; this.graph = graph; }
+    private readonly ICommandHandler<LinkMessageToRecord, Acknowledgement> link;
+    public AssignMessageToRequestHandler(ICommandHandler<LinkMessageToRecord, Acknowledgement> link) { this.link = link; }
 
-    public async Task<Acknowledgement> HandleAsync(AssignMessageToRequest command, CancellationToken cancellationToken)
-    {
-        var request = await context.Requests.FirstOrDefaultAsync(r => r.RequestId == command.RequestId, cancellationToken)
-            ?? throw new InvalidOperationException($"Request {command.RequestId} not found.");
-
-        var snapshot = await graph.GetSnapshotAsync(command.MessageId, command.InternetMessageId, cancellationToken)
-            ?? throw new InvalidOperationException("The email could not be read from the mailbox.");
-
-        // Tag the email to this request, verified by read-back. The tag IS the association — no copy of
-        // the email is stored; the request reads its emails live by tag (RequestEmailReader).
-        var tagged = await graph.AssignAsync(
-            command.MessageId, snapshot.InternetMessageId, TriageCategories.ForRequest(request.TagReference), cancellationToken);
-        if (!tagged)
-            throw new InvalidOperationException("The email couldn't be tagged to the request. Please try again.");
-
-        return new Acknowledgement(request.RequestId);
-    }
+    public Task<Acknowledgement> HandleAsync(AssignMessageToRequest command, CancellationToken cancellationToken) =>
+        link.HandleAsync(
+            new LinkMessageToRecord(command.MessageId, RecordType.Request, command.RequestId, command.InternetMessageId),
+            cancellationToken);
 }
 
 /// <summary>

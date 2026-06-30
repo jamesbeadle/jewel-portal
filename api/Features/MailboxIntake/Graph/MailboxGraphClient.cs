@@ -24,9 +24,14 @@ public static class TriageCategories
     /// <summary>Present on a discarded ("not a request") email.</summary>
     public const string Discarded = "JPMS/Discarded";
 
-    /// <summary>The workflow tag for an email assigned to a record, from its reference
-    /// (e.g. "RFI-001" -> "JPMS/RFI-001"). The record reads its emails back by this exact tag.</summary>
-    public static string ForRequest(string reference) => $"JPMS/{reference.Trim()}";
+    /// <summary>The workflow tag for an email linked to a record, from its reference
+    /// (e.g. "RFI-001" -> "JPMS/RFI-001", "BPI-0001" -> "JPMS/BPI-0001"). The record reads its emails
+    /// back by this exact tag. Record-type-agnostic: the tag is just the reference stem.</summary>
+    public static string ForRecord(string reference) => $"JPMS/{reference.Trim()}";
+
+    /// <summary>Back-compat alias for <see cref="ForRecord"/>, kept while the Request path migrates to
+    /// the record-agnostic link layer. Prefer <see cref="ForRecord"/> in new code.</summary>
+    public static string ForRequest(string reference) => ForRecord(reference);
 
     /// <summary>True if a category is a JPMS workflow tag (not the bare marker, not a user category).</summary>
     public static bool IsWorkflowTag(string category) =>
