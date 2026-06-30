@@ -455,22 +455,47 @@ else
         }
         else
         {
-            @if (knownTags.Count > 0)
-            {
-                <div class="flex flex-wrap items-center gap-2 mb-5">
-                    <span class="text-xs uppercase tracking-wider text-content-subtle font-semibold mr-1">Filter</span>
-                    <button type="button" class="@TagFilterClass(null)" @onclick="() => SetTaggedFilter(null)">All</button>
-                    @foreach (var tag in knownTags)
+            <div class="flex flex-wrap items-center gap-2 mb-5">
+                <span class="text-xs uppercase tracking-wider text-content-subtle font-semibold mr-1">Filter</span>
+                <div class="relative">
+                    <button type="button"
+                            class="rounded-full border border-line px-3 py-1 text-xs font-medium text-content-muted hover:text-content hover:border-line-strong transition inline-flex items-center gap-1.5"
+                            @onclick="ToggleFilterMenu">
+                        @FilterButtonLabel
+                        <span class="text-[9px] leading-none">▾</span>
+                    </button>
+                    @if (filterOpen)
                     {
-                        <button type="button" class="@TagFilterClass(tag)" @onclick="() => SetTaggedFilter(tag)">@TagLabel(tag)</button>
+                        <div class="absolute z-20 mt-1 w-60 max-h-72 overflow-y-auto rounded-lg border border-line bg-surface-raised shadow-lg p-1">
+                            <button type="button"
+                                    class="w-full text-left rounded px-3 py-1.5 text-sm text-content-muted hover:bg-surface hover:text-content"
+                                    @onclick="ClearTagFilters">
+                                All tags
+                            </button>
+                            <div class="my-1 border-t border-line"></div>
+                            @foreach (var tag in knownTags)
+                            {
+                                <label class="flex items-center gap-2 rounded px-3 py-1.5 text-sm text-content hover:bg-surface cursor-pointer">
+                                    <input type="checkbox" checked="@selectedTags.Contains(tag)" @onchange="() => ToggleTag(tag)" />
+                                    <span>@TagLabel(tag)</span>
+                                </label>
+                            }
+                        </div>
                     }
                 </div>
-            }
+                @foreach (var tag in selectedTags)
+                {
+                    <span class="inline-flex items-center gap-1.5 rounded-full border border-accent bg-surface-raised px-2.5 py-1 text-xs text-content">
+                        @TagLabel(tag)
+                        <button type="button" class="text-content-subtle hover:text-negative" @onclick="() => ToggleTag(tag)" title="Remove filter">✕</button>
+                    </span>
+                }
+            </div>
 
             @if (taggedTotal == 0)
             {
                 <div class="panel p-8 text-center">
-                    <p class="text-sm text-content">@(taggedFilter is null ? "No tagged emails." : "No emails with this tag.")</p>
+                    <p class="text-sm text-content">@(selectedTags.Count == 0 ? "No tagged emails." : "No emails with the selected tags.")</p>
                     <p class="text-xs text-content-subtle mt-1">Emails linked to a request (or discarded) appear here. Open one to add it to another request or remove a tag.</p>
                 </div>
             }
@@ -647,10 +672,12 @@ else
     private List<string?> taggedCursors = new() { null };
     private int taggedIndex;
     private string? taggedNext;
-    // The active tag filter on the Tagged tab (null = every tagged email), and the set of tags we've
-    // seen so far — used to offer quick-filter buttons. Tags accumulate as the user pages/explores.
-    private string? taggedFilter;
-    private readonly SortedSet<string> knownTags = new(StringComparer.OrdinalIgnoreCase);
+    // The Tagged tab's multi-select filter: the set of tags currently ticked (empty = every tagged
+    // email), whether the dropdown is open, and the set of tags we've seen (offered in the dropdown).
+    // "Discarded" is always offered; the rest accrue as tagged emails load.
+    private readonly HashSet<string> selectedTags = new(StringComparer.OrdinalIgnoreCase);
+    private bool filterOpen;
+    private readonly SortedSet<string> knownTags = new(StringComparer.OrdinalIgnoreCase) { "JPMS/Discarded" };
 
     private MailboxMessage? selected;
     private MailboxMessageDetail? detail;
@@ -709,7 +736,7 @@ else
         mode = TriageMode.None;
         actionError = null;
         if (next == QueueView.Discarded) { ResetDiscardedPaging(); await LoadDiscardedAsync(); }
-        else if (next == QueueView.Tagged) { taggedFilter = null; ResetTaggedPaging(); await LoadTaggedAsync(); }
+        else if (next == QueueView.Tagged) { selectedTags.Clear(); filterOpen = false; ResetTaggedPaging(); await LoadTaggedAsync(); }
         else { ResetQueuePaging(); await LoadAsync(); }
     }
 
@@ -793,13 +820,14 @@ else
         loadError = null;
         try
         {
-            var result = await Intake.ListTaggedLiveAsync(taggedCursors[taggedIndex], PageSize, taggedFilter);
+            var filter = selectedTags.Count == 0 ? null : selectedTags.ToList();
+            var result = await Intake.ListTaggedLiveAsync(taggedCursors[taggedIndex], PageSize, filter);
             taggedItems = result.Items;
             taggedTotal = result.Total;
             taggedNext = result.NextCursor;
             if (taggedNext is not null && taggedIndex == taggedCursors.Count - 1)
                 taggedCursors.Add(taggedNext);
-            // Remember every tag we see so the quick-filter buttons can offer them.
+            // Remember every tag we see so the filter dropdown can offer them.
             foreach (var message in taggedItems)
                 foreach (var tag in message.Categories)
                     knownTags.Add(tag);
@@ -813,9 +841,25 @@ else
         }
     }
 
-    private async Task SetTaggedFilter(string? tag)
+    private void ToggleFilterMenu() => filterOpen = !filterOpen;
+
+    private string FilterButtonLabel => selectedTags.Count == 0 ? "All tags" : $"{selectedTags.Count} selected";
+
+    // Tick/untick a tag in the multi-select filter, then re-read the (OR-filtered) list from page one.
+    private async Task ToggleTag(string tag)
     {
-        taggedFilter = tag;
+        if (!selectedTags.Add(tag)) selectedTags.Remove(tag);
+        selected = null;
+        detail = null;
+        detailLoading = false;
+        ResetTaggedPaging();
+        await LoadTaggedAsync();
+    }
+
+    private async Task ClearTagFilters()
+    {
+        selectedTags.Clear();
+        filterOpen = false;
         selected = null;
         detail = null;
         detailLoading = false;
@@ -1118,15 +1162,6 @@ else
         return view == tab
             ? $"{baseClass} border-accent text-content"
             : $"{baseClass} border-transparent text-content-muted hover:text-content";
-    }
-
-    private string TagFilterClass(string? tag)
-    {
-        var baseClass = "rounded-full border px-3 py-1 text-xs font-medium transition";
-        var active = string.Equals(taggedFilter ?? "", tag ?? "", StringComparison.OrdinalIgnoreCase);
-        return active
-            ? $"{baseClass} border-accent text-content bg-surface-raised"
-            : $"{baseClass} border-line text-content-muted hover:text-content hover:border-line-strong";
     }
 
     private string ModeTabClass(TriageMode tab)

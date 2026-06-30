@@ -57,6 +57,10 @@ public interface IMailboxGraphClient
     /// the management surface for the Tagged tab.</summary>
     Task<MailboxPage> ListTaggedAsync(string? cursor, int take, CancellationToken ct);
 
+    /// <summary>One page of emails carrying ANY of the given workflow tags (an OR filter), newest
+    /// first — backs the Tagged tab's multi-select filter.</summary>
+    Task<MailboxPage> ListByTagsAsync(IReadOnlyList<string> tags, string? cursor, int take, CancellationToken ct);
+
     /// <summary>Remove a single workflow tag from an email; if it was the last one, the email returns
     /// to the triage queue (the marker is dropped too). Verified by read-back.</summary>
     Task<bool> RemoveTagAsync(string messageId, string? internetMessageId, string tag, CancellationToken ct);
@@ -101,6 +105,8 @@ public sealed class NullMailboxGraphClient : IMailboxGraphClient
         Task.FromResult(new MailboxPage(Array.Empty<MailboxMessage>(), null, 0));
     public Task<MailboxPage> ListTaggedAsync(string? cursor, int take, CancellationToken ct) =>
         Task.FromResult(new MailboxPage(Array.Empty<MailboxMessage>(), null, 0));
+    public Task<MailboxPage> ListByTagsAsync(IReadOnlyList<string> tags, string? cursor, int take, CancellationToken ct) =>
+        Task.FromResult(new MailboxPage(Array.Empty<MailboxMessage>(), null, 0));
     public Task<bool> RemoveTagAsync(string messageId, string? internetMessageId, string tag, CancellationToken ct) => Task.FromResult(false);
     public Task<bool> DiscardAsync(string messageId, string? internetMessageId, CancellationToken ct) => Task.FromResult(false);
     public Task<bool> RestoreAsync(string messageId, string? internetMessageId, CancellationToken ct) => Task.FromResult(false);
@@ -143,6 +149,17 @@ public sealed class MailboxGraphClient : IMailboxGraphClient
 
     public Task<MailboxPage> ListTaggedAsync(string? cursor, int take, CancellationToken ct) =>
         ListFilteredAsync($"categories/any(c:c eq '{TriageCategories.Marker}')", cursor, take, ct);
+
+    public Task<MailboxPage> ListByTagsAsync(IReadOnlyList<string> tags, string? cursor, int take, CancellationToken ct)
+    {
+        if (tags.Count == 0)
+            return ListTaggedAsync(cursor, take, ct);
+        // OR the per-tag category filters: an email matching any selected tag is included. Single-quotes
+        // in a category are escaped by doubling, per OData.
+        var filter = string.Join(" or ",
+            tags.Select(t => $"categories/any(c:c eq '{t.Replace("'", "''")}')"));
+        return ListFilteredAsync(filter, cursor, take, ct);
+    }
 
     private async Task<MailboxPage> ListFilteredAsync(string filter, string? cursor, int take, CancellationToken ct)
     {

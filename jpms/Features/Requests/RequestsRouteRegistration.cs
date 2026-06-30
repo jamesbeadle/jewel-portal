@@ -55,7 +55,8 @@ public static class RequestsRouteRegistration
                 query =>
                 {
                     var q = (ListTaggedMessages)query;
-                    return $"/api/mailbox/tagged?cursor={Uri.EscapeDataString(q.Cursor ?? string.Empty)}&take={q.Take}&tag={Uri.EscapeDataString(q.Tag ?? string.Empty)}";
+                    var tags = q.Tags is null ? string.Empty : string.Join(",", q.Tags);
+                    return $"/api/mailbox/tagged?cursor={Uri.EscapeDataString(q.Cursor ?? string.Empty)}&take={q.Take}&tags={Uri.EscapeDataString(tags)}";
                 }));
 
         queries.Register<GetMailboxMessageDetail, MailboxMessageDetail>(

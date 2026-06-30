@@ -34,9 +34,9 @@ public sealed class ListTaggedMessagesHandler : IQueryHandler<ListTaggedMessages
     public ListTaggedMessagesHandler(IMailboxGraphClient graph) { this.graph = graph; }
 
     public Task<MailboxPage> HandleAsync(ListTaggedMessages query, CancellationToken cancellationToken) =>
-        string.IsNullOrWhiteSpace(query.Tag)
-            ? graph.ListTaggedAsync(query.Cursor, query.Take, cancellationToken)
-            : graph.ListByTagAsync(query.Tag, query.Cursor, query.Take, cancellationToken);
+        query.Tags is { Count: > 0 } tags
+            ? graph.ListByTagsAsync(tags, query.Cursor, query.Take, cancellationToken)
+            : graph.ListTaggedAsync(query.Cursor, query.Take, cancellationToken);
 }
 
 /// <summary>

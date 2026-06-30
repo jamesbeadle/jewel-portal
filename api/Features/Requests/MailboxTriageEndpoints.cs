@@ -76,8 +76,10 @@ public sealed class MailboxTriageEndpoints
     {
         if (await Gate(request) is { } deny) return deny;
         var (cursor, take) = Paging(request);
-        var tag = request.Query["tag"].ToString();
-        var query = new ListTaggedMessages(cursor, take, string.IsNullOrWhiteSpace(tag) ? null : tag);
+        // Filter tags arrive comma-separated in the "tags" query param (e.g. "JPMS/RFI-001,JPMS/Discarded").
+        var tags = request.Query["tags"].ToString()
+            .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        var query = new ListTaggedMessages(cursor, take, tags.Length == 0 ? null : tags);
         return new OkObjectResult(await listTagged.HandleAsync(query, request.HttpContext.RequestAborted));
     }
 
