@@ -1,5 +1,7 @@
 @page "/projects/{ProjectId}/bid-package-invites/{BidPackageId}"
 @using Jewel.JPMS.Contracts.Procurement
+@using Jewel.JPMS.Contracts.Boq
+@using Jewel.JPMS.Contracts.Variations
 @using Jewel.JPMS.Cqrs
 @inject AuthService Auth
 @inject SessionService Session
@@ -39,6 +41,10 @@ else
         {
             <header class="mb-6 flex flex-wrap items-start justify-between gap-3">
                 <div>
+                    @if (!string.IsNullOrWhiteSpace(package.Reference))
+                    {
+                        <p class="text-xs font-mono tracking-wide text-content-subtle mb-0.5">@package.Reference</p>
+                    }
                     <div class="flex items-center gap-3">
                         <h2 class="text-lg font-semibold text-content">@package.Title</h2>
                         <span class="inline-flex items-center rounded-full bg-surface-raised border border-line px-2 py-0.5 text-[11px] font-medium text-content-muted">@package.Status</span>
@@ -172,6 +178,11 @@ else
                                             <th class="px-4 py-2">Description</th>
                                             <th class="px-4 py-2 hidden sm:table-cell">Unit</th>
                                             <th class="px-4 py-2">Qty</th>
+                                            <th class="px-4 py-2">Covered by</th>
+                                            @if (CanManage)
+                                            {
+                                                <th class="px-4 py-2"></th>
+                                            }
                                         </tr>
                                     </thead>
                                     <tbody class="divide-y divide-line">
@@ -181,6 +192,22 @@ else
                                                 <td class="px-4 py-2 text-content">@item.Description</td>
                                                 <td class="px-4 py-2 text-content-muted hidden sm:table-cell">@item.Unit</td>
                                                 <td class="px-4 py-2 text-content-muted">@item.Quantity</td>
+                                                <td class="px-4 py-2">
+                                                    @if (item.Coverage == BidPackageLineCoverage.Unassigned)
+                                                    {
+                                                        <span class="text-xs text-content-subtle italic">Not linked</span>
+                                                    }
+                                                    else
+                                                    {
+                                                        <span class="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-medium @(item.Coverage == BidPackageLineCoverage.Variation ? "border-accent/30 bg-accent/10 text-accent" : "border-line bg-surface-raised text-content-muted")">@CoverageLabel(item)</span>
+                                                    }
+                                                </td>
+                                                @if (CanManage)
+                                                {
+                                                    <td class="px-4 py-2 text-right">
+                                                        <button type="button" class="text-xs text-accent hover:underline" disabled="@busy" @onclick="() => OpenCoverageModal(item)">@(item.Coverage == BidPackageLineCoverage.Unassigned ? "Link" : "Change")</button>
+                                                    </td>
+                                                }
                                             </tr>
                                         }
                                     </tbody>
@@ -262,6 +289,61 @@ else
             </div>
         }
     </Modal>
+
+    @* ---- Line-item coverage modal: link to a contract BoQ line OR a variation ---- *@
+    <Modal IsOpen="showCoverageModal" Title="Link line item" ShowFooter="true"
+           ConfirmLabel="Save" CancelLabel="Cancel"
+           OnCancel="CloseCoverageModal" OnConfirm="ConfirmCoverage" Class="max-w-lg w-full">
+        @if (linkingLine is not null)
+        {
+            <p class="text-sm text-content mb-1 font-medium">@linkingLine.Description</p>
+            <p class="text-xs text-content-subtle mb-4">A line is covered by a contract BoQ line (flows into the Valuation Report) or a Variation Order Quote — never both.</p>
+
+            <label class="block text-xs font-semibold uppercase tracking-wide text-content-subtle mb-1">Covered by</label>
+            <select class="field" @bind="coverageChoice">
+                <option value="@BidPackageLineCoverage.Unassigned">Not linked</option>
+                <option value="@BidPackageLineCoverage.ContractLine">Contract BoQ line</option>
+                <option value="@BidPackageLineCoverage.Variation">Variation Order Quote</option>
+            </select>
+
+            @if (coverageChoice == BidPackageLineCoverage.ContractLine)
+            {
+                <label class="block text-xs font-semibold uppercase tracking-wide text-content-subtle mt-3 mb-1">BoQ line</label>
+                @if (boqLines.Count == 0)
+                {
+                    <p class="text-sm text-content-subtle italic">No BoQ lines on this project yet.</p>
+                }
+                else
+                {
+                    <select class="field" @bind="coverageBoqId">
+                        <option value="">Select a BoQ line…</option>
+                        @foreach (var b in boqLines)
+                        {
+                            <option value="@b.BoqLineItemId">@b.Description (@b.Unit)</option>
+                        }
+                    </select>
+                }
+            }
+            else if (coverageChoice == BidPackageLineCoverage.Variation)
+            {
+                <label class="block text-xs font-semibold uppercase tracking-wide text-content-subtle mt-3 mb-1">Variation Order Quote</label>
+                @if (voqs.Count == 0)
+                {
+                    <p class="text-sm text-content-subtle italic">No variation order quotes on this project yet.</p>
+                }
+                else
+                {
+                    <select class="field" @bind="coverageVoqId">
+                        <option value="">Select a variation…</option>
+                        @foreach (var v in voqs)
+                        {
+                            <option value="@v.VariationOrderQuoteId">@v.Reference — @v.Title</option>
+                        }
+                    </select>
+                }
+            }
+        }
+    </Modal>
 }
 
 @code {
@@ -277,6 +359,8 @@ else
     private IReadOnlyList<BidPackageRecipient> recipients = Array.Empty<BidPackageRecipient>();
     private IReadOnlyList<BidPackageLineItem> lineItems = Array.Empty<BidPackageLineItem>();
     private IReadOnlyList<MailboxMessage> emails = Array.Empty<MailboxMessage>();
+    private IReadOnlyList<BoqLineItem> boqLines = Array.Empty<BoqLineItem>();
+    private IReadOnlyList<VariationOrderQuote> voqs = Array.Empty<VariationOrderQuote>();
 
     private bool showInviteModal;
     private string subSearch = "";
@@ -323,6 +407,69 @@ else
 
         try { emails = await Queries.AskAsync(new ListBidPackageEmails(BidPackageId), CancellationToken.None); }
         catch (Exception ex) { error = Append(error, $"Couldn't load related emails: {ex.Message}"); }
+
+        // Coverage targets — best-effort so the picker can offer contract BoQ lines and variations.
+        try { boqLines = await Queries.AskAsync(new ListBoqLinesForProject(ProjectId), CancellationToken.None); }
+        catch { /* picker simply shows no BoQ lines */ }
+
+        try { voqs = await Queries.AskAsync(new ListVoqsForProject(ProjectId), CancellationToken.None); }
+        catch { /* picker simply shows no variations */ }
+    }
+
+    // ---- Line-item coverage (link to a contract BoQ line or a variation) ----
+
+    private bool showCoverageModal;
+    private BidPackageLineItem? linkingLine;
+    private BidPackageLineCoverage coverageChoice = BidPackageLineCoverage.Unassigned;
+    private string? coverageBoqId;
+    private string? coverageVoqId;
+
+    private string CoverageLabel(BidPackageLineItem item)
+    {
+        switch (item.Coverage)
+        {
+            case BidPackageLineCoverage.ContractLine:
+                var boq = boqLines.FirstOrDefault(b => b.BoqLineItemId == item.BoqLineItemId);
+                return boq is null ? "Contract line" : $"BoQ · {boq.Description}";
+            case BidPackageLineCoverage.Variation:
+                var voq = voqs.FirstOrDefault(v => v.VariationOrderQuoteId == item.VariationOrderQuoteId);
+                return voq is null ? "Variation" : $"{voq.Reference} · {voq.Title}";
+            default:
+                return "";
+        }
+    }
+
+    private void OpenCoverageModal(BidPackageLineItem item)
+    {
+        linkingLine = item;
+        coverageChoice = item.Coverage;
+        coverageBoqId = item.BoqLineItemId;
+        coverageVoqId = item.VariationOrderQuoteId;
+        showCoverageModal = true;
+    }
+
+    private void CloseCoverageModal()
+    {
+        showCoverageModal = false;
+        linkingLine = null;
+    }
+
+    private async Task ConfirmCoverage()
+    {
+        if (busy || linkingLine is null || !CanManage) return;
+        error = null;
+        try
+        {
+            busy = true;
+            var boqId = coverageChoice == BidPackageLineCoverage.ContractLine && !string.IsNullOrWhiteSpace(coverageBoqId) ? coverageBoqId : null;
+            var voqId = coverageChoice == BidPackageLineCoverage.Variation && !string.IsNullOrWhiteSpace(coverageVoqId) ? coverageVoqId : null;
+            lineItems = await Commands.SendAsync(
+                new SetBidPackageLineItemCoverage(linkingLine.LineItemId, coverageChoice, boqId, voqId), CancellationToken.None);
+            showCoverageModal = false;
+            linkingLine = null;
+        }
+        catch { error = "Couldn't update coverage. Make sure a BoQ line or variation is selected, then try again."; }
+        finally { busy = false; }
     }
 
     private static string Append(string? existing, string line) =>

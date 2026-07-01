@@ -33,9 +33,12 @@ public sealed record CostCodeBudget(
     string ProjectId,
     string CostCode,
     decimal AllocatedAmount,
-    decimal SpentAmount)
+    decimal SpentAmount,
+    decimal CommittedAmount = 0)   // committed-but-not-yet-spent, e.g. an approved variation order
 {
     public decimal RemainingAmount => AllocatedAmount - SpentAmount;
+    // What is left once both spend and outstanding commitments are taken off the allocation.
+    public decimal UncommittedAmount => AllocatedAmount - SpentAmount - CommittedAmount;
     public bool IsOverrun => SpentAmount > AllocatedAmount;
 }
 

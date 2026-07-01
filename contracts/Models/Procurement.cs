@@ -29,9 +29,21 @@ public sealed record BidPackageRecipient(
     DateTimeOffset InvitedAt,
     DateTimeOffset? RespondedAt = null);
 
+// What a bid package line item is covered by — the commercial home the tendered scope maps to. A line
+// is either backed by a contract BoQ line (so it flows into the Programme Valuation Report against the
+// original tender) OR by a Variation Order Quote (extra-over scope priced outside the contract sum) —
+// never both. Unassigned until the QS links it.
+public enum BidPackageLineCoverage
+{
+    Unassigned = 0,  // not yet linked to a commercial home
+    ContractLine = 1, // backed by a contract BoQ line (BoqLineItemId set) — shows in the Valuation Report
+    Variation = 2    // backed by a Variation Order Quote (VariationOrderQuoteId set)
+}
+
 // A priced line on a bid package — the scope items a subcontractor tenders against. Grouped in the UI
 // by Trade/speciality (e.g. electrician, plumber). Quantity + Unit describe the work; pricing is
-// captured per response, not here.
+// captured per response, not here. Coverage links the line to exactly one commercial home: a contract
+// BoQ line (ContractLine + BoqLineItemId) or a Variation Order Quote (Variation + VariationOrderQuoteId).
 public sealed record BidPackageLineItem(
     string LineItemId,
     string BidPackageId,
@@ -39,7 +51,10 @@ public sealed record BidPackageLineItem(
     string Unit,
     decimal Quantity,
     string Trade,
-    int SortOrder);
+    int SortOrder,
+    BidPackageLineCoverage Coverage = BidPackageLineCoverage.Unassigned,
+    string? BoqLineItemId = null,
+    string? VariationOrderQuoteId = null);
 
 public sealed record BidPackage(
     string BidPackageId,
@@ -48,7 +63,14 @@ public sealed record BidPackage(
     string Trade,
     BidPackageStatus Status,
     DateTimeOffset CreatedAt,
-    string OwnerEmail);
+    string OwnerEmail,
+    string? VariationOrderQuoteId = null,   // parent VOQ, when this package belongs to one
+    int Number = 0)                          // sequential; rendered BPI-0001 via Reference
+{
+    // Human, collision-safe reference and the stem tagged on the package's emails ("JPMS/BPI-0001"),
+    // so RFT responses group under the package in the Bid Package Invites section. Blank until numbered.
+    public string Reference => Number > 0 ? $"BPI-{Number:0000}" : "";
+}
 
 public sealed record Quote(
     string QuoteId,

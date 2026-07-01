@@ -53,6 +53,8 @@ public sealed class JpmsContext : DbContext
     public DbSet<BidPackageLineItemEntity> BidPackageLineItems => Set<BidPackageLineItemEntity>();
     public DbSet<QuoteEntity> Quotes => Set<QuoteEntity>();
     public DbSet<WorkOrderEntity> WorkOrders => Set<WorkOrderEntity>();
+    public DbSet<VariationOrderQuoteEntity> VariationOrderQuotes => Set<VariationOrderQuoteEntity>();
+    public DbSet<VariationOrderEntity> VariationOrders => Set<VariationOrderEntity>();
     public DbSet<RequestEntity> Requests => Set<RequestEntity>();
     public DbSet<RequestMessageEntity> RequestMessages => Set<RequestMessageEntity>();
     public DbSet<RequestAgentEntity> RequestAgents => Set<RequestAgentEntity>();
@@ -79,6 +81,7 @@ public sealed class JpmsContext : DbContext
     public DbSet<CostCodeBudgetEntity> CostCodeBudgets => Set<CostCodeBudgetEntity>();
     public DbSet<TimesheetEntity> Timesheets => Set<TimesheetEntity>();
     public DbSet<CashflowSnapshotEntity> CashflowSnapshots => Set<CashflowSnapshotEntity>();
+    public DbSet<CashCallEntity> CashCalls => Set<CashCallEntity>();
     public DbSet<DayworkEntity> Dayworks => Set<DayworkEntity>();
     public DbSet<ContraChargeEntity> ContraCharges => Set<ContraChargeEntity>();
     public DbSet<SubcontractorRetentionEntity> SubcontractorRetentions => Set<SubcontractorRetentionEntity>();

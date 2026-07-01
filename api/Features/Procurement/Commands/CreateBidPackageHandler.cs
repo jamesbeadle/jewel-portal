@@ -3,6 +3,7 @@ using Jewel.JPMS.Api.Data;
 using Jewel.JPMS.Api.Data.Entities;
 using Jewel.JPMS.Contracts.Procurement;
 using Jewel.JPMS.Models;
+using Microsoft.EntityFrameworkCore;
 
 namespace Jewel.JPMS.Api.Features.Procurement.Commands;
 
@@ -15,6 +16,8 @@ public sealed class CreateBidPackageHandler
 
     public async Task<BidPackage> HandleAsync(CreateBidPackage command, CancellationToken cancellationToken)
     {
+        var nextNumber = (await context.BidPackages.MaxAsync(p => (int?)p.Number, cancellationToken) ?? 0) + 1;
+
         var entity = new BidPackageEntity
         {
             BidPackageId = ProcurementIdentifierFactory.NextBidPackageId(),
@@ -23,7 +26,8 @@ public sealed class CreateBidPackageHandler
             Trade = command.Trade,
             Status = (int)BidPackageStatus.Draft,
             CreatedAt = DateTimeOffset.UtcNow,
-            OwnerEmail = command.OwnerEmail
+            OwnerEmail = command.OwnerEmail,
+            Number = nextNumber
         };
         context.BidPackages.Add(entity);
         await context.SaveChangesAsync(cancellationToken);

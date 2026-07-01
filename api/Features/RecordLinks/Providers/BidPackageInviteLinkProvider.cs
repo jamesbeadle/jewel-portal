@@ -37,7 +37,10 @@ public sealed class BidPackageInviteLinkProvider : ILinkableRecordProvider
 
     private static LinkableRecord ToLinkable(BidPackageEntity entity)
     {
-        var reference = ReferenceFor(entity.BidPackageId);
+        // The package's sequential BPI-0001 reference is the tag stem, so a triage email tagged to it
+        // ("JPMS/BPI-0001") surfaces under the package in the Bid Package Invites section. Legacy rows
+        // with no Number fall back to the id-derived stem (BidPackageEntity.Reference handles both).
+        var reference = entity.Reference;
         return new LinkableRecord(
             Type:         RecordType.BidPackageInvite,
             RecordId:     entity.BidPackageId,
@@ -47,9 +50,4 @@ public sealed class BidPackageInviteLinkProvider : ILinkableRecordProvider
             Title:        entity.Title,
             StatusLabel:  ((BidPackageStatus)entity.Status).ToString());
     }
-
-    // Bid packages have no human reference/sequential number yet, so derive a stable, collision-safe
-    // tag stem from the id: "BPI-XXXXXXXX". A sequential BPI-NNNN number is a sensible later refinement.
-    private static string ReferenceFor(string bidPackageId) =>
-        "BPI-" + (bidPackageId.Length >= 8 ? bidPackageId[..8] : bidPackageId).ToUpperInvariant();
 }

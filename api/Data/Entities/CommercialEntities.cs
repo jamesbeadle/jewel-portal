@@ -57,6 +57,9 @@ public sealed class CostCodeBudgetEntity
     [MaxLength(32)]      public string CostCode { get; set; } = "";
     public decimal AllocatedAmount { get; set; }
     public decimal SpentAmount { get; set; }
+
+    // Committed-but-not-yet-spent value, e.g. an approved variation order awarded against this code.
+    public decimal CommittedAmount { get; set; }
 }
 
 public sealed class TimesheetEntity

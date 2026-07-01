@@ -4,6 +4,7 @@
 @inject SessionService Session
 @inject IRequestRegister RequestRegister
 @inject IClientStore ClientStore
+@inject IVariationStore Variations
 @inject IAgentDesk Agents
 @inject NavigationManager Nav
 
@@ -130,6 +131,33 @@ else
                             </select>
                             <p class="text-xs text-content-subtle mt-1">The architect email an RFI is issued to comes from this client account.</p>
                         </div>
+                    </div>
+                }
+
+                @if (record.HasRfq)
+                {
+                    <div class="panel p-5 space-y-3">
+                        <h3 class="eyebrow">Variation Order Quote</h3>
+                        @if (voq is not null)
+                        {
+                            <p class="text-sm text-content">
+                                <span class="font-mono font-semibold">@voq.DisplayNumber</span>
+                                <span class="text-content-subtle ml-2">@voq.Status</span>
+                            </p>
+                            <a href="@VoqHref" class="btn-secondary w-full inline-flex justify-center">Open VOQ</a>
+                        }
+                        else
+                        {
+                            @if (voqError is not null)
+                            {
+                                <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@voqError</p>
+                            }
+                            <p class="text-xs text-content-subtle">This RFI carries an RFQ. Create a Variation Order Quote to send bid packages to subcontractors.</p>
+                            @if (CanEditDetails)
+                            {
+                                <button type="button" class="btn-primary w-full" disabled="@busy" @onclick="CreateVoq">Create VOQ</button>
+                            }
+                        }
                     </div>
                 }
 
@@ -284,6 +312,10 @@ else
     private IReadOnlyList<AgentCompletionState> blockingAgents = Array.Empty<AgentCompletionState>();
     private IReadOnlyList<Client> clients = Array.Empty<Client>();
     private string? ladderError;
+    private VariationOrderQuote? voq;
+    private string? voqError;
+
+    private string VoqHref => voq is null ? "" : $"/projects/{ProjectId}/voq/{voq.VariationOrderQuoteId}";
 
     private string RegisterHref => $"/projects/{ProjectId}/requests";
 
@@ -324,7 +356,21 @@ else
         {
             try { clients = await ClientStore.ListAsync(); } catch { clients = Array.Empty<Client>(); }
         }
+        await LoadVoqAsync();
         isLoaded = true;
+    }
+
+    private async Task LoadVoqAsync()
+    {
+        if (record?.HasRfq == true)
+        {
+            try { voq = await Variations.GetByRequestAsync(RequestId); }
+            catch { voq = null; }
+        }
+        else
+        {
+            voq = null;
+        }
     }
 
     protected override async Task OnParametersSetAsync()
@@ -411,10 +457,31 @@ else
         {
             busy = true;
             record = await RequestRegister.EnableRfqAsync(record.RequestId, ProjectId);
+            await LoadVoqAsync();
         }
         catch
         {
             ladderError = "Couldn't enable the RFQ. Please try again.";
+        }
+        finally
+        {
+            busy = false;
+        }
+    }
+
+    private async Task CreateVoq()
+    {
+        if (record is null || busy) return;
+        voqError = null;
+        try
+        {
+            busy = true;
+            voq = await Variations.CreateFromRfqAsync(record.RequestId);
+            Nav.NavigateTo($"/projects/{ProjectId}/voq/{voq.VariationOrderQuoteId}");
+        }
+        catch
+        {
+            voqError = "Couldn't create the VOQ. Please try again.";
         }
         finally
         {

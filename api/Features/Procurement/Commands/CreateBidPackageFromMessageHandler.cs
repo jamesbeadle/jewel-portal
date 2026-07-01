@@ -35,7 +35,8 @@ public sealed class CreateBidPackageFromMessageHandler
             Trade = Clamp(command.Trade, 64),
             Status = (int)BidPackageStatus.Draft,
             CreatedAt = DateTimeOffset.UtcNow,
-            OwnerEmail = command.OwnerEmail
+            OwnerEmail = command.OwnerEmail,
+            Number = (await context.BidPackages.MaxAsync(p => (int?)p.Number, cancellationToken) ?? 0) + 1
         };
         context.BidPackages.Add(entity);
         await context.SaveChangesAsync(cancellationToken);

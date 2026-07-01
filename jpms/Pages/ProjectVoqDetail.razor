@@ -1,0 +1,303 @@
+@page "/projects/{ProjectId}/voq/{VoqId}"
+@inject AuthService Auth
+@inject SessionService Session
+@inject IVariationStore Variations
+@inject ISubcontractorStore Subcontractors
+@inject NavigationManager Nav
+@implements IDisposable
+
+<PageTitle>Variation Order Quote · JPMS</PageTitle>
+
+@if (!isLoaded)
+{
+    <section class="max-w-5xl mx-auto px-4 py-12 text-content-subtle text-sm">Loading…</section>
+}
+else if (!Session.IsApproved)
+{
+    <RequestAccessView Email="@Auth.CurrentUser!.Email" DisplayName="@Auth.CurrentUser.DisplayName" />
+}
+else if (voq is null)
+{
+    <ProjectPageShell ProjectId="@ProjectId" ActiveTab="requests">
+        <p class="text-sm text-content-subtle italic">That variation order quote could not be found.</p>
+    </ProjectPageShell>
+}
+else
+{
+    <ProjectPageShell ProjectId="@ProjectId" ActiveTab="requests">
+        <a href="@RequestHref" class="text-sm text-content-muted hover:text-content inline-flex items-center gap-1 mb-4">
+            &larr; Originating request
+        </a>
+
+        <div class="flex flex-wrap items-center gap-3 mb-1">
+            <span class="font-mono text-sm font-semibold text-content">@voq.DisplayNumber</span>
+            <span class="inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium bg-surface-raised text-content-muted">@StatusLabel(voq.Status)</span>
+        </div>
+        <h2 class="text-xl font-semibold text-content mb-5">@voq.Title</h2>
+
+        @if (error is not null)
+        {
+            <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-4">@error</p>
+        }
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
+            <div class="lg:col-span-2 space-y-5">
+                <div class="panel p-5">
+                    <div class="flex items-center justify-between mb-3">
+                        <h3 class="eyebrow">Bid packages</h3>
+                        @if (CanManage)
+                        {
+                            <button type="button" class="btn-secondary" disabled="@busy" @onclick="() => addingPackage = true">Add bid package</button>
+                        }
+                    </div>
+
+                    @if (packages.Count == 0)
+                    {
+                        <p class="text-sm text-content-subtle italic">No bid packages yet. Add one to invite subcontractors to tender.</p>
+                    }
+                    else
+                    {
+                        <ul class="divide-y divide-line">
+                            @foreach (var package in packages)
+                            {
+                                <li class="py-2 flex items-center justify-between gap-3">
+                                    <div>
+                                        <a href="@PackageHref(package.BidPackageId)" class="text-sm font-medium text-content hover:underline">@package.Title</a>
+                                        <span class="text-xs text-content-subtle ml-2">@package.Trade</span>
+                                        @if (voq.SelectedBidPackageId == package.BidPackageId)
+                                        {
+                                            <span class="ml-2 inline-flex items-center rounded bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-600">Selected</span>
+                                        }
+                                    </div>
+                                    <a href="@PackageHref(package.BidPackageId)" class="text-xs text-content-muted hover:text-content">Open →</a>
+                                </li>
+                            }
+                        </ul>
+                    }
+
+                    @if (addingPackage)
+                    {
+                        <div class="mt-4 pt-4 border-t border-line space-y-3">
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                <FormField Label="Package title" Value="@newTitle" OnChange="v => newTitle = v" Required="true" />
+                                <FormField Label="Trade" Value="@newTrade" OnChange="v => newTrade = v" Required="true" />
+                            </div>
+                            <div class="flex gap-2">
+                                <button type="button" class="btn-primary" disabled="@busy" @onclick="AddPackage">Create package</button>
+                                <button type="button" class="btn-secondary" disabled="@busy" @onclick="() => addingPackage = false">Cancel</button>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+
+            <div class="space-y-5">
+                <div class="panel p-5 space-y-3 text-sm">
+                    <div class="flex justify-between"><span class="text-content-subtle">Reference</span><span class="font-mono">@voq.Reference</span></div>
+                    <div class="flex justify-between"><span class="text-content-subtle">Status</span><span>@StatusLabel(voq.Status)</span></div>
+                    <div class="flex justify-between"><span class="text-content-subtle">Estimated value</span><span>@(voq.EstimatedValue is null ? "—" : Money(voq.EstimatedValue.Value))</span></div>
+                    <div class="flex justify-between"><span class="text-content-subtle">Selected sub</span><span>@SelectedSubName()</span></div>
+                </div>
+
+                @if (vo is not null)
+                {
+                    <div class="panel p-5 space-y-3">
+                        <h3 class="eyebrow">Variation Order</h3>
+                        <p class="text-sm text-content">
+                            <span class="font-mono font-semibold">@vo.VariationRef</span>
+                            <span class="inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium bg-surface-raised text-content-muted ml-2">@vo.Status</span>
+                        </p>
+                        <div class="flex justify-between text-sm"><span class="text-content-subtle">Value</span><span>@Money(vo.Value)</span></div>
+                        <div class="flex justify-between text-sm"><span class="text-content-subtle">Cost code</span><span class="font-mono">@vo.CostCode</span></div>
+                        <p class="text-xs text-content-subtle">Added to the Valuation Report and committed to the cost centre.</p>
+                        @if (CanManage && vo.Status == VariationOrderStatus.Approved)
+                        {
+                            <button type="button" class="btn-secondary w-full" disabled="@busy" @onclick="IssueVo">Mark as issued</button>
+                        }
+                    </div>
+                }
+                else if (CanManage && voq.Status == VariationOrderQuoteStatus.Selected)
+                {
+                    <div class="panel p-5 space-y-3">
+                        <h3 class="eyebrow">Approve &amp; raise Variation Order</h3>
+                        <p class="text-xs text-content-subtle">Approving writes the value into the Valuation Report, the CVR and the cost-centre budget.</p>
+                        <FormField Label="Cost code" Value="@approveCostCode" OnChange="v => approveCostCode = v" Required="true" />
+                        <FormField Label="Value (£)" Value="@approveValue" OnChange="v => approveValue = v" InputType="number" />
+                        <button type="button" class="btn-primary w-full" disabled="@busy" @onclick="ApproveVoq">Approve &amp; raise VO</button>
+                    </div>
+                }
+
+                @if (CanManage && packages.Count > 0 && vo is null)
+                {
+                    <div class="panel p-5 space-y-3">
+                        <h3 class="eyebrow">Select winning tender</h3>
+                        <div>
+                            <label class="eyebrow block mb-1">Bid package</label>
+                            <select class="field" value="@selBidPackageId" @onchange="OnBidPackageChanged">
+                                <option value="">— Choose —</option>
+                                @foreach (var package in packages)
+                                {
+                                    <option value="@package.BidPackageId">@package.Title</option>
+                                }
+                            </select>
+                        </div>
+                        <div>
+                            <label class="eyebrow block mb-1">Subcontractor</label>
+                            <select class="field" value="@selSubId" @onchange="OnSubChanged">
+                                <option value="">— Choose —</option>
+                                @foreach (var sub in Subs)
+                                {
+                                    <option value="@sub.SubcontractorId">@sub.CompanyName</option>
+                                }
+                            </select>
+                        </div>
+                        <FormField Label="Agreed value (£)" Value="@selValue" OnChange="v => selValue = v" InputType="number" />
+                        <button type="button" class="btn-primary w-full" disabled="@busy" @onclick="SelectTender">Record selection</button>
+                    </div>
+                }
+            </div>
+        </div>
+    </ProjectPageShell>
+}
+
+@code {
+    [Parameter] public string ProjectId { get; set; } = "";
+    [Parameter] public string VoqId { get; set; } = "";
+
+    private bool isLoaded;
+    private bool busy;
+    private string? error;
+    private VariationOrderQuote? voq;
+    private VariationOrder? vo;
+    private IReadOnlyList<BidPackage> packages = Array.Empty<BidPackage>();
+
+    private string approveCostCode = "";
+    private string approveValue = "";
+
+    private bool addingPackage;
+    private string newTitle = "";
+    private string newTrade = "";
+
+    private string selBidPackageId = "";
+    private string selSubId = "";
+    private string selValue = "";
+
+    private string RequestHref => voq is null ? $"/projects/{ProjectId}/requests" : $"/projects/{ProjectId}/requests/view/{voq.RequestId}";
+    private string PackageHref(string bidPackageId) => $"/projects/{ProjectId}/bid-package-invites/{bidPackageId}";
+
+    private bool CanManage => Session.AvailableRoles.Any(role =>
+        role is Role.Admin or Role.ManagingDirector or Role.ProjectManager or Role.QuantitySurveyor);
+
+    private IReadOnlyList<Subcontractor> Subs => Subcontractors.All();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Session.EnsureLoadedAsync();
+        if (!Auth.IsSignedIn) { Nav.NavigateTo("/login", forceLoad: true); return; }
+        Subcontractors.OnChange += StateHasChanged;
+        _ = Subcontractors.All(); // warm the directory cache for the tender dropdown
+        await ReloadAsync();
+        isLoaded = true;
+    }
+
+    public void Dispose() => Subcontractors.OnChange -= StateHasChanged;
+
+    private async Task ReloadAsync()
+    {
+        try
+        {
+            voq = await Variations.GetByIdAsync(VoqId);
+            packages = await Variations.ListBidPackagesAsync(VoqId);
+            vo = await Variations.GetVariationOrderByVoqAsync(VoqId);
+            if (string.IsNullOrEmpty(approveValue) && voq?.EstimatedValue is { } est)
+                approveValue = est.ToString(System.Globalization.CultureInfo.InvariantCulture);
+            error = null;
+        }
+        catch { error = "Couldn't load the variation order quote. Please try again."; }
+    }
+
+    private async Task AddPackage()
+    {
+        if (busy) return;
+        error = null;
+        if (string.IsNullOrWhiteSpace(newTitle) || string.IsNullOrWhiteSpace(newTrade)) { error = "A title and trade are required."; return; }
+        try
+        {
+            busy = true;
+            await Variations.AddBidPackageAsync(VoqId, newTitle.Trim(), newTrade.Trim());
+            newTitle = newTrade = "";
+            addingPackage = false;
+            await ReloadAsync();
+        }
+        catch { error = "Couldn't add the bid package. Please try again."; }
+        finally { busy = false; }
+    }
+
+    private void OnBidPackageChanged(ChangeEventArgs e) => selBidPackageId = e.Value?.ToString() ?? "";
+    private void OnSubChanged(ChangeEventArgs e) => selSubId = e.Value?.ToString() ?? "";
+
+    private async Task ApproveVoq()
+    {
+        if (busy) return;
+        error = null;
+        if (string.IsNullOrWhiteSpace(approveCostCode)) { error = "A cost code is required to approve."; return; }
+        decimal? value = decimal.TryParse(approveValue, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var parsed) ? parsed : null;
+        try
+        {
+            busy = true;
+            vo = await Variations.ApproveVoqAsync(VoqId, approveCostCode.Trim(), value);
+            await ReloadAsync();
+        }
+        catch { error = "Couldn't approve the VOQ. Please try again."; }
+        finally { busy = false; }
+    }
+
+    private async Task IssueVo()
+    {
+        if (busy || vo is null) return;
+        error = null;
+        try
+        {
+            busy = true;
+            vo = await Variations.IssueVariationOrderAsync(vo.VariationOrderId);
+            await ReloadAsync();
+        }
+        catch { error = "Couldn't issue the variation order. Please try again."; }
+        finally { busy = false; }
+    }
+
+    private async Task SelectTender()
+    {
+        if (busy) return;
+        error = null;
+        if (string.IsNullOrWhiteSpace(selBidPackageId) || string.IsNullOrWhiteSpace(selSubId)) { error = "Choose a bid package and a subcontractor."; return; }
+        decimal? value = decimal.TryParse(selValue, out var parsed) ? parsed : null;
+        try
+        {
+            busy = true;
+            voq = await Variations.SelectTenderAsync(VoqId, selBidPackageId, selSubId, value);
+            await ReloadAsync();
+        }
+        catch { error = "Couldn't record the selection. Please try again."; }
+        finally { busy = false; }
+    }
+
+    private string SelectedSubName()
+    {
+        if (voq?.SelectedSubcontractorId is null) return "—";
+        return Subcontractors.Find(voq.SelectedSubcontractorId)?.CompanyName ?? voq.SelectedSubcontractorId;
+    }
+
+    private static string StatusLabel(VariationOrderQuoteStatus status) => status switch
+    {
+        VariationOrderQuoteStatus.Draft     => "Draft",
+        VariationOrderQuoteStatus.Inviting  => "Inviting",
+        VariationOrderQuoteStatus.Tendering => "Tendering",
+        VariationOrderQuoteStatus.Selected  => "Selected",
+        VariationOrderQuoteStatus.Approved  => "Approved",
+        VariationOrderQuoteStatus.Rejected  => "Rejected",
+        _ => status.ToString()
+    };
+
+    private static string Money(decimal value) => value.ToString("C0", System.Globalization.CultureInfo.GetCultureInfo("en-GB"));
+}

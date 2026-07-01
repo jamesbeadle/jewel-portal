@@ -66,6 +66,10 @@ public static class ProcurementRouteRegistration
             new CommandRoute("PUT", "/api/bid-packages/{bidPackageId}/line-items",
                 command => $"/api/bid-packages/{((SetBidPackageLineItems)command).BidPackageId}/line-items"));
 
+        commands.Register<SetBidPackageLineItemCoverage, IReadOnlyList<BidPackageLineItem>>(
+            new CommandRoute("PUT", "/api/bid-package-line-items/{lineItemId}/coverage",
+                command => $"/api/bid-package-line-items/{((SetBidPackageLineItemCoverage)command).LineItemId}/coverage"));
+
         commands.Register<UpdateBidPackageScope, BidPackage>(
             new CommandRoute("PUT", "/api/bid-packages/{bidPackageId}",
                 command => $"/api/bid-packages/{((UpdateBidPackageScope)command).BidPackageId}"));

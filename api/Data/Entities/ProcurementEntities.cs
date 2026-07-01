@@ -11,6 +11,20 @@ public sealed class BidPackageEntity
     public int Status { get; set; }
     public DateTimeOffset CreatedAt { get; set; }
     [MaxLength(256)]     public string OwnerEmail { get; set; } = "";
+
+    // Parent Variation Order Quote, when this package belongs to one. Null for standalone packages.
+    [MaxLength(64)]      public string? VariationOrderQuoteId { get; set; }
+
+    // Sequential, human-readable package number (rendered BPI-0001). The BPI reference is the stem
+    // tagged on the package's emails so RFT responses group under it in the Bid Package Invites section.
+    public int Number { get; set; }
+
+    // Canonical reference this package's emails are tagged with ("JPMS/BPI-0001"). Falls back to an
+    // id-derived stem for legacy rows that predate numbering. Computed, not stored.
+    [System.ComponentModel.DataAnnotations.Schema.NotMapped]
+    public string Reference => Number > 0
+        ? $"BPI-{Number:0000}"
+        : "BPI-" + (BidPackageId.Length >= 8 ? BidPackageId[..8] : BidPackageId).ToUpperInvariant();
 }
 
 // A subcontractor invited to tender for a bid package. One row per (package, subcontractor).
@@ -34,6 +48,12 @@ public sealed class BidPackageLineItemEntity
     public decimal Quantity { get; set; }
     [MaxLength(64)]      public string Trade { get; set; } = "";
     public int SortOrder { get; set; }
+
+    // Commercial home of this line — 0 Unassigned, 1 ContractLine, 2 Variation (BidPackageLineCoverage).
+    // Exactly one of BoqLineItemId / VariationOrderQuoteId is set to match, enforced by the handler.
+    public int Coverage { get; set; }
+    [MaxLength(64)]      public string? BoqLineItemId { get; set; }
+    [MaxLength(64)]      public string? VariationOrderQuoteId { get; set; }
 }
 
 public sealed class QuoteEntity

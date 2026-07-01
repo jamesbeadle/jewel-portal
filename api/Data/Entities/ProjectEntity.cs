@@ -12,4 +12,8 @@ public sealed class ProjectEntity
     public int Stage { get; set; }
     [MaxLength(256)]     public string ProjectManagerEmail { get; set; } = "";
     public DateTimeOffset CreatedAt { get; set; }
+
+    // Running total of cash calls received from the client on this project. Incremented when a cash
+    // call is marked Received. Denormalised for the directors' project-level view.
+    public decimal CashCallTotal { get; set; }
 }
