@@ -7,13 +7,13 @@
         <div>
             <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Date & time</label>
             <input type="datetime-local" @bind="scheduledAt"
-                   class="rounded-lg border border-line-strong px-3 py-2 text-sm" />
+                   class="field" />
         </div>
         <div>
             <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Notes</label>
             <textarea @bind="notes" rows="3"
                       placeholder="Brief for the visit, who needs to attend…"
-                      class="w-full rounded-lg border border-line-strong px-3 py-2 text-sm"></textarea>
+                      class="field"></textarea>
         </div>
         <button type="submit"
                 class="rounded-lg bg-accent text-accent-ink font-medium text-sm px-4 py-2 hover:bg-accent-hover transition">

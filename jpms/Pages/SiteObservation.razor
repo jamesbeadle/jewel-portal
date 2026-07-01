@@ -24,7 +24,7 @@
         <form @onsubmit="HandleSave" @onsubmit:preventDefault="true" class="space-y-3">
             <div>
                 <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Type</label>
-                <select @bind="kind" class="w-full rounded-xl border border-line-strong px-4 py-3 text-base">
+                <select @bind="kind" class="field rounded-xl px-4 py-3 text-base">
                     <option value="@HsRecordKind.Observation">Observation</option>
                     <option value="@HsRecordKind.NearMiss">Near miss</option>
                     <option value="@HsRecordKind.Incident">Incident</option>
@@ -33,11 +33,11 @@
             <div>
                 <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">What happened?</label>
                 <textarea @bind="summary" required rows="4"
-                          class="w-full rounded-xl border border-line-strong px-4 py-3 text-base"></textarea>
+                          class="field rounded-xl px-4 py-3 text-base"></textarea>
             </div>
             <div>
                 <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Severity</label>
-                <select @bind="severity" class="w-full rounded-xl border border-line-strong px-4 py-3 text-base">
+                <select @bind="severity" class="field rounded-xl px-4 py-3 text-base">
                     @foreach (var option in Enum.GetValues<HsSeverity>())
                     {
                         <option value="@option">@option</option>

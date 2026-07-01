@@ -11,6 +11,10 @@ public sealed class HttpClientStore : IClientStore
     private readonly IQueryClient queries;
     private readonly ICommandSender commands;
 
+    // Whether a clients load has been started — prevents an empty result from
+    // re-triggering a fetch on every re-render (see HttpDrawingStore).
+    private bool requested;
+
     public HttpClientStore(ClientsReadModel readModel, IQueryClient queries, ICommandSender commands)
     {
         this.readModel = readModel;
@@ -23,8 +27,14 @@ public sealed class HttpClientStore : IClientStore
 
     public IReadOnlyList<Client> All()
     {
-        if (readModel.Current.Count == 0) _ = readModel.RefreshAsync(CancellationToken.None);
+        if (!requested) { requested = true; _ = LoadAsync(); }
         return readModel.Current;
+    }
+
+    private async Task LoadAsync()
+    {
+        try { await readModel.RefreshAsync(CancellationToken.None); }
+        catch { requested = false; }
     }
 
     public async Task<IReadOnlyList<Client>> ListAsync(CancellationToken cancellationToken = default)

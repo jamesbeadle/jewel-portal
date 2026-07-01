@@ -11,6 +11,10 @@ public sealed partial class HttpCvrStore : ICvrStore
     private readonly IQueryClient queries;
     private readonly ICommandSender commands;
 
+    // Projects whose snapshots have had a load started — prevents an empty result
+    // from re-triggering a fetch on every re-render (see HttpDrawingStore).
+    private readonly HashSet<string> requested = new();
+
     public HttpCvrStore(CvrSnapshotsReadModel snapshotsReadModel, IQueryClient queries, ICommandSender commands)
     {
         this.snapshotsReadModel = snapshotsReadModel;
@@ -23,8 +27,14 @@ public sealed partial class HttpCvrStore : ICvrStore
 
     public IReadOnlyList<CvrSnapshot> SnapshotsFor(string projectId)
     {
-        if (snapshotsReadModel.Current(projectId).Count == 0) _ = snapshotsReadModel.RefreshAsync(projectId, CancellationToken.None);
+        if (requested.Add(projectId)) _ = LoadAsync(projectId);
         return snapshotsReadModel.Current(projectId);
+    }
+
+    private async Task LoadAsync(string projectId)
+    {
+        try { await snapshotsReadModel.RefreshAsync(projectId, CancellationToken.None); }
+        catch { requested.Remove(projectId); }
     }
 
     public CvrSnapshot? LatestSnapshot(string projectId) =>

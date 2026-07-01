@@ -7,7 +7,7 @@
     </p>
     <div class="flex flex-wrap items-center gap-2">
         <select @bind="selectedStage"
-                class="rounded-lg border border-line-strong px-3 py-2 text-sm">
+                class="field">
             @foreach (var stage in Enum.GetValues<LeadStage>())
             {
                 <option value="@stage">@stage.DisplayName()</option>

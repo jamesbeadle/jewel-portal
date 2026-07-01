@@ -8,8 +8,14 @@ public sealed partial class HttpCommercialStore
 {
     public IReadOnlyList<CostCodeBudget> BudgetsFor(string projectId)
     {
-        if (budgetsReadModel.Current(projectId).Count == 0) _ = budgetsReadModel.RefreshAsync(projectId, CancellationToken.None);
+        if (budgetsRequested.Add(projectId)) _ = LoadBudgetsAsync(projectId);
         return budgetsReadModel.Current(projectId);
+    }
+
+    private async Task LoadBudgetsAsync(string projectId)
+    {
+        try { await budgetsReadModel.RefreshAsync(projectId, CancellationToken.None); }
+        catch { budgetsRequested.Remove(projectId); }
     }
 
     public CostCodeBudget SaveBudget(CostCodeBudget budget)
@@ -26,8 +32,14 @@ public sealed partial class HttpCommercialStore
 
     public IReadOnlyList<Timesheet> TimesheetsFor(string projectId)
     {
-        if (timesheetsReadModel.Current(projectId).Count == 0) _ = timesheetsReadModel.RefreshAsync(projectId, CancellationToken.None);
+        if (timesheetsRequested.Add(projectId)) _ = LoadTimesheetsAsync(projectId);
         return timesheetsReadModel.Current(projectId);
+    }
+
+    private async Task LoadTimesheetsAsync(string projectId)
+    {
+        try { await timesheetsReadModel.RefreshAsync(projectId, CancellationToken.None); }
+        catch { timesheetsRequested.Remove(projectId); }
     }
 
     public Timesheet SaveTimesheet(Timesheet timesheet)

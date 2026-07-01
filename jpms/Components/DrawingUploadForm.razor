@@ -17,26 +17,26 @@
     <div>
         <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Drawing code *</label>
         <input type="text" @bind="drawingCode" required placeholder="A-100"
-               class="w-full rounded-lg border border-line-strong px-3 py-2 text-sm" />
+               class="field" />
         <p class="text-xs text-content-subtle mt-1">Re-uploading an existing code adds a new revision to that drawing.</p>
     </div>
 
     <div>
         <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Title *</label>
         <input type="text" @bind="title" required placeholder="Garden, shed, …"
-               class="w-full rounded-lg border border-line-strong px-3 py-2 text-sm" />
+               class="field" />
     </div>
 
     <div>
         <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Revision *</label>
         <input type="text" @bind="revisionLabel" required placeholder="A"
-               class="w-full rounded-lg border border-line-strong px-3 py-2 text-sm" />
+               class="field" />
     </div>
 
     <div>
         <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Issued by</label>
         <input type="email" @bind="issuedBy" placeholder="architect@example.com"
-               class="w-full rounded-lg border border-line-strong px-3 py-2 text-sm" />
+               class="field" />
     </div>
 
     @if (error is not null)

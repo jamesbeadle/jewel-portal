@@ -5,7 +5,7 @@
     <form @onsubmit="HandleAdd" @onsubmit:preventDefault="true" class="flex flex-wrap items-end gap-2">
         <div class="flex-1 min-w-[10rem]">
             <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Kind</label>
-            <select @bind="kind" class="w-full rounded-lg border border-line-strong px-3 py-2 text-sm">
+            <select @bind="kind" class="field">
                 <option value="Drawing">Drawing</option>
                 <option value="Consent">Planning consent</option>
                 <option value="Brief">Brief</option>
@@ -15,7 +15,7 @@
         <div class="flex-[2] min-w-[14rem]">
             <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Description</label>
             <input type="text" @bind="description"
-                   class="w-full rounded-lg border border-line-strong px-3 py-2 text-sm" />
+                   class="field" />
         </div>
         <button type="submit"
                 class="rounded-lg bg-accent text-accent-ink font-medium text-sm px-4 py-2 hover:bg-accent-hover transition">

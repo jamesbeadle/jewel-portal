@@ -13,7 +13,7 @@
     <div>
         <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Source</label>
         <select @bind="source"
-                class="w-full rounded-lg border border-line-strong px-3 py-2 text-sm">
+                class="field">
             @foreach (var option in Enum.GetValues<LeadSource>())
             {
                 <option value="@option">@option.DisplayName()</option>

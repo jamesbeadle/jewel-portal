@@ -11,6 +11,10 @@ public sealed class HttpCloseoutStore : ICloseoutStore
     private readonly IQueryClient queries;
     private readonly ICommandSender commands;
 
+    // Projects whose defects have had a load started — prevents an empty result
+    // from re-triggering a fetch on every re-render (see HttpDrawingStore).
+    private readonly HashSet<string> requested = new();
+
     public HttpCloseoutStore(DefectsReadModel defectsReadModel, IQueryClient queries, ICommandSender commands)
     {
         this.defectsReadModel = defectsReadModel;
@@ -23,8 +27,14 @@ public sealed class HttpCloseoutStore : ICloseoutStore
 
     public IReadOnlyList<Defect> DefectsFor(string projectId)
     {
-        if (defectsReadModel.Current(projectId).Count == 0) _ = defectsReadModel.RefreshAsync(projectId, CancellationToken.None);
+        if (requested.Add(projectId)) _ = LoadAsync(projectId);
         return defectsReadModel.Current(projectId);
+    }
+
+    private async Task LoadAsync(string projectId)
+    {
+        try { await defectsReadModel.RefreshAsync(projectId, CancellationToken.None); }
+        catch { requested.Remove(projectId); }
     }
 
     public Defect SaveDefect(Defect defect)

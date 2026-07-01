@@ -11,6 +11,11 @@ public sealed class HttpAgentDesk : IAgentDesk
     private readonly IQueryClient queries;
     private readonly ICommandSender commands;
 
+    // Keys that have had a load started — prevents an empty result from
+    // re-triggering a fetch on every re-render (see HttpDrawingStore).
+    private readonly HashSet<string> requestsRequested = new();
+    private bool queueRequested;
+
     public HttpAgentDesk(AgentsReadModel readModel, IQueryClient queries, ICommandSender commands)
     {
         this.readModel = readModel;
@@ -23,14 +28,26 @@ public sealed class HttpAgentDesk : IAgentDesk
 
     public IReadOnlyList<RequestAgent> ForRequest(string requestId)
     {
-        if (readModel.ForRequest(requestId).Count == 0) _ = readModel.RefreshRequestAsync(requestId, CancellationToken.None);
+        if (requestsRequested.Add(requestId)) _ = LoadRequestAsync(requestId);
         return readModel.ForRequest(requestId);
+    }
+
+    private async Task LoadRequestAsync(string requestId)
+    {
+        try { await readModel.RefreshRequestAsync(requestId, CancellationToken.None); }
+        catch { requestsRequested.Remove(requestId); }
     }
 
     public IReadOnlyList<AgentQueueItem> Queue()
     {
-        if (readModel.Queue.Count == 0) _ = readModel.RefreshQueueAsync(CancellationToken.None);
+        if (!queueRequested) { queueRequested = true; _ = LoadQueueGuardedAsync(); }
         return readModel.Queue;
+    }
+
+    private async Task LoadQueueGuardedAsync()
+    {
+        try { await readModel.RefreshQueueAsync(CancellationToken.None); }
+        catch { queueRequested = false; }
     }
 
     public async Task<IReadOnlyList<RequestAgent>> LoadRequestAgentsAsync(string requestId, CancellationToken cancellationToken = default)

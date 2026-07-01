@@ -31,7 +31,7 @@ public sealed class HttpDrawingStore : IDrawingStore
 
     public IReadOnlyList<Drawing> DrawingsFor(string projectId)
     {
-        if (readModel.DrawingsCurrent(projectId).Count == 0) _ = readModel.RefreshDrawingsAsync(projectId, CancellationToken.None);
+        readModel.EnsureDrawings(projectId, CancellationToken.None);
         return readModel.DrawingsCurrent(projectId);
     }
 
@@ -40,7 +40,7 @@ public sealed class HttpDrawingStore : IDrawingStore
 
     public IReadOnlyList<DrawingRevision> RevisionsFor(string drawingId)
     {
-        if (readModel.RevisionsCurrent(drawingId).Count == 0) _ = readModel.RefreshRevisionsAsync(drawingId, CancellationToken.None);
+        readModel.EnsureRevisions(drawingId, CancellationToken.None);
         return readModel.RevisionsCurrent(drawingId);
     }
 

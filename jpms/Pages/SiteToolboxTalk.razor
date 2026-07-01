@@ -26,13 +26,13 @@
             <div>
                 <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Topic</label>
                 <input type="text" @bind="topic" required placeholder="Working at height refresher"
-                       class="w-full rounded-xl border border-line-strong px-4 py-3 text-base" />
+                       class="field rounded-xl px-4 py-3 text-base" />
             </div>
             <div>
                 <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Attendees (one per line)</label>
                 <textarea @bind="attendeesText" rows="4" required
                           placeholder="Pete Maynard&#10;Linda Hampton&#10;Raj Patel"
-                          class="w-full rounded-xl border border-line-strong px-4 py-3 text-base"></textarea>
+                          class="field rounded-xl px-4 py-3 text-base"></textarea>
             </div>
             <button type="submit"
                     class="w-full rounded-xl bg-accent text-accent-ink font-semibold text-base px-4 py-4 active:bg-accent-hover"

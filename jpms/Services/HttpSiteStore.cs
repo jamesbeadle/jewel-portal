@@ -11,6 +11,11 @@ public sealed class HttpSiteStore : ISiteStore
     private readonly ProgrammeReadModel programmeReadModel;
     private readonly ICommandSender commands;
 
+    // Projects whose data has had a load started — prevents an empty result
+    // from re-triggering a fetch on every re-render (see HttpDrawingStore).
+    private readonly HashSet<string> reportsRequested = new();
+    private readonly HashSet<string> programmeRequested = new();
+
     public HttpSiteStore(SiteReportsReadModel reportsReadModel, ProgrammeReadModel programmeReadModel, ICommandSender commands)
     {
         this.reportsReadModel = reportsReadModel;
@@ -24,14 +29,26 @@ public sealed class HttpSiteStore : ISiteStore
 
     public IReadOnlyList<SiteReport> ReportsFor(string projectId)
     {
-        if (reportsReadModel.Current(projectId).Count == 0) _ = reportsReadModel.RefreshAsync(projectId, CancellationToken.None);
+        if (reportsRequested.Add(projectId)) _ = LoadReportsAsync(projectId);
         return reportsReadModel.Current(projectId);
+    }
+
+    private async Task LoadReportsAsync(string projectId)
+    {
+        try { await reportsReadModel.RefreshAsync(projectId, CancellationToken.None); }
+        catch { reportsRequested.Remove(projectId); }
     }
 
     public IReadOnlyList<ProgrammeTask> ProgrammeFor(string projectId)
     {
-        if (programmeReadModel.Current(projectId).Count == 0) _ = programmeReadModel.RefreshAsync(projectId, CancellationToken.None);
+        if (programmeRequested.Add(projectId)) _ = LoadProgrammeAsync(projectId);
         return programmeReadModel.Current(projectId);
+    }
+
+    private async Task LoadProgrammeAsync(string projectId)
+    {
+        try { await programmeReadModel.RefreshAsync(projectId, CancellationToken.None); }
+        catch { programmeRequested.Remove(projectId); }
     }
 
     public SiteReport SaveReport(SiteReport report)

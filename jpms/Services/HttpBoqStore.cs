@@ -11,6 +11,10 @@ public sealed class HttpBoqStore : IBoqStore
     private readonly IQueryClient queries;
     private readonly ICommandSender commands;
 
+    // Projects whose BoQ lines have had a load started — prevents an empty result
+    // from re-triggering a fetch on every re-render (see HttpDrawingStore).
+    private readonly HashSet<string> requested = new();
+
     public HttpBoqStore(BoqLinesReadModel readModel, IQueryClient queries, ICommandSender commands)
     {
         this.readModel = readModel;
@@ -23,8 +27,14 @@ public sealed class HttpBoqStore : IBoqStore
 
     public IReadOnlyList<BoqLineItem> LinesFor(string projectId)
     {
-        if (readModel.Current(projectId).Count == 0) _ = readModel.RefreshAsync(projectId, CancellationToken.None);
+        if (requested.Add(projectId)) _ = LoadAsync(projectId);
         return readModel.Current(projectId);
+    }
+
+    private async Task LoadAsync(string projectId)
+    {
+        try { await readModel.RefreshAsync(projectId, CancellationToken.None); }
+        catch { requested.Remove(projectId); }
     }
 
     public BoqLineItem Upsert(BoqLineItem line)

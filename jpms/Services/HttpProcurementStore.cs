@@ -12,6 +12,10 @@ public sealed class HttpProcurementStore : IProcurementStore
     private readonly IQueryClient queries;
     private readonly ICommandSender commands;
 
+    // Projects whose packages have had a load started — prevents an empty result
+    // from re-triggering a fetch on every re-render (see HttpDrawingStore).
+    private readonly HashSet<string> packagesRequested = new();
+
     public HttpProcurementStore(BidPackagesReadModel packagesReadModel, WorkOrdersReadModel workOrdersReadModel, IQueryClient queries, ICommandSender commands)
     {
         this.packagesReadModel = packagesReadModel;
@@ -26,8 +30,14 @@ public sealed class HttpProcurementStore : IProcurementStore
 
     public IReadOnlyList<BidPackage> PackagesFor(string projectId)
     {
-        if (packagesReadModel.Current(projectId).Count == 0) _ = packagesReadModel.RefreshAsync(projectId, CancellationToken.None);
+        if (packagesRequested.Add(projectId)) _ = LoadPackagesAsync(projectId);
         return packagesReadModel.Current(projectId);
+    }
+
+    private async Task LoadPackagesAsync(string projectId)
+    {
+        try { await packagesReadModel.RefreshAsync(projectId, CancellationToken.None); }
+        catch { packagesRequested.Remove(projectId); }
     }
 
     public BidPackage? FindPackage(string bidPackageId) =>

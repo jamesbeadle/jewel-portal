@@ -12,6 +12,12 @@ public sealed class HttpValuationReportStore : IValuationReportStore
     private readonly ClaimLinesReadModel claimLinesReadModel;
     private readonly ICommandSender commands;
 
+    // Keys that have had a load started — prevents an empty result from
+    // re-triggering a fetch on every re-render (see HttpDrawingStore).
+    private readonly HashSet<string> linesRequested = new();
+    private readonly HashSet<string> claimsRequested = new();
+    private readonly HashSet<string> claimLinesRequested = new();
+
     public HttpValuationReportStore(
         ValuationLinesReadModel linesReadModel,
         ValuationClaimsReadModel claimsReadModel,
@@ -31,20 +37,38 @@ public sealed class HttpValuationReportStore : IValuationReportStore
 
     public IReadOnlyList<ValuationLineItem> LinesFor(string projectId)
     {
-        if (linesReadModel.Current(projectId).Count == 0) _ = linesReadModel.RefreshAsync(projectId, CancellationToken.None);
+        if (linesRequested.Add(projectId)) _ = LoadLinesAsync(projectId);
         return linesReadModel.Current(projectId);
+    }
+
+    private async Task LoadLinesAsync(string projectId)
+    {
+        try { await linesReadModel.RefreshAsync(projectId, CancellationToken.None); }
+        catch { linesRequested.Remove(projectId); }
     }
 
     public IReadOnlyList<ValuationClaim> ClaimsFor(string projectId)
     {
-        if (claimsReadModel.Current(projectId).Count == 0) _ = claimsReadModel.RefreshAsync(projectId, CancellationToken.None);
+        if (claimsRequested.Add(projectId)) _ = LoadClaimsAsync(projectId);
         return claimsReadModel.Current(projectId);
+    }
+
+    private async Task LoadClaimsAsync(string projectId)
+    {
+        try { await claimsReadModel.RefreshAsync(projectId, CancellationToken.None); }
+        catch { claimsRequested.Remove(projectId); }
     }
 
     public IReadOnlyList<ClaimLine> EntriesFor(string claimId)
     {
-        if (claimLinesReadModel.Current(claimId).Count == 0) _ = claimLinesReadModel.RefreshAsync(claimId, CancellationToken.None);
+        if (claimLinesRequested.Add(claimId)) _ = LoadClaimLinesAsync(claimId);
         return claimLinesReadModel.Current(claimId);
+    }
+
+    private async Task LoadClaimLinesAsync(string claimId)
+    {
+        try { await claimLinesReadModel.RefreshAsync(claimId, CancellationToken.None); }
+        catch { claimLinesRequested.Remove(claimId); }
     }
 
     public async Task<ValuationLineItem> AddLineAsync(AddValuationLineItem command)

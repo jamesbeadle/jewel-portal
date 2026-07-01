@@ -17,6 +17,12 @@ public sealed partial class HttpCommercialStore : ICommercialStore
     private readonly IQueryClient queries;
     private readonly ICommandSender commands;
 
+    // Projects whose data has had a load started — prevents an empty result
+    // from re-triggering a fetch on every re-render (see HttpDrawingStore).
+    private readonly HashSet<string> valuationsRequested = new();
+    private readonly HashSet<string> budgetsRequested = new();
+    private readonly HashSet<string> timesheetsRequested = new();
+
     public HttpCommercialStore(ValuationsReadModel valuationsReadModel, CostCodeBudgetsReadModel budgetsReadModel, TimesheetsReadModel timesheetsReadModel, CashflowReadModel cashflowReadModel, IQueryClient queries, ICommandSender commands)
     {
         this.valuationsReadModel = valuationsReadModel;
@@ -38,8 +44,14 @@ public sealed partial class HttpCommercialStore : ICommercialStore
 
     public IReadOnlyList<Valuation> ValuationsFor(string projectId)
     {
-        if (valuationsReadModel.Current(projectId).Count == 0) _ = valuationsReadModel.RefreshAsync(projectId, CancellationToken.None);
+        if (valuationsRequested.Add(projectId)) _ = LoadValuationsAsync(projectId);
         return valuationsReadModel.Current(projectId);
+    }
+
+    private async Task LoadValuationsAsync(string projectId)
+    {
+        try { await valuationsReadModel.RefreshAsync(projectId, CancellationToken.None); }
+        catch { valuationsRequested.Remove(projectId); }
     }
 
     public Valuation SaveValuation(Valuation valuation)
