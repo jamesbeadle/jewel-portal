@@ -1,0 +1,103 @@
+@inject AuthService Auth
+@inject IDrawingStore DrawingStore
+@using Microsoft.AspNetCore.Components.Forms
+
+@* Uploads a new revision straight into a known drawing (unlike DrawingUploadForm, which
+   resolves the drawing by code from the register). Used on the drawing detail page. *@
+<EditForm Model="this" OnValidSubmit="HandleUpload"
+      class="rounded-2xl border border-line bg-surface p-5 space-y-3">
+
+    <div>
+        <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">New version file *</label>
+        <InputFile OnChange="OnFileSelected" class="w-full text-sm text-content-muted" />
+        @if (selectedFile is not null)
+        {
+            <p class="text-xs text-content-subtle mt-1">@selectedFile.Name · @FormatSize(selectedFile.Size)</p>
+        }
+    </div>
+
+    <div>
+        <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Revision *</label>
+        <input type="text" @bind="revisionLabel" required placeholder="B" class="field" />
+    </div>
+
+    <div>
+        <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Issued by</label>
+        <input type="email" @bind="issuedBy" placeholder="architect@example.com" class="field" />
+    </div>
+
+    @if (error is not null)
+    {
+        <p class="text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2">@error</p>
+    }
+
+    <p class="text-xs text-content-subtle">New uploads are saved as <span class="font-medium">Unapproved</span>. They become the latest drawing only once approved.</p>
+
+    <button type="submit" disabled="@busy"
+            class="w-full rounded-lg bg-accent text-accent-ink font-medium px-4 py-2.5 hover:bg-accent-hover transition disabled:opacity-60">
+        @(busy ? "Uploading…" : "Upload revision")
+    </button>
+</EditForm>
+
+@code {
+    [Parameter, EditorRequired] public string ProjectId { get; set; } = "";
+    [Parameter, EditorRequired] public string DrawingId { get; set; } = "";
+    [Parameter] public EventCallback OnUploaded { get; set; }
+
+    private IBrowserFile? selectedFile;
+    private string revisionLabel = "";
+    private string issuedBy = "";
+    private bool busy;
+    private string? error;
+
+    private void OnFileSelected(InputFileChangeEventArgs e)
+    {
+        selectedFile = e.File;
+        error = null;
+        if (string.IsNullOrWhiteSpace(revisionLabel))
+        {
+            var extracted = ExtractRevisionLabel(selectedFile.Name);
+            if (extracted.Length > 0) revisionLabel = extracted;
+        }
+    }
+
+    private async Task HandleUpload()
+    {
+        if (selectedFile is null) { error = "Choose a file to upload."; return; }
+        if (string.IsNullOrWhiteSpace(revisionLabel)) { error = "Enter a revision label."; return; }
+
+        busy = true;
+        error = null;
+        try
+        {
+            var issuedByEmail = string.IsNullOrWhiteSpace(issuedBy) ? Auth.CurrentUser?.Email ?? "" : issuedBy;
+            await DrawingStore.UploadRevisionAsync(
+                ProjectId, DrawingId, revisionLabel.Trim().ToUpperInvariant(), issuedByEmail, selectedFile, CancellationToken.None);
+
+            selectedFile = null; revisionLabel = ""; issuedBy = "";
+            await OnUploaded.InvokeAsync();
+        }
+        catch (Exception ex)
+        {
+            error = $"Upload failed: {ex.Message}";
+        }
+        finally
+        {
+            busy = false;
+        }
+    }
+
+    private static string ExtractRevisionLabel(string fileName)
+    {
+        var match = System.Text.RegularExpressions.Regex.Match(
+            fileName, @"[_-]Rev[_-]?([A-Za-z0-9]+)", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+        return match.Success ? match.Groups[1].Value.ToUpperInvariant() : "";
+    }
+
+    private static string FormatSize(long bytes)
+    {
+        if (bytes >= 1024 * 1024) return $"{bytes / (1024.0 * 1024.0):0.#} MB";
+        if (bytes >= 1024) return $"{bytes / 1024.0:0.#} KB";
+        return $"{bytes} B";
+    }
+}

@@ -45,21 +45,38 @@ else
                 </div>
             </div>
 
-            <header class="mb-6">
-                <p class="font-mono text-xs text-content-subtle mb-1">@drawing.DrawingCode</p>
-                <h2 class="text-xl md:text-2xl font-semibold text-content">@drawing.Title</h2>
-                <p class="text-sm text-content-muted mt-1">
-                    Latest approved:
-                    @if (string.IsNullOrEmpty(drawing.CurrentApprovedRevisionLabel))
-                    {
-                        <span class="italic text-content-subtle">none yet</span>
-                    }
-                    else
-                    {
-                        <span class="font-mono">Rev @drawing.CurrentApprovedRevisionLabel</span>
-                    }
-                </p>
+            <header class="mb-6 flex flex-wrap items-start justify-between gap-3">
+                <div>
+                    <p class="font-mono text-xs text-content-subtle mb-1">@drawing.DrawingCode</p>
+                    <h2 class="text-xl md:text-2xl font-semibold text-content">@drawing.Title</h2>
+                    <p class="text-sm text-content-muted mt-1">
+                        Latest approved:
+                        @if (string.IsNullOrEmpty(drawing.CurrentApprovedRevisionLabel))
+                        {
+                            <span class="italic text-content-subtle">none yet</span>
+                        }
+                        else
+                        {
+                            <span class="font-mono">Rev @drawing.CurrentApprovedRevisionLabel</span>
+                        }
+                    </p>
+                </div>
+                @if (CanManage)
+                {
+                    <button type="button" @onclick="() => isUploading = !isUploading"
+                            class="rounded-lg bg-accent text-accent-ink font-medium text-sm px-3 py-2 hover:bg-accent-hover transition">
+                        @(isUploading ? "Cancel" : "+ Upload new version")
+                    </button>
+                }
             </header>
+
+            @if (isUploading)
+            {
+                <div class="mb-6">
+                    <DrawingRevisionUploadForm ProjectId="@ProjectId" DrawingId="@drawing.DrawingId"
+                                               OnUploaded="() => isUploading = false" />
+                </div>
+            }
 
             <div class="grid gap-6 lg:grid-cols-5">
                 <div class="lg:col-span-3">
@@ -106,7 +123,11 @@ else
     [Parameter] public string DrawingId { get; set; } = "";
 
     private bool isLoaded;
+    private bool isUploading;
     private Drawing? drawing;
+
+    private bool CanManage =>
+        Auth.CurrentRoles.Any(role => role is Role.Admin or Role.ManagingDirector or Role.ProjectManager);
 
     protected override async Task OnInitializedAsync()
     {
