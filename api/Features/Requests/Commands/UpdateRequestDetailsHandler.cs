@@ -1,19 +1,35 @@
 using Jewel.JPMS.Api.Cqrs;
 using Jewel.JPMS.Api.Data;
+using Jewel.JPMS.Api.Features.MailboxIntake.Graph;
 using Jewel.JPMS.Contracts.Requests;
 using Jewel.JPMS.Models;
+using Microsoft.Extensions.Logging;
 
 namespace Jewel.JPMS.Api.Features.Requests.Commands;
 
 public sealed class UpdateRequestDetailsHandler : ICommandHandler<UpdateRequestDetails, Request>
 {
     private readonly JpmsContext context;
-    public UpdateRequestDetailsHandler(JpmsContext context) { this.context = context; }
+    private readonly IMailboxGraphClient graph;
+    private readonly ILogger<UpdateRequestDetailsHandler> logger;
+    public UpdateRequestDetailsHandler(JpmsContext context, IMailboxGraphClient graph, ILogger<UpdateRequestDetailsHandler> logger)
+    {
+        this.context = context;
+        this.graph = graph;
+        this.logger = logger;
+    }
 
     public async Task<Request> HandleAsync(UpdateRequestDetails command, CancellationToken cancellationToken)
     {
         var entity = await context.Requests.FindAsync(new object[] { command.RequestId }, cancellationToken);
         if (entity is null) throw new InvalidOperationException($"Request {command.RequestId} not found.");
+
+        // Allow the reference to be edited manually, but never onto a number another request on this
+        // project already holds — excluding this request so an unchanged reference always passes.
+        await RequestReferenceGuard.EnsureUniqueAsync(context, entity.ProjectId, command.Reference, entity.RequestId, cancellationToken);
+
+        // The mailbox tag is derived from the reference, so capture the old tag before we change it.
+        var previousTag = TriageCategories.ForRecord(entity.TagReference);
 
         entity.Reference = command.Reference;
         entity.Title = command.Title;
@@ -33,6 +49,27 @@ public sealed class UpdateRequestDetailsHandler : ICommandHandler<UpdateRequestD
         if (entity.RespondedAt is null && !string.IsNullOrWhiteSpace(command.ResponseText)) entity.RespondedAt = DateTimeOffset.UtcNow;
 
         await context.SaveChangesAsync(cancellationToken);
+
+        // If the reference changed, its mailbox tag changed with it. Move every email carrying the old
+        // JPMS/<ref> tag onto the new one so the record keeps its linked correspondence — including
+        // replies further down the tagged threads. Best-effort: the reference is already saved, and a
+        // transient Graph failure shouldn't fail the edit (a later thread-sync can reconcile).
+        var newTag = TriageCategories.ForRecord(entity.TagReference);
+        if (!string.Equals(previousTag, newTag, StringComparison.OrdinalIgnoreCase))
+        {
+            try
+            {
+                var moved = await graph.RetagAsync(previousTag, newTag, cancellationToken);
+                logger.LogInformation("Retagged {Count} email(s) from {OldTag} to {NewTag} after reference change.",
+                    moved, previousTag, newTag);
+            }
+            catch (Exception ex)
+            {
+                logger.LogWarning(ex, "Retag from {OldTag} to {NewTag} failed; emails may still carry the old tag.",
+                    previousTag, newTag);
+            }
+        }
+
         return entity.ToModel();
     }
 }

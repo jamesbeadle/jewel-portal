@@ -83,6 +83,12 @@ public interface IMailboxGraphClient
     /// Returns how many were cleared.</summary>
     Task<int> ClearRequestTagsAsync(string requestCategory, CancellationToken ct);
 
+    /// <summary>Move every email carrying <paramref name="oldCategory"/> onto <paramref name="newCategory"/>
+    /// — used when a record's reference is renamed so its linked correspondence follows the new tag. The
+    /// new tag is added before the old one is removed, so an email never loses its marker mid-move (and so
+    /// never bounces back to triage). Verified per message. Returns how many were retagged.</summary>
+    Task<int> RetagAsync(string oldCategory, string newCategory, CancellationToken ct);
+
     /// <summary>Read the fields needed to record an email against a request, or null if it's gone.</summary>
     Task<MailboxSnapshot?> GetSnapshotAsync(string messageId, string? internetMessageId, CancellationToken ct);
 
@@ -129,6 +135,7 @@ public sealed class NullMailboxGraphClient : IMailboxGraphClient
     public Task<bool> RestoreAsync(string messageId, string? internetMessageId, CancellationToken ct) => Task.FromResult(false);
     public Task<bool> AssignAsync(string messageId, string? internetMessageId, string requestCategory, CancellationToken ct) => Task.FromResult(false);
     public Task<int> ClearRequestTagsAsync(string requestCategory, CancellationToken ct) => Task.FromResult(0);
+    public Task<int> RetagAsync(string oldCategory, string newCategory, CancellationToken ct) => Task.FromResult(0);
     public Task<MailboxSnapshot?> GetSnapshotAsync(string messageId, string? internetMessageId, CancellationToken ct) => Task.FromResult<MailboxSnapshot?>(null);
     public Task<IReadOnlyList<string>> ListInboxConversationIdsByCategoryAsync(string category, CancellationToken ct) =>
         Task.FromResult<IReadOnlyList<string>>(Array.Empty<string>());
@@ -258,6 +265,35 @@ public sealed class MailboxGraphClient : IMailboxGraphClient
                 break;
         }
         return cleared;
+    }
+
+    public async Task<int> RetagAsync(string oldCategory, string newCategory, CancellationToken ct)
+    {
+        if (string.Equals(oldCategory, newCategory, StringComparison.OrdinalIgnoreCase))
+            return 0;
+
+        var retagged = 0;
+        for (var guard = 0; guard < 20; guard++)
+        {
+            var ids = await FindInboxIdsByCategoryAsync(oldCategory, ct);
+            if (ids.Count == 0)
+                break;
+
+            var any = false;
+            foreach (var id in ids)
+                // Add the new tag first so the email always keeps a workflow tag (never bounced back to
+                // triage mid-move), then drop the old one. Only count a message once both stick.
+                if (await AddTagAsync(id, null, newCategory, ct)
+                    && await RemoveTagAsync(id, null, oldCategory, ct))
+                {
+                    retagged++;
+                    any = true;
+                }
+
+            if (!any)
+                break;
+        }
+        return retagged;
     }
 
     // --- Verified tag operations: write the categories, then read them back to confirm. ---

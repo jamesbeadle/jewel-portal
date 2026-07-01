@@ -28,6 +28,14 @@ public sealed class RaiseRequestEndpoint
         if (!authorisation.Allows(signedInUser, command)) return new ForbidResult();
         var validationOutcome = validation.Check(command);
         if (validationOutcome.HasFailed) return new BadRequestObjectResult(validationOutcome.Errors);
-        return new OkObjectResult(await handler.HandleAsync(command, request.HttpContext.RequestAborted));
+        try
+        {
+            return new OkObjectResult(await handler.HandleAsync(command, request.HttpContext.RequestAborted));
+        }
+        catch (InvalidOperationException ex)
+        {
+            // e.g. the reference is already in use on this project.
+            return new BadRequestObjectResult(ex.Message);
+        }
     }
 }

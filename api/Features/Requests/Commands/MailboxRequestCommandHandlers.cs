@@ -47,6 +47,8 @@ public sealed class CreateRequestFromMessageHandler : ICommandHandler<CreateRequ
         var projectExists = await context.Projects.AnyAsync(p => p.ProjectId == command.ProjectId, cancellationToken);
         if (!projectExists) throw new InvalidOperationException($"Project '{command.ProjectId}' not found.");
 
+        await RequestReferenceGuard.EnsureUniqueAsync(context, command.ProjectId, command.Reference, excludeRequestId: null, cancellationToken);
+
         var snapshot = await graph.GetSnapshotAsync(command.MessageId, command.InternetMessageId, cancellationToken)
             ?? throw new InvalidOperationException("The email could not be read from the mailbox.");
 

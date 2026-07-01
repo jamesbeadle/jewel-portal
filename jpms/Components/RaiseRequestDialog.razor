@@ -133,11 +133,10 @@
         error = null;
     }
 
-    private string SuggestReference(RequestType k)
-    {
-        var existing = RequestRegister.ForProject(ProjectId, k).Count;
-        return $"{k.DisplayName()}-{existing + 1:000}";
-    }
+    // Continue the register from the highest number already issued for this kind, not a row count —
+    // manual-register gaps, deletions and back-filled history mean count + 1 can re-issue a live number.
+    private string SuggestReference(RequestType k) =>
+        RequestReference.SuggestNext(k, RequestRegister.ForProject(ProjectId, k).Select(r => r.Reference));
 
     private void OnKindChanged(ChangeEventArgs e)
     {
@@ -201,6 +200,11 @@
             saving = true;
             var raised = await RequestRegister.RaiseAsync(command);
             await OnRaised.InvokeAsync(raised);
+        }
+        catch (CommandFailedException ex)
+        {
+            error = ex.Message;
+            saving = false;
         }
         catch
         {

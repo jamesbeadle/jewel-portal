@@ -540,6 +540,10 @@ else
             record = await RequestRegister.UpdateAsync(command);
             responseDraft = record.ResponseText ?? "";
         }
+        catch (CommandFailedException ex)
+        {
+            actionError = ex.Message;
+        }
         catch
         {
             actionError = "Couldn't update the request. Please try again.";
@@ -609,6 +613,11 @@ else
             record = await RequestRegister.UpdateAsync(command);
             responseDraft = record.ResponseText ?? "";
             editing = false;
+        }
+        catch (CommandFailedException ex)
+        {
+            // e.g. the reference was manually edited onto a number already in use on this project.
+            editError = ex.Message;
         }
         catch
         {

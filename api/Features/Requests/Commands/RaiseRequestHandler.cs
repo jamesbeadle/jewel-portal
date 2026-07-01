@@ -16,6 +16,10 @@ public sealed class RaiseRequestHandler : ICommandHandler<RaiseRequest, Request>
 
     public async Task<Request> HandleAsync(RaiseRequest command, CancellationToken cancellationToken)
     {
+        // The reference may have been typed manually, so guard against re-using a number already
+        // on this project before we insert.
+        await RequestReferenceGuard.EnsureUniqueAsync(context, command.ProjectId, command.Reference, excludeRequestId: null, cancellationToken);
+
         var nextNumber = (await context.Requests.MaxAsync(r => (int?)r.Number, cancellationToken) ?? 0) + 1;
 
         var entity = new RequestEntity

@@ -159,7 +159,11 @@ else
             </div>
         }
 
-        @if (total == 0)
+        @if (listLoading && items.Count == 0)
+        {
+            <JewelSpinner Class="py-16" Label="Loading" />
+        }
+        else if (total == 0)
         {
             <div class="panel p-8 text-center">
                 <p class="text-sm text-content">Nothing in the queue.</p>
@@ -169,7 +173,11 @@ else
         else
         {
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
-                <div class="space-y-2 lg:col-span-1">
+                <div class="relative space-y-2 lg:col-span-1">
+                    @if (listLoading)
+                    {
+                        <JewelSpinner Overlay="true" Label="Loading" />
+                    }
                     @foreach (var item in items)
                     {
                         <button type="button" @key="item.Id" @onclick="() => Select(item)"
@@ -405,7 +413,11 @@ else
         }
         else if (view == QueueView.Discarded)
         {
-            @if (discardedTotal == 0)
+            @if (listLoading && discardedItems.Count == 0)
+            {
+                <JewelSpinner Class="py-16" Label="Loading" />
+            }
+            else if (discardedTotal == 0)
             {
                 <div class="panel p-8 text-center">
                     <p class="text-sm text-content">No discarded emails.</p>
@@ -415,7 +427,11 @@ else
             else
             {
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
-                    <div class="space-y-2 lg:col-span-1">
+                    <div class="relative space-y-2 lg:col-span-1">
+                        @if (listLoading)
+                        {
+                            <JewelSpinner Overlay="true" Label="Loading" />
+                        }
                         @foreach (var item in discardedItems)
                         {
                             <button type="button" @key="item.Id" @onclick="() => Select(item)" class="@RowClass(item)">
@@ -532,7 +548,11 @@ else
                 }
             </div>
 
-            @if (taggedTotal == 0)
+            @if (listLoading && taggedItems.Count == 0)
+            {
+                <JewelSpinner Class="py-16" Label="Loading" />
+            }
+            else if (taggedTotal == 0)
             {
                 <div class="panel p-8 text-center">
                     <p class="text-sm text-content">@(selectedTags.Count == 0 ? "No tagged emails." : "No emails with the selected tags.")</p>
@@ -542,7 +562,11 @@ else
             else
             {
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
-                    <div class="space-y-2 lg:col-span-1">
+                    <div class="relative space-y-2 lg:col-span-1">
+                        @if (listLoading)
+                        {
+                            <JewelSpinner Overlay="true" Label="Loading" />
+                        }
                         @foreach (var item in taggedItems)
                         {
                             <button type="button" @key="item.Id" @onclick="() => Select(item)" class="@RowClass(item)">
@@ -720,6 +744,9 @@ else
 
     private bool isLoaded;
     private string? loadError;
+    // True while a list page (queue / discarded / tagged) is being re-fetched — drives the inline
+    // spinner over the list column so pagination and filter changes fade rather than jolt.
+    private bool listLoading;
 
     // The current page only. Graph pages with an opaque cursor, so we keep a small stack of the
     // cursors we've walked (index 0 = first page, cursor null) to support Previous/Next.
@@ -822,6 +849,7 @@ else
     private async Task LoadAsync()
     {
         loadError = null;
+        listLoading = true;
         try
         {
             var result = await Intake.ListInboxLiveAsync(queueCursors[queueIndex], PageSize);
@@ -839,11 +867,16 @@ else
             total = 0;
             queueNext = null;
         }
+        finally
+        {
+            listLoading = false;
+        }
     }
 
     private async Task LoadDiscardedAsync()
     {
         loadError = null;
+        listLoading = true;
         try
         {
             var result = await Intake.ListDiscardedLiveAsync(discardedCursors[discardedIndex], PageSize);
@@ -859,6 +892,10 @@ else
             discardedItems = Array.Empty<MailboxMessage>();
             discardedTotal = 0;
             discardedNext = null;
+        }
+        finally
+        {
+            listLoading = false;
         }
     }
 
@@ -893,6 +930,7 @@ else
     private async Task LoadTaggedAsync()
     {
         loadError = null;
+        listLoading = true;
         try
         {
             var filter = selectedTags.Count == 0 ? null : selectedTags.ToList();
@@ -913,6 +951,10 @@ else
             taggedItems = Array.Empty<MailboxMessage>();
             taggedTotal = 0;
             taggedNext = null;
+        }
+        finally
+        {
+            listLoading = false;
         }
     }
 
@@ -1100,11 +1142,12 @@ else
 
     private void OnCreateDescriptionInput(ChangeEventArgs e) => createDescription = e.Value?.ToString() ?? "";
 
+    // Continue from the highest number already issued for this kind rather than a row count, so gaps
+    // in the manual register, deletions and back-filled history never re-issue a live number.
     private string SuggestReference()
     {
-        if (string.IsNullOrWhiteSpace(createProjectId)) return $"{createKind.DisplayName()}-001";
-        var existing = RequestRegister.ForProject(createProjectId, createKind).Count;
-        return $"{createKind.DisplayName()}-{existing + 1:000}";
+        if (string.IsNullOrWhiteSpace(createProjectId)) return RequestReference.SuggestNext(createKind, Array.Empty<string>());
+        return RequestReference.SuggestNext(createKind, RequestRegister.ForProject(createProjectId, createKind).Select(r => r.Reference));
     }
 
     private async Task DoLink()
@@ -1198,6 +1241,11 @@ else
             detail = null;
             detailLoading = false;
             mode = TriageMode.None;
+        }
+        catch (CommandFailedException ex)
+        {
+            // e.g. the reference is already in use on this project.
+            actionError = ex.Message;
         }
         catch
         {

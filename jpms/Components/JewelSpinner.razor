@@ -1,0 +1,47 @@
+@* Inline loading indicator for in-page data loads (pagination, filters, tab switches).
+   Mirrors LoadingScreen's spinning-ring + pulsing-jewel motif, but sized to sit inside a
+   panel or list region rather than covering the viewport. Set Overlay="true" to float it,
+   centred and dimming the content behind, over a region that keeps its existing height
+   (the region needs `position: relative`, e.g. the Tailwind `relative` class). *@
+
+@if (Overlay)
+{
+    <div class="absolute inset-0 z-10 flex flex-col items-center justify-center gap-2 bg-canvas/60 backdrop-blur-[1px]">
+        <div class="relative @Size grid place-items-center">
+            <div class="absolute inset-0 rounded-full border-2 border-surface-field border-t-content/70 animate-spin"></div>
+            <JewelIcon Class="@IconClass" />
+        </div>
+        @if (!string.IsNullOrEmpty(Label))
+        {
+            <p class="text-xs text-content-subtle">@Label</p>
+        }
+    </div>
+}
+else
+{
+    <div class="flex flex-col items-center justify-center gap-2 @Class">
+        <div class="relative @Size grid place-items-center">
+            <div class="absolute inset-0 rounded-full border-2 border-surface-field border-t-content/70 animate-spin"></div>
+            <JewelIcon Class="@IconClass" />
+        </div>
+        @if (!string.IsNullOrEmpty(Label))
+        {
+            <p class="text-xs text-content-subtle">@Label</p>
+        }
+    </div>
+}
+
+@code {
+    // Diameter of the ring. Small by default so it reads as "inline", not "full page".
+    [Parameter] public string Size { get; set; } = "w-8 h-8";
+    // Jewel icon is roughly 40% of the ring.
+    [Parameter] public string IconSize { get; set; } = "w-3.5 h-3.5";
+    // Optional caption shown beneath the spinner.
+    [Parameter] public string? Label { get; set; }
+    // When true, floats the spinner over its (position:relative) parent and dims the content.
+    [Parameter] public bool Overlay { get; set; }
+    // Extra classes for the inline (non-overlay) wrapper, e.g. vertical padding.
+    [Parameter] public string Class { get; set; } = "py-8";
+
+    private string IconClass => $"{IconSize} animate-jewel-pulse";
+}
