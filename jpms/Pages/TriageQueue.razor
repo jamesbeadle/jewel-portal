@@ -337,7 +337,7 @@ else
                                             <div>
                                                 <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Record type *</label>
                                                 <select class="field" value="@((int)createRecordType)" @onchange="OnCreateRecordTypeChanged">
-                                                    @foreach (var recordType in RecordTypeOptions)
+                                                    @foreach (var recordType in CreateRecordTypeOptions)
                                                     {
                                                         <option value="@((int)recordType)">@RecordTypeLabel(recordType)</option>
                                                     }
@@ -726,9 +726,16 @@ else
         RequestType.Rfi, RequestType.Rfq, RequestType.Rfp, RequestType.Rfc, RequestType.Rfa
     };
 
-    // The record types an email can be linked to, in the order shown in the category picker. Driven by
+    // The record types an email can be LINKED to, in the order shown in the category picker. Driven by
     // the providers registered server-side; adding a type here surfaces it once its provider exists.
     private static readonly RecordType[] RecordTypeOptions =
+    {
+        RecordType.Request, RecordType.BidPackageInvite, RecordType.CostCentre
+    };
+
+    // The subset that can be CREATED from an email. Cost centres come from the global master, so an
+    // email can be linked to one but never creates one — it's excluded from the "Create new" picker.
+    private static readonly RecordType[] CreateRecordTypeOptions =
     {
         RecordType.Request, RecordType.BidPackageInvite
     };
@@ -737,6 +744,7 @@ else
     {
         RecordType.Request          => "Request",
         RecordType.BidPackageInvite => "Bid Package Invite",
+        RecordType.CostCentre       => "Cost Centre",
         _                           => type.ToString()
     };
 
