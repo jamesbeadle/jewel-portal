@@ -14,18 +14,9 @@
             <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@error</p>
         }
 
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Type *</label>
-                <select class="field" value="@((int)kind)" @onchange="OnKindChanged">
-                    @foreach (var option in KindOptions)
-                    {
-                        <option value="@((int)option)">@option.DisplayName() — @option.LongName()</option>
-                    }
-                </select>
-            </div>
-            <FormField Label="Reference" Value="@reference" OnChange="v => reference = v" Required="true" />
-        </div>
+        <p class="rounded-lg bg-surface-raised border border-line px-3 py-2 text-xs text-content-subtle">
+            Raised as a <span class="font-medium text-content">General</span> request and auto-numbered REQ-####. Promote it to an official RFI from the request once it's created.
+        </p>
 
         <FormField Label="Subject" Value="@title" OnChange="v => title = v" Required="true" />
 
@@ -84,11 +75,9 @@
     [Parameter] public EventCallback OnClose { get; set; }
     [Parameter] public EventCallback<Request> OnRaised { get; set; }
 
-    private static readonly RequestType[] KindOptions =
-    {
-        RequestType.Rfi, RequestType.Rfq, RequestType.Rfp,
-        RequestType.Rfc, RequestType.Rfa
-    };
+    // A request is raised as a General container (auto-numbered REQ-#### server-side) and is later
+    // promoted to an RFI from the request page. The kind is no longer chosen at creation.
+    private const RequestType kind = RequestType.General;
 
     private static readonly RequestStatus[] StatusOptions =
     {
@@ -96,8 +85,6 @@
         RequestStatus.Approved, RequestStatus.Rejected, RequestStatus.Closed
     };
 
-    private RequestType kind = RequestType.Rfi;
-    private string reference = "";
     private string title = "";
     private string description = "";
     private string raisedTo = "";
@@ -123,28 +110,12 @@
 
     private void Reset()
     {
-        kind = RequestType.Rfi;
-        reference = SuggestReference(RequestType.Rfi);
         title = description = raisedTo = drawingRef = responseDue = valueText = "";
         backfill = false;
         raisedAt = respondedAt = responseText = "";
         status = RequestStatus.Open;
         saving = false;
         error = null;
-    }
-
-    // Continue the register from the highest number already issued for this kind, not a row count —
-    // manual-register gaps, deletions and back-filled history mean count + 1 can re-issue a live number.
-    private string SuggestReference(RequestType k) =>
-        RequestReference.SuggestNext(k, RequestRegister.ForProject(ProjectId, k).Select(r => r.Reference));
-
-    private void OnKindChanged(ChangeEventArgs e)
-    {
-        if (int.TryParse(e.Value?.ToString(), out var raw))
-        {
-            kind = (RequestType)raw;
-            reference = SuggestReference(kind);
-        }
     }
 
     private void OnStatusChanged(ChangeEventArgs e)
@@ -165,7 +136,6 @@
         if (saving) return;
         error = null;
 
-        if (string.IsNullOrWhiteSpace(reference)) { error = "A reference is required."; return; }
         if (string.IsNullOrWhiteSpace(title)) { error = "A subject is required."; return; }
 
         var email = Auth.CurrentUser?.Email;
@@ -178,10 +148,11 @@
             value = parsed;
         }
 
+        // Blank reference: a General request is auto-numbered REQ-#### server-side.
         var command = new RaiseRequest(
             ProjectId,
             kind,
-            reference.Trim(),
+            "",
             title.Trim(),
             description?.Trim() ?? "",
             value,

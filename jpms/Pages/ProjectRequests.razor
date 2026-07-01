@@ -85,17 +85,15 @@ else
 
     private record Filter(string Slug, string Label, RequestType? Kind);
 
+    // A request is a general container until it's promoted. Only the states that exist on this level
+    // are shown: General (the default) and RFIs (a request set as an official RFI). RFQs and the other
+    // instruments happen *inside* a request, so they aren't top-level tabs. "All" still lists every
+    // record, including any legacy-kind rows carried over from the historical register.
     private static readonly Filter[] Filters =
     {
         new("all",        "All",  null),
         new("general",    "General", RequestType.General),
-        new("rfis",       "RFIs", RequestType.Rfi),
-        new("rfqs",       "RFQs", RequestType.Rfq),
-        new("rfps",       "RFPs", RequestType.Rfp),
-        new("rfcs",       "RFCs", RequestType.Rfc),
-        new("rfas",       "RFAs", RequestType.Rfa),
-        new("delays",     "NODs", RequestType.NoticeOfDelay),
-        new("eots",       "EOTs", RequestType.ExtensionOfTime)
+        new("rfis",       "RFIs", RequestType.Rfi)
     };
 
     private string ActiveSlug => string.IsNullOrWhiteSpace(Kind) ? "all" : Kind.ToLowerInvariant();

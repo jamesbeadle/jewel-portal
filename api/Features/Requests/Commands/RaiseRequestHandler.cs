@@ -22,13 +22,19 @@ public sealed class RaiseRequestHandler : ICommandHandler<RaiseRequest, Request>
 
         var nextNumber = (await context.Requests.MaxAsync(r => (int?)r.Number, cancellationToken) ?? 0) + 1;
 
+        // A General request is a container raised without a reference — auto-number it REQ-#### to match
+        // its display number. A specific reference (e.g. a back-filled RFI) is honoured as typed.
+        var reference = string.IsNullOrWhiteSpace(command.Reference)
+            ? $"REQ-{nextNumber:0000}"
+            : command.Reference;
+
         var entity = new RequestEntity
         {
             RequestId = RequestsIdentifierFactory.Next(),
             Number = nextNumber,
             ProjectId = command.ProjectId,
             Kind = (int)command.Kind,
-            Reference = command.Reference,
+            Reference = reference,
             Title = command.Title,
             Description = command.Description,
             Status = (int)(command.Status ?? RequestStatus.Open),

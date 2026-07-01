@@ -357,20 +357,11 @@ else
 
                                         @if (createRecordType == RecordType.Request)
                                         {
-                                            <div>
-                                                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Type *</label>
-                                                <select class="field" value="@((int)createKind)" @onchange="OnCreateKindChanged">
-                                                    @foreach (var option in KindOptions)
-                                                    {
-                                                        <option value="@((int)option)">@option.DisplayName() — @option.LongName()</option>
-                                                    }
-                                                </select>
-                                            </div>
+                                            <p class="rounded-lg bg-surface-raised border border-line px-3 py-2 text-xs text-content-subtle">
+                                                Created as a <span class="font-medium text-content">General</span> request and auto-numbered REQ-####. Promote it to an official RFI from the request page.
+                                            </p>
 
-                                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                                <FormField Label="Reference" Value="@createReference" OnChange="v => createReference = v" Required="true" />
-                                                <FormField Label="Raised to" Value="@createRaisedTo" OnChange="v => createRaisedTo = v" />
-                                            </div>
+                                            <FormField Label="Raised to" Value="@createRaisedTo" OnChange="v => createRaisedTo = v" />
 
                                             <FormField Label="Subject" Value="@createTitle" OnChange="v => createTitle = v" Required="true" />
 
@@ -721,11 +712,6 @@ else
     private enum QueueView { Active, Discarded, Tagged }
     private QueueView view = QueueView.Active;
 
-    private static readonly RequestType[] KindOptions =
-    {
-        RequestType.Rfi, RequestType.Rfq, RequestType.Rfp, RequestType.Rfc, RequestType.Rfa
-    };
-
     // The record types an email can be LINKED to, in the order shown in the category picker. Driven by
     // the providers registered server-side; adding a type here surfaces it once its provider exists.
     private static readonly RecordType[] RecordTypeOptions =
@@ -812,11 +798,11 @@ else
     private IReadOnlyList<LinkableRecord> linkRecords = Array.Empty<LinkableRecord>();
     private bool linkRecordsLoading;
 
-    // Create-new state
+    // Create-new state. A request created from an email always starts as a General container
+    // (auto-numbered REQ-#### server-side); it's promoted to an RFI later from the request page.
     private RecordType createRecordType = RecordType.Request;
     private string createProjectId = "";
-    private RequestType createKind = RequestType.Rfi;
-    private string createReference = "";
+    private const RequestType createKind = RequestType.General;
     private string createTitle = "";
     private string createDescription = "";
     private string createRaisedTo = "";
@@ -1039,8 +1025,6 @@ else
         ResetLinkState();
         createRecordType = RecordType.Request;
         createProjectId = "";
-        createKind = RequestType.Rfi;
-        createReference = "";
         createTitle = item.Subject;
         createDescription = item.BodyPreview;
         createRaisedTo = createDrawingRef = createResponseDue = "";
@@ -1136,27 +1120,9 @@ else
         linkRecords = Array.Empty<LinkableRecord>();
     }
 
-    private void OnCreateProjectChanged(ChangeEventArgs e)
-    {
-        createProjectId = e.Value?.ToString() ?? "";
-        createReference = SuggestReference();
-    }
-
-    private void OnCreateKindChanged(ChangeEventArgs e)
-    {
-        if (int.TryParse(e.Value?.ToString(), out var raw)) createKind = (RequestType)raw;
-        createReference = SuggestReference();
-    }
+    private void OnCreateProjectChanged(ChangeEventArgs e) => createProjectId = e.Value?.ToString() ?? "";
 
     private void OnCreateDescriptionInput(ChangeEventArgs e) => createDescription = e.Value?.ToString() ?? "";
-
-    // Continue from the highest number already issued for this kind rather than a row count, so gaps
-    // in the manual register, deletions and back-filled history never re-issue a live number.
-    private string SuggestReference()
-    {
-        if (string.IsNullOrWhiteSpace(createProjectId)) return RequestReference.SuggestNext(createKind, Array.Empty<string>());
-        return RequestReference.SuggestNext(createKind, RequestRegister.ForProject(createProjectId, createKind).Select(r => r.Reference));
-    }
 
     private async Task DoLink()
     {
@@ -1168,14 +1134,14 @@ else
     {
         if (selected is null || busy) return;
         if (string.IsNullOrWhiteSpace(createProjectId)) { actionError = "Choose a project."; return; }
-        if (string.IsNullOrWhiteSpace(createReference)) { actionError = "A reference is required."; return; }
         if (string.IsNullOrWhiteSpace(createTitle)) { actionError = "A subject is required."; return; }
 
+        // Blank reference: a General request is auto-numbered REQ-#### server-side.
         var command = new CreateRequestFromMessage(
             selected.Id,
             createProjectId,
             createKind,
-            createReference.Trim(),
+            "",
             createTitle.Trim(),
             createDescription?.Trim() ?? "",
             RaisedTo: NullIfBlank(createRaisedTo),

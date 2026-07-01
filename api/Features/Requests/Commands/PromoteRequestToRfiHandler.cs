@@ -29,6 +29,19 @@ public sealed class PromoteRequestToRfiHandler : ICommandHandler<PromoteRequestT
         var entity = await context.Requests.FindAsync(new object[] { command.RequestId }, cancellationToken);
         if (entity is null) throw new InvalidOperationException($"Request {command.RequestId} not found.");
 
+        // Mint the next RFI reference for this project on first promotion. A General container carries a
+        // REQ-#### reference; becoming an official RFI gives it a place in the project's RFI sequence
+        // (RFI-001, RFI-002…). References already in the RFI series (e.g. a back-filled RFI) are left as-is.
+        if (!entity.Reference.StartsWith("RFI-", StringComparison.OrdinalIgnoreCase))
+        {
+            var projectReferences = await context.Requests
+                .Where(r => r.ProjectId == entity.ProjectId)
+                .Select(r => r.Reference)
+                .ToListAsync(cancellationToken);
+            var nextRfi = RequestReference.HighestNumber("RFI", projectReferences) + 1;
+            entity.Reference = $"RFI-{nextRfi:000}";
+        }
+
         entity.Kind = (int)RequestType.Rfi;
         if (entity.Status == (int)RequestStatus.Closed) entity.Status = (int)RequestStatus.Open;
         await context.SaveChangesAsync(cancellationToken);

@@ -54,13 +54,19 @@ public sealed class CreateRequestFromMessageHandler : ICommandHandler<CreateRequ
 
         var nextNumber = (await context.Requests.MaxAsync(r => (int?)r.Number, cancellationToken) ?? 0) + 1;
 
+        // A request created from an email is a General container raised without a reference — auto-number
+        // it REQ-#### to match its display number. A specific typed reference is honoured as-is.
+        var reference = string.IsNullOrWhiteSpace(command.Reference)
+            ? $"REQ-{nextNumber:0000}"
+            : command.Reference;
+
         var request = new RequestEntity
         {
             RequestId = RequestsIdentifierFactory.Next(),
             Number = nextNumber,
             ProjectId = command.ProjectId,
             Kind = (int)command.Kind,
-            Reference = command.Reference,
+            Reference = reference,
             Title = Clamp(command.Title, 256),
             Description = Clamp(command.Description, 2048),
             Status = (int)RequestStatus.Open,
