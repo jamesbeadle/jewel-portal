@@ -11,7 +11,8 @@ public enum RequestType
     NoticeOfDelay = 3,  // NOD (JCT ICD 2024 cl. 2.19)
     Rfq = 4,            // Request for Quotation
     Rfp = 5,            // Request for Proposal
-    ExtensionOfTime = 6 // EOT (JCT ICD 2024 cl. 2.19/2.20)
+    ExtensionOfTime = 6,// EOT (JCT ICD 2024 cl. 2.19/2.20)
+    General = 7         // Default state: project-tagged & cost centre known, not yet promoted
 }
 
 public enum RequestStatus
@@ -45,7 +46,9 @@ public sealed record Request(
     string? RelatedDrawingSpec = null,  // related drawing / spec issued with the response
     string? InternalNotes = null,       // notes kept internal to Jewel
     string? ClientNotes = null,         // notes shared with client / external parties
-    int Number = 0)                     // sequential request number; rendered as REQ-0001
+    int Number = 0,                     // sequential request number; rendered as REQ-0001
+    bool HasRfq = false,                // an RFI that has spawned an RFQ (unlocks VOQ creation)
+    string? ClientId = null)            // owning client account — architect email source on RFI promotion
 {
     // Human-readable request number / mailbox folder name (e.g. "REQ-0001"). Empty until assigned.
     public string DisplayNumber => Number > 0 ? $"REQ-{Number:0000}" : "";
@@ -71,6 +74,7 @@ public static class RequestTypeExtensions
         RequestType.Rfa             => "RFA",
         RequestType.NoticeOfDelay   => "NOD",
         RequestType.ExtensionOfTime => "EOT",
+        RequestType.General         => "General",
         _ => kind.ToString()
     };
 
@@ -83,6 +87,7 @@ public static class RequestTypeExtensions
         RequestType.Rfa             => "Request for Approval",
         RequestType.NoticeOfDelay   => "Notice of Delay",
         RequestType.ExtensionOfTime => "Extension of Time",
+        RequestType.General         => "General Request",
         _ => kind.ToString()
     };
 }

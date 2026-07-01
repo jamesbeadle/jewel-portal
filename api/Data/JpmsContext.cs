@@ -22,6 +22,7 @@ public sealed class JpmsContext : DbContext
 
     public DbSet<ProjectEntity> Projects => Set<ProjectEntity>();
     public DbSet<ProjectContactEntity> ProjectContacts => Set<ProjectContactEntity>();
+    public DbSet<ClientEntity> Clients => Set<ClientEntity>();
     public DbSet<LeadEntity> Leads => Set<LeadEntity>();
     public DbSet<QualificationAssessmentEntity> QualificationAssessments => Set<QualificationAssessmentEntity>();
     public DbSet<SiteVisitEntity> SiteVisits => Set<SiteVisitEntity>();

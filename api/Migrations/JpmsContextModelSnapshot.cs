@@ -268,9 +268,48 @@ namespace Jewel.JPMS.Api.Migrations
                     b.ToTable("CashflowSnapshots");
                 });
 
+            modelBuilder.Entity("Jewel.JPMS.Api.Data.Entities.ClientEntity", b =>
+                {
+                    b.Property<string>("ClientId")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<string>("ArchitectEmail")
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<string>("ArchitectName")
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<string>("PrimaryContactEmail")
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<string>("PrimaryContactName")
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.HasKey("ClientId");
+
+                    b.ToTable("Clients");
+                });
+
             modelBuilder.Entity("Jewel.JPMS.Api.Data.Entities.RequestEntity", b =>
                 {
                     b.Property<string>("RequestId")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<string>("ClientId")
                         .HasMaxLength(64)
                         .HasColumnType("nvarchar(64)");
 
@@ -286,6 +325,9 @@ namespace Jewel.JPMS.Api.Migrations
                     b.Property<string>("DrawingRef")
                         .HasMaxLength(256)
                         .HasColumnType("nvarchar(256)");
+
+                    b.Property<bool>("HasRfq")
+                        .HasColumnType("bit");
 
                     b.Property<bool>("ImpliesVariation")
                         .HasColumnType("bit");

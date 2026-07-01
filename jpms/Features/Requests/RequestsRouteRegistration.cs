@@ -87,6 +87,19 @@ public static class RequestsRouteRegistration
             new CommandRoute("POST", "/api/requests/{requestId}/return-to-triage",
                 command => $"/api/requests/{((ReturnRequestToTriage)command).RequestId}/return-to-triage"));
 
+        // Request ladder: General -> RFI -> (RFQ), plus linking a request to a client account.
+        commands.Register<PromoteRequestToRfi, Request>(
+            new CommandRoute("POST", "/api/requests/{requestId}/promote-to-rfi",
+                command => $"/api/requests/{((PromoteRequestToRfi)command).RequestId}/promote-to-rfi"));
+
+        commands.Register<EnableRfqOnRequest, Request>(
+            new CommandRoute("POST", "/api/requests/{requestId}/enable-rfq",
+                command => $"/api/requests/{((EnableRfqOnRequest)command).RequestId}/enable-rfq"));
+
+        commands.Register<LinkRequestToClient, Request>(
+            new CommandRoute("PUT", "/api/requests/{requestId}/client",
+                command => $"/api/requests/{((LinkRequestToClient)command).RequestId}/client"));
+
         // Live-read triage moves: discard (Inbox -> General) and restore (General -> Inbox). The
         // message id + internetMessageId travel in the JSON body, so the route is static.
         commands.Register<DiscardMessage, Acknowledgement>(

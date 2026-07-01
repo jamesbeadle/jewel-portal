@@ -86,6 +86,13 @@ public sealed class RequestEntity
     // request's Outlook folder in the projects@ mailbox so triaged emails can be grouped per request.
     public int Number { get; set; }
 
+    // True once an RFI has spawned an RFQ. Gates creation of a Variation Order Quote (VOQ).
+    public bool HasRfq { get; set; }
+
+    // Owning client account. Architect email for RFI promotion resolves from this client first,
+    // falling back to the project's Architect contact. Null until the request is linked to a client.
+    [MaxLength(64)]     public string? ClientId { get; set; }
+
     // Graph id of this request's mailbox folder, set the first time an email is filed against it.
     // Cached so subsequent emails for the same request reuse the folder rather than recreating it.
     [MaxLength(450)]     public string? MailboxFolderId { get; set; }

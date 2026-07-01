@@ -42,6 +42,18 @@ public static class RequestsFeatureRegistration
         services.AddScoped<UpdateRequestDetailsAuthorisation>();
         services.AddScoped<UpdateRequestDetailsValidation>();
 
+        services.AddScoped<ICommandHandler<PromoteRequestToRfi, Request>, PromoteRequestToRfiHandler>();
+        services.AddScoped<PromoteRequestToRfiAuthorisation>();
+        services.AddScoped<PromoteRequestToRfiValidation>();
+
+        services.AddScoped<ICommandHandler<EnableRfqOnRequest, Request>, EnableRfqOnRequestHandler>();
+        services.AddScoped<EnableRfqOnRequestAuthorisation>();
+        services.AddScoped<EnableRfqOnRequestValidation>();
+
+        services.AddScoped<ICommandHandler<LinkRequestToClient, Request>, LinkRequestToClientHandler>();
+        services.AddScoped<LinkRequestToClientAuthorisation>();
+        services.AddScoped<LinkRequestToClientValidation>();
+
         services.AddScoped<ICommandHandler<PostRequestMessage, RequestMessage>, PostRequestMessageHandler>();
         services.AddScoped<PostRequestMessageAuthorisation>();
         services.AddScoped<PostRequestMessageValidation>();

@@ -7,6 +7,7 @@ using Jewel.JPMS.Api.Features.Ai;
 using Jewel.JPMS.Api.Features.Auth;
 using Jewel.JPMS.Api.Features.Boq;
 using Jewel.JPMS.Api.Features.Cashflow;
+using Jewel.JPMS.Api.Features.Clients;
 using Jewel.JPMS.Api.Features.CostCenters;
 using Jewel.JPMS.Api.Features.Requests;
 using Jewel.JPMS.Api.Features.Closeout;
@@ -51,6 +52,7 @@ var host = new HostBuilder()
         services.AddDirectoryFeature();
         services.AddAccessRequestsFeature();
         services.AddProjectsFeature();
+        services.AddClientsFeature();
         services.AddLeadsFeature();
         services.AddBoqFeature();
         services.AddRatesFeature();

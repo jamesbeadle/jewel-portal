@@ -80,6 +80,27 @@ public sealed class HttpRequestRegister : IRequestRegister
     public Task<IReadOnlyList<Request>> ListUnassignedAsync(CancellationToken cancellationToken = default) =>
         queries.AskAsync(new ListUnassignedRequests(), cancellationToken);
 
+    public async Task<Request> PromoteToRfiAsync(string requestId, string projectId, CancellationToken cancellationToken = default)
+    {
+        var updated = await commands.SendAsync(new PromoteRequestToRfi(requestId), cancellationToken);
+        await readModel.RefreshAsync(projectId, cancellationToken);
+        return updated;
+    }
+
+    public async Task<Request> EnableRfqAsync(string requestId, string projectId, CancellationToken cancellationToken = default)
+    {
+        var updated = await commands.SendAsync(new EnableRfqOnRequest(requestId), cancellationToken);
+        await readModel.RefreshAsync(projectId, cancellationToken);
+        return updated;
+    }
+
+    public async Task<Request> LinkToClientAsync(string requestId, string? clientId, string projectId, CancellationToken cancellationToken = default)
+    {
+        var updated = await commands.SendAsync(new LinkRequestToClient(requestId, clientId), cancellationToken);
+        await readModel.RefreshAsync(projectId, cancellationToken);
+        return updated;
+    }
+
     private async Task RaiseRecordAsync(Request record)
     {
         await commands.SendAsync(new RaiseRequest(record.ProjectId, record.Kind, record.Reference, record.Title, record.Description, record.Value, record.RaisedByEmail, record.RaisedTo, record.DrawingRef, record.ResponseDue, record.InternalNotes, record.ClientNotes), CancellationToken.None);

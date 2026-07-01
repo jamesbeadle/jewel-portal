@@ -14,6 +14,9 @@ public interface IRequestRegister
     Task<Request?> GetAsync(string requestId, CancellationToken cancellationToken = default);
     Task<Request> RaiseAsync(RaiseRequest command, CancellationToken cancellationToken = default);
     Task<Request> UpdateAsync(UpdateRequestDetails command, CancellationToken cancellationToken = default);
+    Task<Request> PromoteToRfiAsync(string requestId, string projectId, CancellationToken cancellationToken = default);
+    Task<Request> EnableRfqAsync(string requestId, string projectId, CancellationToken cancellationToken = default);
+    Task<Request> LinkToClientAsync(string requestId, string? clientId, string projectId, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<RequestMessage>> ListMessagesAsync(string requestId, CancellationToken cancellationToken = default);
     Task<RequestMessage> PostMessageAsync(PostRequestMessage command, CancellationToken cancellationToken = default);
     Task DeleteAsync(string requestId, string projectId, CancellationToken cancellationToken = default);

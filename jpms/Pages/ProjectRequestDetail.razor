@@ -3,6 +3,7 @@
 @inject AuthService Auth
 @inject SessionService Session
 @inject IRequestRegister RequestRegister
+@inject IClientStore ClientStore
 @inject IAgentDesk Agents
 @inject NavigationManager Nav
 
@@ -85,6 +86,52 @@ else
                     }
                     <MetaRow Label="Related drawing / spec" Value="@Dash(record.RelatedDrawingSpec)" />
                 </div>
+
+                @if (CanEditDetails)
+                {
+                    <div class="panel p-5 space-y-4">
+                        <h3 class="eyebrow">Request type</h3>
+                        <p class="text-sm text-content">
+                            Current: <span class="font-medium">@record.Kind.DisplayName()</span>
+                            @if (record.HasRfq)
+                            {
+                                <span class="ml-2 inline-flex items-center rounded bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-600">RFQ enabled</span>
+                            }
+                        </p>
+
+                        @if (ladderError is not null)
+                        {
+                            <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@ladderError</p>
+                        }
+
+                        @if (record.Kind is not RequestType.Rfi)
+                        {
+                            <div>
+                                <button type="button" class="btn-primary w-full" disabled="@busy" @onclick="PromoteToRfi">Promote to RFI</button>
+                                <p class="text-xs text-content-subtle mt-1">Issues the official RFI to the architect on the client account (falling back to the project's architect contact).</p>
+                            </div>
+                        }
+                        else if (!record.HasRfq)
+                        {
+                            <div>
+                                <button type="button" class="btn-secondary w-full" disabled="@busy" @onclick="EnableRfq">Enable RFQ</button>
+                                <p class="text-xs text-content-subtle mt-1">Marks this RFI as carrying an RFQ, unlocking a Variation Order Quote.</p>
+                            </div>
+                        }
+
+                        <div>
+                            <label class="eyebrow block mb-1">Client account</label>
+                            <select class="field" value="@(record.ClientId ?? "")" @onchange="OnClientChanged" disabled="@busy">
+                                <option value="">— None —</option>
+                                @foreach (var client in clients)
+                                {
+                                    <option value="@client.ClientId">@client.Name</option>
+                                }
+                            </select>
+                            <p class="text-xs text-content-subtle mt-1">The architect email an RFI is issued to comes from this client account.</p>
+                        </div>
+                    </div>
+                }
 
                 <div class="panel p-5">
                     <h3 class="eyebrow mb-3">Manage</h3>
@@ -235,6 +282,8 @@ else
     private bool confirmingDelete;
     private bool confirmingReturn;
     private IReadOnlyList<AgentCompletionState> blockingAgents = Array.Empty<AgentCompletionState>();
+    private IReadOnlyList<Client> clients = Array.Empty<Client>();
+    private string? ladderError;
 
     private string RegisterHref => $"/projects/{ProjectId}/requests";
 
@@ -271,6 +320,10 @@ else
         await Session.EnsureLoadedAsync();
         if (!Auth.IsSignedIn) { Nav.NavigateTo("/login", forceLoad: true); return; }
         await LoadAsync();
+        if (CanEditDetails)
+        {
+            try { clients = await ClientStore.ListAsync(); } catch { clients = Array.Empty<Client>(); }
+        }
         isLoaded = true;
     }
 
@@ -329,6 +382,66 @@ else
     private void OnAgentsChanged() => blockingAgents = Array.Empty<AgentCompletionState>();
 
     private async Task ReopenRequest() => await Apply(RequestStatus.Open, record?.ResponseText);
+
+    private async Task PromoteToRfi()
+    {
+        if (record is null || busy) return;
+        ladderError = null;
+        try
+        {
+            busy = true;
+            record = await RequestRegister.PromoteToRfiAsync(record.RequestId, ProjectId);
+            responseDraft = record.ResponseText ?? "";
+        }
+        catch
+        {
+            ladderError = "Couldn't promote the request to an RFI. Please try again.";
+        }
+        finally
+        {
+            busy = false;
+        }
+    }
+
+    private async Task EnableRfq()
+    {
+        if (record is null || busy) return;
+        ladderError = null;
+        try
+        {
+            busy = true;
+            record = await RequestRegister.EnableRfqAsync(record.RequestId, ProjectId);
+        }
+        catch
+        {
+            ladderError = "Couldn't enable the RFQ. Please try again.";
+        }
+        finally
+        {
+            busy = false;
+        }
+    }
+
+    private async Task OnClientChanged(ChangeEventArgs e)
+    {
+        if (record is null || busy) return;
+        ladderError = null;
+        var clientId = e.Value?.ToString();
+        if (string.IsNullOrWhiteSpace(clientId)) clientId = null;
+        try
+        {
+            busy = true;
+            record = await RequestRegister.LinkToClientAsync(record.RequestId, clientId, ProjectId);
+        }
+        catch
+        {
+            ladderError = "Couldn't update the client account. Please try again.";
+        }
+        finally
+        {
+            busy = false;
+        }
+    }
 
     private async Task Apply(RequestStatus status, string? responseText)
     {

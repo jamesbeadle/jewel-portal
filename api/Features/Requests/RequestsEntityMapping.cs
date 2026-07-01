@@ -26,7 +26,9 @@ internal static class RequestsEntityMapping
         RelatedDrawingSpec: entity.RelatedDrawingSpec,
         InternalNotes: entity.InternalNotes,
         ClientNotes: entity.ClientNotes,
-        Number: entity.Number);
+        Number: entity.Number,
+        HasRfq: entity.HasRfq,
+        ClientId: entity.ClientId);
 
     public static RequestMessage ToModel(this RequestMessageEntity entity) => new(
         MessageId: entity.MessageId,

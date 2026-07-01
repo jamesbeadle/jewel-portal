@@ -1,0 +1,217 @@
+@page "/clients"
+@using Jewel.JPMS.Contracts.Clients
+@inject AuthService Auth
+@inject SessionService Session
+@inject IClientStore ClientStore
+@inject NavigationManager Nav
+
+<PageTitle>Clients · JPMS</PageTitle>
+
+@if (!isLoaded)
+{
+    <section class="max-w-5xl mx-auto px-4 py-12 text-content-subtle text-sm">Loading…</section>
+}
+else if (!Session.IsApproved)
+{
+    <RequestAccessView Email="@Auth.CurrentUser!.Email" DisplayName="@Auth.CurrentUser.DisplayName" />
+}
+else if (!CanManage)
+{
+    <section class="max-w-5xl mx-auto px-4 py-12 text-content-subtle text-sm">You don't have access to client accounts.</section>
+}
+else
+{
+    <section class="max-w-5xl mx-auto px-4 py-8 md:py-12">
+        <header class="mb-6 md:mb-8 flex items-end justify-between gap-4">
+            <div>
+                <p class="text-xs uppercase tracking-wider text-content-subtle font-medium mb-1">JPMS</p>
+                <h1 class="text-2xl md:text-3xl font-semibold text-content leading-tight">Client accounts</h1>
+                <p class="text-sm text-content-muted mt-2">@clients.Count client@(clients.Count == 1 ? "" : "s") · the architect email an RFI is issued to lives here.</p>
+            </div>
+            <button type="button" class="btn-primary" @onclick="OpenCreate">New client</button>
+        </header>
+
+        @if (loadError is not null)
+        {
+            <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-4">@loadError</p>
+        }
+
+        @if (clients.Count == 0)
+        {
+            <div class="panel p-8 text-center text-sm text-content-subtle">No client accounts yet. Create one to store the architect email for RFI promotion.</div>
+        }
+        else
+        {
+            <div class="panel overflow-hidden">
+                <table class="w-full text-sm">
+                    <thead>
+                        <tr class="text-left text-content-subtle border-b border-line">
+                            <th class="px-4 py-3 font-medium">Client</th>
+                            <th class="px-4 py-3 font-medium">Primary contact</th>
+                            <th class="px-4 py-3 font-medium">Architect</th>
+                            <th class="px-4 py-3 font-medium">Architect email</th>
+                            <th class="px-4 py-3"></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var client in clients)
+                        {
+                            <tr class="border-b border-line last:border-0">
+                                <td class="px-4 py-3 font-medium text-content">@client.Name</td>
+                                <td class="px-4 py-3 text-content-muted">@Dash(client.PrimaryContactName)</td>
+                                <td class="px-4 py-3 text-content-muted">@Dash(client.ArchitectName)</td>
+                                <td class="px-4 py-3 text-content-muted">@Dash(client.ArchitectEmail)</td>
+                                <td class="px-4 py-3 text-right">
+                                    <button type="button" class="text-sm font-medium text-content-muted hover:text-content" @onclick="() => OpenEdit(client)">Edit</button>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </section>
+
+    <Modal IsOpen="creating"
+           Title="New client account"
+           ConfirmLabel="@(busy ? "Creating…" : "Create client")"
+           OnCancel="() => creating = false"
+           OnConfirm="CreateClientAsync"
+           Class="max-w-2xl">
+        <div class="space-y-4">
+            @if (formError is not null)
+            {
+                <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@formError</p>
+            }
+            <FormField Label="Client name" Value="@formName" OnChange="v => formName = v" Required="true" />
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <FormField Label="Primary contact name" Value="@formPrimaryName" OnChange="v => formPrimaryName = v" />
+                <FormField Label="Primary contact email" Value="@formPrimaryEmail" OnChange="v => formPrimaryEmail = v" />
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <FormField Label="Architect name" Value="@formArchitectName" OnChange="v => formArchitectName = v" />
+                <FormField Label="Architect email" Value="@formArchitectEmail" OnChange="v => formArchitectEmail = v" />
+            </div>
+        </div>
+    </Modal>
+
+    <Modal IsOpen="editing"
+           Title="Edit client architect"
+           ConfirmLabel="@(busy ? "Saving…" : "Save changes")"
+           OnCancel="() => editing = false"
+           OnConfirm="SaveEditAsync"
+           Class="max-w-2xl">
+        <div class="space-y-4">
+            @if (formError is not null)
+            {
+                <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@formError</p>
+            }
+            <p class="text-sm text-content">Editing <span class="font-medium">@editTargetName</span>.</p>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <FormField Label="Architect name" Value="@formArchitectName" OnChange="v => formArchitectName = v" />
+                <FormField Label="Architect email" Value="@formArchitectEmail" OnChange="v => formArchitectEmail = v" />
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <FormField Label="Primary contact name" Value="@formPrimaryName" OnChange="v => formPrimaryName = v" />
+                <FormField Label="Primary contact email" Value="@formPrimaryEmail" OnChange="v => formPrimaryEmail = v" />
+            </div>
+        </div>
+    </Modal>
+}
+
+@code {
+    private bool isLoaded;
+    private bool busy;
+    private string? loadError;
+    private string? formError;
+    private IReadOnlyList<Client> clients = Array.Empty<Client>();
+
+    private bool CanManage => Session.AvailableRoles.Any(role => role is Role.Admin or Role.ManagingDirector or Role.ProjectManager);
+
+    private bool creating;
+    private bool editing;
+    private string? editTargetId;
+    private string editTargetName = "";
+    private string formName = "";
+    private string formPrimaryName = "";
+    private string formPrimaryEmail = "";
+    private string formArchitectName = "";
+    private string formArchitectEmail = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Session.EnsureLoadedAsync();
+        if (!Auth.IsSignedIn) { Nav.NavigateTo("/login", forceLoad: true); return; }
+        await ReloadAsync();
+        isLoaded = true;
+    }
+
+    private async Task ReloadAsync()
+    {
+        try { clients = await ClientStore.ListAsync(); loadError = null; }
+        catch { loadError = "Couldn't load client accounts. Please try again."; }
+    }
+
+    private void OpenCreate()
+    {
+        formError = null;
+        formName = formPrimaryName = formPrimaryEmail = formArchitectName = formArchitectEmail = "";
+        creating = true;
+    }
+
+    private void OpenEdit(Client client)
+    {
+        formError = null;
+        editTargetId = client.ClientId;
+        editTargetName = client.Name;
+        formArchitectName = client.ArchitectName ?? "";
+        formArchitectEmail = client.ArchitectEmail ?? "";
+        formPrimaryName = client.PrimaryContactName ?? "";
+        formPrimaryEmail = client.PrimaryContactEmail ?? "";
+        editing = true;
+    }
+
+    private async Task CreateClientAsync()
+    {
+        if (busy) return;
+        formError = null;
+        if (string.IsNullOrWhiteSpace(formName)) { formError = "A client name is required."; return; }
+        try
+        {
+            busy = true;
+            await ClientStore.CreateAsync(new CreateClient(
+                formName.Trim(),
+                NullIfBlank(formPrimaryName),
+                NullIfBlank(formPrimaryEmail),
+                NullIfBlank(formArchitectName),
+                NullIfBlank(formArchitectEmail)));
+            creating = false;
+            await ReloadAsync();
+        }
+        catch { formError = "Couldn't create the client. Please try again."; }
+        finally { busy = false; }
+    }
+
+    private async Task SaveEditAsync()
+    {
+        if (busy || editTargetId is null) return;
+        formError = null;
+        try
+        {
+            busy = true;
+            await ClientStore.UpdateArchitectAsync(new UpdateClientArchitect(
+                editTargetId,
+                NullIfBlank(formArchitectName),
+                NullIfBlank(formArchitectEmail),
+                NullIfBlank(formPrimaryName),
+                NullIfBlank(formPrimaryEmail)));
+            editing = false;
+            await ReloadAsync();
+        }
+        catch { formError = "Couldn't save the changes. Please try again."; }
+        finally { busy = false; }
+    }
+
+    private static string Dash(string? value) => string.IsNullOrWhiteSpace(value) ? "—" : value;
+    private static string? NullIfBlank(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+}
