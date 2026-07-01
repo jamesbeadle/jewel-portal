@@ -70,7 +70,13 @@ public sealed class HttpDrawingStore : IDrawingStore
         if (!string.IsNullOrWhiteSpace(issuedByEmail)) content.Add(new StringContent(issuedByEmail), "issuedByEmail");
 
         var response = await httpClient.PostAsync($"api/drawings/{drawingId}/revisions", content, cancellationToken);
-        response.EnsureSuccessStatusCode();
+        if (!response.IsSuccessStatusCode)
+        {
+            // Surface the server's message (e.g. a storage error) rather than a bare status code.
+            var body = await response.Content.ReadAsStringAsync(cancellationToken);
+            throw new InvalidOperationException(
+                string.IsNullOrWhiteSpace(body) ? $"Server returned {(int)response.StatusCode}." : body.Trim('"'));
+        }
 
         // The write has been committed. Refresh caches in the background so a slow or
         // stalled refresh cannot keep the upload UI stuck on "Uploading…".

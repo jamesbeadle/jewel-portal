@@ -71,10 +71,20 @@ public sealed class UploadDrawingRevisionEndpoint
         var revisionId = DrawingIdentifierFactory.NextDrawingRevisionId();
 
         string blobRef;
-        await using (var stream = file.OpenReadStream())
+        try
         {
+            await using var stream = file.OpenReadStream();
             blobRef = await blobStore.UploadAsync(
                 drawing.ProjectId, drawingId, revisionId, fileName, contentType, stream, cancellationToken);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            // Storage misconfigured/unreachable — report it clearly rather than letting the request
+            // hang or surface as an opaque 500. The revision is not recorded, so no orphan row.
+            return new ObjectResult($"Could not store the drawing file — check the drawings storage configuration. ({ex.Message})")
+            {
+                StatusCode = StatusCodes.Status502BadGateway
+            };
         }
 
         var command = new UploadDrawingRevision(

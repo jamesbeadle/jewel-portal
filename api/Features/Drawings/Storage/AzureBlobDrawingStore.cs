@@ -18,7 +18,21 @@ public sealed class AzureBlobDrawingStore : IDrawingBlobStore
 
     public AzureBlobDrawingStore(string connectionString)
     {
-        container = new BlobContainerClient(connectionString, ContainerName);
+        // Bound the retry/backoff so an unreachable or misconfigured storage account surfaces as a
+        // quick error instead of the SDK's default long retry chain (which makes uploads appear to
+        // hang). NetworkTimeout is per-attempt, so large multi-block uploads are unaffected.
+        var options = new BlobClientOptions
+        {
+            Retry =
+            {
+                Mode = Azure.Core.RetryMode.Fixed,
+                MaxRetries = 2,
+                Delay = TimeSpan.FromSeconds(1),
+                MaxDelay = TimeSpan.FromSeconds(3),
+                NetworkTimeout = TimeSpan.FromSeconds(15),
+            }
+        };
+        container = new BlobContainerClient(connectionString, ContainerName, options);
     }
 
     public async Task<string> UploadAsync(
