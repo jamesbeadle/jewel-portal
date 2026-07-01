@@ -15,10 +15,35 @@ public sealed class ListDrawingsForProjectHandler
 
     public async Task<IReadOnlyList<Drawing>> HandleAsync(ListDrawingsForProject query, CancellationToken cancellationToken)
     {
-        var entities = await context.Drawings
+        var drawings = await context.Drawings
             .Where(drawing => drawing.ProjectId == query.ProjectId)
             .OrderBy(drawing => drawing.DrawingCode)
             .ToListAsync(cancellationToken);
-        return entities.Select(entity => entity.ToModel()).ToList().AsReadOnly();
+
+        var drawingIds = drawings.Select(drawing => drawing.DrawingId).ToList();
+        var revisionStatuses = await context.DrawingRevisions
+            .Where(revision => drawingIds.Contains(revision.DrawingId))
+            .Select(revision => new { revision.DrawingId, revision.ApprovalStatus })
+            .ToListAsync(cancellationToken);
+
+        var byDrawing = revisionStatuses
+            .GroupBy(revision => revision.DrawingId)
+            .ToDictionary(group => group.Key, group => group.ToList());
+
+        var result = new List<Drawing>();
+        foreach (var drawing in drawings)
+        {
+            byDrawing.TryGetValue(drawing.DrawingId, out var statuses);
+            statuses ??= new();
+
+            var unapproved = statuses.Count(status => status.ApprovalStatus == (int)DrawingApprovalStatus.Unapproved);
+            var archived = statuses.Count(status => status.ApprovalStatus == (int)DrawingApprovalStatus.Archived);
+            var hasApproved = statuses.Any(status => status.ApprovalStatus == (int)DrawingApprovalStatus.Approved);
+
+            if (query.ApprovedOnly && !hasApproved) continue;
+            result.Add(drawing.ToModel(unapproved, archived));
+        }
+
+        return result.AsReadOnly();
     }
 }

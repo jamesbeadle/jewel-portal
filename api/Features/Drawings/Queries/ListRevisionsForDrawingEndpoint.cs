@@ -29,7 +29,12 @@ public sealed class ListRevisionsForDrawingEndpoint
         var signedInUser = await users.ResolveAsync(request, request.HttpContext.RequestAborted);
         if (signedInUser is null) return new UnauthorizedResult();
 
-        var revisions = await handler.HandleAsync(new ListRevisionsForDrawing(drawingId), request.HttpContext.RequestAborted);
+        var status = Enum.TryParse<DrawingRevisionStatusFilter>(request.Query["status"], ignoreCase: true, out var parsed)
+            ? parsed
+            : DrawingRevisionStatusFilter.All;
+
+        var revisions = await handler.HandleAsync(
+            new ListRevisionsForDrawing(drawingId, status), request.HttpContext.RequestAborted);
         return new OkObjectResult(revisions);
     }
 }

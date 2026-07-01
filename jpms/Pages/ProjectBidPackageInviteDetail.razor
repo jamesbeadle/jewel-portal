@@ -349,6 +349,8 @@ else
         var invited = recipients.Select(r => r.SubcontractorId).ToHashSet(StringComparer.OrdinalIgnoreCase);
         var q = (subSearch ?? "").Trim();
         return Subs.All()
+            // Only companies we tender to — never clients or architects.
+            .Where(s => s.Category is DirectoryCategory.Subcontractor or DirectoryCategory.Supplier)
             .Where(s => !invited.Contains(s.SubcontractorId))
             .Where(s => q.Length == 0
                 || (s.CompanyName ?? "").Contains(q, StringComparison.OrdinalIgnoreCase)

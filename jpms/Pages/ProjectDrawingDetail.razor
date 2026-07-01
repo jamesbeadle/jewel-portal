@@ -31,9 +31,20 @@ else
             <header class="mb-6">
                 <p class="font-mono text-xs text-content-subtle mb-1">@drawing.DrawingCode</p>
                 <h2 class="text-xl md:text-2xl font-semibold text-content">@drawing.Title</h2>
-                <p class="text-sm text-content-muted mt-1">Current revision: <span class="font-mono">@drawing.CurrentRevision</span></p>
+                <p class="text-sm text-content-muted mt-1">
+                    Latest approved:
+                    @if (string.IsNullOrEmpty(drawing.CurrentApprovedRevisionLabel))
+                    {
+                        <span class="italic text-content-subtle">none yet</span>
+                    }
+                    else
+                    {
+                        <span class="font-mono">Rev @drawing.CurrentApprovedRevisionLabel</span>
+                    }
+                </p>
             </header>
-            <DrawingRevisionList Revisions="DrawingStore.RevisionsFor(drawing.DrawingId)" />
+            <DrawingRevisionList Revisions="DrawingStore.RevisionsFor(drawing.DrawingId)"
+                                 ProjectId="@ProjectId" DrawingId="@drawing.DrawingId" />
         }
     </ProjectPageShell>
 }

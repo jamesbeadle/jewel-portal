@@ -31,7 +31,7 @@
 @code {
     [Parameter, EditorRequired] public IReadOnlyList<Subcontractor> Subcontractors { get; set; } = Array.Empty<Subcontractor>();
 
-    private void Open(string subcontractorId) => Nav.NavigateTo($"/subcontractors/{subcontractorId}");
+    private void Open(string subcontractorId) => Nav.NavigateTo($"/directory/{subcontractorId}");
 
     private ComplianceStatus WorstStatus(Subcontractor sub)
     {

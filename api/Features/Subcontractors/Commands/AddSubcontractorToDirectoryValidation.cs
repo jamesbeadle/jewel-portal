@@ -1,5 +1,6 @@
 using Jewel.JPMS.Api.Cqrs;
 using Jewel.JPMS.Contracts.Subcontractors;
+using Jewel.JPMS.Models;
 
 namespace Jewel.JPMS.Api.Features.Subcontractors.Commands;
 
@@ -9,8 +10,9 @@ public sealed class AddSubcontractorToDirectoryValidation
     {
         var errors = new List<string>();
         if (string.IsNullOrWhiteSpace(command.CompanyName)) errors.Add("Company name is required.");
-        if (string.IsNullOrWhiteSpace(command.PrimaryTrade)) errors.Add("Primary trade is required.");
-        if (string.IsNullOrWhiteSpace(command.ContactEmail)) errors.Add("Contact email is required.");
+        // Trade only matters for the companies we buy work from; clients/architects don't need one.
+        var needsTrade = command.Category is DirectoryCategory.Subcontractor or DirectoryCategory.Supplier;
+        if (needsTrade && string.IsNullOrWhiteSpace(command.PrimaryTrade)) errors.Add("Trade is required for subcontractors and suppliers.");
         if (errors.Count == 0) return ValidationOutcome.Passed;
         return new ValidationOutcome(errors);
     }

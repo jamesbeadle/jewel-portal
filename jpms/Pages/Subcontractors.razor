@@ -1,4 +1,4 @@
-@page "/subcontractors"
+@page "/directory"
 @inject AuthService Auth
 @inject SessionService Session
 @inject ISubcontractorStore SubcontractorStore
@@ -15,13 +15,26 @@ else if (!Session.IsApproved)
 {
     <RequestAccessView Email="@Auth.CurrentUser!.Email" DisplayName="@Auth.CurrentUser.DisplayName" />
 }
+else if (!CanAccess)
+{
+    <section class="max-w-3xl mx-auto px-4 py-12">
+        <h1 class="text-2xl font-semibold text-content mb-2">Not available</h1>
+        <p class="text-content-muted">The company directory is restricted to administrators and the managing director.</p>
+    </section>
+}
 else
 {
     <section class="max-w-5xl mx-auto px-4 py-8 md:py-12">
-        <header class="mb-6">
-            <p class="text-xs uppercase tracking-wider text-content-subtle font-medium mb-1">JPMS · Company directory</p>
-            <h1 class="text-2xl md:text-3xl font-semibold text-content leading-tight">Directory</h1>
-            <p class="text-sm text-content-muted mt-2">@Filtered().Count of @SubcontractorStore.All().Count companies.</p>
+        <header class="mb-6 flex flex-wrap items-start justify-between gap-3">
+            <div>
+                <p class="text-xs uppercase tracking-wider text-content-subtle font-medium mb-1">JPMS · Company directory</p>
+                <h1 class="text-2xl md:text-3xl font-semibold text-content leading-tight">Directory</h1>
+                <p class="text-sm text-content-muted mt-2">@Filtered().Count of @SubcontractorStore.All().Count companies.</p>
+            </div>
+            @if (CanManage)
+            {
+                <button type="button" class="btn-primary" @onclick="OpenAddModal">+ Add company</button>
+            }
         </header>
 
         @* Filters: category + free-text search across all types *@
@@ -83,6 +96,70 @@ else
             </div>
         }
     </section>
+
+    <Modal IsOpen="showAddModal" Title="Add company" ShowFooter="true"
+           ConfirmLabel="@(saving ? "Saving…" : "Add company")" CancelLabel="Cancel"
+           OnCancel="CloseAddModal" OnConfirm="SaveCompany" Class="max-w-lg w-full">
+        @if (addError is not null)
+        {
+            <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-3">@addError</p>
+        }
+        <div class="space-y-3">
+            <div>
+                <label class="eyebrow block mb-1">Company name</label>
+                <input class="field" @bind="nCompany" />
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="eyebrow block mb-1">Type</label>
+                    <select class="field" @bind="nCategory">
+                        @foreach (var c in AllCategories)
+                        {
+                            <option value="@c">@Label(c)</option>
+                        }
+                    </select>
+                </div>
+                <div>
+                    <label class="eyebrow block mb-1">Trade</label>
+                    <input class="field" @bind="nTrade" placeholder="e.g. Electrician" />
+                </div>
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="eyebrow block mb-1">Contact name</label>
+                    <input class="field" @bind="nContact" />
+                </div>
+                <div>
+                    <label class="eyebrow block mb-1">Email</label>
+                    <input class="field" @bind="nEmail" />
+                </div>
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="eyebrow block mb-1">Phone</label>
+                    <input class="field" @bind="nPhone" />
+                </div>
+                <div>
+                    <label class="eyebrow block mb-1">Mobile</label>
+                    <input class="field" @bind="nMobile" />
+                </div>
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="eyebrow block mb-1">Town</label>
+                    <input class="field" @bind="nTown" />
+                </div>
+                <div>
+                    <label class="eyebrow block mb-1">County</label>
+                    <input class="field" @bind="nCounty" />
+                </div>
+            </div>
+            <div>
+                <label class="eyebrow block mb-1">Website</label>
+                <input class="field" @bind="nWebsite" />
+            </div>
+        </div>
+    </Modal>
 }
 
 @code {
@@ -92,6 +169,47 @@ else
 
     private static readonly DirectoryCategory[] AllCategories =
         (DirectoryCategory[])Enum.GetValues(typeof(DirectoryCategory));
+
+    // The directory is restricted to administrators and the managing director / CEO.
+    private bool CanAccess => Session.AvailableRoles.Any(r => r is Role.Admin or Role.ManagingDirector);
+
+    private bool CanManage => CanAccess;
+
+    // Add-company form state
+    private bool showAddModal;
+    private bool saving;
+    private string? addError;
+    private string nCompany = "", nTrade = "", nContact = "", nEmail = "", nPhone = "", nMobile = "", nTown = "", nCounty = "", nWebsite = "";
+    private DirectoryCategory nCategory = DirectoryCategory.Subcontractor;
+
+    private void OpenAddModal()
+    {
+        nCompany = nTrade = nContact = nEmail = nPhone = nMobile = nTown = nCounty = nWebsite = "";
+        nCategory = DirectoryCategory.Subcontractor;
+        addError = null;
+        showAddModal = true;
+    }
+
+    private void CloseAddModal() => showAddModal = false;
+
+    private void SaveCompany()
+    {
+        if (saving) return;
+        addError = null;
+        if (string.IsNullOrWhiteSpace(nCompany)) { addError = "Company name is required."; return; }
+        if ((nCategory is DirectoryCategory.Subcontractor or DirectoryCategory.Supplier) && string.IsNullOrWhiteSpace(nTrade))
+        { addError = "Trade is required for subcontractors and suppliers."; return; }
+        try
+        {
+            saving = true;
+            SubcontractorStore.Upsert(new Subcontractor(
+                "", nCompany.Trim(), nTrade.Trim(), nContact.Trim(), nEmail.Trim(), nPhone.Trim(),
+                "", DateTimeOffset.UtcNow, nCategory, nMobile.Trim(), nTown.Trim(), nCounty.Trim(), nWebsite.Trim()));
+            showAddModal = false;
+        }
+        catch { addError = "Couldn't add the company. Please try again."; }
+        finally { saving = false; }
+    }
 
     protected override async Task OnInitializedAsync()
     {
@@ -127,7 +245,7 @@ else
             .ToList();
     }
 
-    private void Open(string id) => Nav.NavigateTo($"/subcontractors/{id}");
+    private void Open(string id) => Nav.NavigateTo($"/directory/{id}");
 
     private static string Location(Subcontractor s) =>
         string.Join(", ", new[] { s.Town, s.County }.Where(x => !string.IsNullOrWhiteSpace(x)));

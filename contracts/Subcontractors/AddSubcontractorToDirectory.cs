@@ -9,4 +9,9 @@ public sealed record AddSubcontractorToDirectory(
     string ContactName,
     string ContactEmail,
     string ContactPhone,
-    string CisStatus) : ICommand<Subcontractor>;
+    string CisStatus,
+    DirectoryCategory Category = DirectoryCategory.Subcontractor,
+    string MobileNumber = "",
+    string Town = "",
+    string County = "",
+    string Website = "") : ICommand<Subcontractor>;

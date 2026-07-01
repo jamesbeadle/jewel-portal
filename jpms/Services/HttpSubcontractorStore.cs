@@ -48,7 +48,8 @@ public sealed class HttpSubcontractorStore : ISubcontractorStore
 
     private async Task AddAsync(Subcontractor sub)
     {
-        await commands.SendAsync(new AddSubcontractorToDirectory(sub.CompanyName, sub.PrimaryTrade, sub.ContactName, sub.ContactEmail, sub.ContactPhone, sub.CisStatus), CancellationToken.None);
+        await commands.SendAsync(new AddSubcontractorToDirectory(sub.CompanyName, sub.PrimaryTrade, sub.ContactName, sub.ContactEmail, sub.ContactPhone, sub.CisStatus,
+            sub.Category, sub.MobileNumber, sub.Town, sub.County, sub.Website), CancellationToken.None);
         await readModel.RefreshAsync(CancellationToken.None);
     }
 

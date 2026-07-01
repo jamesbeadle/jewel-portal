@@ -11,7 +11,6 @@ public sealed class RegisterDrawingValidation
         if (string.IsNullOrWhiteSpace(command.ProjectId)) errors.Add("ProjectId is required.");
         if (string.IsNullOrWhiteSpace(command.DrawingCode)) errors.Add("Drawing code is required.");
         if (string.IsNullOrWhiteSpace(command.Title)) errors.Add("Title is required.");
-        if (string.IsNullOrWhiteSpace(command.InitialRevisionLabel)) errors.Add("Initial revision label is required.");
         if (errors.Count == 0) return ValidationOutcome.Passed;
         return new ValidationOutcome(errors);
     }

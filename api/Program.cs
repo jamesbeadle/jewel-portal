@@ -54,7 +54,7 @@ var host = new HostBuilder()
         services.AddLeadsFeature();
         services.AddBoqFeature();
         services.AddRatesFeature();
-        services.AddDrawingsFeature();
+        services.AddDrawingsFeature(context.Configuration);
         services.AddProcurementFeature();
         services.AddSubcontractorsFeature();
         services.AddHsFeature();

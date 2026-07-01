@@ -21,7 +21,8 @@ public sealed class RegisterDrawingHandler
             ProjectId = command.ProjectId,
             DrawingCode = command.DrawingCode,
             Title = command.Title,
-            CurrentRevision = command.InitialRevisionLabel,
+            // A new drawing has no approved revision yet; the label is set on first approval.
+            CurrentApprovedRevisionLabel = null,
             CreatedAt = DateTimeOffset.UtcNow
         };
         context.Drawings.Add(entity);

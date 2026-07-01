@@ -47,7 +47,8 @@ public sealed class DrawingEntity
     [MaxLength(64)]      public string ProjectId { get; set; } = "";
     [MaxLength(64)]      public string DrawingCode { get; set; } = "";
     [MaxLength(256)]     public string Title { get; set; } = "";
-    [MaxLength(16)]      public string CurrentRevision { get; set; } = "";
+    // The latest APPROVED revision label; null until a revision has been approved.
+    [MaxLength(16)]      public string? CurrentApprovedRevisionLabel { get; set; }
     public DateTimeOffset CreatedAt { get; set; }
 }
 
@@ -62,4 +63,12 @@ public sealed class DrawingRevisionEntity
     public DateTimeOffset? SupersededAt { get; set; }
     public bool IsAmbiguous { get; set; }
     public int ViewCount { get; set; }
+
+    // Approval workflow + stored file.
+    public int ApprovalStatus { get; set; }            // maps to DrawingApprovalStatus (0=Unapproved,1=Approved,2=Archived)
+    [MaxLength(1024)] public string? BlobRef { get; set; }
+    [MaxLength(128)]  public string? ContentType { get; set; }
+    public long? FileSizeBytes { get; set; }
+    [MaxLength(256)]  public string? ApprovedByEmail { get; set; }
+    public DateTimeOffset? ApprovedAt { get; set; }
 }

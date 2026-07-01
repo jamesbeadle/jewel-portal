@@ -24,7 +24,12 @@ public sealed class AddSubcontractorToDirectoryHandler
             ContactEmail = command.ContactEmail,
             ContactPhone = command.ContactPhone,
             CisStatus = command.CisStatus,
-            OnboardedAt = DateTimeOffset.UtcNow
+            OnboardedAt = DateTimeOffset.UtcNow,
+            Category = (int)command.Category,
+            MobileNumber = command.MobileNumber,
+            Town = command.Town,
+            County = command.County,
+            Website = command.Website
         };
         context.Subcontractors.Add(entity);
         await context.SaveChangesAsync(cancellationToken);

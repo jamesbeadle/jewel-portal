@@ -29,7 +29,10 @@ public sealed class ListDrawingsForProjectEndpoint
         var signedInUser = await users.ResolveAsync(request, request.HttpContext.RequestAborted);
         if (signedInUser is null) return new UnauthorizedResult();
 
-        var drawings = await handler.HandleAsync(new ListDrawingsForProject(projectId), request.HttpContext.RequestAborted);
+        var approvedOnly = string.Equals(request.Query["approvedOnly"], "true", StringComparison.OrdinalIgnoreCase);
+
+        var drawings = await handler.HandleAsync(
+            new ListDrawingsForProject(projectId, approvedOnly), request.HttpContext.RequestAborted);
         return new OkObjectResult(drawings);
     }
 }

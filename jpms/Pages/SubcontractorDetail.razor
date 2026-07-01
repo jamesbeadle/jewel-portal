@@ -1,4 +1,4 @@
-@page "/subcontractors/{SubcontractorId}"
+@page "/directory/{SubcontractorId}"
 @inject AuthService Auth
 @inject SessionService Session
 @inject ISubcontractorStore SubcontractorStore
@@ -15,12 +15,19 @@ else if (!Session.IsApproved)
 {
     <RequestAccessView Email="@Auth.CurrentUser!.Email" DisplayName="@Auth.CurrentUser.DisplayName" />
 }
+else if (!CanAccess)
+{
+    <section class="max-w-3xl mx-auto px-4 py-12">
+        <h1 class="text-2xl font-semibold text-content mb-2">Not available</h1>
+        <p class="text-content-muted">The company directory is restricted to administrators and the managing director.</p>
+    </section>
+}
 else if (subcontractor is null)
 {
     <section class="max-w-3xl mx-auto px-4 py-12">
         <h1 class="text-2xl font-semibold text-content mb-2">Subcontractor not found</h1>
         <p class="text-content-muted">
-            <a class="text-content underline" href="/subcontractors">Back to directory</a>.
+            <a class="text-content underline" href="/directory">Back to directory</a>.
         </p>
     </section>
 }
@@ -28,7 +35,7 @@ else
 {
     <section class="max-w-4xl mx-auto px-4 py-8 md:py-12">
         <nav class="mb-4 text-sm">
-            <a href="/subcontractors" class="text-content-subtle hover:text-content underline underline-offset-4">Subcontractors</a>
+            <a href="/directory" class="text-content-subtle hover:text-content underline underline-offset-4">Subcontractors</a>
             <span class="text-content-subtle mx-2">/</span>
             <span class="text-content-muted font-medium">@subcontractor.CompanyName</span>
         </nav>
@@ -47,6 +54,9 @@ else
 
     private bool isLoaded;
     private Subcontractor? subcontractor;
+
+    // Restricted to administrators and the managing director / CEO.
+    private bool CanAccess => Session.AvailableRoles.Any(r => r is Role.Admin or Role.ManagingDirector);
 
     private string PageTitleText => subcontractor?.CompanyName ?? "Subcontractor";
 

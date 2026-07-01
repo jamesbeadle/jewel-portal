@@ -5,8 +5,10 @@ public sealed record Drawing(
     string ProjectId,
     string DrawingCode,
     string Title,
-    string CurrentRevision,
-    DateTimeOffset CreatedAt);
+    string? CurrentApprovedRevisionLabel,
+    DateTimeOffset CreatedAt,
+    int UnapprovedCount = 0,
+    int ArchivedCount = 0);
 
 public sealed record DrawingRevision(
     string DrawingRevisionId,
@@ -17,7 +19,13 @@ public sealed record DrawingRevision(
     DateTimeOffset ReceivedAt,
     DateTimeOffset? SupersededAt,
     bool IsAmbiguous,
-    int ViewCount);
+    int ViewCount,
+    DrawingApprovalStatus ApprovalStatus,
+    string? BlobRef,
+    string? ContentType,
+    long? FileSizeBytes,
+    string? ApprovedByEmail,
+    DateTimeOffset? ApprovedAt);
 
 public sealed record DrawingIssueRecord(
     string DrawingIssueRecordId,

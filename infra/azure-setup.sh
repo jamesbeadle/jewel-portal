@@ -16,6 +16,7 @@ SWA_LOCATION="${SWA_LOCATION:-westeurope}"
 SQL_SERVER="${SQL_SERVER:-sql-jpms-test-$(openssl rand -hex 3)}"
 SQL_DATABASE="${SQL_DATABASE:-jpms}"
 SWA_NAME="${SWA_NAME:-swa-jpms-test}"
+STORAGE_ACCOUNT="${STORAGE_ACCOUNT:-stjpmstest$(openssl rand -hex 3)}"
 ENTRA_APP_NAME="${ENTRA_APP_NAME:-entra-jpms-test}"
 SQL_ADMIN_USER="${SQL_ADMIN_USER:-jpmsadmin}"
 SQL_ADMIN_PASSWORD="${SQL_ADMIN_PASSWORD:-$(openssl rand -base64 24 | tr -d '/+=' | cut -c1-20)Aa1!}"
@@ -26,6 +27,7 @@ echo "Resource group:    ${RESOURCE_GROUP}"
 echo "SQL server:        ${SQL_SERVER}.database.windows.net"
 echo "SQL database:      ${SQL_DATABASE}"
 echo "Static Web App:    ${SWA_NAME}"
+echo "Storage account:   ${STORAGE_ACCOUNT}"
 echo "Entra app:         ${ENTRA_APP_NAME}"
 echo "SQL admin user:    ${SQL_ADMIN_USER}"
 echo "SQL admin password (save this): ${SQL_ADMIN_PASSWORD}"
@@ -37,7 +39,7 @@ read -r -p "Continue with these values? (y/N) " confirmation
 
 echo
 echo "Registering required resource providers..."
-REQUIRED_PROVIDERS=(Microsoft.Sql Microsoft.Web)
+REQUIRED_PROVIDERS=(Microsoft.Sql Microsoft.Web Microsoft.Storage)
 for namespace in "${REQUIRED_PROVIDERS[@]}"; do
   state="$(az provider show --namespace "${namespace}" --query registrationState --output tsv 2>/dev/null || echo NotRegistered)"
   if [ "${state}" != "Registered" ]; then
@@ -280,13 +282,41 @@ if [ -z "${ENTRA_SECRET:-}" ]; then
     --output tsv)"
 fi
 
-echo "Wiring AAD client ID + secret into the Static Web App settings..."
+echo "Creating Storage account for drawing files (skip if exists)..."
+if ! az storage account show --name "${STORAGE_ACCOUNT}" --resource-group "${RESOURCE_GROUP}" --output none 2>/dev/null; then
+  az storage account create \
+    --name "${STORAGE_ACCOUNT}" \
+    --resource-group "${RESOURCE_GROUP}" \
+    --location "${SQL_LOCATION}" \
+    --sku Standard_LRS \
+    --kind StorageV2 \
+    --allow-blob-public-access false \
+    --min-tls-version TLS1_2 \
+    --output none
+fi
+
+DRAWINGS_STORAGE_CONNECTION_STRING="$(az storage account show-connection-string \
+  --name "${STORAGE_ACCOUNT}" \
+  --resource-group "${RESOURCE_GROUP}" \
+  --query connectionString \
+  --output tsv)"
+
+echo "Ensuring private 'drawings' blob container exists..."
+az storage container create \
+  --name drawings \
+  --account-name "${STORAGE_ACCOUNT}" \
+  --connection-string "${DRAWINGS_STORAGE_CONNECTION_STRING}" \
+  --public-access off \
+  --output none
+
+echo "Wiring AAD client ID + secret + drawings storage into the Static Web App settings..."
 az staticwebapp appsettings set \
   --name "${SWA_NAME}" \
   --resource-group "${RESOURCE_GROUP}" \
   --setting-names \
     "AAD_CLIENT_ID=${ENTRA_APP_ID}" \
     "AAD_CLIENT_SECRET=${ENTRA_SECRET}" \
+    "DrawingsStorage:ConnectionString=${DRAWINGS_STORAGE_CONNECTION_STRING}" \
   --output none
 
 SWA_DEPLOYMENT_TOKEN="$(az staticwebapp secrets list \
@@ -307,6 +337,8 @@ SQL_CONNECTION_STRING="Server=tcp:${SQL_SERVER}.database.windows.net,1433;Databa
 SWA_NAME=${SWA_NAME}
 SWA_HOSTNAME=${SWA_HOSTNAME}
 SWA_DEPLOYMENT_TOKEN=${SWA_DEPLOYMENT_TOKEN}
+STORAGE_ACCOUNT=${STORAGE_ACCOUNT}
+DRAWINGS_STORAGE_CONNECTION_STRING="${DRAWINGS_STORAGE_CONNECTION_STRING}"
 ENTRA_APP_NAME=${ENTRA_APP_NAME}
 ENTRA_APP_ID=${ENTRA_APP_ID}
 ENTRA_SECRET=${ENTRA_SECRET}

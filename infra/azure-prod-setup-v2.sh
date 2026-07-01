@@ -73,6 +73,7 @@ if [ -z "${SQL_SERVER:-}" ]; then
 fi
 SQL_SERVER="${SQL_SERVER:-sql-jpms-prod-$(openssl rand -hex 3)}"
 SWA_NAME="${SWA_NAME:-swa-jpms-prod}"
+STORAGE_ACCOUNT="${STORAGE_ACCOUNT:-stjpmsprod$(openssl rand -hex 3)}"
 ENTRA_APP_NAME="${ENTRA_APP_NAME:-entra-jpms-prod}"
 SQL_ADMIN_USER="${SQL_ADMIN_USER:-jpmsadmin}"
 SQL_ADMIN_PASSWORD="${SQL_ADMIN_PASSWORD:-$(openssl rand -base64 24 | tr -d '/+=' | cut -c1-20)Aa1!}"
@@ -129,7 +130,7 @@ read -r -p "Continue with these values? (y/N) " confirmation
 # --- Resource providers -----------------------------------------------------
 echo
 echo "Registering required resource providers..."
-REQUIRED_PROVIDERS=(Microsoft.Sql Microsoft.Web Microsoft.Insights)
+REQUIRED_PROVIDERS=(Microsoft.Sql Microsoft.Web Microsoft.Insights Microsoft.Storage)
 for namespace in "${REQUIRED_PROVIDERS[@]}"; do
   state="$(az provider show --namespace "${namespace}" --query registrationState --output tsv 2>/dev/null || echo NotRegistered)"
   if [ "${state}" != "Registered" ]; then
@@ -290,7 +291,32 @@ if [ -z "${COMMS_CONNECTION_STRING}" ]; then
   echo "  (no Communication Services resource '${COMMS_RESOURCE_NAME}' found — invite emails will be disabled)"
 fi
 
-echo "Wiring SqlConnectionString + AAD client id/secret + invite email into the Static Web App..."
+echo "Creating Storage account for drawing files (skip if exists)..."
+if ! az storage account show --name "${STORAGE_ACCOUNT}" --resource-group "${RESOURCE_GROUP}" --output none 2>/dev/null; then
+  az storage account create \
+    --name "${STORAGE_ACCOUNT}" \
+    --resource-group "${RESOURCE_GROUP}" \
+    --location "${SQL_LOCATION}" \
+    --sku Standard_GRS \
+    --kind StorageV2 \
+    --allow-blob-public-access false \
+    --min-tls-version TLS1_2 \
+    --output none
+fi
+
+DRAWINGS_STORAGE_CONNECTION_STRING="$(az storage account show-connection-string \
+  --name "${STORAGE_ACCOUNT}" --resource-group "${RESOURCE_GROUP}" \
+  --query connectionString --output tsv)"
+
+echo "Ensuring private 'drawings' blob container exists..."
+az storage container create \
+  --name drawings \
+  --account-name "${STORAGE_ACCOUNT}" \
+  --connection-string "${DRAWINGS_STORAGE_CONNECTION_STRING}" \
+  --public-access off \
+  --output none
+
+echo "Wiring SqlConnectionString + AAD client id/secret + invite email + drawings storage into the Static Web App..."
 az staticwebapp appsettings set --name "${SWA_NAME}" --resource-group "${RESOURCE_GROUP}" \
   --setting-names \
     "SqlConnectionString=${SQL_CONNECTION_STRING}" \
@@ -300,6 +326,7 @@ az staticwebapp appsettings set --name "${SWA_NAME}" --resource-group "${RESOURC
     "CommunicationServicesConnectionString=${COMMS_CONNECTION_STRING}" \
     "InviteEmailSender=${INVITE_EMAIL_SENDER}" \
     "PublicSiteUrl=${PUBLIC_SITE_URL}" \
+    "DrawingsStorage:ConnectionString=${DRAWINGS_STORAGE_CONNECTION_STRING}" \
   --output none
 
 SWA_DEPLOYMENT_TOKEN="$(az staticwebapp secrets list --name "${SWA_NAME}" --resource-group "${RESOURCE_GROUP}" \
@@ -333,6 +360,8 @@ SQL_CONNECTION_STRING="${SQL_CONNECTION_STRING}"
 SWA_NAME=${SWA_NAME}
 SWA_HOSTNAME=${SWA_HOSTNAME}
 SWA_DEPLOYMENT_TOKEN=${SWA_DEPLOYMENT_TOKEN}
+STORAGE_ACCOUNT=${STORAGE_ACCOUNT}
+DRAWINGS_STORAGE_CONNECTION_STRING="${DRAWINGS_STORAGE_CONNECTION_STRING}"
 ENTRA_APP_NAME=${ENTRA_APP_NAME}
 ENTRA_APP_ID=${ENTRA_APP_ID}
 ENTRA_SECRET=${ENTRA_SECRET}

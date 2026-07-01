@@ -1,6 +1,9 @@
+@inject IDrawingStore DrawingStore
+@inject AuthService Auth
+
 <section class="rounded-xl border border-line bg-surface overflow-hidden">
     <header class="px-5 py-3 border-b border-line bg-surface-raised flex items-center justify-between">
-        <h2 class="text-sm font-medium text-content-muted">Revision history</h2>
+        <h2 class="text-sm font-medium text-content-muted">@Heading</h2>
         <span class="text-xs text-content-subtle">@Revisions.Count revisions</span>
     </header>
     @if (Revisions.Count == 0)
@@ -14,32 +17,91 @@
             {
                 <li class="p-4 text-sm">
                     <div class="flex items-start justify-between gap-3">
-                        <div>
+                        <div class="min-w-0">
                             <p class="font-medium text-content">
                                 Rev @revision.RevisionLabel
-                                @if (revision.SupersededAt is null)
+                                @switch (revision.ApprovalStatus)
                                 {
-                                    <span class="ml-2 inline-flex items-center rounded-full bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 text-[10px] font-medium text-emerald-800">Current</span>
+                                    case DrawingApprovalStatus.Approved:
+                                        <span class="ml-2 inline-flex items-center rounded-full bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 text-[10px] font-medium text-emerald-800">Approved · latest</span>
+                                        break;
+                                    case DrawingApprovalStatus.Unapproved:
+                                        <span class="ml-2 inline-flex items-center rounded-full bg-amber-50 border border-amber-200 px-1.5 py-0.5 text-[10px] font-medium text-amber-800">Unapproved</span>
+                                        break;
+                                    case DrawingApprovalStatus.Archived:
+                                        <span class="ml-2 inline-flex items-center rounded-full bg-surface-raised border border-line px-1.5 py-0.5 text-[10px] font-medium text-content-subtle">Archived</span>
+                                        break;
                                 }
                                 @if (revision.IsAmbiguous)
                                 {
                                     <span class="ml-2 inline-flex items-center rounded-full bg-amber-50 border border-amber-200 px-1.5 py-0.5 text-[10px] font-medium text-amber-800">Ambiguous</span>
                                 }
                             </p>
-                            <p class="text-xs text-content-subtle mt-1">
+                            <p class="text-xs text-content-subtle mt-1 truncate">
                                 @revision.FileName · from @revision.IssuedByEmail
                             </p>
                             <p class="text-xs text-content-subtle">
                                 Received @revision.ReceivedAt.LocalDateTime.ToString("d MMM yyyy") · @revision.ViewCount views
+                                @if (revision.ApprovalStatus == DrawingApprovalStatus.Approved && revision.ApprovedByEmail is not null)
+                                {
+                                    <span> · approved by @revision.ApprovedByEmail</span>
+                                }
                             </p>
+                        </div>
+                        <div class="flex flex-col items-end gap-1.5 shrink-0">
+                            @if (!string.IsNullOrEmpty(revision.BlobRef))
+                            {
+                                <a href="@($"/api/drawings/revisions/{revision.DrawingRevisionId}/file")"
+                                   target="_blank" rel="noopener"
+                                   class="text-xs text-accent hover:underline underline-offset-2">Download</a>
+                            }
+                            @if (CanManage && revision.ApprovalStatus == DrawingApprovalStatus.Unapproved)
+                            {
+                                <button type="button" disabled="@busy"
+                                        @onclick="() => Approve(revision.DrawingRevisionId)"
+                                        class="rounded-lg bg-accent text-accent-ink text-xs font-medium px-2.5 py-1 hover:bg-accent-hover transition disabled:opacity-60">
+                                    Approve
+                                </button>
+                            }
                         </div>
                     </div>
                 </li>
             }
         </ul>
     }
+    @if (error is not null)
+    {
+        <p class="px-5 py-3 text-sm text-red-700 bg-red-50 border-t border-red-200">@error</p>
+    }
 </section>
 
 @code {
     [Parameter, EditorRequired] public IReadOnlyList<DrawingRevision> Revisions { get; set; } = Array.Empty<DrawingRevision>();
+    [Parameter] public string ProjectId { get; set; } = "";
+    [Parameter] public string DrawingId { get; set; } = "";
+    [Parameter] public string Heading { get; set; } = "Revision history";
+
+    private bool busy;
+    private string? error;
+
+    private bool CanManage =>
+        Auth.CurrentRoles.Any(role => role is Role.Admin or Role.ManagingDirector or Role.ProjectManager);
+
+    private async Task Approve(string revisionId)
+    {
+        busy = true;
+        error = null;
+        try
+        {
+            await DrawingStore.ApproveRevisionAsync(ProjectId, DrawingId, revisionId, CancellationToken.None);
+        }
+        catch (Exception ex)
+        {
+            error = $"Approval failed: {ex.Message}";
+        }
+        finally
+        {
+            busy = false;
+        }
+    }
 }

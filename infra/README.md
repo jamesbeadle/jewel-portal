@@ -9,8 +9,12 @@ Azure provisioning for the JPMS test environment.
 | Resource group `rg-jpms-test` | n/a | free |
 | Azure SQL Server `sql-jpms-test-<random>` | n/a | free |
 | Azure SQL Database `jpms` | GP_S_Gen5 Serverless, auto-pause 60min, Free-Limit if available | ~£0 while idle, free up to 100k vCore-seconds + 32GB/month |
+| Storage account `stjpmstest<random>` + private `drawings` container | StorageV2, Standard_LRS, public blob access disabled | pennies (pay-per-GB); holds uploaded drawing files |
 | Static Web App `swa-jpms-test` | Free | free (250GB/month bandwidth) |
 | Entra ID app registration | n/a | free |
+
+The storage connection string is written to `.azure-output.env` and set on the Static Web App as
+`DrawingsStorage:ConnectionString`, so the drawings upload/download endpoints work after deploy.
 
 UK South for SQL, West Europe for the Static Web App (Free tier is not in UK South).
 

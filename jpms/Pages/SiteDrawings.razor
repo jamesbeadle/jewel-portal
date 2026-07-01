@@ -22,7 +22,7 @@
                         <p class="text-sm font-semibold text-content mt-1">@drawing.Title</p>
                     </div>
                     <span class="inline-flex items-center justify-center rounded-lg bg-accent text-accent-ink px-3 py-1 text-xs font-mono font-medium shrink-0">
-                        Rev @drawing.CurrentRevision
+                        @(string.IsNullOrEmpty(drawing.CurrentApprovedRevisionLabel) ? "No approved rev" : $"Rev {drawing.CurrentApprovedRevisionLabel}")
                     </span>
                 </div>
             </div>

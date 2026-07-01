@@ -6,5 +6,4 @@ namespace Jewel.JPMS.Contracts.Drawings;
 public sealed record RegisterDrawing(
     string ProjectId,
     string DrawingCode,
-    string Title,
-    string InitialRevisionLabel) : ICommand<Drawing>;
+    string Title) : ICommand<Drawing>;

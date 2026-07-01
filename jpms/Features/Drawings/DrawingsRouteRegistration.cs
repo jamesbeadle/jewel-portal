@@ -35,8 +35,15 @@ public static class DrawingsRouteRegistration
             new CommandRoute("PUT", "/api/drawings/{drawingId}",
                 command => $"/api/drawings/{((UpdateDrawingMetadata)command).DrawingId}"));
 
-        commands.Register<IssueDrawingRevision, DrawingRevision>(
-            new CommandRoute("POST", "/api/drawings/{drawingId}/revisions",
-                command => $"/api/drawings/{((IssueDrawingRevision)command).DrawingId}/revisions"));
+        // Revision upload is multipart/form-data and is sent directly by HttpDrawingStore, not via
+        // the JSON command sender, so it is intentionally not registered here.
+
+        commands.Register<ApproveDrawingRevision, DrawingRevision>(
+            new CommandRoute("POST", "/api/drawings/{drawingId}/revisions/{revisionId}/approve",
+                command =>
+                {
+                    var approve = (ApproveDrawingRevision)command;
+                    return $"/api/drawings/{approve.DrawingId}/revisions/{approve.DrawingRevisionId}/approve";
+                }));
     }
 }

@@ -31,10 +31,19 @@ else
                     }
                 </p>
             </div>
-            <button type="button" @onclick="() => isUploading = !isUploading"
-                    class="rounded-lg bg-accent text-accent-ink font-medium text-sm px-3 py-2 hover:bg-accent-hover transition">
-                @(isUploading ? "Cancel" : "+ Upload drawing")
-            </button>
+            <div class="flex items-center gap-2">
+                <button type="button" @onclick="() => approvedOnly = !approvedOnly"
+                        class="rounded-lg border text-sm px-3 py-2 transition @(approvedOnly ? "bg-emerald-50 border-emerald-200 text-emerald-800" : "border-line-strong text-content-muted hover:bg-surface-raised")">
+                    @(approvedOnly ? "Showing approved" : "All drawings")
+                </button>
+                @if (CanManage)
+                {
+                    <button type="button" @onclick="() => isUploading = !isUploading"
+                            class="rounded-lg bg-accent text-accent-ink font-medium text-sm px-3 py-2 hover:bg-accent-hover transition">
+                        @(isUploading ? "Cancel" : "+ Upload drawing")
+                    </button>
+                }
+            </div>
         </div>
 
         @if (isUploading)
@@ -44,13 +53,15 @@ else
             </div>
         }
 
-        @if (Drawings.Count == 0)
+        @if (VisibleDrawings.Count == 0)
         {
-            <p class="text-sm text-content-subtle italic">No drawings uploaded yet.</p>
+            <p class="text-sm text-content-subtle italic">
+                @(approvedOnly ? "No approved drawings yet." : "No drawings uploaded yet.")
+            </p>
         }
         else
         {
-            <DrawingsTable Drawings="Drawings" />
+            <DrawingsTable Drawings="VisibleDrawings" />
         }
     </ProjectPageShell>
 }
@@ -60,9 +71,18 @@ else
 
     private bool isLoaded;
     private bool isUploading;
+    private bool approvedOnly;
 
     private IReadOnlyList<Drawing> Drawings => DrawingStore.DrawingsFor(ProjectId);
     private IReadOnlyList<DrawingRevision> Ambiguous => DrawingStore.AmbiguousFor(ProjectId);
+
+    private IReadOnlyList<Drawing> VisibleDrawings =>
+        approvedOnly
+            ? Drawings.Where(drawing => !string.IsNullOrEmpty(drawing.CurrentApprovedRevisionLabel)).ToList()
+            : Drawings;
+
+    private bool CanManage =>
+        Auth.CurrentRoles.Any(role => role is Role.Admin or Role.ManagingDirector or Role.ProjectManager);
 
     protected override async Task OnInitializedAsync()
     {
