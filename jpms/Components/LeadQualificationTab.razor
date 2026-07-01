@@ -44,9 +44,9 @@
     private string notes = "";
     private QualificationAssessment? existing;
 
-    protected override void OnParametersSet()
+    protected override async Task OnParametersSetAsync()
     {
-        existing = LeadStore.GetQualification(Lead.LeadId);
+        existing = await LeadStore.GetQualificationAsync(Lead.LeadId);
         score = existing?.Score ?? 50;
         notes = existing?.Notes ?? "";
     }

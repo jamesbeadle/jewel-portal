@@ -39,8 +39,8 @@ public sealed partial class HttpCommercialStore : ICommercialStore
 
     public event Action? OnChange;
 
-    public IReadOnlyList<ClaimPeriod> ClaimPeriodsFor(string projectId) =>
-        queries.AskAsync(new ListClaimPeriodsForProject(projectId), CancellationToken.None).GetAwaiter().GetResult();
+    public Task<IReadOnlyList<ClaimPeriod>> ClaimPeriodsForAsync(string projectId) =>
+        queries.AskAsync(new ListClaimPeriodsForProject(projectId), CancellationToken.None);
 
     public IReadOnlyList<Valuation> ValuationsFor(string projectId)
     {

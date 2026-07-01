@@ -35,9 +35,6 @@ public sealed class HttpDrawingStore : IDrawingStore
         return readModel.DrawingsCurrent(projectId);
     }
 
-    public Drawing? Find(string drawingId) =>
-        queries.AskAsync(new GetDrawingById(drawingId), CancellationToken.None).GetAwaiter().GetResult();
-
     public IReadOnlyList<DrawingRevision> RevisionsFor(string drawingId)
     {
         readModel.EnsureRevisions(drawingId, CancellationToken.None);
@@ -55,7 +52,7 @@ public sealed class HttpDrawingStore : IDrawingStore
     {
         var drawing = await commands.SendAsync(
             new RegisterDrawing(projectId, drawingCode, title), cancellationToken);
-        await readModel.RefreshDrawingsAsync(projectId, cancellationToken);
+        RefreshInBackground(projectId, null);
         return drawing;
     }
 
@@ -75,15 +72,31 @@ public sealed class HttpDrawingStore : IDrawingStore
         var response = await httpClient.PostAsync($"api/drawings/{drawingId}/revisions", content, cancellationToken);
         response.EnsureSuccessStatusCode();
 
-        await readModel.RefreshRevisionsAsync(drawingId, cancellationToken);
-        await readModel.RefreshDrawingsAsync(projectId, cancellationToken);
+        // The write has been committed. Refresh caches in the background so a slow or
+        // stalled refresh cannot keep the upload UI stuck on "Uploading…".
+        RefreshInBackground(projectId, drawingId);
     }
 
     public async Task ApproveRevisionAsync(string projectId, string drawingId, string revisionId, CancellationToken cancellationToken)
     {
         // The API sets the approver from the signed-in user; the email here is ignored server-side.
         await commands.SendAsync(new ApproveDrawingRevision(drawingId, revisionId, string.Empty), cancellationToken);
-        await readModel.RefreshRevisionsAsync(drawingId, cancellationToken);
-        await readModel.RefreshDrawingsAsync(projectId, cancellationToken);
+        RefreshInBackground(projectId, drawingId);
+    }
+
+    // Refreshes revisions (optional) then drawings without blocking the caller. Views update
+    // via readModel.OnChanged when the refresh lands. Refreshing revisions first marks the
+    // drawing as loaded before any OnChanged re-render, so it cannot spawn a duplicate fetch.
+    private void RefreshInBackground(string projectId, string? drawingId) =>
+        _ = RunRefreshAsync(projectId, drawingId);
+
+    private async Task RunRefreshAsync(string projectId, string? drawingId)
+    {
+        try
+        {
+            if (drawingId is not null) await readModel.RefreshRevisionsAsync(drawingId, CancellationToken.None);
+            await readModel.RefreshDrawingsAsync(projectId, CancellationToken.None);
+        }
+        catch { /* OnChanged-driven views recover on the next interaction */ }
     }
 }

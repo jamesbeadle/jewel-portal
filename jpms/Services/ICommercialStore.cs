@@ -4,7 +4,7 @@ namespace Jewel.JPMS.Services;
 
 public interface ICommercialStore
 {
-    IReadOnlyList<ClaimPeriod> ClaimPeriodsFor(string projectId);
+    Task<IReadOnlyList<ClaimPeriod>> ClaimPeriodsForAsync(string projectId);
 
     IReadOnlyList<Valuation> ValuationsFor(string projectId);
     Valuation SaveValuation(Valuation valuation);

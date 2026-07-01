@@ -58,9 +58,9 @@
     private string reason = "";
     private LeadOutcome? existing;
 
-    protected override void OnParametersSet()
+    protected override async Task OnParametersSetAsync()
     {
-        existing = LeadStore.GetOutcome(Lead.LeadId);
+        existing = await LeadStore.GetOutcomeAsync(Lead.LeadId);
         isWon = existing?.IsWon ?? true;
         reason = existing?.Reason ?? "";
     }

@@ -1,4 +1,5 @@
 @inject ISubcontractorStore SubcontractorStore
+@implements IDisposable
 
 <div class="rounded-xl border border-line bg-surface overflow-x-auto">
     <table class="w-full text-sm">
@@ -52,6 +53,10 @@
 
     private string VarianceColour(Quote quote) =>
         !quote.IsDeclined && quote.Value == LowestValue ? "text-emerald-700 font-medium" : "text-content-muted";
+
+    // Re-render when the cached compliance documents load in the background.
+    protected override void OnInitialized() => SubcontractorStore.OnChange += StateHasChanged;
+    public void Dispose() => SubcontractorStore.OnChange -= StateHasChanged;
 
     private ComplianceStatus WorstStatus(string subcontractorId)
     {

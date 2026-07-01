@@ -11,12 +11,17 @@ public sealed class HttpSubcontractorStore : ISubcontractorStore
     private readonly IQueryClient queries;
     private readonly ICommandSender commands;
 
+    // Compliance documents per subcontractor, cached so render-time reads never block on async
+    // (which deadlocks on WebAssembly). Saving a document invalidates its subcontractor.
+    private readonly AsyncQueryCache<string, IReadOnlyList<ComplianceDocument>> compliance;
+
     public HttpSubcontractorStore(SubcontractorsReadModel readModel, IQueryClient queries, ICommandSender commands)
     {
         this.readModel = readModel;
         this.queries = queries;
         this.commands = commands;
         readModel.OnChanged += () => OnChange?.Invoke();
+        compliance = new((id, ct) => queries.AskAsync(new ListComplianceDocumentsForSubcontractor(id), ct), () => OnChange?.Invoke());
     }
 
     public event Action? OnChange;
@@ -39,12 +44,17 @@ public sealed class HttpSubcontractorStore : ISubcontractorStore
     }
 
     public IReadOnlyList<ComplianceDocument> ComplianceFor(string subcontractorId) =>
-        queries.AskAsync(new ListComplianceDocumentsForSubcontractor(subcontractorId), CancellationToken.None).GetAwaiter().GetResult();
+        compliance.Get(subcontractorId, Array.Empty<ComplianceDocument>());
 
-    public void SaveCompliance(ComplianceDocument document) =>
-        _ = commands.SendAsync(
+    public void SaveCompliance(ComplianceDocument document) => _ = SaveComplianceAsync(document);
+
+    private async Task SaveComplianceAsync(ComplianceDocument document)
+    {
+        await commands.SendAsync(
             new UploadComplianceDocument(document.SubcontractorId, document.Kind, document.FileName, document.ExpiresAt),
             CancellationToken.None);
+        compliance.Invalidate(document.SubcontractorId);
+    }
 
     private async Task AddAsync(Subcontractor sub)
     {

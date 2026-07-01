@@ -10,7 +10,7 @@ public interface ILeadStore
 
     Lead Upsert(Lead lead);
 
-    QualificationAssessment? GetQualification(string leadId);
+    Task<QualificationAssessment?> GetQualificationAsync(string leadId);
     void SaveQualification(QualificationAssessment assessment);
 
     IReadOnlyList<SiteVisit> SiteVisitsFor(string leadId);
@@ -19,13 +19,13 @@ public interface ILeadStore
     IReadOnlyList<InfoChaseItem> InfoChaseFor(string leadId);
     void SaveInfoChaseItem(InfoChaseItem item);
 
-    BidDecision? GetBidDecision(string leadId);
+    Task<BidDecision?> GetBidDecisionAsync(string leadId);
     void SaveBidDecision(BidDecision decision);
 
-    Proposal? GetProposal(string leadId);
+    Task<Proposal?> GetProposalAsync(string leadId);
     void SaveProposal(Proposal proposal);
 
-    LeadOutcome? GetOutcome(string leadId);
+    Task<LeadOutcome?> GetOutcomeAsync(string leadId);
     void SaveOutcome(LeadOutcome outcome);
 
     event Action? OnChange;

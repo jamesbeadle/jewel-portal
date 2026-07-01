@@ -49,9 +49,9 @@
     private string reason = "";
     private BidDecision? existing;
 
-    protected override void OnParametersSet()
+    protected override async Task OnParametersSetAsync()
     {
-        existing = LeadStore.GetBidDecision(Lead.LeadId);
+        existing = await LeadStore.GetBidDecisionAsync(Lead.LeadId);
         shouldBid = existing?.ShouldBid ?? true;
         reason = existing?.Reason ?? "";
     }

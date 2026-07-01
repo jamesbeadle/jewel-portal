@@ -15,12 +15,29 @@ public sealed partial class HttpCvrStore : ICvrStore
     // from re-triggering a fetch on every re-render (see HttpDrawingStore).
     private readonly HashSet<string> requested = new();
 
+    // Caches for the async list queries so render-time reads never block on async (which
+    // deadlocks on WebAssembly). Declared here; also used by the HttpCvrStore.Depth partial.
+    private readonly AsyncQueryCache<string, IReadOnlyList<CvrPackageRow>> packages;
+    private readonly AsyncQueryCache<string, IReadOnlyList<ForecastComponent>> forecastComponents;
+    private readonly AsyncQueryCache<string, IReadOnlyList<QsAccrual>> accruals;
+    private readonly AsyncQueryCache<string, IReadOnlyList<PrelimItem>> prelims;
+    private readonly AsyncQueryCache<string, IReadOnlyList<PrelimForecastEntry>> prelimEntries;
+    private readonly AsyncQueryCache<string, IReadOnlyList<Eot>> eots;
+
     public HttpCvrStore(CvrSnapshotsReadModel snapshotsReadModel, IQueryClient queries, ICommandSender commands)
     {
         this.snapshotsReadModel = snapshotsReadModel;
         this.queries = queries;
         this.commands = commands;
         snapshotsReadModel.OnChanged += () => OnChange?.Invoke();
+
+        Action notify = () => OnChange?.Invoke();
+        packages = new((id, ct) => queries.AskAsync(new ListCvrPackagesForProject(id), ct), notify);
+        forecastComponents = new((id, ct) => queries.AskAsync(new ListForecastComponentsForProject(id), ct), notify);
+        accruals = new((id, ct) => queries.AskAsync(new ListQsAccrualsForProject(id), ct), notify);
+        prelims = new((id, ct) => queries.AskAsync(new ListPrelimItemsForProject(id), ct), notify);
+        prelimEntries = new((id, ct) => queries.AskAsync(new ListPrelimEntriesForItem(id), ct), notify);
+        eots = new((id, ct) => queries.AskAsync(new ListEotsForProject(id), ct), notify);
     }
 
     public event Action? OnChange;
@@ -55,17 +72,23 @@ public sealed partial class HttpCvrStore : ICvrStore
     }
 
     public IReadOnlyList<CvrPackageRow> PackagesFor(string projectId) =>
-        queries.AskAsync(new ListCvrPackagesForProject(projectId), CancellationToken.None).GetAwaiter().GetResult();
+        packages.Get(projectId, Array.Empty<CvrPackageRow>());
 
     public CvrPackageRow SavePackageRow(CvrPackageRow row)
     {
-        _ = SendThenNotify(new RecordCvrPackageRow(row.ProjectId, row.PackageName, row.OrderCost, row.OrderValue, row.VariationCost, row.VariationValue));
+        _ = SendThenInvalidate(
+            new RecordCvrPackageRow(row.ProjectId, row.PackageName, row.OrderCost, row.OrderValue, row.VariationCost, row.VariationValue),
+            packages, row.ProjectId);
         return row;
     }
 
-    private async Task SendThenNotify<TResult>(Jewel.JPMS.Contracts.Cqrs.ICommand<TResult> command)
+    // Await the command, then invalidate the affected cache key so the refetch (and its change
+    // notification) carries the new data. Shared with the HttpCvrStore.Depth partial.
+    private async Task SendThenInvalidate<TResult, TValue>(
+        Jewel.JPMS.Contracts.Cqrs.ICommand<TResult> command,
+        AsyncQueryCache<string, TValue> cache, string key)
     {
         await commands.SendAsync(command, CancellationToken.None);
-        OnChange?.Invoke();
+        cache.Invalidate(key);
     }
 }

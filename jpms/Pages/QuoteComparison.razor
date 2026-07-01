@@ -3,6 +3,7 @@
 @inject SessionService Session
 @inject IProcurementStore ProcurementStore
 @inject NavigationManager Nav
+@implements IDisposable
 
 <PageTitle>Quote comparison · JPMS</PageTitle>
 
@@ -50,7 +51,10 @@ else
     {
         await Session.EnsureLoadedAsync();
         if (!Auth.IsSignedIn) { Nav.NavigateTo("/login", forceLoad: true); return; }
-        package = ProcurementStore.FindPackage(PackageId);
+        ProcurementStore.OnChange += StateHasChanged; // re-render when the cached quotes load
+        package = await ProcurementStore.FindPackageAsync(PackageId);
         isLoaded = true;
     }
+
+    public void Dispose() => ProcurementStore.OnChange -= StateHasChanged;
 }

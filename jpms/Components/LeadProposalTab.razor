@@ -37,9 +37,9 @@
     private decimal value;
     private Proposal? existing;
 
-    protected override void OnParametersSet()
+    protected override async Task OnParametersSetAsync()
     {
-        existing = LeadStore.GetProposal(Lead.LeadId);
+        existing = await LeadStore.GetProposalAsync(Lead.LeadId);
         value = Lead.EstimatedValue ?? 0;
     }
 

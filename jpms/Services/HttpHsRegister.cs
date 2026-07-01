@@ -11,12 +11,17 @@ public sealed class HttpHsRegister : IHsRegister
     private readonly IQueryClient queries;
     private readonly ICommandSender commands;
 
+    // Attendance per H&S record, cached so render-time reads never block on async
+    // (which deadlocks on WebAssembly). Saving attendance invalidates its record.
+    private readonly AsyncQueryCache<string, IReadOnlyList<HsRecordAttendance>> attendance;
+
     public HttpHsRegister(HsRecordsReadModel readModel, IQueryClient queries, ICommandSender commands)
     {
         this.readModel = readModel;
         this.queries = queries;
         this.commands = commands;
         readModel.OnChanged += () => OnChange?.Invoke();
+        attendance = new((id, ct) => queries.AskAsync(new ListAttendanceForHsRecord(id), ct), () => OnChange?.Invoke());
     }
 
     public event Action? OnChange;
@@ -42,10 +47,15 @@ public sealed class HttpHsRegister : IHsRegister
     }
 
     public IReadOnlyList<HsRecordAttendance> AttendanceFor(string hsRecordId) =>
-        queries.AskAsync(new ListAttendanceForHsRecord(hsRecordId), CancellationToken.None).GetAwaiter().GetResult();
+        attendance.Get(hsRecordId, Array.Empty<HsRecordAttendance>());
 
-    public void SaveAttendance(HsRecordAttendance attendance) =>
-        _ = commands.SendAsync(new RecordAttendanceForHsRecord(attendance.HsRecordId, attendance.AttendeeName, attendance.SignatureBlobRef), CancellationToken.None);
+    public void SaveAttendance(HsRecordAttendance record) => _ = SaveAttendanceAsync(record);
+
+    private async Task SaveAttendanceAsync(HsRecordAttendance record)
+    {
+        await commands.SendAsync(new RecordAttendanceForHsRecord(record.HsRecordId, record.AttendeeName, record.SignatureBlobRef), CancellationToken.None);
+        attendance.Invalidate(record.HsRecordId);
+    }
 
     private async Task LogAsync(HsRecord record)
     {

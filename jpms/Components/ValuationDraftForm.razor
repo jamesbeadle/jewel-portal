@@ -37,7 +37,10 @@
     private string grossValue = "0";
     private string retentionPercent = "0";
 
-    private IReadOnlyList<ClaimPeriod> Periods => CommercialStore.ClaimPeriodsFor(ProjectId);
+    private IReadOnlyList<ClaimPeriod> Periods = Array.Empty<ClaimPeriod>();
+
+    protected override async Task OnParametersSetAsync() =>
+        Periods = await CommercialStore.ClaimPeriodsForAsync(ProjectId);
 
     private void Draft()
     {

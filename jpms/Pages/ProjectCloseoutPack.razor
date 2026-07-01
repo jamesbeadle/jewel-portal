@@ -4,6 +4,7 @@
 @inject IDrawingStore DrawingStore
 @inject ICloseoutStore CloseoutStore
 @inject NavigationManager Nav
+@implements IDisposable
 
 <PageTitle>Close-out pack · JPMS</PageTitle>
 
@@ -50,6 +51,15 @@ else
     {
         await Session.EnsureLoadedAsync();
         if (!Auth.IsSignedIn) { Nav.NavigateTo("/login", forceLoad: true); return; }
+        // Re-render when the drawing register and cached close-out lookups load in the background.
+        DrawingStore.OnChange += StateHasChanged;
+        CloseoutStore.OnChange += StateHasChanged;
         isLoaded = true;
+    }
+
+    public void Dispose()
+    {
+        DrawingStore.OnChange -= StateHasChanged;
+        CloseoutStore.OnChange -= StateHasChanged;
     }
 }

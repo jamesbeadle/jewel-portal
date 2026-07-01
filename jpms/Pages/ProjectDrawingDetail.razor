@@ -24,10 +24,27 @@ else
         }
         else
         {
-            <div class="mb-5">
+            <div class="flex flex-wrap items-center justify-between gap-3 mb-5">
                 <a href="@($"/projects/{ProjectId}/drawings")"
                    class="text-sm text-content-subtle hover:text-content underline underline-offset-4">← Back to register</a>
+                <div class="flex items-center gap-2">
+                    @if (PreviousDrawing is not null)
+                    {
+                        <a href="@DrawingHref(PreviousDrawing)"
+                           class="rounded-lg border border-line-strong text-sm px-3 py-1.5 text-content-muted hover:bg-surface-raised transition">← Previous</a>
+                    }
+                    @if (Position is not null)
+                    {
+                        <span class="text-xs text-content-subtle tabular-nums">@Position.Value.index of @Position.Value.total</span>
+                    }
+                    @if (NextDrawing is not null)
+                    {
+                        <a href="@DrawingHref(NextDrawing)"
+                           class="rounded-lg border border-line-strong text-sm px-3 py-1.5 text-content-muted hover:bg-surface-raised transition">Next →</a>
+                    }
+                </div>
             </div>
+
             <header class="mb-6">
                 <p class="font-mono text-xs text-content-subtle mb-1">@drawing.DrawingCode</p>
                 <h2 class="text-xl md:text-2xl font-semibold text-content">@drawing.Title</h2>
@@ -43,8 +60,43 @@ else
                     }
                 </p>
             </header>
-            <DrawingRevisionList Revisions="DrawingStore.RevisionsFor(drawing.DrawingId)"
-                                 ProjectId="@ProjectId" DrawingId="@drawing.DrawingId" />
+
+            <div class="grid gap-6 lg:grid-cols-5">
+                <div class="lg:col-span-3">
+                    @if (PreviewRevision is null)
+                    {
+                        <div class="rounded-xl border border-line bg-surface p-8 text-center text-sm text-content-subtle italic">
+                            No file to preview yet.
+                        </div>
+                    }
+                    else if (IsPreviewable(PreviewRevision))
+                    {
+                        <div class="rounded-xl border border-line bg-surface overflow-hidden">
+                            <header class="px-4 py-2.5 border-b border-line bg-surface-raised flex items-center justify-between gap-3">
+                                <span class="text-xs text-content-muted font-medium truncate">
+                                    Showing Rev @PreviewRevision.RevisionLabel · @PreviewRevision.FileName
+                                </span>
+                                <a href="@FileUrl(PreviewRevision, inline: false)" target="_blank" rel="noopener"
+                                   class="text-xs text-accent hover:underline underline-offset-2 shrink-0">Open / download</a>
+                            </header>
+                            <iframe src="@FileUrl(PreviewRevision, inline: true)"
+                                    class="w-full h-[70vh] bg-white" title="Drawing preview"></iframe>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="rounded-xl border border-line bg-surface p-8 text-center text-sm text-content-subtle">
+                            This file type can't be previewed inline.
+                            <a href="@FileUrl(PreviewRevision, inline: false)" target="_blank" rel="noopener"
+                               class="text-accent hover:underline underline-offset-2">Download @PreviewRevision.FileName</a>.
+                        </div>
+                    }
+                </div>
+                <div class="lg:col-span-2">
+                    <DrawingRevisionList Revisions="DrawingStore.RevisionsFor(drawing.DrawingId)"
+                                         ProjectId="@ProjectId" DrawingId="@drawing.DrawingId" />
+                </div>
+            </div>
         }
     </ProjectPageShell>
 }
@@ -67,7 +119,52 @@ else
 
     protected override void OnParametersSet() => Reload();
 
-    private void Reload() => drawing = DrawingStore.Find(DrawingId);
+    // Read from the cached register rather than a blocking query. A synchronous
+    // wait on an async HTTP call (the old DrawingStore.Find) deadlocks on WebAssembly.
+    private void Reload() =>
+        drawing = Siblings.FirstOrDefault(candidate => candidate.DrawingId == DrawingId);
+
+    private IReadOnlyList<Drawing> Siblings => DrawingStore.DrawingsFor(ProjectId);
+
+    private int CurrentIndex
+    {
+        get
+        {
+            var list = Siblings;
+            for (var i = 0; i < list.Count; i++)
+                if (list[i].DrawingId == DrawingId) return i;
+            return -1;
+        }
+    }
+
+    private Drawing? PreviousDrawing => CurrentIndex > 0 ? Siblings[CurrentIndex - 1] : null;
+
+    private Drawing? NextDrawing =>
+        CurrentIndex >= 0 && CurrentIndex < Siblings.Count - 1 ? Siblings[CurrentIndex + 1] : null;
+
+    private (int index, int total)? Position =>
+        CurrentIndex >= 0 ? (CurrentIndex + 1, Siblings.Count) : null;
+
+    // The version to preview: the approved revision if there is one, otherwise the
+    // most recently received revision that has a stored file.
+    private DrawingRevision? PreviewRevision =>
+        DrawingStore.RevisionsFor(DrawingId)
+            .Where(revision => !string.IsNullOrEmpty(revision.BlobRef))
+            .OrderByDescending(revision => revision.ApprovalStatus == DrawingApprovalStatus.Approved)
+            .ThenByDescending(revision => revision.ReceivedAt)
+            .FirstOrDefault();
+
+    private static bool IsPreviewable(DrawingRevision revision)
+    {
+        var type = revision.ContentType ?? "";
+        return type.Contains("pdf", StringComparison.OrdinalIgnoreCase)
+            || type.StartsWith("image/", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private string FileUrl(DrawingRevision revision, bool inline) =>
+        $"/api/drawings/revisions/{revision.DrawingRevisionId}/file{(inline ? "?inline=1" : "")}";
+
+    private string DrawingHref(Drawing target) => $"/projects/{ProjectId}/drawings/{target.DrawingId}";
 
     private void HandleChange() { Reload(); StateHasChanged(); }
 

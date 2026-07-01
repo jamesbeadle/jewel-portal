@@ -11,12 +11,20 @@ public sealed class HttpLeadStore : ILeadStore
     private readonly IQueryClient queries;
     private readonly ICommandSender commands;
 
+    // Per-lead lists read during render, cached so they never block on async (which deadlocks
+    // on WebAssembly). Saving invalidates the affected lead. The single-value getters below are
+    // async instead, because their callers assign the result to a field in a lifecycle method.
+    private readonly AsyncQueryCache<string, IReadOnlyList<SiteVisit>> siteVisits;
+    private readonly AsyncQueryCache<string, IReadOnlyList<InfoChaseItem>> infoChase;
+
     public HttpLeadStore(LeadPipelineReadModel readModel, IQueryClient queries, ICommandSender commands)
     {
         this.readModel = readModel;
         this.queries = queries;
         this.commands = commands;
         readModel.OnChanged += () => OnChange?.Invoke();
+        siteVisits = new((id, ct) => queries.AskAsync(new ListSiteVisitsForLead(id), ct), () => OnChange?.Invoke());
+        infoChase = new((id, ct) => queries.AskAsync(new ListInformationChaseItemsForLead(id), ct), () => OnChange?.Invoke());
     }
 
     public event Action? OnChange;
@@ -37,8 +45,8 @@ public sealed class HttpLeadStore : ILeadStore
         return lead;
     }
 
-    public QualificationAssessment? GetQualification(string leadId) =>
-        queries.AskAsync(new GetLeadQualification(leadId), CancellationToken.None).GetAwaiter().GetResult();
+    public Task<QualificationAssessment?> GetQualificationAsync(string leadId) =>
+        queries.AskAsync(new GetLeadQualification(leadId), CancellationToken.None);
 
     public void SaveQualification(QualificationAssessment assessment) =>
         _ = commands.SendAsync(
@@ -46,34 +54,42 @@ public sealed class HttpLeadStore : ILeadStore
             CancellationToken.None);
 
     public IReadOnlyList<SiteVisit> SiteVisitsFor(string leadId) =>
-        queries.AskAsync(new ListSiteVisitsForLead(leadId), CancellationToken.None).GetAwaiter().GetResult();
+        siteVisits.Get(leadId, Array.Empty<SiteVisit>());
 
-    public void SaveSiteVisit(SiteVisit visit)
+    public void SaveSiteVisit(SiteVisit visit) => _ = SaveSiteVisitAsync(visit);
+
+    private async Task SaveSiteVisitAsync(SiteVisit visit)
     {
         if (string.IsNullOrEmpty(visit.SiteVisitId))
-            _ = commands.SendAsync(new BookSiteVisit(visit.LeadId, visit.ScheduledAt, visit.AttendeeEmails), CancellationToken.None);
+            await commands.SendAsync(new BookSiteVisit(visit.LeadId, visit.ScheduledAt, visit.AttendeeEmails), CancellationToken.None);
         else
-            _ = commands.SendAsync(new RecordSiteVisitNotes(visit.SiteVisitId, visit.Notes, visit.PhotoCount, visit.IsComplete), CancellationToken.None);
+            await commands.SendAsync(new RecordSiteVisitNotes(visit.SiteVisitId, visit.Notes, visit.PhotoCount, visit.IsComplete), CancellationToken.None);
+        siteVisits.Invalidate(visit.LeadId);
     }
 
     public IReadOnlyList<InfoChaseItem> InfoChaseFor(string leadId) =>
-        queries.AskAsync(new ListInformationChaseItemsForLead(leadId), CancellationToken.None).GetAwaiter().GetResult();
+        infoChase.Get(leadId, Array.Empty<InfoChaseItem>());
 
-    public void SaveInfoChaseItem(InfoChaseItem item) =>
-        _ = commands.SendAsync(
+    public void SaveInfoChaseItem(InfoChaseItem item) => _ = SaveInfoChaseItemAsync(item);
+
+    private async Task SaveInfoChaseItemAsync(InfoChaseItem item)
+    {
+        await commands.SendAsync(
             new RecordInformationChaseItem(item.LeadId, item.Kind, item.Description, item.IsReceived),
             CancellationToken.None);
+        infoChase.Invalidate(item.LeadId);
+    }
 
-    public BidDecision? GetBidDecision(string leadId) =>
-        queries.AskAsync(new GetBidDecisionForLead(leadId), CancellationToken.None).GetAwaiter().GetResult();
+    public Task<BidDecision?> GetBidDecisionAsync(string leadId) =>
+        queries.AskAsync(new GetBidDecisionForLead(leadId), CancellationToken.None);
 
     public void SaveBidDecision(BidDecision decision) =>
         _ = commands.SendAsync(
             new RecordBidDecision(decision.LeadId, decision.ShouldBid, decision.Reason, decision.DecidedByEmail),
             CancellationToken.None);
 
-    public Proposal? GetProposal(string leadId) =>
-        queries.AskAsync(new GetProposalForLead(leadId), CancellationToken.None).GetAwaiter().GetResult();
+    public Task<Proposal?> GetProposalAsync(string leadId) =>
+        queries.AskAsync(new GetProposalForLead(leadId), CancellationToken.None);
 
     public void SaveProposal(Proposal proposal)
     {
@@ -83,8 +99,8 @@ public sealed class HttpLeadStore : ILeadStore
             _ = commands.SendAsync(new ReviseProposal(proposal.LeadId, proposal.Value, "Revised via legacy shim"), CancellationToken.None);
     }
 
-    public LeadOutcome? GetOutcome(string leadId) =>
-        queries.AskAsync(new GetLeadOutcome(leadId), CancellationToken.None).GetAwaiter().GetResult();
+    public Task<LeadOutcome?> GetOutcomeAsync(string leadId) =>
+        queries.AskAsync(new GetLeadOutcome(leadId), CancellationToken.None);
 
     public void SaveOutcome(LeadOutcome outcome)
     {

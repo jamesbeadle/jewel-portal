@@ -79,7 +79,7 @@ else
     {
         await Session.EnsureLoadedAsync();
         if (!Auth.IsSignedIn) { Nav.NavigateTo("/login", forceLoad: true); return; }
-        existingSignOff = BoqStore.SignOffFor(ProjectId);
+        existingSignOff = await BoqStore.SignOffForAsync(ProjectId);
         isLoaded = true;
     }
 

@@ -40,9 +40,6 @@ public sealed class HttpRequestRegister : IRequestRegister
     public IReadOnlyList<Request> ForProject(string projectId, RequestType kind) =>
         ForProject(projectId).Where(record => record.Kind == kind).ToList().AsReadOnly();
 
-    public Request? Find(string requestId) =>
-        queries.AskAsync(new GetRequestById(requestId), CancellationToken.None).GetAwaiter().GetResult();
-
     public Request Upsert(Request record)
     {
         if (string.IsNullOrEmpty(record.RequestId))

@@ -5,7 +5,7 @@ namespace Jewel.JPMS.Services;
 public interface IProcurementStore
 {
     IReadOnlyList<BidPackage> PackagesFor(string projectId);
-    BidPackage? FindPackage(string bidPackageId);
+    Task<BidPackage?> FindPackageAsync(string bidPackageId);
     BidPackage Upsert(BidPackage package);
 
     IReadOnlyList<Quote> QuotesFor(string bidPackageId);

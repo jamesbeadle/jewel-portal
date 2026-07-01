@@ -16,6 +16,10 @@ public sealed class HttpProcurementStore : IProcurementStore
     // from re-triggering a fetch on every re-render (see HttpDrawingStore).
     private readonly HashSet<string> packagesRequested = new();
 
+    // Quotes per bid package, cached so render-time reads never block on async
+    // (which deadlocks on WebAssembly). Saving a quote invalidates its package.
+    private readonly AsyncQueryCache<string, IReadOnlyList<Quote>> quotes;
+
     public HttpProcurementStore(BidPackagesReadModel packagesReadModel, WorkOrdersReadModel workOrdersReadModel, IQueryClient queries, ICommandSender commands)
     {
         this.packagesReadModel = packagesReadModel;
@@ -24,6 +28,7 @@ public sealed class HttpProcurementStore : IProcurementStore
         this.commands = commands;
         packagesReadModel.OnChanged += () => OnChange?.Invoke();
         workOrdersReadModel.OnChanged += () => OnChange?.Invoke();
+        quotes = new((id, ct) => queries.AskAsync(new ListQuotesForBidPackage(id), ct), () => OnChange?.Invoke());
     }
 
     public event Action? OnChange;
@@ -40,8 +45,8 @@ public sealed class HttpProcurementStore : IProcurementStore
         catch { packagesRequested.Remove(projectId); }
     }
 
-    public BidPackage? FindPackage(string bidPackageId) =>
-        queries.AskAsync(new GetBidPackageById(bidPackageId), CancellationToken.None).GetAwaiter().GetResult();
+    public Task<BidPackage?> FindPackageAsync(string bidPackageId) =>
+        queries.AskAsync(new GetBidPackageById(bidPackageId), CancellationToken.None);
 
     public BidPackage Upsert(BidPackage package)
     {
@@ -52,15 +57,21 @@ public sealed class HttpProcurementStore : IProcurementStore
     }
 
     public IReadOnlyList<Quote> QuotesFor(string bidPackageId) =>
-        queries.AskAsync(new ListQuotesForBidPackage(bidPackageId), CancellationToken.None).GetAwaiter().GetResult();
+        quotes.Get(bidPackageId, Array.Empty<Quote>());
 
     public Quote SaveQuote(Quote quote)
     {
-        if (string.IsNullOrEmpty(quote.QuoteId))
-            _ = commands.SendAsync(new SubmitQuoteForBidPackage(quote.BidPackageId, quote.SubcontractorId, quote.Value, quote.Notes), CancellationToken.None);
-        else
-            _ = commands.SendAsync(new ReviseQuote(quote.QuoteId, quote.Value, quote.Notes), CancellationToken.None);
+        _ = SaveQuoteAsync(quote);
         return quote;
+    }
+
+    private async Task SaveQuoteAsync(Quote quote)
+    {
+        if (string.IsNullOrEmpty(quote.QuoteId))
+            await commands.SendAsync(new SubmitQuoteForBidPackage(quote.BidPackageId, quote.SubcontractorId, quote.Value, quote.Notes), CancellationToken.None);
+        else
+            await commands.SendAsync(new ReviseQuote(quote.QuoteId, quote.Value, quote.Notes), CancellationToken.None);
+        quotes.Invalidate(quote.BidPackageId);
     }
 
     public IReadOnlyList<WorkOrder> AllWorkOrders()

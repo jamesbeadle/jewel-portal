@@ -12,7 +12,7 @@ public interface IBoqStore
 
     decimal TotalFor(string projectId);
 
-    BoqSignOff? SignOffFor(string projectId);
+    Task<BoqSignOff?> SignOffForAsync(string projectId);
     BoqSignOff RecordSignOff(BoqSignOff signOff);
 
     event Action? OnChange;

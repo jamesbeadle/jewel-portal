@@ -47,12 +47,26 @@ public sealed class DownloadDrawingRevisionFileEndpoint
         var blob = await blobStore.OpenAsync(revision.BlobRef, cancellationToken);
         if (blob is null) return new NotFoundObjectResult("The stored file could not be found.");
 
-        revision.ViewCount += 1;
-        await context.SaveChangesAsync(cancellationToken);
+        // Inline requests (?inline=1) are for the in-app viewer, which re-requests the
+        // file whenever the page re-renders — so they must not inflate the view count.
+        var inline = request.Query.TryGetValue("inline", out var inlineValue)
+            && (inlineValue == "1" || string.Equals(inlineValue, "true", StringComparison.OrdinalIgnoreCase));
 
-        return new FileStreamResult(blob.Content, revision.ContentType ?? blob.ContentType)
+        if (!inline)
         {
-            FileDownloadName = string.IsNullOrWhiteSpace(revision.FileName) ? $"{revisionId}" : revision.FileName
+            revision.ViewCount += 1;
+            await context.SaveChangesAsync(cancellationToken);
+        }
+
+        // Range processing lets browser PDF viewers seek. Omitting FileDownloadName leaves
+        // Content-Disposition unset, so the browser renders the file inline in the iframe;
+        // for explicit downloads we set the filename to force the attachment behaviour.
+        var result = new FileStreamResult(blob.Content, revision.ContentType ?? blob.ContentType)
+        {
+            EnableRangeProcessing = true
         };
+        if (!inline)
+            result.FileDownloadName = string.IsNullOrWhiteSpace(revision.FileName) ? $"{revisionId}" : revision.FileName;
+        return result;
     }
 }

@@ -52,8 +52,8 @@ public sealed class HttpBoqStore : IBoqStore
 
     public decimal TotalFor(string projectId) => LinesFor(projectId).Sum(line => line.LineTotal);
 
-    public BoqSignOff? SignOffFor(string projectId) =>
-        queries.AskAsync(new GetBoqSignOffForProject(projectId), CancellationToken.None).GetAwaiter().GetResult();
+    public Task<BoqSignOff?> SignOffForAsync(string projectId) =>
+        queries.AskAsync(new GetBoqSignOffForProject(projectId), CancellationToken.None);
 
     public BoqSignOff RecordSignOff(BoqSignOff signOff)
     {

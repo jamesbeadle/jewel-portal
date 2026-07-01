@@ -7,8 +7,6 @@ public interface IDrawingStore
 {
     IReadOnlyList<Drawing> DrawingsFor(string projectId);
 
-    Drawing? Find(string drawingId);
-
     IReadOnlyList<DrawingRevision> RevisionsFor(string drawingId);
 
     IReadOnlyList<DrawingRevision> AmbiguousFor(string projectId);
