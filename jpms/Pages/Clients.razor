@@ -26,7 +26,7 @@ else
             <div>
                 <p class="text-xs uppercase tracking-wider text-content-subtle font-medium mb-1">JPMS</p>
                 <h1 class="text-2xl md:text-3xl font-semibold text-content leading-tight">Client accounts</h1>
-                <p class="text-sm text-content-muted mt-2">@clients.Count client@(clients.Count == 1 ? "" : "s") · the architect email an RFI is issued to lives here.</p>
+                <p class="text-sm text-content-muted mt-2">@clients.Count client@(clients.Count == 1 ? "" : "s") · when a client is a project's party, request documents go to the primary contact here. Architects are managed on the <a class="underline hover:text-content" href="/architects">Architects</a> page.</p>
             </div>
             <button type="button" class="btn-primary" @onclick="OpenCreate">New client</button>
         </header>
@@ -38,7 +38,7 @@ else
 
         @if (clients.Count == 0)
         {
-            <div class="panel p-8 text-center text-sm text-content-subtle">No client accounts yet. Create one to store the architect email for RFI promotion.</div>
+            <div class="panel p-8 text-center text-sm text-content-subtle">No client accounts yet. Create one to link projects and requests to the client.</div>
         }
         else
         {
@@ -48,8 +48,7 @@ else
                         <tr class="text-left text-content-subtle border-b border-line">
                             <th class="px-4 py-3 font-medium">Client</th>
                             <th class="px-4 py-3 font-medium">Primary contact</th>
-                            <th class="px-4 py-3 font-medium">Architect</th>
-                            <th class="px-4 py-3 font-medium">Architect email</th>
+                            <th class="px-4 py-3 font-medium">Contact email</th>
                             <th class="px-4 py-3"></th>
                         </tr>
                     </thead>
@@ -59,8 +58,7 @@ else
                             <tr class="border-b border-line last:border-0">
                                 <td class="px-4 py-3 font-medium text-content">@client.Name</td>
                                 <td class="px-4 py-3 text-content-muted">@Dash(client.PrimaryContactName)</td>
-                                <td class="px-4 py-3 text-content-muted">@Dash(client.ArchitectName)</td>
-                                <td class="px-4 py-3 text-content-muted">@Dash(client.ArchitectEmail)</td>
+                                <td class="px-4 py-3 text-content-muted">@Dash(client.PrimaryContactEmail)</td>
                                 <td class="px-4 py-3 text-right">
                                     <button type="button" class="text-sm font-medium text-content-muted hover:text-content" @onclick="() => OpenEdit(client)">Edit</button>
                                 </td>
@@ -88,15 +86,12 @@ else
                 <FormField Label="Primary contact name" Value="@formPrimaryName" OnChange="v => formPrimaryName = v" />
                 <FormField Label="Primary contact email" Value="@formPrimaryEmail" OnChange="v => formPrimaryEmail = v" />
             </div>
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <FormField Label="Architect name" Value="@formArchitectName" OnChange="v => formArchitectName = v" />
-                <FormField Label="Architect email" Value="@formArchitectEmail" OnChange="v => formArchitectEmail = v" />
-            </div>
+            <p class="text-xs text-content-subtle">Working through an architect on this client's behalf? Add the practice on the <a class="underline hover:text-content" href="/architects">Architects</a> page and select it as the party on the project or request.</p>
         </div>
     </Modal>
 
     <Modal IsOpen="editing"
-           Title="Edit client architect"
+           Title="Edit client"
            ConfirmLabel="@(busy ? "Saving…" : "Save changes")"
            OnCancel="() => editing = false"
            OnConfirm="SaveEditAsync"
@@ -106,11 +101,7 @@ else
             {
                 <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@formError</p>
             }
-            <p class="text-sm text-content">Editing <span class="font-medium">@editTargetName</span>.</p>
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <FormField Label="Architect name" Value="@formArchitectName" OnChange="v => formArchitectName = v" />
-                <FormField Label="Architect email" Value="@formArchitectEmail" OnChange="v => formArchitectEmail = v" />
-            </div>
+            <FormField Label="Client name" Value="@formName" OnChange="v => formName = v" Required="true" />
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <FormField Label="Primary contact name" Value="@formPrimaryName" OnChange="v => formPrimaryName = v" />
                 <FormField Label="Primary contact email" Value="@formPrimaryEmail" OnChange="v => formPrimaryEmail = v" />
@@ -131,12 +122,9 @@ else
     private bool creating;
     private bool editing;
     private string? editTargetId;
-    private string editTargetName = "";
     private string formName = "";
     private string formPrimaryName = "";
     private string formPrimaryEmail = "";
-    private string formArchitectName = "";
-    private string formArchitectEmail = "";
 
     protected override async Task OnInitializedAsync()
     {
@@ -155,7 +143,7 @@ else
     private void OpenCreate()
     {
         formError = null;
-        formName = formPrimaryName = formPrimaryEmail = formArchitectName = formArchitectEmail = "";
+        formName = formPrimaryName = formPrimaryEmail = "";
         creating = true;
     }
 
@@ -163,9 +151,7 @@ else
     {
         formError = null;
         editTargetId = client.ClientId;
-        editTargetName = client.Name;
-        formArchitectName = client.ArchitectName ?? "";
-        formArchitectEmail = client.ArchitectEmail ?? "";
+        formName = client.Name;
         formPrimaryName = client.PrimaryContactName ?? "";
         formPrimaryEmail = client.PrimaryContactEmail ?? "";
         editing = true;
@@ -182,9 +168,7 @@ else
             await ClientStore.CreateAsync(new CreateClient(
                 formName.Trim(),
                 NullIfBlank(formPrimaryName),
-                NullIfBlank(formPrimaryEmail),
-                NullIfBlank(formArchitectName),
-                NullIfBlank(formArchitectEmail)));
+                NullIfBlank(formPrimaryEmail)));
             creating = false;
             await ReloadAsync();
         }
@@ -196,13 +180,13 @@ else
     {
         if (busy || editTargetId is null) return;
         formError = null;
+        if (string.IsNullOrWhiteSpace(formName)) { formError = "A client name is required."; return; }
         try
         {
             busy = true;
-            await ClientStore.UpdateArchitectAsync(new UpdateClientArchitect(
+            await ClientStore.UpdateContactAsync(new UpdateClientContact(
                 editTargetId,
-                NullIfBlank(formArchitectName),
-                NullIfBlank(formArchitectEmail),
+                formName.Trim(),
                 NullIfBlank(formPrimaryName),
                 NullIfBlank(formPrimaryEmail)));
             editing = false;

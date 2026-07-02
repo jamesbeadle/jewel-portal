@@ -24,14 +24,16 @@
 
     // Removed tabs (BoQ, Procurement, Mobilisation, H&S, Site, Commercial, Close-out) will be
     // reintroduced here once their functionality is fully scoped.
+    // Ordered to follow the commercial flow: requests raise variations, and approved variations land
+    // on the valuation report (which also carries valuation invoices — the old Cash Calls tab).
     private static readonly Tab[] Tabs =
     {
         new("overview",            "Overview",            true),
         new("requests",            "Requests",            true),
+        new("variations",          "Variations",          true),
+        new("valuation",           "Valuation Report",    true),
         new("bid-package-invites", "Bid Package Invites", true),
         new("schedule",            "Schedule",            true),
-        new("valuation",           "Valuation Report",    true),
-        new("cash-calls",          "Cash Calls",          true),
         new("financials",          "Financials",          true),
         new("drawings",            "Drawings",            true)
     };

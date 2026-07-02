@@ -14,6 +14,12 @@ public sealed class AddValuationLineItemHandler : ICommandHandler<AddValuationLi
 
     public async Task<ValuationLineItem> HandleAsync(AddValuationLineItem command, CancellationToken cancellationToken)
     {
+        // Variation lines are system-written when a VOQ is approved into a Variation Order —
+        // they cannot be added by hand, so unagreed variations can never reach the report.
+        if (command.ElementType == ValuationElementType.Variation)
+            throw new InvalidOperationException(
+                "Variation lines are created by approving a variation order and cannot be added manually.");
+
         var entity = new ValuationLineItemEntity
         {
             ValuationLineItemId = CommercialIdentifierFactory.NextValuationLineItemId(),

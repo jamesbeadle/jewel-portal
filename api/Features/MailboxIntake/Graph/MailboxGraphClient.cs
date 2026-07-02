@@ -103,7 +103,31 @@ public interface IMailboxGraphClient
     /// <summary>Inbox message ids in the given conversation that currently carry the category — i.e. the
     /// thread members to un-tag when reversing a thread-wide tag (e.g. restoring a discarded thread).</summary>
     Task<IReadOnlyList<string>> ListTaggedInboxIdsInConversationAsync(string conversationId, string category, CancellationToken ct);
+
+    /// <summary>
+    /// Create a draft message in the mailbox's Drafts folder — recipients, subject, HTML body and
+    /// attachments all pre-filled — for a person to review and send from the mailbox itself.
+    /// Nothing is sent. Returns the draft's identity (with a webLink to open it in Outlook on the
+    /// web when Graph provides one), or null when the mailbox is unconfigured / the create failed.
+    /// </summary>
+    Task<MailboxDraft?> CreateDraftAsync(MailboxDraftMessage draft, CancellationToken ct);
 }
+
+/// <summary>A new draft to place in the mailbox's Drafts folder (never sent by JPMS).</summary>
+public sealed record MailboxDraftMessage(
+    IReadOnlyList<MailboxDraftRecipient> To,
+    string Subject,
+    string HtmlBody,
+    IReadOnlyList<MailboxDraftAttachment> Attachments);
+
+/// <summary>A draft recipient (address plus optional display name).</summary>
+public sealed record MailboxDraftRecipient(string Email, string? Name = null);
+
+/// <summary>A file attached to a draft, sent as a Graph fileAttachment (base64 contentBytes).</summary>
+public sealed record MailboxDraftAttachment(string FileName, string ContentType, byte[] Content);
+
+/// <summary>A created draft: its Graph id and (usually) a webLink that opens it in Outlook on the web.</summary>
+public sealed record MailboxDraft(string Id, string? WebLink);
 
 /// <summary>The subset of a mailbox message recorded against a request when an email is assigned.</summary>
 public sealed record MailboxSnapshot(
@@ -143,6 +167,8 @@ public sealed class NullMailboxGraphClient : IMailboxGraphClient
         Task.FromResult<IReadOnlyList<string>>(Array.Empty<string>());
     public Task<IReadOnlyList<string>> ListTaggedInboxIdsInConversationAsync(string conversationId, string category, CancellationToken ct) =>
         Task.FromResult<IReadOnlyList<string>>(Array.Empty<string>());
+    public Task<MailboxDraft?> CreateDraftAsync(MailboxDraftMessage draft, CancellationToken ct) =>
+        Task.FromResult<MailboxDraft?>(null);
 }
 
 /// <summary>Graph REST implementation (HttpClient + app-only token).</summary>
@@ -638,6 +664,54 @@ public sealed class MailboxGraphClient : IMailboxGraphClient
                     categories.Add(cat);
 
         return new MailboxMessage(id, imid, fromEmail, fromName, subject, preview, hasAttachments, receivedAt, categories);
+    }
+
+    public async Task<MailboxDraft?> CreateDraftAsync(MailboxDraftMessage draft, CancellationToken ct)
+    {
+        // POST /users/{mailbox}/messages creates the message in the Drafts folder. Attachments under
+        // the ~3 MB inline limit (our request-document PDFs are far smaller) go in the same call.
+        var url = $"{GraphBase}/users/{Mailbox}/messages";
+
+        var payload = new Dictionary<string, object?>
+        {
+            ["subject"] = draft.Subject,
+            ["body"] = new Dictionary<string, object?>
+            {
+                ["contentType"] = "HTML",
+                ["content"] = draft.HtmlBody
+            },
+            ["toRecipients"] = draft.To.Select(r => new Dictionary<string, object?>
+            {
+                ["emailAddress"] = string.IsNullOrWhiteSpace(r.Name)
+                    ? new Dictionary<string, object?> { ["address"] = r.Email }
+                    : new Dictionary<string, object?> { ["address"] = r.Email, ["name"] = r.Name }
+            }).ToArray(),
+            ["attachments"] = draft.Attachments.Select(a => new Dictionary<string, object?>
+            {
+                ["@odata.type"] = "#microsoft.graph.fileAttachment",
+                ["name"] = a.FileName,
+                ["contentType"] = a.ContentType,
+                ["contentBytes"] = Convert.ToBase64String(a.Content)
+            }).ToArray()
+        };
+
+        using var content = JsonContent.Create(payload);
+        using var response = await SendAsync(HttpMethod.Post, url, content, ct);
+        if (!response.IsSuccessStatusCode)
+        {
+            _logger.LogWarning("Draft create failed: {Status}. {Detail}",
+                (int)response.StatusCode, await SafeBodyAsync(response, ct));
+            return null;
+        }
+
+        await using var stream = await response.Content.ReadAsStreamAsync(ct);
+        using var doc = await JsonDocument.ParseAsync(stream, cancellationToken: ct);
+        var root = doc.RootElement;
+        var id = root.TryGetProperty("id", out var idEl) ? idEl.GetString() : null;
+        if (string.IsNullOrEmpty(id))
+            return null;
+        var webLink = root.TryGetProperty("webLink", out var wl) ? wl.GetString() : null;
+        return new MailboxDraft(id, webLink);
     }
 
     private async Task<HttpResponseMessage> SendAsync(

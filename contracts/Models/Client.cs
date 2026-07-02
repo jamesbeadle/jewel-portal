@@ -1,14 +1,13 @@
 namespace Jewel.JPMS.Models;
 
 // A global client account. Distinct from a project's per-project contacts: one client account can
-// own many projects, and it is the canonical home of the architect email an RFI is issued to when a
-// request is promoted. Resolution order for the RFI recipient is Client.ArchitectEmail first, then
-// the project's Architect ProjectContact as a fallback.
+// own many projects. Architects are managed separately (see Architect / PartyKind) — a project or
+// request either deals with this client directly, or with an architect acting on the client's
+// behalf. When the client is the selected party, request documents are addressed to the primary
+// contact email here.
 public sealed record Client(
     string ClientId,
     string Name,
     string? PrimaryContactName,
     string? PrimaryContactEmail,
-    string? ArchitectName,
-    string? ArchitectEmail,
     DateTimeOffset CreatedAt);

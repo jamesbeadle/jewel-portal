@@ -4,6 +4,7 @@
 @inject SessionService Session
 @inject IRequestRegister RequestRegister
 @inject IClientStore ClientStore
+@inject IArchitectStore ArchitectStore
 @inject IVariationStore Variations
 @inject IAgentDesk Agents
 @inject NavigationManager Nav
@@ -62,6 +63,156 @@ else
                     <p class="text-sm text-content whitespace-pre-wrap">@(string.IsNullOrWhiteSpace(record.Description) ? "—" : record.Description)</p>
                 </div>
 
+                <div class="panel p-5">
+                    <div class="flex items-start justify-between gap-3 mb-3">
+                        <div>
+                            <h3 class="eyebrow">Official @record.Kind.DisplayName() form</h3>
+                            <p class="text-xs text-content-subtle mt-0.5">The itemised queries and sections rendered on the issued document.</p>
+                        </div>
+                        @if (CanEditDetails && !editingForm)
+                        {
+                            <button type="button" class="text-xs font-medium text-content-muted hover:text-content underline underline-offset-2" @onclick="OpenFormEditor">Edit form</button>
+                        }
+                    </div>
+
+                    @if (formError is not null)
+                    {
+                        <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-3">@formError</p>
+                    }
+
+                    @if (!editingForm)
+                    {
+                        @if (record.ItemList.Count == 0
+                            && string.IsNullOrWhiteSpace(record.BasisOfQueries)
+                            && string.IsNullOrWhiteSpace(record.ResponseActionRequired)
+                            && string.IsNullOrWhiteSpace(record.ImpactIfLate))
+                        {
+                            <p class="text-sm text-content-subtle italic">No itemised queries yet. The issued document carries the detail above only.</p>
+                        }
+                        else
+                        {
+                            @if (record.ItemList.Count > 0)
+                            {
+                                <div class="overflow-x-auto -mx-1 px-1">
+                                    <table class="w-full text-sm">
+                                        <thead>
+                                            <tr class="text-left text-content-subtle border-b border-line">
+                                                <th class="py-2 pr-3 font-medium w-10">Item</th>
+                                                <th class="py-2 pr-3 font-medium">Drawing ref</th>
+                                                <th class="py-2 pr-3 font-medium">Member / area</th>
+                                                <th class="py-2 pr-3 font-medium">Query</th>
+                                                <th class="py-2 font-medium">Response</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @foreach (var item in record.ItemList)
+                                            {
+                                                <tr class="border-b border-line last:border-0 align-top">
+                                                    <td class="py-2 pr-3 font-mono text-content-muted">@item.Position</td>
+                                                    <td class="py-2 pr-3 text-content-muted whitespace-pre-wrap">@Dash(item.DrawingRef)</td>
+                                                    <td class="py-2 pr-3 text-content whitespace-pre-wrap">@Dash(item.MemberArea)</td>
+                                                    <td class="py-2 pr-3 text-content whitespace-pre-wrap">@Dash(item.Query)</td>
+                                                    <td class="py-2 text-content-muted whitespace-pre-wrap">@Dash(item.Response)</td>
+                                                </tr>
+                                            }
+                                        </tbody>
+                                    </table>
+                                </div>
+                            }
+
+                            @if (!string.IsNullOrWhiteSpace(record.BasisOfQueries))
+                            {
+                                <div class="mt-3">
+                                    <h4 class="eyebrow mb-1">Basis of queries</h4>
+                                    <p class="text-sm text-content-muted whitespace-pre-wrap">@record.BasisOfQueries</p>
+                                </div>
+                            }
+                            @if (!string.IsNullOrWhiteSpace(record.ResponseActionRequired))
+                            {
+                                <div class="mt-3">
+                                    <h4 class="eyebrow mb-1">Response / action required</h4>
+                                    <p class="text-sm text-content whitespace-pre-wrap">@record.ResponseActionRequired</p>
+                                </div>
+                            }
+                            @if (!string.IsNullOrWhiteSpace(record.ImpactIfLate))
+                            {
+                                <div class="mt-3">
+                                    <h4 class="eyebrow mb-1">Impact if not received by the required date</h4>
+                                    <p class="text-sm text-content-muted whitespace-pre-wrap">@record.ImpactIfLate</p>
+                                </div>
+                            }
+                        }
+                    }
+                    else
+                    {
+                        <div class="space-y-4">
+                            <div>
+                                <label class="eyebrow block mb-2">Itemised queries</label>
+                                @if (formItems.Count == 0)
+                                {
+                                    <p class="text-sm text-content-subtle italic mb-2">No items — add the first numbered query below.</p>
+                                }
+                                <div class="space-y-3">
+                                    @{ var itemNumber = 0; }
+                                    @foreach (var row in formItems)
+                                    {
+                                        itemNumber++;
+                                        <div class="rounded-lg border border-line p-3 space-y-2">
+                                            <div class="flex items-center justify-between">
+                                                <span class="font-mono text-xs font-semibold text-content-muted">Item @itemNumber</span>
+                                                <button type="button" class="text-xs text-negative hover:underline underline-offset-2" @onclick="() => RemoveFormItem(row)">Remove</button>
+                                            </div>
+                                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                                <div>
+                                                    <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Drawing ref</label>
+                                                    <textarea class="field" rows="2" value="@row.DrawingRef" @oninput="e => row.DrawingRef = e.Value?.ToString() ?? string.Empty"
+                                                              placeholder="Dwg 1986_111 Rev D&#10;SD8, SD3"></textarea>
+                                                </div>
+                                                <div>
+                                                    <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Member / area</label>
+                                                    <textarea class="field" rows="2" value="@row.MemberArea" @oninput="e => row.MemberArea = e.Value?.ToString() ?? string.Empty"
+                                                              placeholder="West Elevation — lead valley gutter"></textarea>
+                                                </div>
+                                            </div>
+                                            <div>
+                                                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Query</label>
+                                                <textarea class="field" rows="3" value="@row.Query" @oninput="e => row.Query = e.Value?.ToString() ?? string.Empty"
+                                                          placeholder="Please confirm…"></textarea>
+                                            </div>
+                                            <div>
+                                                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Response (when received)</label>
+                                                <textarea class="field" rows="2" value="@row.Response" @oninput="e => row.Response = e.Value?.ToString() ?? string.Empty"></textarea>
+                                            </div>
+                                        </div>
+                                    }
+                                </div>
+                                <button type="button" class="btn-secondary mt-2" @onclick="AddFormItem">Add item</button>
+                            </div>
+
+                            <div>
+                                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Basis of queries</label>
+                                <textarea class="field" rows="2" value="@formBasis" @oninput="e => formBasis = e.Value?.ToString() ?? string.Empty"
+                                          placeholder="Architect's email ref…, site inspection observations, drawings…"></textarea>
+                            </div>
+                            <div>
+                                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Response / action required</label>
+                                <textarea class="field" rows="3" value="@formResponseAction" @oninput="e => formResponseAction = e.Value?.ToString() ?? string.Empty"
+                                          placeholder="Please provide written confirmation / instruction on the items above…"></textarea>
+                            </div>
+                            <div>
+                                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Impact if not received by the required date</label>
+                                <textarea class="field" rows="2" value="@formImpact" @oninput="e => formImpact = e.Value?.ToString() ?? string.Empty"
+                                          placeholder="Works cannot proceed, risking programme delay while scaffold remains in place…"></textarea>
+                            </div>
+
+                            <div class="flex flex-wrap gap-2">
+                                <button type="button" class="btn-primary" disabled="@busy" @onclick="SaveForm">@(busy ? "Saving…" : "Save form")</button>
+                                <button type="button" class="btn-secondary" disabled="@busy" @onclick="CancelFormEdit">Cancel</button>
+                            </div>
+                        </div>
+                    }
+                </div>
+
                 @if (!string.IsNullOrWhiteSpace(record.ResponseText))
                 {
                     <div class="panel p-5">
@@ -95,6 +246,40 @@ else
                     <MetaRow Label="Related drawing / spec" Value="@Dash(record.RelatedDrawingSpec)" />
                 </div>
 
+                <div class="panel p-5 space-y-3">
+                    <h3 class="eyebrow">Official document</h3>
+                    <a href="@DocumentHref" target="_blank" rel="noopener"
+                       class="btn-secondary w-full inline-flex justify-center">Download @record.Kind.DisplayName() PDF</a>
+                    <p class="text-xs text-content-subtle">Regenerated from the register on every download, so it always reflects the request as it stands.</p>
+
+                    @if (CanDraftEmail)
+                    {
+                        <div class="pt-3 border-t border-line">
+                            <button type="button" class="btn-primary w-full" disabled="@(busy || preparingDraft)" @onclick="PrepareEmailDraft">
+                                @(preparingDraft ? "Preparing draft…" : "Prepare email draft")
+                            </button>
+                            <p class="text-xs text-content-subtle mt-1">Creates a draft in the projects mailbox — PDF attached, addressed to the linked party. Review and send from Outlook; nothing is sent from here.</p>
+                        </div>
+
+                        @if (draftError is not null)
+                        {
+                            <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@draftError</p>
+                        }
+                        @if (draftResult is not null)
+                        {
+                            <div class="rounded-lg bg-emerald-500/10 border border-emerald-500/30 px-3 py-2">
+                                <p class="text-sm font-medium text-emerald-600">Draft created in the projects mailbox.</p>
+                                <p class="text-xs text-content-subtle mt-1">To: @string.Join(", ", draftResult.Recipients)</p>
+                                @if (!string.IsNullOrWhiteSpace(draftResult.WebLink))
+                                {
+                                    <a href="@draftResult.WebLink" target="_blank" rel="noopener"
+                                       class="text-xs text-accent hover:underline underline-offset-2">Open the draft in Outlook</a>
+                                }
+                            </div>
+                        }
+                    }
+                </div>
+
                 @if (CanEditDetails)
                 {
                     <div class="panel p-5 space-y-4">
@@ -116,7 +301,7 @@ else
                         {
                             <div>
                                 <button type="button" class="btn-primary w-full" disabled="@busy" @onclick="PromoteToRfi">Promote to RFI</button>
-                                <p class="text-xs text-content-subtle mt-1">Issues the official RFI to the architect on the client account (falling back to the project's architect contact).</p>
+                                <p class="text-xs text-content-subtle mt-1">Issues the official RFI to the linked party — an architect's contact email, or the client's primary contact when working with the client directly (falling back to the project's party, then its architect contact).</p>
                             </div>
                         }
                         else if (!record.HasRfq)
@@ -128,16 +313,45 @@ else
                         }
 
                         <div>
-                            <label class="eyebrow block mb-1">Client account</label>
-                            <select class="field" value="@(record.ClientId ?? "")" @onchange="OnClientChanged" disabled="@busy">
+                            <label class="eyebrow block mb-1">Issued to</label>
+                            <select class="field" value="@PartySelectionValue" @onchange="OnPartyChanged" disabled="@busy">
                                 <option value="">— None —</option>
-                                @foreach (var client in clients)
+                                @if (clients.Count > 0)
                                 {
-                                    <option value="@client.ClientId">@client.Name</option>
+                                    <optgroup label="Clients">
+                                        @foreach (var client in clients)
+                                        {
+                                            <option value="@($"{ClientPrefix}{client.ClientId}")">@client.Name</option>
+                                        }
+                                    </optgroup>
+                                }
+                                @if (architects.Count > 0)
+                                {
+                                    <optgroup label="Architects">
+                                        @foreach (var architect in architects)
+                                        {
+                                            <option value="@($"{ArchitectPrefix}{architect.ArchitectId}")">@architect.Name</option>
+                                        }
+                                    </optgroup>
                                 }
                             </select>
-                            <p class="text-xs text-content-subtle mt-1">The architect email an RFI is issued to comes from this client account.</p>
+                            <p class="text-xs text-content-subtle mt-1">The email an RFI is issued to comes from this party — a client directly, or an architect acting on the client's behalf.</p>
                         </div>
+
+                        @if (record.PartyKind == PartyKind.Architect && !string.IsNullOrEmpty(record.PartyId))
+                        {
+                            <div>
+                                <label class="eyebrow block mb-1">On behalf of client</label>
+                                <select class="field" value="@(record.OnBehalfOfClientId ?? "")" @onchange="OnOnBehalfOfClientChanged" disabled="@busy">
+                                    <option value="">— Not recorded —</option>
+                                    @foreach (var client in clients)
+                                    {
+                                        <option value="@client.ClientId">@client.Name</option>
+                                    }
+                                </select>
+                                <p class="text-xs text-content-subtle mt-1">Optional: the client this architect is acting for.</p>
+                            </div>
+                        }
                     </div>
                 }
 
@@ -318,13 +532,44 @@ else
     private bool confirmingReturn;
     private IReadOnlyList<AgentCompletionState> blockingAgents = Array.Empty<AgentCompletionState>();
     private IReadOnlyList<Client> clients = Array.Empty<Client>();
+    private IReadOnlyList<Architect> architects = Array.Empty<Architect>();
+
+    private const string ClientPrefix = "client:";
+    private const string ArchitectPrefix = "architect:";
+
+    // The composite value driving the party select: "client:{id}" / "architect:{id}" / "".
+    private string PartySelectionValue =>
+        record is null || string.IsNullOrEmpty(record.PartyId)
+            ? ""
+            : (record.PartyKind == PartyKind.Architect ? ArchitectPrefix : ClientPrefix) + record.PartyId;
     private string? ladderError;
     private VariationOrderQuote? voq;
     private string? voqError;
 
+    // Official document form editor (the itemised queries + narrative sections).
+    private bool editingForm;
+    private string? formError;
+    private List<FormItemRow> formItems = new();
+    private string formBasis = "";
+    private string formResponseAction = "";
+    private string formImpact = "";
+
+    // Email draft staging (Outlook draft in the projects mailbox).
+    private bool preparingDraft;
+    private string? draftError;
+    private RequestEmailDraft? draftResult;
+
     private string VoqHref => voq is null ? "" : $"/projects/{ProjectId}/voq/{voq.VariationOrderQuoteId}";
 
     private string RegisterHref => $"/projects/{ProjectId}/requests";
+
+    // Streams the official PDF from the api, regenerated from SQL on every download.
+    private string DocumentHref => $"/api/requests/{RequestId}/document";
+
+    // Mirrors PrepareRequestEmailDraftAuthorisation server-side (directors, project managers, site
+    // managers and architects; admins carry every role server-side).
+    private bool CanDraftEmail => Session.AvailableRoles.Any(role =>
+        role is Role.Admin or Role.ManagingDirector or Role.ProjectManager or Role.SiteManager or Role.Architect);
 
     private bool IsAdmin => Auth.CurrentUser is not null && JpmsAdministrators.Contains(Auth.CurrentUser.Email);
 
@@ -362,6 +607,7 @@ else
         if (CanEditDetails)
         {
             try { clients = await ClientStore.ListAsync(); } catch { clients = Array.Empty<Client>(); }
+            try { architects = await ArchitectStore.ListAsync(); } catch { architects = Array.Empty<Architect>(); }
         }
         await LoadVoqAsync();
         isLoaded = true;
@@ -494,20 +740,57 @@ else
         }
     }
 
-    private async Task OnClientChanged(ChangeEventArgs e)
+    private async Task OnPartyChanged(ChangeEventArgs e)
     {
         if (record is null || busy) return;
+        ladderError = null;
+
+        var selection = e.Value?.ToString() ?? "";
+        var partyKind = PartyKind.Client;
+        string? partyId = null;
+        string? onBehalfOfClientId = null;
+
+        if (selection.StartsWith(ArchitectPrefix, StringComparison.Ordinal))
+        {
+            partyKind = PartyKind.Architect;
+            partyId = selection[ArchitectPrefix.Length..];
+            // Keep the recorded on-behalf-of client when switching between architects.
+            onBehalfOfClientId = record.OnBehalfOfClientId;
+        }
+        else if (selection.StartsWith(ClientPrefix, StringComparison.Ordinal))
+        {
+            partyId = selection[ClientPrefix.Length..];
+        }
+
+        try
+        {
+            busy = true;
+            record = await RequestRegister.LinkToPartyAsync(record.RequestId, partyKind, partyId, onBehalfOfClientId, ProjectId);
+        }
+        catch
+        {
+            ladderError = "Couldn't update the linked party. Please try again.";
+        }
+        finally
+        {
+            busy = false;
+        }
+    }
+
+    private async Task OnOnBehalfOfClientChanged(ChangeEventArgs e)
+    {
+        if (record is null || busy || string.IsNullOrEmpty(record.PartyId)) return;
         ladderError = null;
         var clientId = e.Value?.ToString();
         if (string.IsNullOrWhiteSpace(clientId)) clientId = null;
         try
         {
             busy = true;
-            record = await RequestRegister.LinkToClientAsync(record.RequestId, clientId, ProjectId);
+            record = await RequestRegister.LinkToPartyAsync(record.RequestId, PartyKind.Architect, record.PartyId, clientId, ProjectId);
         }
         catch
         {
-            ladderError = "Couldn't update the client account. Please try again.";
+            ladderError = "Couldn't update the on-behalf-of client. Please try again.";
         }
         finally
         {
@@ -671,6 +954,114 @@ else
             actionError = "Couldn't return the request to triage. Please try again.";
             confirmingReturn = false;
             busy = false;
+        }
+    }
+
+    // ---- Official document form (itemised queries + narrative sections) ------------------------
+
+    /// <summary>A mutable editor row for one itemised query; positions are re-minted on save.</summary>
+    private sealed class FormItemRow
+    {
+        public string DrawingRef { get; set; } = "";
+        public string MemberArea { get; set; } = "";
+        public string Query { get; set; } = "";
+        public string Response { get; set; } = "";
+    }
+
+    private void OpenFormEditor()
+    {
+        if (record is null) return;
+        formItems = record.ItemList
+            .OrderBy(item => item.Position)
+            .Select(item => new FormItemRow
+            {
+                DrawingRef = item.DrawingRef,
+                MemberArea = item.MemberArea,
+                Query = item.Query,
+                Response = item.Response ?? ""
+            })
+            .ToList();
+        if (formItems.Count == 0) formItems.Add(new FormItemRow());
+        formBasis = record.BasisOfQueries ?? "";
+        formResponseAction = record.ResponseActionRequired ?? "";
+        formImpact = record.ImpactIfLate ?? "";
+        formError = null;
+        editingForm = true;
+    }
+
+    private void CancelFormEdit()
+    {
+        editingForm = false;
+        formError = null;
+    }
+
+    private void AddFormItem() => formItems.Add(new FormItemRow());
+
+    private void RemoveFormItem(FormItemRow row) => formItems.Remove(row);
+
+    private async Task SaveForm()
+    {
+        if (record is null || busy || !CanEditDetails) return;
+        formError = null;
+
+        var items = formItems
+            .Select(row => new RequestItemDraft(
+                row.DrawingRef.Trim(),
+                row.MemberArea.Trim(),
+                row.Query.Trim(),
+                NullIfBlank(row.Response)))
+            .ToList();
+
+        var command = new UpdateRequestForm(
+            record.RequestId,
+            NullIfBlank(formBasis),
+            NullIfBlank(formResponseAction),
+            NullIfBlank(formImpact),
+            items);
+
+        try
+        {
+            busy = true;
+            record = await RequestRegister.SaveFormAsync(command);
+            editingForm = false;
+        }
+        catch (CommandFailedException ex)
+        {
+            formError = ex.Message;
+        }
+        catch
+        {
+            formError = "Couldn't save the form. Please try again.";
+        }
+        finally
+        {
+            busy = false;
+        }
+    }
+
+    // ---- Email draft staging --------------------------------------------------------------------
+
+    private async Task PrepareEmailDraft()
+    {
+        if (record is null || busy || preparingDraft || !CanDraftEmail) return;
+        draftError = null;
+        draftResult = null;
+        try
+        {
+            preparingDraft = true;
+            draftResult = await RequestRegister.PrepareEmailDraftAsync(record.RequestId);
+        }
+        catch (CommandFailedException ex)
+        {
+            draftError = ex.Message;
+        }
+        catch
+        {
+            draftError = "Couldn't create the draft. Please try again.";
+        }
+        finally
+        {
+            preparingDraft = false;
         }
     }
 

@@ -230,7 +230,11 @@ else
                     }
                     else
                     {
-                        <div class="panel p-5 space-y-4">
+                        <div class="panel p-5 space-y-4 relative">
+                            @if (busy)
+                            {
+                                <JewelSpinner Overlay="true" Label="@busyLabel" />
+                            }
                             @if (actionError is not null)
                             {
                                 <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@actionError</p>
@@ -521,7 +525,11 @@ else
                         }
                         else
                         {
-                            <div class="panel p-5 space-y-4">
+                            <div class="panel p-5 space-y-4 relative">
+                                @if (busy)
+                                {
+                                    <JewelSpinner Overlay="true" Label="@busyLabel" />
+                                }
                                 @if (actionError is not null)
                                 {
                                     <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@actionError</p>
@@ -665,7 +673,11 @@ else
                         }
                         else
                         {
-                            <div class="panel p-5 space-y-4">
+                            <div class="panel p-5 space-y-4 relative">
+                                @if (busy)
+                                {
+                                    <JewelSpinner Overlay="true" Label="@busyLabel" />
+                                }
                                 @if (actionError is not null)
                                 {
                                     <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@actionError</p>
@@ -855,6 +867,8 @@ else
     private int TaggedPageCount => Math.Max(1, (int)Math.Ceiling(taggedTotal / (double)PageSize));
 
     private bool busy;
+    // Caption under the detail-pane spinner while an action is in flight, e.g. "Discarding".
+    private string busyLabel = "Working";
     private string? actionError;
     private TriageMode mode = TriageMode.None;
 
@@ -1227,7 +1241,7 @@ else
     private async Task DoLink()
     {
         if (selected is null || busy || string.IsNullOrWhiteSpace(linkRecordId)) return;
-        await RunAction(async () => await Intake.LinkMessageToRecordAsync(selected.Id, selected.InternetMessageId, linkRecordType, linkRecordId));
+        await RunAction("Linking", async () => await Intake.LinkMessageToRecordAsync(selected.Id, selected.InternetMessageId, linkRecordType, linkRecordId));
     }
 
     private async Task DoCreate()
@@ -1249,7 +1263,7 @@ else
             ResponseDue: ParseDate(createResponseDue),
             InternetMessageId: selected.InternetMessageId);
 
-        await RunAction(async () => await Intake.CreateRequestFromMessageAsync(command));
+        await RunAction("Creating request", async () => await Intake.CreateRequestFromMessageAsync(command));
     }
 
     private void OnCreateRecordTypeChanged(ChangeEventArgs e)
@@ -1270,7 +1284,7 @@ else
             createTrade?.Trim() ?? "",
             InternetMessageId: selected.InternetMessageId);
 
-        await RunAction(async () => await Intake.CreateBidPackageFromMessageAsync(command));
+        await RunAction("Creating bid package", async () => await Intake.CreateBidPackageFromMessageAsync(command));
     }
 
     // "Create new → To-do item(s)": create every row with a title on the chosen project in one
@@ -1297,7 +1311,7 @@ else
             drafts,
             InternetMessageId: selected.InternetMessageId);
 
-        await RunAction(async () => await Intake.CreateTodoItemsFromMessageAsync(command));
+        await RunAction("Creating to-dos", async () => await Intake.CreateTodoItemsFromMessageAsync(command));
     }
 
     // "Create new → Scheduling": nothing is created — every project already has its scheduling
@@ -1306,13 +1320,13 @@ else
     {
         if (selected is null || busy) return;
         if (string.IsNullOrWhiteSpace(createProjectId)) { actionError = "Choose a project."; return; }
-        await RunAction(async () => await Intake.LinkMessageToRecordAsync(selected.Id, selected.InternetMessageId, RecordType.Scheduling, createProjectId));
+        await RunAction("Tagging", async () => await Intake.LinkMessageToRecordAsync(selected.Id, selected.InternetMessageId, RecordType.Scheduling, createProjectId));
     }
 
     private async Task DoDiscard()
     {
         if (selected is null || busy) return;
-        await RunAction(async () => await Intake.DiscardMessageAsync(selected.Id, selected.InternetMessageId));
+        await RunAction("Discarding", async () => await Intake.DiscardMessageAsync(selected.Id, selected.InternetMessageId));
     }
 
     private async Task DoRestore()
@@ -1321,6 +1335,7 @@ else
         actionError = null;
         try
         {
+            busyLabel = "Restoring";
             busy = true;
             await Intake.RestoreMessageAsync(selected.Id, selected.InternetMessageId);
             selected = null;
@@ -1337,12 +1352,14 @@ else
     }
 
     // Runs a Queue-tab action (assign / create / discard), then refreshes the inbox and clears the
-    // selection — the message has left the Inbox, so it drops out of the live read.
-    private async Task RunAction(Func<Task> action)
+    // selection — the message has left the Inbox, so it drops out of the live read. `label` captions
+    // the detail-pane spinner while the action is in flight.
+    private async Task RunAction(string label, Func<Task> action)
     {
         actionError = null;
         try
         {
+            busyLabel = label;
             busy = true;
             await action();
             ResetQueuePaging();
@@ -1366,11 +1383,12 @@ else
 
     // Runs a Tagged-tab action (add a tag, remove a tag), then refreshes the tagged list and clears the
     // selection — the email's tag set has changed, so re-read it live.
-    private async Task RunTaggedAction(Func<Task> action)
+    private async Task RunTaggedAction(string label, Func<Task> action)
     {
         actionError = null;
         try
         {
+            busyLabel = label;
             busy = true;
             await action();
             ResetTaggedPaging();
@@ -1392,13 +1410,13 @@ else
     private async Task DoAddTagLink()
     {
         if (selected is null || busy || string.IsNullOrWhiteSpace(linkRecordId)) return;
-        await RunTaggedAction(async () => await Intake.LinkMessageToRecordAsync(selected.Id, selected.InternetMessageId, linkRecordType, linkRecordId));
+        await RunTaggedAction("Linking", async () => await Intake.LinkMessageToRecordAsync(selected.Id, selected.InternetMessageId, linkRecordType, linkRecordId));
     }
 
     private async Task DoRemoveTag(string tag)
     {
         if (selected is null || busy) return;
-        await RunTaggedAction(async () => await Intake.RemoveTagFromMessageAsync(selected.Id, selected.InternetMessageId, tag));
+        await RunTaggedAction("Removing tag", async () => await Intake.RemoveTagFromMessageAsync(selected.Id, selected.InternetMessageId, tag));
     }
 
     private void OnTaggedRecordChanged(ChangeEventArgs e) => linkRecordId = e.Value?.ToString() ?? "";

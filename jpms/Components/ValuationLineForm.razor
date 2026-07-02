@@ -11,8 +11,9 @@
                     <option value="@ValuationElementType.ContractWorks">Contract works</option>
                     <option value="@ValuationElementType.PcSum">Provisional Sums</option>
                     <option value="@ValuationElementType.Contingency">Contingency</option>
-                    <option value="@ValuationElementType.Variation">Variation</option>
                 </select>
+                @* Variation lines are not added by hand — they are written onto the report
+                   automatically when a VOQ is approved into a Variation Order. *@
             </div>
             <div>
                 <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Line type</label>

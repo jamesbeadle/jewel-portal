@@ -59,6 +59,8 @@ public static class RequestDocumentRenderer
         AddPartiesGrid(section, model);
         AddReferences(section, model);
         AddQuestionSection(section, model);
+        AddItemisedQueries(section, model);
+        AddResponseActionRequired(section, model);
         AddResponseSection(section, model);
         AddRecipients(section, model);
         AddActivity(section, model);
@@ -103,9 +105,9 @@ public static class RequestDocumentRenderer
         heading.Format.Font.Color = White;
         SpaceAfter(heading, 1);
 
-        var refLine = string.IsNullOrEmpty(model.DisplayNumber)
+        var refLine = string.IsNullOrEmpty(model.DisplayReference)
             ? model.TypeShort
-            : $"{model.DisplayNumber}  ·  {model.TypeShort}";
+            : $"{model.DisplayReference}  ·  {model.TypeShort}";
         var sub = row.Cells[0].AddParagraph(refLine);
         sub.Format.Font.Size = 9.5;
         sub.Format.Font.Bold = true;
@@ -224,6 +226,93 @@ public static class RequestDocumentRenderer
             notes.Format.Font.Size = 8.5;
             notes.Format.Font.Color = Muted;
             SpaceBefore(notes, 1.5);
+        }
+
+        SpaceAfterTable(section);
+    }
+
+    private static void AddItemisedQueries(Section section, RequestDocumentModel model)
+    {
+        // The basis-of-queries note leads the table when present, even if there are no items yet.
+        var items = model.ItemList;
+        if (items.Count == 0 && string.IsNullOrWhiteSpace(model.BasisOfQueries))
+            return;
+
+        SectionHeading(section, "Itemised queries");
+
+        if (items.Count > 0)
+        {
+            var table = section.AddTable();
+            table.Borders.Color = Hair;
+            table.Borders.Width = 0.5;
+            table.AddColumn(Unit.FromCentimeter(0.9));   // Item
+            table.AddColumn(Unit.FromCentimeter(3.2));   // Drawing ref
+            table.AddColumn(Unit.FromCentimeter(3.2));   // Member / area
+            table.AddColumn(Unit.FromCentimeter(6.4));   // Query
+            table.AddColumn(Unit.FromCentimeter(4.1));   // Response
+
+            var head = table.AddRow();
+            head.Shading.Color = Navy;
+            head.HeadingFormat = true;                   // repeat the header when the table breaks pages
+            HeaderCell(head.Cells[0], "Item");
+            HeaderCell(head.Cells[1], "Drawing ref");
+            HeaderCell(head.Cells[2], "Member / area");
+            HeaderCell(head.Cells[3], "Query");
+            HeaderCell(head.Cells[4], "Response");
+
+            var zebra = false;
+            foreach (var item in items)
+            {
+                var row = table.AddRow();
+                if (zebra) row.Shading.Color = Panel;
+                zebra = !zebra;
+                BodyCell(row.Cells[0], item.Position.ToString());
+                BodyCell(row.Cells[1], item.DrawingRef);
+                BodyCell(row.Cells[2], item.MemberArea);
+                BodyCell(row.Cells[3], item.Query);
+                BodyCell(row.Cells[4], string.IsNullOrWhiteSpace(item.Response) ? "—" : item.Response!);
+            }
+        }
+
+        if (!string.IsNullOrWhiteSpace(model.BasisOfQueries))
+        {
+            var basis = section.AddParagraph();
+            basis.AddFormattedText("Basis of queries:  ", TextFormat.Bold);
+            basis.AddText(model.BasisOfQueries!);
+            basis.Format.Font.Size = 8.5;
+            basis.Format.Font.Color = Muted;
+            SpaceBefore(basis, 2);
+        }
+
+        SpaceAfterTable(section);
+    }
+
+    private static void AddResponseActionRequired(Section section, RequestDocumentModel model)
+    {
+        var hasAny = !string.IsNullOrWhiteSpace(model.ResponseActionRequired)
+                     || !string.IsNullOrWhiteSpace(model.ImpactIfLate);
+        if (!hasAny)
+            return;
+
+        SectionHeading(section, "Response / action required");
+
+        if (!string.IsNullOrWhiteSpace(model.ResponseActionRequired))
+            Panelled(section, model.ResponseActionRequired!);
+
+        var footnotes = new List<(string Label, string Text)>();
+        if (model.ResponseDue is { } due)
+            footnotes.Add(("Required by:  ", Date(due)));
+        if (!string.IsNullOrWhiteSpace(model.ImpactIfLate))
+            footnotes.Add(("Impact if not received by the required date:  ", model.ImpactIfLate!));
+
+        foreach (var (label, text) in footnotes)
+        {
+            var line = section.AddParagraph();
+            line.AddFormattedText(label, TextFormat.Bold);
+            line.AddText(text);
+            line.Format.Font.Size = 8.5;
+            line.Format.Font.Color = Muted;
+            SpaceBefore(line, 1.5);
         }
 
         SpaceAfterTable(section);

@@ -102,6 +102,19 @@ public sealed class RequestEntity
     [MaxLength(4000)]    public string? InternalNotes { get; set; }
     [MaxLength(4000)]    public string? ClientNotes { get; set; }
 
+    // ---- Official document (RFI sheet) body -----------------------------------------------------
+    // The structured sections of the issued RFI document, alongside the itemised queries held in
+    // RequestItems. All optional: a simple request needs none of them and renders as before.
+
+    // "Basis of queries" — the emails, drawings and site observations the queries arise from.
+    [MaxLength(4000)]    public string? BasisOfQueries { get; set; }
+
+    // "Response / action required" — what written confirmation or instruction is being asked for.
+    [MaxLength(4000)]    public string? ResponseActionRequired { get; set; }
+
+    // Impact if the response is not received by the required-by date (programme / cost consequence).
+    [MaxLength(2048)]    public string? ImpactIfLate { get; set; }
+
     // Sequential, human-readable request number (rendered as REQ-0001). Used as the name of the
     // request's Outlook folder in the projects@ mailbox so triaged emails can be grouped per request.
     public int Number { get; set; }
@@ -109,9 +122,14 @@ public sealed class RequestEntity
     // True once an RFI has spawned an RFQ. Gates creation of a Variation Order Quote (VOQ).
     public bool HasRfq { get; set; }
 
-    // Owning client account. Architect email for RFI promotion resolves from this client first,
-    // falling back to the project's Architect contact. Null until the request is linked to a client.
-    [MaxLength(64)]     public string? ClientId { get; set; }
+    // The party this request is corresponded with: a client account directly (PartyKind 0) or an
+    // architect acting on a client's behalf (PartyKind 1, with OnBehalfOfClientId optionally
+    // recording that client). The recipient email on RFI promotion resolves from this party first,
+    // falling back to the project's party, then the project's Architect contact. PartyId is null
+    // until the request is linked to a party.
+    public int PartyKind { get; set; }
+    [MaxLength(64)]     public string? PartyId { get; set; }
+    [MaxLength(64)]     public string? OnBehalfOfClientId { get; set; }
 
     // Graph id of this request's mailbox folder, set the first time an email is filed against it.
     // Cached so subsequent emails for the same request reuse the folder rather than recreating it.

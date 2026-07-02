@@ -25,16 +25,13 @@ internal static class ValuationClaimSummary
             .Select(line => line.ToModel())
             .ToList();
 
-        // Certified to date = net certified by the most recent confirmed claim before this one.
-        var priorConfirmed = await context.ValuationClaims
-            .Where(other => other.ProjectId == claim.ProjectId
-                            && other.Status == (int)ValuationClaimStatus.Confirmed
-                            && other.ClaimNumber < claim.ClaimNumber)
-            .OrderByDescending(other => other.ClaimNumber)
-            .FirstOrDefaultAsync(cancellationToken);
-        var certifiedToDate = priorConfirmed is null
-            ? 0m
-            : priorConfirmed.TotalWorksComplete - priorConfirmed.RetentionHeld + priorConfirmed.RetentionReleased;
+        // Certified to date = total valuation-invoiced to date: every invoice that has been issued
+        // to the client (Issued or Paid). Draft (Raised) invoices don't count until issued.
+        var certifiedToDate = await context.ValuationInvoices
+            .Where(invoice => invoice.ProjectId == claim.ProjectId
+                              && (invoice.Status == (int)ValuationInvoiceStatus.Issued
+                                  || invoice.Status == (int)ValuationInvoiceStatus.Paid))
+            .SumAsync(invoice => (decimal?)invoice.Amount, cancellationToken) ?? 0m;
 
         var contractSum = ValuationCalculations.ContractSum(lineModels);
         var netVariations = ValuationCalculations.NetVariations(lineModels);

@@ -51,6 +51,13 @@ public static class RequestDocumentBuilder
             .OrderBy(a => a.PostedAt)
             .ToList();
 
+        // The official document's itemised queries, in display order.
+        var items = await context.RequestItems
+            .Where(i => i.RequestId == requestId)
+            .OrderBy(i => i.Position)
+            .Select(i => new RequestDocumentItem(i.Position, i.DrawingRef, i.MemberArea, i.Query, i.Response))
+            .ToListAsync(ct);
+
         var kind = (RequestType)request.Kind;
         var status = (RequestStatus)request.Status;
 
@@ -79,7 +86,12 @@ public static class RequestDocumentBuilder
             RespondedAt: request.RespondedAt,
             Recipients: recipients,
             Activity: activity,
-            GeneratedAt: DateTimeOffset.UtcNow);
+            GeneratedAt: DateTimeOffset.UtcNow,
+            Reference: request.Reference,
+            BasisOfQueries: request.BasisOfQueries,
+            ResponseActionRequired: request.ResponseActionRequired,
+            ImpactIfLate: request.ImpactIfLate,
+            Items: items);
     }
 
     private static string StatusLabel(RequestStatus status) => status switch

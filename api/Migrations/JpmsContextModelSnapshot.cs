@@ -33,7 +33,7 @@ namespace Jewel.JPMS.Api.Migrations
                         .HasMaxLength(256)
                         .HasColumnType("nvarchar(256)");
 
-                    b.Property<DateTimeOffset>("RequestedAt")
+                    b.Property<DateTimeOffset>("RaisedAt")
                         .HasColumnType("datetimeoffset");
 
                     b.HasKey("Email");
@@ -415,19 +415,38 @@ namespace Jewel.JPMS.Api.Migrations
                     b.ToTable("CashflowSnapshots");
                 });
 
+            modelBuilder.Entity("Jewel.JPMS.Api.Data.Entities.ArchitectEntity", b =>
+                {
+                    b.Property<string>("ArchitectId")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<string>("ContactEmail")
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<string>("ContactName")
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.HasKey("ArchitectId");
+
+                    b.ToTable("Architects");
+                });
+
             modelBuilder.Entity("Jewel.JPMS.Api.Data.Entities.ClientEntity", b =>
                 {
                     b.Property<string>("ClientId")
                         .HasMaxLength(64)
                         .HasColumnType("nvarchar(64)");
-
-                    b.Property<string>("ArchitectEmail")
-                        .HasMaxLength(256)
-                        .HasColumnType("nvarchar(256)");
-
-                    b.Property<string>("ArchitectName")
-                        .HasMaxLength(256)
-                        .HasColumnType("nvarchar(256)");
 
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("datetimeoffset");
@@ -456,9 +475,9 @@ namespace Jewel.JPMS.Api.Migrations
                         .HasMaxLength(64)
                         .HasColumnType("nvarchar(64)");
 
-                    b.Property<string>("ClientId")
-                        .HasMaxLength(64)
-                        .HasColumnType("nvarchar(64)");
+                    b.Property<string>("BasisOfQueries")
+                        .HasMaxLength(4000)
+                        .HasColumnType("nvarchar(4000)");
 
                     b.Property<string>("ClientNotes")
                         .HasMaxLength(4000)
@@ -476,6 +495,10 @@ namespace Jewel.JPMS.Api.Migrations
                     b.Property<bool>("HasRfq")
                         .HasColumnType("bit");
 
+                    b.Property<string>("ImpactIfLate")
+                        .HasMaxLength(2048)
+                        .HasColumnType("nvarchar(2048)");
+
                     b.Property<bool>("ImpliesVariation")
                         .HasColumnType("bit");
 
@@ -491,6 +514,17 @@ namespace Jewel.JPMS.Api.Migrations
                         .HasColumnType("nvarchar(450)");
 
                     b.Property<int>("Number")
+                        .HasColumnType("int");
+
+                    b.Property<string>("OnBehalfOfClientId")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<string>("PartyId")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<int>("PartyKind")
                         .HasColumnType("int");
 
                     b.Property<string>("ProjectId")
@@ -526,6 +560,10 @@ namespace Jewel.JPMS.Api.Migrations
                         .HasMaxLength(256)
                         .HasColumnType("nvarchar(256)");
 
+                    b.Property<string>("ResponseActionRequired")
+                        .HasMaxLength(4000)
+                        .HasColumnType("nvarchar(4000)");
+
                     b.Property<DateTimeOffset?>("ResponseDue")
                         .HasColumnType("datetimeoffset");
 
@@ -548,6 +586,46 @@ namespace Jewel.JPMS.Api.Migrations
                     b.HasKey("RequestId");
 
                     b.ToTable("Requests");
+                });
+
+            modelBuilder.Entity("Jewel.JPMS.Api.Data.Entities.RequestItemEntity", b =>
+                {
+                    b.Property<string>("RequestItemId")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<string>("DrawingRef")
+                        .IsRequired()
+                        .HasMaxLength(1024)
+                        .HasColumnType("nvarchar(1024)");
+
+                    b.Property<string>("MemberArea")
+                        .IsRequired()
+                        .HasMaxLength(512)
+                        .HasColumnType("nvarchar(512)");
+
+                    b.Property<int>("Position")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Query")
+                        .IsRequired()
+                        .HasMaxLength(4000)
+                        .HasColumnType("nvarchar(4000)");
+
+                    b.Property<string>("RequestId")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<string>("Response")
+                        .HasMaxLength(4000)
+                        .HasColumnType("nvarchar(4000)");
+
+                    b.HasKey("RequestItemId");
+
+                    b.HasIndex("RequestId");
+
+                    b.ToTable("RequestItems");
                 });
 
             modelBuilder.Entity("Jewel.JPMS.Api.Data.Entities.RequestMessageEntity", b =>
@@ -661,7 +739,7 @@ namespace Jewel.JPMS.Api.Migrations
                         .HasMaxLength(512)
                         .HasColumnType("nvarchar(512)");
 
-                    b.Property<DateTimeOffset>("ReceivedAt")
+                    b.Property<DateTimeOffset>("PaidAt")
                         .HasColumnType("datetimeoffset");
 
                     b.Property<string>("ReferencesHeader")
@@ -1205,7 +1283,7 @@ namespace Jewel.JPMS.Api.Migrations
                         .HasMaxLength(256)
                         .HasColumnType("nvarchar(256)");
 
-                    b.Property<DateTimeOffset>("ReceivedAt")
+                    b.Property<DateTimeOffset>("PaidAt")
                         .HasColumnType("datetimeoffset");
 
                     b.Property<string>("RevisionLabel")
@@ -1426,7 +1504,7 @@ namespace Jewel.JPMS.Api.Migrations
                         .HasMaxLength(64)
                         .HasColumnType("nvarchar(64)");
 
-                    b.Property<DateTimeOffset>("RequestedAt")
+                    b.Property<DateTimeOffset>("RaisedAt")
                         .HasColumnType("datetimeoffset");
 
                     b.HasKey("InfoChaseItemId");
@@ -1778,21 +1856,21 @@ namespace Jewel.JPMS.Api.Migrations
                     b.ToTable("ProgrammeTasks");
                 });
 
-            modelBuilder.Entity("Jewel.JPMS.Api.Data.Entities.CashCallEntity", b =>
+            modelBuilder.Entity("Jewel.JPMS.Api.Data.Entities.ValuationInvoiceEntity", b =>
                 {
-                    b.Property<string>("CashCallId")
+                    b.Property<string>("ValuationInvoiceId")
                         .HasMaxLength(64)
                         .HasColumnType("nvarchar(64)");
 
-                    b.Property<decimal>("AmountReceived")
+                    b.Property<decimal>("AmountPaid")
                         .HasPrecision(18, 4)
                         .HasColumnType("decimal(18,4)");
 
-                    b.Property<decimal>("AmountRequested")
+                    b.Property<decimal>("Amount")
                         .HasPrecision(18, 4)
                         .HasColumnType("decimal(18,4)");
 
-                    b.Property<DateTimeOffset?>("InvoicedAt")
+                    b.Property<DateTimeOffset?>("IssuedAt")
                         .HasColumnType("datetimeoffset");
 
                     b.Property<int>("Number")
@@ -1806,7 +1884,7 @@ namespace Jewel.JPMS.Api.Migrations
                         .HasMaxLength(64)
                         .HasColumnType("nvarchar(64)");
 
-                    b.Property<DateTimeOffset?>("ReceivedAt")
+                    b.Property<DateTimeOffset?>("PaidAt")
                         .HasColumnType("datetimeoffset");
 
                     b.Property<string>("Reference")
@@ -1814,7 +1892,7 @@ namespace Jewel.JPMS.Api.Migrations
                         .HasMaxLength(32)
                         .HasColumnType("nvarchar(32)");
 
-                    b.Property<DateTimeOffset>("RequestedAt")
+                    b.Property<DateTimeOffset>("RaisedAt")
                         .HasColumnType("datetimeoffset");
 
                     b.Property<int>("Status")
@@ -1824,9 +1902,9 @@ namespace Jewel.JPMS.Api.Migrations
                         .HasMaxLength(64)
                         .HasColumnType("nvarchar(64)");
 
-                    b.HasKey("CashCallId");
+                    b.HasKey("ValuationInvoiceId");
 
-                    b.ToTable("CashCalls");
+                    b.ToTable("ValuationInvoices");
                 });
 
             modelBuilder.Entity("Jewel.JPMS.Api.Data.Entities.ProjectEntity", b =>
@@ -1835,7 +1913,7 @@ namespace Jewel.JPMS.Api.Migrations
                         .HasMaxLength(64)
                         .HasColumnType("nvarchar(64)");
 
-                    b.Property<decimal>("CashCallTotal")
+                    b.Property<decimal>("ValuationInvoicePaidTotal")
                         .HasPrecision(18, 4)
                         .HasColumnType("decimal(18,4)");
 
@@ -1852,7 +1930,18 @@ namespace Jewel.JPMS.Api.Migrations
                         .HasMaxLength(256)
                         .HasColumnType("nvarchar(256)");
 
+                    b.Property<string>("OnBehalfOfClientId")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
                     b.Property<int>("Organisation")
+                        .HasColumnType("int");
+
+                    b.Property<string>("PartyId")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<int>("PartyKind")
                         .HasColumnType("int");
 
                     b.Property<string>("ProjectManagerEmail")
@@ -2034,7 +2123,7 @@ namespace Jewel.JPMS.Api.Migrations
                         .HasMaxLength(1024)
                         .HasColumnType("nvarchar(1024)");
 
-                    b.Property<DateTimeOffset>("ReceivedAt")
+                    b.Property<DateTimeOffset>("PaidAt")
                         .HasColumnType("datetimeoffset");
 
                     b.Property<string>("SubcontractorId")

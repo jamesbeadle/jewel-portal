@@ -11,5 +11,5 @@ public interface IClientStore
     Task<IReadOnlyList<Client>> ListAsync(CancellationToken cancellationToken = default);
     Task<Client?> GetAsync(string clientId, CancellationToken cancellationToken = default);
     Task<Client> CreateAsync(CreateClient command, CancellationToken cancellationToken = default);
-    Task<Client> UpdateArchitectAsync(UpdateClientArchitect command, CancellationToken cancellationToken = default);
+    Task<Client> UpdateContactAsync(UpdateClientContact command, CancellationToken cancellationToken = default);
 }

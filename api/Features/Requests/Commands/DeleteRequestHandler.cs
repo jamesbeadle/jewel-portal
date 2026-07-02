@@ -19,6 +19,12 @@ public sealed class DeleteRequestHandler : ICommandHandler<DeleteRequest, Acknow
             .ToListAsync(cancellationToken);
         context.RequestMessages.RemoveRange(messages);
 
+        // And the official document's itemised queries, for the same reason.
+        var items = await context.RequestItems
+            .Where(item => item.RequestId == command.RequestId)
+            .ToListAsync(cancellationToken);
+        context.RequestItems.RemoveRange(items);
+
         var entity = await context.Requests
             .FirstOrDefaultAsync(request => request.RequestId == command.RequestId, cancellationToken);
         if (entity is not null) context.Requests.Remove(entity);

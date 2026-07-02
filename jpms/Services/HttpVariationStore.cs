@@ -26,6 +26,9 @@ public sealed class HttpVariationStore : IVariationStore
     public Task<IReadOnlyList<VariationOrderQuote>> ListForProjectAsync(string projectId, CancellationToken cancellationToken = default) =>
         queries.AskAsync(new ListVoqsForProject(projectId), cancellationToken);
 
+    public Task<IReadOnlyList<VariationOrder>> ListVariationOrdersForProjectAsync(string projectId, CancellationToken cancellationToken = default) =>
+        queries.AskAsync(new ListVariationOrdersForProject(projectId), cancellationToken);
+
     public Task<IReadOnlyList<BidPackage>> ListBidPackagesAsync(string voqId, CancellationToken cancellationToken = default) =>
         queries.AskAsync(new ListBidPackagesForVoq(voqId), cancellationToken);
 

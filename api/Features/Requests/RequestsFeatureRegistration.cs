@@ -46,6 +46,14 @@ public static class RequestsFeatureRegistration
         services.AddScoped<UpdateRequestDetailsAuthorisation>();
         services.AddScoped<UpdateRequestDetailsValidation>();
 
+        services.AddScoped<ICommandHandler<UpdateRequestForm, Request>, UpdateRequestFormHandler>();
+        services.AddScoped<UpdateRequestFormAuthorisation>();
+        services.AddScoped<UpdateRequestFormValidation>();
+
+        services.AddScoped<ICommandHandler<PrepareRequestEmailDraft, RequestEmailDraft>, PrepareRequestEmailDraftHandler>();
+        services.AddScoped<PrepareRequestEmailDraftAuthorisation>();
+        services.AddScoped<PrepareRequestEmailDraftValidation>();
+
         services.AddScoped<ICommandHandler<PromoteRequestToRfi, Request>, PromoteRequestToRfiHandler>();
         services.AddScoped<PromoteRequestToRfiAuthorisation>();
         services.AddScoped<PromoteRequestToRfiValidation>();
@@ -54,9 +62,9 @@ public static class RequestsFeatureRegistration
         services.AddScoped<EnableRfqOnRequestAuthorisation>();
         services.AddScoped<EnableRfqOnRequestValidation>();
 
-        services.AddScoped<ICommandHandler<LinkRequestToClient, Request>, LinkRequestToClientHandler>();
-        services.AddScoped<LinkRequestToClientAuthorisation>();
-        services.AddScoped<LinkRequestToClientValidation>();
+        services.AddScoped<ICommandHandler<LinkRequestToParty, Request>, LinkRequestToPartyHandler>();
+        services.AddScoped<LinkRequestToPartyAuthorisation>();
+        services.AddScoped<LinkRequestToPartyValidation>();
 
         services.AddScoped<ICommandHandler<PostRequestMessage, RequestMessage>, PostRequestMessageHandler>();
         services.AddScoped<PostRequestMessageAuthorisation>();

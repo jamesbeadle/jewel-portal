@@ -24,6 +24,23 @@ public sealed class UpdateProjectDetailsHandler
         entity.Stage = (int)command.Stage;
         entity.ProjectManagerEmail = command.ProjectManagerEmail;
 
+        // The party this project corresponds with (client directly, or architect on a client's
+        // behalf). A null/empty PartyId clears the assignment.
+        if (string.IsNullOrWhiteSpace(command.PartyId))
+        {
+            entity.PartyKind = (int)PartyKind.Client;
+            entity.PartyId = null;
+            entity.OnBehalfOfClientId = null;
+        }
+        else
+        {
+            entity.PartyKind = (int)command.PartyKind;
+            entity.PartyId = command.PartyId;
+            entity.OnBehalfOfClientId = command.PartyKind == PartyKind.Architect
+                ? (string.IsNullOrWhiteSpace(command.OnBehalfOfClientId) ? null : command.OnBehalfOfClientId)
+                : null;
+        }
+
         await context.SaveChangesAsync(cancellationToken);
         return entity.ToModel();
     }

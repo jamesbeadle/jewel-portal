@@ -104,12 +104,18 @@ public sealed class HttpRequestRegister : IRequestRegister
         return updated;
     }
 
-    public async Task<Request> LinkToClientAsync(string requestId, string? clientId, string projectId, CancellationToken cancellationToken = default)
+    public async Task<Request> LinkToPartyAsync(string requestId, PartyKind partyKind, string? partyId, string? onBehalfOfClientId, string projectId, CancellationToken cancellationToken = default)
     {
-        var updated = await commands.SendAsync(new LinkRequestToClient(requestId, clientId), cancellationToken);
+        var updated = await commands.SendAsync(new LinkRequestToParty(requestId, partyKind, partyId, onBehalfOfClientId), cancellationToken);
         await readModel.RefreshAsync(projectId, cancellationToken);
         return updated;
     }
+
+    public Task<Request> SaveFormAsync(UpdateRequestForm command, CancellationToken cancellationToken = default) =>
+        commands.SendAsync(command, cancellationToken);
+
+    public Task<RequestEmailDraft> PrepareEmailDraftAsync(string requestId, string? recipientOverride = null, CancellationToken cancellationToken = default) =>
+        commands.SendAsync(new PrepareRequestEmailDraft(requestId, recipientOverride), cancellationToken);
 
     private async Task RaiseRecordAsync(Request record)
     {

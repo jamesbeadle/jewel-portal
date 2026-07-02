@@ -25,8 +25,8 @@ public static class ClientsRouteRegistration
         commands.Register<CreateClient, Client>(
             new CommandRoute("POST", "/api/clients", _ => "/api/clients"));
 
-        commands.Register<UpdateClientArchitect, Client>(
-            new CommandRoute("PUT", "/api/clients/{clientId}/architect",
-                command => $"/api/clients/{((UpdateClientArchitect)command).ClientId}/architect"));
+        commands.Register<UpdateClientContact, Client>(
+            new CommandRoute("PUT", "/api/clients/{clientId}/contact",
+                command => $"/api/clients/{((UpdateClientContact)command).ClientId}/contact"));
     }
 }

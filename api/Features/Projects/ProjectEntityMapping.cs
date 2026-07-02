@@ -13,5 +13,8 @@ internal static class ProjectEntityMapping
         Organisation: (Organisation)entity.Organisation,
         Stage: (ProjectStage)entity.Stage,
         ProjectManagerEmail: entity.ProjectManagerEmail,
-        CreatedAt: entity.CreatedAt);
+        CreatedAt: entity.CreatedAt,
+        PartyKind: (PartyKind)entity.PartyKind,
+        PartyId: entity.PartyId,
+        OnBehalfOfClientId: entity.OnBehalfOfClientId);
 }

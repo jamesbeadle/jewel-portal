@@ -3,6 +3,7 @@ using Jewel.JPMS.Api.Data;
 using Jewel.JPMS.Api.Features.MailboxIntake.Graph;
 using Jewel.JPMS.Contracts.Requests;
 using Jewel.JPMS.Models;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
 namespace Jewel.JPMS.Api.Features.Requests.Commands;
@@ -80,6 +81,10 @@ public sealed class UpdateRequestDetailsHandler : ICommandHandler<UpdateRequestD
             }
         }
 
-        return entity.ToModel();
+        // Return with the itemised queries so the detail view keeps them across an edit round-trip.
+        var items = await context.RequestItems
+            .Where(item => item.RequestId == entity.RequestId)
+            .ToListAsync(cancellationToken);
+        return entity.ToModel(items);
     }
 }

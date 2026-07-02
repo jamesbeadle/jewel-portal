@@ -10,4 +10,10 @@ public sealed record UpdateProjectDetails(
     string ClientName,
     Organisation Organisation,
     ProjectStage Stage,
-    string ProjectManagerEmail) : ICommand<Project>;
+    string ProjectManagerEmail,
+    // The party this project corresponds with (null PartyId clears the assignment): a client
+    // account directly, or an architect acting on a client's behalf — where project emails
+    // (RFIs and other request documents) are addressed.
+    PartyKind PartyKind = PartyKind.Client,
+    string? PartyId = null,
+    string? OnBehalfOfClientId = null) : ICommand<Project>;

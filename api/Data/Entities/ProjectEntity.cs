@@ -13,7 +13,16 @@ public sealed class ProjectEntity
     [MaxLength(256)]     public string ProjectManagerEmail { get; set; } = "";
     public DateTimeOffset CreatedAt { get; set; }
 
-    // Running total of cash calls received from the client on this project. Incremented when a cash
+    // The party this project corresponds with: a client account directly (PartyKind 0) or an
+    // architect acting on a client's behalf (PartyKind 1, with OnBehalfOfClientId optionally
+    // recording that client). Where project emails (RFIs etc.) are addressed; requests fall back
+    // to this when they carry no party link of their own. PartyId is null until assigned; the
+    // free-text ClientName above remains the display name shown on documents.
+    public int PartyKind { get; set; }
+    [MaxLength(64)]      public string? PartyId { get; set; }
+    [MaxLength(64)]      public string? OnBehalfOfClientId { get; set; }
+
+    // Running total of valuation invoices received from the client on this project. Incremented when a cash
     // call is marked Received. Denormalised for the directors' project-level view.
-    public decimal CashCallTotal { get; set; }
+    public decimal ValuationInvoicePaidTotal { get; set; }
 }

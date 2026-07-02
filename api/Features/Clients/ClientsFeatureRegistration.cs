@@ -18,9 +18,9 @@ public static class ClientsFeatureRegistration
         services.AddScoped<CreateClientAuthorisation>();
         services.AddScoped<CreateClientValidation>();
 
-        services.AddScoped<ICommandHandler<UpdateClientArchitect, Client>, UpdateClientArchitectHandler>();
-        services.AddScoped<UpdateClientArchitectAuthorisation>();
-        services.AddScoped<UpdateClientArchitectValidation>();
+        services.AddScoped<ICommandHandler<UpdateClientContact, Client>, UpdateClientContactHandler>();
+        services.AddScoped<UpdateClientContactAuthorisation>();
+        services.AddScoped<UpdateClientContactValidation>();
 
         return services;
     }

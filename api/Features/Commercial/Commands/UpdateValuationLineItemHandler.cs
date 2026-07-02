@@ -16,6 +16,13 @@ public sealed class UpdateValuationLineItemHandler : ICommandHandler<UpdateValua
         var entity = await context.ValuationLineItems.FindAsync(new object?[] { command.ValuationLineItemId }, cancellationToken)
             ?? throw new KeyNotFoundException($"Valuation line item {command.ValuationLineItemId} was not found.");
 
+        // A variation line mirrors an approved Variation Order; once approved a variation is
+        // locked and can only change through the variation itself (e.g. cancelling the VO).
+        if (entity.ElementType == (int)ValuationElementType.Variation
+            || command.ElementType == ValuationElementType.Variation)
+            throw new InvalidOperationException(
+                "Variation lines mirror approved variation orders and cannot be edited directly.");
+
         entity.ElementType = (int)command.ElementType;
         entity.SectionCode = command.SectionCode ?? "";
         entity.SectionName = command.SectionName ?? "";

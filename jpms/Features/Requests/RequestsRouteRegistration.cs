@@ -87,6 +87,16 @@ public static class RequestsRouteRegistration
             new CommandRoute("PUT", "/api/requests/{requestId}",
                 command => $"/api/requests/{((UpdateRequestDetails)command).RequestId}"));
 
+        // The structured body of the official document (itemised queries + narrative sections).
+        commands.Register<UpdateRequestForm, Request>(
+            new CommandRoute("PUT", "/api/requests/{requestId}/form",
+                command => $"/api/requests/{((UpdateRequestForm)command).RequestId}/form"));
+
+        // Stage the outbound email: an Outlook draft in the projects mailbox with the PDF attached.
+        commands.Register<PrepareRequestEmailDraft, RequestEmailDraft>(
+            new CommandRoute("POST", "/api/requests/{requestId}/email-draft",
+                command => $"/api/requests/{((PrepareRequestEmailDraft)command).RequestId}/email-draft"));
+
         commands.Register<PostRequestMessage, RequestMessage>(
             new CommandRoute("POST", "/api/requests/{requestId}/messages",
                 command => $"/api/requests/{((PostRequestMessage)command).RequestId}/messages"));
@@ -99,7 +109,8 @@ public static class RequestsRouteRegistration
             new CommandRoute("POST", "/api/requests/{requestId}/return-to-triage",
                 command => $"/api/requests/{((ReturnRequestToTriage)command).RequestId}/return-to-triage"));
 
-        // Request ladder: General -> RFI -> (RFQ), plus linking a request to a client account.
+        // Request ladder: General -> RFI -> (RFQ), plus linking a request to its party (a client
+        // account, or an architect acting on a client's behalf).
         commands.Register<PromoteRequestToRfi, Request>(
             new CommandRoute("POST", "/api/requests/{requestId}/promote-to-rfi",
                 command => $"/api/requests/{((PromoteRequestToRfi)command).RequestId}/promote-to-rfi"));
@@ -108,9 +119,9 @@ public static class RequestsRouteRegistration
             new CommandRoute("POST", "/api/requests/{requestId}/enable-rfq",
                 command => $"/api/requests/{((EnableRfqOnRequest)command).RequestId}/enable-rfq"));
 
-        commands.Register<LinkRequestToClient, Request>(
-            new CommandRoute("PUT", "/api/requests/{requestId}/client",
-                command => $"/api/requests/{((LinkRequestToClient)command).RequestId}/client"));
+        commands.Register<LinkRequestToParty, Request>(
+            new CommandRoute("PUT", "/api/requests/{requestId}/party",
+                command => $"/api/requests/{((LinkRequestToParty)command).RequestId}/party"));
 
         // Live-read triage moves: discard (Inbox -> General) and restore (General -> Inbox). The
         // message id + internetMessageId travel in the JSON body, so the route is static.

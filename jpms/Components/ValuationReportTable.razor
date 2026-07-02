@@ -106,10 +106,18 @@ else
                                             @if (CanEditLines)
                                             {
                                                 <td class="px-3 py-2 text-right whitespace-nowrap">
-                                                    <button @onclick="@(() => OnEditLine.InvokeAsync(line))"
-                                                            class="text-content-subtle hover:text-content underline underline-offset-2 text-xs">Edit</button>
-                                                    <button @onclick="@(() => RemoveLineAsync(line))"
-                                                            class="ml-2 text-negative/80 hover:text-negative underline underline-offset-2 text-xs">Remove</button>
+                                                    @if (line.ElementType == ValuationElementType.Variation)
+                                                    {
+                                                        @* Variation lines mirror approved VOs and can only change via the variation itself. *@
+                                                        <span class="text-content-subtle text-xs" title="From an approved variation order — manage it on the Variations tab.">Locked</span>
+                                                    }
+                                                    else
+                                                    {
+                                                        <button @onclick="@(() => OnEditLine.InvokeAsync(line))"
+                                                                class="text-content-subtle hover:text-content underline underline-offset-2 text-xs">Edit</button>
+                                                        <button @onclick="@(() => RemoveLineAsync(line))"
+                                                                class="ml-2 text-negative/80 hover:text-negative underline underline-offset-2 text-xs">Remove</button>
+                                                    }
                                                 </td>
                                             }
                                         </tr>
@@ -122,6 +130,13 @@ else
             </div>
         }
     </div>
+}
+
+@* Extra accordion sections that live with the bill (e.g. valuation invoices) but are fed
+   from their own store rather than the line items. *@
+@if (ExtraSections is not null)
+{
+    <div class="mt-3">@ExtraSections</div>
 }
 
 @if (lines.Count > 0)
@@ -145,6 +160,10 @@ else
     [Parameter, EditorRequired] public string ProjectId { get; set; } = "";
     [Parameter] public ValuationClaim? SelectedClaim { get; set; }
     [Parameter] public EventCallback<ValuationLineItem> OnEditLine { get; set; }
+    // Rendered between the bill sections and the summary (e.g. the valuation invoices accordion).
+    [Parameter] public RenderFragment? ExtraSections { get; set; }
+    // Total issued/paid valuation invoices — drives "Certified to date" for live (draft/no-claim) views.
+    [Parameter] public decimal InvoicedToDate { get; set; }
 
     private static readonly System.Globalization.CultureInfo Gb = System.Globalization.CultureInfo.GetCultureInfo("en-GB");
 
@@ -190,18 +209,20 @@ else
 
         if (SelectedClaim is { Status: ValuationClaimStatus.Draft })
         {
-            // Live preview for an editable draft.
+            // Live preview for an editable draft. Certified to date tracks the valuation
+            // invoices issued so far, so adding/issuing an invoice updates the payment due.
             var live = lines.Where(l => l.CountsTowardTotals)
                             .Select(l => ValuationCalculations.CumulativeClaimed(PercentFor(l), l.LineAmount));
             totalWorksComplete = live.Sum();
             retentionHeld = ValuationCalculations.RetentionHeld(totalWorksComplete, retentionPercent);
             retentionReleased = ValuationCalculations.RetentionReleased(revisedContractSum, retentionReleasePercent);
-            certifiedToDate = SelectedClaim.CertifiedToDate;
+            certifiedToDate = InvoicedToDate;
             paymentDueExVat = ValuationCalculations.PaymentDueExVat(totalWorksComplete, retentionHeld, retentionReleased, certifiedToDate);
         }
         else if (SelectedClaim is not null)
         {
-            // Frozen totals from the locked claim.
+            // Frozen totals from the locked claim (its CertifiedToDate captured the invoiced
+            // total at the moment it was locked).
             totalWorksComplete = SelectedClaim.TotalWorksComplete;
             retentionHeld = SelectedClaim.RetentionHeld;
             retentionReleased = SelectedClaim.RetentionReleased;
@@ -210,7 +231,9 @@ else
         }
         else
         {
-            totalWorksComplete = retentionHeld = retentionReleased = certifiedToDate = paymentDueExVat = 0m;
+            // No claim selected: nothing is being claimed, but what's been invoiced still reads.
+            totalWorksComplete = retentionHeld = retentionReleased = paymentDueExVat = 0m;
+            certifiedToDate = InvoicedToDate;
         }
     }
 

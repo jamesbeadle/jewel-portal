@@ -8,10 +8,12 @@ using Microsoft.EntityFrameworkCore;
 namespace Jewel.JPMS.Api.Features.Requests.Commands;
 
 /// <summary>
-/// Promotes a request to an RFI and issues its document to the architect. Recipient resolution:
-/// the linked client account's architect email first, then the project's Architect contact; if
-/// neither is found the send falls back to the project's flagged contacts (recipientOverride null),
-/// matching how a raised request is issued. Promotion never fails for want of a recipient.
+/// Promotes a request to an RFI and issues its document to the request's linked party — an
+/// architect's contact email, or a client's primary contact email when Jewel works with the client
+/// directly. Resolution: the request's party first, then the project's party, then the project's
+/// Architect contact; if none is found the send falls back to the project's flagged contacts
+/// (recipientOverride null), matching how a raised request is issued. Promotion never fails for
+/// want of a recipient.
 /// </summary>
 public sealed class PromoteRequestToRfiHandler : ICommandHandler<PromoteRequestToRfi, Request>
 {
@@ -60,27 +62,52 @@ public sealed class PromoteRequestToRfiHandler : ICommandHandler<PromoteRequestT
             }
         }
 
-        var architectEmail = await ResolveArchitectEmailAsync(entity.ClientId, entity.ProjectId, cancellationToken);
-        await mailbox.ScheduleRequestDocumentSendAsync(entity.RequestId, architectEmail, cancellationToken);
+        var recipientEmail = await ResolveRecipientEmailAsync(entity, cancellationToken);
+        await mailbox.ScheduleRequestDocumentSendAsync(entity.RequestId, recipientEmail, cancellationToken);
 
-        return entity.ToModel();
+        // Return with the itemised queries so the detail view keeps them across the promotion.
+        var items = await context.RequestItems
+            .Where(item => item.RequestId == entity.RequestId)
+            .ToListAsync(cancellationToken);
+        return entity.ToModel(items);
     }
 
-    private async Task<string?> ResolveArchitectEmailAsync(string? clientId, string projectId, CancellationToken cancellationToken)
+    private async Task<string?> ResolveRecipientEmailAsync(RequestEntity entity, CancellationToken cancellationToken)
     {
-        if (!string.IsNullOrWhiteSpace(clientId))
+        // The request's own party first: architect contact email, or client primary contact email.
+        var partyEmail = await ResolvePartyEmailAsync(entity.PartyKind, entity.PartyId, cancellationToken);
+        if (partyEmail is not null) return partyEmail;
+
+        // Then the project's party — a request with no party link of its own follows its project.
+        var project = await context.Projects.FindAsync(new object[] { entity.ProjectId }, cancellationToken);
+        if (project is not null)
         {
-            var client = await context.Clients.FindAsync(new object[] { clientId }, cancellationToken);
-            if (!string.IsNullOrWhiteSpace(client?.ArchitectEmail)) return client!.ArchitectEmail;
+            var projectPartyEmail = await ResolvePartyEmailAsync(project.PartyKind, project.PartyId, cancellationToken);
+            if (projectPartyEmail is not null) return projectPartyEmail;
         }
 
+        // Legacy fallback: the project's Architect contact flagged to receive requests.
         var architectContact = await context.ProjectContacts
-            .Where(contact => contact.ProjectId == projectId
+            .Where(contact => contact.ProjectId == entity.ProjectId
                 && contact.Role == (int)ProjectContactRole.Architect
                 && contact.ReceivesRequests)
             .Select(contact => contact.Email)
             .FirstOrDefaultAsync(cancellationToken);
 
         return string.IsNullOrWhiteSpace(architectContact) ? null : architectContact;
+    }
+
+    private async Task<string?> ResolvePartyEmailAsync(int partyKind, string? partyId, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(partyId)) return null;
+
+        if (partyKind == (int)PartyKind.Architect)
+        {
+            var architect = await context.Architects.FindAsync(new object[] { partyId }, cancellationToken);
+            return string.IsNullOrWhiteSpace(architect?.ContactEmail) ? null : architect!.ContactEmail;
+        }
+
+        var client = await context.Clients.FindAsync(new object[] { partyId }, cancellationToken);
+        return string.IsNullOrWhiteSpace(client?.PrimaryContactEmail) ? null : client!.PrimaryContactEmail;
     }
 }

@@ -1,0 +1,185 @@
+@page "/projects/{ProjectId}/variations"
+@inject AuthService Auth
+@inject SessionService Session
+@inject IVariationStore Variations
+@inject NavigationManager Nav
+
+<PageTitle>Variations · JPMS</PageTitle>
+
+@if (!isLoaded)
+{
+    <section class="max-w-5xl mx-auto px-4 py-12 text-content-subtle text-sm">Loading…</section>
+}
+else if (!Session.IsApproved)
+{
+    <RequestAccessView Email="@Auth.CurrentUser!.Email" DisplayName="@Auth.CurrentUser.DisplayName" />
+}
+else
+{
+    <ProjectPageShell ProjectId="@ProjectId" ActiveTab="variations">
+        <div class="mb-5">
+            <h2 class="text-lg font-semibold text-content">Variations</h2>
+            <p class="text-sm text-content-muted">
+                Every variation on this project. A variation starts life as a VOQ (variation order quote);
+                once approved it becomes a VO and its value is written onto the valuation report — quotes never appear there.
+            </p>
+        </div>
+
+        @if (error is not null)
+        {
+            <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-4">@error</p>
+        }
+
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+            <div class="panel p-4">
+                <p class="eyebrow mb-1">Open quotes (VOQ)</p>
+                <p class="text-xl font-semibold text-content">@OpenQuoteCount</p>
+            </div>
+            <div class="panel p-4">
+                <p class="eyebrow mb-1">Approved orders (VO)</p>
+                <p class="text-xl font-semibold text-content">@LiveOrders.Count</p>
+            </div>
+            <div class="panel p-4">
+                <p class="eyebrow mb-1">Approved value</p>
+                <p class="text-xl font-semibold text-content">@Money(LiveOrders.Sum(vo => vo.Value))</p>
+            </div>
+        </div>
+
+        @if (Rows.Count == 0)
+        {
+            <p class="text-sm text-content-subtle italic">
+                No variations yet. Raise a VOQ from an RFQ on the Requests tab to start one.
+            </p>
+        }
+        else
+        {
+            <div class="rounded-xl border border-line bg-surface overflow-hidden">
+                <table class="w-full text-sm">
+                    <thead class="bg-surface-raised border-b border-line">
+                        <tr class="text-left text-[11px] uppercase tracking-wider text-content-subtle font-semibold">
+                            <th class="px-4 py-3">Ref</th>
+                            <th class="px-4 py-3">Title</th>
+                            <th class="px-4 py-3">Status</th>
+                            <th class="px-4 py-3 text-right">Value</th>
+                            <th class="px-4 py-3 hidden lg:table-cell">Raised</th>
+                            <th class="px-4 py-3 hidden lg:table-cell">Approved</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-line">
+                        @foreach (var row in Rows)
+                        {
+                            <tr class="hover:bg-surface-raised">
+                                <td class="px-4 py-3 font-mono text-[12px] whitespace-nowrap">
+                                    <a class="text-content hover:underline underline-offset-4"
+                                       href="@($"/projects/{ProjectId}/voq/{row.Voq.VariationOrderQuoteId}")">@row.Reference</a>
+                                </td>
+                                <td class="px-4 py-3">
+                                    <a class="text-content font-medium hover:underline underline-offset-4"
+                                       href="@($"/projects/{ProjectId}/voq/{row.Voq.VariationOrderQuoteId}")">@row.Voq.Title</a>
+                                </td>
+                                <td class="px-4 py-3 whitespace-nowrap">
+                                    <span class="@BadgeClass(row)">@StatusLabel(row)</span>
+                                </td>
+                                <td class="px-4 py-3 text-right whitespace-nowrap @(row.IsCancelled ? "text-content-subtle line-through" : "text-content")">
+                                    @(row.Value is { } v ? Money(v) : "—")
+                                </td>
+                                <td class="px-4 py-3 text-content-subtle hidden lg:table-cell whitespace-nowrap">@row.Voq.CreatedAt.LocalDateTime.ToString("d MMM yyyy")</td>
+                                <td class="px-4 py-3 text-content-subtle hidden lg:table-cell whitespace-nowrap">
+                                    @(row.Order?.ApprovedAt.LocalDateTime.ToString("d MMM yyyy") ?? "—")
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+            <p class="text-xs text-content-subtle mt-3">
+                Only approved VOs are included on the valuation report; VOQs stay here until they're approved.
+            </p>
+        }
+    </ProjectPageShell>
+}
+
+@code {
+    [Parameter] public string ProjectId { get; set; } = "";
+
+    private bool isLoaded;
+    private string? error;
+    private IReadOnlyList<VariationOrderQuote> quotes = Array.Empty<VariationOrderQuote>();
+    private IReadOnlyList<VariationOrder> orders = Array.Empty<VariationOrder>();
+
+    // One row per VOQ; once approved, the VO carries the ref, value and status.
+    private sealed record Row(VariationOrderQuote Voq, VariationOrder? Order)
+    {
+        public string Reference => Order?.VariationRef ?? Voq.Reference;
+        public decimal? Value => Order?.Value ?? Voq.EstimatedValue;
+        public bool IsCancelled => Order?.Status == VariationOrderStatus.Cancelled;
+    }
+
+    private List<Row> Rows { get; set; } = new();
+
+    private List<VariationOrder> LiveOrders =>
+        orders.Where(vo => vo.Status != VariationOrderStatus.Cancelled).ToList();
+
+    private int OpenQuoteCount => quotes.Count(q =>
+        q.Status is not (VariationOrderQuoteStatus.Approved or VariationOrderQuoteStatus.Rejected));
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Session.EnsureLoadedAsync();
+        if (!Auth.IsSignedIn) { Nav.NavigateTo("/login", forceLoad: true); return; }
+        try
+        {
+            quotes = await Variations.ListForProjectAsync(ProjectId);
+            orders = await Variations.ListVariationOrdersForProjectAsync(ProjectId);
+            var byVoq = orders.ToDictionary(vo => vo.VariationOrderQuoteId);
+            Rows = quotes
+                .Select(q => new Row(q, byVoq.GetValueOrDefault(q.VariationOrderQuoteId)))
+                .OrderByDescending(r => r.Voq.Number)
+                .ToList();
+        }
+        catch { error = "Couldn't load variations. Please try again."; }
+        isLoaded = true;
+    }
+
+    private static string StatusLabel(Row row)
+    {
+        if (row.Order is { } vo)
+        {
+            return vo.Status switch
+            {
+                VariationOrderStatus.Approved => "VO — Approved",
+                VariationOrderStatus.Issued => "VO — Issued",
+                VariationOrderStatus.Cancelled => "VO — Cancelled",
+                _ => "VO"
+            };
+        }
+        return row.Voq.Status switch
+        {
+            VariationOrderQuoteStatus.Draft => "VOQ — Draft",
+            VariationOrderQuoteStatus.Inviting => "VOQ — Inviting",
+            VariationOrderQuoteStatus.Tendering => "VOQ — Tendering",
+            VariationOrderQuoteStatus.Selected => "VOQ — Selected",
+            VariationOrderQuoteStatus.Rejected => "VOQ — Rejected",
+            _ => "VOQ"
+        };
+    }
+
+    private static string BadgeClass(Row row)
+    {
+        const string baseClass = "inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-medium ";
+        if (row.Order is { } vo)
+        {
+            return vo.Status switch
+            {
+                VariationOrderStatus.Cancelled => baseClass + "bg-negative/10 border-negative/30 text-negative",
+                _ => baseClass + "bg-accent/10 border-accent/30 text-accent"
+            };
+        }
+        return row.Voq.Status == VariationOrderQuoteStatus.Rejected
+            ? baseClass + "bg-negative/10 border-negative/30 text-negative"
+            : baseClass + "bg-surface-raised border-line text-content-muted";
+    }
+
+    private static string Money(decimal value) =>
+        value.ToString("C2", System.Globalization.CultureInfo.GetCultureInfo("en-GB"));
+}

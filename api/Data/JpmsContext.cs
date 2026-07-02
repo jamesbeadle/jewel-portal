@@ -23,6 +23,7 @@ public sealed class JpmsContext : DbContext
     public DbSet<ProjectEntity> Projects => Set<ProjectEntity>();
     public DbSet<ProjectContactEntity> ProjectContacts => Set<ProjectContactEntity>();
     public DbSet<ClientEntity> Clients => Set<ClientEntity>();
+    public DbSet<ArchitectEntity> Architects => Set<ArchitectEntity>();
     public DbSet<LeadEntity> Leads => Set<LeadEntity>();
     public DbSet<QualificationAssessmentEntity> QualificationAssessments => Set<QualificationAssessmentEntity>();
     public DbSet<SiteVisitEntity> SiteVisits => Set<SiteVisitEntity>();
@@ -56,6 +57,7 @@ public sealed class JpmsContext : DbContext
     public DbSet<VariationOrderQuoteEntity> VariationOrderQuotes => Set<VariationOrderQuoteEntity>();
     public DbSet<VariationOrderEntity> VariationOrders => Set<VariationOrderEntity>();
     public DbSet<RequestEntity> Requests => Set<RequestEntity>();
+    public DbSet<RequestItemEntity> RequestItems => Set<RequestItemEntity>();
     public DbSet<RequestMessageEntity> RequestMessages => Set<RequestMessageEntity>();
     public DbSet<RequestAgentEntity> RequestAgents => Set<RequestAgentEntity>();
     public DbSet<AgentChatMessageEntity> AgentChatMessages => Set<AgentChatMessageEntity>();
@@ -83,7 +85,7 @@ public sealed class JpmsContext : DbContext
     public DbSet<CostCodeBudgetEntity> CostCodeBudgets => Set<CostCodeBudgetEntity>();
     public DbSet<TimesheetEntity> Timesheets => Set<TimesheetEntity>();
     public DbSet<CashflowSnapshotEntity> CashflowSnapshots => Set<CashflowSnapshotEntity>();
-    public DbSet<CashCallEntity> CashCalls => Set<CashCallEntity>();
+    public DbSet<ValuationInvoiceEntity> ValuationInvoices => Set<ValuationInvoiceEntity>();
     public DbSet<DayworkEntity> Dayworks => Set<DayworkEntity>();
     public DbSet<ContraChargeEntity> ContraCharges => Set<ContraChargeEntity>();
     public DbSet<SubcontractorRetentionEntity> SubcontractorRetentions => Set<SubcontractorRetentionEntity>();

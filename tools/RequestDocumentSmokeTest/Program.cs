@@ -38,7 +38,23 @@ var model = new RequestDocumentModel(
         new RequestDocumentActivity("Tom Reilly (Jewel)", "RFI raised and issued to the design team.", DateTimeOffset.Now.AddDays(-3), false),
         new RequestDocumentActivity("Jane Foster", "Acknowledged — checking with the structural engineer.", DateTimeOffset.Now.AddDays(-2), true)
     },
-    GeneratedAt: DateTimeOffset.Now);
+    GeneratedAt: DateTimeOffset.Now,
+    // The structured RFI-sheet body, proving the itemised-queries table and narrative sections render.
+    Reference: "RFI-006",
+    BasisOfQueries: "Architect's email ref. 1986_5.05 dated 9 June 2026, site inspection observations, "
+        + "and drawings S-204 rev C / A-330.",
+    ResponseActionRequired: "Please provide written confirmation / instruction on both items above, "
+        + "including whether a revised drawn detail will be issued.",
+    ImpactIfLate: "Steel fabrication cannot proceed, risking programme delay while scaffold remains "
+        + "in place at ongoing cost.",
+    Items: new[]
+    {
+        new RequestDocumentItem(1, "S-204 rev C\nA-330", "Grid B/4 — steel connection",
+            "Please confirm: (a) whether the connection is moment or pinned; (b) whether a revised detail is required.", null),
+        new RequestDocumentItem(2, "Site observation", "Existing ridge tiles adjacent to extension",
+            "Please confirm formal instruction to make good the failed mortar bedding while scaffold is in place.",
+            "Agreed — proceed as a variation; cost proposal to follow.")
+    });
 
 var outPath = args.Length > 0
     ? args[0]

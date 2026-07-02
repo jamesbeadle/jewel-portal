@@ -36,32 +36,60 @@ public sealed record RequestDocumentModel(
     DateTimeOffset? RespondedAt,
     IReadOnlyList<RequestDocumentRecipient> Recipients,
     IReadOnlyList<RequestDocumentActivity> Activity,
-    DateTimeOffset GeneratedAt)
+    DateTimeOffset GeneratedAt,
+    // ---- Official document (RFI sheet) body: all optional, rendered only when present ----------
+    string Reference = "",                            // client-visible reference, e.g. RFI-052
+    string? BasisOfQueries = null,                    // what the queries arise from
+    string? ResponseActionRequired = null,            // the confirmation / instruction requested
+    string? ImpactIfLate = null,                      // consequence of missing the required-by date
+    IReadOnlyList<RequestDocumentItem>? Items = null) // the itemised queries, in order
 {
+    /// <summary>The itemised queries, never null (Items is nullable so older call sites stay valid).</summary>
+    public IReadOnlyList<RequestDocumentItem> ItemList => Items ?? Array.Empty<RequestDocumentItem>();
+
+    /// <summary>The client-facing reference: the project-local number (RFI-052) when one has been
+    /// minted, otherwise the internal REQ number.</summary>
+    public string DisplayReference => string.IsNullOrWhiteSpace(Reference) ? DisplayNumber : Reference;
+
     /// <summary>True when a still-open request has been outstanding past its response-due date.</summary>
     public bool IsOverdue =>
         RespondedAt is null
         && ResponseDue is { } due
         && DateTimeOffset.UtcNow > due;
 
-    /// <summary>A safe, human file name for the PDF, e.g. "REQ-0001 - RFI.pdf".</summary>
+    /// <summary>A safe, human file name for the PDF — the client-visible reference plus the subject,
+    /// e.g. "RFI-052 - Shower Trays.pdf" (falling back to "REQ-0001 - RFI.pdf" pre-numbering).</summary>
     public string FileName
     {
         get
         {
-            var stem = string.IsNullOrEmpty(DisplayNumber) ? TypeShort : $"{DisplayNumber} - {TypeShort}";
+            var title = Title.Trim();
+            if (title.Length > 60) title = title[..60].TrimEnd();
+            var stem = !string.IsNullOrWhiteSpace(Reference)
+                ? (title.Length > 0 ? $"{Reference} - {title}" : Reference)
+                : string.IsNullOrEmpty(DisplayNumber) ? TypeShort : $"{DisplayNumber} - {TypeShort}";
             foreach (var c in Path.GetInvalidFileNameChars())
                 stem = stem.Replace(c, '-');
             return stem + ".pdf";
         }
     }
 
-    /// <summary>The email subject line used when the document is sent or resent.</summary>
+    /// <summary>The email subject line used when the document is sent, resent or drafted.</summary>
     public string EmailSubject =>
-        string.IsNullOrEmpty(DisplayNumber)
-            ? $"{TypeShort}: {Title} — {ProjectName}"
-            : $"{DisplayNumber} {TypeShort}: {Title} — {ProjectName}";
+        !string.IsNullOrWhiteSpace(Reference)
+            ? $"{Reference}: {Title} — {ProjectName}"
+            : string.IsNullOrEmpty(DisplayNumber)
+                ? $"{TypeShort}: {Title} — {ProjectName}"
+                : $"{DisplayNumber} {TypeShort}: {Title} — {ProjectName}";
 }
+
+/// <summary>One numbered row of the itemised-queries table (Item / Drawing Ref / Member-Area / Query / Response).</summary>
+public sealed record RequestDocumentItem(
+    int Position,
+    string DrawingRef,
+    string MemberArea,
+    string Query,
+    string? Response);
 
 /// <summary>An external party the document is issued to (a project contact flagged ReceivesRequests).</summary>
 public sealed record RequestDocumentRecipient(string Name, string Email, string Role, string? Organisation);

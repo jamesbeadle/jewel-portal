@@ -19,12 +19,36 @@ timestamp).
   and moves an `Open` request to `Awaiting response`. Failures retry on the queue — the DB stays the
   source of truth.
 
+## The structured RFI form
+
+Beyond the flat description, a request carries the structured body of the official RFI sheet,
+edited in the "Official … form" panel on the request page and rendered on the PDF:
+
+- **Itemised queries** (`RequestItems` table) — the numbered rows: Item / Drawing ref /
+  Member-area / Query / Response. Saved replace-all via `PUT /api/requests/{requestId}/form`
+  (`UpdateRequestForm`); positions are re-minted 1..n from the submitted order.
+- **Basis of queries**, **Response / action required** and **Impact if not received by the
+  required date** — narrative sections on the request itself. The required-by date is the
+  existing `ResponseDue`.
+
+All optional: a request without them renders exactly as before.
+
 ## Endpoints
 
 - `GET  /api/requests/{requestId}/document` — download the PDF (`application/pdf`).
 - `POST /api/requests/{requestId}/document/send` — resend. Optional JSON body
   `{ "recipientOverride": "someone@example.com" }` sends to one ad-hoc address instead of the
   project's flagged contacts. Restricted to Director / Project Manager / Site Manager / Architect.
+- `PUT  /api/requests/{requestId}/form` — save the structured form (itemised queries + sections).
+  Restricted to Director / Project Manager / Architect.
+- `POST /api/requests/{requestId}/email-draft` — create an **Outlook draft** in the projects
+  mailbox: recipients, subject, branded cover note and the freshly rendered PDF all pre-filled.
+  Nothing is sent — staff review and send from the mailbox itself. Recipients resolve from the
+  request's linked party (an architect's contact email, or a client's primary contact), falling
+  back to the project's party, then the flagged project contacts. Optional JSON body
+  `{ "recipientOverride": "someone@example.com" }`. Restricted to Director / Project Manager /
+  Site Manager / Architect. Requires the Graph app permission `Mail.ReadWrite` on the mailbox
+  (drafts are created with `POST /users/{mailbox}/messages`, which `Mail.Send` alone does not cover).
 
 Auto-send fires when a request is raised (`RaiseRequest`) or created from an intake email
 (`CreateRequestFromIntake`), provided it is in the `Open` state.

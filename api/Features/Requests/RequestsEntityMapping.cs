@@ -28,7 +28,28 @@ internal static class RequestsEntityMapping
         ClientNotes: entity.ClientNotes,
         Number: entity.Number,
         HasRfq: entity.HasRfq,
-        ClientId: entity.ClientId);
+        PartyKind: (PartyKind)entity.PartyKind,
+        PartyId: entity.PartyId,
+        OnBehalfOfClientId: entity.OnBehalfOfClientId,
+        BasisOfQueries: entity.BasisOfQueries,
+        ResponseActionRequired: entity.ResponseActionRequired,
+        ImpactIfLate: entity.ImpactIfLate);
+
+    /// <summary>The model including its itemised queries (the numbered rows of the official document).</summary>
+    public static Request ToModel(this RequestEntity entity, IEnumerable<RequestItemEntity> items) =>
+        entity.ToModel() with
+        {
+            Items = items.OrderBy(i => i.Position).Select(i => i.ToModel()).ToList()
+        };
+
+    public static RequestItem ToModel(this RequestItemEntity entity) => new(
+        RequestItemId: entity.RequestItemId,
+        RequestId: entity.RequestId,
+        Position: entity.Position,
+        DrawingRef: entity.DrawingRef,
+        MemberArea: entity.MemberArea,
+        Query: entity.Query,
+        Response: entity.Response);
 
     public static RequestMessage ToModel(this RequestMessageEntity entity) => new(
         MessageId: entity.MessageId,

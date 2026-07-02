@@ -53,7 +53,7 @@ public sealed class HttpClientStore : IClientStore
         return created;
     }
 
-    public async Task<Client> UpdateArchitectAsync(UpdateClientArchitect command, CancellationToken cancellationToken = default)
+    public async Task<Client> UpdateContactAsync(UpdateClientContact command, CancellationToken cancellationToken = default)
     {
         var updated = await commands.SendAsync(command, cancellationToken);
         await readModel.RefreshAsync(cancellationToken);

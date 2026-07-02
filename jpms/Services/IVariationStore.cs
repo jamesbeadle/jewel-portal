@@ -9,6 +9,7 @@ public interface IVariationStore
     Task<VariationOrderQuote?> GetByIdAsync(string voqId, CancellationToken cancellationToken = default);
     Task<VariationOrderQuote?> GetByRequestAsync(string requestId, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<VariationOrderQuote>> ListForProjectAsync(string projectId, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<VariationOrder>> ListVariationOrdersForProjectAsync(string projectId, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<BidPackage>> ListBidPackagesAsync(string voqId, CancellationToken cancellationToken = default);
 
     Task<VariationOrderQuote> CreateFromRfqAsync(string requestId, CancellationToken cancellationToken = default);

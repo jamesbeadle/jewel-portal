@@ -10,7 +10,5 @@ internal static class ClientEntityMapping
         Name: entity.Name,
         PrimaryContactName: entity.PrimaryContactName,
         PrimaryContactEmail: entity.PrimaryContactEmail,
-        ArchitectName: entity.ArchitectName,
-        ArchitectEmail: entity.ArchitectEmail,
         CreatedAt: entity.CreatedAt);
 }

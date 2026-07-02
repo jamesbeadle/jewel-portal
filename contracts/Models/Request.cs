@@ -48,10 +48,19 @@ public sealed record Request(
     string? ClientNotes = null,         // notes shared with client / external parties
     int Number = 0,                     // sequential request number; rendered as REQ-0001
     bool HasRfq = false,                // an RFI that has spawned an RFQ (unlocks VOQ creation)
-    string? ClientId = null)            // owning client account — architect email source on RFI promotion
+    PartyKind PartyKind = PartyKind.Client, // what kind of party PartyId points at (client or architect)
+    string? PartyId = null,             // the party corresponded with — recipient source on RFI promotion
+    string? OnBehalfOfClientId = null,  // when the party is an architect: the client they act for (optional)
+    string? BasisOfQueries = null,          // official document: what the queries arise from (emails, drawings, site observations)
+    string? ResponseActionRequired = null,  // official document: the written confirmation / instruction being asked for
+    string? ImpactIfLate = null,            // official document: consequence if no response by the required-by date
+    IReadOnlyList<RequestItem>? Items = null) // official document: the itemised queries, ordered by Position
 {
     // Human-readable request number / mailbox folder name (e.g. "REQ-0001"). Empty until assigned.
     public string DisplayNumber => Number > 0 ? $"REQ-{Number:0000}" : "";
+
+    // The itemised queries, never null (Items is nullable so old payloads deserialize cleanly).
+    public IReadOnlyList<RequestItem> ItemList => Items ?? Array.Empty<RequestItem>();
 
     // Working days a still-open request has been outstanding since it was issued.
     public int? DaysOutstanding =>
@@ -62,6 +71,20 @@ public sealed record Request(
     // Open and older than 7 days without a response.
     public bool IsOverdue => DaysOutstanding is > 7;
 }
+
+/// <summary>
+/// One itemised query on a request's official document — a numbered row of the RFI sheet
+/// (Item / Drawing Ref / Member-Area / Query / Response). The rendered item number is the 1-based
+/// <paramref name="Position"/>.
+/// </summary>
+public sealed record RequestItem(
+    string RequestItemId,
+    string RequestId,
+    int Position,
+    string DrawingRef,
+    string MemberArea,
+    string Query,
+    string? Response = null);
 
 public static class RequestTypeExtensions
 {

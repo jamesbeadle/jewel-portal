@@ -3,6 +3,8 @@
 @inject SessionService Session
 @inject ICommandSender Commands
 @inject ProjectListReadModel Projects
+@inject IClientStore ClientStore
+@inject IArchitectStore ArchitectStore
 
 @*
     "Edit details" button + modal for a project's core details (reference, name, client, entity,
@@ -26,6 +28,47 @@
             <FormField Label="Reference" Value="@reference" OnChange="v => reference = v" Required="true" />
             <FormField Label="Project name" Value="@name" OnChange="v => name = v" Required="true" />
             <FormField Label="Client" Value="@clientName" OnChange="v => clientName = v" Required="true" />
+
+            <div>
+                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Corresponds with</label>
+                <select class="field" value="@partySelection" @onchange="OnPartyChanged">
+                    <option value="">— Not assigned —</option>
+                    @if (clients.Count > 0)
+                    {
+                        <optgroup label="Clients">
+                            @foreach (var client in clients)
+                            {
+                                <option value="@($"{ClientPrefix}{client.ClientId}")">@client.Name</option>
+                            }
+                        </optgroup>
+                    }
+                    @if (architects.Count > 0)
+                    {
+                        <optgroup label="Architects">
+                            @foreach (var architect in architects)
+                            {
+                                <option value="@($"{ArchitectPrefix}{architect.ArchitectId}")">@architect.Name</option>
+                            }
+                        </optgroup>
+                    }
+                </select>
+                <p class="text-xs text-content-subtle mt-1">The party project emails are addressed to — a client account directly, or an architect acting on the client's behalf. The free-text client above stays the display name on documents.</p>
+            </div>
+
+            @if (partySelection.StartsWith(ArchitectPrefix, StringComparison.Ordinal))
+            {
+                <div>
+                    <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">On behalf of client</label>
+                    <select class="field" value="@onBehalfOfClientId" @onchange="OnOnBehalfOfClientChanged">
+                        <option value="">— Not recorded —</option>
+                        @foreach (var client in clients)
+                        {
+                            <option value="@client.ClientId">@client.Name</option>
+                        }
+                    </select>
+                    <p class="text-xs text-content-subtle mt-1">Optional: the client this architect is acting for.</p>
+                </div>
+            }
 
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
@@ -63,12 +106,22 @@
     private bool busy;
     private string? error;
 
+    private const string ClientPrefix = "client:";
+    private const string ArchitectPrefix = "architect:";
+
     private string reference = "";
     private string name = "";
     private string clientName = "";
     private Organisation organisation = Organisation.JewelBespokeBuild;
     private ProjectStage stage = ProjectStage.LiveDelivery;
     private string projectManagerEmail = "";
+
+    // The party this project corresponds with — "client:{id}" / "architect:{id}" / "" — plus the
+    // optional client an architect acts for.
+    private string partySelection = "";
+    private string onBehalfOfClientId = "";
+    private IReadOnlyList<Client> clients = Array.Empty<Client>();
+    private IReadOnlyList<Architect> architects = Array.Empty<Architect>();
 
     // Mirrors UpdateProjectDetailsAuthorisation server-side (directors and project managers;
     // administrators carry every role).
@@ -85,9 +138,30 @@
         organisation = project.Organisation;
         stage = project.Stage;
         projectManagerEmail = project.ProjectManagerEmail;
+        partySelection = string.IsNullOrEmpty(project.PartyId)
+            ? ""
+            : (project.PartyKind == PartyKind.Architect ? ArchitectPrefix : ClientPrefix) + project.PartyId;
+        onBehalfOfClientId = project.OnBehalfOfClientId ?? "";
         error = null;
         open = true;
+        _ = LoadPartiesAsync();
     }
+
+    private async Task LoadPartiesAsync()
+    {
+        try { clients = await ClientStore.ListAsync(); } catch { clients = Array.Empty<Client>(); }
+        try { architects = await ArchitectStore.ListAsync(); } catch { architects = Array.Empty<Architect>(); }
+        StateHasChanged();
+    }
+
+    private void OnPartyChanged(ChangeEventArgs e)
+    {
+        partySelection = e.Value?.ToString() ?? "";
+        if (!partySelection.StartsWith(ArchitectPrefix, StringComparison.Ordinal)) onBehalfOfClientId = "";
+    }
+
+    private void OnOnBehalfOfClientChanged(ChangeEventArgs e) =>
+        onBehalfOfClientId = e.Value?.ToString() ?? "";
 
     private void Close()
     {
@@ -115,6 +189,15 @@
         busy = true;
         try
         {
+            var partyKind = partySelection.StartsWith(ArchitectPrefix, StringComparison.Ordinal)
+                ? PartyKind.Architect
+                : PartyKind.Client;
+            var partyId = partySelection.StartsWith(ArchitectPrefix, StringComparison.Ordinal)
+                ? partySelection[ArchitectPrefix.Length..]
+                : partySelection.StartsWith(ClientPrefix, StringComparison.Ordinal)
+                    ? partySelection[ClientPrefix.Length..]
+                    : null;
+
             await Commands.SendAsync(
                 new UpdateProjectDetails(
                     ProjectId,
@@ -123,7 +206,12 @@
                     clientName.Trim(),
                     organisation,
                     stage,
-                    projectManagerEmail.Trim()),
+                    projectManagerEmail.Trim(),
+                    partyKind,
+                    partyId,
+                    partyKind == PartyKind.Architect && !string.IsNullOrWhiteSpace(onBehalfOfClientId)
+                        ? onBehalfOfClientId
+                        : null),
                 CancellationToken.None);
             await Projects.RefreshAsync(CancellationToken.None);
             Close();

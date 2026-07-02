@@ -4,12 +4,11 @@ using Jewel.JPMS.Models;
 namespace Jewel.JPMS.Contracts.Clients;
 
 /// <summary>
-/// Creates a global client account. The architect email captured here is the canonical recipient
-/// for RFIs raised against requests linked to this client.
+/// Creates a global client account. The primary contact email captured here is where request
+/// documents are addressed when this client is the selected party on a project/request.
+/// Architects are managed separately — see the Architects contracts.
 /// </summary>
 public sealed record CreateClient(
     string Name,
     string? PrimaryContactName = null,
-    string? PrimaryContactEmail = null,
-    string? ArchitectName = null,
-    string? ArchitectEmail = null) : ICommand<Client>;
+    string? PrimaryContactEmail = null) : ICommand<Client>;

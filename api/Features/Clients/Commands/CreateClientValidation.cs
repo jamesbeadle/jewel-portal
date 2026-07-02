@@ -9,8 +9,6 @@ public sealed class CreateClientValidation
     {
         var errors = new List<string>();
         if (string.IsNullOrWhiteSpace(command.Name)) errors.Add("Client name is required.");
-        if (!string.IsNullOrWhiteSpace(command.ArchitectEmail) && !command.ArchitectEmail.Contains('@'))
-            errors.Add("Architect email is not a valid email address.");
         if (!string.IsNullOrWhiteSpace(command.PrimaryContactEmail) && !command.PrimaryContactEmail.Contains('@'))
             errors.Add("Primary contact email is not a valid email address.");
         if (errors.Count == 0) return ValidationOutcome.Passed;

@@ -19,8 +19,6 @@ public sealed class CreateClientHandler : ICommandHandler<CreateClient, Client>
             Name = command.Name.Trim(),
             PrimaryContactName = command.PrimaryContactName,
             PrimaryContactEmail = command.PrimaryContactEmail,
-            ArchitectName = command.ArchitectName,
-            ArchitectEmail = command.ArchitectEmail,
             CreatedAt = DateTimeOffset.UtcNow
         };
 

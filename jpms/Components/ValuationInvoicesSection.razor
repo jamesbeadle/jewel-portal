@@ -1,0 +1,251 @@
+@inject IValuationInvoiceStore Invoices
+@inject SessionService Session
+
+@* Valuation invoices (formerly Cash Calls) live inside the Valuation Report as one more
+   accordion. Issued invoices drive "Certified to date" — and so the payment due — in the
+   report summary; the total is reported up via OnInvoicedToDateChanged. *@
+<div class="rounded-xl border border-line bg-surface overflow-hidden">
+    <button type="button" @onclick="Toggle" aria-expanded="@isOpen"
+            class="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-surface-raised/60 transition">
+        <svg class="@(isOpen ? "w-4 h-4 shrink-0 text-content-subtle rotate-90 transition-transform" : "w-4 h-4 shrink-0 text-content-subtle transition-transform")"
+             viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M9 6l6 6-6 6" />
+        </svg>
+        <span class="font-semibold text-content whitespace-nowrap">Valuation Invoices</span>
+        <span class="text-xs text-content-subtle whitespace-nowrap">
+            @invoices.Count @(invoices.Count == 1 ? "invoice" : "invoices")
+        </span>
+        <span class="ml-auto flex items-baseline gap-6 whitespace-nowrap">
+            <span class="text-sm">
+                <span class="text-[11px] uppercase tracking-wider text-content-subtle mr-1.5">Paid</span>
+                <span class="text-content-muted">@Money(TotalPaid)</span>
+            </span>
+            <span class="text-sm">
+                <span class="text-[11px] uppercase tracking-wider text-content-subtle mr-1.5">Invoiced</span>
+                <span class="text-content font-medium">@Money(InvoicedToDate)</span>
+            </span>
+        </span>
+    </button>
+
+    @if (isOpen)
+    {
+        @if (error is not null)
+        {
+            <p class="border-t border-line bg-negative/10 px-4 py-2 text-sm text-negative">@error</p>
+        }
+
+        @if (invoices.Count == 0)
+        {
+            <div class="border-t border-line px-4 py-5 text-center text-content-subtle italic text-sm">
+                No valuation invoices yet. Add one below — once issued it counts toward certified to date.
+            </div>
+        }
+        else
+        {
+            <div class="border-t border-line overflow-x-auto">
+                <table class="w-full text-sm border-collapse">
+                    <thead class="bg-surface-raised border-b border-line">
+                        <tr class="text-left text-[11px] uppercase tracking-wider text-content-subtle font-semibold">
+                            <th class="px-3 py-3 w-[88px]">Ref</th>
+                            <th class="px-3 py-3 whitespace-nowrap">Period</th>
+                            <th class="px-3 py-3 text-right whitespace-nowrap">Amount £</th>
+                            <th class="px-3 py-3 whitespace-nowrap">Status</th>
+                            <th class="px-3 py-3 text-right whitespace-nowrap">Paid £</th>
+                            @if (CanManage)
+                            {
+                                <th class="px-3 py-3 text-right w-[130px]"></th>
+                            }
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-line">
+                        @foreach (var invoice in invoices)
+                        {
+                            <tr>
+                                <td class="px-3 py-2 font-mono text-[11px] text-content-subtle whitespace-nowrap">@invoice.DisplayNumber</td>
+                                <td class="px-3 py-2 text-content-muted whitespace-nowrap">@invoice.PeriodMonth.ToString("MMM yyyy")</td>
+                                <td class="px-3 py-2 text-right text-content whitespace-nowrap">@Money(invoice.Amount)</td>
+                                <td class="px-3 py-2 whitespace-nowrap"><span class="@BadgeClass(invoice.Status)">@StatusLabel(invoice.Status)</span></td>
+                                <td class="px-3 py-2 text-right text-content-muted whitespace-nowrap">@(invoice.AmountPaid > 0 ? Money(invoice.AmountPaid) : "—")</td>
+                                @if (CanManage)
+                                {
+                                    <td class="px-3 py-2 text-right whitespace-nowrap">
+                                        @if (invoice.Status == ValuationInvoiceStatus.Raised)
+                                        {
+                                            <button type="button" disabled="@busy" @onclick="() => IssueAsync(invoice)"
+                                                    class="text-content-subtle hover:text-content underline underline-offset-2 text-xs">Issue invoice</button>
+                                        }
+                                        else if (invoice.Status == ValuationInvoiceStatus.Issued)
+                                        {
+                                            <button type="button" disabled="@busy" @onclick="() => OpenPayment(invoice)"
+                                                    class="text-content-subtle hover:text-content underline underline-offset-2 text-xs">Record payment</button>
+                                        }
+                                    </td>
+                                }
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+
+        @if (CanManage)
+        {
+            <div class="border-t border-line px-4 py-3 flex flex-wrap items-end gap-3">
+                <div>
+                    <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Period month</label>
+                    <input type="month" @bind="newMonth"
+                           class="rounded-lg border border-line-strong bg-surface-field px-3 py-2 text-sm text-content focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent" />
+                </div>
+                <div>
+                    <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Amount £</label>
+                    <input type="number" step="any" min="0" @bind="newAmount"
+                           class="rounded-lg border border-line-strong bg-surface-field px-3 py-2 text-sm text-content w-40 focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent" />
+                </div>
+                <button type="button" disabled="@busy" @onclick="AddAsync"
+                        class="rounded-lg bg-accent text-accent-ink font-medium text-sm px-3 py-2 hover:bg-accent-hover disabled:bg-surface-field transition">
+                    Add invoice
+                </button>
+            </div>
+        }
+    }
+</div>
+
+<Modal IsOpen="paymentInvoice is not null"
+       Title="Record client payment"
+       ConfirmLabel="@(busy ? "Saving…" : "Record payment")"
+       OnCancel="() => paymentInvoice = null"
+       OnConfirm="RecordPaymentAsync"
+       Class="max-w-md">
+    <div class="space-y-3">
+        @if (paymentInvoice is not null)
+        {
+            <p class="text-sm text-content">
+                Payment received against <span class="font-mono">@paymentInvoice.DisplayNumber</span>
+                (invoiced @Money(paymentInvoice.Amount)).
+            </p>
+        }
+        <FormField Label="Amount received (£)" Value="@paymentAmount" OnChange="v => paymentAmount = v" InputType="number" />
+    </div>
+</Modal>
+
+@code {
+    [Parameter, EditorRequired] public string ProjectId { get; set; } = "";
+    // When a claim is selected on the report, new invoices are drawn against it.
+    [Parameter] public string? ValuationClaimId { get; set; }
+    [Parameter] public EventCallback<decimal> OnInvoicedToDateChanged { get; set; }
+
+    private static readonly System.Globalization.CultureInfo Gb = System.Globalization.CultureInfo.GetCultureInfo("en-GB");
+
+    private bool isOpen;
+    private bool busy;
+    private string? error;
+    private IReadOnlyList<ValuationInvoice> invoices = Array.Empty<ValuationInvoice>();
+
+    private string newMonth = DateTimeOffset.UtcNow.ToString("yyyy-MM");
+    private string newAmount = "";
+
+    private ValuationInvoice? paymentInvoice;
+    private string paymentAmount = "";
+
+    private bool CanManage => Session.AvailableRoles.Any(role =>
+        role is Role.Admin or Role.ManagingDirector or Role.FinanceDirector or Role.ProjectManager);
+
+    // Issued + Paid invoices are what the client has actually been invoiced — this is the
+    // figure that feeds "Certified to date" on the report summary.
+    private decimal InvoicedToDate => invoices
+        .Where(invoice => invoice.Status is ValuationInvoiceStatus.Issued or ValuationInvoiceStatus.Paid)
+        .Sum(invoice => invoice.Amount);
+
+    private decimal TotalPaid => invoices.Sum(invoice => invoice.AmountPaid);
+
+    protected override async Task OnInitializedAsync() => await ReloadAsync();
+
+    private void Toggle() => isOpen = !isOpen;
+
+    private async Task ReloadAsync()
+    {
+        try
+        {
+            invoices = await Invoices.ListAsync(ProjectId);
+            error = null;
+        }
+        catch { error = "Couldn't load valuation invoices. Please try again."; }
+        await OnInvoicedToDateChanged.InvokeAsync(InvoicedToDate);
+    }
+
+    private async Task AddAsync()
+    {
+        if (busy) return;
+        error = null;
+        if (!decimal.TryParse(newAmount, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var amount) || amount <= 0)
+        { error = "Enter an amount greater than zero."; return; }
+        try
+        {
+            busy = true;
+            await Invoices.CreateAsync(ProjectId, ParseMonth(newMonth), amount, ValuationClaimId);
+            newAmount = "";
+            await ReloadAsync();
+        }
+        catch { error = "Couldn't add the valuation invoice. Please try again."; }
+        finally { busy = false; }
+    }
+
+    private async Task IssueAsync(ValuationInvoice invoice)
+    {
+        if (busy) return;
+        error = null;
+        try { busy = true; await Invoices.IssueAsync(invoice.ValuationInvoiceId); await ReloadAsync(); }
+        catch { error = "Couldn't issue the invoice. Please try again."; }
+        finally { busy = false; }
+    }
+
+    private void OpenPayment(ValuationInvoice invoice)
+    {
+        paymentInvoice = invoice;
+        paymentAmount = invoice.Amount.ToString(System.Globalization.CultureInfo.InvariantCulture);
+    }
+
+    private async Task RecordPaymentAsync()
+    {
+        if (busy || paymentInvoice is null) return;
+        error = null;
+        if (!decimal.TryParse(paymentAmount, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var amount) || amount <= 0)
+        { error = "Enter an amount greater than zero."; return; }
+        try
+        {
+            busy = true;
+            await Invoices.RecordPaymentAsync(paymentInvoice.ValuationInvoiceId, amount);
+            paymentInvoice = null;
+            await ReloadAsync();
+        }
+        catch { error = "Couldn't record the payment. Please try again."; }
+        finally { busy = false; }
+    }
+
+    private static DateTimeOffset ParseMonth(string value) =>
+        DateTimeOffset.TryParse(string.IsNullOrWhiteSpace(value) ? "" : value + "-01", out var parsed)
+            ? parsed
+            : DateTimeOffset.UtcNow;
+
+    private static string StatusLabel(ValuationInvoiceStatus status) => status switch
+    {
+        ValuationInvoiceStatus.Raised => "Raised",
+        ValuationInvoiceStatus.Issued => "Issued",
+        ValuationInvoiceStatus.Paid => "Paid",
+        _ => status.ToString()
+    };
+
+    private static string BadgeClass(ValuationInvoiceStatus status)
+    {
+        const string baseClass = "inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-medium ";
+        return status switch
+        {
+            ValuationInvoiceStatus.Paid => baseClass + "bg-accent/10 border-accent/30 text-accent",
+            ValuationInvoiceStatus.Issued => baseClass + "bg-info/10 border-info/30 text-info",
+            _ => baseClass + "bg-surface-raised border-line text-content-muted"
+        };
+    }
+
+    private static string Money(decimal value) => value.ToString("C2", Gb);
+}

@@ -111,7 +111,16 @@ else
             </div>
         }
 
-        <ValuationReportTable ProjectId="@ProjectId" SelectedClaim="@Selected" OnEditLine="StartEditLine" />
+        <ValuationReportTable ProjectId="@ProjectId" SelectedClaim="@Selected" OnEditLine="StartEditLine"
+                              InvoicedToDate="@invoicedToDate">
+            <ExtraSections>
+                @* The old Cash Calls tab, folded into the report: issued invoices feed
+                   "Certified to date" and therefore the payment due. *@
+                <ValuationInvoicesSection ProjectId="@ProjectId"
+                                          ValuationClaimId="@Selected?.ValuationClaimId"
+                                          OnInvoicedToDateChanged="OnInvoicedToDateChanged" />
+            </ExtraSections>
+        </ValuationReportTable>
 
         <Modal IsOpen="@(showLineForm || editingLine is not null)"
                Title="@(editingLine is null ? "Add a line" : "Edit line")"
@@ -130,6 +139,13 @@ else
     private bool showLineForm;
     private string selectedClaimId = "";
     private ValuationLineItem? editingLine;
+    private decimal invoicedToDate;
+
+    private void OnInvoicedToDateChanged(decimal total)
+    {
+        invoicedToDate = total;
+        StateHasChanged();
+    }
 
     private DateTime newClaimDate = DateTime.Today;
     private string newRetentionPercent = "5";

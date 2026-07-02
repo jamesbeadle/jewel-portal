@@ -1,0 +1,200 @@
+@page "/architects"
+@using Jewel.JPMS.Contracts.Architects
+@inject AuthService Auth
+@inject SessionService Session
+@inject IArchitectStore ArchitectStore
+@inject NavigationManager Nav
+
+<PageTitle>Architects · JPMS</PageTitle>
+
+@if (!isLoaded)
+{
+    <section class="max-w-5xl mx-auto px-4 py-12 text-content-subtle text-sm">Loading…</section>
+}
+else if (!Session.IsApproved)
+{
+    <RequestAccessView Email="@Auth.CurrentUser!.Email" DisplayName="@Auth.CurrentUser.DisplayName" />
+}
+else if (!CanManage)
+{
+    <section class="max-w-5xl mx-auto px-4 py-12 text-content-subtle text-sm">You don't have access to architect practices.</section>
+}
+else
+{
+    <section class="max-w-5xl mx-auto px-4 py-8 md:py-12">
+        <header class="mb-6 md:mb-8 flex items-end justify-between gap-4">
+            <div>
+                <p class="text-xs uppercase tracking-wider text-content-subtle font-medium mb-1">JPMS</p>
+                <h1 class="text-2xl md:text-3xl font-semibold text-content leading-tight">Architect practices</h1>
+                <p class="text-sm text-content-muted mt-2">@architects.Count architect@(architects.Count == 1 ? "" : "s") · when an architect is a project's party, RFIs and other request documents go to the contact email here.</p>
+            </div>
+            <button type="button" class="btn-primary" @onclick="OpenCreate">New architect</button>
+        </header>
+
+        @if (loadError is not null)
+        {
+            <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-4">@loadError</p>
+        }
+
+        @if (architects.Count == 0)
+        {
+            <div class="panel p-8 text-center text-sm text-content-subtle">No architect practices yet. Create one to select it as the party on a project or request when Jewel works through an architect.</div>
+        }
+        else
+        {
+            <div class="panel overflow-hidden">
+                <table class="w-full text-sm">
+                    <thead>
+                        <tr class="text-left text-content-subtle border-b border-line">
+                            <th class="px-4 py-3 font-medium">Practice</th>
+                            <th class="px-4 py-3 font-medium">Contact</th>
+                            <th class="px-4 py-3 font-medium">Contact email</th>
+                            <th class="px-4 py-3"></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var architect in architects)
+                        {
+                            <tr class="border-b border-line last:border-0">
+                                <td class="px-4 py-3 font-medium text-content">@architect.Name</td>
+                                <td class="px-4 py-3 text-content-muted">@Dash(architect.ContactName)</td>
+                                <td class="px-4 py-3 text-content-muted">@Dash(architect.ContactEmail)</td>
+                                <td class="px-4 py-3 text-right">
+                                    <button type="button" class="text-sm font-medium text-content-muted hover:text-content" @onclick="() => OpenEdit(architect)">Edit</button>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </section>
+
+    <Modal IsOpen="creating"
+           Title="New architect practice"
+           ConfirmLabel="@(busy ? "Creating…" : "Create architect")"
+           OnCancel="() => creating = false"
+           OnConfirm="CreateArchitectAsync"
+           Class="max-w-2xl">
+        <div class="space-y-4">
+            @if (formError is not null)
+            {
+                <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@formError</p>
+            }
+            <FormField Label="Practice name" Value="@formName" OnChange="v => formName = v" Required="true" />
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <FormField Label="Contact name" Value="@formContactName" OnChange="v => formContactName = v" />
+                <FormField Label="Contact email" Value="@formContactEmail" OnChange="v => formContactEmail = v" />
+            </div>
+        </div>
+    </Modal>
+
+    <Modal IsOpen="editing"
+           Title="Edit architect"
+           ConfirmLabel="@(busy ? "Saving…" : "Save changes")"
+           OnCancel="() => editing = false"
+           OnConfirm="SaveEditAsync"
+           Class="max-w-2xl">
+        <div class="space-y-4">
+            @if (formError is not null)
+            {
+                <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@formError</p>
+            }
+            <FormField Label="Practice name" Value="@formName" OnChange="v => formName = v" Required="true" />
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <FormField Label="Contact name" Value="@formContactName" OnChange="v => formContactName = v" />
+                <FormField Label="Contact email" Value="@formContactEmail" OnChange="v => formContactEmail = v" />
+            </div>
+        </div>
+    </Modal>
+}
+
+@code {
+    private bool isLoaded;
+    private bool busy;
+    private string? loadError;
+    private string? formError;
+    private IReadOnlyList<Architect> architects = Array.Empty<Architect>();
+
+    private bool CanManage => Session.AvailableRoles.Any(role => role is Role.Admin or Role.ManagingDirector or Role.ProjectManager);
+
+    private bool creating;
+    private bool editing;
+    private string? editTargetId;
+    private string formName = "";
+    private string formContactName = "";
+    private string formContactEmail = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Session.EnsureLoadedAsync();
+        if (!Auth.IsSignedIn) { Nav.NavigateTo("/login", forceLoad: true); return; }
+        await ReloadAsync();
+        isLoaded = true;
+    }
+
+    private async Task ReloadAsync()
+    {
+        try { architects = await ArchitectStore.ListAsync(); loadError = null; }
+        catch { loadError = "Couldn't load architect practices. Please try again."; }
+    }
+
+    private void OpenCreate()
+    {
+        formError = null;
+        formName = formContactName = formContactEmail = "";
+        creating = true;
+    }
+
+    private void OpenEdit(Architect architect)
+    {
+        formError = null;
+        editTargetId = architect.ArchitectId;
+        formName = architect.Name;
+        formContactName = architect.ContactName ?? "";
+        formContactEmail = architect.ContactEmail ?? "";
+        editing = true;
+    }
+
+    private async Task CreateArchitectAsync()
+    {
+        if (busy) return;
+        formError = null;
+        if (string.IsNullOrWhiteSpace(formName)) { formError = "A practice name is required."; return; }
+        try
+        {
+            busy = true;
+            await ArchitectStore.CreateAsync(new CreateArchitect(
+                formName.Trim(),
+                NullIfBlank(formContactName),
+                NullIfBlank(formContactEmail)));
+            creating = false;
+            await ReloadAsync();
+        }
+        catch { formError = "Couldn't create the architect. Please try again."; }
+        finally { busy = false; }
+    }
+
+    private async Task SaveEditAsync()
+    {
+        if (busy || editTargetId is null) return;
+        formError = null;
+        if (string.IsNullOrWhiteSpace(formName)) { formError = "A practice name is required."; return; }
+        try
+        {
+            busy = true;
+            await ArchitectStore.UpdateAsync(new UpdateArchitect(
+                editTargetId,
+                formName.Trim(),
+                NullIfBlank(formContactName),
+                NullIfBlank(formContactEmail)));
+            editing = false;
+            await ReloadAsync();
+        }
+        catch { formError = "Couldn't save the changes. Please try again."; }
+        finally { busy = false; }
+    }
+
+    private static string Dash(string? value) => string.IsNullOrWhiteSpace(value) ? "—" : value;
+    private static string? NullIfBlank(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+}

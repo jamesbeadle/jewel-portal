@@ -16,6 +16,12 @@ public sealed class GetRequestByIdHandler : IQueryHandler<GetRequestById, Reques
     {
         var entity = await context.Requests
             .FirstOrDefaultAsync(change => change.RequestId == query.RequestId, cancellationToken);
-        return entity?.ToModel();
+        if (entity is null) return null;
+
+        // The detail view carries the official document's itemised queries too.
+        var items = await context.RequestItems
+            .Where(item => item.RequestId == query.RequestId)
+            .ToListAsync(cancellationToken);
+        return entity.ToModel(items);
     }
 }

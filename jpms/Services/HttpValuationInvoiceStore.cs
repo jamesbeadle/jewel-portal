@@ -1,0 +1,46 @@
+using Jewel.JPMS.Contracts.ValuationInvoices;
+using Jewel.JPMS.Cqrs;
+using Jewel.JPMS.Models;
+
+namespace Jewel.JPMS.Services;
+
+public sealed class HttpValuationInvoiceStore : IValuationInvoiceStore
+{
+    private readonly IQueryClient queries;
+    private readonly ICommandSender commands;
+
+    public HttpValuationInvoiceStore(IQueryClient queries, ICommandSender commands)
+    {
+        this.queries = queries;
+        this.commands = commands;
+    }
+
+    public event Action? OnChange;
+
+    public Task<IReadOnlyList<ValuationInvoice>> ListAsync(string projectId, CancellationToken cancellationToken = default) =>
+        queries.AskAsync(new ListValuationInvoicesForProject(projectId), cancellationToken);
+
+    public Task<ProjectValuationInvoiceSummary> GetSummaryAsync(string projectId, CancellationToken cancellationToken = default) =>
+        queries.AskAsync(new GetProjectValuationInvoiceSummary(projectId), cancellationToken);
+
+    public async Task<ValuationInvoice> CreateAsync(string projectId, DateTimeOffset periodMonth, decimal amount, string? valuationClaimId, CancellationToken cancellationToken = default)
+    {
+        var created = await commands.SendAsync(new CreateValuationInvoice(projectId, periodMonth, amount, valuationClaimId), cancellationToken);
+        OnChange?.Invoke();
+        return created;
+    }
+
+    public async Task<ValuationInvoice> IssueAsync(string valuationInvoiceId, CancellationToken cancellationToken = default)
+    {
+        var call = await commands.SendAsync(new IssueValuationInvoice(valuationInvoiceId), cancellationToken);
+        OnChange?.Invoke();
+        return call;
+    }
+
+    public async Task<ValuationInvoice> RecordPaymentAsync(string valuationInvoiceId, decimal amountPaid, CancellationToken cancellationToken = default)
+    {
+        var call = await commands.SendAsync(new RecordValuationInvoicePayment(valuationInvoiceId, amountPaid), cancellationToken);
+        OnChange?.Invoke();
+        return call;
+    }
+}
