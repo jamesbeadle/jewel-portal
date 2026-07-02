@@ -1,8 +1,13 @@
 @using Jewel.JPMS.Features.Projects
 @inject ProjectListReadModel Projects
+@implements IDisposable
 
 @if (Project is not null)
 {
+    <div class="flex items-center justify-end mb-3">
+        <ProjectDetailsEditor ProjectId="@ProjectId" />
+    </div>
+
     <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-4 mb-6">
         <Stat Label="Stage"           Value="@Project.Stage.DisplayName()" />
         <Stat Label="Entity"          Value="@Project.Organisation.ShortCode()" />
@@ -16,4 +21,10 @@
     [Parameter, EditorRequired] public string ProjectId { get; set; } = "";
 
     private Project? Project => Projects.Find(ProjectId);
+
+    // Re-render when the project list refreshes (e.g. after "Edit details" saves) so the stats
+    // pick up the new stage / entity / project manager without a page reload.
+    protected override void OnInitialized() => Projects.OnChanged += StateHasChanged;
+
+    public void Dispose() => Projects.OnChanged -= StateHasChanged;
 }

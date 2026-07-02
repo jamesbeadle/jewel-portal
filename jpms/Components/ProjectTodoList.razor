@@ -11,10 +11,16 @@
 
 <div class="panel p-5">
     <div class="flex items-center justify-between gap-2 mb-1">
-        <h2 class="text-sm font-semibold text-content">To-do list</h2>
-        @if (items.Count > 0)
+        <div class="flex items-center gap-3">
+            <h2 class="text-sm font-semibold text-content">To-do list</h2>
+            @if (items.Count > 0)
+            {
+                <span class="text-[11px] text-content-subtle">@items.Count(i => i.IsComplete) of @items.Count done</span>
+            }
+        </div>
+        @if (CanManage && !loading)
         {
-            <span class="text-[11px] text-content-subtle">@items.Count(i => i.IsComplete) of @items.Count done</span>
+            <button type="button" class="btn-primary text-xs px-2.5 py-1.5" @onclick="OpenAdd">Add item</button>
         }
     </div>
     <p class="text-xs text-content-subtle mb-4">
@@ -82,30 +88,30 @@
             </div>
         }
 
-        @if (CanManage)
-        {
-            <div class="pt-3 border-t border-line space-y-3">
-                <p class="text-xs uppercase tracking-wider text-content-subtle font-semibold">Add an item</p>
-
-                <FormField Label="Title" Value="@newTitle" OnChange="v => newTitle = v" Required="true" />
-
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <FormField Label="Assignee email" Value="@newAssignee" OnChange="v => newAssignee = v" />
-                    <FormField Label="Due" Value="@newDue" OnChange="v => newDue = v" InputType="date" />
-                </div>
-
-                <div>
-                    <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Notes</label>
-                    <textarea class="field" rows="2" value="@newNotes" @oninput="OnNewNotesInput"></textarea>
-                </div>
-
-                <button type="button" class="btn-primary" disabled="@(busy || string.IsNullOrWhiteSpace(newTitle))" @onclick="Add">
-                    Add to-do item
-                </button>
-            </div>
-        }
     }
 </div>
+
+<Modal IsOpen="@addOpen" Title="Add a to-do item" ConfirmLabel="Add to-do item" CancelLabel="Cancel"
+       OnConfirm="Add" OnCancel="CloseAdd">
+    <div class="space-y-3">
+        @if (addError is not null)
+        {
+            <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@addError</p>
+        }
+
+        <FormField Label="Title" Value="@newTitle" OnChange="v => newTitle = v" Required="true" />
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <FormField Label="Assignee email" Value="@newAssignee" OnChange="v => newAssignee = v" />
+            <FormField Label="Due" Value="@newDue" OnChange="v => newDue = v" InputType="date" />
+        </div>
+
+        <div>
+            <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Notes</label>
+            <textarea class="field" rows="2" value="@newNotes" @oninput="OnNewNotesInput"></textarea>
+        </div>
+    </div>
+</Modal>
 
 @code {
     [Parameter, EditorRequired] public string ProjectId { get; set; } = "";
@@ -115,6 +121,10 @@
     private bool busy;
     private string? error;
 
+    // "Add a to-do item" modal state. The form lives in the modal; opening it starts from a clean
+    // slate, and a successful add closes it.
+    private bool addOpen;
+    private string? addError;
     private string newTitle = "";
     private string newNotes = "";
     private string newAssignee = "";
@@ -137,9 +147,24 @@
 
     private void OnNewNotesInput(ChangeEventArgs e) => newNotes = e.Value?.ToString() ?? "";
 
+    private void OpenAdd()
+    {
+        newTitle = newNotes = newAssignee = newDue = "";
+        addError = null;
+        addOpen = true;
+    }
+
+    private void CloseAdd()
+    {
+        addOpen = false;
+        addError = null;
+    }
+
     private async Task Add()
     {
-        if (busy || string.IsNullOrWhiteSpace(newTitle)) return;
+        if (busy) return;
+        if (string.IsNullOrWhiteSpace(newTitle)) { addError = "A title is required."; return; }
+        addError = null;
         await Run(async () =>
         {
             await Todos.AddAsync(new AddTodoItem(
@@ -148,8 +173,10 @@
                 NullIfBlank(newNotes),
                 NullIfBlank(newAssignee),
                 ParseDate(newDue)));
-            newTitle = newNotes = newAssignee = newDue = "";
+            CloseAdd();
         });
+        // A failed add leaves the modal open with the panel-level error mirrored inside it.
+        if (error is not null && addOpen) addError = error;
     }
 
     private async Task ToggleComplete(TodoItem item)

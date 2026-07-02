@@ -1,0 +1,135 @@
+@using Jewel.JPMS.Contracts.Projects
+@using Jewel.JPMS.Features.Projects
+@inject SessionService Session
+@inject ICommandSender Commands
+@inject ProjectListReadModel Projects
+
+@*
+    "Edit details" button + modal for a project's core details (reference, name, client, entity,
+    stage, project manager). Sends the existing UpdateProjectDetails command and refreshes the
+    project list read model, so the page header, stage badge and Overview stats update in place.
+    Server-side the command is gated to directors and project managers; the button mirrors that.
+*@
+
+@if (CanEdit)
+{
+    <button type="button" class="btn-secondary text-xs px-2.5 py-1.5" @onclick="Open">Edit details</button>
+
+    <Modal IsOpen="@open" Title="Edit project details" ConfirmLabel="@(busy ? "Saving…" : "Save changes")"
+           CancelLabel="Cancel" OnConfirm="Save" OnCancel="Close">
+        <div class="space-y-3">
+            @if (error is not null)
+            {
+                <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@error</p>
+            }
+
+            <FormField Label="Reference" Value="@reference" OnChange="v => reference = v" Required="true" />
+            <FormField Label="Project name" Value="@name" OnChange="v => name = v" Required="true" />
+            <FormField Label="Client" Value="@clientName" OnChange="v => clientName = v" Required="true" />
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Entity *</label>
+                    <select class="field" value="@organisation" @onchange="OnOrganisationChanged">
+                        @foreach (var option in AllOrganisations)
+                        {
+                            <option value="@option">@option.DisplayName()</option>
+                        }
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Stage *</label>
+                    <select class="field" value="@stage" @onchange="OnStageChanged">
+                        @foreach (var option in AllStages)
+                        {
+                            <option value="@option">@option.DisplayName()</option>
+                        }
+                    </select>
+                </div>
+            </div>
+
+            <FormField Label="Project manager email" Value="@projectManagerEmail" OnChange="v => projectManagerEmail = v" InputType="email" Required="true" />
+        </div>
+    </Modal>
+}
+
+@code {
+    [Parameter, EditorRequired] public string ProjectId { get; set; } = "";
+
+    private static readonly Organisation[] AllOrganisations = Enum.GetValues<Organisation>();
+    private static readonly ProjectStage[] AllStages = Enum.GetValues<ProjectStage>();
+
+    private bool open;
+    private bool busy;
+    private string? error;
+
+    private string reference = "";
+    private string name = "";
+    private string clientName = "";
+    private Organisation organisation = Organisation.JewelBespokeBuild;
+    private ProjectStage stage = ProjectStage.LiveDelivery;
+    private string projectManagerEmail = "";
+
+    // Mirrors UpdateProjectDetailsAuthorisation server-side (directors and project managers;
+    // administrators carry every role).
+    private bool CanEdit =>
+        Session.AvailableRoles.Any(role => role is Role.Admin or Role.ManagingDirector or Role.ProjectManager);
+
+    private void Open()
+    {
+        var project = Projects.Find(ProjectId);
+        if (project is null) return;
+        reference = project.Reference;
+        name = project.Name;
+        clientName = project.ClientName;
+        organisation = project.Organisation;
+        stage = project.Stage;
+        projectManagerEmail = project.ProjectManagerEmail;
+        error = null;
+        open = true;
+    }
+
+    private void Close()
+    {
+        open = false;
+        error = null;
+    }
+
+    private void OnOrganisationChanged(ChangeEventArgs e) =>
+        organisation = Enum.Parse<Organisation>(e.Value?.ToString() ?? nameof(Organisation.JewelBespokeBuild));
+
+    private void OnStageChanged(ChangeEventArgs e) =>
+        stage = Enum.Parse<ProjectStage>(e.Value?.ToString() ?? nameof(ProjectStage.LiveDelivery));
+
+    private async Task Save()
+    {
+        if (busy) return;
+        if (string.IsNullOrWhiteSpace(reference) || string.IsNullOrWhiteSpace(name) ||
+            string.IsNullOrWhiteSpace(clientName) || string.IsNullOrWhiteSpace(projectManagerEmail))
+        {
+            error = "Reference, name, client and project manager email are all required.";
+            return;
+        }
+
+        error = null;
+        busy = true;
+        try
+        {
+            await Commands.SendAsync(
+                new UpdateProjectDetails(
+                    ProjectId,
+                    reference.Trim(),
+                    name.Trim(),
+                    clientName.Trim(),
+                    organisation,
+                    stage,
+                    projectManagerEmail.Trim()),
+                CancellationToken.None);
+            await Projects.RefreshAsync(CancellationToken.None);
+            Close();
+        }
+        catch (CommandFailedException ex) { error = ex.Message; }
+        catch { error = "Couldn't save the changes. Please try again."; }
+        finally { busy = false; }
+    }
+}
