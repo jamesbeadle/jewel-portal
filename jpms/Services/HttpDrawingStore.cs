@@ -29,6 +29,8 @@ public sealed class HttpDrawingStore : IDrawingStore
 
     public event Action? OnChange;
 
+    public bool DrawingsLoadedFor(string projectId) => readModel.DrawingsLoaded(projectId);
+
     public IReadOnlyList<Drawing> DrawingsFor(string projectId)
     {
         readModel.EnsureDrawings(projectId, CancellationToken.None);

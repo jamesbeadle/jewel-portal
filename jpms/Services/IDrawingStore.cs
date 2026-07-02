@@ -5,6 +5,10 @@ namespace Jewel.JPMS.Services;
 
 public interface IDrawingStore
 {
+    /// <summary>False until the project's drawing register has been fetched at least once.
+    /// Lets views distinguish "still loading" from "genuinely not found".</summary>
+    bool DrawingsLoadedFor(string projectId);
+
     IReadOnlyList<Drawing> DrawingsFor(string projectId);
 
     IReadOnlyList<DrawingRevision> RevisionsFor(string drawingId);

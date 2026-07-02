@@ -116,12 +116,42 @@ else
         }
     }
 
-    private IReadOnlyList<Request> FilteredRecords => statusView switch
+    private IReadOnlyList<Request> FilteredRecords
     {
-        StatusView.Open   => KindRecords.Where(r => r.Status is not RequestStatus.Closed).ToList(),
-        StatusView.Closed => KindRecords.Where(r => r.Status is RequestStatus.Closed).ToList(),
-        _                 => KindRecords
-    };
+        get
+        {
+            IEnumerable<Request> records = statusView switch
+            {
+                StatusView.Open   => KindRecords.Where(r => r.Status is not RequestStatus.Closed),
+                StatusView.Closed => KindRecords.Where(r => r.Status is RequestStatus.Closed),
+                _                 => KindRecords
+            };
+            // Register reads in reference order, ascending (RFI-001 at the top). The number is
+            // parsed rather than string-compared so unpadded or suffixed references (RFI-49,
+            // RFI-049A, RFI-1000) still land in numeric order; free-text or blank references
+            // sort after the numbered run within their prefix.
+            return records
+                .OrderBy(r => ReferenceKey(r.Reference).Prefix, StringComparer.OrdinalIgnoreCase)
+                .ThenBy(r => ReferenceKey(r.Reference).Number)
+                .ThenBy(r => r.Reference, StringComparer.OrdinalIgnoreCase)
+                .ToList();
+        }
+    }
+
+    private static (string Prefix, int Number) ReferenceKey(string? reference)
+    {
+        var raw = (reference ?? "").Trim();
+        if (raw.Length == 0) return ("\uFFFF", int.MaxValue); // blanks last
+
+        var dash = raw.IndexOf('-');
+        if (dash > 0)
+        {
+            var digits = new string(raw[(dash + 1)..].TakeWhile(char.IsDigit).ToArray());
+            if (int.TryParse(digits, out var number))
+                return (raw[..dash], number);
+        }
+        return (raw, int.MaxValue); // unnumbered free text after numbered refs
+    }
 
     private int StatusViewCount(StatusView view) => view switch
     {

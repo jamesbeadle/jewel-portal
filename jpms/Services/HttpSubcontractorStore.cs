@@ -26,6 +26,8 @@ public sealed class HttpSubcontractorStore : ISubcontractorStore
 
     public event Action? OnChange;
 
+    public bool IsLoaded => readModel.Current is not null;
+
     public IReadOnlyList<Subcontractor> All()
     {
         if (readModel.Current is null) _ = readModel.RefreshAsync(CancellationToken.None);

@@ -20,6 +20,10 @@ public sealed class DrawingsReadModel
 
     public event Action? OnChanged;
 
+    /// <summary>True once the project's drawing register has been fetched at least once.
+    /// Lets views distinguish "still loading" from "genuinely not found".</summary>
+    public bool DrawingsLoaded(string projectId) => drawingsByProject.ContainsKey(projectId);
+
     public IReadOnlyList<Drawing> DrawingsCurrent(string projectId) =>
         drawingsByProject.TryGetValue(projectId, out var list) ? list : Array.Empty<Drawing>();
 

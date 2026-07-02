@@ -18,7 +18,12 @@ else if (!Session.IsApproved)
 else
 {
     <ProjectPageShell ProjectId="@ProjectId" ActiveTab="drawings">
-        @if (drawing is null)
+        @if (!DrawingStore.DrawingsLoadedFor(ProjectId))
+        {
+            @* Register fetch still in flight — don't flash "not found" before it lands. *@
+            <p class="text-sm text-content-subtle italic">Loading…</p>
+        }
+        else if (drawing is null)
         {
             <p class="text-sm text-content-subtle italic">Drawing not found.</p>
         }
