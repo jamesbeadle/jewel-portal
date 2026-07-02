@@ -2,6 +2,7 @@ using Jewel.JPMS.Contracts.Cqrs;
 using Jewel.JPMS.Contracts.Procurement;
 using Jewel.JPMS.Contracts.RecordLinks;
 using Jewel.JPMS.Contracts.Requests;
+using Jewel.JPMS.Contracts.Todos;
 using Jewel.JPMS.Models;
 
 namespace Jewel.JPMS.Services;
@@ -35,4 +36,9 @@ public interface IIntakeQueue
     // equivalent is CreateRequestFromMessageAsync; both are the "create a new record from this email"
     // half of triage, one per record type.
     Task<BidPackage> CreateBidPackageFromMessageAsync(CreateBidPackageFromMessage command, CancellationToken cancellationToken = default);
+
+    // Create one or more to-do items on a project from an email (several can be captured from a single
+    // message). The email is tagged "JPMS/TODO-####" per item, so each item reads its mail back live by
+    // its own tag — the to-do half of "create a new record from this email".
+    Task<IReadOnlyList<TodoItem>> CreateTodoItemsFromMessageAsync(CreateTodoItemsFromMessage command, CancellationToken cancellationToken = default);
 }

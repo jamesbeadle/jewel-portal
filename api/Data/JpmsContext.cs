@@ -62,6 +62,8 @@ public sealed class JpmsContext : DbContext
     public DbSet<AgentProposalEntity> AgentProposals => Set<AgentProposalEntity>();
     public DbSet<CostCenterEntity> CostCenters => Set<CostCenterEntity>();
 
+    public DbSet<TodoItemEntity> TodoItems => Set<TodoItemEntity>();
+
     public DbSet<SiteReportEntity> SiteReports => Set<SiteReportEntity>();
     public DbSet<ProgrammeTaskEntity> ProgrammeTasks => Set<ProgrammeTaskEntity>();
     public DbSet<PhotoEntity> Photos => Set<PhotoEntity>();

@@ -23,6 +23,7 @@ using Jewel.JPMS.Features.RecordLinks;
 using Jewel.JPMS.Features.Rates;
 using Jewel.JPMS.Features.Site;
 using Jewel.JPMS.Features.Subcontractors;
+using Jewel.JPMS.Features.Todos;
 using Jewel.JPMS.Services;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
@@ -74,6 +75,7 @@ builder.Services.AddScoped<IClientStore, HttpClientStore>();
 builder.Services.AddScoped<IVariationStore, HttpVariationStore>();
 builder.Services.AddScoped<ICashCallStore, HttpCashCallStore>();
 builder.Services.AddScoped<IIntakeQueue, HttpIntakeQueue>();
+builder.Services.AddScoped<ITodoStore, HttpTodoStore>();
 builder.Services.AddScoped<ISiteStore, HttpSiteStore>();
 builder.Services.AddScoped<ICommercialStore, HttpCommercialStore>();
 builder.Services.AddScoped<IValuationReportStore, HttpValuationReportStore>();
@@ -115,6 +117,7 @@ using (var routeScope = app.Services.CreateScope())
     VariationsRouteRegistration.RegisterVariationsRoutes(queryRoutes, commandRoutes);
     CashCallsRouteRegistration.RegisterCashCallsRoutes(queryRoutes, commandRoutes);
     RecordLinksRouteRegistration.RegisterRecordLinksRoutes(queryRoutes, commandRoutes);
+    TodosRouteRegistration.RegisterTodosRoutes(queryRoutes, commandRoutes);
     CostCentersRouteRegistration.RegisterCostCentersRoutes(queryRoutes, commandRoutes);
     AgentsRouteRegistration.RegisterAgentsRoutes(queryRoutes, commandRoutes);
 }

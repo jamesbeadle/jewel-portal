@@ -1,0 +1,194 @@
+@using Jewel.JPMS.Contracts.Todos
+@inject ITodoStore Todos
+@inject SessionService Session
+
+@*
+    The project's to-do list, shown on the Overview tab. Items are added here directly or created
+    from an email at the triage stage ("Create new → To-do item"), in which case the email is tagged
+    "JPMS/TODO-####" per item — the item's reference chip is that tag stem. Full manage: add,
+    complete/reopen, delete.
+*@
+
+<div class="panel p-5">
+    <div class="flex items-center justify-between gap-2 mb-1">
+        <h2 class="text-sm font-semibold text-content">To-do list</h2>
+        @if (items.Count > 0)
+        {
+            <span class="text-[11px] text-content-subtle">@items.Count(i => i.IsComplete) of @items.Count done</span>
+        }
+    </div>
+    <p class="text-xs text-content-subtle mb-4">
+        Items added here or captured from an email at triage. An item created from an email carries its
+        TODO reference as a mailbox tag, so its linked mail is always a tag-filter away in the Tagged view.
+    </p>
+
+    @if (error is not null)
+    {
+        <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-3">@error</p>
+    }
+
+    @if (loading)
+    {
+        <JewelSpinner Class="py-8" Label="Loading" />
+    }
+    else
+    {
+        @if (items.Count == 0)
+        {
+            <p class="text-sm text-content-subtle italic mb-4">No to-do items on this project yet.</p>
+        }
+        else
+        {
+            <div class="space-y-2 mb-4">
+                @foreach (var item in items)
+                {
+                    <div @key="item.TodoItemId" class="flex items-start gap-3 rounded-lg border border-line px-3 py-2">
+                        <input type="checkbox" class="mt-1" checked="@item.IsComplete" disabled="@(!CanManage || busy)"
+                               @onchange="() => ToggleComplete(item)" title="@(item.IsComplete ? "Reopen" : "Mark done")" />
+                        <div class="min-w-0 flex-1">
+                            <p class="text-sm @(item.IsComplete ? "text-content-subtle line-through" : "text-content")">
+                                <span class="font-mono text-xs text-content-muted mr-2">@item.Reference</span>@item.Title
+                            </p>
+                            @if (!string.IsNullOrWhiteSpace(item.Notes))
+                            {
+                                <p class="text-xs text-content-muted mt-0.5 whitespace-pre-wrap">@item.Notes</p>
+                            }
+                            <div class="flex flex-wrap items-center gap-x-3 gap-y-0.5 mt-1 text-[11px] text-content-subtle">
+                                @if (item.DueAt is not null)
+                                {
+                                    <span class="@(IsOverdue(item) ? "text-negative font-medium" : "")">Due @item.DueAt.Value.LocalDateTime.ToString("d MMM yyyy")</span>
+                                }
+                                @if (!string.IsNullOrWhiteSpace(item.AssigneeEmail))
+                                {
+                                    <span>Assigned to @item.AssigneeEmail</span>
+                                }
+                                @if (!string.IsNullOrWhiteSpace(item.CreatedByEmail))
+                                {
+                                    <span>Added by @item.CreatedByEmail</span>
+                                }
+                                @if (item.CompletedAt is not null)
+                                {
+                                    <span>Done @item.CompletedAt.Value.LocalDateTime.ToString("d MMM yyyy")</span>
+                                }
+                            </div>
+                        </div>
+                        @if (CanManage)
+                        {
+                            <button type="button" class="text-content-subtle hover:text-negative text-xs mt-1" disabled="@busy"
+                                    @onclick="() => Delete(item)" title="Delete this item">✕</button>
+                        }
+                    </div>
+                }
+            </div>
+        }
+
+        @if (CanManage)
+        {
+            <div class="pt-3 border-t border-line space-y-3">
+                <p class="text-xs uppercase tracking-wider text-content-subtle font-semibold">Add an item</p>
+
+                <FormField Label="Title" Value="@newTitle" OnChange="v => newTitle = v" Required="true" />
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <FormField Label="Assignee email" Value="@newAssignee" OnChange="v => newAssignee = v" />
+                    <FormField Label="Due" Value="@newDue" OnChange="v => newDue = v" InputType="date" />
+                </div>
+
+                <div>
+                    <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Notes</label>
+                    <textarea class="field" rows="2" value="@newNotes" @oninput="OnNewNotesInput"></textarea>
+                </div>
+
+                <button type="button" class="btn-primary" disabled="@(busy || string.IsNullOrWhiteSpace(newTitle))" @onclick="Add">
+                    Add to-do item
+                </button>
+            </div>
+        }
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public string ProjectId { get; set; } = "";
+
+    private IReadOnlyList<TodoItem> items = Array.Empty<TodoItem>();
+    private bool loading = true;
+    private bool busy;
+    private string? error;
+
+    private string newTitle = "";
+    private string newNotes = "";
+    private string newAssignee = "";
+    private string newDue = "";
+
+    // Managing the list mirrors the server-side TodoRoles gate: directors, project managers and site
+    // managers (administrators carry every role). Everyone else sees the list read-only.
+    private bool CanManage =>
+        Session.AvailableRoles.Any(role => role is Role.Admin or Role.ManagingDirector or Role.ProjectManager or Role.SiteManager);
+
+    protected override async Task OnInitializedAsync() => await LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        loading = true;
+        try { items = await Todos.ListForProjectAsync(ProjectId); }
+        catch { error = "Couldn't load the to-do list. Please try again."; }
+        finally { loading = false; }
+    }
+
+    private void OnNewNotesInput(ChangeEventArgs e) => newNotes = e.Value?.ToString() ?? "";
+
+    private async Task Add()
+    {
+        if (busy || string.IsNullOrWhiteSpace(newTitle)) return;
+        await Run(async () =>
+        {
+            await Todos.AddAsync(new AddTodoItem(
+                ProjectId,
+                newTitle.Trim(),
+                NullIfBlank(newNotes),
+                NullIfBlank(newAssignee),
+                ParseDate(newDue)));
+            newTitle = newNotes = newAssignee = newDue = "";
+        });
+    }
+
+    private async Task ToggleComplete(TodoItem item)
+    {
+        if (busy) return;
+        await Run(() => Todos.UpdateAsync(new UpdateTodoItem(
+            item.TodoItemId,
+            item.Title,
+            NullIfBlank(item.Notes),
+            NullIfBlank(item.AssigneeEmail),
+            item.DueAt,
+            !item.IsComplete)));
+    }
+
+    private async Task Delete(TodoItem item)
+    {
+        if (busy) return;
+        await Run(() => Todos.DeleteAsync(item.TodoItemId));
+    }
+
+    private async Task Run(Func<Task> action)
+    {
+        error = null;
+        try
+        {
+            busy = true;
+            await action();
+            items = await Todos.ListForProjectAsync(ProjectId);
+        }
+        catch (CommandFailedException ex) { error = ex.Message; }
+        catch { error = "That action didn't complete. Please try again."; }
+        finally { busy = false; }
+    }
+
+    private static bool IsOverdue(TodoItem item) =>
+        !item.IsComplete && item.DueAt is not null && item.DueAt.Value < DateTimeOffset.Now.Date;
+
+    private static string? NullIfBlank(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+
+    private static DateTimeOffset? ParseDate(string value) =>
+        DateTimeOffset.TryParse(value, out var parsed) ? parsed : null;
+}

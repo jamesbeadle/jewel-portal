@@ -1,6 +1,7 @@
 @page "/requests/triage"
 @using Jewel.JPMS.Contracts.Procurement
 @using Jewel.JPMS.Contracts.Requests
+@using Jewel.JPMS.Contracts.Todos
 @inject AuthService Auth
 @inject SessionService Session
 @inject NavigationManager Nav
@@ -394,6 +395,45 @@ else
 
                                             <button type="button" class="btn-primary" disabled="@(busy || string.IsNullOrWhiteSpace(createProjectId))" @onclick="DoTagScheduling">Tag email to scheduling</button>
                                         }
+                                        else if (createRecordType == RecordType.Todo)
+                                        {
+                                            <p class="rounded-lg bg-surface-raised border border-line px-3 py-2 text-xs text-content-subtle">
+                                                Each item is numbered TODO-#### and this email is tagged to <span class="font-medium text-content">every item</span> you add here, so one email can feed several to-dos. The items appear on the project's Overview tab.
+                                            </p>
+
+                                            @for (var i = 0; i < createTodoRows.Count; i++)
+                                            {
+                                                var row = createTodoRows[i];
+                                                var rowNumber = i + 1;
+                                                <div @key="row" class="rounded-lg border border-line p-3 space-y-3">
+                                                    <div class="flex items-center justify-between">
+                                                        <p class="text-xs uppercase tracking-wider text-content-subtle font-semibold">Item @rowNumber</p>
+                                                        @if (createTodoRows.Count > 1)
+                                                        {
+                                                            <button type="button" class="text-xs text-content-subtle hover:text-negative" @onclick="() => RemoveTodoRow(row)">Remove</button>
+                                                        }
+                                                    </div>
+
+                                                    <FormField Label="Title" Value="@row.Title" OnChange="v => row.Title = v" Required="true" />
+
+                                                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                                        <FormField Label="Assignee email" Value="@row.AssigneeEmail" OnChange="v => row.AssigneeEmail = v" />
+                                                        <FormField Label="Due" Value="@row.Due" OnChange="v => row.Due = v" InputType="date" />
+                                                    </div>
+
+                                                    <div>
+                                                        <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Notes</label>
+                                                        <textarea class="field" rows="2" value="@row.Notes" @oninput="e => OnTodoNotesInput(row, e)"></textarea>
+                                                    </div>
+                                                </div>
+                                            }
+
+                                            <button type="button" class="btn-secondary text-xs" @onclick="AddTodoRow">+ Add another item</button>
+
+                                            <button type="button" class="btn-primary" disabled="@(busy || string.IsNullOrWhiteSpace(createProjectId) || !createTodoRows.Any(r => !string.IsNullOrWhiteSpace(r.Title)))" @onclick="DoCreateTodos">
+                                                Create @(TodoRowCountLabel) from email
+                                            </button>
+                                        }
                                     </div>
                                 }
                                 else if (mode == TriageMode.Discard)
@@ -724,7 +764,7 @@ else
     // the providers registered server-side; adding a type here surfaces it once its provider exists.
     private static readonly RecordType[] RecordTypeOptions =
     {
-        RecordType.Request, RecordType.BidPackageInvite, RecordType.CostCentre, RecordType.Scheduling
+        RecordType.Request, RecordType.BidPackageInvite, RecordType.CostCentre, RecordType.Scheduling, RecordType.Todo
     };
 
     // The subset offered by the "Create new" picker. Cost centres come from the global master, so an
@@ -733,7 +773,7 @@ else
     // "creating" a scheduling item is simply tagging the email to the chosen project's bucket.
     private static readonly RecordType[] CreateRecordTypeOptions =
     {
-        RecordType.Request, RecordType.BidPackageInvite, RecordType.Scheduling
+        RecordType.Request, RecordType.BidPackageInvite, RecordType.Scheduling, RecordType.Todo
     };
 
     private static string RecordTypeLabel(RecordType type) => type switch
@@ -742,6 +782,7 @@ else
         RecordType.BidPackageInvite => "Bid Package Invite",
         RecordType.CostCentre       => "Cost Centre",
         RecordType.Scheduling       => "Scheduling",
+        RecordType.Todo             => "To-do item",
         _                           => type.ToString()
     };
 
@@ -750,12 +791,14 @@ else
     private static string RecordTypeLabelPlural(RecordType type) => type switch
     {
         RecordType.Scheduling => "scheduling records",
+        RecordType.Todo       => "to-do items",
         _                     => $"{RecordTypeLabel(type).ToLowerInvariant()}s"
     };
 
     private static string RecordTypeLabelSingular(RecordType type) => type switch
     {
         RecordType.Scheduling => "scheduling record",
+        RecordType.Todo       => "to-do item",
         _                     => RecordTypeLabel(type).ToLowerInvariant()
     };
 
@@ -835,6 +878,37 @@ else
     private string createResponseDue = "";
     // Bid Package Invite create fields (shares createProjectId + createTitle with the Request form).
     private string createTrade = "";
+
+    // To-do create rows: one per item to capture from this email (the form starts with a single row
+    // pre-filled from the subject; "+ Add another item" appends more). Class instances so the Blazor
+    // input lambdas mutate the row in place.
+    private sealed class TodoDraftRow
+    {
+        public string Title { get; set; } = "";
+        public string Notes { get; set; } = "";
+        public string AssigneeEmail { get; set; } = "";
+        public string Due { get; set; } = "";
+    }
+    private List<TodoDraftRow> createTodoRows = new() { new TodoDraftRow() };
+
+    private string TodoRowCountLabel
+    {
+        get
+        {
+            var count = createTodoRows.Count(r => !string.IsNullOrWhiteSpace(r.Title));
+            return count == 1 ? "1 to-do item" : $"{count} to-do items";
+        }
+    }
+
+    private void AddTodoRow() => createTodoRows.Add(new TodoDraftRow());
+
+    private void RemoveTodoRow(TodoDraftRow row)
+    {
+        createTodoRows.Remove(row);
+        if (createTodoRows.Count == 0) createTodoRows.Add(new TodoDraftRow());
+    }
+
+    private void OnTodoNotesInput(TodoDraftRow row, ChangeEventArgs e) => row.Notes = e.Value?.ToString() ?? "";
 
     protected override async Task OnInitializedAsync()
     {
@@ -1054,6 +1128,7 @@ else
         createDescription = item.BodyPreview;
         createRaisedTo = createDrawingRef = createResponseDue = "";
         createTrade = "";
+        createTodoRows = new List<TodoDraftRow> { new() { Title = item.Subject } };
         await LoadDetailAsync(item);
     }
 
@@ -1196,6 +1271,33 @@ else
             InternetMessageId: selected.InternetMessageId);
 
         await RunAction(async () => await Intake.CreateBidPackageFromMessageAsync(command));
+    }
+
+    // "Create new → To-do item(s)": create every row with a title on the chosen project in one
+    // command. The email is tagged "JPMS/TODO-####" once per created item, so each item reads this
+    // email back live by its own tag — the reason one email can feed several to-dos.
+    private async Task DoCreateTodos()
+    {
+        if (selected is null || busy) return;
+        if (string.IsNullOrWhiteSpace(createProjectId)) { actionError = "Choose a project."; return; }
+
+        var drafts = createTodoRows
+            .Where(row => !string.IsNullOrWhiteSpace(row.Title))
+            .Select(row => new TodoItemDraft(
+                row.Title.Trim(),
+                NullIfBlank(row.Notes),
+                NullIfBlank(row.AssigneeEmail),
+                ParseDate(row.Due)))
+            .ToList();
+        if (drafts.Count == 0) { actionError = "At least one to-do item needs a title."; return; }
+
+        var command = new CreateTodoItemsFromMessage(
+            selected.Id,
+            createProjectId,
+            drafts,
+            InternetMessageId: selected.InternetMessageId);
+
+        await RunAction(async () => await Intake.CreateTodoItemsFromMessageAsync(command));
     }
 
     // "Create new → Scheduling": nothing is created — every project already has its scheduling

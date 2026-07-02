@@ -27,6 +27,7 @@ using Jewel.JPMS.Api.Features.Rates;
 using Jewel.JPMS.Api.Features.RecordLinks;
 using Jewel.JPMS.Api.Features.Site;
 using Jewel.JPMS.Api.Features.Subcontractors;
+using Jewel.JPMS.Api.Features.Todos;
 using Jewel.JPMS.Api.Features.Variations;
 using Jewel.JPMS.Api.Gates;
 using Microsoft.Azure.Functions.Worker;
@@ -73,6 +74,7 @@ var host = new HostBuilder()
         services.AddCloseoutFeature();
         services.AddRequestsFeature();
         services.AddRecordLinksFeature();
+        services.AddTodosFeature();
         services.AddAgentsFeature();
         services.AddCostCentersFeature();
         services.AddMailboxIntakeFeature(context.Configuration);

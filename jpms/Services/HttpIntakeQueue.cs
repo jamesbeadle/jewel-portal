@@ -2,6 +2,7 @@ using Jewel.JPMS.Contracts.Cqrs;
 using Jewel.JPMS.Contracts.Procurement;
 using Jewel.JPMS.Contracts.RecordLinks;
 using Jewel.JPMS.Contracts.Requests;
+using Jewel.JPMS.Contracts.Todos;
 using Jewel.JPMS.Cqrs;
 using Jewel.JPMS.Models;
 
@@ -55,5 +56,8 @@ public sealed class HttpIntakeQueue : IIntakeQueue
         commands.SendAsync(new SyncRecordThreadTags(type, recordId), cancellationToken);
 
     public Task<BidPackage> CreateBidPackageFromMessageAsync(CreateBidPackageFromMessage command, CancellationToken cancellationToken = default) =>
+        commands.SendAsync(command, cancellationToken);
+
+    public Task<IReadOnlyList<TodoItem>> CreateTodoItemsFromMessageAsync(CreateTodoItemsFromMessage command, CancellationToken cancellationToken = default) =>
         commands.SendAsync(command, cancellationToken);
 }

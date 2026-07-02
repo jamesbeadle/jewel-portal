@@ -21,6 +21,7 @@ public static class RecordLinksFeatureRegistration
         services.AddScoped<ILinkableRecordProvider, BidPackageInviteLinkProvider>();
         services.AddScoped<ILinkableRecordProvider, CostCentreLinkProvider>();
         services.AddScoped<ILinkableRecordProvider, SchedulingLinkProvider>();
+        services.AddScoped<ILinkableRecordProvider, TodoLinkProvider>();
 
         services.AddScoped<RecordProviderRegistry>();
         services.AddScoped<RecordEmailReader>();

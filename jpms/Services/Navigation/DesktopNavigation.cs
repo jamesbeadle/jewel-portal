@@ -32,10 +32,8 @@ public static class DesktopNavigation
     private static readonly IReadOnlyList<DesktopNavigationEntry> Entries = new DesktopNavigationEntry[]
     {
         Entry("Dashboard",      "/dashboard",      AllRoles),
-        Entry("Leads",          "/leads",          Role.ManagingDirector, Role.FinanceDirector, Role.ProjectManager, Role.QuantitySurveyor),
         Entry("Projects",       "/projects",       Role.ManagingDirector, Role.FinanceDirector, Role.ProjectManager, Role.QuantitySurveyor, Role.SiteManager, Role.HealthSafetyOfficer, Role.OfficeComplianceCoordinator),
         Entry("Directory",      "/directory",      Role.ManagingDirector),
-        Entry("Work orders",    "/work-orders",    Role.ManagingDirector, Role.FinanceDirector, Role.ProjectManager, Role.QuantitySurveyor, Role.OfficeComplianceCoordinator),
         Entry("Clients",        "/clients",        Role.ManagingDirector, Role.ProjectManager),
         // Triage is restricted to administrators (who see everything via the early return above)
         // and project managers for now. A dedicated triage-visibility role can be added later.
@@ -43,12 +41,7 @@ public static class DesktopNavigation
         // The agent queue mirrors the API's AgentRoles.AllowedToOperateAgents gate (admins see
         // everything via the early return above).
         Entry("Agents",         "/agents",          Role.ManagingDirector, Role.ProjectManager, Role.QuantitySurveyor, Role.SiteManager),
-        Entry("H&S",            "/hs",             Role.ManagingDirector, Role.HealthSafetyOfficer),
-        Entry("Cashflow",       "/cashflow",       Role.ManagingDirector, Role.FinanceDirector, Role.ProjectManager),
-        Entry("Portfolio",      "/portfolio",      Role.ManagingDirector, Role.FinanceDirector, Role.ProjectManager, Role.QuantitySurveyor, Role.HealthSafetyOfficer),
-        Entry("Reports",        "/reports",        Role.ManagingDirector, Role.FinanceDirector, Role.ProjectManager, Role.QuantitySurveyor),
-        Entry("Rates",          "/rate-library",   Role.ManagingDirector, Role.ProjectManager, Role.QuantitySurveyor),
-        Entry("Site app",       "/site/today",     Role.SiteManager, Role.Foreman)
+        Entry("Rates",          "/rate-library",   Role.ManagingDirector, Role.ProjectManager, Role.QuantitySurveyor)
     };
 
     private static DesktopNavigationEntry Entry(string label, string href, params Role[] visibleTo) =>

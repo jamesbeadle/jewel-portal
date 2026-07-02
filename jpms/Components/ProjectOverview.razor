@@ -8,6 +8,8 @@
         <Stat Label="Entity"          Value="@Project.Organisation.ShortCode()" />
         <Stat Label="Project Manager" Value="@Project.ProjectManagerEmail" />
     </div>
+
+    <ProjectTodoList ProjectId="@ProjectId" />
 }
 
 @code {

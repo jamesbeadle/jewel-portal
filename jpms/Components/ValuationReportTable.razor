@@ -2,91 +2,127 @@
 @using Jewel.JPMS.Contracts.Commercial
 @inject IValuationReportStore Store
 
-<div class="rounded-xl border border-line bg-surface overflow-x-auto">
-    <table class="w-full text-sm border-collapse">
-        <thead class="bg-surface-raised border-b border-line">
-            <tr class="text-left text-[11px] uppercase tracking-wider text-content-subtle font-semibold">
-                <th class="sticky left-0 z-10 bg-surface-raised px-3 py-3 w-[72px]">Code</th>
-                <th class="sticky left-[72px] z-10 bg-surface-raised px-3 py-3 min-w-[220px]">Description</th>
-                <th class="px-3 py-3 text-right whitespace-nowrap">Qty</th>
-                <th class="px-3 py-3 text-right whitespace-nowrap">Rate £</th>
-                <th class="px-3 py-3 text-right whitespace-nowrap">Amount £</th>
-                <th class="px-3 py-3 text-right whitespace-nowrap">% Complete</th>
-                <th class="px-3 py-3 text-right whitespace-nowrap">Claimed £</th>
-                @if (CanEditLines)
+@if (lines.Count == 0)
+{
+    <div class="rounded-xl border border-line bg-surface px-3 py-6 text-center text-content-subtle italic">
+        No lines yet. Add contract works, provisional sums, contingency and variation lines to build the report.
+    </div>
+}
+else
+{
+    <div class="space-y-3">
+        @foreach (var section in Sections)
+        {
+            var isOpen = IsExpanded(section.Type);
+            <div class="rounded-xl border border-line bg-surface overflow-hidden">
+                <button type="button" @onclick="@(() => Toggle(section.Type))" aria-expanded="@isOpen"
+                        class="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-surface-raised/60 transition">
+                    <svg class="@(isOpen ? "w-4 h-4 shrink-0 text-content-subtle rotate-90 transition-transform" : "w-4 h-4 shrink-0 text-content-subtle transition-transform")"
+                         viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                         stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M9 6l6 6-6 6" />
+                    </svg>
+                    <span class="font-semibold text-content whitespace-nowrap">@section.Title</span>
+                    <span class="text-xs text-content-subtle whitespace-nowrap">
+                        @section.Lines.Count @(section.Lines.Count == 1 ? "line" : "lines")
+                    </span>
+                    <span class="ml-auto flex items-baseline gap-6 whitespace-nowrap">
+                        @if (SelectedClaim is not null)
+                        {
+                            <span class="text-sm">
+                                <span class="text-[11px] uppercase tracking-wider text-content-subtle mr-1.5">Claimed</span>
+                                <span class="text-content-muted">@Money(ClaimedTotalFor(section)) (@Pct(PercentTotalFor(section)))</span>
+                            </span>
+                        }
+                        <span class="text-sm">
+                            <span class="text-[11px] uppercase tracking-wider text-content-subtle mr-1.5">Total</span>
+                            <span class="text-content font-medium">@Money(section.Amount)</span>
+                        </span>
+                    </span>
+                </button>
+
+                @if (isOpen)
                 {
-                    <th class="px-3 py-3 text-right w-[80px]"></th>
-                }
-            </tr>
-        </thead>
-        <tbody class="divide-y divide-line">
-            @if (lines.Count == 0)
-            {
-                <tr>
-                    <td colspan="@ColumnCount" class="px-3 py-6 text-center text-content-subtle italic">
-                        No lines yet. Add contract works, provisional sums, contingency and variation lines to build the report.
-                    </td>
-                </tr>
-            }
-            else
-            {
-                @foreach (var block in Blocks)
-                {
-                    <tr class="bg-surface-raised/60">
-                        <td colspan="@ColumnCount" class="px-3 py-2 text-[11px] uppercase tracking-wider text-content-subtle font-semibold">
-                            @block.Title
-                        </td>
-                    </tr>
-                    @foreach (var line in block.Lines)
+                    @if (section.Lines.Count == 0)
                     {
-                        <tr class="@(line.CountsTowardTotals ? "" : "opacity-60")">
-                            <td class="sticky left-0 z-10 bg-surface px-3 py-2 font-mono text-[11px] text-content-subtle whitespace-nowrap">@CodeFor(line)</td>
-                            <td class="sticky left-[72px] z-10 bg-surface px-3 py-2 text-content">
-                                <div class="font-medium">@TitleFor(line)</div>
-                                @if (!string.IsNullOrWhiteSpace(line.Comments))
-                                {
-                                    <div class="text-[11px] text-content-subtle">@line.Comments</div>
-                                }
-                                @if (!line.CountsTowardTotals)
-                                {
-                                    <span class="inline-block mt-0.5 text-[10px] uppercase tracking-wide text-content-subtle">@line.LineType</span>
-                                }
-                            </td>
-                            <td class="px-3 py-2 text-right text-content-muted whitespace-nowrap">@Num(line.Quantity)</td>
-                            <td class="px-3 py-2 text-right text-content-muted whitespace-nowrap">@Num(line.Rate)</td>
-                            <td class="px-3 py-2 text-right text-content whitespace-nowrap">@Money(line.LineAmount)</td>
-                            <td class="px-3 py-2 text-right whitespace-nowrap">
-                                @if (CanEditEntries && line.CountsTowardTotals)
-                                {
-                                    <input type="number" step="any" min="0" max="100"
-                                           value="@PercentText(line)"
-                                           @onchange="@(e => SaveEntryAsync(line, e.Value?.ToString()))"
-                                           class="field w-20 text-right px-2 py-1 focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent" />
-                                }
-                                else
-                                {
-                                    <span class="text-content-muted">@(line.CountsTowardTotals ? Pct(PercentFor(line)) : "—")</span>
-                                }
-                            </td>
-                            <td class="px-3 py-2 text-right text-content-muted whitespace-nowrap">
-                                @(line.CountsTowardTotals ? Money(ClaimedFor(line)) : "—")
-                            </td>
-                            @if (CanEditLines)
-                            {
-                                <td class="px-3 py-2 text-right whitespace-nowrap">
-                                    <button @onclick="@(() => OnEditLine.InvokeAsync(line))"
-                                            class="text-content-subtle hover:text-content underline underline-offset-2 text-xs">Edit</button>
-                                    <button @onclick="@(() => RemoveLineAsync(line))"
-                                            class="ml-2 text-negative/80 hover:text-negative underline underline-offset-2 text-xs">Remove</button>
-                                </td>
-                            }
-                        </tr>
+                        <div class="border-t border-line px-4 py-5 text-center text-content-subtle italic text-sm">
+                            No @section.Title.ToLowerInvariant() lines yet.
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="border-t border-line overflow-x-auto">
+                            <table class="w-full text-sm border-collapse">
+                                <thead class="bg-surface-raised border-b border-line">
+                                    <tr class="text-left text-[11px] uppercase tracking-wider text-content-subtle font-semibold">
+                                        <th class="sticky left-0 z-10 bg-surface-raised px-3 py-3 w-[72px]">Code</th>
+                                        <th class="sticky left-[72px] z-10 bg-surface-raised px-3 py-3 min-w-[220px]">Description</th>
+                                        <th class="px-3 py-3 text-right whitespace-nowrap">Qty</th>
+                                        <th class="px-3 py-3 text-right whitespace-nowrap">Rate £</th>
+                                        <th class="px-3 py-3 text-right whitespace-nowrap">Amount £</th>
+                                        <th class="px-3 py-3 text-right whitespace-nowrap">% Complete</th>
+                                        <th class="px-3 py-3 text-right whitespace-nowrap">Claimed £</th>
+                                        @if (CanEditLines)
+                                        {
+                                            <th class="px-3 py-3 text-right w-[80px]"></th>
+                                        }
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-line">
+                                    @foreach (var line in section.Lines)
+                                    {
+                                        <tr class="@(line.CountsTowardTotals ? "" : "opacity-60")">
+                                            <td class="sticky left-0 z-10 bg-surface px-3 py-2 font-mono text-[11px] text-content-subtle whitespace-nowrap">@CodeFor(line)</td>
+                                            <td class="sticky left-[72px] z-10 bg-surface px-3 py-2 text-content">
+                                                <div class="font-medium">@TitleFor(line)</div>
+                                                @if (!string.IsNullOrWhiteSpace(line.Comments))
+                                                {
+                                                    <div class="text-[11px] text-content-subtle">@line.Comments</div>
+                                                }
+                                                @if (!line.CountsTowardTotals)
+                                                {
+                                                    <span class="inline-block mt-0.5 text-[10px] uppercase tracking-wide text-content-subtle">@line.LineType</span>
+                                                }
+                                            </td>
+                                            <td class="px-3 py-2 text-right text-content-muted whitespace-nowrap">@Num(line.Quantity)</td>
+                                            <td class="px-3 py-2 text-right text-content-muted whitespace-nowrap">@Num(line.Rate)</td>
+                                            <td class="px-3 py-2 text-right text-content whitespace-nowrap">@Money(line.LineAmount)</td>
+                                            <td class="px-3 py-2 text-right whitespace-nowrap">
+                                                @if (CanEditEntries && line.CountsTowardTotals)
+                                                {
+                                                    <input type="number" step="any" min="0" max="100"
+                                                           value="@PercentText(line)"
+                                                           @onchange="@(e => SaveEntryAsync(line, e.Value?.ToString()))"
+                                                           class="field w-20 text-right px-2 py-1 focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent" />
+                                                }
+                                                else
+                                                {
+                                                    <span class="text-content-muted">@(line.CountsTowardTotals ? Pct(PercentFor(line)) : "—")</span>
+                                                }
+                                            </td>
+                                            <td class="px-3 py-2 text-right text-content-muted whitespace-nowrap">
+                                                @(line.CountsTowardTotals ? Money(ClaimedFor(line)) : "—")
+                                            </td>
+                                            @if (CanEditLines)
+                                            {
+                                                <td class="px-3 py-2 text-right whitespace-nowrap">
+                                                    <button @onclick="@(() => OnEditLine.InvokeAsync(line))"
+                                                            class="text-content-subtle hover:text-content underline underline-offset-2 text-xs">Edit</button>
+                                                    <button @onclick="@(() => RemoveLineAsync(line))"
+                                                            class="ml-2 text-negative/80 hover:text-negative underline underline-offset-2 text-xs">Remove</button>
+                                                </td>
+                                            }
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
                     }
                 }
-            }
-        </tbody>
-    </table>
-</div>
+            </div>
+        }
+    </div>
+}
 
 @if (lines.Count > 0)
 {
@@ -115,13 +151,21 @@
     private IReadOnlyList<ValuationLineItem> lines = Array.Empty<ValuationLineItem>();
     private IReadOnlyList<ClaimLine> entries = Array.Empty<ClaimLine>();
 
+    // Sections start collapsed so the four totals read at a glance; state survives re-renders.
+    private readonly HashSet<ValuationElementType> expanded = new();
+
+    private bool IsExpanded(ValuationElementType type) => expanded.Contains(type);
+
+    private void Toggle(ValuationElementType type)
+    {
+        if (!expanded.Remove(type)) expanded.Add(type);
+    }
+
     // Editable only while a Draft claim is selected.
     private bool CanEditEntries => SelectedClaim is { Status: ValuationClaimStatus.Draft };
     // Lines can be edited whenever no claim has locked them (no Preapproved/Confirmed claim selected is fine,
     // but bill edits are always allowed since they only affect future claims; keep simple: allow unless viewing a locked claim).
     private bool CanEditLines => SelectedClaim is null or { Status: ValuationClaimStatus.Draft };
-
-    private int ColumnCount => CanEditLines ? 8 : 7;
 
     // Summary figures.
     private decimal contractSum, netVariations, revisedContractSum, totalWorksComplete;
@@ -170,28 +214,39 @@
         }
     }
 
-    private record Block(string Title, List<ValuationLineItem> Lines);
+    private record Section(ValuationElementType Type, string Title, List<ValuationLineItem> Lines)
+    {
+        public decimal Amount => Lines.Where(l => l.CountsTowardTotals).Sum(l => l.LineAmount);
+    }
 
-    private IEnumerable<Block> Blocks
+    // Always render all four sections so the shape of the bill is visible even before
+    // any lines exist in a given block.
+    private IEnumerable<Section> Sections
     {
         get
         {
-            Block? Make(string title, ValuationElementType type)
-            {
-                var rows = lines.Where(l => l.ElementType == type)
-                                .OrderBy(l => l.DisplayOrder)
-                                .ToList();
-                return rows.Count == 0 ? null : new Block(title, rows);
-            }
+            Section Make(string title, ValuationElementType type) =>
+                new(type, title, lines.Where(l => l.ElementType == type)
+                                      .OrderBy(l => l.DisplayOrder)
+                                      .ToList());
 
             return new[]
             {
-                Make("Contract works", ValuationElementType.ContractWorks),
+                Make("Contract Works", ValuationElementType.ContractWorks),
                 Make("Provisional Sums", ValuationElementType.PcSum),
-                Make("Contingency", ValuationElementType.Contingency),
+                Make("Contingency Sums", ValuationElementType.Contingency),
                 Make("Variations", ValuationElementType.Variation)
-            }.Where(b => b is not null)!.Cast<Block>();
+            };
         }
+    }
+
+    private decimal ClaimedTotalFor(Section section) =>
+        section.Lines.Where(l => l.CountsTowardTotals).Sum(ClaimedFor);
+
+    private decimal PercentTotalFor(Section section)
+    {
+        var amount = section.Amount;
+        return amount == 0m ? 0m : Math.Round(ClaimedTotalFor(section) / amount * 100m, 2);
     }
 
     // Non-variation lines show the Jewel cost-centre code (JBB-*); fall back to the

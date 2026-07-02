@@ -22,7 +22,8 @@
 
     private record Tab(string Slug, string Label, bool Enabled);
 
-    // Overview, Financials, Requests and Drawings are live while the rest of the project view is re-scoped.
+    // Removed tabs (BoQ, Procurement, Mobilisation, H&S, Site, Commercial, Close-out) will be
+    // reintroduced here once their functionality is fully scoped.
     private static readonly Tab[] Tabs =
     {
         new("overview",            "Overview",            true),
@@ -32,14 +33,7 @@
         new("valuation",           "Valuation Report",    true),
         new("cash-calls",          "Cash Calls",          true),
         new("financials",          "Financials",          true),
-        new("drawings",     "Drawings",     true),
-        new("boq",          "BoQ",          false),
-        new("procurement",  "Procurement",  false),
-        new("mobilisation", "Mobilisation", false),
-        new("hs",           "H&S",          false),
-        new("site",         "Site",         false),
-        new("commercial",   "Commercial",   false),
-        new("closeout",     "Close-out",    false)
+        new("drawings",            "Drawings",            true)
     };
 
     private string HrefFor(string slug) =>
