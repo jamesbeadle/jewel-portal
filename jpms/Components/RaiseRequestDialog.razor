@@ -14,9 +14,32 @@
             <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@error</p>
         }
 
-        <p class="rounded-lg bg-surface-raised border border-line px-3 py-2 text-xs text-content-subtle">
-            Raised as a <span class="font-medium text-content">General</span> request and auto-numbered REQ-####. Promote it to an official RFI from the request once it's created.
-        </p>
+        <div>
+            <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Raise as</label>
+            <div class="flex gap-2">
+                <button type="button"
+                        class="@KindButtonClass(RequestType.General)"
+                        @onclick="() => SetKind(RequestType.General)">General request</button>
+                <button type="button"
+                        class="@KindButtonClass(RequestType.Rfi)"
+                        @onclick="() => SetKind(RequestType.Rfi)">Official RFI</button>
+            </div>
+            <p class="mt-2 rounded-lg bg-surface-raised border border-line px-3 py-2 text-xs text-content-subtle">
+                @if (kind == RequestType.General)
+                {
+                    <text>Auto-numbered REQ-####. Promote it to an official RFI from the request once it's created.</text>
+                }
+                else
+                {
+                    <text>Takes the project's next RFI number automatically — edit the reference only to back-fill a legacy RFI.</text>
+                }
+            </p>
+        </div>
+
+        @if (kind == RequestType.Rfi)
+        {
+            <FormField Label="RFI reference" Value="@reference" OnChange="v => reference = v" Required="true" />
+        }
 
         <FormField Label="Subject" Value="@title" OnChange="v => title = v" Required="true" />
 
@@ -75,9 +98,14 @@
     [Parameter] public EventCallback OnClose { get; set; }
     [Parameter] public EventCallback<Request> OnRaised { get; set; }
 
-    // A request is raised as a General container (auto-numbered REQ-#### server-side) and is later
-    // promoted to an RFI from the request page. The kind is no longer chosen at creation.
-    private const RequestType kind = RequestType.General;
+    // A request is raised either as a General container (auto-numbered REQ-#### server-side, promoted
+    // to an RFI later) or directly as an official RFI. An RFI's reference is pre-filled with the
+    // project's next number (same shared logic the server uses) and stays editable so legacy RFIs can
+    // be back-filled under their original numbers. If the suggestion is left untouched it is sent
+    // blank and the server mints the number authoritatively — a stale local register can't clash.
+    private RequestType kind = RequestType.General;
+    private string reference = "";
+    private string suggestedReference = "";
 
     private static readonly RequestStatus[] StatusOptions =
     {
@@ -114,9 +142,35 @@
         backfill = false;
         raisedAt = respondedAt = responseText = "";
         status = RequestStatus.Open;
+        kind = RequestType.General;
+        reference = suggestedReference = "";
         saving = false;
         error = null;
     }
+
+    private void SetKind(RequestType selected)
+    {
+        if (kind == selected) return;
+        kind = selected;
+        if (kind == RequestType.Rfi)
+        {
+            // Suggest the project's next RFI number from the local register (the server re-derives it
+            // on save, so this is a preview the user can overtype for legacy back-fills).
+            suggestedReference = RequestReference.SuggestNext(
+                RequestType.Rfi,
+                RequestRegister.ForProject(ProjectId).Select(r => r.Reference));
+            reference = suggestedReference;
+        }
+        else
+        {
+            reference = suggestedReference = "";
+        }
+    }
+
+    private string KindButtonClass(RequestType option) =>
+        kind == option
+            ? "px-3 py-1.5 rounded-lg text-sm font-medium bg-accent/15 border border-accent text-content"
+            : "px-3 py-1.5 rounded-lg text-sm font-medium bg-surface-raised border border-line text-content-muted hover:text-content";
 
     private void OnStatusChanged(ChangeEventArgs e)
     {
@@ -148,11 +202,19 @@
             value = parsed;
         }
 
-        // Blank reference: a General request is auto-numbered REQ-#### server-side.
+        // Blank reference: the server mints the number (REQ-#### for General, the project's next
+        // RFI-nnn for an RFI). An untouched suggestion is sent blank so the server stays authoritative;
+        // only a genuinely edited reference (legacy back-fill) is sent as typed.
+        var referenceToSend = kind == RequestType.Rfi
+            && !string.IsNullOrWhiteSpace(reference)
+            && !string.Equals(reference.Trim(), suggestedReference, StringComparison.OrdinalIgnoreCase)
+                ? reference.Trim()
+                : "";
+
         var command = new RaiseRequest(
             ProjectId,
             kind,
-            "",
+            referenceToSend,
             title.Trim(),
             description?.Trim() ?? "",
             value,

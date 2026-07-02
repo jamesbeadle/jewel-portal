@@ -53,6 +53,9 @@
          worker's own GraphTokenProvider (same namespace + signature). -->
     <Compile Include="..\api\Features\MailboxIntake\Graph\MailboxGraphClient.cs" Link="Shared\Graph\MailboxGraphClient.cs" />
     <Compile Include="..\api\Features\Requests\RequestEmailReader.cs" Link="Shared\RequestEmailReader.cs" />
+    <!-- Project-qualified tag stems (references are only unique per project; tags share one flat
+         mailbox category space). RequestEmailReader resolves its tag through this helper. -->
+    <Compile Include="..\api\Features\Requests\RequestTags.cs" Link="Shared\RequestTags.cs" />
   </ItemGroup>
 
   <ItemGroup>

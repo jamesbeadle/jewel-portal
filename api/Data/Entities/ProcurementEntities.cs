@@ -117,9 +117,11 @@ public sealed class RequestEntity
     // Cached so subsequent emails for the same request reuse the folder rather than recreating it.
     [MaxLength(450)]     public string? MailboxFolderId { get; set; }
 
-    // The canonical reference this record's emails are tagged with in the mailbox (e.g. "RFI-001" ->
-    // category "JPMS/RFI-001"). Prefers the human reference; falls back to REQ-NNNN when blank so a tag
-    // is always well-formed. Computed, not stored.
+    // The unqualified reference stem for this record's mailbox tag. Prefers the human reference;
+    // falls back to REQ-NNNN when blank so a stem is always well-formed. Computed, not stored.
+    // NB: the actual mailbox tag is project-qualified (references are only unique per project, tags
+    // share one flat category space) — see RequestTags, which turns this stem into e.g.
+    // "JBB-2026-001-RFI-001" -> category "JPMS/JBB-2026-001-RFI-001".
     [System.ComponentModel.DataAnnotations.Schema.NotMapped]
     public string TagReference =>
         string.IsNullOrWhiteSpace(Reference) ? $"REQ-{Number:0000}" : Reference.Trim();

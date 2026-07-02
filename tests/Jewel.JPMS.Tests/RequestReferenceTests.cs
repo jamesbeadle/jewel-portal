@@ -62,4 +62,29 @@ public sealed class RequestReferenceTests
     [Fact]
     public void SuggestNext_appliesPerKindPrefix() =>
         Assert.Equal("RFQ-006", RequestReference.SuggestNext(RequestType.Rfq, new[] { "RFQ-005" }));
+
+    [Fact]
+    public void SuggestNext_startsFreshKindAt001EvenInPopulatedRegister()
+    {
+        // A project's first RFA opens its own sequence — other kinds' numbers don't leak across.
+        var existing = new[] { "REQ-0007", "RFI-048", "RFI-049" };
+        Assert.Equal("RFA-001", RequestReference.SuggestNext(RequestType.Rfa, existing));
+    }
+
+    [Fact]
+    public void SuggestNext_ignoresGeneralReqNumbersInRfiSequence()
+    {
+        // The register mixes General containers (REQ-####, global sequence) with the project's RFIs;
+        // the RFI sequence must continue from the highest RFI, not be dragged up by REQ numbers.
+        var existing = new[] { "REQ-0120", "REQ-0121", "RFI-012" };
+        Assert.Equal("RFI-013", RequestReference.SuggestNext(RequestType.Rfi, existing));
+    }
+
+    [Fact]
+    public void SuggestNext_continuesAfterBackfilledLegacyNumber()
+    {
+        // A legacy RFI back-filled under a high original number moves the sequence past it.
+        var existing = new[] { "RFI-003", "RFI-100" };
+        Assert.Equal("RFI-101", RequestReference.SuggestNext(RequestType.Rfi, existing));
+    }
 }

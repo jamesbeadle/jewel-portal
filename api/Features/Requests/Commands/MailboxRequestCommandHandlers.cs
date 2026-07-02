@@ -54,11 +54,27 @@ public sealed class CreateRequestFromMessageHandler : ICommandHandler<CreateRequ
 
         var nextNumber = (await context.Requests.MaxAsync(r => (int?)r.Number, cancellationToken) ?? 0) + 1;
 
-        // A request created from an email is a General container raised without a reference — auto-number
-        // it REQ-#### to match its display number. A specific typed reference is honoured as-is.
-        var reference = string.IsNullOrWhiteSpace(command.Reference)
-            ? $"REQ-{nextNumber:0000}"
-            : command.Reference;
+        // A blank reference is minted server-side by kind: a General container is auto-numbered
+        // REQ-#### to match its display number (global sequence); any other kind continues the
+        // project's own sequence (e.g. "RFI-048" -> "RFI-049"). A specific typed reference is
+        // honoured as-is.
+        string reference;
+        if (!string.IsNullOrWhiteSpace(command.Reference))
+        {
+            reference = command.Reference.Trim();
+        }
+        else if (command.Kind == RequestType.General)
+        {
+            reference = $"REQ-{nextNumber:0000}";
+        }
+        else
+        {
+            var projectReferences = await context.Requests
+                .Where(r => r.ProjectId == command.ProjectId)
+                .Select(r => r.Reference)
+                .ToListAsync(cancellationToken);
+            reference = RequestReference.SuggestNext(command.Kind, projectReferences);
+        }
 
         var request = new RequestEntity
         {
@@ -80,15 +96,26 @@ public sealed class CreateRequestFromMessageHandler : ICommandHandler<CreateRequ
         };
         // Tag the email to this new request first, verified by read-back; only persist the request
         // once the tag sticks, so we never create a request whose email is still sitting in the queue.
-        var tagged = await graph.AssignAsync(
-            command.MessageId, snapshot.InternetMessageId, TriageCategories.ForRequest(request.TagReference), cancellationToken);
+        var tag = TriageCategories.ForRequest(
+            RequestTags.Stem(await RequestTags.ProjectRefAsync(context, command.ProjectId, cancellationToken), command.ProjectId, request.TagReference));
+        var tagged = await graph.AssignAsync(command.MessageId, snapshot.InternetMessageId, tag, cancellationToken);
         if (!tagged)
             throw new InvalidOperationException("The email couldn't be tagged to the new request. Please try again.");
 
         // The tag is the only link to the email — no copy is stored. The request reads its emails live
         // by tag (RequestEmailReader) for the conversation view, LLM context, and document.
         context.Requests.Add(request);
-        await context.SaveChangesAsync(cancellationToken);
+        try
+        {
+            await context.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateException ex) when (RequestReferenceConflict.IsReferenceClash(ex))
+        {
+            // Lost a race for that reference after the email was already tagged: pull the tag back off
+            // (best-effort) so the email stays in the triage queue, then surface the clash.
+            try { await graph.ClearRequestTagsAsync(tag, cancellationToken); } catch { /* best-effort */ }
+            throw RequestReferenceConflict.AsFriendlyError(reference);
+        }
 
         // Issue the rendered document to the project's contacts (no-op when unconfigured / no contacts).
         await mailbox.ScheduleRequestDocumentSendAsync(request.RequestId, recipientOverride: null, cancellationToken);

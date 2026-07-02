@@ -52,7 +52,13 @@ else
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
             <div class="lg:col-span-2 space-y-5">
                 <div class="panel p-5">
-                    <h3 class="eyebrow mb-2">Detail</h3>
+                    <div class="flex items-start justify-between gap-3 mb-2">
+                        <h3 class="eyebrow">Detail</h3>
+                        @if (CanEditDetails)
+                        {
+                            <button type="button" class="text-xs font-medium text-content-muted hover:text-content underline underline-offset-2" @onclick="OpenEdit">Edit</button>
+                        }
+                    </div>
                     <p class="text-sm text-content whitespace-pre-wrap">@(string.IsNullOrWhiteSpace(record.Description) ? "—" : record.Description)</p>
                 </div>
 
@@ -70,7 +76,8 @@ else
 
                 <RequestConversation RequestId="@RequestId" />
 
-                <AgentWorkspace RequestId="@RequestId" OnChanged="OnAgentsChanged" />
+                @* Agents are parked for now — the workspace is hidden until we settle on whether
+                   attaching agents to requests is the right model. Re-add <AgentWorkspace> here. *@
             </div>
 
             <div class="space-y-5">
@@ -424,8 +431,6 @@ else
             busy = false;
         }
     }
-
-    private void OnAgentsChanged() => blockingAgents = Array.Empty<AgentCompletionState>();
 
     private async Task ReopenRequest() => await Apply(RequestStatus.Open, record?.ResponseText);
 

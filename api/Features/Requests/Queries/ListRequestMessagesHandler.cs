@@ -25,7 +25,7 @@ public sealed class ListRequestMessagesHandler : IQueryHandler<ListRequestMessag
             .FirstOrDefaultAsync(r => r.RequestId == query.RequestId, cancellationToken);
         if (request is not null)
         {
-            try { await threadTagger.SyncThreadsAsync(TriageCategories.ForRecord(request.TagReference), cancellationToken); }
+            try { await threadTagger.SyncThreadsAsync(TriageCategories.ForRecord(await RequestTags.StemAsync(context, request, cancellationToken)), cancellationToken); }
             catch { /* best-effort: never fail the conversation view on a tagging hiccup */ }
         }
 

@@ -35,6 +35,9 @@ public static class RequestsFeatureRegistration
         services.AddScoped<ICommandHandler<AssignMessageToRequest, Acknowledgement>, AssignMessageToRequestHandler>();
         services.AddScoped<ICommandHandler<CreateRequestFromMessage, Request>, CreateRequestFromMessageHandler>();
 
+        // One-off admin sweep migrating legacy flat request tags to project-qualified ones.
+        services.AddScoped<ICommandHandler<RetagRequestWorkflowTags, RequestRetagSummary>, RetagRequestWorkflowTagsHandler>();
+
         services.AddScoped<ICommandHandler<RaiseRequest, Request>, RaiseRequestHandler>();
         services.AddScoped<RaiseRequestAuthorisation>();
         services.AddScoped<RaiseRequestValidation>();

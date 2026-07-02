@@ -28,8 +28,10 @@ public sealed class UpdateRequestDetailsHandler : ICommandHandler<UpdateRequestD
         // project already holds — excluding this request so an unchanged reference always passes.
         await RequestReferenceGuard.EnsureUniqueAsync(context, entity.ProjectId, command.Reference, entity.RequestId, cancellationToken);
 
-        // The mailbox tag is derived from the reference, so capture the old tag before we change it.
-        var previousTag = TriageCategories.ForRecord(entity.TagReference);
+        // The mailbox tag is derived from the (project-qualified) reference, so capture the old tag
+        // before we change it. The project qualifier is the same on both sides of the rename.
+        var projectRef = await RequestTags.ProjectRefAsync(context, entity.ProjectId, cancellationToken);
+        var previousTag = TriageCategories.ForRecord(RequestTags.Stem(projectRef, entity.ProjectId, entity.TagReference));
 
         entity.Reference = command.Reference;
         entity.Title = command.Title;
@@ -48,13 +50,21 @@ public sealed class UpdateRequestDetailsHandler : ICommandHandler<UpdateRequestD
         if (command.RaisedAt is { } issued) entity.RaisedAt = issued;
         if (entity.RespondedAt is null && !string.IsNullOrWhiteSpace(command.ResponseText)) entity.RespondedAt = DateTimeOffset.UtcNow;
 
-        await context.SaveChangesAsync(cancellationToken);
+        try
+        {
+            await context.SaveChangesAsync(cancellationToken);
+        }
+        catch (Microsoft.EntityFrameworkCore.DbUpdateException ex) when (RequestReferenceConflict.IsReferenceClash(ex))
+        {
+            // The guard above is check-then-act and can race; the unique index is the backstop.
+            throw RequestReferenceConflict.AsFriendlyError(command.Reference);
+        }
 
         // If the reference changed, its mailbox tag changed with it. Move every email carrying the old
         // JPMS/<ref> tag onto the new one so the record keeps its linked correspondence — including
         // replies further down the tagged threads. Best-effort: the reference is already saved, and a
         // transient Graph failure shouldn't fail the edit (a later thread-sync can reconcile).
-        var newTag = TriageCategories.ForRecord(entity.TagReference);
+        var newTag = TriageCategories.ForRecord(RequestTags.Stem(projectRef, entity.ProjectId, entity.TagReference));
         if (!string.Equals(previousTag, newTag, StringComparison.OrdinalIgnoreCase))
         {
             try

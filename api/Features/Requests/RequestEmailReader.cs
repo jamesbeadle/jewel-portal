@@ -37,7 +37,7 @@ public sealed class RequestEmailReader
         if (request is null)
             return Array.Empty<MailboxMessage>();
 
-        var tag = TriageCategories.ForRecord(request.TagReference);
+        var tag = TriageCategories.ForRecord(await RequestTags.StemAsync(context, request, ct));
 
         var emails = new List<MailboxMessage>();
         string? cursor = null;

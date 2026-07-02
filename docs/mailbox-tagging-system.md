@@ -29,7 +29,7 @@ mailbox's master list so they render as tidy coloured labels.
 
 ## Tags
 
-- Workflow tag = the record's reference: **`JPMS/RFI-001`**, `JPMS/RFQ-014`, etc. Stable + unique.
+- Workflow tag = the record's **project-qualified** reference: **`JPMS/JBB-2026-001-RFI-001`**, `JPMS/JBB-2026-001-RFQ-014`, etc. Stable + unique. Request references are only unique per project (every project runs its own RFI-001…), and tags share one flat category space, so the stem carries the project reference (see `RequestTags`; `POST mailbox/retag-requests` migrates legacy flat tags).
 - Discarded is just a tag: `JPMS/Discarded`.
 
 ## The two screens
