@@ -28,6 +28,18 @@ public static class RequestsRouteRegistration
             new QueryRoute("/api/requests/{requestId}/messages",
                 query => $"/api/requests/{((ListRequestMessages)query).RequestId}/messages"));
 
+        // Full body of one conversation email, fetched on demand when the reader expands it (the
+        // conversation list only carries the short preview). Message ids go in the query string —
+        // Graph ids contain path-unsafe chars.
+        queries.Register<GetRequestEmailDetail, MailboxMessageDetail>(
+            new QueryRoute("/api/requests/{requestId}/messages/email-detail",
+                query =>
+                {
+                    var q = (GetRequestEmailDetail)query;
+                    return $"/api/requests/{q.RequestId}/messages/email-detail"
+                        + $"?id={Uri.EscapeDataString(q.MessageId)}&imid={Uri.EscapeDataString(q.InternetMessageId ?? string.Empty)}";
+                }));
+
         queries.Register<ListUnassignedRequests, IReadOnlyList<Request>>(
             new QueryRoute("/api/requests/unassigned",
                 _ => "/api/requests/unassigned"));

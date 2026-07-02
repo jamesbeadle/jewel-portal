@@ -69,6 +69,9 @@ public sealed class HttpRequestRegister : IRequestRegister
     public Task<IReadOnlyList<RequestMessage>> ListMessagesAsync(string requestId, CancellationToken cancellationToken = default) =>
         queries.AskAsync(new ListRequestMessages(requestId), cancellationToken);
 
+    public Task<MailboxMessageDetail> GetEmailDetailAsync(string requestId, string mailboxId, string? internetMessageId, CancellationToken cancellationToken = default) =>
+        queries.AskAsync(new GetRequestEmailDetail(requestId, mailboxId, internetMessageId), cancellationToken);
+
     public Task<RequestMessage> PostMessageAsync(PostRequestMessage command, CancellationToken cancellationToken = default) =>
         commands.SendAsync(command, cancellationToken);
 

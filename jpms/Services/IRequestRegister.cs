@@ -17,6 +17,10 @@ public interface IRequestRegister
     Task<Request> EnableRfqAsync(string requestId, string projectId, CancellationToken cancellationToken = default);
     Task<Request> LinkToClientAsync(string requestId, string? clientId, string projectId, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<RequestMessage>> ListMessagesAsync(string requestId, CancellationToken cancellationToken = default);
+
+    /// <summary>Full body + attachment names of one inbound conversation email, fetched live on
+    /// demand (the listed message body is only the mailbox's short preview snippet).</summary>
+    Task<MailboxMessageDetail> GetEmailDetailAsync(string requestId, string mailboxId, string? internetMessageId, CancellationToken cancellationToken = default);
     Task<RequestMessage> PostMessageAsync(PostRequestMessage command, CancellationToken cancellationToken = default);
     Task DeleteAsync(string requestId, string projectId, CancellationToken cancellationToken = default);
     Task ReturnToTriageAsync(string requestId, string projectId, CancellationToken cancellationToken = default);

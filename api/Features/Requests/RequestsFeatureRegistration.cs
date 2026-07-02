@@ -16,6 +16,7 @@ public static class RequestsFeatureRegistration
         services.AddScoped<IQueryHandler<GetRequestById, Request?>, GetRequestByIdHandler>();
         services.AddScoped<IQueryHandler<GetRequestDocument, RequestDocumentFile?>, GetRequestDocumentHandler>();
         services.AddScoped<IQueryHandler<ListRequestMessages, IReadOnlyList<RequestMessage>>, ListRequestMessagesHandler>();
+        services.AddScoped<IQueryHandler<GetRequestEmailDetail, MailboxMessageDetail>, GetRequestEmailDetailHandler>();
         services.AddScoped<IQueryHandler<ListUnassignedRequests, IReadOnlyList<Request>>, ListUnassignedRequestsHandler>();
 
         // Reads a request's emails live from the mailbox by its workflow tag — the replacement for the

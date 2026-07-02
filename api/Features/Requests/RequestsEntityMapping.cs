@@ -59,5 +59,7 @@ internal static class RequestsEntityMapping
         EmailMessageId: e.InternetMessageId,
         InReplyTo: null,
         ConversationId: null,
-        SentStatus: MessageSentStatus.NotApplicable);
+        SentStatus: MessageSentStatus.NotApplicable,
+        // Carried so the conversation view can expand the email to its full body on demand.
+        MailboxId: e.Id);
 }

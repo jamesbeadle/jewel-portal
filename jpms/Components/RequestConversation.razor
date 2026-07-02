@@ -33,7 +33,51 @@
                                 <span class="inline-flex items-center rounded bg-surface-raised border border-line px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-content-muted">Shared</span>
                             }
                         </div>
-                        <p class="text-sm text-content whitespace-pre-wrap">@message.Body</p>
+                        @if (message.Direction == MessageDirection.Inbound && !string.IsNullOrEmpty(message.MailboxId)
+                             && expanded.Contains(message.MessageId))
+                        {
+                            @* Expanded email: the full body (incl. the quoted thread), fetched live on demand.
+                               The listed Body is only Graph's short preview snippet, so long emails and their
+                               history only appear here. HTML is sanitised server-side before it reaches us. *@
+                            <div class="rounded-lg bg-surface-raised border border-line p-3 max-h-[28rem] overflow-y-auto">
+                                @if (!details.TryGetValue(message.MessageId, out var detail) || detail is null)
+                                {
+                                    <p class="text-sm text-content-subtle italic">Loading full email…</p>
+                                }
+                                else if (!string.IsNullOrWhiteSpace(detail.BodyHtml) && detail.BodyIsHtml)
+                                {
+                                    <div class="rounded bg-white text-gray-900 p-3 text-sm overflow-x-auto">@((MarkupString)detail.BodyHtml)</div>
+                                }
+                                else if (!string.IsNullOrWhiteSpace(detail.BodyHtml))
+                                {
+                                    <p class="text-sm text-content whitespace-pre-wrap">@detail.BodyHtml</p>
+                                }
+                                else
+                                {
+                                    <p class="text-sm text-content whitespace-pre-wrap">@message.Body</p>
+                                }
+                            </div>
+                            @if (details.TryGetValue(message.MessageId, out var loadedDetail)
+                                 && loadedDetail is { Attachments.Count: > 0 })
+                            {
+                                <p class="text-xs text-content-subtle mt-1">
+                                    @loadedDetail.Attachments.Count attachment@(loadedDetail.Attachments.Count == 1 ? "" : "s"):
+                                    @string.Join(", ", loadedDetail.Attachments.Select(a => a.Name))
+                                </p>
+                            }
+                        }
+                        else
+                        {
+                            <p class="text-sm text-content whitespace-pre-wrap">@message.Body</p>
+                        }
+                        @if (message.Direction == MessageDirection.Inbound && !string.IsNullOrEmpty(message.MailboxId))
+                        {
+                            <button type="button"
+                                    class="mt-1 text-xs font-medium text-accent hover:underline"
+                                    @onclick="() => ToggleExpandAsync(message)">
+                                @(expanded.Contains(message.MessageId) ? "Show summary" : "Show full email")
+                            </button>
+                        }
                     </li>
                 }
             </ol>
@@ -68,6 +112,11 @@
     private string draft = "";
     private bool internalOnly;
     private IReadOnlyList<RequestMessage> messages = Array.Empty<RequestMessage>();
+
+    // Inbound emails render their short preview by default; expanding fetches the FULL body (with the
+    // quoted thread + attachment names) live from the mailbox, cached per message for the page's life.
+    private readonly HashSet<string> expanded = new();
+    private readonly Dictionary<string, MailboxMessageDetail?> details = new();
 
     protected override async Task OnParametersSetAsync() => await LoadAsync();
 
@@ -112,6 +161,29 @@
         finally
         {
             busy = false;
+        }
+    }
+
+    private async Task ToggleExpandAsync(RequestMessage message)
+    {
+        if (!expanded.Add(message.MessageId))
+        {
+            expanded.Remove(message.MessageId);
+            return;
+        }
+
+        if (details.ContainsKey(message.MessageId) || string.IsNullOrEmpty(message.MailboxId))
+            return;
+
+        try
+        {
+            var detail = await RequestRegister.GetEmailDetailAsync(RequestId, message.MailboxId, message.EmailMessageId);
+            details[message.MessageId] = detail;
+        }
+        catch
+        {
+            // Fetch failed — fall back to the preview body inside the expanded pane.
+            details[message.MessageId] = new MailboxMessageDetail(message.MailboxId, "", false, Array.Empty<IntakeAttachment>());
         }
     }
 
