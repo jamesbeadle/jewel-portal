@@ -1,0 +1,151 @@
+@page "/projects/{ProjectId}/schedule"
+@using Jewel.JPMS.Contracts.RecordLinks
+@inject AuthService Auth
+@inject SessionService Session
+@inject IQueryClient Queries
+@inject NavigationManager Nav
+
+<PageTitle>Schedule · JPMS</PageTitle>
+
+@*
+    The project Schedule tab. Two views: the programme itself (not built yet — placeholder) and
+    Communications, which lists every email tagged to this project's scheduling bucket
+    ("JPMS/SCH-<projectRef>") live from the mailbox. Emails get here from mailbox triage — link an
+    email to record type "Scheduling" — and an email can carry other workflow tags at the same time,
+    so the same message can feed a request AND appear here.
+*@
+
+@if (!isLoaded)
+{
+    <section class="max-w-5xl mx-auto px-4 py-12 text-content-subtle text-sm">Loading…</section>
+}
+else if (!Session.IsApproved)
+{
+    <RequestAccessView Email="@Auth.CurrentUser!.Email" DisplayName="@Auth.CurrentUser.DisplayName" />
+}
+else
+{
+    <ProjectPageShell ProjectId="@ProjectId" ActiveTab="schedule">
+        <div class="mb-5">
+            <h2 class="text-lg font-semibold text-content">Schedule</h2>
+            <p class="text-sm text-content-muted">The project programme and its related correspondence.</p>
+        </div>
+
+        <div class="flex gap-2 mb-6 border-b border-line">
+            <button type="button" class="@SubTabClass(SubView.Programme)" @onclick="() => SwitchView(SubView.Programme)">Schedule</button>
+            <button type="button" class="@SubTabClass(SubView.Communications)" @onclick="() => SwitchView(SubView.Communications)">
+                Communications
+                @if (emailsLoaded && emails.Count > 0)
+                {
+                    <span class="ml-1.5 inline-flex items-center rounded-full bg-accent/10 px-2 py-0.5 text-[11px] font-medium text-accent">@emails.Count</span>
+                }
+            </button>
+        </div>
+
+        @if (view == SubView.Programme)
+        {
+            <div class="panel p-8 text-center">
+                <p class="text-sm text-content">The project programme isn't built yet.</p>
+                <p class="text-xs text-content-subtle mt-1">
+                    The schedule view — activities, sequencing and progress against the programme — is coming.
+                    In the meantime, scheduling correspondence is collected under the Communications tab.
+                </p>
+            </div>
+        }
+        else
+        {
+            @if (emailsError is not null)
+            {
+                <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-4">@emailsError</p>
+            }
+
+            @if (!emailsLoaded)
+            {
+                <JewelSpinner Class="py-16" Label="Loading" />
+            }
+            else if (emails.Count == 0)
+            {
+                <div class="panel p-8 text-center">
+                    <p class="text-sm text-content">No scheduling emails yet.</p>
+                    <p class="text-xs text-content-subtle mt-1">
+                        Tag an email to <span class="font-medium text-content">Scheduling</span> in mailbox triage and it will appear here.
+                    </p>
+                </div>
+            }
+            else
+            {
+                <ul class="space-y-2">
+                    @foreach (var email in emails)
+                    {
+                        <li class="rounded-lg border border-line bg-surface px-4 py-3">
+                            <div class="flex flex-wrap items-center justify-between gap-2">
+                                <span class="text-sm font-medium text-content">@(string.IsNullOrWhiteSpace(email.FromName) ? email.FromEmail : email.FromName)</span>
+                                <span class="text-xs text-content-subtle">@email.ReceivedAt.LocalDateTime.ToString("d MMM yyyy, HH:mm")</span>
+                            </div>
+                            <p class="text-sm text-content mt-0.5">
+                                @email.Subject
+                                @if (email.HasAttachments)
+                                {
+                                    <span class="ml-2 inline-flex items-center rounded bg-surface-raised border border-line px-1.5 py-0.5 text-[10px] text-content-subtle">attachment</span>
+                                }
+                            </p>
+                            @if (!string.IsNullOrWhiteSpace(email.BodyPreview))
+                            {
+                                <p class="text-xs text-content-subtle mt-1 line-clamp-2">@email.BodyPreview</p>
+                            }
+                        </li>
+                    }
+                </ul>
+            }
+        }
+    </ProjectPageShell>
+}
+
+@code {
+    [Parameter] public string ProjectId { get; set; } = "";
+
+    private enum SubView { Programme, Communications }
+    private SubView view = SubView.Programme;
+
+    private bool isLoaded;
+    private bool emailsLoaded;
+    private string? emailsError;
+    private IReadOnlyList<MailboxMessage> emails = Array.Empty<MailboxMessage>();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Session.EnsureLoadedAsync();
+        if (!Auth.IsSignedIn) { Nav.NavigateTo("/login", forceLoad: true); return; }
+        isLoaded = true;
+        // Load communications in the background so the count badge is ready when the tab is opened.
+        await LoadEmailsAsync();
+    }
+
+    private void SwitchView(SubView next) => view = next;
+
+    private async Task LoadEmailsAsync()
+    {
+        emailsError = null;
+        try
+        {
+            emails = await Queries.AskAsync(new ListSchedulingEmails(ProjectId), CancellationToken.None);
+        }
+        catch
+        {
+            emails = Array.Empty<MailboxMessage>();
+            emailsError = "Couldn't load scheduling emails. Please try again.";
+        }
+        finally
+        {
+            emailsLoaded = true;
+        }
+    }
+
+    private string SubTabClass(SubView tab)
+    {
+        var baseClass = "px-3 py-2 text-sm font-medium border-b-2 -mb-px transition inline-flex items-center";
+        return view == tab
+            ? $"{baseClass} border-accent text-content"
+            : $"{baseClass} border-transparent text-content-muted hover:text-content";
+    }
+}

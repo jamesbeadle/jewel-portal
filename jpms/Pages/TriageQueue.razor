@@ -279,7 +279,7 @@ else
                                         {
                                             if (linkRecordsLoading)
                                             {
-                                                <p class="text-sm text-content-subtle italic">Loading @(RecordTypeLabel(linkRecordType).ToLowerInvariant())s…</p>
+                                                <p class="text-sm text-content-subtle italic">Loading @(RecordTypeLabelPlural(linkRecordType))…</p>
                                             }
                                             else
                                             {
@@ -305,7 +305,7 @@ else
                                                 @if (others.Count > 0)
                                                 {
                                                     <div>
-                                                        <p class="text-xs font-semibold text-content-subtle mb-1">Other @(RecordTypeLabel(linkRecordType).ToLowerInvariant())s on this project</p>
+                                                        <p class="text-xs font-semibold text-content-subtle mb-1">Other @(RecordTypeLabelPlural(linkRecordType)) on this project</p>
                                                         <div class="space-y-1 max-h-56 overflow-y-auto">
                                                             @foreach (var record in others)
                                                             {
@@ -320,7 +320,7 @@ else
 
                                                 @if (candidates.Count == 0 && others.Count == 0)
                                                 {
-                                                    <p class="text-sm text-content-subtle italic">No @(RecordTypeLabel(linkRecordType).ToLowerInvariant())s on this project yet.</p>
+                                                    <p class="text-sm text-content-subtle italic">No @(RecordTypeLabelPlural(linkRecordType)) on this project yet.</p>
                                                 }
                                             }
                                         }
@@ -675,12 +675,12 @@ else
                                             {
                                                 @if (linkRecordsLoading)
                                                 {
-                                                    <p class="text-sm text-content-subtle italic">Loading @(RecordTypeLabel(linkRecordType).ToLowerInvariant())s…</p>
+                                                    <p class="text-sm text-content-subtle italic">Loading @(RecordTypeLabelPlural(linkRecordType))…</p>
                                                 }
                                                 else
                                                 {
                                                     <select class="field" value="@linkRecordId" @onchange="OnTaggedRecordChanged">
-                                                        <option value="">Select a @(RecordTypeLabel(linkRecordType).ToLowerInvariant())…</option>
+                                                        <option value="">Select a @(RecordTypeLabelSingular(linkRecordType))…</option>
                                                         @foreach (var record in ProjectRecords())
                                                         {
                                                             <option value="@record.RecordId">@record.Reference — @record.Title</option>
@@ -716,11 +716,12 @@ else
     // the providers registered server-side; adding a type here surfaces it once its provider exists.
     private static readonly RecordType[] RecordTypeOptions =
     {
-        RecordType.Request, RecordType.BidPackageInvite, RecordType.CostCentre
+        RecordType.Request, RecordType.BidPackageInvite, RecordType.CostCentre, RecordType.Scheduling
     };
 
-    // The subset that can be CREATED from an email. Cost centres come from the global master, so an
-    // email can be linked to one but never creates one — it's excluded from the "Create new" picker.
+    // The subset that can be CREATED from an email. Cost centres come from the global master and the
+    // Scheduling bucket exists implicitly (one per project), so an email can be linked to either but
+    // never creates one — both are excluded from the "Create new" picker.
     private static readonly RecordType[] CreateRecordTypeOptions =
     {
         RecordType.Request, RecordType.BidPackageInvite
@@ -731,7 +732,22 @@ else
         RecordType.Request          => "Request",
         RecordType.BidPackageInvite => "Bid Package Invite",
         RecordType.CostCentre       => "Cost Centre",
+        RecordType.Scheduling       => "Scheduling",
         _                           => type.ToString()
+    };
+
+    // Lower-case plural for the generic "Loading …" / "No … on this project" copy. Scheduling is a
+    // per-project bucket (exactly one record), so its plural reads as the set of bucket records.
+    private static string RecordTypeLabelPlural(RecordType type) => type switch
+    {
+        RecordType.Scheduling => "scheduling records",
+        _                     => $"{RecordTypeLabel(type).ToLowerInvariant()}s"
+    };
+
+    private static string RecordTypeLabelSingular(RecordType type) => type switch
+    {
+        RecordType.Scheduling => "scheduling record",
+        _                     => RecordTypeLabel(type).ToLowerInvariant()
     };
 
     private const int PageSize = 25;

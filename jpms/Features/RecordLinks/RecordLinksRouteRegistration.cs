@@ -20,6 +20,10 @@ public static class RecordLinksRouteRegistration
                     return $"/api/projects/{q.ProjectId}/records?type={q.Type}";
                 }));
 
+        queries.Register<ListSchedulingEmails, IReadOnlyList<MailboxMessage>>(
+            new QueryRoute("/api/projects/{projectId}/scheduling/emails",
+                query => $"/api/projects/{((ListSchedulingEmails)query).ProjectId}/scheduling/emails"));
+
         commands.Register<LinkMessageToRecord, Acknowledgement>(
             new CommandRoute("POST", "/api/mailbox/message/link", _ => "/api/mailbox/message/link"));
 

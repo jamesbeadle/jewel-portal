@@ -20,6 +20,7 @@ public static class RecordLinksFeatureRegistration
         services.AddScoped<ILinkableRecordProvider, RequestLinkProvider>();
         services.AddScoped<ILinkableRecordProvider, BidPackageInviteLinkProvider>();
         services.AddScoped<ILinkableRecordProvider, CostCentreLinkProvider>();
+        services.AddScoped<ILinkableRecordProvider, SchedulingLinkProvider>();
 
         services.AddScoped<RecordProviderRegistry>();
         services.AddScoped<RecordEmailReader>();
@@ -28,6 +29,7 @@ public static class RecordLinksFeatureRegistration
         services.AddScoped<RecordThreadTagger>();
 
         services.AddScoped<IQueryHandler<ListLinkableRecords, IReadOnlyList<LinkableRecord>>, ListLinkableRecordsHandler>();
+        services.AddScoped<IQueryHandler<ListSchedulingEmails, IReadOnlyList<MailboxMessage>>, ListSchedulingEmailsHandler>();
         services.AddScoped<ICommandHandler<LinkMessageToRecord, Acknowledgement>, LinkMessageToRecordHandler>();
         services.AddScoped<ICommandHandler<SyncRecordThreadTags, Acknowledgement>, SyncRecordThreadTagsHandler>();
 

@@ -8,7 +8,8 @@ public enum RecordType
 {
     Request = 0,           // the RF* family (RFI/RFA/RFC/RFQ/RFP) plus NOD/EOT
     BidPackageInvite = 1,  // a bid package and the subcontractors invited to tender (Part B)
-    CostCentre = 2         // a valuation-report cost centre on a project (project + cost-centre grouping)
+    CostCentre = 2,        // a valuation-report cost centre on a project (project + cost-centre grouping)
+    Scheduling = 3         // a project's scheduling bucket — one per project, feeds the Schedule tab
 }
 
 // The discipline an agent belongs to. Mirrors the columns of the request-agent flow diagram:
