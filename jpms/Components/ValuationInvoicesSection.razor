@@ -94,7 +94,10 @@
             <div class="border-t border-line px-4 py-3 flex flex-wrap items-end gap-3">
                 <div>
                     <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Period month</label>
-                    <input type="month" @bind="newMonth"
+                    @* Explicit value/@onchange rather than @bind: Razor special-cases @bind on
+                       type="month" to expect a DateTime, but the month travels as a "yyyy-MM"
+                       string (see ParseMonth). *@
+                    <input type="month" value="@newMonth" @onchange="e => newMonth = e.Value?.ToString() ?? newMonth"
                            class="rounded-lg border border-line-strong bg-surface-field px-3 py-2 text-sm text-content focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent" />
                 </div>
                 <div>
