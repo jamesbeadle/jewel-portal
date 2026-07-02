@@ -386,6 +386,14 @@ else
 
                                             <button type="button" class="btn-primary" disabled="@(busy || string.IsNullOrWhiteSpace(createProjectId) || string.IsNullOrWhiteSpace(createTitle))" @onclick="DoCreateBidPackage">Create bid package from email</button>
                                         }
+                                        else if (createRecordType == RecordType.Scheduling)
+                                        {
+                                            <p class="rounded-lg bg-surface-raised border border-line px-3 py-2 text-xs text-content-subtle">
+                                                This email (and its whole thread) is tagged to the project's <span class="font-medium text-content">scheduling communications</span> and appears under the project's Schedule tab. You can add further tags later from the Tagged view — the same email can also feed a request or bid package.
+                                            </p>
+
+                                            <button type="button" class="btn-primary" disabled="@(busy || string.IsNullOrWhiteSpace(createProjectId))" @onclick="DoTagScheduling">Tag email to scheduling</button>
+                                        }
                                     </div>
                                 }
                                 else if (mode == TriageMode.Discard)
@@ -719,12 +727,13 @@ else
         RecordType.Request, RecordType.BidPackageInvite, RecordType.CostCentre, RecordType.Scheduling
     };
 
-    // The subset that can be CREATED from an email. Cost centres come from the global master and the
-    // Scheduling bucket exists implicitly (one per project), so an email can be linked to either but
-    // never creates one — both are excluded from the "Create new" picker.
+    // The subset offered by the "Create new" picker. Cost centres come from the global master, so an
+    // email can be linked to one but never creates one — it's excluded. Scheduling is included even
+    // though nothing is created: every project already has its (implicit) scheduling bucket, so
+    // "creating" a scheduling item is simply tagging the email to the chosen project's bucket.
     private static readonly RecordType[] CreateRecordTypeOptions =
     {
-        RecordType.Request, RecordType.BidPackageInvite
+        RecordType.Request, RecordType.BidPackageInvite, RecordType.Scheduling
     };
 
     private static string RecordTypeLabel(RecordType type) => type switch
@@ -1187,6 +1196,15 @@ else
             InternetMessageId: selected.InternetMessageId);
 
         await RunAction(async () => await Intake.CreateBidPackageFromMessageAsync(command));
+    }
+
+    // "Create new → Scheduling": nothing is created — every project already has its scheduling
+    // bucket, whose RecordId is the project id — so this is a straight link to the chosen project.
+    private async Task DoTagScheduling()
+    {
+        if (selected is null || busy) return;
+        if (string.IsNullOrWhiteSpace(createProjectId)) { actionError = "Choose a project."; return; }
+        await RunAction(async () => await Intake.LinkMessageToRecordAsync(selected.Id, selected.InternetMessageId, RecordType.Scheduling, createProjectId));
     }
 
     private async Task DoDiscard()
