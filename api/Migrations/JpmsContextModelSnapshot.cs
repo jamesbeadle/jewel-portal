@@ -553,6 +553,10 @@ namespace Jewel.JPMS.Api.Migrations
                         .HasMaxLength(512)
                         .HasColumnType("nvarchar(512)");
 
+                    b.Property<string>("RelatedNodRequestId")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
                     b.Property<DateTimeOffset?>("RespondedAt")
                         .HasColumnType("datetimeoffset");
 
@@ -1510,6 +1514,63 @@ namespace Jewel.JPMS.Api.Migrations
                     b.HasKey("InfoChaseItemId");
 
                     b.ToTable("InfoChaseItems");
+                });
+
+            modelBuilder.Entity("Jewel.JPMS.Api.Data.Entities.LadClaimEntity", b =>
+                {
+                    b.Property<string>("LadClaimId")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<decimal>("Amount")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("decimal(18,4)");
+
+                    b.Property<string>("CreatedByEmail")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<int>("DaysClaimed")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(2048)
+                        .HasColumnType("nvarchar(2048)");
+
+                    b.Property<int>("Number")
+                        .HasColumnType("int");
+
+                    b.Property<DateTimeOffset?>("PeriodFrom")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<DateTimeOffset?>("PeriodTo")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("ProjectId")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<DateTimeOffset>("RaisedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<decimal>("RatePerWeek")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("decimal(18,4)");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.HasKey("LadClaimId");
+
+                    b.ToTable("LadClaims");
                 });
 
             modelBuilder.Entity("Jewel.JPMS.Api.Data.Entities.LeadEntity", b =>

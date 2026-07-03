@@ -1,4 +1,5 @@
 using Jewel.JPMS.Api.Data;
+using Jewel.JPMS.Api.Features.Requests;
 using Jewel.JPMS.Models;
 using Microsoft.EntityFrameworkCore;
 
@@ -6,33 +7,77 @@ namespace Jewel.JPMS.Api.Features.RecordLinks.Providers;
 
 // Linkable-record provider for a project's Scheduling bucket. Unlike Requests / Bid Package Invites
 // there is no per-item table behind this: every project has exactly ONE scheduling record — a bucket
-// that collects programme/scheduling correspondence for the project's Schedule tab. So ForProjectAsync
-// returns a single LinkableRecord and the RecordId is simply the project id.
+// that collects programme/scheduling correspondence for the project's Schedule tab. So FindAsync
+// resolves a single LinkableRecord and the RecordId is simply the project id.
 //
 // JPMS tags share one flat mailbox-category space, so the tag stem is project-qualified the same way
 // cost-centre tags are:
 //   TagReference = "SCH-{projectRef}"  ->  category "JPMS/SCH-{projectRef}".
 //
-// The Schedule tab's Communications view reads these emails back live by that tag (RecordEmailReader),
-// identically to every other record type. Scheduling records are link-only: nothing is ever created
-// from an email — the bucket exists implicitly for every project.
+// ForProjectAsync goes deeper than the bucket: alongside it, the picker lists the project's claims
+// documents — the NOD/EOT requests (owned by RequestLinkProvider) and the LADs claims (owned by
+// LadLinkProvider) — so a triage email can be linked to the specific scheduling document it concerns
+// rather than only the general bucket. Each of those records carries its OWN Type/RecordId, so the
+// link and read paths still resolve through the owning provider; nothing here changes the tag layer.
+//
+// The Schedule tab's Communications view reads the bucket's emails back live by tag
+// (RecordEmailReader), identically to every other record type. The bucket itself is link-only:
+// nothing is ever created from an email — it exists implicitly for every project.
 public sealed class SchedulingLinkProvider : ILinkableRecordProvider
 {
+    private static readonly int[] ClaimRequestKinds =
+    {
+        (int)RequestType.NoticeOfDelay,
+        (int)RequestType.ExtensionOfTime
+    };
+
     private readonly JpmsContext context;
 
     public SchedulingLinkProvider(JpmsContext context) { this.context = context; }
 
     public RecordType Type => RecordType.Scheduling;
 
-    // Scheduling links own the "SCH" reference namespace (tags are "SCH-<projectRef>").
+    // Scheduling links own the "SCH" reference namespace (tags are "SCH-<projectRef>"). The claim
+    // records listed alongside the bucket keep their owning providers' namespaces (NOD/EOT/LAD).
     public IReadOnlyCollection<string> ReferencePrefixes { get; } = new[] { "SCH" };
 
     public async Task<IReadOnlyList<LinkableRecord>> ForProjectAsync(string projectId, CancellationToken ct)
     {
-        var record = await FindAsync(projectId, ct);
-        return record is null
-            ? Array.Empty<LinkableRecord>()
-            : new[] { record };
+        var bucket = await FindAsync(projectId, ct);
+        if (bucket is null) return Array.Empty<LinkableRecord>();
+
+        var records = new List<LinkableRecord> { bucket };
+
+        // The schedule's claims documents: Jewel's own NOD/EOT notices (Request family) …
+        var projectRef = await RequestTags.ProjectRefAsync(context, projectId, ct);
+        var claimRequests = await context.Requests.AsNoTracking()
+            .Where(r => r.ProjectId == projectId && ClaimRequestKinds.Contains(r.Kind))
+            .OrderByDescending(r => r.RaisedAt)
+            .ToListAsync(ct);
+        records.AddRange(claimRequests.Select(r => new LinkableRecord(
+            Type:         RecordType.Request,
+            RecordId:     r.RequestId,
+            ProjectId:    r.ProjectId,
+            Reference:    string.IsNullOrWhiteSpace(r.Reference) ? r.TagReference : r.Reference.Trim(),
+            TagReference: RequestTags.Stem(projectRef, r.ProjectId, r.TagReference),
+            Title:        r.Title,
+            StatusLabel:  ((RequestStatus)r.Status).ToString())));
+
+        // … and the client's LADs claims against Jewel.
+        var ladClaims = await context.LadClaims.AsNoTracking()
+            .Where(l => l.ProjectId == projectId)
+            .OrderByDescending(l => l.Number)
+            .ToListAsync(ct);
+        records.AddRange(ladClaims.Select(l => new LinkableRecord(
+            Type:         RecordType.Lad,
+            RecordId:     l.LadClaimId,
+            ProjectId:    l.ProjectId,
+            Reference:    l.Reference,
+            TagReference: l.Reference,
+            Title:        l.Title,
+            StatusLabel:  ((LadStatus)l.Status).DisplayName())));
+
+        return records;
     }
 
     // The RecordId IS the project id — one scheduling bucket per project.

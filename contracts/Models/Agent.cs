@@ -10,7 +10,9 @@ public enum RecordType
     BidPackageInvite = 1,  // a bid package and the subcontractors invited to tender (Part B)
     CostCentre = 2,        // a valuation-report cost centre on a project (project + cost-centre grouping)
     Scheduling = 3,        // a project's scheduling bucket — one per project, feeds the Schedule tab
-    Todo = 4               // a project to-do item — created at triage or on the project's Overview tab
+    Todo = 4,              // a project to-do item — created at triage or on the project's Overview tab
+    Lad = 5,               // a Liquidated Damages claim — a claims document on the Schedule tab
+    Variation = 6          // a Variation Order — the approved change feeding the valuation report
 }
 
 // The discipline an agent belongs to. Mirrors the columns of the request-agent flow diagram:

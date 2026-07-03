@@ -19,6 +19,7 @@ using Jewel.JPMS.Api.Features.Cvr;
 using Jewel.JPMS.Api.Features.Directory;
 using Jewel.JPMS.Api.Features.Drawings;
 using Jewel.JPMS.Api.Features.Hs;
+using Jewel.JPMS.Api.Features.Lads;
 using Jewel.JPMS.Api.Features.Leads;
 using Jewel.JPMS.Api.Features.MailboxIntake;
 using Jewel.JPMS.Api.Features.Mobilisation;
@@ -77,6 +78,7 @@ var host = new HostBuilder()
         services.AddRequestsFeature();
         services.AddRecordLinksFeature();
         services.AddTodosFeature();
+        services.AddLadsFeature();
         services.AddAgentsFeature();
         services.AddCostCentersFeature();
         services.AddMailboxIntakeFeature(context.Configuration);

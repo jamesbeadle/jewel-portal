@@ -19,4 +19,6 @@ public sealed record UpdateRequestDetails(
     string? RelatedDrawingSpec = null,
     string? InternalNotes = null,
     string? ClientNotes = null,
-    DateTimeOffset? RaisedAt = null) : ICommand<Request>;
+    DateTimeOffset? RaisedAt = null,
+    // EOT only: the Notice of Delay this EOT arises from. Optional — an EOT can stand alone.
+    string? RelatedNodRequestId = null) : ICommand<Request>;

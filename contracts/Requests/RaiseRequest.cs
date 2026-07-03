@@ -23,4 +23,6 @@ public sealed record RaiseRequest(
     DateTimeOffset? RespondedAt = null,
     string? ResponseText = null,
     string? RespondedByEmail = null,
-    RequestStatus? Status = null) : ICommand<Request>;
+    RequestStatus? Status = null,
+    // EOT only: the Notice of Delay this EOT arises from. Optional — an EOT can stand alone.
+    string? RelatedNodRequestId = null) : ICommand<Request>;

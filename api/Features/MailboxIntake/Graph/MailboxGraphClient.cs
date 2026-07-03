@@ -48,21 +48,22 @@ public static class TriageCategories
 /// </summary>
 public interface IMailboxGraphClient
 {
-    /// <summary>One page of the triage queue: Inbox messages NOT tagged triaged, newest first.</summary>
+    /// <summary>One page of the triage queue: Inbox messages NOT tagged triaged, oldest first (so
+    /// the backlog is cleared from page one).</summary>
     Task<MailboxPage> ListInboxAsync(string? cursor, int take, CancellationToken ct);
 
-    /// <summary>One page of the discarded pile: Inbox messages tagged discarded, newest first.</summary>
+    /// <summary>One page of the discarded pile: Inbox messages tagged discarded, oldest first.</summary>
     Task<MailboxPage> ListDiscardedAsync(string? cursor, int take, CancellationToken ct);
 
-    /// <summary>One page of the emails tagged to a specific record (its workflow tag), newest first.
+    /// <summary>One page of the emails tagged to a specific record (its workflow tag), oldest first.
     /// This is how a record reads its associated emails live — no copies are stored.</summary>
     Task<MailboxPage> ListByTagAsync(string tag, string? cursor, int take, CancellationToken ct);
 
-    /// <summary>One page of every tagged email (anything carrying the JPMS marker), newest first —
+    /// <summary>One page of every tagged email (anything carrying the JPMS marker), oldest first —
     /// the management surface for the Tagged tab.</summary>
     Task<MailboxPage> ListTaggedAsync(string? cursor, int take, CancellationToken ct);
 
-    /// <summary>One page of emails carrying ANY of the given workflow tags (an OR filter), newest
+    /// <summary>One page of emails carrying ANY of the given workflow tags (an OR filter), oldest
     /// first — backs the Tagged tab's multi-select filter.</summary>
     Task<MailboxPage> ListByTagsAsync(IReadOnlyList<string> tags, string? cursor, int take, CancellationToken ct);
 
@@ -230,7 +231,9 @@ public sealed class MailboxGraphClient : IMailboxGraphClient
 
         var url = $"{GraphBase}/users/{Mailbox}/mailFolders/inbox/messages"
             + $"?$filter={Uri.EscapeDataString(filter)}"
-            + "&$orderby=receivedDateTime%20desc"
+            // Oldest-first so triage users clear the backlog from page one instead of paging to the
+            // end. RecordEmailReader is unaffected: it re-sorts oldest-first after collecting pages.
+            + "&$orderby=receivedDateTime%20asc"
             + $"&$select={Summary}"
             + $"&$top={take}&$skip={skip}&$count=true";
 

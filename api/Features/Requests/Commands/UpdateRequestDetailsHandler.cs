@@ -48,6 +48,11 @@ public sealed class UpdateRequestDetailsHandler : ICommandHandler<UpdateRequestD
         entity.RelatedDrawingSpec = command.RelatedDrawingSpec;
         entity.InternalNotes = command.InternalNotes;
         entity.ClientNotes = command.ClientNotes;
+        // EOT -> NoD provenance only makes sense on an EOT; never write it for other kinds. A null on
+        // the command means "not supplied" (the parameter is optional and most edit surfaces don't
+        // carry it), NOT "clear the link" — so an existing link is preserved unless a value arrives.
+        if ((RequestType)entity.Kind == RequestType.ExtensionOfTime && command.RelatedNodRequestId is not null)
+            entity.RelatedNodRequestId = string.IsNullOrWhiteSpace(command.RelatedNodRequestId) ? null : command.RelatedNodRequestId;
         if (command.RaisedAt is { } issued) entity.RaisedAt = issued;
         if (entity.RespondedAt is null && !string.IsNullOrWhiteSpace(command.ResponseText)) entity.RespondedAt = DateTimeOffset.UtcNow;
 

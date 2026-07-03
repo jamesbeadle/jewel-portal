@@ -15,6 +15,7 @@ using Jewel.JPMS.Features.Cvr;
 using Jewel.JPMS.Features.Directory;
 using Jewel.JPMS.Features.Drawings;
 using Jewel.JPMS.Features.Hs;
+using Jewel.JPMS.Features.Lads;
 using Jewel.JPMS.Features.Leads;
 using Jewel.JPMS.Features.Mobilisation;
 using Jewel.JPMS.Features.Procurement;
@@ -122,6 +123,7 @@ using (var routeScope = app.Services.CreateScope())
     ValuationInvoicesRouteRegistration.RegisterValuationInvoicesRoutes(queryRoutes, commandRoutes);
     RecordLinksRouteRegistration.RegisterRecordLinksRoutes(queryRoutes, commandRoutes);
     TodosRouteRegistration.RegisterTodosRoutes(queryRoutes, commandRoutes);
+    LadsRouteRegistration.RegisterLadsRoutes(queryRoutes, commandRoutes);
     CostCentersRouteRegistration.RegisterCostCentersRoutes(queryRoutes, commandRoutes);
     AgentsRouteRegistration.RegisterAgentsRoutes(queryRoutes, commandRoutes);
 }

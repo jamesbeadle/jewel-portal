@@ -66,6 +66,8 @@ public sealed class JpmsContext : DbContext
 
     public DbSet<TodoItemEntity> TodoItems => Set<TodoItemEntity>();
 
+    public DbSet<LadClaimEntity> LadClaims => Set<LadClaimEntity>();
+
     public DbSet<SiteReportEntity> SiteReports => Set<SiteReportEntity>();
     public DbSet<ProgrammeTaskEntity> ProgrammeTasks => Set<ProgrammeTaskEntity>();
     public DbSet<PhotoEntity> Photos => Set<PhotoEntity>();

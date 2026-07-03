@@ -135,6 +135,10 @@ public sealed class RequestEntity
     // Cached so subsequent emails for the same request reuse the folder rather than recreating it.
     [MaxLength(450)]     public string? MailboxFolderId { get; set; }
 
+    // EOT only: the Notice of Delay request this EOT arises from (JCT ICD 2024 cl. 2.19 -> 2.20).
+    // Optional — an EOT can stand alone; never set for other kinds.
+    [MaxLength(64)]      public string? RelatedNodRequestId { get; set; }
+
     // The unqualified reference stem for this record's mailbox tag. Prefers the human reference;
     // falls back to REQ-NNNN when blank so a stem is always well-formed. Computed, not stored.
     // NB: the actual mailbox tag is project-qualified (references are only unique per project, tags

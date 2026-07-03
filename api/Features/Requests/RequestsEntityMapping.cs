@@ -33,7 +33,8 @@ internal static class RequestsEntityMapping
         OnBehalfOfClientId: entity.OnBehalfOfClientId,
         BasisOfQueries: entity.BasisOfQueries,
         ResponseActionRequired: entity.ResponseActionRequired,
-        ImpactIfLate: entity.ImpactIfLate);
+        ImpactIfLate: entity.ImpactIfLate,
+        RelatedNodRequestId: entity.RelatedNodRequestId);
 
     /// <summary>The model including its itemised queries (the numbered rows of the official document).</summary>
     public static Request ToModel(this RequestEntity entity, IEnumerable<RequestItemEntity> items) =>

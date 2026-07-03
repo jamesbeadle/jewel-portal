@@ -776,7 +776,7 @@ else
     // the providers registered server-side; adding a type here surfaces it once its provider exists.
     private static readonly RecordType[] RecordTypeOptions =
     {
-        RecordType.Request, RecordType.BidPackageInvite, RecordType.CostCentre, RecordType.Scheduling, RecordType.Todo
+        RecordType.Request, RecordType.BidPackageInvite, RecordType.CostCentre, RecordType.Scheduling, RecordType.Variation, RecordType.Todo
     };
 
     // The subset offered by the "Create new" picker. Cost centres come from the global master, so an
@@ -794,15 +794,19 @@ else
         RecordType.BidPackageInvite => "Bid Package Invite",
         RecordType.CostCentre       => "Cost Centre",
         RecordType.Scheduling       => "Scheduling",
+        RecordType.Variation        => "Variation Order",
+        RecordType.Lad              => "LADs claim",
         RecordType.Todo             => "To-do item",
         _                           => type.ToString()
     };
 
-    // Lower-case plural for the generic "Loading …" / "No … on this project" copy. Scheduling is a
-    // per-project bucket (exactly one record), so its plural reads as the set of bucket records.
+    // Lower-case plural for the generic "Loading …" / "No … on this project" copy. Scheduling lists
+    // the project's bucket plus its claims documents (NOD/EOT/LADs), so its plural reads as that set.
     private static string RecordTypeLabelPlural(RecordType type) => type switch
     {
         RecordType.Scheduling => "scheduling records",
+        RecordType.Variation  => "variation orders",
+        RecordType.Lad        => "LADs claims",
         RecordType.Todo       => "to-do items",
         _                     => $"{RecordTypeLabel(type).ToLowerInvariant()}s"
     };
@@ -810,6 +814,8 @@ else
     private static string RecordTypeLabelSingular(RecordType type) => type switch
     {
         RecordType.Scheduling => "scheduling record",
+        RecordType.Variation  => "variation order",
+        RecordType.Lad        => "LADs claim",
         RecordType.Todo       => "to-do item",
         _                     => RecordTypeLabel(type).ToLowerInvariant()
     };
@@ -1241,8 +1247,15 @@ else
     private async Task DoLink()
     {
         if (selected is null || busy || string.IsNullOrWhiteSpace(linkRecordId)) return;
-        await RunAction("Linking", async () => await Intake.LinkMessageToRecordAsync(selected.Id, selected.InternetMessageId, linkRecordType, linkRecordId));
+        var recordType = SelectedLinkRecordType();
+        await RunAction("Linking", async () => await Intake.LinkMessageToRecordAsync(selected.Id, selected.InternetMessageId, recordType, linkRecordId));
     }
+
+    // The type to link as is the picked RECORD's own type, not the dropdown's: the Scheduling picker
+    // lists the bucket alongside the schedule's claims documents (NOD/EOT requests, LADs claims), and
+    // each of those must link through its owning provider so the tag stem resolves correctly.
+    private RecordType SelectedLinkRecordType() =>
+        linkRecords.FirstOrDefault(r => r.RecordId == linkRecordId)?.Type ?? linkRecordType;
 
     private async Task DoCreate()
     {
@@ -1410,7 +1423,8 @@ else
     private async Task DoAddTagLink()
     {
         if (selected is null || busy || string.IsNullOrWhiteSpace(linkRecordId)) return;
-        await RunTaggedAction("Linking", async () => await Intake.LinkMessageToRecordAsync(selected.Id, selected.InternetMessageId, linkRecordType, linkRecordId));
+        var recordType = SelectedLinkRecordType();
+        await RunTaggedAction("Linking", async () => await Intake.LinkMessageToRecordAsync(selected.Id, selected.InternetMessageId, recordType, linkRecordId));
     }
 
     private async Task DoRemoveTag(string tag)
