@@ -71,6 +71,19 @@ public sealed class HttpValuationReportStore : IValuationReportStore
         catch { claimLinesRequested.Remove(claimId); }
     }
 
+    // Forces a background reload of lines and claims even when cached, and marks per-claim
+    // entries stale so the next EntriesFor read refetches. Pages call this once on entry
+    // (never from render): cached data renders immediately, OnChange fires when fresh data
+    // lands — so navigating back to the tab picks up changes made elsewhere.
+    public void Refresh(string projectId)
+    {
+        linesRequested.Add(projectId);
+        claimsRequested.Add(projectId);
+        claimLinesRequested.Clear();
+        _ = LoadLinesAsync(projectId);
+        _ = LoadClaimsAsync(projectId);
+    }
+
     public async Task<ValuationLineItem> AddLineAsync(AddValuationLineItem command)
     {
         var result = await commands.SendAsync(command, CancellationToken.None);

@@ -52,6 +52,9 @@ else
         await Session.EnsureLoadedAsync();
         if (!Auth.IsSignedIn) { Nav.NavigateTo("/login", forceLoad: true); return; }
         DrawingStore.OnChange += StateHasChanged;
+        // Refresh on entry so the ambiguity list reflects changes made since the register
+        // was first cached (stale-while-revalidate).
+        DrawingStore.Refresh(ProjectId);
         isLoaded = true;
     }
 

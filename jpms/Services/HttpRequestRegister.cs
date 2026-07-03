@@ -37,6 +37,15 @@ public sealed class HttpRequestRegister : IRequestRegister
         catch { requested.Remove(projectId); }
     }
 
+    // Forces a background reload even when the project is already cached. Pages call this once
+    // on entry (never from render) so tab navigation picks up changes made elsewhere — another
+    // user, an agent, or a mutation through a different store.
+    public void Refresh(string projectId)
+    {
+        requested.Add(projectId);
+        _ = LoadAsync(projectId);
+    }
+
     public IReadOnlyList<Request> ForProject(string projectId, RequestType kind) =>
         ForProject(projectId).Where(record => record.Kind == kind).ToList().AsReadOnly();
 

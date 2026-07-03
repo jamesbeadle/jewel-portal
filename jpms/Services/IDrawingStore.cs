@@ -15,6 +15,11 @@ public interface IDrawingStore
 
     IReadOnlyList<DrawingRevision> AmbiguousFor(string projectId);
 
+    /// <summary>Starts a background refetch of the project's drawings even if cached, and marks
+    /// cached revisions stale so the next read refetches them. Call on page entry so navigating
+    /// back to the Drawings tab shows fresh data (stale-while-revalidate).</summary>
+    void Refresh(string projectId);
+
     /// <summary>Creates a new named drawing (the "thing") and returns it.</summary>
     Task<Drawing> RegisterDrawingAsync(string projectId, string drawingCode, string title, CancellationToken cancellationToken);
 

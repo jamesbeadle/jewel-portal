@@ -45,6 +45,14 @@ public sealed class HttpProcurementStore : IProcurementStore
         catch { packagesRequested.Remove(projectId); }
     }
 
+    // Forces a background reload of the project's bid packages even when cached. Pages call
+    // this once on entry (never from render) so tab navigation picks up changes made elsewhere.
+    public void Refresh(string projectId)
+    {
+        packagesRequested.Add(projectId);
+        _ = LoadPackagesAsync(projectId);
+    }
+
     public Task<BidPackage?> FindPackageAsync(string bidPackageId) =>
         queries.AskAsync(new GetBidPackageById(bidPackageId), CancellationToken.None);
 

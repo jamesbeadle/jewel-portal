@@ -186,6 +186,9 @@ else
         await Session.EnsureLoadedAsync();
         if (!Auth.IsSignedIn) { Nav.NavigateTo("/login", forceLoad: true); return; }
         RequestRegister.OnChange += StateHasChanged;
+        // Refresh on entry: cached requests render immediately, then update when the
+        // background reload lands — so navigating back to this tab never shows stale data.
+        RequestRegister.Refresh(ProjectId);
         isLoaded = true;
     }
 

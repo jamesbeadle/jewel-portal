@@ -49,6 +49,15 @@ else
     {
         Projects.OnChanged += StateHasChanged;
         if (Projects.Current is null) await Projects.RefreshAsync(CancellationToken.None);
+        else _ = RefreshInBackgroundAsync(); // stale-while-revalidate: header/stage update on tab nav
+    }
+
+    private async Task RefreshInBackgroundAsync()
+    {
+        // Fire-and-forget must swallow failures: the cached list is still shown, and the next
+        // navigation retries.
+        try { await Projects.RefreshAsync(CancellationToken.None); }
+        catch { }
     }
 
     public void Dispose() => Projects.OnChanged -= StateHasChanged;

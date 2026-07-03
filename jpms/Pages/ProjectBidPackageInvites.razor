@@ -76,6 +76,9 @@ else
         await Session.EnsureLoadedAsync();
         if (!Auth.IsSignedIn) { Nav.NavigateTo("/login", forceLoad: true); return; }
         ProcurementStore.OnChange += StateHasChanged;
+        // Refresh on entry: cached packages render immediately, then update when the
+        // background reload lands — so navigating back to this tab never shows stale data.
+        ProcurementStore.Refresh(ProjectId);
         isLoaded = true;
     }
 

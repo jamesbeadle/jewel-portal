@@ -7,6 +7,11 @@ public interface IRequestRegister
 {
     IReadOnlyList<Request> ForProject(string projectId);
     IReadOnlyList<Request> ForProject(string projectId, RequestType kind);
+
+    /// <summary>Starts a background refetch of the project's requests even if they are already
+    /// cached — call on page entry so navigating back to a tab shows fresh data (stale-while-
+    /// revalidate: cached rows render immediately and OnChange fires when the reload lands).</summary>
+    void Refresh(string projectId);
     Request Upsert(Request record);
     event Action? OnChange;
 

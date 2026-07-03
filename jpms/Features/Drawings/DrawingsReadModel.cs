@@ -59,6 +59,11 @@ public sealed class DrawingsReadModel
         catch { revisionsRequested.Remove(drawingId); }
     }
 
+    /// <summary>Marks every cached revision list stale: the values stay readable, but the next
+    /// EnsureRevisions call per drawing starts a fresh background fetch. Used on page entry so
+    /// revision data (approval state, ambiguity) catches up with changes made elsewhere.</summary>
+    public void MarkRevisionsStale() => revisionsRequested.Clear();
+
     public async Task RefreshDrawingsAsync(string projectId, CancellationToken cancellationToken)
     {
         drawingsByProject[projectId] = await queries.AskAsync(new ListDrawingsForProject(projectId), cancellationToken);

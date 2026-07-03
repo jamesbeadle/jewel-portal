@@ -89,6 +89,9 @@ else
         await Session.EnsureLoadedAsync();
         if (!Auth.IsSignedIn) { Nav.NavigateTo("/login", forceLoad: true); return; }
         DrawingStore.OnChange += StateHasChanged;
+        // Refresh on entry: cached drawings render immediately, then update when the
+        // background reload lands — so navigating back to this tab never shows stale data.
+        DrawingStore.Refresh(ProjectId);
         isLoaded = true;
     }
 

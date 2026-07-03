@@ -43,6 +43,15 @@ public sealed class HttpDrawingStore : IDrawingStore
         return readModel.RevisionsCurrent(drawingId);
     }
 
+    // Forces a background reload of the drawing register even when cached, and marks revisions
+    // stale so the next RevisionsFor read refetches. Pages call this once on entry (never from
+    // render) so tab navigation picks up changes made elsewhere.
+    public void Refresh(string projectId)
+    {
+        readModel.MarkRevisionsStale();
+        RefreshInBackground(projectId, null);
+    }
+
     public IReadOnlyList<DrawingRevision> AmbiguousFor(string projectId) =>
         DrawingsFor(projectId)
             .SelectMany(drawing => RevisionsFor(drawing.DrawingId))

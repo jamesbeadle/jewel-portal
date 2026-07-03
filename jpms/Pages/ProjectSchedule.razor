@@ -374,6 +374,9 @@ else
         await Session.EnsureLoadedAsync();
         if (!Auth.IsSignedIn) { Nav.NavigateTo("/login", forceLoad: true); return; }
         RequestRegister.OnChange += StateHasChanged;
+        // Refresh on entry so NoD / EOT rows and count badges reflect changes made since the
+        // register was first cached (stale-while-revalidate).
+        RequestRegister.Refresh(ProjectId);
         isLoaded = true;
         // Load claims + communications in the background so the count badges are ready when the
         // tabs are opened.

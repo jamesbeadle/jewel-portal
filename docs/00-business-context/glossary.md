@@ -4,14 +4,11 @@ Construction and Jewel-Enterprises-specific terms used across this scoping repos
 
 ---
 
-**Cash Call**
-A request to a client for payment, raised by Jewel Enterprises based on the percentage of work completed against a project. Cash call accuracy depends on accurate line-item completion data — this is the central data-flow concern of the initial platform.
-
 **Cashflow Forecast**
-A projection of incoming and outgoing cash across the business, produced by the Accountant for the Managing Director. Depends on real-time-ish completion data per project and the timing of cash calls.
+A projection of incoming and outgoing cash across the business, produced by the Accountant for the Managing Director. Depends on real-time-ish completion data per project and the timing of valuation invoices.
 
 **Cost Code**
-A reference defined by a client architect, used to categorise work for the architect's own billing and reporting. Cost codes must be referenceable from line items, completion records, and cash-call documentation tied to that architect's tender.
+A reference defined by a client architect, used to categorise work for the architect's own billing and reporting. Cost codes must be referenceable from line items, completion records, and valuation-invoice documentation tied to that architect's tender.
 
 **Drawing**
 A construction drawing attached to a tender (CAD export, PDF, etc.) defining what needs to be built.
@@ -43,5 +40,8 @@ A package of drawings and specifications sent by an Architect to Jewel Enterpris
 **Timesheet**
 A record of time spent on a project by a Subcontractor, used for cost tracking and payment.
 
+**Valuation Invoice** *(formerly "Cash Call")*
+The canonical term for an amount of money Jewel has claimed for the client to pay, raised against the current valuation based on the percentage of work completed. Lifecycle: Raised → Issued (counts toward certified/invoiced to date) → Paid. Valuation-invoice accuracy depends on accurate line-item completion data — this is the central data-flow concern of the initial platform. Use "valuation invoice" everywhere; "cash call" survives only in historical meeting notes and old migration files.
+
 **VO (Variation Order)**
-A formal update to a tender's line items, typically arising from an RFI or scope change. Once approved, line items are added, changed, or removed. Completed VO work is billable to the client via the cash-call procedure.
+A formal update to a tender's line items, typically arising from an RFI or scope change. Once approved, line items are added, changed, or removed. Completed VO work is billable to the client via a valuation invoice.
