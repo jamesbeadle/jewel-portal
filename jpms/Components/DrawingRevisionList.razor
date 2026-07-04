@@ -63,6 +63,14 @@
                                     Approve
                                 </button>
                             }
+                            @if (CanManage)
+                            {
+                                <button type="button" disabled="@busy"
+                                        @onclick="() => pendingDelete = revision"
+                                        class="text-xs text-red-600 hover:text-red-700 hover:underline underline-offset-2 disabled:opacity-60">
+                                    Delete
+                                </button>
+                            }
                         </div>
                     </div>
                 </li>
@@ -75,6 +83,22 @@
     }
 </section>
 
+<Modal IsOpen="pendingDelete is not null"
+       Title="Delete revision?"
+       ConfirmLabel="@(busy ? "Deleting…" : "Delete revision")"
+       OnCancel="() => pendingDelete = null"
+       OnConfirm="DeletePendingAsync">
+    <p class="text-sm text-content-muted">
+        This permanently deletes <strong>Rev @pendingDelete?.RevisionLabel</strong>
+        (@pendingDelete?.FileName) and its stored file.
+        @if (pendingDelete?.ApprovalStatus == DrawingApprovalStatus.Approved)
+        {
+            <span> It is the currently approved revision — the drawing will be left with no approved revision.</span>
+        }
+        This cannot be undone.
+    </p>
+</Modal>
+
 @code {
     [Parameter, EditorRequired] public IReadOnlyList<DrawingRevision> Revisions { get; set; } = Array.Empty<DrawingRevision>();
     [Parameter] public string ProjectId { get; set; } = "";
@@ -83,6 +107,7 @@
 
     private bool busy;
     private string? error;
+    private DrawingRevision? pendingDelete;
 
     private bool CanManage =>
         Auth.CurrentRoles.Any(role => role is Role.Admin or Role.ManagingDirector or Role.ProjectManager);
@@ -98,6 +123,29 @@
         catch (Exception ex)
         {
             error = $"Approval failed: {ex.Message}";
+        }
+        finally
+        {
+            busy = false;
+        }
+    }
+
+    private async Task DeletePendingAsync()
+    {
+        if (pendingDelete is null || busy) return;
+        busy = true;
+        error = null;
+        try
+        {
+            // Use the revision's own DrawingId — the component parameter is not supplied on every
+            // page that renders this list (e.g. the ambiguous-revisions view).
+            await DrawingStore.DeleteRevisionAsync(ProjectId, pendingDelete.DrawingId, pendingDelete.DrawingRevisionId, CancellationToken.None);
+            pendingDelete = null;
+        }
+        catch (Exception ex)
+        {
+            error = $"Delete failed: {ex.Message}";
+            pendingDelete = null;
         }
         finally
         {

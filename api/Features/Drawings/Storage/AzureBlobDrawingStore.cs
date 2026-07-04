@@ -64,6 +64,12 @@ public sealed class AzureBlobDrawingStore : IDrawingBlobStore
             length);
     }
 
+    public async Task DeleteAsync(string blobRef, CancellationToken cancellationToken)
+    {
+        var blob = container.GetBlobClient(blobRef);
+        await blob.DeleteIfExistsAsync(cancellationToken: cancellationToken);
+    }
+
     private static string BuildBlobRef(string projectId, string drawingId, string revisionId, string fileName)
     {
         var safeName = Path.GetFileName(fileName);

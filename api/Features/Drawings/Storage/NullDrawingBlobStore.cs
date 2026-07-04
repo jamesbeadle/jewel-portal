@@ -16,4 +16,7 @@ public sealed class NullDrawingBlobStore : IDrawingBlobStore
 
     public Task<DrawingBlob?> OpenAsync(string blobRef, CancellationToken cancellationToken) =>
         throw new InvalidOperationException(Message);
+
+    public Task DeleteAsync(string blobRef, CancellationToken cancellationToken) =>
+        throw new InvalidOperationException(Message);
 }

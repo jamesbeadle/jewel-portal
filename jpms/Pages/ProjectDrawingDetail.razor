@@ -68,12 +68,35 @@ else
                 </div>
                 @if (CanManage)
                 {
-                    <button type="button" @onclick="() => isUploading = !isUploading"
-                            class="rounded-lg bg-accent text-accent-ink font-medium text-sm px-3 py-2 hover:bg-accent-hover transition">
-                        @(isUploading ? "Cancel" : "+ Upload new version")
-                    </button>
+                    <div class="flex items-center gap-2">
+                        <button type="button" @onclick="() => isUploading = !isUploading"
+                                class="rounded-lg bg-accent text-accent-ink font-medium text-sm px-3 py-2 hover:bg-accent-hover transition">
+                            @(isUploading ? "Cancel" : "+ Upload new version")
+                        </button>
+                        <button type="button" disabled="@deleteBusy" @onclick="() => confirmingDelete = true"
+                                class="rounded-lg border border-red-300 text-red-700 font-medium text-sm px-3 py-2 hover:bg-red-50 transition disabled:opacity-60">
+                            Delete drawing
+                        </button>
+                    </div>
                 }
             </header>
+
+            @if (deleteError is not null)
+            {
+                <p class="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-2.5 text-sm text-red-700">@deleteError</p>
+            }
+
+            <Modal IsOpen="confirmingDelete"
+                   Title="Delete drawing?"
+                   ConfirmLabel="@(deleteBusy ? "Deleting…" : "Delete drawing")"
+                   OnCancel="() => confirmingDelete = false"
+                   OnConfirm="DeleteDrawingAsync">
+                <p class="text-sm text-content-muted">
+                    This permanently deletes <strong>@drawing.DrawingCode · @drawing.Title</strong>,
+                    including all @DrawingStore.RevisionsFor(drawing.DrawingId).Count revision(s) and their files.
+                    This cannot be undone.
+                </p>
+            </Modal>
 
             @if (isUploading)
             {
@@ -129,6 +152,9 @@ else
 
     private bool isLoaded;
     private bool isUploading;
+    private bool confirmingDelete;
+    private bool deleteBusy;
+    private string? deleteError;
     private Drawing? drawing;
 
     private bool CanManage =>
@@ -191,6 +217,28 @@ else
         $"/api/drawings/revisions/{revision.DrawingRevisionId}/file{(inline ? "?inline=1" : "")}";
 
     private string DrawingHref(Drawing target) => $"/projects/{ProjectId}/drawings/{target.DrawingId}";
+
+    private async Task DeleteDrawingAsync()
+    {
+        if (drawing is null || deleteBusy) return;
+        deleteBusy = true;
+        deleteError = null;
+        try
+        {
+            await DrawingStore.DeleteDrawingAsync(ProjectId, drawing.DrawingId, CancellationToken.None);
+            confirmingDelete = false;
+            Nav.NavigateTo($"/projects/{ProjectId}/drawings");
+        }
+        catch (Exception ex)
+        {
+            confirmingDelete = false;
+            deleteError = $"Delete failed: {ex.Message}";
+        }
+        finally
+        {
+            deleteBusy = false;
+        }
+    }
 
     private void HandleChange() { Reload(); StateHasChanged(); }
 

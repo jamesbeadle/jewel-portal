@@ -1,3 +1,4 @@
+using Jewel.JPMS.Contracts.Cqrs;
 using Jewel.JPMS.Contracts.Drawings;
 using Jewel.JPMS.Cqrs;
 using Jewel.JPMS.Models;
@@ -44,6 +45,18 @@ public static class DrawingsRouteRegistration
                 {
                     var approve = (ApproveDrawingRevision)command;
                     return $"/api/drawings/{approve.DrawingId}/revisions/{approve.DrawingRevisionId}/approve";
+                }));
+
+        commands.Register<DeleteDrawing, Acknowledgement>(
+            new CommandRoute("DELETE", "/api/drawings/{drawingId}",
+                command => $"/api/drawings/{((DeleteDrawing)command).DrawingId}"));
+
+        commands.Register<DeleteDrawingRevision, Acknowledgement>(
+            new CommandRoute("DELETE", "/api/drawings/{drawingId}/revisions/{revisionId}",
+                command =>
+                {
+                    var delete = (DeleteDrawingRevision)command;
+                    return $"/api/drawings/{delete.DrawingId}/revisions/{delete.DrawingRevisionId}";
                 }));
     }
 }

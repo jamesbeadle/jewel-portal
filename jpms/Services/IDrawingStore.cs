@@ -31,5 +31,13 @@ public interface IDrawingStore
     /// <summary>Approves a revision — it becomes the latest and all others are archived.</summary>
     Task ApproveRevisionAsync(string projectId, string drawingId, string revisionId, CancellationToken cancellationToken);
 
+    /// <summary>Permanently deletes a drawing, all of its revisions and their stored files.
+    /// Administrator, Managing Director and Project Manager only; cannot be undone.</summary>
+    Task DeleteDrawingAsync(string projectId, string drawingId, CancellationToken cancellationToken);
+
+    /// <summary>Permanently deletes a single revision and its stored file. Administrator,
+    /// Managing Director and Project Manager only; cannot be undone.</summary>
+    Task DeleteRevisionAsync(string projectId, string drawingId, string revisionId, CancellationToken cancellationToken);
+
     event Action? OnChange;
 }

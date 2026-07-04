@@ -13,6 +13,9 @@ public interface IDrawingBlobStore
 
     /// <summary>Opens a stored file by its blob reference, or null if it no longer exists.</summary>
     Task<DrawingBlob?> OpenAsync(string blobRef, CancellationToken cancellationToken);
+
+    /// <summary>Deletes a stored file by its blob reference. Deleting a missing blob is a no-op.</summary>
+    Task DeleteAsync(string blobRef, CancellationToken cancellationToken);
 }
 
 public sealed record DrawingBlob(Stream Content, string ContentType, long Length);

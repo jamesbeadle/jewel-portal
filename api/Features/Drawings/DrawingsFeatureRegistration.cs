@@ -2,6 +2,7 @@ using Jewel.JPMS.Api.Cqrs;
 using Jewel.JPMS.Api.Features.Drawings.Commands;
 using Jewel.JPMS.Api.Features.Drawings.Queries;
 using Jewel.JPMS.Api.Features.Drawings.Storage;
+using Jewel.JPMS.Contracts.Cqrs;
 using Jewel.JPMS.Contracts.Drawings;
 using Jewel.JPMS.Models;
 using Microsoft.Extensions.Configuration;
@@ -34,6 +35,14 @@ public static class DrawingsFeatureRegistration
         services.AddScoped<ICommandHandler<ApproveDrawingRevision, DrawingRevision>, ApproveDrawingRevisionHandler>();
         services.AddScoped<ApproveDrawingRevisionAuthorisation>();
         services.AddScoped<ApproveDrawingRevisionValidation>();
+
+        services.AddScoped<ICommandHandler<DeleteDrawing, Acknowledgement>, DeleteDrawingHandler>();
+        services.AddScoped<DeleteDrawingAuthorisation>();
+        services.AddScoped<DeleteDrawingValidation>();
+
+        services.AddScoped<ICommandHandler<DeleteDrawingRevision, Acknowledgement>, DeleteDrawingRevisionHandler>();
+        services.AddScoped<DeleteDrawingRevisionAuthorisation>();
+        services.AddScoped<DeleteDrawingRevisionValidation>();
 
         return services;
     }

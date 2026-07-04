@@ -101,6 +101,18 @@ public sealed class HttpDrawingStore : IDrawingStore
         RefreshInBackground(projectId, drawingId);
     }
 
+    public async Task DeleteDrawingAsync(string projectId, string drawingId, CancellationToken cancellationToken)
+    {
+        await commands.SendAsync(new DeleteDrawing(drawingId), cancellationToken);
+        RefreshInBackground(projectId, null);
+    }
+
+    public async Task DeleteRevisionAsync(string projectId, string drawingId, string revisionId, CancellationToken cancellationToken)
+    {
+        await commands.SendAsync(new DeleteDrawingRevision(drawingId, revisionId), cancellationToken);
+        RefreshInBackground(projectId, drawingId);
+    }
+
     // Refreshes revisions (optional) then drawings without blocking the caller. Views update
     // via readModel.OnChanged when the refresh lands. Refreshing revisions first marks the
     // drawing as loaded before any OnChanged re-render, so it cannot spawn a duplicate fetch.
