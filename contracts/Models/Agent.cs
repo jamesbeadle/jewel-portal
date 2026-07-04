@@ -12,7 +12,8 @@ public enum RecordType
     Scheduling = 3,        // a project's scheduling bucket — one per project, feeds the Schedule tab
     Todo = 4,              // a project to-do item — created at triage or on the project's Overview tab
     Lad = 5,               // a Liquidated Damages claim — a claims document on the Schedule tab
-    Variation = 6          // a Variation Order — the approved change feeding the valuation report
+    Variation = 6,         // a Variation Order — the approved change feeding the valuation report
+    VariationQuote = 7     // a Variation Order Quote (VOQ) — the pre-approval quote a VO is raised from
 }
 
 // The discipline an agent belongs to. Mirrors the columns of the request-agent flow diagram:

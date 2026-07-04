@@ -776,7 +776,7 @@ else
     // the providers registered server-side; adding a type here surfaces it once its provider exists.
     private static readonly RecordType[] RecordTypeOptions =
     {
-        RecordType.Request, RecordType.BidPackageInvite, RecordType.CostCentre, RecordType.Scheduling, RecordType.Variation, RecordType.Todo
+        RecordType.Request, RecordType.BidPackageInvite, RecordType.CostCentre, RecordType.Scheduling, RecordType.VariationQuote, RecordType.Variation, RecordType.Todo
     };
 
     // The subset offered by the "Create new" picker. Cost centres come from the global master, so an
@@ -795,6 +795,7 @@ else
         RecordType.CostCentre       => "Cost Centre",
         RecordType.Scheduling       => "Scheduling",
         RecordType.Variation        => "Variation Order",
+        RecordType.VariationQuote   => "Variation Order Quote",
         RecordType.Lad              => "LADs claim",
         RecordType.Todo             => "To-do item",
         _                           => type.ToString()
@@ -805,7 +806,8 @@ else
     private static string RecordTypeLabelPlural(RecordType type) => type switch
     {
         RecordType.Scheduling => "scheduling records",
-        RecordType.Variation  => "variation orders",
+        RecordType.Variation      => "variation orders",
+        RecordType.VariationQuote => "variation order quotes",
         RecordType.Lad        => "LADs claims",
         RecordType.Todo       => "to-do items",
         _                     => $"{RecordTypeLabel(type).ToLowerInvariant()}s"
@@ -814,7 +816,8 @@ else
     private static string RecordTypeLabelSingular(RecordType type) => type switch
     {
         RecordType.Scheduling => "scheduling record",
-        RecordType.Variation  => "variation order",
+        RecordType.Variation      => "variation order",
+        RecordType.VariationQuote => "variation order quote",
         RecordType.Lad        => "LADs claim",
         RecordType.Todo       => "to-do item",
         _                     => RecordTypeLabel(type).ToLowerInvariant()
