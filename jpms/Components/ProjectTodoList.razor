@@ -204,11 +204,27 @@
         {
             busy = true;
             await action();
-            items = await Todos.ListForProjectAsync(ProjectId);
+            items = PreserveOrder(items, await Todos.ListForProjectAsync(ProjectId));
         }
         catch (CommandFailedException ex) { error = ex.Message; }
         catch { error = "That action didn't complete. Please try again."; }
         finally { busy = false; }
+    }
+
+    // Keep rows where they are while the user works the list: without this, ticking an item makes the
+    // reloaded list re-sort it into the done pile at the bottom, which reads as "I clicked the top item
+    // and the bottom one got checked". Existing items keep their on-screen position (a ticked item is
+    // struck through in place); new items append at the end. The server's open-first/done-pile order
+    // still applies fresh the next time the tab loads.
+    private static IReadOnlyList<TodoItem> PreserveOrder(IReadOnlyList<TodoItem> current, IReadOnlyList<TodoItem> refreshed)
+    {
+        var position = current
+            .Select((item, index) => (item.TodoItemId, index))
+            .ToDictionary(entry => entry.TodoItemId, entry => entry.index);
+        return refreshed
+            .OrderBy(item => position.TryGetValue(item.TodoItemId, out var index) ? index : int.MaxValue)
+            .ToList()
+            .AsReadOnly();
     }
 
     private static bool IsOverdue(TodoItem item) =>
