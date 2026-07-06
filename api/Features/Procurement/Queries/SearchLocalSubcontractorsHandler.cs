@@ -74,13 +74,16 @@ public sealed class SearchLocalSubcontractorsHandler
         // its own short timeout, so one slow site can't stall the search.
         var mapped = await Task.WhenAll(found.Hits.Select(async hit =>
         {
-            var name = CompanyNameFrom(hit.Title, hit.Domain);
+            var contact = await contactFinder.FindAsync(hit.Url, cancellationToken);
+
+            // The persisted name comes from the company's own site (og:site_name / <title>); the
+            // search-result title is only a transient display fallback.
+            var name = contact.Name ?? CompanyNameFrom(hit.Title, hit.Domain);
 
             var known = byDomain.TryGetValue(hit.Domain, out var matched) ? matched
                 : byName.TryGetValue(name, out matched) ? matched
                 : null;
 
-            var contact = await contactFinder.FindAsync(hit.Url, cancellationToken);
             var email = known is not null && !string.IsNullOrWhiteSpace(known.ContactEmail)
                 ? known.ContactEmail
                 : contact.Email;

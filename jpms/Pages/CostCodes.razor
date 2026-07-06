@@ -46,6 +46,21 @@ else
         }
         else
         {
+            <div class="mb-3 flex items-center justify-end">
+                <label class="flex items-center gap-2 text-sm text-content-muted cursor-pointer select-none">
+                    <input type="checkbox" checked="@showRetired" @onchange="e => showRetired = (bool)e.Value!" />
+                    <span>Show retired</span>
+                </label>
+            </div>
+
+            @if (VisibleCostCodes.Count == 0)
+            {
+                <div class="panel p-8 text-center text-sm text-content-subtle">
+                    No active cost codes. Turn on "Show retired" to see retired codes.
+                </div>
+            }
+            else
+            {
             <div class="panel overflow-hidden">
                 <table class="w-full text-sm">
                     <thead>
@@ -58,7 +73,7 @@ else
                         </tr>
                     </thead>
                     <tbody>
-                        @foreach (var costCode in costCodes)
+                        @foreach (var costCode in VisibleCostCodes)
                         {
                             <tr class="border-b border-line last:border-0 @(costCode.IsActive ? "" : "opacity-60")">
                                 <td class="px-4 py-3 font-medium text-content whitespace-nowrap">@costCode.Code</td>
@@ -85,6 +100,7 @@ else
                     </tbody>
                 </table>
             </div>
+            }
         }
     </section>
 
@@ -129,6 +145,10 @@ else
     private string? loadError;
     private string? formError;
     private IReadOnlyList<CostCenter> costCodes = Array.Empty<CostCenter>();
+    private bool showRetired;
+
+    private IReadOnlyList<CostCenter> VisibleCostCodes =>
+        showRetired ? costCodes : costCodes.Where(c => c.IsActive).ToList();
 
     private bool CanManage => Session.AvailableRoles.Any(role =>
         role is Role.Admin or Role.ManagingDirector or Role.FinanceDirector or Role.QuantitySurveyor);

@@ -15,8 +15,10 @@ public interface IWebsiteContactFinder
     Task<WebsiteContact> FindAsync(string websiteUrl, CancellationToken ct);
 }
 
-/// <summary>What was found on the site — either field may be null.</summary>
-public sealed record WebsiteContact(string? Email, string? Phone)
+/// <summary>What was found on the site — any field may be null. Name comes from the site's own
+/// og:site_name or &lt;title&gt;, so persisted company details originate from the company itself
+/// rather than from search-result content (which must stay transient).</summary>
+public sealed record WebsiteContact(string? Email, string? Phone, string? Name = null)
 {
     public static readonly WebsiteContact None = new(null, null);
 }
@@ -39,6 +41,14 @@ public sealed class WebsiteContactFinder : IWebsiteContactFinder
     private static readonly Regex UkPhonePattern = new(
         @"(?:\+44\s?\(?0?\)?\s?\d{2,4}|\(?0\d{2,4}\)?)[\s.\-]?\d{3,4}[\s.\-]?\d{3,4}",
         RegexOptions.Compiled);
+
+    private static readonly Regex SiteNamePattern = new(
+        @"property\s*=\s*[""']og:site_name[""']\s+content\s*=\s*[""']([^""']+)[""']|content\s*=\s*[""']([^""']+)[""']\s+property\s*=\s*[""']og:site_name[""']",
+        RegexOptions.Compiled | RegexOptions.IgnoreCase);
+
+    private static readonly Regex TitleTagPattern = new(
+        @"<title[^>]*>\s*([^<]+?)\s*</title>",
+        RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
     // Obvious non-contact matches: asset filenames, tracking/CMS domains, placeholder addresses.
     private static readonly string[] JunkFragments =
@@ -70,7 +80,11 @@ public sealed class WebsiteContactFinder : IWebsiteContactFinder
             if (!Uri.TryCreate(uri, path, out var contactUri)) continue;
             var fromContactPage = await FindOnPageAsync(contactUri, ct);
             if (fromContactPage.Email is not null)
-                return fromContactPage with { Phone = fromContactPage.Phone ?? contact.Phone };
+                return fromContactPage with
+                {
+                    Phone = fromContactPage.Phone ?? contact.Phone,
+                    Name = contact.Name ?? fromContactPage.Name // homepage names the business best
+                };
         }
         return contact;
     }
@@ -89,7 +103,7 @@ public sealed class WebsiteContactFinder : IWebsiteContactFinder
             var html = await response.Content.ReadAsStringAsync(timeout.Token);
             if (html.Length == 0) return WebsiteContact.None;
 
-            return new WebsiteContact(FindEmail(html), FindPhone(html));
+            return new WebsiteContact(FindEmail(html), FindPhone(html), FindName(html));
         }
         catch (Exception ex) when (ex is not OperationCanceledException || !ct.IsCancellationRequested)
         {
@@ -120,6 +134,31 @@ public sealed class WebsiteContactFinder : IWebsiteContactFinder
             .OrderByDescending(c => c.StartsWith("info@") || c.StartsWith("contact@")
                 || c.StartsWith("hello@") || c.StartsWith("enquiries@") || c.StartsWith("office@") || c.StartsWith("sales@"))
             .First();
+    }
+
+    // og:site_name is the site naming itself; otherwise the first meaningful <title> segment
+    // ("SilvaTree Landscaping | Garden Design Bromley" → "SilvaTree Landscaping").
+    private static string? FindName(string html)
+    {
+        var og = SiteNamePattern.Match(html);
+        if (og.Success)
+        {
+            var name = System.Net.WebUtility.HtmlDecode((og.Groups[1].Value + og.Groups[2].Value).Trim());
+            if (name.Length >= 3) return name;
+        }
+
+        var title = TitleTagPattern.Match(html);
+        if (!title.Success) return null;
+        var segments = System.Net.WebUtility.HtmlDecode(title.Groups[1].Value)
+            .Split(new[] { '|', '-', '–', '—', '·' }, StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
+        foreach (var segment in segments)
+        {
+            if (segment.Length < 3) continue;
+            if (segment.Equals("home", StringComparison.OrdinalIgnoreCase)) continue;
+            if (segment.Equals("welcome", StringComparison.OrdinalIgnoreCase)) continue;
+            return segment;
+        }
+        return null;
     }
 
     private static string? FindPhone(string html)
