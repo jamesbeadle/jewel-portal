@@ -6,4 +6,6 @@ internal static class SubcontractorIdentifierFactory
 
     public static string NextSubcontractorId() => Guid.NewGuid().ToString(CompactGuidFormat);
     public static string NextComplianceDocumentId() => Guid.NewGuid().ToString(CompactGuidFormat);
+    public static string NextTradeId() => Guid.NewGuid().ToString(CompactGuidFormat);
+    public static string NextSubcontractorTradeId() => Guid.NewGuid().ToString(CompactGuidFormat);
 }

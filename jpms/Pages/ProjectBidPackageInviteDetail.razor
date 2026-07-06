@@ -129,7 +129,7 @@ else
                                                 <span class="block text-xs text-content-subtle">@sub.ContactEmail</span>
                                             }
                                         </td>
-                                        <td class="px-4 py-3 text-content-muted hidden sm:table-cell">@(sub?.PrimaryTrade ?? "")</td>
+                                        <td class="px-4 py-3 text-content-muted hidden sm:table-cell">@(sub?.TradesLabel ?? "")</td>
                                         <td class="px-4 py-3 text-content-subtle">@recipient.InvitedAt.LocalDateTime.ToString("d MMM yyyy, HH:mm")</td>
                                         <td class="px-4 py-3 text-content-muted">@recipient.Status</td>
                                         <td class="px-4 py-3 text-right">
@@ -459,7 +459,7 @@ else
                         <input type="checkbox" checked="@selected.Contains(sub.SubcontractorId)"
                                @onchange="e => Toggle(sub.SubcontractorId, e)" />
                         <span class="font-medium">@sub.CompanyName</span>
-                        <span class="text-content-subtle">· @sub.PrimaryTrade</span>
+                        <span class="text-content-subtle">· @sub.TradesLabel</span>
                         @if (string.IsNullOrWhiteSpace(sub.ContactEmail))
                         {
                             <span class="inline-flex items-center rounded-full bg-amber-50 border border-amber-200 px-1.5 py-0.5 text-[10px] font-medium text-amber-800">No email</span>
@@ -476,7 +476,13 @@ else
             <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
                 <input class="field" placeholder="Company or name *" @bind="quickAddName" @bind:event="oninput" />
                 <input class="field" type="email" placeholder="Email address *" @bind="quickAddEmail" @bind:event="oninput" />
-                <input class="field" placeholder="Trade *" @bind="quickAddTrade" @bind:event="oninput" />
+                <select class="field" @bind="quickAddTradeId">
+                    <option value="">Trade…</option>
+                    @foreach (var trade in Subs.Trades())
+                    {
+                        <option value="@trade.TradeId">@trade.Name</option>
+                    }
+                </select>
             </div>
             @if (quickAddPartial)
             {
@@ -1123,23 +1129,40 @@ else
         selected.Clear();
         subSearch = "";
         // Trade is required by the directory — prefill with the package's trade so quick-add just works.
-        if (string.IsNullOrWhiteSpace(quickAddTrade))
-            quickAddTrade = package?.Trade ?? "";
+        if (string.IsNullOrWhiteSpace(quickAddTradeId))
+            quickAddTradeId = CuratedTradeIdFor(package?.Trade) ?? "";
         // Pre-filter to the package's trade when the directory knows it — one less tap.
         tradeFilter = InvitableTrades()
             .FirstOrDefault(t => string.Equals(t, package?.Trade, StringComparison.OrdinalIgnoreCase));
         showInviteModal = true;
     }
 
-    // The distinct trades among companies that could be invited (never clients/architects).
+    // The distinct trade names among companies that could be invited (never clients/architects).
+    // A company with several trades appears under each of them.
     private IReadOnlyList<string> InvitableTrades() =>
         Subs.All()
             .Where(s => s.Category is DirectoryCategory.Subcontractor or DirectoryCategory.Supplier)
-            .Select(s => (s.PrimaryTrade ?? "").Trim())
+            .SelectMany(s => s.Trades)
+            .Select(t => t.Name.Trim())
             .Where(t => t.Length > 0)
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .OrderBy(t => t, StringComparer.OrdinalIgnoreCase)
             .ToList();
+
+    // The curated trade id for a trade name, when the list knows it.
+    private string? CuratedTradeIdFor(string? name) =>
+        string.IsNullOrWhiteSpace(name) ? null
+        : Subs.Trades().FirstOrDefault(t => string.Equals(t.Name, name.Trim(), StringComparison.OrdinalIgnoreCase))?.TradeId;
+
+    // Resolves a trade name to a curated trade id, adding it to the curated list if new — the
+    // server normalises and de-duplicates, so this never mints case-variant duplicates.
+    private async Task<string> EnsureTradeIdAsync(string? name)
+    {
+        var trimmed = string.IsNullOrWhiteSpace(name) ? "General" : name.Trim();
+        if (CuratedTradeIdFor(trimmed) is string existing) return existing;
+        var created = await Commands.SendAsync(new AddTrade(trimmed), CancellationToken.None);
+        return created.TradeId;
+    }
 
     private void CloseInviteModal() => showInviteModal = false;
 
@@ -1153,10 +1176,12 @@ else
             // Only companies we tender to — never clients or architects.
             .Where(s => s.Category is DirectoryCategory.Subcontractor or DirectoryCategory.Supplier)
             .Where(s => !invited.Contains(s.SubcontractorId))
-            .Where(s => tradeFilter is null || string.Equals((s.PrimaryTrade ?? "").Trim(), tradeFilter, StringComparison.OrdinalIgnoreCase))
+            // Any of the company's trades counts — "Boarding" and "Plastering" both surface a
+            // company that carries both, where the old free-text compound string never matched.
+            .Where(s => tradeFilter is null || s.Trades.Any(t => string.Equals(t.Name.Trim(), tradeFilter, StringComparison.OrdinalIgnoreCase)))
             .Where(s => q.Length == 0
                 || (s.CompanyName ?? "").Contains(q, StringComparison.OrdinalIgnoreCase)
-                || (s.PrimaryTrade ?? "").Contains(q, StringComparison.OrdinalIgnoreCase)
+                || s.Trades.Any(t => t.Name.Contains(q, StringComparison.OrdinalIgnoreCase))
                 || (s.ContactName ?? "").Contains(q, StringComparison.OrdinalIgnoreCase))
             .ToList();
     }
@@ -1171,7 +1196,7 @@ else
 
     private string quickAddName = "";
     private string quickAddEmail = "";
-    private string quickAddTrade = "";
+    private string quickAddTradeId = "";
 
     private bool QuickAddReady =>
         !string.IsNullOrWhiteSpace(quickAddName)
@@ -1195,11 +1220,11 @@ else
             {
                 // Save the ad-hoc contact to the directory first, then invite like any other.
                 // The directory requires a trade — fall back to the package's, then "General".
-                var trade = !string.IsNullOrWhiteSpace(quickAddTrade) ? quickAddTrade.Trim()
-                    : !string.IsNullOrWhiteSpace(package?.Trade) ? package!.Trade : "General";
+                var tradeId = !string.IsNullOrWhiteSpace(quickAddTradeId) ? quickAddTradeId
+                    : await EnsureTradeIdAsync(package?.Trade);
                 var created = await Commands.SendAsync(
                     new AddSubcontractorToDirectory(
-                        quickAddName.Trim(), trade, quickAddName.Trim(),
+                        quickAddName.Trim(), new[] { tradeId }, quickAddName.Trim(),
                         quickAddEmail.Trim(), "", ""), CancellationToken.None);
                 ids.Add(created.SubcontractorId);
                 await SubsReadModel.RefreshAsync(CancellationToken.None);
@@ -1207,7 +1232,7 @@ else
             recipients = await Commands.SendAsync(
                 new InviteSubcontractorsToBidPackage(BidPackageId, ids), CancellationToken.None);
             selected.Clear();
-            quickAddName = quickAddEmail = quickAddTrade = "";
+            quickAddName = quickAddEmail = quickAddTradeId = "";
             showInviteModal = false;
             package = await Queries.AskAsync(new GetBidPackageById(BidPackageId), CancellationToken.None);
         }
@@ -1227,11 +1252,14 @@ else
     private readonly List<LocalSubcontractor> findResults = new();
     private readonly Dictionary<string, LocalSubcontractor> selectedPlaces = new(StringComparer.Ordinal);
 
-    // The directory's trades, with the package's own trade offered even if nothing in the
-    // directory carries it yet.
+    // The curated trade list, with the package's own trade offered even if the curated list
+    // doesn't know it yet (searching can precede curating).
     private IReadOnlyList<string> FindTradeOptions()
     {
-        var trades = InvitableTrades().ToList();
+        var trades = Subs.Trades()
+            .Select(t => t.Name)
+            .OrderBy(t => t, StringComparer.OrdinalIgnoreCase)
+            .ToList();
         if (!string.IsNullOrWhiteSpace(package?.Trade)
             && !trades.Contains(package!.Trade, StringComparer.OrdinalIgnoreCase))
         {
@@ -1317,7 +1345,7 @@ else
                     {
                         await Commands.SendAsync(
                             new UpdateSubcontractor(
-                                existing!.SubcontractorId, existing.CompanyName, existing.PrimaryTrade, existing.ContactName,
+                                existing!.SubcontractorId, existing.CompanyName, existing.Trades.Select(t => t.TradeId).ToList(), existing.ContactName,
                                 needsEmail ? place.Email! : existing.ContactEmail,
                                 needsPhone ? place.Phone! : existing.ContactPhone,
                                 existing.CisStatus),
@@ -1328,7 +1356,7 @@ else
                 }
                 var created = await Commands.SendAsync(
                     new AddSubcontractorToDirectory(
-                        place.Name, findTrade.Trim(), "", place.Email ?? "", place.Phone ?? "", "",
+                        place.Name, new[] { await EnsureTradeIdAsync(findTrade) }, "", place.Email ?? "", place.Phone ?? "", "",
                         DirectoryCategory.Subcontractor, "", "", "", place.Website ?? ""),
                     CancellationToken.None);
                 ids.Add(created.SubcontractorId);

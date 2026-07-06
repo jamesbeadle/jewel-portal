@@ -5,7 +5,7 @@ namespace Jewel.JPMS.Contracts.Subcontractors;
 
 public sealed record AddSubcontractorToDirectory(
     string CompanyName,
-    string PrimaryTrade,
+    IReadOnlyList<string> TradeIds,
     string ContactName,
     string ContactEmail,
     string ContactPhone,

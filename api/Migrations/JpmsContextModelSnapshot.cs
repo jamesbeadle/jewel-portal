@@ -2573,11 +2573,6 @@ namespace Jewel.JPMS.Api.Migrations
                     b.Property<DateTimeOffset>("OnboardedAt")
                         .HasColumnType("datetimeoffset");
 
-                    b.Property<string>("PrimaryTrade")
-                        .IsRequired()
-                        .HasMaxLength(64)
-                        .HasColumnType("nvarchar(64)");
-
                     b.Property<int>("Category")
                         .HasColumnType("int");
 
@@ -2651,6 +2646,52 @@ namespace Jewel.JPMS.Api.Migrations
                     b.HasKey("SubcontractorRetentionId");
 
                     b.ToTable("SubcontractorRetentions");
+                });
+
+            modelBuilder.Entity("Jewel.JPMS.Api.Data.Entities.SubcontractorTradeEntity", b =>
+                {
+                    b.Property<string>("SubcontractorTradeId")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<string>("SubcontractorId")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<string>("TradeId")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.HasKey("SubcontractorTradeId");
+
+                    b.HasIndex("SubcontractorId", "TradeId")
+                        .IsUnique();
+
+                    b.ToTable("SubcontractorTrades");
+                });
+
+            modelBuilder.Entity("Jewel.JPMS.Api.Data.Entities.TradeEntity", b =>
+                {
+                    b.Property<string>("TradeId")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.HasKey("TradeId");
+
+                    b.HasIndex("Name")
+                        .IsUnique();
+
+                    b.ToTable("Trades");
                 });
 
             modelBuilder.Entity("Jewel.JPMS.Api.Data.Entities.TimesheetEntity", b =>

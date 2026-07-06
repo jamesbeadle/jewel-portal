@@ -16,6 +16,15 @@ public static class CostCentersRouteRegistration
     public static void RegisterCostCentersRoutes(QueryRouteTable queries, CommandRouteTable commands)
     {
         queries.Register<ListCostCenters, IReadOnlyList<CostCenter>>(
-            new QueryRoute("/api/cost-centers", _ => "/api/cost-centers"));
+            new QueryRoute("/api/cost-centers",
+                query => ((ListCostCenters)query).IncludeInactive
+                    ? "/api/cost-centers?includeInactive=true"
+                    : "/api/cost-centers"));
+
+        commands.Register<AddCostCenter, CostCenter>(CommandRoute.Post("/api/cost-centers"));
+
+        commands.Register<ReviseCostCenter, CostCenter>(
+            new CommandRoute("PUT", "/api/cost-centers/{costCenterId}",
+                command => $"/api/cost-centers/{((ReviseCostCenter)command).CostCenterId}"));
     }
 }

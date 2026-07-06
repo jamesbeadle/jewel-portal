@@ -47,8 +47,51 @@ else
 
         <header class="mb-6">
             <h1 class="text-2xl md:text-3xl font-semibold text-content">@subcontractor.CompanyName</h1>
-            <p class="text-sm text-content-muted mt-1">@subcontractor.PrimaryTrade · @subcontractor.ContactName · @subcontractor.ContactEmail</p>
+            <p class="text-sm text-content-muted mt-1">@ContactLine(subcontractor)</p>
         </header>
+
+        @* Trades are managed here: each is a chip from the curated list, so when a company changes
+           what it does (no longer a bricklayer, now a hod carrier) the record is updated in place. *@
+        <div class="rounded-xl border border-line bg-surface p-4 mb-6">
+            <div class="flex items-center justify-between mb-3">
+                <h2 class="text-sm font-semibold text-content">Trades</h2>
+                @if (tradesNote is not null)
+                {
+                    <span class="text-xs text-content-subtle">@tradesNote</span>
+                }
+            </div>
+            @if (tradesError is not null)
+            {
+                <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-3">@tradesError</p>
+            }
+            <div class="flex flex-wrap gap-1.5 mb-3">
+                @if (subcontractor.Trades.Count == 0)
+                {
+                    <span class="text-sm text-content-subtle italic">No trades recorded.</span>
+                }
+                @foreach (var trade in subcontractor.Trades)
+                {
+                    <span class="inline-flex items-center gap-1.5 rounded-full bg-surface-raised border border-line px-2.5 py-1 text-xs font-medium text-content-muted">
+                        @trade.Name
+                        <button type="button" class="text-content-subtle hover:text-content" title="Remove @trade.Name"
+                                disabled="@tradesBusy" @onclick="() => RemoveTrade(trade.TradeId)">×</button>
+                    </span>
+                }
+            </div>
+            <div class="flex flex-wrap gap-2">
+                <select class="field w-56" value="" disabled="@tradesBusy" @onchange="AddExistingTrade">
+                    <option value="">Add a trade…</option>
+                    @foreach (var trade in SubcontractorStore.Trades().Where(t => !subcontractor.HasTrade(t.TradeId)))
+                    {
+                        <option value="@trade.TradeId">@trade.Name</option>
+                    }
+                </select>
+                <input class="field w-56" placeholder="New trade, e.g. Hod carrier" @bind="newTradeName" @bind:event="oninput" />
+                <button type="button" class="btn-secondary" disabled="@(tradesBusy || string.IsNullOrWhiteSpace(newTradeName))" @onclick="AddNewTrade">
+                    @(tradesBusy ? "Saving…" : "Add new trade")
+                </button>
+            </div>
+        </div>
 
         <SubcontractorComplianceList SubcontractorId="@subcontractor.SubcontractorId" />
     </section>
@@ -79,4 +122,63 @@ else
     private void HandleChange() { Reload(); StateHasChanged(); }
 
     public void Dispose() => SubcontractorStore.OnChange -= HandleChange;
+
+    private static string ContactLine(Subcontractor sub) =>
+        string.Join(" · ", new[] { sub.TradesLabel, sub.ContactName, sub.ContactEmail }.Where(x => !string.IsNullOrWhiteSpace(x)));
+
+    // ---- Trade management ----
+
+    private bool tradesBusy;
+    private string? tradesError;
+    private string? tradesNote;
+    private string newTradeName = "";
+
+    private async Task AddExistingTrade(ChangeEventArgs e)
+    {
+        var tradeId = e.Value?.ToString();
+        if (string.IsNullOrEmpty(tradeId) || subcontractor is null || subcontractor.HasTrade(tradeId)) return;
+        await SaveTrades(subcontractor.Trades.Select(t => t.TradeId).Append(tradeId).ToList());
+    }
+
+    private async Task RemoveTrade(string tradeId)
+    {
+        if (subcontractor is null) return;
+        await SaveTrades(subcontractor.Trades.Where(t => !string.Equals(t.TradeId, tradeId, StringComparison.OrdinalIgnoreCase))
+            .Select(t => t.TradeId).ToList());
+    }
+
+    // Creates the trade in the curated list (or reuses it if the name already exists), then applies it.
+    private async Task AddNewTrade()
+    {
+        if (tradesBusy || subcontractor is null || string.IsNullOrWhiteSpace(newTradeName)) return;
+        tradesError = null; tradesNote = null;
+        try
+        {
+            tradesBusy = true;
+            var trade = await SubcontractorStore.AddTradeAsync(newTradeName.Trim());
+            if (!subcontractor.HasTrade(trade.TradeId))
+                await SubcontractorStore.SetTradesAsync(subcontractor.SubcontractorId,
+                    subcontractor.Trades.Select(t => t.TradeId).Append(trade.TradeId).ToList());
+            newTradeName = "";
+            tradesNote = "Saved.";
+        }
+        catch (CommandFailedException ex) { tradesError = $"Couldn't update trades: {ex.Message}"; }
+        catch { tradesError = "Couldn't update trades. Please try again."; }
+        finally { tradesBusy = false; }
+    }
+
+    private async Task SaveTrades(IReadOnlyList<string> tradeIds)
+    {
+        if (tradesBusy || subcontractor is null) return;
+        tradesError = null; tradesNote = null;
+        try
+        {
+            tradesBusy = true;
+            await SubcontractorStore.SetTradesAsync(subcontractor.SubcontractorId, tradeIds);
+            tradesNote = "Saved.";
+        }
+        catch (CommandFailedException ex) { tradesError = $"Couldn't update trades: {ex.Message}"; }
+        catch { tradesError = "Couldn't update trades. Please try again."; }
+        finally { tradesBusy = false; }
+    }
 }

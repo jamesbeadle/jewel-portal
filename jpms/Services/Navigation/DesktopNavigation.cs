@@ -42,7 +42,9 @@ public static class DesktopNavigation
         // The agent queue mirrors the API's AgentRoles.AllowedToOperateAgents gate (admins see
         // everything via the early return above).
         Entry("Agents",         "/agents",          Role.ManagingDirector, Role.ProjectManager, Role.QuantitySurveyor, Role.SiteManager),
-        Entry("Rates",          "/rate-library",   Role.ManagingDirector, Role.ProjectManager, Role.QuantitySurveyor)
+        Entry("Rates",          "/rate-library",   Role.ManagingDirector, Role.ProjectManager, Role.QuantitySurveyor),
+        // Mirrors the API's cost-centre command authorisation (admins see everything via the early return above).
+        Entry("Cost codes",     "/cost-codes",     Role.ManagingDirector, Role.FinanceDirector, Role.QuantitySurveyor)
     };
 
     private static DesktopNavigationEntry Entry(string label, string href, params Role[] visibleTo) =>

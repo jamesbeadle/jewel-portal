@@ -18,6 +18,7 @@ public sealed class ListCostCentersEndpoint
     public async Task<IActionResult> Run([HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "cost-centers")] HttpRequest request)
     {
         if (await users.ResolveAsync(request, request.HttpContext.RequestAborted) is null) return new UnauthorizedResult();
-        return new OkObjectResult(await handler.HandleAsync(new ListCostCenters(), request.HttpContext.RequestAborted));
+        var includeInactive = string.Equals(request.Query["includeInactive"], "true", StringComparison.OrdinalIgnoreCase);
+        return new OkObjectResult(await handler.HandleAsync(new ListCostCenters(includeInactive), request.HttpContext.RequestAborted));
     }
 }

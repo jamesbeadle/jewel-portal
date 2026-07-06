@@ -17,6 +17,12 @@
 -- Any cost centre NOT in the list below is automatically deactivated
 -- (IsActive = 0) so superseded rows drop out of the Financials view without
 -- being deleted. To retire a cost centre, remove it from the VALUES list.
+--
+-- ⚠ SUPERSEDED FOR DAY-TO-DAY CHANGES: cost codes are now managed in-app on
+-- the Cost codes page (/cost-codes — AddCostCenter / ReviseCostCenter). This
+-- script remains only for bootstrapping an empty database. Do NOT re-run it
+-- against a live database: the NOT MATCHED BY SOURCE clause would retire
+-- every code added or renamed through the app.
 -- ============================================================================
 
 IF OBJECT_ID(N'[dbo].[CostCenters]', N'U') IS NULL

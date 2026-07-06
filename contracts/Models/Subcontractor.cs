@@ -20,13 +20,17 @@ public enum ComplianceStatus
     Missing
 }
 
+// A trade from the curated master list (e.g. "Bricklayer"). Directory records carry a set of these
+// rather than a free-text string, so RFI/bid-package trade filters group reliably.
+public sealed record Trade(string TradeId, string Name);
+
 // A company directory record. Originally subcontractor-only; now any company type (see Category).
 // The id/field names keep the "Subcontractor" prefix for back-compat with existing references
 // (bid-package recipients, compliance docs) while the directory is unified by Category.
 public sealed record Subcontractor(
     string SubcontractorId,
     string CompanyName,
-    string PrimaryTrade,
+    IReadOnlyList<Trade> Trades,
     string ContactName,
     string ContactEmail,
     string ContactPhone,
@@ -38,7 +42,14 @@ public sealed record Subcontractor(
     string County = "",
     string Website = "",
     string Pli = "",
-    string PliExpiry = "");
+    string PliExpiry = "")
+{
+    // Display helper: the trade names joined for one-line contexts (tables, subtitles).
+    public string TradesLabel => string.Join(" · ", Trades.Select(trade => trade.Name));
+
+    public bool HasTrade(string tradeId) =>
+        Trades.Any(trade => string.Equals(trade.TradeId, tradeId, StringComparison.OrdinalIgnoreCase));
+}
 
 public sealed record ComplianceDocument(
     string ComplianceDocumentId,

@@ -1,0 +1,248 @@
+@page "/cost-codes"
+@using Jewel.JPMS.Contracts.CostCenters
+@inject AuthService Auth
+@inject SessionService Session
+@inject ICostCenterStore CostCenters
+@inject NavigationManager Nav
+@implements IDisposable
+
+<PageTitle>Cost codes · JPMS</PageTitle>
+
+@if (!isLoaded)
+{
+    <section class="max-w-5xl mx-auto px-4 py-12 text-content-subtle text-sm">Loading…</section>
+}
+else if (!Session.IsApproved)
+{
+    <RequestAccessView Email="@Auth.CurrentUser!.Email" DisplayName="@Auth.CurrentUser.DisplayName" />
+}
+else if (!CanManage)
+{
+    <section class="max-w-5xl mx-auto px-4 py-12 text-content-subtle text-sm">You don't have access to cost codes.</section>
+}
+else
+{
+    <section class="max-w-5xl mx-auto px-4 py-8 md:py-12">
+        <header class="mb-6 md:mb-8 flex items-end justify-between gap-4">
+            <div>
+                <p class="text-xs uppercase tracking-wider text-content-subtle font-medium mb-1">JPMS · Commercial</p>
+                <h1 class="text-2xl md:text-3xl font-semibold text-content leading-tight">Cost codes</h1>
+                <p class="text-sm text-content-muted mt-2">
+                    The global cost-code master. Every project's financials, valuation report and invoice
+                    allocations group by these codes. Retired codes keep their historical allocations.
+                </p>
+            </div>
+            <button type="button" class="btn-primary shrink-0" @onclick="OpenAdd">New cost code</button>
+        </header>
+
+        @if (loadError is not null)
+        {
+            <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-4">@loadError</p>
+        }
+
+        @if (costCodes.Count == 0)
+        {
+            <div class="panel p-8 text-center text-sm text-content-subtle">No cost codes yet. Add one to start allocating costs.</div>
+        }
+        else
+        {
+            <div class="panel overflow-hidden">
+                <table class="w-full text-sm">
+                    <thead>
+                        <tr class="text-left text-content-subtle border-b border-line">
+                            <th class="px-4 py-3 font-medium">Code</th>
+                            <th class="px-4 py-3 font-medium">Name</th>
+                            <th class="px-4 py-3 font-medium text-right hidden md:table-cell">Sort order</th>
+                            <th class="px-4 py-3 font-medium">Status</th>
+                            <th class="px-4 py-3"></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var costCode in costCodes)
+                        {
+                            <tr class="border-b border-line last:border-0 @(costCode.IsActive ? "" : "opacity-60")">
+                                <td class="px-4 py-3 font-medium text-content whitespace-nowrap">@costCode.Code</td>
+                                <td class="px-4 py-3 text-content-muted">@costCode.Name</td>
+                                <td class="px-4 py-3 text-right text-content-subtle hidden md:table-cell">@costCode.SortOrder</td>
+                                <td class="px-4 py-3">
+                                    @if (costCode.IsActive)
+                                    {
+                                        <span class="inline-flex items-center rounded-full bg-positive/10 text-positive px-2 py-0.5 text-xs font-medium">Active</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="inline-flex items-center rounded-full bg-surface-raised text-content-subtle px-2 py-0.5 text-xs font-medium">Retired</span>
+                                    }
+                                </td>
+                                <td class="px-4 py-3 text-right whitespace-nowrap">
+                                    <button type="button" class="text-sm font-medium text-content-muted hover:text-content mr-3" @onclick="() => OpenEdit(costCode)">Edit</button>
+                                    <button type="button" class="text-sm font-medium text-content-muted hover:text-content" @onclick="() => ToggleActiveAsync(costCode)">
+                                        @(costCode.IsActive ? "Retire" : "Reinstate")
+                                    </button>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </section>
+
+    <Modal IsOpen="adding"
+           Title="New cost code"
+           ConfirmLabel="@(busy ? "Adding…" : "Add cost code")"
+           OnCancel="() => adding = false"
+           OnConfirm="AddAsync"
+           Class="max-w-lg">
+        <div class="space-y-4">
+            @if (formError is not null)
+            {
+                <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@formError</p>
+            }
+            <FormField Label="Code" Value="@formCode" OnChange="v => formCode = v" Required="true" />
+            <FormField Label="Name" Value="@formName" OnChange="v => formName = v" Required="true" />
+            <FormField Label="Sort order (blank to add at the end)" Value="@formSortOrder" OnChange="v => formSortOrder = v" InputType="number" />
+        </div>
+    </Modal>
+
+    <Modal IsOpen="editing"
+           Title="Edit cost code"
+           ConfirmLabel="@(busy ? "Saving…" : "Save changes")"
+           OnCancel="() => editing = false"
+           OnConfirm="SaveEditAsync"
+           Class="max-w-lg">
+        <div class="space-y-4">
+            @if (formError is not null)
+            {
+                <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@formError</p>
+            }
+            <FormField Label="Code" Value="@formCode" OnChange="v => formCode = v" Required="true" />
+            <FormField Label="Name" Value="@formName" OnChange="v => formName = v" Required="true" />
+            <FormField Label="Sort order" Value="@formSortOrder" OnChange="v => formSortOrder = v" InputType="number" />
+        </div>
+    </Modal>
+}
+
+@code {
+    private bool isLoaded;
+    private bool busy;
+    private string? loadError;
+    private string? formError;
+    private IReadOnlyList<CostCenter> costCodes = Array.Empty<CostCenter>();
+
+    private bool CanManage => Session.AvailableRoles.Any(role =>
+        role is Role.Admin or Role.ManagingDirector or Role.FinanceDirector or Role.QuantitySurveyor);
+
+    private bool adding;
+    private bool editing;
+    private CostCenter? editTarget;
+    private string formCode = "";
+    private string formName = "";
+    private string formSortOrder = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Session.EnsureLoadedAsync();
+        if (!Auth.IsSignedIn) { Nav.NavigateTo("/login", forceLoad: true); return; }
+        CostCenters.OnChange += StateHasChanged;
+        await ReloadAsync();
+        isLoaded = true;
+    }
+
+    private async Task ReloadAsync()
+    {
+        try { costCodes = await CostCenters.ListAllAsync(); loadError = null; }
+        catch { loadError = "Couldn't load the cost codes. Please try again."; }
+    }
+
+    private void OpenAdd()
+    {
+        formError = null;
+        formCode = formName = formSortOrder = "";
+        adding = true;
+    }
+
+    private void OpenEdit(CostCenter costCode)
+    {
+        formError = null;
+        editTarget = costCode;
+        formCode = costCode.Code;
+        formName = costCode.Name;
+        formSortOrder = costCode.SortOrder.ToString();
+        editing = true;
+    }
+
+    private async Task AddAsync()
+    {
+        if (busy) return;
+        formError = null;
+        if (string.IsNullOrWhiteSpace(formCode)) { formError = "A code is required."; return; }
+        if (string.IsNullOrWhiteSpace(formName)) { formError = "A name is required."; return; }
+        if (!TryParseSortOrder(out var sortOrder)) return;
+        try
+        {
+            busy = true;
+            await CostCenters.AddAsync(new AddCostCenter(formCode.Trim(), formName.Trim(), sortOrder));
+            adding = false;
+            await ReloadAsync();
+        }
+        catch (CommandFailedException ex) { formError = ex.Message; }
+        catch { formError = "Couldn't add the cost code. Please try again."; }
+        finally { busy = false; }
+    }
+
+    private async Task SaveEditAsync()
+    {
+        if (busy || editTarget is null) return;
+        formError = null;
+        if (string.IsNullOrWhiteSpace(formCode)) { formError = "A code is required."; return; }
+        if (string.IsNullOrWhiteSpace(formName)) { formError = "A name is required."; return; }
+        // Unlike Add, a blank sort order has no "append" meaning here — require it.
+        if (string.IsNullOrWhiteSpace(formSortOrder)) { formError = "A sort order is required."; return; }
+        if (!TryParseSortOrder(out var sortOrder)) return;
+        try
+        {
+            busy = true;
+            await CostCenters.ReviseAsync(new ReviseCostCenter(
+                editTarget.CostCenterId,
+                formCode.Trim(),
+                formName.Trim(),
+                sortOrder,
+                editTarget.IsActive));
+            editing = false;
+            await ReloadAsync();
+        }
+        catch (CommandFailedException ex) { formError = ex.Message; }
+        catch { formError = "Couldn't save the changes. Please try again."; }
+        finally { busy = false; }
+    }
+
+    private async Task ToggleActiveAsync(CostCenter costCode)
+    {
+        if (busy) return;
+        try
+        {
+            busy = true;
+            await CostCenters.ReviseAsync(new ReviseCostCenter(
+                costCode.CostCenterId,
+                costCode.Code,
+                costCode.Name,
+                costCode.SortOrder,
+                !costCode.IsActive));
+            await ReloadAsync();
+        }
+        catch { loadError = "Couldn't update the cost code. Please try again."; }
+        finally { busy = false; }
+    }
+
+    private bool TryParseSortOrder(out int sortOrder)
+    {
+        sortOrder = 0;
+        if (string.IsNullOrWhiteSpace(formSortOrder)) return true;
+        if (int.TryParse(formSortOrder, out sortOrder) && sortOrder >= 0) return true;
+        formError = "The sort order must be a non-negative number.";
+        return false;
+    }
+
+    public void Dispose() => CostCenters.OnChange -= StateHasChanged;
+}

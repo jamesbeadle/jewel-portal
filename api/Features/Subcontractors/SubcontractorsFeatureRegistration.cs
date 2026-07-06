@@ -12,6 +12,7 @@ public static class SubcontractorsFeatureRegistration
     public static IServiceCollection AddSubcontractorsFeature(this IServiceCollection services)
     {
         services.AddScoped<IQueryHandler<ListSubcontractors, IReadOnlyList<Subcontractor>>, ListSubcontractorsHandler>();
+        services.AddScoped<IQueryHandler<ListTrades, IReadOnlyList<Trade>>, ListTradesHandler>();
         services.AddScoped<IQueryHandler<ListComplianceDocumentsForSubcontractor, IReadOnlyList<ComplianceDocument>>, ListComplianceDocumentsForSubcontractorHandler>();
 
         services.AddScoped<ICommandHandler<AddSubcontractorToDirectory, Subcontractor>, AddSubcontractorToDirectoryHandler>();
@@ -21,6 +22,10 @@ public static class SubcontractorsFeatureRegistration
         services.AddScoped<ICommandHandler<UpdateSubcontractor, Subcontractor>, UpdateSubcontractorHandler>();
         services.AddScoped<UpdateSubcontractorAuthorisation>();
         services.AddScoped<UpdateSubcontractorValidation>();
+
+        services.AddScoped<ICommandHandler<AddTrade, Trade>, AddTradeHandler>();
+        services.AddScoped<AddTradeAuthorisation>();
+        services.AddScoped<AddTradeValidation>();
 
         services.AddScoped<ICommandHandler<UploadComplianceDocument, ComplianceDocument>, UploadComplianceDocumentHandler>();
         services.AddScoped<UploadComplianceDocumentAuthorisation>();

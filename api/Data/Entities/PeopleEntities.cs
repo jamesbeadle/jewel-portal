@@ -6,7 +6,6 @@ public sealed class SubcontractorEntity
 {
     [Key, MaxLength(64)] public string SubcontractorId { get; set; } = "";
     [MaxLength(256)]     public string CompanyName { get; set; } = "";
-    [MaxLength(64)]      public string PrimaryTrade { get; set; } = "";
     [MaxLength(256)]     public string ContactName { get; set; } = "";
     [MaxLength(256)]     public string ContactEmail { get; set; } = "";
     [MaxLength(64)]      public string ContactPhone { get; set; } = "";
@@ -22,6 +21,24 @@ public sealed class SubcontractorEntity
     [MaxLength(512)]     public string Website { get; set; } = "";
     [MaxLength(128)]     public string Pli { get; set; } = "";
     [MaxLength(64)]      public string PliExpiry { get; set; } = "";
+}
+
+// The curated master list of trades. Directory records link to these via SubcontractorTrades, so a
+// trade is added deliberately once and reused everywhere — never typed free-text per record (the old
+// PrimaryTrade string allowed slash-separated compounds like "Boarding/drylining/Plastering").
+public sealed class TradeEntity
+{
+    [Key, MaxLength(64)] public string TradeId { get; set; } = "";
+    [MaxLength(64)]      public string Name { get; set; } = "";
+    public DateTimeOffset CreatedAt { get; set; }
+}
+
+// Link table: one row per (subcontractor, trade). A directory record can carry several trades.
+public sealed class SubcontractorTradeEntity
+{
+    [Key, MaxLength(64)] public string SubcontractorTradeId { get; set; } = "";
+    [MaxLength(64)]      public string SubcontractorId { get; set; } = "";
+    [MaxLength(64)]      public string TradeId { get; set; } = "";
 }
 
 public sealed class ComplianceDocumentEntity

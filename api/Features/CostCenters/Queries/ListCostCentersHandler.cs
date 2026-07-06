@@ -13,8 +13,9 @@ public sealed class ListCostCentersHandler : IQueryHandler<ListCostCenters, IRea
 
     public async Task<IReadOnlyList<CostCenter>> HandleAsync(ListCostCenters query, CancellationToken cancellationToken)
     {
-        var entities = await context.CostCenters
-            .Where(c => c.IsActive)
+        var rows = context.CostCenters.AsQueryable();
+        if (!query.IncludeInactive) rows = rows.Where(c => c.IsActive);
+        var entities = await rows
             .OrderBy(c => c.SortOrder)
             .ToListAsync(cancellationToken);
         return entities.Select(entity => entity.ToModel()).ToList().AsReadOnly();

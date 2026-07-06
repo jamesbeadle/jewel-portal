@@ -6,7 +6,7 @@ namespace Jewel.JPMS.Contracts.Subcontractors;
 public sealed record UpdateSubcontractor(
     string SubcontractorId,
     string CompanyName,
-    string PrimaryTrade,
+    IReadOnlyList<string> TradeIds,
     string ContactName,
     string ContactEmail,
     string ContactPhone,

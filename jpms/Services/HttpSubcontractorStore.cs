@@ -8,6 +8,7 @@ namespace Jewel.JPMS.Services;
 public sealed class HttpSubcontractorStore : ISubcontractorStore
 {
     private readonly SubcontractorsReadModel readModel;
+    private readonly TradesReadModel tradesReadModel;
     private readonly IQueryClient queries;
     private readonly ICommandSender commands;
 
@@ -15,12 +16,14 @@ public sealed class HttpSubcontractorStore : ISubcontractorStore
     // (which deadlocks on WebAssembly). Saving a document invalidates its subcontractor.
     private readonly AsyncQueryCache<string, IReadOnlyList<ComplianceDocument>> compliance;
 
-    public HttpSubcontractorStore(SubcontractorsReadModel readModel, IQueryClient queries, ICommandSender commands)
+    public HttpSubcontractorStore(SubcontractorsReadModel readModel, TradesReadModel tradesReadModel, IQueryClient queries, ICommandSender commands)
     {
         this.readModel = readModel;
+        this.tradesReadModel = tradesReadModel;
         this.queries = queries;
         this.commands = commands;
         readModel.OnChanged += () => OnChange?.Invoke();
+        tradesReadModel.OnChanged += () => OnChange?.Invoke();
         compliance = new((id, ct) => queries.AskAsync(new ListComplianceDocumentsForSubcontractor(id), ct), () => OnChange?.Invoke());
     }
 
@@ -36,6 +39,29 @@ public sealed class HttpSubcontractorStore : ISubcontractorStore
 
     public Subcontractor? Find(string subcontractorId) =>
         All().FirstOrDefault(sub => string.Equals(sub.SubcontractorId, subcontractorId, StringComparison.OrdinalIgnoreCase));
+
+    public IReadOnlyList<Trade> Trades()
+    {
+        if (tradesReadModel.Current is null) _ = tradesReadModel.RefreshAsync(CancellationToken.None);
+        return tradesReadModel.Current ?? Array.Empty<Trade>();
+    }
+
+    public async Task<Trade> AddTradeAsync(string name)
+    {
+        var trade = await commands.SendAsync(new AddTrade(name), CancellationToken.None);
+        await tradesReadModel.RefreshAsync(CancellationToken.None);
+        return trade;
+    }
+
+    public async Task SetTradesAsync(string subcontractorId, IReadOnlyList<string> tradeIds)
+    {
+        var sub = Find(subcontractorId)
+            ?? throw new InvalidOperationException($"Subcontractor {subcontractorId} not found.");
+        await commands.SendAsync(new UpdateSubcontractor(
+            sub.SubcontractorId, sub.CompanyName, tradeIds, sub.ContactName, sub.ContactEmail,
+            sub.ContactPhone, sub.CisStatus), CancellationToken.None);
+        await readModel.RefreshAsync(CancellationToken.None);
+    }
 
     public Subcontractor Upsert(Subcontractor subcontractor)
     {
@@ -60,14 +86,17 @@ public sealed class HttpSubcontractorStore : ISubcontractorStore
 
     private async Task AddAsync(Subcontractor sub)
     {
-        await commands.SendAsync(new AddSubcontractorToDirectory(sub.CompanyName, sub.PrimaryTrade, sub.ContactName, sub.ContactEmail, sub.ContactPhone, sub.CisStatus,
+        await commands.SendAsync(new AddSubcontractorToDirectory(sub.CompanyName, TradeIds(sub), sub.ContactName, sub.ContactEmail, sub.ContactPhone, sub.CisStatus,
             sub.Category, sub.MobileNumber, sub.Town, sub.County, sub.Website), CancellationToken.None);
         await readModel.RefreshAsync(CancellationToken.None);
     }
 
     private async Task UpdateAsync(Subcontractor sub)
     {
-        await commands.SendAsync(new UpdateSubcontractor(sub.SubcontractorId, sub.CompanyName, sub.PrimaryTrade, sub.ContactName, sub.ContactEmail, sub.ContactPhone, sub.CisStatus), CancellationToken.None);
+        await commands.SendAsync(new UpdateSubcontractor(sub.SubcontractorId, sub.CompanyName, TradeIds(sub), sub.ContactName, sub.ContactEmail, sub.ContactPhone, sub.CisStatus), CancellationToken.None);
         await readModel.RefreshAsync(CancellationToken.None);
     }
+
+    private static IReadOnlyList<string> TradeIds(Subcontractor sub) =>
+        sub.Trades.Select(trade => trade.TradeId).ToList();
 }

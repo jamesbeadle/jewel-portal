@@ -10,12 +10,17 @@ public static class SubcontractorsRouteRegistration
     public static IServiceCollection AddSubcontractorsReadModels(this IServiceCollection services)
     {
         services.AddScoped<SubcontractorsReadModel>();
+        services.AddScoped<TradesReadModel>();
         return services;
     }
 
     public static void RegisterSubcontractorsRoutes(QueryRouteTable queries, CommandRouteTable commands)
     {
         queries.Register<ListSubcontractors, IReadOnlyList<Subcontractor>>(QueryRoute.Static("/api/subcontractors"));
+
+        queries.Register<ListTrades, IReadOnlyList<Trade>>(QueryRoute.Static("/api/trades"));
+
+        commands.Register<AddTrade, Trade>(CommandRoute.Post("/api/trades"));
 
         queries.Register<ListComplianceDocumentsForSubcontractor, IReadOnlyList<ComplianceDocument>>(
             new QueryRoute("/api/subcontractors/{subcontractorId}/compliance",

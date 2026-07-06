@@ -88,6 +88,7 @@ builder.Services.AddScoped<IValuationReportStore, HttpValuationReportStore>();
 builder.Services.AddScoped<ICvrStore, HttpCvrStore>();
 builder.Services.AddScoped<ICommercialInputsStore, HttpCommercialInputsStore>();
 builder.Services.AddScoped<ICloseoutStore, HttpCloseoutStore>();
+builder.Services.AddScoped<ICostCenterStore, HttpCostCenterStore>();
 builder.Services.AddScoped<IAgentDesk, HttpAgentDesk>();
 
 builder.Services.AddScoped<StoreChangeHub>();

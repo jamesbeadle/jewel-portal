@@ -44,6 +44,8 @@ public sealed class JpmsContext : DbContext
     public DbSet<DrawingIssueRecordEntity> DrawingIssueRecords => Set<DrawingIssueRecordEntity>();
 
     public DbSet<SubcontractorEntity> Subcontractors => Set<SubcontractorEntity>();
+    public DbSet<TradeEntity> Trades => Set<TradeEntity>();
+    public DbSet<SubcontractorTradeEntity> SubcontractorTrades => Set<SubcontractorTradeEntity>();
     public DbSet<ComplianceDocumentEntity> ComplianceDocuments => Set<ComplianceDocumentEntity>();
 
     public DbSet<HsRecordEntity> HsRecords => Set<HsRecordEntity>();
