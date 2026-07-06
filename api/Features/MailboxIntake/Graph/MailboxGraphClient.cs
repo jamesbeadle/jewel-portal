@@ -685,13 +685,19 @@ public sealed class MailboxGraphClient : IMailboxGraphClient
         return new MailboxMessage(id, imid, fromEmail, fromName, subject, preview, hasAttachments, receivedAt, categories);
     }
 
+    // Graph only accepts attachments up to ~3 MB inline; larger files stream through an upload session.
+    private const long InlineAttachmentLimit = 3_000_000;
+
     public async Task<MailboxDraft?> CreateDraftAsync(MailboxDraftMessage draft, CancellationToken ct)
     {
         // POST /users/{mailbox}/messages creates the message in the Drafts folder. Attachments under
-        // the ~3 MB inline limit (our request-document PDFs are far smaller) go in the same call.
+        // the ~3 MB inline limit go in the same call; anything larger (e.g. drawings) is streamed
+        // onto the created draft through an upload session afterwards.
         var url = $"{GraphBase}/users/{Mailbox}/messages";
+        var large = draft.Attachments.Where(a => a.Content.LongLength > InlineAttachmentLimit).ToList();
+        var small = large.Count == 0 ? draft.Attachments : draft.Attachments.Where(a => a.Content.LongLength <= InlineAttachmentLimit).ToList();
 
-        using var content = JsonContent.Create(BuildMessagePayload(draft));
+        using var content = JsonContent.Create(BuildMessagePayload(draft with { Attachments = small }));
         using var response = await SendAsync(HttpMethod.Post, url, content, ct);
         if (!response.IsSuccessStatusCode)
         {
@@ -700,22 +706,31 @@ public sealed class MailboxGraphClient : IMailboxGraphClient
             return null;
         }
 
-        await using var stream = await response.Content.ReadAsStreamAsync(ct);
-        using var doc = await JsonDocument.ParseAsync(stream, cancellationToken: ct);
-        var root = doc.RootElement;
-        var id = root.TryGetProperty("id", out var idEl) ? idEl.GetString() : null;
-        if (string.IsNullOrEmpty(id))
-            return null;
-        var webLink = root.TryGetProperty("webLink", out var wl) ? wl.GetString() : null;
+        string? id, webLink;
+        await using (var stream = await response.Content.ReadAsStreamAsync(ct))
+        using (var doc = await JsonDocument.ParseAsync(stream, cancellationToken: ct))
+        {
+            var root = doc.RootElement;
+            id = root.TryGetProperty("id", out var idEl) ? idEl.GetString() : null;
+            if (string.IsNullOrEmpty(id))
+                return null;
+            webLink = root.TryGetProperty("webLink", out var wl) ? wl.GetString() : null;
+        }
+
+        foreach (var attachment in large)
+        {
+            if (!await UploadLargeAttachmentAsync(id, attachment, ct))
+                return null; // the incomplete draft is left in Drafts for a human to inspect/retry
+        }
+
         return new MailboxDraft(id, webLink);
     }
 
     public async Task<bool> SendMailAsync(MailboxDraftMessage message, CancellationToken ct)
     {
         // Graph only accepts attachments up to ~3 MB inline. Anything larger needs the draft route:
-        // create the draft (small attachments inline), stream each big file through an upload
-        // session, then send the draft. Messages with only small attachments use one-call sendMail.
-        const long InlineAttachmentLimit = 3_000_000;
+        // create the draft (which streams big files through upload sessions), then send the draft.
+        // Messages with only small attachments use one-call sendMail.
         var large = message.Attachments.Where(a => a.Content.LongLength > InlineAttachmentLimit).ToList();
 
         if (large.Count == 0)
@@ -740,15 +755,8 @@ public sealed class MailboxGraphClient : IMailboxGraphClient
             return false;
         }
 
-        var small = message.Attachments.Where(a => a.Content.LongLength <= InlineAttachmentLimit).ToList();
-        var draft = await CreateDraftAsync(message with { Attachments = small }, ct);
+        var draft = await CreateDraftAsync(message, ct); // handles the large-attachment upload sessions
         if (draft is null) return false;
-
-        foreach (var attachment in large)
-        {
-            if (!await UploadLargeAttachmentAsync(draft.Id, attachment, ct))
-                return false; // the un-sent draft is left in Drafts for a human to inspect/retry
-        }
 
         var sendUrl = $"{GraphBase}/users/{Mailbox}/messages/{Uri.EscapeDataString(draft.Id)}/send";
         using var sendResponse = await SendAsync(HttpMethod.Post, sendUrl, null, ct);

@@ -77,7 +77,7 @@ else
                         <div class="flex items-center gap-4">
                             @if (recipients.Count > 0 && lineItems.Count > 0)
                             {
-                                <button type="button" class="text-xs text-accent hover:underline" @onclick="OpenComposeModal">Send invite email</button>
+                                <button type="button" class="text-xs text-accent hover:underline" @onclick="OpenComposeModal">Draft invite email</button>
                             }
                             <button type="button" class="text-xs text-accent hover:underline" @onclick="OpenInviteModal">+ Add subcontractor</button>
                         </div>
@@ -86,7 +86,13 @@ else
 
                 @if (sendNote is not null)
                 {
-                    <p class="rounded-lg bg-accent/10 border border-accent/30 px-3 py-2 text-sm text-content mb-3">@sendNote</p>
+                    <p class="rounded-lg bg-accent/10 border border-accent/30 px-3 py-2 text-sm text-content mb-3">
+                        @sendNote
+                        @if (draftWebLink is not null)
+                        {
+                            <a class="text-accent underline ml-1" href="@draftWebLink" target="_blank" rel="noopener">Open the draft in Outlook</a>
+                        }
+                    </p>
                 }
 
                 @if (recipients.Count == 0)
@@ -469,7 +475,7 @@ else
             <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
                 <input class="field" placeholder="Company or name *" @bind="quickAddName" @bind:event="oninput" />
                 <input class="field" type="email" placeholder="Email address *" @bind="quickAddEmail" @bind:event="oninput" />
-                <input class="field" placeholder="Trade (optional)" @bind="quickAddTrade" @bind:event="oninput" />
+                <input class="field" placeholder="Trade *" @bind="quickAddTrade" @bind:event="oninput" />
             </div>
             @if (quickAddPartial)
             {
@@ -566,13 +572,14 @@ else
     </Modal>
 
     @* ---- Compose & send the tender-invite email (recipients BCC'd) ---- *@
-    <Modal IsOpen="showComposeModal" Title="Send invite email" ShowFooter="true"
-           ConfirmLabel="@(busy ? "Sending…" : BccPreview().Count == 0 ? "No one to send to" : $"Send to {BccPreview().Count} subcontractor{(BccPreview().Count == 1 ? "" : "s")}")"
+    <Modal IsOpen="showComposeModal" Title="Draft invite email" ShowFooter="true"
+           ConfirmLabel="@(busy ? "Creating draft…" : BccPreview().Count == 0 ? "No one to send to" : $"Create draft for {BccPreview().Count} subcontractor{(BccPreview().Count == 1 ? "" : "s")}")"
            ConfirmDisabled="@(busy || BccPreview().Count == 0)" CancelLabel="Cancel"
            OnCancel="CloseComposeModal" OnConfirm="ConfirmSendInvite" Class="max-w-2xl w-full">
         <p class="text-xs text-content-subtle mb-3">
-            Sent from the shared mailbox with every recipient in BCC — subcontractors never see each
-            other. The sent email is tagged to this package, and tagged replies appear under
+            Creates a draft in the shared mailbox — nothing is sent until someone reviews and sends
+            it from Outlook. Every recipient goes in BCC, so subcontractors never see each other.
+            The email is tagged to this package, and tagged replies appear under
             Tender responses below.
             @if (packageDrawings.Count > 0)
             {
@@ -847,6 +854,9 @@ else
     {
         selected.Clear();
         subSearch = "";
+        // Trade is required by the directory — prefill with the package's trade so quick-add just works.
+        if (string.IsNullOrWhiteSpace(quickAddTrade))
+            quickAddTrade = package?.Trade ?? "";
         // Pre-filter to the package's trade when the directory knows it — one less tap.
         tradeFilter = InvitableTrades()
             .FirstOrDefault(t => string.Equals(t, package?.Trade, StringComparison.OrdinalIgnoreCase));
@@ -916,9 +926,12 @@ else
             if (QuickAddReady)
             {
                 // Save the ad-hoc contact to the directory first, then invite like any other.
+                // The directory requires a trade — fall back to the package's, then "General".
+                var trade = !string.IsNullOrWhiteSpace(quickAddTrade) ? quickAddTrade.Trim()
+                    : !string.IsNullOrWhiteSpace(package?.Trade) ? package!.Trade : "General";
                 var created = await Commands.SendAsync(
                     new AddSubcontractorToDirectory(
-                        quickAddName.Trim(), quickAddTrade.Trim(), quickAddName.Trim(),
+                        quickAddName.Trim(), trade, quickAddName.Trim(),
                         quickAddEmail.Trim(), "", ""), CancellationToken.None);
                 ids.Add(created.SubcontractorId);
                 await SubsReadModel.RefreshAsync(CancellationToken.None);
@@ -930,6 +943,7 @@ else
             showInviteModal = false;
             package = await Queries.AskAsync(new GetBidPackageById(BidPackageId), CancellationToken.None);
         }
+        catch (CommandFailedException ex) { error = $"Couldn't send those invites: {ex.Message}"; }
         catch { error = "Couldn't send those invites. Please try again."; }
         finally { busy = false; }
     }
@@ -993,6 +1007,7 @@ else
     private string composeSubject = "";
     private string composeBody = "";
     private string? sendNote;
+    private string? draftWebLink;
 
     // The companies that will actually be BCC'd — invited recipients with a directory email.
     private IReadOnlyList<string> BccPreview() =>
@@ -1042,6 +1057,15 @@ else
                 sb.AppendLine($"<tr><td>{item.Description}</td><td>{item.Quantity}</td><td>{item.Unit}</td><td></td><td></td></tr>");
             sb.AppendLine("</table>");
         }
+        sb.AppendLine("<p><strong>Please include the following with your tender:</strong></p>");
+        sb.AppendLine("<ul>");
+        sb.AppendLine("<li><strong>Deposit</strong> — our preference is not to pay a deposit upfront. If one is required for you to take on the work, please state the amount and terms in your tender.</li>");
+        sb.AppendLine("<li><strong>Duration</strong> — how long the work will take.</li>");
+        sb.AppendLine("<li><strong>Availability</strong> — if selected, when you would be able to start.</li>");
+        sb.AppendLine("<li><strong>Insurances</strong> — confirmation that you hold all insurances required for this work.</li>");
+        sb.AppendLine("<li><strong>RAMS</strong> — confirmation that you will provide the required RAMS documentation.</li>");
+        sb.AppendLine("<li><strong>Portfolio</strong> — examples of prior comparable work.</li>");
+        sb.AppendLine("</ul>");
         sb.AppendLine("<p>Please confirm receipt and let us know if you need any further information or drawings.</p>");
         sb.AppendLine("<p>Kind regards,<br/>Jewel Bespoke Build</p>");
         return sb.ToString();
@@ -1054,12 +1078,15 @@ else
         try
         {
             busy = true;
-            package = await Commands.SendAsync(
-                new SendBidPackageInvite(BidPackageId, composeSubject.Trim(), composeBody), CancellationToken.None);
+            var draft = await Commands.SendAsync(
+                new PrepareBidPackageInviteDraft(BidPackageId, composeSubject.Trim(), composeBody), CancellationToken.None);
+            package = draft.Package;
             showComposeModal = false;
-            sendNote = $"Invite sent to {BccPreview().Count} subcontractor(s) in BCC and tagged {package.Reference}.";
+            draftWebLink = draft.WebLink;
+            sendNote = $"Draft created in the shared mailbox with {draft.Bcc.Count} subcontractor(s) in BCC, tagged {package.Reference}. Review and send it from the mailbox's Drafts folder.";
         }
-        catch { error = "Couldn't send the invite email. Check the recipients have email addresses and that the mailbox can send, then try again."; }
+        catch (CommandFailedException ex) { error = $"Couldn't create the draft: {ex.Message}"; }
+        catch { error = "Couldn't create the draft. Check the recipients have email addresses and the mailbox connection, then try again."; }
         finally { busy = false; }
     }
 

@@ -57,6 +57,10 @@ public static class ProcurementFeatureRegistration
         services.AddScoped<SendBidPackageInviteAuthorisation>();
         services.AddScoped<SendBidPackageInviteValidation>();
 
+        services.AddScoped<ICommandHandler<PrepareBidPackageInviteDraft, BidPackageInviteDraft>, PrepareBidPackageInviteDraftHandler>();
+        services.AddScoped<PrepareBidPackageInviteDraftAuthorisation>();
+        services.AddScoped<PrepareBidPackageInviteDraftValidation>();
+
         services.AddScoped<ICommandHandler<ExtractQuoteFromMessage, QuoteExtractionProposal>, ExtractQuoteFromMessageHandler>();
         services.AddScoped<ExtractQuoteFromMessageAuthorisation>();
         services.AddScoped<ExtractQuoteFromMessageValidation>();
