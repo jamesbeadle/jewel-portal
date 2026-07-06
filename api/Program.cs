@@ -24,6 +24,7 @@ using Jewel.JPMS.Api.Features.Lads;
 using Jewel.JPMS.Api.Features.Leads;
 using Jewel.JPMS.Api.Features.MailboxIntake;
 using Jewel.JPMS.Api.Features.Mobilisation;
+using Jewel.JPMS.Api.Features.Places;
 using Jewel.JPMS.Api.Features.Procurement;
 using Jewel.JPMS.Api.Features.Projects;
 using Jewel.JPMS.Api.Features.Rates;
@@ -66,6 +67,7 @@ var host = new HostBuilder()
         services.AddRatesFeature();
         services.AddDrawingsFeature(context.Configuration);
         services.AddProcurementFeature();
+        services.AddPlacesFeature(context.Configuration);
         services.AddVariationsFeature();
         services.AddSubcontractorsFeature();
         services.AddHsFeature();

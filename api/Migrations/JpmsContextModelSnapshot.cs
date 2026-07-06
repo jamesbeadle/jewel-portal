@@ -2068,6 +2068,11 @@ namespace Jewel.JPMS.Api.Migrations
                         .HasPrecision(18, 4)
                         .HasColumnType("decimal(18,4)");
 
+                    b.Property<string>("AddressLine")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
                     b.Property<string>("ClientName")
                         .IsRequired()
                         .HasMaxLength(256)
@@ -2095,6 +2100,11 @@ namespace Jewel.JPMS.Api.Migrations
                     b.Property<int>("PartyKind")
                         .HasColumnType("int");
 
+                    b.Property<string>("Postcode")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("nvarchar(16)");
+
                     b.Property<string>("ProjectManagerEmail")
                         .IsRequired()
                         .HasMaxLength(256)
@@ -2107,6 +2117,11 @@ namespace Jewel.JPMS.Api.Migrations
 
                     b.Property<int>("Stage")
                         .HasColumnType("int");
+
+                    b.Property<string>("Town")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
 
                     b.HasKey("ProjectId");
 

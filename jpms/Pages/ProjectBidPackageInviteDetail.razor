@@ -79,6 +79,7 @@ else
                             {
                                 <button type="button" class="text-xs text-accent hover:underline" @onclick="OpenComposeModal">Draft invite email</button>
                             }
+                            <button type="button" class="text-xs text-accent hover:underline" @onclick="OpenFindModal">Find subcontractors</button>
                             <button type="button" class="text-xs text-accent hover:underline" @onclick="OpenInviteModal">+ Add subcontractor</button>
                         </div>
                     }
@@ -484,6 +485,84 @@ else
         </div>
     </Modal>
 
+    @* ---- Find local subcontractors: Google Places search near the project's site ---- *@
+    <Modal IsOpen="showFindModal" Title="Find local subcontractors" ShowFooter="true"
+           ConfirmLabel="@(busy ? "Inviting…" : selectedPlaces.Count == 0 ? "Invite" : $"Invite {selectedPlaces.Count}")"
+           ConfirmDisabled="@(busy || selectedPlaces.Count == 0)" CancelLabel="Close"
+           OnCancel="CloseFindModal" OnConfirm="ConfirmFindInvite" Class="max-w-2xl w-full">
+        <p class="text-xs text-content-subtle mb-3">
+            Searches Google for companies of a trade near the project's site (its town and postcode —
+            set under Edit details on the project). Ticked companies are saved to the directory and
+            invited to this package. Google doesn't share email addresses, so add those in the
+            Directory before drafting the invite email.
+        </p>
+
+        <div class="flex gap-2 mb-3">
+            <select class="field flex-1" @bind="findTrade">
+                <option value="">Select a trade…</option>
+                @foreach (var trade in FindTradeOptions())
+                {
+                    <option value="@trade">@trade</option>
+                }
+            </select>
+            <button type="button" class="btn-primary shrink-0"
+                    disabled="@(findBusy || string.IsNullOrWhiteSpace(findTrade))"
+                    @onclick="() => RunFindSearch(loadMore: false)">
+                @(findBusy ? "Searching…" : "Search")
+            </button>
+        </div>
+
+        @if (findError is not null)
+        {
+            <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-3">@findError</p>
+        }
+
+        @if (findResults.Count > 0)
+        {
+            <div class="space-y-1 max-h-96 overflow-y-auto">
+                @foreach (var place in findResults)
+                {
+                    <label class="flex items-start gap-2.5 rounded-lg border border-line bg-surface px-3 py-2.5 cursor-pointer hover:border-line-strong">
+                        <input type="checkbox" class="mt-1" checked="@selectedPlaces.ContainsKey(place.PlaceId)"
+                               @onchange="e => TogglePlace(place, e)" />
+                        <span class="min-w-0">
+                            <span class="flex items-center gap-2 flex-wrap">
+                                <span class="text-sm font-medium text-content">@place.Name</span>
+                                @if (place.ExistingSubcontractorId is not null)
+                                {
+                                    <span class="inline-flex items-center rounded-full bg-accent/10 border border-accent/30 px-1.5 py-0.5 text-[10px] font-medium text-accent">Already in directory</span>
+                                }
+                                @if (place.Rating is not null)
+                                {
+                                    <span class="text-xs text-content-muted">★ @place.Rating.Value.ToString("0.0") (@place.RatingCount)</span>
+                                }
+                            </span>
+                            <span class="block text-xs text-content-subtle truncate">@place.Address</span>
+                            <span class="block text-xs text-content-subtle">
+                                @place.Phone
+                                @if (!string.IsNullOrEmpty(place.Website))
+                                {
+                                    <a class="text-accent hover:underline ml-1" href="@place.Website" target="_blank" rel="noopener" @onclick:stopPropagation="true">Website</a>
+                                }
+                            </span>
+                        </span>
+                    </label>
+                }
+            </div>
+            @if (findNextPageToken is not null)
+            {
+                <button type="button" class="btn-secondary w-full mt-3" disabled="@findBusy"
+                        @onclick="() => RunFindSearch(loadMore: true)">
+                    @(findBusy ? "Loading…" : "Load more results")
+                </button>
+            }
+        }
+        else if (findSearched && !findBusy && findError is null)
+        {
+            <p class="text-sm text-content-subtle italic">No companies found for that trade near the project.</p>
+        }
+    </Modal>
+
     @* ---- Line-item coverage modal: link to a contract BoQ line OR a variation ---- *@
     <Modal IsOpen="showCoverageModal" Title="Link line item" ShowFooter="true"
            ConfirmLabel="Save" CancelLabel="Cancel"
@@ -700,6 +779,96 @@ else
             <textarea class="field" rows="3" @bind="extractNotes"></textarea>
         }
     </Modal>
+
+    @* ---- Generate using AI: confirm before anything runs ---- *@
+    <Modal IsOpen="showAiConfirmModal" Title="Generate using AI" ShowFooter="true"
+           ConfirmLabel="@(aiBusy ? "Generating…" : "Generate draft")" ConfirmDisabled="@aiBusy" CancelLabel="Cancel"
+           OnCancel="CloseAiConfirmModal" OnConfirm="ConfirmAiGenerate" Class="max-w-lg w-full">
+        <p class="text-sm text-content mb-3">
+            Claude drafts this package — scope and line items — from what's tagged to it:
+        </p>
+        <ul class="text-sm text-content-muted space-y-1 mb-4 list-disc pl-5">
+            <li>@emails.Count related email@(emails.Count == 1 ? "" : "s")</li>
+            <li>@packageDrawings.Count linked drawing@(packageDrawings.Count == 1 ? "" : "s")</li>
+        </ul>
+        @if (emails.Count == 0 && packageDrawings.Count == 0)
+        {
+            <p class="rounded-lg bg-amber-50 border border-amber-200 px-3 py-2 text-xs text-amber-800 mb-3">
+                No related emails or linked drawings yet — Claude will only have the package title and trade
+                to work from, so the draft may be thin.
+            </p>
+        }
+        @if (lineItems.Count > 0)
+        {
+            <p class="rounded-lg bg-amber-50 border border-amber-200 px-3 py-2 text-xs text-amber-800">
+                This package already has @lineItems.Count line item@(lineItems.Count == 1 ? "" : "s").
+                Generating never changes or removes them — the draft opens in a review screen and only
+                the lines you accept are added.
+            </p>
+        }
+        else
+        {
+            <p class="text-xs text-content-subtle">
+                The draft opens in a review screen — nothing is added to the package until you accept it.
+            </p>
+        }
+    </Modal>
+
+    @* ---- Generate using AI: review the draft before anything is saved ---- *@
+    <Modal IsOpen="showAiReviewModal" Title="Review AI draft" ShowFooter="true"
+           ConfirmLabel="@(busy ? "Adding…" : AiAcceptedCount() == 0 ? "Nothing selected" : $"Add {AiAcceptedCount()} line item{(AiAcceptedCount() == 1 ? "" : "s")}")"
+           ConfirmDisabled="@(busy || AiAcceptedCount() == 0)" CancelLabel="Discard draft"
+           OnCancel="CloseAiReviewModal" OnConfirm="ConfirmAiApply" Class="max-w-3xl w-full">
+        <p class="rounded-lg bg-accent/10 border border-accent/30 px-3 py-2 text-xs text-content mb-3">
+            Drafted by Claude — nothing has been saved yet. Only ticked lines are added when you confirm;
+            your existing line items are never changed or removed. Check every figure before accepting.
+        </p>
+
+        @if (!string.IsNullOrWhiteSpace(aiProposalNotes))
+        {
+            <p class="text-sm text-content-muted mb-3">@aiProposalNotes</p>
+        }
+
+        <div class="rounded-xl border border-line bg-surface overflow-hidden mb-3">
+            <table class="w-full text-sm">
+                <thead class="bg-surface-raised border-b border-line">
+                    <tr class="text-left text-[11px] uppercase tracking-wider text-content-subtle font-semibold">
+                        <th class="px-3 py-2">Add</th>
+                        <th class="px-3 py-2">Trade</th>
+                        <th class="px-3 py-2">Description</th>
+                        <th class="px-3 py-2 hidden sm:table-cell">Unit</th>
+                        <th class="px-3 py-2">Qty</th>
+                        <th class="px-3 py-2"></th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-line">
+                    @foreach (var draft in aiDrafts)
+                    {
+                        <tr class="@(draft.Include ? "" : "opacity-60")">
+                            <td class="px-3 py-2">
+                                <input type="checkbox" checked="@draft.Include"
+                                       @onchange="e => draft.Include = e.Value is true" />
+                            </td>
+                            <td class="px-3 py-2"><input class="field w-28" @bind="draft.Trade" /></td>
+                            <td class="px-3 py-2">
+                                <input class="field" @bind="draft.Description" />
+                                @if (draft.AlreadyOnPackage)
+                                {
+                                    <span class="inline-flex items-center rounded-full bg-surface-raised border border-line px-1.5 py-0.5 text-[10px] font-medium text-content-muted mt-1">Already on package</span>
+                                }
+                            </td>
+                            <td class="px-3 py-2 hidden sm:table-cell"><input class="field w-16" @bind="draft.Unit" /></td>
+                            <td class="px-3 py-2"><input class="field w-20" type="number" step="any" @bind="draft.Quantity" /></td>
+                            <td class="px-3 py-2 text-right">
+                                <button type="button" class="text-xs text-content-muted hover:text-negative" @onclick="() => aiDrafts.Remove(draft)">Remove</button>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+        <button type="button" class="btn-secondary" @onclick="AddAiDraftLine">Add line</button>
+    </Modal>
 }
 
 @code {
@@ -843,8 +1012,103 @@ else
     private static string Append(string? existing, string line) =>
         string.IsNullOrEmpty(existing) ? line : existing + "\n" + line;
 
-    private void GenerateWithAi() =>
-        aiNote = "AI generation isn't wired up yet. When enabled, this will send the related emails and any drawings to Claude and draft the bid package — scope, line items and suggested subcontractors — for you to review.";
+    // ---- Generate using AI: confirm → generate → review → apply (merge, never replace) ----
+
+    private sealed class AiDraftLine
+    {
+        public string Trade { get; set; } = "";
+        public string Description { get; set; } = "";
+        public string Unit { get; set; } = "";
+        public decimal Quantity { get; set; }
+        public bool Include { get; set; } = true;
+        public bool AlreadyOnPackage { get; set; }
+    }
+
+    private sealed class AiDraftProposal
+    {
+        public string? Notes { get; set; }
+        public List<AiDraftLine> Lines { get; set; } = new();
+    }
+
+    private bool showAiConfirmModal;
+    private bool showAiReviewModal;
+    private bool aiBusy;
+    private string? aiProposalNotes;
+    private List<AiDraftLine> aiDrafts = new();
+
+    // The header button never generates directly — it opens the confirm screen.
+    private void GenerateWithAi()
+    {
+        aiNote = null;
+        showAiConfirmModal = true;
+    }
+
+    private void CloseAiConfirmModal() => showAiConfirmModal = false;
+
+    private async Task ConfirmAiGenerate()
+    {
+        if (aiBusy || !CanManage) return;
+        aiBusy = true;
+        try
+        {
+            var proposal = await RequestAiProposalAsync();
+            showAiConfirmModal = false;
+            if (proposal is null)
+            {
+                aiNote = "AI generation isn't wired up yet. When enabled, Claude will draft the package — scope and line items — from the related emails and drawings, and the draft will open here for review. Nothing is added to the package until you accept it, and existing content is never changed or removed.";
+                return;
+            }
+            aiProposalNotes = proposal.Notes;
+            aiDrafts = proposal.Lines;
+            foreach (var draft in aiDrafts)
+            {
+                draft.AlreadyOnPackage = IsExistingLine(draft);
+                if (draft.AlreadyOnPackage) draft.Include = false; // never re-add what's already there
+            }
+            showAiReviewModal = true;
+        }
+        finally { aiBusy = false; }
+    }
+
+    // The generation seam. When the backend command lands, call it here and map the result to
+    // AiDraftProposal — the confirm → review → apply flow around it stays exactly as is.
+    private Task<AiDraftProposal?> RequestAiProposalAsync() =>
+        Task.FromResult<AiDraftProposal?>(null);
+
+    private bool IsExistingLine(AiDraftLine draft) =>
+        lineItems.Any(item =>
+            string.Equals(item.Description.Trim(), draft.Description.Trim(), StringComparison.OrdinalIgnoreCase)
+            && string.Equals((item.Trade ?? "").Trim(), (draft.Trade ?? "").Trim(), StringComparison.OrdinalIgnoreCase));
+
+    private void CloseAiReviewModal() => showAiReviewModal = false;
+
+    private void AddAiDraftLine() => aiDrafts.Add(new AiDraftLine { Trade = package?.Trade ?? "", Quantity = 1 });
+
+    private int AiAcceptedCount() => aiDrafts.Count(d => d.Include && !string.IsNullOrWhiteSpace(d.Description));
+
+    // Apply = append-only: AddBidPackageLineItems never reads, deletes or recreates existing rows,
+    // so their ids, coverage links and quote-line references stay intact. (Deliberately NOT
+    // SetBidPackageLineItems — that replaces the whole set and would drop those links.)
+    private async Task ConfirmAiApply()
+    {
+        if (busy || !CanManage) return;
+        error = null;
+        try
+        {
+            busy = true;
+            var accepted = aiDrafts.Where(d => d.Include && !string.IsNullOrWhiteSpace(d.Description)).ToList();
+            if (accepted.Count == 0) { showAiReviewModal = false; return; }
+            var inputs = accepted
+                .Select(d => new BidPackageLineItemInput(
+                    d.Description.Trim(), (d.Unit ?? "").Trim(), d.Quantity, (d.Trade ?? "").Trim()))
+                .ToList();
+            lineItems = await Commands.SendAsync(new AddBidPackageLineItems(BidPackageId, inputs), CancellationToken.None);
+            showAiReviewModal = false;
+            aiNote = $"Added {accepted.Count} line item{(accepted.Count == 1 ? "" : "s")} from the AI draft. Existing line items were left untouched.";
+        }
+        catch { error = "Couldn't add the accepted line items. Please try again."; }
+        finally { busy = false; }
+    }
 
     // ---- Invite (modal over the directory) ----
 
@@ -945,6 +1209,120 @@ else
         }
         catch (CommandFailedException ex) { error = $"Couldn't send those invites: {ex.Message}"; }
         catch { error = "Couldn't send those invites. Please try again."; }
+        finally { busy = false; }
+    }
+
+    // ---- Find local subcontractors (Google Places search near the project's site) ----
+
+    private bool showFindModal;
+    private bool findBusy;
+    private bool findSearched;
+    private string findTrade = "";
+    private string? findError;
+    private string? findNextPageToken;
+    private readonly List<LocalSubcontractor> findResults = new();
+    private readonly Dictionary<string, LocalSubcontractor> selectedPlaces = new(StringComparer.Ordinal);
+
+    // The directory's trades, with the package's own trade offered even if nothing in the
+    // directory carries it yet.
+    private IReadOnlyList<string> FindTradeOptions()
+    {
+        var trades = InvitableTrades().ToList();
+        if (!string.IsNullOrWhiteSpace(package?.Trade)
+            && !trades.Contains(package!.Trade, StringComparer.OrdinalIgnoreCase))
+        {
+            trades.Insert(0, package.Trade);
+        }
+        return trades;
+    }
+
+    private void OpenFindModal()
+    {
+        findTrade = package?.Trade ?? "";
+        findResults.Clear();
+        selectedPlaces.Clear();
+        findNextPageToken = null;
+        findError = null;
+        findSearched = false;
+        showFindModal = true;
+    }
+
+    private void CloseFindModal() => showFindModal = false;
+
+    private async Task RunFindSearch(bool loadMore)
+    {
+        if (findBusy || string.IsNullOrWhiteSpace(findTrade)) return;
+        findBusy = true;
+        findError = null;
+        try
+        {
+            var result = await Queries.AskAsync(
+                new SearchLocalSubcontractors(ProjectId, findTrade.Trim(), loadMore ? findNextPageToken : null),
+                CancellationToken.None);
+            if (!loadMore)
+            {
+                findResults.Clear();
+                selectedPlaces.Clear();
+            }
+            if (result.Error is not null)
+            {
+                findError = result.Error;
+                findNextPageToken = null;
+            }
+            else
+            {
+                findResults.AddRange(result.Results.Where(hit => findResults.All(existing => existing.PlaceId != hit.PlaceId)));
+                findNextPageToken = result.NextPageToken;
+            }
+            findSearched = true;
+        }
+        catch { findError = "The search failed. Please try again."; }
+        finally { findBusy = false; }
+    }
+
+    private void TogglePlace(LocalSubcontractor place, ChangeEventArgs e)
+    {
+        if (e.Value is true) selectedPlaces[place.PlaceId] = place;
+        else selectedPlaces.Remove(place.PlaceId);
+    }
+
+    // Save each ticked company to the directory (unless it's already there), then invite them all.
+    private async Task ConfirmFindInvite()
+    {
+        if (busy || selectedPlaces.Count == 0 || !CanManage) return;
+        error = null;
+        try
+        {
+            busy = true;
+            var ids = new List<string>();
+            var createdAny = false;
+            foreach (var place in selectedPlaces.Values)
+            {
+                if (!string.IsNullOrEmpty(place.ExistingSubcontractorId))
+                {
+                    ids.Add(place.ExistingSubcontractorId);
+                    continue;
+                }
+                var created = await Commands.SendAsync(
+                    new AddSubcontractorToDirectory(
+                        place.Name, findTrade.Trim(), "", "", place.Phone ?? "", "",
+                        DirectoryCategory.Subcontractor, "", "", "", place.Website ?? ""),
+                    CancellationToken.None);
+                ids.Add(created.SubcontractorId);
+                createdAny = true;
+            }
+            if (createdAny) await SubsReadModel.RefreshAsync(CancellationToken.None);
+
+            recipients = await Commands.SendAsync(
+                new InviteSubcontractorsToBidPackage(BidPackageId, ids), CancellationToken.None);
+            selectedPlaces.Clear();
+            showFindModal = false;
+            package = await Queries.AskAsync(new GetBidPackageById(BidPackageId), CancellationToken.None);
+            sendNote = $"Invited {ids.Count} compan{(ids.Count == 1 ? "y" : "ies")} from the local search. Google doesn't share email addresses — add them in the Directory before drafting the invite email.";
+            draftWebLink = null;
+        }
+        catch (CommandFailedException ex) { error = $"Couldn't invite those companies: {ex.Message}"; }
+        catch { error = "Couldn't invite those companies. Please try again."; }
         finally { busy = false; }
     }
 

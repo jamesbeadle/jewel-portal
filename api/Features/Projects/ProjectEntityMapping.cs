@@ -16,5 +16,8 @@ internal static class ProjectEntityMapping
         CreatedAt: entity.CreatedAt,
         PartyKind: (PartyKind)entity.PartyKind,
         PartyId: entity.PartyId,
-        OnBehalfOfClientId: entity.OnBehalfOfClientId);
+        OnBehalfOfClientId: entity.OnBehalfOfClientId,
+        AddressLine: entity.AddressLine,
+        Town: entity.Town,
+        Postcode: entity.Postcode);
 }

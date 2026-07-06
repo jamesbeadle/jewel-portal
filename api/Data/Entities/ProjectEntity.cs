@@ -25,4 +25,9 @@ public sealed class ProjectEntity
     // Running total of valuation invoices received from the client on this project. Incremented when a cash
     // call is marked Received. Denormalised for the directors' project-level view.
     public decimal ValuationInvoicePaidTotal { get; set; }
+
+    // Site address — Town + Postcode drive the "find local subcontractors" search near the project.
+    [MaxLength(256)]     public string AddressLine { get; set; } = "";
+    [MaxLength(128)]     public string Town { get; set; } = "";
+    [MaxLength(16)]      public string Postcode { get; set; } = "";
 }

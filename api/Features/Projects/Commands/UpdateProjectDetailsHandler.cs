@@ -23,6 +23,9 @@ public sealed class UpdateProjectDetailsHandler
         entity.Organisation = (int)command.Organisation;
         entity.Stage = (int)command.Stage;
         entity.ProjectManagerEmail = command.ProjectManagerEmail;
+        entity.AddressLine = (command.AddressLine ?? "").Trim();
+        entity.Town = (command.Town ?? "").Trim();
+        entity.Postcode = (command.Postcode ?? "").Trim();
 
         // The party this project corresponds with (client directly, or architect on a client's
         // behalf). A null/empty PartyId clears the assignment.

@@ -46,6 +46,17 @@ public static class ProcurementRouteRegistration
             new QueryRoute("/api/bid-packages/{bidPackageId}/quote-lines",
                 query => $"/api/bid-packages/{((ListQuoteLineItemsForBidPackage)query).BidPackageId}/quote-lines"));
 
+        queries.Register<SearchLocalSubcontractors, LocalSubcontractorSearchResult>(
+            new QueryRoute("/api/projects/{projectId}/local-subcontractors",
+                query =>
+                {
+                    var search = (SearchLocalSubcontractors)query;
+                    var path = $"/api/projects/{search.ProjectId}/local-subcontractors?trade={Uri.EscapeDataString(search.Trade)}";
+                    return string.IsNullOrEmpty(search.PageToken)
+                        ? path
+                        : $"{path}&pageToken={Uri.EscapeDataString(search.PageToken)}";
+                }));
+
         queries.Register<ListBidPackageDrawings, IReadOnlyList<Drawing>>(
             new QueryRoute("/api/bid-packages/{bidPackageId}/drawings",
                 query => $"/api/bid-packages/{((ListBidPackageDrawings)query).BidPackageId}/drawings"));
@@ -73,6 +84,10 @@ public static class ProcurementRouteRegistration
         commands.Register<SetBidPackageLineItems, IReadOnlyList<BidPackageLineItem>>(
             new CommandRoute("PUT", "/api/bid-packages/{bidPackageId}/line-items",
                 command => $"/api/bid-packages/{((SetBidPackageLineItems)command).BidPackageId}/line-items"));
+
+        commands.Register<AddBidPackageLineItems, IReadOnlyList<BidPackageLineItem>>(
+            new CommandRoute("POST", "/api/bid-packages/{bidPackageId}/line-items",
+                command => $"/api/bid-packages/{((AddBidPackageLineItems)command).BidPackageId}/line-items"));
 
         commands.Register<SetBidPackageLineItemCoverage, IReadOnlyList<BidPackageLineItem>>(
             new CommandRoute("PUT", "/api/bid-package-line-items/{lineItemId}/coverage",

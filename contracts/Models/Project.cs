@@ -14,4 +14,9 @@ public sealed record Project(
     // assigned; ClientName above stays the free-text display name shown on documents.
     PartyKind PartyKind = PartyKind.Client,
     string? PartyId = null,
-    string? OnBehalfOfClientId = null);
+    string? OnBehalfOfClientId = null,
+    // Site address — used to find local subcontractors near the project (and anywhere else the
+    // site's location matters). Free-text; Town + Postcode are what the local search needs.
+    string AddressLine = "",
+    string Town = "",
+    string Postcode = "");

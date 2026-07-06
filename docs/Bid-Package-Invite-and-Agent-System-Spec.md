@@ -4,7 +4,7 @@ Status: **Draft for review** · Author: assisted draft · Date: 2026‑06‑30
 
 > **Captured requirements — bid-package detail view & invite content (2026‑06‑30, from client review):**
 >
-> *Detail view (UI built this round):* the bid-package page now shows **Invited to tender** (with add via a searchable/filterable **directory modal**, and remove), **Line items** (grouped by trade, editable), a **Documents** section (placeholder — see below), **Related emails** (emails tagged to the package, read live), and a **Generate using AI** button (UI stub only — will later send related emails + drawings to Claude and draft the package).
+> *Detail view (UI built this round):* the bid-package page now shows **Invited to tender** (with add via a searchable/filterable **directory modal**, and remove), **Line items** (grouped by trade, editable), a **Documents** section (placeholder — see below), **Related emails** (emails tagged to the package, read live), and a **Generate using AI** button (confirm → review → apply flow built 2026‑07‑06; generation itself is stubbed behind `RequestAiProposalAsync` — when wired, Claude drafts from related emails + drawings, the draft opens in a review modal, and only accepted lines are merged in; existing content is never changed or removed).
 >
 > *Address-book modal:* should cover not just subcontractors/suppliers but also **clients and architects** (ties to open decision D3 — a Client/Architect directory is not built yet; the modal currently lists the subcontractor directory).
 >

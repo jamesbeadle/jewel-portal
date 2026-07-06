@@ -92,6 +92,13 @@
             </div>
 
             <FormField Label="Project manager email" Value="@projectManagerEmail" OnChange="v => projectManagerEmail = v" InputType="email" Required="true" />
+
+            <FormField Label="Site address" Value="@addressLine" OnChange="v => addressLine = v" />
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <FormField Label="Town" Value="@town" OnChange="v => town = v" />
+                <FormField Label="Postcode" Value="@postcode" OnChange="v => postcode = v" />
+            </div>
+            <p class="text-xs text-content-subtle">Town and postcode power "Find subcontractors" on bid packages — local companies are searched near the site.</p>
         </div>
     </Modal>
 }
@@ -115,6 +122,9 @@
     private Organisation organisation = Organisation.JewelBespokeBuild;
     private ProjectStage stage = ProjectStage.LiveDelivery;
     private string projectManagerEmail = "";
+    private string addressLine = "";
+    private string town = "";
+    private string postcode = "";
 
     // The party this project corresponds with — "client:{id}" / "architect:{id}" / "" — plus the
     // optional client an architect acts for.
@@ -138,6 +148,9 @@
         organisation = project.Organisation;
         stage = project.Stage;
         projectManagerEmail = project.ProjectManagerEmail;
+        addressLine = project.AddressLine;
+        town = project.Town;
+        postcode = project.Postcode;
         partySelection = string.IsNullOrEmpty(project.PartyId)
             ? ""
             : (project.PartyKind == PartyKind.Architect ? ArchitectPrefix : ClientPrefix) + project.PartyId;
@@ -211,7 +224,10 @@
                     partyId,
                     partyKind == PartyKind.Architect && !string.IsNullOrWhiteSpace(onBehalfOfClientId)
                         ? onBehalfOfClientId
-                        : null),
+                        : null,
+                    addressLine.Trim(),
+                    town.Trim(),
+                    postcode.Trim()),
                 CancellationToken.None);
             await Projects.RefreshAsync(CancellationToken.None);
             Close();

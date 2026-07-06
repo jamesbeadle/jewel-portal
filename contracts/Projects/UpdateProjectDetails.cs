@@ -16,4 +16,8 @@ public sealed record UpdateProjectDetails(
     // (RFIs and other request documents) are addressed.
     PartyKind PartyKind = PartyKind.Client,
     string? PartyId = null,
-    string? OnBehalfOfClientId = null) : ICommand<Project>;
+    string? OnBehalfOfClientId = null,
+    // Site address — Town + Postcode drive the "find local subcontractors" search.
+    string AddressLine = "",
+    string Town = "",
+    string Postcode = "") : ICommand<Project>;
