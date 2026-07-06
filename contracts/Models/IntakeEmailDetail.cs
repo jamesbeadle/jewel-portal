@@ -6,4 +6,7 @@ namespace Jewel.JPMS.Models;
 public sealed record IntakeAttachment(
     string Name,
     long Size,
-    string? ContentType);
+    string? ContentType,
+    // Graph attachment id — lets the triage UI act on a specific attachment (e.g. save it into a
+    // project's drawings). Empty for legacy snapshots that never recorded ids.
+    string Id = "");

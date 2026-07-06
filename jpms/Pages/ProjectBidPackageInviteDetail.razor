@@ -1,6 +1,7 @@
 @page "/projects/{ProjectId}/bid-package-invites/{BidPackageId}"
 @using Jewel.JPMS.Contracts.Procurement
 @using Jewel.JPMS.Contracts.Boq
+@using Jewel.JPMS.Contracts.Drawings
 @using Jewel.JPMS.Contracts.Variations
 @using Jewel.JPMS.Cqrs
 @inject AuthService Auth
@@ -317,12 +318,43 @@ else
                 </section>
             }
 
-            @* ---- Documents (placeholder) ---- *@
+            @* ---- Documents: project drawings linked to this package ---- *@
             <section class="mb-8">
-                <h3 class="eyebrow mb-3">Documents</h3>
-                <div class="rounded-xl border border-dashed border-line bg-surface-raised px-4 py-5 text-sm text-content-subtle">
-                    Drawings and supporting documents for this package will live here — uploaded files and cloud-storage links you can send to invited subcontractors. Not wired up yet.
+                <div class="flex items-center justify-between mb-3">
+                    <h3 class="eyebrow">Documents</h3>
+                    @if (CanManage)
+                    {
+                        <button type="button" class="text-xs text-accent hover:underline" @onclick="OpenDrawingsModal">Link drawings</button>
+                    }
                 </div>
+
+                @if (packageDrawings.Count == 0)
+                {
+                    <div class="rounded-xl border border-dashed border-line bg-surface-raised px-4 py-5 text-sm text-content-subtle">
+                        No drawings linked yet. Link drawings from the project's Drawings section — they're attached
+                        to the invite email when it's sent. (Save drawings out of any email from Triage.)
+                    </div>
+                }
+                else
+                {
+                    <ul class="space-y-2">
+                        @foreach (var drawing in packageDrawings)
+                        {
+                            <li class="rounded-lg border border-line bg-surface px-4 py-3 flex flex-wrap items-center justify-between gap-2">
+                                <div>
+                                    <span class="text-sm font-medium text-content">@drawing.DrawingCode</span>
+                                    <span class="text-sm text-content-muted ml-2">@drawing.Title</span>
+                                </div>
+                                <div class="flex items-center gap-3">
+                                    <span class="inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-medium @(drawing.CurrentApprovedRevisionLabel is null ? "border-amber-200 bg-amber-50 text-amber-800" : "border-line bg-surface-raised text-content-muted")">
+                                        @(drawing.CurrentApprovedRevisionLabel is null ? "No approved revision" : $"Rev {drawing.CurrentApprovedRevisionLabel}")
+                                    </span>
+                                    <a class="text-xs text-accent hover:underline" href="@($"/projects/{ProjectId}/drawings/{drawing.DrawingId}")">Open</a>
+                                </div>
+                            </li>
+                        }
+                    </ul>
+                }
             </section>
 
             @* ---- Tender responses & related emails (read live by the package's tag) ---- *@
@@ -470,6 +502,38 @@ else
         }
     </Modal>
 
+    @* ---- Link project drawings to the package (the tender documents) ---- *@
+    <Modal IsOpen="showDrawingsModal" Title="Link drawings" ShowFooter="true"
+           ConfirmLabel="@(busy ? "Saving…" : $"Link {selectedDrawingIds.Count}")" CancelLabel="Cancel"
+           OnCancel="CloseDrawingsModal" OnConfirm="ConfirmDrawings" Class="max-w-lg w-full">
+        @if (projectDrawings.Count == 0)
+        {
+            <p class="text-sm text-content-subtle italic">
+                No drawings on this project yet. Upload them in the Drawings tab, or save them out of
+                an email from Triage ("Save to drawings").
+            </p>
+        }
+        else
+        {
+            <p class="text-xs text-content-subtle mb-3">Linked drawings are attached to the invite email (latest approved revision, or the newest upload when none is approved).</p>
+            <div class="space-y-1 max-h-80 overflow-y-auto">
+                @foreach (var drawing in projectDrawings)
+                {
+                    <label class="flex items-center gap-2 text-sm text-content py-1">
+                        <input type="checkbox" checked="@selectedDrawingIds.Contains(drawing.DrawingId)"
+                               @onchange="e => ToggleDrawing(drawing.DrawingId, e)" />
+                        <span class="font-medium">@drawing.DrawingCode</span>
+                        <span class="text-content-subtle truncate">· @drawing.Title</span>
+                        @if (drawing.CurrentApprovedRevisionLabel is not null)
+                        {
+                            <span class="text-content-subtle">· Rev @drawing.CurrentApprovedRevisionLabel</span>
+                        }
+                    </label>
+                }
+            </div>
+        }
+    </Modal>
+
     @* ---- Compose & send the tender-invite email (recipients BCC'd) ---- *@
     <Modal IsOpen="showComposeModal" Title="Send invite email" ShowFooter="true"
            ConfirmLabel="@(busy ? "Sending…" : $"Send to {BccPreview().Count} (BCC)")" CancelLabel="Cancel"
@@ -478,6 +542,10 @@ else
             Sent from the shared mailbox with every recipient in BCC — subcontractors never see each
             other. The sent email is tagged to this package, and tagged replies appear under
             Tender responses below.
+            @if (packageDrawings.Count > 0)
+            {
+                <span> The @packageDrawings.Count linked drawing@(packageDrawings.Count == 1 ? "" : "s") will be attached.</span>
+            }
         </p>
 
         <label class="block text-xs font-semibold uppercase tracking-wide text-content-subtle mb-1">Recipients (BCC)</label>
@@ -591,6 +659,7 @@ else
     private IReadOnlyList<MailboxMessage> emails = Array.Empty<MailboxMessage>();
     private IReadOnlyList<Quote> quotes = Array.Empty<Quote>();
     private IReadOnlyList<QuoteLineItem> quoteLines = Array.Empty<QuoteLineItem>();
+    private IReadOnlyList<Drawing> packageDrawings = Array.Empty<Drawing>();
     private IReadOnlyList<BoqLineItem> boqLines = Array.Empty<BoqLineItem>();
     private IReadOnlyList<VariationOrderQuote> voqs = Array.Empty<VariationOrderQuote>();
 
@@ -645,6 +714,9 @@ else
 
         try { quoteLines = await Queries.AskAsync(new ListQuoteLineItemsForBidPackage(BidPackageId), CancellationToken.None); }
         catch { /* comparison simply shows totals only */ }
+
+        try { packageDrawings = await Queries.AskAsync(new ListBidPackageDrawings(BidPackageId), CancellationToken.None); }
+        catch { /* documents section simply shows none */ }
 
         // Coverage targets — best-effort so the picker can offer contract BoQ lines and variations.
         try { boqLines = await Queries.AskAsync(new ListBoqLinesForProject(ProjectId), CancellationToken.None); }
@@ -794,6 +866,44 @@ else
                 new RemoveBidPackageRecipient(BidPackageId, recipient.RecipientId), CancellationToken.None);
         }
         catch { error = "Couldn't remove that subcontractor. Please try again."; }
+        finally { busy = false; }
+    }
+
+    // ---- Link project drawings to the package ----
+
+    private bool showDrawingsModal;
+    private IReadOnlyList<Drawing> projectDrawings = Array.Empty<Drawing>();
+    private readonly HashSet<string> selectedDrawingIds = new(StringComparer.OrdinalIgnoreCase);
+
+    private async Task OpenDrawingsModal()
+    {
+        selectedDrawingIds.Clear();
+        foreach (var drawing in packageDrawings) selectedDrawingIds.Add(drawing.DrawingId);
+        showDrawingsModal = true;
+        try { projectDrawings = await Queries.AskAsync(new ListDrawingsForProject(ProjectId), CancellationToken.None); }
+        catch { projectDrawings = Array.Empty<Drawing>(); }
+    }
+
+    private void CloseDrawingsModal() => showDrawingsModal = false;
+
+    private void ToggleDrawing(string drawingId, ChangeEventArgs e)
+    {
+        if (e.Value is true) selectedDrawingIds.Add(drawingId);
+        else selectedDrawingIds.Remove(drawingId);
+    }
+
+    private async Task ConfirmDrawings()
+    {
+        if (busy || !CanManage) return;
+        error = null;
+        try
+        {
+            busy = true;
+            packageDrawings = await Commands.SendAsync(
+                new SetBidPackageDrawings(BidPackageId, selectedDrawingIds.ToList()), CancellationToken.None);
+            showDrawingsModal = false;
+        }
+        catch { error = "Couldn't update the linked drawings. Please try again."; }
         finally { busy = false; }
     }
 

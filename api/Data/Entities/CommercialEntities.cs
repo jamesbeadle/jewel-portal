@@ -25,6 +25,41 @@ public sealed class ProgrammeTaskEntity
     [MaxLength(64)]      public string? BoqLineItemId { get; set; }
 }
 
+// A finish-to-start dependency between two programme tasks (successor starts LagDays after the
+// predecessor finishes; lag may be negative for overlap). No FK constraints, by-id only, matching
+// every JPMS table.
+public sealed class ProgrammeTaskLinkEntity
+{
+    [Key, MaxLength(64)] public string ProgrammeTaskLinkId { get; set; } = "";
+    [MaxLength(64)]      public string ProjectId { get; set; } = "";
+    [MaxLength(64)]      public string PredecessorTaskId { get; set; } = "";
+    [MaxLength(64)]      public string SuccessorTaskId { get; set; } = "";
+    public int LagDays { get; set; }
+}
+
+// A named snapshot of the whole programme at a point in time — the yardstick movement is measured
+// against, and the contemporaneous record behind NOD/EOT claims.
+public sealed class ProgrammeBaselineEntity
+{
+    [Key, MaxLength(64)] public string ProgrammeBaselineId { get; set; } = "";
+    [MaxLength(64)]      public string ProjectId { get; set; } = "";
+    [MaxLength(256)]     public string Label { get; set; } = "";
+    [MaxLength(256)]     public string TakenByEmail { get; set; } = "";
+    public DateTimeOffset TakenAt { get; set; }
+}
+
+// One task's dates as they stood when the baseline was taken. Title is copied so the snapshot
+// stays meaningful even if the live task is later renamed.
+public sealed class ProgrammeBaselineTaskEntity
+{
+    [Key, MaxLength(64)] public string ProgrammeBaselineTaskId { get; set; } = "";
+    [MaxLength(64)]      public string ProgrammeBaselineId { get; set; } = "";
+    [MaxLength(64)]      public string ProgrammeTaskId { get; set; } = "";
+    [MaxLength(256)]     public string Title { get; set; } = "";
+    public DateTimeOffset PlannedStart { get; set; }
+    public DateTimeOffset PlannedEnd { get; set; }
+}
+
 public sealed class ValuationEntity
 {
     [Key, MaxLength(64)] public string ValuationId { get; set; } = "";

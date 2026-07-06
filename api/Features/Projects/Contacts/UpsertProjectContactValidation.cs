@@ -10,9 +10,14 @@ public sealed class UpsertProjectContactValidation
     {
         var errors = new List<string>();
         if (string.IsNullOrWhiteSpace(command.ProjectId)) errors.Add("ProjectId is required.");
-        if (string.IsNullOrWhiteSpace(command.Name)) errors.Add("Name is required.");
-        if (string.IsNullOrWhiteSpace(command.Email)) errors.Add("Email is required.");
-        else if (!IsValidEmail(command.Email)) errors.Add("Email is not a valid address.");
+        // Linked rows (PartyContactId set) take name/email from the party contact; ad-hoc rows
+        // must carry their own.
+        if (string.IsNullOrWhiteSpace(command.PartyContactId))
+        {
+            if (string.IsNullOrWhiteSpace(command.Name)) errors.Add("Name is required.");
+            if (string.IsNullOrWhiteSpace(command.Email)) errors.Add("Email is required.");
+            else if (!IsValidEmail(command.Email)) errors.Add("Email is not a valid address.");
+        }
         if (errors.Count == 0) return ValidationOutcome.Passed;
         return new ValidationOutcome(errors);
     }

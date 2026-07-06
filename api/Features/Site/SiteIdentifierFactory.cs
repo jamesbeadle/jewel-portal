@@ -6,4 +6,7 @@ internal static class SiteIdentifierFactory
 
     public static string NextSiteReportId() => Guid.NewGuid().ToString(CompactGuidFormat);
     public static string NextProgrammeTaskId() => Guid.NewGuid().ToString(CompactGuidFormat);
+    public static string NextProgrammeTaskLinkId() => Guid.NewGuid().ToString(CompactGuidFormat);
+    public static string NextProgrammeBaselineId() => Guid.NewGuid().ToString(CompactGuidFormat);
+    public static string NextProgrammeBaselineTaskId() => Guid.NewGuid().ToString(CompactGuidFormat);
 }

@@ -5,6 +5,7 @@
 @inject IRequestRegister RequestRegister
 @inject IClientStore ClientStore
 @inject IArchitectStore ArchitectStore
+@inject ICorrespondenceStore Correspondence
 @inject IVariationStore Variations
 @inject IAgentDesk Agents
 @inject NavigationManager Nav
@@ -258,7 +259,7 @@ else
                             <button type="button" class="btn-primary w-full" disabled="@(busy || preparingDraft)" @onclick="PrepareEmailDraft">
                                 @(preparingDraft ? "Preparing draft…" : "Prepare email draft")
                             </button>
-                            <p class="text-xs text-content-subtle mt-1">Creates a draft in the projects mailbox — PDF attached, addressed to the linked party. Review and send from Outlook; nothing is sent from here.</p>
+                            <p class="text-xs text-content-subtle mt-1">Creates a draft in the projects mailbox — PDF attached, To/CC/BCC pre-filled from the correspondence profile. Review and send from Outlook; nothing is sent from here.</p>
                         </div>
 
                         @if (draftError is not null)
@@ -270,6 +271,14 @@ else
                             <div class="rounded-lg bg-emerald-500/10 border border-emerald-500/30 px-3 py-2">
                                 <p class="text-sm font-medium text-emerald-600">Draft created in the projects mailbox.</p>
                                 <p class="text-xs text-content-subtle mt-1">To: @string.Join(", ", draftResult.Recipients)</p>
+                                @if (draftResult.Cc is { Count: > 0 } draftCc)
+                                {
+                                    <p class="text-xs text-content-subtle">CC: @string.Join(", ", draftCc)</p>
+                                }
+                                @if (draftResult.Bcc is { Count: > 0 } draftBcc)
+                                {
+                                    <p class="text-xs text-content-subtle">BCC: @string.Join(", ", draftBcc)</p>
+                                }
                                 @if (!string.IsNullOrWhiteSpace(draftResult.WebLink))
                                 {
                                     <a href="@draftResult.WebLink" target="_blank" rel="noopener"
@@ -301,7 +310,7 @@ else
                         {
                             <div>
                                 <button type="button" class="btn-primary w-full" disabled="@busy" @onclick="PromoteToRfi">Promote to RFI</button>
-                                <p class="text-xs text-content-subtle mt-1">Issues the official RFI to the linked party — an architect's contact email, or the client's primary contact when working with the client directly (falling back to the project's party, then its architect contact).</p>
+                                <p class="text-xs text-content-subtle mt-1">Issues the official RFI to the resolved recipients below — the linked party's primary contact, with the project's CC/BCC recipients copied.</p>
                             </div>
                         }
                         else if (!record.HasRfq)
@@ -350,6 +359,30 @@ else
                                     }
                                 </select>
                                 <p class="text-xs text-content-subtle mt-1">Optional: the client this architect is acting for.</p>
+                            </div>
+                        }
+
+                        @if (recipientPreview is not null)
+                        {
+                            <div class="rounded-lg bg-surface-raised border border-line px-3 py-2 space-y-1">
+                                <p class="text-[10px] uppercase tracking-wide font-semibold text-content-subtle">Will be sent</p>
+                                @if (recipientPreview.To.Count == 0)
+                                {
+                                    <p class="text-xs text-negative">No correspondent resolves — link a party or set a project contact's routing to To.</p>
+                                }
+                                else
+                                {
+                                    <p class="text-xs text-content"><span class="font-medium">To:</span> @RecipientLine(recipientPreview.To)</p>
+                                }
+                                @if (recipientPreview.Cc.Count > 0)
+                                {
+                                    <p class="text-xs text-content"><span class="font-medium">CC:</span> @RecipientLine(recipientPreview.Cc)</p>
+                                }
+                                @if (recipientPreview.Bcc.Count > 0)
+                                {
+                                    <p class="text-xs text-content"><span class="font-medium">BCC:</span> @RecipientLine(recipientPreview.Bcc)</p>
+                                }
+                                <p class="text-[10px] text-content-subtle">From the project's correspondence profile (Overview tab). BCC never appears on the document or the shared trail.</p>
                             </div>
                         }
                     </div>
@@ -558,6 +591,7 @@ else
     private bool preparingDraft;
     private string? draftError;
     private RequestEmailDraft? draftResult;
+    private RequestRecipientSet? recipientPreview;
 
     private string VoqHref => voq is null ? "" : $"/projects/{ProjectId}/voq/{voq.VariationOrderQuoteId}";
 
@@ -610,8 +644,20 @@ else
             try { architects = await ArchitectStore.ListAsync(); } catch { architects = Array.Empty<Architect>(); }
         }
         await LoadVoqAsync();
+        await LoadRecipientPreviewAsync();
         isLoaded = true;
     }
+
+    // The resolved To/CC/BCC an issue or draft would use right now — same resolver as the send
+    // paths, refreshed whenever the linked party changes. Best-effort: the panel just hides on error.
+    private async Task LoadRecipientPreviewAsync()
+    {
+        try { recipientPreview = record is null ? null : await Correspondence.ResolveRequestRecipientsAsync(record.RequestId); }
+        catch { recipientPreview = null; }
+    }
+
+    private static string RecipientLine(IReadOnlyList<CorrespondenceRecipient> recipients) =>
+        string.Join(", ", recipients.Select(r => string.IsNullOrWhiteSpace(r.Name) ? r.Email : $"{r.Name} <{r.Email}>"));
 
     private async Task LoadVoqAsync()
     {
@@ -766,6 +812,7 @@ else
         {
             busy = true;
             record = await RequestRegister.LinkToPartyAsync(record.RequestId, partyKind, partyId, onBehalfOfClientId, ProjectId);
+            await LoadRecipientPreviewAsync();
         }
         catch
         {
@@ -787,6 +834,7 @@ else
         {
             busy = true;
             record = await RequestRegister.LinkToPartyAsync(record.RequestId, PartyKind.Architect, record.PartyId, clientId, ProjectId);
+            await LoadRecipientPreviewAsync();
         }
         catch
         {

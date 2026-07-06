@@ -1,0 +1,198 @@
+@using Jewel.JPMS.Contracts.Parties
+@inject ICorrespondenceStore Correspondence
+
+@*
+    A party's contact book: the people at a client account or architect practice, each with a
+    default correspondence routing (To/CC/BCC/Off). The primary contact is the party's To
+    correspondent — request documents are addressed to them on every project corresponding with
+    this party; CC/BCC contacts are copied on every issue (projects can override per person).
+    Opened from the Clients / Architects pages via @ref + Open(partyId, partyName).
+*@
+
+<Modal IsOpen="@open" Title="@($"Contacts — {partyName}")" ConfirmLabel="Done" CancelLabel="Close"
+       OnConfirm="Close" OnCancel="Close" Class="max-w-3xl">
+    <div class="space-y-4">
+        @if (error is not null)
+        {
+            <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@error</p>
+        }
+
+        @if (loading)
+        {
+            <p class="text-sm text-content-subtle">Loading contacts…</p>
+        }
+        else if (contacts.Count == 0)
+        {
+            <p class="text-sm text-content-subtle">No contacts yet. Add the people request documents should go to — the primary contact is addressed directly, CC/BCC contacts are copied on every issue.</p>
+        }
+        else
+        {
+            <div class="border border-line rounded-lg overflow-hidden">
+                <table class="w-full text-sm">
+                    <thead>
+                        <tr class="text-left text-content-subtle border-b border-line">
+                            <th class="px-3 py-2 font-medium">Name</th>
+                            <th class="px-3 py-2 font-medium">Email</th>
+                            <th class="px-3 py-2 font-medium">Routing</th>
+                            <th class="px-3 py-2"></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var contact in contacts)
+                        {
+                            <tr class="border-b border-line last:border-0">
+                                <td class="px-3 py-2 text-content">
+                                    @contact.Name
+                                    @if (contact.IsPrimary)
+                                    {
+                                        <span class="ml-2 inline-flex items-center rounded bg-accent/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-accent">Primary</span>
+                                    }
+                                    @if (!string.IsNullOrWhiteSpace(contact.JobTitle))
+                                    {
+                                        <span class="block text-xs text-content-subtle">@contact.JobTitle</span>
+                                    }
+                                </td>
+                                <td class="px-3 py-2 text-content-muted">@contact.Email</td>
+                                <td class="px-3 py-2">
+                                    <select class="field text-xs py-1" value="@((int)contact.DefaultRouting)" disabled="@(busy || contact.IsPrimary)"
+                                            @onchange="e => ChangeRoutingAsync(contact, e)">
+                                        <option value="@((int)CorrespondenceRouting.To)">To</option>
+                                        <option value="@((int)CorrespondenceRouting.Cc)">CC</option>
+                                        <option value="@((int)CorrespondenceRouting.Bcc)">BCC</option>
+                                        <option value="@((int)CorrespondenceRouting.None)">Off</option>
+                                    </select>
+                                </td>
+                                <td class="px-3 py-2 text-right whitespace-nowrap">
+                                    @if (!contact.IsPrimary)
+                                    {
+                                        <button type="button" class="text-xs font-medium text-content-muted hover:text-content mr-3"
+                                                disabled="@busy" @onclick="() => MakePrimaryAsync(contact)">Make primary</button>
+                                    }
+                                    <button type="button" class="text-xs font-medium text-negative/80 hover:text-negative"
+                                            disabled="@busy" @onclick="() => RemoveAsync(contact)">Remove</button>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+            <p class="text-xs text-content-subtle">The primary contact is who request documents are addressed to. CC/BCC contacts are copied on every issued document; a project can fine-tune routing per person from its Correspondence panel.</p>
+        }
+
+        <div class="pt-3 border-t border-line space-y-3">
+            <h4 class="eyebrow">Add a contact</h4>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <FormField Label="Name" Value="@newName" OnChange="v => newName = v" Required="true" />
+                <FormField Label="Email" Value="@newEmail" OnChange="v => newEmail = v" InputType="email" Required="true" />
+                <FormField Label="Job title" Value="@newJobTitle" OnChange="v => newJobTitle = v" />
+                <div>
+                    <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Routing</label>
+                    <select class="field" @bind="newRouting">
+                        <option value="@((int)CorrespondenceRouting.Cc)">CC — copied on every issue</option>
+                        <option value="@((int)CorrespondenceRouting.Bcc)">BCC — blind-copied</option>
+                        <option value="@((int)CorrespondenceRouting.To)">To — addressed directly</option>
+                        <option value="@((int)CorrespondenceRouting.None)">Off — on the book only</option>
+                    </select>
+                </div>
+            </div>
+            <button type="button" class="btn-secondary" disabled="@busy" @onclick="AddAsync">
+                @(busy ? "Saving…" : "Add contact")
+            </button>
+        </div>
+    </div>
+</Modal>
+
+@code {
+    [Parameter, EditorRequired] public PartyKind Kind { get; set; }
+    [Parameter] public EventCallback OnChanged { get; set; }
+
+    private bool open;
+    private bool loading;
+    private bool busy;
+    private string? error;
+    private string partyId = "";
+    private string partyName = "";
+    private IReadOnlyList<PartyContact> contacts = Array.Empty<PartyContact>();
+
+    private string newName = "";
+    private string newEmail = "";
+    private string newJobTitle = "";
+    private int newRouting = (int)CorrespondenceRouting.Cc;
+
+    public async Task Open(string id, string name)
+    {
+        partyId = id;
+        partyName = name;
+        error = null;
+        newName = newEmail = newJobTitle = "";
+        newRouting = (int)CorrespondenceRouting.Cc;
+        open = true;
+        await ReloadAsync();
+    }
+
+    private void Close()
+    {
+        open = false;
+        error = null;
+    }
+
+    private async Task ReloadAsync()
+    {
+        loading = true;
+        StateHasChanged();
+        try { contacts = await Correspondence.ListPartyContactsAsync(Kind, partyId); error = null; }
+        catch { contacts = Array.Empty<PartyContact>(); error = "Couldn't load the contacts. Please try again."; }
+        finally { loading = false; StateHasChanged(); }
+    }
+
+    private async Task AddAsync()
+    {
+        if (busy) return;
+        error = null;
+        if (string.IsNullOrWhiteSpace(newName) || string.IsNullOrWhiteSpace(newEmail))
+        {
+            error = "A name and email are required.";
+            return;
+        }
+        // The first contact on an empty book becomes the primary To correspondent.
+        var isFirst = contacts.Count == 0;
+        await MutateAsync(() => Correspondence.UpsertPartyContactAsync(new UpsertPartyContact(
+            Kind, partyId, newName.Trim(), newEmail.Trim(),
+            isFirst ? CorrespondenceRouting.To : (CorrespondenceRouting)newRouting,
+            IsPrimary: isFirst,
+            JobTitle: NullIfBlank(newJobTitle))));
+        if (error is null) { newName = newEmail = newJobTitle = ""; newRouting = (int)CorrespondenceRouting.Cc; }
+    }
+
+    private async Task ChangeRoutingAsync(PartyContact contact, ChangeEventArgs e)
+    {
+        if (busy || !int.TryParse(e.Value?.ToString(), out var routing)) return;
+        await MutateAsync(() => Correspondence.UpsertPartyContactAsync(new UpsertPartyContact(
+            Kind, partyId, contact.Name, contact.Email, (CorrespondenceRouting)routing,
+            IsPrimary: contact.IsPrimary, JobTitle: contact.JobTitle, PartyContactId: contact.PartyContactId)));
+    }
+
+    private async Task MakePrimaryAsync(PartyContact contact) =>
+        await MutateAsync(() => Correspondence.UpsertPartyContactAsync(new UpsertPartyContact(
+            Kind, partyId, contact.Name, contact.Email, CorrespondenceRouting.To,
+            IsPrimary: true, JobTitle: contact.JobTitle, PartyContactId: contact.PartyContactId)));
+
+    private async Task RemoveAsync(PartyContact contact) =>
+        await MutateAsync(() => Correspondence.RemovePartyContactAsync(Kind, partyId, contact.PartyContactId));
+
+    private async Task MutateAsync(Func<Task> action)
+    {
+        try
+        {
+            busy = true;
+            await action();
+            await ReloadAsync();
+            if (OnChanged.HasDelegate) await OnChanged.InvokeAsync();
+        }
+        catch (CommandFailedException ex) { error = ex.Message; }
+        catch { error = "Couldn't save the change. Please try again."; }
+        finally { busy = false; }
+    }
+
+    private static string? NullIfBlank(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+}

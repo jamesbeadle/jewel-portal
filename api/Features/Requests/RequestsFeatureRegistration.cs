@@ -19,6 +19,10 @@ public static class RequestsFeatureRegistration
         services.AddScoped<IQueryHandler<GetRequestEmailDetail, MailboxMessageDetail>, GetRequestEmailDetailHandler>();
         services.AddScoped<IQueryHandler<ListUnassignedRequests, IReadOnlyList<Request>>, ListUnassignedRequestsHandler>();
 
+        // Recipients preview: the exact To/CC/BCC set an issue or draft would use right now,
+        // resolved through the same shared RequestRecipientResolver as the send paths.
+        services.AddScoped<IQueryHandler<ResolveRequestRecipients, RequestRecipientSet>, ResolveRequestRecipientsHandler>();
+
         // Reads a request's emails live from the mailbox by its workflow tag — the replacement for the
         // old stored email snapshot. Used by the conversation view, LLM context, and document builder.
         services.AddScoped<RequestEmailReader>();

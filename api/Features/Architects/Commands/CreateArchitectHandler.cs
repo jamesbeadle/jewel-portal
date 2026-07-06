@@ -1,6 +1,7 @@
 using Jewel.JPMS.Api.Cqrs;
 using Jewel.JPMS.Api.Data;
 using Jewel.JPMS.Api.Data.Entities;
+using Jewel.JPMS.Api.Features.Parties;
 using Jewel.JPMS.Contracts.Architects;
 using Jewel.JPMS.Models;
 
@@ -23,6 +24,13 @@ public sealed class CreateArchitectHandler : ICommandHandler<CreateArchitect, Ar
         };
 
         context.Architects.Add(entity);
+
+        // Seed the contact book: the contact given at creation becomes the practice's primary To
+        // correspondent on the new PartyContacts table.
+        await PartyContactLegacySync.SyncPrimaryAsync(
+            context, PartyKind.Architect, entity.ArchitectId,
+            command.ContactName, command.ContactEmail, cancellationToken);
+
         await context.SaveChangesAsync(cancellationToken);
         return entity.ToModel();
     }

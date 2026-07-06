@@ -24,6 +24,12 @@ public static class RequestsRouteRegistration
             new QueryRoute("/api/requests/{requestId}",
                 query => $"/api/requests/{((GetRequestById)query).RequestId}"));
 
+        // Recipients preview: the exact To/CC/BCC set an issue or draft would use right now,
+        // resolved through the same shared resolver as the send paths.
+        queries.Register<ResolveRequestRecipients, RequestRecipientSet>(
+            new QueryRoute("/api/requests/{requestId}/recipients",
+                query => $"/api/requests/{((ResolveRequestRecipients)query).RequestId}/recipients"));
+
         queries.Register<ListRequestMessages, IReadOnlyList<RequestMessage>>(
             new QueryRoute("/api/requests/{requestId}/messages",
                 query => $"/api/requests/{((ListRequestMessages)query).RequestId}/messages"));

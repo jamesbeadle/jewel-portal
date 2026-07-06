@@ -91,8 +91,14 @@ public sealed record RequestDocumentItem(
     string Query,
     string? Response);
 
-/// <summary>An external party the document is issued to (a project contact flagged ReceivesRequests).</summary>
-public sealed record RequestDocumentRecipient(string Name, string Email, string Role, string? Organisation);
+/// <summary>
+/// A party the document is addressed or openly copied to, resolved through the project's
+/// correspondence profile (see RequestRecipientResolver). Routing is To or Cc only — Bcc is
+/// deliberately never placed on the document model, so it cannot reach a render.
+/// </summary>
+public sealed record RequestDocumentRecipient(
+    string Name, string Email, string Role, string? Organisation,
+    CorrespondenceRouting Routing = CorrespondenceRouting.To);
 
 /// <summary>One entry in the request's shared activity history, rendered as the audit trail.</summary>
 public sealed record RequestDocumentActivity(string AuthorName, string Body, DateTimeOffset PostedAt, bool Inbound);

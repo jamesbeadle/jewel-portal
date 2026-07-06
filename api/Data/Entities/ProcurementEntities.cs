@@ -67,6 +67,17 @@ public sealed class QuoteEntity
     public bool IsDeclined { get; set; }
 }
 
+// A project drawing linked to a bid package — the tender documents. One row per (package, drawing);
+// the drawing itself (and its revisions/files) lives in the project's Drawings section, this is just
+// the association the invite email attaches from.
+public sealed class BidPackageDrawingEntity
+{
+    [Key, MaxLength(64)] public string BidPackageDrawingId { get; set; } = "";
+    [MaxLength(64)]      public string BidPackageId { get; set; } = "";
+    [MaxLength(64)]      public string DrawingId { get; set; } = "";
+    public DateTimeOffset LinkedAt { get; set; }
+}
+
 // A priced line on a subcontractor's quote — their rate against one of the package's line items.
 public sealed class QuoteLineItemEntity
 {

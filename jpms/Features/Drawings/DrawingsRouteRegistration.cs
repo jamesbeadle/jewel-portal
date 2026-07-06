@@ -39,6 +39,10 @@ public static class DrawingsRouteRegistration
         // Revision upload is multipart/form-data and is sent directly by HttpDrawingStore, not via
         // the JSON command sender, so it is intentionally not registered here.
 
+        commands.Register<ImportDrawingFromMessage, Drawing>(
+            new CommandRoute("POST", "/api/projects/{projectId}/drawings/import-from-message",
+                command => $"/api/projects/{((ImportDrawingFromMessage)command).ProjectId}/drawings/import-from-message"));
+
         commands.Register<ApproveDrawingRevision, DrawingRevision>(
             new CommandRoute("POST", "/api/drawings/{drawingId}/revisions/{revisionId}/approve",
                 command =>

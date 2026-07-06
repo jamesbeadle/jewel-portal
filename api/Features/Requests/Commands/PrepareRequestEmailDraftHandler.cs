@@ -1,8 +1,8 @@
 using Jewel.JPMS.Api.Cqrs;
 using Jewel.JPMS.Api.Data;
-using Jewel.JPMS.Api.Data.Entities;
 using Jewel.JPMS.Api.Features.MailboxIntake.Graph;
 using Jewel.JPMS.Api.Features.Requests.Documents;
+using Jewel.JPMS.Api.Features.Requests.Recipients;
 using Jewel.JPMS.Contracts.Requests;
 using Jewel.JPMS.Models;
 using Microsoft.EntityFrameworkCore;
@@ -15,11 +15,10 @@ namespace Jewel.JPMS.Api.Features.Requests.Commands;
 /// person can review, adjust and send it from the mailbox itself. Nothing is sent and no status
 /// changes: issuing remains the send path's job.
 ///
-/// Recipient resolution, most specific first:
-///  1. the ad-hoc override, when given;
-///  2. the request's linked party — an architect's contact email, or a client's primary contact
-///     email — falling back to the project's party when the request carries no party link;
-///  3. the project contacts flagged ReceivesRequests — the same fallback the send path uses.
+/// Recipients come from the shared <see cref="RequestRecipientResolver"/> (request party →
+/// project party → project profile To rows, with the correspondence profile supplying CC/BCC) —
+/// the same resolution the worker send uses. An ad-hoc override addresses the draft to that one
+/// email instead, with no CC/BCC.
 /// </summary>
 public sealed class PrepareRequestEmailDraftHandler : ICommandHandler<PrepareRequestEmailDraft, RequestEmailDraft>
 {
@@ -40,22 +39,32 @@ public sealed class PrepareRequestEmailDraftHandler : ICommandHandler<PrepareReq
             .FirstOrDefaultAsync(r => r.RequestId == command.RequestId, cancellationToken);
         if (request is null) throw new InvalidOperationException($"Request '{command.RequestId}' not found.");
 
-        var tagged = await emails.ForRequestAsync(command.RequestId, cancellationToken);
-        var model = await RequestDocumentBuilder.BuildAsync(context, command.RequestId, tagged, cancellationToken);
-        if (model is null) throw new InvalidOperationException($"Request '{command.RequestId}' not found.");
-
-        var recipients = await ResolveRecipientsAsync(request, model, command.RecipientOverride, cancellationToken);
-        if (recipients.Count == 0)
+        // An ad-hoc override addresses the draft to that one email, nothing copied; otherwise the
+        // shared resolver supplies the full To/CC/BCC set the send path would use.
+        var recipients = !string.IsNullOrWhiteSpace(command.RecipientOverride)
+            ? new RequestRecipientSet(
+                new[] { new CorrespondenceRecipient("", command.RecipientOverride.Trim(), CorrespondenceRouting.To) },
+                Array.Empty<CorrespondenceRecipient>(),
+                Array.Empty<CorrespondenceRecipient>())
+            : await RequestRecipientResolver.ResolveAsync(context, request, cancellationToken);
+        if (!recipients.HasTo)
             throw new InvalidOperationException(
                 "No recipient could be resolved. Link the request (or its project) to a client or architect " +
-                "with a contact email, or flag a project contact to receive requests.");
+                "with a contact, or set a project contact's routing to To.");
+
+        var tagged = await emails.ForRequestAsync(command.RequestId, cancellationToken);
+        var model = await RequestDocumentBuilder.BuildAsync(
+            context, command.RequestId, tagged, cancellationToken, recipients);
+        if (model is null) throw new InvalidOperationException($"Request '{command.RequestId}' not found.");
 
         var pdf = RequestDocumentRenderer.Render(model);
         var draft = new MailboxDraftMessage(
-            recipients,
+            recipients.To.Select(ToDraftRecipient).ToList(),
             model.EmailSubject,
             BuildCoverNote(model),
-            new[] { new MailboxDraftAttachment(model.FileName, "application/pdf", pdf) });
+            new[] { new MailboxDraftAttachment(model.FileName, "application/pdf", pdf) },
+            Bcc: recipients.Bcc.Select(ToDraftRecipient).ToList(),
+            Cc: recipients.Cc.Select(ToDraftRecipient).ToList());
 
         var created = await graph.CreateDraftAsync(draft, cancellationToken);
         if (created is null)
@@ -65,53 +74,14 @@ public sealed class PrepareRequestEmailDraftHandler : ICommandHandler<PrepareReq
         return new RequestEmailDraft(
             request.RequestId,
             model.EmailSubject,
-            recipients.Select(r => r.Email).ToList(),
-            created.WebLink);
+            recipients.To.Select(r => r.Email).ToList(),
+            created.WebLink,
+            Cc: recipients.Cc.Select(r => r.Email).ToList(),
+            Bcc: recipients.Bcc.Select(r => r.Email).ToList());
     }
 
-    private async Task<List<MailboxDraftRecipient>> ResolveRecipientsAsync(
-        RequestEntity request, RequestDocumentModel model, string? recipientOverride, CancellationToken cancellationToken)
-    {
-        if (!string.IsNullOrWhiteSpace(recipientOverride))
-            return new List<MailboxDraftRecipient> { new(recipientOverride.Trim()) };
-
-        // The request's own party link wins; otherwise the project's assigned party.
-        var partyKind = request.PartyKind;
-        var partyId = request.PartyId;
-        if (string.IsNullOrWhiteSpace(partyId))
-        {
-            var project = await context.Projects
-                .Where(p => p.ProjectId == request.ProjectId)
-                .Select(p => new { p.PartyKind, p.PartyId })
-                .FirstOrDefaultAsync(cancellationToken);
-            partyKind = project?.PartyKind ?? (int)PartyKind.Client;
-            partyId = project?.PartyId;
-        }
-
-        var recipients = new List<MailboxDraftRecipient>();
-        if (!string.IsNullOrWhiteSpace(partyId))
-        {
-            if (partyKind == (int)PartyKind.Architect)
-            {
-                var architect = await context.Architects.FindAsync(new object[] { partyId }, cancellationToken);
-                if (!string.IsNullOrWhiteSpace(architect?.ContactEmail))
-                    recipients.Add(new MailboxDraftRecipient(architect!.ContactEmail.Trim(), architect.ContactName ?? architect.Name));
-            }
-            else
-            {
-                var client = await context.Clients.FindAsync(new object[] { partyId }, cancellationToken);
-                if (!string.IsNullOrWhiteSpace(client?.PrimaryContactEmail))
-                    recipients.Add(new MailboxDraftRecipient(client!.PrimaryContactEmail.Trim(), client.PrimaryContactName ?? client.Name));
-            }
-        }
-
-        // Same fallback the send path uses: the project contacts flagged to receive requests
-        // (already collated on the document model).
-        if (recipients.Count == 0)
-            recipients.AddRange(model.Recipients.Select(r => new MailboxDraftRecipient(r.Email, r.Name)));
-
-        return recipients;
-    }
+    private static MailboxDraftRecipient ToDraftRecipient(CorrespondenceRecipient r) =>
+        new(r.Email, string.IsNullOrWhiteSpace(r.Name) ? null : r.Name);
 
     /// <summary>The short branded HTML cover note — mirrors the worker's outbound send so a drafted
     /// email reads the same as an auto-issued one.</summary>

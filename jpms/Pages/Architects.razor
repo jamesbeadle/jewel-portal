@@ -59,7 +59,8 @@ else
                                 <td class="px-4 py-3 font-medium text-content">@architect.Name</td>
                                 <td class="px-4 py-3 text-content-muted">@Dash(architect.ContactName)</td>
                                 <td class="px-4 py-3 text-content-muted">@Dash(architect.ContactEmail)</td>
-                                <td class="px-4 py-3 text-right">
+                                <td class="px-4 py-3 text-right whitespace-nowrap">
+                                    <button type="button" class="text-sm font-medium text-content-muted hover:text-content mr-3" @onclick="() => OpenContacts(architect)">Contacts</button>
                                     <button type="button" class="text-sm font-medium text-content-muted hover:text-content" @onclick="() => OpenEdit(architect)">Edit</button>
                                 </td>
                             </tr>
@@ -69,6 +70,8 @@ else
             </div>
         }
     </section>
+
+    <PartyContactsEditor @ref="contactsEditor" Kind="PartyKind.Architect" OnChanged="ReloadAsync" />
 
     <Modal IsOpen="creating"
            Title="New architect practice"
@@ -120,6 +123,7 @@ else
 
     private bool creating;
     private bool editing;
+    private PartyContactsEditor? contactsEditor;
     private string? editTargetId;
     private string formName = "";
     private string formContactName = "";
@@ -144,6 +148,11 @@ else
         formError = null;
         formName = formContactName = formContactEmail = "";
         creating = true;
+    }
+
+    private async Task OpenContacts(Architect architect)
+    {
+        if (contactsEditor is not null) await contactsEditor.Open(architect.ArchitectId, architect.Name);
     }
 
     private void OpenEdit(Architect architect)

@@ -13,6 +13,7 @@ public static class SiteFeatureRegistration
     {
         services.AddScoped<IQueryHandler<ListSiteReportsForProject, IReadOnlyList<SiteReport>>, ListSiteReportsForProjectHandler>();
         services.AddScoped<IQueryHandler<GetProgrammeForProject, IReadOnlyList<ProgrammeTask>>, GetProgrammeForProjectHandler>();
+        services.AddScoped<IQueryHandler<GetProgrammeDetail, ProgrammeDetail>, GetProgrammeDetailHandler>();
 
         services.AddScoped<ICommandHandler<AssembleSiteReport, SiteReport>, AssembleSiteReportHandler>();
         services.AddScoped<AssembleSiteReportAuthorisation>();
@@ -29,6 +30,18 @@ public static class SiteFeatureRegistration
         services.AddScoped<ICommandHandler<UpdateProgrammeTask, ProgrammeTask>, UpdateProgrammeTaskHandler>();
         services.AddScoped<UpdateProgrammeTaskAuthorisation>();
         services.AddScoped<UpdateProgrammeTaskValidation>();
+
+        services.AddScoped<ICommandHandler<AddProgrammeTaskLink, ProgrammeTaskLink>, AddProgrammeTaskLinkHandler>();
+        services.AddScoped<AddProgrammeTaskLinkAuthorisation>();
+        services.AddScoped<AddProgrammeTaskLinkValidation>();
+
+        services.AddScoped<ICommandHandler<RemoveProgrammeTaskLink, Jewel.JPMS.Contracts.Cqrs.Acknowledgement>, RemoveProgrammeTaskLinkHandler>();
+        services.AddScoped<RemoveProgrammeTaskLinkAuthorisation>();
+        services.AddScoped<RemoveProgrammeTaskLinkValidation>();
+
+        services.AddScoped<ICommandHandler<TakeProgrammeBaseline, ProgrammeBaseline>, TakeProgrammeBaselineHandler>();
+        services.AddScoped<TakeProgrammeBaselineAuthorisation>();
+        services.AddScoped<TakeProgrammeBaselineValidation>();
 
         return services;
     }

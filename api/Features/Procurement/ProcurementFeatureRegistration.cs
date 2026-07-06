@@ -19,6 +19,7 @@ public static class ProcurementFeatureRegistration
         services.AddScoped<IQueryHandler<ListBidPackageLineItems, IReadOnlyList<BidPackageLineItem>>, ListBidPackageLineItemsHandler>();
         services.AddScoped<IQueryHandler<ListBidPackageEmails, IReadOnlyList<MailboxMessage>>, ListBidPackageEmailsHandler>();
         services.AddScoped<IQueryHandler<ListQuoteLineItemsForBidPackage, IReadOnlyList<QuoteLineItem>>, ListQuoteLineItemsForBidPackageHandler>();
+        services.AddScoped<IQueryHandler<ListBidPackageDrawings, IReadOnlyList<Drawing>>, ListBidPackageDrawingsHandler>();
 
         services.AddScoped<ICommandHandler<CreateBidPackage, BidPackage>, CreateBidPackageHandler>();
         services.AddScoped<CreateBidPackageAuthorisation>();
@@ -47,6 +48,10 @@ public static class ProcurementFeatureRegistration
         services.AddScoped<ICommandHandler<UpdateBidPackageScope, BidPackage>, UpdateBidPackageScopeHandler>();
         services.AddScoped<UpdateBidPackageScopeAuthorisation>();
         services.AddScoped<UpdateBidPackageScopeValidation>();
+
+        services.AddScoped<ICommandHandler<SetBidPackageDrawings, IReadOnlyList<Drawing>>, SetBidPackageDrawingsHandler>();
+        services.AddScoped<SetBidPackageDrawingsAuthorisation>();
+        services.AddScoped<SetBidPackageDrawingsValidation>();
 
         services.AddScoped<ICommandHandler<SendBidPackageInvite, BidPackage>, SendBidPackageInviteHandler>();
         services.AddScoped<SendBidPackageInviteAuthorisation>();

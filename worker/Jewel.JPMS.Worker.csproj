@@ -48,6 +48,9 @@
     <Compile Include="..\api\Features\Requests\Documents\RequestDocumentBuilder.cs" Link="Shared\Documents\RequestDocumentBuilder.cs" />
     <Compile Include="..\api\Features\Requests\Documents\RequestDocumentRenderer.cs" Link="Shared\Documents\RequestDocumentRenderer.cs" />
     <Compile Include="..\api\Features\Requests\Documents\DocumentFontResolver.cs" Link="Shared\Documents\DocumentFontResolver.cs" />
+    <!-- Shared recipient resolution: the worker send, the Outlook draft, and the recipients
+         preview all resolve To/CC/BCC through the same code so the paths can never drift. -->
+    <Compile Include="..\api\Features\Requests\Recipients\RequestRecipientResolver.cs" Link="Shared\RequestRecipientResolver.cs" />
     <!-- Live mailbox read-by-tag: the worker builds the same document the app downloads, so it needs to
          read a request's tagged emails live (RequestEmailReader -> MailboxGraphClient). Binds to the
          worker's own GraphTokenProvider (same namespace + signature). -->

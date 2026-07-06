@@ -1,4 +1,5 @@
 using Jewel.JPMS.Api.Data;
+using Jewel.JPMS.Api.Features.Requests.Recipients;
 using Jewel.JPMS.Models;
 using Microsoft.EntityFrameworkCore;
 
@@ -12,7 +13,8 @@ namespace Jewel.JPMS.Api.Features.Requests.Documents;
 public static class RequestDocumentBuilder
 {
     public static async Task<RequestDocumentModel?> BuildAsync(
-        JpmsContext context, string requestId, IReadOnlyList<MailboxMessage> emails, CancellationToken ct)
+        JpmsContext context, string requestId, IReadOnlyList<MailboxMessage> emails, CancellationToken ct,
+        RequestRecipientSet? resolvedRecipients = null)
     {
         var request = await context.Requests
             .FirstOrDefaultAsync(r => r.RequestId == requestId, ct);
@@ -22,15 +24,17 @@ public static class RequestDocumentBuilder
         var project = await context.Projects
             .FirstOrDefaultAsync(p => p.ProjectId == request.ProjectId, ct);
 
-        // Recipients are the project's contacts flagged to receive request documents, in a stable
-        // order (role, then name) so the issued-to list reads the same on every regeneration.
-        var recipients = await context.ProjectContacts
-            .Where(c => c.ProjectId == request.ProjectId && c.ReceivesRequests)
-            .OrderBy(c => c.Role)
-            .ThenBy(c => c.Name)
-            .Select(c => new RequestDocumentRecipient(
-                c.Name, c.Email, ((ProjectContactRole)c.Role).DisplayName(), c.Organisation))
-            .ToListAsync(ct);
+        // Recipients come from the shared resolver (request party → project party → project
+        // profile), so the document's issued-to block always matches what an actual send would
+        // address. Only To and Cc reach the document — Bcc stays off every client-facing surface.
+        // Callers that already resolved (the worker send, the draft) pass their set in so a single
+        // send never resolves twice.
+        var recipientSet = resolvedRecipients
+            ?? await RequestRecipientResolver.ResolveAsync(context, request, ct);
+        var recipients = recipientSet.To.Concat(recipientSet.Cc)
+            .Select(r => new RequestDocumentRecipient(
+                r.Name, r.Email, r.RoleLabel ?? "Contact", r.Organisation, r.Routing))
+            .ToList();
 
         // Only the Shared leg of the thread belongs on a client-facing document; internal Jewel
         // discussion never leaves the platform. In-app Shared activity comes from SQL; the inbound

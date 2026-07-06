@@ -124,14 +124,16 @@ public interface IMailboxGraphClient
 }
 
 /// <summary>A new message for the mailbox: placed in Drafts via CreateDraftAsync, or sent via
-/// SendMailAsync. Bcc and Categories are optional so existing draft-only callers are unchanged.</summary>
+/// SendMailAsync. Cc, Bcc and Categories are optional so existing draft-only callers are
+/// unchanged (Cc sits last purely to preserve older positional constructions).</summary>
 public sealed record MailboxDraftMessage(
     IReadOnlyList<MailboxDraftRecipient> To,
     string Subject,
     string HtmlBody,
     IReadOnlyList<MailboxDraftAttachment> Attachments,
     IReadOnlyList<MailboxDraftRecipient>? Bcc = null,
-    IReadOnlyList<string>? Categories = null);
+    IReadOnlyList<string>? Categories = null,
+    IReadOnlyList<MailboxDraftRecipient>? Cc = null);
 
 /// <summary>A draft recipient (address plus optional display name).</summary>
 public sealed record MailboxDraftRecipient(string Email, string? Name = null);
@@ -710,24 +712,101 @@ public sealed class MailboxGraphClient : IMailboxGraphClient
 
     public async Task<bool> SendMailAsync(MailboxDraftMessage message, CancellationToken ct)
     {
-        // POST /users/{mailbox}/sendMail sends in one call and saves to Sent Items. Categories are
-        // set on the message itself, so the sent copy carries the record tag (e.g. "JPMS/BPI-0001")
-        // without a second round trip.
-        var url = $"{GraphBase}/users/{Mailbox}/sendMail";
+        // Graph only accepts attachments up to ~3 MB inline. Anything larger needs the draft route:
+        // create the draft (small attachments inline), stream each big file through an upload
+        // session, then send the draft. Messages with only small attachments use one-call sendMail.
+        const long InlineAttachmentLimit = 3_000_000;
+        var large = message.Attachments.Where(a => a.Content.LongLength > InlineAttachmentLimit).ToList();
 
-        var payload = new Dictionary<string, object?>
+        if (large.Count == 0)
         {
-            ["message"] = BuildMessagePayload(message),
-            ["saveToSentItems"] = true
+            // POST /users/{mailbox}/sendMail sends in one call and saves to Sent Items. Categories are
+            // set on the message itself, so the sent copy carries the record tag (e.g. "JPMS/BPI-0001")
+            // without a second round trip.
+            var url = $"{GraphBase}/users/{Mailbox}/sendMail";
+
+            var payload = new Dictionary<string, object?>
+            {
+                ["message"] = BuildMessagePayload(message),
+                ["saveToSentItems"] = true
+            };
+
+            using var content = JsonContent.Create(payload);
+            using var response = await SendAsync(HttpMethod.Post, url, content, ct);
+            if (response.IsSuccessStatusCode) return true;
+
+            _logger.LogWarning("sendMail failed: {Status}. {Detail}",
+                (int)response.StatusCode, await SafeBodyAsync(response, ct));
+            return false;
+        }
+
+        var small = message.Attachments.Where(a => a.Content.LongLength <= InlineAttachmentLimit).ToList();
+        var draft = await CreateDraftAsync(message with { Attachments = small }, ct);
+        if (draft is null) return false;
+
+        foreach (var attachment in large)
+        {
+            if (!await UploadLargeAttachmentAsync(draft.Id, attachment, ct))
+                return false; // the un-sent draft is left in Drafts for a human to inspect/retry
+        }
+
+        var sendUrl = $"{GraphBase}/users/{Mailbox}/messages/{Uri.EscapeDataString(draft.Id)}/send";
+        using var sendResponse = await SendAsync(HttpMethod.Post, sendUrl, null, ct);
+        if (sendResponse.IsSuccessStatusCode) return true;
+
+        _logger.LogWarning("Draft send failed: {Status}. {Detail}",
+            (int)sendResponse.StatusCode, await SafeBodyAsync(sendResponse, ct));
+        return false;
+    }
+
+    // Streams one >3 MB file onto a draft via Graph's attachment upload session (chunked PUTs to a
+    // pre-authenticated URL — no bearer header on the chunks).
+    private async Task<bool> UploadLargeAttachmentAsync(string messageId, MailboxDraftAttachment attachment, CancellationToken ct)
+    {
+        var sessionUrl = $"{GraphBase}/users/{Mailbox}/messages/{Uri.EscapeDataString(messageId)}/attachments/createUploadSession";
+        var sessionPayload = new Dictionary<string, object?>
+        {
+            ["AttachmentItem"] = new Dictionary<string, object?>
+            {
+                ["attachmentType"] = "file",
+                ["name"] = attachment.FileName,
+                ["size"] = attachment.Content.LongLength
+            }
         };
 
-        using var content = JsonContent.Create(payload);
-        using var response = await SendAsync(HttpMethod.Post, url, content, ct);
-        if (response.IsSuccessStatusCode) return true;
+        string? uploadUrl;
+        using (var sessionContent = JsonContent.Create(sessionPayload))
+        using (var sessionResponse = await SendAsync(HttpMethod.Post, sessionUrl, sessionContent, ct))
+        {
+            if (!sessionResponse.IsSuccessStatusCode)
+            {
+                _logger.LogWarning("Attachment upload session failed: {Status}. {Detail}",
+                    (int)sessionResponse.StatusCode, await SafeBodyAsync(sessionResponse, ct));
+                return false;
+            }
+            await using var stream = await sessionResponse.Content.ReadAsStreamAsync(ct);
+            using var doc = await JsonDocument.ParseAsync(stream, cancellationToken: ct);
+            uploadUrl = doc.RootElement.TryGetProperty("uploadUrl", out var u) ? u.GetString() : null;
+        }
+        if (string.IsNullOrEmpty(uploadUrl)) return false;
 
-        _logger.LogWarning("sendMail failed: {Status}. {Detail}",
-            (int)response.StatusCode, await SafeBodyAsync(response, ct));
-        return false;
+        const int ChunkSize = 3_276_800; // 10 × 320 KiB, the required granularity
+        var data = attachment.Content;
+        for (long offset = 0; offset < data.LongLength; offset += ChunkSize)
+        {
+            var count = (int)Math.Min(ChunkSize, data.LongLength - offset);
+            using var chunk = new ByteArrayContent(data, (int)offset, count);
+            chunk.Headers.ContentRange = new ContentRangeHeaderValue(offset, offset + count - 1, data.LongLength);
+            using var put = new HttpRequestMessage(HttpMethod.Put, uploadUrl) { Content = chunk };
+            using var putResponse = await _http.SendAsync(put, ct);
+            if (!putResponse.IsSuccessStatusCode)
+            {
+                _logger.LogWarning("Attachment chunk upload failed at {Offset}: {Status}.",
+                    offset, (int)putResponse.StatusCode);
+                return false;
+            }
+        }
+        return true;
     }
 
     // The Graph message shape shared by draft-create and sendMail.
@@ -758,6 +837,8 @@ public sealed class MailboxGraphClient : IMailboxGraphClient
             }).ToArray()
         };
 
+        if (message.Cc is { Count: > 0 } cc)
+            payload["ccRecipients"] = cc.Select(Recipient).ToArray();
         if (message.Bcc is { Count: > 0 } bcc)
             payload["bccRecipients"] = bcc.Select(Recipient).ToArray();
         if (message.Categories is { Count: > 0 } categories)

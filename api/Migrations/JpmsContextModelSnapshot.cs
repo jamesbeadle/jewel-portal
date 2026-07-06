@@ -1882,6 +1882,67 @@ namespace Jewel.JPMS.Api.Migrations
                     b.ToTable("PrelimItems");
                 });
 
+            modelBuilder.Entity("Jewel.JPMS.Api.Data.Entities.ProgrammeBaselineEntity", b =>
+                {
+                    b.Property<string>("ProgrammeBaselineId")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<string>("Label")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<string>("ProjectId")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<DateTimeOffset>("TakenAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("TakenByEmail")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.HasKey("ProgrammeBaselineId");
+
+                    b.ToTable("ProgrammeBaselines");
+                });
+
+            modelBuilder.Entity("Jewel.JPMS.Api.Data.Entities.ProgrammeBaselineTaskEntity", b =>
+                {
+                    b.Property<string>("ProgrammeBaselineTaskId")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<DateTimeOffset>("PlannedEnd")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<DateTimeOffset>("PlannedStart")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("ProgrammeBaselineId")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<string>("ProgrammeTaskId")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.HasKey("ProgrammeBaselineTaskId");
+
+                    b.ToTable("ProgrammeBaselineTasks");
+                });
+
             modelBuilder.Entity("Jewel.JPMS.Api.Data.Entities.ProgrammeTaskEntity", b =>
                 {
                     b.Property<string>("ProgrammeTaskId")
@@ -1915,6 +1976,35 @@ namespace Jewel.JPMS.Api.Migrations
                     b.HasKey("ProgrammeTaskId");
 
                     b.ToTable("ProgrammeTasks");
+                });
+
+            modelBuilder.Entity("Jewel.JPMS.Api.Data.Entities.ProgrammeTaskLinkEntity", b =>
+                {
+                    b.Property<string>("ProgrammeTaskLinkId")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<int>("LagDays")
+                        .HasColumnType("int");
+
+                    b.Property<string>("PredecessorTaskId")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<string>("ProjectId")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<string>("SuccessorTaskId")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.HasKey("ProgrammeTaskLinkId");
+
+                    b.ToTable("ProgrammeTaskLinks");
                 });
 
             modelBuilder.Entity("Jewel.JPMS.Api.Data.Entities.ValuationInvoiceEntity", b =>
@@ -2199,6 +2289,30 @@ namespace Jewel.JPMS.Api.Migrations
                     b.HasKey("QuoteId");
 
                     b.ToTable("Quotes");
+                });
+
+            modelBuilder.Entity("Jewel.JPMS.Api.Data.Entities.BidPackageDrawingEntity", b =>
+                {
+                    b.Property<string>("BidPackageDrawingId")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<string>("BidPackageId")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<string>("DrawingId")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<DateTimeOffset>("LinkedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.HasKey("BidPackageDrawingId");
+
+                    b.ToTable("BidPackageDrawings");
                 });
 
             modelBuilder.Entity("Jewel.JPMS.Api.Data.Entities.QuoteLineItemEntity", b =>

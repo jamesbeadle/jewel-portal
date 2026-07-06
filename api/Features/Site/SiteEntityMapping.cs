@@ -10,4 +10,13 @@ internal static class SiteEntityMapping
 
     public static ProgrammeTask ToModel(this ProgrammeTaskEntity entity) =>
         new(entity.ProgrammeTaskId, entity.ProjectId, entity.Title, entity.PlannedStart, entity.PlannedEnd, entity.ProgressPercent, entity.BoqLineItemId);
+
+    public static ProgrammeTaskLink ToModel(this ProgrammeTaskLinkEntity entity) =>
+        new(entity.ProgrammeTaskLinkId, entity.ProjectId, entity.PredecessorTaskId, entity.SuccessorTaskId, entity.LagDays);
+
+    public static ProgrammeBaseline ToModel(this ProgrammeBaselineEntity entity) =>
+        new(entity.ProgrammeBaselineId, entity.ProjectId, entity.Label, entity.TakenByEmail, entity.TakenAt);
+
+    public static ProgrammeBaselineTask ToModel(this ProgrammeBaselineTaskEntity entity) =>
+        new(entity.ProgrammeBaselineTaskId, entity.ProgrammeBaselineId, entity.ProgrammeTaskId, entity.Title, entity.PlannedStart, entity.PlannedEnd);
 }

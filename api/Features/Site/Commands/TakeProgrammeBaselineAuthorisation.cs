@@ -1,0 +1,11 @@
+using Jewel.JPMS.Api.Gates;
+using Jewel.JPMS.Contracts.Site;
+
+namespace Jewel.JPMS.Api.Features.Site.Commands;
+
+public sealed class TakeProgrammeBaselineAuthorisation
+{
+    private static readonly RoleSet RolesThatMayBaseline = RoleSet.Of(JpmsRoles.Director, JpmsRoles.ProjectManager);
+
+    public bool Allows(SignedInUser user, TakeProgrammeBaseline command) => RolesThatMayBaseline.IncludesAny(user.Roles);
+}

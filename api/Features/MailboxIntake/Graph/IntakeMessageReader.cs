@@ -9,7 +9,12 @@ namespace Jewel.JPMS.Api.Features.MailboxIntake.Graph;
 /// body plus its real, non-inline attachments. Sanitisation happens in the handler, not here.</summary>
 public sealed record IntakeMessageContent(string Body, bool IsHtml, IReadOnlyList<IntakeMessageAttachment> Attachments);
 
-public sealed record IntakeMessageAttachment(string Name, long Size, string? ContentType);
+// Id is the Graph attachment id, used to download the attachment's bytes on demand (e.g. saving a
+// drawing out of a triaged email). Optional so existing metadata-only callers are unchanged.
+public sealed record IntakeMessageAttachment(string Name, long Size, string? ContentType, string Id = "");
+
+/// <summary>One downloaded attachment: its bytes plus the metadata needed to store it elsewhere.</summary>
+public sealed record IntakeAttachmentContent(string Name, string ContentType, byte[] Content);
 
 /// <summary>
 /// Reads a single mailbox message's full body and attachment metadata from Microsoft Graph, on
@@ -20,6 +25,10 @@ public interface IIntakeMessageReader
 {
     /// <summary>Fetch body + attachments for a Graph message id, or null if it can't be retrieved.</summary>
     Task<IntakeMessageContent?> GetAsync(string graphMessageId, CancellationToken ct);
+
+    /// <summary>Download one attachment's bytes (a Graph fileAttachment), or null if it can't be
+    /// retrieved / isn't a file attachment (item and reference attachments have no bytes).</summary>
+    Task<IntakeAttachmentContent?> GetAttachmentAsync(string graphMessageId, string attachmentId, CancellationToken ct);
 }
 
 /// <summary>No-op reader used when Graph credentials aren't configured for the API. Returns null so
@@ -28,6 +37,8 @@ public sealed class NullIntakeMessageReader : IIntakeMessageReader
 {
     public Task<IntakeMessageContent?> GetAsync(string graphMessageId, CancellationToken ct) =>
         Task.FromResult<IntakeMessageContent?>(null);
+    public Task<IntakeAttachmentContent?> GetAttachmentAsync(string graphMessageId, string attachmentId, CancellationToken ct) =>
+        Task.FromResult<IntakeAttachmentContent?>(null);
 }
 
 /// <summary>Graph REST implementation (HttpClient + app-only token), matching the worker's style.</summary>
@@ -105,7 +116,8 @@ public sealed class GraphIntakeMessageReader : IIntakeMessageReader
                     if (string.IsNullOrWhiteSpace(name)) name = "(unnamed attachment)";
                     long size = att.TryGetProperty("size", out var s) && s.TryGetInt64(out var sz) ? sz : 0;
                     string? type = att.TryGetProperty("contentType", out var t) ? t.GetString() : null;
-                    attachments.Add(new IntakeMessageAttachment(name, size, type));
+                    var attachmentId = att.TryGetProperty("id", out var idEl) ? idEl.GetString() ?? "" : "";
+                    attachments.Add(new IntakeMessageAttachment(name, size, type, attachmentId));
                 }
             }
 
@@ -114,6 +126,51 @@ public sealed class GraphIntakeMessageReader : IIntakeMessageReader
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "Intake message read errored for {GraphId}.", graphMessageId);
+            return null;
+        }
+    }
+
+    public async Task<IntakeAttachmentContent?> GetAttachmentAsync(string graphMessageId, string attachmentId, CancellationToken ct)
+    {
+        if (string.IsNullOrEmpty(graphMessageId) || string.IsNullOrEmpty(attachmentId))
+            return null;
+
+        // A fileAttachment carries its bytes as base64 contentBytes in the attachment resource.
+        var url = $"{GraphBase}/users/{Mailbox}/messages/{Uri.EscapeDataString(graphMessageId)}"
+            + $"/attachments/{Uri.EscapeDataString(attachmentId)}";
+
+        try
+        {
+            var token = await _tokens.GetTokenAsync(ct);
+            using var request = new HttpRequestMessage(HttpMethod.Get, url);
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+            using var response = await _http.SendAsync(request, ct);
+            if (!response.IsSuccessStatusCode)
+            {
+                _logger.LogWarning("Graph attachment read failed: {Status}.", (int)response.StatusCode);
+                return null;
+            }
+
+            await using var stream = await response.Content.ReadAsStreamAsync(ct);
+            using var doc = await JsonDocument.ParseAsync(stream, cancellationToken: ct);
+            var root = doc.RootElement;
+
+            // Only fileAttachment has contentBytes; item/reference attachments are not downloadable files.
+            if (!root.TryGetProperty("contentBytes", out var bytesEl) || bytesEl.ValueKind != JsonValueKind.String)
+            {
+                _logger.LogWarning("Attachment {AttachmentId} is not a file attachment.", attachmentId);
+                return null;
+            }
+
+            var name = root.TryGetProperty("name", out var n) ? n.GetString() ?? "attachment" : "attachment";
+            var contentType = root.TryGetProperty("contentType", out var t) ? t.GetString() ?? "application/octet-stream" : "application/octet-stream";
+            var content = Convert.FromBase64String(bytesEl.GetString() ?? "");
+            return new IntakeAttachmentContent(name, contentType, content);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Attachment read errored for {GraphId}/{AttachmentId}.", graphMessageId, attachmentId);
             return null;
         }
     }

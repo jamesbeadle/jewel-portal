@@ -1,5 +1,6 @@
 using Jewel.JPMS.Api.Cqrs;
 using Jewel.JPMS.Api.Data;
+using Jewel.JPMS.Api.Features.Drawings.Storage;
 using Jewel.JPMS.Api.Features.MailboxIntake;
 using Jewel.JPMS.Api.Features.MailboxIntake.Graph;
 using Jewel.JPMS.Contracts.Procurement;
@@ -11,16 +12,19 @@ namespace Jewel.JPMS.Api.Features.Procurement.Commands;
 // Sends the reviewed tender-invite email from the shared mailbox. The mailbox itself is the To
 // (subcontractors must not see each other), every recipient with a directory email goes in BCC, and
 // the sent copy carries the package's tag ("JPMS/BPI-0001") so it — and, more importantly, the
-// replies triaged onto the same tag — group under the package. Moves a Draft package to Inviting.
+// replies triaged onto the same tag — group under the package. The package's linked drawings are
+// attached (latest approved revision, or the newest upload when none is approved). Moves a Draft
+// package to Inviting.
 public sealed class SendBidPackageInviteHandler : ICommandHandler<SendBidPackageInvite, BidPackage>
 {
     private readonly JpmsContext context;
     private readonly IMailboxGraphClient mailbox;
     private readonly MailboxIntakeOptions options;
+    private readonly IDrawingBlobStore blobStore;
 
-    public SendBidPackageInviteHandler(JpmsContext context, IMailboxGraphClient mailbox, MailboxIntakeOptions options)
+    public SendBidPackageInviteHandler(JpmsContext context, IMailboxGraphClient mailbox, MailboxIntakeOptions options, IDrawingBlobStore blobStore)
     {
-        this.context = context; this.mailbox = mailbox; this.options = options;
+        this.context = context; this.mailbox = mailbox; this.options = options; this.blobStore = blobStore;
     }
 
     public async Task<BidPackage> HandleAsync(SendBidPackageInvite command, CancellationToken cancellationToken)
@@ -50,7 +54,7 @@ public sealed class SendBidPackageInviteHandler : ICommandHandler<SendBidPackage
             To: new[] { new MailboxDraftRecipient(options.Mailbox) },
             Subject: command.Subject,
             HtmlBody: command.HtmlBody,
-            Attachments: Array.Empty<MailboxDraftAttachment>(),
+            Attachments: await LoadDrawingAttachmentsAsync(command.BidPackageId, cancellationToken),
             Bcc: recipients,
             Categories: new[] { TriageCategories.Marker, TriageCategories.ForRecord(package.Reference) });
 
@@ -65,5 +69,40 @@ public sealed class SendBidPackageInviteHandler : ICommandHandler<SendBidPackage
         await context.SaveChangesAsync(cancellationToken);
 
         return package.ToModel();
+    }
+
+    // One attachment per linked drawing: its latest approved revision, or — when nothing is approved
+    // yet — the newest uploaded revision. Drawings whose file can't be opened are skipped rather than
+    // blocking the send; the linked list on the package remains the source of truth.
+    private async Task<IReadOnlyList<MailboxDraftAttachment>> LoadDrawingAttachmentsAsync(string bidPackageId, CancellationToken cancellationToken)
+    {
+        var revisions = await (
+            from link in context.BidPackageDrawings
+            where link.BidPackageId == bidPackageId
+            join revision in context.DrawingRevisions on link.DrawingId equals revision.DrawingId
+            where revision.BlobRef != null
+            select revision)
+            .ToListAsync(cancellationToken);
+
+        var attachments = new List<MailboxDraftAttachment>();
+        foreach (var chosen in revisions
+            .GroupBy(r => r.DrawingId)
+            .Select(g => g
+                .OrderByDescending(r => r.ApprovalStatus == (int)DrawingApprovalStatus.Approved)
+                .ThenByDescending(r => r.ReceivedAt)
+                .First()))
+        {
+            var blob = await blobStore.OpenAsync(chosen.BlobRef!, cancellationToken);
+            if (blob is null) continue;
+
+            await using var stream = blob.Content;
+            using var buffer = new MemoryStream();
+            await stream.CopyToAsync(buffer, cancellationToken);
+            attachments.Add(new MailboxDraftAttachment(
+                chosen.FileName,
+                string.IsNullOrWhiteSpace(chosen.ContentType) ? "application/octet-stream" : chosen.ContentType!,
+                buffer.ToArray()));
+        }
+        return attachments;
     }
 }

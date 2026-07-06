@@ -102,14 +102,18 @@ public sealed record GraphRecipient(string Email, string? Name = null);
 public sealed record GraphAttachment(string FileName, string ContentType, byte[] Content);
 
 /// <summary>
-/// A new outbound email to send via Graph. Supports one or more recipients and zero or more
-/// attachments (e.g. the request-document PDF).
+/// A new outbound email to send via Graph. Supports one or more recipients, optional open and
+/// blind copies (the correspondence profile's Cc/Bcc), and zero or more attachments (e.g. the
+/// request-document PDF). Bcc is carried on the wire only — nothing rendered or recorded on a
+/// client-facing surface may be derived from it.
 /// </summary>
 public sealed record GraphOutboundMessage(
     IReadOnlyList<GraphRecipient> To,
     string Subject,
     string HtmlBody,
-    IReadOnlyList<GraphAttachment>? Attachments = null)
+    IReadOnlyList<GraphAttachment>? Attachments = null,
+    IReadOnlyList<GraphRecipient>? Cc = null,
+    IReadOnlyList<GraphRecipient>? Bcc = null)
 {
     /// <summary>Convenience constructor for a single recipient with no attachments.</summary>
     public GraphOutboundMessage(string toEmail, string? toName, string subject, string htmlBody)

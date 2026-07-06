@@ -60,7 +60,7 @@ public sealed class GetMailboxMessageDetailHandler : IQueryHandler<GetMailboxMes
 
         var body = content.IsHtml ? Sanitise(content.Body) : content.Body;
         var attachments = content.Attachments
-            .Select(a => new IntakeAttachment(a.Name, a.Size, a.ContentType))
+            .Select(a => new IntakeAttachment(a.Name, a.Size, a.ContentType, a.Id))
             .ToList()
             .AsReadOnly();
 

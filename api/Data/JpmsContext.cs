@@ -22,6 +22,7 @@ public sealed class JpmsContext : DbContext
 
     public DbSet<ProjectEntity> Projects => Set<ProjectEntity>();
     public DbSet<ProjectContactEntity> ProjectContacts => Set<ProjectContactEntity>();
+    public DbSet<PartyContactEntity> PartyContacts => Set<PartyContactEntity>();
     public DbSet<ClientEntity> Clients => Set<ClientEntity>();
     public DbSet<ArchitectEntity> Architects => Set<ArchitectEntity>();
     public DbSet<LeadEntity> Leads => Set<LeadEntity>();
@@ -54,6 +55,7 @@ public sealed class JpmsContext : DbContext
     public DbSet<BidPackageLineItemEntity> BidPackageLineItems => Set<BidPackageLineItemEntity>();
     public DbSet<QuoteEntity> Quotes => Set<QuoteEntity>();
     public DbSet<QuoteLineItemEntity> QuoteLineItems => Set<QuoteLineItemEntity>();
+    public DbSet<BidPackageDrawingEntity> BidPackageDrawings => Set<BidPackageDrawingEntity>();
     public DbSet<WorkOrderEntity> WorkOrders => Set<WorkOrderEntity>();
     public DbSet<VariationOrderQuoteEntity> VariationOrderQuotes => Set<VariationOrderQuoteEntity>();
     public DbSet<VariationOrderEntity> VariationOrders => Set<VariationOrderEntity>();
@@ -71,6 +73,9 @@ public sealed class JpmsContext : DbContext
 
     public DbSet<SiteReportEntity> SiteReports => Set<SiteReportEntity>();
     public DbSet<ProgrammeTaskEntity> ProgrammeTasks => Set<ProgrammeTaskEntity>();
+    public DbSet<ProgrammeTaskLinkEntity> ProgrammeTaskLinks => Set<ProgrammeTaskLinkEntity>();
+    public DbSet<ProgrammeBaselineEntity> ProgrammeBaselines => Set<ProgrammeBaselineEntity>();
+    public DbSet<ProgrammeBaselineTaskEntity> ProgrammeBaselineTasks => Set<ProgrammeBaselineTaskEntity>();
     public DbSet<PhotoEntity> Photos => Set<PhotoEntity>();
 
     public DbSet<ClaimPeriodEntity> ClaimPeriods => Set<ClaimPeriodEntity>();

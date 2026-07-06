@@ -18,6 +18,25 @@ public sealed class ListProjectContactsHandler : IQueryHandler<ListProjectContac
             .OrderBy(contact => contact.Role)
             .ThenBy(contact => contact.Name)
             .ToListAsync(cancellationToken);
-        return entities.Select(entity => entity.ToModel()).ToList().AsReadOnly();
+
+        // Linked rows (per-project overrides of a party contact) render with the party contact's
+        // current name/email so party-level edits show through on every project.
+        var linkedIds = entities
+            .Where(e => e.PartyContactId is not null)
+            .Select(e => e.PartyContactId!)
+            .Distinct()
+            .ToList();
+        var sources = linkedIds.Count == 0
+            ? new Dictionary<string, Data.Entities.PartyContactEntity>()
+            : await context.PartyContacts
+                .Where(p => linkedIds.Contains(p.PartyContactId))
+                .ToDictionaryAsync(p => p.PartyContactId, cancellationToken);
+
+        return entities
+            .Select(entity => entity.PartyContactId is not null && sources.TryGetValue(entity.PartyContactId, out var source)
+                ? entity.ToModel(source)
+                : entity.ToModel())
+            .ToList()
+            .AsReadOnly();
     }
 }

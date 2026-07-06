@@ -51,7 +51,7 @@ public sealed class GetRequestEmailDetailHandler : IQueryHandler<GetRequestEmail
 
         var body = content.IsHtml ? new HtmlSanitizer().Sanitize(content.Body) : content.Body;
         var attachments = content.Attachments
-            .Select(a => new IntakeAttachment(a.Name, a.Size, a.ContentType))
+            .Select(a => new IntakeAttachment(a.Name, a.Size, a.ContentType, a.Id))
             .ToList()
             .AsReadOnly();
 

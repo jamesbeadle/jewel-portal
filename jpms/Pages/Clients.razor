@@ -59,7 +59,8 @@ else
                                 <td class="px-4 py-3 font-medium text-content">@client.Name</td>
                                 <td class="px-4 py-3 text-content-muted">@Dash(client.PrimaryContactName)</td>
                                 <td class="px-4 py-3 text-content-muted">@Dash(client.PrimaryContactEmail)</td>
-                                <td class="px-4 py-3 text-right">
+                                <td class="px-4 py-3 text-right whitespace-nowrap">
+                                    <button type="button" class="text-sm font-medium text-content-muted hover:text-content mr-3" @onclick="() => OpenContacts(client)">Contacts</button>
                                     <button type="button" class="text-sm font-medium text-content-muted hover:text-content" @onclick="() => OpenEdit(client)">Edit</button>
                                 </td>
                             </tr>
@@ -69,6 +70,8 @@ else
             </div>
         }
     </section>
+
+    <PartyContactsEditor @ref="contactsEditor" Kind="PartyKind.Client" OnChanged="ReloadAsync" />
 
     <Modal IsOpen="creating"
            Title="New client account"
@@ -121,6 +124,7 @@ else
 
     private bool creating;
     private bool editing;
+    private PartyContactsEditor? contactsEditor;
     private string? editTargetId;
     private string formName = "";
     private string formPrimaryName = "";
@@ -145,6 +149,11 @@ else
         formError = null;
         formName = formPrimaryName = formPrimaryEmail = "";
         creating = true;
+    }
+
+    private async Task OpenContacts(Client client)
+    {
+        if (contactsEditor is not null) await contactsEditor.Open(client.ClientId, client.Name);
     }
 
     private void OpenEdit(Client client)

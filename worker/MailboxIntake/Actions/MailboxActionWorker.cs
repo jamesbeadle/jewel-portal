@@ -4,6 +4,7 @@ using Jewel.JPMS.Api.Features.MailboxIntake.Graph;
 using Jewel.JPMS.Api.Features.MailboxIntake.Queue;
 using Jewel.JPMS.Api.Features.Requests;
 using Jewel.JPMS.Api.Features.Requests.Documents;
+using Jewel.JPMS.Api.Features.Requests.Recipients;
 using Jewel.JPMS.Models;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.EntityFrameworkCore;
@@ -55,45 +56,71 @@ public sealed class MailboxActionWorker
 
     /// <summary>
     /// Renders the request's document (RFI etc.) from the SQL source of truth and emails it as a PDF
-    /// attachment. Recipients are the project's flagged contacts, unless an ad-hoc override address is
-    /// supplied (a resend to one person). The same render path serves the platform download, so the
-    /// emailed PDF is byte-for-byte the file the triager can pull down. Best-effort: the queue retries.
+    /// attachment. Recipients resolve through the shared RequestRecipientResolver (request party →
+    /// project party → project profile, with the correspondence profile supplying CC/BCC), unless an
+    /// ad-hoc override address is supplied (a resend to one person, nothing copied). The same render
+    /// path serves the platform download, so the emailed PDF is byte-for-byte the file the triager
+    /// can pull down. Best-effort: the queue retries.
     /// </summary>
     private async Task SendRequestDocumentAsync(MailboxActionMessage action, CancellationToken ct)
     {
         if (!_options.EnableRequestDocuments || string.IsNullOrEmpty(action.RequestId))
             return;
 
+        var request = await _context.Requests
+            .FirstOrDefaultAsync(r => r.RequestId == action.RequestId, ct);
+        if (request is null)
+        {
+            _logger.LogWarning("Request-document send skipped: request {RequestId} not found.", action.RequestId);
+            return;
+        }
+
+        // Either the ad-hoc override (resend to one address, nothing copied) or the full resolved set.
+        var recipientSet = !string.IsNullOrWhiteSpace(action.RecipientOverride)
+            ? new RequestRecipientSet(
+                new[] { new CorrespondenceRecipient("", action.RecipientOverride.Trim(), CorrespondenceRouting.To) },
+                Array.Empty<CorrespondenceRecipient>(),
+                Array.Empty<CorrespondenceRecipient>())
+            : await RequestRecipientResolver.ResolveAsync(_context, request, ct);
+
         var tagged = await _emails.ForRequestAsync(action.RequestId, ct);
-        var model = await RequestDocumentBuilder.BuildAsync(_context, action.RequestId, tagged, ct);
+        var model = await RequestDocumentBuilder.BuildAsync(_context, action.RequestId, tagged, ct, recipientSet);
         if (model is null)
         {
             _logger.LogWarning("Request-document send skipped: request {RequestId} not found.", action.RequestId);
             return;
         }
 
-        // Either the ad-hoc override (resend to one address) or the project's flagged contacts.
-        var recipients = !string.IsNullOrWhiteSpace(action.RecipientOverride)
-            ? new[] { new GraphRecipient(action.RecipientOverride.Trim()) }
-            : model.Recipients.Select(r => new GraphRecipient(r.Email, r.Name)).ToArray();
-
-        if (recipients.Length == 0)
+        if (!recipientSet.HasTo)
         {
             _logger.LogWarning(
-                "Request-document send skipped: request {RequestId} ({Number}) has no flagged contacts to email.",
+                "Request-document send skipped: request {RequestId} ({Number}) has no correspondent to email — " +
+                "link a party or set a project contact's routing to To.",
                 model.RequestId, model.DisplayNumber);
             return;
         }
 
+        static GraphRecipient AsGraph(CorrespondenceRecipient r) =>
+            new(r.Email, string.IsNullOrWhiteSpace(r.Name) ? null : r.Name);
+
         var pdf = RequestDocumentRenderer.Render(model);
         var attachment = new GraphAttachment(model.FileName, "application/pdf", pdf);
         var outbound = new GraphOutboundMessage(
-            recipients, model.EmailSubject, BuildCoverNote(model), new[] { attachment });
+            recipientSet.To.Select(AsGraph).ToArray(),
+            model.EmailSubject,
+            BuildCoverNote(model),
+            new[] { attachment },
+            Cc: recipientSet.Cc.Select(AsGraph).ToArray(),
+            Bcc: recipientSet.Bcc.Select(AsGraph).ToArray());
 
         await _graph.SendMailAsync(outbound, ct);
 
-        // Record the send on the request's shared activity history (the audit trail the document renders).
-        var recipientList = string.Join(", ", recipients.Select(r => r.Email));
+        // Record the send on the request's shared activity history (the audit trail the document
+        // renders). This trail is client-facing, so it lists To and CC only — BCC never appears on
+        // any shared surface (it is logged below as a count, nothing more).
+        var recipientList = string.Join(", ", recipientSet.To.Select(r => r.Email));
+        if (recipientSet.Cc.Count > 0)
+            recipientList += " (copied: " + string.Join(", ", recipientSet.Cc.Select(r => r.Email)) + ")";
         _context.RequestMessages.Add(new RequestMessageEntity
         {
             MessageId = RequestsIdentifierFactory.Next(),
@@ -108,13 +135,14 @@ public sealed class MailboxActionWorker
         });
 
         // First issue moves an Open request to AwaitingResponse; a resend never regresses the status.
-        var request = await _context.Requests.FirstOrDefaultAsync(r => r.RequestId == model.RequestId, ct);
-        if (request is not null && request.Status == (int)RequestStatus.Open)
+        if (request.Status == (int)RequestStatus.Open)
             request.Status = (int)RequestStatus.AwaitingResponse;
 
         await _context.SaveChangesAsync(ct);
         _logger.LogInformation(
-            "Issued {Type} {Number} to {Count} recipient(s).", model.TypeShort, model.DisplayNumber, recipients.Length);
+            "Issued {Type} {Number} to {ToCount} recipient(s), {CcCount} copied, {BccCount} blind-copied.",
+            model.TypeShort, model.DisplayNumber,
+            recipientSet.To.Count, recipientSet.Cc.Count, recipientSet.Bcc.Count);
     }
 
     /// <summary>The short branded HTML cover note that accompanies the attached document.</summary>

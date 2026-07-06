@@ -1,5 +1,6 @@
 using Jewel.JPMS.Api.Cqrs;
 using Jewel.JPMS.Api.Data;
+using Jewel.JPMS.Api.Features.Parties;
 using Jewel.JPMS.Contracts.Architects;
 using Jewel.JPMS.Models;
 
@@ -18,6 +19,12 @@ public sealed class UpdateArchitectHandler : ICommandHandler<UpdateArchitect, Ar
         entity.Name = command.Name.Trim();
         entity.ContactName = command.ContactName;
         entity.ContactEmail = command.ContactEmail;
+
+        // The practice's contact book mirrors the legacy fields: editing here updates (or creates)
+        // the primary party contact so correspondence resolution stays consistent.
+        await PartyContactLegacySync.SyncPrimaryAsync(
+            context, PartyKind.Architect, entity.ArchitectId,
+            command.ContactName, command.ContactEmail, cancellationToken);
 
         await context.SaveChangesAsync(cancellationToken);
         return entity.ToModel();

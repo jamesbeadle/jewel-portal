@@ -46,6 +46,10 @@ public static class ProcurementRouteRegistration
             new QueryRoute("/api/bid-packages/{bidPackageId}/quote-lines",
                 query => $"/api/bid-packages/{((ListQuoteLineItemsForBidPackage)query).BidPackageId}/quote-lines"));
 
+        queries.Register<ListBidPackageDrawings, IReadOnlyList<Drawing>>(
+            new QueryRoute("/api/bid-packages/{bidPackageId}/drawings",
+                query => $"/api/bid-packages/{((ListBidPackageDrawings)query).BidPackageId}/drawings"));
+
         commands.Register<CreateBidPackage, BidPackage>(
             new CommandRoute("POST", "/api/projects/{projectId}/bid-packages",
                 command => $"/api/projects/{((CreateBidPackage)command).ProjectId}/bid-packages"));
@@ -77,6 +81,10 @@ public static class ProcurementRouteRegistration
         commands.Register<UpdateBidPackageScope, BidPackage>(
             new CommandRoute("PUT", "/api/bid-packages/{bidPackageId}",
                 command => $"/api/bid-packages/{((UpdateBidPackageScope)command).BidPackageId}"));
+
+        commands.Register<SetBidPackageDrawings, IReadOnlyList<Drawing>>(
+            new CommandRoute("PUT", "/api/bid-packages/{bidPackageId}/drawings",
+                command => $"/api/bid-packages/{((SetBidPackageDrawings)command).BidPackageId}/drawings"));
 
         commands.Register<SendBidPackageInvite, BidPackage>(
             new CommandRoute("POST", "/api/bid-packages/{bidPackageId}/send-invite",

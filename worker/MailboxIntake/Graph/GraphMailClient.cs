@@ -227,9 +227,10 @@ public sealed class GraphMailClient : IGraphMailClient
     {
         var url = $"{GraphBase}/users/{Mailbox}/sendMail";
 
-        var toRecipients = message.To
-            .Select(r => new { emailAddress = new { address = r.Email, name = r.Name ?? r.Email } })
-            .ToArray();
+        static object Recipient(GraphRecipient r) =>
+            new { emailAddress = new { address = r.Email, name = r.Name ?? r.Email } };
+
+        var toRecipients = message.To.Select(Recipient).ToArray();
 
         // Graph attachments need the "@odata.type" property name, which an anonymous type cannot
         // express, so each attachment is built as a dictionary that serialises to the right shape.
@@ -251,6 +252,10 @@ public sealed class GraphMailClient : IGraphMailClient
         };
         if (attachments.Length > 0)
             messageBody["attachments"] = attachments;
+        if (message.Cc is { Count: > 0 } cc)
+            messageBody["ccRecipients"] = cc.Select(Recipient).ToArray();
+        if (message.Bcc is { Count: > 0 } bcc)
+            messageBody["bccRecipients"] = bcc.Select(Recipient).ToArray();
 
         var payload = new { message = messageBody, saveToSentItems = true };
         using var response = await SendAsync(HttpMethod.Post, url, JsonContent.Create(payload), ct);

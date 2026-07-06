@@ -1,4 +1,5 @@
 using System.Globalization;
+using Jewel.JPMS.Models;
 using MigraDoc.DocumentObjectModel;
 using MigraDoc.DocumentObjectModel.Tables;
 using MigraDoc.Rendering;
@@ -349,15 +350,20 @@ public static class RequestDocumentRenderer
         SpaceAfterTable(section);
     }
 
+    // The document lists who it is addressed to and who is openly copied, in two blocks. Bcc never
+    // reaches the model (see RequestDocumentRecipient), so it cannot render here.
     private static void AddRecipients(Section section, RequestDocumentModel model)
     {
         SectionHeading(section, "Issued to");
 
-        if (model.Recipients.Count == 0)
+        var to = model.Recipients.Where(r => r.Routing != CorrespondenceRouting.Cc).ToList();
+        var copied = model.Recipients.Where(r => r.Routing == CorrespondenceRouting.Cc).ToList();
+
+        if (to.Count == 0)
         {
             var none = section.AddParagraph(
-                "No project contacts are flagged to receive request documents. Add a contact to the " +
-                "project so this request can be issued.");
+                "No correspondent is set for this project. Link the project (or this request) to a " +
+                "client or architect, or set a project contact's routing to To, so this request can be issued.");
             none.Format.Font.Size = 8.5;
             none.Format.Font.Italic = true;
             none.Format.Font.Color = Orange;
@@ -365,6 +371,17 @@ public static class RequestDocumentRenderer
             return;
         }
 
+        RecipientTable(section, to);
+
+        if (copied.Count > 0)
+        {
+            SectionHeading(section, "Copied to");
+            RecipientTable(section, copied);
+        }
+    }
+
+    private static void RecipientTable(Section section, IReadOnlyList<RequestDocumentRecipient> recipients)
+    {
         var table = section.AddTable();
         table.Borders.Color = Hair;
         table.Borders.Width = 0.5;
@@ -381,12 +398,12 @@ public static class RequestDocumentRenderer
         HeaderCell(head.Cells[3], "Role");
 
         var zebra = false;
-        foreach (var r in model.Recipients)
+        foreach (var r in recipients)
         {
             var row = table.AddRow();
             if (zebra) row.Shading.Color = Panel;
             zebra = !zebra;
-            BodyCell(row.Cells[0], r.Name);
+            BodyCell(row.Cells[0], string.IsNullOrWhiteSpace(r.Name) ? r.Email : r.Name);
             BodyCell(row.Cells[1], r.Email);
             BodyCell(row.Cells[2], string.IsNullOrWhiteSpace(r.Organisation) ? "—" : r.Organisation!);
             BodyCell(row.Cells[3], r.Role);

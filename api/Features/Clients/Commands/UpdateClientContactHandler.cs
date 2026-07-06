@@ -1,5 +1,6 @@
 using Jewel.JPMS.Api.Cqrs;
 using Jewel.JPMS.Api.Data;
+using Jewel.JPMS.Api.Features.Parties;
 using Jewel.JPMS.Contracts.Clients;
 using Jewel.JPMS.Models;
 
@@ -18,6 +19,12 @@ public sealed class UpdateClientContactHandler : ICommandHandler<UpdateClientCon
         entity.Name = command.Name.Trim();
         entity.PrimaryContactName = command.PrimaryContactName;
         entity.PrimaryContactEmail = command.PrimaryContactEmail;
+
+        // The client's contact book mirrors the legacy fields: editing here updates (or creates)
+        // the primary party contact so correspondence resolution stays consistent.
+        await PartyContactLegacySync.SyncPrimaryAsync(
+            context, PartyKind.Client, entity.ClientId,
+            command.PrimaryContactName, command.PrimaryContactEmail, cancellationToken);
 
         await context.SaveChangesAsync(cancellationToken);
         return entity.ToModel();

@@ -1,4 +1,5 @@
 @page "/requests/triage"
+@using Jewel.JPMS.Contracts.Drawings
 @using Jewel.JPMS.Contracts.Procurement
 @using Jewel.JPMS.Contracts.Requests
 @using Jewel.JPMS.Contracts.Todos
@@ -7,6 +8,7 @@
 @inject NavigationManager Nav
 @inject IIntakeQueue Intake
 @inject IRequestRegister RequestRegister
+@inject ICommandSender Commands
 @inject Jewel.JPMS.Features.Projects.ProjectListReadModel Projects
 @implements IDisposable
 
@@ -55,13 +57,64 @@
                     {
                         <li class="flex items-center justify-between gap-3 text-sm text-content">
                             <span class="truncate">@att.Name</span>
-                            @if (att.Size > 0)
-                            {
-                                <span class="text-xs text-content-subtle whitespace-nowrap">@FormatSize(att.Size)</span>
-                            }
+                            <span class="flex items-center gap-3 whitespace-nowrap">
+                                @if (att.Size > 0)
+                                {
+                                    <span class="text-xs text-content-subtle">@FormatSize(att.Size)</span>
+                                }
+                                @if (!string.IsNullOrEmpty(att.Id))
+                                {
+                                    <button type="button" class="text-xs text-accent hover:underline" disabled="@busy"
+                                            @onclick="() => OpenDrawingImport(att)">Save to drawings</button>
+                                }
+                            </span>
                         </li>
                     }
                 </ul>
+
+                @if (importNote is not null)
+                {
+                    <p class="rounded-lg bg-accent/10 border border-accent/30 px-3 py-2 text-xs text-content mt-3">@importNote</p>
+                }
+                @if (importError is not null)
+                {
+                    <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-xs text-negative mt-3">@importError</p>
+                }
+
+                @* Inline import form: any email's attachment can become a drawing revision on a project. *@
+                @if (importAttachment is not null)
+                {
+                    <div class="mt-3 rounded-lg border border-line bg-surface p-3 space-y-3">
+                        <p class="text-xs text-content-muted">
+                            Save <span class="font-medium text-content">@importAttachment.Name</span> into a project's drawings.
+                            The file lands as an <span class="font-medium text-content">unapproved revision</span> — matched to an
+                            existing drawing by its code, or registered as a new drawing.
+                        </p>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Project *</label>
+                                <select class="field" @bind="importProjectId">
+                                    <option value="">Select a project…</option>
+                                    @foreach (var project in ProjectOptions)
+                                    {
+                                        <option value="@project.ProjectId">@project.Reference — @project.Name</option>
+                                    }
+                                </select>
+                            </div>
+                            <FormField Label="Drawing code" Value="@importCode" OnChange="v => importCode = v" Required="true" />
+                        </div>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <FormField Label="Title" Value="@importTitle" OnChange="v => importTitle = v" />
+                            <FormField Label="Revision label" Value="@importRevision" OnChange="v => importRevision = v" />
+                        </div>
+                        <div class="flex items-center gap-3">
+                            <button type="button" class="btn-primary"
+                                    disabled="@(busy || string.IsNullOrWhiteSpace(importProjectId) || string.IsNullOrWhiteSpace(importCode))"
+                                    @onclick="DoImportDrawing">@(busy ? "Saving…" : "Save to drawings")</button>
+                            <button type="button" class="text-sm text-content-muted hover:text-content" @onclick="() => importAttachment = null">Cancel</button>
+                        </div>
+                    </div>
+                }
             </div>
         }
         else if (selected is not null && selected.HasAttachments && detail is not null)
@@ -1364,6 +1417,74 @@ else
         {
             actionError = "Couldn't restore that email. Please try again.";
         }
+        finally { busy = false; }
+    }
+
+    // ---- Save an attachment into a project's drawings ----
+    // Unlike the record actions this does NOT consume the email: the message keeps its place in
+    // triage (it may still become a request or bid package) — only the file is copied out.
+
+    private IntakeAttachment? importAttachment;
+    private string importProjectId = "";
+    private string importCode = "";
+    private string importTitle = "";
+    private string importRevision = "";
+    private string? importNote;
+    private string? importError;
+
+    private void OpenDrawingImport(IntakeAttachment attachment)
+    {
+        importAttachment = attachment;
+        importNote = null;
+        importError = null;
+        // Keep whichever project the triager already picked in the link/create forms.
+        if (string.IsNullOrWhiteSpace(importProjectId))
+            importProjectId = !string.IsNullOrWhiteSpace(createProjectId) ? createProjectId : linkProjectId;
+        PrefillFromFileName(attachment.Name);
+    }
+
+    // "PRO-064-(WD)-P-800 Rev I Site set out.pdf" → code "PRO-064-(WD)-P-800", revision "I",
+    // title "Site set out". Falls back to the bare file name as the code when no "Rev X" is found.
+    private void PrefillFromFileName(string fileName)
+    {
+        var name = System.IO.Path.GetFileNameWithoutExtension(fileName ?? "").Trim();
+        var match = System.Text.RegularExpressions.Regex.Match(
+            name, @"^(?<code>.+?)[\s\-–—]+Rev(?:ision)?\.?\s*(?<rev>[A-Za-z0-9]{1,3})\b[\s\-–—]*(?<title>.*)$",
+            System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+        if (match.Success)
+        {
+            importCode = match.Groups["code"].Value.Trim();
+            importRevision = match.Groups["rev"].Value.Trim().ToUpperInvariant();
+            importTitle = match.Groups["title"].Value.Trim();
+        }
+        else
+        {
+            importCode = name;
+            importRevision = "";
+            importTitle = "";
+        }
+    }
+
+    private async Task DoImportDrawing()
+    {
+        if (selected is null || importAttachment is null || busy) return;
+        importError = null;
+        importNote = null;
+        try
+        {
+            busyLabel = "Saving drawing";
+            busy = true;
+            var drawing = await Commands.SendAsync(
+                new ImportDrawingFromMessage(
+                    importProjectId, selected.Id, importAttachment.Id,
+                    importCode.Trim(), importTitle.Trim(), importRevision.Trim()),
+                CancellationToken.None);
+            var project = ProjectOptions.FirstOrDefault(p => p.ProjectId == importProjectId);
+            importNote = $"Saved as {drawing.DrawingCode} (unapproved revision) under {(project is null ? "the project" : project.Name)}'s drawings.";
+            importAttachment = null;
+        }
+        catch (CommandFailedException ex) { importError = ex.Message; }
+        catch { importError = "Couldn't save that attachment to drawings. Please try again."; }
         finally { busy = false; }
     }
 

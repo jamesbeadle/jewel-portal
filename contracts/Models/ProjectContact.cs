@@ -1,9 +1,12 @@
 namespace Jewel.JPMS.Models;
 
-// The external parties attached to a project — the clients, architects, consultants and
-// engineers an RFI/request is issued to. A project's request documents are emailed to the
-// contacts whose <see cref="ProjectContact.ReceivesRequests"/> flag is set, so a project must
-// carry at least one such contact before the auto-send on creation has anywhere to go.
+// The people attached to a project's correspondence profile — external parties (clients,
+// architects, consultants, engineers) and ad-hoc recipients such as internal Jewel staff.
+// Each row carries a CorrespondenceRouting: To rows are the fallback correspondent when no party
+// link resolves, Cc/Bcc rows are copied on every issued request document. A row may be linked to
+// a PartyContact (PartyContactId set), in which case its routing overrides that person's default
+// for this project only, or ad-hoc (PartyContactId null) with its own name/email.
+// ReceivesRequests is the legacy flag, kept in step with Routing == To until fully retired.
 public enum ProjectContactRole
 {
     Client = 0,
@@ -22,7 +25,9 @@ public sealed record ProjectContact(
     string? Organisation,
     ProjectContactRole Role,
     bool ReceivesRequests,
-    DateTimeOffset CreatedAt);
+    DateTimeOffset CreatedAt,
+    CorrespondenceRouting Routing = CorrespondenceRouting.None,
+    string? PartyContactId = null);
 
 public static class ProjectContactRoleExtensions
 {
