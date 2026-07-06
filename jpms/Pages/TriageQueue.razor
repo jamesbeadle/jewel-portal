@@ -8,6 +8,7 @@
 @inject NavigationManager Nav
 @inject IIntakeQueue Intake
 @inject IRequestRegister RequestRegister
+@inject IDrawingStore DrawingStore
 @inject ICommandSender Commands
 @inject Jewel.JPMS.Features.Projects.ProjectListReadModel Projects
 @implements IDisposable
@@ -87,13 +88,22 @@
                     <div class="mt-3 rounded-lg border border-line bg-surface p-3 space-y-3">
                         <p class="text-xs text-content-muted">
                             Save <span class="font-medium text-content">@importAttachment.Name</span> into a project's drawings.
-                            The file lands as an <span class="font-medium text-content">unapproved revision</span> — matched to an
-                            existing drawing by its code, or registered as a new drawing.
+                            The file lands as an <span class="font-medium text-content">unapproved revision</span>.
                         </p>
+                        <div class="inline-flex rounded-lg border border-line-strong p-0.5 gap-0.5">
+                            <button type="button" @onclick="() => SetImportMode(isRevision: false)"
+                                    class="rounded-md text-xs px-2.5 py-1.5 transition @(!importIsRevision ? "bg-accent text-accent-ink font-medium" : "text-content-muted hover:bg-surface-raised")">
+                                New drawing
+                            </button>
+                            <button type="button" @onclick="() => SetImportMode(isRevision: true)"
+                                    class="rounded-md text-xs px-2.5 py-1.5 transition @(importIsRevision ? "bg-accent text-accent-ink font-medium" : "text-content-muted hover:bg-surface-raised")">
+                                Revision of existing drawing
+                            </button>
+                        </div>
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                             <div>
                                 <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Project *</label>
-                                <select class="field" @bind="importProjectId">
+                                <select class="field" value="@importProjectId" @onchange="OnImportProjectChanged">
                                     <option value="">Select a project…</option>
                                     @foreach (var project in ProjectOptions)
                                     {
@@ -101,15 +111,49 @@
                                     }
                                 </select>
                             </div>
-                            <FormField Label="Drawing code" Value="@importCode" OnChange="v => importCode = v" Required="true" />
+                            @if (importIsRevision)
+                            {
+                                <div>
+                                    <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Existing drawing *</label>
+                                    <select class="field" @bind="importDrawingId" disabled="@string.IsNullOrWhiteSpace(importProjectId)">
+                                        @if (string.IsNullOrWhiteSpace(importProjectId))
+                                        {
+                                            <option value="">Select a project first…</option>
+                                        }
+                                        else if (!DrawingStore.DrawingsLoadedFor(importProjectId))
+                                        {
+                                            <option value="">Loading drawings…</option>
+                                        }
+                                        else if (ImportDrawingOptions.Count == 0)
+                                        {
+                                            <option value="">No drawings on this project yet</option>
+                                        }
+                                        else
+                                        {
+                                            <option value="">Select a drawing…</option>
+                                            @foreach (var drawing in ImportDrawingOptions)
+                                            {
+                                                <option value="@drawing.DrawingId">@drawing.DrawingCode — @drawing.Title</option>
+                                            }
+                                        }
+                                    </select>
+                                </div>
+                            }
+                            else
+                            {
+                                <FormField Label="Drawing code" Value="@importCode" OnChange="v => importCode = v" Required="true" />
+                            }
                         </div>
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                            <FormField Label="Title" Value="@importTitle" OnChange="v => importTitle = v" />
+                            @if (!importIsRevision)
+                            {
+                                <FormField Label="Title" Value="@importTitle" OnChange="v => importTitle = v" />
+                            }
                             <FormField Label="Revision label" Value="@importRevision" OnChange="v => importRevision = v" />
                         </div>
                         <div class="flex items-center gap-3">
                             <button type="button" class="btn-primary"
-                                    disabled="@(busy || string.IsNullOrWhiteSpace(importProjectId) || string.IsNullOrWhiteSpace(importCode))"
+                                    disabled="@(busy || string.IsNullOrWhiteSpace(importProjectId) || (importIsRevision ? string.IsNullOrWhiteSpace(importDrawingId) : string.IsNullOrWhiteSpace(importCode)))"
                                     @onclick="DoImportDrawing">@(busy ? "Saving…" : "Save to drawings")</button>
                             <button type="button" class="text-sm text-content-muted hover:text-content" @onclick="() => importAttachment = null">Cancel</button>
                         </div>
@@ -991,6 +1035,7 @@ else
         await Session.EnsureLoadedAsync();
         if (!Auth.IsSignedIn) { Nav.NavigateTo("/login", forceLoad: true); return; }
         RequestRegister.OnChange += StateHasChanged;
+        DrawingStore.OnChange += StateHasChanged;
         await Projects.RefreshAsync(CancellationToken.None);
         await LoadAsync();
         await LoadUnassignedAsync();
@@ -1425,12 +1470,17 @@ else
     // triage (it may still become a request or bid package) — only the file is copied out.
 
     private IntakeAttachment? importAttachment;
+    private bool importIsRevision;
+    private string importDrawingId = "";
     private string importProjectId = "";
     private string importCode = "";
     private string importTitle = "";
     private string importRevision = "";
     private string? importNote;
     private string? importError;
+
+    private IReadOnlyList<Drawing> ImportDrawingOptions =>
+        string.IsNullOrWhiteSpace(importProjectId) ? Array.Empty<Drawing>() : DrawingStore.DrawingsFor(importProjectId);
 
     private void OpenDrawingImport(IntakeAttachment attachment)
     {
@@ -1440,7 +1490,25 @@ else
         // Keep whichever project the triager already picked in the link/create forms.
         if (string.IsNullOrWhiteSpace(importProjectId))
             importProjectId = !string.IsNullOrWhiteSpace(createProjectId) ? createProjectId : linkProjectId;
+        if (!string.IsNullOrWhiteSpace(importProjectId))
+            DrawingStore.Refresh(importProjectId);
         PrefillFromFileName(attachment.Name);
+    }
+
+    private void SetImportMode(bool isRevision)
+    {
+        importIsRevision = isRevision;
+        importError = null;
+        if (isRevision && !string.IsNullOrWhiteSpace(importProjectId))
+            DrawingStore.Refresh(importProjectId);
+    }
+
+    private void OnImportProjectChanged(ChangeEventArgs e)
+    {
+        importProjectId = e.Value?.ToString() ?? "";
+        importDrawingId = "";
+        if (!string.IsNullOrWhiteSpace(importProjectId))
+            DrawingStore.Refresh(importProjectId);
     }
 
     // "PRO-064-(WD)-P-800 Rev I Site set out.pdf" → code "PRO-064-(WD)-P-800", revision "I",
@@ -1470,6 +1538,19 @@ else
         if (selected is null || importAttachment is null || busy) return;
         importError = null;
         importNote = null;
+
+        // In revision mode the target drawing is picked explicitly; send its code so the
+        // import lands as a new unapproved revision of that drawing rather than a new one.
+        var code = importCode.Trim();
+        var title = importTitle.Trim();
+        if (importIsRevision)
+        {
+            var target = ImportDrawingOptions.FirstOrDefault(d => d.DrawingId == importDrawingId);
+            if (target is null) { importError = "Select the drawing this revision belongs to."; return; }
+            code = target.DrawingCode;
+            title = target.Title;
+        }
+
         try
         {
             busyLabel = "Saving drawing";
@@ -1477,11 +1558,12 @@ else
             var drawing = await Commands.SendAsync(
                 new ImportDrawingFromMessage(
                     importProjectId, selected.Id, importAttachment.Id,
-                    importCode.Trim(), importTitle.Trim(), importRevision.Trim()),
+                    code, title, importRevision.Trim()),
                 CancellationToken.None);
             var project = ProjectOptions.FirstOrDefault(p => p.ProjectId == importProjectId);
             importNote = $"Saved as {drawing.DrawingCode} (unapproved revision) under {(project is null ? "the project" : project.Name)}'s drawings.";
             importAttachment = null;
+            importDrawingId = "";
         }
         catch (CommandFailedException ex) { importError = ex.Message; }
         catch { importError = "Couldn't save that attachment to drawings. Please try again."; }
@@ -1646,5 +1728,9 @@ else
     private static DateTimeOffset? ParseDate(string value) =>
         DateTimeOffset.TryParse(value, out var parsed) ? parsed : null;
 
-    public void Dispose() => RequestRegister.OnChange -= StateHasChanged;
+    public void Dispose()
+    {
+        RequestRegister.OnChange -= StateHasChanged;
+        DrawingStore.OnChange -= StateHasChanged;
+    }
 }
