@@ -421,28 +421,24 @@ else
 
     @* ---- Add-subcontractor modal: the directory, searchable ---- *@
     <Modal IsOpen="showInviteModal" Title="Invite subcontractors" ShowFooter="true"
-           ConfirmLabel="@($"Invite {InviteCount()}")" ConfirmDisabled="@(busy || InviteCount() == 0)" CancelLabel="Cancel"
+           ConfirmLabel="@(InviteCount() == 0 ? "Invite" : $"Invite {InviteCount()}")" ConfirmDisabled="@(busy || InviteCount() == 0)" CancelLabel="Cancel"
            OnCancel="CloseInviteModal" OnConfirm="ConfirmInvite" Class="max-w-lg w-full">
-        <div class="mb-3">
-            <input class="field" placeholder="Search by company, trade or contact…"
+        <div class="mb-3 flex gap-2">
+            <input class="field flex-1" placeholder="Search by company, trade or contact…"
                    value="@subSearch" @oninput="OnSearchInput" />
+            @* Trade filter — a compact dropdown (the full chip list overwhelmed the modal). *@
+            @if (InvitableTrades().Count > 1)
+            {
+                <select class="field w-44 shrink-0" value="@(tradeFilter ?? "")"
+                        @onchange="e => tradeFilter = string.IsNullOrEmpty(e.Value?.ToString()) ? null : e.Value!.ToString()">
+                    <option value="">All trades</option>
+                    @foreach (var trade in InvitableTrades())
+                    {
+                        <option value="@trade">@trade</option>
+                    }
+                </select>
+            }
         </div>
-        @* One-tap trade filters — the distinct trades of invitable companies, for fast selection. *@
-        @if (InvitableTrades().Count > 1)
-        {
-            <div class="mb-3 flex flex-wrap gap-1.5">
-                <button type="button"
-                        class="rounded-full border px-2.5 py-0.5 text-[11px] font-medium @(tradeFilter is null ? "border-accent bg-accent/10 text-accent" : "border-line bg-surface-raised text-content-muted hover:text-content")"
-                        @onclick="() => tradeFilter = null">All trades</button>
-                @foreach (var trade in InvitableTrades())
-                {
-                    var isActive = string.Equals(tradeFilter, trade, StringComparison.OrdinalIgnoreCase);
-                    <button type="button"
-                            class="rounded-full border px-2.5 py-0.5 text-[11px] font-medium @(isActive ? "border-accent bg-accent/10 text-accent" : "border-line bg-surface-raised text-content-muted hover:text-content")"
-                            @onclick="() => tradeFilter = isActive ? null : trade">@trade</button>
-                }
-            </div>
-        }
         @if (Invitable().Count == 0)
         {
             <p class="text-sm text-content-subtle italic">No matching subcontractors in the directory.</p>

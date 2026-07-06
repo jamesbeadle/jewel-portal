@@ -1,8 +1,8 @@
 @if (IsOpen)
 {
     <div class="modal-overlay" @onclick="OnCancel">
-        <div class="modal-panel @Class" @onclick:stopPropagation="true">
-            <header class="flex items-center justify-between gap-3 px-5 py-4 border-b border-line">
+        <div class="modal-panel @Class flex flex-col max-h-[85vh]" @onclick:stopPropagation="true">
+            <header class="shrink-0 flex items-center justify-between gap-3 px-5 py-4 border-b border-line">
                 <h2 class="text-base font-semibold text-content">@Title</h2>
                 <button type="button" @onclick="OnCancel" aria-label="Close"
                         class="inline-flex items-center justify-center w-8 h-8 rounded-md text-content-subtle hover:text-content hover:bg-surface-raised">
@@ -11,13 +11,13 @@
                 </button>
             </header>
 
-            <div class="px-5 py-4">
+            <div class="px-5 py-4 overflow-y-auto grow">
                 @ChildContent
             </div>
 
             @if (ShowFooter)
             {
-                <footer class="flex items-center justify-end gap-2 px-5 py-4 border-t border-line">
+                <footer class="shrink-0 flex items-center justify-end gap-2 px-5 py-4 border-t border-line">
                     <button type="button" class="btn-secondary" @onclick="OnCancel">@CancelLabel</button>
                     <button type="button" class="btn-primary" disabled="@ConfirmDisabled" @onclick="OnConfirm">@ConfirmLabel</button>
                 </footer>
