@@ -19,7 +19,7 @@
             {
                 <footer class="flex items-center justify-end gap-2 px-5 py-4 border-t border-line">
                     <button type="button" class="btn-secondary" @onclick="OnCancel">@CancelLabel</button>
-                    <button type="button" class="btn-primary" @onclick="OnConfirm">@ConfirmLabel</button>
+                    <button type="button" class="btn-primary" disabled="@ConfirmDisabled" @onclick="OnConfirm">@ConfirmLabel</button>
                 </footer>
             }
         </div>
@@ -33,6 +33,7 @@
     [Parameter] public bool ShowFooter { get; set; } = true;
     [Parameter] public string CancelLabel { get; set; } = "Cancel";
     [Parameter] public string ConfirmLabel { get; set; } = "Action";
+    [Parameter] public bool ConfirmDisabled { get; set; }
     [Parameter] public string Class { get; set; } = "";
     [Parameter] public EventCallback OnCancel { get; set; }
     [Parameter] public EventCallback OnConfirm { get; set; }

@@ -1,5 +1,6 @@
 @page "/projects/{ProjectId}/bid-package-invites/{BidPackageId}"
 @using Jewel.JPMS.Contracts.Procurement
+@using Jewel.JPMS.Contracts.Subcontractors
 @using Jewel.JPMS.Contracts.Boq
 @using Jewel.JPMS.Contracts.Drawings
 @using Jewel.JPMS.Contracts.Variations
@@ -9,6 +10,7 @@
 @inject IQueryClient Queries
 @inject ICommandSender Commands
 @inject ISubcontractorStore Subs
+@inject Jewel.JPMS.Features.Subcontractors.SubcontractorsReadModel SubsReadModel
 @inject NavigationManager Nav
 @implements IDisposable
 
@@ -109,7 +111,17 @@ else
                                 {
                                     var sub = Subs.Find(recipient.SubcontractorId);
                                     <tr>
-                                        <td class="px-4 py-3 text-content font-medium">@(sub?.CompanyName ?? recipient.SubcontractorId)</td>
+                                        <td class="px-4 py-3">
+                                            <span class="text-content font-medium">@(sub?.CompanyName ?? recipient.SubcontractorId)</span>
+                                            @if (sub is not null && string.IsNullOrWhiteSpace(sub.ContactEmail))
+                                            {
+                                                <span class="ml-2 inline-flex items-center rounded-full bg-amber-50 border border-amber-200 px-1.5 py-0.5 text-[10px] font-medium text-amber-800">No email address</span>
+                                            }
+                                            else if (sub is not null)
+                                            {
+                                                <span class="block text-xs text-content-subtle">@sub.ContactEmail</span>
+                                            }
+                                        </td>
                                         <td class="px-4 py-3 text-content-muted hidden sm:table-cell">@(sub?.PrimaryTrade ?? "")</td>
                                         <td class="px-4 py-3 text-content-subtle">@recipient.InvitedAt.LocalDateTime.ToString("d MMM yyyy, HH:mm")</td>
                                         <td class="px-4 py-3 text-content-muted">@recipient.Status</td>
@@ -124,6 +136,10 @@ else
                             </tbody>
                         </table>
                     </div>
+                    <p class="text-xs text-content-subtle mt-2">
+                        Adding a subcontractor only builds the invite list — nothing is emailed until you use
+                        “Send invite email”, which sends directly from the shared mailbox (it won't appear in your Drafts).
+                    </p>
                 }
             </section>
 
@@ -405,7 +421,7 @@ else
 
     @* ---- Add-subcontractor modal: the directory, searchable ---- *@
     <Modal IsOpen="showInviteModal" Title="Invite subcontractors" ShowFooter="true"
-           ConfirmLabel="@($"Invite {selected.Count}")" CancelLabel="Cancel"
+           ConfirmLabel="@($"Invite {InviteCount()}")" ConfirmDisabled="@(busy || InviteCount() == 0)" CancelLabel="Cancel"
            OnCancel="CloseInviteModal" OnConfirm="ConfirmInvite" Class="max-w-lg w-full">
         <div class="mb-3">
             <input class="field" placeholder="Search by company, trade or contact…"
@@ -441,10 +457,29 @@ else
                                @onchange="e => Toggle(sub.SubcontractorId, e)" />
                         <span class="font-medium">@sub.CompanyName</span>
                         <span class="text-content-subtle">· @sub.PrimaryTrade</span>
+                        @if (string.IsNullOrWhiteSpace(sub.ContactEmail))
+                        {
+                            <span class="inline-flex items-center rounded-full bg-amber-50 border border-amber-200 px-1.5 py-0.5 text-[10px] font-medium text-amber-800">No email</span>
+                        }
                     </label>
                 }
             </div>
         }
+
+        @* Ad-hoc invite: saved to the directory, then included in this invite list. *@
+        <div class="mt-4 pt-4 border-t border-line">
+            <p class="text-xs font-semibold uppercase tracking-wide text-content-subtle mb-1">Not in the directory?</p>
+            <p class="text-xs text-content-subtle mb-2">Add their details — they're saved to the directory and included in this invite.</p>
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                <input class="field" placeholder="Company or name *" @bind="quickAddName" @bind:event="oninput" />
+                <input class="field" type="email" placeholder="Email address *" @bind="quickAddEmail" @bind:event="oninput" />
+                <input class="field" placeholder="Trade (optional)" @bind="quickAddTrade" @bind:event="oninput" />
+            </div>
+            @if (quickAddPartial)
+            {
+                <p class="text-xs text-amber-800 mt-1">Enter both a name and a valid email address to include them.</p>
+            }
+        </div>
     </Modal>
 
     @* ---- Line-item coverage modal: link to a contract BoQ line OR a variation ---- *@
@@ -536,7 +571,8 @@ else
 
     @* ---- Compose & send the tender-invite email (recipients BCC'd) ---- *@
     <Modal IsOpen="showComposeModal" Title="Send invite email" ShowFooter="true"
-           ConfirmLabel="@(busy ? "Sending…" : $"Send to {BccPreview().Count} (BCC)")" CancelLabel="Cancel"
+           ConfirmLabel="@(busy ? "Sending…" : BccPreview().Count == 0 ? "No one to send to" : $"Send to {BccPreview().Count} subcontractor{(BccPreview().Count == 1 ? "" : "s")}")"
+           ConfirmDisabled="@(busy || BccPreview().Count == 0)" CancelLabel="Cancel"
            OnCancel="CloseComposeModal" OnConfirm="ConfirmSendInvite" Class="max-w-2xl w-full">
         <p class="text-xs text-content-subtle mb-3">
             Sent from the shared mailbox with every recipient in BCC — subcontractors never see each
@@ -549,26 +585,45 @@ else
         </p>
 
         <label class="block text-xs font-semibold uppercase tracking-wide text-content-subtle mb-1">Recipients (BCC)</label>
-        @if (BccPreview().Count == 0)
+        @if (BccPreview().Count > 0)
         {
-            <p class="text-sm text-negative mb-3">None of the invited subcontractors has an email address in the directory.</p>
-        }
-        else
-        {
-            <div class="mb-3 flex flex-wrap gap-1.5">
+            <div class="mb-2 flex flex-wrap gap-1.5">
                 @foreach (var name in BccPreview())
                 {
                     <span class="inline-flex items-center rounded-full bg-surface-raised border border-line px-2 py-0.5 text-[11px] text-content-muted">@name</span>
                 }
             </div>
         }
+        @if (MissingEmail().Count > 0)
+        {
+            <p class="rounded-lg bg-amber-50 border border-amber-200 px-3 py-2 text-xs text-amber-800 mb-3">
+                @(BccPreview().Count == 0 ? "None of the invited subcontractors has an email address, so this email can't be sent yet. " : "")
+                Won't receive it (no email address): @string.Join(", ", MissingEmail()).
+                Add their email in the <a class="underline" href="/directory">Directory</a> and reopen this window.
+            </p>
+        }
 
         <label class="block text-xs font-semibold uppercase tracking-wide text-content-subtle mb-1">Subject</label>
         <input class="field mb-3" @bind="composeSubject" />
 
-        <label class="block text-xs font-semibold uppercase tracking-wide text-content-subtle mb-1">Message</label>
-        <textarea class="field font-mono text-xs" rows="14" @bind="composeBody"></textarea>
-        <p class="text-[11px] text-content-subtle mt-1">Sent as HTML — the pre-filled message includes the package's line items for pricing.</p>
+        <div class="flex items-center justify-between mb-1">
+            <label class="block text-xs font-semibold uppercase tracking-wide text-content-subtle">Message</label>
+            <button type="button" class="text-xs text-accent hover:underline" @onclick="() => editingBody = !editingBody">
+                @(editingBody ? "Back to preview" : "Edit message (HTML)")
+            </button>
+        </div>
+        @if (editingBody)
+        {
+            <textarea class="field font-mono text-xs" rows="14" @bind="composeBody"></textarea>
+            <p class="text-[11px] text-content-subtle mt-1">Sent as HTML — the pre-filled message includes the package's line items for pricing.</p>
+        }
+        else
+        {
+            <div class="rounded-lg border border-line bg-white text-gray-900 p-4 text-sm max-h-80 overflow-y-auto">
+                @((MarkupString)composeBody)
+            </div>
+            <p class="text-[11px] text-content-subtle mt-1">This is how the email will look. It includes the package's line items for the subcontractor to price.</p>
+        }
     </Modal>
 
     @* ---- Review an extracted tender before saving it as a quote ---- *@
@@ -838,16 +893,44 @@ else
         else selected.Remove(subcontractorId);
     }
 
+    // ---- Quick-add: invite someone who isn't in the directory yet ----
+
+    private string quickAddName = "";
+    private string quickAddEmail = "";
+    private string quickAddTrade = "";
+
+    private bool QuickAddReady =>
+        !string.IsNullOrWhiteSpace(quickAddName)
+        && quickAddEmail.Contains('@') && quickAddEmail.Trim().Length >= 5;
+
+    // Something typed but not enough to include — surfaced so a half-filled row isn't silently dropped.
+    private bool quickAddPartial =>
+        !QuickAddReady && (!string.IsNullOrWhiteSpace(quickAddName) || !string.IsNullOrWhiteSpace(quickAddEmail));
+
+    private int InviteCount() => selected.Count + (QuickAddReady ? 1 : 0);
+
     private async Task ConfirmInvite()
     {
-        if (busy || selected.Count == 0 || !CanManage) return;
+        if (busy || InviteCount() == 0 || !CanManage) return;
         error = null;
         try
         {
             busy = true;
+            var ids = selected.ToList();
+            if (QuickAddReady)
+            {
+                // Save the ad-hoc contact to the directory first, then invite like any other.
+                var created = await Commands.SendAsync(
+                    new AddSubcontractorToDirectory(
+                        quickAddName.Trim(), quickAddTrade.Trim(), quickAddName.Trim(),
+                        quickAddEmail.Trim(), "", ""), CancellationToken.None);
+                ids.Add(created.SubcontractorId);
+                await SubsReadModel.RefreshAsync(CancellationToken.None);
+            }
             recipients = await Commands.SendAsync(
-                new InviteSubcontractorsToBidPackage(BidPackageId, selected.ToList()), CancellationToken.None);
+                new InviteSubcontractorsToBidPackage(BidPackageId, ids), CancellationToken.None);
             selected.Clear();
+            quickAddName = quickAddEmail = quickAddTrade = "";
             showInviteModal = false;
             package = await Queries.AskAsync(new GetBidPackageById(BidPackageId), CancellationToken.None);
         }
@@ -910,6 +993,7 @@ else
     // ---- Compose & send the tender-invite email ----
 
     private bool showComposeModal;
+    private bool editingBody;
     private string composeSubject = "";
     private string composeBody = "";
     private string? sendNote;
@@ -923,12 +1007,24 @@ else
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToList();
 
+    // Invited but unreachable — no email address in the directory.
+    private IReadOnlyList<string> MissingEmail() =>
+        recipients
+            .Select(r => Subs.Find(r.SubcontractorId) is { } s
+                ? (Name: s.CompanyName, HasEmail: !string.IsNullOrWhiteSpace(s.ContactEmail))
+                : (Name: r.SubcontractorId, HasEmail: false))
+            .Where(x => !x.HasEmail)
+            .Select(x => x.Name)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
     private void OpenComposeModal()
     {
         if (package is null) return;
         composeSubject = $"Invitation to tender — {package.Title} ({package.Reference})";
         composeBody = DefaultInviteBody();
         sendNote = null;
+        editingBody = false;
         showComposeModal = true;
     }
 
