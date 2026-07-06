@@ -1299,12 +1299,31 @@ else
         {
             busy = true;
             var ids = new List<string>();
-            var createdAny = false;
+            var directoryChanged = false;
             foreach (var place in selectedPlaces.Values)
             {
                 if (!string.IsNullOrEmpty(place.ExistingSubcontractorId))
                 {
                     ids.Add(place.ExistingSubcontractorId);
+                    // Backfill contact details the search discovered but the directory entry lacks
+                    // (e.g. entries added before email discovery existed). Blanks only — a value
+                    // someone typed into the directory deliberately is never overwritten.
+                    var existing = Subs.Find(place.ExistingSubcontractorId);
+                    var needsEmail = existing is not null
+                        && string.IsNullOrWhiteSpace(existing.ContactEmail) && !string.IsNullOrWhiteSpace(place.Email);
+                    var needsPhone = existing is not null
+                        && string.IsNullOrWhiteSpace(existing.ContactPhone) && !string.IsNullOrWhiteSpace(place.Phone);
+                    if (needsEmail || needsPhone)
+                    {
+                        await Commands.SendAsync(
+                            new UpdateSubcontractor(
+                                existing!.SubcontractorId, existing.CompanyName, existing.PrimaryTrade, existing.ContactName,
+                                needsEmail ? place.Email! : existing.ContactEmail,
+                                needsPhone ? place.Phone! : existing.ContactPhone,
+                                existing.CisStatus),
+                            CancellationToken.None);
+                        directoryChanged = true; // refresh the read model so the new email shows immediately
+                    }
                     continue;
                 }
                 var created = await Commands.SendAsync(
@@ -1313,9 +1332,9 @@ else
                         DirectoryCategory.Subcontractor, "", "", "", place.Website ?? ""),
                     CancellationToken.None);
                 ids.Add(created.SubcontractorId);
-                createdAny = true;
+                directoryChanged = true;
             }
-            if (createdAny) await SubsReadModel.RefreshAsync(CancellationToken.None);
+            if (directoryChanged) await SubsReadModel.RefreshAsync(CancellationToken.None);
 
             recipients = await Commands.SendAsync(
                 new InviteSubcontractorsToBidPackage(BidPackageId, ids), CancellationToken.None);
