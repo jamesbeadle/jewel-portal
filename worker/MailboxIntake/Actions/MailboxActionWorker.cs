@@ -152,8 +152,15 @@ public sealed class MailboxActionWorker
             ? $"<p style=\"margin:0 0 12px\">A response is requested by <strong>{d:dd MMM yyyy}</strong>.</p>"
             : string.Empty;
 
+        // Lead with the client-visible reference (RFI-012) — matching the subject line, the PDF and
+        // the register — not the internal REQ number. The type word is only added in the pre-numbering
+        // fallback, where DisplayReference is the bare REQ number.
+        var displayRef = !string.IsNullOrWhiteSpace(model.Reference)
+            ? model.Reference
+            : $"{model.TypeShort} {model.DisplayNumber}".Trim();
+
         return $@"<div style=""font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#1A1E29;line-height:1.5"">
-  <p style=""margin:0 0 12px"">Please find attached <strong>{model.TypeShort} {model.DisplayNumber}</strong> &mdash; {System.Net.WebUtility.HtmlEncode(model.Title)} &mdash; for project {System.Net.WebUtility.HtmlEncode(model.ProjectName)} ({System.Net.WebUtility.HtmlEncode(model.ProjectReference)}).</p>
+  <p style=""margin:0 0 12px"">Please find attached <strong>{displayRef}</strong> &mdash; {System.Net.WebUtility.HtmlEncode(model.Title)} &mdash; for project {System.Net.WebUtility.HtmlEncode(model.ProjectName)} ({System.Net.WebUtility.HtmlEncode(model.ProjectReference)}).</p>
   {due}
   <p style=""margin:0 0 12px"">The attached PDF contains the full details and any references. Please reply to this email to respond.</p>
   <p style=""margin:16px 0 0;color:#C09A51;font-weight:bold"">Jewel Bespoke Build</p>
