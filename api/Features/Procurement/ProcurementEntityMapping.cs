@@ -18,6 +18,10 @@ internal static class ProcurementEntityMapping
     public static Quote ToModel(this QuoteEntity entity) =>
         new(entity.QuoteId, entity.BidPackageId, entity.SubcontractorId, entity.Value, entity.Notes, entity.ReceivedAt, entity.IsDeclined);
 
+    public static QuoteLineItem ToModel(this QuoteLineItemEntity entity) =>
+        new(entity.QuoteLineItemId, entity.QuoteId, entity.BidPackageLineItemId, entity.Description,
+            entity.Unit, entity.Quantity, entity.Rate, entity.Total);
+
     public static WorkOrder ToModel(this WorkOrderEntity entity) =>
         new(entity.WorkOrderId, entity.ProjectId, entity.BidPackageId, entity.SubcontractorId, entity.Value, entity.Scope, entity.AwardedAt, entity.AwardedByEmail);
 }

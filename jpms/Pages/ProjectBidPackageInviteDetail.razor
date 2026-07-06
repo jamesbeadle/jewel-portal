@@ -71,9 +71,20 @@ else
                     <h3 class="eyebrow">Invited to tender</h3>
                     @if (CanManage)
                     {
-                        <button type="button" class="text-xs text-accent hover:underline" @onclick="OpenInviteModal">+ Add subcontractor</button>
+                        <div class="flex items-center gap-4">
+                            @if (recipients.Count > 0 && lineItems.Count > 0)
+                            {
+                                <button type="button" class="text-xs text-accent hover:underline" @onclick="OpenComposeModal">Send invite email</button>
+                            }
+                            <button type="button" class="text-xs text-accent hover:underline" @onclick="OpenInviteModal">+ Add subcontractor</button>
+                        </div>
                     }
                 </div>
+
+                @if (sendNote is not null)
+                {
+                    <p class="rounded-lg bg-accent/10 border border-accent/30 px-3 py-2 text-sm text-content mb-3">@sendNote</p>
+                }
 
                 @if (recipients.Count == 0)
                 {
@@ -218,6 +229,94 @@ else
                 }
             </section>
 
+            @* ---- Tender submissions: quotes compared line by line ---- *@
+            @if (quotes.Count > 0)
+            {
+                <section class="mb-8">
+                    <h3 class="eyebrow mb-3">Tender submissions</h3>
+
+                    @if (awardNote is not null)
+                    {
+                        <p class="rounded-lg bg-accent/10 border border-accent/30 px-3 py-2 text-sm text-content mb-3">@awardNote</p>
+                    }
+
+                    <div class="rounded-xl border border-line bg-surface overflow-x-auto">
+                        <table class="w-full text-sm">
+                            <thead class="bg-surface-raised border-b border-line">
+                                <tr class="text-left text-[11px] uppercase tracking-wider text-content-subtle font-semibold">
+                                    <th class="px-4 py-2">Line item</th>
+                                    <th class="px-4 py-2 hidden sm:table-cell">Qty</th>
+                                    @foreach (var quote in quotes)
+                                    {
+                                        var sub = Subs.Find(quote.SubcontractorId);
+                                        <th class="px-4 py-2 text-right">@(sub?.CompanyName ?? quote.SubcontractorId)</th>
+                                    }
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-line">
+                                @foreach (var item in lineItems)
+                                {
+                                    <tr>
+                                        <td class="px-4 py-2 text-content">@item.Description</td>
+                                        <td class="px-4 py-2 text-content-muted hidden sm:table-cell">@item.Quantity @item.Unit</td>
+                                        @foreach (var quote in quotes)
+                                        {
+                                            var line = quoteLines.FirstOrDefault(l => l.QuoteId == quote.QuoteId && l.BidPackageLineItemId == item.LineItemId);
+                                            <td class="px-4 py-2 text-right text-content-muted">
+                                                @(line is null ? "—" : line.Total.ToString("£#,##0.00"))
+                                            </td>
+                                        }
+                                    </tr>
+                                }
+                                @{ var extras = quoteLines.Where(l => l.BidPackageLineItemId is null).ToList(); }
+                                @if (extras.Count > 0)
+                                {
+                                    <tr>
+                                        <td class="px-4 py-2 text-content-subtle italic">Outside package scope</td>
+                                        <td class="px-4 py-2 hidden sm:table-cell"></td>
+                                        @foreach (var quote in quotes)
+                                        {
+                                            var sum = extras.Where(l => l.QuoteId == quote.QuoteId).Sum(l => l.Total);
+                                            <td class="px-4 py-2 text-right text-content-subtle italic">@(sum == 0 ? "—" : sum.ToString("£#,##0.00"))</td>
+                                        }
+                                    </tr>
+                                }
+                            </tbody>
+                            <tfoot class="bg-surface-raised border-t border-line">
+                                <tr class="font-semibold text-content">
+                                    <td class="px-4 py-2">Total</td>
+                                    <td class="px-4 py-2 hidden sm:table-cell"></td>
+                                    @foreach (var quote in quotes)
+                                    {
+                                        <td class="px-4 py-2 text-right">@quote.Value.ToString("£#,##0.00")</td>
+                                    }
+                                </tr>
+                                @if (CanManage && package.Status != BidPackageStatus.Awarded)
+                                {
+                                    <tr>
+                                        <td class="px-4 py-2"></td>
+                                        <td class="px-4 py-2 hidden sm:table-cell"></td>
+                                        @foreach (var quote in quotes)
+                                        {
+                                            <td class="px-4 py-2 text-right">
+                                                <button type="button" class="text-xs text-accent hover:underline" disabled="@busy"
+                                                        @onclick="() => AwardTo(quote)">Award</button>
+                                            </td>
+                                        }
+                                    </tr>
+                                }
+                            </tfoot>
+                        </table>
+                    </div>
+
+                    @foreach (var quote in quotes.Where(q => !string.IsNullOrWhiteSpace(q.Notes)))
+                    {
+                        var sub = Subs.Find(quote.SubcontractorId);
+                        <p class="text-xs text-content-subtle mt-2"><span class="font-medium text-content-muted">@(sub?.CompanyName ?? quote.SubcontractorId):</span> @quote.Notes</p>
+                    }
+                </section>
+            }
+
             @* ---- Documents (placeholder) ---- *@
             <section class="mb-8">
                 <h3 class="eyebrow mb-3">Documents</h3>
@@ -226,12 +325,15 @@ else
                 </div>
             </section>
 
-            @* ---- Related emails ---- *@
+            @* ---- Tender responses & related emails (read live by the package's tag) ---- *@
             <section>
-                <h3 class="eyebrow mb-3">Related emails</h3>
+                <h3 class="eyebrow mb-3">Tender responses & related emails</h3>
                 @if (emails.Count == 0)
                 {
-                    <p class="text-sm text-content-subtle italic">No emails tagged to this bid package.</p>
+                    <p class="text-sm text-content-subtle italic">
+                        No emails tagged to this bid package. Replies to the invite land in Triage —
+                        tag them with @package.Reference and they appear here.
+                    </p>
                 }
                 else
                 {
@@ -241,7 +343,14 @@ else
                             <li class="rounded-lg border border-line bg-surface px-4 py-3">
                                 <div class="flex flex-wrap items-center justify-between gap-2">
                                     <span class="text-sm font-medium text-content">@(string.IsNullOrWhiteSpace(email.FromName) ? email.FromEmail : email.FromName)</span>
-                                    <span class="text-xs text-content-subtle">@email.ReceivedAt.LocalDateTime.ToString("d MMM yyyy, HH:mm")</span>
+                                    <div class="flex items-center gap-3">
+                                        <span class="text-xs text-content-subtle">@email.ReceivedAt.LocalDateTime.ToString("d MMM yyyy, HH:mm")</span>
+                                        @if (CanManage)
+                                        {
+                                            <button type="button" class="text-xs text-accent hover:underline" disabled="@busy"
+                                                    @onclick="() => OpenExtractModal(email)">Extract tender</button>
+                                        }
+                                    </div>
                                 </div>
                                 <p class="text-sm text-content mt-0.5">
                                     @email.Subject
@@ -270,6 +379,22 @@ else
             <input class="field" placeholder="Search by company, trade or contact…"
                    value="@subSearch" @oninput="OnSearchInput" />
         </div>
+        @* One-tap trade filters — the distinct trades of invitable companies, for fast selection. *@
+        @if (InvitableTrades().Count > 1)
+        {
+            <div class="mb-3 flex flex-wrap gap-1.5">
+                <button type="button"
+                        class="rounded-full border px-2.5 py-0.5 text-[11px] font-medium @(tradeFilter is null ? "border-accent bg-accent/10 text-accent" : "border-line bg-surface-raised text-content-muted hover:text-content")"
+                        @onclick="() => tradeFilter = null">All trades</button>
+                @foreach (var trade in InvitableTrades())
+                {
+                    var isActive = string.Equals(tradeFilter, trade, StringComparison.OrdinalIgnoreCase);
+                    <button type="button"
+                            class="rounded-full border px-2.5 py-0.5 text-[11px] font-medium @(isActive ? "border-accent bg-accent/10 text-accent" : "border-line bg-surface-raised text-content-muted hover:text-content")"
+                            @onclick="() => tradeFilter = isActive ? null : trade">@trade</button>
+                }
+            </div>
+        }
         @if (Invitable().Count == 0)
         {
             <p class="text-sm text-content-subtle italic">No matching subcontractors in the directory.</p>
@@ -344,6 +469,111 @@ else
             }
         }
     </Modal>
+
+    @* ---- Compose & send the tender-invite email (recipients BCC'd) ---- *@
+    <Modal IsOpen="showComposeModal" Title="Send invite email" ShowFooter="true"
+           ConfirmLabel="@(busy ? "Sending…" : $"Send to {BccPreview().Count} (BCC)")" CancelLabel="Cancel"
+           OnCancel="CloseComposeModal" OnConfirm="ConfirmSendInvite" Class="max-w-2xl w-full">
+        <p class="text-xs text-content-subtle mb-3">
+            Sent from the shared mailbox with every recipient in BCC — subcontractors never see each
+            other. The sent email is tagged to this package, and tagged replies appear under
+            Tender responses below.
+        </p>
+
+        <label class="block text-xs font-semibold uppercase tracking-wide text-content-subtle mb-1">Recipients (BCC)</label>
+        @if (BccPreview().Count == 0)
+        {
+            <p class="text-sm text-negative mb-3">None of the invited subcontractors has an email address in the directory.</p>
+        }
+        else
+        {
+            <div class="mb-3 flex flex-wrap gap-1.5">
+                @foreach (var name in BccPreview())
+                {
+                    <span class="inline-flex items-center rounded-full bg-surface-raised border border-line px-2 py-0.5 text-[11px] text-content-muted">@name</span>
+                }
+            </div>
+        }
+
+        <label class="block text-xs font-semibold uppercase tracking-wide text-content-subtle mb-1">Subject</label>
+        <input class="field mb-3" @bind="composeSubject" />
+
+        <label class="block text-xs font-semibold uppercase tracking-wide text-content-subtle mb-1">Message</label>
+        <textarea class="field font-mono text-xs" rows="14" @bind="composeBody"></textarea>
+        <p class="text-[11px] text-content-subtle mt-1">Sent as HTML — the pre-filled message includes the package's line items for pricing.</p>
+    </Modal>
+
+    @* ---- Review an extracted tender before saving it as a quote ---- *@
+    <Modal IsOpen="showExtractModal" Title="Tender submission" ShowFooter="true"
+           ConfirmLabel="@(busy ? "Saving…" : "Save submission")" CancelLabel="Cancel"
+           OnCancel="CloseExtractModal" OnConfirm="ConfirmSaveExtracted" Class="max-w-3xl w-full">
+        @if (extractBusy)
+        {
+            <p class="text-sm text-content-subtle">Reading the email…</p>
+        }
+        else
+        {
+            @if (extractProposed)
+            {
+                <p class="rounded-lg bg-accent/10 border border-accent/30 px-3 py-2 text-xs text-content mb-3">
+                    Extracted by Claude from the email — check every figure against the message before saving.
+                </p>
+            }
+            else
+            {
+                <p class="rounded-lg bg-surface-raised border border-line px-3 py-2 text-xs text-content-muted mb-3">
+                    Automatic extraction wasn't available — the package's line items are pre-filled for manual entry.
+                </p>
+            }
+
+            <label class="block text-xs font-semibold uppercase tracking-wide text-content-subtle mb-1">Subcontractor</label>
+            <select class="field mb-3" @bind="extractSubcontractorId">
+                <option value="">Select the subcontractor…</option>
+                @foreach (var recipient in recipients)
+                {
+                    var sub = Subs.Find(recipient.SubcontractorId);
+                    <option value="@recipient.SubcontractorId">@(sub?.CompanyName ?? recipient.SubcontractorId)</option>
+                }
+            </select>
+
+            <div class="rounded-xl border border-line bg-surface overflow-hidden mb-3">
+                <table class="w-full text-sm">
+                    <thead class="bg-surface-raised border-b border-line">
+                        <tr class="text-left text-[11px] uppercase tracking-wider text-content-subtle font-semibold">
+                            <th class="px-3 py-2">Description</th>
+                            <th class="px-3 py-2 hidden sm:table-cell">Unit</th>
+                            <th class="px-3 py-2">Qty</th>
+                            <th class="px-3 py-2">Rate</th>
+                            <th class="px-3 py-2">Total</th>
+                            <th class="px-3 py-2"></th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-line">
+                        @foreach (var draft in extractDrafts)
+                        {
+                            <tr class="@(draft.BidPackageLineItemId is null ? "bg-accent/5" : "")">
+                                <td class="px-3 py-2"><input class="field" @bind="draft.Description" /></td>
+                                <td class="px-3 py-2 hidden sm:table-cell"><input class="field w-16" @bind="draft.Unit" /></td>
+                                <td class="px-3 py-2"><input class="field w-20" type="number" step="any" @bind="draft.Quantity" /></td>
+                                <td class="px-3 py-2"><input class="field w-24" type="number" step="any" @bind="draft.Rate" @onblur="() => RecalcTotal(draft)" /></td>
+                                <td class="px-3 py-2"><input class="field w-28" type="number" step="any" @bind="draft.Total" /></td>
+                                <td class="px-3 py-2 text-right">
+                                    <button type="button" class="text-xs text-content-muted hover:text-negative" @onclick="() => extractDrafts.Remove(draft)">Remove</button>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+            <div class="flex items-center justify-between mb-3">
+                <button type="button" class="btn-secondary" @onclick="AddExtractLine">Add line</button>
+                <p class="text-sm text-content font-medium">Total: @extractDrafts.Sum(d => d.Total).ToString("£#,##0.00")</p>
+            </div>
+
+            <label class="block text-xs font-semibold uppercase tracking-wide text-content-subtle mb-1">Notes (exclusions, caveats, lead times)</label>
+            <textarea class="field" rows="3" @bind="extractNotes"></textarea>
+        }
+    </Modal>
 }
 
 @code {
@@ -359,6 +589,8 @@ else
     private IReadOnlyList<BidPackageRecipient> recipients = Array.Empty<BidPackageRecipient>();
     private IReadOnlyList<BidPackageLineItem> lineItems = Array.Empty<BidPackageLineItem>();
     private IReadOnlyList<MailboxMessage> emails = Array.Empty<MailboxMessage>();
+    private IReadOnlyList<Quote> quotes = Array.Empty<Quote>();
+    private IReadOnlyList<QuoteLineItem> quoteLines = Array.Empty<QuoteLineItem>();
     private IReadOnlyList<BoqLineItem> boqLines = Array.Empty<BoqLineItem>();
     private IReadOnlyList<VariationOrderQuote> voqs = Array.Empty<VariationOrderQuote>();
 
@@ -407,6 +639,12 @@ else
 
         try { emails = await Queries.AskAsync(new ListBidPackageEmails(BidPackageId), CancellationToken.None); }
         catch (Exception ex) { error = Append(error, $"Couldn't load related emails: {ex.Message}"); }
+
+        try { quotes = await Queries.AskAsync(new ListQuotesForBidPackage(BidPackageId), CancellationToken.None); }
+        catch (Exception ex) { error = Append(error, $"Couldn't load tender submissions: {ex.Message}"); }
+
+        try { quoteLines = await Queries.AskAsync(new ListQuoteLineItemsForBidPackage(BidPackageId), CancellationToken.None); }
+        catch { /* comparison simply shows totals only */ }
 
         // Coverage targets — best-effort so the picker can offer contract BoQ lines and variations.
         try { boqLines = await Queries.AskAsync(new ListBoqLinesForProject(ProjectId), CancellationToken.None); }
@@ -480,12 +718,27 @@ else
 
     // ---- Invite (modal over the directory) ----
 
+    private string? tradeFilter;
+
     private void OpenInviteModal()
     {
         selected.Clear();
         subSearch = "";
+        // Pre-filter to the package's trade when the directory knows it — one less tap.
+        tradeFilter = InvitableTrades()
+            .FirstOrDefault(t => string.Equals(t, package?.Trade, StringComparison.OrdinalIgnoreCase));
         showInviteModal = true;
     }
+
+    // The distinct trades among companies that could be invited (never clients/architects).
+    private IReadOnlyList<string> InvitableTrades() =>
+        Subs.All()
+            .Where(s => s.Category is DirectoryCategory.Subcontractor or DirectoryCategory.Supplier)
+            .Select(s => (s.PrimaryTrade ?? "").Trim())
+            .Where(t => t.Length > 0)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(t => t, StringComparer.OrdinalIgnoreCase)
+            .ToList();
 
     private void CloseInviteModal() => showInviteModal = false;
 
@@ -499,6 +752,7 @@ else
             // Only companies we tender to — never clients or architects.
             .Where(s => s.Category is DirectoryCategory.Subcontractor or DirectoryCategory.Supplier)
             .Where(s => !invited.Contains(s.SubcontractorId))
+            .Where(s => tradeFilter is null || string.Equals((s.PrimaryTrade ?? "").Trim(), tradeFilter, StringComparison.OrdinalIgnoreCase))
             .Where(s => q.Length == 0
                 || (s.CompanyName ?? "").Contains(q, StringComparison.OrdinalIgnoreCase)
                 || (s.PrimaryTrade ?? "").Contains(q, StringComparison.OrdinalIgnoreCase)
@@ -540,6 +794,191 @@ else
                 new RemoveBidPackageRecipient(BidPackageId, recipient.RecipientId), CancellationToken.None);
         }
         catch { error = "Couldn't remove that subcontractor. Please try again."; }
+        finally { busy = false; }
+    }
+
+    // ---- Compose & send the tender-invite email ----
+
+    private bool showComposeModal;
+    private string composeSubject = "";
+    private string composeBody = "";
+    private string? sendNote;
+
+    // The companies that will actually be BCC'd — invited recipients with a directory email.
+    private IReadOnlyList<string> BccPreview() =>
+        recipients
+            .Select(r => Subs.Find(r.SubcontractorId))
+            .Where(s => s is not null && !string.IsNullOrWhiteSpace(s.ContactEmail))
+            .Select(s => s!.CompanyName)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+    private void OpenComposeModal()
+    {
+        if (package is null) return;
+        composeSubject = $"Invitation to tender — {package.Title} ({package.Reference})";
+        composeBody = DefaultInviteBody();
+        sendNote = null;
+        showComposeModal = true;
+    }
+
+    private void CloseComposeModal() => showComposeModal = false;
+
+    // The pre-filled HTML invite: scope summary plus the line items to price, grouped by trade.
+    private string DefaultInviteBody()
+    {
+        var sb = new System.Text.StringBuilder();
+        sb.AppendLine("<p>Hello,</p>");
+        sb.AppendLine($"<p>Jewel Bespoke Build invites you to tender for the <strong>{package!.Title}</strong> package (ref {package.Reference}). Please price the items below and reply to this email with your rates, exclusions and lead times, quoting the reference in your reply.</p>");
+        foreach (var group in lineItems.GroupBy(item => item.Trade).OrderBy(g => g.Key))
+        {
+            var heading = string.IsNullOrWhiteSpace(group.Key) ? "General" : group.Key;
+            sb.AppendLine($"<p><strong>{heading}</strong></p>");
+            sb.AppendLine("<table border=\"1\" cellpadding=\"6\" cellspacing=\"0\" style=\"border-collapse:collapse\">");
+            sb.AppendLine("<tr><th align=\"left\">Description</th><th align=\"left\">Qty</th><th align=\"left\">Unit</th><th align=\"left\">Rate</th><th align=\"left\">Total</th></tr>");
+            foreach (var item in group.OrderBy(i => i.SortOrder))
+                sb.AppendLine($"<tr><td>{item.Description}</td><td>{item.Quantity}</td><td>{item.Unit}</td><td></td><td></td></tr>");
+            sb.AppendLine("</table>");
+        }
+        sb.AppendLine("<p>Please confirm receipt and let us know if you need any further information or drawings.</p>");
+        sb.AppendLine("<p>Kind regards,<br/>Jewel Bespoke Build</p>");
+        return sb.ToString();
+    }
+
+    private async Task ConfirmSendInvite()
+    {
+        if (busy || package is null || !CanManage) return;
+        error = null;
+        try
+        {
+            busy = true;
+            package = await Commands.SendAsync(
+                new SendBidPackageInvite(BidPackageId, composeSubject.Trim(), composeBody), CancellationToken.None);
+            showComposeModal = false;
+            sendNote = $"Invite sent to {BccPreview().Count} subcontractor(s) in BCC and tagged {package.Reference}.";
+        }
+        catch { error = "Couldn't send the invite email. Check the recipients have email addresses and that the mailbox can send, then try again."; }
+        finally { busy = false; }
+    }
+
+    // ---- Extract a tender from a tagged email, review, save as a quote ----
+
+    private sealed class ExtractDraft
+    {
+        public string? BidPackageLineItemId { get; set; }
+        public string Description { get; set; } = "";
+        public string Unit { get; set; } = "";
+        public decimal Quantity { get; set; }
+        public decimal Rate { get; set; }
+        public decimal Total { get; set; }
+    }
+
+    private bool showExtractModal;
+    private bool extractBusy;
+    private bool extractProposed;
+    private string extractSubcontractorId = "";
+    private string extractNotes = "";
+    private List<ExtractDraft> extractDrafts = new();
+    private string? awardNote;
+
+    private async Task OpenExtractModal(MailboxMessage email)
+    {
+        if (busy) return;
+        showExtractModal = true;
+        extractBusy = true;
+        extractProposed = false;
+        extractSubcontractorId = "";
+        extractNotes = "";
+        extractDrafts = new();
+        StateHasChanged();
+        try
+        {
+            var proposal = await Commands.SendAsync(
+                new ExtractQuoteFromMessage(BidPackageId, email.Id), CancellationToken.None);
+            extractProposed = proposal.Proposed;
+            extractSubcontractorId = proposal.SubcontractorId ?? "";
+            extractNotes = proposal.Notes;
+            extractDrafts = proposal.Lines
+                .Select(line => new ExtractDraft
+                {
+                    BidPackageLineItemId = line.BidPackageLineItemId,
+                    Description = line.Description,
+                    Unit = line.Unit,
+                    Quantity = line.Quantity,
+                    Rate = line.Rate,
+                    Total = line.Total
+                })
+                .ToList();
+            if (extractDrafts.Count == 0)
+                extractDrafts = lineItems
+                    .Select(item => new ExtractDraft { BidPackageLineItemId = item.LineItemId, Description = item.Description, Unit = item.Unit, Quantity = item.Quantity })
+                    .ToList();
+        }
+        catch
+        {
+            error = "Couldn't read that email for extraction. You can still enter the submission manually.";
+            extractDrafts = lineItems
+                .Select(item => new ExtractDraft { BidPackageLineItemId = item.LineItemId, Description = item.Description, Unit = item.Unit, Quantity = item.Quantity })
+                .ToList();
+        }
+        finally
+        {
+            extractBusy = false;
+            StateHasChanged();
+        }
+    }
+
+    private void CloseExtractModal() => showExtractModal = false;
+
+    private void AddExtractLine() => extractDrafts.Add(new ExtractDraft { Quantity = 1 });
+
+    private void RecalcTotal(ExtractDraft draft)
+    {
+        if (draft.Total == 0 && draft.Rate != 0 && draft.Quantity != 0)
+            draft.Total = decimal.Round(draft.Rate * draft.Quantity, 2);
+    }
+
+    private async Task ConfirmSaveExtracted()
+    {
+        if (busy || !CanManage || string.IsNullOrWhiteSpace(extractSubcontractorId)) return;
+        error = null;
+        try
+        {
+            busy = true;
+            var lines = extractDrafts
+                .Where(draft => !string.IsNullOrWhiteSpace(draft.Description))
+                .Select(draft => new QuoteExtractionLine(
+                    draft.BidPackageLineItemId, draft.Description.Trim(), (draft.Unit ?? "").Trim(),
+                    draft.Quantity, draft.Rate, draft.Total))
+                .ToList();
+            await Commands.SendAsync(
+                new SaveExtractedQuote(BidPackageId, extractSubcontractorId, extractNotes ?? "", lines), CancellationToken.None);
+            showExtractModal = false;
+            await LoadAsync();
+        }
+        catch { error = "Couldn't save that submission. Make sure a subcontractor is selected and every line has a description."; }
+        finally { busy = false; }
+    }
+
+    // ---- Award: winning quote → work order (the purchase-order record) ----
+
+    private async Task AwardTo(Quote quote)
+    {
+        if (busy || package is null || !CanManage) return;
+        error = null;
+        try
+        {
+            busy = true;
+            var sub = Subs.Find(quote.SubcontractorId);
+            var workOrder = await Commands.SendAsync(
+                new AwardBidPackage(
+                    BidPackageId, ProjectId, quote.SubcontractorId, quote.Value,
+                    $"{package.Title} ({package.Reference}) — as tender submission received {quote.ReceivedAt.LocalDateTime:d MMM yyyy}",
+                    Auth.CurrentUser?.Email ?? "", quote.QuoteId), CancellationToken.None);
+            awardNote = $"Awarded to {sub?.CompanyName ?? quote.SubcontractorId} at {quote.Value:£#,##0.00} — work order {workOrder.WorkOrderId[..8]}… raised as the purchase order.";
+            await LoadAsync();
+        }
+        catch { error = "Couldn't award the package. Please try again."; }
         finally { busy = false; }
     }
 

@@ -42,6 +42,10 @@ public static class ProcurementRouteRegistration
             new QueryRoute("/api/bid-packages/{bidPackageId}/emails",
                 query => $"/api/bid-packages/{((ListBidPackageEmails)query).BidPackageId}/emails"));
 
+        queries.Register<ListQuoteLineItemsForBidPackage, IReadOnlyList<QuoteLineItem>>(
+            new QueryRoute("/api/bid-packages/{bidPackageId}/quote-lines",
+                query => $"/api/bid-packages/{((ListQuoteLineItemsForBidPackage)query).BidPackageId}/quote-lines"));
+
         commands.Register<CreateBidPackage, BidPackage>(
             new CommandRoute("POST", "/api/projects/{projectId}/bid-packages",
                 command => $"/api/projects/{((CreateBidPackage)command).ProjectId}/bid-packages"));
@@ -73,6 +77,18 @@ public static class ProcurementRouteRegistration
         commands.Register<UpdateBidPackageScope, BidPackage>(
             new CommandRoute("PUT", "/api/bid-packages/{bidPackageId}",
                 command => $"/api/bid-packages/{((UpdateBidPackageScope)command).BidPackageId}"));
+
+        commands.Register<SendBidPackageInvite, BidPackage>(
+            new CommandRoute("POST", "/api/bid-packages/{bidPackageId}/send-invite",
+                command => $"/api/bid-packages/{((SendBidPackageInvite)command).BidPackageId}/send-invite"));
+
+        commands.Register<ExtractQuoteFromMessage, QuoteExtractionProposal>(
+            new CommandRoute("POST", "/api/bid-packages/{bidPackageId}/extract-quote",
+                command => $"/api/bid-packages/{((ExtractQuoteFromMessage)command).BidPackageId}/extract-quote"));
+
+        commands.Register<SaveExtractedQuote, Quote>(
+            new CommandRoute("POST", "/api/bid-packages/{bidPackageId}/extracted-quotes",
+                command => $"/api/bid-packages/{((SaveExtractedQuote)command).BidPackageId}/extracted-quotes"));
 
         commands.Register<SubmitQuoteForBidPackage, Quote>(
             new CommandRoute("POST", "/api/bid-packages/{bidPackageId}/quotes",

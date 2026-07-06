@@ -53,6 +53,7 @@ public sealed class JpmsContext : DbContext
     public DbSet<BidPackageRecipientEntity> BidPackageRecipients => Set<BidPackageRecipientEntity>();
     public DbSet<BidPackageLineItemEntity> BidPackageLineItems => Set<BidPackageLineItemEntity>();
     public DbSet<QuoteEntity> Quotes => Set<QuoteEntity>();
+    public DbSet<QuoteLineItemEntity> QuoteLineItems => Set<QuoteLineItemEntity>();
     public DbSet<WorkOrderEntity> WorkOrders => Set<WorkOrderEntity>();
     public DbSet<VariationOrderQuoteEntity> VariationOrderQuotes => Set<VariationOrderQuoteEntity>();
     public DbSet<VariationOrderEntity> VariationOrders => Set<VariationOrderEntity>();

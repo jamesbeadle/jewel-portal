@@ -18,6 +18,7 @@ public static class ProcurementFeatureRegistration
         services.AddScoped<IQueryHandler<ListBidPackageRecipients, IReadOnlyList<BidPackageRecipient>>, ListBidPackageRecipientsHandler>();
         services.AddScoped<IQueryHandler<ListBidPackageLineItems, IReadOnlyList<BidPackageLineItem>>, ListBidPackageLineItemsHandler>();
         services.AddScoped<IQueryHandler<ListBidPackageEmails, IReadOnlyList<MailboxMessage>>, ListBidPackageEmailsHandler>();
+        services.AddScoped<IQueryHandler<ListQuoteLineItemsForBidPackage, IReadOnlyList<QuoteLineItem>>, ListQuoteLineItemsForBidPackageHandler>();
 
         services.AddScoped<ICommandHandler<CreateBidPackage, BidPackage>, CreateBidPackageHandler>();
         services.AddScoped<CreateBidPackageAuthorisation>();
@@ -46,6 +47,18 @@ public static class ProcurementFeatureRegistration
         services.AddScoped<ICommandHandler<UpdateBidPackageScope, BidPackage>, UpdateBidPackageScopeHandler>();
         services.AddScoped<UpdateBidPackageScopeAuthorisation>();
         services.AddScoped<UpdateBidPackageScopeValidation>();
+
+        services.AddScoped<ICommandHandler<SendBidPackageInvite, BidPackage>, SendBidPackageInviteHandler>();
+        services.AddScoped<SendBidPackageInviteAuthorisation>();
+        services.AddScoped<SendBidPackageInviteValidation>();
+
+        services.AddScoped<ICommandHandler<ExtractQuoteFromMessage, QuoteExtractionProposal>, ExtractQuoteFromMessageHandler>();
+        services.AddScoped<ExtractQuoteFromMessageAuthorisation>();
+        services.AddScoped<ExtractQuoteFromMessageValidation>();
+
+        services.AddScoped<ICommandHandler<SaveExtractedQuote, Quote>, SaveExtractedQuoteHandler>();
+        services.AddScoped<SaveExtractedQuoteAuthorisation>();
+        services.AddScoped<SaveExtractedQuoteValidation>();
 
         services.AddScoped<ICommandHandler<SubmitQuoteForBidPackage, Quote>, SubmitQuoteForBidPackageHandler>();
         services.AddScoped<SubmitQuoteForBidPackageAuthorisation>();

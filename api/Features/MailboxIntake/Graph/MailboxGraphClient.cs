@@ -112,14 +112,26 @@ public interface IMailboxGraphClient
     /// web when Graph provides one), or null when the mailbox is unconfigured / the create failed.
     /// </summary>
     Task<MailboxDraft?> CreateDraftAsync(MailboxDraftMessage draft, CancellationToken ct);
+
+    /// <summary>
+    /// Send a message from the mailbox (Graph sendMail, saved to Sent Items). Unlike
+    /// <see cref="CreateDraftAsync"/> this SENDS immediately — callers own the human-review step
+    /// before invoking it. Categories are stamped on the sent copy so tag-based reads (e.g. a bid
+    /// package's "JPMS/BPI-0001") can find it. Returns false when the mailbox is unconfigured or
+    /// Graph refuses (e.g. missing Mail.Send application permission).
+    /// </summary>
+    Task<bool> SendMailAsync(MailboxDraftMessage message, CancellationToken ct);
 }
 
-/// <summary>A new draft to place in the mailbox's Drafts folder (never sent by JPMS).</summary>
+/// <summary>A new message for the mailbox: placed in Drafts via CreateDraftAsync, or sent via
+/// SendMailAsync. Bcc and Categories are optional so existing draft-only callers are unchanged.</summary>
 public sealed record MailboxDraftMessage(
     IReadOnlyList<MailboxDraftRecipient> To,
     string Subject,
     string HtmlBody,
-    IReadOnlyList<MailboxDraftAttachment> Attachments);
+    IReadOnlyList<MailboxDraftAttachment> Attachments,
+    IReadOnlyList<MailboxDraftRecipient>? Bcc = null,
+    IReadOnlyList<string>? Categories = null);
 
 /// <summary>A draft recipient (address plus optional display name).</summary>
 public sealed record MailboxDraftRecipient(string Email, string? Name = null);
@@ -170,6 +182,8 @@ public sealed class NullMailboxGraphClient : IMailboxGraphClient
         Task.FromResult<IReadOnlyList<string>>(Array.Empty<string>());
     public Task<MailboxDraft?> CreateDraftAsync(MailboxDraftMessage draft, CancellationToken ct) =>
         Task.FromResult<MailboxDraft?>(null);
+    public Task<bool> SendMailAsync(MailboxDraftMessage message, CancellationToken ct) =>
+        Task.FromResult(false);
 }
 
 /// <summary>Graph REST implementation (HttpClient + app-only token).</summary>
@@ -675,30 +689,7 @@ public sealed class MailboxGraphClient : IMailboxGraphClient
         // the ~3 MB inline limit (our request-document PDFs are far smaller) go in the same call.
         var url = $"{GraphBase}/users/{Mailbox}/messages";
 
-        var payload = new Dictionary<string, object?>
-        {
-            ["subject"] = draft.Subject,
-            ["body"] = new Dictionary<string, object?>
-            {
-                ["contentType"] = "HTML",
-                ["content"] = draft.HtmlBody
-            },
-            ["toRecipients"] = draft.To.Select(r => new Dictionary<string, object?>
-            {
-                ["emailAddress"] = string.IsNullOrWhiteSpace(r.Name)
-                    ? new Dictionary<string, object?> { ["address"] = r.Email }
-                    : new Dictionary<string, object?> { ["address"] = r.Email, ["name"] = r.Name }
-            }).ToArray(),
-            ["attachments"] = draft.Attachments.Select(a => new Dictionary<string, object?>
-            {
-                ["@odata.type"] = "#microsoft.graph.fileAttachment",
-                ["name"] = a.FileName,
-                ["contentType"] = a.ContentType,
-                ["contentBytes"] = Convert.ToBase64String(a.Content)
-            }).ToArray()
-        };
-
-        using var content = JsonContent.Create(payload);
+        using var content = JsonContent.Create(BuildMessagePayload(draft));
         using var response = await SendAsync(HttpMethod.Post, url, content, ct);
         if (!response.IsSuccessStatusCode)
         {
@@ -715,6 +706,64 @@ public sealed class MailboxGraphClient : IMailboxGraphClient
             return null;
         var webLink = root.TryGetProperty("webLink", out var wl) ? wl.GetString() : null;
         return new MailboxDraft(id, webLink);
+    }
+
+    public async Task<bool> SendMailAsync(MailboxDraftMessage message, CancellationToken ct)
+    {
+        // POST /users/{mailbox}/sendMail sends in one call and saves to Sent Items. Categories are
+        // set on the message itself, so the sent copy carries the record tag (e.g. "JPMS/BPI-0001")
+        // without a second round trip.
+        var url = $"{GraphBase}/users/{Mailbox}/sendMail";
+
+        var payload = new Dictionary<string, object?>
+        {
+            ["message"] = BuildMessagePayload(message),
+            ["saveToSentItems"] = true
+        };
+
+        using var content = JsonContent.Create(payload);
+        using var response = await SendAsync(HttpMethod.Post, url, content, ct);
+        if (response.IsSuccessStatusCode) return true;
+
+        _logger.LogWarning("sendMail failed: {Status}. {Detail}",
+            (int)response.StatusCode, await SafeBodyAsync(response, ct));
+        return false;
+    }
+
+    // The Graph message shape shared by draft-create and sendMail.
+    private static Dictionary<string, object?> BuildMessagePayload(MailboxDraftMessage message)
+    {
+        static Dictionary<string, object?> Recipient(MailboxDraftRecipient r) => new()
+        {
+            ["emailAddress"] = string.IsNullOrWhiteSpace(r.Name)
+                ? new Dictionary<string, object?> { ["address"] = r.Email }
+                : new Dictionary<string, object?> { ["address"] = r.Email, ["name"] = r.Name }
+        };
+
+        var payload = new Dictionary<string, object?>
+        {
+            ["subject"] = message.Subject,
+            ["body"] = new Dictionary<string, object?>
+            {
+                ["contentType"] = "HTML",
+                ["content"] = message.HtmlBody
+            },
+            ["toRecipients"] = message.To.Select(Recipient).ToArray(),
+            ["attachments"] = message.Attachments.Select(a => new Dictionary<string, object?>
+            {
+                ["@odata.type"] = "#microsoft.graph.fileAttachment",
+                ["name"] = a.FileName,
+                ["contentType"] = a.ContentType,
+                ["contentBytes"] = Convert.ToBase64String(a.Content)
+            }).ToArray()
+        };
+
+        if (message.Bcc is { Count: > 0 } bcc)
+            payload["bccRecipients"] = bcc.Select(Recipient).ToArray();
+        if (message.Categories is { Count: > 0 } categories)
+            payload["categories"] = categories.ToArray();
+
+        return payload;
     }
 
     private async Task<HttpResponseMessage> SendAsync(

@@ -67,6 +67,21 @@ public sealed class QuoteEntity
     public bool IsDeclined { get; set; }
 }
 
+// A priced line on a subcontractor's quote — their rate against one of the package's line items.
+public sealed class QuoteLineItemEntity
+{
+    [Key, MaxLength(64)] public string QuoteLineItemId { get; set; } = "";
+    [MaxLength(64)]      public string QuoteId { get; set; } = "";
+    // The package line this quoted line prices; null when the subbie quoted outside the package's
+    // scope (lump-sum extra, attendance) — such lines still show in the comparison, unaligned.
+    [MaxLength(64)]      public string? BidPackageLineItemId { get; set; }
+    [MaxLength(512)]     public string Description { get; set; } = "";
+    [MaxLength(32)]      public string Unit { get; set; } = "";
+    public decimal Quantity { get; set; }
+    public decimal Rate { get; set; }
+    public decimal Total { get; set; }
+}
+
 public sealed class WorkOrderEntity
 {
     [Key, MaxLength(64)] public string WorkOrderId { get; set; } = "";

@@ -81,6 +81,21 @@ public sealed record Quote(
     DateTimeOffset ReceivedAt,
     bool IsDeclined);
 
+// A priced line on a subcontractor's quote — their rate against one of the package's line items.
+// BidPackageLineItemId links the quoted line to the package line it prices (null when the subbie
+// quoted something outside the package's scope, e.g. an attendance or a lump-sum extra); the
+// comparison view aligns quotes side by side through that link. Total is Quantity × Rate as the
+// subcontractor stated it (kept verbatim rather than recomputed, so a lump-sum line survives).
+public sealed record QuoteLineItem(
+    string QuoteLineItemId,
+    string QuoteId,
+    string? BidPackageLineItemId,
+    string Description,
+    string Unit,
+    decimal Quantity,
+    decimal Rate,
+    decimal Total);
+
 public sealed record WorkOrder(
     string WorkOrderId,
     string ProjectId,

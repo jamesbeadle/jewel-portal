@@ -2201,6 +2201,45 @@ namespace Jewel.JPMS.Api.Migrations
                     b.ToTable("Quotes");
                 });
 
+            modelBuilder.Entity("Jewel.JPMS.Api.Data.Entities.QuoteLineItemEntity", b =>
+                {
+                    b.Property<string>("QuoteLineItemId")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<string>("BidPackageLineItemId")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(512)
+                        .HasColumnType("nvarchar(512)");
+
+                    b.Property<decimal>("Quantity")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("QuoteId")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<decimal>("Rate")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("Total")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("Unit")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)");
+
+                    b.HasKey("QuoteLineItemId");
+
+                    b.ToTable("QuoteLineItems");
+                });
+
             modelBuilder.Entity("Jewel.JPMS.Api.Data.Entities.RateEntity", b =>
                 {
                     b.Property<string>("RateId")

@@ -3,9 +3,13 @@ using Jewel.JPMS.Api.Data;
 using Jewel.JPMS.Api.Data.Entities;
 using Jewel.JPMS.Contracts.Procurement;
 using Jewel.JPMS.Models;
+using Microsoft.EntityFrameworkCore;
 
 namespace Jewel.JPMS.Api.Features.Procurement.Commands;
 
+// Creates the work order (the purchase-order record) for the winning subcontractor, marks their
+// recipient row Won (a previously-marked winner drops back to Responded on re-award), and moves
+// the package to Awarded.
 public sealed class AwardBidPackageHandler
     : ICommandHandler<AwardBidPackage, WorkOrder>
 {
@@ -31,6 +35,18 @@ public sealed class AwardBidPackageHandler
         };
         context.WorkOrders.Add(entity);
         package.Status = (int)BidPackageStatus.Awarded;
+
+        var recipients = await context.BidPackageRecipients
+            .Where(r => r.BidPackageId == command.BidPackageId)
+            .ToListAsync(cancellationToken);
+        foreach (var recipient in recipients)
+        {
+            if (string.Equals(recipient.SubcontractorId, command.SubcontractorId, StringComparison.OrdinalIgnoreCase))
+                recipient.Status = (int)BidPackageRecipientStatus.Won;
+            else if (recipient.Status == (int)BidPackageRecipientStatus.Won)
+                recipient.Status = (int)BidPackageRecipientStatus.Responded;
+        }
+
         await context.SaveChangesAsync(cancellationToken);
         return entity.ToModel();
     }
