@@ -4,6 +4,16 @@
     <table class="w-full text-sm data-table">
         <thead class="bg-surface-raised border-b border-line">
             <tr class="text-left text-[11px] uppercase tracking-wider text-content-subtle font-semibold">
+                @if (SelectionEnabled)
+                {
+                    <th class="pl-4 pr-1 py-3 w-8">
+                        <input type="checkbox" class="cursor-pointer align-middle"
+                               title="Select all shown"
+                               checked="@AllSelectableSelected"
+                               disabled="@(!SelectableRecords.Any())"
+                               @onchange="e => OnToggleSelectAll.InvokeAsync((bool)e.Value!)" />
+                    </th>
+                }
                 <th class="px-4 py-3">Ref</th>
                 <th class="px-4 py-3 hidden sm:table-cell">Kind</th>
                 <th class="px-4 py-3">Subject</th>
@@ -20,6 +30,17 @@
             @foreach (var record in Records)
             {
                 <tr class="align-top @(CanOpen ? "is-clickable cursor-pointer" : "")" @onclick="() => Open(record)">
+                    @if (SelectionEnabled)
+                    {
+                        <td class="pl-4 pr-1 py-3 w-8" @onclick:stopPropagation="true">
+                            @if (IsSelectable(record))
+                            {
+                                <input type="checkbox" class="cursor-pointer align-middle"
+                                       checked="@SelectedIds.Contains(record.RequestId)"
+                                       @onchange="() => OnToggleSelect.InvokeAsync(record)" />
+                            }
+                        </td>
+                    }
                     <td class="px-4 py-3 font-mono text-xs text-content-muted whitespace-nowrap">@record.Reference</td>
                     <td class="px-4 py-3 text-content-muted hidden sm:table-cell whitespace-nowrap" title="@record.Kind.LongName()">@record.Kind.DisplayName()</td>
                     <td class="px-4 py-3 text-content font-medium">
@@ -60,6 +81,22 @@
 @code {
     [Parameter, EditorRequired] public IReadOnlyList<Request> Records { get; set; } = Array.Empty<Request>();
     [Parameter] public string? ProjectId { get; set; }
+
+    // Optional bulk selection: the parent owns the selected-id set and decides which rows may be
+    // selected (the register limits it to RFIs). Checkbox cells stop click propagation so ticking
+    // a row doesn't also navigate into it.
+    [Parameter] public bool SelectionEnabled { get; set; }
+    [Parameter] public Func<Request, bool>? RowSelectable { get; set; }
+    [Parameter] public IReadOnlyCollection<string> SelectedIds { get; set; } = Array.Empty<string>();
+    [Parameter] public EventCallback<Request> OnToggleSelect { get; set; }
+    [Parameter] public EventCallback<bool> OnToggleSelectAll { get; set; }
+
+    private bool IsSelectable(Request record) => RowSelectable?.Invoke(record) ?? true;
+
+    private IEnumerable<Request> SelectableRecords => Records.Where(IsSelectable);
+
+    private bool AllSelectableSelected =>
+        SelectableRecords.Any() && SelectableRecords.All(r => SelectedIds.Contains(r.RequestId));
 
     private bool CanOpen => !string.IsNullOrWhiteSpace(ProjectId);
 

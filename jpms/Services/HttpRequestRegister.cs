@@ -126,6 +126,22 @@ public sealed class HttpRequestRegister : IRequestRegister
     public Task<RequestEmailDraft> PrepareEmailDraftAsync(string requestId, string? recipientOverride = null, CancellationToken cancellationToken = default) =>
         commands.SendAsync(new PrepareRequestEmailDraft(requestId, recipientOverride), cancellationToken);
 
+    // The api caps each call (PDF render + Graph call per draft must fit one function
+    // invocation), so larger selections go up in chunks and the outcomes merge back into a
+    // single batch — callers see one result however many round trips it took.
+    private const int DraftChunkSize = 10;
+
+    public async Task<RequestEmailDraftBatch> PrepareEmailDraftsAsync(IReadOnlyList<string> requestIds, CancellationToken cancellationToken = default)
+    {
+        var outcomes = new List<RequestEmailDraftOutcome>(requestIds.Count);
+        foreach (var chunk in requestIds.Chunk(DraftChunkSize))
+        {
+            var batch = await commands.SendAsync(new PrepareRequestEmailDrafts(chunk), cancellationToken);
+            outcomes.AddRange(batch.Outcomes);
+        }
+        return new RequestEmailDraftBatch(outcomes);
+    }
+
     private async Task RaiseRecordAsync(Request record)
     {
         await commands.SendAsync(new RaiseRequest(record.ProjectId, record.Kind, record.Reference, record.Title, record.Description, record.Value, record.RaisedByEmail, record.RaisedTo, record.DrawingRef, record.ResponseDue, record.InternalNotes, record.ClientNotes), CancellationToken.None);

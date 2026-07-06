@@ -1,10 +1,12 @@
 namespace Jewel.JPMS.Models;
 
 /// <summary>
-/// A company found near a project's site by the Google Places search — a candidate to invite to
-/// tender. Places supplies name/address/phone/website/rating but never an email address, so Email
-/// is discovered from the company's own website (or the directory, for known companies); results
-/// where no email could be found are excluded — an invite that can't be emailed is no invite.
+/// A company found near a project's site by the local web search — a candidate to invite to
+/// tender. The search finds company websites; email and phone are discovered from each company's
+/// own site (or the directory, for known companies). Results where no email could be found are
+/// excluded — an invite that can't be emailed is no invite. PlaceId is the website domain (the
+/// stable identity of a hit); Address carries the search snippet describing the company;
+/// Rating/RatingCount are unused by the current provider and kept for shape compatibility.
 /// </summary>
 public sealed record LocalSubcontractor(
     string PlaceId,
@@ -16,8 +18,8 @@ public sealed record LocalSubcontractor(
     int RatingCount,
     // Discovered from the company's website (best-effort) or taken from the directory entry.
     string? Email = null,
-    // Set when a directory entry with the same company name already exists, so the UI can mark it
-    // and invite the existing entry rather than create a duplicate.
+    // Set when a directory entry with the same company name or website already exists, so the UI
+    // can mark it and invite the existing entry rather than create a duplicate.
     string? ExistingSubcontractorId = null);
 
 /// <summary>

@@ -47,13 +47,71 @@ else
             }
         </div>
 
+        @if (CanDraftEmail && SelectedCount > 0)
+        {
+            <div class="rounded-xl border border-line bg-surface px-4 py-3 mb-4">
+                <div class="flex flex-wrap items-center gap-3">
+                    <span class="text-sm font-medium text-content">@SelectedCount RFI@(SelectedCount == 1 ? "" : "s") selected</span>
+                    <button type="button" class="btn-primary" disabled="@preparingDrafts" @onclick="PrepareSelectedDrafts">
+                        @(preparingDrafts ? "Preparing drafts…" : $"Prepare email drafts ({SelectedCount})")
+                    </button>
+                    <button type="button" class="btn-secondary" disabled="@preparingDrafts" @onclick="ClearSelection">Clear selection</button>
+                </div>
+                <p class="text-xs text-content-subtle mt-2">Creates one draft per RFI in the projects mailbox — PDF attached, To/CC/BCC pre-filled from the correspondence profile. Review and send each from Outlook; nothing is sent from here.</p>
+            </div>
+        }
+
+        @if (draftBatchError is not null)
+        {
+            <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-4">@draftBatchError</p>
+        }
+        @if (draftBatch is not null)
+        {
+            <div class="rounded-xl border border-line bg-surface px-4 py-3 mb-4 space-y-2">
+                <p class="text-sm font-medium @(draftBatch.FailedCount == 0 ? "text-emerald-600" : "text-content")">
+                    @draftBatch.PreparedCount of @draftBatch.Outcomes.Count draft@(draftBatch.Outcomes.Count == 1 ? "" : "s") created in the projects mailbox.
+                    @if (draftBatch.FailedCount > 0)
+                    {
+                        <span class="text-content-muted font-normal">Failed RFIs stay selected so you can fix and retry.</span>
+                    }
+                </p>
+                <ul class="space-y-1.5 text-sm">
+                    @foreach (var outcome in draftBatch.Outcomes)
+                    {
+                        <li class="flex flex-wrap items-baseline gap-x-2">
+                            <span class="font-mono text-xs text-content-muted">@LabelFor(outcome)</span>
+                            @if (outcome.Succeeded)
+                            {
+                                <span class="text-emerald-600">Draft created</span>
+                                <span class="text-xs text-content-subtle">To: @string.Join(", ", outcome.Draft!.Recipients)</span>
+                                @if (!string.IsNullOrWhiteSpace(outcome.Draft.WebLink))
+                                {
+                                    <a href="@outcome.Draft.WebLink" target="_blank" rel="noopener"
+                                       class="text-xs text-accent hover:underline underline-offset-2">Open in Outlook</a>
+                                }
+                            }
+                            else
+                            {
+                                <span class="text-negative">@outcome.Error</span>
+                            }
+                        </li>
+                    }
+                </ul>
+            </div>
+        }
+
         @if (FilteredRecords.Count == 0)
         {
             <p class="text-sm text-content-subtle italic">No requests recorded.</p>
         }
         else
         {
-            <RequestTable Records="FilteredRecords" ProjectId="@ProjectId" />
+            <RequestTable Records="FilteredRecords" ProjectId="@ProjectId"
+                          SelectionEnabled="CanDraftEmail"
+                          RowSelectable="IsRfi"
+                          SelectedIds="selectedIds"
+                          OnToggleSelect="ToggleSelect"
+                          OnToggleSelectAll="ToggleSelectAll" />
         }
     </ProjectPageShell>
 
@@ -76,6 +134,76 @@ else
 
     private void OpenRaiseDialog() => raiseDialogOpen = true;
     private void CloseRaiseDialog() => raiseDialogOpen = false;
+
+    // ---- Bulk email drafts -------------------------------------------------------------------
+    // Selection is limited to RFIs (a General request has no official document to send yet) and
+    // survives filter/tab switches within the page, so someone can tick RFIs across views before
+    // drafting the lot in one go.
+
+    private readonly HashSet<string> selectedIds = new();
+    private bool preparingDrafts;
+    private string? draftBatchError;
+    private RequestEmailDraftBatch? draftBatch;
+
+    private int SelectedCount => selectedIds.Count;
+
+    // Mirrors PrepareRequestEmailDraftsAuthorisation server-side (directors, project managers,
+    // site managers and architects; admins carry every role server-side).
+    private bool CanDraftEmail => Session.AvailableRoles.Any(role =>
+        role is Role.Admin or Role.ManagingDirector or Role.ProjectManager or Role.SiteManager or Role.Architect);
+
+    private static bool IsRfi(Request record) => record.Kind == RequestType.Rfi;
+
+    private void ToggleSelect(Request record)
+    {
+        if (!IsRfi(record)) return;
+        if (!selectedIds.Remove(record.RequestId)) selectedIds.Add(record.RequestId);
+    }
+
+    // The header checkbox acts on the RFIs currently shown: ticking it adds them all, unticking
+    // removes them — without touching selections made under other filters.
+    private void ToggleSelectAll(bool select)
+    {
+        var visible = FilteredRecords.Where(IsRfi).Select(r => r.RequestId).ToList();
+        if (select) selectedIds.UnionWith(visible);
+        else selectedIds.ExceptWith(visible);
+    }
+
+    private void ClearSelection()
+    {
+        selectedIds.Clear();
+        draftBatch = null;
+        draftBatchError = null;
+    }
+
+    private string LabelFor(RequestEmailDraftOutcome outcome) =>
+        !string.IsNullOrWhiteSpace(outcome.Reference)
+            ? outcome.Reference!
+            : AllRecords.FirstOrDefault(r => r.RequestId == outcome.RequestId)?.Reference ?? outcome.RequestId;
+
+    private async Task PrepareSelectedDrafts()
+    {
+        if (preparingDrafts || selectedIds.Count == 0) return;
+        preparingDrafts = true;
+        draftBatch = null;
+        draftBatchError = null;
+        try
+        {
+            var batch = await RequestRegister.PrepareEmailDraftsAsync(selectedIds.ToList());
+            draftBatch = batch;
+            // Drafted RFIs come off the selection; failures stay ticked for a fix-and-retry.
+            foreach (var outcome in batch.Outcomes.Where(o => o.Succeeded))
+                selectedIds.Remove(outcome.RequestId);
+        }
+        catch (Exception ex)
+        {
+            draftBatchError = ex.Message;
+        }
+        finally
+        {
+            preparingDrafts = false;
+        }
+    }
 
     private void OnRaised(Request raised)
     {

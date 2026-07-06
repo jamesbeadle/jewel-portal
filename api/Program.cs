@@ -67,7 +67,7 @@ var host = new HostBuilder()
         services.AddRatesFeature();
         services.AddDrawingsFeature(context.Configuration);
         services.AddProcurementFeature();
-        services.AddPlacesFeature(context.Configuration);
+        services.AddLocalSearchFeature(context.Configuration);
         services.AddVariationsFeature();
         services.AddSubcontractorsFeature();
         services.AddHsFeature();

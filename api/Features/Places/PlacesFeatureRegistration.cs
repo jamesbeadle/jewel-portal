@@ -5,35 +5,36 @@ using Microsoft.Extensions.Logging;
 namespace Jewel.JPMS.Api.Features.Places;
 
 /// <summary>
-/// Registers the Google Places client used to find local subcontractors near a project. Real client
-/// when an API key is present in configuration, otherwise a no-op so the rest of the app runs
-/// unchanged and the search UI explains that the key is missing. The key is read from app settings /
-/// Key Vault only (GooglePlaces__ApiKey) — never from source control.
+/// Registers the local-business search used to find subcontractors near a project: a Brave Search
+/// API client that finds company websites, plus the contact finder that pulls an email/phone off
+/// each site. Real search client when an API key is present in configuration, otherwise a no-op so
+/// the rest of the app runs unchanged and the search UI explains that the key is missing. The key
+/// is read from app settings / Key Vault only (BraveSearch__ApiKey) — never from source control.
 /// </summary>
 public static class PlacesFeatureRegistration
 {
-    public static IServiceCollection AddPlacesFeature(this IServiceCollection services, IConfiguration configuration)
+    public static IServiceCollection AddLocalSearchFeature(this IServiceCollection services, IConfiguration configuration)
     {
-        var options = GooglePlacesOptions.FromConfiguration(configuration);
+        var options = BraveSearchOptions.FromConfiguration(configuration);
         services.AddSingleton(options);
 
         if (options.IsConfigured)
         {
             // Own HttpClient instances so they don't clash with the Graph client's registration.
-            services.AddSingleton<IGooglePlacesClient>(sp =>
-                new GooglePlacesClient(new HttpClient(), options, sp.GetRequiredService<ILogger<GooglePlacesClient>>()));
+            services.AddSingleton<ILocalBusinessSearch>(sp =>
+                new BraveLocalBusinessSearch(new HttpClient(), options, sp.GetRequiredService<ILogger<BraveLocalBusinessSearch>>()));
         }
         else
         {
-            services.AddSingleton<IGooglePlacesClient, NullGooglePlacesClient>();
+            services.AddSingleton<ILocalBusinessSearch, NullLocalBusinessSearch>();
         }
 
-        // Discovers a contact email on each found company's website (Places never returns emails).
-        services.AddSingleton<IWebsiteEmailFinder>(sp =>
+        // Discovers a contact email/phone on each found company's website.
+        services.AddSingleton<IWebsiteContactFinder>(sp =>
         {
             var http = new HttpClient { Timeout = TimeSpan.FromSeconds(8) };
             http.DefaultRequestHeaders.UserAgent.ParseAdd("Mozilla/5.0 (compatible; JPMS/1.0)");
-            return new WebsiteEmailFinder(http, sp.GetRequiredService<ILogger<WebsiteEmailFinder>>());
+            return new WebsiteContactFinder(http, sp.GetRequiredService<ILogger<WebsiteContactFinder>>());
         });
 
         return services;

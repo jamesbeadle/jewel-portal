@@ -58,6 +58,12 @@ public static class RequestsFeatureRegistration
         services.AddScoped<PrepareRequestEmailDraftAuthorisation>();
         services.AddScoped<PrepareRequestEmailDraftValidation>();
 
+        // Bulk drafting: one Outlook draft per selected request, delegating each to the single
+        // handler above so the drafts are identical to detail-page ones.
+        services.AddScoped<ICommandHandler<PrepareRequestEmailDrafts, RequestEmailDraftBatch>, PrepareRequestEmailDraftsHandler>();
+        services.AddScoped<PrepareRequestEmailDraftsAuthorisation>();
+        services.AddScoped<PrepareRequestEmailDraftsValidation>();
+
         services.AddScoped<ICommandHandler<PromoteRequestToRfi, Request>, PromoteRequestToRfiHandler>();
         services.AddScoped<PromoteRequestToRfiAuthorisation>();
         services.AddScoped<PromoteRequestToRfiValidation>();

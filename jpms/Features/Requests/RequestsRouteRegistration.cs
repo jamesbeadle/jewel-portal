@@ -103,6 +103,11 @@ public static class RequestsRouteRegistration
             new CommandRoute("POST", "/api/requests/{requestId}/email-draft",
                 command => $"/api/requests/{((PrepareRequestEmailDraft)command).RequestId}/email-draft"));
 
+        // Bulk-stage outbound emails: one Outlook draft per request id in the body. Partial
+        // success is reported per request; nothing is sent from here.
+        commands.Register<PrepareRequestEmailDrafts, RequestEmailDraftBatch>(
+            new CommandRoute("POST", "/api/requests/email-drafts", _ => "/api/requests/email-drafts"));
+
         commands.Register<PostRequestMessage, RequestMessage>(
             new CommandRoute("POST", "/api/requests/{requestId}/messages",
                 command => $"/api/requests/{((PostRequestMessage)command).RequestId}/messages"));
