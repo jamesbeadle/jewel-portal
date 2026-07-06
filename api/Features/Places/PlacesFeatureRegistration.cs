@@ -19,7 +19,7 @@ public static class PlacesFeatureRegistration
 
         if (options.IsConfigured)
         {
-            // Own HttpClient instance so it doesn't clash with the Graph client's registration.
+            // Own HttpClient instances so they don't clash with the Graph client's registration.
             services.AddSingleton<IGooglePlacesClient>(sp =>
                 new GooglePlacesClient(new HttpClient(), options, sp.GetRequiredService<ILogger<GooglePlacesClient>>()));
         }
@@ -27,6 +27,14 @@ public static class PlacesFeatureRegistration
         {
             services.AddSingleton<IGooglePlacesClient, NullGooglePlacesClient>();
         }
+
+        // Discovers a contact email on each found company's website (Places never returns emails).
+        services.AddSingleton<IWebsiteEmailFinder>(sp =>
+        {
+            var http = new HttpClient { Timeout = TimeSpan.FromSeconds(8) };
+            http.DefaultRequestHeaders.UserAgent.ParseAdd("Mozilla/5.0 (compatible; JPMS/1.0)");
+            return new WebsiteEmailFinder(http, sp.GetRequiredService<ILogger<WebsiteEmailFinder>>());
+        });
 
         return services;
     }

@@ -11,16 +11,21 @@ namespace Jewel.JPMS.Api.Features.Procurement.Queries;
 // returned as a readable Error on the result (not thrown) so the UI can explain: key not
 // configured, project missing its address, or Places refusing the call. Hits are matched against
 // the directory by company name so the UI can invite an existing entry instead of duplicating it.
+// Places never returns email addresses, so each hit's email is taken from its directory entry or
+// discovered on the company's website — hits with no findable email are excluded (an invite that
+// can't be emailed is no invite).
 public sealed class SearchLocalSubcontractorsHandler
     : IQueryHandler<SearchLocalSubcontractors, LocalSubcontractorSearchResult>
 {
     private readonly JpmsContext context;
     private readonly IGooglePlacesClient places;
     private readonly GooglePlacesOptions options;
+    private readonly IWebsiteEmailFinder emailFinder;
 
-    public SearchLocalSubcontractorsHandler(JpmsContext context, IGooglePlacesClient places, GooglePlacesOptions options)
+    public SearchLocalSubcontractorsHandler(
+        JpmsContext context, IGooglePlacesClient places, GooglePlacesOptions options, IWebsiteEmailFinder emailFinder)
     {
-        this.context = context; this.places = places; this.options = options;
+        this.context = context; this.places = places; this.options = options; this.emailFinder = emailFinder;
     }
 
     public async Task<LocalSubcontractorSearchResult> HandleAsync(SearchLocalSubcontractors query, CancellationToken cancellationToken)
@@ -47,19 +52,36 @@ public sealed class SearchLocalSubcontractorsHandler
         if (page is null)
             return Fail("The Places search failed. Check the API key is valid and the Places API (New) is enabled for it, then try again.");
 
-        // Flag hits that already exist in the directory (by company name) so they aren't duplicated.
+        // Flag hits that already exist in the directory (by company name) so they aren't duplicated,
+        // and reuse the directory's email when it has one.
         var existingByName = await context.Subcontractors
-            .Select(sub => new { sub.SubcontractorId, sub.CompanyName })
+            .Select(sub => new { sub.SubcontractorId, sub.CompanyName, sub.ContactEmail })
             .ToListAsync(cancellationToken);
         var lookup = existingByName
             .GroupBy(sub => sub.CompanyName.Trim(), StringComparer.OrdinalIgnoreCase)
-            .ToDictionary(g => g.Key, g => g.First().SubcontractorId, StringComparer.OrdinalIgnoreCase);
+            .ToDictionary(g => g.Key, g => g.First(), StringComparer.OrdinalIgnoreCase);
 
-        var results = page.Places
-            .Select(hit => new LocalSubcontractor(
+        // Email discovery runs against every hit's website in parallel — each page fetch carries its
+        // own short timeout, so one slow site can't stall the search.
+        var mapped = await Task.WhenAll(page.Places.Select(async hit =>
+        {
+            string? subcontractorId = null;
+            string? email = null;
+            if (lookup.TryGetValue(hit.Name.Trim(), out var known))
+            {
+                subcontractorId = known.SubcontractorId;
+                email = string.IsNullOrWhiteSpace(known.ContactEmail) ? null : known.ContactEmail;
+            }
+            if (email is null && !string.IsNullOrWhiteSpace(hit.Website))
+                email = await emailFinder.FindAsync(hit.Website!, cancellationToken);
+
+            return new LocalSubcontractor(
                 hit.PlaceId, hit.Name, hit.Address, hit.Phone, hit.Website, hit.Rating, hit.RatingCount,
-                ExistingSubcontractorId: lookup.TryGetValue(hit.Name.Trim(), out var id) ? id : null))
-            .ToList();
+                Email: email, ExistingSubcontractorId: subcontractorId);
+        }));
+
+        // Only companies we can actually email make the list.
+        var results = mapped.Where(hit => !string.IsNullOrWhiteSpace(hit.Email)).ToList();
 
         return new LocalSubcontractorSearchResult(results, page.NextPageToken);
     }

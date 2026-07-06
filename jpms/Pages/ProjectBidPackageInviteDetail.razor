@@ -492,9 +492,9 @@ else
            OnCancel="CloseFindModal" OnConfirm="ConfirmFindInvite" Class="max-w-2xl w-full">
         <p class="text-xs text-content-subtle mb-3">
             Searches Google for companies of a trade near the project's site (its town and postcode —
-            set under Edit details on the project). Ticked companies are saved to the directory and
-            invited to this package. Google doesn't share email addresses, so add those in the
-            Directory before drafting the invite email.
+            set under Edit details on the project). Email addresses are picked up from each company's
+            own website; companies where none could be found are left out. Ticked companies are saved
+            to the directory with their email and invited to this package.
         </p>
 
         <div class="flex gap-2 mb-3">
@@ -538,8 +538,12 @@ else
                                 }
                             </span>
                             <span class="block text-xs text-content-subtle truncate">@place.Address</span>
-                            <span class="block text-xs text-content-subtle">
-                                @place.Phone
+                            <span class="block text-xs text-content-subtle truncate">
+                                <span class="text-content-muted">@place.Email</span>
+                                @if (!string.IsNullOrEmpty(place.Phone))
+                                {
+                                    <span class="ml-1">· @place.Phone</span>
+                                }
                                 @if (!string.IsNullOrEmpty(place.Website))
                                 {
                                     <a class="text-accent hover:underline ml-1" href="@place.Website" target="_blank" rel="noopener" @onclick:stopPropagation="true">Website</a>
@@ -559,7 +563,7 @@ else
         }
         else if (findSearched && !findBusy && findError is null)
         {
-            <p class="text-sm text-content-subtle italic">No companies found for that trade near the project.</p>
+            <p class="text-sm text-content-subtle italic">No companies with a findable email address for that trade near the project. Try a broader trade name.</p>
         }
     </Modal>
 
@@ -1305,7 +1309,7 @@ else
                 }
                 var created = await Commands.SendAsync(
                     new AddSubcontractorToDirectory(
-                        place.Name, findTrade.Trim(), "", "", place.Phone ?? "", "",
+                        place.Name, findTrade.Trim(), "", place.Email ?? "", place.Phone ?? "", "",
                         DirectoryCategory.Subcontractor, "", "", "", place.Website ?? ""),
                     CancellationToken.None);
                 ids.Add(created.SubcontractorId);
@@ -1318,7 +1322,7 @@ else
             selectedPlaces.Clear();
             showFindModal = false;
             package = await Queries.AskAsync(new GetBidPackageById(BidPackageId), CancellationToken.None);
-            sendNote = $"Invited {ids.Count} compan{(ids.Count == 1 ? "y" : "ies")} from the local search. Google doesn't share email addresses — add them in the Directory before drafting the invite email.";
+            sendNote = $"Invited {ids.Count} compan{(ids.Count == 1 ? "y" : "ies")} from the local search. Their emails were picked up from their websites — worth a quick check in the Directory before drafting the invite email.";
             draftWebLink = null;
         }
         catch (CommandFailedException ex) { error = $"Couldn't invite those companies: {ex.Message}"; }
