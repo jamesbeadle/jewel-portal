@@ -17,10 +17,12 @@ public sealed class XeroOptions
     public string? ClientSecret { get; set; }
 
     /// <summary>
-    /// Scopes requested on the token. Must be a subset of the scopes granted to the custom
-    /// connection in the Xero developer portal; reading invoices needs accounting.transactions.read.
+    /// Optional. When unset (the default) the token request omits the scope parameter and Xero
+    /// grants everything the custom connection was set up with — the safe choice, because a
+    /// requested scope that doesn't exactly match the granted set fails with invalid_scope
+    /// ("Client credentials scope validation failed"). Set only to deliberately narrow the token.
     /// </summary>
-    public string Scopes { get; set; } = "accounting.transactions.read";
+    public string? Scopes { get; set; }
 
     /// <summary>
     /// Optional. Custom connections are tied to a single organisation so Xero does not require the

@@ -172,13 +172,15 @@ public sealed class XeroClient : IXeroClient
             if (_accessToken is not null && DateTimeOffset.UtcNow < _accessTokenExpiresAt)
                 return _accessToken;
 
+            // Omit the scope parameter unless explicitly configured — Xero then grants everything
+            // the custom connection holds, whereas a mismatch fails with invalid_scope.
+            var form = new Dictionary<string, string> { ["grant_type"] = "client_credentials" };
+            if (!string.IsNullOrWhiteSpace(_options.Scopes))
+                form["scope"] = _options.Scopes;
+
             using var request = new HttpRequestMessage(HttpMethod.Post, TokenUrl)
             {
-                Content = new FormUrlEncodedContent(new Dictionary<string, string>
-                {
-                    ["grant_type"] = "client_credentials",
-                    ["scope"] = _options.Scopes
-                })
+                Content = new FormUrlEncodedContent(form)
             };
             var credentials = Convert.ToBase64String(Encoding.UTF8.GetBytes($"{_options.ClientId}:{_options.ClientSecret}"));
             request.Headers.Authorization = new AuthenticationHeaderValue("Basic", credentials);
@@ -189,7 +191,7 @@ public sealed class XeroClient : IXeroClient
             {
                 _logger.LogWarning("Xero token call failed: {Status} {Body}.", (int)response.StatusCode, Truncate(body));
                 throw new XeroCallFailedException(
-                    $"Xero rejected the credentials with HTTP {(int)response.StatusCode}. Check Xero__ClientId / Xero__ClientSecret and that the custom connection grants the '{_options.Scopes}' scope. {Truncate(body)}");
+                    $"Xero rejected the credentials with HTTP {(int)response.StatusCode}. Check Xero__ClientId / Xero__ClientSecret and that the custom connection has an accounting scope (e.g. accounting.transactions) ticked in the Xero developer portal. {Truncate(body)}");
             }
 
             using var doc = JsonDocument.Parse(body);
