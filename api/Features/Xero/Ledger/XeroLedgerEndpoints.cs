@@ -68,8 +68,19 @@ public sealed class SyncXeroLedgerEndpoint
         if (!XeroLedgerRoles.AllowedToAllocate.IncludesAny(signedInUser.Roles))
             return new StatusCodeResult(StatusCodes.Status403Forbidden);
 
-        var result = await handler.HandleAsync(new SyncXeroLedger(), request.HttpContext.RequestAborted);
-        return new OkObjectResult(result);
+        try
+        {
+            var result = await handler.HandleAsync(new SyncXeroLedger(), request.HttpContext.RequestAborted);
+            return new OkObjectResult(result);
+        }
+        catch (Exception ex)
+        {
+            // Sync spans Xero paging + a bulk SaveChanges; surface the real cause to the
+            // allocation page (via HttpCommandSender) instead of an opaque 500. Inner
+            // exceptions carry the SQL detail (e.g. truncation / missing table).
+            var detail = ex.InnerException?.Message ?? ex.Message;
+            return new BadRequestObjectResult($"Sync failed: {detail}");
+        }
     }
 }
 

@@ -27,7 +27,11 @@ public sealed class SyncXeroLedgerHandler : ICommandHandler<SyncXeroLedger, Xero
 
     public async Task<XeroLedgerSyncResult> HandleAsync(SyncXeroLedger command, CancellationToken cancellationToken)
     {
-        var snapshot = await xero.GetPurchaseInvoicesAsync(force: true, cancellationToken);
+        // force:false — a snapshot fetched within the cache window (e.g. by the Xero
+        // transactions page moments earlier) is reused rather than re-pulling dozens of
+        // Xero pages; a cold cache still triggers a full pull. Keeps sync well inside
+        // the platform's HTTP timeout.
+        var snapshot = await xero.GetPurchaseInvoicesAsync(force: false, cancellationToken);
         if (!snapshot.IsConfigured)
             return new XeroLedgerSyncResult(false, null, 0, 0, 0, 0);
         if (snapshot.Error is not null)
@@ -68,17 +72,20 @@ public sealed class SyncXeroLedgerHandler : ICommandHandler<SyncXeroLedger, Xero
                 }
 
                 // Xero-owned facts — refreshed every sync. Allocation fields untouched.
-                entity.Type = transaction.Type;
-                entity.InvoiceNumber = transaction.Number;
-                entity.Reference = transaction.Reference;
-                entity.ContactName = transaction.ContactName;
+                // Every string is clamped to its column size: Xero allows longer values
+                // (references up to 255 chars etc.) and one oversized value would fail
+                // the whole SaveChanges with a truncation error.
+                entity.Type = Truncate(transaction.Type, 16)!;
+                entity.InvoiceNumber = Truncate(transaction.Number, 64);
+                entity.Reference = Truncate(transaction.Reference, 256);
+                entity.ContactName = Truncate(transaction.ContactName, 256);
                 entity.Date = transaction.Date;
-                entity.InvoiceStatus = transaction.Status;
+                entity.InvoiceStatus = Truncate(transaction.Status, 32)!;
                 entity.Description = Truncate(line.Description, 1024);
                 entity.Net = line.LineAmount;
                 entity.Tax = line.TaxAmount;
-                entity.AccountCode = line.AccountCode;
-                entity.AccountName = line.AccountName;
+                entity.AccountCode = Truncate(line.AccountCode, 32);
+                entity.AccountName = Truncate(line.AccountName, 256);
                 entity.XeroSite = Truncate(line.Site, 128);
                 entity.XeroCostCode = Truncate(line.CostCode, 128);
                 entity.LastSyncedAtUtc = now;
