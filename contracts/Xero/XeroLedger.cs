@@ -27,9 +27,10 @@ public static class XeroBuckets
     public const string Parking = "Parking";
     public const string Fuel = "Fuel";
     public const string Software = "Software subscriptions";
+    public const string Ica = "ICA (Intercompany Account)";
     public const string Other = "Other";
 
-    public static readonly IReadOnlyList<string> All = new[] { Parking, Fuel, Software, Other };
+    public static readonly IReadOnlyList<string> All = new[] { Parking, Fuel, Software, Ica, Other };
 }
 
 /// <summary>All stored ledger lines with allocation state and server-computed suggestions.</summary>
