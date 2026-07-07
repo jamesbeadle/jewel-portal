@@ -113,6 +113,27 @@ public sealed class XeroAllocationSuggester
         return null;
     }
 
+    // Supplier/description patterns for lines that are cost of sales but belong to a
+    // bucket rather than a project (no site tracking to match). Ordered; first hit wins.
+    private static readonly (string Pattern, string Bucket)[] BucketRules =
+    {
+        (@"parking|\bpcn\b|paybyphone|parkpcm|\bncp\b|ringgo|justpark", XeroBuckets.Parking),
+        (@"\bfuel\b|\bshell\b|\bbp\b|\besso\b|texaco|\bgulf\b|petrol|diesel", XeroBuckets.Fuel),
+        (@"subscription|software|licen[cs]e|microsoft|azure|adobe|planyard|xero custom|\bsaas\b|dns filter", XeroBuckets.Software),
+    };
+
+    /// <summary>
+    /// Best-guess bucket for a line with no project match — suggested only, never applied
+    /// automatically. Based on supplier name and line description.
+    /// </summary>
+    public string? SuggestBucket(string? contactName, string? description)
+    {
+        var text = $"{contactName} {description}".ToLowerInvariant();
+        foreach (var (pattern, bucket) in BucketRules)
+            if (System.Text.RegularExpressions.Regex.IsMatch(text, pattern)) return bucket;
+        return null;
+    }
+
     private static string StripLeadingCode(string value)
     {
         var trimmed = value.Trim();

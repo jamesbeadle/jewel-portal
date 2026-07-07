@@ -32,10 +32,13 @@ public sealed class XeroLedgerLineEntity
     [MaxLength(128)]      public string? XeroSite { get; set; }
     [MaxLength(128)]      public string? XeroCostCode { get; set; }
 
-    // Allocation — owned by JPMS, survives syncs. Status: 0 Unallocated, 1 Allocated, 2 Ignored.
+    // Allocation — owned by JPMS, survives syncs.
+    // Status: 0 Unallocated, 1 Allocated (project + cost centre), 2 Ignored,
+    // 3 Bucketed (cost of sales with no identifiable project — Parking, Fuel, ...).
     public int AllocationStatus { get; set; }
     [MaxLength(64)]       public string? ProjectId { get; set; }
     [MaxLength(32)]       public string? CostCenterCode { get; set; }
+    [MaxLength(64)]       public string? Bucket { get; set; }
     [MaxLength(256)]      public string? AllocatedBy { get; set; }
     public DateTimeOffset? AllocatedAtUtc { get; set; }
     [MaxLength(512)]      public string? Note { get; set; }

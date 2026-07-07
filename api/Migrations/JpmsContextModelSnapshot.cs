@@ -3335,6 +3335,10 @@ namespace Jewel.JPMS.Api.Migrations
                     b.Property<int>("AllocationStatus")
                         .HasColumnType("int");
 
+                    b.Property<string>("Bucket")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
                     b.Property<string>("ContactName")
                         .HasMaxLength(256)
                         .HasColumnType("nvarchar(256)");

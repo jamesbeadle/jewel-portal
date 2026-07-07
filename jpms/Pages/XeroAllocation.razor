@@ -100,6 +100,9 @@ else
                     <button class="@TabClass(XeroAllocationStatus.Allocated)" @onclick="() => SwitchTab(XeroAllocationStatus.Allocated)">
                         Allocated (@CountOf(XeroAllocationStatus.Allocated))
                     </button>
+                    <button class="@TabClass(XeroAllocationStatus.Bucketed)" @onclick="() => SwitchTab(XeroAllocationStatus.Bucketed)">
+                        Buckets (@CountOf(XeroAllocationStatus.Bucketed))
+                    </button>
                     <button class="@TabClass(XeroAllocationStatus.Ignored)" @onclick="() => SwitchTab(XeroAllocationStatus.Ignored)">
                         Ignored (@CountOf(XeroAllocationStatus.Ignored))
                     </button>
@@ -130,9 +133,31 @@ else
                     <button class="text-sm font-medium rounded-lg px-3 py-1.5 bg-content text-surface disabled:opacity-50"
                             disabled="@(isBusy || string.IsNullOrEmpty(bulkProjectId) || string.IsNullOrEmpty(bulkCostCenterCode))"
                             @onclick="BulkAllocateAsync">Allocate selected</button>
+                    <span class="text-content-subtle">·</span>
+                    <select class="bg-surface border border-line rounded-lg px-2 py-1.5 text-content text-sm" @bind="bulkBucket">
+                        <option value="">Bucket…</option>
+                        @foreach (var bucket in XeroBuckets.All)
+                        {
+                            <option value="@bucket">@bucket</option>
+                        }
+                    </select>
+                    <button class="text-sm font-medium rounded-lg px-3 py-1.5 border border-line text-content-muted hover:text-content disabled:opacity-50"
+                            disabled="@(isBusy || string.IsNullOrEmpty(bulkBucket))" @onclick="BulkBucketAsync">Bucket selected</button>
                     <button class="text-sm font-medium rounded-lg px-3 py-1.5 border border-line text-content-muted hover:text-content disabled:opacity-50"
                             disabled="@isBusy" @onclick="BulkIgnoreAsync">Ignore selected</button>
                     <button class="text-xs text-content-subtle underline underline-offset-4" @onclick="() => selectedIds.Clear()">Clear</button>
+                </div>
+            }
+
+            @if (activeTab == XeroAllocationStatus.Bucketed)
+            {
+                <div class="mb-4 flex flex-wrap gap-2">
+                    @foreach (var bucket in XeroBuckets.All)
+                    {
+                        <button class="@BucketChipClass(bucket)" @onclick="() => ToggleBucketFilter(bucket)">
+                            @bucket · @Money(BucketTotal(bucket))
+                        </button>
+                    }
                 </div>
             }
 
@@ -158,7 +183,10 @@ else
                             }
                             else
                             {
-                                <th class="px-3 py-3">@(activeTab == XeroAllocationStatus.Allocated ? "Allocated to" : "Reason")</th>
+                                <th class="px-3 py-3">
+                                    @(activeTab == XeroAllocationStatus.Allocated ? "Allocated to"
+                                      : activeTab == XeroAllocationStatus.Bucketed ? "Bucket" : "Reason")
+                                </th>
                                 <th class="px-3 py-3 hidden md:table-cell">By</th>
                                 <th class="px-3 py-3"></th>
                             }
@@ -219,6 +247,24 @@ else
                                         <button class="text-xs font-medium rounded-lg px-2.5 py-1 bg-content text-surface disabled:opacity-40"
                                                 disabled="@(isBusy || !CanAllocate(line))"
                                                 @onclick="() => AllocateAsync(line)">Allocate</button>
+                                        @if (line.SuggestedBucket is not null)
+                                        {
+                                            <button class="text-xs font-medium rounded-lg px-2.5 py-1 border border-line text-content-muted hover:text-content ml-2 disabled:opacity-40"
+                                                    disabled="@isBusy"
+                                                    @onclick="() => BucketAsync(line, line.SuggestedBucket)">→ @line.SuggestedBucket</button>
+                                        }
+                                        else
+                                        {
+                                            <select class="bg-surface border border-line rounded-lg px-1.5 py-1 text-content-muted text-xs ml-2 w-24"
+                                                    value="" disabled="@isBusy"
+                                                    @onchange="e => BucketFromSelectAsync(line, e.Value?.ToString())">
+                                                <option value="">Bucket…</option>
+                                                @foreach (var bucket in XeroBuckets.All)
+                                                {
+                                                    <option value="@bucket">@bucket</option>
+                                                }
+                                            </select>
+                                        }
                                         <button class="text-xs text-content-subtle underline underline-offset-4 ml-2"
                                                 disabled="@isBusy"
                                                 @onclick="() => IgnoreAsync(line)">Ignore</button>
@@ -231,6 +277,10 @@ else
                                         {
                                             <span class="text-content">@ProjectName(line.ProjectId)</span>
                                             <span class="block text-xs text-content-subtle">@CostCenterText(line.CostCenterCode)</span>
+                                        }
+                                        else if (activeTab == XeroAllocationStatus.Bucketed)
+                                        {
+                                            <span class="text-content">@(line.Bucket ?? "—")</span>
                                         }
                                         else
                                         {
@@ -287,6 +337,8 @@ else
     private readonly Dictionary<string, string?> chosenCostCenter = new();
     private string bulkProjectId = "";
     private string bulkCostCenterCode = "";
+    private string bulkBucket = "";
+    private string? bucketFilter;
     private bool confirmAllocateMatched;
 
     private bool isBusy => isSyncing || isRechecking || isApplying;
@@ -304,18 +356,20 @@ else
     private const int PageSize = 50;
     private int page;
     private IReadOnlyList<XeroLedgerLine>? visibleCache;
-    private (IReadOnlyList<XeroLedgerLine>? Lines, string Search, XeroAllocationStatus Tab) visibleCacheKey;
+    private (IReadOnlyList<XeroLedgerLine>? Lines, string Search, XeroAllocationStatus Tab, string? Bucket) visibleCacheKey;
 
     private IReadOnlyList<XeroLedgerLine> Visible
     {
         get
         {
-            var key = (Lines, search, activeTab);
+            var key = (Lines, search, activeTab, bucketFilter);
             if (visibleCache is null || key != visibleCacheKey)
             {
                 visibleCache = Lines is null
                     ? Array.Empty<XeroLedgerLine>()
                     : Lines.Where(line => line.AllocationStatus == activeTab)
+                           .Where(line => activeTab != XeroAllocationStatus.Bucketed
+                                          || bucketFilter is null || line.Bucket == bucketFilter)
                            .Where(MatchesSearch)
                            .ToList();
                 visibleCacheKey = key;
@@ -410,6 +464,30 @@ else
     private async Task BulkIgnoreAsync() =>
         await ApplyAsync(new SetXeroAllocation(selectedIds.ToList(), XeroAllocationAction.Ignore));
 
+    private async Task BucketAsync(XeroLedgerLine line, string bucket) =>
+        await ApplyAsync(new SetXeroAllocation(new[] { line.XeroLedgerLineId }, XeroAllocationAction.AllocateToBucket, Bucket: bucket));
+
+    private async Task BucketFromSelectAsync(XeroLedgerLine line, string? bucket)
+    {
+        if (!string.IsNullOrEmpty(bucket)) await BucketAsync(line, bucket);
+    }
+
+    private async Task BulkBucketAsync() =>
+        await ApplyAsync(new SetXeroAllocation(selectedIds.ToList(), XeroAllocationAction.AllocateToBucket, Bucket: bulkBucket));
+
+    private decimal BucketTotal(string bucket) =>
+        Lines?.Where(line => line.AllocationStatus == XeroAllocationStatus.Bucketed && line.Bucket == bucket)
+              .Sum(SignedNet) ?? 0m;
+
+    private void ToggleBucketFilter(string bucket) =>
+        bucketFilter = bucketFilter == bucket ? null : bucket;
+
+    private string BucketChipClass(string bucket) =>
+        (bucketFilter == bucket
+            ? "bg-content text-surface border-content"
+            : "bg-surface text-content-muted border-line hover:text-content")
+        + " text-xs font-medium border rounded-full px-3 py-1 transition-colors";
+
     private int FullyMatchedCount =>
         Lines?.Count(line => line.AllocationStatus == XeroAllocationStatus.Unallocated
                              && line.SuggestedProjectId is not null
@@ -496,6 +574,7 @@ else
     {
         activeTab = tab;
         selectedIds.Clear();
+        bucketFilter = null;
         page = 0;
     }
 

@@ -31,6 +31,10 @@ public sealed class SetXeroAllocationHandler : ICommandHandler<SetXeroAllocation
                 throw new InvalidOperationException("Choose an active cost centre before allocating.");
         }
 
+        if (command.Action == XeroAllocationAction.AllocateToBucket
+            && !XeroBuckets.All.Contains(command.Bucket ?? "", StringComparer.OrdinalIgnoreCase))
+            throw new InvalidOperationException("Choose a bucket (Parking, Fuel, Software subscriptions or Other).");
+
         var ids = command.XeroLedgerLineIds.Distinct().ToList();
         var lines = await context.XeroLedgerLines
             .Where(line => ids.Contains(line.XeroLedgerLineId))
@@ -45,6 +49,16 @@ public sealed class SetXeroAllocationHandler : ICommandHandler<SetXeroAllocation
                     line.AllocationStatus = (int)XeroAllocationStatus.Allocated;
                     line.ProjectId = command.ProjectId;
                     line.CostCenterCode = command.CostCenterCode;
+                    line.Bucket = null;
+                    line.AllocatedBy = command.AllocatedBy;
+                    line.AllocatedAtUtc = now;
+                    line.Note = command.Note;
+                    break;
+                case XeroAllocationAction.AllocateToBucket:
+                    line.AllocationStatus = (int)XeroAllocationStatus.Bucketed;
+                    line.ProjectId = null;
+                    line.CostCenterCode = null;
+                    line.Bucket = command.Bucket;
                     line.AllocatedBy = command.AllocatedBy;
                     line.AllocatedAtUtc = now;
                     line.Note = command.Note;
@@ -53,6 +67,7 @@ public sealed class SetXeroAllocationHandler : ICommandHandler<SetXeroAllocation
                     line.AllocationStatus = (int)XeroAllocationStatus.Ignored;
                     line.ProjectId = null;
                     line.CostCenterCode = null;
+                    line.Bucket = null;
                     line.AllocatedBy = command.AllocatedBy;
                     line.AllocatedAtUtc = now;
                     line.Note = command.Note;
@@ -61,6 +76,7 @@ public sealed class SetXeroAllocationHandler : ICommandHandler<SetXeroAllocation
                     line.AllocationStatus = (int)XeroAllocationStatus.Unallocated;
                     line.ProjectId = null;
                     line.CostCenterCode = null;
+                    line.Bucket = null;
                     line.AllocatedBy = null;
                     line.AllocatedAtUtc = null;
                     line.Note = null;

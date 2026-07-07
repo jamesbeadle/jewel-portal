@@ -50,11 +50,13 @@ public sealed class ListXeroLedgerLinesHandler : IQueryHandler<ListXeroLedgerLin
             (XeroAllocationStatus)entity.AllocationStatus,
             entity.ProjectId,
             entity.CostCenterCode,
+            entity.Bucket,
             entity.AllocatedBy,
             entity.AllocatedAtUtc,
             entity.Note,
             unallocated ? suggester.SuggestProject(entity.XeroSite) : null,
             unallocated ? suggester.SuggestCostCenter(entity.XeroCostCode) : null,
+            unallocated ? suggester.SuggestBucket(entity.ContactName, entity.Description) : null,
             entity.FirstSeenAtUtc,
             entity.LastSyncedAtUtc);
     }

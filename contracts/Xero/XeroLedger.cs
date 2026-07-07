@@ -12,9 +12,25 @@ namespace Jewel.JPMS.Contracts.Xero;
 // allocation. One line carries exactly one allocation (no splits).
 // ============================================================================
 
-public enum XeroAllocationStatus { Unallocated = 0, Allocated = 1, Ignored = 2 }
+public enum XeroAllocationStatus { Unallocated = 0, Allocated = 1, Ignored = 2, Bucketed = 3 }
 
-public enum XeroAllocationAction { Allocate = 0, Ignore = 1, Reset = 2 }
+public enum XeroAllocationAction { Allocate = 0, Ignore = 1, Reset = 2, AllocateToBucket = 3 }
+
+/// <summary>
+/// Buckets for cost-of-sales lines with no identifiable project (parking charges,
+/// fuel, software subscriptions...). Bucketed spend stays visible with per-bucket
+/// totals so it can be drilled into and dealt with internally, while the
+/// allocation queue clears down to genuine project costs.
+/// </summary>
+public static class XeroBuckets
+{
+    public const string Parking = "Parking";
+    public const string Fuel = "Fuel";
+    public const string Software = "Software subscriptions";
+    public const string Other = "Other";
+
+    public static readonly IReadOnlyList<string> All = new[] { Parking, Fuel, Software, Other };
+}
 
 /// <summary>All stored ledger lines with allocation state and server-computed suggestions.</summary>
 public sealed record ListXeroLedgerLines : IQuery<IReadOnlyList<XeroLedgerLine>>;
@@ -45,11 +61,13 @@ public sealed record XeroLedgerLine(
     XeroAllocationStatus AllocationStatus,
     string? ProjectId,
     string? CostCenterCode,
+    string? Bucket,
     string? AllocatedBy,
     DateTimeOffset? AllocatedAtUtc,
     string? Note,
     string? SuggestedProjectId,
     string? SuggestedCostCenterCode,
+    string? SuggestedBucket,
     DateTimeOffset FirstSeenAtUtc,
     DateTimeOffset LastSyncedAtUtc);
 
@@ -79,7 +97,8 @@ public sealed record AllocateSuggestedXeroLines(string? AllocatedBy = null) : IC
 
 /// <summary>
 /// Applies one allocation action to a batch of ledger lines. Allocate requires
-/// ProjectId + CostCenterCode; Ignore takes an optional Note (reason); Reset
+/// ProjectId + CostCenterCode; AllocateToBucket requires a Bucket from
+/// <see cref="XeroBuckets.All"/>; Ignore takes an optional Note (reason); Reset
 /// returns lines to Unallocated. AllocatedBy is stamped server-side from the
 /// signed-in user — any client-supplied value is ignored.
 /// </summary>
@@ -88,5 +107,6 @@ public sealed record SetXeroAllocation(
     XeroAllocationAction Action,
     string? ProjectId = null,
     string? CostCenterCode = null,
+    string? Bucket = null,
     string? Note = null,
     string? AllocatedBy = null) : ICommand<int>;
