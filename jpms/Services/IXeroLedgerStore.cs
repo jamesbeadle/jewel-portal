@@ -15,5 +15,8 @@ public interface IXeroLedgerStore
     /// <summary>Applies an allocation action to a batch of lines, then refreshes. Returns lines affected.</summary>
     Task<int> ApplyAsync(SetXeroAllocation command, CancellationToken cancellationToken = default);
 
+    /// <summary>Allocates every unallocated line whose project AND cost centre both matched, then refreshes.</summary>
+    Task<int> AllocateSuggestedAsync(CancellationToken cancellationToken = default);
+
     event Action? OnChange;
 }

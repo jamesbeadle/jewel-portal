@@ -48,6 +48,13 @@ public sealed class HttpXeroLedgerStore : IXeroLedgerStore
         return affected;
     }
 
+    public async Task<int> AllocateSuggestedAsync(CancellationToken cancellationToken = default)
+    {
+        var allocated = await commands.SendAsync(new AllocateSuggestedXeroLines(), cancellationToken);
+        await RefreshAsync(cancellationToken);
+        return allocated;
+    }
+
     private void EnsureRequested()
     {
         if (!requested) { requested = true; _ = LoadAsync(); }

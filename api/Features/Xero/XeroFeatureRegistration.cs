@@ -40,6 +40,7 @@ public static class XeroFeatureRegistration
         services.AddScoped<ICommandHandler<SyncXeroLedger, XeroLedgerSyncResult>, SyncXeroLedgerHandler>();
         services.AddScoped<IQueryHandler<ListXeroLedgerLines, IReadOnlyList<XeroLedgerLine>>, ListXeroLedgerLinesHandler>();
         services.AddScoped<ICommandHandler<SetXeroAllocation, int>, SetXeroAllocationHandler>();
+        services.AddScoped<ICommandHandler<AllocateSuggestedXeroLines, int>, AllocateSuggestedXeroLinesHandler>();
 
         return services;
     }

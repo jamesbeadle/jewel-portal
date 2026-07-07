@@ -58,6 +58,33 @@ else
         }
         else
         {
+            @if (activeTab == XeroAllocationStatus.Unallocated && FullyMatchedCount > 0)
+            {
+                <div class="mb-4 rounded-xl border border-line bg-surface-raised px-4 py-3 flex items-center gap-3 flex-wrap text-sm">
+                    <span class="text-content-muted">
+                        <span class="text-content font-medium">@FullyMatchedCount lines</span> have both a project and a
+                        cost centre matched from their Xero tracking.
+                    </span>
+                    @if (!confirmAllocateMatched)
+                    {
+                        <button class="text-sm font-medium rounded-lg px-3 py-1.5 bg-content text-surface disabled:opacity-50"
+                                disabled="@isBusy" @onclick="() => confirmAllocateMatched = true">
+                            Allocate all matched…
+                        </button>
+                    }
+                    else
+                    {
+                        <button class="text-sm font-medium rounded-lg px-3 py-1.5 bg-content text-surface disabled:opacity-50"
+                                disabled="@isBusy" @onclick="AllocateMatchedAsync">
+                            @(isBusy ? "Allocating…" : $"Confirm — allocate {FullyMatchedCount} lines")
+                        </button>
+                        <button class="text-xs text-content-subtle underline underline-offset-4"
+                                @onclick="() => confirmAllocateMatched = false">Cancel</button>
+                    }
+                    <span class="text-xs text-content-subtle">Noted as auto-matched; each line stays reversible via Undo.</span>
+                </div>
+            }
+
             <div class="mb-4 flex items-center justify-between gap-4 flex-wrap">
                 <div class="inline-flex rounded-lg border border-line overflow-hidden">
                     <button class="@TabClass(XeroAllocationStatus.Unallocated)" @onclick="() => SwitchTab(XeroAllocationStatus.Unallocated)">
@@ -252,6 +279,7 @@ else
     private readonly Dictionary<string, string?> chosenCostCenter = new();
     private string bulkProjectId = "";
     private string bulkCostCenterCode = "";
+    private bool confirmAllocateMatched;
 
     private bool isBusy => isSyncing || isApplying;
 
@@ -347,6 +375,23 @@ else
 
     private async Task BulkIgnoreAsync() =>
         await ApplyAsync(new SetXeroAllocation(selectedIds.ToList(), XeroAllocationAction.Ignore));
+
+    private int FullyMatchedCount =>
+        Lines?.Count(line => line.AllocationStatus == XeroAllocationStatus.Unallocated
+                             && line.SuggestedProjectId is not null
+                             && line.SuggestedCostCenterCode is not null) ?? 0;
+
+    private async Task AllocateMatchedAsync()
+    {
+        isApplying = true; errorMessage = null; confirmAllocateMatched = false;
+        try
+        {
+            var allocated = await Ledger.AllocateSuggestedAsync();
+            syncMessage = $"{allocated} matched lines allocated — what's left in the queue needs a human decision.";
+        }
+        catch (CommandFailedException failure) { errorMessage = failure.Message; }
+        finally { isApplying = false; }
+    }
 
     private async Task ApplyAsync(SetXeroAllocation command)
     {

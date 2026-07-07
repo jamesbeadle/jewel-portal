@@ -68,6 +68,15 @@ public sealed record XeroLedgerSyncResult(
     int UnallocatedLines);
 
 /// <summary>
+/// Allocates every unallocated line whose suggestions resolved BOTH a project
+/// and a cost centre (recomputed server-side at execution time, so what gets
+/// applied is exactly what the queue shows as pre-filled). Allocations are
+/// noted as auto-matched so they can be found and reviewed later. Returns how
+/// many lines were allocated.
+/// </summary>
+public sealed record AllocateSuggestedXeroLines(string? AllocatedBy = null) : ICommand<int>;
+
+/// <summary>
 /// Applies one allocation action to a batch of ledger lines. Allocate requires
 /// ProjectId + CostCenterCode; Ignore takes an optional Note (reason); Reset
 /// returns lines to Unallocated. AllocatedBy is stamped server-side from the

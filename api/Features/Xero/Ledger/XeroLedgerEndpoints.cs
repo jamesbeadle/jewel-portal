@@ -84,6 +84,34 @@ public sealed class SyncXeroLedgerEndpoint
     }
 }
 
+public sealed class AllocateSuggestedXeroLinesEndpoint
+{
+    private readonly SignedInUserResolver users;
+    private readonly ICommandHandler<AllocateSuggestedXeroLines, int> handler;
+
+    public AllocateSuggestedXeroLinesEndpoint(
+        SignedInUserResolver users,
+        ICommandHandler<AllocateSuggestedXeroLines, int> handler)
+    {
+        this.users = users;
+        this.handler = handler;
+    }
+
+    [Function(nameof(AllocateSuggestedXeroLines))]
+    public async Task<IActionResult> Run(
+        [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "xero/allocations/suggested")] HttpRequest request)
+    {
+        var signedInUser = await users.ResolveAsync(request, request.HttpContext.RequestAborted);
+        if (signedInUser is null) return new UnauthorizedResult();
+        if (!XeroLedgerRoles.AllowedToAllocate.IncludesAny(signedInUser.Roles))
+            return new StatusCodeResult(StatusCodes.Status403Forbidden);
+
+        var command = new AllocateSuggestedXeroLines(signedInUser.Email);
+        var allocated = await handler.HandleAsync(command, request.HttpContext.RequestAborted);
+        return new OkObjectResult(allocated);
+    }
+}
+
 public sealed class SetXeroAllocationEndpoint
 {
     private readonly SignedInUserResolver users;
