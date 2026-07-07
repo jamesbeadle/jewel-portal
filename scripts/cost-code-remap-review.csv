@@ -1,0 +1,1171 @@
+Seed file,LineId,Section/VO,Description,Old code,New code,New code name,Amount (net),Mapped by
+seed-abbotroad-valuation.sql,ar-cw-001,01,Site manager,JBB-PRL,00016,Site manager,9000.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-002,01,Site manager,JBB-PRL,00016,Site manager,16500.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-003,01,Project manager,JBB-PRL,00017,Project manager,4200.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-004,01,Project manager,JBB-PRL,00017,Project manager,7700.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-005,01,Site labour,JBB-PRL,00015,Labour,3600.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-006,01,Site labour,JBB-PRL,00015,Labour,6600.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-007,01,Hoarding & protection,JBB-PRL,00001,Hoarding,125.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-008,01,Rubbish removal,JBB-PRL,00131,Rubbish clearance,2280.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-009,01,Rubbish removal,JBB-PRL,00131,Rubbish clearance,2280.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-010,01,Temporary toilet & welfare,JBB-PRL,00004,Welfare,1080.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-011,01,Temporary toilet & welfare,JBB-PRL,00004,Welfare,1980.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-012,01,"Plant, lighting & machinery",JBB-PRL,00072,Electrician,660.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-013,01,"Plant, lighting & machinery",JBB-PRL,00072,Electrician,1210.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-014,01,Temporary plumbing & electrics,JBB-PRL,00072,Electrician,800.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-015,01,CDM,JBB-PRL,00006,Health & Safety CDM,1200.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-016,01,"Health, safety & welfare",JBB-PRL,00004,Welfare,1500.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-017,01,"Health, safety & welfare",JBB-PRL,00004,Welfare,2750.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-018,01,Scaffolding,JBB-PRL,00020,Scaffolding,3500.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-019,01,Clean on completion,JBB-PRL,00130,Cleaning internal,800.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-020,01,Conveyor Belt System to remove hardcore from garden,JBB-PRL,00027,Concrete,2000.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-021,01,Asbestos Survey & Report,JBB-PRL,00114,Asbestos removal,315.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-022,01,Standing Charge - 23 June,JBB-PRL,00002,Site set up,500.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-023,01,Standing Charge - 30th June,JBB-PRL,00002,Site set up,500.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-024,01,Standing Charge - 7th July,JBB-PRL,00002,Site set up,500.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-025,01,Standing Charge - 14th July,JBB-PRL,00002,Site set up,500.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-026,01,Standing Charge - 21st July,JBB-PRL,00002,Site set up,500.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-027,01,Standing Charge - 28th July,JBB-PRL,00002,Site set up,500.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-028,01,Standing Charge - 4th August,JBB-PRL,00002,Site set up,500.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-029,01,Standing Charge - 11th August,JBB-PRL,00002,Site set up,500.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-030,01,Standing Charge - 18th August,JBB-PRL,00002,Site set up,500.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-031,01,Standing Charge - 25th August,JBB-PRL,00002,Site set up,500.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-032,01,Standing Charge - 1st Sept,JBB-PRL,00002,Site set up,500.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-033,01,Standing Charge - 8th Sept,JBB-PRL,00002,Site set up,500.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-034,01,Standing Charge - 15th Sept,JBB-PRL,00002,Site set up,500.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-035,01,Standing Charge - 22nd Sept,JBB-PRL,00002,Site set up,500.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-036,01,Standing Charge - 29th Sept,JBB-PRL,00002,Site set up,500.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-037,02,Erect temporary propping to existing construction,JBB-DEM,00019,Structural support,625.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-038,02,Cap off & drain / divert existing services,JBB-DEM,00018,Demolition,250.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-039,02,Remove redundant fixtures & fittings,JBB-DEM,00018,Demolition,200.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-040,02,Remove existing metal balcony & staircase,JBB-DEM,00018,Demolition,1800.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-041,02,Cut down existing balcony support steels,JBB-DEM,00018,Demolition,350.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-042,02,Remove external door,JBB-DEM,00018,Demolition,55.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-043,02,Demolish existing retaining wall,JBB-DEM,00022,Groundworks,600.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-044,02,Grub out existing manhole,JBB-DEM,00024,Drainage internal,375.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-045,02,Remove existing paving to new areas,JBB-DEM,00018,Demolition,144.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-046,02,Excavate to reduce levels & remove spoil,JBB-DEM,00021,Excavation,220.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-047,02,Demolition of existing Garden Wall & Flower Bed,JBB-DEM,00018,Demolition,1400.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-048,02,Rubbish removal,JBB-DEM,00131,Rubbish clearance,380.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-049,02,Removal of surface water drainage only,JBB-DEM,00024,Drainage internal,350.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-050,02,Erect strongboy propping to existing construction. (New opening into Sitting Area from Balcony).,JBB-DEM,00019,Structural support,375.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-051,02,Erect needle propping to existing construction. (New opening into Sitting Area from Balcony).,JBB-DEM,00019,Structural support,450.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-052,02,"Removal of sitting area window opening, plaster, cut back brickwork, remove existing lintel & all associated demo work to this area.",JBB-DEM,00018,Demolition,1050.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-053,02,Install protection to all existing area with in kitchen & sitting area. Protect kitchen worktops & close up / make air tight to doorways leading into house while demo is being carried out.,JBB-DEM,00008,General protection,600.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-054,03,Remove section of lower roof,JBB-RFS,00018,Demolition,24.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-055,03,Install 12 mm WBP plywood deck with timbers,JBB-RFS,00041,Carpentry 1st fix,84.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-056,03,Code 4 lead flashings,JBB-RFS,00034,Roofing lead works,136.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-057,04,Remove section of main roof,JBB-RFS,00024,Drainage internal,108.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-058,04,Install 12 mm WBP plywood deck with timbers,JBB-RFS,00024,Drainage internal,378.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-059,04,Code 4 lead flashings,JBB-RFS,00024,Drainage internal,612.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-060,05,Excavate & concrete in pad foundations - PAD1,JBB-SUB,00021,Excavation,796.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-061,05,Excavate & concrete in pad foundations - PAD2,JBB-SUB,00021,Excavation,320.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-062,05,Excavate & concrete in strip foundation,JBB-SUB,00021,Excavation,580.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-063,05,Excavate & concrete in pad foundations - PAD1,JBB-SUB,00021,Excavation,-398.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-064,05,Excavate & concrete in pad foundations - PAD2,JBB-SUB,00021,Excavation,-160.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-065,05,Excavate & concrete in strip foundation,JBB-SUB,00021,Excavation,-290.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-066,05,7.5 - Unforeseen structural,JBB-SUB,00021,Excavation,-1000.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-067,05,Capital Piling - SFA Open Bore Piles - REV3,JBB-SUB,00025,Piling,9355.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-068,05,Capital Piling - RC Ground Beam - REV3,JBB-SUB,00025,Piling,15005.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-069,05,Excavation Works relating to P2 & P3,JBB-SUB,00021,Excavation,1795.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-070,05,Core Drilling 500mm holes into 200mm r/c,JBB-SUB,00021,Excavation,1770.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-071,05,Trial Pit Excavation as requested,JBB-SUB,00021,Excavation,1200.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-072,06,Excavate ground round proposed concrete encased steel beam & Proposed 1m2 concrete pad. Section Detail 12.,JBB-SUB,00041,Carpentry 1st fix,2000.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-073,06,Proposed concrete & steel to 1m2 steel reinforced concrete pad foundation to S.E detail & specification.,JBB-SUB,00041,Carpentry 1st fix,500.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-074,06,Supply & Install of Concrete to Steel Ground Beam.,JBB-SUB,00041,Carpentry 1st fix,1750.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-075,06,Dense concrete blockwork subwall supporting beam & block floor to S.E detail & Spec.,JBB-SUB,00041,Carpentry 1st fix,1000.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-076,06,Proposed Beam & Block concrete floor to S.E detail & specification.,JBB-SUB,00041,Carpentry 1st fix,648.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-077,06,65 x 215mm dense concrete blockwork laid flat,JBB-SUB,00041,Carpentry 1st fix,432.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-078,06,95mm wide engineering brick on edge,JBB-SUB,00041,Carpentry 1st fix,432.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-079,06,65mm x 100mm dense concrete external blockwork,JBB-SUB,00041,Carpentry 1st fix,432.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-080,06,Facing brickwork to match exisitng below timber frame walls,JBB-SUB,00041,Carpentry 1st fix,159.84,keyword
+seed-abbotroad-valuation.sql,ar-cw-081,06,100 x 140mm Marmox Thermoblock to run full length across top of 215mm blockwork full length,JBB-SUB,00041,Carpentry 1st fix,432.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-082,06,210 x 222 x 215mm Manthorpe telescopic underfloor vent.,JBB-SUB,00041,Carpentry 1st fix,40.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-083,06,Stone paving cap facing brick to match external landing floor finish,JBB-SUB,00041,Carpentry 1st fix,600.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-084,06,50 mm hardcore blinded with sand,JBB-SUB,00041,Carpentry 1st fix,0.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-085,06,200 mm bed of concrete,JBB-SUB,00041,Carpentry 1st fix,0.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-086,06,Damp proof membrane,JBB-SUB,00041,Carpentry 1st fix,108.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-087,06,150 mm XPS insulation,JBB-SUB,00041,Carpentry 1st fix,372.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-088,06,Damp proof membrane / Separating Layer,JBB-SUB,00041,Carpentry 1st fix,108.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-089,06,75 mm sand / cement screed,JBB-SUB,00041,Carpentry 1st fix,480.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-090,06,Proposed 25mm perimeter insulation,JBB-SUB,00041,Carpentry 1st fix,400.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-091,06,20mm Cellecta Screedboard,JBB-SUB,00041,Carpentry 1st fix,750.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-092,06,Proposed Sphere 8 resin floor (Lower Ground Stairwell only) (TBC),JBB-SUB,00041,Carpentry 1st fix,0.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-093,07,Carefully remove existing floor boards not to damage existing floor joists. Exisitng floor to remian.,JBB-UPF,00041,Carpentry 1st fix,165.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-094,07,Replace with - Proposed 70mm Kingspan K103 insulation fixed between existing joists.,JBB-UPF,00041,Carpentry 1st fix,186.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-095,07,0.3 Polythene Vapour Control Layer,JBB-UPF,00041,Carpentry 1st fix,100.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-096,07,18mm plywood flooring,JBB-UPF,00041,Carpentry 1st fix,108.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-097,07,Proposed Sphere 8 resin floor (Lower Ground Stairwell only) (TBC),JBB-UPF,00041,Carpentry 1st fix,0.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-098,08,152 x 152 x 23 kg steel beams,JBB-FRM,00010,Structural steel,3680.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-099,08,152 x 152 x 37 kg steel beams,JBB-FRM,00010,Structural steel,8120.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-100,08,152 x 152 x 30 kg steel beams,JBB-FRM,00010,Structural steel,3360.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-101,08,139.7 x 8 CHS steel column,JBB-FRM,00010,Structural steel,640.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-102,08,100 x 100 x 8 SHS steel column,JBB-FRM,00010,Structural steel,960.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-103,08,Intumescent paint to steels,JBB-FRM,00010,Structural steel,600.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-104,08,Ground Beam Steel,JBB-FRM,00010,Structural steel,1250.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-105,08,Balustrade Balcony Steel,JBB-FRM,00010,Structural steel,1500.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-106,08,Louvre Brackets (Provisional Sum),JBB-FRM,00010,Structural steel,1500.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-107,09,50 x 150 mm timber floor joists,JBB-FRM,00041,Carpentry 1st fix,2624.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-108,09,Structural timbers / trimmers,JBB-FRM,00041,Carpentry 1st fix,755.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-109,09,140mm mineral insulation laid with in Joist Lay under Internal section of joist lay only,JBB-FRM,00041,Carpentry 1st fix,700.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-110,09,Black mesh to underside of joists,JBB-FRM,00027,Concrete,945.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-111,09,Fix 65mm Kingspan Kooltherm K110 insulation to the underside of the joist lay,JBB-FRM,00041,Carpentry 1st fix,1375.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-112,10,18 mm plywood deck,JBB-UPF,00041,Carpentry 1st fix,432.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-113,10,50mm x 50mm treated timber battens laid ontop of the 18mm plywood to the internal section of the balcony,JBB-UPF,00041,Carpentry 1st fix,504.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-114,10,18mm WBP Plywood to top of 50mm x 50mm batten,JBB-UPF,00041,Carpentry 1st fix,504.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-115,11,Timber firings to floor joists,JBB-RFS,00041,Carpentry 1st fix,264.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-116,11,18mm WBP Plywood deck to SE detail & Specification,JBB-RFS,00041,Carpentry 1st fix,462.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-117,11,Sarnifil single ply roof membrane,JBB-RFS,00033,Roofing flat membrane,1925.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-118,11,130mm high 50mm thick Kingspan Kooltherm K15 insulation taken up to underside of decking at door threshold to prevent thermal bridge,JBB-RFS,00041,Carpentry 1st fix,330.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-119,11,"22mm CLADCO composite decking with timber effect, laid on 50mm(W) x 100mm(H) CLADCO recycled plastic joists cut in profile & length to account for falls underneath, @ 400mm centres. Allow for 10mm drainage gap to decking perimeter. (Allowance made under Ref 29.02)",JBB-RFS,00024,Drainage internal,0.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-120,12,1100 mm clear glass balustrade,JBB-WED,00014,Glass railing and balustrade,5000.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-121,12,1100 mm opaque glass balustrade,JBB-WED,00014,Glass railing and balustrade,3290.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-122,12,1100 mm clear glass balustrade,JBB-WED,00014,Glass railing and balustrade,-5000.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-123,12,1100 mm opaque glass balustrade,JBB-WED,00014,Glass railing and balustrade,-3290.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-124,12,1100 mm toughened glass balustrade to steps,JBB-WED,00014,Glass railing and balustrade,-750.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-125,12,IG Glass - Q55861 - CSA005 - 12.09.25,JBB-WED,00054,Specialist glazing,47090.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-126,13,50 x 140 mm timber framed external wall,JBB-EXW,00041,Carpentry 1st fix,2184.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-127,13,140 mm Kingspan insulation between studs,JBB-EXW,00041,Carpentry 1st fix,936.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-128,13,12 mm plywood,JBB-EXW,00041,Carpentry 1st fix,468.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-129,13,Breatherable membrane,JBB-EXW,00033,Roofing flat membrane,416.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-130,13,Timber battens (cross battened),JBB-EXW,00041,Carpentry 1st fix,1092.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-131,13,Western Red Cedar board cladding,JBB-EXW,00041,Carpentry 1st fix,5832.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-132,13,Western Red Cedar board cladding,JBB-EXW,00041,Carpentry 1st fix,-5832.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-133,13,Millboard Anique Oak Boards,JBB-EXW,00041,Carpentry 1st fix,10320.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-134,13,Millboard Fixtures & Fittings,JBB-EXW,00041,Carpentry 1st fix,3350.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-135,13,Aluminium trim,JBB-EXW,00041,Carpentry 1st fix,1040.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-136,13,62.5mm Kingspan Kooltherm K118 insulated plasterboard w/ integral vapour control layer. Breakdown of 50mm rigid insulation & 12.5mm plasterboard,JBB-WLF,00041,Carpentry 1st fix,2112.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-137,13,3mm Plaster Skim to Wall,JBB-WLF,00041,Carpentry 1st fix,704.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-138,13,White Paint Finish to Wall,JBB-WLF,00041,Carpentry 1st fix,704.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-139,14,50 x 150 mm timber roof joists,JBB-RFS,00033,Roofing flat membrane,1536.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-140,14,18 mm plywood over firings,JBB-RFS,00033,Roofing flat membrane,572.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-141,14,Breatherable membrane,JBB-RFS,00033,Roofing flat membrane,176.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-142,14,2 layers of 90 mm Kingspan,JBB-RFS,00033,Roofing flat membrane,858.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-143,14,Sarnifil single ply roof membrane,JBB-RFS,00033,Roofing flat membrane,1925.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-144,14,12 mm BPG plasterboard,JBB-RFS,00033,Roofing flat membrane,-440.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-145,15,50 x 235 Oak Louvres @ 200mm spacing (Provisional),JBB-RFS,00102,"Gazebo, carports and awning",3000.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-146,15,Fixtures & Fittings (Provisional),JBB-RFS,00102,"Gazebo, carports and awning",800.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-147,15,Wealding of all support plates to take Oak Beams (Provisional),JBB-RFS,00102,"Gazebo, carports and awning",500.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-148,15,12mm WBP Plywood board & Tyvek breathable membrane,JBB-RFS,00033,Roofing flat membrane,550.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-149,15,Kingspan Nilvent Breathable membrane,JBB-RFS,00033,Roofing flat membrane,300.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-150,15,50mm x 38mm treated timber vertical battens @ 400mm centres,JBB-RFS,00102,"Gazebo, carports and awning",462.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-151,16,50 x 140 mm timber framed external wall,JBB-EXW,00041,Carpentry 1st fix,1008.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-152,16,140 mm Kingspan insulation between studs,JBB-EXW,00028,Masonry brickworks,624.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-153,16,25 mm Kingspan insulation,JBB-EXW,00057,Insulation walls,312.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-154,16,2 no 12 mm plywood,JBB-EXW,00041,Carpentry 1st fix,432.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-155,16,Breatherable membrane,JBB-EXW,00033,Roofing flat membrane,192.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-156,16,Timber battens (cross battened),JBB-EXW,00028,Masonry brickworks,504.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-157,16,Western Red Cedar board cladding,JBB-EXW,00106,External timber cladding,1944.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-158,16,Western Red Cedar board cladding,JBB-EXW,00106,External timber cladding,-1944.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-159,16,Aluminium capping,JBB-EXW,00052,Aluminium window and doors,2352.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-160,17,50 x 140 mm timber framed external wall,JBB-EXW,00041,Carpentry 1st fix,504.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-161,17,12 mm plywood,JBB-EXW,00041,Carpentry 1st fix,108.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-162,17,Breatherable membrane,JBB-EXW,00033,Roofing flat membrane,96.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-163,17,Timber battens (cross battened),JBB-EXW,00041,Carpentry 1st fix,252.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-164,17,8 mm Swisspearl fibre cement panel,JBB-EXW,00135,Specialist,840.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-165,18,50 x 140 mm timber framed external wall,JBB-EXW,00041,Carpentry 1st fix,252.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-166,18,140 mm Kingspan insulation between studs,JBB-EXW,00028,Masonry brickworks,156.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-167,18,25 mm Kingspan insulation,JBB-EXW,00057,Insulation walls,78.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-168,18,2 no 12 mm plywood,JBB-EXW,00041,Carpentry 1st fix,108.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-169,18,Breatherable membrane,JBB-EXW,00033,Roofing flat membrane,48.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-170,18,Timber battens (cross battened),JBB-EXW,00028,Masonry brickworks,126.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-171,18,8 mm Swisspearl fibre cement panel,JBB-EXW,00135,Specialist,420.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-172,18,Aluminium capping,JBB-EXW,00052,Aluminium window and doors,560.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-173,19,Install of internal timber wall to inclose Pocket door,JBB-IND,00044,Internal Doors & linings,250.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-174,19,Install of Pocket Door System 760mm x 2040mm Enigma sliding pocket door,JBB-IND,00044,Internal Doors & linings,900.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-175,19,Celotex insulation between walls,JBB-IND,00044,Internal Doors & linings,0.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-176,19,12.5 mm plasterboard to studwork,JBB-IND,00044,Internal Doors & linings,75.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-177,19,3 mm skim to walls,JBB-IND,00044,Internal Doors & linings,80.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-178,20,Install of Catnic Lintel to new opening with in sitting room / balcony area. Making good of all associated surrounding work inc brickwork.,JBB-EXW,00028,Masonry brickworks,1000.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-179,20,13mm wet plaster to existing brickwork (new internal balcony area) 5000mm (L) x 2100mm (H) = 10.5m2,JBB-EXW,00062,Plastering,275.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-180,20,Paint finish to existing brickwork wall once plastered 5000mm (L) x 2100mm (H) = 10.5m2,JBB-EXW,00082,Decorating,176.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-181,21,MF5 Ceiling to new internal balcony area & ground floor stair landing,JBB-CLF,00048,Stairs timber,2250.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-182,21,100 Isosaver Spacesaver insulation laid above ceiling boards,JBB-CLF,00058,Insulation ceilings,720.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-183,21,12.5mm British Gypsum Soundbloc Plasterboard,JBB-CLF,00060,Plaster Boarding,225.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-184,21,3mm Plaster Skim to Ceiling,JBB-CLF,00062,Plastering,240.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-185,21,White Paint Finish to Ceiling,JBB-CLF,00082,Decorating,240.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-186,22,100mm block wall to Lower Ground Bedroom opening,JBB-IWP,00028,Masonry brickworks,360.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-187,22,13mm wet plaster to new single skin blockwork wall,JBB-IWP,00062,Plastering,125.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-188,22,Paint Finish to new single skin blockwork wall,JBB-IWP,00082,Decorating,80.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-189,22,"Install single internal door to new blockwork wall. L/G Bedroom. Lining, Door, Ironmongary, door stops, paint / decorate?",JBB-IWP,00044,Internal Doors & linings,1000.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-190,23,Upper Level: Allow for intrusive investigations into two separate 200mm square area to the current existing floor buildup. One to the marble floor and one to the timber floor. Allow for remedial works if required to reinstate screed where disturbed.,JBB-HTG,00067,Screed,600.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-191,23,Upper Level: Allow for preparatory works to remove existing floor finish (marble and timber floor) down to existing sub-base - Screed.,JBB-HTG,00018,Demolition,2145.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-192,23,Screed Plank 20mm (board) - JBB INSTALL ONLY,JBB-HTG,00067,Screed,2070.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-193,23,Iso Edge (6mm x 75mm x 50m) - JBB INSTALL ONLY,JBB-HTG,00074,Plumber,250.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-194,23,Screed Plank Adhesive (bottle) - JBB INSTALL ONLY,JBB-HTG,00067,Screed,250.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-195,23,Screed Plank Screws (19mm) (500) - JBB INSTALL ONLY,JBB-HTG,00067,Screed,250.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-196,23,Upper level: Allow for your plumber to connect their system it to the existing water supply. (JBB have not allowed for the supply & install of thermostat or manifold),JBB-HTG,00093,Under-floor heating,1000.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-197,23,JBB Oversee & Management Fee (Assumed 15% OH&P on JK Flooring Contract Sum),JBB-HTG,00074,Plumber,500.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-198,24,Steel staircase,JBB-STR,00047,Stairs metal,-7500.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-199,24,Timber Wrapped Staircase w/ potensial handrail / ballustrade,JBB-STR,00013,Metal Railings and balustrade,5000.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-200,24,Underlay & Carpet (£40 per m2 supply) to New Wrapped Timber Staircase,JBB-STR,00048,Stairs timber,1000.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-201,25,Make good existing finishes,JBB-DRN,00036,Gutters and rainwater UPVC,300.0,section
+seed-abbotroad-valuation.sql,ar-cw-202,25,Remove existing rainwater gutter,JBB-DRN,00018,Demolition,80.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-203,25,Sarnifill box scuppers,JBB-DRN,00036,Gutters and rainwater UPVC,640.0,section
+seed-abbotroad-valuation.sql,ar-cw-204,25,PPC aluminium hopper heads,JBB-DRN,00052,Aluminium window and doors,560.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-205,25,PPC aluminium rainwater pipe,JBB-DRN,00052,Aluminium window and doors,230.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-206,25,PPC aluminium rainwater pipe,JBB-DRN,00052,Aluminium window and doors,276.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-207,25,PPC aluminium rainwater pipe,JBB-DRN,00052,Aluminium window and doors,276.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-208,25,PPC aluminium guttering,JBB-DRN,00036,Gutters and rainwater UPVC,220.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-209,25,Rainwater outlets & rain chains from balcony,JBB-DRN,00036,Gutters and rainwater UPVC,520.0,section
+seed-abbotroad-valuation.sql,ar-cw-210,25B,950 x 1050 mm Velfac window,JBB-WED,00050,Timber windows and doors,780.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-211,25B,810 x 2000 mm Velfac external door,JBB-WED,00050,Timber windows and doors,1720.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-212,26,25 mm Cladco composite decking,JBB-EXW,00108,Decking,-3192.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-213,26,External Finish Decking to Balcony - 25 mm Cladco composite decking,JBB-EXW,00108,Decking,1672.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-214,26,8 mm Swisspearl fibre cement panel,JBB-EXW,00135,Specialist,4480.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-215,26,Prepare & decorate existing surfaces affected,JBB-EXW,00082,Decorating,500.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-216,26,Silicone mastic,JBB-EXW,00134,Misc,100.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-217,27,"Lower Level - 1No Lower Level radiator beneath the staircase - Victorian Plumbing – Urban Horizontal Radiator (Double panel, 600mm H x 608mm W, Anthracite)",JBB-PLB,00048,Stairs timber,300.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-218,27,All proposed plumbing connections to 1no radiators.,JBB-PLB,00074,Plumber,550.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-219,28,External LED downlights to ceilings,JBB-ELE,00072,Electrician,1750.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-220,28,External double socket outlet,JBB-ELE,00072,Electrician,270.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-221,28,BWIC,JBB-ELE,00072,Electrician,350.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-222,28,Additional electrics unforeseen (Provisional),JBB-ELE,00072,Electrician,500.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-223,29,Existing foul routes & connections to be assessed / repaired,JBB-EDR,00023,Drainage Below ground,400.0,section+bucket
+seed-abbotroad-valuation.sql,ar-cw-224,29,New foul water manhole,JBB-EDR,00024,Drainage internal,722.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-225,29,Make connection into existing system,JBB-EDR,00023,Drainage Below ground,250.0,section+bucket
+seed-abbotroad-valuation.sql,ar-cw-226,29,Connect new rainwater drains into storm system,JBB-EDR,00024,Drainage internal,450.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-227,29,1100 mm toughened glass balustrade to steps,JBB-EXT,00014,Glass railing and balustrade,750.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-228,29,Facing brick plinths with copping,JBB-EXT,00028,Masonry brickworks,3640.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-229,29,Install of New Soakaway,JBB-EXT,00023,Drainage Below ground,0.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-230,29,Install of Catchpit Chamber,JBB-EXT,00117,Landscaping,0.0,section+bucket
+seed-abbotroad-valuation.sql,ar-cw-231,29,Proposed Planters,JBB-EXT,00117,Landscaping,0.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-232,29,Concrete Plinths to take rain chains,JBB-EXT,00027,Concrete,0.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-233,29,Rear Steps / Slab,JBB-EXT,00113,Paving and roads,0.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-234,29,Sub base & paving slabs to external areas (no supply of slabs),JBB-EXT,00113,Paving and roads,0.0,keyword
+seed-abbotroad-valuation.sql,ar-cw-235,29,Replace Grass to West Elevation (Next to P1 & P4),JBB-EXT,00116,Turfing,0.0,keyword
+seed-abbotroad-valuation.sql,ar-ps-01,30,Supply of ironmongery,JBB-IND,00128,Ironmongery supply,500.0,keyword
+seed-abbotroad-valuation.sql,ar-ps-02,30,Unforeseen drainage,JBB-EDR,00024,Drainage internal,1000.0,keyword
+seed-abbotroad-valuation.sql,ar-ps-03,30,Unforeseen landscaping,JBB-SFL,00117,Landscaping,0.0,keyword
+seed-abbotroad-valuation.sql,ar-ps-04,30,Unforeseen electrics,JBB-ELE,00072,Electrician,500.0,keyword
+seed-abbotroad-valuation.sql,ar-ps-05,30,Unforeseen structural,JBB-RSK,00134,Misc,1000.0,keyword
+seed-abbotroad-valuation.sql,ar-ps-06,30,Overheads & Profits,JBB-OHP,00134,Misc,13662.2,keyword
+seed-abbotroad-variations.sql,ar-vo-v01,V01,Levelling Compound Removal,(none),00071,Floor finish self levelling,1050.0,keyword
+seed-abbotroad-variations.sql,ar-vo-v04,V04,Various,(none),00134,Misc,6410.0,unmapped -> Misc
+seed-abbotroad-variations.sql,ar-vo-v05,V05,Electrical,(none),00072,Electrician,3900.0,keyword
+seed-abbotroad-variations.sql,ar-vo-v09,V09,External Tap,(none),00074,Plumber,546.0,keyword
+seed-abbotroad-variations.sql,ar-vo-v23,V23,Staircase,(none),00048,Stairs timber,5544.5,keyword
+seed-albanymews-valuation.sql,am-cw-001,A10,Site Supervision,JBB-PRL,00016,Site manager,37500.0,keyword
+seed-albanymews-valuation.sql,am-cw-002,A10,Scaffolding,JBB-PRL,00020,Scaffolding,3680.0,keyword
+seed-albanymews-valuation.sql,am-cw-003,A10,Rubbish removal,JBB-PRL,00131,Rubbish clearance,6080.0,keyword
+seed-albanymews-valuation.sql,am-cw-004,A10,General protection,JBB-PRL,00008,General protection,600.0,keyword
+seed-albanymews-valuation.sql,am-cw-005,A10,Temporary toilet,JBB-PRL,00007,Temp toilet,2700.0,keyword
+seed-albanymews-valuation.sql,am-cw-006,A10,CDM,JBB-PRL,00006,Health & Safety CDM,1200.0,keyword
+seed-albanymews-valuation.sql,am-cw-007,A10,"Health, safety & welfare",JBB-PRL,00004,Welfare,3750.0,keyword
+seed-albanymews-valuation.sql,am-cw-008,A10,Clean on completion,JBB-PRL,00130,Cleaning internal,1000.0,keyword
+seed-albanymews-valuation.sql,am-cw-009,C20,Isolate electrical installation in connection with demolitions & strip out as required,JBB-DEM,00018,Demolition,500.0,keyword
+seed-albanymews-valuation.sql,am-cw-010,C20,Ditto plumbing & heating installation,JBB-DEM,00018,Demolition,600.0,keyword
+seed-albanymews-valuation.sql,am-cw-011,C20,"Remove flooring, tiles, skirtings, picture rail, cove, fittings etc.",JBB-DEM,00018,Demolition,450.0,keyword
+seed-albanymews-valuation.sql,am-cw-012,C20,"Remove kitchen & utility units, worktops & appliances",JBB-DEM,00018,Demolition,240.0,keyword
+seed-albanymews-valuation.sql,am-cw-013,C20,Remove sanitary items from WCs & bathrooms,JBB-DEM,00018,Demolition,440.0,keyword
+seed-albanymews-valuation.sql,am-cw-014,C20,Remove internal doors & frames,JBB-DEM,00018,Demolition,120.0,keyword
+seed-albanymews-valuation.sql,am-cw-015,C20,Demolish internal single skin walls,JBB-DEM,00018,Demolition,1344.0,keyword
+seed-albanymews-valuation.sql,am-cw-016,C20,Remove existing plasterboard ceiling - as required,JBB-DEM,00018,Demolition,384.0,keyword
+seed-albanymews-valuation.sql,am-cw-017,C20,Remove external doors & windows - to new areas,JBB-DEM,00018,Demolition,250.0,keyword
+seed-albanymews-valuation.sql,am-cw-018,C20,Temporary propping & needling,JBB-DEM,00019,Structural support,1000.0,keyword
+seed-albanymews-valuation.sql,am-cw-019,C20,Demolish external walls - single skin,JBB-DEM,00018,Demolition,1008.0,keyword
+seed-albanymews-valuation.sql,am-cw-020,C20,Demolish external walls - cavity wall,JBB-DEM,00018,Demolition,240.0,keyword
+seed-albanymews-valuation.sql,am-cw-021,C20,Break up existing garage floor slab,JBB-DEM,00018,Demolition,960.0,keyword
+seed-albanymews-valuation.sql,am-cw-022,C20,Remove section of roof construction & covering,JBB-DEM,00018,Demolition,864.0,keyword
+seed-albanymews-valuation.sql,am-cw-023,C20,Grub out redundnant drainage,JBB-DEM,00024,Drainage internal,350.0,keyword
+seed-albanymews-valuation.sql,am-cw-024,C20,"Remove existing paving, shrubs, etc to areas of new work",JBB-DEM,00018,Demolition,240.0,keyword
+seed-albanymews-valuation.sql,am-cw-025,D20,Excavate to reduce levels & remove spoil : to new areas,JBB-SUB,00021,Excavation,1320.0,keyword
+seed-albanymews-valuation.sql,am-cw-026,D20,Excavate foundations 600 x 1000 mm & remove spoil,JBB-SUB,00021,Excavation,2170.0,keyword
+seed-albanymews-valuation.sql,am-cw-027,R12,Excavate & lay new underground drainage runs,JBB-EDR,00021,Excavation,1850.0,keyword
+seed-albanymews-valuation.sql,am-cw-028,R12,New soakaway,JBB-EDR,00023,Drainage Below ground,1150.0,keyword
+seed-albanymews-valuation.sql,am-cw-029,R12,Make connection into existing runs,JBB-EDR,00023,Drainage Below ground,500.0,keyword
+seed-albanymews-valuation.sql,am-cw-030,R11,Stub stack & durgo valve,JBB-DRN,00024,Drainage internal,390.0,keyword
+seed-albanymews-valuation.sql,am-cw-031,R11,Soil vent pipework,JBB-DRN,00024,Drainage internal,900.0,keyword
+seed-albanymews-valuation.sql,am-cw-032,R11,Wastes connections,JBB-DRN,00024,Drainage internal,1232.0,keyword
+seed-albanymews-valuation.sql,am-cw-033,R11,Excavate & lay new underground drainage runs,JBB-DRN,00021,Excavation,1800.0,keyword
+seed-albanymews-valuation.sql,am-cw-034,R11,New manhole,JBB-DRN,00024,Drainage internal,725.0,keyword
+seed-albanymews-valuation.sql,am-cw-035,E10,Concrete in strip & pad foundations,JBB-SUB,00027,Concrete,1800.0,keyword
+seed-albanymews-valuation.sql,am-cw-036,E10,150 mm hardcore blinded with sand,JBB-SUB,00027,Concrete,1596.0,keyword
+seed-albanymews-valuation.sql,am-cw-037,E10,150 mm bed of concrete,JBB-SUB,00027,Concrete,1770.0,keyword
+seed-albanymews-valuation.sql,am-cw-038,F1,Cavity walls below dpc in two skins of engineering brickwork & lean mix cavity fill,JBB-EXW,00081,Damp proofing specialist,1904.0,keyword
+seed-albanymews-valuation.sql,am-cw-039,F1,Damp proof course,JBB-EXW,00081,Damp proofing specialist,384.0,keyword
+seed-albanymews-valuation.sql,am-cw-040,F1,"Cavity wall in facing brickwork, 100 mm blockwork with 150 mm Celotex insulation to cavity",JBB-EXW,00057,Insulation walls,8240.0,keyword
+seed-albanymews-valuation.sql,am-cw-041,F1,Single skin of facing brickwork to store,JBB-EXW,00028,Masonry brickworks,1568.0,keyword
+seed-albanymews-valuation.sql,am-cw-042,F1,Supply of facing brickwork (£1.50 per brick),JBB-EXW,00028,Masonry brickworks,4860.0,keyword
+seed-albanymews-valuation.sql,am-cw-043,F1,Brick on edge over openings,JBB-EXW,00028,Masonry brickworks,270.0,keyword
+seed-albanymews-valuation.sql,am-cw-044,F1,100 mm blockwork LB internal walls,JBB-EXW,00028,Masonry brickworks,2236.0,keyword
+seed-albanymews-valuation.sql,am-cw-045,F30,Alterations to existing openings & making good reveals,JBB-EXW,00028,Masonry brickworks,250.0,section
+seed-albanymews-valuation.sql,am-cw-046,F30,Wall extension profiles,JBB-EXW,00028,Masonry brickworks,384.0,keyword
+seed-albanymews-valuation.sql,am-cw-047,F30,Thermabate cavity closers,JBB-EXW,00028,Masonry brickworks,748.0,keyword
+seed-albanymews-valuation.sql,am-cw-048,F30,Catnic CG90/100 lintel & tray over new openings,JBB-EXW,00028,Masonry brickworks,976.0,keyword
+seed-albanymews-valuation.sql,am-cw-049,F30,Precast concrete lintels over internal openings,JBB-EXW,00027,Concrete,460.0,keyword
+seed-albanymews-valuation.sql,am-cw-050,G10,Structural steels & associated work - Provisional sum,JBB-FRM,00010,Structural steel,5000.0,keyword
+seed-albanymews-valuation.sql,am-cw-051,G20,50 x 150 mm timber roof rafters (to new pitched roof),JBB-FRM,00039,Carpentry cut Roofing,5096.0,keyword
+seed-albanymews-valuation.sql,am-cw-052,G20,50 x 150 mm timber ceiling joists,JBB-FRM,00041,Carpentry 1st fix,2548.0,keyword
+seed-albanymews-valuation.sql,am-cw-053,G20,50 x 150 mm timber roof joists & plywood (to flat roof),JBB-FRM,00033,Roofing flat membrane,625.0,keyword
+seed-albanymews-valuation.sql,am-cw-054,G20,Joist hangers,JBB-FRM,00041,Carpentry 1st fix,434.0,keyword
+seed-albanymews-valuation.sql,am-cw-055,G20,Galvanised restaint straps,JBB-FRM,00041,Carpentry 1st fix,270.0,keyword
+seed-albanymews-valuation.sql,am-cw-056,H1,"Breatherable membrane, battens & concrete tiles",JBB-RFS,00027,Concrete,4576.0,keyword
+seed-albanymews-valuation.sql,am-cw-057,H1,300 mm mineral insulation over ceiling joists,JBB-RFS,00030,Roofer,1144.0,keyword
+seed-albanymews-valuation.sql,am-cw-058,H1,Ridge / hip tiles,JBB-RFS,00030,Roofer,440.0,keyword
+seed-albanymews-valuation.sql,am-cw-059,H1,Separate cost for supply of tiles (£0.60 each),JBB-RFS,00030,Roofer,1872.0,keyword
+seed-albanymews-valuation.sql,am-cw-060,H1,Roof ventilators,JBB-RFS,00030,Roofer,340.0,keyword
+seed-albanymews-valuation.sql,am-cw-061,H1,Fascia / soffit to new areas,JBB-RFS,00035,Facia and soffit UPVC,1564.0,keyword
+seed-albanymews-valuation.sql,am-cw-062,H70,Lead flashing / valley lining / soakers / aprons,JBB-RFS,00034,Roofing lead works,1000.0,keyword
+seed-albanymews-valuation.sql,am-cw-063,J40,Damp proof membranes 1200 g,JBB-SUB,00081,Damp proofing specialist,608.0,keyword
+seed-albanymews-valuation.sql,am-cw-064,J42,150 mm Celotex insulation to flat roof deck,JBB-RFS,00033,Roofing flat membrane,576.0,keyword
+seed-albanymews-valuation.sql,am-cw-065,J42,Plywood deck,JBB-RFS,00033,Roofing flat membrane,504.0,keyword
+seed-albanymews-valuation.sql,am-cw-066,J42,Sarnifli single ply membrane,JBB-RFS,00033,Roofing flat membrane,1980.0,keyword
+seed-albanymews-valuation.sql,am-cw-067,R10,New upvc guttering & rainwater pipework,JBB-DRN,00024,Drainage internal,952.0,keyword
+seed-albanymews-valuation.sql,am-cw-068,K1,100 mm Celotex insulation to new floor slab,JBB-SUB,00059,Insulation floors,1428.0,keyword
+seed-albanymews-valuation.sql,am-cw-069,M10,75 mm sand / cement floor screed,JBB-FLF,00067,Screed,2584.0,keyword
+seed-albanymews-valuation.sql,am-cw-070,P10,Plywood boxing & insulation to internal pipes,JBB-RFS,00041,Carpentry 1st fix,685.0,keyword
+seed-albanymews-valuation.sql,am-cw-071,L10,650 x 1050 mm upvc window - W01,JBB-WED,00054,Specialist glazing,725.0,keyword
+seed-albanymews-valuation.sql,am-cw-072,L10,Reglazed with obscure glazing,JBB-WED,00054,Specialist glazing,1100.0,keyword
+seed-albanymews-valuation.sql,am-cw-073,L10,750 x 750 mm flat roof lights,JBB-WED,00033,Roofing flat membrane,2700.0,keyword
+seed-albanymews-valuation.sql,am-cw-074,L20,1585 x 2100 mm aluminium entrance door,JBB-WED,00052,Aluminium window and doors,1000.0,keyword
+seed-albanymews-valuation.sql,am-cw-075,L20,1585 x 2100 mm aluminium French doors,JBB-WED,00052,Aluminium window and doors,1400.0,keyword
+seed-albanymews-valuation.sql,am-cw-076,L20,2009 x 2100 mm aluminium external door with window,JBB-WED,00052,Aluminium window and doors,700.0,keyword
+seed-albanymews-valuation.sql,am-cw-077,L20,2148 x 2100 mm aluminium bifolding doors,JBB-WED,00052,Aluminium window and doors,1500.0,keyword
+seed-albanymews-valuation.sql,am-cw-078,L20,2100 x 2260 mm composite store room door,JBB-WED,00050,Timber windows and doors,600.0,keyword
+seed-albanymews-valuation.sql,am-cw-079,L20,Timber garden gate,JBB-WED,00050,Timber windows and doors,300.0,keyword
+seed-albanymews-valuation.sql,am-cw-080,L20,910 mm Internal door lining & single door ( £200 supply ),JBB-WED,00123,Door supply,1050.0,keyword
+seed-albanymews-valuation.sql,am-cw-081,L20,1030 mm Internal door lining & single door ( £250 supply ),JBB-WED,00123,Door supply,3030.0,keyword
+seed-albanymews-valuation.sql,am-cw-082,L20,1350 mm Internal door lining & double door ( £300 supply ),JBB-WED,00123,Door supply,555.0,keyword
+seed-albanymews-valuation.sql,am-cw-083,S90,Hot & cold water supply,JBB-PLB,00074,Plumber,3420.0,keyword
+seed-albanymews-valuation.sql,am-cw-084,T90,New central heating boiler & associated pipework,JBB-HTG,00090,Boilers,4250.0,keyword
+seed-albanymews-valuation.sql,am-cw-085,T90,Megaflo hot water cylinder,JBB-HTG,00074,Plumber,2780.0,keyword
+seed-albanymews-valuation.sql,am-cw-086,T90,Radiators with TRVs,JBB-HTG,00074,Plumber,1770.0,keyword
+seed-albanymews-valuation.sql,am-cw-087,T90,Towel rails with TRVS,JBB-HTG,00074,Plumber,1950.0,keyword
+seed-albanymews-valuation.sql,am-cw-088,U90,Extract fan,JBB-VEN,00111,Ventilation and extract,1625.0,keyword
+seed-albanymews-valuation.sql,am-cw-089,V90,Consumer unit,JBB-ELE,00072,Electrician,1550.0,keyword
+seed-albanymews-valuation.sql,am-cw-090,V90,Double socket outlet,JBB-ELE,00072,Electrician,1000.0,keyword
+seed-albanymews-valuation.sql,am-cw-091,V90,Fused spurs,JBB-ELE,00072,Electrician,1000.0,keyword
+seed-albanymews-valuation.sql,am-cw-092,V90,Cooker switch,JBB-ELE,00072,Electrician,120.0,keyword
+seed-albanymews-valuation.sql,am-cw-093,V90,Shavers socket,JBB-ELE,00072,Electrician,190.0,keyword
+seed-albanymews-valuation.sql,am-cw-094,V90,Recessed light fitting,JBB-ELE,00072,Electrician,7560.0,keyword
+seed-albanymews-valuation.sql,am-cw-095,V90,Pendant lights,JBB-ELE,00072,Electrician,1248.0,keyword
+seed-albanymews-valuation.sql,am-cw-096,V90,External lights,JBB-ELE,00072,Electrician,175.0,keyword
+seed-albanymews-valuation.sql,am-cw-097,V90,Light switches,JBB-ELE,00072,Electrician,640.0,keyword
+seed-albanymews-valuation.sql,am-cw-098,V90,Smoke/heat detector,JBB-ELE,00072,Electrician,750.0,keyword
+seed-albanymews-valuation.sql,am-cw-099,V90,Carbon monoxide detector,JBB-ELE,00072,Electrician,118.0,keyword
+seed-albanymews-valuation.sql,am-cw-100,V90,Builders work in connection with electrical installation,JBB-ELE,00072,Electrician,500.0,keyword
+seed-albanymews-valuation.sql,am-cw-101,W90,All assoisated works,JBB-ELE,00003,Site temp security,1000.0,keyword
+seed-albanymews-valuation.sql,am-cw-102,K10,12.5mm plasterboard to ceilings,JBB-IWP,00060,Plaster Boarding,1080.0,keyword
+seed-albanymews-valuation.sql,am-cw-103,K10,50 x 100 mm timber internal stud walls,JBB-IWP,00041,Carpentry 1st fix,1488.0,keyword
+seed-albanymews-valuation.sql,am-cw-104,K10,50 mm rockwool insulation between stud walls,JBB-IWP,00041,Carpentry 1st fix,384.0,keyword
+seed-albanymews-valuation.sql,am-cw-105,K10,11 mm plywood to stud walls,JBB-IWP,00041,Carpentry 1st fix,360.0,keyword
+seed-albanymews-valuation.sql,am-cw-106,K10,12.5 mm plasterboard to blockwork & studs,JBB-IWP,00060,Plaster Boarding,3080.0,keyword
+seed-albanymews-valuation.sql,am-cw-107,N13,Fix only - WC to ground floor WC,JBB-SAN,00126,Appliance and machinery supply,340.0,keyword
+seed-albanymews-valuation.sql,am-cw-108,N13,Fix only - Wash hand basin to ground floor WC,JBB-SAN,00126,Appliance and machinery supply,320.0,keyword
+seed-albanymews-valuation.sql,am-cw-109,N13,Fix only - Sanitry items to wetroom,JBB-SAN,00126,Appliance and machinery supply,1500.0,keyword
+seed-albanymews-valuation.sql,am-cw-110,N13,Fix only - WC to second floor,JBB-SAN,00126,Appliance and machinery supply,340.0,keyword
+seed-albanymews-valuation.sql,am-cw-111,N13,Fix only - Wash hand basin to second floor,JBB-SAN,00126,Appliance and machinery supply,320.0,keyword
+seed-albanymews-valuation.sql,am-cw-112,M20,3 mm skim to ceilings,JBB-WLF,00063,Rendering,1080.0,keyword
+seed-albanymews-valuation.sql,am-cw-113,M20,Make good existing areas as required,JBB-WLF,00063,Rendering,1000.0,keyword
+seed-albanymews-valuation.sql,am-cw-114,M20,3 mm skim to new walls,JBB-WLF,00063,Rendering,3080.0,keyword
+seed-albanymews-valuation.sql,am-cw-115,P20,MDF architraves to new door frames (£4/m supply),JBB-FFE,00042,Carpentry 2nd fix,1120.0,keyword
+seed-albanymews-valuation.sql,am-cw-116,P20,MDF skirting to walls to new walls (£8/m supply),JBB-FFE,00042,Carpentry 2nd fix,2296.0,keyword
+seed-albanymews-valuation.sql,am-cw-117,P20,MDF window boards,JBB-FFE,00042,Carpentry 2nd fix,176.0,keyword
+seed-albanymews-valuation.sql,am-cw-118,P21,Fix only - Door ironmongery,JBB-IND,00128,Ironmongery supply,1400.0,keyword
+seed-albanymews-valuation.sql,am-cw-119,M60,Mist & 2 coats of Dulux emulsion to ceilings,JBB-WLF,00082,Decorating,2412.0,keyword
+seed-albanymews-valuation.sql,am-cw-120,M60,Ditto walls,JBB-WLF,00082,Decorating,4416.0,keyword
+seed-albanymews-valuation.sql,am-cw-121,M60,Prepare & decorate doors,JBB-WLF,00050,Timber windows and doors,1152.0,keyword
+seed-albanymews-valuation.sql,am-cw-122,M60,"Frames, architrave, window board & skirtings",JBB-WLF,00042,Carpentry 2nd fix,2205.0,keyword
+seed-albanymews-valuation.sql,am-cw-123,Z22,Sealants,JBB-WLF,00134,Misc,500.0,keyword
+seed-albanymews-valuation.sql,am-cw-124,M50,Karndean flooring (£50/m supply),JBB-FLF,00070,Floor finish LVT/Lino,11760.0,keyword
+seed-albanymews-valuation.sql,am-cw-125,P30,All assosiated work - Provisional sum,JBB-BWC,00121,"Trenching, bore holes and services",1500.0,keyword
+seed-albanymews-valuation.sql,am-cw-126,Q10,Aco threshold drain,JBB-RPP,00113,Paving and roads,1740.0,keyword
+seed-albanymews-valuation.sql,am-cw-127,Q20,Hardcore sub base to new patio area,JBB-RPP,00027,Concrete,1100.0,keyword
+seed-albanymews-valuation.sql,am-ps-01,PC08,Asbestos,JBB-FAC,00114,Asbestos removal,5500.0,keyword
+seed-albanymews-valuation.sql,am-ps-02,PC09,Existing drainage CCTV and remedial works,JBB-EDR,00024,Drainage internal,5500.0,keyword
+seed-albanymews-valuation.sql,am-ps-03,PC21,Structural Engineers details,JBB-FEE,00135,Specialist,5500.0,keyword
+seed-albanymews-valuation.sql,am-ps-04,PC14,Moving existing meter,JBB-BWC,00120,Utilities,1600.0,keyword
+seed-albanymews-valuation.sql,am-ps-05,PC11,Intruder Alarm,JBB-ELE,00087,Alarms and security,4300.0,keyword
+seed-albanymews-valuation.sql,am-ps-06,PC12,Fire and smoke alarm adaptation,JBB-ELE,00096,Fire and smoke alarms,3500.0,keyword
+seed-albanymews-valuation.sql,am-ps-07,PC18,Air conditioning unit to SW therapy (supply),JBB-SEQ,00089,Air con,9900.0,keyword
+seed-albanymews-valuation.sql,am-ps-08,PC19,Boiler Adaptation works unknown,JBB-HTG,00090,Boilers,3800.0,keyword
+seed-albanymews-valuation.sql,am-ps-09,PC05,"Main kitchen units, appliances and worktop",JBB-FFE,00125,Kitchen supply,36800.0,keyword
+seed-albanymews-valuation.sql,am-ps-10,PC01,Wall tiling supply only (BASED ON 75M2 @ £70.00 / M2),JBB-WLF,00124,Tiling supply,7525.0,keyword
+seed-albanymews-valuation.sql,am-ps-11,PC02,Floor tiling supply only(BASED ON 12M2 @ £100.00 / M2),JBB-FLF,00124,Tiling supply,2250.0,keyword
+seed-albanymews-valuation.sql,am-ps-12,PC16,Lift,JBB-SEQ,00099,Lifts and hoists,22000.0,keyword
+seed-albanymews-valuation.sql,am-ps-13,PC04,Specialist rise and fall washbasin,JBB-SAN,00122,Sanitary supply,7125.0,keyword
+seed-albanymews-valuation.sql,am-ps-14,PC07,Shower tray and enclosure in seondfloor bathroom supply only. Fitting price to be included elsewhere.,JBB-SAN,00122,Sanitary supply,2700.0,keyword
+seed-albanymews-valuation.sql,am-ps-15,PC15,Gerebit toilet or similar and support rails,JBB-SAN,00007,Temp toilet,8100.0,keyword
+seed-albanymews-valuation.sql,am-ps-16,PC17,Specialist bath,JBB-SAN,00122,Sanitary supply,11000.0,keyword
+seed-albanymews-valuation.sql,am-ps-17,PC03,Internal Door ironmongery (£125 per door),JBB-IND,00128,Ironmongery supply,1100.0,keyword
+seed-albanymews-valuation.sql,am-ps-18,PC10,Blinds and curtains,JBB-FFE,00084,Blinds and curtains,7000.0,keyword
+seed-albanymews-valuation.sql,am-ps-19,PC13,Soft landscaping,JBB-SFL,00117,Landscaping,3200.0,keyword
+seed-albanymews-valuation.sql,am-ps-20,PC20,Supply for paving slab Type TBC,JBB-RPP,00113,Paving and roads,4400.0,keyword
+seed-albanymews-valuation.sql,am-cont-01,,Contingency Budget,JBB-RSK,00134,Misc,30000.0,keyword
+seed-albanymews-variations.sql,am-vo-v01,V01,Asbestos removal - Goodbye Asbestos,(none),00114,Asbestos removal,-1835.0,keyword
+seed-albanymews-variations.sql,am-vo-v02,V02,Structural steels - supply & installation,(none),00010,Structural steel,-805.0,keyword
+seed-albanymews-variations.sql,am-vo-v03,V03,"Groundworks redesign - drainage, block & beam, foundations",(none),00024,Drainage internal,-6.0,keyword
+seed-albanymews-variations.sql,am-vo-v04,V04,Relocate electrical board & gas meter,(none),00120,Utilities,-160.0,keyword
+seed-albanymews-variations.sql,am-vo-v05,V05,Intruder / fire & smoke alarm revision,(none),00096,Fire and smoke alarms,-3600.0,keyword
+seed-albanymews-variations.sql,am-vo-v06,V06,Site Supervision - EOT-01,(none),00016,Site manager,5860.0,keyword
+seed-albanymews-variations.sql,am-vo-v07,V07,"Windows, Doors & Entrance Door - Quote 9585",(none),00050,Timber windows and doors,16322.17,keyword
+seed-albanymews-variations.sql,am-vo-v08,V08,Stiltz Homelift - Supply & Installation,(none),00099,Lifts and hoists,-2200.0,keyword
+seed-albanymews-variations.sql,am-vo-v09,V09,"Howden Kitchen, Worktop & Installation",(none),00125,Kitchen supply,-680.0,keyword
+seed-albanymews-variations.sql,am-vo-v10,V10,Split Level Air Conditioning,(none),00089,Air con,-2415.0,keyword
+seed-albanymews-variations.sql,am-vo-v11,V11,D&P Healthcare specialist sanitary ware,(none),00122,Sanitary supply,-18858.5,keyword
+seed-albanymews-variations.sql,am-vo-v12,V12,Boiler adaptation works & radiators,(none),00090,Boilers,2030.0,keyword
+seed-albanymews-variations.sql,am-vo-v13,V13,"Structural steel & timber revisions (PS1/PS2, lintels)",(none),00010,Structural steel,4865.0,keyword
+seed-albanymews-variations.sql,am-vo-v14,V14,Site Supervision - EOT-02,(none),00016,Site manager,4395.0,keyword
+seed-albanymews-variations.sql,am-vo-v15,V15,"Electrical - Velux SFS & blinds, staircase lighting",(none),00054,Specialist glazing,2680.0,keyword
+seed-albanymews-variations.sql,am-vo-v16,V16,GF Lounge alterations & fire lining,(none),00097,Passive fire protection,7126.0,keyword
+seed-albanymews-variations.sql,am-vo-v17,V17,Continuous Timber Mopstick - Existing Staircase,(none),00048,Stairs timber,2250.0,keyword
+seed-albanymews-variations.sql,am-vo-v18,V18,Velux rooflights & blinds,(none),00054,Specialist glazing,4500.0,keyword
+seed-albanymews-variations.sql,am-vo-v19,V19,Electrical uplifts - sockets & external camera,(none),00072,Electrician,1130.0,keyword
+seed-albanymews-variations.sql,am-vo-v20,V20,GF cloakroom sanitary ware & accessories,(none),00122,Sanitary supply,910.0,keyword
+seed-albanymews-variations.sql,am-vo-v21,V21,FF bathroom - BetteLux bath & fittings,(none),00122,Sanitary supply,7495.0,keyword
+seed-albanymews-variations.sql,am-vo-v22,V22,SF shower room refit,(none),00122,Sanitary supply,7035.0,keyword
+seed-albanymews-variations.sql,am-vo-v23,V23,Electrical additions - therapy room & GF lounge,(none),00072,Electrician,2015.0,keyword
+seed-albanymews-variations.sql,am-vo-v24,V24,Wall & floor tiling - PRO 131-APPENDIX 07 Walkington Rev C,(none),00076,Tiling,-1125.0,keyword
+seed-albanymews-variations.sql,am-vo-v25,V25,"Flooring - Karndean, Altro wetroom & staircase carpet",(none),00048,Stairs timber,5540.0,keyword
+seed-albanymews-variations.sql,am-vo-v26,V26,Double sockets - GF hallway & external,(none),00072,Electrician,305.0,keyword
+seed-albanymews-variations.sql,am-vo-v27,V27,"Entrance gate, clearance & brickwork",(none),00115,Fencing,2300.0,keyword
+seed-albanymews-variations.sql,am-vo-v28,V28,Velux GGU MK08 0070,(none),00054,Specialist glazing,3300.0,keyword
+seed-albanymews-variations.sql,am-vo-v29,V29,Dining & lounge electrical additions,(none),00072,Electrician,705.0,keyword
+seed-albanymews-variations.sql,am-vo-v30,V30,External landscaping - Marshalls paving & Aco drain,(none),00113,Paving and roads,-620.0,keyword
+seed-albanymews-variations.sql,am-vo-v31,V31,Howdens door ironmongery & mag lock,(none),00125,Kitchen supply,285.0,keyword
+seed-albanymews-variations.sql,am-vo-v32,V32,Blinds and curtains - omit provisional sum,(none),00084,Blinds and curtains,-7000.0,keyword
+seed-albanymews-variations.sql,am-vo-v33,V33,Contingency Budget - omit,(none),00134,Misc,-30000.0,keyword
+seed-albanymews-variations.sql,am-vo-v34,V34,"Utility room - Howdens supply, installation & structural works",(none),00125,Kitchen supply,7485.0,keyword
+seed-albanymews-variations.sql,am-vo-v35,V35,Balcony & sliding door remedial works,(none),00052,Aluminium window and doors,4290.0,keyword
+seed-albanymews-variations.sql,am-vo-v36,V36,Additional Electrics - GF Socket,(none),00072,Electrician,450.0,keyword
+seed-albanymews-variations.sql,am-vo-v37,V37,Supply & Install Shower Screen,(none),00122,Sanitary supply,535.0,keyword
+seed-albanymews-variations.sql,am-vo-v38,V38,Grab rails & bathroom accessories - FF,(none),00122,Sanitary supply,700.0,keyword
+seed-albanymews-variations.sql,am-vo-v39,V39,"Parcel box, decal sticker & radiator cover",(none),00074,Plumber,480.0,keyword
+seed-albanymews-variations.sql,am-vo-v40,V40,"Building Control works - therapy room, utility & external",(none),00120,Utilities,13915.0,keyword
+seed-albanymews-variations.sql,am-vo-v41,V41,Additional Plumbing works,(none),00074,Plumber,1225.0,keyword
+seed-byfrance-valuation.sql,bf-cw-001,A10,Site Supervision,JBB-PRL,00016,Site manager,65000.0,keyword
+seed-byfrance-valuation.sql,bf-cw-002,A10,Rubbish removal,JBB-PRL,00131,Rubbish clearance,9880.0,keyword
+seed-byfrance-valuation.sql,bf-cw-003,A10,General protection,JBB-PRL,00008,General protection,600.0,keyword
+seed-byfrance-valuation.sql,bf-cw-004,A10,Temporary toilet,JBB-PRL,00007,Temp toilet,4680.0,keyword
+seed-byfrance-valuation.sql,bf-cw-005,A10,CDM,JBB-PRL,00006,Health & Safety CDM,1200.0,keyword
+seed-byfrance-valuation.sql,bf-cw-006,A10,"Health, safety & welfare",JBB-PRL,00004,Welfare,6500.0,keyword
+seed-byfrance-valuation.sql,bf-cw-007,A10,Scaffolding,JBB-PRL,00020,Scaffolding,30940.0,keyword
+seed-byfrance-valuation.sql,bf-cw-008,A10,Clean on completion,JBB-PRL,00130,Cleaning internal,500.0,keyword
+seed-byfrance-valuation.sql,bf-cw-009,C20,Isolate electrical installation in connection with demolitions & strip out as required,JBB-DEM,00018,Demolition,600.0,keyword
+seed-byfrance-valuation.sql,bf-cw-010,C20,Ditto plumbing & heating installation,JBB-DEM,00018,Demolition,750.0,keyword
+seed-byfrance-valuation.sql,bf-cw-011,C20,"Remove flooring, tiles, skirtings, picture rail, cove, fittings etc.",JBB-DEM,00018,Demolition,500.0,keyword
+seed-byfrance-valuation.sql,bf-cw-012,C20,"Remove kitchen & utility units, worktops & appliances",JBB-DEM,00018,Demolition,240.0,keyword
+seed-byfrance-valuation.sql,bf-cw-013,C20,Remove sanitary items from WCs & bathrooms,JBB-DEM,00018,Demolition,520.0,keyword
+seed-byfrance-valuation.sql,bf-cw-014,C20,Remove internal doors & frames,JBB-DEM,00018,Demolition,360.0,keyword
+seed-byfrance-valuation.sql,bf-cw-015,C20,Demolish internal single skin walls,JBB-DEM,00018,Demolition,4032.0,keyword
+seed-byfrance-valuation.sql,bf-cw-016,C20,Remove existing plasterboard ceiling - throughout,JBB-DEM,00018,Demolition,3120.0,keyword
+seed-byfrance-valuation.sql,bf-cw-017,C20,Remove staircase,JBB-DEM,00018,Demolition,324.0,keyword
+seed-byfrance-valuation.sql,bf-cw-018,C20,Remove external doors & windows,JBB-DEM,00018,Demolition,520.0,keyword
+seed-byfrance-valuation.sql,bf-cw-019,C20,Temporary propping & needling,JBB-DEM,00019,Structural support,3500.0,keyword
+seed-byfrance-valuation.sql,bf-cw-020,C20,Demolish external walls,JBB-DEM,00018,Demolition,14720.0,keyword
+seed-byfrance-valuation.sql,bf-cw-021,C20,Demolish chimney breasts & stack,JBB-DEM,00018,Demolition,2800.0,keyword
+seed-byfrance-valuation.sql,bf-cw-022,C20,Remove existing floor build up throughout GF,JBB-DEM,00018,Demolition,2200.0,keyword
+seed-byfrance-valuation.sql,bf-cw-023,C20,Remove all roof construction & covering,JBB-DEM,00018,Demolition,5852.0,keyword
+seed-byfrance-valuation.sql,bf-cw-024,C20,Grub out redundnant drainage,JBB-DEM,00024,Drainage internal,450.0,keyword
+seed-byfrance-valuation.sql,bf-cw-025,C20,Demolish bomb shelter & remove trees,JBB-DEM,00018,Demolition,1000.0,keyword
+seed-byfrance-valuation.sql,bf-cw-026,C20,"Remove existing paving, shrubs, etc to areas of new work",JBB-DEM,00018,Demolition,2400.0,keyword
+seed-byfrance-valuation.sql,bf-cw-027,D20,Trial pits,JBB-SUB,00021,Excavation,750.0,keyword
+seed-byfrance-valuation.sql,bf-cw-028,D20,Excavate to reduce levels & remove spoil : to new areas,JBB-SUB,00021,Excavation,10080.0,keyword
+seed-byfrance-valuation.sql,bf-cw-029,D20,Excavate pad foundations & remove spoil,JBB-SUB,00021,Excavation,3720.0,keyword
+seed-byfrance-valuation.sql,bf-cw-030,D20,Excavate foundations 450 x 1000 mm & remove spoil,JBB-SUB,00021,Excavation,6090.0,keyword
+seed-byfrance-valuation.sql,bf-cw-031,D20,Excavate foundations 600 x 1000 mm & remove spoil,JBB-SUB,00021,Excavation,13050.0,keyword
+seed-byfrance-valuation.sql,bf-cw-032,P30,All assosiated work - Provisional sum,JBB-BWC,00121,"Trenching, bore holes and services",4500.0,keyword
+seed-byfrance-valuation.sql,bf-cw-033,R11,Stub stack & durgo valve,JBB-DRN,00024,Drainage internal,650.0,keyword
+seed-byfrance-valuation.sql,bf-cw-034,R11,Soil vent pipework,JBB-DRN,00024,Drainage internal,900.0,keyword
+seed-byfrance-valuation.sql,bf-cw-035,R11,Wastes connections,JBB-DRN,00024,Drainage internal,3344.0,keyword
+seed-byfrance-valuation.sql,bf-cw-036,R11,Excavate & lay new underground drainage runs,JBB-DRN,00021,Excavation,3750.0,keyword
+seed-byfrance-valuation.sql,bf-cw-037,R11,New manhole,JBB-DRN,00024,Drainage internal,4350.0,keyword
+seed-byfrance-valuation.sql,bf-cw-038,R12,Excavate & lay new underground drainage runs,JBB-EDR,00021,Excavation,3480.0,keyword
+seed-byfrance-valuation.sql,bf-cw-039,R12,New soakaway,JBB-EDR,00023,Drainage Below ground,2300.0,keyword
+seed-byfrance-valuation.sql,bf-cw-040,R12,Make connection into existing runs,JBB-EDR,00023,Drainage Below ground,500.0,keyword
+seed-byfrance-valuation.sql,bf-cw-041,D21,Ground gas collection & ventilated systems - Provisional sum,JBB-SUB,00022,Groundworks,2500.0,keyword
+seed-byfrance-valuation.sql,bf-cw-042,E10,Concrete in strip & pad foundations,JBB-SUB,00027,Concrete,23095.0,keyword
+seed-byfrance-valuation.sql,bf-cw-043,E10,150 mm hardcore blinded with sand,JBB-SUB,00027,Concrete,1296.0,keyword
+seed-byfrance-valuation.sql,bf-cw-044,E10,150 mm bed of concrete to existing house & garage,JBB-SUB,00027,Concrete,10260.0,keyword
+seed-byfrance-valuation.sql,bf-cw-045,E10,A252 mesh to concrete,JBB-SUB,00027,Concrete,1008.0,keyword
+seed-byfrance-valuation.sql,bf-cw-046,E60,100 mm concrete oversite,JBB-SUB,00027,Concrete,10304.0,keyword
+seed-byfrance-valuation.sql,bf-cw-047,E60,150 mm beam & block flooring,JBB-SUB,00027,Concrete,41216.0,keyword
+seed-byfrance-valuation.sql,bf-cw-048,C45,Damp proof course,JBB-SUB,00081,Damp proofing specialist,2208.0,keyword
+seed-byfrance-valuation.sql,bf-cw-049,F1,Cavity walls below dpc in two skins of engineering brickwork & lean mix cavity fill,JBB-EXW,00081,Damp proofing specialist,16184.0,keyword
+seed-byfrance-valuation.sql,bf-cw-050,F1,215 mm blockwork sleeper walls,JBB-EXW,00028,Masonry brickworks,3392.0,keyword
+seed-byfrance-valuation.sql,bf-cw-051,F1,"Cavity wall in facing brickwork, 100 mm blockwork with 150 mm Celotex insulation to cavity",JBB-EXW,00057,Insulation walls,30024.0,keyword
+seed-byfrance-valuation.sql,bf-cw-052,F1,Cavity wall in two skins of 100 mm blockwork with 150 mm Celotex insulation to cavity,JBB-EXW,00057,Insulation walls,51168.0,keyword
+seed-byfrance-valuation.sql,bf-cw-053,F1,100 mm blockwork internal walls to GF,JBB-EXW,00028,Masonry brickworks,11868.0,keyword
+seed-byfrance-valuation.sql,bf-cw-054,F1,Timber dormer walls with plywood,JBB-EXW,00041,Carpentry 1st fix,612.0,keyword
+seed-byfrance-valuation.sql,bf-cw-055,F30,Alterations to existing openings & making good reveals,JBB-EXW,00028,Masonry brickworks,900.0,section
+seed-byfrance-valuation.sql,bf-cw-056,F30,Wall extension profiles,JBB-EXW,00028,Masonry brickworks,1024.0,keyword
+seed-byfrance-valuation.sql,bf-cw-057,F30,Thermabate cavity closers,JBB-EXW,00028,Masonry brickworks,1320.0,keyword
+seed-byfrance-valuation.sql,bf-cw-058,F30,Catnic CG90/100 lintel & tray over new openings,JBB-EXW,00028,Masonry brickworks,3216.0,keyword
+seed-byfrance-valuation.sql,bf-cw-059,F30,Precast concrete lintels over internal openings,JBB-EXW,00027,Concrete,3136.0,keyword
+seed-byfrance-valuation.sql,bf-cw-060,F30,Air vent bricks,JBB-EXW,00028,Masonry brickworks,450.0,section
+seed-byfrance-valuation.sql,bf-cw-061,G10,Structural steel beams & columns associated work,JBB-FRM,00010,Structural steel,132300.0,keyword
+seed-byfrance-valuation.sql,bf-cw-062,G10,D49 mesh wrapped around ground beam,JBB-FRM,00010,Structural steel,375.0,keyword
+seed-byfrance-valuation.sql,bf-cw-063,G10,Cut out & cast concrete padstones,JBB-FRM,00027,Concrete,3610.0,keyword
+seed-byfrance-valuation.sql,bf-cw-064,G10,Base plates & hold down brackets,JBB-FRM,00010,Structural steel,1320.0,keyword
+seed-byfrance-valuation.sql,bf-cw-065,G10,Fireline protection to steel beams,JBB-FRM,00008,General protection,3500.0,keyword
+seed-byfrance-valuation.sql,bf-cw-066,G20,50 x 175 mm timber floor joists,JBB-FRM,00041,Carpentry 1st fix,22528.0,keyword
+seed-byfrance-valuation.sql,bf-cw-067,G20,50 x 150 mm timber roof rafters (to new pitched roof),JBB-FRM,00039,Carpentry cut Roofing,42312.0,keyword
+seed-byfrance-valuation.sql,bf-cw-068,G20,50 x 150 mm timber roof joists & plywood (to flat roof),JBB-FRM,00033,Roofing flat membrane,12980.0,keyword
+seed-byfrance-valuation.sql,bf-cw-069,G20,Plywood to fascia / soffit detail,JBB-FRM,00035,Facia and soffit UPVC,5460.0,keyword
+seed-byfrance-valuation.sql,bf-cw-070,G20,100 x 100 mm timber posts,JBB-FRM,00041,Carpentry 1st fix,2080.0,keyword
+seed-byfrance-valuation.sql,bf-cw-071,G20,Joist hangers,JBB-FRM,00041,Carpentry 1st fix,5040.0,keyword
+seed-byfrance-valuation.sql,bf-cw-072,G20,Galvanised restaint straps,JBB-FRM,00041,Carpentry 1st fix,4500.0,keyword
+seed-byfrance-valuation.sql,bf-cw-073,K11,12 mm plywood to dormers,JBB-UPF,00041,Carpentry 1st fix,144.0,keyword
+seed-byfrance-valuation.sql,bf-cw-074,K11,18 mm T & G flooring to first / second floor,JBB-UPF,00041,Carpentry 1st fix,8220.0,keyword
+seed-byfrance-valuation.sql,bf-cw-075,P10,Plywood boxing & insulation to internal pipes,JBB-RFS,00041,Carpentry 1st fix,800.0,keyword
+seed-byfrance-valuation.sql,bf-cw-076,P10,Mineral insulation to loft space,JBB-RFS,00058,Insulation ceilings,1400.0,keyword
+seed-byfrance-valuation.sql,bf-cw-077,H1,"Breatherable membrane, battens & concrete tiles",JBB-RFS,00027,Concrete,41328.0,keyword
+seed-byfrance-valuation.sql,bf-cw-078,H1,100 mm Celotex insulation between rafters,JBB-RFS,00039,Carpentry cut Roofing,12080.0,keyword
+seed-byfrance-valuation.sql,bf-cw-079,H1,70 mm Celotex insulation over rafters,JBB-RFS,00039,Carpentry cut Roofing,8456.0,keyword
+seed-byfrance-valuation.sql,bf-cw-080,H1,Ridge / hip tiles,JBB-RFS,00030,Roofer,2640.0,keyword
+seed-byfrance-valuation.sql,bf-cw-081,H1,Separate cost for supply of tiles (60p each),JBB-RFS,00030,Roofer,17712.0,keyword
+seed-byfrance-valuation.sql,bf-cw-082,H1,Roof ventilators,JBB-RFS,00030,Roofer,2125.0,keyword
+seed-byfrance-valuation.sql,bf-cw-083,H1,Fascia / soffit to new areas,JBB-RFS,00035,Facia and soffit UPVC,8008.0,keyword
+seed-byfrance-valuation.sql,bf-cw-084,H1,Lead flashing / valley lining / soakers / aprons,JBB-RFS,00034,Roofing lead works,1200.0,keyword
+seed-byfrance-valuation.sql,bf-cw-085,J42,150 mm Celotex insulation to flat roof deck,JBB-RFS,00033,Roofing flat membrane,5280.0,keyword
+seed-byfrance-valuation.sql,bf-cw-086,J42,Sarnifli single ply membrane,JBB-RFS,00033,Roofing flat membrane,15840.0,keyword
+seed-byfrance-valuation.sql,bf-cw-087,J42,Canopys to rear extension,JBB-RFS,00102,"Gazebo, carports and awning",5000.0,keyword
+seed-byfrance-valuation.sql,bf-cw-088,J42,Aluminium copping to parapet walls,JBB-RFS,00033,Roofing flat membrane,1536.0,keyword
+seed-byfrance-valuation.sql,bf-cw-089,R10,New upvc guttering & rainwater pipework,JBB-DRN,00024,Drainage internal,4828.0,keyword
+seed-byfrance-valuation.sql,bf-cw-090,R10,Hopper heads,JBB-DRN,00024,Drainage internal,510.0,keyword
+seed-byfrance-valuation.sql,bf-cw-091,K1,100 mm Celotex insulation to new floor slab,JBB-SUB,00059,Insulation floors,12880.0,keyword
+seed-byfrance-valuation.sql,bf-cw-092,J40,Damp proof membranes 1200 g,JBB-SUB,00081,Damp proofing specialist,5152.0,keyword
+seed-byfrance-valuation.sql,bf-cw-093,M10,75 mm sand / cement floor screed,JBB-FLF,00067,Screed,21896.0,keyword
+seed-byfrance-valuation.sql,bf-cw-094,K10,100 mm mineral insulation between floor joists,JBB-IWP,00041,Carpentry 1st fix,6944.0,keyword
+seed-byfrance-valuation.sql,bf-cw-095,K10,50 x 100 mm timber internal stud walls,JBB-IWP,00041,Carpentry 1st fix,9052.0,keyword
+seed-byfrance-valuation.sql,bf-cw-096,K10,50 mm rockwool insulation between stud walls,JBB-IWP,00041,Carpentry 1st fix,2336.0,keyword
+seed-byfrance-valuation.sql,bf-cw-097,K10,11 mm plywood to stud walls,JBB-IWP,00041,Carpentry 1st fix,1440.0,keyword
+seed-byfrance-valuation.sql,bf-cw-098,K10,12.5mm plasterboard to ceilings,JBB-IWP,00060,Plaster Boarding,10640.0,keyword
+seed-byfrance-valuation.sql,bf-cw-099,K10,12.5 mm plasterboard to studs,JBB-IWP,00060,Plaster Boarding,5960.0,keyword
+seed-byfrance-valuation.sql,bf-cw-100,M20,10 mm render to internal blockwork walls,JBB-WLF,00063,Rendering,12340.0,keyword
+seed-byfrance-valuation.sql,bf-cw-101,M20,3 mm skim to ceilings,JBB-WLF,00063,Rendering,10640.0,keyword
+seed-byfrance-valuation.sql,bf-cw-102,M20,3 mm skim to new walls,JBB-WLF,00063,Rendering,18300.0,keyword
+seed-byfrance-valuation.sql,bf-cw-103,M21,Webre multi coat render with insulation,JBB-EXW,00063,Rendering,22275.0,keyword
+seed-byfrance-valuation.sql,bf-cw-104,K20,"Breatherable membrane, battens & composite cladding",JBB-EXW,00033,Roofing flat membrane,8512.0,keyword
+seed-byfrance-valuation.sql,bf-cw-105,L10,Aluminium windows - throughout,JBB-WED,00054,Specialist glazing,35000.0,keyword
+seed-byfrance-valuation.sql,bf-cw-106,L10,Fix only - Window coverings,JBB-WED,00054,Specialist glazing,2500.0,keyword
+seed-byfrance-valuation.sql,bf-cw-107,L20,Aluminium external doors - throughout,JBB-WED,00052,Aluminium window and doors,45000.0,keyword
+seed-byfrance-valuation.sql,bf-cw-108,L20,926 mm Internal door lining & single door ( 200 supply ),JBB-WED,00123,Door supply,11830.0,keyword
+seed-byfrance-valuation.sql,bf-cw-109,L20,926 mm Internal door lining & double door ( 450 supply ),JBB-WED,00123,Door supply,1640.0,keyword
+seed-byfrance-valuation.sql,bf-cw-110,P20,MDF architraves to new door frames,JBB-FFE,00042,Carpentry 2nd fix,3480.0,keyword
+seed-byfrance-valuation.sql,bf-cw-111,P20,MDF skirting to walls to new walls (8/m supply),JBB-FFE,00042,Carpentry 2nd fix,7248.0,keyword
+seed-byfrance-valuation.sql,bf-cw-112,P20,MDF window boards,JBB-FFE,00042,Carpentry 2nd fix,1152.0,keyword
+seed-byfrance-valuation.sql,bf-cw-113,S90,Hot & cold water supply,JBB-PLB,00074,Plumber,9280.0,keyword
+seed-byfrance-valuation.sql,bf-cw-114,S91,Test existing system,JBB-PLB,00074,Plumber,1000.0,section
+seed-byfrance-valuation.sql,bf-cw-115,T90,New central heating boiler & associated pipework,JBB-HTG,00090,Boilers,6540.0,keyword
+seed-byfrance-valuation.sql,bf-cw-116,T90,Megaflo hot water cylinder,JBB-HTG,00074,Plumber,3480.0,keyword
+seed-byfrance-valuation.sql,bf-cw-117,T90,Wet underfloor heating to ground floor,JBB-HTG,00093,Under-floor heating,45724.0,keyword
+seed-byfrance-valuation.sql,bf-cw-118,T90,Manifolds / thermostats,JBB-HTG,00093,Under-floor heating,1200.0,keyword
+seed-byfrance-valuation.sql,bf-cw-119,T90,Radiators with TRVs,JBB-HTG,00074,Plumber,3510.0,keyword
+seed-byfrance-valuation.sql,bf-cw-120,T90,Towel rails with TRVS,JBB-HTG,00074,Plumber,1755.0,keyword
+seed-byfrance-valuation.sql,bf-cw-121,U90,Extract fan,JBB-VEN,00111,Ventilation and extract,3300.0,keyword
+seed-byfrance-valuation.sql,bf-cw-122,V90,Consumer unit,JBB-ELE,00072,Electrician,1550.0,keyword
+seed-byfrance-valuation.sql,bf-cw-123,V90,Double socket outlet,JBB-ELE,00072,Electrician,14720.0,keyword
+seed-byfrance-valuation.sql,bf-cw-124,V90,External double socket,JBB-ELE,00072,Electrician,240.0,keyword
+seed-byfrance-valuation.sql,bf-cw-125,V90,Fused spurs,JBB-ELE,00072,Electrician,2600.0,keyword
+seed-byfrance-valuation.sql,bf-cw-126,V90,Cooker switch,JBB-ELE,00072,Electrician,240.0,keyword
+seed-byfrance-valuation.sql,bf-cw-127,V90,Shavers socket,JBB-ELE,00072,Electrician,665.0,keyword
+seed-byfrance-valuation.sql,bf-cw-128,V90,Recessed light fitting,JBB-ELE,00072,Electrician,22032.0,keyword
+seed-byfrance-valuation.sql,bf-cw-129,V90,LED strip lighting,JBB-ELE,00072,Electrician,3000.0,keyword
+seed-byfrance-valuation.sql,bf-cw-130,V90,Pendant lights,JBB-ELE,00072,Electrician,234.0,keyword
+seed-byfrance-valuation.sql,bf-cw-131,V90,Wall lights,JBB-ELE,00072,Electrician,1800.0,keyword
+seed-byfrance-valuation.sql,bf-cw-132,V90,External lights,JBB-ELE,00072,Electrician,3500.0,keyword
+seed-byfrance-valuation.sql,bf-cw-133,V90,Garage lights,JBB-ELE,00072,Electrician,1788.0,keyword
+seed-byfrance-valuation.sql,bf-cw-134,V90,Light switches,JBB-ELE,00072,Electrician,1680.0,keyword
+seed-byfrance-valuation.sql,bf-cw-135,V90,Smoke/heat detector,JBB-ELE,00072,Electrician,1350.0,keyword
+seed-byfrance-valuation.sql,bf-cw-136,V90,Carbon monoxide detector,JBB-ELE,00072,Electrician,236.0,keyword
+seed-byfrance-valuation.sql,bf-cw-137,V90,Fix only - Intruder alarm,JBB-ELE,00087,Alarms and security,900.0,keyword
+seed-byfrance-valuation.sql,bf-cw-138,V90,Fix only - Hoist system,JBB-ELE,00099,Lifts and hoists,1000.0,keyword
+seed-byfrance-valuation.sql,bf-cw-139,V90,Builders work in connection with electrical installation,JBB-ELE,00072,Electrician,500.0,keyword
+seed-byfrance-valuation.sql,bf-cw-140,V90,Specialist fibre optic ceiling lights,JBB-ELE,00072,Electrician,7500.0,keyword
+seed-byfrance-valuation.sql,bf-cw-141,V90,Air conditioning,JBB-ELE,00089,Air con,20000.0,keyword
+seed-byfrance-valuation.sql,bf-cw-142,W90,All associated works,JBB-ELE,00003,Site temp security,5000.0,keyword
+seed-byfrance-valuation.sql,bf-cw-143,P21,Fix only - Door Ironmongery,JBB-IND,00128,Ironmongery supply,3000.0,keyword
+seed-byfrance-valuation.sql,bf-cw-144,L30,Fix only - Feature staircase,JBB-STR,00013,Metal Railings and balustrade,2500.0,keyword
+seed-byfrance-valuation.sql,bf-cw-145,L30,New staircase from first to second - complete,JBB-STR,00013,Metal Railings and balustrade,4500.0,keyword
+seed-byfrance-valuation.sql,bf-cw-146,M40,Fix only - Floor tiles to bathrooms,JBB-WLF,00122,Sanitary supply,4640.0,keyword
+seed-byfrance-valuation.sql,bf-cw-147,M40,Fix only - Wall tiles to wet areas,JBB-WLF,00076,Tiling,4800.0,keyword
+seed-byfrance-valuation.sql,bf-cw-148,M60,Mist & 2 coats of Dulux emulsion to ceilings,JBB-WLF,00082,Decorating,9576.0,keyword
+seed-byfrance-valuation.sql,bf-cw-149,M60,Ditto walls,JBB-WLF,00082,Decorating,14640.0,keyword
+seed-byfrance-valuation.sql,bf-cw-150,M60,Prepare & decorate doors,JBB-WLF,00050,Timber windows and doors,3528.0,keyword
+seed-byfrance-valuation.sql,bf-cw-151,M60,"Frames, architrave, window board & skirtings",JBB-WLF,00042,Carpentry 2nd fix,4878.0,keyword
+seed-byfrance-valuation.sql,bf-cw-152,Z10,Fix only - Bespoke joinery,JBB-FFE,00045,Joinery,9000.0,keyword
+seed-byfrance-valuation.sql,bf-cw-153,M50,Karndean flooring (50/m supply),JBB-FLF,00070,Floor finish LVT/Lino,27170.0,keyword
+seed-byfrance-valuation.sql,bf-cw-154,M51,Underlay & carpet (30/m supply),JBB-FLF,00069,Floor finish carpet,12896.0,keyword
+seed-byfrance-valuation.sql,bf-cw-155,N10,Fix only - Decorative fire place,JBB-FFE,00082,Decorating,1575.0,keyword
+seed-byfrance-valuation.sql,bf-cw-156,Q10,Aco threshold drain,JBB-RPP,00113,Paving and roads,3480.0,keyword
+seed-byfrance-valuation.sql,bf-cw-157,Q10,Concrete edging & widening to acess,JBB-RPP,00027,Concrete,1500.0,keyword
+seed-byfrance-valuation.sql,bf-cw-158,Q20,Hardcore sub base to new patio area & front drive,JBB-RPP,00027,Concrete,12544.0,keyword
+seed-byfrance-valuation.sql,bf-cw-159,Q22,Tarmac to front drive,JBB-RPP,00113,Paving and roads,18700.0,keyword
+seed-byfrance-valuation.sql,bf-cw-160,Q25,600 x 600 mm stone paving slabs,JBB-RPP,00113,Paving and roads,33060.0,keyword
+seed-byfrance-valuation.sql,bf-cw-161,Q28,Topsoil for soft landscaping,JBB-SFL,00116,Turfing,2000.0,keyword
+seed-byfrance-valuation.sql,bf-cw-162,Q30,Lawn seeding,JBB-SFL,00116,Turfing,2500.0,keyword
+seed-byfrance-valuation.sql,bf-cw-163,Q40,New 6ft timber fencing,JBB-EXT,00115,Fencing,9600.0,keyword
+seed-byfrance-valuation.sql,bf-cw-164,Q50,Electric entrance gates,JBB-EXT,00115,Fencing,15000.0,keyword
+seed-byfrance-valuation.sql,bf-pc-01,PC01,Wall tiling (based on 212m2 @ 80.00/m2),JBB-WLF,00076,Tiling,18216.0,keyword
+seed-byfrance-valuation.sql,bf-pc-02,PC02,Floor tiling (based on 37m2 @ 80.00/m2),JBB-FLF,00076,Tiling,3256.0,keyword
+seed-byfrance-valuation.sql,bf-pc-03,PC03,Internal Door ironmongery,JBB-IND,00128,Ironmongery supply,2560.0,keyword
+seed-byfrance-valuation.sql,bf-pc-04,PC04,Decorative Fireplaces for media walls,JBB-FFE,00103,"Fires, chimney and stoves",7600.0,keyword
+seed-byfrance-valuation.sql,bf-pc-05,PC05,Sanitary ware for Cloakroom,JBB-SAN,00122,Sanitary supply,1700.0,keyword
+seed-byfrance-valuation.sql,bf-pc-06,PC06,Sanitary ware for Accessible wet room,JBB-SAN,00122,Sanitary supply,32900.0,keyword
+seed-byfrance-valuation.sql,bf-pc-07,PC07,Sanitary ware for Guest and carers shower rooms,JBB-SAN,00122,Sanitary supply,6600.0,keyword
+seed-byfrance-valuation.sql,bf-pc-08,PC08,Annex kitchen/Utility room,JBB-FFE,00125,Kitchen supply,6250.0,keyword
+seed-byfrance-valuation.sql,bf-pc-09,PC09,Sanitary ware to first floor ensuite bathrooms,JBB-SAN,00122,Sanitary supply,12600.0,keyword
+seed-byfrance-valuation.sql,bf-pc-10,PC10,Sanitary ware to first floor ensuite shower rooms,JBB-SAN,00122,Sanitary supply,11000.0,keyword
+seed-byfrance-valuation.sql,bf-pc-11,PC11,Supply of feature staircase,JBB-STR,00048,Stairs timber,34500.0,keyword
+seed-byfrance-valuation.sql,bf-pc-12,PC12,Removal of Asbestos,JBB-FAC,00114,Asbestos removal,5500.0,keyword
+seed-byfrance-valuation.sql,bf-pc-13,PC13,Below ground drainage CCTV and remedial works,JBB-EDR,00023,Drainage Below ground,5500.0,keyword
+seed-byfrance-valuation.sql,bf-pc-14,PC14,Window coverings,JBB-FFE,00050,Timber windows and doors,16500.0,keyword
+seed-byfrance-valuation.sql,bf-pc-15,PC15,Intruder Alarm,JBB-ELE,00087,Alarms and security,11000.0,keyword
+seed-byfrance-valuation.sql,bf-pc-16,PC16,Fire and smoke alarm,JBB-ELE,00096,Fire and smoke alarms,2750.0,keyword
+seed-byfrance-valuation.sql,bf-pc-17,PC17,Soft landscaping (planting and beds etc),JBB-SFL,00117,Landscaping,11000.0,keyword
+seed-byfrance-valuation.sql,bf-pc-18,PC18,"Dressing rooms, Wardrobes and fitted storage",JBB-FFE,00046,Wardrobes,42000.0,keyword
+seed-byfrance-valuation.sql,bf-pc-19,PC19,Ceiling track hoists,JBB-SEQ,00099,Lifts and hoists,22000.0,keyword
+seed-byfrance-valuation.sql,bf-pc-20,PC20,Gazebo,JBB-EXT,00102,"Gazebo, carports and awning",5000.0,keyword
+seed-byfrance-valuation.sql,bf-pc-21,PC21,4 No Canopies,JBB-EXT,00102,"Gazebo, carports and awning",17200.0,keyword
+seed-byfrance-valuation.sql,bf-pc-22,PC22,Pond,JBB-EXT,00117,Landscaping,20000.0,keyword
+seed-byfrance-valuation.sql,bf-pc-23,PC23,Chandelier,JBB-ELE,00072,Electrician,2250.0,keyword
+seed-byfrance-valuation.sql,bf-cont-01,,Contingency Budget,JBB-RSK,00134,Misc,50000.0,keyword
+seed-byfrance-variations.sql,bf-vo-v01,V01,Removal of Asbestos,(none),00114,Asbestos removal,-5500.0,keyword
+seed-byfrance-variations.sql,bf-vo-v03,V03,All assosiated work - Provisional sum,(none),00121,"Trenching, bore holes and services",27797.0,special
+seed-byfrance-variations.sql,bf-vo-v04,V04,Temporary Works - Demolition Phase 1& 2 - TW-200,(none),00019,Structural support,1135.0,keyword
+seed-byfrance-variations.sql,bf-vo-v05,V05,Site Supervision 8 days - July 24,(none),00016,Site manager,2860.0,keyword
+seed-byfrance-variations.sql,bf-vo-v06,V06,Site Supervision 3 days - August 24,(none),00016,Site manager,1610.0,keyword
+seed-byfrance-variations.sql,bf-vo-v07,V07,Site Supervision 3 days - Sept 24,(none),00016,Site manager,1360.0,keyword
+seed-byfrance-variations.sql,bf-vo-v08,V08,Site Supervision 2 days - Oct 24,(none),00016,Site manager,1360.0,keyword
+seed-byfrance-variations.sql,bf-vo-v09,V09,Site Supervision 2 days - Nov 24,(none),00016,Site manager,1360.0,keyword
+seed-byfrance-variations.sql,bf-vo-v10,V10,Ground gas collection & ventilated systems - Provisional sum,(none),00022,Groundworks,5116.0,keyword
+seed-byfrance-variations.sql,bf-vo-v11,V11,Connection Details - Steel Fabrication,(none),00010,Structural steel,4125.0,keyword
+seed-byfrance-variations.sql,bf-vo-v12,V12,Tree Protection - STEM Arb Report,(none),00002,Site set up,2100.0,keyword
+seed-byfrance-variations.sql,bf-vo-v13,V13,Thames Sewer Connections - MC0476 Model1-CIV10,(none),00023,Drainage Below ground,6396.0,keyword
+seed-byfrance-variations.sql,bf-vo-v14,V14,Driveway Porous Stone - MC0476 Model1-CIV10,(none),00113,Paving and roads,42936.0,keyword
+seed-byfrance-variations.sql,bf-vo-v15,V15,Site Supervision - EOT-01,(none),00016,Site manager,5860.0,keyword
+seed-byfrance-variations.sql,bf-vo-v16,V16,Pond,(none),00117,Landscaping,26351.0,keyword
+seed-byfrance-variations.sql,bf-vo-v17,V17,100mm Ducting to the entrance gates,(none),00115,Fencing,1720.0,keyword
+seed-byfrance-variations.sql,bf-vo-v18,V18,Aluminium windows - throughout,(none),00052,Aluminium window and doors,11474.1,keyword
+seed-byfrance-variations.sql,bf-vo-v19,V19,Additional Drainage TBC,(none),00024,Drainage internal,0.0,keyword
+seed-byfrance-variations.sql,bf-vo-v20,V20,4 No Canopies,(none),00102,"Gazebo, carports and awning",-22200.0,keyword
+seed-byfrance-variations.sql,bf-vo-v21,V21,W-07 Rebuild Opening - PRO-064-(WD)-P-004 Rev G,(none),00028,Masonry brickworks,400.0,keyword
+seed-byfrance-variations.sql,bf-vo-v22,V22,SW.1 - G11 - SITE WORKS - Rev B,(none),00117,Landscaping,7600.0,keyword
+seed-byfrance-variations.sql,bf-vo-v23,V23,Chandelier,(none),00072,Electrician,29533.0,keyword
+seed-byfrance-variations.sql,bf-vo-v24,V24,Wet underfloor heating to ground floor (carers only),(none),00093,Under-floor heating,4093.0,keyword
+seed-byfrance-variations.sql,bf-vo-v25,V25,Site Supervision - EOT-02,(none),00016,Site manager,3516.0,keyword
+seed-byfrance-variations.sql,bf-vo-v26,V26,Air conditioning,(none),00089,Air con,8925.0,keyword
+seed-byfrance-variations.sql,bf-vo-v27,V27,Intruder Alarm,(none),00087,Alarms and security,-6640.0,keyword
+seed-byfrance-variations.sql,bf-vo-v28,V28,Fire and smoke alarm,(none),00096,Fire and smoke alarms,-1310.0,keyword
+seed-byfrance-variations.sql,bf-vo-v29,V29,Invoice 6764 - Croft Structural Engineers,(none),00135,Specialist,330.0,keyword
+seed-byfrance-variations.sql,bf-vo-v30,V30,10 mm render to internal blockwork walls,(none),00063,Rendering,29185.0,keyword
+seed-byfrance-variations.sql,bf-vo-v31,V31,Sanitary ware for Cloakroom,(none),00122,Sanitary supply,-12240.0,keyword
+seed-byfrance-variations.sql,bf-vo-v32,V32,Supply of feature staircase,(none),00048,Stairs timber,-1665.0,keyword
+seed-byfrance-variations.sql,bf-vo-v33,V33,Structural Steel Works - SL30 Rev 9 & SL40 Rev 8,(none),00010,Structural steel,1870.0,keyword
+seed-byfrance-variations.sql,bf-vo-v34,V34,Fix only - WC,(none),00122,Sanitary supply,11965.0,keyword
+seed-byfrance-variations.sql,bf-vo-v35,V35,Site Supervision - EOT-03,(none),00016,Site manager,8790.0,keyword
+seed-byfrance-variations.sql,bf-vo-v36,V36,Annex kitchen/Utility room,(none),00125,Kitchen supply,17935.0,keyword
+seed-byfrance-variations.sql,bf-vo-v37,V37,GF - ZZ Bathroom - On the Level Shower Former,(none),00122,Sanitary supply,4245.0,keyword
+seed-byfrance-variations.sql,bf-vo-v38,V38,New 6ft timber fencing,(none),00115,Fencing,23650.0,keyword
+seed-byfrance-variations.sql,bf-vo-v39,V39,Demolition - Removal of Fencing & Existing trees,(none),00018,Demolition,0.0,keyword
+seed-byfrance-variations.sql,bf-vo-v40,V40,Electrics - P-151 Rev P Electrical Plan FF,(none),00072,Electrician,790.0,keyword
+seed-byfrance-variations.sql,bf-vo-v41,V41,Karndean flooring (£50/m supply),(none),00070,Floor finish LVT/Lino,19067.0,keyword
+seed-byfrance-variations.sql,bf-vo-v42,V42,Wall tiling (BASED ON 212M2 @ £80.00 / M2),(none),00076,Tiling,-14577.0,keyword
+seed-byfrance-variations.sql,bf-vo-v43,V43,Ceiling track hoists,(none),00099,Lifts and hoists,-19800.0,keyword
+seed-byfrance-variations.sql,bf-vo-v44,V44,Radiators with TRVs,(none),00074,Plumber,2435.0,keyword
+seed-byfrance-variations.sql,bf-vo-v45,V45,Contingency Budget,(none),00134,Misc,-50000.0,keyword
+seed-byfrance-variations.sql,bf-vo-v46,V46,Eve Access Hatches P-009 Rev H,(none),00041,Carpentry 1st fix,4950.0,keyword
+seed-byfrance-variations.sql,bf-vo-v47,V47,Double Socket Outlets - P-151 Rev Q / P-152 Rev H,(none),00072,Electrician,575.0,keyword
+seed-byfrance-variations.sql,bf-vo-v48,V48,Fix only - Bespoke joinery,(none),00045,Joinery,-60175.0,keyword
+seed-byfrance-variations.sql,bf-vo-v49,V49,Gazebo,(none),00102,"Gazebo, carports and awning",-5000.0,keyword
+seed-byfrance-variations.sql,bf-vo-v50,V50,Window coverings,(none),00050,Timber windows and doors,-16500.0,keyword
+seed-byfrance-variations.sql,bf-vo-v51,V51,Internal Door ironmongery,(none),00128,Ironmongery supply,-2560.0,keyword
+seed-byfrance-variations.sql,bf-vo-v52,V52,Mineral insulation to loft space,(none),00058,Insulation ceilings,8393.0,keyword
+seed-byfrance-variations.sql,bf-vo-v53,V53,12.5mm plasterboard,(none),00060,Plaster Boarding,6210.0,keyword
+seed-byfrance-variations.sql,bf-vo-v54,V54,FFL/FCL TBC,(none),00134,Misc,0.0,unmapped -> Misc
+seed-byfrance-variations.sql,bf-vo-v55,V55,"Double Sockets - P-152 Rev J, Electrical Plan SF",(none),00072,Electrician,230.0,keyword
+seed-byfrance-variations.sql,bf-vo-v56,V56,P-205 Rev H Ensuite 1 & P-206 Rev H Ensuite 2,(none),00122,Sanitary supply,750.0,keyword
+seed-byfrance-variations.sql,bf-vo-v57,V57,Site Supervision - EOT-04,(none),00016,Site manager,29300.0,keyword
+seed-byfrance-variations.sql,bf-vo-v58,V58,Manifold - Carers,(none),00093,Under-floor heating,3907.0,keyword
+seed-byfrance-variations.sql,bf-vo-v59,V59,PRO-064-(WD)-P-703  Rev —  Rear Canopies,(none),00102,"Gazebo, carports and awning",0.0,keyword
+seed-byfrance-variations.sql,bf-vo-v60,V60,Croft SL-20 rev 11,(none),00135,Specialist,2940.0,keyword
+seed-byfrance-variations.sql,bf-vo-v61,V61,Acoustic boxing to SVP pipe through eaves space,(none),00041,Carpentry 1st fix,438.0,keyword
+seed-byfrance-variations.sql,bf-vo-v62,V62,PRO-064-(WD)-P-706 Rev F — Ground Floor RCP,(none),00072,Electrician,5771.5,keyword
+seed-byfrance-variations.sql,bf-vo-v63,V63,PRO-064-(WD)-P-150 Rev Q — Electrical Plan GF,(none),00072,Electrician,3565.0,keyword
+seed-byfrance-variations.sql,bf-vo-v64,V64,926 mm Internal door lining & single door ( £200 supply ),(none),00123,Door supply,25351.37,keyword
+seed-byfrance-variations.sql,bf-vo-v65,V65,Staircase Omit Item,(none),00048,Stairs timber,0.0,keyword
+seed-byfrance-variations.sql,bf-vo-v66,V66,Supply - Howdens Utility,(none),00125,Kitchen supply,-23845.0,keyword
+seed-byfrance-variations.sql,bf-vo-v67,V67,2nd Fix Carpentry Omit,(none),00042,Carpentry 2nd fix,0.0,keyword
+seed-byfrance-variations.sql,bf-vo-v68,V68,Mist & 2 coats of Dulux emulsion to ceilings,(none),00082,Decorating,0.0,keyword
+seed-byfrance-variations.sql,bf-vo-v69,V69,Tile Supply - REVISED WITH V42 OMIT,(none),00124,Tiling supply,1548.12,keyword
+seed-byfrance-variations.sql,bf-vo-v70,V70,External Taps - Declined,(none),00074,Plumber,0.0,keyword
+seed-byfrance-variations.sql,bf-vo-v71,V71,Generation - Entrance Door,(none),00050,Timber windows and doors,0.0,keyword
+seed-byfrance-variations.sql,bf-vo-v72,V72,Coffer Details and Insulation ZZ bedroom - Works Completed,(none),00058,Insulation ceilings,2285.0,keyword
+seed-byfrance-variations.sql,bf-vo-v73,V73,Revised Coving and LED lighting Details,(none),00066,Coving,4781.49,keyword
+seed-byfrance-variations.sql,bf-vo-v76,V76,Tile Installation & Enabling Works,(none),00076,Tiling,38865.0,keyword
+seed-coombelane-valuation.sql,cl-cw-001,A10,Site Supervision,JBB-PRL,00016,Site manager,25000.0,keyword
+seed-coombelane-valuation.sql,cl-cw-002,A10,Rubbish removal,JBB-PRL,00131,Rubbish clearance,6080.0,keyword
+seed-coombelane-valuation.sql,cl-cw-003,A10,General protection,JBB-PRL,00008,General protection,600.0,keyword
+seed-coombelane-valuation.sql,cl-cw-004,A10,Temporary toilet,JBB-PRL,00007,Temp toilet,1800.0,keyword
+seed-coombelane-valuation.sql,cl-cw-005,A10,CDM,JBB-PRL,00006,Health & Safety CDM,1200.0,keyword
+seed-coombelane-valuation.sql,cl-cw-006,A10,"Health, safety & welfare",JBB-PRL,00004,Welfare,2500.0,keyword
+seed-coombelane-valuation.sql,cl-cw-007,A10,Clean on completion,JBB-PRL,00130,Cleaning internal,500.0,keyword
+seed-coombelane-valuation.sql,cl-cw-008,C20,Isolate electrical installation in connection with demolitions & strip out as required,JBB-DEM,00018,Demolition,400.0,keyword
+seed-coombelane-valuation.sql,cl-cw-009,C20,Ditto plumbing & heating installation,JBB-DEM,00018,Demolition,550.0,keyword
+seed-coombelane-valuation.sql,cl-cw-010,C20,Decomision & remove ground source heat pump,JBB-DEM,00018,Demolition,1000.0,keyword
+seed-coombelane-valuation.sql,cl-cw-011,C20,"Remove flooring, tiles, skirtings, picture rail, cove, fittings etc.",JBB-DEM,00018,Demolition,624.0,keyword
+seed-coombelane-valuation.sql,cl-cw-012,C20,"Remove utility units, worktops & appliances",JBB-DEM,00018,Demolition,180.0,keyword
+seed-coombelane-valuation.sql,cl-cw-013,C20,Remove sanitary items from WCs & bathrooms,JBB-DEM,00018,Demolition,400.0,keyword
+seed-coombelane-valuation.sql,cl-cw-014,C20,Remove internal doors & frames,JBB-DEM,00018,Demolition,132.0,keyword
+seed-coombelane-valuation.sql,cl-cw-015,C20,Demolish internal single skin walls,JBB-DEM,00018,Demolition,1320.0,keyword
+seed-coombelane-valuation.sql,cl-cw-016,C20,Remove section of existing plasterboard ceiling,JBB-DEM,00018,Demolition,2176.0,keyword
+seed-coombelane-valuation.sql,cl-cw-017,C20,Remove existing copping from parapet walls,JBB-DEM,00018,Demolition,275.0,keyword
+seed-coombelane-valuation.sql,cl-cw-018,C20,Remove external doors,JBB-DEM,00018,Demolition,225.0,keyword
+seed-coombelane-valuation.sql,cl-cw-019,C20,Remove window,JBB-DEM,00018,Demolition,45.0,keyword
+seed-coombelane-valuation.sql,cl-cw-020,C20,Break up external steps & retaining walls,JBB-DEM,00022,Groundworks,800.0,keyword
+seed-coombelane-valuation.sql,cl-cw-021,C20,"Remove existing paving, shrubs, etc to areas of new work",JBB-DEM,00018,Demolition,1296.0,keyword
+seed-coombelane-valuation.sql,cl-cw-022,R11,Stub stack & durgo valve,JBB-DRN,00024,Drainage internal,260.0,keyword
+seed-coombelane-valuation.sql,cl-cw-023,R11,Soil vent pipework,JBB-DRN,00024,Drainage internal,450.0,keyword
+seed-coombelane-valuation.sql,cl-cw-024,R11,Wastes connections,JBB-DRN,00024,Drainage internal,704.0,keyword
+seed-coombelane-valuation.sql,cl-cw-025,R11,Excavate & lay new underground drainage runs,JBB-DRN,00021,Excavation,1000.0,keyword
+seed-coombelane-valuation.sql,cl-cw-026,R11,New manhole,JBB-DRN,00024,Drainage internal,725.0,keyword
+seed-coombelane-valuation.sql,cl-cw-027,R12,Excavate & lay new underground drainage runs,JBB-EDR,00021,Excavation,750.0,keyword
+seed-coombelane-valuation.sql,cl-cw-028,R12,Drainage remedial works & surveys,JBB-EDR,00023,Drainage Below ground,700.0,keyword
+seed-coombelane-valuation.sql,cl-cw-029,R12,Make connection into existing runs,JBB-EDR,00023,Drainage Below ground,250.0,keyword
+seed-coombelane-valuation.sql,cl-cw-030,F1,215 mm blockwork wall to first floor,JBB-EXW,00028,Masonry brickworks,244.0,keyword
+seed-coombelane-valuation.sql,cl-cw-031,F30,Stone copping to parapet wall,JBB-EXW,00028,Masonry brickworks,1705.0,keyword
+seed-coombelane-valuation.sql,cl-cw-032,B50,Labour only to structural work,JBB-FRM,00010,Structural steel,3000.0,section
+seed-coombelane-valuation.sql,cl-cw-033,K10,12.5mm plasterboard to ceilings first floor areas,JBB-IWP,00060,Plaster Boarding,2720.0,keyword
+seed-coombelane-valuation.sql,cl-cw-034,K10,38 x 89 mm timber internal stud walls,JBB-IWP,00041,Carpentry 1st fix,1856.0,keyword
+seed-coombelane-valuation.sql,cl-cw-035,K10,50 mm rockwool insulation between stud walls,JBB-IWP,00041,Carpentry 1st fix,512.0,keyword
+seed-coombelane-valuation.sql,cl-cw-036,K10,18 mm marine plywood to stud walls,JBB-IWP,00041,Carpentry 1st fix,2432.0,keyword
+seed-coombelane-valuation.sql,cl-cw-037,K10,12.5 mm plasterboard to blockwork & studs,JBB-IWP,00060,Plaster Boarding,1360.0,keyword
+seed-coombelane-valuation.sql,cl-cw-038,M20,Make good areas of existing walls as required,JBB-WLF,00063,Rendering,750.0,keyword
+seed-coombelane-valuation.sql,cl-cw-039,M20,3 mm skim to ceilings,JBB-WLF,00063,Rendering,2720.0,keyword
+seed-coombelane-valuation.sql,cl-cw-040,M20,3 mm skim to new walls,JBB-WLF,00063,Rendering,1360.0,keyword
+seed-coombelane-valuation.sql,cl-cw-041,L10,Replacement window to Luna's ensuite with blind,JBB-WED,00122,Sanitary supply,1950.0,keyword
+seed-coombelane-valuation.sql,cl-cw-042,L20,3500 x 2100 mm timber sliding doors,JBB-WED,00052,Aluminium window and doors,7255.0,keyword
+seed-coombelane-valuation.sql,cl-cw-043,L20,2935 x 2100 mm timber sliding doors,JBB-WED,00052,Aluminium window and doors,12400.0,keyword
+seed-coombelane-valuation.sql,cl-cw-044,L20,926 mm Internal door lining & single door ( £120 supply ),JBB-WED,00123,Door supply,345.0,keyword
+seed-coombelane-valuation.sql,cl-cw-045,L20,826 mm Internal door lining & single pocket door,JBB-WED,00044,Internal Doors & linings,2110.0,keyword
+seed-coombelane-valuation.sql,cl-cw-046,L20,Internal door lining & single door with glazed screen,JBB-WED,00044,Internal Doors & linings,1980.0,keyword
+seed-coombelane-valuation.sql,cl-cw-047,L20,Pool storage doors - fix only,JBB-WED,00050,Timber windows and doors,525.0,keyword
+seed-coombelane-valuation.sql,cl-cw-048,L20,Fix only - Door ironmongery,JBB-WED,00128,Ironmongery supply,450.0,keyword
+seed-coombelane-valuation.sql,cl-cw-049,S90,Hot & cold water supply,JBB-PLB,00074,Plumber,2560.0,keyword
+seed-coombelane-valuation.sql,cl-cw-050,S90,Alterations to pool H&C water supply,JBB-PLB,00100,Swimming pools,1500.0,keyword
+seed-coombelane-valuation.sql,cl-cw-051,T90,Towel rails with TRVS - FF,JBB-HTG,00074,Plumber,500.0,keyword
+seed-coombelane-valuation.sql,cl-cw-052,T90,Alterations to existing system,JBB-HTG,00074,Plumber,800.0,keyword
+seed-coombelane-valuation.sql,cl-cw-053,U90,Extract fan,JBB-VEN,00111,Ventilation and extract,825.0,keyword
+seed-coombelane-valuation.sql,cl-cw-054,V90,Double socket outlet,JBB-ELE,00072,Electrician,1495.0,keyword
+seed-coombelane-valuation.sql,cl-cw-055,V90,Shavers socket,JBB-ELE,00072,Electrician,95.0,keyword
+seed-coombelane-valuation.sql,cl-cw-056,V90,Recessed light fitting,JBB-ELE,00072,Electrician,6804.0,keyword
+seed-coombelane-valuation.sql,cl-cw-057,V90,Light switches,JBB-ELE,00072,Electrician,560.0,keyword
+seed-coombelane-valuation.sql,cl-cw-058,V90,Fan isolator switches,JBB-ELE,00072,Electrician,285.0,keyword
+seed-coombelane-valuation.sql,cl-cw-059,V90,Alterations to existing system,JBB-ELE,00072,Electrician,800.0,keyword
+seed-coombelane-valuation.sql,cl-cw-060,V90,Fix only - Tesla points,JBB-ELE,00072,Electrician,950.0,keyword
+seed-coombelane-valuation.sql,cl-cw-061,V90,Builders work in connection with electrical installation,JBB-ELE,00072,Electrician,500.0,keyword
+seed-coombelane-valuation.sql,cl-cw-062,B05,Fire saftey - Provisional sum,JBB-ELE,00096,Fire and smoke alarms,1000.0,keyword
+seed-coombelane-valuation.sql,cl-cw-063,P10,Plywood boxing & insulation to internal pipes,JBB-RFS,00041,Carpentry 1st fix,450.0,keyword
+seed-coombelane-valuation.sql,cl-cw-064,P20,MDF architraves to new door frames,JBB-FFE,00042,Carpentry 2nd fix,540.0,keyword
+seed-coombelane-valuation.sql,cl-cw-065,P20,MDF skirting to walls to new walls (£8/m supply),JBB-FFE,00042,Carpentry 2nd fix,1104.0,keyword
+seed-coombelane-valuation.sql,cl-cw-066,P20,MDF window boards,JBB-FFE,00042,Carpentry 2nd fix,72.0,keyword
+seed-coombelane-valuation.sql,cl-cw-067,P20,Fix only - Waredrobes / bespoke joinery,JBB-FFE,00045,Joinery,1200.0,keyword
+seed-coombelane-valuation.sql,cl-cw-068,N13,"Fix only - Sanitry items (wc, basin, bath, hoist & shower FF)",JBB-SAN,00122,Sanitary supply,4255.0,keyword
+seed-coombelane-valuation.sql,cl-cw-069,M40,Fix only - Wall tiling Ensuite Luna,JBB-WLF,00122,Sanitary supply,1200.0,keyword
+seed-coombelane-valuation.sql,cl-cw-070,M40,Fix only - Floor tiling & hallway,JBB-FLF,00076,Tiling,16800.0,keyword
+seed-coombelane-valuation.sql,cl-cw-071,M60,Mist & 2 coats of Dulux emulsion to ceilings,JBB-WLF,00082,Decorating,2992.0,keyword
+seed-coombelane-valuation.sql,cl-cw-072,M60,Ditto walls,JBB-WLF,00082,Decorating,4960.0,keyword
+seed-coombelane-valuation.sql,cl-cw-073,M60,Prepare & decorate doors,JBB-WLF,00050,Timber windows and doors,432.0,keyword
+seed-coombelane-valuation.sql,cl-cw-074,M60,"Frames, architrave, window board & skirtings",JBB-WLF,00042,Carpentry 2nd fix,1980.0,keyword
+seed-coombelane-valuation.sql,cl-cw-075,M61,Coating to basement wall plates,JBB-WLF,00097,Passive fire protection,400.0,keyword
+seed-coombelane-valuation.sql,cl-cw-076,Q10,Remove existing slot drain,JBB-RPP,00018,Demolition,578.0,keyword
+seed-coombelane-valuation.sql,cl-cw-077,Q10,New Aco slot drain,JBB-RPP,00113,Paving and roads,2414.0,keyword
+seed-coombelane-valuation.sql,cl-cw-078,Q20,Hardcore sub base to new patio area,JBB-RPP,00027,Concrete,3600.0,keyword
+seed-coombelane-valuation.sql,cl-cw-079,Q20,Form new ramp,JBB-RPP,00113,Paving and roads,2000.0,keyword
+seed-coombelane-valuation.sql,cl-cw-080,Q20,Extend / alterations to retaining walls,JBB-RPP,00022,Groundworks,5000.0,keyword
+seed-coombelane-valuation.sql,cl-cw-081,Q23,Remove existing top surface - area tbc,JBB-RPP,00018,Demolition,3000.0,keyword
+seed-coombelane-valuation.sql,cl-cw-082,Q23,New resin bound finish - area tbc,JBB-RPP,00113,Paving and roads,14500.0,keyword
+seed-coombelane-valuation.sql,cl-cw-083,Q23,Fix only - Carport,JBB-EXT,00102,"Gazebo, carports and awning",2500.0,keyword
+seed-coombelane-valuation.sql,cl-cw-084,Q23,Replacement sliding gate,JBB-EXT,00115,Fencing,7500.0,keyword
+seed-coombelane-valuation.sql,cl-cw-085,Q25,Fix only - Hard Landscaping,JBB-RPP,00113,Paving and roads,11440.0,keyword
+seed-coombelane-valuation.sql,cl-cw-086,M50,Karndean vinyl flooring (£40 supply),JBB-FLF,00069,Floor finish carpet,3610.0,keyword
+seed-coombelane-valuation.sql,cl-cw-087,M50,Altro vinyl flooring (£40 supply),JBB-FLF,00069,Floor finish carpet,665.0,keyword
+seed-coombelane-valuation.sql,cl-cw-088,,H20 pools quote -  PCC-Bees-021023,JBB-SEQ,00100,Swimming pools,268692.6,keyword
+seed-coombelane-valuation.sql,cl-ps-01,,Wall tiling (BASED  @ £50.00 / M2),JBB-WLF,00076,Tiling,21100.0,keyword
+seed-coombelane-valuation.sql,cl-ps-02,,Internal door ironmongery,JBB-IND,00128,Ironmongery supply,440.0,keyword
+seed-coombelane-valuation.sql,cl-ps-03,,Structural engineering items,JBB-FRM,00135,Specialist,22000.0,keyword
+seed-coombelane-valuation.sql,cl-ps-04,,Decommission and remove ground source heat pump,JBB-HTS,00018,Demolition,5500.0,keyword
+seed-coombelane-valuation.sql,cl-ps-05,,Drainage remedial work,JBB-EDR,00024,Drainage internal,2200.0,keyword
+seed-coombelane-valuation.sql,cl-ps-06,,Hard landscaping supply (Based on 130m^2@£50/m^2),JBB-RPP,00117,Landscaping,7150.0,keyword
+seed-coombelane-valuation.sql,cl-ps-07,,Drainage survey pre and post completion,JBB-EDR,00024,Drainage internal,5500.0,keyword
+seed-coombelane-valuation.sql,cl-ps-08,,Existing mechanical system alterations,JBB-HTG,00074,Plumber,5500.0,keyword
+seed-coombelane-valuation.sql,cl-ps-09,,Existing electrical systems alterations,JBB-ELE,00072,Electrician,5500.0,keyword
+seed-coombelane-valuation.sql,cl-ps-10,,Wardrobes and fitted furniture to bedroom,JBB-FFE,00046,Wardrobes,3300.0,keyword
+seed-coombelane-valuation.sql,cl-ps-11,,Luna's ensuite storage/ fitted furniture,JBB-FFE,00122,Sanitary supply,2200.0,keyword
+seed-coombelane-valuation.sql,cl-ps-12,,Closomat or similar WC,JBB-SAN,00122,Sanitary supply,6600.0,keyword
+seed-coombelane-valuation.sql,cl-ps-13,,WH Vanity basin,JBB-SAN,00122,Sanitary supply,550.0,keyword
+seed-coombelane-valuation.sql,cl-ps-14,,"Shower tray, enclosure and shower",JBB-SAN,00122,Sanitary supply,3300.0,keyword
+seed-coombelane-valuation.sql,cl-ps-15,,Hi/lo bath,JBB-SAN,00122,Sanitary supply,19800.0,keyword
+seed-coombelane-valuation.sql,cl-ps-16,,Hoist installation - Luna's Bedroom; Ensuite; Therapy Room; Snug,JBB-SEQ,00122,Sanitary supply,19800.0,keyword
+seed-coombelane-valuation.sql,cl-ps-17,,"Pool hall alterations (including water supply, system, existing ductwork, existing heating & electrical systems, hoist, tiling)",JBB-ELE,00099,Lifts and hoists,5500.0,keyword
+seed-coombelane-valuation.sql,cl-ps-18,,Internal floor tiling GF (BASED ON 50M2@£70/M^2),JBB-FLF,00076,Tiling,3850.0,keyword
+seed-coombelane-valuation.sql,cl-ps-19,,Carport,JBB-EXT,00102,"Gazebo, carports and awning",22000.0,keyword
+seed-coombelane-valuation.sql,cl-ps-20,,Asbestos survey,JBB-FAC,00114,Asbestos removal,2200.0,keyword
+seed-coombelane-valuation.sql,cl-ps-21,,Light switches sockets to match existing system,JBB-ELE,00072,Electrician,1650.0,keyword
+seed-coombelane-valuation.sql,cl-ps-22,,Sanitary fittings to changing room and basement shower,JBB-SAN,00122,Sanitary supply,10450.0,keyword
+seed-coombelane-valuation.sql,cl-ps-23,,Pool area additional floor tiling supply only,JBB-FLF,00124,Tiling supply,12375.0,keyword
+seed-coombelane-valuation.sql,cl-ps-24,,Supply cost 3 no. pool storage doors,JBB-IND,00050,Timber windows and doors,2200.0,keyword
+seed-coombelane-valuation.sql,cl-ps-25,,Tesla charging point,JBB-ELE,00094,EV car chargers,1650.0,keyword
+seed-coombelane-valuation.sql,cl-ps-26,,Tesla Powerwall,JBB-ELE,00092,Solar panels,12650.0,keyword
+seed-coombelane-valuation.sql,cl-cont-01,,Contingency (NBS reference A54 / 590),JBB-RSK,00134,Misc,20000.0,keyword
+seed-ravenswood-valuation.sql,rv-cw-001,01,Site manager,JBB-PRL,00016,Site manager,27000.0,keyword
+seed-ravenswood-valuation.sql,rv-cw-002,01,Project manager,JBB-PRL,00017,Project manager,9900.0,keyword
+seed-ravenswood-valuation.sql,rv-cw-003,01,Site labour,JBB-PRL,00015,Labour,8100.0,keyword
+seed-ravenswood-valuation.sql,rv-cw-004,01,Rubbish removal,JBB-PRL,00131,Rubbish clearance,3420.0,keyword
+seed-ravenswood-valuation.sql,rv-cw-005,01,CDM,JBB-PRL,00006,Health & Safety CDM,1200.0,keyword
+seed-ravenswood-valuation.sql,rv-cw-006,01,"Health, safety & welfare",JBB-PRL,00004,Welfare,2250.0,keyword
+seed-ravenswood-valuation.sql,rv-cw-007,01,Hoarding & protection,JBB-PRL,00001,Hoarding,4000.0,keyword
+seed-ravenswood-valuation.sql,rv-cw-008,01,Temporary plumbing & electrics,JBB-PRL,00072,Electrician,1500.0,keyword
+seed-ravenswood-valuation.sql,rv-cw-009,01,Temporary toilet,JBB-PRL,00007,Temp toilet,1620.0,keyword
+seed-ravenswood-valuation.sql,rv-cw-010,01,Temporary welfare,JBB-PRL,00004,Welfare,1980.0,keyword
+seed-ravenswood-valuation.sql,rv-cw-011,01,Temporary kitchen set up,JBB-PRL,00002,Site set up,350.0,keyword
+seed-ravenswood-valuation.sql,rv-cw-012,01,Site security,JBB-PRL,00003,Site temp security,1350.0,keyword
+seed-ravenswood-valuation.sql,rv-cw-013,01,"Plant, lighting & machinery",JBB-PRL,00072,Electrician,990.0,keyword
+seed-ravenswood-valuation.sql,rv-cw-014,01,Scaffolding,JBB-PRL,00020,Scaffolding,1848.0,keyword
+seed-ravenswood-valuation.sql,rv-cw-015,01,Clean on completion,JBB-PRL,00130,Cleaning internal,1000.0,keyword
+seed-ravenswood-valuation.sql,rv-cw-016,02,Isolate electrical installation in connection with demolitions & strip out as required,JBB-DEM,00018,Demolition,500.0,keyword
+seed-ravenswood-valuation.sql,rv-cw-017,02,Ditto plumbing & heating installation,JBB-DEM,00018,Demolition,650.0,keyword
+seed-ravenswood-valuation.sql,rv-cw-018,02,"Remove tiles, skirtings, picture rail, cove, fittings etc.",JBB-DEM,00018,Demolition,400.0,keyword
+seed-ravenswood-valuation.sql,rv-cw-019,02,Remove floor finishes,JBB-DEM,00018,Demolition,220.0,keyword
+seed-ravenswood-valuation.sql,rv-cw-020,02,"Remove kitchen units, worktops & appliances",JBB-DEM,00018,Demolition,180.0,keyword
+seed-ravenswood-valuation.sql,rv-cw-021,02,Remove sanitary items,JBB-DEM,00018,Demolition,275.0,keyword
+seed-ravenswood-valuation.sql,rv-cw-022,02,Remove internal doors & frames,JBB-DEM,00018,Demolition,162.0,keyword
+seed-ravenswood-valuation.sql,rv-cw-023,02,Asbestos removal,JBB-DEM,00114,Asbestos removal,1500.0,keyword
+seed-ravenswood-valuation.sql,rv-cw-024,02,Demolish internal walls to form new layout,JBB-DEM,00018,Demolition,420.0,keyword
+seed-ravenswood-valuation.sql,rv-cw-025,02,Remove section of plasterboard ceiling,JBB-DEM,00018,Demolition,576.0,keyword
+seed-ravenswood-valuation.sql,rv-cw-026,02,Remove windows & external doors,JBB-DEM,00018,Demolition,240.0,keyword
+seed-ravenswood-valuation.sql,rv-cw-027,02,Erect temporary propping to existing construction,JBB-DEM,00019,Structural support,1000.0,keyword
+seed-ravenswood-valuation.sql,rv-cw-028,02,Demolish external walls,JBB-DEM,00018,Demolition,765.0,keyword
+seed-ravenswood-valuation.sql,rv-cw-029,02,Remove garden shed & green house,JBB-DEM,00018,Demolition,300.0,keyword
+seed-ravenswood-valuation.sql,rv-cw-030,02,Remove redundant drainage,JBB-DEM,00024,Drainage internal,420.0,keyword
+seed-ravenswood-valuation.sql,rv-cw-031,02,Remove existing paving / steps,JBB-DEM,00018,Demolition,300.0,keyword
+seed-ravenswood-valuation.sql,rv-cw-032,02,Remove external chimney stack & make good,JBB-DEM,00018,Demolition,550.0,keyword
+seed-ravenswood-valuation.sql,rv-cw-033,02,Internal wall opening up,JBB-DEM,00018,Demolition,150.0,keyword
+seed-ravenswood-valuation.sql,rv-cw-034,03,Trial pits,JBB-SUB,00021,Excavation,550.0,keyword
+seed-ravenswood-valuation.sql,rv-cw-035,03,Excavate to reduce levels & remove spoil,JBB-SUB,00021,Excavation,875.0,keyword
+seed-ravenswood-valuation.sql,rv-cw-036,03,Excavate foundations 450 x 1000 mm & remove spoil,JBB-SUB,00021,Excavation,240.0,keyword
+seed-ravenswood-valuation.sql,rv-cw-037,03,Excavate foundations 600 x 1000 mm & remove spoil,JBB-SUB,00021,Excavation,1440.0,keyword
+seed-ravenswood-valuation.sql,rv-cw-038,03,Excavate pad foundations  & remove spoil,JBB-SUB,00021,Excavation,420.0,keyword
+seed-ravenswood-valuation.sql,rv-cw-039,03,Concrete in foundations,JBB-SUB,00021,Excavation,1665.0,keyword
+seed-ravenswood-valuation.sql,rv-cw-040,03,A393 mesh to foundation base,JBB-SUB,00021,Excavation,408.0,keyword
+seed-ravenswood-valuation.sql,rv-cw-041,04,Excavate & lay new underground drainage runs,JBB-DRN,00021,Excavation,2050.0,keyword
+seed-ravenswood-valuation.sql,rv-cw-042,04,Make connection of new drainage to existing runs,JBB-DRN,00024,Drainage internal,250.0,keyword
+seed-ravenswood-valuation.sql,rv-cw-043,04,New inspection chambers,JBB-DRN,00024,Drainage internal,645.0,keyword
+seed-ravenswood-valuation.sql,rv-cw-044,04,Stub stack & durgo valve,JBB-DRN,00024,Drainage internal,260.0,keyword
+seed-ravenswood-valuation.sql,rv-cw-045,04,Soil vent pipework,JBB-DRN,00024,Drainage internal,300.0,keyword
+seed-ravenswood-valuation.sql,rv-cw-046,04,Wastes to ditto,JBB-DRN,00024,Drainage internal,792.0,keyword
+seed-ravenswood-valuation.sql,rv-cw-047,04,Excavate & lay new underground drainage runs,JBB-DRN,00021,Excavation,2000.0,keyword
+seed-ravenswood-valuation.sql,rv-cw-048,04,"Provide drainage from new rainwater pipe, back inlet gulley & connection to existing drainage",JBB-DRN,00024,Drainage internal,240.0,keyword
+seed-ravenswood-valuation.sql,rv-cw-049,04,New soakaway,JBB-DRN,00023,Drainage Below ground,1325.0,keyword
+seed-ravenswood-valuation.sql,rv-cw-050,04,Public sewer confirmation,JBB-DRN,00023,Drainage Below ground,200.0,keyword
+seed-ravenswood-valuation.sql,rv-cw-051,05,Concrete blinding under floor slab,JBB-SUB,00027,Concrete,736.0,keyword
+seed-ravenswood-valuation.sql,rv-cw-052,05,155 mm beam & block flooring,JBB-SUB,00027,Concrete,2806.0,keyword
+seed-ravenswood-valuation.sql,rv-cw-053,05,Damp proof membranes 1200 g,JBB-SUB,00081,Damp proofing specialist,368.0,keyword
+seed-ravenswood-valuation.sql,rv-cw-054,05,100 mm Celotex floor insulation,JBB-SUB,00059,Insulation floors,920.0,keyword
+seed-ravenswood-valuation.sql,rv-cw-055,05,Vapour control layer,JBB-SUB,00041,Carpentry 1st fix,276.0,keyword
+seed-ravenswood-valuation.sql,rv-cw-056,05,75 mm sand / cement screed,JBB-SUB,00059,Insulation floors,1380.0,keyword
+seed-ravenswood-valuation.sql,rv-cw-057,06,Wall extension profiles,JBB-EXW,00028,Masonry brickworks,640.0,keyword
+seed-ravenswood-valuation.sql,rv-cw-058,06,"Cavity walls below dpc in facing brickwork, 100 mm blockwork & lean mix cavity fill",JBB-EXW,00081,Damp proofing specialist,1416.0,keyword
+seed-ravenswood-valuation.sql,rv-cw-059,06,Damp proof course,JBB-EXW,00081,Damp proofing specialist,224.0,keyword
+seed-ravenswood-valuation.sql,rv-cw-060,06,Cavity wall in two skins of 100 mm blockwork with 100 mm Celotex insulation to cavity,JBB-EXW,00057,Insulation walls,6144.0,keyword
+seed-ravenswood-valuation.sql,rv-cw-061,06,215 mm blockwork wall infills,JBB-EXW,00028,Masonry brickworks,378.0,keyword
+seed-ravenswood-valuation.sql,rv-cw-062,06,BSD 100 lintel over opening,JBB-EXW,00028,Masonry brickworks,240.0,keyword
+seed-ravenswood-valuation.sql,rv-cw-063,06,Catnic CG150/100 lintel,JBB-EXW,00028,Masonry brickworks,1050.0,keyword
+seed-ravenswood-valuation.sql,rv-cw-064,06,BSD 140 lintel over openings,JBB-EXW,00028,Masonry brickworks,267.0,keyword
+seed-ravenswood-valuation.sql,rv-cw-065,06,Catnic CN71A,JBB-EXW,00028,Masonry brickworks,180.0,keyword
+seed-ravenswood-valuation.sql,rv-cw-066,06,Infill existing masonry openings,JBB-EXW,00028,Masonry brickworks,384.0,keyword
+seed-ravenswood-valuation.sql,rv-cw-067,07,152 x 152 x 23 kg steel columns,JBB-FRM,00010,Structural steel,875.0,keyword
+seed-ravenswood-valuation.sql,rv-cw-068,07,203 x 203 x 46 kg steel beam with 10 mm plate,JBB-FRM,00010,Structural steel,2240.0,keyword
+seed-ravenswood-valuation.sql,rv-cw-069,07,152 x 152 x 37 kg steel beam with 10 mm plate,JBB-FRM,00010,Structural steel,1260.0,keyword
+seed-ravenswood-valuation.sql,rv-cw-070,07,125 x 70 x 4 WP,JBB-FRM,00010,Structural steel,245.0,keyword
+seed-ravenswood-valuation.sql,rv-cw-071,07,Cut out & case concrete padstones,JBB-FRM,00027,Concrete,244.0,keyword
+seed-ravenswood-valuation.sql,rv-cw-072,07,Base plate & hold down brackets,JBB-FRM,00010,Structural steel,130.0,keyword
+seed-ravenswood-valuation.sql,rv-cw-073,08,Timber wall plate bolted to wall,JBB-FRM,00041,Carpentry 1st fix,782.0,keyword
+seed-ravenswood-valuation.sql,rv-cw-074,08,50 x 175 mm timber floor joists,JBB-FRM,00041,Carpentry 1st fix,4480.0,keyword
+seed-ravenswood-valuation.sql,rv-cw-075,08,50 x 100 mm timber stud wall,JBB-FRM,00041,Carpentry 1st fix,2240.0,keyword
+seed-ravenswood-valuation.sql,rv-cw-076,08,18 mm plywood,JBB-FRM,00041,Carpentry 1st fix,3008.0,keyword
+seed-ravenswood-valuation.sql,rv-cw-077,08,18 mm T & G plywood to floor deck,JBB-FRM,00041,Carpentry 1st fix,384.0,keyword
+seed-ravenswood-valuation.sql,rv-cw-078,08,Remove floorboards & clean void,JBB-FRM,00018,Demolition,352.0,keyword
+seed-ravenswood-valuation.sql,rv-cw-079,08,Repair damaged joists,JBB-FRM,00041,Carpentry 1st fix,200.0,keyword
+seed-ravenswood-valuation.sql,rv-cw-080,08,Woodworm treatment,JBB-FRM,00041,Carpentry 1st fix,550.0,keyword
+seed-ravenswood-valuation.sql,rv-cw-081,08,Timber battening,JBB-FRM,00041,Carpentry 1st fix,1408.0,keyword
+seed-ravenswood-valuation.sql,rv-cw-082,09,"Breatherable membrane, battens & concrete plain tiles",JBB-RFS,00027,Concrete,2632.0,keyword
+seed-ravenswood-valuation.sql,rv-cw-083,09,Separate cost for supply of tiles,JBB-RFS,00036,Gutters and rainwater UPVC,1064.0,keyword
+seed-ravenswood-valuation.sql,rv-cw-084,09,Lead flashing / valley lining,JBB-RFS,00034,Roofing lead works,496.0,keyword
+seed-ravenswood-valuation.sql,rv-cw-085,09,"Fascia, soffit & barge boards",JBB-RFS,00035,Facia and soffit UPVC,720.0,keyword
+seed-ravenswood-valuation.sql,rv-cw-086,09,Upvc guttering,JBB-RFS,00036,Gutters and rainwater UPVC,272.0,keyword
+seed-ravenswood-valuation.sql,rv-cw-087,09,Upvc rainwater pipe,JBB-RFS,00036,Gutters and rainwater UPVC,216.0,keyword
+seed-ravenswood-valuation.sql,rv-cw-088,09,Vapour barrier,JBB-RFS,00036,Gutters and rainwater UPVC,840.0,keyword
+seed-ravenswood-valuation.sql,rv-cw-089,09,Main roof remedial works,JBB-RFS,00036,Gutters and rainwater UPVC,1500.0,keyword
+seed-ravenswood-valuation.sql,rv-cw-090,10,150 mm Celotex insulation on battens,JBB-IWP,00060,Plaster Boarding,648.0,keyword
+seed-ravenswood-valuation.sql,rv-cw-091,10,120 mm Celotex insulation,JBB-IWP,00060,Plaster Boarding,3312.0,keyword
+seed-ravenswood-valuation.sql,rv-cw-092,10,37.5 mm Kingspan plasterboard to rafters,JBB-IWP,00039,Carpentry cut Roofing,1288.0,keyword
+seed-ravenswood-valuation.sql,rv-cw-093,10,100 mm rockwool insulation between ceilings,JBB-IWP,00058,Insulation ceilings,1584.0,keyword
+seed-ravenswood-valuation.sql,rv-cw-094,10,100 mm rockwool insulation between studs,JBB-IWP,00060,Plaster Boarding,1152.0,keyword
+seed-ravenswood-valuation.sql,rv-cw-095,10,12.5mm acoustic plasterboard to walls,JBB-IWP,00060,Plaster Boarding,2508.0,keyword
+seed-ravenswood-valuation.sql,rv-cw-096,10,12.5mm tile backer board,JBB-IWP,00060,Plaster Boarding,304.0,keyword
+seed-ravenswood-valuation.sql,rv-cw-097,10,12.5mm acoustic plasterboard to ceilings,JBB-IWP,00060,Plaster Boarding,2156.0,keyword
+seed-ravenswood-valuation.sql,rv-cw-098,10,Fireline protection to steels,JBB-IWP,00008,General protection,300.0,keyword
+seed-ravenswood-valuation.sql,rv-cw-099,11,Velux 980 x 1340 mm roof lights,JBB-WED,00054,Specialist glazing,2764.0,keyword
+seed-ravenswood-valuation.sql,rv-cw-100,11,Electric blinds to roof lights,JBB-WED,00054,Specialist glazing,980.0,keyword
+seed-ravenswood-valuation.sql,rv-cw-101,11,Assistance to glazing supplier / installer,JBB-WED,00054,Specialist glazing,250.0,keyword
+seed-ravenswood-valuation.sql,rv-cw-102,12,3mm skim to ceilings,JBB-WLF,00062,Plastering,1440.0,keyword
+seed-ravenswood-valuation.sql,rv-cw-103,12,3 mm skim to walls,JBB-WLF,00062,Plastering,2040.0,keyword
+seed-ravenswood-valuation.sql,rv-cw-104,12,Damp proofing & re plaster - Provisional sum,JBB-WLF,00081,Damp proofing specialist,1000.0,keyword
+seed-ravenswood-valuation.sql,rv-cw-105,13,Three coat render to external walls,JBB-EXW,00063,Rendering,5580.0,keyword
+seed-ravenswood-valuation.sql,rv-cw-106,13,Make good existing render,JBB-EXW,00063,Rendering,750.0,keyword
+seed-ravenswood-valuation.sql,rv-cw-107,13,Rendered plinth detail,JBB-EXW,00063,Rendering,1220.0,keyword
+seed-ravenswood-valuation.sql,rv-cw-108,14,New consumer unit,JBB-ELE,00072,Electrician,1150.0,keyword
+seed-ravenswood-valuation.sql,rv-cw-109,14,Double socket outlet,JBB-ELE,00072,Electrician,5750.0,keyword
+seed-ravenswood-valuation.sql,rv-cw-110,14,Single sockets,JBB-ELE,00072,Electrician,805.0,keyword
+seed-ravenswood-valuation.sql,rv-cw-111,14,Telephone point,JBB-ELE,00072,Electrician,110.0,keyword
+seed-ravenswood-valuation.sql,rv-cw-112,14,Fused spurs,JBB-ELE,00072,Electrician,550.0,keyword
+seed-ravenswood-valuation.sql,rv-cw-113,14,Shavers socket,JBB-ELE,00072,Electrician,220.0,keyword
+seed-ravenswood-valuation.sql,rv-cw-114,14,Cat 6,JBB-ELE,00072,Electrician,98.0,keyword
+seed-ravenswood-valuation.sql,rv-cw-115,14,External sockets,JBB-ELE,00072,Electrician,270.0,keyword
+seed-ravenswood-valuation.sql,rv-cw-116,14,Pendant lights,JBB-ELE,00072,Electrician,1045.0,keyword
+seed-ravenswood-valuation.sql,rv-cw-117,14,Recessed lights,JBB-ELE,00072,Electrician,7540.0,keyword
+seed-ravenswood-valuation.sql,rv-cw-118,14,LED strip lights,JBB-ELE,00072,Electrician,2800.0,keyword
+seed-ravenswood-valuation.sql,rv-cw-119,14,Niche lights,JBB-ELE,00072,Electrician,210.0,keyword
+seed-ravenswood-valuation.sql,rv-cw-120,14,Wall lights,JBB-ELE,00072,Electrician,980.0,keyword
+seed-ravenswood-valuation.sql,rv-cw-121,14,Light switch,JBB-ELE,00072,Electrician,702.0,keyword
+seed-ravenswood-valuation.sql,rv-cw-122,14,Extractor fans,JBB-ELE,00111,Ventilation and extract,825.0,keyword
+seed-ravenswood-valuation.sql,rv-cw-123,14,For coving for LED strip lighting,JBB-ELE,00066,Coving,300.0,keyword
+seed-ravenswood-valuation.sql,rv-cw-124,14,Smoke / heat detector,JBB-ELE,00072,Electrician,465.0,keyword
+seed-ravenswood-valuation.sql,rv-cw-125,14,CO2 detector,JBB-ELE,00072,Electrician,180.0,keyword
+seed-ravenswood-valuation.sql,rv-cw-126,14,Attendance on specialist subcontractors,JBB-ELE,00072,Electrician,100.0,keyword
+seed-ravenswood-valuation.sql,rv-cw-127,14,Test on completion,JBB-ELE,00072,Electrician,350.0,keyword
+seed-ravenswood-valuation.sql,rv-cw-128,14,Armoured cable to rear garden with fuse board,JBB-ELE,00117,Landscaping,1500.0,keyword
+seed-ravenswood-valuation.sql,rv-cw-129,14,Double socket outlet,JBB-ELE,00072,Electrician,375.0,keyword
+seed-ravenswood-valuation.sql,rv-cw-130,14,Light fittings,JBB-ELE,00072,Electrician,120.0,keyword
+seed-ravenswood-valuation.sql,rv-cw-131,14,Light switches,JBB-ELE,00072,Electrician,54.0,keyword
+seed-ravenswood-valuation.sql,rv-cw-132,15,New boiler & associated pipework (spec tbc),JBB-HTG,00090,Boilers,3975.0,keyword
+seed-ravenswood-valuation.sql,rv-cw-133,15,Megaflow hot water cylinder,JBB-HTG,00074,Plumber,2980.0,keyword
+seed-ravenswood-valuation.sql,rv-cw-134,15,Thermostat,JBB-HTG,00074,Plumber,450.0,keyword
+seed-ravenswood-valuation.sql,rv-cw-135,15,Fix only - radiators,JBB-HTG,00074,Plumber,2475.0,keyword
+seed-ravenswood-valuation.sql,rv-cw-136,15,External taps,JBB-PLB,00074,Plumber,310.0,keyword
+seed-ravenswood-valuation.sql,rv-cw-137,15,Test on completion,JBB-PLB,00074,Plumber,350.0,keyword
+seed-ravenswood-valuation.sql,rv-cw-138,15,Fix only - WC,JBB-PLB,00122,Sanitary supply,330.0,keyword
+seed-ravenswood-valuation.sql,rv-cw-139,15,Hot & cold supplies to sanitary fittings,JBB-PLB,00122,Sanitary supply,890.0,keyword
+seed-ravenswood-valuation.sql,rv-cw-140,15,Fix only - Wash hand basin,JBB-PLB,00122,Sanitary supply,320.0,keyword
+seed-ravenswood-valuation.sql,rv-cw-141,15,Fix only - Shower,JBB-PLB,00122,Sanitary supply,505.0,keyword
+seed-ravenswood-valuation.sql,rv-cw-142,15,Fix only - Accessories,JBB-PLB,00074,Plumber,100.0,keyword
+seed-ravenswood-valuation.sql,rv-cw-143,15,Fix only - WC,JBB-PLB,00122,Sanitary supply,330.0,keyword
+seed-ravenswood-valuation.sql,rv-cw-144,15,Hot & cold supplies to sanitary fittings,JBB-PLB,00122,Sanitary supply,890.0,keyword
+seed-ravenswood-valuation.sql,rv-cw-145,15,Fix only - Wash hand basin,JBB-PLB,00122,Sanitary supply,320.0,keyword
+seed-ravenswood-valuation.sql,rv-cw-146,15,Fix only - Shower,JBB-PLB,00122,Sanitary supply,505.0,keyword
+seed-ravenswood-valuation.sql,rv-cw-147,15,Fix only - Accessories,JBB-PLB,00074,Plumber,100.0,keyword
+seed-ravenswood-valuation.sql,rv-cw-148,16,"Internal door lining, double pocket door & ironmongery",JBB-IND,00128,Ironmongery supply,1975.0,keyword
+seed-ravenswood-valuation.sql,rv-cw-149,16,"Internal door lining, panel door & ironmongery (£150 supply)",JBB-IND,00128,Ironmongery supply,3640.0,keyword
+seed-ravenswood-valuation.sql,rv-cw-150,16,Oak door thresholds,JBB-FFE,00042,Carpentry 2nd fix,750.0,keyword
+seed-ravenswood-valuation.sql,rv-cw-151,16,MDF skirting to walls to new walls (£8/m supply),JBB-FFE,00042,Carpentry 2nd fix,3976.0,keyword
+seed-ravenswood-valuation.sql,rv-cw-152,16,MDF architraves to new door frames (£4/m supply),JBB-FFE,00042,Carpentry 2nd fix,1330.0,keyword
+seed-ravenswood-valuation.sql,rv-cw-153,16,MDF window boards,JBB-FFE,00042,Carpentry 2nd fix,180.0,keyword
+seed-ravenswood-valuation.sql,rv-cw-154,16,Plywood boxing to internal pipework,JBB-FFE,00041,Carpentry 1st fix,500.0,keyword
+seed-ravenswood-valuation.sql,rv-cw-155,16,Removable access to shower rooms,JBB-FFE,00122,Sanitary supply,200.0,keyword
+seed-ravenswood-valuation.sql,rv-cw-156,16,Fix only - Kitchen units & appliances,JBB-FFE,00125,Kitchen supply,2500.0,keyword
+seed-ravenswood-valuation.sql,rv-cw-157,16,Fix only - Kitchen worktop & splashback,JBB-FFE,00125,Kitchen supply,1500.0,keyword
+seed-ravenswood-valuation.sql,rv-cw-158,16,Fix only - Blinds,JBB-FFE,00042,Carpentry 2nd fix,200.0,keyword
+seed-ravenswood-valuation.sql,rv-cw-159,17,Bespoke joinery - Provisional sum,JBB-FFE,00045,Joinery,12000.0,keyword
+seed-ravenswood-valuation.sql,rv-cw-160,18,Fix only - Tiles,JBB-WLF,00076,Tiling,2000.0,keyword
+seed-ravenswood-valuation.sql,rv-cw-161,18,Fix only - Tiles,JBB-WLF,00076,Tiling,1680.0,keyword
+seed-ravenswood-valuation.sql,rv-cw-162,19,Mist & 2 coats of Dulux emulsion to ceilings,JBB-WLF,00082,Decorating,2420.0,keyword
+seed-ravenswood-valuation.sql,rv-cw-163,19,Ditto walls,JBB-WLF,00082,Decorating,4960.0,keyword
+seed-ravenswood-valuation.sql,rv-cw-164,19,Prepare & decorate doors,JBB-WLF,00050,Timber windows and doors,1024.0,keyword
+seed-ravenswood-valuation.sql,rv-cw-165,19,"Frames, architrave, window board & skirtings",JBB-WLF,00042,Carpentry 2nd fix,1760.0,keyword
+seed-ravenswood-valuation.sql,rv-cw-166,19,Prepare & decorate all render,JBB-WLF,00063,Rendering,3520.0,keyword
+seed-ravenswood-valuation.sql,rv-cw-167,19,Mastic finishing,JBB-WLF,00134,Misc,250.0,keyword
+seed-ravenswood-valuation.sql,rv-cw-168,20,Sub base & fix only paving slabs,JBB-RPP,00113,Paving and roads,7700.0,keyword
+seed-ravenswood-valuation.sql,rv-cw-169,20,Reinstate fencing on completion,JBB-EXT,00115,Fencing,400.0,keyword
+seed-ravenswood-valuation.sql,rv-cw-170,20,Supply & fit new fencing - area tbc,JBB-EXT,00115,Fencing,2700.0,keyword
+seed-ravenswood-valuation.sql,rv-cw-171,20,Concrete shed base,JBB-EXT,00027,Concrete,700.0,keyword
+seed-ravenswood-valuation.sql,rv-cw-172,20,Fix only - Shed,JBB-EXT,00119,Sheds and out houses,425.0,keyword
+seed-woodhouse-valuation.sql,wh-cw-001,01,Scaffolding,JBB-PRL,00020,Scaffolding,5760.0,keyword
+seed-woodhouse-valuation.sql,wh-cw-002,01,Site manager,JBB-PRL,00016,Site manager,60000.0,keyword
+seed-woodhouse-valuation.sql,wh-cw-003,01,Rubbish removal,JBB-PRL,00131,Rubbish clearance,9120.0,keyword
+seed-woodhouse-valuation.sql,wh-cw-004,01,Temporary toilet,JBB-PRL,00007,Temp toilet,3600.0,keyword
+seed-woodhouse-valuation.sql,wh-cw-005,01,CDM,JBB-PRL,00006,Health & Safety CDM,1200.0,keyword
+seed-woodhouse-valuation.sql,wh-cw-006,01,"Health, safety & welfare",JBB-PRL,00004,Welfare,5000.0,keyword
+seed-woodhouse-valuation.sql,wh-cw-007,01,Clean on completion,JBB-PRL,00130,Cleaning internal,850.0,keyword
+seed-woodhouse-valuation.sql,wh-cw-008,01,Tree protection,JBB-PRL,00002,Site set up,550.0,keyword
+seed-woodhouse-valuation.sql,wh-cw-009,01,Contingency sum,JBB-RSK,00134,Misc,5000.0,keyword
+seed-woodhouse-valuation.sql,wh-cw-010,02,Isolate electrical installation in connection with demolitions & strip out as required,JBB-DEM,00018,Demolition,500.0,keyword
+seed-woodhouse-valuation.sql,wh-cw-011,02,Ditto plumbing & heating installation,JBB-DEM,00018,Demolition,650.0,keyword
+seed-woodhouse-valuation.sql,wh-cw-012,02,"Remove fireplace, gas fires & false chimneys",JBB-DEM,00018,Demolition,585.0,keyword
+seed-woodhouse-valuation.sql,wh-cw-013,02,Remove existing built in waredrobes,JBB-DEM,00018,Demolition,120.0,keyword
+seed-woodhouse-valuation.sql,wh-cw-014,02,"Remove flooring, tiles, skirtings, picture rail, cove, fittings etc.",JBB-DEM,00018,Demolition,550.0,keyword
+seed-woodhouse-valuation.sql,wh-cw-015,02,"Remove kitchen units, worktops & appliances",JBB-DEM,00018,Demolition,195.0,keyword
+seed-woodhouse-valuation.sql,wh-cw-016,02,Remove sanitary from WC & FF bathroom,JBB-DEM,00018,Demolition,240.0,keyword
+seed-woodhouse-valuation.sql,wh-cw-017,02,Remove internal doors,JBB-DEM,00018,Demolition,126.0,keyword
+seed-woodhouse-valuation.sql,wh-cw-018,02,Demolish internal walls to form new layout,JBB-DEM,00018,Demolition,576.0,keyword
+seed-woodhouse-valuation.sql,wh-cw-019,02,Remove plasterboard ceilings to areas required,JBB-DEM,00018,Demolition,800.0,keyword
+seed-woodhouse-valuation.sql,wh-cw-020,02,Break up existing floor ready for new insulation & screed,JBB-DEM,00018,Demolition,728.0,keyword
+seed-woodhouse-valuation.sql,wh-cw-021,02,Remove existing balustrade & handrail,JBB-DEM,00018,Demolition,80.0,keyword
+seed-woodhouse-valuation.sql,wh-cw-022,02,Remove loft access hatch,JBB-DEM,00041,Carpentry 1st fix,55.0,keyword
+seed-woodhouse-valuation.sql,wh-cw-023,02,Remove windows & external doors,JBB-DEM,00018,Demolition,550.0,keyword
+seed-woodhouse-valuation.sql,wh-cw-024,02,Erect temporary propping to existing construction,JBB-DEM,00019,Structural support,1500.0,keyword
+seed-woodhouse-valuation.sql,wh-cw-025,02,Demolish external walls to form new layout,JBB-DEM,00018,Demolition,1620.0,keyword
+seed-woodhouse-valuation.sql,wh-cw-026,02,Grub out redundant drainage runs,JBB-DEM,00024,Drainage internal,425.0,keyword
+seed-woodhouse-valuation.sql,wh-cw-027,02,Remove & relocate existing shed,JBB-DEM,00018,Demolition,350.0,keyword
+seed-woodhouse-valuation.sql,wh-cw-028,02,"Remove existing paving, retaining walls, etc to new areas",JBB-DEM,00022,Groundworks,1080.0,keyword
+seed-woodhouse-valuation.sql,wh-cw-029,03,Excavate to reduce levels & remove spoil,JBB-SUB,00021,Excavation,880.0,keyword
+seed-woodhouse-valuation.sql,wh-cw-030,03,Excavate foundations 500 x 1000 mm & remove spoil,JBB-SUB,00021,Excavation,1015.0,keyword
+seed-woodhouse-valuation.sql,wh-cw-031,03,Excavate for ground beam & remove spoil,JBB-SUB,00021,Excavation,580.0,keyword
+seed-woodhouse-valuation.sql,wh-cw-032,03,Excavate pad foundations & remove spoil,JBB-SUB,00021,Excavation,792.0,keyword
+seed-woodhouse-valuation.sql,wh-cw-033,04,Concrete in foundations & ground beam,JBB-SUB,00027,Concrete,1870.0,keyword
+seed-woodhouse-valuation.sql,wh-cw-034,04,150 mm hardcore blinded with sand,JBB-SUB,00027,Concrete,836.0,keyword
+seed-woodhouse-valuation.sql,wh-cw-035,04,150 mm bed of concrete,JBB-SUB,00027,Concrete,1936.0,keyword
+seed-woodhouse-valuation.sql,wh-cw-036,04,A393 mesh to slab,JBB-SUB,00027,Concrete,792.0,keyword
+seed-woodhouse-valuation.sql,wh-cw-037,04,Damp proof membranes 1200 g,JBB-SUB,00081,Damp proofing specialist,352.0,keyword
+seed-woodhouse-valuation.sql,wh-cw-038,05,Excavate & lay new underground drainage runs,JBB-DRN,00021,Excavation,5760.0,keyword
+seed-woodhouse-valuation.sql,wh-cw-039,05,"Provide drainage from new rainwater pipe, back inlet gulley & connection to existing drainage",JBB-DRN,00024,Drainage internal,240.0,keyword
+seed-woodhouse-valuation.sql,wh-cw-040,05,Make connection of new drainage to existing runs,JBB-DRN,00024,Drainage internal,250.0,keyword
+seed-woodhouse-valuation.sql,wh-cw-041,05,New inspection chambers,JBB-DRN,00024,Drainage internal,1290.0,keyword
+seed-woodhouse-valuation.sql,wh-cw-042,05,New soakaway,JBB-DRN,00023,Drainage Below ground,1550.0,keyword
+seed-woodhouse-valuation.sql,wh-cw-043,05,Aco slot drains,JBB-DRN,00024,Drainage internal,3100.0,keyword
+seed-woodhouse-valuation.sql,wh-cw-044,05,New covers to existing manholes,JBB-DRN,00024,Drainage internal,450.0,keyword
+seed-woodhouse-valuation.sql,wh-cw-045,05,Make good damaged areas,JBB-DRN,00024,Drainage internal,550.0,keyword
+seed-woodhouse-valuation.sql,wh-cw-046,06,Cavity walls below dpc in two skins of engineering brickwork & lean mix cavity fill,JBB-EXW,00081,Damp proofing specialist,2736.0,keyword
+seed-woodhouse-valuation.sql,wh-cw-047,06,Damp proof course,JBB-EXW,00081,Damp proofing specialist,272.0,keyword
+seed-woodhouse-valuation.sql,wh-cw-048,06,Cavity wall in two skins of 100 mm blockwork & 115 mm Kingspan insulation to cavity,JBB-EXW,00057,Insulation walls,1128.0,keyword
+seed-woodhouse-valuation.sql,wh-cw-049,06,Make good around existing & newley formed openings,JBB-EXW,00028,Masonry brickworks,350.0,keyword
+seed-woodhouse-valuation.sql,wh-cw-050,06,Wall extension profiles,JBB-EXW,00028,Masonry brickworks,320.0,keyword
+seed-woodhouse-valuation.sql,wh-cw-051,06,Thermabate cavity closers,JBB-EXW,00028,Masonry brickworks,308.0,keyword
+seed-woodhouse-valuation.sql,wh-cw-052,07,305 x 305 x 97 kg steel beam,JBB-FRM,00010,Structural steel,5460.0,keyword
+seed-woodhouse-valuation.sql,wh-cw-053,07,D49 mesh wrapped around ground beam,JBB-FRM,00010,Structural steel,550.0,keyword
+seed-woodhouse-valuation.sql,wh-cw-054,07,305 x 305 x 118 kg steel beam,JBB-FRM,00010,Structural steel,6440.0,keyword
+seed-woodhouse-valuation.sql,wh-cw-055,07,203 x 133 x 25 kg steel beam,JBB-FRM,00010,Structural steel,525.0,keyword
+seed-woodhouse-valuation.sql,wh-cw-056,07,254 x 146 x 45 kg steel beam,JBB-FRM,00010,Structural steel,7175.0,keyword
+seed-woodhouse-valuation.sql,wh-cw-057,07,152 x 152 x 23 kg steel beam,JBB-FRM,00010,Structural steel,3465.0,keyword
+seed-woodhouse-valuation.sql,wh-cw-058,07,152 x 152 x 37 kg steel beam,JBB-FRM,00010,Structural steel,6650.0,keyword
+seed-woodhouse-valuation.sql,wh-cw-059,07,254 x 254 x 73 kg steel columns,JBB-FRM,00010,Structural steel,3080.0,keyword
+seed-woodhouse-valuation.sql,wh-cw-060,07,114.3 CHS 6.3 steel columns,JBB-FRM,00010,Structural steel,1470.0,keyword
+seed-woodhouse-valuation.sql,wh-cw-061,07,Cut out & cast concrete padstones,JBB-FRM,00027,Concrete,475.0,keyword
+seed-woodhouse-valuation.sql,wh-cw-062,07,Base plate & hold down brackets,JBB-FRM,00010,Structural steel,220.0,keyword
+seed-woodhouse-valuation.sql,wh-cw-063,07,Fireline protection to steels,JBB-FRM,00008,General protection,750.0,keyword
+seed-woodhouse-valuation.sql,wh-cw-064,07,Raise existing steel beam in sitting room 2,JBB-FRM,00010,Structural steel,4000.0,keyword
+seed-woodhouse-valuation.sql,wh-cw-065,08,Timber wall plate bolted to wall,JBB-FRM,00041,Carpentry 1st fix,1008.0,keyword
+seed-woodhouse-valuation.sql,wh-cw-066,08,50 x 150 mm timber roof joists,JBB-FRM,00039,Carpentry cut Roofing,6840.0,keyword
+seed-woodhouse-valuation.sql,wh-cw-067,08,Plywood decking over firings to flat roof,JBB-FRM,00033,Roofing flat membrane,3224.0,keyword
+seed-woodhouse-valuation.sql,wh-cw-068,08,Render board to soffit,JBB-FRM,00035,Facia and soffit UPVC,2080.0,keyword
+seed-woodhouse-valuation.sql,wh-cw-069,08,50 x 150 mm timber ceiling joists to kitchen,JBB-FRM,00125,Kitchen supply,2640.0,keyword
+seed-woodhouse-valuation.sql,wh-cw-070,08,50 x 62 mm timber ceiling joists to bathroom,JBB-FRM,00041,Carpentry 1st fix,728.0,keyword
+seed-woodhouse-valuation.sql,wh-cw-071,08,Joist hangers,JBB-FRM,00041,Carpentry 1st fix,994.0,keyword
+seed-woodhouse-valuation.sql,wh-cw-072,08,Galvanised restraint straps,JBB-FRM,00041,Carpentry 1st fix,684.0,keyword
+seed-woodhouse-valuation.sql,wh-cw-073,08,6 mm plywood to bedroom 5 floor,JBB-FRM,00041,Carpentry 1st fix,504.0,keyword
+seed-woodhouse-valuation.sql,wh-cw-074,08,50 x 100 mm timber internal stud walls,JBB-FRM,00041,Carpentry 1st fix,1960.0,keyword
+seed-woodhouse-valuation.sql,wh-cw-075,08,Extra for forming pocket door reveals,JBB-FRM,00044,Internal Doors & linings,250.0,keyword
+seed-woodhouse-valuation.sql,wh-cw-076,08,25 x 50 mm timber battens fixed to external walls,JBB-FRM,00041,Carpentry 1st fix,4416.0,keyword
+seed-woodhouse-valuation.sql,wh-cw-077,08,18 mm OSB board to battens,JBB-FRM,00041,Carpentry 1st fix,3128.0,keyword
+seed-woodhouse-valuation.sql,wh-cw-078,09,100 mm Kingspan floor insulation,JBB-SUB,00059,Insulation floors,2024.0,keyword
+seed-woodhouse-valuation.sql,wh-cw-079,09,Vapour control layer,JBB-SUB,00041,Carpentry 1st fix,552.0,keyword
+seed-woodhouse-valuation.sql,wh-cw-080,09,70 mm sand / cement screed,JBB-SUB,00059,Insulation floors,2760.0,keyword
+seed-woodhouse-valuation.sql,wh-cw-081,10,EPDM flat roof covering,JBB-RFS,00033,Roofing flat membrane,9610.0,keyword
+seed-woodhouse-valuation.sql,wh-cw-082,10,Ditto to upstands,JBB-RFS,00030,Roofer,750.0,keyword
+seed-woodhouse-valuation.sql,wh-cw-083,10,Lead flashing / valley lining,JBB-RFS,00034,Roofing lead works,770.0,keyword
+seed-woodhouse-valuation.sql,wh-cw-084,10,Aluminium deep guttering,JBB-DRN,00036,Gutters and rainwater UPVC,3432.0,keyword
+seed-woodhouse-valuation.sql,wh-cw-085,10,Ditto rainwater pipework,JBB-DRN,00030,Roofer,1280.0,keyword
+seed-woodhouse-valuation.sql,wh-cw-086,10,Snow Guard,JBB-RFS,00030,Roofer,1250.0,keyword
+seed-woodhouse-valuation.sql,wh-cw-087,11,Supply & fit as per Fluid Glass Quote,JBB-WED,00054,Specialist glazing,81913.95,keyword
+seed-woodhouse-valuation.sql,wh-cw-088,11,Main contractors OH&P,JBB-WED,00054,Specialist glazing,8191.0,keyword
+seed-woodhouse-valuation.sql,wh-cw-089,11,Trickle vents to windows,JBB-WED,00054,Specialist glazing,250.0,keyword
+seed-woodhouse-valuation.sql,wh-cw-090,11,New porch entrance door,JBB-WED,00054,Specialist glazing,2500.0,keyword
+seed-woodhouse-valuation.sql,wh-cw-091,12,Relocate existing boiler into new location,JBB-HTG,00090,Boilers,500.0,keyword
+seed-woodhouse-valuation.sql,wh-cw-092,12,Megaflow hot water cylinder,JBB-HTG,00074,Plumber,2980.0,keyword
+seed-woodhouse-valuation.sql,wh-cw-093,12,Wet underfloor heating to kitchen / dinner,JBB-HTG,00125,Kitchen supply,7130.0,keyword
+seed-woodhouse-valuation.sql,wh-cw-094,12,Manifold,JBB-HTG,00093,Under-floor heating,380.0,keyword
+seed-woodhouse-valuation.sql,wh-cw-095,12,Radiators with TRVs (£225 rad / £25 TRV supply),JBB-HTG,00074,Plumber,5915.0,keyword
+seed-woodhouse-valuation.sql,wh-cw-096,12,Soil vent pipework,JBB-PLB,00024,Drainage internal,550.0,keyword
+seed-woodhouse-valuation.sql,wh-cw-097,12,Hot & cold supplies to kitchen & sanitary fittings,JBB-PLB,00125,Kitchen supply,3026.0,keyword
+seed-woodhouse-valuation.sql,wh-cw-098,12,Wastes to ditto,JBB-PLB,00024,Drainage internal,792.0,keyword
+seed-woodhouse-valuation.sql,wh-cw-099,12,External tap,JBB-PLB,00074,Plumber,155.0,keyword
+seed-woodhouse-valuation.sql,wh-cw-100,12,Fix only - Sanitry items to GF WC,JBB-PLB,00122,Sanitary supply,720.0,keyword
+seed-woodhouse-valuation.sql,wh-cw-101,12,Builders work in connection with plumbing & heating installation,JBB-PLB,00074,Plumber,500.0,keyword
+seed-woodhouse-valuation.sql,wh-cw-102,12,Bora Extract Ducting within Island,JBB-PLB,00111,Ventilation and extract,850.0,keyword
+seed-woodhouse-valuation.sql,wh-cw-103,12,LPG Ducting and Pipework,JBB-PLB,00074,Plumber,1200.0,keyword
+seed-woodhouse-valuation.sql,wh-cw-104,12,New mains water supply with stop cock - Provisional sum,JBB-PLB,00074,Plumber,0.0,keyword
+seed-woodhouse-valuation.sql,wh-cw-105,13,New consumer unit,JBB-ELE,00072,Electrician,950.0,keyword
+seed-woodhouse-valuation.sql,wh-cw-106,13,Double socket outlet,JBB-ELE,00072,Electrician,3600.0,keyword
+seed-woodhouse-valuation.sql,wh-cw-107,13,External double sockets,JBB-ELE,00072,Electrician,396.0,keyword
+seed-woodhouse-valuation.sql,wh-cw-108,13,Fused spurs,JBB-ELE,00072,Electrician,550.0,keyword
+seed-woodhouse-valuation.sql,wh-cw-109,13,TV / data,JBB-ELE,00072,Electrician,850.0,keyword
+seed-woodhouse-valuation.sql,wh-cw-110,13,Smoke/heat detector,JBB-ELE,00072,Electrician,580.0,keyword
+seed-woodhouse-valuation.sql,wh-cw-111,13,"Electric underfloor heating to utility, hall & WC",JBB-ELE,00093,Under-floor heating,2790.0,keyword
+seed-woodhouse-valuation.sql,wh-cw-112,13,Carbon monoixide detector,JBB-ELE,00072,Electrician,160.0,keyword
+seed-woodhouse-valuation.sql,wh-cw-113,13,Ducting & cabling to fron gate for future use,JBB-ELE,00115,Fencing,3000.0,keyword
+seed-woodhouse-valuation.sql,wh-cw-114,13,Builders work in connection with electrical installation,JBB-ELE,00072,Electrician,500.0,keyword
+seed-woodhouse-valuation.sql,wh-cw-115,13,"Phos recessed downlights - L1,2,3,4,5 & 7",JBB-ELE,00072,Electrician,26800.0,keyword
+seed-woodhouse-valuation.sql,wh-cw-116,13,Honeycomb louvre - HC,JBB-ELE,00072,Electrician,900.0,keyword
+seed-woodhouse-valuation.sql,wh-cw-117,13,Astro adjustable downlight 1240028 - L6,JBB-ELE,00072,Electrician,920.0,keyword
+seed-woodhouse-valuation.sql,wh-cw-118,13,Fix only - Client supplied light fittings,JBB-ELE,00072,Electrician,1050.0,keyword
+seed-woodhouse-valuation.sql,wh-cw-119,13,Danlers recessed PIR,JBB-ELE,00072,Electrician,294.0,keyword
+seed-woodhouse-valuation.sql,wh-cw-120,13,"LED shelf light tape, including drivers",JBB-ELE,00072,Electrician,700.0,keyword
+seed-woodhouse-valuation.sql,wh-cw-121,13,"Phos LED skylight, including drivers",JBB-ELE,00054,Specialist glazing,4625.0,keyword
+seed-woodhouse-valuation.sql,wh-cw-122,13,Lutron RA Keypad - plates / system,JBB-ELE,00072,Electrician,5000.0,keyword
+seed-woodhouse-valuation.sql,wh-cw-123,13,Light grafix surface mounted spotlight,JBB-ELE,00072,Electrician,290.0,keyword
+seed-woodhouse-valuation.sql,wh-cw-124,13,Light graphix  wall light,JBB-ELE,00072,Electrician,2016.0,keyword
+seed-woodhouse-valuation.sql,wh-cw-125,13,Wall mounted PIRs,JBB-ELE,00072,Electrician,360.0,keyword
+seed-woodhouse-valuation.sql,wh-cw-126,13,Phos recessed step light,JBB-ELE,00072,Electrician,2205.0,keyword
+seed-woodhouse-valuation.sql,wh-cw-127,13,Wiska junction box,JBB-ELE,00072,Electrician,500.0,keyword
+seed-woodhouse-valuation.sql,wh-cw-128,13,External recessed ceilinglights,JBB-ELE,00072,Electrician,135.0,keyword
+seed-woodhouse-valuation.sql,wh-cw-129,13,Steinal wall light,JBB-ELE,00072,Electrician,180.0,keyword
+seed-woodhouse-valuation.sql,wh-cw-130,13,Light graphix gate signage,JBB-ELE,00115,Fencing,250.0,keyword
+seed-woodhouse-valuation.sql,wh-cw-131,13,Internal joinery light,JBB-ELE,00045,Joinery,300.0,keyword
+seed-woodhouse-valuation.sql,wh-cw-132,13,Reading light,JBB-ELE,00072,Electrician,244.0,keyword
+seed-woodhouse-valuation.sql,wh-cw-133,13,SB focus 1 x switch,JBB-ELE,00072,Electrician,240.0,keyword
+seed-woodhouse-valuation.sql,wh-cw-134,13,SB focus 1 x intermediate switch,JBB-ELE,00072,Electrician,340.0,keyword
+seed-woodhouse-valuation.sql,wh-cw-135,13,SB focus 1 x 2 way switch,JBB-ELE,00072,Electrician,450.0,keyword
+seed-woodhouse-valuation.sql,wh-cw-136,13,SB focus 2 x 2 way switch,JBB-ELE,00072,Electrician,570.0,keyword
+seed-woodhouse-valuation.sql,wh-cw-137,13,SB focus 3 x dimmer,JBB-ELE,00072,Electrician,400.0,keyword
+seed-woodhouse-valuation.sql,wh-cw-138,13,SB focus 4 x dimmer,JBB-ELE,00072,Electrician,110.0,keyword
+seed-woodhouse-valuation.sql,wh-cw-139,13,5amp socket MK white,JBB-ELE,00072,Electrician,1800.0,keyword
+seed-woodhouse-valuation.sql,wh-cw-140,13,MK white 1 x switch,JBB-ELE,00072,Electrician,110.0,keyword
+seed-woodhouse-valuation.sql,wh-cw-141,13,5 amp floor socket,JBB-ELE,00072,Electrician,180.0,keyword
+seed-woodhouse-valuation.sql,wh-cw-142,13,Extractor fan,JBB-ELE,00111,Ventilation and extract,885.0,keyword
+seed-woodhouse-valuation.sql,wh-cw-143,14,200 mm Kingspan insulation to new extension roof,JBB-IWP,00062,Plastering,1080.0,keyword
+seed-woodhouse-valuation.sql,wh-cw-144,14,12.5mm plasterboard to ceilings,JBB-IWP,00060,Plaster Boarding,1040.0,keyword
+seed-woodhouse-valuation.sql,wh-cw-145,14,3 mm skim to ceilings,JBB-WLF,00062,Plastering,1296.0,keyword
+seed-woodhouse-valuation.sql,wh-cw-146,14,Make good existing ceilings as required,JBB-WLF,00062,Plastering,1500.0,keyword
+seed-woodhouse-valuation.sql,wh-cw-147,14,72.5 mm Kingspan plasterboard to walls,JBB-IWP,00060,Plaster Boarding,6256.0,keyword
+seed-woodhouse-valuation.sql,wh-cw-148,14,50 mm rockwool insulation between stud walls,JBB-IWP,00041,Carpentry 1st fix,392.0,keyword
+seed-woodhouse-valuation.sql,wh-cw-149,14,12.5 mm plasterboard to blockwork & studs,JBB-IWP,00060,Plaster Boarding,1332.0,keyword
+seed-woodhouse-valuation.sql,wh-cw-150,14,3 mm skim to walls,JBB-WLF,00062,Plastering,2988.0,keyword
+seed-woodhouse-valuation.sql,wh-cw-151,14,Make good existing walls as required,JBB-WLF,00062,Plastering,500.0,keyword
+seed-woodhouse-valuation.sql,wh-cw-152,15,K - render to external walls,JBB-EXW,00063,Rendering,3100.0,keyword
+seed-woodhouse-valuation.sql,wh-cw-153,15,Render to soffit,JBB-EXW,00035,Facia and soffit UPVC,4576.0,keyword
+seed-woodhouse-valuation.sql,wh-cw-154,16,New glazed balustrade to stairs,JBB-STR,00013,Metal Railings and balustrade,2500.0,keyword
+seed-woodhouse-valuation.sql,wh-cw-155,17,Internal door lining & panel door,JBB-IND,00044,Internal Doors & linings,3555.0,keyword
+seed-woodhouse-valuation.sql,wh-cw-156,17,Internal door lining & glazed door,JBB-IND,00044,Internal Doors & linings,2200.0,keyword
+seed-woodhouse-valuation.sql,wh-cw-157,17,Internal door lining & double door,JBB-IND,00044,Internal Doors & linings,850.0,keyword
+seed-woodhouse-valuation.sql,wh-cw-158,17,Sliding pocket door system,JBB-IND,00044,Internal Doors & linings,996.0,keyword
+seed-woodhouse-valuation.sql,wh-cw-159,17,Supply of ironmongery,JBB-IND,00128,Ironmongery supply,2550.0,keyword
+seed-woodhouse-valuation.sql,wh-cw-160,17,Fix only ironmonery,JBB-IND,00042,Carpentry 2nd fix,1360.0,keyword
+seed-woodhouse-valuation.sql,wh-cw-161,17,MDF architraves to new door frames,JBB-FFE,00042,Carpentry 2nd fix,2170.0,keyword
+seed-woodhouse-valuation.sql,wh-cw-162,17,MDF skirting to walls to new walls (£8/m supply),JBB-FFE,00042,Carpentry 2nd fix,2184.0,keyword
+seed-woodhouse-valuation.sql,wh-cw-163,17,MDF window boards,JBB-FFE,00042,Carpentry 2nd fix,288.0,keyword
+seed-woodhouse-valuation.sql,wh-cw-164,17,Plywood boxing to internal pipework,JBB-FFE,00041,Carpentry 1st fix,500.0,keyword
+seed-woodhouse-valuation.sql,wh-cw-165,17,Loft access hatch with drop down ladder,JBB-FFE,00041,Carpentry 1st fix,775.0,keyword
+seed-woodhouse-valuation.sql,wh-cw-166,17,Kitchen & utility installation coordination,JBB-FFE,00125,Kitchen supply,500.0,keyword
+seed-woodhouse-valuation.sql,wh-cw-167,18,Floor tiling supply (£60/m),JBB-FLF,00124,Tiling supply,3900.0,keyword
+seed-woodhouse-valuation.sql,wh-cw-168,18,Wall tiling to splash backs (£60/m supply),JBB-WLF,00124,Tiling supply,240.0,keyword
+seed-woodhouse-valuation.sql,wh-cw-169,18,Fix only - Wall tiles,JBB-WLF,00076,Tiling,320.0,keyword
+seed-woodhouse-valuation.sql,wh-cw-170,18,Ditra matting,JBB-FLF,00076,Tiling,2210.0,keyword
+seed-woodhouse-valuation.sql,wh-cw-171,18,Fix only - Floor tiles,JBB-FLF,00076,Tiling,5200.0,keyword
+seed-woodhouse-valuation.sql,wh-cw-172,19,Mist & 2 coats of Dulux emulsion to ceilings,JBB-WLF,00082,Decorating,4352.0,keyword
+seed-woodhouse-valuation.sql,wh-cw-173,19,Ditto walls,JBB-WLF,00082,Decorating,6972.0,keyword
+seed-woodhouse-valuation.sql,wh-cw-174,19,Prepare & decorate doors,JBB-WLF,00050,Timber windows and doors,1080.0,keyword
+seed-woodhouse-valuation.sql,wh-cw-175,19,"Frames, architrave, window board & skirtings",JBB-WLF,00042,Carpentry 2nd fix,2496.0,keyword
+seed-woodhouse-valuation.sql,wh-cw-176,19,External decoration as required,JBB-WLF,00082,Decorating,1500.0,keyword
+seed-woodhouse-valuation.sql,wh-cw-177,20,Excavate to reduce levels & remove spoil,JBB-EXT,00021,Excavation,1980.0,keyword
+seed-woodhouse-valuation.sql,wh-cw-178,20,Excavate foundations (various sizes) & remove spoil,JBB-EXT,00021,Excavation,4640.0,keyword
+seed-woodhouse-valuation.sql,wh-cw-179,20,Concrete in foundations,JBB-EXT,00027,Concrete,4080.0,keyword
+seed-woodhouse-valuation.sql,wh-cw-180,20,Paving slabs patio (£60/m supply),JBB-RPP,00113,Paving and roads,6480.0,keyword
+seed-woodhouse-valuation.sql,wh-cw-181,20,Fix only - Paving slabs,JBB-RPP,00113,Paving and roads,12420.0,keyword
+seed-woodhouse-valuation.sql,wh-cw-182,20,Hollow block wall with concrete & reinforcement,JBB-EXT,00027,Concrete,8640.0,keyword
+seed-woodhouse-valuation.sql,wh-cw-183,20,Stone cladding to retaining wall (top half only),JBB-EXT,00022,Groundworks,5544.0,keyword
+seed-woodhouse-valuation.sql,wh-cw-184,20,Stone round edge cill to retaining wall,JBB-EXT,00029,Masonry stonework,8160.0,keyword
+seed-woodhouse-valuation.sql,wh-cw-185,20,Form & cast concrete steps,JBB-EXT,00027,Concrete,6245.0,keyword
+seed-woodhouse-valuation.sql,wh-cw-186,20,Widen entrance & grade land for access,JBB-EXT,00022,Groundworks,1500.0,keyword
+seed-woodhouse-valuation.sql,wh-cw-187,20,Make good on completion,JBB-EXT,00117,Landscaping,500.0,section+bucket

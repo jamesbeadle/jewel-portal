@@ -272,8 +272,10 @@ else
         return amount == 0m ? 0m : Math.Round(ClaimedTotalFor(section) / amount * 100m, 2);
     }
 
-    // Non-variation lines show the Jewel cost-centre code (JBB-*); fall back to the
-    // NRM2 section ref only if a line has no cost code mapped.
+    // Non-variation lines show the Jewel master cost code (00001..00137, per the
+    // seeded CostCenters master); fall back to the NRM2 section ref only if a line
+    // has no cost code mapped. Variation lines prefer their VariationRef but now
+    // also carry a cost code for purchase-invoice reconciliation.
     private static string CodeFor(ValuationLineItem line) =>
         line.ElementType == ValuationElementType.Variation
             ? (string.IsNullOrWhiteSpace(line.VariationRef) ? line.CostCode : line.VariationRef)
