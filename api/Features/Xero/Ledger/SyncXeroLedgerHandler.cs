@@ -50,6 +50,7 @@ public sealed class SyncXeroLedgerHandler : ICommandHandler<SyncXeroLedger, Xero
 
         var now = DateTimeOffset.UtcNow;
         int added = 0, updated = 0, removed = 0;
+        var seenLineIds = new HashSet<string>();
 
         foreach (var transaction in snapshot.Transactions)
         {
@@ -65,20 +66,14 @@ public sealed class SyncXeroLedgerHandler : ICommandHandler<SyncXeroLedger, Xero
 
                 if (excluded)
                 {
-                    // Never add drafts/voided to the queue. Previously stored lines that are
-                    // still unallocated are cleaned out (a draft re-enters when approved);
-                    // allocated/ignored ones are kept and refreshed so the reverted status
-                    // is visible rather than silently losing the allocation.
-                    if (existingById.TryGetValue(id, out var stale)
-                        && stale.AllocationStatus == (int)XeroAllocationStatus.Unallocated)
-                    {
-                        context.XeroLedgerLines.Remove(stale);
-                        existingById.Remove(id);
-                        removed++;
-                        continue;
-                    }
-                    if (!existingById.ContainsKey(id)) continue;
+                    // Never add drafts/voided/deleted to the queue. (Stored lines for these
+                    // invoices are cleaned up in the invoice-level pass below — deleted
+                    // invoices usually come back with NO line items at all, so a per-line
+                    // check here would miss them.)
+                    continue;
                 }
+
+                seenLineIds.Add(id);
 
                 if (existingById.TryGetValue(id, out var entity))
                 {
@@ -116,6 +111,37 @@ public sealed class SyncXeroLedgerHandler : ICommandHandler<SyncXeroLedger, Xero
                 entity.AccountName = Truncate(line.AccountName, 256);
                 entity.XeroSite = Truncate(line.Site, 128);
                 entity.XeroCostCode = Truncate(line.CostCode, 128);
+                entity.LastSyncedAtUtc = now;
+            }
+        }
+
+        // Invoice-level cleanup pass. Deleted invoices come back from Xero with no
+        // line items (so the loop above never sees them), and lines can be edited
+        // off a bill entirely. For any invoice present in the snapshot:
+        //   * unallocated stored lines of draft/voided/deleted invoices -> removed
+        //   * unallocated stored lines that no longer exist on the bill -> removed
+        //   * allocated/ignored lines are always kept; their InvoiceStatus is
+        //     refreshed so a post-allocation void/delete is visible, never silent.
+        var statusByInvoiceId = snapshot.Transactions
+            .GroupBy(transaction => transaction.TransactionId)
+            .ToDictionary(group => group.Key, group => group.First().Status);
+
+        foreach (var entity in existingById.Values.ToList())
+        {
+            if (!statusByInvoiceId.TryGetValue(entity.XeroInvoiceId, out var invoiceStatus)) continue;
+
+            var excluded = ExcludedStatuses.Contains(invoiceStatus);
+            if (entity.AllocationStatus == (int)XeroAllocationStatus.Unallocated)
+            {
+                if (excluded || !seenLineIds.Contains(entity.XeroLedgerLineId))
+                {
+                    context.XeroLedgerLines.Remove(entity);
+                    removed++;
+                }
+            }
+            else if (excluded)
+            {
+                entity.InvoiceStatus = invoiceStatus;
                 entity.LastSyncedAtUtc = now;
             }
         }
