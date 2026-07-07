@@ -1,4 +1,5 @@
 @using Jewel.JPMS.Models
+@using Jewel.JPMS.Contracts.Commercial
 
 <div class="rounded-xl border border-line bg-surface overflow-x-auto">
     <table class="w-full text-sm border-collapse">
@@ -13,14 +14,27 @@
             </tr>
         </thead>
         <tbody class="divide-y divide-line">
-            @foreach (var centre in CostCenters.OrderBy(c => c.Name, StringComparer.OrdinalIgnoreCase))
+            @foreach (var centre in Ordered)
             {
                 <tr>
                     <td class="sticky left-0 z-10 bg-surface px-4 py-3 font-mono text-[11px] text-content-subtle whitespace-nowrap">@centre.Code</td>
                     <td class="sticky left-[88px] z-10 bg-surface px-4 py-3 text-content font-medium whitespace-nowrap">@centre.Name</td>
                     @foreach (var col in Columns)
                     {
-                        <td class="px-4 py-3 text-right text-content-muted">@col.Zero</td>
+                        <td class="px-4 py-3 text-right @CellClass(col, centre.Code)">@CellText(col, centre.Code)</td>
+                    }
+                </tr>
+            }
+            @foreach (var code in UnmatchedCodes)
+            {
+                @* Values sitting on codes that are not in the active master (legacy /
+                   retired) — shown rather than silently swallowed. *@
+                <tr>
+                    <td class="sticky left-0 z-10 bg-surface px-4 py-3 font-mono text-[11px] text-content-subtle whitespace-nowrap">@code</td>
+                    <td class="sticky left-[88px] z-10 bg-surface px-4 py-3 text-content-subtle italic whitespace-nowrap">(not in cost-code master)</td>
+                    @foreach (var col in Columns)
+                    {
+                        <td class="px-4 py-3 text-right @CellClass(col, code)">@CellText(col, code)</td>
                     }
                 </tr>
             }
@@ -31,7 +45,7 @@
                 <td class="sticky left-[88px] z-10 bg-surface-raised px-4 py-3 whitespace-nowrap">Total</td>
                 @foreach (var col in Columns)
                 {
-                    <td class="px-4 py-3 text-right">@col.Zero</td>
+                    <td class="px-4 py-3 text-right">@TotalText(col)</td>
                 }
             </tr>
         </tfoot>
@@ -40,21 +54,18 @@
 
 @code {
     [Parameter, EditorRequired] public IReadOnlyList<CostCenter> CostCenters { get; set; } = Array.Empty<CostCenter>();
+    [Parameter] public IReadOnlyList<ProjectFinancialSummaryRow> SummaryRows { get; set; } = Array.Empty<ProjectFinancialSummaryRow>();
 
     private enum Format { Money, Percent }
 
-    private sealed record Column(string Label, Format Format)
-    {
-        // Placeholder until the costing engine is wired in — every cell shows zero.
-        public string Zero => Format == Format.Percent
-            ? "0%"
-            : 0m.ToString("C0", System.Globalization.CultureInfo.GetCultureInfo("en-GB"));
-    }
+    private sealed record Column(string Label, Format Format);
 
     // Budget allocation model (FD-agreed):
-    //   Assigned Budget    = sum of purchase orders raised to suppliers (committed cost)
-    //   Unallocated Budget = Budgeted Cost - Assigned Budget (still available to assign)
-    //   Under/Over Budget  = measured against PO commitments, since no invoice arrives without a PO
+    //   Budgeted Cost      = the valuation report's counting lines per cost centre (LIVE)
+    //   Actual Cost        = Xero purchase lines allocated to this project (LIVE)
+    //   Assigned Budget    = sum of purchase orders raised to suppliers (committed cost — later)
+    //   Unallocated Budget = Budgeted Cost - Assigned Budget (later)
+    //   Under/Over Budget  = measured against PO commitments (later)
     private static readonly Column[] Columns =
     {
         new("Budgeted Cost",         Format.Money),
@@ -70,4 +81,49 @@
         new("Under/Over Billed",     Format.Money),
         new("Gross Profit",          Format.Money)
     };
+
+    private Dictionary<string, ProjectFinancialSummaryRow> byCode = new(StringComparer.OrdinalIgnoreCase);
+
+    protected override void OnParametersSet() =>
+        byCode = SummaryRows.ToDictionary(row => row.CostCode, StringComparer.OrdinalIgnoreCase);
+
+    private IEnumerable<CostCenter> Ordered =>
+        CostCenters.OrderBy(c => c.Name, StringComparer.OrdinalIgnoreCase);
+
+    private IEnumerable<string> UnmatchedCodes =>
+        SummaryRows.Select(row => row.CostCode)
+            .Where(code => !CostCenters.Any(centre => string.Equals(centre.Code, code, StringComparison.OrdinalIgnoreCase)))
+            .OrderBy(code => code, StringComparer.OrdinalIgnoreCase);
+
+    private decimal ValueFor(Column col, string code)
+    {
+        if (!byCode.TryGetValue(code, out var row)) return 0m;
+        return col.Label switch
+        {
+            "Budgeted Cost" => row.BudgetedCost,
+            "Actual Cost" => row.ActualCost,
+            _ => 0m
+        };
+    }
+
+    private string CellText(Column col, string code) =>
+        col.Format == Format.Percent ? "0%" : Money(ValueFor(col, code));
+
+    private string CellClass(Column col, string code) =>
+        ValueFor(col, code) == 0m ? "text-content-muted" : "text-content";
+
+    private string TotalText(Column col)
+    {
+        if (col.Format == Format.Percent) return "0%";
+        var total = col.Label switch
+        {
+            "Budgeted Cost" => SummaryRows.Sum(row => row.BudgetedCost),
+            "Actual Cost" => SummaryRows.Sum(row => row.ActualCost),
+            _ => 0m
+        };
+        return Money(total);
+    }
+
+    private static string Money(decimal value) =>
+        value.ToString("C0", System.Globalization.CultureInfo.GetCultureInfo("en-GB"));
 }

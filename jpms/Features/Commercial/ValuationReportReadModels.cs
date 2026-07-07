@@ -60,3 +60,27 @@ public sealed class ClaimLinesReadModel
         OnChanged?.Invoke();
     }
 }
+
+/// <summary>
+/// Per-project financial summary (budget from the valuation report, actuals from
+/// allocated Xero lines). Fetch-once per project; ProjectFinancials.razor calls
+/// RefreshAsync(projectId) from OnInitializedAsync (stale-while-revalidate).
+/// </summary>
+public sealed class ProjectFinancialSummaryReadModel
+{
+    private readonly IQueryClient queries;
+    private readonly Dictionary<string, IReadOnlyList<ProjectFinancialSummaryRow>> rowsByProject = new();
+
+    public ProjectFinancialSummaryReadModel(IQueryClient queries) { this.queries = queries; }
+
+    public event Action? OnChanged;
+
+    public IReadOnlyList<ProjectFinancialSummaryRow> Current(string projectId) =>
+        rowsByProject.TryGetValue(projectId, out var list) ? list : Array.Empty<ProjectFinancialSummaryRow>();
+
+    public async Task RefreshAsync(string projectId, CancellationToken cancellationToken)
+    {
+        rowsByProject[projectId] = await queries.AskAsync(new GetProjectFinancialSummary(projectId), cancellationToken);
+        OnChanged?.Invoke();
+    }
+}

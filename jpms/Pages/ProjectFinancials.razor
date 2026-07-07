@@ -1,8 +1,10 @@
 @page "/projects/{ProjectId}/financials"
 @using Jewel.JPMS.Features.CostCenters
+@using Jewel.JPMS.Features.Commercial
 @inject AuthService Auth
 @inject SessionService Session
 @inject CostCentersReadModel CostCenters
+@inject ProjectFinancialSummaryReadModel Summary
 @inject NavigationManager Nav
 @implements IDisposable
 
@@ -29,7 +31,12 @@ else
         }
         else
         {
-            <FinancialsTable CostCenters="CostCenters.Current" />
+            <FinancialsTable CostCenters="CostCenters.Current" SummaryRows="Summary.Current(ProjectId)" />
+            <p class="text-xs text-content-subtle mt-3">
+                Budgeted cost is the valuation report's contract value per cost centre (declined/TBC lines
+                excluded). Actual cost is Xero purchase spend allocated to this project on the Allocation
+                page, net of credit notes.
+            </p>
         }
     </ProjectPageShell>
 }
@@ -44,9 +51,17 @@ else
         await Session.EnsureLoadedAsync();
         if (!Auth.IsSignedIn) { Nav.NavigateTo("/login", forceLoad: true); return; }
         CostCenters.OnChanged += StateHasChanged;
+        Summary.OnChanged += StateHasChanged;
+        // Refresh once per tab entry (stale-while-revalidate, per the front-end
+        // data-loading convention) — cached figures render immediately, then update.
+        _ = Summary.RefreshAsync(ProjectId, CancellationToken.None);
         await CostCenters.RefreshAsync(CancellationToken.None);
         isLoaded = true;
     }
 
-    public void Dispose() => CostCenters.OnChanged -= StateHasChanged;
+    public void Dispose()
+    {
+        CostCenters.OnChanged -= StateHasChanged;
+        Summary.OnChanged -= StateHasChanged;
+    }
 }

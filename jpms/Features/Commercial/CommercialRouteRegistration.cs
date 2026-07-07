@@ -14,6 +14,7 @@ public static class CommercialRouteRegistration
         services.AddScoped<CostCodeBudgetsReadModel>();
         services.AddScoped<TimesheetsReadModel>();
         services.AddScoped<ValuationLinesReadModel>();
+        services.AddScoped<ProjectFinancialSummaryReadModel>();
         services.AddScoped<ValuationClaimsReadModel>();
         services.AddScoped<ClaimLinesReadModel>();
         return services;
@@ -67,6 +68,10 @@ public static class CommercialRouteRegistration
         queries.Register<ListValuationLinesForProject, IReadOnlyList<ValuationLineItem>>(
             new QueryRoute("/api/projects/{projectId}/valuation-lines",
                 query => $"/api/projects/{((ListValuationLinesForProject)query).ProjectId}/valuation-lines"));
+
+        queries.Register<GetProjectFinancialSummary, IReadOnlyList<ProjectFinancialSummaryRow>>(
+            new QueryRoute("/api/projects/{projectId}/financial-summary",
+                query => $"/api/projects/{((GetProjectFinancialSummary)query).ProjectId}/financial-summary"));
 
         queries.Register<ListValuationClaimsForProject, IReadOnlyList<ValuationClaim>>(
             new QueryRoute("/api/projects/{projectId}/valuation-claims",
