@@ -17,25 +17,29 @@ public sealed record ListXeroTransactions(bool Force = false) : IQuery<XeroTrans
 /// carries a human-readable failure when Xero itself rejected or failed the call.
 /// <see cref="FromDate"/> is the start of the requested window and <see cref="FetchedAtUtc"/> is
 /// when Xero was actually read (older than 'now' when the API served its cache).
+/// <see cref="Truncated"/> is true when the fetch hit its page cap before exhausting Xero's data —
+/// totals are then incomplete and the cap (Xero__MaxPages) needs raising.
 /// </summary>
 public sealed record XeroTransactionsSnapshot(
     bool IsConfigured,
     string? Error,
     DateTime? FromDate,
     DateTimeOffset? FetchedAtUtc,
+    bool Truncated,
     IReadOnlyList<XeroTransaction> Transactions)
 {
     public static XeroTransactionsSnapshot NotConfigured() =>
-        new(false, null, null, null, Array.Empty<XeroTransaction>());
+        new(false, null, null, null, false, Array.Empty<XeroTransaction>());
 
     public static XeroTransactionsSnapshot Failed(string error) =>
-        new(true, error, null, null, Array.Empty<XeroTransaction>());
+        new(true, error, null, null, false, Array.Empty<XeroTransaction>());
 }
 
 /// <summary>
 /// One transaction as Xero holds it. Amounts are in the invoice currency (<see cref="CurrencyCode"/>,
-/// normally GBP). <see cref="Type"/> is Xero's own code: ACCPAY = purchase invoice (supplier bill),
-/// ACCREC = sales invoice.
+/// normally GBP) and are stored positive even for credit notes — consumers apply the sign from
+/// <see cref="Type"/>: ACCPAY = purchase invoice (supplier bill), ACCPAYCREDIT = supplier credit
+/// note (reduces spend), ACCREC = sales invoice.
 /// </summary>
 public sealed record XeroTransaction(
     string TransactionId,

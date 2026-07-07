@@ -58,13 +58,24 @@ else
         }
         else
         {
+            @if (Snapshot.Truncated)
+            {
+                <div class="rounded-xl border border-line bg-surface-raised px-5 py-4 text-sm text-content-muted mb-6">
+                    <p class="text-content font-medium mb-1">Fetch cap reached — totals are incomplete</p>
+                    <p>
+                        Xero holds more records since @FromDateText than the API's page cap allows.
+                        Raise the <span class="font-mono text-content">Xero__MaxPages</span> app setting and refresh.
+                    </p>
+                </div>
+            }
+
             <div class="mb-6 flex items-center justify-between gap-4 flex-wrap">
                 <div class="inline-flex rounded-lg border border-line overflow-hidden">
                     <button class="@TabClass(View.Transactions)" @onclick="() => activeView = View.Transactions">Transactions</button>
                     <button class="@TabClass(View.BySite)" @onclick="() => activeView = View.BySite">Site × cost code</button>
                 </div>
                 <p class="text-xs text-content-subtle">
-                    @Snapshot.Transactions.Count purchase invoices ·
+                    @BillCount bills · @CreditNoteCount credit notes ·
                     fetched @FetchedText
                 </p>
             </div>
@@ -72,7 +83,8 @@ else
             @if (activeView == View.Transactions)
             {
                 <p class="text-sm text-content-muted mb-4">
-                    @Filtered.Count shown · @Money(Filtered.Sum(t => t.Total)) total · @Money(Filtered.Sum(t => t.AmountDue)) outstanding.
+                    @Filtered.Count shown · @Money(Filtered.Sum(t => Sign(t) * t.Total)) total (net of credit notes) ·
+                    @Money(Filtered.Sum(t => Sign(t) * t.AmountDue)) outstanding.
                     <span class="text-content-subtle">Click a row for its lines.</span>
                 </p>
 
@@ -103,7 +115,13 @@ else
                                 <tr class="cursor-pointer hover:bg-surface-raised" @onclick="() => ToggleExpanded(transaction.TransactionId)">
                                     <td class="px-4 py-3 text-content-muted whitespace-nowrap">@DateText(transaction.Date)</td>
                                     <td class="px-4 py-3 text-content font-medium">@(transaction.ContactName ?? "—")</td>
-                                    <td class="px-4 py-3 text-content-muted hidden md:table-cell">@(transaction.Number ?? "—")</td>
+                                    <td class="px-4 py-3 text-content-muted hidden md:table-cell">
+                                        @(transaction.Number ?? "—")
+                                        @if (IsCreditNote(transaction))
+                                        {
+                                            <span class="ml-1.5 text-[10px] uppercase tracking-wider font-semibold border border-line rounded px-1 py-0.5">Credit note</span>
+                                        }
+                                    </td>
                                     <td class="px-4 py-3 text-content-muted">@DistinctText(transaction.Lines.Select(l => l.Site))</td>
                                     <td class="px-4 py-3 text-content-muted hidden lg:table-cell">@DistinctText(transaction.Lines.Select(l => l.CostCode))</td>
                                     <td class="px-4 py-3 text-content-subtle">@transaction.Status</td>
@@ -159,8 +177,15 @@ else
             else
             {
                 <p class="text-sm text-content-muted mb-4">
-                    Net (pre-VAT) purchase invoice value by site and cost code, per calendar year.
-                    Voided invoices are excluded.
+                    Net (pre-VAT) spend by site and cost code, per calendar year — approved bills
+                    (authorised or paid) minus approved credit notes.
+                    @if (ExcludedFromBreakdown > 0)
+                    {
+                        <span class="text-content-subtle">
+                            Excludes @Money(ExcludedFromBreakdown) net of draft / awaiting-approval / voided records
+                            (visible under Transactions).
+                        </span>
+                    }
                 </p>
 
                 <div class="rounded-xl border border-line bg-surface overflow-hidden">
@@ -227,6 +252,29 @@ else
 
     private XeroTransactionsSnapshot? Snapshot => Xero.Snapshot();
 
+    // Statuses Xero's own reports count. DRAFT and SUBMITTED (awaiting approval) are excluded so
+    // the split matches what the accountants see in Xero.
+    private static bool CountsInBreakdown(XeroTransaction transaction) =>
+        transaction.Status is "AUTHORISED" or "PAID";
+
+    private static bool IsCreditNote(XeroTransaction transaction) =>
+        transaction.Type == "ACCPAYCREDIT";
+
+    private static decimal Sign(XeroTransaction transaction) =>
+        IsCreditNote(transaction) ? -1m : 1m;
+
+    private int BillCount =>
+        Snapshot?.Transactions.Count(transaction => !IsCreditNote(transaction)) ?? 0;
+
+    private int CreditNoteCount =>
+        Snapshot?.Transactions.Count(IsCreditNote) ?? 0;
+
+    /// <summary>Net value of records the breakdown leaves out, so the gap to the list view is explained.</summary>
+    private decimal ExcludedFromBreakdown =>
+        Snapshot?.Transactions
+            .Where(transaction => !CountsInBreakdown(transaction))
+            .Sum(transaction => Sign(transaction) * transaction.SubTotal) ?? 0m;
+
     private string FromDateText => (Snapshot?.FromDate)?.ToString("MMM yyyy") ?? "Jan 2023";
 
     private string FetchedText =>
@@ -271,14 +319,16 @@ else
         {
             if (Snapshot is null) return Array.Empty<SiteRow>();
 
+            // Approved records only — mirrors Xero's own reports, which exclude drafts and
+            // records awaiting approval. Credit notes subtract.
             var cells = Snapshot.Transactions
-                .Where(transaction => transaction.Status is not ("VOIDED" or "DELETED"))
+                .Where(CountsInBreakdown)
                 .SelectMany(transaction => transaction.Lines.Select(line => new
                 {
                     Site = string.IsNullOrWhiteSpace(line.Site) ? "(no site)" : line.Site!,
                     CostCode = string.IsNullOrWhiteSpace(line.CostCode) ? "(no cost code)" : line.CostCode!,
                     Year = transaction.Date?.Year ?? 0,
-                    Net = line.LineAmount
+                    Net = Sign(transaction) * line.LineAmount
                 }))
                 .Where(cell => cell.Year > 0);
 

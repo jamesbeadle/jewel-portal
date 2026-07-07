@@ -30,8 +30,11 @@ public sealed class XeroOptions
     /// </summary>
     public string? TenantId { get; set; }
 
-    /// <summary>Safety cap on pagination (100 transactions per page) so a huge ledger cannot stall the endpoint.</summary>
-    public int MaxPages { get; set; } = 40;
+    /// <summary>
+    /// Safety cap on pagination (100 transactions per page) so a huge ledger cannot stall the
+    /// endpoint. The snapshot flags itself Truncated when the cap is hit, and the UI warns.
+    /// </summary>
+    public int MaxPages { get; set; } = 100;
 
     /// <summary>Start of the reporting window — reconciliation looks back to the start of 2023.</summary>
     public DateTime FromDate { get; set; } = new(2023, 1, 1);
@@ -69,7 +72,7 @@ public sealed class XeroOptions
         if (!string.IsNullOrWhiteSpace(scopes))
             options.Scopes = scopes;
 
-        if (int.TryParse(section["MaxPages"], out var maxPages) && maxPages is > 0 and <= 100)
+        if (int.TryParse(section["MaxPages"], out var maxPages) && maxPages is > 0 and <= 500)
             options.MaxPages = maxPages;
 
         if (DateTime.TryParse(section["FromDate"], out var fromDate))

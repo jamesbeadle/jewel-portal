@@ -38,6 +38,7 @@ public sealed class XeroClient : IXeroClient
 {
     private const string TokenUrl = "https://identity.xero.com/connect/token";
     private const string InvoicesUrl = "https://api.xero.com/api.xro/2.0/Invoices";
+    private const string CreditNotesUrl = "https://api.xero.com/api.xro/2.0/CreditNotes";
     private const string AccountsUrl = "https://api.xero.com/api.xro/2.0/Accounts";
     private const int PageSize = 100; // Xero's page size for the Invoices endpoint.
 
@@ -116,38 +117,51 @@ public sealed class XeroClient : IXeroClient
         var accountNames = await GetAccountNamesAsync(token, ct);
 
         var transactions = new List<XeroTransaction>();
+        var truncated = false;
         try
         {
-            for (var page = 1; page <= _options.MaxPages; page++)
-            {
-                var pageOfInvoices = await FetchInvoicePageAsync(token, page, accountNames, ct);
-                transactions.AddRange(pageOfInvoices);
-                if (pageOfInvoices.Count < PageSize) break; // Short page — no more to fetch.
-            }
+            // Bills first, then supplier credit notes so spend can be netted off downstream.
+            truncated |= await FetchAllPagesAsync(token, InvoicesUrl, "Invoices", "ACCPAY", accountNames, transactions, ct);
+            truncated |= await FetchAllPagesAsync(token, CreditNotesUrl, "CreditNotes", "ACCPAYCREDIT", accountNames, transactions, ct);
         }
         catch (XeroCallFailedException callFailure)
         {
             return XeroTransactionsSnapshot.Failed(callFailure.Message);
         }
 
-        return new XeroTransactionsSnapshot(true, null, _options.FromDate, DateTimeOffset.UtcNow, transactions);
+        return new XeroTransactionsSnapshot(true, null, _options.FromDate, DateTimeOffset.UtcNow, truncated, transactions);
     }
 
-    private async Task<IReadOnlyList<XeroTransaction>> FetchInvoicePageAsync(
-        string token, int page, IReadOnlyDictionary<string, string> accountNames, CancellationToken ct)
+    /// <summary>Pages through one Xero collection into <paramref name="into"/>; true = page cap hit with data left.</summary>
+    private async Task<bool> FetchAllPagesAsync(
+        string token, string baseUrl, string collectionProperty, string xeroType,
+        IReadOnlyDictionary<string, string> accountNames, List<XeroTransaction> into, CancellationToken ct)
     {
-        // Purchase invoices only (supplier bills), inside the reporting window. Paged responses
-        // include line items, which carry the site / cost-code tracking.
+        for (var page = 1; page <= _options.MaxPages; page++)
+        {
+            var pageOfTransactions = await FetchPageAsync(token, baseUrl, collectionProperty, xeroType, page, accountNames, ct);
+            into.AddRange(pageOfTransactions);
+            if (pageOfTransactions.Count < PageSize) return false; // Short page — no more to fetch.
+        }
+        return true;
+    }
+
+    private async Task<IReadOnlyList<XeroTransaction>> FetchPageAsync(
+        string token, string baseUrl, string collectionProperty, string xeroType, int page,
+        IReadOnlyDictionary<string, string> accountNames, CancellationToken ct)
+    {
+        // Purchase side only, inside the reporting window. Paged responses include line items,
+        // which carry the site / cost-code tracking.
         var from = _options.FromDate;
-        var where = $"Type==\"ACCPAY\" AND Date >= DateTime({from.Year},{from.Month:D2},{from.Day:D2})";
-        var url = $"{InvoicesUrl}?page={page}&where={Uri.EscapeDataString(where)}&order={Uri.EscapeDataString("Date DESC")}";
+        var where = $"Type==\"{xeroType}\" AND Date >= DateTime({from.Year},{from.Month:D2},{from.Day:D2})";
+        var url = $"{baseUrl}?page={page}&where={Uri.EscapeDataString(where)}&order={Uri.EscapeDataString("Date DESC")}";
 
-        using var doc = await GetJsonAsync(token, url, "invoices", ct);
+        using var doc = await GetJsonAsync(token, url, collectionProperty.ToLowerInvariant(), ct);
 
-        if (!doc.RootElement.TryGetProperty("Invoices", out var invoices) || invoices.ValueKind != JsonValueKind.Array)
+        if (!doc.RootElement.TryGetProperty(collectionProperty, out var items) || items.ValueKind != JsonValueKind.Array)
             return Array.Empty<XeroTransaction>();
 
-        return invoices.EnumerateArray().Select(invoice => ReadInvoice(invoice, accountNames)).ToList();
+        return items.EnumerateArray().Select(item => ReadTransaction(item, xeroType, accountNames)).ToList();
     }
 
     /// <summary>
@@ -203,22 +217,27 @@ public sealed class XeroClient : IXeroClient
         return await JsonDocument.ParseAsync(stream, cancellationToken: ct);
     }
 
-    private XeroTransaction ReadInvoice(JsonElement invoice, IReadOnlyDictionary<string, string> accountNames) => new(
-        TransactionId: StringOf(invoice, "InvoiceID") ?? Guid.NewGuid().ToString(),
-        Type: StringOf(invoice, "Type") ?? "ACCPAY",
-        Number: StringOf(invoice, "InvoiceNumber"),
-        Reference: StringOf(invoice, "Reference"),
-        ContactName: invoice.TryGetProperty("Contact", out var contact) ? StringOf(contact, "Name") : null,
-        Date: DateOf(invoice, "DateString", "Date"),
-        DueDate: DateOf(invoice, "DueDateString", "DueDate"),
-        Status: StringOf(invoice, "Status") ?? "UNKNOWN",
-        SubTotal: DecimalOf(invoice, "SubTotal"),
-        TotalTax: DecimalOf(invoice, "TotalTax"),
-        Total: DecimalOf(invoice, "Total"),
-        AmountDue: DecimalOf(invoice, "AmountDue"),
-        AmountPaid: DecimalOf(invoice, "AmountPaid"),
-        CurrencyCode: StringOf(invoice, "CurrencyCode"),
-        Lines: ReadLines(invoice, accountNames));
+    /// <summary>
+    /// Maps one invoice or credit note. The two shapes differ only in id/number field names
+    /// (InvoiceID/InvoiceNumber vs CreditNoteID/CreditNoteNumber) and credit notes carry
+    /// RemainingCredit instead of AmountDue.
+    /// </summary>
+    private XeroTransaction ReadTransaction(JsonElement item, string xeroType, IReadOnlyDictionary<string, string> accountNames) => new(
+        TransactionId: StringOf(item, "InvoiceID") ?? StringOf(item, "CreditNoteID") ?? Guid.NewGuid().ToString(),
+        Type: StringOf(item, "Type") ?? xeroType,
+        Number: StringOf(item, "InvoiceNumber") ?? StringOf(item, "CreditNoteNumber"),
+        Reference: StringOf(item, "Reference"),
+        ContactName: item.TryGetProperty("Contact", out var contact) ? StringOf(contact, "Name") : null,
+        Date: DateOf(item, "DateString", "Date"),
+        DueDate: DateOf(item, "DueDateString", "DueDate"),
+        Status: StringOf(item, "Status") ?? "UNKNOWN",
+        SubTotal: DecimalOf(item, "SubTotal"),
+        TotalTax: DecimalOf(item, "TotalTax"),
+        Total: DecimalOf(item, "Total"),
+        AmountDue: item.TryGetProperty("AmountDue", out _) ? DecimalOf(item, "AmountDue") : DecimalOf(item, "RemainingCredit"),
+        AmountPaid: DecimalOf(item, "AmountPaid"),
+        CurrencyCode: StringOf(item, "CurrencyCode"),
+        Lines: ReadLines(item, accountNames));
 
     private IReadOnlyList<XeroTransactionLine> ReadLines(JsonElement invoice, IReadOnlyDictionary<string, string> accountNames)
     {
