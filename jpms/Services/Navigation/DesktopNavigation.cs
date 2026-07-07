@@ -44,7 +44,9 @@ public static class DesktopNavigation
         Entry("Agents",         "/agents",          Role.ManagingDirector, Role.ProjectManager, Role.QuantitySurveyor, Role.SiteManager),
         Entry("Rates",          "/rate-library",   Role.ManagingDirector, Role.ProjectManager, Role.QuantitySurveyor),
         // Mirrors the API's cost-centre command authorisation (admins see everything via the early return above).
-        Entry("Cost codes",     "/cost-codes",     Role.ManagingDirector, Role.FinanceDirector, Role.QuantitySurveyor)
+        Entry("Cost codes",     "/cost-codes",     Role.ManagingDirector, Role.FinanceDirector, Role.QuantitySurveyor),
+        // Mirrors the API's Xero ledger authorisation (ListXeroTransactionsEndpoint).
+        Entry("Xero",           "/finance/xero",   Role.ManagingDirector, Role.FinanceDirector, Role.QuantitySurveyor)
     };
 
     private static DesktopNavigationEntry Entry(string label, string href, params Role[] visibleTo) =>

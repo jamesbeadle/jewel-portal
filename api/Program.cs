@@ -33,6 +33,7 @@ using Jewel.JPMS.Api.Features.Site;
 using Jewel.JPMS.Api.Features.Subcontractors;
 using Jewel.JPMS.Api.Features.Todos;
 using Jewel.JPMS.Api.Features.Variations;
+using Jewel.JPMS.Api.Features.Xero;
 using Jewel.JPMS.Api.Gates;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.EntityFrameworkCore;
@@ -87,6 +88,7 @@ var host = new HostBuilder()
         services.AddCostCentersFeature();
         services.AddMailboxIntakeFeature(context.Configuration);
         services.AddAiFeature(context.Configuration);
+        services.AddXeroFeature(context.Configuration);
     })
     .Build();
 

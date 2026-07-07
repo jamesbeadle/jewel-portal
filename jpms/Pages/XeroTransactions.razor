@@ -1,0 +1,165 @@
+@page "/finance/xero"
+@using Jewel.JPMS.Contracts.Xero
+@inject AuthService Auth
+@inject SessionService Session
+@inject IXeroTransactionStore Xero
+@inject NavigationManager Nav
+@implements IDisposable
+
+<PageTitle>Xero transactions · JPMS</PageTitle>
+
+@if (!isLoaded)
+{
+    <section class="max-w-6xl mx-auto px-4 py-12 text-content-subtle text-sm">Loading…</section>
+}
+else if (!Session.IsApproved)
+{
+    <RequestAccessView Email="@Auth.CurrentUser!.Email" DisplayName="@Auth.CurrentUser.DisplayName" />
+}
+else
+{
+    <section class="max-w-6xl mx-auto px-4 py-8 md:py-12">
+        <header class="mb-6 md:mb-8 flex items-end justify-between gap-4">
+            <div>
+                <p class="text-xs uppercase tracking-wider text-content-subtle font-medium mb-1">JPMS · Finance</p>
+                <h1 class="text-2xl md:text-3xl font-semibold text-content leading-tight">Xero transactions</h1>
+                <p class="text-sm text-content-muted mt-2">
+                    Purchase invoices read live from Xero — the cost-of-sales side of the ledger, ready for reconciliation.
+                </p>
+            </div>
+            <button class="text-sm font-medium text-content-muted hover:text-content underline underline-offset-4 disabled:opacity-50"
+                    disabled="@isRefreshing" @onclick="RefreshAsync">
+                @(isRefreshing ? "Refreshing…" : "Refresh from Xero")
+            </button>
+        </header>
+
+        @if (Snapshot is null)
+        {
+            <p class="text-sm text-content-subtle py-8">Fetching transactions from Xero…</p>
+        }
+        else if (!Snapshot.IsConfigured)
+        {
+            <div class="rounded-xl border border-line bg-surface-raised px-5 py-4 text-sm text-content-muted">
+                Xero isn't connected yet. Add the custom connection's credentials as the
+                <span class="font-mono text-content">Xero__ClientId</span> and
+                <span class="font-mono text-content">Xero__ClientSecret</span> app settings on the API, then reload.
+            </div>
+        }
+        else if (Snapshot.Error is not null)
+        {
+            <div class="rounded-xl border border-line bg-surface-raised px-5 py-4 text-sm text-content-muted">
+                <p class="text-content font-medium mb-1">Xero returned an error</p>
+                <p>@Snapshot.Error</p>
+            </div>
+        }
+        else if (Snapshot.Transactions.Count == 0)
+        {
+            <p class="text-sm text-content-subtle py-8">Xero returned no purchase invoices.</p>
+        }
+        else
+        {
+            <p class="text-sm text-content-muted mb-4">
+                @Filtered.Count of @Snapshot.Transactions.Count purchase invoices ·
+                @Money(Filtered.Sum(transaction => transaction.Total)) total ·
+                @Money(Filtered.Sum(transaction => transaction.AmountDue)) outstanding.
+            </p>
+
+            <div class="mb-4 flex flex-wrap gap-2">
+                @foreach (var status in Statuses)
+                {
+                    <button class="@ChipClassFor(status)" @onclick="() => ToggleStatus(status)">@status</button>
+                }
+            </div>
+
+            <div class="rounded-xl border border-line bg-surface overflow-hidden">
+                <table class="w-full text-sm">
+                    <thead class="bg-surface-raised border-b border-line">
+                        <tr class="text-left text-[11px] uppercase tracking-wider text-content-subtle font-semibold">
+                            <th class="px-4 py-3">Date</th>
+                            <th class="px-4 py-3">Supplier</th>
+                            <th class="px-4 py-3 hidden md:table-cell">Number</th>
+                            <th class="px-4 py-3 hidden lg:table-cell">Reference</th>
+                            <th class="px-4 py-3">Status</th>
+                            <th class="px-4 py-3 text-right hidden md:table-cell">Net</th>
+                            <th class="px-4 py-3 text-right hidden md:table-cell">VAT</th>
+                            <th class="px-4 py-3 text-right">Total</th>
+                            <th class="px-4 py-3 text-right hidden lg:table-cell">Due</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-line">
+                        @foreach (var transaction in Filtered)
+                        {
+                            <tr>
+                                <td class="px-4 py-3 text-content-muted whitespace-nowrap">@DateText(transaction.Date)</td>
+                                <td class="px-4 py-3 text-content font-medium">@(transaction.ContactName ?? "—")</td>
+                                <td class="px-4 py-3 text-content-muted hidden md:table-cell">@(transaction.Number ?? "—")</td>
+                                <td class="px-4 py-3 text-content-muted hidden lg:table-cell">@(transaction.Reference ?? "—")</td>
+                                <td class="px-4 py-3 text-content-subtle">@transaction.Status</td>
+                                <td class="px-4 py-3 text-right text-content-muted hidden md:table-cell">@Money(transaction.SubTotal)</td>
+                                <td class="px-4 py-3 text-right text-content-muted hidden md:table-cell">@Money(transaction.TotalTax)</td>
+                                <td class="px-4 py-3 text-right text-content font-medium">@Money(transaction.Total)</td>
+                                <td class="px-4 py-3 text-right text-content-muted hidden lg:table-cell">@Money(transaction.AmountDue)</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </section>
+}
+
+@code {
+    private bool isLoaded;
+    private bool isRefreshing;
+    private string? statusFilter;
+
+    private XeroTransactionsSnapshot? Snapshot => Xero.Snapshot();
+
+    private IReadOnlyList<string> Statuses =>
+        Snapshot?.Transactions.Select(transaction => transaction.Status).Distinct().OrderBy(status => status).ToList()
+        ?? (IReadOnlyList<string>)Array.Empty<string>();
+
+    private IReadOnlyList<XeroTransaction> Filtered =>
+        Snapshot is null
+            ? Array.Empty<XeroTransaction>()
+            : Snapshot.Transactions
+                .Where(transaction => statusFilter is null || transaction.Status == statusFilter)
+                .OrderByDescending(transaction => transaction.Date ?? DateTime.MinValue)
+                .ToList();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Session.EnsureLoadedAsync();
+        if (!Auth.IsSignedIn) { Nav.NavigateTo("/login", forceLoad: true); return; }
+        Xero.OnChange += StateHasChanged;
+        isLoaded = true;
+
+        // Revalidate cached data in the background on tab entry (stale-while-revalidate) —
+        // the store's fetch-once guard handles the very first load.
+        _ = Xero.RefreshAsync();
+    }
+
+    private async Task RefreshAsync()
+    {
+        isRefreshing = true;
+        try { await Xero.RefreshAsync(); }
+        finally { isRefreshing = false; }
+    }
+
+    private void ToggleStatus(string status) =>
+        statusFilter = statusFilter == status ? null : status;
+
+    private string ChipClassFor(string status) =>
+        (statusFilter == status
+            ? "bg-content text-surface border-content"
+            : "bg-surface text-content-muted border-line hover:text-content")
+        + " text-xs font-medium border rounded-full px-3 py-1 transition-colors";
+
+    private static string DateText(DateTime? date) =>
+        date?.ToString("d MMM yyyy") ?? "—";
+
+    private static string Money(decimal value) =>
+        value.ToString("C2", System.Globalization.CultureInfo.GetCultureInfo("en-GB"));
+
+    public void Dispose() => Xero.OnChange -= StateHasChanged;
+}
