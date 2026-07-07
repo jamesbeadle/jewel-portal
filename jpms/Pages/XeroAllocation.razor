@@ -31,10 +31,16 @@ else
                     project and master cost centre. Suggestions come from the line's Xero tracking — you confirm.
                 </p>
             </div>
-            <button class="text-sm font-medium text-content-muted hover:text-content underline underline-offset-4 disabled:opacity-50"
-                    disabled="@isBusy" @onclick="SyncAsync">
-                @(isSyncing ? "Syncing…" : "Sync from Xero")
-            </button>
+            <div class="flex items-center gap-4 whitespace-nowrap">
+                <button class="text-sm font-medium text-content-muted hover:text-content underline underline-offset-4 disabled:opacity-50"
+                        disabled="@isBusy" @onclick="RecheckMatchesAsync">
+                    @(isRechecking ? "Re-checking…" : "Re-check matches")
+                </button>
+                <button class="text-sm font-medium text-content-muted hover:text-content underline underline-offset-4 disabled:opacity-50"
+                        disabled="@isBusy" @onclick="SyncAsync">
+                    @(isSyncing ? "Syncing…" : "Sync from Xero")
+                </button>
+            </div>
         </header>
 
         @if (syncMessage is not null)
@@ -268,6 +274,7 @@ else
 @code {
     private bool isLoaded;
     private bool isSyncing;
+    private bool isRechecking;
     private bool isApplying;
     private string search = string.Empty;
     private string? syncMessage;
@@ -281,7 +288,7 @@ else
     private string bulkCostCenterCode = "";
     private bool confirmAllocateMatched;
 
-    private bool isBusy => isSyncing || isApplying;
+    private bool isBusy => isSyncing || isRechecking || isApplying;
 
     private IReadOnlyList<XeroLedgerLine>? Lines => Ledger.Lines();
 
@@ -339,6 +346,30 @@ else
 
         if (ProjectsReadModel.Current is null) _ = ProjectsReadModel.RefreshAsync(CancellationToken.None);
         _ = Ledger.RefreshAsync();
+    }
+
+    /// <summary>
+    /// Re-runs the matching without touching Xero: reloads the project list (new
+    /// projects added since the page opened) and re-reads the ledger — the API
+    /// recomputes every unallocated line's suggestions against the live project
+    /// and cost-centre masters on each read, so new projects get suggested and
+    /// the "Allocate all matched" banner updates to include them.
+    /// </summary>
+    private async Task RecheckMatchesAsync()
+    {
+        isRechecking = true; syncMessage = null; errorMessage = null;
+        try
+        {
+            var matchedBefore = FullyMatchedCount;
+            await ProjectsReadModel.RefreshAsync(CancellationToken.None);
+            await Ledger.RefreshAsync();
+            var newlyMatched = FullyMatchedCount - matchedBefore;
+            syncMessage = newlyMatched > 0
+                ? $"Re-checked: {newlyMatched} more lines now match a project and cost centre — {FullyMatchedCount} matched in total."
+                : $"Re-checked against the current project list: {FullyMatchedCount} lines fully matched.";
+        }
+        catch (CommandFailedException failure) { errorMessage = failure.Message; }
+        finally { isRechecking = false; }
     }
 
     private async Task SyncAsync()
