@@ -119,7 +119,9 @@ public sealed class XeroAllocationSuggester
     private static readonly (string Pattern, string Bucket)[] BucketRules =
     {
         (@"parking|\bpcn\b|paybyphone|parkpcm|\bncp\b|ringgo|justpark", XeroBuckets.Parking),
+        (@"\btolls?\b|dart ?charge|dartford|congestion charge|\bulez\b|m6 ?toll|crossing charge", XeroBuckets.Tolls),
         (@"\bfuel\b|\bshell\b|\bbp\b|\besso\b|texaco|\bgulf\b|petrol|diesel", XeroBuckets.Fuel),
+        (@"\btrain\b|\brail\b|trainline|\btfl\b|oyster|\buber\b|\btaxi\b|\bcab\b|\bflight\b|\bhotel\b|airline|easyjet|british airways|mileage", XeroBuckets.Travel),
         (@"subscription|software|licen[cs]e|microsoft|azure|adobe|planyard|xero custom|\bsaas\b|dns filter", XeroBuckets.Software),
         // Deliberately narrow: intercompany suppliers (e.g. Jewel Property Serve) also raise
         // genuine project invoices, so only an explicit mention suggests ICA — not the supplier name.
