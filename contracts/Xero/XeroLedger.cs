@@ -64,6 +64,7 @@ public sealed record XeroLedgerSyncResult(
     string? Error,
     int NewLines,
     int UpdatedLines,
+    int RemovedLines,
     int TotalLines,
     int UnallocatedLines);
 

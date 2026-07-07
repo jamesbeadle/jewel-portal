@@ -382,7 +382,9 @@ else
                 ? "Xero isn't connected — add the Xero__ClientId / Xero__ClientSecret app settings."
                 : result.Error is not null
                     ? $"Xero returned an error: {result.Error}"
-                    : $"Synced. {result.NewLines} new lines, {result.UpdatedLines} refreshed — {result.UnallocatedLines} of {result.TotalLines} now awaiting allocation.";
+                    : $"Synced. {result.NewLines} new lines, {result.UpdatedLines} refreshed"
+                      + (result.RemovedLines > 0 ? $", {result.RemovedLines} draft/voided lines removed from the queue" : "")
+                      + $" — {result.UnallocatedLines} of {result.TotalLines} now awaiting allocation.";
         }
         catch (CommandFailedException failure) { errorMessage = failure.Message; }
         finally { isSyncing = false; }

@@ -25,6 +25,14 @@ public sealed class SyncXeroLedgerHandler : ICommandHandler<SyncXeroLedger, Xero
         this.context = context;
     }
 
+    // Statuses that never enter the allocation queue: drafts aren't committed costs,
+    // voided/deleted bills aren't costs at all. SUBMITTED (awaiting approval),
+    // AUTHORISED and PAID count — matching the accountant's payable basis.
+    private static readonly HashSet<string> ExcludedStatuses = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "DRAFT", "VOIDED", "DELETED"
+    };
+
     public async Task<XeroLedgerSyncResult> HandleAsync(SyncXeroLedger command, CancellationToken cancellationToken)
     {
         // force:false — a snapshot fetched within the cache window (e.g. by the Xero
@@ -33,18 +41,20 @@ public sealed class SyncXeroLedgerHandler : ICommandHandler<SyncXeroLedger, Xero
         // the platform's HTTP timeout.
         var snapshot = await xero.GetPurchaseInvoicesAsync(force: false, cancellationToken);
         if (!snapshot.IsConfigured)
-            return new XeroLedgerSyncResult(false, null, 0, 0, 0, 0);
+            return new XeroLedgerSyncResult(false, null, 0, 0, 0, 0, 0);
         if (snapshot.Error is not null)
-            return new XeroLedgerSyncResult(true, snapshot.Error, 0, 0, 0, 0);
+            return new XeroLedgerSyncResult(true, snapshot.Error, 0, 0, 0, 0, 0);
 
         var existingById = await context.XeroLedgerLines
             .ToDictionaryAsync(line => line.XeroLedgerLineId, cancellationToken);
 
         var now = DateTimeOffset.UtcNow;
-        int added = 0, updated = 0;
+        int added = 0, updated = 0, removed = 0;
 
         foreach (var transaction in snapshot.Transactions)
         {
+            var excluded = ExcludedStatuses.Contains(transaction.Status);
+
             foreach (var line in transaction.Lines)
             {
                 // Without a stable line id there is nothing safe to upsert on; Xero
@@ -52,6 +62,24 @@ public sealed class SyncXeroLedgerHandler : ICommandHandler<SyncXeroLedger, Xero
                 if (string.IsNullOrWhiteSpace(line.LineItemId)) continue;
 
                 var id = $"{transaction.TransactionId}:{line.LineItemId}";
+
+                if (excluded)
+                {
+                    // Never add drafts/voided to the queue. Previously stored lines that are
+                    // still unallocated are cleaned out (a draft re-enters when approved);
+                    // allocated/ignored ones are kept and refreshed so the reverted status
+                    // is visible rather than silently losing the allocation.
+                    if (existingById.TryGetValue(id, out var stale)
+                        && stale.AllocationStatus == (int)XeroAllocationStatus.Unallocated)
+                    {
+                        context.XeroLedgerLines.Remove(stale);
+                        existingById.Remove(id);
+                        removed++;
+                        continue;
+                    }
+                    if (!existingById.ContainsKey(id)) continue;
+                }
+
                 if (existingById.TryGetValue(id, out var entity))
                 {
                     updated++;
@@ -98,7 +126,7 @@ public sealed class SyncXeroLedgerHandler : ICommandHandler<SyncXeroLedger, Xero
         var unallocated = await context.XeroLedgerLines
             .CountAsync(line => line.AllocationStatus == (int)XeroAllocationStatus.Unallocated, cancellationToken);
 
-        return new XeroLedgerSyncResult(true, null, added, updated, total, unallocated);
+        return new XeroLedgerSyncResult(true, null, added, updated, removed, total, unallocated);
     }
 
     private static string? Truncate(string? value, int max) =>
