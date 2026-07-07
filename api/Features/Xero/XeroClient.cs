@@ -244,15 +244,22 @@ public sealed class XeroClient : IXeroClient
         if (!invoice.TryGetProperty("LineItems", out var lineItems) || lineItems.ValueKind != JsonValueKind.Array)
             return Array.Empty<XeroTransactionLine>();
 
+        // Invoices entered as amounts-inclusive-of-VAT carry VAT inside LineAmount
+        // (LineAmountTypes = "Inclusive"); subtract the line's tax so LineAmount is always net.
+        // Without this, VAT-inclusive bills overstate the cost-code split by their VAT.
+        var vatInclusive = string.Equals(StringOf(invoice, "LineAmountTypes"), "Inclusive", StringComparison.OrdinalIgnoreCase);
+
         return lineItems.EnumerateArray().Select(line =>
         {
             var accountCode = StringOf(line, "AccountCode");
+            var taxAmount = DecimalOf(line, "TaxAmount");
+            var lineAmount = DecimalOf(line, "LineAmount");
             return new XeroTransactionLine(
                 Description: StringOf(line, "Description"),
                 Quantity: DecimalOf(line, "Quantity"),
                 UnitAmount: DecimalOf(line, "UnitAmount"),
-                LineAmount: DecimalOf(line, "LineAmount"),
-                TaxAmount: DecimalOf(line, "TaxAmount"),
+                LineAmount: vatInclusive ? lineAmount - taxAmount : lineAmount,
+                TaxAmount: taxAmount,
                 AccountCode: accountCode,
                 AccountName: accountCode is not null && accountNames.TryGetValue(accountCode, out var name) ? name : null,
                 Site: TrackingOptionOf(line, _options.SiteTrackingCategory),

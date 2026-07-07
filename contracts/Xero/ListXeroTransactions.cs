@@ -63,7 +63,9 @@ public sealed record XeroTransaction(
 /// categories (named "Site" and "Cost code" in this organisation; names configurable on the API).
 /// <see cref="AccountCode"/>/<see cref="AccountName"/> are the ledger account the line posts to;
 /// the name is filled from the chart of accounts when the connection's scopes allow it.
-/// <see cref="LineAmount"/> is the net (pre-VAT) amount — the figure the site × cost-code split uses.
+/// <see cref="LineAmount"/> is always the net (pre-VAT) amount — the API normalises VAT-inclusive
+/// invoices (Xero LineAmountTypes = Inclusive) by deducting each line's tax — and is the figure the
+/// site × cost-code split uses.
 /// </summary>
 public sealed record XeroTransactionLine(
     string? Description,

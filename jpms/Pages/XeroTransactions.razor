@@ -88,7 +88,10 @@ else
                     <span class="text-content-subtle">Click a row for its lines.</span>
                 </p>
 
-                <div class="mb-4 flex flex-wrap gap-2">
+                <div class="mb-4 flex flex-wrap items-center gap-2">
+                    <input class="text-sm bg-surface border border-line rounded-lg px-3 py-1.5 text-content placeholder:text-content-subtle w-64"
+                           placeholder="Search supplier, number, reference…"
+                           value="@search" @oninput="e => search = e.Value?.ToString() ?? string.Empty" />
                     @foreach (var status in Statuses)
                     {
                         <button class="@ChipClassFor(status)" @onclick="() => ToggleStatus(status)">@status</button>
@@ -247,6 +250,7 @@ else
     private bool isLoaded;
     private bool isRefreshing;
     private string? statusFilter;
+    private string search = string.Empty;
     private string? expandedId;
     private View activeView = View.Transactions;
 
@@ -289,8 +293,18 @@ else
             ? Array.Empty<XeroTransaction>()
             : Snapshot.Transactions
                 .Where(transaction => statusFilter is null || transaction.Status == statusFilter)
+                .Where(MatchesSearch)
                 .OrderByDescending(transaction => transaction.Date ?? DateTime.MinValue)
                 .ToList();
+
+    private bool MatchesSearch(XeroTransaction transaction)
+    {
+        if (string.IsNullOrWhiteSpace(search)) return true;
+        return Contains(transaction.ContactName) || Contains(transaction.Number) || Contains(transaction.Reference);
+
+        bool Contains(string? value) =>
+            value is not null && value.Contains(search.Trim(), StringComparison.OrdinalIgnoreCase);
+    }
 
     private IReadOnlyList<int> Years
     {
