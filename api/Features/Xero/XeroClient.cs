@@ -255,6 +255,7 @@ public sealed class XeroClient : IXeroClient
             var taxAmount = DecimalOf(line, "TaxAmount");
             var lineAmount = DecimalOf(line, "LineAmount");
             return new XeroTransactionLine(
+                LineItemId: StringOf(line, "LineItemID"),
                 Description: StringOf(line, "Description"),
                 Quantity: DecimalOf(line, "Quantity"),
                 UnitAmount: DecimalOf(line, "UnitAmount"),

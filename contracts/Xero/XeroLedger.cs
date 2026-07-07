@@ -1,0 +1,82 @@
+using Jewel.JPMS.Contracts.Cqrs;
+
+namespace Jewel.JPMS.Contracts.Xero;
+
+// ============================================================================
+// Xero ledger allocation — reconciling accounts (Xero) with projects (JPMS).
+// Purchase invoice LINES pulled from Xero are stored in JPMS with an
+// allocation status; each line is allocated to a JPMS project + master cost
+// centre (00001..00137 — deliberately independent of Xero's own tracking
+// codes). Syncing upserts by Xero line id: new lines arrive Unallocated and
+// existing lines have their Xero facts refreshed without ever touching the
+// allocation. One line carries exactly one allocation (no splits).
+// ============================================================================
+
+public enum XeroAllocationStatus { Unallocated = 0, Allocated = 1, Ignored = 2 }
+
+public enum XeroAllocationAction { Allocate = 0, Ignore = 1, Reset = 2 }
+
+/// <summary>All stored ledger lines with allocation state and server-computed suggestions.</summary>
+public sealed record ListXeroLedgerLines : IQuery<IReadOnlyList<XeroLedgerLine>>;
+
+/// <summary>
+/// One stored Xero purchase-invoice line. Amounts are net (pre-VAT, normalised
+/// for VAT-inclusive invoices) and positive; <see cref="Type"/> distinguishes
+/// bills (ACCPAY) from supplier credit notes (ACCPAYCREDIT), which subtract in
+/// any spend view. Suggested* fields are the server's best guess from the
+/// line's Xero Sites / Cost Code tracking — never applied automatically.
+/// </summary>
+public sealed record XeroLedgerLine(
+    string XeroLedgerLineId,
+    string XeroInvoiceId,
+    string Type,
+    string? InvoiceNumber,
+    string? Reference,
+    string? ContactName,
+    DateTime? Date,
+    string InvoiceStatus,
+    string? Description,
+    decimal Net,
+    decimal Tax,
+    string? AccountCode,
+    string? AccountName,
+    string? XeroSite,
+    string? XeroCostCode,
+    XeroAllocationStatus AllocationStatus,
+    string? ProjectId,
+    string? CostCenterCode,
+    string? AllocatedBy,
+    DateTimeOffset? AllocatedAtUtc,
+    string? Note,
+    string? SuggestedProjectId,
+    string? SuggestedCostCenterCode,
+    DateTimeOffset FirstSeenAtUtc,
+    DateTimeOffset LastSyncedAtUtc);
+
+/// <summary>
+/// Pulls the latest purchase invoices + credit notes from Xero (bypassing the
+/// read cache) and upserts them into the stored ledger. Allocations survive.
+/// </summary>
+public sealed record SyncXeroLedger : ICommand<XeroLedgerSyncResult>;
+
+public sealed record XeroLedgerSyncResult(
+    bool IsConfigured,
+    string? Error,
+    int NewLines,
+    int UpdatedLines,
+    int TotalLines,
+    int UnallocatedLines);
+
+/// <summary>
+/// Applies one allocation action to a batch of ledger lines. Allocate requires
+/// ProjectId + CostCenterCode; Ignore takes an optional Note (reason); Reset
+/// returns lines to Unallocated. AllocatedBy is stamped server-side from the
+/// signed-in user — any client-supplied value is ignored.
+/// </summary>
+public sealed record SetXeroAllocation(
+    IReadOnlyList<string> XeroLedgerLineIds,
+    XeroAllocationAction Action,
+    string? ProjectId = null,
+    string? CostCenterCode = null,
+    string? Note = null,
+    string? AllocatedBy = null) : ICommand<int>;

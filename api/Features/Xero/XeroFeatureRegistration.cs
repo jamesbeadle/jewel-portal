@@ -1,4 +1,5 @@
 using Jewel.JPMS.Api.Cqrs;
+using Jewel.JPMS.Api.Features.Xero.Ledger;
 using Jewel.JPMS.Api.Features.Xero.Queries;
 using Jewel.JPMS.Contracts.Xero;
 using Microsoft.Extensions.Configuration;
@@ -34,6 +35,11 @@ public static class XeroFeatureRegistration
         }
 
         services.AddScoped<IQueryHandler<ListXeroTransactions, XeroTransactionsSnapshot>, ListXeroTransactionsHandler>();
+
+        // Ledger allocation: stored Xero lines reconciled onto projects + master cost centres.
+        services.AddScoped<ICommandHandler<SyncXeroLedger, XeroLedgerSyncResult>, SyncXeroLedgerHandler>();
+        services.AddScoped<IQueryHandler<ListXeroLedgerLines, IReadOnlyList<XeroLedgerLine>>, ListXeroLedgerLinesHandler>();
+        services.AddScoped<ICommandHandler<SetXeroAllocation, int>, SetXeroAllocationHandler>();
 
         return services;
     }

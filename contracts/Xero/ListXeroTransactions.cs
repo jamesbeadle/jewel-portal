@@ -68,6 +68,7 @@ public sealed record XeroTransaction(
 /// site × cost-code split uses.
 /// </summary>
 public sealed record XeroTransactionLine(
+    string? LineItemId,
     string? Description,
     decimal Quantity,
     decimal UnitAmount,

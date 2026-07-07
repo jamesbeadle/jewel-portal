@@ -69,6 +69,8 @@ public sealed class JpmsContext : DbContext
     public DbSet<AgentProposalEntity> AgentProposals => Set<AgentProposalEntity>();
     public DbSet<CostCenterEntity> CostCenters => Set<CostCenterEntity>();
 
+    public DbSet<XeroLedgerLineEntity> XeroLedgerLines => Set<XeroLedgerLineEntity>();
+
     public DbSet<TodoItemEntity> TodoItems => Set<TodoItemEntity>();
 
     public DbSet<LadClaimEntity> LadClaims => Set<LadClaimEntity>();

@@ -93,6 +93,7 @@ builder.Services.AddScoped<ICloseoutStore, HttpCloseoutStore>();
 builder.Services.AddScoped<ICostCenterStore, HttpCostCenterStore>();
 builder.Services.AddScoped<IAgentDesk, HttpAgentDesk>();
 builder.Services.AddScoped<IXeroTransactionStore, HttpXeroTransactionStore>();
+builder.Services.AddScoped<IXeroLedgerStore, HttpXeroLedgerStore>();
 
 builder.Services.AddScoped<StoreChangeHub>();
 builder.Services.AddScoped<AuthService>();

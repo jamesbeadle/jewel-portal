@@ -1,0 +1,403 @@
+@page "/finance/allocation"
+@using Jewel.JPMS.Contracts.Xero
+@using Jewel.JPMS.Features.Projects
+@inject AuthService Auth
+@inject SessionService Session
+@inject IXeroLedgerStore Ledger
+@inject ICostCenterStore CostCenters
+@inject ProjectListReadModel ProjectsReadModel
+@inject NavigationManager Nav
+@implements IDisposable
+
+<PageTitle>Cost allocation · JPMS</PageTitle>
+
+@if (!isLoaded)
+{
+    <section class="max-w-7xl mx-auto px-4 py-12 text-content-subtle text-sm">Loading…</section>
+}
+else if (!Session.IsApproved)
+{
+    <RequestAccessView Email="@Auth.CurrentUser!.Email" DisplayName="@Auth.CurrentUser.DisplayName" />
+}
+else
+{
+    <section class="max-w-7xl mx-auto px-4 py-8 md:py-12">
+        <header class="mb-6 md:mb-8 flex items-end justify-between gap-4">
+            <div>
+                <p class="text-xs uppercase tracking-wider text-content-subtle font-medium mb-1">JPMS · Finance</p>
+                <h1 class="text-2xl md:text-3xl font-semibold text-content leading-tight">Cost allocation</h1>
+                <p class="text-sm text-content-muted mt-2">
+                    Reconcile the accounts system with the projects: every Xero purchase line is allocated to a
+                    project and master cost centre. Suggestions come from the line's Xero tracking — you confirm.
+                </p>
+            </div>
+            <button class="text-sm font-medium text-content-muted hover:text-content underline underline-offset-4 disabled:opacity-50"
+                    disabled="@isBusy" @onclick="SyncAsync">
+                @(isSyncing ? "Syncing…" : "Sync from Xero")
+            </button>
+        </header>
+
+        @if (syncMessage is not null)
+        {
+            <div class="rounded-xl border border-line bg-surface-raised px-5 py-3 text-sm text-content-muted mb-6">@syncMessage</div>
+        }
+        @if (errorMessage is not null)
+        {
+            <div class="rounded-xl border border-line bg-surface-raised px-5 py-3 text-sm text-content mb-6">@errorMessage</div>
+        }
+
+        @if (Lines is null)
+        {
+            <p class="text-sm text-content-subtle py-8">Loading the stored ledger…</p>
+        }
+        else if (Lines.Count == 0)
+        {
+            <p class="text-sm text-content-subtle py-8">
+                Nothing stored yet — press “Sync from Xero” to pull the purchase ledger in for allocation.
+            </p>
+        }
+        else
+        {
+            <div class="mb-4 flex items-center justify-between gap-4 flex-wrap">
+                <div class="inline-flex rounded-lg border border-line overflow-hidden">
+                    <button class="@TabClass(XeroAllocationStatus.Unallocated)" @onclick="() => SwitchTab(XeroAllocationStatus.Unallocated)">
+                        Unallocated (@CountOf(XeroAllocationStatus.Unallocated))
+                    </button>
+                    <button class="@TabClass(XeroAllocationStatus.Allocated)" @onclick="() => SwitchTab(XeroAllocationStatus.Allocated)">
+                        Allocated (@CountOf(XeroAllocationStatus.Allocated))
+                    </button>
+                    <button class="@TabClass(XeroAllocationStatus.Ignored)" @onclick="() => SwitchTab(XeroAllocationStatus.Ignored)">
+                        Ignored (@CountOf(XeroAllocationStatus.Ignored))
+                    </button>
+                </div>
+                <input class="text-sm bg-surface border border-line rounded-lg px-3 py-1.5 text-content placeholder:text-content-subtle w-64"
+                       placeholder="Search supplier, description, number…"
+                       value="@search" @oninput="e => search = e.Value?.ToString() ?? string.Empty" />
+            </div>
+
+            @if (activeTab == XeroAllocationStatus.Unallocated && selectedIds.Count > 0)
+            {
+                <div class="mb-4 rounded-xl border border-line bg-surface-raised px-4 py-3 flex items-center gap-3 flex-wrap text-sm">
+                    <span class="text-content font-medium">@selectedIds.Count selected</span>
+                    <select class="bg-surface border border-line rounded-lg px-2 py-1.5 text-content text-sm" @bind="bulkProjectId">
+                        <option value="">Project…</option>
+                        @foreach (var project in Projects)
+                        {
+                            <option value="@project.ProjectId">@project.Name</option>
+                        }
+                    </select>
+                    <select class="bg-surface border border-line rounded-lg px-2 py-1.5 text-content text-sm" @bind="bulkCostCenterCode">
+                        <option value="">Cost centre…</option>
+                        @foreach (var centre in CostCenters.Active())
+                        {
+                            <option value="@centre.Code">@centre.Code @centre.Name</option>
+                        }
+                    </select>
+                    <button class="text-sm font-medium rounded-lg px-3 py-1.5 bg-content text-surface disabled:opacity-50"
+                            disabled="@(isBusy || string.IsNullOrEmpty(bulkProjectId) || string.IsNullOrEmpty(bulkCostCenterCode))"
+                            @onclick="BulkAllocateAsync">Allocate selected</button>
+                    <button class="text-sm font-medium rounded-lg px-3 py-1.5 border border-line text-content-muted hover:text-content disabled:opacity-50"
+                            disabled="@isBusy" @onclick="BulkIgnoreAsync">Ignore selected</button>
+                    <button class="text-xs text-content-subtle underline underline-offset-4" @onclick="() => selectedIds.Clear()">Clear</button>
+                </div>
+            }
+
+            <div class="rounded-xl border border-line bg-surface overflow-hidden">
+                <table class="w-full text-sm">
+                    <thead class="bg-surface-raised border-b border-line">
+                        <tr class="text-left text-[11px] uppercase tracking-wider text-content-subtle font-semibold">
+                            @if (activeTab == XeroAllocationStatus.Unallocated)
+                            {
+                                <th class="px-3 py-3 w-8">
+                                    <input type="checkbox" checked="@AllVisibleSelected" @onchange="ToggleSelectAll" />
+                                </th>
+                            }
+                            <th class="px-3 py-3">Date</th>
+                            <th class="px-3 py-3">Supplier</th>
+                            <th class="px-3 py-3">Description</th>
+                            <th class="px-3 py-3 text-right">Net</th>
+                            @if (activeTab == XeroAllocationStatus.Unallocated)
+                            {
+                                <th class="px-3 py-3">Project</th>
+                                <th class="px-3 py-3">Cost centre</th>
+                                <th class="px-3 py-3"></th>
+                            }
+                            else
+                            {
+                                <th class="px-3 py-3">@(activeTab == XeroAllocationStatus.Allocated ? "Allocated to" : "Reason")</th>
+                                <th class="px-3 py-3 hidden md:table-cell">By</th>
+                                <th class="px-3 py-3"></th>
+                            }
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-line">
+                        @foreach (var line in Visible)
+                        {
+                            <tr>
+                                @if (activeTab == XeroAllocationStatus.Unallocated)
+                                {
+                                    <td class="px-3 py-2.5">
+                                        <input type="checkbox" checked="@selectedIds.Contains(line.XeroLedgerLineId)"
+                                               @onchange="() => ToggleSelected(line.XeroLedgerLineId)" />
+                                    </td>
+                                }
+                                <td class="px-3 py-2.5 text-content-muted whitespace-nowrap">@DateText(line.Date)</td>
+                                <td class="px-3 py-2.5 text-content font-medium">
+                                    @(line.ContactName ?? "—")
+                                    @if (line.Type == "ACCPAYCREDIT")
+                                    {
+                                        <span class="ml-1.5 text-[10px] uppercase tracking-wider font-semibold border border-line rounded px-1 py-0.5">Credit</span>
+                                    }
+                                </td>
+                                <td class="px-3 py-2.5 text-content-muted max-w-md">
+                                    <span class="block truncate" title="@line.Description">@(line.Description ?? "—")</span>
+                                    <span class="block text-xs text-content-subtle">
+                                        @(line.InvoiceNumber ?? "—") · @(line.XeroSite ?? "no site") · @(line.XeroCostCode ?? "no Xero code")
+                                    </span>
+                                </td>
+                                <td class="px-3 py-2.5 text-right text-content font-medium whitespace-nowrap">@Money(SignedNet(line))</td>
+
+                                @if (activeTab == XeroAllocationStatus.Unallocated)
+                                {
+                                    <td class="px-3 py-2.5">
+                                        <select class="bg-surface border border-line rounded-lg px-2 py-1 text-content text-sm w-44"
+                                                value="@SelectedProjectFor(line)"
+                                                @onchange="e => SetProject(line.XeroLedgerLineId, e.Value?.ToString())">
+                                            <option value="">—</option>
+                                            @foreach (var project in Projects)
+                                            {
+                                                <option value="@project.ProjectId">@project.Name</option>
+                                            }
+                                        </select>
+                                    </td>
+                                    <td class="px-3 py-2.5">
+                                        <select class="bg-surface border border-line rounded-lg px-2 py-1 text-content text-sm w-52"
+                                                value="@SelectedCostCenterFor(line)"
+                                                @onchange="e => SetCostCenter(line.XeroLedgerLineId, e.Value?.ToString())">
+                                            <option value="">—</option>
+                                            @foreach (var centre in CostCenters.Active())
+                                            {
+                                                <option value="@centre.Code">@centre.Code @centre.Name</option>
+                                            }
+                                        </select>
+                                    </td>
+                                    <td class="px-3 py-2.5 text-right whitespace-nowrap">
+                                        <button class="text-xs font-medium rounded-lg px-2.5 py-1 bg-content text-surface disabled:opacity-40"
+                                                disabled="@(isBusy || !CanAllocate(line))"
+                                                @onclick="() => AllocateAsync(line)">Allocate</button>
+                                        <button class="text-xs text-content-subtle underline underline-offset-4 ml-2"
+                                                disabled="@isBusy"
+                                                @onclick="() => IgnoreAsync(line)">Ignore</button>
+                                    </td>
+                                }
+                                else
+                                {
+                                    <td class="px-3 py-2.5 text-content-muted">
+                                        @if (activeTab == XeroAllocationStatus.Allocated)
+                                        {
+                                            <span class="text-content">@ProjectName(line.ProjectId)</span>
+                                            <span class="block text-xs text-content-subtle">@CostCenterText(line.CostCenterCode)</span>
+                                        }
+                                        else
+                                        {
+                                            @(line.Note ?? "—")
+                                        }
+                                    </td>
+                                    <td class="px-3 py-2.5 text-content-subtle text-xs hidden md:table-cell">
+                                        @(line.AllocatedBy ?? "—")
+                                        <span class="block">@(line.AllocatedAtUtc?.ToLocalTime().ToString("d MMM yyyy") ?? "")</span>
+                                    </td>
+                                    <td class="px-3 py-2.5 text-right">
+                                        <button class="text-xs text-content-subtle underline underline-offset-4"
+                                                disabled="@isBusy" @onclick="() => ResetAsync(line)">Undo</button>
+                                    </td>
+                                }
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+
+            <p class="text-xs text-content-subtle mt-3">
+                @Visible.Count lines · @Money(Visible.Sum(SignedNet)) net.
+                Allocations live in JPMS only — Xero is never written to.
+            </p>
+        }
+    </section>
+}
+
+@code {
+    private bool isLoaded;
+    private bool isSyncing;
+    private bool isApplying;
+    private string search = string.Empty;
+    private string? syncMessage;
+    private string? errorMessage;
+    private XeroAllocationStatus activeTab = XeroAllocationStatus.Unallocated;
+
+    private readonly HashSet<string> selectedIds = new();
+    private readonly Dictionary<string, string?> chosenProject = new();
+    private readonly Dictionary<string, string?> chosenCostCenter = new();
+    private string bulkProjectId = "";
+    private string bulkCostCenterCode = "";
+
+    private bool isBusy => isSyncing || isApplying;
+
+    private IReadOnlyList<XeroLedgerLine>? Lines => Ledger.Lines();
+
+    private IReadOnlyList<Jewel.JPMS.Models.Project> Projects =>
+        ProjectsReadModel.Current ?? Array.Empty<Jewel.JPMS.Models.Project>();
+
+    private IReadOnlyList<XeroLedgerLine> Visible =>
+        Lines is null
+            ? Array.Empty<XeroLedgerLine>()
+            : Lines.Where(line => line.AllocationStatus == activeTab)
+                   .Where(MatchesSearch)
+                   .ToList();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Session.EnsureLoadedAsync();
+        if (!Auth.IsSignedIn) { Nav.NavigateTo("/login", forceLoad: true); return; }
+        Ledger.OnChange += StateHasChanged;
+        CostCenters.OnChange += StateHasChanged;
+        ProjectsReadModel.OnChanged += StateHasChanged;
+        isLoaded = true;
+
+        if (ProjectsReadModel.Current is null) _ = ProjectsReadModel.RefreshAsync(CancellationToken.None);
+        _ = Ledger.RefreshAsync();
+    }
+
+    private async Task SyncAsync()
+    {
+        isSyncing = true; syncMessage = null; errorMessage = null;
+        try
+        {
+            var result = await Ledger.SyncAsync();
+            syncMessage = !result.IsConfigured
+                ? "Xero isn't connected — add the Xero__ClientId / Xero__ClientSecret app settings."
+                : result.Error is not null
+                    ? $"Xero returned an error: {result.Error}"
+                    : $"Synced. {result.NewLines} new lines, {result.UpdatedLines} refreshed — {result.UnallocatedLines} of {result.TotalLines} now awaiting allocation.";
+        }
+        catch (CommandFailedException failure) { errorMessage = failure.Message; }
+        finally { isSyncing = false; }
+    }
+
+    private async Task AllocateAsync(XeroLedgerLine line) =>
+        await ApplyAsync(new SetXeroAllocation(
+            new[] { line.XeroLedgerLineId },
+            XeroAllocationAction.Allocate,
+            SelectedProjectFor(line),
+            SelectedCostCenterFor(line)));
+
+    private async Task IgnoreAsync(XeroLedgerLine line) =>
+        await ApplyAsync(new SetXeroAllocation(new[] { line.XeroLedgerLineId }, XeroAllocationAction.Ignore));
+
+    private async Task ResetAsync(XeroLedgerLine line) =>
+        await ApplyAsync(new SetXeroAllocation(new[] { line.XeroLedgerLineId }, XeroAllocationAction.Reset));
+
+    private async Task BulkAllocateAsync() =>
+        await ApplyAsync(new SetXeroAllocation(selectedIds.ToList(), XeroAllocationAction.Allocate, bulkProjectId, bulkCostCenterCode));
+
+    private async Task BulkIgnoreAsync() =>
+        await ApplyAsync(new SetXeroAllocation(selectedIds.ToList(), XeroAllocationAction.Ignore));
+
+    private async Task ApplyAsync(SetXeroAllocation command)
+    {
+        isApplying = true; errorMessage = null;
+        try
+        {
+            await Ledger.ApplyAsync(command);
+            foreach (var id in command.XeroLedgerLineIds)
+            {
+                selectedIds.Remove(id);
+                chosenProject.Remove(id);
+                chosenCostCenter.Remove(id);
+            }
+        }
+        catch (CommandFailedException failure) { errorMessage = failure.Message; }
+        finally { isApplying = false; }
+    }
+
+    // -- selection & per-line choices ----------------------------------------
+
+    private string SelectedProjectFor(XeroLedgerLine line) =>
+        (chosenProject.TryGetValue(line.XeroLedgerLineId, out var chosen) ? chosen : line.SuggestedProjectId) ?? "";
+
+    private string SelectedCostCenterFor(XeroLedgerLine line) =>
+        (chosenCostCenter.TryGetValue(line.XeroLedgerLineId, out var chosen) ? chosen : line.SuggestedCostCenterCode) ?? "";
+
+    private void SetProject(string lineId, string? projectId) => chosenProject[lineId] = projectId;
+    private void SetCostCenter(string lineId, string? code) => chosenCostCenter[lineId] = code;
+
+    private bool CanAllocate(XeroLedgerLine line) =>
+        !string.IsNullOrEmpty(SelectedProjectFor(line)) && !string.IsNullOrEmpty(SelectedCostCenterFor(line));
+
+    private void ToggleSelected(string lineId)
+    {
+        if (!selectedIds.Remove(lineId)) selectedIds.Add(lineId);
+    }
+
+    private bool AllVisibleSelected =>
+        Visible.Count > 0 && Visible.All(line => selectedIds.Contains(line.XeroLedgerLineId));
+
+    private void ToggleSelectAll(ChangeEventArgs args)
+    {
+        if (args.Value is true)
+            foreach (var line in Visible) selectedIds.Add(line.XeroLedgerLineId);
+        else
+            selectedIds.Clear();
+    }
+
+    private void SwitchTab(XeroAllocationStatus tab)
+    {
+        activeTab = tab;
+        selectedIds.Clear();
+    }
+
+    // -- display helpers ------------------------------------------------------
+
+    private int CountOf(XeroAllocationStatus status) =>
+        Lines?.Count(line => line.AllocationStatus == status) ?? 0;
+
+    private bool MatchesSearch(XeroLedgerLine line)
+    {
+        if (string.IsNullOrWhiteSpace(search)) return true;
+        var term = search.Trim();
+        return Contains(line.ContactName) || Contains(line.Description) || Contains(line.InvoiceNumber)
+            || Contains(line.Reference) || Contains(line.XeroSite) || Contains(line.XeroCostCode);
+
+        bool Contains(string? value) =>
+            value is not null && value.Contains(term, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private string ProjectName(string? projectId) =>
+        Projects.FirstOrDefault(project => project.ProjectId == projectId)?.Name ?? projectId ?? "—";
+
+    private string CostCenterText(string? code)
+    {
+        if (code is null) return "—";
+        var centre = CostCenters.All().FirstOrDefault(c => c.Code == code);
+        return centre is null ? code : $"{centre.Code} {centre.Name}";
+    }
+
+    private string TabClass(XeroAllocationStatus tab) =>
+        (activeTab == tab ? "bg-content text-surface" : "bg-surface text-content-muted hover:text-content")
+        + " text-sm font-medium px-4 py-1.5 transition-colors";
+
+    private static decimal SignedNet(XeroLedgerLine line) =>
+        line.Type == "ACCPAYCREDIT" ? -line.Net : line.Net;
+
+    private static string DateText(DateTime? date) => date?.ToString("d MMM yyyy") ?? "—";
+
+    private static string Money(decimal value) =>
+        value.ToString("C2", System.Globalization.CultureInfo.GetCultureInfo("en-GB"));
+
+    public void Dispose()
+    {
+        Ledger.OnChange -= StateHasChanged;
+        CostCenters.OnChange -= StateHasChanged;
+        ProjectsReadModel.OnChanged -= StateHasChanged;
+    }
+}
