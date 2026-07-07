@@ -9,14 +9,19 @@ namespace Jewel.JPMS.Api.Features.Xero;
 /// <summary>
 /// Minimal client for the Xero Accounting API over a custom connection (client-credentials grant).
 /// Returns a snapshot rather than throwing so the UI can explain "not configured" and "Xero said no"
-/// states instead of surfacing a 500.
+/// states instead of surfacing a 500. Reads purchase invoices with line items (Xero includes line
+/// items on paged /Invoices responses) plus the chart of accounts for account names, and caches the
+/// assembled snapshot briefly — a multi-year read costs dozens of calls against Xero's 60/min limit.
 /// </summary>
 public interface IXeroClient
 {
     bool IsConfigured { get; }
 
-    /// <summary>Lists purchase invoices (ACCPAY bills), newest first, across up to MaxPages pages.</summary>
-    Task<XeroTransactionsSnapshot> GetPurchaseInvoicesAsync(CancellationToken ct);
+    /// <summary>
+    /// Lists purchase invoices (ACCPAY bills) from the configured start date, newest first.
+    /// Serves the cached snapshot when fresh enough unless <paramref name="force"/> is set.
+    /// </summary>
+    Task<XeroTransactionsSnapshot> GetPurchaseInvoicesAsync(bool force, CancellationToken ct);
 }
 
 /// <summary>No-op used when no Xero client id/secret is configured; reports itself as such.</summary>
@@ -24,7 +29,7 @@ public sealed class NullXeroClient : IXeroClient
 {
     public bool IsConfigured => false;
 
-    public Task<XeroTransactionsSnapshot> GetPurchaseInvoicesAsync(CancellationToken ct) =>
+    public Task<XeroTransactionsSnapshot> GetPurchaseInvoicesAsync(bool force, CancellationToken ct) =>
         Task.FromResult(XeroTransactionsSnapshot.NotConfigured());
 }
 
@@ -33,6 +38,7 @@ public sealed class XeroClient : IXeroClient
 {
     private const string TokenUrl = "https://identity.xero.com/connect/token";
     private const string InvoicesUrl = "https://api.xero.com/api.xro/2.0/Invoices";
+    private const string AccountsUrl = "https://api.xero.com/api.xro/2.0/Accounts";
     private const int PageSize = 100; // Xero's page size for the Invoices endpoint.
 
     private readonly HttpClient _http;
@@ -44,6 +50,16 @@ public sealed class XeroClient : IXeroClient
     private string? _accessToken;
     private DateTimeOffset _accessTokenExpiresAt = DateTimeOffset.MinValue;
 
+    // Snapshot cache — one fetch serves every user for CacheMinutes. Guarded by a lock so two
+    // simultaneous page loads don't both run a multi-page Xero read.
+    private readonly SemaphoreSlim _snapshotLock = new(1, 1);
+    private XeroTransactionsSnapshot? _cachedSnapshot;
+    private DateTimeOffset _cachedSnapshotAt = DateTimeOffset.MinValue;
+
+    // Chart of accounts changes rarely; refresh it hourly at most.
+    private IReadOnlyDictionary<string, string>? _accountNamesByCode;
+    private DateTimeOffset _accountNamesFetchedAt = DateTimeOffset.MinValue;
+
     public XeroClient(HttpClient http, XeroOptions options, ILogger<XeroClient> logger)
     {
         _http = http;
@@ -53,11 +69,40 @@ public sealed class XeroClient : IXeroClient
 
     public bool IsConfigured => _options.IsConfigured;
 
-    public async Task<XeroTransactionsSnapshot> GetPurchaseInvoicesAsync(CancellationToken ct)
+    public async Task<XeroTransactionsSnapshot> GetPurchaseInvoicesAsync(bool force, CancellationToken ct)
     {
         if (!_options.IsConfigured)
             return XeroTransactionsSnapshot.NotConfigured();
 
+        await _snapshotLock.WaitAsync(ct);
+        try
+        {
+            if (!force && CachedSnapshotIsFresh)
+                return _cachedSnapshot!;
+
+            var snapshot = await FetchSnapshotAsync(ct);
+
+            // Only successful reads replace the cache — a transient failure shouldn't evict good data,
+            // but it is still returned so the user sees what went wrong.
+            if (snapshot.Error is null)
+            {
+                _cachedSnapshot = snapshot;
+                _cachedSnapshotAt = DateTimeOffset.UtcNow;
+            }
+            return snapshot;
+        }
+        finally
+        {
+            _snapshotLock.Release();
+        }
+    }
+
+    private bool CachedSnapshotIsFresh =>
+        _cachedSnapshot is not null
+        && DateTimeOffset.UtcNow < _cachedSnapshotAt.AddMinutes(_options.CacheMinutes);
+
+    private async Task<XeroTransactionsSnapshot> FetchSnapshotAsync(CancellationToken ct)
+    {
         string token;
         try
         {
@@ -68,12 +113,14 @@ public sealed class XeroClient : IXeroClient
             return XeroTransactionsSnapshot.Failed(tokenFailure.Message);
         }
 
+        var accountNames = await GetAccountNamesAsync(token, ct);
+
         var transactions = new List<XeroTransaction>();
         try
         {
             for (var page = 1; page <= _options.MaxPages; page++)
             {
-                var pageOfInvoices = await FetchInvoicePageAsync(token, page, ct);
+                var pageOfInvoices = await FetchInvoicePageAsync(token, page, accountNames, ct);
                 transactions.AddRange(pageOfInvoices);
                 if (pageOfInvoices.Count < PageSize) break; // Short page — no more to fetch.
             }
@@ -83,14 +130,61 @@ public sealed class XeroClient : IXeroClient
             return XeroTransactionsSnapshot.Failed(callFailure.Message);
         }
 
-        return new XeroTransactionsSnapshot(true, null, transactions);
+        return new XeroTransactionsSnapshot(true, null, _options.FromDate, DateTimeOffset.UtcNow, transactions);
     }
 
-    private async Task<IReadOnlyList<XeroTransaction>> FetchInvoicePageAsync(string token, int page, CancellationToken ct)
+    private async Task<IReadOnlyList<XeroTransaction>> FetchInvoicePageAsync(
+        string token, int page, IReadOnlyDictionary<string, string> accountNames, CancellationToken ct)
     {
-        // Purchase invoices only (supplier bills) — the cost-of-sales side of the ledger.
-        var url = $"{InvoicesUrl}?page={page}&where={Uri.EscapeDataString("Type==\"ACCPAY\"")}&order={Uri.EscapeDataString("Date DESC")}";
+        // Purchase invoices only (supplier bills), inside the reporting window. Paged responses
+        // include line items, which carry the site / cost-code tracking.
+        var from = _options.FromDate;
+        var where = $"Type==\"ACCPAY\" AND Date >= DateTime({from.Year},{from.Month:D2},{from.Day:D2})";
+        var url = $"{InvoicesUrl}?page={page}&where={Uri.EscapeDataString(where)}&order={Uri.EscapeDataString("Date DESC")}";
 
+        using var doc = await GetJsonAsync(token, url, "invoices", ct);
+
+        if (!doc.RootElement.TryGetProperty("Invoices", out var invoices) || invoices.ValueKind != JsonValueKind.Array)
+            return Array.Empty<XeroTransaction>();
+
+        return invoices.EnumerateArray().Select(invoice => ReadInvoice(invoice, accountNames)).ToList();
+    }
+
+    /// <summary>
+    /// Account code → account name from the chart of accounts. Best effort: if the custom connection
+    /// lacks the accounting.settings scope (or the call fails) lines simply show the bare code.
+    /// </summary>
+    private async Task<IReadOnlyDictionary<string, string>> GetAccountNamesAsync(string token, CancellationToken ct)
+    {
+        if (_accountNamesByCode is not null && DateTimeOffset.UtcNow < _accountNamesFetchedAt.AddHours(1))
+            return _accountNamesByCode;
+
+        try
+        {
+            using var doc = await GetJsonAsync(token, AccountsUrl, "accounts", ct);
+            var names = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            if (doc.RootElement.TryGetProperty("Accounts", out var accounts) && accounts.ValueKind == JsonValueKind.Array)
+            {
+                foreach (var account in accounts.EnumerateArray())
+                {
+                    var code = StringOf(account, "Code");
+                    var name = StringOf(account, "Name");
+                    if (code is not null && name is not null) names[code] = name;
+                }
+            }
+            _accountNamesByCode = names;
+            _accountNamesFetchedAt = DateTimeOffset.UtcNow;
+            return names;
+        }
+        catch (XeroCallFailedException accountsFailure)
+        {
+            _logger.LogInformation("Chart of accounts unavailable ({Message}); showing account codes only.", accountsFailure.Message);
+            return _accountNamesByCode ?? new Dictionary<string, string>();
+        }
+    }
+
+    private async Task<JsonDocument> GetJsonAsync(string token, string url, string what, CancellationToken ct)
+    {
         using var request = new HttpRequestMessage(HttpMethod.Get, url);
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
         request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
@@ -101,20 +195,15 @@ public sealed class XeroClient : IXeroClient
         if (!response.IsSuccessStatusCode)
         {
             var body = await response.Content.ReadAsStringAsync(ct);
-            _logger.LogWarning("Xero invoices call failed: {Status} {Body}.", (int)response.StatusCode, Truncate(body));
-            throw new XeroCallFailedException($"Xero rejected the invoices request with HTTP {(int)response.StatusCode}. {Truncate(body)}");
+            _logger.LogWarning("Xero {What} call failed: {Status} {Body}.", what, (int)response.StatusCode, Truncate(body));
+            throw new XeroCallFailedException($"Xero rejected the {what} request with HTTP {(int)response.StatusCode}. {Truncate(body)}");
         }
 
         await using var stream = await response.Content.ReadAsStreamAsync(ct);
-        using var doc = await JsonDocument.ParseAsync(stream, cancellationToken: ct);
-
-        if (!doc.RootElement.TryGetProperty("Invoices", out var invoices) || invoices.ValueKind != JsonValueKind.Array)
-            return Array.Empty<XeroTransaction>();
-
-        return invoices.EnumerateArray().Select(ReadInvoice).ToList();
+        return await JsonDocument.ParseAsync(stream, cancellationToken: ct);
     }
 
-    private static XeroTransaction ReadInvoice(JsonElement invoice) => new(
+    private XeroTransaction ReadInvoice(JsonElement invoice, IReadOnlyDictionary<string, string> accountNames) => new(
         TransactionId: StringOf(invoice, "InvoiceID") ?? Guid.NewGuid().ToString(),
         Type: StringOf(invoice, "Type") ?? "ACCPAY",
         Number: StringOf(invoice, "InvoiceNumber"),
@@ -128,7 +217,50 @@ public sealed class XeroClient : IXeroClient
         Total: DecimalOf(invoice, "Total"),
         AmountDue: DecimalOf(invoice, "AmountDue"),
         AmountPaid: DecimalOf(invoice, "AmountPaid"),
-        CurrencyCode: StringOf(invoice, "CurrencyCode"));
+        CurrencyCode: StringOf(invoice, "CurrencyCode"),
+        Lines: ReadLines(invoice, accountNames));
+
+    private IReadOnlyList<XeroTransactionLine> ReadLines(JsonElement invoice, IReadOnlyDictionary<string, string> accountNames)
+    {
+        if (!invoice.TryGetProperty("LineItems", out var lineItems) || lineItems.ValueKind != JsonValueKind.Array)
+            return Array.Empty<XeroTransactionLine>();
+
+        return lineItems.EnumerateArray().Select(line =>
+        {
+            var accountCode = StringOf(line, "AccountCode");
+            return new XeroTransactionLine(
+                Description: StringOf(line, "Description"),
+                Quantity: DecimalOf(line, "Quantity"),
+                UnitAmount: DecimalOf(line, "UnitAmount"),
+                LineAmount: DecimalOf(line, "LineAmount"),
+                TaxAmount: DecimalOf(line, "TaxAmount"),
+                AccountCode: accountCode,
+                AccountName: accountCode is not null && accountNames.TryGetValue(accountCode, out var name) ? name : null,
+                Site: TrackingOptionOf(line, _options.SiteTrackingCategory),
+                CostCode: TrackingOptionOf(line, _options.CostCodeTrackingCategory));
+        }).ToList();
+    }
+
+    /// <summary>
+    /// Reads the option of the named tracking category off a line, tolerating spacing/case
+    /// differences ("Cost code" vs "CostCode"). Line tracking shape: [{ "Name": …, "Option": … }].
+    /// </summary>
+    private static string? TrackingOptionOf(JsonElement line, string categoryName)
+    {
+        if (!line.TryGetProperty("Tracking", out var tracking) || tracking.ValueKind != JsonValueKind.Array)
+            return null;
+
+        foreach (var entry in tracking.EnumerateArray())
+        {
+            var name = StringOf(entry, "Name");
+            if (name is not null && Normalise(name) == Normalise(categoryName))
+                return StringOf(entry, "Option");
+        }
+        return null;
+    }
+
+    private static string Normalise(string categoryName) =>
+        categoryName.Replace(" ", "").ToLowerInvariant();
 
     private static string? StringOf(JsonElement element, string property) =>
         element.TryGetProperty(property, out var value) && value.ValueKind == JsonValueKind.String

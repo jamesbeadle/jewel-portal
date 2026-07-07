@@ -26,10 +26,10 @@ public sealed class HttpXeroTransactionStore : IXeroTransactionStore
         return readModel.Current;
     }
 
-    public async Task RefreshAsync(CancellationToken cancellationToken = default)
+    public async Task RefreshAsync(bool force = false, CancellationToken cancellationToken = default)
     {
         requested = true;
-        await readModel.RefreshAsync(cancellationToken);
+        await readModel.RefreshAsync(force, cancellationToken);
     }
 
     private void EnsureRequested()

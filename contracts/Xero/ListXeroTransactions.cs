@@ -4,27 +4,32 @@ namespace Jewel.JPMS.Contracts.Xero;
 
 /// <summary>
 /// Asks the API for the current transactions held in Xero (live passthrough — nothing is stored in
-/// JPMS yet). The first cut lists purchase invoices (Xero type ACCPAY, i.e. supplier bills) because
-/// cost-of-sales reconciliation is the goal, but the snapshot shape is deliberately generic so other
-/// Xero record types (sales invoices, bank transactions, credit notes) can join it later.
+/// JPMS yet). Lists purchase invoices (Xero type ACCPAY, i.e. supplier bills) from the configured
+/// start date (default 1 Jan 2023) with their line items, because cost-of-sales reconciliation needs
+/// the per-line site and cost-code tracking. The API caches the Xero read briefly to respect Xero's
+/// rate limits; <paramref name="Force"/> bypasses that cache for an explicit user refresh.
 /// </summary>
-public sealed record ListXeroTransactions : IQuery<XeroTransactionsSnapshot>;
+public sealed record ListXeroTransactions(bool Force = false) : IQuery<XeroTransactionsSnapshot>;
 
 /// <summary>
 /// What the API saw when it asked Xero. <see cref="IsConfigured"/> is false when the Xero client id
 /// and secret app settings are missing (the UI explains rather than erroring); <see cref="Error"/>
 /// carries a human-readable failure when Xero itself rejected or failed the call.
+/// <see cref="FromDate"/> is the start of the requested window and <see cref="FetchedAtUtc"/> is
+/// when Xero was actually read (older than 'now' when the API served its cache).
 /// </summary>
 public sealed record XeroTransactionsSnapshot(
     bool IsConfigured,
     string? Error,
+    DateTime? FromDate,
+    DateTimeOffset? FetchedAtUtc,
     IReadOnlyList<XeroTransaction> Transactions)
 {
     public static XeroTransactionsSnapshot NotConfigured() =>
-        new(false, null, Array.Empty<XeroTransaction>());
+        new(false, null, null, null, Array.Empty<XeroTransaction>());
 
     public static XeroTransactionsSnapshot Failed(string error) =>
-        new(true, error, Array.Empty<XeroTransaction>());
+        new(true, error, null, null, Array.Empty<XeroTransaction>());
 }
 
 /// <summary>
@@ -46,4 +51,23 @@ public sealed record XeroTransaction(
     decimal Total,
     decimal AmountDue,
     decimal AmountPaid,
-    string? CurrencyCode);
+    string? CurrencyCode,
+    IReadOnlyList<XeroTransactionLine> Lines);
+
+/// <summary>
+/// One invoice line. <see cref="Site"/> and <see cref="CostCode"/> come from Xero's tracking
+/// categories (named "Site" and "Cost code" in this organisation; names configurable on the API).
+/// <see cref="AccountCode"/>/<see cref="AccountName"/> are the ledger account the line posts to;
+/// the name is filled from the chart of accounts when the connection's scopes allow it.
+/// <see cref="LineAmount"/> is the net (pre-VAT) amount — the figure the site × cost-code split uses.
+/// </summary>
+public sealed record XeroTransactionLine(
+    string? Description,
+    decimal Quantity,
+    decimal UnitAmount,
+    decimal LineAmount,
+    decimal TaxAmount,
+    string? AccountCode,
+    string? AccountName,
+    string? Site,
+    string? CostCode);

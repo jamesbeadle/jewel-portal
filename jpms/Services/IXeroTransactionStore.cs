@@ -7,8 +7,11 @@ public interface IXeroTransactionStore
     /// <summary>Latest snapshot from Xero, or null while the first load is in flight.</summary>
     XeroTransactionsSnapshot? Snapshot();
 
-    /// <summary>Forces a fresh read of Xero (stale-while-revalidate on tab entry, or the Refresh button).</summary>
-    Task RefreshAsync(CancellationToken cancellationToken = default);
+    /// <summary>
+    /// Reloads from the API (stale-while-revalidate on tab entry). <paramref name="force"/> also
+    /// bypasses the API's short-lived Xero cache — used by the explicit Refresh button.
+    /// </summary>
+    Task RefreshAsync(bool force = false, CancellationToken cancellationToken = default);
 
     event Action? OnChange;
 }

@@ -14,6 +14,8 @@ public static class XeroRouteRegistration
 
     public static void RegisterXeroRoutes(QueryRouteTable queries, CommandRouteTable commands)
     {
-        queries.Register<ListXeroTransactions, XeroTransactionsSnapshot>(QueryRoute.Static("/api/xero/transactions"));
+        queries.Register<ListXeroTransactions, XeroTransactionsSnapshot>(
+            new QueryRoute("/api/xero/transactions",
+                query => ((ListXeroTransactions)query).Force ? "/api/xero/transactions?force=true" : "/api/xero/transactions"));
     }
 }

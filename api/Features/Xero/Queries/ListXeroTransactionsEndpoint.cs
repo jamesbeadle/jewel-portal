@@ -34,7 +34,8 @@ public sealed class ListXeroTransactionsEndpoint
         if (signedInUser is null) return new UnauthorizedResult();
         if (!AllowedToViewLedger.IncludesAny(signedInUser.Roles)) return new StatusCodeResult(StatusCodes.Status403Forbidden);
 
-        var snapshot = await handler.HandleAsync(new ListXeroTransactions(), request.HttpContext.RequestAborted);
+        var force = string.Equals(request.Query["force"], "true", StringComparison.OrdinalIgnoreCase);
+        var snapshot = await handler.HandleAsync(new ListXeroTransactions(force), request.HttpContext.RequestAborted);
         return new OkObjectResult(snapshot);
     }
 }

@@ -10,5 +10,5 @@ public sealed class ListXeroTransactionsHandler : IQueryHandler<ListXeroTransact
     public ListXeroTransactionsHandler(IXeroClient xero) { this.xero = xero; }
 
     public Task<XeroTransactionsSnapshot> HandleAsync(ListXeroTransactions query, CancellationToken cancellationToken) =>
-        xero.GetPurchaseInvoicesAsync(cancellationToken);
+        xero.GetPurchaseInvoicesAsync(query.Force, cancellationToken);
 }

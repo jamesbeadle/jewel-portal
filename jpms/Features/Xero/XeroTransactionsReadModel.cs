@@ -13,9 +13,12 @@ public sealed class XeroTransactionsReadModel : IReadModelStore<XeroTransactions
 
     public event Action? OnChanged;
 
-    public async Task RefreshAsync(CancellationToken cancellationToken)
+    public Task RefreshAsync(CancellationToken cancellationToken) => RefreshAsync(false, cancellationToken);
+
+    /// <summary>Force bypasses the API's short-lived Xero cache — used by the explicit Refresh button.</summary>
+    public async Task RefreshAsync(bool force, CancellationToken cancellationToken)
     {
-        Current = await queries.AskAsync(new ListXeroTransactions(), cancellationToken);
+        Current = await queries.AskAsync(new ListXeroTransactions(force), cancellationToken);
         OnChanged?.Invoke();
     }
 }
