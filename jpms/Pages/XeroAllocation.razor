@@ -162,7 +162,7 @@ else
             }
 
             <div class="rounded-xl border border-line bg-surface overflow-x-auto">
-                <table class="w-full min-w-[74rem] text-sm">
+                <table class="w-full min-w-[82rem] text-sm">
                     <thead class="bg-surface-raised border-b border-line">
                         <tr class="text-left text-[11px] uppercase tracking-wider text-content-subtle font-semibold">
                             @if (activeTab == XeroAllocationStatus.Unallocated)
@@ -179,6 +179,7 @@ else
                             {
                                 <th class="px-3 py-3">Project</th>
                                 <th class="px-3 py-3">Cost centre</th>
+                                <th class="px-3 py-3">Bucket</th>
                                 <th class="px-3 py-3"></th>
                             }
                             else
@@ -243,28 +244,27 @@ else
                                             }
                                         </select>
                                     </td>
+                                    <td class="px-3 py-2.5">
+                                        <select class="bg-surface border border-line rounded-lg px-2 py-1 text-content text-sm w-36"
+                                                value="@SelectedBucketFor(line)"
+                                                @onchange="e => SetBucket(line.XeroLedgerLineId, e.Value?.ToString())">
+                                            <option value="">—</option>
+                                            @foreach (var bucket in XeroBuckets.All)
+                                            {
+                                                <option value="@bucket">@bucket</option>
+                                            }
+                                        </select>
+                                    </td>
                                     <td class="px-3 py-2.5 text-right whitespace-nowrap">
+                                        @* Exactly one Allocate is ever active: project + cost centre arms the
+                                           first; a bucket choice arms the second (and wins if both are set,
+                                           since picking a bucket was the later, deliberate act). *@
                                         <button class="text-xs font-medium rounded-lg px-2.5 py-1 bg-content text-surface disabled:opacity-40"
-                                                disabled="@(isBusy || !CanAllocate(line))"
+                                                disabled="@(isBusy || !CanAllocate(line) || CanBucket(line))"
                                                 @onclick="() => AllocateAsync(line)">Allocate</button>
-                                        @if (line.SuggestedBucket is not null)
-                                        {
-                                            <button class="text-xs font-medium rounded-lg px-2.5 py-1 border border-line text-content-muted hover:text-content ml-2 disabled:opacity-40"
-                                                    disabled="@isBusy"
-                                                    @onclick="() => BucketAsync(line, line.SuggestedBucket)">→ @line.SuggestedBucket</button>
-                                        }
-                                        else
-                                        {
-                                            <select class="bg-surface border border-line rounded-lg px-1.5 py-1 text-content-muted text-xs ml-2 w-24"
-                                                    value="" disabled="@isBusy"
-                                                    @onchange="e => BucketFromSelectAsync(line, e.Value?.ToString())">
-                                                <option value="">Bucket…</option>
-                                                @foreach (var bucket in XeroBuckets.All)
-                                                {
-                                                    <option value="@bucket">@bucket</option>
-                                                }
-                                            </select>
-                                        }
+                                        <button class="text-xs font-medium rounded-lg px-2.5 py-1 bg-content text-surface ml-2 disabled:opacity-40"
+                                                disabled="@(isBusy || !CanBucket(line))"
+                                                @onclick="() => BucketAsync(line, SelectedBucketFor(line))">Allocate to bucket</button>
                                         <button class="text-xs text-content-subtle underline underline-offset-4 ml-2"
                                                 disabled="@isBusy"
                                                 @onclick="() => IgnoreAsync(line)">Ignore</button>
@@ -335,6 +335,7 @@ else
     private readonly HashSet<string> selectedIds = new();
     private readonly Dictionary<string, string?> chosenProject = new();
     private readonly Dictionary<string, string?> chosenCostCenter = new();
+    private readonly Dictionary<string, string?> chosenBucket = new();
     private string bulkProjectId = "";
     private string bulkCostCenterCode = "";
     private string bulkBucket = "";
@@ -467,10 +468,14 @@ else
     private async Task BucketAsync(XeroLedgerLine line, string bucket) =>
         await ApplyAsync(new SetXeroAllocation(new[] { line.XeroLedgerLineId }, XeroAllocationAction.AllocateToBucket, Bucket: bucket));
 
-    private async Task BucketFromSelectAsync(XeroLedgerLine line, string? bucket)
-    {
-        if (!string.IsNullOrEmpty(bucket)) await BucketAsync(line, bucket);
-    }
+    // The bucket dropdown works like the project/cost-centre ones: pre-selected with
+    // the suggestion when one was inferred, blank otherwise, always overridable.
+    private string SelectedBucketFor(XeroLedgerLine line) =>
+        (chosenBucket.TryGetValue(line.XeroLedgerLineId, out var chosen) ? chosen : line.SuggestedBucket) ?? "";
+
+    private void SetBucket(string lineId, string? bucket) => chosenBucket[lineId] = bucket;
+
+    private bool CanBucket(XeroLedgerLine line) => !string.IsNullOrEmpty(SelectedBucketFor(line));
 
     private async Task BulkBucketAsync() =>
         await ApplyAsync(new SetXeroAllocation(selectedIds.ToList(), XeroAllocationAction.AllocateToBucket, Bucket: bulkBucket));
@@ -516,6 +521,7 @@ else
                 selectedIds.Remove(id);
                 chosenProject.Remove(id);
                 chosenCostCenter.Remove(id);
+                chosenBucket.Remove(id);
             }
         }
         catch (CommandFailedException failure) { errorMessage = failure.Message; }
