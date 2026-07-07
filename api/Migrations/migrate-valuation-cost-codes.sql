@@ -1,6 +1,11 @@
 -- ============================================================================
 -- MIGRATION: move cost centres + valuation lines to the Jewel master cost codes
 -- ----------------------------------------------------------------------------
+-- ⚠ SUPERSEDED (2026-07-07): the numeric 00001..00137 master this script
+-- installs was replaced the same day by the canonical JBB Cost Code Master
+-- (trade-prefixed codes). Do NOT run this against a database that has had
+-- migrate-cost-centers-v2.sql applied -- it would push valuation lines back
+-- onto the retired numeric codes. Kept for audit trail only.
 -- Replaces the original JBB-* NRM2 element buckets with the granular master
 -- cost codes 00001..00137 (source workbook: CostCodes_20260707.xlsx), and
 -- remaps every SEEDED ValuationLineItem (all six projects' contract works,

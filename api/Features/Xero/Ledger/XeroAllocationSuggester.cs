@@ -17,52 +17,54 @@ namespace Jewel.JPMS.Api.Features.Xero.Ledger;
 /// </summary>
 public sealed class XeroAllocationSuggester
 {
-    // Xero cost-code names -> master code. Curated from the tracking options in use.
+    // Xero cost-code names -> master code (JBB Cost Code Master v2.1, trade-prefixed).
+    // Curated from the tracking options in use.
     private static readonly Dictionary<string, string> CostCodeAliases = new(StringComparer.OrdinalIgnoreCase)
     {
-        ["Foundations"] = "00022",              // Groundworks
-        ["Masonry"] = "00028",                  // Masonry brickworks
-        ["Site Manager"] = "00016",
-        ["Project Manager"] = "00017",
-        ["Electrics"] = "00072",                // Electrician
-        ["Windows & Doors"] = "00050",          // Timber windows and doors (review per line)
-        ["Structural Metal Members PS"] = "00010",
-        ["Structural Works PS"] = "00019",      // Structural support
-        ["Roofing & Guttering"] = "00030",      // Roofer
-        ["Hard Landscaping"] = "00117",         // Landscaping
-        ["Plumbing"] = "00074",                 // Plumber
-        ["Plastering"] = "00062",
-        ["Scaffolding"] = "00020",
-        ["Supply of Sanitary PS"] = "00122",    // Sanitary supply
-        ["Sanitary PS"] = "00122",
-        ["Kitchen & Appliances PS"] = "00125",  // Kitchen supply
-        ["Gypsum Board"] = "00060",             // Plaster Boarding
-        ["Air Con PS"] = "00089",
-        ["Staircase"] = "00048",                // Stairs timber
-        ["Carpentry 1st Fix"] = "00041",
-        ["Carpentry 2nd Fix"] = "00042",
-        ["Demolition"] = "00018",
-        ["Excavation"] = "00021",
-        ["Hire Costs"] = "00134",               // no hire bucket in the master list -> Misc
-        ["Labour Costs"] = "00015",
-        ["Rubbish Removal"] = "00131",          // Rubbish clearance
-        ["Welfare/Hoarding"] = "00004",         // Welfare
-        ["Temp Toilet"] = "00007",
-        ["Temp Plumbing & Electrics"] = "00002",// Site set up
-        ["Trenching & Services PS"] = "00121",
-        ["Health & Safety"] = "00005",
-        ["CDM"] = "00006",
-        ["Asbestos"] = "00114",
-        ["Builders Clean"] = "00130",           // Cleaning internal
-        ["Floor Finishes"] = "00070",           // Floor finish LVT/Lino (review per line)
-        ["Painting"] = "00082",                 // Decorating
-        ["Tiling"] = "00076",
-        ["Lift & Hoists PS"] = "00099",
-        ["Misc Items"] = "00134",
+        ["Foundations"] = "SUB-GWK",              // Groundworks
+        ["Masonry"] = "MASON-BRK",                // Masonry brickworks
+        ["Site Manager"] = "PRELIMS-SMG",
+        ["Project Manager"] = "PRELIMS-PMG",
+        ["Electrics"] = "ELE-STD",                // Electrician
+        ["Windows & Doors"] = "WDR-TIM",          // Timber windows and doors (review per line)
+        ["Structural Metal Members PS"] = "STR-STL",
+        ["Structural Works PS"] = "ENABLE-STS",   // Structural support
+        ["Roofing & Guttering"] = "ROOF-RFR",     // Roofer
+        ["Hard Landscaping"] = "EXTW-LND",        // Landscaping
+        ["Plumbing"] = "MEC-PLM",                 // Plumber
+        ["Plastering"] = "INT-PLS",
+        ["Scaffolding"] = "SCAFF-STD",
+        ["Supply of Sanitary PS"] = "SUP-SAN",    // Sanitary supply
+        ["Sanitary PS"] = "SUP-SAN",
+        ["Kitchen & Appliances PS"] = "SUP-KIT",  // Kitchen supply
+        ["Gypsum Board"] = "INT-PLB",             // Plaster Boarding
+        ["Air Con PS"] = "MEC-AC",
+        ["Staircase"] = "STAIR-TIM",              // Stairs timber
+        ["Carpentry 1st Fix"] = "CARP-1FX",
+        ["Carpentry 2nd Fix"] = "CARP-2FX",
+        ["Demolition"] = "ENABLE-DEM",
+        ["Excavation"] = "SUB-EXC",
+        ["Hire Costs"] = "HAND-MSC",              // no plant-hire bucket in the master -> Misc
+        ["Labour Costs"] = "PRELIMS-LAB",
+        ["Rubbish Removal"] = "ENABLE-SKP",       // Skips
+        ["Welfare/Hoarding"] = "PRELIMS-WEL",     // Welfare
+        ["Temp Toilet"] = "PRELIMS-WC",
+        ["Temp Plumbing & Electrics"] = "PRELIMS-SET", // Site set up
+        ["Trenching & Services PS"] = "UTIL-TRN",
+        ["Health & Safety"] = "PRELIMS-HSO",
+        ["CDM"] = "PRELIMS-HSC",
+        ["Asbestos"] = "ENABLE-ASB",
+        ["Builders Clean"] = "HAND-CLI",          // Cleaning internal
+        ["Floor Finishes"] = "FLR-LVT",           // Floor finish LVT/Lino (review per line)
+        ["Painting"] = "DEC-STD",                 // Decorating
+        ["Tiling"] = "TIL-STD",
+        ["Lift & Hoists PS"] = "SPEC-LFT",
+        ["Misc Items"] = "HAND-MSC",
     };
 
     private readonly List<(string Normalised, string ProjectId)> projects;
     private readonly List<(string Normalised, string Code)> costCenters;
+    private readonly HashSet<string> activeCodes;
 
     public XeroAllocationSuggester(
         IEnumerable<ProjectEntity> projects,
@@ -75,6 +77,7 @@ public sealed class XeroAllocationSuggester
         costCenters = activeCostCenters
             .Select(c => (Normalise(c.Name), c.Code))
             .ToList();
+        activeCodes = costCenters.Select(c => c.Code).ToHashSet(StringComparer.OrdinalIgnoreCase);
     }
 
     public string? SuggestProject(string? xeroSite)
@@ -94,8 +97,11 @@ public sealed class XeroAllocationSuggester
         if (string.IsNullOrWhiteSpace(xeroCostCode)) return null;
 
         // "00006-04 Masonry" -> "Masonry"; some options have no numeric prefix.
+        // An alias is only suggested if that code is actually active — a retired
+        // master code would fail allocation validation and render as a blank
+        // dropdown on the allocation page.
         var name = StripLeadingCode(xeroCostCode);
-        if (CostCodeAliases.TryGetValue(name, out var alias)) return alias;
+        if (CostCodeAliases.TryGetValue(name, out var alias) && activeCodes.Contains(alias)) return alias;
 
         var normalised = Normalise(name);
         foreach (var (ccName, code) in costCenters)

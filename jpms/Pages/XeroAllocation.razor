@@ -443,11 +443,20 @@ else
 
     // -- selection & per-line choices ----------------------------------------
 
-    private string SelectedProjectFor(XeroLedgerLine line) =>
-        (chosenProject.TryGetValue(line.XeroLedgerLineId, out var chosen) ? chosen : line.SuggestedProjectId) ?? "";
+    // A value that isn't in the dropdown's options (e.g. a suggestion for a project or
+    // code that no longer exists) counts as empty — otherwise the select renders blank
+    // while the Allocate button believes a value is set.
+    private string SelectedProjectFor(XeroLedgerLine line)
+    {
+        var value = (chosenProject.TryGetValue(line.XeroLedgerLineId, out var chosen) ? chosen : line.SuggestedProjectId) ?? "";
+        return Projects.Any(project => project.ProjectId == value) ? value : "";
+    }
 
-    private string SelectedCostCenterFor(XeroLedgerLine line) =>
-        (chosenCostCenter.TryGetValue(line.XeroLedgerLineId, out var chosen) ? chosen : line.SuggestedCostCenterCode) ?? "";
+    private string SelectedCostCenterFor(XeroLedgerLine line)
+    {
+        var value = (chosenCostCenter.TryGetValue(line.XeroLedgerLineId, out var chosen) ? chosen : line.SuggestedCostCenterCode) ?? "";
+        return CostCenters.Active().Any(centre => centre.Code == value) ? value : "";
+    }
 
     private void SetProject(string lineId, string? projectId) => chosenProject[lineId] = projectId;
     private void SetCostCenter(string lineId, string? code) => chosenCostCenter[lineId] = code;
