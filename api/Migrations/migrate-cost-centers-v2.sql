@@ -1,3 +1,9 @@
+-- ⛔ DO NOT RUN — WITHDRAWN 2026-07-07. This migration was applied in error;
+-- restore-numeric-cost-codes.sql reverts it. The numbered list in
+-- CostCodes_20260707.xlsx is the cost-code master. Kept for audit only.
+THROW 50000, 'WITHDRAWN: do not run migrate-cost-centers-v2.sql. See restore-numeric-cost-codes.sql.', 1;
+GO
+
 -- ============================================================================
 -- MIGRATION v2: move to the canonical JBB Cost Code Master (v2.1)
 -- ----------------------------------------------------------------------------

@@ -1,5 +1,5 @@
 -- ============================================================================
--- NOTE: CostCode values use the canonical JBB Cost Code Master codes (v2.1, trade-prefixed) seeded
+-- NOTE: CostCode values use the Jewel master cost codes (00001..00137) seeded
 -- by seed-cost-centers.sql. Remapped from the original JBB-* buckets on
 -- 2026-07-07 -- audit trail: scripts/cost-code-remap-review.csv.
 -- Seed: Abbot Road -- Variation Orders (VOQs, VOs and report variation lines)
@@ -38,11 +38,11 @@
 
 MERGE INTO [dbo].[ValuationLineItems] AS target
 USING (VALUES
-    (N'ar-vo-v01', N'4ec1ad1ca3a440c69f32f46f73aea005', 3, N'', N'', N'V01', N'Levelling Compound Removal', 0, N'FLR-SLF', N'', N'item', 1.0000, 1050.0000, 1050.0000, N'', 1),
-    (N'ar-vo-v04', N'4ec1ad1ca3a440c69f32f46f73aea005', 3, N'', N'', N'V04', N'Various', 0, N'HAND-MSC', N'', N'item', 1.0000, 6410.0000, 6410.0000, N'', 2),
-    (N'ar-vo-v05', N'4ec1ad1ca3a440c69f32f46f73aea005', 3, N'', N'', N'V05', N'Electrical', 0, N'ELE-STD', N'', N'item', 1.0000, 3900.0000, 3900.0000, N'', 3),
-    (N'ar-vo-v09', N'4ec1ad1ca3a440c69f32f46f73aea005', 3, N'', N'', N'V09', N'External Tap', 0, N'MEC-PLM', N'', N'item', 1.0000, 546.0000, 546.0000, N'', 4),
-    (N'ar-vo-v23', N'4ec1ad1ca3a440c69f32f46f73aea005', 3, N'', N'', N'V23', N'Staircase', 0, N'STAIR-TIM', N'', N'item', 1.0000, 5544.5000, 5544.5000, N'', 5)
+    (N'ar-vo-v01', N'4ec1ad1ca3a440c69f32f46f73aea005', 3, N'', N'', N'V01', N'Levelling Compound Removal', 0, N'00071', N'', N'item', 1.0000, 1050.0000, 1050.0000, N'', 1),
+    (N'ar-vo-v04', N'4ec1ad1ca3a440c69f32f46f73aea005', 3, N'', N'', N'V04', N'Various', 0, N'00134', N'', N'item', 1.0000, 6410.0000, 6410.0000, N'', 2),
+    (N'ar-vo-v05', N'4ec1ad1ca3a440c69f32f46f73aea005', 3, N'', N'', N'V05', N'Electrical', 0, N'00072', N'', N'item', 1.0000, 3900.0000, 3900.0000, N'', 3),
+    (N'ar-vo-v09', N'4ec1ad1ca3a440c69f32f46f73aea005', 3, N'', N'', N'V09', N'External Tap', 0, N'00074', N'', N'item', 1.0000, 546.0000, 546.0000, N'', 4),
+    (N'ar-vo-v23', N'4ec1ad1ca3a440c69f32f46f73aea005', 3, N'', N'', N'V23', N'Staircase', 0, N'00048', N'', N'item', 1.0000, 5544.5000, 5544.5000, N'', 5)
 ) AS source (ValuationLineItemId, ProjectId, ElementType, SectionCode, SectionName,
              VariationRef, VariationTitle, LineType, CostCode, Description, Unit,
              Quantity, Rate, LineAmount, Comments, DisplayOrder)
