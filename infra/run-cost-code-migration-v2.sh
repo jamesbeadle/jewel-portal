@@ -1,15 +1,11 @@
 #!/usr/bin/env bash
-# ⛔ DO NOT RUN — WITHDRAWN 2026-07-07. Applied in error; use
-# infra/run-restore-numeric-cost-codes.sh to revert. Kept for audit only.
-echo 'WITHDRAWN: do not run. Use infra/run-restore-numeric-cost-codes.sh instead.'; exit 1
-
 # ============================================================================
 # Runs the cost-code migration against the PROD database.
 #
-# v2: migrates the cost-centre master to the canonical JBB Cost Code Master
-# (v2.1, trade-prefixed codes, 138 codes / 25 parent trades) and remaps both
-# the valuation lines AND the Xero ledger allocations off the interim numeric
-# codes. Transactional and self-verifying: rolls back if valuation totals move.
+# v2 (CONFIRMED): migrates the cost-centre master to the JBB Cost Code Master
+# (trade-prefixed codes, 138 codes / 25 parent trades) and remaps both the
+# valuation lines AND the Xero ledger allocations off the numeric codes.
+# Transactional and self-verifying: rolls back if valuation totals move.
 #
 # Does everything end-to-end from your Mac (same pattern as seed-master-admin.sh):
 #   1. reads the prod connection details from infra/.azure-prod-output.env
@@ -17,7 +13,7 @@ echo 'WITHDRAWN: do not run. Use infra/run-restore-numeric-cost-codes.sh instead
 #   3. opens the Azure SQL firewall for your current public IP
 #   4. runs api/Migrations/migrate-cost-centers-v2.sql
 #
-# Usage:  bash infra/run-cost-code-migration-v2.sh
+# Usage:  bash infra/restore-numeric-cost-codes.sh
 # Safe to re-run: the firewall rule upserts and the SQL script is idempotent.
 # ============================================================================
 set -euo pipefail

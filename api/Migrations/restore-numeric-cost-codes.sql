@@ -1,3 +1,9 @@
+-- ⛔ DO NOT RUN — WITHDRAWN 2026-07-07 (second decision): the JBB Cost Code
+-- Master (trade-prefixed) is confirmed as the master. This restore script
+-- would push everything back onto the retired numeric codes. Audit only.
+THROW 50000, 'WITHDRAWN: do not run restore-numeric-cost-codes.sql. The JBB trade-prefixed master is confirmed.', 1;
+GO
+
 -- ============================================================================
 -- RESTORE: revert the cost-code master to the numbered Jewel list (00001..00137)
 -- ----------------------------------------------------------------------------

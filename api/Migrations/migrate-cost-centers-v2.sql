@@ -1,26 +1,20 @@
--- ⛔ DO NOT RUN — WITHDRAWN 2026-07-07. This migration was applied in error;
--- restore-numeric-cost-codes.sql reverts it. The numbered list in
--- CostCodes_20260707.xlsx is the cost-code master. Kept for audit only.
-THROW 50000, 'WITHDRAWN: do not run migrate-cost-centers-v2.sql. See restore-numeric-cost-codes.sql.', 1;
-GO
-
 -- ============================================================================
--- MIGRATION v2: move to the canonical JBB Cost Code Master (v2.1)
+-- MIGRATION v2 (CONFIRMED 2026-07-07): move to the JBB Cost Code Master
 -- ----------------------------------------------------------------------------
--- Replaces the interim numeric master (00001..00137) with the canonical JBB
--- Cost Code Master: trade-prefixed codes (PRELIMS-HRD, ...), 138 codes across
--- 25 parent trades (source workbook: JBB_CostCode_Master v2.1, owner Nigel
--- Reilly). If a code is not in the master it is NOT a cost code: everything
--- else is retired, and nothing outside the master is ever reactivated.
+-- Replaces the interim numeric codes (00001..00137 -- Xero's legacy numbering)
+-- with the JBB Cost Code Master: trade-prefixed codes, 138 codes across 25
+-- parent trades (source workbook: JBB_CostCode_Master v2.1, owner Nigel
+-- Reilly). Confirmed as the go-forward master. If a code is not in the master
+-- it is NOT a cost code.
 --
--- Remaps, by a 1:1 name-based code mapping (numeric -> new):
+-- Remaps, by a 1:1 name-based code mapping (numeric -> prefixed):
 --   * ValuationLineItems.CostCode      (all six projects, incl. variations)
 --   * XeroLedgerLines.CostCenterCode   (allocations already made in the queue)
--- Two judgment calls in the mapping: 00054 Specialist glazing -> WDR-SPG
--- ("Specialist glazing and screens") and 00131 Rubbish clearance -> ENABLE-SKP
--- ("Skips").
+-- Judgment calls: 00054 Specialist glazing -> WDR-SPG ("Specialist glazing and
+-- screens"); 00131 Rubbish clearance -> ENABLE-SKP ("Skips").
 --
 -- Idempotent and transactional; amounts are never touched. Safe to re-run.
+-- (History: applied, reverted while the master was reconfirmed, re-applied.)
 -- ============================================================================
 
 SET XACT_ABORT ON;
@@ -28,7 +22,7 @@ BEGIN TRANSACTION;
 
 DECLARE @valTotalBefore decimal(38,4) = (SELECT SUM([LineAmount]) FROM [dbo].[ValuationLineItems]);
 
--- 1. Seed / refresh the canonical master --------------------------------------
+-- 1. Seed / refresh the master -------------------------------------------------
 MERGE INTO [dbo].[CostCenters] AS target
 USING (VALUES
     (N'cc-prelims-hrd', N'PRELIMS-HRD', N'Hoarding', 10),
@@ -178,7 +172,7 @@ WHEN NOT MATCHED BY TARGET THEN
     INSERT ([CostCenterId], [Code], [Name], [SortOrder], [IsActive])
     VALUES (source.[CostCenterId], source.[Code], source.[Name], source.[SortOrder], 1);
 
--- 2. Retire everything that is not in the master ------------------------------
+-- 2. Retire everything that is not in the master ---------------------------------
 UPDATE [dbo].[CostCenters]
 SET [IsActive] = 0
 WHERE [CostCenterId] NOT IN (SELECT [CostCenterId] FROM (VALUES
@@ -322,7 +316,7 @@ WHERE [CostCenterId] NOT IN (SELECT [CostCenterId] FROM (VALUES
     (N'cc-nom-sup', N'NOM-SUP', N'Nominated supplier', 1380)
 ) AS master ([CostCenterId], [Code], [Name], [SortOrder]));
 
--- 3. Remap valuation lines and Xero allocations off the numeric codes ---------
+-- 3. Remap valuation lines and Xero allocations (numeric -> prefixed) ------------
 DECLARE @map TABLE ([OldCode] nvarchar(32) PRIMARY KEY, [NewCode] nvarchar(32));
 INSERT INTO @map ([OldCode], [NewCode]) VALUES
     (N'00001', N'PRELIMS-HRD'),
@@ -469,7 +463,7 @@ FROM [dbo].[ValuationLineItems] v JOIN @map m ON v.[CostCode] = m.[OldCode];
 UPDATE x SET x.[CostCenterCode] = m.[NewCode]
 FROM [dbo].[XeroLedgerLines] x JOIN @map m ON x.[CostCenterCode] = m.[OldCode];
 
--- 4. Verify -------------------------------------------------------------------
+-- 4. Verify -----------------------------------------------------------------------
 DECLARE @valTotalAfter decimal(38,4) = (SELECT SUM([LineAmount]) FROM [dbo].[ValuationLineItems]);
 IF @valTotalBefore <> @valTotalAfter
 BEGIN
@@ -479,11 +473,11 @@ END;
 
 COMMIT TRANSACTION;
 
--- Post-migration report ---------------------------------------------------------
-SELECT 'ValuationLineItems still on numeric codes' AS [Check], COUNT(*) AS [Count]
+-- Post-migration report --------------------------------------------------------------
+SELECT 'Valuation lines still on numeric codes (should be 0)' AS [Check], COUNT(*) AS [Count]
 FROM [dbo].[ValuationLineItems] WHERE [CostCode] LIKE N'00[0-9][0-9][0-9]'
 UNION ALL
-SELECT 'XeroLedgerLines still on numeric codes', COUNT(*)
+SELECT 'Xero allocations still on numeric codes (should be 0)', COUNT(*)
 FROM [dbo].[XeroLedgerLines] WHERE [CostCenterCode] LIKE N'00[0-9][0-9][0-9]'
 UNION ALL
 SELECT 'Active cost centres (must be 138)', COUNT(*)

@@ -1,4 +1,8 @@
 #!/usr/bin/env bash
+# ⛔ DO NOT RUN — WITHDRAWN 2026-07-07: the JBB trade-prefixed master is
+# confirmed. Use infra/run-cost-code-migration-v2.sh. Audit only.
+echo 'WITHDRAWN: the JBB trade-prefixed master is confirmed. Use infra/run-cost-code-migration-v2.sh.'; exit 1
+
 # ============================================================================
 # Runs the cost-code migration against the PROD database.
 #
