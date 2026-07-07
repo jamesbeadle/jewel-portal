@@ -180,15 +180,19 @@ else
             else
             {
                 <p class="text-sm text-content-muted mb-4">
-                    Net (pre-VAT) spend by site and cost code, per calendar year — approved bills
-                    (authorised or paid) minus approved credit notes.
-                    @if (ExcludedFromBreakdown > 0)
-                    {
-                        <span class="text-content-subtle">
-                            Excludes @Money(ExcludedFromBreakdown) net of draft / awaiting-approval / voided records
-                            (visible under Transactions).
-                        </span>
-                    }
+                    Net (pre-VAT) spend by site and cost code, per calendar year — bills that are paid,
+                    authorised or awaiting approval, minus credit notes (the same basis as the accountant's
+                    payable invoice summary).
+                    <span class="text-content-subtle">
+                        @if (AwaitingApprovalNet != 0)
+                        {
+                            <text>Includes @Money(AwaitingApprovalNet) awaiting approval. </text>
+                        }
+                        @if (OtherExcludedNet != 0)
+                        {
+                            <text>Draft / voided: @Money(OtherExcludedNet) excluded.</text>
+                        }
+                    </span>
                 </p>
 
                 <div class="rounded-xl border border-line bg-surface overflow-hidden">
@@ -256,10 +260,10 @@ else
 
     private XeroTransactionsSnapshot? Snapshot => Xero.Snapshot();
 
-    // Statuses Xero's own reports count. DRAFT and SUBMITTED (awaiting approval) are excluded so
-    // the split matches what the accountants see in Xero.
+    // Mirrors the accountant's payable invoice summary basis: paid, authorised and awaiting-approval
+    // (SUBMITTED) records all count as committed cost. DRAFT and VOIDED never count.
     private static bool CountsInBreakdown(XeroTransaction transaction) =>
-        transaction.Status is "AUTHORISED" or "PAID";
+        transaction.Status is "AUTHORISED" or "PAID" or "SUBMITTED";
 
     private static bool IsCreditNote(XeroTransaction transaction) =>
         transaction.Type == "ACCPAYCREDIT";
@@ -273,10 +277,16 @@ else
     private int CreditNoteCount =>
         Snapshot?.Transactions.Count(IsCreditNote) ?? 0;
 
-    /// <summary>Net value of records the breakdown leaves out, so the gap to the list view is explained.</summary>
-    private decimal ExcludedFromBreakdown =>
+    /// <summary>Net value of awaiting-approval records — the usual gap to the accountant's reports.</summary>
+    private decimal AwaitingApprovalNet =>
         Snapshot?.Transactions
-            .Where(transaction => !CountsInBreakdown(transaction))
+            .Where(transaction => transaction.Status == "SUBMITTED")
+            .Sum(transaction => Sign(transaction) * transaction.SubTotal) ?? 0m;
+
+    /// <summary>Net value of draft/voided records the breakdown never counts.</summary>
+    private decimal OtherExcludedNet =>
+        Snapshot?.Transactions
+            .Where(transaction => transaction.Status is not ("AUTHORISED" or "PAID" or "SUBMITTED"))
             .Sum(transaction => Sign(transaction) * transaction.SubTotal) ?? 0m;
 
     private string FromDateText => (Snapshot?.FromDate)?.ToString("MMM yyyy") ?? "Jan 2023";
