@@ -18,11 +18,26 @@ public sealed class SyncXeroLedgerHandler : ICommandHandler<SyncXeroLedger, Xero
 {
     private readonly IXeroClient xero;
     private readonly JpmsContext context;
+    private readonly XeroOptions options;
 
-    public SyncXeroLedgerHandler(IXeroClient xero, JpmsContext context)
+    public SyncXeroLedgerHandler(IXeroClient xero, JpmsContext context, XeroOptions options)
     {
         this.xero = xero;
         this.context = context;
+        this.options = options;
+    }
+
+    /// <summary>
+    /// Only cost-of-sales lines are allocated to projects: the nominal account the
+    /// line posts to must start with a configured prefix (default "3"). Lines with
+    /// no account code (stripped/deleted invoices) are not cost of sales.
+    /// </summary>
+    private bool IsCostOfSales(string? accountCode)
+    {
+        if (options.CostOfSalesAccountPrefixes.Count == 0) return true;
+        if (string.IsNullOrWhiteSpace(accountCode)) return false;
+        return options.CostOfSalesAccountPrefixes.Any(prefix =>
+            accountCode.StartsWith(prefix, StringComparison.OrdinalIgnoreCase));
     }
 
     // Statuses that never enter the allocation queue: drafts aren't committed costs,
@@ -72,6 +87,11 @@ public sealed class SyncXeroLedgerHandler : ICommandHandler<SyncXeroLedger, Xero
                     // check here would miss them.)
                     continue;
                 }
+
+                // Only cost-of-sales lines (nominal account 3xx by default) are queued for
+                // allocation; overhead lines are skipped. Existing stored lines that fail
+                // the rule are cleaned up in the pass below.
+                if (!IsCostOfSales(line.AccountCode)) continue;
 
                 seenLineIds.Add(id);
 
@@ -128,20 +148,28 @@ public sealed class SyncXeroLedgerHandler : ICommandHandler<SyncXeroLedger, Xero
 
         foreach (var entity in existingById.Values.ToList())
         {
-            if (!statusByInvoiceId.TryGetValue(entity.XeroInvoiceId, out var invoiceStatus)) continue;
-
-            var excluded = ExcludedStatuses.Contains(invoiceStatus);
             if (entity.AllocationStatus == (int)XeroAllocationStatus.Unallocated)
             {
-                if (excluded || !seenLineIds.Contains(entity.XeroLedgerLineId))
+                // The account rule holds regardless of whether the invoice was in this
+                // snapshot — an unallocated non-cost-of-sales line never belongs here.
+                if (!IsCostOfSales(entity.AccountCode))
+                {
+                    context.XeroLedgerLines.Remove(entity);
+                    removed++;
+                    continue;
+                }
+
+                if (statusByInvoiceId.TryGetValue(entity.XeroInvoiceId, out var status)
+                    && (ExcludedStatuses.Contains(status) || !seenLineIds.Contains(entity.XeroLedgerLineId)))
                 {
                     context.XeroLedgerLines.Remove(entity);
                     removed++;
                 }
             }
-            else if (excluded)
+            else if (statusByInvoiceId.TryGetValue(entity.XeroInvoiceId, out var status)
+                     && ExcludedStatuses.Contains(status))
             {
-                entity.InvoiceStatus = invoiceStatus;
+                entity.InvoiceStatus = status;
                 entity.LastSyncedAtUtc = now;
             }
         }

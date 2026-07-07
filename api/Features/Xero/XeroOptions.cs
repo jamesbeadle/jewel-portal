@@ -47,6 +47,15 @@ public sealed class XeroOptions
     public int CacheMinutes { get; set; } = 5;
 
     /// <summary>
+    /// Nominal account-code prefixes that count as cost of sales — only lines posted to
+    /// these accounts enter the allocation queue (comma-separated app setting; default "3",
+    /// i.e. the 3xx cost-of-sales range). Overhead lines (IT, subscriptions, professional
+    /// fees...) stay visible on the live Xero transactions page but are never queued for
+    /// project allocation. Empty disables the filter.
+    /// </summary>
+    public IReadOnlyList<string> CostOfSalesAccountPrefixes { get; set; } = new[] { "3" };
+
+    /// <summary>
     /// Tracking category (as named in Xero) that identifies the site on an invoice line. The
     /// organisation's category is literally named "Sites" (plural); matching ignores case and spaces.
     /// </summary>
@@ -80,6 +89,11 @@ public sealed class XeroOptions
 
         if (int.TryParse(section["CacheMinutes"], out var cacheMinutes) && cacheMinutes is >= 0 and <= 120)
             options.CacheMinutes = cacheMinutes;
+
+        var prefixes = section["CostOfSalesAccountPrefixes"];
+        if (prefixes is not null)
+            options.CostOfSalesAccountPrefixes = prefixes
+                .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 
         var siteCategory = section["SiteTrackingCategory"];
         if (!string.IsNullOrWhiteSpace(siteCategory))
