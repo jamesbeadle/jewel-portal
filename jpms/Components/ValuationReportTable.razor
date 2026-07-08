@@ -90,10 +90,38 @@ else
                                             <td class="px-3 py-2 text-right whitespace-nowrap">
                                                 @if (CanEditEntries && line.CountsTowardTotals)
                                                 {
-                                                    <input type="number" step="any" min="0" max="100"
-                                                           value="@PercentText(line)"
-                                                           @onchange="@(e => SaveEntryAsync(line, e.Value?.ToString()))"
-                                                           class="field w-20 text-right px-2 py-1 focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent" />
+                                                    @if (editingLineId == line.ValuationLineItemId)
+                                                    {
+                                                        @* Explicit commit only: Enter / tick saves, Esc / cross discards. *@
+                                                        <span class="inline-flex items-center gap-1">
+                                                            <input @ref="editInput" type="text" inputmode="decimal"
+                                                                   value="@editValue"
+                                                                   @oninput="@(e => { editValue = e.Value?.ToString() ?? ""; editError = false; })"
+                                                                   @onkeydown="@(e => OnEditKeyDownAsync(e, line))"
+                                                                   aria-label="Percent complete"
+                                                                   class="field w-16 text-right px-2 py-1 focus:outline-none focus:ring-2 @(editError ? "ring-2 ring-negative border-negative" : "focus:ring-accent focus:border-accent")" />
+                                                            <button type="button" title="Save (Enter)" aria-label="Save percent complete"
+                                                                    @onclick="() => CommitEditAsync(line)"
+                                                                    class="inline-flex items-center justify-center w-6 h-6 rounded-md text-positive hover:bg-surface-raised">
+                                                                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                                                                     stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7" /></svg>
+                                                            </button>
+                                                            <button type="button" title="Cancel (Esc)" aria-label="Cancel edit"
+                                                                    @onclick="CancelEdit"
+                                                                    class="inline-flex items-center justify-center w-6 h-6 rounded-md text-content-subtle hover:text-content hover:bg-surface-raised">
+                                                                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                                                                     stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6L6 18" /></svg>
+                                                            </button>
+                                                        </span>
+                                                    }
+                                                    else
+                                                    {
+                                                        <button type="button" title="Edit % complete"
+                                                                @onclick="() => StartEdit(line)"
+                                                                class="underline decoration-dotted underline-offset-2 hover:decoration-solid @(PercentFor(line) == 0m ? "text-content-muted" : "text-content")">
+                                                            @Pct(PercentFor(line))
+                                                        </button>
+                                                    }
                                                 }
                                                 else
                                                 {
@@ -292,21 +320,61 @@ else
     private decimal PercentFor(ValuationLineItem line) =>
         entries.FirstOrDefault(e => e.ValuationLineItemId == line.ValuationLineItemId)?.PercentComplete ?? 0m;
 
-    private string PercentText(ValuationLineItem line)
-    {
-        var p = PercentFor(line);
-        return p == 0m ? "" : p.ToString("0.##", Gb);
-    }
-
     private decimal ClaimedFor(ValuationLineItem line) =>
         ValuationCalculations.CumulativeClaimed(PercentFor(line), line.LineAmount);
 
-    private async Task SaveEntryAsync(ValuationLineItem line, string? raw)
+    // ---- % complete click-to-edit -----------------------------------------
+    // One cell edits at a time; nothing saves until the user confirms (Enter or
+    // the tick). Esc or the cross discards. Clicking elsewhere leaves the editor
+    // open rather than silently committing or discarding.
+    private string? editingLineId;
+    private string editValue = "";
+    private bool editError;
+    private bool focusPending;
+    private ElementReference editInput;
+
+    private void StartEdit(ValuationLineItem line)
     {
-        if (SelectedClaim is null) return;
-        var percent = FormNumber.ParseAmount(raw ?? "0");
+        editingLineId = line.ValuationLineItemId;
+        editValue = PercentFor(line).ToString("0.##", Gb);
+        editError = false;
+        focusPending = true;
+    }
+
+    private void CancelEdit()
+    {
+        editingLineId = null;
+        editError = false;
+    }
+
+    private async Task OnEditKeyDownAsync(KeyboardEventArgs e, ValuationLineItem line)
+    {
+        if (e.Key == "Enter") await CommitEditAsync(line);
+        else if (e.Key == "Escape") CancelEdit();
+    }
+
+    private async Task CommitEditAsync(ValuationLineItem line)
+    {
+        if (SelectedClaim is null) { CancelEdit(); return; }
+        if (!decimal.TryParse(editValue.Trim().TrimEnd('%'), System.Globalization.NumberStyles.Number, Gb, out var percent)
+            || percent < 0m || percent > 100m)
+        {
+            editError = true;
+            return;
+        }
         await Store.RecordEntryAsync(ProjectId, new RecordClaimEntry(SelectedClaim.ValuationClaimId, line.ValuationLineItemId, percent));
+        editingLineId = null;
+        editError = false;
         OnParametersSet();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (focusPending && editingLineId is not null)
+        {
+            focusPending = false;
+            await editInput.FocusAsync();
+        }
     }
 
     private async Task RemoveLineAsync(ValuationLineItem line)
