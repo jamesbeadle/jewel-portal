@@ -1,6 +1,11 @@
 @using Jewel.JPMS.Models
 @using Jewel.JPMS.Contracts.Commercial
 
+<label class="mb-3 flex w-fit items-center gap-2 text-sm text-content-subtle cursor-pointer select-none">
+    <input type="checkbox" class="cursor-pointer align-middle" @bind="hideZeroRows" />
+    Hide zero rows
+</label>
+
 <div class="rounded-xl border border-line bg-surface overflow-x-auto">
     <table class="w-full text-sm border-collapse">
         <thead class="bg-surface-raised border-b border-line">
@@ -99,13 +104,22 @@
 
     private Dictionary<string, ProjectFinancialSummaryRow> byCode = new(StringComparer.OrdinalIgnoreCase);
 
+    // Hide cost centres with no figures in any column; on by default.
+    private bool hideZeroRows = true;
+
+    private bool HasAnyValue(string costCode) =>
+        byCode.TryGetValue(costCode, out var row) &&
+        (row.BudgetedSales != 0m || row.BudgetedCost != 0m || row.CompletionPercent != 0m ||
+         row.ExpectedActualCost != 0m || row.ActualCost != 0m || row.UnderOverExpected != 0m);
+
     protected override void OnParametersSet() =>
         byCode = SummaryRows.ToDictionary(row => row.CostCode, StringComparer.OrdinalIgnoreCase);
 
     private IEnumerable<(string Code, string Name, bool InMaster)> Rows =>
         CostCenters.OrderBy(c => c.Name, StringComparer.OrdinalIgnoreCase)
             .Select(centre => (Code: centre.Code, Name: centre.Name, InMaster: true))
-            .Concat(UnmatchedCodes.Select(unmatched => (Code: unmatched, Name: "", InMaster: false)));
+            .Concat(UnmatchedCodes.Select(unmatched => (Code: unmatched, Name: "", InMaster: false)))
+            .Where(entry => !hideZeroRows || HasAnyValue(entry.Code));
 
     private IEnumerable<string> UnmatchedCodes =>
         SummaryRows.Select(row => row.CostCode)

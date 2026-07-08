@@ -11,7 +11,7 @@
 
 @if (!isLoaded)
 {
-    <section class="max-w-6xl mx-auto px-4 py-12 text-content-subtle text-sm">Loading…</section>
+    <section class="px-6 md:px-8 py-12 text-content-subtle text-sm">Loading…</section>
 }
 else if (!Session.IsApproved)
 {
@@ -19,7 +19,7 @@ else if (!Session.IsApproved)
 }
 else if (!CanView)
 {
-    <section class="max-w-6xl mx-auto px-4 py-12">
+    <section class="px-6 md:px-8 py-12">
         <div class="panel p-8 text-center">
             <p class="text-sm text-content">You don't have access to the agent queue.</p>
             <p class="text-xs text-content-subtle mt-1">The queue is available to administrators, directors, project managers, quantity surveyors and site managers.</p>
@@ -28,7 +28,7 @@ else if (!CanView)
 }
 else
 {
-    <section class="max-w-6xl mx-auto px-4 py-8 md:py-12">
+    <section class="px-6 md:px-8 py-8 md:py-12">
         <header class="mb-6">
             <p class="text-xs uppercase tracking-wider text-content-subtle font-medium mb-1">JPMS · agents</p>
             <h1 class="text-2xl md:text-3xl font-semibold text-content leading-tight">Agent queue</h1>
