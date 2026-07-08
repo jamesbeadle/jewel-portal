@@ -142,3 +142,11 @@ public sealed record WorkOrderLine(
     decimal LineTotal,
     decimal PaidToDate,
     int SortOrder);
+
+// A work order with everything the Work Orders tab renders: the header, the supplier's display
+// name (resolved so the tab doesn't join the directory client-side), and the priced lines whose
+// cost codes drive the tab's cost-centre grouping.
+public sealed record ProjectWorkOrderDetail(
+    WorkOrder Order,
+    string SubcontractorName,
+    IReadOnlyList<WorkOrderLine> Lines);

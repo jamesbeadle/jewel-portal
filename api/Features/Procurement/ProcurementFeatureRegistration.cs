@@ -15,6 +15,7 @@ public static class ProcurementFeatureRegistration
         services.AddScoped<IQueryHandler<GetBidPackageById, BidPackage?>, GetBidPackageByIdHandler>();
         services.AddScoped<IQueryHandler<ListQuotesForBidPackage, IReadOnlyList<Quote>>, ListQuotesForBidPackageHandler>();
         services.AddScoped<IQueryHandler<ListWorkOrders, IReadOnlyList<WorkOrder>>, ListWorkOrdersHandler>();
+        services.AddScoped<IQueryHandler<ListProjectWorkOrders, IReadOnlyList<ProjectWorkOrderDetail>>, ListProjectWorkOrdersHandler>();
         services.AddScoped<IQueryHandler<ListBidPackageRecipients, IReadOnlyList<BidPackageRecipient>>, ListBidPackageRecipientsHandler>();
         services.AddScoped<IQueryHandler<ListBidPackageLineItems, IReadOnlyList<BidPackageLineItem>>, ListBidPackageLineItemsHandler>();
         services.AddScoped<IQueryHandler<ListBidPackageEmails, IReadOnlyList<MailboxMessage>>, ListBidPackageEmailsHandler>();

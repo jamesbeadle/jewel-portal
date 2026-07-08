@@ -49,7 +49,8 @@ else
                                        CostCode="@(selectedCostCode ?? "")"
                                        CostCentreName="@SelectedCostCentreName"
                                        Row="SelectedRow"
-                                       OnClose="CloseCostCentreModal" />
+                                       OnClose="CloseCostCentreModal"
+                                       OnInvoiceMoved="HandleInvoiceMovedAsync" />
         }
     </ProjectPageShell>
 }
@@ -76,6 +77,14 @@ else
     private void OpenCostCentreModal(string costCode) => selectedCostCode = costCode;
 
     private void CloseCostCentreModal() => selectedCostCode = null;
+
+    // A line was reallocated to another cost centre from inside the modal:
+    // close it and re-pull the summary so the table reflects the move.
+    private async Task HandleInvoiceMovedAsync()
+    {
+        selectedCostCode = null;
+        await Summary.RefreshAsync(ProjectId, CancellationToken.None);
+    }
 
     protected override async Task OnInitializedAsync()
     {

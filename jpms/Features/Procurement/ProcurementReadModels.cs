@@ -37,3 +37,25 @@ public sealed class WorkOrdersReadModel : IReadModelStore<IReadOnlyList<WorkOrde
         OnChanged?.Invoke();
     }
 }
+
+// The Work Orders tab's store: every order on the project with lines and supplier names, keyed
+// per project so navigating between projects keeps each one's cached view (stale-while-revalidate,
+// per the front-end data-loading convention).
+public sealed class ProjectWorkOrdersReadModel
+{
+    private readonly IQueryClient queries;
+    private readonly Dictionary<string, IReadOnlyList<ProjectWorkOrderDetail>> ordersByProject = new();
+
+    public ProjectWorkOrdersReadModel(IQueryClient queries) { this.queries = queries; }
+
+    public event Action? OnChanged;
+
+    public IReadOnlyList<ProjectWorkOrderDetail> Current(string projectId) =>
+        ordersByProject.TryGetValue(projectId, out var list) ? list : Array.Empty<ProjectWorkOrderDetail>();
+
+    public async Task RefreshAsync(string projectId, CancellationToken cancellationToken)
+    {
+        ordersByProject[projectId] = await queries.AskAsync(new ListProjectWorkOrders(projectId), cancellationToken);
+        OnChanged?.Invoke();
+    }
+}
