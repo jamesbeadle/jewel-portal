@@ -48,6 +48,7 @@ public static class CommercialFeatureRegistration
         // Valuation Report — the bill, its claims, and the claim lifecycle.
         services.AddScoped<IQueryHandler<ListValuationLinesForProject, IReadOnlyList<ValuationLineItem>>, ListValuationLinesForProjectHandler>();
         services.AddScoped<IQueryHandler<GetProjectFinancialSummary, IReadOnlyList<ProjectFinancialSummaryRow>>, GetProjectFinancialSummaryHandler>();
+        services.AddScoped<IQueryHandler<ListCostCentreActualCosts, IReadOnlyList<CostCentreActualCostLine>>, ListCostCentreActualCostsHandler>();
         services.AddScoped<IQueryHandler<ListValuationClaimsForProject, IReadOnlyList<ValuationClaim>>, ListValuationClaimsForProjectHandler>();
         services.AddScoped<IQueryHandler<ListClaimLines, IReadOnlyList<ClaimLine>>, ListClaimLinesHandler>();
 

@@ -73,6 +73,10 @@ public static class CommercialRouteRegistration
             new QueryRoute("/api/projects/{projectId}/financial-summary",
                 query => $"/api/projects/{((GetProjectFinancialSummary)query).ProjectId}/financial-summary"));
 
+        queries.Register<ListCostCentreActualCosts, IReadOnlyList<CostCentreActualCostLine>>(
+            new QueryRoute("/api/projects/{projectId}/cost-centres/{costCode}/actual-costs",
+                query => $"/api/projects/{((ListCostCentreActualCosts)query).ProjectId}/cost-centres/{Uri.EscapeDataString(((ListCostCentreActualCosts)query).CostCode)}/actual-costs"));
+
         queries.Register<ListValuationClaimsForProject, IReadOnlyList<ValuationClaim>>(
             new QueryRoute("/api/projects/{projectId}/valuation-claims",
                 query => $"/api/projects/{((ListValuationClaimsForProject)query).ProjectId}/valuation-claims"));

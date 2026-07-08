@@ -15,10 +15,10 @@ public sealed class GetProjectFinancialSummaryHandler : IQueryHandler<GetProject
 
     public async Task<IReadOnlyList<ProjectFinancialSummaryRow>> HandleAsync(GetProjectFinancialSummary query, CancellationToken cancellationToken)
     {
-        // Budget: every counting valuation line (declined / TBC excluded — mirrors
-        // ValuationLineItem.CountsTowardTotals). Omit lines carry negative amounts
-        // and net off naturally; variation lines carry cost codes and count too.
-        var budgets = await context.ValuationLineItems
+        // Budgeted sales: every counting valuation line (declined / TBC excluded —
+        // mirrors ValuationLineItem.CountsTowardTotals). Omit lines carry negative
+        // amounts and net off naturally; variation lines carry cost codes and count too.
+        var sales = await context.ValuationLineItems
             .Where(line => line.ProjectId == query.ProjectId
                            && line.LineType != (int)ValuationLineType.Declined
                            && line.LineType != (int)ValuationLineType.Tbc
@@ -26,6 +26,34 @@ public sealed class GetProjectFinancialSummaryHandler : IQueryHandler<GetProject
             .GroupBy(line => line.CostCode)
             .Select(group => new { CostCode = group.Key, Amount = group.Sum(line => line.LineAmount) })
             .ToListAsync(cancellationToken);
+
+        // Completion: the latest claim's cumulative claimed value per cost centre
+        // (any status — reflects current site progress even while a claim is in
+        // draft). Completion % = claimed / budgeted sales, i.e. amount-weighted
+        // across the centre's lines; lines not yet claimed against count as 0%.
+        var latestClaimId = await context.ValuationClaims
+            .Where(claim => claim.ProjectId == query.ProjectId)
+            .OrderByDescending(claim => claim.ClaimNumber)
+            .Select(claim => (string?)claim.ValuationClaimId)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        var claimedByCode = new Dictionary<string, decimal>(StringComparer.OrdinalIgnoreCase);
+        if (latestClaimId is not null)
+        {
+            var claimed = await context.ClaimLines
+                .Where(claimLine => claimLine.ValuationClaimId == latestClaimId)
+                .Join(context.ValuationLineItems,
+                    claimLine => claimLine.ValuationLineItemId,
+                    line => line.ValuationLineItemId,
+                    (claimLine, line) => new { line.CostCode, line.LineType, claimLine.CumulativeClaimed })
+                .Where(joined => joined.LineType != (int)ValuationLineType.Declined
+                                 && joined.LineType != (int)ValuationLineType.Tbc
+                                 && joined.CostCode != "")
+                .GroupBy(joined => joined.CostCode)
+                .Select(group => new { CostCode = group.Key, Amount = group.Sum(joined => joined.CumulativeClaimed) })
+                .ToListAsync(cancellationToken);
+            foreach (var entry in claimed) claimedByCode[entry.CostCode] = entry.Amount;
+        }
 
         // Actuals: Xero purchase lines allocated to this project. Net is stored
         // positive; supplier credit notes (ACCPAYCREDIT) subtract.
@@ -41,14 +69,29 @@ public sealed class GetProjectFinancialSummaryHandler : IQueryHandler<GetProject
             })
             .ToListAsync(cancellationToken);
 
-        var budgetByCode = budgets.ToDictionary(b => b.CostCode, b => b.Amount, StringComparer.OrdinalIgnoreCase);
+        var salesByCode = sales.ToDictionary(s => s.CostCode, s => s.Amount, StringComparer.OrdinalIgnoreCase);
         var actualByCode = actuals.ToDictionary(a => a.CostCode, a => a.Amount, StringComparer.OrdinalIgnoreCase);
 
-        return budgetByCode.Keys.Union(actualByCode.Keys, StringComparer.OrdinalIgnoreCase)
-            .Select(code => new ProjectFinancialSummaryRow(
-                code,
-                budgetByCode.TryGetValue(code, out var budget) ? budget : 0m,
-                actualByCode.TryGetValue(code, out var actual) ? actual : 0m))
+        return salesByCode.Keys.Union(actualByCode.Keys, StringComparer.OrdinalIgnoreCase)
+            .Select(code =>
+            {
+                var budgetedSales = salesByCode.TryGetValue(code, out var salesAmount) ? salesAmount : 0m;
+                var claimedAmount = claimedByCode.TryGetValue(code, out var claimedValue) ? claimedValue : 0m;
+                var actualCost = actualByCode.TryGetValue(code, out var actual) ? actual : 0m;
+
+                var budgetedCost = Math.Round(budgetedSales * FinancialSummaryAssumptions.CostFactor, 2);
+                var completionPercent = budgetedSales == 0m ? 0m : Math.Round(claimedAmount / budgetedSales * 100m, 1);
+                var expectedActualCost = Math.Round(budgetedCost * completionPercent / 100m, 2);
+
+                return new ProjectFinancialSummaryRow(
+                    code,
+                    budgetedSales,
+                    budgetedCost,
+                    completionPercent,
+                    expectedActualCost,
+                    actualCost,
+                    expectedActualCost - actualCost);
+            })
             .ToList();
     }
 }
