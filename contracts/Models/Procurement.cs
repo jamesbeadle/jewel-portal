@@ -96,12 +96,49 @@ public sealed record QuoteLineItem(
     decimal Rate,
     decimal Total);
 
+// Where a work order sits in its lifecycle. Draft while being put together; Released once issued
+// to the supplier (Buildertrend's "Date Released"); Complete when the works are done and settled;
+// Cancelled if withdrawn. Awarding a bid package creates the order Released.
+public enum WorkOrderStatus
+{
+    Draft = 0,
+    Released = 1,
+    Complete = 2,
+    Cancelled = 3
+}
+
+// The purchase-order record raised against a supplier — the business calls these work orders.
+// BidPackageId is set when the order came from awarding a tender; null for orders raised directly
+// or seeded from Buildertrend. Value is the order total; the per-cost-code detail lives on the
+// order's WorkOrderLines.
 public sealed record WorkOrder(
     string WorkOrderId,
     string ProjectId,
-    string BidPackageId,
+    string? BidPackageId,
     string SubcontractorId,
     decimal Value,
     string Scope,
     DateTimeOffset AwardedAt,
-    string AwardedByEmail);
+    string AwardedByEmail,
+    int Number,
+    string Title,
+    WorkOrderStatus Status,
+    DateTimeOffset CreatedAt,
+    DateTimeOffset? ScheduledCompletion);
+
+// A priced line on a work order. Each line carries its own cost centre code (CostCode, from the
+// current master list) — cost-centre totals aggregate lines, not orders. PaidToDate is what has
+// been paid against the line so far.
+public sealed record WorkOrderLine(
+    string WorkOrderLineId,
+    string WorkOrderId,
+    string Title,
+    string Description,
+    string CostType,
+    string CostCode,
+    decimal Quantity,
+    string Unit,
+    decimal UnitCost,
+    decimal LineTotal,
+    decimal PaidToDate,
+    int SortOrder);

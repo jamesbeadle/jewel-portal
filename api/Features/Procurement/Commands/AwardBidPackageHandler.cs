@@ -22,6 +22,14 @@ public sealed class AwardBidPackageHandler
         var package = await context.BidPackages.FindAsync(new object[] { command.BidPackageId }, cancellationToken);
         if (package is null) throw new InvalidOperationException($"Bid package {command.BidPackageId} not found.");
 
+        // Numbers are sequential per project (mirroring Buildertrend's per-job PO numbering, which
+        // seeded orders keep so paperwork cross-references hold), shared across all orders however
+        // they were raised (award, direct, seed) — so max+1 within the project, not a count.
+        var nextNumber = (await context.WorkOrders
+            .Where(order => order.ProjectId == command.ProjectId)
+            .MaxAsync(order => (int?)order.Number, cancellationToken) ?? 0) + 1;
+
+        var now = DateTimeOffset.UtcNow;
         var entity = new WorkOrderEntity
         {
             WorkOrderId = ProcurementIdentifierFactory.NextWorkOrderId(),
@@ -30,8 +38,12 @@ public sealed class AwardBidPackageHandler
             SubcontractorId = command.SubcontractorId,
             Value = command.Value,
             Scope = command.Scope,
-            AwardedAt = DateTimeOffset.UtcNow,
-            AwardedByEmail = command.AwardedByEmail
+            AwardedAt = now,
+            AwardedByEmail = command.AwardedByEmail,
+            Number = nextNumber,
+            Title = package.Title,
+            Status = (int)WorkOrderStatus.Released,
+            CreatedAt = now
         };
         context.WorkOrders.Add(entity);
         package.Status = (int)BidPackageStatus.Awarded;

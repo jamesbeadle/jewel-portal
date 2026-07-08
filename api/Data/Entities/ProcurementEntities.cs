@@ -93,16 +93,70 @@ public sealed class QuoteLineItemEntity
     public decimal Total { get; set; }
 }
 
+// The purchase-order record raised against a supplier — the business calls these work orders.
+// Created by awarding a bid package, raised directly, or seeded from Buildertrend. The money
+// detail lives on WorkOrderLines, each carrying its own cost code (one order routinely spans
+// several cost centres — e.g. plastering + render + screed on a single drywall order); Value is
+// the order total and should equal the sum of the lines' totals.
 public sealed class WorkOrderEntity
 {
     [Key, MaxLength(64)] public string WorkOrderId { get; set; } = "";
     [MaxLength(64)]      public string ProjectId { get; set; } = "";
-    [MaxLength(64)]      public string BidPackageId { get; set; } = "";
+
+    // The tender this order was awarded from. Null for orders raised directly or seeded from
+    // Buildertrend, which predate bid packages.
+    [MaxLength(64)]      public string? BidPackageId { get; set; }
     [MaxLength(64)]      public string SubcontractorId { get; set; } = "";
     public decimal Value { get; set; }
-    [MaxLength(1024)]    public string Scope { get; set; } = "";
+    [MaxLength(4000)]    public string Scope { get; set; } = "";
     public DateTimeOffset AwardedAt { get; set; }
     [MaxLength(256)]     public string AwardedByEmail { get; set; } = "";
+
+    // Sequential, human-readable order number (rendered WO-0001). Seeded orders keep their
+    // Buildertrend PO number so paperwork cross-references hold (PO-32 -> WO-0032).
+    public int Number { get; set; }
+    [MaxLength(256)]     public string Title { get; set; } = "";
+    public int Status { get; set; }
+    public DateTimeOffset CreatedAt { get; set; }
+    public DateTimeOffset? ScheduledCompletion { get; set; }
+
+    // External id of the record this order was seeded from (e.g. the Buildertrend PO id), so
+    // re-running the seed is idempotent. Null for orders raised in JPMS.
+    [MaxLength(64)]      public string? SourceReference { get; set; }
+
+    // Human reference, falling back to an id-derived stem for legacy rows that predate numbering.
+    // Computed, not stored — mirrors BidPackageEntity.Reference.
+    [System.ComponentModel.DataAnnotations.Schema.NotMapped]
+    public string Reference => Number > 0
+        ? $"WO-{Number:0000}"
+        : "WO-" + (WorkOrderId.Length >= 8 ? WorkOrderId[..8] : WorkOrderId).ToUpperInvariant();
+}
+
+// A priced line on a work order. Cost centre totals aggregate lines, not orders, because each
+// line carries its own cost code. PaidToDate is the amount invoiced-and-paid against the line so
+// far (carried over from Buildertrend on seeded orders).
+public sealed class WorkOrderLineEntity
+{
+    [Key, MaxLength(64)] public string WorkOrderLineId { get; set; } = "";
+    [MaxLength(64)]      public string WorkOrderId { get; set; } = "";
+    [MaxLength(256)]     public string Title { get; set; } = "";
+    [MaxLength(1024)]    public string Description { get; set; } = "";
+
+    // As printed on the order, e.g. Subcontractor / Material / Labour.
+    [MaxLength(64)]      public string CostType { get; set; } = "";
+
+    // Cost centre code in the current master list (CostCenterEntity.Code).
+    [MaxLength(32)]      public string CostCode { get; set; } = "";
+
+    // The source system's cost code as printed on a seeded order (e.g. "00006-12 Plastering"),
+    // kept so the mapping to CostCode stays traceable. Empty for lines raised in JPMS.
+    [MaxLength(128)]     public string LegacyCostCode { get; set; } = "";
+    public decimal Quantity { get; set; }
+    [MaxLength(32)]      public string Unit { get; set; } = "";
+    public decimal UnitCost { get; set; }
+    public decimal LineTotal { get; set; }
+    public decimal PaidToDate { get; set; }
+    public int SortOrder { get; set; }
 }
 
 public sealed class RequestEntity
