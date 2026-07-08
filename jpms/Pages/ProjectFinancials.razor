@@ -1,11 +1,13 @@
 @page "/projects/{ProjectId}/financials"
 @using Jewel.JPMS.Features.CostCenters
 @using Jewel.JPMS.Features.Commercial
+@using Jewel.JPMS.Features.Procurement
 @using Jewel.JPMS.Contracts.Commercial
 @inject AuthService Auth
 @inject SessionService Session
 @inject CostCentersReadModel CostCenters
 @inject ProjectFinancialSummaryReadModel Summary
+@inject ProjectWorkOrdersReadModel WorkOrders
 @inject NavigationManager Nav
 @implements IDisposable
 
@@ -34,14 +36,17 @@ else
         {
             <FinancialsTable CostCenters="CostCenters.Current"
                              SummaryRows="Summary.Current(ProjectId)"
-                             OnUnderOverSelected="OpenCostCentreModal" />
+                             WorkOrderRemainingByCode="WoRemainingByCode"
+                             OnUnderOverSelected="OpenCostCentreModal"
+                             OnWorkOrderRemainingSelected="OpenWorkOrdersModal" />
             <p class="text-xs text-content-subtle mt-3">
                 Budgeted sales is the valuation report's contract value per cost centre (declined/TBC lines
                 excluded); budgeted cost is that figure less an assumed
                 @($"{FinancialSummaryAssumptions.MarginPercent:0.#}%") margin. Completion comes from the
                 latest claim, and expected actual cost applies it to the budgeted cost. Actual cost is Xero
-                purchase spend allocated to this project on the Allocation page, net of credit notes. Click
-                an under/over figure for the breakdown.
+                purchase spend allocated to this project on the Allocation page, net of credit notes. WO
+                remaining is committed work-order value not yet paid. Click an under/over figure for the
+                breakdown, or a WO remaining figure for the cost centre's work orders.
             </p>
 
             <CostCentreFinancialsModal IsOpen="@(selectedCostCode is not null)"
@@ -51,6 +56,13 @@ else
                                        Row="SelectedRow"
                                        OnClose="CloseCostCentreModal"
                                        OnInvoiceMoved="HandleInvoiceMovedAsync" />
+
+            <CostCentreWorkOrdersModal IsOpen="@(selectedWoCostCode is not null)"
+                                       ProjectId="@ProjectId"
+                                       CostCode="@(selectedWoCostCode ?? "")"
+                                       CostCentreName="@SelectedWoCostCentreName"
+                                       Orders="WorkOrders.Current(ProjectId)"
+                                       OnClose="CloseWorkOrdersModal" />
         }
     </ProjectPageShell>
 }
@@ -60,6 +72,19 @@ else
 
     private bool isLoaded;
     private string? selectedCostCode;
+    private string? selectedWoCostCode;
+
+    // Remaining (unpaid) work-order value per cost code: committed line totals less paid-to-date,
+    // from the same store the Work Orders tab renders. Lines without a cost code can't land on a
+    // Financials row, so they're excluded here (they surface on the Work Orders tab instead).
+    private IReadOnlyDictionary<string, decimal> WoRemainingByCode =>
+        WorkOrders.Current(ProjectId)
+            .SelectMany(detail => detail.Lines)
+            .Where(line => !string.IsNullOrWhiteSpace(line.CostCode))
+            .GroupBy(line => line.CostCode, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(group => group.Key,
+                          group => group.Sum(line => line.LineTotal - line.PaidToDate),
+                          StringComparer.OrdinalIgnoreCase);
 
     private ProjectFinancialSummaryRow? SelectedRow =>
         selectedCostCode is null
@@ -78,6 +103,17 @@ else
 
     private void CloseCostCentreModal() => selectedCostCode = null;
 
+    private string SelectedWoCostCentreName =>
+        selectedWoCostCode is null
+            ? ""
+            : CostCenters.Current.FirstOrDefault(centre =>
+                  string.Equals(centre.Code, selectedWoCostCode, StringComparison.OrdinalIgnoreCase))?.Name
+              ?? "(not in cost-code master)";
+
+    private void OpenWorkOrdersModal(string costCode) => selectedWoCostCode = costCode;
+
+    private void CloseWorkOrdersModal() => selectedWoCostCode = null;
+
     // A line was reallocated to another cost centre from inside the modal:
     // close it and re-pull the summary so the table reflects the move.
     private async Task HandleInvoiceMovedAsync()
@@ -92,9 +128,11 @@ else
         if (!Auth.IsSignedIn) { Nav.NavigateTo("/login", forceLoad: true); return; }
         CostCenters.OnChanged += StateHasChanged;
         Summary.OnChanged += StateHasChanged;
+        WorkOrders.OnChanged += StateHasChanged;
         // Refresh once per tab entry (stale-while-revalidate, per the front-end
         // data-loading convention) — cached figures render immediately, then update.
         _ = Summary.RefreshAsync(ProjectId, CancellationToken.None);
+        _ = WorkOrders.RefreshAsync(ProjectId, CancellationToken.None);
         await CostCenters.RefreshAsync(CancellationToken.None);
         isLoaded = true;
     }
@@ -103,5 +141,6 @@ else
     {
         CostCenters.OnChanged -= StateHasChanged;
         Summary.OnChanged -= StateHasChanged;
+        WorkOrders.OnChanged -= StateHasChanged;
     }
 }

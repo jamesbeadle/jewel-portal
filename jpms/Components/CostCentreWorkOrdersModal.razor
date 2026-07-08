@@ -1,0 +1,87 @@
+@using Jewel.JPMS.Models
+
+@* The work orders behind one cost centre's WO Remaining figure on the Financials tab:
+   every work-order line coded to the centre, with committed / paid / remaining per line.
+   Data comes from the already-loaded ProjectWorkOrdersReadModel — no extra fetch. *@
+<Modal IsOpen="IsOpen"
+       Title="@($"{CostCode} — {CostCentreName} · Work orders")"
+       ShowFooter="false"
+       OnCancel="OnClose"
+       Class="max-w-3xl">
+    @if (Entries.Count == 0)
+    {
+        <p class="text-sm text-content-subtle italic">
+            No work-order lines are coded to this cost centre.
+        </p>
+    }
+    else
+    {
+        <div class="space-y-4">
+            <div class="rounded-lg border border-line overflow-x-auto">
+                <table class="w-full text-sm border-collapse">
+                    <thead class="bg-surface-raised border-b border-line">
+                        <tr class="text-left text-[11px] uppercase tracking-wider text-content-subtle font-semibold">
+                            <th class="px-4 py-2.5 whitespace-nowrap">Order</th>
+                            <th class="px-4 py-2.5">Supplier</th>
+                            <th class="px-4 py-2.5">Line</th>
+                            <th class="px-4 py-2.5 whitespace-nowrap">Status</th>
+                            <th class="px-4 py-2.5 text-right whitespace-nowrap">Committed</th>
+                            <th class="px-4 py-2.5 text-right whitespace-nowrap">Paid</th>
+                            <th class="px-4 py-2.5 text-right whitespace-nowrap">Remaining</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-line">
+                        @foreach (var entry in Entries)
+                        {
+                            var remaining = entry.Line.LineTotal - entry.Line.PaidToDate;
+                            <tr>
+                                <td class="px-4 py-2.5 font-mono text-[11px] text-content-subtle whitespace-nowrap" title="@entry.Order.Title">@($"WO-{entry.Order.Number:0000}")</td>
+                                <td class="px-4 py-2.5 text-content whitespace-nowrap">@entry.SupplierName</td>
+                                <td class="px-4 py-2.5 text-content-muted" title="@entry.Line.Description">@entry.Line.Title</td>
+                                <td class="px-4 py-2.5 whitespace-nowrap"><span class="inline-block rounded-full border border-line px-2 py-0.5 text-[11px] text-content-subtle">@entry.Order.Status</span></td>
+                                <td class="px-4 py-2.5 text-right whitespace-nowrap text-content">@Money(entry.Line.LineTotal)</td>
+                                <td class="px-4 py-2.5 text-right whitespace-nowrap text-content-muted">@Money(entry.Line.PaidToDate)</td>
+                                <td class="px-4 py-2.5 text-right whitespace-nowrap @(remaining == 0m ? "text-content-muted" : "text-content font-medium")">@Money(remaining)</td>
+                            </tr>
+                        }
+                    </tbody>
+                    <tfoot class="border-t-2 border-line-strong bg-surface-raised">
+                        <tr class="font-semibold text-content">
+                            <td class="px-4 py-2.5" colspan="4">Total</td>
+                            <td class="px-4 py-2.5 text-right whitespace-nowrap">@Money(Entries.Sum(entry => entry.Line.LineTotal))</td>
+                            <td class="px-4 py-2.5 text-right whitespace-nowrap">@Money(Entries.Sum(entry => entry.Line.PaidToDate))</td>
+                            <td class="px-4 py-2.5 text-right whitespace-nowrap">@Money(Entries.Sum(entry => entry.Line.LineTotal - entry.Line.PaidToDate))</td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+            <p class="text-sm">
+                <a class="text-content-subtle hover:text-content underline underline-offset-4"
+                   href="/projects/@ProjectId/work-orders">Open the Work Orders tab</a>
+            </p>
+        </div>
+    }
+</Modal>
+
+@code {
+    [Parameter] public bool IsOpen { get; set; }
+    [Parameter] public string ProjectId { get; set; } = "";
+    [Parameter] public string CostCode { get; set; } = "";
+    [Parameter] public string CostCentreName { get; set; } = "";
+    [Parameter] public IReadOnlyList<ProjectWorkOrderDetail> Orders { get; set; } = Array.Empty<ProjectWorkOrderDetail>();
+    [Parameter] public EventCallback OnClose { get; set; }
+
+    private sealed record Entry(WorkOrder Order, string SupplierName, WorkOrderLine Line);
+
+    private List<Entry> Entries =>
+        Orders.SelectMany(detail => detail.Lines
+                .Where(line => string.Equals(line.CostCode, CostCode, StringComparison.OrdinalIgnoreCase))
+                .Select(line => new Entry(detail.Order, detail.SubcontractorName, line)))
+            .OrderBy(entry => entry.Order.Number)
+            .ThenBy(entry => entry.Line.SortOrder)
+            .ToList();
+
+    private static string Money(decimal value) =>
+        value.ToString(value == Math.Truncate(value) ? "C0" : "C2",
+            System.Globalization.CultureInfo.GetCultureInfo("en-GB"));
+}

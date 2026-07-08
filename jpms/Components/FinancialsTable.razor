@@ -48,6 +48,17 @@
                                 </button>
                             </td>
                         }
+                        else if (col.Label == WoRemainingLabel && ValueFor(col, entry.Code) != 0m)
+                        {
+                            <td class="px-4 py-3 text-right">
+                                <button type="button"
+                                        class="underline decoration-dotted underline-offset-2 hover:decoration-solid @CellClass(col, entry.Code)"
+                                        title="Show this cost centre's work orders"
+                                        @onclick="() => OnWorkOrderRemainingSelected.InvokeAsync(entry.Code)">
+                                    @CellText(col, entry.Code)
+                                </button>
+                            </td>
+                        }
                         else
                         {
                             <td class="px-4 py-3 text-right @CellClass(col, entry.Code)">@CellText(col, entry.Code)</td>
@@ -76,6 +87,14 @@
     /// <summary>Raised with the cost code when a row's Under/Over Expected figure is clicked.</summary>
     [Parameter] public EventCallback<string> OnUnderOverSelected { get; set; }
 
+    /// <summary>Remaining work-order value (committed less paid) per cost code, from the
+    /// project's work orders. Rendered as the WO Remaining column.</summary>
+    [Parameter] public IReadOnlyDictionary<string, decimal> WorkOrderRemainingByCode { get; set; } =
+        new Dictionary<string, decimal>(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>Raised with the cost code when a row's WO Remaining figure is clicked.</summary>
+    [Parameter] public EventCallback<string> OnWorkOrderRemainingSelected { get; set; }
+
     private enum Format { Money, Percent }
 
     private sealed record Column(string Label, Format Format);
@@ -97,10 +116,15 @@
         new("Completion %",          Format.Percent),
         new("Expected Actual Cost",  Format.Money),
         new("Actual Cost",           Format.Money),
-        new("Under/Over Expected",   Format.Money)
+        new("Under/Over Expected",   Format.Money),
+        new("WO Remaining",          Format.Money)
     };
 
     private const string UnderOverLabel = "Under/Over Expected";
+
+    // Remaining (unpaid) work-order value per cost centre — committed order lines less what has
+    // been paid against them. Click-through opens the cost centre's work orders.
+    private const string WoRemainingLabel = "WO Remaining";
 
     private Dictionary<string, ProjectFinancialSummaryRow> byCode = new(StringComparer.OrdinalIgnoreCase);
 
@@ -108,9 +132,10 @@
     private bool hideZeroRows = true;
 
     private bool HasAnyValue(string costCode) =>
-        byCode.TryGetValue(costCode, out var row) &&
-        (row.BudgetedSales != 0m || row.BudgetedCost != 0m || row.CompletionPercent != 0m ||
-         row.ExpectedActualCost != 0m || row.ActualCost != 0m || row.UnderOverExpected != 0m);
+        (byCode.TryGetValue(costCode, out var row) &&
+         (row.BudgetedSales != 0m || row.BudgetedCost != 0m || row.CompletionPercent != 0m ||
+          row.ExpectedActualCost != 0m || row.ActualCost != 0m || row.UnderOverExpected != 0m)) ||
+        (WorkOrderRemainingByCode.TryGetValue(costCode, out var remaining) && remaining != 0m);
 
     protected override void OnParametersSet() =>
         byCode = SummaryRows.ToDictionary(row => row.CostCode, StringComparer.OrdinalIgnoreCase);
@@ -123,11 +148,14 @@
 
     private IEnumerable<string> UnmatchedCodes =>
         SummaryRows.Select(row => row.CostCode)
+            .Union(WorkOrderRemainingByCode.Keys, StringComparer.OrdinalIgnoreCase)
             .Where(rowCode => !CostCenters.Any(centre => string.Equals(centre.Code, rowCode, StringComparison.OrdinalIgnoreCase)))
             .OrderBy(rowCode => rowCode, StringComparer.OrdinalIgnoreCase);
 
     private decimal ValueFor(Column col, string costCode)
     {
+        if (col.Label == WoRemainingLabel)
+            return WorkOrderRemainingByCode.TryGetValue(costCode, out var remaining) ? remaining : 0m;
         if (!byCode.TryGetValue(costCode, out var row)) return 0m;
         return col.Label switch
         {
@@ -171,6 +199,7 @@
             "Expected Actual Cost" => SummaryRows.Sum(row => row.ExpectedActualCost),
             "Actual Cost" => SummaryRows.Sum(row => row.ActualCost),
             UnderOverLabel => SummaryRows.Sum(row => row.UnderOverExpected),
+            WoRemainingLabel => WorkOrderRemainingByCode.Values.Sum(),
             _ => 0m
         };
         return Money(total);
