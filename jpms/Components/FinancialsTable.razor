@@ -25,16 +25,17 @@
                     }
                 </tr>
             }
-            @foreach (var code in UnmatchedCodes)
+            @foreach (var unmatched in UnmatchedCodes)
             {
                 @* Values sitting on codes that are not in the active master (legacy /
-                   retired) — shown rather than silently swallowed. *@
+                   retired) — shown rather than silently swallowed. (Loop variable must
+                   not be named "code": @code in markup parses as the Razor directive.) *@
                 <tr>
-                    <td class="sticky left-0 z-10 bg-surface px-4 py-3 font-mono text-[11px] text-content-subtle whitespace-nowrap">@code</td>
+                    <td class="sticky left-0 z-10 bg-surface px-4 py-3 font-mono text-[11px] text-content-subtle whitespace-nowrap">@unmatched</td>
                     <td class="sticky left-[88px] z-10 bg-surface px-4 py-3 text-content-subtle italic whitespace-nowrap">(not in cost-code master)</td>
                     @foreach (var col in Columns)
                     {
-                        <td class="px-4 py-3 text-right @CellClass(col, code)">@CellText(col, code)</td>
+                        <td class="px-4 py-3 text-right @CellClass(col, unmatched)">@CellText(col, unmatched)</td>
                     }
                 </tr>
             }
