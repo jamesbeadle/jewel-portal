@@ -76,28 +76,23 @@
     private sealed record Column(string Label, Format Format);
 
     // Budget allocation model (FD-agreed):
-    //   Budgeted Sales       = the valuation report's counting lines per cost centre — what we bill the client (LIVE)
-    //   Budgeted Cost        = Budgeted Sales less the assumed margin (FinancialSummaryAssumptions.MarginPercent) (LIVE)
-    //   Assigned Budget      = sum of purchase orders raised to suppliers (committed cost — later)
-    //   Unallocated Budget   = Budgeted Cost - Assigned Budget (later)
-    //   Completion %         = latest claim's cumulative claimed value / budgeted sales (LIVE)
-    //   Expected Actual Cost = Budgeted Cost × Completion % (LIVE)
-    //   Actual Cost          = Xero purchase lines allocated to this project (LIVE)
-    //   Under/Over Expected  = Expected Actual Cost - Actual Cost; positive = under (LIVE, click for detail)
+    //   Budgeted Sales       = the valuation report's counting lines per cost centre — what we bill the client
+    //   Budgeted Cost        = Budgeted Sales less the assumed margin (FinancialSummaryAssumptions.MarginPercent)
+    //   Completion %         = latest claim's cumulative claimed value / budgeted sales
+    //   Expected Actual Cost = Budgeted Cost × Completion %
+    //   Actual Cost          = Xero purchase lines allocated to this project
+    //   Under/Over Expected  = Expected Actual Cost - Actual Cost; positive = under (click for detail)
+    // Planned columns (removed for now, to return later): Assigned Budget (POs raised
+    // to suppliers), Unallocated Budget, Expected Actual Sales, Actual Sales,
+    // Under/Over Billed, Gross Profit.
     private static readonly Column[] Columns =
     {
         new("Budgeted Sales",        Format.Money),
         new("Budgeted Cost",         Format.Money),
-        new("Assigned Budget",       Format.Money),
-        new("Unallocated Budget",    Format.Money),
         new("Completion %",          Format.Percent),
         new("Expected Actual Cost",  Format.Money),
         new("Actual Cost",           Format.Money),
-        new("Under/Over Expected",   Format.Money),
-        new("Expected Actual Sales", Format.Money),
-        new("Actual Sales",          Format.Money),
-        new("Under/Over Billed",     Format.Money),
-        new("Gross Profit",          Format.Money)
+        new("Under/Over Expected",   Format.Money)
     };
 
     private const string UnderOverLabel = "Under/Over Expected";
