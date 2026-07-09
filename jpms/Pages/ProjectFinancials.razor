@@ -57,12 +57,12 @@ else
                 Contract sales value is the valuation report's contract value per cost centre — initial
                 contract plus variation lines, declined/TBC excluded. % complete is the sales-side
                 completion from the latest claim (edit it on the valuation report); claim value is the
-                cumulative claimed amount at that completion. WO committed is the value committed to
-                work orders — click a figure for the cost centre's orders. Drawdown is the expected cost
-                (contract sales value less our assumed
-                @($"{FinancialSummaryAssumptions.MarginPercent:0.#}%") margin) not yet committed to work
-                orders; negative means the centre is committed beyond its expected cost. Cost % complete
-                is the cost-side completion — edit it directly in the table.
+                cumulative claimed amount at that completion. Target cost value is the contract sales
+                value less our assumed @($"{FinancialSummaryAssumptions.MarginPercent:0.#}%") margin —
+                what the centre should cost us. WO committed is the value committed to work orders —
+                click a figure for the cost centre's orders. Drawdown is the target cost not yet
+                committed to work orders; negative means the centre is committed beyond its target.
+                Cost % complete is the cost-side completion — edit it directly in the table.
             </p>
 
             <CostCentreWorkOrdersModal IsOpen="@(selectedWoCostCode is not null)"

@@ -17,7 +17,8 @@
                 <th class="px-4 py-3 text-right whitespace-nowrap">% Complete</th>
                 <th class="px-4 py-3 text-right whitespace-nowrap">Claim Value</th>
                 @* Cost side: what we expect to pay out. *@
-                <th class="px-4 py-3 text-right whitespace-nowrap border-l border-line">WO Committed</th>
+                <th class="px-4 py-3 text-right whitespace-nowrap border-l border-line">Target Cost Value</th>
+                <th class="px-4 py-3 text-right whitespace-nowrap">WO Committed</th>
                 <th class="px-4 py-3 text-right whitespace-nowrap">Drawdown</th>
                 <th class="px-4 py-3 text-right whitespace-nowrap">Cost % Complete</th>
             </tr>
@@ -47,9 +48,11 @@
                     <td class="px-4 py-3 text-right @MoneyClass(SalesCompletionFor(costCode))">@Percent(SalesCompletionFor(costCode))</td>
                     <td class="px-4 py-3 text-right @MoneyClass(ClaimValueFor(costCode))">@Money(ClaimValueFor(costCode))</td>
 
+                    <td class="px-4 py-3 text-right border-l border-line @MoneyClass(TargetCostFor(costCode))">@Money(TargetCostFor(costCode))</td>
+
                     @if (woCommitted != 0m)
                     {
-                        <td class="px-4 py-3 text-right border-l border-line">
+                        <td class="px-4 py-3 text-right">
                             <button type="button"
                                     class="underline decoration-dotted underline-offset-2 hover:decoration-solid text-content"
                                     title="Show this cost centre's work orders"
@@ -60,7 +63,7 @@
                     }
                     else
                     {
-                        <td class="px-4 py-3 text-right border-l border-line text-content-muted">@Money(0m)</td>
+                        <td class="px-4 py-3 text-right text-content-muted">@Money(0m)</td>
                     }
 
                     <td class="px-4 py-3 text-right @DrawdownClass(drawdown)">@Money(drawdown)</td>
@@ -84,7 +87,8 @@
                 <td class="px-4 py-3 text-right">@Money(TotalContractSales)</td>
                 <td class="px-4 py-3 text-right">@Percent(WeightedSalesCompletion)</td>
                 <td class="px-4 py-3 text-right">@Money(TotalClaimValue)</td>
-                <td class="px-4 py-3 text-right border-l border-line">@Money(TotalWoCommitted)</td>
+                <td class="px-4 py-3 text-right border-l border-line">@Money(TotalTargetCost)</td>
+                <td class="px-4 py-3 text-right">@Money(TotalWoCommitted)</td>
                 <td class="px-4 py-3 text-right">@Money(TotalDrawdown)</td>
                 <td class="px-4 py-3 text-right pr-6">@Percent(WeightedCostCompletion)</td>
             </tr>
@@ -114,10 +118,11 @@
     //                          provisional sums, contingency and variations; declined/TBC excluded)
     //   % Complete           = sales-side completion from the latest claim — edited on the valuation
     //   Claim Value          = the latest claim's cumulative claimed £ (Contract Sales Value × % Complete)
+    //   Target Cost Value    = Contract Sales Value less the assumed
+    //                          FinancialSummaryAssumptions.MarginPercent — what the centre should cost us
     //   WO Committed         = committed work-order line totals (click for the centre's work orders)
-    //   Drawdown             = expected cost (Contract Sales Value less the assumed
-    //                          FinancialSummaryAssumptions.MarginPercent) minus WO Committed —
-    //                          budget still to be spent outside work orders; negative = over-committed
+    //   Drawdown             = Target Cost Value minus WO Committed — budget still to be
+    //                          spent outside work orders; negative = over-committed
     //   Cost % Complete      = cost-side completion, edited inline here
 
     private Dictionary<string, ProjectFinancialSummaryRow> byCode = new(StringComparer.OrdinalIgnoreCase);
@@ -150,9 +155,13 @@
     private decimal WoCommittedFor(string costCode) =>
         WorkOrderCommittedByCode.TryGetValue(costCode, out var committed) ? committed : 0m;
 
-    // Expected cost (contract sales less the assumed margin) not yet committed to work orders.
+    // Contract sales value less the assumed margin — what the centre should cost us.
+    private decimal TargetCostFor(string costCode) =>
+        byCode.TryGetValue(costCode, out var row) ? row.BudgetedCost : 0m;
+
+    // Target cost not yet committed to work orders.
     private decimal DrawdownFor(string costCode) =>
-        (byCode.TryGetValue(costCode, out var row) ? row.BudgetedCost : 0m) - WoCommittedFor(costCode);
+        TargetCostFor(costCode) - WoCommittedFor(costCode);
 
     private bool IsSaving(string costCode) =>
         string.Equals(savingCostCode, costCode, StringComparison.OrdinalIgnoreCase);
@@ -189,8 +198,9 @@
 
     private decimal TotalContractSales => SummaryRows.Sum(row => row.BudgetedSales);
     private decimal TotalClaimValue => SummaryRows.Sum(row => row.ClaimedToDate);
+    private decimal TotalTargetCost => SummaryRows.Sum(row => row.BudgetedCost);
     private decimal TotalWoCommitted => WorkOrderCommittedByCode.Values.Sum();
-    private decimal TotalDrawdown => SummaryRows.Sum(row => row.BudgetedCost) - TotalWoCommitted;
+    private decimal TotalDrawdown => TotalTargetCost - TotalWoCommitted;
 
     // Weighted by contract sales value, matching the per-row calculation.
     private decimal WeightedSalesCompletion =>
