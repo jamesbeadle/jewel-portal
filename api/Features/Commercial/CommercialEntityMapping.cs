@@ -12,7 +12,7 @@ internal static class CommercialEntityMapping
         new(entity.CostCodeBudgetId, entity.ProjectId, entity.CostCode, entity.AllocatedAmount, entity.SpentAmount, entity.CommittedAmount);
 
     public static CostCentreCostProgress ToModel(this CostCentreCostProgressEntity entity) =>
-        new(entity.CostCentreCostProgressId, entity.ProjectId, entity.CostCode, entity.CostCompletionPercent);
+        new(entity.CostCentreCostProgressId, entity.ProjectId, entity.CostCode, entity.CostCompletionPercent, entity.IsFinalised);
 
     public static Timesheet ToModel(this TimesheetEntity entity) =>
         new(entity.TimesheetId, entity.ProjectId, entity.PersonEmail, entity.WorkedOn, entity.Hours, entity.CostCode, entity.IsApproved);

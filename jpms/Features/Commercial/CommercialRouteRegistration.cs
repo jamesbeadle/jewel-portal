@@ -43,6 +43,14 @@ public static class CommercialRouteRegistration
             new CommandRoute("POST", "/api/projects/{projectId}/cost-centre-cost-completion",
                 command => $"/api/projects/{((SetCostCentreCostCompletion)command).ProjectId}/cost-centre-cost-completion"));
 
+        commands.Register<SetCostCentreFinalisation, CostCentreCostProgress>(
+            new CommandRoute("POST", "/api/projects/{projectId}/cost-centre-finalisation",
+                command => $"/api/projects/{((SetCostCentreFinalisation)command).ProjectId}/cost-centre-finalisation"));
+
+        commands.Register<LinkXeroLineToWorkOrder, Acknowledgement>(
+            new CommandRoute("POST", "/api/projects/{projectId}/xero-line-work-order-links",
+                command => $"/api/projects/{((LinkXeroLineToWorkOrder)command).ProjectId}/xero-line-work-order-links"));
+
         // Cost centre groups — named roll-ups on the Financials tab.
         queries.Register<ListCostCentreGroupsForProject, IReadOnlyList<CostCentreGroup>>(
             new QueryRoute("/api/projects/{projectId}/cost-centre-groups",

@@ -45,6 +45,10 @@ public sealed class XeroLedgerLineEntity
     public DateTimeOffset? AllocatedAtUtc { get; set; }
     [MaxLength(512)]      public string? Note { get; set; }
 
+    // Financials tab: the work order this purchase line pays against (null = not linked —
+    // such lines count as non-work-order cost of sales). Owned by JPMS, survives syncs.
+    [MaxLength(64)]       public string? LinkedWorkOrderId { get; set; }
+
     // Xero write-back (tracking + DRAFT → AUTHORISED approval) — per invoice,
     // stamped on every stored line of the invoice when attempted.
     // 0 None (not attempted / not needed), 1 Approved, 2 Failed (see error).

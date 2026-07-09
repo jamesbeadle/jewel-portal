@@ -125,6 +125,10 @@ public sealed class CostCentreCostProgressEntity
     [MaxLength(64)]      public string ProjectId { get; set; } = "";
     [MaxLength(32)]      public string CostCode { get; set; } = "";
     public decimal CostCompletionPercent { get; set; }
+
+    // Locked down on the Financials tab: no more money is to be spent against this centre,
+    // so its remaining drawdown reads as realised profit / loss instead of available funds.
+    public bool IsFinalised { get; set; }
 }
 
 public sealed class TimesheetEntity

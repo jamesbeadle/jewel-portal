@@ -60,6 +60,9 @@ public sealed class GetProjectFinancialSummaryHandler : IQueryHandler<GetProject
         // allocations carry their project + centre on the line; split lines carry
         // theirs in XeroCostSplits (each row a share of the line's net, with its
         // own project), so both populations sum into the same per-centre totals.
+        // Each population also carries its non-work-order share: spend on lines not linked
+        // to any work order (LinkedWorkOrderId null), which draws the centre's target cost
+        // down alongside its work orders.
         var actuals = await context.XeroLedgerLines
             .Where(line => line.ProjectId == query.ProjectId
                            && line.AllocationStatus == (int)XeroAllocationStatus.Allocated
@@ -68,7 +71,10 @@ public sealed class GetProjectFinancialSummaryHandler : IQueryHandler<GetProject
             .Select(group => new
             {
                 CostCode = group.Key,
-                Amount = group.Sum(line => line.Type == "ACCPAYCREDIT" ? -line.Net : line.Net)
+                Amount = group.Sum(line => line.Type == "ACCPAYCREDIT" ? -line.Net : line.Net),
+                NonWoAmount = group.Sum(line => line.LinkedWorkOrderId != null
+                    ? 0m
+                    : line.Type == "ACCPAYCREDIT" ? -line.Net : line.Net)
             })
             .ToListAsync(cancellationToken);
 
@@ -76,32 +82,41 @@ public sealed class GetProjectFinancialSummaryHandler : IQueryHandler<GetProject
             .Join(context.XeroLedgerLines,
                 split => split.XeroLedgerLineId,
                 line => line.XeroLedgerLineId,
-                (split, line) => new { split.CostCenterCode, split.Net, split.ProjectId, line.AllocationStatus, line.Type })
+                (split, line) => new { split.CostCenterCode, split.Net, split.ProjectId, line.AllocationStatus, line.Type, line.LinkedWorkOrderId })
             .Where(joined => joined.ProjectId == query.ProjectId
                              && joined.AllocationStatus == (int)XeroAllocationStatus.Allocated)
             .GroupBy(joined => joined.CostCenterCode)
             .Select(group => new
             {
                 CostCode = group.Key,
-                Amount = group.Sum(joined => joined.Type == "ACCPAYCREDIT" ? -joined.Net : joined.Net)
+                Amount = group.Sum(joined => joined.Type == "ACCPAYCREDIT" ? -joined.Net : joined.Net),
+                NonWoAmount = group.Sum(joined => joined.LinkedWorkOrderId != null
+                    ? 0m
+                    : joined.Type == "ACCPAYCREDIT" ? -joined.Net : joined.Net)
             })
             .ToListAsync(cancellationToken);
 
-        // Cost-side completion: set inline on the Financials tab (SetCostCentreCostCompletion),
-        // one row per cost centre. Centres never edited default to 0%.
+        // Cost-side state: completion % and the finalisation lock, set inline on the
+        // Financials tab, one row per cost centre. Centres never edited default to 0% / unlocked.
         var costProgress = await context.CostCentreCostProgress
             .Where(progress => progress.ProjectId == query.ProjectId)
-            .Select(progress => new { progress.CostCode, progress.CostCompletionPercent })
+            .Select(progress => new { progress.CostCode, progress.CostCompletionPercent, progress.IsFinalised })
             .ToListAsync(cancellationToken);
-        var costProgressByCode = new Dictionary<string, decimal>(StringComparer.OrdinalIgnoreCase);
-        foreach (var entry in costProgress) costProgressByCode[entry.CostCode] = entry.CostCompletionPercent;
+        var costProgressByCode = new Dictionary<string, (decimal Percent, bool IsFinalised)>(StringComparer.OrdinalIgnoreCase);
+        foreach (var entry in costProgress) costProgressByCode[entry.CostCode] = (entry.CostCompletionPercent, entry.IsFinalised);
 
         var salesByCode = sales.ToDictionary(s => s.CostCode, s => s.Amount, StringComparer.OrdinalIgnoreCase);
         var actualByCode = actuals.ToDictionary(a => a.CostCode, a => a.Amount, StringComparer.OrdinalIgnoreCase);
+        var nonWoActualByCode = actuals.ToDictionary(a => a.CostCode, a => a.NonWoAmount, StringComparer.OrdinalIgnoreCase);
         foreach (var splitActual in splitActuals)
+        {
             actualByCode[splitActual.CostCode] = actualByCode.TryGetValue(splitActual.CostCode, out var existing)
                 ? existing + splitActual.Amount
                 : splitActual.Amount;
+            nonWoActualByCode[splitActual.CostCode] = nonWoActualByCode.TryGetValue(splitActual.CostCode, out var existingNonWo)
+                ? existingNonWo + splitActual.NonWoAmount
+                : splitActual.NonWoAmount;
+        }
 
         return salesByCode.Keys.Union(actualByCode.Keys, StringComparer.OrdinalIgnoreCase)
             .Union(costProgressByCode.Keys, StringComparer.OrdinalIgnoreCase)
@@ -115,7 +130,8 @@ public sealed class GetProjectFinancialSummaryHandler : IQueryHandler<GetProject
                 var completionPercent = budgetedSales == 0m ? 0m : Math.Round(claimedAmount / budgetedSales * 100m, 1);
                 var expectedActualCost = Math.Round(budgetedCost * completionPercent / 100m, 2);
 
-                var costCompletionPercent = costProgressByCode.TryGetValue(code, out var costPercent) ? costPercent : 0m;
+                var costState = costProgressByCode.TryGetValue(code, out var state) ? state : (Percent: 0m, IsFinalised: false);
+                var nonWoActualCost = nonWoActualByCode.TryGetValue(code, out var nonWo) ? nonWo : 0m;
 
                 return new ProjectFinancialSummaryRow(
                     code,
@@ -126,7 +142,9 @@ public sealed class GetProjectFinancialSummaryHandler : IQueryHandler<GetProject
                     actualCost,
                     expectedActualCost - actualCost,
                     claimedAmount,
-                    costCompletionPercent);
+                    costState.Percent,
+                    nonWoActualCost,
+                    costState.IsFinalised);
             })
             .ToList();
     }

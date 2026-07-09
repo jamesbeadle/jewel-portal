@@ -41,7 +41,9 @@ public sealed class ListCostCentreActualCostsHandler : IQueryHandler<ListCostCen
                 line.ContactName ?? "",
                 line.InvoiceNumber ?? "",
                 line.Description ?? "",
-                line.Type == "ACCPAYCREDIT" ? -line.Net : line.Net));
+                line.Type == "ACCPAYCREDIT" ? -line.Net : line.Net,
+                IsSplit: false,
+                line.LinkedWorkOrderId));
 
         var shares = splitShares
             .Where(joined => string.Equals(joined.Split.CostCenterCode, query.CostCode, StringComparison.OrdinalIgnoreCase))
@@ -52,7 +54,8 @@ public sealed class ListCostCentreActualCostsHandler : IQueryHandler<ListCostCen
                 joined.Line.InvoiceNumber ?? "",
                 joined.Line.Description ?? "",
                 joined.Line.Type == "ACCPAYCREDIT" ? -joined.Split.Net : joined.Split.Net,
-                IsSplit: true));
+                IsSplit: true,
+                joined.Line.LinkedWorkOrderId));
 
         return whole.Concat(shares)
             .OrderByDescending(line => line.Date ?? DateTime.MinValue)

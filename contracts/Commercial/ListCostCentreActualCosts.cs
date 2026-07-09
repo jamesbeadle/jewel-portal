@@ -18,4 +18,5 @@ public sealed record CostCentreActualCostLine(
     string InvoiceNumber,
     string Description,
     decimal Net,
-    bool IsSplit = false);
+    bool IsSplit = false,
+    string? LinkedWorkOrderId = null); // the work order this line pays against, if linked

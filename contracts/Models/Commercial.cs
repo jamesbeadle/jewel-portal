@@ -49,7 +49,8 @@ public sealed record CostCentreCostProgress(
     string CostCentreCostProgressId,
     string ProjectId,
     string CostCode,
-    decimal CostCompletionPercent);
+    decimal CostCompletionPercent,
+    bool IsFinalised = false);  // locked down: drawdown reads as realised profit / loss
 
 /// <summary>A named roll-up of cost centres shown as one line on the Financials tab.
 /// Presentation only — figures are still stored per cost centre.</summary>

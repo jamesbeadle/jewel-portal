@@ -26,7 +26,9 @@ public sealed record ProjectFinancialSummaryRow(
     decimal ActualCost,
     decimal UnderOverExpected,   // ExpectedActualCost − ActualCost; positive = under
     decimal ClaimedToDate = 0m,          // claim value: the latest claim's cumulative claimed £ for this centre
-    decimal CostCompletionPercent = 0m); // 0–100, cost-side, edited inline on the Financials tab
+    decimal CostCompletionPercent = 0m,  // 0–100, cost-side, edited inline on the Financials tab
+    decimal NonWorkOrderActualCost = 0m, // allocated Xero spend not linked to any work order
+    bool IsFinalised = false);           // locked down: drawdown reads as realised profit / loss
 
 /// <summary>Assumptions shared by the API calculation and the UI's explanation of it.</summary>
 public static class FinancialSummaryAssumptions

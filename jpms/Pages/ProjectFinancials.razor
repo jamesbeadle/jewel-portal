@@ -59,7 +59,8 @@ else
                              OnCostOfSalesSelected="OpenCostOfSalesModal"
                              OnGroupRequested="OpenGroupDialog"
                              OnUngroupRequested="HandleUngroupAsync"
-                             OnCostCompletionChanged="HandleCostCompletionChangedAsync" />
+                             OnCostCompletionChanged="HandleCostCompletionChangedAsync"
+                             OnFinalisationToggled="HandleFinalisationToggledAsync" />
             <p class="text-xs text-content-subtle mt-3">
                 Contract sales value is the valuation report's contract value per cost centre — initial
                 contract plus variation lines, declined/TBC excluded; click a figure for the valuation
@@ -69,14 +70,17 @@ else
                 @($"{FinancialSummaryAssumptions.MarkupPercent:0.#}%") markup backed out (divided by
                 @($"{1m + FinancialSummaryAssumptions.MarkupPercent / 100m:0.##}")) — what the line
                 should cost us. Work orders is the value committed to work orders — click a figure
-                for the line's orders. Cost of sales is Xero purchase spend allocated to this project
-                on the Allocation page, net of credit notes — click a figure for the invoices, where
-                whole lines can also be moved to another centre. Drawdown is the target cost not yet
-                committed to work orders;
-                negative means the line is committed beyond its target. Cost % complete is the
-                cost-side completion — edit it directly in the table. Tick two or more rows to roll
-                them up into one named line; on a rolled-up line, figures are summed, the two
-                percentages are value-weighted, and editing cost % writes it to every member.
+                for the line's orders. Actual cost of sales is Xero purchase spend allocated to this
+                project on the Allocation page, net of credit notes — click a figure for the invoices,
+                where each can be linked to the work order it pays against or moved to another centre.
+                Non-WO cost of sales is the share of that spend not linked to any work order. Drawdown
+                is what's left of the target cost after work orders and non-WO cost of sales — the
+                funds still available on the line; negative means overspent. Lock a line when no more
+                is to be spent on it: its remaining drawdown moves to profit / loss, realising what was
+                made (or lost) buying against that centre. Cost % complete is the cost-side
+                completion — edit it directly in the table. Tick two or more rows to roll them up into
+                one named line; on a rolled-up line, figures are summed, the two percentages are
+                value-weighted, and editing cost % or the lock applies to every member.
             </p>
 
             <CostCentreSalesLinesModal IsOpen="@(selectedSales is not null)"
@@ -97,8 +101,10 @@ else
                                         ProjectId="@ProjectId"
                                         Heading="@(selectedCostOfSales?.Heading ?? "")"
                                         CostCodes="@(selectedCostOfSales?.CostCodes ?? Array.Empty<string>())"
+                                        Orders="WorkOrders.Current(ProjectId)"
                                         OnClose="CloseCostOfSalesModal"
-                                        OnInvoiceMoved="HandleInvoiceMovedAsync" />
+                                        OnInvoiceMoved="HandleInvoiceMovedAsync"
+                                        OnWorkOrderLinkChanged="HandleWorkOrderLinkChangedAsync" />
 
             <Modal IsOpen="@(pendingGroupCodes is not null)"
                    Title="Roll up into one line"
@@ -185,6 +191,28 @@ else
     private async Task HandleInvoiceMovedAsync()
     {
         selectedCostOfSales = null;
+        await Summary.RefreshAsync(ProjectId, CancellationToken.None);
+    }
+
+    // An invoice's work-order link changed inside the modal: re-pull the summary so the
+    // non-WO cost of sales and drawdown columns update behind it. The modal stays open.
+    private Task HandleWorkOrderLinkChangedAsync() => Summary.RefreshAsync(ProjectId, CancellationToken.None);
+
+    // A line's lock button was clicked: apply the finalisation state to every cost code
+    // behind the line, then re-pull the summary so drawdown / profit-loss move together.
+    private async Task HandleFinalisationToggledAsync((IReadOnlyList<string> CostCodes, bool Finalise) change)
+    {
+        actionError = null;
+        try
+        {
+            foreach (var costCode in change.CostCodes)
+                await Commands.SendAsync(
+                    new SetCostCentreFinalisation(ProjectId, costCode, change.Finalise), CancellationToken.None);
+        }
+        catch (CommandFailedException ex)
+        {
+            actionError = $"Could not update the lock — {ex.Message}";
+        }
         await Summary.RefreshAsync(ProjectId, CancellationToken.None);
     }
 

@@ -34,9 +34,12 @@
                 @* Cost side: what we expect to pay out. *@
                 <th class="px-4 py-3 text-right whitespace-nowrap border-l border-line">Target Cost Value</th>
                 <th class="px-4 py-3 text-right whitespace-nowrap">Work Orders</th>
-                <th class="px-4 py-3 text-right whitespace-nowrap">Cost of Sales</th>
+                <th class="px-4 py-3 text-right whitespace-nowrap">Actual Cost of Sales</th>
+                <th class="px-4 py-3 text-right whitespace-nowrap">Non-WO Cost of Sales</th>
                 <th class="px-4 py-3 text-right whitespace-nowrap">Drawdown</th>
+                <th class="px-4 py-3 text-right whitespace-nowrap">Profit / Loss</th>
                 <th class="px-4 py-3 text-right whitespace-nowrap">Cost % Complete</th>
+                <th class="px-4 py-3 w-[80px]"><span class="sr-only">Lock</span></th>
             </tr>
         </thead>
         <tbody class="divide-y divide-line">
@@ -50,7 +53,10 @@
                 var reportLine = line;
                 var woCommitted = WoCommittedFor(reportLine.CostCodes);
                 var contractSales = ContractSalesFor(reportLine.CostCodes);
-                var drawdown = TargetCostFor(reportLine.CostCodes) - woCommitted;
+                var drawdown = DrawdownFor(reportLine.CostCodes);
+                var profitLoss = ProfitLossFor(reportLine.CostCodes);
+                var allLocked = AllFinalised(reportLine.CostCodes);
+                var anyLocked = AnyFinalised(reportLine.CostCodes);
                 <tr>
                     <td class="sticky left-0 z-10 bg-surface px-3 py-3">
                         @if (!reportLine.IsGroup)
@@ -129,7 +135,7 @@
                         <td class="px-4 py-3 text-right">
                             <button type="button"
                                     class="underline decoration-dotted underline-offset-2 hover:decoration-solid text-content"
-                                    title="Show the allocated purchase invoices behind this figure"
+                                    title="Show the allocated purchase invoices behind this figure, and link them to work orders"
                                     @onclick="() => OnCostOfSalesSelected.InvokeAsync((Heading(reportLine), reportLine.CostCodes))">
                                 @Money(CostOfSalesFor(reportLine.CostCodes))
                             </button>
@@ -140,7 +146,25 @@
                         <td class="px-4 py-3 text-right text-content-muted">@Money(0m)</td>
                     }
 
-                    <td class="px-4 py-3 text-right @DrawdownClass(drawdown)">@Money(drawdown)</td>
+                    <td class="px-4 py-3 text-right @MoneyClass(NonWoCostOfSalesFor(reportLine.CostCodes))">@Money(NonWoCostOfSalesFor(reportLine.CostCodes))</td>
+
+                    @if (allLocked)
+                    {
+                        <td class="px-4 py-3 text-right text-content-muted" title="Locked — the remaining value now reads as profit / loss">—</td>
+                    }
+                    else
+                    {
+                        <td class="px-4 py-3 text-right @DrawdownClass(drawdown)">@Money(drawdown)</td>
+                    }
+
+                    @if (anyLocked)
+                    {
+                        <td class="px-4 py-3 text-right font-medium @(profitLoss == 0m ? "text-content-muted" : profitLoss > 0m ? "text-positive" : "text-negative")">@Money(profitLoss)</td>
+                    }
+                    else
+                    {
+                        <td class="px-4 py-3 text-right text-content-muted" title="Lock the line to realise its remaining drawdown as profit / loss">—</td>
+                    }
 
                     <td class="px-4 py-3 text-right">
                         <input type="number" min="0" max="100" step="1"
@@ -152,6 +176,15 @@
                                value="@InputValue(CostCompletionFor(reportLine.CostCodes))"
                                disabled="@IsSaving(reportLine.Key)"
                                @onchange="args => HandleCostCompletionChangedAsync(reportLine, args)" />
+                    </td>
+
+                    <td class="px-4 py-3 text-right whitespace-nowrap">
+                        <button type="button"
+                                class="text-xs font-medium underline underline-offset-4 @(allLocked ? "text-content" : "text-content-subtle hover:text-content")"
+                                title="@LockTitle(reportLine, allLocked, anyLocked)"
+                                @onclick="() => OnFinalisationToggled.InvokeAsync((reportLine.CostCodes, !allLocked))">
+                            @(allLocked ? "Unlock" : anyLocked ? "Lock all" : "Lock")
+                        </button>
                     </td>
                 </tr>
             }
@@ -167,8 +200,11 @@
                 <td class="px-4 py-3 text-right border-l border-line">@Money(TotalTargetCost)</td>
                 <td class="px-4 py-3 text-right">@Money(TotalWoCommitted)</td>
                 <td class="px-4 py-3 text-right">@Money(TotalCostOfSales)</td>
+                <td class="px-4 py-3 text-right">@Money(TotalNonWoCostOfSales)</td>
                 <td class="px-4 py-3 text-right">@Money(TotalDrawdown)</td>
+                <td class="px-4 py-3 text-right @(TotalProfitLoss == 0m ? "" : TotalProfitLoss > 0m ? "text-positive" : "text-negative")">@Money(TotalProfitLoss)</td>
                 <td class="px-4 py-3 text-right pr-6">@Percent(WeightedCostCompletion)</td>
+                <td class="px-4 py-3"></td>
             </tr>
         </tfoot>
     </table>
@@ -193,8 +229,12 @@
     /// <summary>Raised with a heading and the line's cost codes when a Work Orders figure is clicked.</summary>
     [Parameter] public EventCallback<(string Heading, IReadOnlyList<string> CostCodes)> OnWorkOrderCommittedSelected { get; set; }
 
-    /// <summary>Raised with a heading and the line's cost codes when a Cost of Sales figure is clicked.</summary>
+    /// <summary>Raised with a heading and the line's cost codes when an Actual Cost of Sales figure is clicked.</summary>
     [Parameter] public EventCallback<(string Heading, IReadOnlyList<string> CostCodes)> OnCostOfSalesSelected { get; set; }
+
+    /// <summary>Raised when a line's lock button is clicked: the line's cost codes and the state
+    /// to apply to all of them (lock everything unless every member is already locked).</summary>
+    [Parameter] public EventCallback<(IReadOnlyList<string> CostCodes, bool Finalise)> OnFinalisationToggled { get; set; }
 
     /// <summary>Raised with the selected cost codes when the user asks to roll them up;
     /// the parent collects a name and creates the group.</summary>
@@ -218,10 +258,14 @@
     //   Target Cost Value    = Contract Sales Value ÷ (1 + FinancialSummaryAssumptions.MarkupPercent)
     //                          — what the line should cost us; target cost + markup = sales value
     //   Work Orders          = committed work-order line totals (click for the line's work orders)
-    //   Cost of Sales        = allocated Xero purchase spend, net of credit notes (click for
-    //                          the invoices; the first step of linking invoices to work orders)
-    //   Drawdown             = Target Cost Value minus Work Orders — budget still to be
-    //                          spent outside work orders; negative = over-committed
+    //   Actual Cost of Sales = allocated Xero purchase spend, net of credit notes (click for
+    //                          the invoices, where each can be linked to a work order)
+    //   Non-WO Cost of Sales = the share of that spend not linked to any work order
+    //   Drawdown             = Target Cost Value − Work Orders − Non-WO Cost of Sales — funds
+    //                          still available on the line; negative = overspent. Locked
+    //                          (finalised) centres show — here and report in Profit / Loss instead
+    //   Profit / Loss        = the same remainder for locked centres — realised by finalising,
+    //                          so it no longer reads as money available to spend
     //   Cost % Complete      = cost-side completion, edited inline here
 
     /// <summary>One rendered row: an individual cost centre or a named roll-up.</summary>
@@ -303,6 +347,38 @@
     // Allocated Xero purchase spend, net of credit notes.
     private decimal CostOfSalesFor(IReadOnlyList<string> costCodes) => SumFor(costCodes, row => row.ActualCost);
 
+    // The share of that spend not linked to any work order.
+    private decimal NonWoCostOfSalesFor(IReadOnlyList<string> costCodes) => SumFor(costCodes, row => row.NonWorkOrderActualCost);
+
+    private bool IsCentreFinalised(string costCode) =>
+        byCode.TryGetValue(costCode, out var row) && row.IsFinalised;
+
+    private bool AllFinalised(IReadOnlyList<string> costCodes) => costCodes.All(IsCentreFinalised);
+
+    private bool AnyFinalised(IReadOnlyList<string> costCodes) => costCodes.Any(IsCentreFinalised);
+
+    // What one centre has left of its target cost after work orders and unlinked spend.
+    private decimal RemainderFor(string costCode) =>
+        (byCode.TryGetValue(costCode, out var row) ? row.BudgetedCost - row.NonWorkOrderActualCost : 0m)
+        - (WorkOrderCommittedByCode.TryGetValue(costCode, out var committed) ? committed : 0m);
+
+    // Unlocked centres' remainders: funds still available on the line.
+    private decimal DrawdownFor(IReadOnlyList<string> costCodes) =>
+        costCodes.Where(entryCode => !IsCentreFinalised(entryCode)).Sum(RemainderFor);
+
+    // Locked centres' remainders: realised profit / loss.
+    private decimal ProfitLossFor(IReadOnlyList<string> costCodes) =>
+        costCodes.Where(IsCentreFinalised).Sum(RemainderFor);
+
+    private static string LockTitle(ReportLine line, bool allLocked, bool anyLocked) =>
+        allLocked
+            ? "Unlock — the remainder returns to drawdown as available funds"
+            : anyLocked
+                ? "Some centres in this roll-up are already locked — lock the rest so the whole remainder reads as profit / loss"
+                : line.IsGroup
+                    ? "Lock every centre in this roll-up — no more spend expected; the remainder becomes profit / loss"
+                    : "Lock this cost centre — no more spend expected; the remainder becomes profit / loss";
+
     private bool IsSaving(string key) => string.Equals(savingKey, key, StringComparison.OrdinalIgnoreCase);
 
     private async Task HandleCostCompletionChangedAsync(ReportLine line, ChangeEventArgs args)
@@ -321,7 +397,8 @@
         costCodes.Any(entryCode =>
             (byCode.TryGetValue(entryCode, out var row) &&
              (row.BudgetedSales != 0m || row.CompletionPercent != 0m || row.ClaimedToDate != 0m ||
-              row.BudgetedCost != 0m || row.CostCompletionPercent != 0m || row.ActualCost != 0m)) ||
+              row.BudgetedCost != 0m || row.CostCompletionPercent != 0m || row.ActualCost != 0m ||
+              row.IsFinalised)) ||
             (WorkOrderCommittedByCode.TryGetValue(entryCode, out var committed) && committed != 0m));
 
     private IEnumerable<ReportLine> VisibleLines
@@ -357,7 +434,14 @@
     private decimal TotalTargetCost => SummaryRows.Sum(row => row.BudgetedCost);
     private decimal TotalWoCommitted => WorkOrderCommittedByCode.Values.Sum();
     private decimal TotalCostOfSales => SummaryRows.Sum(row => row.ActualCost);
-    private decimal TotalDrawdown => TotalTargetCost - TotalWoCommitted;
+    private decimal TotalNonWoCostOfSales => SummaryRows.Sum(row => row.NonWorkOrderActualCost);
+
+    // Every code with any figure — summary rows plus work-order-only codes.
+    private IEnumerable<string> AllCodes =>
+        byCode.Keys.Union(WorkOrderCommittedByCode.Keys, StringComparer.OrdinalIgnoreCase);
+
+    private decimal TotalDrawdown => AllCodes.Where(entryCode => !IsCentreFinalised(entryCode)).Sum(RemainderFor);
+    private decimal TotalProfitLoss => AllCodes.Where(IsCentreFinalised).Sum(RemainderFor);
 
     // Weighted by contract sales value, matching the per-line calculation.
     private decimal WeightedSalesCompletion =>
