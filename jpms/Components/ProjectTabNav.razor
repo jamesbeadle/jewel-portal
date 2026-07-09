@@ -18,29 +18,32 @@
 
 @code {
     [Parameter, EditorRequired] public string ProjectId { get; set; } = "";
-    [Parameter, EditorRequired] public string ActiveTab { get; set; } = "overview";
+    [Parameter, EditorRequired] public string ActiveTab { get; set; } = "financials";
 
     private record Tab(string Slug, string Label, bool Enabled);
 
     // Removed tabs (BoQ, Procurement, Mobilisation, H&S, Site, Commercial, Close-out) will be
     // reintroduced here once their functionality is fully scoped.
-    // Ordered to follow the commercial flow: requests raise variations, and approved variations land
-    // on the valuation report (which also carries valuation invoices — the old Cash Calls tab).
+    // Financials leads — it's the project landing tab (/projects/{id} redirects to it). The middle
+    // tabs follow the commercial flow: requests raise variations, drawings drive change detection,
+    // cost centre line items group by trade into bid packages whose winners become work orders, and
+    // the valuation report rolls it up (it also carries valuation invoices — the old Cash Calls
+    // tab). Setup — correspondence and project details, formerly on the Overview tab — sits last.
     private static readonly Tab[] Tabs =
     {
-        new("overview",            "Overview",            true),
+        new("financials",          "Financials",          true),
+        new("todos",               "To-do",               true),
         new("requests",            "Requests",            true),
         new("variations",          "Variations",          true),
-        new("valuation",           "Valuation Report",    true),
+        new("drawings",            "Drawings",            true),
         new("bid-package-invites", "Bid Package Invites", true),
         new("work-orders",         "Work Orders",         true),
+        new("valuation",           "Valuation Report",    true),
         new("schedule",            "Schedule",            true),
-        new("financials",          "Financials",          true),
-        new("drawings",            "Drawings",            true)
+        new("setup",               "Setup",               true)
     };
 
-    private string HrefFor(string slug) =>
-        slug == "overview" ? $"/projects/{ProjectId}" : $"/projects/{ProjectId}/{slug}";
+    private string HrefFor(string slug) => $"/projects/{ProjectId}/{slug}";
 
     private const string DisabledClass =
         "inline-block px-3 py-2 border-b-2 border-transparent text-content-subtle/40 cursor-not-allowed select-none";

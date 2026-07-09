@@ -4,7 +4,7 @@ using Jewel.JPMS.Models;
 
 namespace Jewel.JPMS.Services;
 
-// Project to-do items: listed and managed on the project's Overview tab. Items created from an email
+// Project to-do items: listed and managed on the project's To-do tab. Items created from an email
 // at the triage stage arrive through IIntakeQueue.CreateTodoItemsFromMessageAsync and show up here.
 public interface ITodoStore
 {

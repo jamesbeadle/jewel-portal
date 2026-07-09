@@ -47,6 +47,34 @@
                                     <span> · approved by @revision.ApprovedByEmail</span>
                                 }
                             </p>
+                            @* Pipeline status: metadata extraction (Bluebeam) and change analysis
+                               are independent stages — each shows done-with-timestamp or pending. *@
+                            <p class="mt-1.5 flex flex-wrap items-center gap-1">
+                                @if (revision.MetadataExtractedAt is { } extractedAt)
+                                {
+                                    <span class="inline-flex items-center rounded-full bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 text-[10px] font-medium text-emerald-800">
+                                        Metadata extracted @extractedAt.LocalDateTime.ToString("d MMM, HH:mm")
+                                    </span>
+                                }
+                                else
+                                {
+                                    <span class="inline-flex items-center rounded-full bg-amber-50 border border-amber-200 px-1.5 py-0.5 text-[10px] font-medium text-amber-800">
+                                        Metadata not extracted
+                                    </span>
+                                }
+                                @if (revision.AnalysedAt is { } analysedAt)
+                                {
+                                    <span class="inline-flex items-center rounded-full bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 text-[10px] font-medium text-emerald-800">
+                                        Analysed @analysedAt.LocalDateTime.ToString("d MMM, HH:mm")
+                                    </span>
+                                }
+                                else
+                                {
+                                    <span class="inline-flex items-center rounded-full bg-amber-50 border border-amber-200 px-1.5 py-0.5 text-[10px] font-medium text-amber-800">
+                                        Not analysed
+                                    </span>
+                                }
+                            </p>
                         </div>
                         <div class="flex flex-col items-end gap-1.5 shrink-0">
                             @if (!string.IsNullOrEmpty(revision.BlobRef))

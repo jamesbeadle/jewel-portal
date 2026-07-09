@@ -1,38 +1,15 @@
 @page "/projects/{ProjectId}"
-@using Jewel.JPMS.Features.Projects
-@inject AuthService Auth
-@inject SessionService Session
-@inject ProjectListReadModel Projects
 @inject NavigationManager Nav
 
-<PageTitle>@PageTitleText · JPMS</PageTitle>
-
-@if (!isLoaded)
-{
-    <section class="px-6 md:px-8 py-12 text-content-subtle text-sm">Loading project…</section>
-}
-else if (!Session.IsApproved)
-{
-    <RequestAccessView Email="@Auth.CurrentUser!.Email" DisplayName="@Auth.CurrentUser.DisplayName" />
-}
-else
-{
-    <ProjectPageShell ProjectId="@ProjectId" ActiveTab="overview">
-        <ProjectOverview ProjectId="@ProjectId" />
-    </ProjectPageShell>
-}
+@*
+    The bare project URL has no tab of its own any more — the old Overview tab was retired (its
+    to-do list moved to the To-do tab, correspondence and details to Setup). Financials is the
+    project landing tab, so redirect there; replace:true keeps Back working naturally.
+*@
 
 @code {
     [Parameter] public string ProjectId { get; set; } = "";
 
-    private bool isLoaded;
-    private string PageTitleText => Projects.Find(ProjectId)?.Name ?? "Project";
-
-    protected override async Task OnInitializedAsync()
-    {
-        await Session.EnsureLoadedAsync();
-        if (!Auth.IsSignedIn) { Nav.NavigateTo("/login", forceLoad: true); return; }
-        if (Projects.Current is null) await Projects.RefreshAsync(CancellationToken.None);
-        isLoaded = true;
-    }
+    protected override void OnInitialized() =>
+        Nav.NavigateTo($"/projects/{ProjectId}/financials", replace: true);
 }

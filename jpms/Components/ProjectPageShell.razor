@@ -40,7 +40,7 @@ else
 
 @code {
     [Parameter, EditorRequired] public string ProjectId { get; set; } = "";
-    [Parameter, EditorRequired] public string ActiveTab { get; set; } = "overview";
+    [Parameter, EditorRequired] public string ActiveTab { get; set; } = "financials";
     [Parameter] public RenderFragment? ChildContent { get; set; }
 
     private Project? Project => Projects.Find(ProjectId);

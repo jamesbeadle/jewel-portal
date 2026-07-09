@@ -71,4 +71,10 @@ public sealed class DrawingRevisionEntity
     public long? FileSizeBytes { get; set; }
     [MaxLength(256)]  public string? ApprovedByEmail { get; set; }
     public DateTimeOffset? ApprovedAt { get; set; }
+
+    // Drawing pipeline status (whiteboard workflow: Bluebeam extracts metadata/structural file
+    // data into the portal, then Claude analyses changes and triggers workflows). Null = that
+    // stage hasn't run for this revision yet; the pipeline stamps these when each stage lands.
+    public DateTimeOffset? MetadataExtractedAt { get; set; }
+    public DateTimeOffset? AnalysedAt { get; set; }
 }

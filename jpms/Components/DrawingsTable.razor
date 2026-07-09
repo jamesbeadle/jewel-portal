@@ -8,6 +8,7 @@
                 <th class="px-4 py-3">Title</th>
                 <th class="px-4 py-3 text-center">Latest approved</th>
                 <th class="px-4 py-3 text-center">Status</th>
+                <th class="px-4 py-3 text-center">Pipeline</th>
                 <th class="px-4 py-3 hidden md:table-cell">Added</th>
             </tr>
         </thead>
@@ -47,6 +48,39 @@
                         {
                             <span class="inline-flex items-center rounded-full bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 text-[10px] font-medium text-emerald-800">
                                 Approved
+                            </span>
+                        }
+                    </td>
+                    <td class="px-4 py-3 text-center whitespace-nowrap">
+                        @* Pipeline status of the latest revision: has Bluebeam extracted its
+                           metadata, and has the change analysis run? Pending states are shown
+                           just as loudly so un-analysed drawings can't be silently missed. *@
+                        @if (drawing.LatestMetadataExtractedAt is { } extractedAt)
+                        {
+                            <span class="inline-flex items-center rounded-full bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 text-[10px] font-medium text-emerald-800"
+                                  title="Metadata extracted @extractedAt.LocalDateTime.ToString("d MMM yyyy, HH:mm")">
+                                Metadata ✓
+                            </span>
+                        }
+                        else
+                        {
+                            <span class="inline-flex items-center rounded-full bg-amber-50 border border-amber-200 px-1.5 py-0.5 text-[10px] font-medium text-amber-800"
+                                  title="The latest revision's metadata has not been extracted yet">
+                                Not extracted
+                            </span>
+                        }
+                        @if (drawing.LatestAnalysedAt is { } analysedAt)
+                        {
+                            <span class="ml-1 inline-flex items-center rounded-full bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 text-[10px] font-medium text-emerald-800"
+                                  title="Change analysis run @analysedAt.LocalDateTime.ToString("d MMM yyyy, HH:mm")">
+                                Analysed ✓
+                            </span>
+                        }
+                        else
+                        {
+                            <span class="ml-1 inline-flex items-center rounded-full bg-amber-50 border border-amber-200 px-1.5 py-0.5 text-[10px] font-medium text-amber-800"
+                                  title="The latest revision has not been analysed yet">
+                                Not analysed
                             </span>
                         }
                     </td>

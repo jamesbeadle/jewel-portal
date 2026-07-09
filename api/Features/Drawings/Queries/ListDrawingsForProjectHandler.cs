@@ -23,7 +23,14 @@ public sealed class ListDrawingsForProjectHandler
         var drawingIds = drawings.Select(drawing => drawing.DrawingId).ToList();
         var revisionStatuses = await context.DrawingRevisions
             .Where(revision => drawingIds.Contains(revision.DrawingId))
-            .Select(revision => new { revision.DrawingId, revision.ApprovalStatus })
+            .Select(revision => new
+            {
+                revision.DrawingId,
+                revision.ApprovalStatus,
+                revision.ReceivedAt,
+                revision.MetadataExtractedAt,
+                revision.AnalysedAt
+            })
             .ToListAsync(cancellationToken);
 
         var byDrawing = revisionStatuses
@@ -41,7 +48,12 @@ public sealed class ListDrawingsForProjectHandler
             var hasApproved = statuses.Any(status => status.ApprovalStatus == (int)DrawingApprovalStatus.Approved);
 
             if (query.ApprovedOnly && !hasApproved) continue;
-            result.Add(drawing.ToModel(unapproved, archived));
+
+            // Pipeline status rolls up from the LATEST revision — that's the one the register
+            // cares about: has the newest issue been extracted and analysed yet?
+            var latest = statuses.OrderByDescending(status => status.ReceivedAt).FirstOrDefault();
+            result.Add(drawing.ToModel(unapproved, archived,
+                latest?.MetadataExtractedAt, latest?.AnalysedAt));
         }
 
         return result.AsReadOnly();
