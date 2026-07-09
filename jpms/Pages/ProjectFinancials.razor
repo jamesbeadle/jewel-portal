@@ -34,6 +34,13 @@ else
         }
         else
         {
+            @if (Summary.LastRefreshFailed(ProjectId))
+            {
+                <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-3">
+                    The financial summary could not be loaded — the figures below only show work-order data.
+                    <button type="button" class="underline underline-offset-2 ml-1" @onclick="RetrySummaryAsync">Retry</button>
+                </p>
+            }
             <FinancialsTable CostCenters="CostCenters.Current"
                              SummaryRows="Summary.Current(ProjectId)"
                              WorkOrderRemainingByCode="WoRemainingByCode"
@@ -109,6 +116,8 @@ else
             : CostCenters.Current.FirstOrDefault(centre =>
                   string.Equals(centre.Code, selectedWoCostCode, StringComparison.OrdinalIgnoreCase))?.Name
               ?? "(not in cost-code master)";
+
+    private Task RetrySummaryAsync() => Summary.RefreshAsync(ProjectId, CancellationToken.None);
 
     private void OpenWorkOrdersModal(string costCode) => selectedWoCostCode = costCode;
 

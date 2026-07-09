@@ -70,6 +70,7 @@ public sealed class ProjectFinancialSummaryReadModel
 {
     private readonly IQueryClient queries;
     private readonly Dictionary<string, IReadOnlyList<ProjectFinancialSummaryRow>> rowsByProject = new();
+    private readonly HashSet<string> failedProjects = new();
 
     public ProjectFinancialSummaryReadModel(IQueryClient queries) { this.queries = queries; }
 
@@ -78,9 +79,22 @@ public sealed class ProjectFinancialSummaryReadModel
     public IReadOnlyList<ProjectFinancialSummaryRow> Current(string projectId) =>
         rowsByProject.TryGetValue(projectId, out var list) ? list : Array.Empty<ProjectFinancialSummaryRow>();
 
+    /// <summary>True when the last refresh for this project failed. The Financials page fires
+    /// RefreshAsync fire-and-forget, so without this a failed fetch silently renders as
+    /// all-zero rows — the page uses this flag to show an error banner instead.</summary>
+    public bool LastRefreshFailed(string projectId) => failedProjects.Contains(projectId);
+
     public async Task RefreshAsync(string projectId, CancellationToken cancellationToken)
     {
-        rowsByProject[projectId] = await queries.AskAsync(new GetProjectFinancialSummary(projectId), cancellationToken);
+        try
+        {
+            rowsByProject[projectId] = await queries.AskAsync(new GetProjectFinancialSummary(projectId), cancellationToken);
+            failedProjects.Remove(projectId);
+        }
+        catch
+        {
+            failedProjects.Add(projectId);
+        }
         OnChanged?.Invoke();
     }
 }
