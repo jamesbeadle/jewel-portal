@@ -156,7 +156,8 @@ public sealed class XeroClient : IXeroClient
 
             // Sites are an explicit per-project mapping — a missing option means the
             // mapping is wrong (or the option was renamed in Xero), so fail loudly.
-            var missingSites = request.Lines.Select(line => line.SiteOption)
+            var missingSites = request.Lines.SelectMany(line => line.Shares)
+                .Select(share => share.SiteOption)
                 .Where(site => !categories.SiteOptions.Contains(site))
                 .Distinct(StringComparer.OrdinalIgnoreCase)
                 .ToList();
@@ -175,8 +176,8 @@ public sealed class XeroClient : IXeroClient
             // Master cost codes are JPMS-owned; create any that Xero doesn't hold yet so
             // the confirmation can be recorded. (Xero caps a category at 100 options — a
             // rejection here surfaces verbatim for the finance team to resolve.)
-            var missingCodes = request.Lines.SelectMany(line => line.Splits)
-                .Select(split => split.CostCenterCode)
+            var missingCodes = request.Lines.SelectMany(line => line.Shares)
+                .Select(share => share.CostCenterCode)
                 .Where(code => !categories.CostCodeOptions.Contains(code))
                 .Distinct(StringComparer.OrdinalIgnoreCase)
                 .ToList();
@@ -248,7 +249,7 @@ public sealed class XeroClient : IXeroClient
                 var lineAmount = DecimalOf(line, "LineAmount");
                 var taxAmount = DecimalOf(line, "TaxAmount");
                 var freshNet = vatInclusive ? lineAmount - taxAmount : lineAmount;
-                var allocatedNet = instruction.Splits.Sum(split => split.Net);
+                var allocatedNet = instruction.Shares.Sum(share => share.Net);
                 if (Math.Abs(freshNet - allocatedNet) > 0.01m)
                 {
                     error = $"Line \"{StringOf(line, "Description")}\" is {freshNet:0.00} net in Xero but was allocated as "
@@ -256,33 +257,35 @@ public sealed class XeroClient : IXeroClient
                     return null;
                 }
 
-                if (instruction.Splits.Count == 1)
+                if (instruction.Shares.Count == 1)
                 {
+                    var share = instruction.Shares[0];
                     var copy = CopyLine(line, keepLineItemId: true, keepTracking: false, includeTaxAmount: true);
-                    copy["Tracking"] = TrackingFor(categories, instruction.SiteOption, instruction.Splits[0].CostCenterCode);
+                    copy["Tracking"] = TrackingFor(categories, share.SiteOption, share.CostCenterCode);
                     result.Add(copy);
                 }
                 else
                 {
-                    // One Xero line per cost centre. Both the raw LineAmount (VAT-inclusive
-                    // or not — proportions are identical) and the original TaxAmount are
-                    // pro-rated with the same penny-safe maths, so the bill's net, tax and
-                    // gross totals are all unchanged to the penny by the split — per-line
-                    // tax recalculation by Xero could otherwise drift by a penny per piece.
-                    var weights = instruction.Splits.Select(split => split.Net).ToList();
-                    var shares = XeroSplitMaths.ProportionalShares(lineAmount, weights);
-                    var taxShares = XeroSplitMaths.ProportionalShares(taxAmount, weights);
+                    // One Xero line per share (its own site + cost code — shares can point
+                    // at different projects). Both the raw LineAmount (VAT-inclusive or not
+                    // — proportions are identical) and the original TaxAmount are pro-rated
+                    // with the same penny-safe maths, so the bill's net, tax and gross
+                    // totals are all unchanged to the penny by the split — per-line tax
+                    // recalculation by Xero could otherwise drift by a penny per piece.
+                    var weights = instruction.Shares.Select(share => share.Net).ToList();
+                    var amounts = XeroSplitMaths.ProportionalShares(lineAmount, weights);
+                    var taxes = XeroSplitMaths.ProportionalShares(taxAmount, weights);
                     var description = StringOf(line, "Description");
-                    for (var i = 0; i < instruction.Splits.Count; i++)
+                    for (var i = 0; i < instruction.Shares.Count; i++)
                     {
-                        var split = instruction.Splits[i];
+                        var share = instruction.Shares[i];
                         var piece = CopyLine(line, keepLineItemId: false, keepTracking: false, includeTaxAmount: false);
-                        piece["Description"] = $"{description} [{split.CostCenterCode}]";
+                        piece["Description"] = $"{description} [{share.CostCenterCode}]";
                         piece["Quantity"] = 1m;
-                        piece["UnitAmount"] = shares[i];
-                        piece["LineAmount"] = shares[i];
-                        piece["TaxAmount"] = taxShares[i];
-                        piece["Tracking"] = TrackingFor(categories, instruction.SiteOption, split.CostCenterCode);
+                        piece["UnitAmount"] = amounts[i];
+                        piece["LineAmount"] = amounts[i];
+                        piece["TaxAmount"] = taxes[i];
+                        piece["Tracking"] = TrackingFor(categories, share.SiteOption, share.CostCenterCode);
                         result.Add(piece);
                     }
                 }

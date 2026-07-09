@@ -288,18 +288,25 @@ else
                                     <td class="px-3 py-2.5 text-content-muted">
                                         @if (activeTab == XeroAllocationStatus.Allocated)
                                         {
-                                            <span class="text-content">@ProjectName(line.ProjectId)</span>
                                             @if (line.Splits is { Count: > 0 })
                                             {
+                                                var multiProject = line.Splits.Select(split => split.ProjectId ?? line.ProjectId)
+                                                    .Distinct().Count() > 1;
+                                                <span class="text-content">@(multiProject ? "Multiple projects" : ProjectName(line.ProjectId ?? line.Splits[0].ProjectId))</span>
                                                 foreach (var split in line.Splits)
                                                 {
                                                     <span class="block text-xs text-content-subtle">
+                                                        @if (multiProject)
+                                                        {
+                                                            <span class="text-content-muted">@ProjectName(split.ProjectId ?? line.ProjectId) · </span>
+                                                        }
                                                         @CostCenterText(split.CostCenterCode) · @Money(line.Type == "ACCPAYCREDIT" ? -split.Net : split.Net)
                                                     </span>
                                                 }
                                             }
                                             else
                                             {
+                                                <span class="text-content">@ProjectName(line.ProjectId)</span>
                                                 <span class="block text-xs text-content-subtle">@CostCenterText(line.CostCenterCode)</span>
                                             }
                                             @if (WriteBackBadge(line) is { } badge)
@@ -356,9 +363,9 @@ else
             </div>
         }
 
-        <Modal IsOpen="@(splitLine is not null)" Title="Split across cost centres"
+        <Modal IsOpen="@(splitLine is not null)" Title="Split across projects and cost centres"
                ConfirmLabel="@(isApplying ? "Allocating…" : "Allocate split")" CancelLabel="Cancel"
-               ConfirmDisabled="@isBusy" OnConfirm="ApplySplitAsync" OnCancel="CloseSplit" Class="max-w-xl">
+               ConfirmDisabled="@isBusy" OnConfirm="ApplySplitAsync" OnCancel="CloseSplit" Class="max-w-3xl">
             @if (splitLine is not null)
             {
                 <div class="space-y-4">
@@ -375,22 +382,24 @@ else
                         <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@splitError</p>
                     }
 
-                    <div>
-                        <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Project</label>
-                        <select class="w-full bg-surface border border-line rounded-lg px-2 py-1.5 text-content text-sm" @bind="splitProjectId">
-                            <option value="">—</option>
-                            @foreach (var project in Projects)
-                            {
-                                <option value="@project.ProjectId">@project.Name</option>
-                            }
-                        </select>
-                    </div>
-
                     <div class="space-y-2">
-                        <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold">Cost centres</label>
+                        <div class="flex items-center gap-2 text-xs uppercase tracking-wider text-content-subtle font-semibold">
+                            <span class="w-56">Project</span>
+                            <span class="grow">Cost centre</span>
+                            <span class="w-32 text-right">Net £</span>
+                            <span class="w-7"></span>
+                        </div>
                         @foreach (var row in splitRows)
                         {
                             <div class="flex items-center gap-2">
+                                <select class="w-56 bg-surface border border-line rounded-lg px-2 py-1.5 text-content text-sm"
+                                        value="@row.ProjectId" @onchange="e => OnSplitProjectChanged(row, e.Value?.ToString())">
+                                    <option value="">—</option>
+                                    @foreach (var project in Projects)
+                                    {
+                                        <option value="@project.ProjectId">@project.Name</option>
+                                    }
+                                </select>
                                 <select class="grow bg-surface border border-line rounded-lg px-2 py-1.5 text-content text-sm"
                                         value="@row.Code" @onchange="e => OnSplitCodeChanged(row, e.Value?.ToString())">
                                     <option value="">—</option>
@@ -412,7 +421,7 @@ else
                             </div>
                         }
                         <button type="button" class="text-xs font-medium text-content-muted hover:text-content underline underline-offset-4"
-                                @onclick="AddSplitRow">+ Add cost centre</button>
+                                @onclick="AddSplitRow">+ Add row</button>
                     </div>
 
                     <p class="text-sm @(SplitRemaining == 0m ? "text-content-muted" : "text-negative")">
@@ -420,8 +429,9 @@ else
                         @(SplitRemaining == 0m ? "— fully assigned." : $"— {Money(SplitRemaining)} remaining.")
                     </p>
                     <p class="text-xs text-content-subtle">
-                        On approval the Xero line is split into one line per cost centre (amounts pro-rated,
-                        invoice total unchanged) with the project's site stamped on each.
+                        Rows can point at different projects. On approval the Xero line is split into one line
+                        per row (amounts pro-rated, invoice total unchanged) with each row's project site and
+                        cost code stamped on it.
                     </p>
                 </div>
             }
@@ -636,30 +646,33 @@ else
     }
 
     // -- split editor ----------------------------------------------------------
-    // A line's value shared across several cost centres. The amounts must add up
-    // to the line's net exactly; the API enforces the same rule server-side.
+    // A line's value shared across several projects and/or cost centres. The
+    // amounts must add up to the line's net exactly; the API enforces the same
+    // rules server-side.
 
     private sealed class SplitRow
     {
+        public string ProjectId { get; set; } = "";
         public string Code { get; set; } = "";
         public decimal? Amount { get; set; }
     }
 
     private XeroLedgerLine? splitLine;
-    private string splitProjectId = "";
     private string? splitError;
     private List<SplitRow> splitRows = new();
 
     private void OpenSplit(XeroLedgerLine line)
     {
         splitLine = line;
-        splitProjectId = SelectedProjectFor(line);
         splitError = null;
-        // First row pre-filled from the line's chosen/suggested centre; second blank.
+        // First row pre-filled from the line's chosen/suggested project + centre;
+        // second row starts on the same project (same-project splits are the
+        // common case) with the centre left open.
+        var project = SelectedProjectFor(line);
         splitRows = new List<SplitRow>
         {
-            new() { Code = SelectedCostCenterFor(line) },
-            new()
+            new() { ProjectId = project, Code = SelectedCostCenterFor(line) },
+            new() { ProjectId = project }
         };
     }
 
@@ -669,12 +682,17 @@ else
         splitError = null;
     }
 
-    private void AddSplitRow() => splitRows.Add(new SplitRow());
+    // New rows inherit the previous row's project — retyping the same project
+    // for every row of a same-project split would be pure friction.
+    private void AddSplitRow() =>
+        splitRows.Add(new SplitRow { ProjectId = splitRows.LastOrDefault()?.ProjectId ?? "" });
 
     private void RemoveSplitRow(SplitRow row)
     {
         if (splitRows.Count > 2) splitRows.Remove(row);
     }
+
+    private void OnSplitProjectChanged(SplitRow row, string? projectId) => row.ProjectId = projectId ?? "";
 
     private void OnSplitCodeChanged(SplitRow row, string? code) => row.Code = code ?? "";
 
@@ -691,13 +709,14 @@ else
     {
         if (splitLine is null || isBusy) return;
 
-        var rows = splitRows.Where(row => !string.IsNullOrEmpty(row.Code) || row.Amount is not null).ToList();
-        if (string.IsNullOrEmpty(splitProjectId)) { splitError = "Choose a project."; return; }
-        if (rows.Count < 2) { splitError = "A split needs at least two cost centres — use Allocate for a single centre."; return; }
-        if (rows.Any(row => string.IsNullOrEmpty(row.Code) || row.Amount is not > 0m))
-        { splitError = "Every row needs a cost centre and an amount above zero."; return; }
-        if (rows.Select(row => row.Code).Distinct(StringComparer.OrdinalIgnoreCase).Count() != rows.Count)
-        { splitError = "Each cost centre can appear only once."; return; }
+        var rows = splitRows
+            .Where(row => !string.IsNullOrEmpty(row.ProjectId) || !string.IsNullOrEmpty(row.Code) || row.Amount is not null)
+            .ToList();
+        if (rows.Count < 2) { splitError = "A split needs at least two rows — use Allocate for a single project + centre."; return; }
+        if (rows.Any(row => string.IsNullOrEmpty(row.ProjectId) || string.IsNullOrEmpty(row.Code) || row.Amount is not > 0m))
+        { splitError = "Every row needs a project, a cost centre and an amount above zero."; return; }
+        if (rows.Select(row => $"{row.ProjectId}:{row.Code}").Distinct(StringComparer.OrdinalIgnoreCase).Count() != rows.Count)
+        { splitError = "Each project + cost centre combination can appear only once."; return; }
         if (rows.Sum(row => row.Amount!.Value) != splitLine.Net)
         { splitError = $"The amounts must add up to {Money(splitLine.Net)} net — currently {Money(SplitAssigned)}."; return; }
 
@@ -707,8 +726,7 @@ else
             await Ledger.ApplyAsync(new SetXeroAllocation(
                 new[] { splitLine.XeroLedgerLineId },
                 XeroAllocationAction.Allocate,
-                splitProjectId,
-                Splits: rows.Select(row => new XeroCostSplit(row.Code, row.Amount!.Value)).ToList()));
+                Splits: rows.Select(row => new XeroCostSplit(row.Code, row.Amount!.Value, row.ProjectId)).ToList()));
             selectedIds.Remove(splitLine.XeroLedgerLineId);
             chosenProject.Remove(splitLine.XeroLedgerLineId);
             chosenCostCenter.Remove(splitLine.XeroLedgerLineId);

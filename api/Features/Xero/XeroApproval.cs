@@ -20,15 +20,18 @@ public sealed record XeroApprovalRequest(
     IReadOnlyList<XeroApprovalLineInstruction> Lines);
 
 /// <summary>
-/// The allocation to stamp on one Xero line item. A single split covers the
-/// whole line (tracking set in place); multiple splits replace the Xero line
-/// with one line per cost centre, amounts pro-rated so the invoice total is
-/// unchanged to the penny.
+/// The allocation to stamp on one Xero line item. A single share covers the
+/// whole line (tracking set in place); multiple shares replace the Xero line
+/// with one line per share — a share carries its own site (project) as well as
+/// its cost code, so a split can span projects — amounts pro-rated so the
+/// invoice total is unchanged to the penny.
 /// </summary>
 public sealed record XeroApprovalLineInstruction(
     string LineItemId,
-    string SiteOption,
-    IReadOnlyList<XeroCostSplit> Splits);
+    IReadOnlyList<XeroApprovalShare> Shares);
+
+/// <summary>One share of a line: which Sites option and Cost Code option to stamp, and its net weight.</summary>
+public sealed record XeroApprovalShare(string SiteOption, string CostCenterCode, decimal Net);
 
 /// <summary>
 /// What happened. AlreadyApproved is a success without any write — the

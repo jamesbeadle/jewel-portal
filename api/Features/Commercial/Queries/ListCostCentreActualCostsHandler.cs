@@ -29,7 +29,7 @@ public sealed class ListCostCentreActualCostsHandler : IQueryHandler<ListCostCen
                 split => split.XeroLedgerLineId,
                 line => line.XeroLedgerLineId,
                 (split, line) => new { Split = split, Line = line })
-            .Where(joined => joined.Line.ProjectId == query.ProjectId
+            .Where(joined => joined.Split.ProjectId == query.ProjectId
                              && joined.Line.AllocationStatus == (int)XeroAllocationStatus.Allocated)
             .ToListAsync(cancellationToken);
 

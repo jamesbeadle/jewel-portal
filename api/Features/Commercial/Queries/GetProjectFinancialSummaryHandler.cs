@@ -57,9 +57,9 @@ public sealed class GetProjectFinancialSummaryHandler : IQueryHandler<GetProject
 
         // Actuals: Xero purchase lines allocated to this project. Net is stored
         // positive; supplier credit notes (ACCPAYCREDIT) subtract. Whole-line
-        // allocations carry their centre on the line; split lines carry theirs
-        // in XeroCostSplits (each row a share of the line's net), so both
-        // populations sum into the same per-centre totals.
+        // allocations carry their project + centre on the line; split lines carry
+        // theirs in XeroCostSplits (each row a share of the line's net, with its
+        // own project), so both populations sum into the same per-centre totals.
         var actuals = await context.XeroLedgerLines
             .Where(line => line.ProjectId == query.ProjectId
                            && line.AllocationStatus == (int)XeroAllocationStatus.Allocated
@@ -76,7 +76,7 @@ public sealed class GetProjectFinancialSummaryHandler : IQueryHandler<GetProject
             .Join(context.XeroLedgerLines,
                 split => split.XeroLedgerLineId,
                 line => line.XeroLedgerLineId,
-                (split, line) => new { split.CostCenterCode, split.Net, line.ProjectId, line.AllocationStatus, line.Type })
+                (split, line) => new { split.CostCenterCode, split.Net, split.ProjectId, line.AllocationStatus, line.Type })
             .Where(joined => joined.ProjectId == query.ProjectId
                              && joined.AllocationStatus == (int)XeroAllocationStatus.Allocated)
             .GroupBy(joined => joined.CostCenterCode)

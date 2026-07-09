@@ -102,8 +102,22 @@ public sealed class XeroWriteBackService : IXeroWriteBackService
                 : null);
         }
 
-        // Resolve each line's project → Xero Sites option; explicit mapping, no guessing.
-        var projectIds = lines.Select(line => line.ProjectId!).Distinct().ToList();
+        // Splits: whole-line allocations carry their project + code on the line itself;
+        // split lines carry rows in XeroCostSplits, each with its own project.
+        var lineIds = lines.Select(line => line.XeroLedgerLineId).ToList();
+        var splitsByLine = (await context.XeroCostSplits
+                .Where(split => lineIds.Contains(split.XeroLedgerLineId))
+                .ToListAsync(ct))
+            .GroupBy(split => split.XeroLedgerLineId)
+            .ToDictionary(group => group.Key, group => group.ToList());
+
+        // Resolve every referenced project → Xero Sites option; explicit mapping, no guessing.
+        var projectIds = lines.Select(line => line.ProjectId)
+            .Concat(splitsByLine.Values.SelectMany(rows => rows).Select(row => (string?)row.ProjectId))
+            .Where(id => !string.IsNullOrWhiteSpace(id))
+            .Select(id => id!)
+            .Distinct()
+            .ToList();
         var projects = await context.Projects
             .Where(project => projectIds.Contains(project.ProjectId))
             .ToDictionaryAsync(project => project.ProjectId, ct);
@@ -116,28 +130,32 @@ public sealed class XeroWriteBackService : IXeroWriteBackService
                 "No Xero site is mapped for " + string.Join(", ", unmapped)
                 + " — set \"Xero site (tracking option)\" in the project's details, then retry.", ct);
 
-        // Cost-centre splits: whole-line allocations carry their code on the line itself;
-        // split lines carry rows in XeroCostSplits instead.
-        var lineIds = lines.Select(line => line.XeroLedgerLineId).ToList();
-        var splitsByLine = (await context.XeroCostSplits
-                .Where(split => lineIds.Contains(split.XeroLedgerLineId))
-                .ToListAsync(ct))
-            .GroupBy(split => split.XeroLedgerLineId)
-            .ToDictionary(group => group.Key, group => group.ToList());
-
         var instructions = new List<XeroApprovalLineInstruction>();
         foreach (var line in lines)
         {
-            var site = projects[line.ProjectId!].XeroSiteName!;
-            var splits = splitsByLine.TryGetValue(line.XeroLedgerLineId, out var rows)
-                ? rows.Select(row => new XeroCostSplit(row.CostCenterCode, row.Net)).ToList()
-                : line.CostCenterCode is not null
-                    ? new List<XeroCostSplit> { new(line.CostCenterCode, line.Net) }
-                    : null;
-            if (splits is null or { Count: 0 })
+            List<XeroApprovalShare>? shares;
+            if (splitsByLine.TryGetValue(line.XeroLedgerLineId, out var rows))
+            {
+                shares = rows
+                    .Select(row => new XeroApprovalShare(projects[row.ProjectId].XeroSiteName!, row.CostCenterCode, row.Net))
+                    .ToList();
+            }
+            else if (line.ProjectId is not null && line.CostCenterCode is not null)
+            {
+                shares = new List<XeroApprovalShare>
+                {
+                    new(projects[line.ProjectId].XeroSiteName!, line.CostCenterCode, line.Net)
+                };
+            }
+            else
+            {
+                shares = null;
+            }
+
+            if (shares is null or { Count: 0 })
                 return await StampFailureAsync(lines,
-                    $"Line \"{line.Description}\" is allocated but carries no cost centre — re-allocate it.", ct);
-            instructions.Add(new XeroApprovalLineInstruction(line.XeroLineItemId, site, splits));
+                    $"Line \"{line.Description}\" is allocated but carries no project + cost centre — re-allocate it.", ct);
+            instructions.Add(new XeroApprovalLineInstruction(line.XeroLineItemId, shares));
         }
 
         var result = await xero.ApproveInvoiceAsync(

@@ -21,7 +21,7 @@ public sealed class ListXeroLedgerLinesHandler : IQueryHandler<ListXeroLedgerLin
         var splitsByLine = (await context.XeroCostSplits.AsNoTracking().ToListAsync(cancellationToken))
             .GroupBy(split => split.XeroLedgerLineId)
             .ToDictionary(group => group.Key, group => (IReadOnlyList<XeroCostSplit>)group
-                .Select(split => new XeroCostSplit(split.CostCenterCode, split.Net))
+                .Select(split => new XeroCostSplit(split.CostCenterCode, split.Net, split.ProjectId))
                 .ToList());
 
         var projects = await context.Projects.AsNoTracking().ToListAsync(cancellationToken);

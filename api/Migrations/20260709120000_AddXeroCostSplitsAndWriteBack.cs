@@ -8,9 +8,10 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace Jewel.JPMS.Api.Migrations
 {
     /// <inheritdoc />
-    // Multi-cost-centre allocation + Xero write-back:
+    // Split allocation + Xero write-back:
     //  * XeroCostSplits — an allocated ledger line's value shared across several
-    //    cost centres (whole-line allocations stay on XeroLedgerLines.CostCenterCode).
+    //    cost centres and/or projects, each row carrying its own project (whole-line
+    //    allocations stay on XeroLedgerLines.ProjectId + CostCenterCode).
     //  * Write-back columns on XeroLedgerLines — the outcome of confirming the
     //    allocation back to Xero (Sites/Cost Code tracking + DRAFT → AUTHORISED).
     //  * Projects.XeroSiteName — the project's option in Xero's "Sites" tracking
@@ -26,8 +27,9 @@ namespace Jewel.JPMS.Api.Migrations
                 name: "XeroCostSplits",
                 columns: table => new
                 {
-                    XeroCostSplitId = table.Column<string>(type: "nvarchar(180)", maxLength: 180, nullable: false),
+                    XeroCostSplitId = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: false),
                     XeroLedgerLineId = table.Column<string>(type: "nvarchar(140)", maxLength: 140, nullable: false),
+                    ProjectId = table.Column<string>(type: "nvarchar(64)", maxLength: 64, nullable: false),
                     CostCenterCode = table.Column<string>(type: "nvarchar(32)", maxLength: 32, nullable: false),
                     Net = table.Column<decimal>(type: "decimal(18,4)", precision: 18, scale: 4, nullable: false)
                 },
@@ -42,9 +44,9 @@ namespace Jewel.JPMS.Api.Migrations
                 column: "XeroLedgerLineId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_XeroCostSplits_CostCenterCode",
+                name: "IX_XeroCostSplits_ProjectId_CostCenterCode",
                 table: "XeroCostSplits",
-                column: "CostCenterCode");
+                columns: new[] { "ProjectId", "CostCenterCode" });
 
             migrationBuilder.AddColumn<int>(
                 name: "WriteBackStatus",

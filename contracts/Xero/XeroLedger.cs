@@ -32,8 +32,13 @@ public enum XeroAllocationAction { Allocate = 0, Ignore = 1, Reset = 2, Allocate
 /// </summary>
 public enum XeroWriteBackStatus { None = 0, Approved = 1, Failed = 2 }
 
-/// <summary>One cost-centre share of a ledger line. Net is pre-VAT and positive, like the line's Net.</summary>
-public sealed record XeroCostSplit(string CostCenterCode, decimal Net);
+/// <summary>
+/// One share of a ledger line: a cost centre, the net amount (pre-VAT and
+/// positive, like the line's Net) and the project the share belongs to — a
+/// split can span projects as well as cost centres. A null ProjectId falls
+/// back to the command/line-level project.
+/// </summary>
+public sealed record XeroCostSplit(string CostCenterCode, decimal Net, string? ProjectId = null);
 
 /// <summary>
 /// Buckets for cost-of-sales lines with no identifiable project (parking charges,
@@ -92,9 +97,10 @@ public sealed record XeroLedgerLine(
     string? SuggestedBucket,
     DateTimeOffset FirstSeenAtUtc,
     DateTimeOffset LastSyncedAtUtc,
-    // Cost-centre split for allocated lines. Null/empty = the whole line sits on
-    // CostCenterCode; entries = the line's net is shared across these centres
-    // (CostCenterCode is then null and the split nets sum to Net).
+    // Split for allocated lines. Null/empty = the whole line sits on this line's
+    // ProjectId + CostCenterCode; entries = the line's net is shared across those
+    // projects/centres (CostCenterCode is then null, ProjectId holds the common
+    // project or null when the split spans projects, and the split nets sum to Net).
     IReadOnlyList<XeroCostSplit>? Splits = null,
     XeroWriteBackStatus WriteBackStatus = XeroWriteBackStatus.None,
     string? WriteBackError = null,
@@ -126,13 +132,14 @@ public sealed record AllocateSuggestedXeroLines(string? AllocatedBy = null) : IC
 
 /// <summary>
 /// Applies one allocation action to a batch of ledger lines. Allocate requires
-/// ProjectId + either CostCenterCode (whole line to one centre) or Splits —
-/// two or more cost-centre shares whose nets must sum exactly to the line's
-/// net (splits therefore apply to a single line, never a batch).
-/// AllocateToBucket requires a Bucket from <see cref="XeroBuckets.All"/>;
-/// Ignore takes an optional Note (reason); Reset returns lines to Unallocated.
-/// AllocatedBy is stamped server-side from the signed-in user — any
-/// client-supplied value is ignored.
+/// either ProjectId + CostCenterCode (whole line to one project + centre) or
+/// Splits — two or more shares, each with its own project and cost centre,
+/// whose nets must sum exactly to the line's net (splits therefore apply to a
+/// single line, never a batch). A split entry without a ProjectId falls back
+/// to the command's ProjectId. AllocateToBucket requires a Bucket from
+/// <see cref="XeroBuckets.All"/>; Ignore takes an optional Note (reason);
+/// Reset returns lines to Unallocated. AllocatedBy is stamped server-side from
+/// the signed-in user — any client-supplied value is ignored.
 /// </summary>
 public sealed record SetXeroAllocation(
     IReadOnlyList<string> XeroLedgerLineIds,

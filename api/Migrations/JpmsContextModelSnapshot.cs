@@ -3403,8 +3403,8 @@ namespace Jewel.JPMS.Api.Migrations
             modelBuilder.Entity("Jewel.JPMS.Api.Data.Entities.XeroCostSplitEntity", b =>
                 {
                     b.Property<string>("XeroCostSplitId")
-                        .HasMaxLength(180)
-                        .HasColumnType("nvarchar(180)");
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
 
                     b.Property<string>("CostCenterCode")
                         .IsRequired()
@@ -3415,6 +3415,11 @@ namespace Jewel.JPMS.Api.Migrations
                         .HasPrecision(18, 4)
                         .HasColumnType("decimal(18,4)");
 
+                    b.Property<string>("ProjectId")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
                     b.Property<string>("XeroLedgerLineId")
                         .IsRequired()
                         .HasMaxLength(140)
@@ -3422,9 +3427,9 @@ namespace Jewel.JPMS.Api.Migrations
 
                     b.HasKey("XeroCostSplitId");
 
-                    b.HasIndex("CostCenterCode");
-
                     b.HasIndex("XeroLedgerLineId");
+
+                    b.HasIndex("ProjectId", "CostCenterCode");
 
                     b.ToTable("XeroCostSplits");
                 });
