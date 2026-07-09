@@ -8,6 +8,7 @@
 @inject CostCentersReadModel CostCenters
 @inject ProjectFinancialSummaryReadModel Summary
 @inject ProjectWorkOrdersReadModel WorkOrders
+@inject ValuationLinesReadModel ValuationLines
 @inject ICommandSender Commands
 @inject NavigationManager Nav
 @implements IDisposable
@@ -51,11 +52,13 @@ else
             <FinancialsTable CostCenters="CostCenters.Current"
                              SummaryRows="Summary.Current(ProjectId)"
                              WorkOrderCommittedByCode="WoCommittedByCode"
+                             OnContractSalesSelected="OpenSalesLinesModal"
                              OnWorkOrderCommittedSelected="OpenWorkOrdersModal"
                              OnCostCompletionChanged="HandleCostCompletionChangedAsync" />
             <p class="text-xs text-content-subtle mt-3">
                 Contract sales value is the valuation report's contract value per cost centre — initial
-                contract plus variation lines, declined/TBC excluded. % complete is the sales-side
+                contract plus variation lines, declined/TBC excluded; click a figure for the valuation
+                lines behind it. % complete is the sales-side
                 completion from the latest claim (edit it on the valuation report); claim value is the
                 cumulative claimed amount at that completion. Target cost value is the contract sales
                 value with our assumed @($"{FinancialSummaryAssumptions.MarkupPercent:0.#}%") markup
@@ -66,6 +69,13 @@ else
                 committed to work orders; negative means the centre is committed beyond its target.
                 Cost % complete is the cost-side completion — edit it directly in the table.
             </p>
+
+            <CostCentreSalesLinesModal IsOpen="@(selectedSalesCostCode is not null)"
+                                       ProjectId="@ProjectId"
+                                       CostCode="@(selectedSalesCostCode ?? "")"
+                                       CostCentreName="@SelectedSalesCostCentreName"
+                                       Lines="ValuationLines.Current(ProjectId)"
+                                       OnClose="CloseSalesLinesModal" />
 
             <CostCentreWorkOrdersModal IsOpen="@(selectedWoCostCode is not null)"
                                        ProjectId="@ProjectId"
@@ -82,6 +92,7 @@ else
 
     private bool isLoaded;
     private string? selectedWoCostCode;
+    private string? selectedSalesCostCode;
     private string? costCompletionError;
 
     // Committed work-order value per cost code — order line totals, from the same store the
@@ -103,7 +114,18 @@ else
                   string.Equals(centre.Code, selectedWoCostCode, StringComparison.OrdinalIgnoreCase))?.Name
               ?? "(not in cost-code master)";
 
+    private string SelectedSalesCostCentreName =>
+        selectedSalesCostCode is null
+            ? ""
+            : CostCenters.Current.FirstOrDefault(centre =>
+                  string.Equals(centre.Code, selectedSalesCostCode, StringComparison.OrdinalIgnoreCase))?.Name
+              ?? "(not in cost-code master)";
+
     private Task RetrySummaryAsync() => Summary.RefreshAsync(ProjectId, CancellationToken.None);
+
+    private void OpenSalesLinesModal(string costCode) => selectedSalesCostCode = costCode;
+
+    private void CloseSalesLinesModal() => selectedSalesCostCode = null;
 
     private void OpenWorkOrdersModal(string costCode) => selectedWoCostCode = costCode;
 
@@ -133,10 +155,12 @@ else
         CostCenters.OnChanged += StateHasChanged;
         Summary.OnChanged += StateHasChanged;
         WorkOrders.OnChanged += StateHasChanged;
+        ValuationLines.OnChanged += StateHasChanged;
         // Refresh once per tab entry (stale-while-revalidate, per the front-end
         // data-loading convention) — cached figures render immediately, then update.
         _ = Summary.RefreshAsync(ProjectId, CancellationToken.None);
         _ = WorkOrders.RefreshAsync(ProjectId, CancellationToken.None);
+        _ = ValuationLines.RefreshAsync(ProjectId, CancellationToken.None);
         await CostCenters.RefreshAsync(CancellationToken.None);
         isLoaded = true;
     }
@@ -146,5 +170,6 @@ else
         CostCenters.OnChanged -= StateHasChanged;
         Summary.OnChanged -= StateHasChanged;
         WorkOrders.OnChanged -= StateHasChanged;
+        ValuationLines.OnChanged -= StateHasChanged;
     }
 }

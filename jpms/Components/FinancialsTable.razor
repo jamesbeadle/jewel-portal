@@ -44,7 +44,21 @@
                         <td class="sticky left-[88px] z-10 bg-surface px-4 py-3 text-content-subtle italic whitespace-nowrap">(not in cost-code master)</td>
                     }
 
-                    <td class="px-4 py-3 text-right @MoneyClass(ContractSalesFor(costCode))">@Money(ContractSalesFor(costCode))</td>
+                    @if (ContractSalesFor(costCode) != 0m)
+                    {
+                        <td class="px-4 py-3 text-right">
+                            <button type="button"
+                                    class="underline decoration-dotted underline-offset-2 hover:decoration-solid text-content"
+                                    title="Show the valuation lines behind this figure"
+                                    @onclick="() => OnContractSalesSelected.InvokeAsync(costCode)">
+                                @Money(ContractSalesFor(costCode))
+                            </button>
+                        </td>
+                    }
+                    else
+                    {
+                        <td class="px-4 py-3 text-right text-content-muted">@Money(0m)</td>
+                    }
                     <td class="px-4 py-3 text-right @MoneyClass(SalesCompletionFor(costCode))">@Percent(SalesCompletionFor(costCode))</td>
                     <td class="px-4 py-3 text-right @MoneyClass(ClaimValueFor(costCode))">@Money(ClaimValueFor(costCode))</td>
 
@@ -104,6 +118,9 @@
     /// project's work orders. Rendered as the WO Committed column.</summary>
     [Parameter] public IReadOnlyDictionary<string, decimal> WorkOrderCommittedByCode { get; set; } =
         new Dictionary<string, decimal>(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>Raised with the cost code when a row's Contract Sales Value figure is clicked.</summary>
+    [Parameter] public EventCallback<string> OnContractSalesSelected { get; set; }
 
     /// <summary>Raised with the cost code when a row's WO Committed figure is clicked.</summary>
     [Parameter] public EventCallback<string> OnWorkOrderCommittedSelected { get; set; }

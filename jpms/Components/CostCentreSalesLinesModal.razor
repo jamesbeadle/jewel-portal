@@ -1,0 +1,126 @@
+@using Jewel.JPMS.Models
+
+@* The valuation lines behind one cost centre's Contract Sales Value figure on the
+   Financials tab: every counting line coded to the centre (contract works, PC sums,
+   contingency and variations; omits net off). Declined / TBC lines are listed
+   separately — recorded but never priced into the total. Data comes from the
+   already-loaded ValuationLinesReadModel — no extra fetch. *@
+<Modal IsOpen="IsOpen"
+       Title="@($"{CostCode} — {CostCentreName} · Contract sales value")"
+       ShowFooter="false"
+       OnCancel="OnClose"
+       Class="max-w-3xl">
+    @if (CountingLines.Count == 0 && NonCountingLines.Count == 0)
+    {
+        <p class="text-sm text-content-subtle italic">
+            No valuation lines are coded to this cost centre.
+        </p>
+    }
+    else
+    {
+        <div class="space-y-4">
+            <div class="rounded-lg border border-line overflow-x-auto">
+                <table class="w-full text-sm border-collapse">
+                    <thead class="bg-surface-raised border-b border-line">
+                        <tr class="text-left text-[11px] uppercase tracking-wider text-content-subtle font-semibold">
+                            <th class="px-4 py-2.5 whitespace-nowrap">Ref</th>
+                            <th class="px-4 py-2.5">Description</th>
+                            <th class="px-4 py-2.5 whitespace-nowrap">Type</th>
+                            <th class="px-4 py-2.5 text-right whitespace-nowrap">Amount</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-line">
+                        @foreach (var line in CountingLines)
+                        {
+                            <tr>
+                                <td class="px-4 py-2.5 font-mono text-[11px] text-content-subtle whitespace-nowrap" title="@RefTitle(line)">@Ref(line)</td>
+                                <td class="px-4 py-2.5 text-content" title="@line.Comments">@line.Description</td>
+                                <td class="px-4 py-2.5 whitespace-nowrap"><span class="inline-block rounded-full border border-line px-2 py-0.5 text-[11px] text-content-subtle">@TypeLabel(line)</span></td>
+                                <td class="px-4 py-2.5 text-right whitespace-nowrap @(line.LineAmount < 0m ? "text-negative" : "text-content")">@Money(line.LineAmount)</td>
+                            </tr>
+                        }
+                    </tbody>
+                    <tfoot class="border-t-2 border-line-strong bg-surface-raised">
+                        <tr class="font-semibold text-content">
+                            <td class="px-4 py-2.5" colspan="3">Total — contract sales value</td>
+                            <td class="px-4 py-2.5 text-right whitespace-nowrap">@Money(CountingLines.Sum(line => line.LineAmount))</td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+
+            @if (NonCountingLines.Count > 0)
+            {
+                <div class="rounded-lg border border-line overflow-x-auto">
+                    <p class="px-4 pt-3 pb-1 text-[11px] uppercase tracking-wider text-content-subtle font-semibold">
+                        Recorded but not priced into the total
+                    </p>
+                    <table class="w-full text-sm border-collapse">
+                        <tbody class="divide-y divide-line">
+                            @foreach (var line in NonCountingLines)
+                            {
+                                <tr class="text-content-muted">
+                                    <td class="px-4 py-2.5 font-mono text-[11px] whitespace-nowrap" title="@RefTitle(line)">@Ref(line)</td>
+                                    <td class="px-4 py-2.5" title="@line.Comments">@line.Description</td>
+                                    <td class="px-4 py-2.5 whitespace-nowrap"><span class="inline-block rounded-full border border-line px-2 py-0.5 text-[11px]">@(line.LineType == ValuationLineType.Tbc ? "TBC" : "Declined")</span></td>
+                                    <td class="px-4 py-2.5 text-right whitespace-nowrap">@Money(line.LineAmount)</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+
+            <p class="text-sm">
+                <a class="text-content-subtle hover:text-content underline underline-offset-4"
+                   href="/projects/@ProjectId/valuation">Open the Valuation Report tab</a>
+            </p>
+        </div>
+    }
+</Modal>
+
+@code {
+    [Parameter] public bool IsOpen { get; set; }
+    [Parameter] public string ProjectId { get; set; } = "";
+    [Parameter] public string CostCode { get; set; } = "";
+    [Parameter] public string CostCentreName { get; set; } = "";
+    [Parameter] public IReadOnlyList<ValuationLineItem> Lines { get; set; } = Array.Empty<ValuationLineItem>();
+    [Parameter] public EventCallback OnClose { get; set; }
+
+    private List<ValuationLineItem> LinesForCentre =>
+        Lines.Where(line => string.Equals(line.CostCode, CostCode, StringComparison.OrdinalIgnoreCase))
+            .OrderBy(line => line.DisplayOrder)
+            .ToList();
+
+    private List<ValuationLineItem> CountingLines =>
+        LinesForCentre.Where(line => line.CountsTowardTotals).ToList();
+
+    private List<ValuationLineItem> NonCountingLines =>
+        LinesForCentre.Where(line => !line.CountsTowardTotals).ToList();
+
+    // Variations show their V-ref; works/PC lines show their section code.
+    private static string Ref(ValuationLineItem line) =>
+        line.ElementType == ValuationElementType.Variation
+            ? (string.IsNullOrWhiteSpace(line.VariationRef) ? "VAR" : line.VariationRef)
+            : line.SectionCode;
+
+    private static string RefTitle(ValuationLineItem line) =>
+        line.ElementType == ValuationElementType.Variation ? line.VariationTitle : line.SectionName;
+
+    private static string TypeLabel(ValuationLineItem line) => line.ElementType switch
+    {
+        ValuationElementType.Variation => "Variation",
+        ValuationElementType.PcSum => "PC sum",
+        ValuationElementType.Contingency => "Contingency",
+        _ => line.LineType switch
+        {
+            ValuationLineType.ProvisionalSum => "Provisional sum",
+            ValuationLineType.Omit => "Omit",
+            _ => "Contract works"
+        }
+    };
+
+    private static string Money(decimal value) =>
+        value.ToString(value == Math.Truncate(value) ? "C0" : "C2",
+            System.Globalization.CultureInfo.GetCultureInfo("en-GB"));
+}
