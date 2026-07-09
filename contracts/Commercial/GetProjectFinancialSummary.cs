@@ -19,12 +19,14 @@ public sealed record GetProjectFinancialSummary(string ProjectId) : IQuery<IRead
 /// <summary>One cost centre's figures; only centres with a non-zero value are returned.</summary>
 public sealed record ProjectFinancialSummaryRow(
     string CostCode,
-    decimal BudgetedSales,
-    decimal BudgetedCost,        // BudgetedSales less the assumed margin
-    decimal CompletionPercent,   // 0–100, from the latest claim (any status)
+    decimal BudgetedSales,       // contract sales value: counting valuation lines (contract + variations)
+    decimal BudgetedCost,        // BudgetedSales less the assumed margin — the expected cost
+    decimal CompletionPercent,   // 0–100, sales-side, from the latest claim (any status; edited on the valuation)
     decimal ExpectedActualCost,  // BudgetedCost × CompletionPercent
     decimal ActualCost,
-    decimal UnderOverExpected);  // ExpectedActualCost − ActualCost; positive = under
+    decimal UnderOverExpected,   // ExpectedActualCost − ActualCost; positive = under
+    decimal ClaimedToDate = 0m,          // claim value: the latest claim's cumulative claimed £ for this centre
+    decimal CostCompletionPercent = 0m); // 0–100, cost-side, edited inline on the Financials tab
 
 /// <summary>Assumptions shared by the API calculation and the UI's explanation of it.</summary>
 public static class FinancialSummaryAssumptions

@@ -38,6 +38,10 @@ public static class CommercialRouteRegistration
             new CommandRoute("POST", "/api/projects/{projectId}/cost-code-budgets",
                 command => $"/api/projects/{((SetCostCodeBudget)command).ProjectId}/cost-code-budgets"));
 
+        commands.Register<SetCostCentreCostCompletion, CostCentreCostProgress>(
+            new CommandRoute("POST", "/api/projects/{projectId}/cost-centre-cost-completion",
+                command => $"/api/projects/{((SetCostCentreCostCompletion)command).ProjectId}/cost-centre-cost-completion"));
+
         queries.Register<ListCostCodeBudgetsForProject, IReadOnlyList<CostCodeBudget>>(
             new QueryRoute("/api/projects/{projectId}/cost-code-budgets",
                 query => $"/api/projects/{((ListCostCodeBudgetsForProject)query).ProjectId}/cost-code-budgets"));

@@ -25,6 +25,10 @@ public static class CommercialFeatureRegistration
         services.AddScoped<SetCostCodeBudgetAuthorisation>();
         services.AddScoped<SetCostCodeBudgetValidation>();
 
+        services.AddScoped<ICommandHandler<SetCostCentreCostCompletion, CostCentreCostProgress>, SetCostCentreCostCompletionHandler>();
+        services.AddScoped<SetCostCentreCostCompletionAuthorisation>();
+        services.AddScoped<SetCostCentreCostCompletionValidation>();
+
         services.AddScoped<ICommandHandler<DraftValuation, Valuation>, DraftValuationHandler>();
         services.AddScoped<DraftValuationAuthorisation>();
         services.AddScoped<DraftValuationValidation>();

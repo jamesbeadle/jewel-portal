@@ -87,6 +87,15 @@ public sealed class GetProjectFinancialSummaryHandler : IQueryHandler<GetProject
             })
             .ToListAsync(cancellationToken);
 
+        // Cost-side completion: set inline on the Financials tab (SetCostCentreCostCompletion),
+        // one row per cost centre. Centres never edited default to 0%.
+        var costProgress = await context.CostCentreCostProgress
+            .Where(progress => progress.ProjectId == query.ProjectId)
+            .Select(progress => new { progress.CostCode, progress.CostCompletionPercent })
+            .ToListAsync(cancellationToken);
+        var costProgressByCode = new Dictionary<string, decimal>(StringComparer.OrdinalIgnoreCase);
+        foreach (var entry in costProgress) costProgressByCode[entry.CostCode] = entry.CostCompletionPercent;
+
         var salesByCode = sales.ToDictionary(s => s.CostCode, s => s.Amount, StringComparer.OrdinalIgnoreCase);
         var actualByCode = actuals.ToDictionary(a => a.CostCode, a => a.Amount, StringComparer.OrdinalIgnoreCase);
         foreach (var splitActual in splitActuals)
@@ -95,6 +104,7 @@ public sealed class GetProjectFinancialSummaryHandler : IQueryHandler<GetProject
                 : splitActual.Amount;
 
         return salesByCode.Keys.Union(actualByCode.Keys, StringComparer.OrdinalIgnoreCase)
+            .Union(costProgressByCode.Keys, StringComparer.OrdinalIgnoreCase)
             .Select(code =>
             {
                 var budgetedSales = salesByCode.TryGetValue(code, out var salesAmount) ? salesAmount : 0m;
@@ -105,6 +115,8 @@ public sealed class GetProjectFinancialSummaryHandler : IQueryHandler<GetProject
                 var completionPercent = budgetedSales == 0m ? 0m : Math.Round(claimedAmount / budgetedSales * 100m, 1);
                 var expectedActualCost = Math.Round(budgetedCost * completionPercent / 100m, 2);
 
+                var costCompletionPercent = costProgressByCode.TryGetValue(code, out var costPercent) ? costPercent : 0m;
+
                 return new ProjectFinancialSummaryRow(
                     code,
                     budgetedSales,
@@ -112,7 +124,9 @@ public sealed class GetProjectFinancialSummaryHandler : IQueryHandler<GetProject
                     completionPercent,
                     expectedActualCost,
                     actualCost,
-                    expectedActualCost - actualCost);
+                    expectedActualCost - actualCost,
+                    claimedAmount,
+                    costCompletionPercent);
             })
             .ToList();
     }

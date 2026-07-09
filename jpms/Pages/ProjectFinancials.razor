@@ -8,6 +8,7 @@
 @inject CostCentersReadModel CostCenters
 @inject ProjectFinancialSummaryReadModel Summary
 @inject ProjectWorkOrdersReadModel WorkOrders
+@inject ICommandSender Commands
 @inject NavigationManager Nav
 @implements IDisposable
 
@@ -41,28 +42,28 @@ else
                     <button type="button" class="underline underline-offset-2 ml-1" @onclick="RetrySummaryAsync">Retry</button>
                 </p>
             }
+            @if (costCompletionError is not null)
+            {
+                <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-3">
+                    @costCompletionError
+                </p>
+            }
             <FinancialsTable CostCenters="CostCenters.Current"
                              SummaryRows="Summary.Current(ProjectId)"
-                             WorkOrderRemainingByCode="WoRemainingByCode"
-                             OnUnderOverSelected="OpenCostCentreModal"
-                             OnWorkOrderRemainingSelected="OpenWorkOrdersModal" />
+                             WorkOrderCommittedByCode="WoCommittedByCode"
+                             OnWorkOrderCommittedSelected="OpenWorkOrdersModal"
+                             OnCostCompletionChanged="HandleCostCompletionChangedAsync" />
             <p class="text-xs text-content-subtle mt-3">
-                Budgeted sales is the valuation report's contract value per cost centre (declined/TBC lines
-                excluded); budgeted cost is that figure less an assumed
-                @($"{FinancialSummaryAssumptions.MarginPercent:0.#}%") margin. Completion comes from the
-                latest claim, and expected actual cost applies it to the budgeted cost. Actual cost is Xero
-                purchase spend allocated to this project on the Allocation page, net of credit notes. WO
-                remaining is committed work-order value not yet paid. Click an under/over figure for the
-                breakdown, or a WO remaining figure for the cost centre's work orders.
+                Contract sales value is the valuation report's contract value per cost centre — initial
+                contract plus variation lines, declined/TBC excluded. % complete is the sales-side
+                completion from the latest claim (edit it on the valuation report); claim value is the
+                cumulative claimed amount at that completion. WO committed is the value committed to
+                work orders — click a figure for the cost centre's orders. Drawdown is the expected cost
+                (contract sales value less our assumed
+                @($"{FinancialSummaryAssumptions.MarginPercent:0.#}%") margin) not yet committed to work
+                orders; negative means the centre is committed beyond its expected cost. Cost % complete
+                is the cost-side completion — edit it directly in the table.
             </p>
-
-            <CostCentreFinancialsModal IsOpen="@(selectedCostCode is not null)"
-                                       ProjectId="@ProjectId"
-                                       CostCode="@(selectedCostCode ?? "")"
-                                       CostCentreName="@SelectedCostCentreName"
-                                       Row="SelectedRow"
-                                       OnClose="CloseCostCentreModal"
-                                       OnInvoiceMoved="HandleInvoiceMovedAsync" />
 
             <CostCentreWorkOrdersModal IsOpen="@(selectedWoCostCode is not null)"
                                        ProjectId="@ProjectId"
@@ -78,37 +79,20 @@ else
     [Parameter] public string ProjectId { get; set; } = "";
 
     private bool isLoaded;
-    private string? selectedCostCode;
     private string? selectedWoCostCode;
+    private string? costCompletionError;
 
-    // Remaining (unpaid) work-order value per cost code: committed line totals less paid-to-date,
-    // from the same store the Work Orders tab renders. Lines without a cost code can't land on a
-    // Financials row, so they're excluded here (they surface on the Work Orders tab instead).
-    private IReadOnlyDictionary<string, decimal> WoRemainingByCode =>
+    // Committed work-order value per cost code — order line totals, from the same store the
+    // Work Orders tab renders. Lines without a cost code can't land on a Financials row, so
+    // they're excluded here (they surface on the Work Orders tab instead).
+    private IReadOnlyDictionary<string, decimal> WoCommittedByCode =>
         WorkOrders.Current(ProjectId)
             .SelectMany(detail => detail.Lines)
             .Where(line => !string.IsNullOrWhiteSpace(line.CostCode))
             .GroupBy(line => line.CostCode, StringComparer.OrdinalIgnoreCase)
             .ToDictionary(group => group.Key,
-                          group => group.Sum(line => line.LineTotal - line.PaidToDate),
+                          group => group.Sum(line => line.LineTotal),
                           StringComparer.OrdinalIgnoreCase);
-
-    private ProjectFinancialSummaryRow? SelectedRow =>
-        selectedCostCode is null
-            ? null
-            : Summary.Current(ProjectId).FirstOrDefault(row =>
-                string.Equals(row.CostCode, selectedCostCode, StringComparison.OrdinalIgnoreCase));
-
-    private string SelectedCostCentreName =>
-        selectedCostCode is null
-            ? ""
-            : CostCenters.Current.FirstOrDefault(centre =>
-                  string.Equals(centre.Code, selectedCostCode, StringComparison.OrdinalIgnoreCase))?.Name
-              ?? "(not in cost-code master)";
-
-    private void OpenCostCentreModal(string costCode) => selectedCostCode = costCode;
-
-    private void CloseCostCentreModal() => selectedCostCode = null;
 
     private string SelectedWoCostCentreName =>
         selectedWoCostCode is null
@@ -123,11 +107,20 @@ else
 
     private void CloseWorkOrdersModal() => selectedWoCostCode = null;
 
-    // A line was reallocated to another cost centre from inside the modal:
-    // close it and re-pull the summary so the table reflects the move.
-    private async Task HandleInvoiceMovedAsync()
+    // A row's Cost % Complete was edited: persist it, then re-pull the summary so the
+    // table (and its weighted total) reflects the saved value.
+    private async Task HandleCostCompletionChangedAsync((string CostCode, decimal Percent) edit)
     {
-        selectedCostCode = null;
+        costCompletionError = null;
+        try
+        {
+            await Commands.SendAsync(
+                new SetCostCentreCostCompletion(ProjectId, edit.CostCode, edit.Percent), CancellationToken.None);
+        }
+        catch (CommandFailedException)
+        {
+            costCompletionError = $"Could not save the cost % complete for {edit.CostCode} — please try again.";
+        }
         await Summary.RefreshAsync(ProjectId, CancellationToken.None);
     }
 

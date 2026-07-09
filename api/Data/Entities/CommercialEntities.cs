@@ -97,6 +97,17 @@ public sealed class CostCodeBudgetEntity
     public decimal CommittedAmount { get; set; }
 }
 
+/// <summary>Cost-side completion per cost centre per project (0–100), edited inline
+/// on the Financials tab. Distinct from sales-side completion, which is derived from
+/// the latest claim's cumulative claimed value on the valuation report.</summary>
+public sealed class CostCentreCostProgressEntity
+{
+    [Key, MaxLength(64)] public string CostCentreCostProgressId { get; set; } = "";
+    [MaxLength(64)]      public string ProjectId { get; set; } = "";
+    [MaxLength(32)]      public string CostCode { get; set; } = "";
+    public decimal CostCompletionPercent { get; set; }
+}
+
 public sealed class TimesheetEntity
 {
     [Key, MaxLength(64)] public string TimesheetId { get; set; } = "";

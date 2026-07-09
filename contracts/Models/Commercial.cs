@@ -42,6 +42,15 @@ public sealed record CostCodeBudget(
     public bool IsOverrun => SpentAmount > AllocatedAmount;
 }
 
+/// <summary>Cost-side completion for one cost centre on one project (0–100),
+/// edited inline on the Financials tab. Sales-side completion lives on the
+/// valuation report's claims instead.</summary>
+public sealed record CostCentreCostProgress(
+    string CostCentreCostProgressId,
+    string ProjectId,
+    string CostCode,
+    decimal CostCompletionPercent);
+
 public sealed record Timesheet(
     string TimesheetId,
     string ProjectId,

@@ -12,10 +12,14 @@
             <tr class="text-left text-[11px] uppercase tracking-wider text-content-subtle font-semibold">
                 <th class="sticky left-0 z-10 bg-surface-raised px-4 py-3 w-[88px]">Code</th>
                 <th class="sticky left-[88px] z-10 bg-surface-raised px-4 py-3 min-w-[200px]">Cost Centre</th>
-                @foreach (var col in Columns)
-                {
-                    <th class="px-4 py-3 text-right whitespace-nowrap">@col.Label</th>
-                }
+                @* Sales side: what we bill the client. *@
+                <th class="px-4 py-3 text-right whitespace-nowrap">Contract Sales Value</th>
+                <th class="px-4 py-3 text-right whitespace-nowrap">% Complete</th>
+                <th class="px-4 py-3 text-right whitespace-nowrap">Claim Value</th>
+                @* Cost side: what we expect to pay out. *@
+                <th class="px-4 py-3 text-right whitespace-nowrap border-l border-line">WO Committed</th>
+                <th class="px-4 py-3 text-right whitespace-nowrap">Drawdown</th>
+                <th class="px-4 py-3 text-right whitespace-nowrap">Cost % Complete</th>
             </tr>
         </thead>
         <tbody class="divide-y divide-line">
@@ -23,8 +27,11 @@
                the active master (legacy / retired) — shown rather than silently
                swallowed. (Loop variable must not be named "code": @code in markup
                parses as the Razor directive.) *@
-            @foreach (var entry in Rows)
+            @foreach (var entry in VisibleRows)
             {
+                var costCode = entry.Code;
+                var woCommitted = WoCommittedFor(costCode);
+                var drawdown = DrawdownFor(costCode);
                 <tr>
                     <td class="sticky left-0 z-10 bg-surface px-4 py-3 font-mono text-[11px] text-content-subtle whitespace-nowrap">@entry.Code</td>
                     @if (entry.InMaster)
@@ -35,35 +42,38 @@
                     {
                         <td class="sticky left-[88px] z-10 bg-surface px-4 py-3 text-content-subtle italic whitespace-nowrap">(not in cost-code master)</td>
                     }
-                    @foreach (var col in Columns)
+
+                    <td class="px-4 py-3 text-right @MoneyClass(ContractSalesFor(costCode))">@Money(ContractSalesFor(costCode))</td>
+                    <td class="px-4 py-3 text-right @MoneyClass(SalesCompletionFor(costCode))">@Percent(SalesCompletionFor(costCode))</td>
+                    <td class="px-4 py-3 text-right @MoneyClass(ClaimValueFor(costCode))">@Money(ClaimValueFor(costCode))</td>
+
+                    @if (woCommitted != 0m)
                     {
-                        @if (col.Label == UnderOverLabel && byCode.ContainsKey(entry.Code))
-                        {
-                            <td class="px-4 py-3 text-right">
-                                <button type="button"
-                                        class="underline decoration-dotted underline-offset-2 hover:decoration-solid @CellClass(col, entry.Code)"
-                                        title="Show cost centre breakdown"
-                                        @onclick="() => OnUnderOverSelected.InvokeAsync(entry.Code)">
-                                    @CellText(col, entry.Code)
-                                </button>
-                            </td>
-                        }
-                        else if (col.Label == WoRemainingLabel && ValueFor(col, entry.Code) != 0m)
-                        {
-                            <td class="px-4 py-3 text-right">
-                                <button type="button"
-                                        class="underline decoration-dotted underline-offset-2 hover:decoration-solid @CellClass(col, entry.Code)"
-                                        title="Show this cost centre's work orders"
-                                        @onclick="() => OnWorkOrderRemainingSelected.InvokeAsync(entry.Code)">
-                                    @CellText(col, entry.Code)
-                                </button>
-                            </td>
-                        }
-                        else
-                        {
-                            <td class="px-4 py-3 text-right @CellClass(col, entry.Code)">@CellText(col, entry.Code)</td>
-                        }
+                        <td class="px-4 py-3 text-right border-l border-line">
+                            <button type="button"
+                                    class="underline decoration-dotted underline-offset-2 hover:decoration-solid text-content"
+                                    title="Show this cost centre's work orders"
+                                    @onclick="() => OnWorkOrderCommittedSelected.InvokeAsync(costCode)">
+                                @Money(woCommitted)
+                            </button>
+                        </td>
                     }
+                    else
+                    {
+                        <td class="px-4 py-3 text-right border-l border-line text-content-muted">@Money(0m)</td>
+                    }
+
+                    <td class="px-4 py-3 text-right @DrawdownClass(drawdown)">@Money(drawdown)</td>
+
+                    <td class="px-4 py-3 text-right">
+                        <input type="number" min="0" max="100" step="1"
+                               class="w-20 rounded-md border border-line bg-surface px-2 py-1 text-right text-sm text-content
+                                      focus:outline-none focus:border-line-strong"
+                               title="Cost-side completion for this cost centre (0–100)"
+                               value="@InputValue(CostCompletionFor(costCode))"
+                               disabled="@IsSaving(costCode)"
+                               @onchange="args => HandleCostCompletionChangedAsync(costCode, args)" />
+                    </td>
                 </tr>
             }
         </tbody>
@@ -71,10 +81,12 @@
             <tr class="font-semibold text-content">
                 <td class="sticky left-0 z-10 bg-surface-raised px-4 py-3"></td>
                 <td class="sticky left-[88px] z-10 bg-surface-raised px-4 py-3 whitespace-nowrap">Total</td>
-                @foreach (var col in Columns)
-                {
-                    <td class="px-4 py-3 text-right">@TotalText(col)</td>
-                }
+                <td class="px-4 py-3 text-right">@Money(TotalContractSales)</td>
+                <td class="px-4 py-3 text-right">@Percent(WeightedSalesCompletion)</td>
+                <td class="px-4 py-3 text-right">@Money(TotalClaimValue)</td>
+                <td class="px-4 py-3 text-right border-l border-line">@Money(TotalWoCommitted)</td>
+                <td class="px-4 py-3 text-right">@Money(TotalDrawdown)</td>
+                <td class="px-4 py-3 text-right pr-6">@Percent(WeightedCostCompletion)</td>
             </tr>
         </tfoot>
     </table>
@@ -84,63 +96,86 @@
     [Parameter, EditorRequired] public IReadOnlyList<CostCenter> CostCenters { get; set; } = Array.Empty<CostCenter>();
     [Parameter] public IReadOnlyList<ProjectFinancialSummaryRow> SummaryRows { get; set; } = Array.Empty<ProjectFinancialSummaryRow>();
 
-    /// <summary>Raised with the cost code when a row's Under/Over Expected figure is clicked.</summary>
-    [Parameter] public EventCallback<string> OnUnderOverSelected { get; set; }
-
-    /// <summary>Remaining work-order value (committed less paid) per cost code, from the
-    /// project's work orders. Rendered as the WO Remaining column.</summary>
-    [Parameter] public IReadOnlyDictionary<string, decimal> WorkOrderRemainingByCode { get; set; } =
+    /// <summary>Committed work-order value (order line totals) per cost code, from the
+    /// project's work orders. Rendered as the WO Committed column.</summary>
+    [Parameter] public IReadOnlyDictionary<string, decimal> WorkOrderCommittedByCode { get; set; } =
         new Dictionary<string, decimal>(StringComparer.OrdinalIgnoreCase);
 
-    /// <summary>Raised with the cost code when a row's WO Remaining figure is clicked.</summary>
-    [Parameter] public EventCallback<string> OnWorkOrderRemainingSelected { get; set; }
+    /// <summary>Raised with the cost code when a row's WO Committed figure is clicked.</summary>
+    [Parameter] public EventCallback<string> OnWorkOrderCommittedSelected { get; set; }
 
-    private enum Format { Money, Percent }
+    /// <summary>Raised when a row's Cost % Complete is edited; the parent persists it and
+    /// refreshes the summary. The cost code being saved renders its input disabled until
+    /// the refreshed rows arrive.</summary>
+    [Parameter] public EventCallback<(string CostCode, decimal Percent)> OnCostCompletionChanged { get; set; }
 
-    private sealed record Column(string Label, Format Format);
-
-    // Budget allocation model (FD-agreed):
-    //   Budgeted Sales       = the valuation report's counting lines per cost centre — what we bill the client
-    //   Budgeted Cost        = Budgeted Sales less the assumed margin (FinancialSummaryAssumptions.MarginPercent)
-    //   Completion %         = latest claim's cumulative claimed value / budgeted sales
-    //   Expected Actual Cost = Budgeted Cost × Completion %
-    //   Actual Cost          = Xero purchase lines allocated to this project
-    //   Under/Over Expected  = Expected Actual Cost - Actual Cost; positive = under (click for detail)
-    // Planned columns (removed for now, to return later): Assigned Budget (POs raised
-    // to suppliers), Unallocated Budget, Expected Actual Sales, Actual Sales,
-    // Under/Over Billed, Gross Profit.
-    private static readonly Column[] Columns =
-    {
-        new("Budgeted Sales",        Format.Money),
-        new("Budgeted Cost",         Format.Money),
-        new("Completion %",          Format.Percent),
-        new("Expected Actual Cost",  Format.Money),
-        new("Actual Cost",           Format.Money),
-        new("Under/Over Expected",   Format.Money),
-        new("WO Remaining",          Format.Money)
-    };
-
-    private const string UnderOverLabel = "Under/Over Expected";
-
-    // Remaining (unpaid) work-order value per cost centre — committed order lines less what has
-    // been paid against them. Click-through opens the cost centre's work orders.
-    private const string WoRemainingLabel = "WO Remaining";
+    // Report shape (agreed 2026-07): sales side then cost side, per cost centre.
+    //   Contract Sales Value = the valuation report's counting lines (contract works,
+    //                          provisional sums, contingency and variations; declined/TBC excluded)
+    //   % Complete           = sales-side completion from the latest claim — edited on the valuation
+    //   Claim Value          = the latest claim's cumulative claimed £ (Contract Sales Value × % Complete)
+    //   WO Committed         = committed work-order line totals (click for the centre's work orders)
+    //   Drawdown             = expected cost (Contract Sales Value less the assumed
+    //                          FinancialSummaryAssumptions.MarginPercent) minus WO Committed —
+    //                          budget still to be spent outside work orders; negative = over-committed
+    //   Cost % Complete      = cost-side completion, edited inline here
 
     private Dictionary<string, ProjectFinancialSummaryRow> byCode = new(StringComparer.OrdinalIgnoreCase);
 
     // Hide cost centres with no figures in any column; on by default.
     private bool hideZeroRows = true;
 
+    // The cost code whose Cost % Complete edit is currently in flight, if any.
+    private string? savingCostCode;
+
+    protected override void OnParametersSet()
+    {
+        byCode = SummaryRows.ToDictionary(row => row.CostCode, StringComparer.OrdinalIgnoreCase);
+        // New rows have arrived (or the parent re-rendered after the save): re-enable the input.
+        savingCostCode = null;
+    }
+
+    private decimal ContractSalesFor(string costCode) =>
+        byCode.TryGetValue(costCode, out var row) ? row.BudgetedSales : 0m;
+
+    private decimal SalesCompletionFor(string costCode) =>
+        byCode.TryGetValue(costCode, out var row) ? row.CompletionPercent : 0m;
+
+    private decimal ClaimValueFor(string costCode) =>
+        byCode.TryGetValue(costCode, out var row) ? row.ClaimedToDate : 0m;
+
+    private decimal CostCompletionFor(string costCode) =>
+        byCode.TryGetValue(costCode, out var row) ? row.CostCompletionPercent : 0m;
+
+    private decimal WoCommittedFor(string costCode) =>
+        WorkOrderCommittedByCode.TryGetValue(costCode, out var committed) ? committed : 0m;
+
+    // Expected cost (contract sales less the assumed margin) not yet committed to work orders.
+    private decimal DrawdownFor(string costCode) =>
+        (byCode.TryGetValue(costCode, out var row) ? row.BudgetedCost : 0m) - WoCommittedFor(costCode);
+
+    private bool IsSaving(string costCode) =>
+        string.Equals(savingCostCode, costCode, StringComparison.OrdinalIgnoreCase);
+
+    private async Task HandleCostCompletionChangedAsync(string costCode, ChangeEventArgs args)
+    {
+        if (!decimal.TryParse(Convert.ToString(args.Value),
+                System.Globalization.NumberStyles.Number,
+                System.Globalization.CultureInfo.InvariantCulture,
+                out var percent)) { StateHasChanged(); return; }
+        percent = Math.Clamp(percent, 0m, 100m);
+        if (percent == CostCompletionFor(costCode)) return;
+        savingCostCode = costCode;
+        await OnCostCompletionChanged.InvokeAsync((costCode, percent));
+    }
+
     private bool HasAnyValue(string costCode) =>
         (byCode.TryGetValue(costCode, out var row) &&
-         (row.BudgetedSales != 0m || row.BudgetedCost != 0m || row.CompletionPercent != 0m ||
-          row.ExpectedActualCost != 0m || row.ActualCost != 0m || row.UnderOverExpected != 0m)) ||
-        (WorkOrderRemainingByCode.TryGetValue(costCode, out var remaining) && remaining != 0m);
+         (row.BudgetedSales != 0m || row.CompletionPercent != 0m || row.ClaimedToDate != 0m ||
+          row.BudgetedCost != 0m || row.CostCompletionPercent != 0m)) ||
+        WoCommittedFor(costCode) != 0m;
 
-    protected override void OnParametersSet() =>
-        byCode = SummaryRows.ToDictionary(row => row.CostCode, StringComparer.OrdinalIgnoreCase);
-
-    private IEnumerable<(string Code, string Name, bool InMaster)> Rows =>
+    private IEnumerable<(string Code, string Name, bool InMaster)> VisibleRows =>
         CostCenters.OrderBy(c => c.Name, StringComparer.OrdinalIgnoreCase)
             .Select(centre => (Code: centre.Code, Name: centre.Name, InMaster: true))
             .Concat(UnmatchedCodes.Select(unmatched => (Code: unmatched, Name: "", InMaster: false)))
@@ -148,62 +183,41 @@
 
     private IEnumerable<string> UnmatchedCodes =>
         SummaryRows.Select(row => row.CostCode)
-            .Union(WorkOrderRemainingByCode.Keys, StringComparer.OrdinalIgnoreCase)
+            .Union(WorkOrderCommittedByCode.Keys, StringComparer.OrdinalIgnoreCase)
             .Where(rowCode => !CostCenters.Any(centre => string.Equals(centre.Code, rowCode, StringComparison.OrdinalIgnoreCase)))
             .OrderBy(rowCode => rowCode, StringComparer.OrdinalIgnoreCase);
 
-    private decimal ValueFor(Column col, string costCode)
+    private decimal TotalContractSales => SummaryRows.Sum(row => row.BudgetedSales);
+    private decimal TotalClaimValue => SummaryRows.Sum(row => row.ClaimedToDate);
+    private decimal TotalWoCommitted => WorkOrderCommittedByCode.Values.Sum();
+    private decimal TotalDrawdown => SummaryRows.Sum(row => row.BudgetedCost) - TotalWoCommitted;
+
+    // Weighted by contract sales value, matching the per-row calculation.
+    private decimal WeightedSalesCompletion =>
+        TotalContractSales == 0m
+            ? 0m
+            : SummaryRows.Sum(row => row.CompletionPercent * row.BudgetedSales) / TotalContractSales;
+
+    // Weighted by expected cost (budgeted cost), the base the cost side draws down against.
+    private decimal WeightedCostCompletion
     {
-        if (col.Label == WoRemainingLabel)
-            return WorkOrderRemainingByCode.TryGetValue(costCode, out var remaining) ? remaining : 0m;
-        if (!byCode.TryGetValue(costCode, out var row)) return 0m;
-        return col.Label switch
+        get
         {
-            "Budgeted Sales" => row.BudgetedSales,
-            "Budgeted Cost" => row.BudgetedCost,
-            "Completion %" => row.CompletionPercent,
-            "Expected Actual Cost" => row.ExpectedActualCost,
-            "Actual Cost" => row.ActualCost,
-            UnderOverLabel => row.UnderOverExpected,
-            _ => 0m
-        };
-    }
-
-    private string CellText(Column col, string costCode) =>
-        col.Format == Format.Percent ? Percent(ValueFor(col, costCode)) : Money(ValueFor(col, costCode));
-
-    private string CellClass(Column col, string costCode)
-    {
-        var value = ValueFor(col, costCode);
-        if (value == 0m) return "text-content-muted";
-        // Under/over: green when under the expected cost, red when over.
-        if (col.Label == UnderOverLabel) return value > 0m ? "text-positive" : "text-negative";
-        return "text-content";
-    }
-
-    private string TotalText(Column col)
-    {
-        if (col.Format == Format.Percent)
-        {
-            // Weighted by budgeted sales, matching the per-row calculation.
-            var totalSales = SummaryRows.Sum(row => row.BudgetedSales);
-            var weighted = totalSales == 0m
+            var totalExpectedCost = SummaryRows.Sum(row => row.BudgetedCost);
+            return totalExpectedCost == 0m
                 ? 0m
-                : SummaryRows.Sum(row => row.CompletionPercent * row.BudgetedSales) / totalSales;
-            return Percent(weighted);
+                : SummaryRows.Sum(row => row.CostCompletionPercent * row.BudgetedCost) / totalExpectedCost;
         }
-        var total = col.Label switch
-        {
-            "Budgeted Sales" => SummaryRows.Sum(row => row.BudgetedSales),
-            "Budgeted Cost" => SummaryRows.Sum(row => row.BudgetedCost),
-            "Expected Actual Cost" => SummaryRows.Sum(row => row.ExpectedActualCost),
-            "Actual Cost" => SummaryRows.Sum(row => row.ActualCost),
-            UnderOverLabel => SummaryRows.Sum(row => row.UnderOverExpected),
-            WoRemainingLabel => WorkOrderRemainingByCode.Values.Sum(),
-            _ => 0m
-        };
-        return Money(total);
     }
+
+    private string MoneyClass(decimal value) => value == 0m ? "text-content-muted" : "text-content";
+
+    // Negative drawdown = more committed to work orders than the expected cost allows.
+    private string DrawdownClass(decimal value) =>
+        value == 0m ? "text-content-muted" : value < 0m ? "text-negative" : "text-content";
+
+    private static string InputValue(decimal value) =>
+        value.ToString(value == Math.Truncate(value) ? "0" : "0.#");
 
     private static string Money(decimal value) =>
         value.ToString("C0", System.Globalization.CultureInfo.GetCultureInfo("en-GB"));
