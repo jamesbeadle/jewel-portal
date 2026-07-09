@@ -62,6 +62,30 @@ public sealed class ClaimLinesReadModel
 }
 
 /// <summary>
+/// Named cost-centre roll-ups for one project's Financials tab. Fetch-once per
+/// project; ProjectFinancials.razor calls RefreshAsync(projectId) from
+/// OnInitializedAsync (stale-while-revalidate).
+/// </summary>
+public sealed class CostCentreGroupsReadModel
+{
+    private readonly IQueryClient queries;
+    private readonly Dictionary<string, IReadOnlyList<CostCentreGroup>> groupsByProject = new();
+
+    public CostCentreGroupsReadModel(IQueryClient queries) { this.queries = queries; }
+
+    public event Action? OnChanged;
+
+    public IReadOnlyList<CostCentreGroup> Current(string projectId) =>
+        groupsByProject.TryGetValue(projectId, out var list) ? list : Array.Empty<CostCentreGroup>();
+
+    public async Task RefreshAsync(string projectId, CancellationToken cancellationToken)
+    {
+        groupsByProject[projectId] = await queries.AskAsync(new ListCostCentreGroupsForProject(projectId), cancellationToken);
+        OnChanged?.Invoke();
+    }
+}
+
+/// <summary>
 /// Per-project financial summary (budget from the valuation report, actuals from
 /// allocated Xero lines). Fetch-once per project; ProjectFinancials.razor calls
 /// RefreshAsync(projectId) from OnInitializedAsync (stale-while-revalidate).

@@ -97,6 +97,25 @@ public sealed class CostCodeBudgetEntity
     public decimal CommittedAmount { get; set; }
 }
 
+/// <summary>A named roll-up of cost centres shown as one line on the project's Financials
+/// tab. Presentation only — figures remain stored per cost centre; members link below.</summary>
+public sealed class CostCentreGroupEntity
+{
+    [Key, MaxLength(64)] public string CostCentreGroupId { get; set; } = "";
+    [MaxLength(64)]      public string ProjectId { get; set; } = "";
+    [MaxLength(128)]     public string Name { get; set; } = "";
+}
+
+/// <summary>One cost centre inside a roll-up. The unique (ProjectId, CostCode) index
+/// keeps each centre in at most one group per project.</summary>
+public sealed class CostCentreGroupMemberEntity
+{
+    [Key, MaxLength(64)] public string CostCentreGroupMemberId { get; set; } = "";
+    [MaxLength(64)]      public string CostCentreGroupId { get; set; } = "";
+    [MaxLength(64)]      public string ProjectId { get; set; } = "";
+    [MaxLength(32)]      public string CostCode { get; set; } = "";
+}
+
 /// <summary>Cost-side completion per cost centre per project (0–100), edited inline
 /// on the Financials tab. Distinct from sales-side completion, which is derived from
 /// the latest claim's cumulative claimed value on the valuation report.</summary>

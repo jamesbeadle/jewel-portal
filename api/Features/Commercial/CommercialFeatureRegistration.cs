@@ -29,6 +29,13 @@ public static class CommercialFeatureRegistration
         services.AddScoped<SetCostCentreCostCompletionAuthorisation>();
         services.AddScoped<SetCostCentreCostCompletionValidation>();
 
+        // Cost centre groups — named roll-ups on the Financials tab.
+        services.AddScoped<IQueryHandler<ListCostCentreGroupsForProject, IReadOnlyList<CostCentreGroup>>, ListCostCentreGroupsForProjectHandler>();
+        services.AddScoped<ICommandHandler<CreateCostCentreGroup, CostCentreGroup>, CreateCostCentreGroupHandler>();
+        services.AddScoped<ICommandHandler<RemoveCostCentreGroup, Acknowledgement>, RemoveCostCentreGroupHandler>();
+        services.AddScoped<CreateCostCentreGroupAuthorisation>();
+        services.AddScoped<CreateCostCentreGroupValidation>();
+
         services.AddScoped<ICommandHandler<DraftValuation, Valuation>, DraftValuationHandler>();
         services.AddScoped<DraftValuationAuthorisation>();
         services.AddScoped<DraftValuationValidation>();

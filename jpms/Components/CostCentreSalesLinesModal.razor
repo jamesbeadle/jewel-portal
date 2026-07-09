@@ -1,19 +1,19 @@
 @using Jewel.JPMS.Models
 
-@* The valuation lines behind one cost centre's Contract Sales Value figure on the
-   Financials tab: every counting line coded to the centre (contract works, PC sums,
-   contingency and variations; omits net off). Declined / TBC lines are listed
-   separately — recorded but never priced into the total. Data comes from the
-   already-loaded ValuationLinesReadModel — no extra fetch. *@
+@* The valuation lines behind one report line's Contract Sales Value figure on the
+   Financials tab: every counting line coded to the centre — or to any member centre,
+   for a roll-up — (contract works, PC sums, contingency and variations; omits net
+   off). Declined / TBC lines are listed separately — recorded but never priced into
+   the total. Data comes from the already-loaded ValuationLinesReadModel — no extra fetch. *@
 <Modal IsOpen="IsOpen"
-       Title="@($"{CostCode} — {CostCentreName} · Contract sales value")"
+       Title="@($"{Heading} · Contract sales value")"
        ShowFooter="false"
        OnCancel="OnClose"
        Class="max-w-3xl">
     @if (CountingLines.Count == 0 && NonCountingLines.Count == 0)
     {
         <p class="text-sm text-content-subtle italic">
-            No valuation lines are coded to this cost centre.
+            No valuation lines are coded to this report line.
         </p>
     }
     else
@@ -24,6 +24,10 @@
                     <thead class="bg-surface-raised border-b border-line">
                         <tr class="text-left text-[11px] uppercase tracking-wider text-content-subtle font-semibold">
                             <th class="px-4 py-2.5 whitespace-nowrap">Ref</th>
+                            @if (ShowCentreColumn)
+                            {
+                                <th class="px-4 py-2.5 whitespace-nowrap">Centre</th>
+                            }
                             <th class="px-4 py-2.5">Description</th>
                             <th class="px-4 py-2.5 whitespace-nowrap">Type</th>
                             <th class="px-4 py-2.5 text-right whitespace-nowrap">Amount</th>
@@ -34,6 +38,10 @@
                         {
                             <tr>
                                 <td class="px-4 py-2.5 font-mono text-[11px] text-content-subtle whitespace-nowrap" title="@RefTitle(line)">@Ref(line)</td>
+                                @if (ShowCentreColumn)
+                                {
+                                    <td class="px-4 py-2.5 font-mono text-[11px] text-content-subtle whitespace-nowrap">@line.CostCode</td>
+                                }
                                 <td class="px-4 py-2.5 text-content" title="@line.Comments">@line.Description</td>
                                 <td class="px-4 py-2.5 whitespace-nowrap"><span class="inline-block rounded-full border border-line px-2 py-0.5 text-[11px] text-content-subtle">@TypeLabel(line)</span></td>
                                 <td class="px-4 py-2.5 text-right whitespace-nowrap @(line.LineAmount < 0m ? "text-negative" : "text-content")">@Money(line.LineAmount)</td>
@@ -42,7 +50,7 @@
                     </tbody>
                     <tfoot class="border-t-2 border-line-strong bg-surface-raised">
                         <tr class="font-semibold text-content">
-                            <td class="px-4 py-2.5" colspan="3">Total — contract sales value</td>
+                            <td class="px-4 py-2.5" colspan="@(ShowCentreColumn ? 4 : 3)">Total — contract sales value</td>
                             <td class="px-4 py-2.5 text-right whitespace-nowrap">@Money(CountingLines.Sum(line => line.LineAmount))</td>
                         </tr>
                     </tfoot>
@@ -61,6 +69,10 @@
                             {
                                 <tr class="text-content-muted">
                                     <td class="px-4 py-2.5 font-mono text-[11px] whitespace-nowrap" title="@RefTitle(line)">@Ref(line)</td>
+                                    @if (ShowCentreColumn)
+                                    {
+                                        <td class="px-4 py-2.5 font-mono text-[11px] whitespace-nowrap">@line.CostCode</td>
+                                    }
                                     <td class="px-4 py-2.5" title="@line.Comments">@line.Description</td>
                                     <td class="px-4 py-2.5 whitespace-nowrap"><span class="inline-block rounded-full border border-line px-2 py-0.5 text-[11px]">@(line.LineType == ValuationLineType.Tbc ? "TBC" : "Declined")</span></td>
                                     <td class="px-4 py-2.5 text-right whitespace-nowrap">@Money(line.LineAmount)</td>
@@ -82,21 +94,30 @@
 @code {
     [Parameter] public bool IsOpen { get; set; }
     [Parameter] public string ProjectId { get; set; } = "";
-    [Parameter] public string CostCode { get; set; } = "";
-    [Parameter] public string CostCentreName { get; set; } = "";
+
+    /// <summary>Modal heading: "CODE — Name" for one centre, or the roll-up's name.</summary>
+    [Parameter] public string Heading { get; set; } = "";
+
+    /// <summary>The cost codes behind the clicked figure — one for an individual row,
+    /// all members for a roll-up (the Centre column appears when there are several).</summary>
+    [Parameter] public IReadOnlyList<string> CostCodes { get; set; } = Array.Empty<string>();
+
     [Parameter] public IReadOnlyList<ValuationLineItem> Lines { get; set; } = Array.Empty<ValuationLineItem>();
     [Parameter] public EventCallback OnClose { get; set; }
 
-    private List<ValuationLineItem> LinesForCentre =>
-        Lines.Where(line => string.Equals(line.CostCode, CostCode, StringComparison.OrdinalIgnoreCase))
-            .OrderBy(line => line.DisplayOrder)
+    private bool ShowCentreColumn => CostCodes.Count > 1;
+
+    private List<ValuationLineItem> LinesForCentres =>
+        Lines.Where(line => CostCodes.Contains(line.CostCode, StringComparer.OrdinalIgnoreCase))
+            .OrderBy(line => line.CostCode, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(line => line.DisplayOrder)
             .ToList();
 
     private List<ValuationLineItem> CountingLines =>
-        LinesForCentre.Where(line => line.CountsTowardTotals).ToList();
+        LinesForCentres.Where(line => line.CountsTowardTotals).ToList();
 
     private List<ValuationLineItem> NonCountingLines =>
-        LinesForCentre.Where(line => !line.CountsTowardTotals).ToList();
+        LinesForCentres.Where(line => !line.CountsTowardTotals).ToList();
 
     // Variations show their V-ref; works/PC lines show their section code.
     private static string Ref(ValuationLineItem line) =>

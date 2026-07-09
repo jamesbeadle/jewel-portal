@@ -9,6 +9,7 @@
 @inject ProjectFinancialSummaryReadModel Summary
 @inject ProjectWorkOrdersReadModel WorkOrders
 @inject ValuationLinesReadModel ValuationLines
+@inject CostCentreGroupsReadModel Groups
 @inject ICommandSender Commands
 @inject NavigationManager Nav
 @implements IDisposable
@@ -43,46 +44,78 @@ else
                     <button type="button" class="underline underline-offset-2 ml-1" @onclick="RetrySummaryAsync">Retry</button>
                 </p>
             }
-            @if (costCompletionError is not null)
+            @if (actionError is not null)
             {
                 <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-3">
-                    @costCompletionError
+                    @actionError
                 </p>
             }
             <FinancialsTable CostCenters="CostCenters.Current"
                              SummaryRows="Summary.Current(ProjectId)"
+                             Groups="Groups.Current(ProjectId)"
                              WorkOrderCommittedByCode="WoCommittedByCode"
                              OnContractSalesSelected="OpenSalesLinesModal"
                              OnWorkOrderCommittedSelected="OpenWorkOrdersModal"
+                             OnGroupRequested="OpenGroupDialog"
+                             OnUngroupRequested="HandleUngroupAsync"
                              OnCostCompletionChanged="HandleCostCompletionChangedAsync" />
             <p class="text-xs text-content-subtle mt-3">
                 Contract sales value is the valuation report's contract value per cost centre — initial
                 contract plus variation lines, declined/TBC excluded; click a figure for the valuation
-                lines behind it. % complete is the sales-side
-                completion from the latest claim (edit it on the valuation report); claim value is the
-                cumulative claimed amount at that completion. Target cost value is the contract sales
-                value with our assumed @($"{FinancialSummaryAssumptions.MarkupPercent:0.#}%") markup
-                backed out (divided by @($"{1m + FinancialSummaryAssumptions.MarkupPercent / 100m:0.##}"))
-                — what the centre should cost us, so target cost plus
-                @($"{FinancialSummaryAssumptions.MarkupPercent:0.#}%") equals the contract sales value. WO committed is the value committed to work orders —
-                click a figure for the cost centre's orders. Drawdown is the target cost not yet
-                committed to work orders; negative means the centre is committed beyond its target.
-                Cost % complete is the cost-side completion — edit it directly in the table.
+                lines behind it. % complete is the sales-side completion from the latest claim (edit it
+                on the valuation report); claim value is the cumulative claimed amount at that
+                completion. Target cost value is the contract sales value with our assumed
+                @($"{FinancialSummaryAssumptions.MarkupPercent:0.#}%") markup backed out (divided by
+                @($"{1m + FinancialSummaryAssumptions.MarkupPercent / 100m:0.##}")) — what the line
+                should cost us. WO committed is the value committed to work orders — click a figure
+                for the line's orders. Drawdown is the target cost not yet committed to work orders;
+                negative means the line is committed beyond its target. Cost % complete is the
+                cost-side completion — edit it directly in the table. Tick two or more rows to roll
+                them up into one named line; on a rolled-up line, figures are summed, the two
+                percentages are value-weighted, and editing cost % writes it to every member.
             </p>
 
-            <CostCentreSalesLinesModal IsOpen="@(selectedSalesCostCode is not null)"
+            <CostCentreSalesLinesModal IsOpen="@(selectedSales is not null)"
                                        ProjectId="@ProjectId"
-                                       CostCode="@(selectedSalesCostCode ?? "")"
-                                       CostCentreName="@SelectedSalesCostCentreName"
+                                       Heading="@(selectedSales?.Heading ?? "")"
+                                       CostCodes="@(selectedSales?.CostCodes ?? Array.Empty<string>())"
                                        Lines="ValuationLines.Current(ProjectId)"
                                        OnClose="CloseSalesLinesModal" />
 
-            <CostCentreWorkOrdersModal IsOpen="@(selectedWoCostCode is not null)"
+            <CostCentreWorkOrdersModal IsOpen="@(selectedWo is not null)"
                                        ProjectId="@ProjectId"
-                                       CostCode="@(selectedWoCostCode ?? "")"
-                                       CostCentreName="@SelectedWoCostCentreName"
+                                       Heading="@(selectedWo?.Heading ?? "")"
+                                       CostCodes="@(selectedWo?.CostCodes ?? Array.Empty<string>())"
                                        Orders="WorkOrders.Current(ProjectId)"
                                        OnClose="CloseWorkOrdersModal" />
+
+            <Modal IsOpen="@(pendingGroupCodes is not null)"
+                   Title="Roll up into one line"
+                   ConfirmLabel="Create group"
+                   ConfirmDisabled="@(string.IsNullOrWhiteSpace(groupName) || isCreatingGroup)"
+                   OnConfirm="CreateGroupAsync"
+                   OnCancel="CloseGroupDialog"
+                   Class="max-w-md">
+                <div class="space-y-3">
+                    <p class="text-sm text-content-subtle">
+                        The selected cost centres will show as one report line. Figures are summed and
+                        percentages value-weighted; nothing changes underneath — ungroup at any time.
+                    </p>
+                    <p class="text-sm text-content font-mono text-[12px]">@string.Join(", ", pendingGroupCodes ?? Array.Empty<string>())</p>
+                    <label class="block text-sm text-content-subtle">
+                        Name for the rolled-up line
+                        <input type="text" maxlength="128"
+                               class="mt-1 w-full rounded-md border border-line bg-surface px-3 py-2 text-sm text-content
+                                      focus:outline-none focus:border-line-strong"
+                               placeholder="e.g. Windows, doors and glazing"
+                               @bind="groupName" @bind:event="oninput" />
+                    </label>
+                    @if (groupDialogError is not null)
+                    {
+                        <p class="text-sm text-negative">@groupDialogError</p>
+                    }
+                </div>
+            </Modal>
         }
     </ProjectPageShell>
 }
@@ -91,9 +124,20 @@ else
     [Parameter] public string ProjectId { get; set; } = "";
 
     private bool isLoaded;
-    private string? selectedWoCostCode;
-    private string? selectedSalesCostCode;
-    private string? costCompletionError;
+    private string? actionError;
+
+    // A clicked-through figure: its heading and the cost codes behind it (one for an
+    // individual row, all members for a roll-up).
+    private sealed record SelectedLine(string Heading, IReadOnlyList<string> CostCodes);
+
+    private SelectedLine? selectedSales;
+    private SelectedLine? selectedWo;
+
+    // Roll-up naming dialog state; non-null pendingGroupCodes means the dialog is open.
+    private IReadOnlyList<string>? pendingGroupCodes;
+    private string groupName = "";
+    private string? groupDialogError;
+    private bool isCreatingGroup;
 
     // Committed work-order value per cost code — order line totals, from the same store the
     // Work Orders tab renders. Lines without a cost code can't land on a Financials row, so
@@ -107,43 +151,78 @@ else
                           group => group.Sum(line => line.LineTotal),
                           StringComparer.OrdinalIgnoreCase);
 
-    private string SelectedWoCostCentreName =>
-        selectedWoCostCode is null
-            ? ""
-            : CostCenters.Current.FirstOrDefault(centre =>
-                  string.Equals(centre.Code, selectedWoCostCode, StringComparison.OrdinalIgnoreCase))?.Name
-              ?? "(not in cost-code master)";
-
-    private string SelectedSalesCostCentreName =>
-        selectedSalesCostCode is null
-            ? ""
-            : CostCenters.Current.FirstOrDefault(centre =>
-                  string.Equals(centre.Code, selectedSalesCostCode, StringComparison.OrdinalIgnoreCase))?.Name
-              ?? "(not in cost-code master)";
-
     private Task RetrySummaryAsync() => Summary.RefreshAsync(ProjectId, CancellationToken.None);
 
-    private void OpenSalesLinesModal(string costCode) => selectedSalesCostCode = costCode;
+    private void OpenSalesLinesModal((string Heading, IReadOnlyList<string> CostCodes) line) =>
+        selectedSales = new SelectedLine(line.Heading, line.CostCodes);
 
-    private void CloseSalesLinesModal() => selectedSalesCostCode = null;
+    private void CloseSalesLinesModal() => selectedSales = null;
 
-    private void OpenWorkOrdersModal(string costCode) => selectedWoCostCode = costCode;
+    private void OpenWorkOrdersModal((string Heading, IReadOnlyList<string> CostCodes) line) =>
+        selectedWo = new SelectedLine(line.Heading, line.CostCodes);
 
-    private void CloseWorkOrdersModal() => selectedWoCostCode = null;
+    private void CloseWorkOrdersModal() => selectedWo = null;
 
-    // A row's Cost % Complete was edited: persist it, then re-pull the summary so the
-    // table (and its weighted total) reflects the saved value.
-    private async Task HandleCostCompletionChangedAsync((string CostCode, decimal Percent) edit)
+    private void OpenGroupDialog(IReadOnlyList<string> costCodes)
     {
-        costCompletionError = null;
+        pendingGroupCodes = costCodes;
+        groupName = "";
+        groupDialogError = null;
+    }
+
+    private void CloseGroupDialog() => pendingGroupCodes = null;
+
+    private async Task CreateGroupAsync()
+    {
+        if (pendingGroupCodes is null || string.IsNullOrWhiteSpace(groupName)) return;
+        isCreatingGroup = true;
+        groupDialogError = null;
         try
         {
             await Commands.SendAsync(
-                new SetCostCentreCostCompletion(ProjectId, edit.CostCode, edit.Percent), CancellationToken.None);
+                new CreateCostCentreGroup(ProjectId, groupName.Trim(), pendingGroupCodes), CancellationToken.None);
+            pendingGroupCodes = null;
+            await Groups.RefreshAsync(ProjectId, CancellationToken.None);
+        }
+        catch (CommandFailedException ex)
+        {
+            groupDialogError = ex.Message;
+        }
+        finally
+        {
+            isCreatingGroup = false;
+        }
+    }
+
+    private async Task HandleUngroupAsync(string groupId)
+    {
+        actionError = null;
+        try
+        {
+            await Commands.SendAsync(new RemoveCostCentreGroup(ProjectId, groupId), CancellationToken.None);
+        }
+        catch (CommandFailedException ex)
+        {
+            actionError = $"Could not ungroup — {ex.Message}";
+        }
+        await Groups.RefreshAsync(ProjectId, CancellationToken.None);
+    }
+
+    // A line's Cost % Complete was edited: persist it to every cost code behind the line
+    // (one for an individual row, all members for a roll-up), then re-pull the summary so
+    // the table and its weighted totals reflect the saved values.
+    private async Task HandleCostCompletionChangedAsync((IReadOnlyList<string> CostCodes, decimal Percent) edit)
+    {
+        actionError = null;
+        try
+        {
+            foreach (var costCode in edit.CostCodes)
+                await Commands.SendAsync(
+                    new SetCostCentreCostCompletion(ProjectId, costCode, edit.Percent), CancellationToken.None);
         }
         catch (CommandFailedException)
         {
-            costCompletionError = $"Could not save the cost % complete for {edit.CostCode} — please try again.";
+            actionError = "Could not save the cost % complete — please try again.";
         }
         await Summary.RefreshAsync(ProjectId, CancellationToken.None);
     }
@@ -156,11 +235,13 @@ else
         Summary.OnChanged += StateHasChanged;
         WorkOrders.OnChanged += StateHasChanged;
         ValuationLines.OnChanged += StateHasChanged;
+        Groups.OnChanged += StateHasChanged;
         // Refresh once per tab entry (stale-while-revalidate, per the front-end
         // data-loading convention) — cached figures render immediately, then update.
         _ = Summary.RefreshAsync(ProjectId, CancellationToken.None);
         _ = WorkOrders.RefreshAsync(ProjectId, CancellationToken.None);
         _ = ValuationLines.RefreshAsync(ProjectId, CancellationToken.None);
+        _ = Groups.RefreshAsync(ProjectId, CancellationToken.None);
         await CostCenters.RefreshAsync(CancellationToken.None);
         isLoaded = true;
     }
@@ -171,5 +252,6 @@ else
         Summary.OnChanged -= StateHasChanged;
         WorkOrders.OnChanged -= StateHasChanged;
         ValuationLines.OnChanged -= StateHasChanged;
+        Groups.OnChanged -= StateHasChanged;
     }
 }

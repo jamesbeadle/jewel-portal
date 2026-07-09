@@ -1,6 +1,9 @@
 @page "/projects/{ProjectId}/requests/view/{RequestId}"
 @using Jewel.JPMS.Contracts.Requests
+@using Jewel.JPMS.Contracts.Procurement
+@using Jewel.JPMS.Contracts.Variations
 @inject AuthService Auth
+@inject ICommandSender Commands
 @inject SessionService Session
 @inject IRequestRegister RequestRegister
 @inject IClientStore ClientStore
@@ -406,10 +409,10 @@ else
                             {
                                 <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@voqError</p>
                             }
-                            <p class="text-xs text-content-subtle">This RFI carries an RFQ. Create a Variation Order Quote to send bid packages to subcontractors.</p>
+                            <p class="text-xs text-content-subtle">This RFI carries an RFQ. Create a Variation Order Quote to send bid packages to subcontractors — the draft is prepared from this RFI and its tagged emails for you to review.</p>
                             @if (CanEditDetails)
                             {
-                                <button type="button" class="btn-primary w-full" disabled="@busy" @onclick="CreateVoq">Create VOQ</button>
+                                <button type="button" class="btn-primary w-full" disabled="@busy" @onclick="OpenVoqDraft">Create VOQ</button>
                             }
                         }
                     </div>
@@ -548,6 +551,69 @@ else
             </div>
 
             <FormField Label="Related drawing / spec" Value="@editRelatedSpec" OnChange="v => editRelatedSpec = v" />
+        </div>
+    </Modal>
+
+    <Modal IsOpen="voqDraftOpen"
+           Title="Create Variation Order Quote"
+           ConfirmLabel="@(busy ? "Creating…" : "Create VOQ")"
+           ConfirmDisabled="@(busy || voqDraftLoading)"
+           OnCancel="CancelVoqDraft"
+           OnConfirm="ConfirmVoqDraft"
+           Class="max-w-2xl">
+        <div class="space-y-4">
+            @if (voqDraftError is not null)
+            {
+                <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@voqDraftError</p>
+            }
+
+            @if (voqDraftLoading)
+            {
+                <p class="text-sm text-content-subtle">Drafting the VOQ from this RFI and its tagged emails…</p>
+            }
+            else
+            {
+                @if (voqDraft?.Proposed == true)
+                {
+                    <p class="rounded-lg bg-accent/10 border border-accent/30 px-3 py-2 text-xs text-content">
+                        Drafted by AI from this RFI and its tagged emails. Review and edit everything below — nothing is created until you confirm.
+                    </p>
+                }
+                else if (voqDraft is not null)
+                {
+                    <p class="text-xs text-content-subtle">AI drafting isn't available right now, so this starts from the RFI's own details.</p>
+                }
+
+                <FormField Label="Title" Value="@draftVoqTitle" OnChange="v => draftVoqTitle = v" Required="true" />
+
+                <div>
+                    <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Scope description</label>
+                    <textarea class="field" rows="6" value="@draftVoqDescription" @oninput="e => draftVoqDescription = e.Value?.ToString() ?? string.Empty"></textarea>
+                </div>
+
+                <FormField Label="Estimated value (£, optional)" Value="@draftVoqValue" OnChange="v => draftVoqValue = v" />
+
+                @if (draftVoqLines.Count > 0)
+                {
+                    <div>
+                        <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Suggested scope lines</label>
+                        <p class="text-xs text-content-subtle mb-2">Ticked lines are added to a draft bid package (@DraftPackageTrade) under the VOQ, ready to send to subcontractors.</p>
+                        <ul class="space-y-1.5">
+                            @foreach (var (row, index) in draftVoqLines.Select((r, i) => (r, i)))
+                            {
+                                var i = index;
+                                <li>
+                                    <label class="flex items-start gap-2 text-sm text-content">
+                                        <input type="checkbox" class="mt-0.5" checked="@row.Accepted"
+                                               @onchange="e => draftVoqLines[i] = draftVoqLines[i] with { Accepted = e.Value is true }" />
+                                        <span>@row.Line.Description <span class="text-content-subtle">— @row.Line.Quantity @row.Line.Unit · @row.Line.Trade</span></span>
+                                    </label>
+                                </li>
+                            }
+                        </ul>
+                    </div>
+                }
+            }
         </div>
     </Modal>
 }
@@ -766,19 +832,117 @@ else
         }
     }
 
-    private async Task CreateVoq()
+    // AI-drafted VOQ review: PrepareVoqDraft proposes, the user edits, CreateVoqFromRfq commits.
+    private bool voqDraftOpen;
+    private bool voqDraftLoading;
+    private VoqDraftProposal? voqDraft;
+    private string? voqDraftError;
+    private string draftVoqTitle = "";
+    private string draftVoqDescription = "";
+    private string draftVoqValue = "";
+    private List<DraftLineRow> draftVoqLines = new();
+
+    private sealed record DraftLineRow(VoqDraftLine Line, bool Accepted);
+
+    // The trade for the draft bid package: the first accepted line's, else the model's suggestion.
+    private string DraftPackageTrade
+    {
+        get
+        {
+            var accepted = draftVoqLines.FirstOrDefault(row => row.Accepted && !string.IsNullOrWhiteSpace(row.Line.Trade));
+            if (accepted is not null) return accepted.Line.Trade;
+            return string.IsNullOrWhiteSpace(voqDraft?.SuggestedTrade) ? "General" : voqDraft!.SuggestedTrade;
+        }
+    }
+
+    private async Task OpenVoqDraft()
     {
         if (record is null || busy) return;
         voqError = null;
+        voqDraftError = null;
+        voqDraft = null;
+        voqDraftOpen = true;
+        voqDraftLoading = true;
+        draftVoqTitle = record.Title;
+        draftVoqDescription = record.Description;
+        draftVoqValue = "";
+        draftVoqLines = new();
+
+        try
+        {
+            voqDraft = await Variations.PrepareVoqDraftAsync(record.RequestId);
+            draftVoqTitle = voqDraft.Title;
+            draftVoqDescription = voqDraft.Description;
+            draftVoqValue = voqDraft.EstimatedValue?.ToString("0.##") ?? "";
+            draftVoqLines = voqDraft.Lines.Select(line => new DraftLineRow(line, true)).ToList();
+        }
+        catch
+        {
+            // A failed draft never blocks raising the VOQ — fall back to the RFI's own details.
+            voqDraftError = "Couldn't draft from the tagged emails; starting from the RFI's details instead.";
+        }
+        finally
+        {
+            voqDraftLoading = false;
+        }
+    }
+
+    private void CancelVoqDraft()
+    {
+        if (busy) return;
+        voqDraftOpen = false;
+    }
+
+    private async Task ConfirmVoqDraft()
+    {
+        if (record is null || busy || voqDraftLoading) return;
+        voqDraftError = null;
+
+        if (string.IsNullOrWhiteSpace(draftVoqTitle))
+        {
+            voqDraftError = "A title is required.";
+            return;
+        }
+
+        decimal? estimatedValue = null;
+        if (!string.IsNullOrWhiteSpace(draftVoqValue))
+        {
+            var raw = draftVoqValue.Replace("£", "").Replace(",", "").Trim();
+            if (!decimal.TryParse(raw, out var parsedValue) || parsedValue < 0)
+            {
+                voqDraftError = "Estimated value must be a number.";
+                return;
+            }
+            estimatedValue = parsedValue;
+        }
+
         try
         {
             busy = true;
-            voq = await Variations.CreateFromRfqAsync(record.RequestId);
+            voq = await Variations.CreateFromRfqAsync(
+                record.RequestId, draftVoqTitle.Trim(), draftVoqDescription.Trim(), estimatedValue);
+
+            // Accepted scope lines become the VOQ's first (draft) bid package, ready to invite.
+            var accepted = draftVoqLines.Where(row => row.Accepted).Select(row => row.Line).ToList();
+            if (accepted.Count > 0)
+            {
+                var package = await Variations.AddBidPackageAsync(voq.VariationOrderQuoteId, voq.Title, DraftPackageTrade);
+                var inputs = accepted
+                    .Select(line => new BidPackageLineItemInput(
+                        line.Description, line.Unit, line.Quantity,
+                        string.IsNullOrWhiteSpace(line.Trade) ? DraftPackageTrade : line.Trade))
+                    .ToList();
+                await Commands.SendAsync(new AddBidPackageLineItems(package.BidPackageId, inputs), CancellationToken.None);
+            }
+
+            voqDraftOpen = false;
             Nav.NavigateTo($"/projects/{ProjectId}/voq/{voq.VariationOrderQuoteId}");
         }
         catch
         {
-            voqError = "Couldn't create the VOQ. Please try again.";
+            voqDraftError = voq is null
+                ? "Couldn't create the VOQ. Please try again."
+                : "The VOQ was created, but adding the scope lines failed. Open it from the panel to add them manually.";
         }
         finally
         {

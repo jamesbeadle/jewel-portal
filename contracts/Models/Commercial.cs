@@ -51,6 +51,14 @@ public sealed record CostCentreCostProgress(
     string CostCode,
     decimal CostCompletionPercent);
 
+/// <summary>A named roll-up of cost centres shown as one line on the Financials tab.
+/// Presentation only — figures are still stored per cost centre.</summary>
+public sealed record CostCentreGroup(
+    string CostCentreGroupId,
+    string ProjectId,
+    string Name,
+    IReadOnlyList<string> CostCodes);
+
 public sealed record Timesheet(
     string TimesheetId,
     string ProjectId,

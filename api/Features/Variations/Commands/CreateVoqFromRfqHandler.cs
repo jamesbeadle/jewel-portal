@@ -28,6 +28,13 @@ public sealed class CreateVoqFromRfqHandler : ICommandHandler<CreateVoqFromRfq, 
 
         var nextNumber = (await context.VariationOrderQuotes.MaxAsync(voq => (int?)voq.Number, cancellationToken) ?? 0) + 1;
 
+        // Clamp to the entity's storage limits — the AI draft-review flow lets the user paste or
+        // accept text the model was only asked (not guaranteed) to keep within bounds.
+        var title = string.IsNullOrWhiteSpace(command.Title) ? request.Title : command.Title!.Trim();
+        var description = command.Description?.Trim() ?? request.Description;
+        if (title.Length > 256) title = title[..256];
+        if (description.Length > 2048) description = description[..2048];
+
         var entity = new VariationOrderQuoteEntity
         {
             VariationOrderQuoteId = VariationsIdentifierFactory.NextVoqId(),
@@ -35,9 +42,10 @@ public sealed class CreateVoqFromRfqHandler : ICommandHandler<CreateVoqFromRfq, 
             RequestId = request.RequestId,
             Number = nextNumber,
             Reference = VariationsIdentifierFactory.Reference(nextNumber),
-            Title = string.IsNullOrWhiteSpace(command.Title) ? request.Title : command.Title!.Trim(),
-            Description = command.Description?.Trim() ?? request.Description,
+            Title = title,
+            Description = description,
             Status = (int)VariationOrderQuoteStatus.Draft,
+            EstimatedValue = command.EstimatedValue,
             CreatedAt = DateTimeOffset.UtcNow,
             CreatedByEmail = command.CreatedByEmail
         };

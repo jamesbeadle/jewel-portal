@@ -1,17 +1,18 @@
 @using Jewel.JPMS.Models
 
-@* The work orders behind one cost centre's WO Remaining figure on the Financials tab:
-   every work-order line coded to the centre, with committed / paid / remaining per line.
-   Data comes from the already-loaded ProjectWorkOrdersReadModel — no extra fetch. *@
+@* The work orders behind one report line's WO Committed figure on the Financials tab:
+   every work-order line coded to the centre — or to any member centre, for a roll-up —
+   with committed / paid / remaining per line. Data comes from the already-loaded
+   ProjectWorkOrdersReadModel — no extra fetch. *@
 <Modal IsOpen="IsOpen"
-       Title="@($"{CostCode} — {CostCentreName} · Work orders")"
+       Title="@($"{Heading} · Work orders")"
        ShowFooter="false"
        OnCancel="OnClose"
        Class="max-w-3xl">
     @if (Entries.Count == 0)
     {
         <p class="text-sm text-content-subtle italic">
-            No work-order lines are coded to this cost centre.
+            No work-order lines are coded to this report line.
         </p>
     }
     else
@@ -22,6 +23,10 @@
                     <thead class="bg-surface-raised border-b border-line">
                         <tr class="text-left text-[11px] uppercase tracking-wider text-content-subtle font-semibold">
                             <th class="px-4 py-2.5 whitespace-nowrap">Order</th>
+                            @if (ShowCentreColumn)
+                            {
+                                <th class="px-4 py-2.5 whitespace-nowrap">Centre</th>
+                            }
                             <th class="px-4 py-2.5">Supplier</th>
                             <th class="px-4 py-2.5">Line</th>
                             <th class="px-4 py-2.5 whitespace-nowrap">Status</th>
@@ -36,6 +41,10 @@
                             var remaining = entry.Line.LineTotal - entry.Line.PaidToDate;
                             <tr>
                                 <td class="px-4 py-2.5 font-mono text-[11px] text-content-subtle whitespace-nowrap" title="@entry.Order.Title">@($"WO-{entry.Order.Number:0000}")</td>
+                                @if (ShowCentreColumn)
+                                {
+                                    <td class="px-4 py-2.5 font-mono text-[11px] text-content-subtle whitespace-nowrap">@entry.Line.CostCode</td>
+                                }
                                 <td class="px-4 py-2.5 text-content whitespace-nowrap">@entry.SupplierName</td>
                                 <td class="px-4 py-2.5 text-content-muted" title="@entry.Line.Description">@entry.Line.Title</td>
                                 <td class="px-4 py-2.5 whitespace-nowrap"><span class="inline-block rounded-full border border-line px-2 py-0.5 text-[11px] text-content-subtle">@entry.Order.Status</span></td>
@@ -47,7 +56,7 @@
                     </tbody>
                     <tfoot class="border-t-2 border-line-strong bg-surface-raised">
                         <tr class="font-semibold text-content">
-                            <td class="px-4 py-2.5" colspan="4">Total</td>
+                            <td class="px-4 py-2.5" colspan="@(ShowCentreColumn ? 5 : 4)">Total</td>
                             <td class="px-4 py-2.5 text-right whitespace-nowrap">@Money(Entries.Sum(entry => entry.Line.LineTotal))</td>
                             <td class="px-4 py-2.5 text-right whitespace-nowrap">@Money(Entries.Sum(entry => entry.Line.PaidToDate))</td>
                             <td class="px-4 py-2.5 text-right whitespace-nowrap">@Money(Entries.Sum(entry => entry.Line.LineTotal - entry.Line.PaidToDate))</td>
@@ -66,16 +75,24 @@
 @code {
     [Parameter] public bool IsOpen { get; set; }
     [Parameter] public string ProjectId { get; set; } = "";
-    [Parameter] public string CostCode { get; set; } = "";
-    [Parameter] public string CostCentreName { get; set; } = "";
+
+    /// <summary>Modal heading: "CODE — Name" for one centre, or the roll-up's name.</summary>
+    [Parameter] public string Heading { get; set; } = "";
+
+    /// <summary>The cost codes behind the clicked figure — one for an individual row,
+    /// all members for a roll-up (the Centre column appears when there are several).</summary>
+    [Parameter] public IReadOnlyList<string> CostCodes { get; set; } = Array.Empty<string>();
+
     [Parameter] public IReadOnlyList<ProjectWorkOrderDetail> Orders { get; set; } = Array.Empty<ProjectWorkOrderDetail>();
     [Parameter] public EventCallback OnClose { get; set; }
+
+    private bool ShowCentreColumn => CostCodes.Count > 1;
 
     private sealed record Entry(WorkOrder Order, string SupplierName, WorkOrderLine Line);
 
     private List<Entry> Entries =>
         Orders.SelectMany(detail => detail.Lines
-                .Where(line => string.Equals(line.CostCode, CostCode, StringComparison.OrdinalIgnoreCase))
+                .Where(line => CostCodes.Contains(line.CostCode, StringComparer.OrdinalIgnoreCase))
                 .Select(line => new Entry(detail.Order, detail.SubcontractorName, line)))
             .OrderBy(entry => entry.Order.Number)
             .ThenBy(entry => entry.Line.SortOrder)

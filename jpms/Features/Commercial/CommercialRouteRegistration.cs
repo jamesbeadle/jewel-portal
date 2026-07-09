@@ -15,6 +15,7 @@ public static class CommercialRouteRegistration
         services.AddScoped<TimesheetsReadModel>();
         services.AddScoped<ValuationLinesReadModel>();
         services.AddScoped<ProjectFinancialSummaryReadModel>();
+        services.AddScoped<CostCentreGroupsReadModel>();
         services.AddScoped<ValuationClaimsReadModel>();
         services.AddScoped<ClaimLinesReadModel>();
         return services;
@@ -41,6 +42,19 @@ public static class CommercialRouteRegistration
         commands.Register<SetCostCentreCostCompletion, CostCentreCostProgress>(
             new CommandRoute("POST", "/api/projects/{projectId}/cost-centre-cost-completion",
                 command => $"/api/projects/{((SetCostCentreCostCompletion)command).ProjectId}/cost-centre-cost-completion"));
+
+        // Cost centre groups — named roll-ups on the Financials tab.
+        queries.Register<ListCostCentreGroupsForProject, IReadOnlyList<CostCentreGroup>>(
+            new QueryRoute("/api/projects/{projectId}/cost-centre-groups",
+                query => $"/api/projects/{((ListCostCentreGroupsForProject)query).ProjectId}/cost-centre-groups"));
+
+        commands.Register<CreateCostCentreGroup, CostCentreGroup>(
+            new CommandRoute("POST", "/api/projects/{projectId}/cost-centre-groups",
+                command => $"/api/projects/{((CreateCostCentreGroup)command).ProjectId}/cost-centre-groups"));
+
+        commands.Register<RemoveCostCentreGroup, Acknowledgement>(
+            new CommandRoute("DELETE", "/api/projects/{projectId}/cost-centre-groups/{groupId}",
+                command => $"/api/projects/{((RemoveCostCentreGroup)command).ProjectId}/cost-centre-groups/{((RemoveCostCentreGroup)command).CostCentreGroupId}"));
 
         queries.Register<ListCostCodeBudgetsForProject, IReadOnlyList<CostCodeBudget>>(
             new QueryRoute("/api/projects/{projectId}/cost-code-budgets",

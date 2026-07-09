@@ -10,7 +10,9 @@ namespace Jewel.JPMS.Api.Features.Variations.Commands;
 
 /// <summary>
 /// POST /api/requests/{requestId}/voq — create the VOQ from a request's RFQ. The creator is the
-/// signed-in user; the VOQ inherits the request's title/description. No request body is required.
+/// signed-in user. The body is optional: when the UI has run the AI draft-review flow it carries
+/// the reviewed title/description/estimated value; otherwise the VOQ inherits the request's own
+/// title/description.
 /// </summary>
 public sealed class CreateVoqFromRfqEndpoint
 {
@@ -41,7 +43,14 @@ public sealed class CreateVoqFromRfqEndpoint
         var signedInUser = await users.ResolveAsync(request, cancellationToken);
         if (signedInUser is null) return new UnauthorizedResult();
 
-        var command = new CreateVoqFromRfq(requestId, signedInUser.Email);
+        // The body is optional (older callers send none); a malformed body is treated as absent so
+        // the command falls back to the request's own title/description.
+        CreateVoqFromRfq? body = null;
+        try { body = await request.ReadFromJsonAsync<CreateVoqFromRfq>(cancellationToken); }
+        catch (System.Text.Json.JsonException) { }
+
+        var command = new CreateVoqFromRfq(
+            requestId, signedInUser.Email, body?.Title, body?.Description, body?.EstimatedValue);
 
         if (!authorisation.Allows(signedInUser, command)) return new ForbidResult();
 

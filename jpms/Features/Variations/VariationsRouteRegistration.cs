@@ -24,6 +24,10 @@ public static class VariationsRouteRegistration
             new QueryRoute("/api/voqs/{voqId}/bid-packages",
                 query => $"/api/voqs/{((ListBidPackagesForVoq)query).VariationOrderQuoteId}/bid-packages"));
 
+        commands.Register<PrepareVoqDraft, VoqDraftProposal>(
+            new CommandRoute("POST", "/api/requests/{requestId}/voq/draft",
+                command => $"/api/requests/{((PrepareVoqDraft)command).RequestId}/voq/draft"));
+
         commands.Register<CreateVoqFromRfq, VariationOrderQuote>(
             new CommandRoute("POST", "/api/requests/{requestId}/voq",
                 command => $"/api/requests/{((CreateVoqFromRfq)command).RequestId}/voq"));
