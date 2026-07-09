@@ -58,8 +58,10 @@ else
                 contract plus variation lines, declined/TBC excluded. % complete is the sales-side
                 completion from the latest claim (edit it on the valuation report); claim value is the
                 cumulative claimed amount at that completion. Target cost value is the contract sales
-                value less our assumed @($"{FinancialSummaryAssumptions.MarginPercent:0.#}%") margin —
-                what the centre should cost us. WO committed is the value committed to work orders —
+                value with our assumed @($"{FinancialSummaryAssumptions.MarkupPercent:0.#}%") markup
+                backed out (divided by @($"{1m + FinancialSummaryAssumptions.MarkupPercent / 100m:0.##}"))
+                — what the centre should cost us, so target cost plus
+                @($"{FinancialSummaryAssumptions.MarkupPercent:0.#}%") equals the contract sales value. WO committed is the value committed to work orders —
                 click a figure for the cost centre's orders. Drawdown is the target cost not yet
                 committed to work orders; negative means the centre is committed beyond its target.
                 Cost % complete is the cost-side completion — edit it directly in the table.

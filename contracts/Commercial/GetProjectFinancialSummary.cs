@@ -7,7 +7,7 @@ namespace Jewel.JPMS.Contracts.Commercial;
 /// Budgeted sales is the valuation report's counting lines per cost centre
 /// (contract works, provisional sums, contingency and variations; declined/TBC
 /// lines excluded) — what we bill the client. Budgeted cost is budgeted sales
-/// less the assumed margin (<see cref="FinancialSummaryAssumptions.MarginPercent"/>).
+/// with the assumed markup backed out (<see cref="FinancialSummaryAssumptions.MarkupPercent"/>).
 /// Completion % is the latest claim's cumulative claimed value against budgeted
 /// sales; expected actual cost applies that completion to the budgeted cost.
 /// Actual cost comes from Xero purchase lines allocated to the project on the
@@ -20,7 +20,7 @@ public sealed record GetProjectFinancialSummary(string ProjectId) : IQuery<IRead
 public sealed record ProjectFinancialSummaryRow(
     string CostCode,
     decimal BudgetedSales,       // contract sales value: counting valuation lines (contract + variations)
-    decimal BudgetedCost,        // BudgetedSales less the assumed margin — the expected cost
+    decimal BudgetedCost,        // BudgetedSales ÷ (1 + assumed markup) — the target cost
     decimal CompletionPercent,   // 0–100, sales-side, from the latest claim (any status; edited on the valuation)
     decimal ExpectedActualCost,  // BudgetedCost × CompletionPercent
     decimal ActualCost,
@@ -31,10 +31,13 @@ public sealed record ProjectFinancialSummaryRow(
 /// <summary>Assumptions shared by the API calculation and the UI's explanation of it.</summary>
 public static class FinancialSummaryAssumptions
 {
-    /// <summary>Assumed margin between budgeted sales and budgeted cost. Fixed for now;
-    /// make configurable per project/cost centre when the business needs it.</summary>
-    public const decimal MarginPercent = 10m;
+    /// <summary>Assumed markup applied to cost to reach the sales figure we bill:
+    /// target cost × (1 + markup) = contract sales value. Fixed for now; make
+    /// configurable per project/cost centre when the business needs it.</summary>
+    public const decimal MarkupPercent = 10m;
 
-    /// <summary>The cost fraction of a sales figure, e.g. 0.9 for a 10% margin.</summary>
-    public const decimal CostFactor = 1m - MarginPercent / 100m;
+    /// <summary>The cost fraction of a sales figure: 1 ÷ (1 + markup), ≈0.9091 for a 10%
+    /// markup — so the target cost plus 10% gets back to the sales figure exactly.
+    /// (Not 1 − 10%: that would treat the 10% as a margin on sales, understating cost.)</summary>
+    public const decimal CostFactor = 1m / (1m + MarkupPercent / 100m);
 }

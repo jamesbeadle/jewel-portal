@@ -25,7 +25,7 @@
                     <div class="flex items-center justify-between gap-4 px-4 py-2.5">
                         <dt class="text-content-muted">
                             Budgeted cost
-                            <span class="text-content-subtle">— sales less @MarginText margin: @Money(Row.BudgetedSales) × @CostFactorText</span>
+                            <span class="text-content-subtle">— sales with the @MarkupText markup backed out: @Money(Row.BudgetedSales) ÷ @MarkupDivisorText</span>
                         </dt>
                         <dd class="text-content font-medium">@Money(Row.BudgetedCost)</dd>
                     </div>
@@ -218,11 +218,11 @@
         }
     }
 
-    private static string MarginText =>
-        $"{FinancialSummaryAssumptions.MarginPercent:0.#}%";
+    private static string MarkupText =>
+        $"{FinancialSummaryAssumptions.MarkupPercent:0.#}%";
 
-    private static string CostFactorText =>
-        $"{100m - FinancialSummaryAssumptions.MarginPercent:0.#}%";
+    private static string MarkupDivisorText =>
+        $"{1m + FinancialSummaryAssumptions.MarkupPercent / 100m:0.##}";
 
     private static string Money(decimal value) =>
         value.ToString("C0", System.Globalization.CultureInfo.GetCultureInfo("en-GB"));

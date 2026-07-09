@@ -118,8 +118,8 @@
     //                          provisional sums, contingency and variations; declined/TBC excluded)
     //   % Complete           = sales-side completion from the latest claim — edited on the valuation
     //   Claim Value          = the latest claim's cumulative claimed £ (Contract Sales Value × % Complete)
-    //   Target Cost Value    = Contract Sales Value less the assumed
-    //                          FinancialSummaryAssumptions.MarginPercent — what the centre should cost us
+    //   Target Cost Value    = Contract Sales Value ÷ (1 + FinancialSummaryAssumptions.MarkupPercent)
+    //                          — what the centre should cost us; target cost + markup = sales value
     //   WO Committed         = committed work-order line totals (click for the centre's work orders)
     //   Drawdown             = Target Cost Value minus WO Committed — budget still to be
     //                          spent outside work orders; negative = over-committed
