@@ -52,7 +52,7 @@ else
                 <p>@Snapshot.Error</p>
             </div>
         }
-        else if (Snapshot.Transactions.Count == 0)
+        else if (VisibleTransactions.Count == 0)
         {
             <p class="text-sm text-content-subtle py-8">Xero returned no purchase invoices since @FromDateText.</p>
         }
@@ -190,7 +190,7 @@ else
                         }
                         @if (OtherExcludedNet != 0)
                         {
-                            <text>Draft / voided: @Money(OtherExcludedNet) excluded.</text>
+                            <text>Drafts: @Money(OtherExcludedNet) excluded.</text>
                         }
                     </span>
                 </p>
@@ -260,8 +260,22 @@ else
 
     private XeroTransactionsSnapshot? Snapshot => Xero.Snapshot();
 
+    // Voided and deleted invoices aren't costs at all, so this page hides them entirely —
+    // the same statuses the ledger sync keeps out of the allocation queue. The raw snapshot
+    // still contains them on purpose: the sync must see a post-allocation void to clean up
+    // stored lines and refresh their status, so don't filter these at the Xero client.
+    private static readonly HashSet<string> HiddenStatuses = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "VOIDED", "DELETED"
+    };
+
+    private IReadOnlyList<XeroTransaction> VisibleTransactions =>
+        Snapshot?.Transactions.Where(transaction => !HiddenStatuses.Contains(transaction.Status)).ToList()
+        ?? (IReadOnlyList<XeroTransaction>)Array.Empty<XeroTransaction>();
+
     // Mirrors the accountant's payable invoice summary basis: paid, authorised and awaiting-approval
-    // (SUBMITTED) records all count as committed cost. DRAFT and VOIDED never count.
+    // (SUBMITTED) records all count as committed cost. DRAFT never counts (voided/deleted are
+    // hidden from the page altogether).
     private static bool CountsInBreakdown(XeroTransaction transaction) =>
         transaction.Status is "AUTHORISED" or "PAID" or "SUBMITTED";
 
@@ -272,22 +286,22 @@ else
         IsCreditNote(transaction) ? -1m : 1m;
 
     private int BillCount =>
-        Snapshot?.Transactions.Count(transaction => !IsCreditNote(transaction)) ?? 0;
+        VisibleTransactions.Count(transaction => !IsCreditNote(transaction));
 
     private int CreditNoteCount =>
-        Snapshot?.Transactions.Count(IsCreditNote) ?? 0;
+        VisibleTransactions.Count(IsCreditNote);
 
     /// <summary>Net value of awaiting-approval records — the usual gap to the accountant's reports.</summary>
     private decimal AwaitingApprovalNet =>
-        Snapshot?.Transactions
+        VisibleTransactions
             .Where(transaction => transaction.Status == "SUBMITTED")
-            .Sum(transaction => Sign(transaction) * transaction.SubTotal) ?? 0m;
+            .Sum(transaction => Sign(transaction) * transaction.SubTotal);
 
-    /// <summary>Net value of draft/voided records the breakdown never counts.</summary>
+    /// <summary>Net value of draft records the breakdown never counts.</summary>
     private decimal OtherExcludedNet =>
-        Snapshot?.Transactions
+        VisibleTransactions
             .Where(transaction => transaction.Status is not ("AUTHORISED" or "PAID" or "SUBMITTED"))
-            .Sum(transaction => Sign(transaction) * transaction.SubTotal) ?? 0m;
+            .Sum(transaction => Sign(transaction) * transaction.SubTotal);
 
     private string FromDateText => (Snapshot?.FromDate)?.ToString("MMM yyyy") ?? "Jan 2023";
 
@@ -295,17 +309,14 @@ else
         Snapshot?.FetchedAtUtc is { } fetched ? fetched.ToLocalTime().ToString("HH:mm") : "—";
 
     private IReadOnlyList<string> Statuses =>
-        Snapshot?.Transactions.Select(transaction => transaction.Status).Distinct().OrderBy(status => status).ToList()
-        ?? (IReadOnlyList<string>)Array.Empty<string>();
+        VisibleTransactions.Select(transaction => transaction.Status).Distinct().OrderBy(status => status).ToList();
 
     private IReadOnlyList<XeroTransaction> Filtered =>
-        Snapshot is null
-            ? Array.Empty<XeroTransaction>()
-            : Snapshot.Transactions
-                .Where(transaction => statusFilter is null || transaction.Status == statusFilter)
-                .Where(MatchesSearch)
-                .OrderByDescending(transaction => transaction.Date ?? DateTime.MinValue)
-                .ToList();
+        VisibleTransactions
+            .Where(transaction => statusFilter is null || transaction.Status == statusFilter)
+            .Where(MatchesSearch)
+            .OrderByDescending(transaction => transaction.Date ?? DateTime.MinValue)
+            .ToList();
 
     private bool MatchesSearch(XeroTransaction transaction)
     {
@@ -345,7 +356,7 @@ else
 
             // Approved records only — mirrors Xero's own reports, which exclude drafts and
             // records awaiting approval. Credit notes subtract.
-            var cells = Snapshot.Transactions
+            var cells = VisibleTransactions
                 .Where(CountsInBreakdown)
                 .SelectMany(transaction => transaction.Lines.Select(line => new
                 {
