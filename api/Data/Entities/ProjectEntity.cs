@@ -30,4 +30,10 @@ public sealed class ProjectEntity
     [MaxLength(256)]     public string AddressLine { get; set; } = "";
     [MaxLength(128)]     public string Town { get; set; } = "";
     [MaxLength(16)]      public string Postcode { get; set; } = "";
+
+    // The project's option in Xero's "Sites" tracking category, exactly as named in Xero
+    // (e.g. "21 Chetwode Road"). Explicit mapping — set on the project details editor. The
+    // Xero write-back stamps this on every line allocated to the project and fails loudly
+    // when it's missing, rather than guessing and writing a wrong site into the accounts.
+    [MaxLength(128)]     public string? XeroSiteName { get; set; }
 }

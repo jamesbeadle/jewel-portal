@@ -9,12 +9,31 @@ namespace Jewel.JPMS.Contracts.Xero;
 // centre (00001..00137 — deliberately independent of Xero's own tracking
 // codes). Syncing upserts by Xero line id: new lines arrive Unallocated and
 // existing lines have their Xero facts refreshed without ever touching the
-// allocation. One line carries exactly one allocation (no splits).
+// allocation. A line is allocated to ONE project, but its value can be SPLIT
+// across multiple cost centres (Splits — net amounts summing to the line net).
+//
+// Write-back: bills arrive from Dext as DRAFT. Once every stored line of a
+// draft (or submitted) bill is allocated, JPMS writes the allocation back to
+// Xero — Sites + Cost Code tracking per line, splitting Xero lines where the
+// allocation is split — and approves the invoice (DRAFT → AUTHORISED). Bills
+// already approved outside JPMS are still allocated portal-side only.
 // ============================================================================
 
 public enum XeroAllocationStatus { Unallocated = 0, Allocated = 1, Ignored = 2, Bucketed = 3 }
 
 public enum XeroAllocationAction { Allocate = 0, Ignore = 1, Reset = 2, AllocateToBucket = 3 }
+
+/// <summary>
+/// Outcome of the last attempt to write an invoice's allocation back to Xero
+/// (tracking + approval). None: never attempted — either the invoice was
+/// already approved outside JPMS (no write-back needed) or its other lines are
+/// still awaiting allocation. Failed lines keep their JPMS allocation; the
+/// error is stored and the write-back can be retried.
+/// </summary>
+public enum XeroWriteBackStatus { None = 0, Approved = 1, Failed = 2 }
+
+/// <summary>One cost-centre share of a ledger line. Net is pre-VAT and positive, like the line's Net.</summary>
+public sealed record XeroCostSplit(string CostCenterCode, decimal Net);
 
 /// <summary>
 /// Buckets for cost-of-sales lines with no identifiable project (parking charges,
@@ -72,7 +91,14 @@ public sealed record XeroLedgerLine(
     string? SuggestedCostCenterCode,
     string? SuggestedBucket,
     DateTimeOffset FirstSeenAtUtc,
-    DateTimeOffset LastSyncedAtUtc);
+    DateTimeOffset LastSyncedAtUtc,
+    // Cost-centre split for allocated lines. Null/empty = the whole line sits on
+    // CostCenterCode; entries = the line's net is shared across these centres
+    // (CostCenterCode is then null and the split nets sum to Net).
+    IReadOnlyList<XeroCostSplit>? Splits = null,
+    XeroWriteBackStatus WriteBackStatus = XeroWriteBackStatus.None,
+    string? WriteBackError = null,
+    DateTimeOffset? WriteBackAtUtc = null);
 
 /// <summary>
 /// Pulls the latest purchase invoices + credit notes from Xero (bypassing the
@@ -100,10 +126,13 @@ public sealed record AllocateSuggestedXeroLines(string? AllocatedBy = null) : IC
 
 /// <summary>
 /// Applies one allocation action to a batch of ledger lines. Allocate requires
-/// ProjectId + CostCenterCode; AllocateToBucket requires a Bucket from
-/// <see cref="XeroBuckets.All"/>; Ignore takes an optional Note (reason); Reset
-/// returns lines to Unallocated. AllocatedBy is stamped server-side from the
-/// signed-in user — any client-supplied value is ignored.
+/// ProjectId + either CostCenterCode (whole line to one centre) or Splits —
+/// two or more cost-centre shares whose nets must sum exactly to the line's
+/// net (splits therefore apply to a single line, never a batch).
+/// AllocateToBucket requires a Bucket from <see cref="XeroBuckets.All"/>;
+/// Ignore takes an optional Note (reason); Reset returns lines to Unallocated.
+/// AllocatedBy is stamped server-side from the signed-in user — any
+/// client-supplied value is ignored.
 /// </summary>
 public sealed record SetXeroAllocation(
     IReadOnlyList<string> XeroLedgerLineIds,
@@ -112,4 +141,14 @@ public sealed record SetXeroAllocation(
     string? CostCenterCode = null,
     string? Bucket = null,
     string? Note = null,
-    string? AllocatedBy = null) : ICommand<int>;
+    string? AllocatedBy = null,
+    IReadOnlyList<XeroCostSplit>? Splits = null) : ICommand<int>;
+
+/// <summary>
+/// Re-attempts the Xero write-back (tracking + approval) for one invoice whose
+/// previous attempt failed — e.g. an unmapped Sites option or a Xero outage.
+/// Succeeds silently when the invoice has since been approved in Xero.
+/// </summary>
+public sealed record RetryXeroWriteBack(string XeroInvoiceId) : ICommand<XeroWriteBackOutcome>;
+
+public sealed record XeroWriteBackOutcome(bool Succeeded, string? Error);

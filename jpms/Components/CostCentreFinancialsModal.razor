@@ -72,10 +72,24 @@
                                         <td class="px-4 py-2.5 whitespace-nowrap text-content-muted">@(line.Date?.ToString("dd MMM yyyy") ?? "—")</td>
                                         <td class="px-4 py-2.5 text-content">@line.Supplier</td>
                                         <td class="px-4 py-2.5 whitespace-nowrap text-content-muted">@line.InvoiceNumber</td>
-                                        <td class="px-4 py-2.5 text-content-muted">@line.Description</td>
+                                        <td class="px-4 py-2.5 text-content-muted">
+                                            @line.Description
+                                            @if (line.IsSplit)
+                                            {
+                                                <span class="ml-1.5 text-[10px] uppercase tracking-wider font-semibold border border-line rounded px-1 py-0.5"
+                                                      title="This centre's share of a line split across several cost centres">Split</span>
+                                            }
+                                        </td>
                                         <td class="px-4 py-2.5 text-right whitespace-nowrap @(line.Net < 0 ? "text-negative" : "text-content")">@MoneyExact(line.Net)</td>
                                         <td class="px-4 py-2.5 whitespace-nowrap text-right">
-                                            @if (movingLineId == line.XeroLedgerLineId)
+                                            @if (line.IsSplit)
+                                            {
+                                                @* Only a share of the line sits here — moving the whole line from this
+                                                   modal would silently drag the other centres' shares with it. Splits
+                                                   are re-cut on the cost allocation screen. *@
+                                                <span class="text-xs text-content-subtle" title="Re-allocate split lines from the cost allocation screen">—</span>
+                                            }
+                                            else if (movingLineId == line.XeroLedgerLineId)
                                             {
                                                 <span class="inline-flex items-center gap-1.5">
                                                     <select class="bg-surface border border-line rounded-lg px-2 py-1 text-content text-sm w-52"

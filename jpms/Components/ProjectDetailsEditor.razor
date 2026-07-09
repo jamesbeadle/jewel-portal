@@ -99,6 +99,13 @@
                 <FormField Label="Postcode" Value="@postcode" OnChange="v => postcode = v" />
             </div>
             <p class="text-xs text-content-subtle">Town and postcode power "Find subcontractors" on bid packages — local companies are searched near the site.</p>
+
+            <FormField Label="Xero site (tracking option)" Value="@xeroSiteName" OnChange="v => xeroSiteName = v" />
+            <p class="text-xs text-content-subtle">
+                The project's option in Xero's "Sites" tracking category, exactly as named in Xero
+                (e.g. "21 Chetwode Road"). Required before allocated draft invoices can be confirmed
+                and approved back into Xero from the cost allocation screen.
+            </p>
         </div>
     </Modal>
 }
@@ -125,6 +132,7 @@
     private string addressLine = "";
     private string town = "";
     private string postcode = "";
+    private string xeroSiteName = "";
 
     // The party this project corresponds with — "client:{id}" / "architect:{id}" / "" — plus the
     // optional client an architect acts for.
@@ -151,6 +159,7 @@
         addressLine = project.AddressLine;
         town = project.Town;
         postcode = project.Postcode;
+        xeroSiteName = project.XeroSiteName ?? "";
         partySelection = string.IsNullOrEmpty(project.PartyId)
             ? ""
             : (project.PartyKind == PartyKind.Architect ? ArchitectPrefix : ClientPrefix) + project.PartyId;
@@ -227,7 +236,8 @@
                         : null,
                     addressLine.Trim(),
                     town.Trim(),
-                    postcode.Trim()),
+                    postcode.Trim(),
+                    string.IsNullOrWhiteSpace(xeroSiteName) ? null : xeroSiteName.Trim()),
                 CancellationToken.None);
             await Projects.RefreshAsync(CancellationToken.None);
             Close();

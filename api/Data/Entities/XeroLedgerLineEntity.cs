@@ -35,6 +35,8 @@ public sealed class XeroLedgerLineEntity
     // Allocation — owned by JPMS, survives syncs.
     // Status: 0 Unallocated, 1 Allocated (project + cost centre), 2 Ignored,
     // 3 Bucketed (cost of sales with no identifiable project — Parking, Fuel, ...).
+    // An allocated line carries EITHER CostCenterCode (whole line to one centre)
+    // OR rows in XeroCostSplits (value shared across centres) — never both.
     public int AllocationStatus { get; set; }
     [MaxLength(64)]       public string? ProjectId { get; set; }
     [MaxLength(32)]       public string? CostCenterCode { get; set; }
@@ -42,6 +44,13 @@ public sealed class XeroLedgerLineEntity
     [MaxLength(256)]      public string? AllocatedBy { get; set; }
     public DateTimeOffset? AllocatedAtUtc { get; set; }
     [MaxLength(512)]      public string? Note { get; set; }
+
+    // Xero write-back (tracking + DRAFT → AUTHORISED approval) — per invoice,
+    // stamped on every stored line of the invoice when attempted.
+    // 0 None (not attempted / not needed), 1 Approved, 2 Failed (see error).
+    public int WriteBackStatus { get; set; }
+    [MaxLength(1024)]     public string? WriteBackError { get; set; }
+    public DateTimeOffset? WriteBackAtUtc { get; set; }
 
     public DateTimeOffset FirstSeenAtUtc { get; set; }
     public DateTimeOffset LastSyncedAtUtc { get; set; }

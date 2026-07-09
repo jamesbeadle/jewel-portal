@@ -17,8 +17,13 @@ public sealed class AllocateSuggestedXeroLinesHandler : ICommandHandler<Allocate
     public const string AutoMatchedNote = "Auto-matched from Xero tracking";
 
     private readonly JpmsContext context;
+    private readonly IXeroWriteBackService writeBack;
 
-    public AllocateSuggestedXeroLinesHandler(JpmsContext context) { this.context = context; }
+    public AllocateSuggestedXeroLinesHandler(JpmsContext context, IXeroWriteBackService writeBack)
+    {
+        this.context = context;
+        this.writeBack = writeBack;
+    }
 
     public async Task<int> HandleAsync(AllocateSuggestedXeroLines command, CancellationToken cancellationToken)
     {
@@ -34,6 +39,7 @@ public sealed class AllocateSuggestedXeroLinesHandler : ICommandHandler<Allocate
 
         var now = DateTimeOffset.UtcNow;
         var allocated = 0;
+        var touchedInvoiceIds = new HashSet<string>();
         foreach (var line in unallocated)
         {
             var projectId = suggester.SuggestProject(line.XeroSite);
@@ -47,9 +53,16 @@ public sealed class AllocateSuggestedXeroLinesHandler : ICommandHandler<Allocate
             line.AllocatedAtUtc = now;
             line.Note = AutoMatchedNote;
             allocated++;
+            touchedInvoiceIds.Add(line.XeroInvoiceId);
         }
 
         await context.SaveChangesAsync(cancellationToken);
+
+        // Confirm-and-approve any draft invoice these allocations completed (best-effort;
+        // outcomes are stamped onto the lines and visible on the allocation page).
+        if (touchedInvoiceIds.Count > 0)
+            await writeBack.TryWriteBackAsync(touchedInvoiceIds, cancellationToken);
+
         return allocated;
     }
 }

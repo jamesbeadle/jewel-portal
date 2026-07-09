@@ -31,8 +31,10 @@ else
                 <h1 class="text-2xl md:text-3xl font-semibold text-content leading-tight">Cost allocation</h1>
                 <p class="text-sm text-content-muted mt-2">
                     Reconcile the accounts system with the projects: every Xero cost-of-sales purchase line
-                    (nominal accounts starting 3) is allocated to a project and master cost centre.
-                    Suggestions come from the line's Xero tracking — you confirm.
+                    (nominal accounts starting 3) is allocated to a project and master cost centre — or split
+                    across several centres. Suggestions come from the line's Xero tracking — you confirm.
+                    Once every line of a draft bill (published from Dext) is allocated, its Sites and Cost Code
+                    tracking are confirmed back to Xero and the bill is approved automatically.
                 </p>
             </div>
             <div class="flex items-center gap-4 whitespace-nowrap">
@@ -214,6 +216,11 @@ else
                                     {
                                         <span class="ml-1.5 text-[10px] uppercase tracking-wider font-semibold border border-line rounded px-1 py-0.5">Credit</span>
                                     }
+                                    @if (IsAwaitingApproval(line))
+                                    {
+                                        <span class="ml-1.5 text-[10px] uppercase tracking-wider font-semibold border border-line rounded px-1 py-0.5"
+                                              title="Awaiting approval in Xero — allocating every line of this bill confirms its cost codes to Xero and approves it">Draft</span>
+                                    }
                                 </td>
                                 <td class="px-3 py-2.5 text-content-muted max-w-xs">
                                     <span class="block truncate" title="@line.Description">@(line.Description ?? "—")</span>
@@ -265,6 +272,9 @@ else
                                         <button class="text-xs font-medium rounded-lg px-2.5 py-1 bg-content text-surface disabled:opacity-40"
                                                 disabled="@(isBusy || !CanAllocate(line) || CanBucket(line))"
                                                 @onclick="() => AllocateAsync(line)">Allocate</button>
+                                        <button class="text-xs text-content-subtle underline underline-offset-4 ml-2"
+                                                disabled="@isBusy"
+                                                @onclick="() => OpenSplit(line)">Split…</button>
                                         <button class="text-xs font-medium rounded-lg px-2.5 py-1 bg-content text-surface ml-2 disabled:opacity-40"
                                                 disabled="@(isBusy || !CanBucket(line))"
                                                 @onclick="() => BucketAsync(line, SelectedBucketFor(line))">Allocate to bucket</button>
@@ -279,7 +289,23 @@ else
                                         @if (activeTab == XeroAllocationStatus.Allocated)
                                         {
                                             <span class="text-content">@ProjectName(line.ProjectId)</span>
-                                            <span class="block text-xs text-content-subtle">@CostCenterText(line.CostCenterCode)</span>
+                                            @if (line.Splits is { Count: > 0 })
+                                            {
+                                                foreach (var split in line.Splits)
+                                                {
+                                                    <span class="block text-xs text-content-subtle">
+                                                        @CostCenterText(split.CostCenterCode) · @Money(line.Type == "ACCPAYCREDIT" ? -split.Net : split.Net)
+                                                    </span>
+                                                }
+                                            }
+                                            else
+                                            {
+                                                <span class="block text-xs text-content-subtle">@CostCenterText(line.CostCenterCode)</span>
+                                            }
+                                            @if (WriteBackBadge(line) is { } badge)
+                                            {
+                                                <span class="block text-xs mt-0.5 @badge.Css" title="@badge.Tooltip">@badge.Text</span>
+                                            }
                                         }
                                         else if (activeTab == XeroAllocationStatus.Bucketed)
                                         {
@@ -294,8 +320,14 @@ else
                                         @(line.AllocatedBy ?? "—")
                                         <span class="block">@(line.AllocatedAtUtc?.ToLocalTime().ToString("d MMM yyyy") ?? "")</span>
                                     </td>
-                                    <td class="px-3 py-2.5 text-right">
-                                        <button class="text-xs text-content-subtle underline underline-offset-4"
+                                    <td class="px-3 py-2.5 text-right whitespace-nowrap">
+                                        @if (activeTab == XeroAllocationStatus.Allocated && line.WriteBackStatus == XeroWriteBackStatus.Failed)
+                                        {
+                                            <button class="text-xs font-medium rounded-lg px-2.5 py-1 bg-content text-surface disabled:opacity-40"
+                                                    disabled="@isBusy" title="@line.WriteBackError"
+                                                    @onclick="() => RetryWriteBackAsync(line)">Retry Xero</button>
+                                        }
+                                        <button class="text-xs text-content-subtle underline underline-offset-4 ml-2"
                                                 disabled="@isBusy" @onclick="() => ResetAsync(line)">Undo</button>
                                     </td>
                                 }
@@ -308,7 +340,8 @@ else
             <div class="mt-3 flex items-center justify-between gap-4 flex-wrap">
                 <p class="text-xs text-content-subtle">
                     @Visible.Count lines · @Money(Visible.Sum(SignedNet)) net.
-                    Allocations live in JPMS only — Xero is never written to.
+                    Allocating every line of a draft bill writes its Sites / Cost Code tracking back to Xero
+                    and approves it; bills already approved in Xero are allocated in JPMS only.
                 </p>
                 @if (PageCount > 1)
                 {
@@ -322,6 +355,77 @@ else
                 }
             </div>
         }
+
+        <Modal IsOpen="@(splitLine is not null)" Title="Split across cost centres"
+               ConfirmLabel="@(isApplying ? "Allocating…" : "Allocate split")" CancelLabel="Cancel"
+               ConfirmDisabled="@isBusy" OnConfirm="ApplySplitAsync" OnCancel="CloseSplit" Class="max-w-xl">
+            @if (splitLine is not null)
+            {
+                <div class="space-y-4">
+                    <div class="rounded-lg border border-line bg-surface-raised px-4 py-3 text-sm">
+                        <span class="text-content font-medium">@(splitLine.ContactName ?? "—")</span>
+                        <span class="text-content-muted"> · @(splitLine.Description ?? "—")</span>
+                        <span class="block text-xs text-content-subtle mt-0.5">
+                            @(splitLine.InvoiceNumber ?? "—") · @Money(splitLine.Net) net
+                        </span>
+                    </div>
+
+                    @if (splitError is not null)
+                    {
+                        <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@splitError</p>
+                    }
+
+                    <div>
+                        <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Project</label>
+                        <select class="w-full bg-surface border border-line rounded-lg px-2 py-1.5 text-content text-sm" @bind="splitProjectId">
+                            <option value="">—</option>
+                            @foreach (var project in Projects)
+                            {
+                                <option value="@project.ProjectId">@project.Name</option>
+                            }
+                        </select>
+                    </div>
+
+                    <div class="space-y-2">
+                        <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold">Cost centres</label>
+                        @foreach (var row in splitRows)
+                        {
+                            <div class="flex items-center gap-2">
+                                <select class="grow bg-surface border border-line rounded-lg px-2 py-1.5 text-content text-sm"
+                                        value="@row.Code" @onchange="e => OnSplitCodeChanged(row, e.Value?.ToString())">
+                                    <option value="">—</option>
+                                    @foreach (var centre in CostCenters.Active())
+                                    {
+                                        <option value="@centre.Code">@centre.Code @centre.Name</option>
+                                    }
+                                </select>
+                                <input class="w-32 bg-surface border border-line rounded-lg px-2 py-1.5 text-content text-sm text-right"
+                                       type="number" step="0.01" min="0" placeholder="0.00"
+                                       value="@(row.Amount?.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture))"
+                                       @onchange="e => OnSplitAmountChanged(row, e.Value?.ToString())" />
+                                <button type="button" aria-label="Remove row" disabled="@(splitRows.Count <= 2)"
+                                        class="inline-flex items-center justify-center w-7 h-7 rounded-md text-content-subtle hover:text-content hover:bg-surface-raised disabled:opacity-40"
+                                        @onclick="() => RemoveSplitRow(row)">
+                                    <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                         stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6L6 18" /></svg>
+                                </button>
+                            </div>
+                        }
+                        <button type="button" class="text-xs font-medium text-content-muted hover:text-content underline underline-offset-4"
+                                @onclick="AddSplitRow">+ Add cost centre</button>
+                    </div>
+
+                    <p class="text-sm @(SplitRemaining == 0m ? "text-content-muted" : "text-negative")">
+                        @Money(SplitAssigned) of @Money(splitLine.Net) assigned
+                        @(SplitRemaining == 0m ? "— fully assigned." : $"— {Money(SplitRemaining)} remaining.")
+                    </p>
+                    <p class="text-xs text-content-subtle">
+                        On approval the Xero line is split into one line per cost centre (amounts pro-rated,
+                        invoice total unchanged) with the project's site stamped on each.
+                    </p>
+                </div>
+            }
+        </Modal>
     </section>
 }
 
@@ -442,7 +546,7 @@ else
                 : result.Error is not null
                     ? $"Xero returned an error: {result.Error}"
                     : $"Synced. {result.NewLines} new lines, {result.UpdatedLines} refreshed"
-                      + (result.RemovedLines > 0 ? $", {result.RemovedLines} draft/voided lines removed from the queue" : "")
+                      + (result.RemovedLines > 0 ? $", {result.RemovedLines} voided/deleted lines removed from the queue" : "")
                       + $" — {result.UnallocatedLines} of {result.TotalLines} now awaiting allocation.";
         }
         catch (CommandFailedException failure) { errorMessage = failure.Message; }
@@ -526,6 +630,125 @@ else
                 chosenCostCenter.Remove(id);
                 chosenBucket.Remove(id);
             }
+        }
+        catch (CommandFailedException failure) { errorMessage = failure.Message; }
+        finally { isApplying = false; }
+    }
+
+    // -- split editor ----------------------------------------------------------
+    // A line's value shared across several cost centres. The amounts must add up
+    // to the line's net exactly; the API enforces the same rule server-side.
+
+    private sealed class SplitRow
+    {
+        public string Code { get; set; } = "";
+        public decimal? Amount { get; set; }
+    }
+
+    private XeroLedgerLine? splitLine;
+    private string splitProjectId = "";
+    private string? splitError;
+    private List<SplitRow> splitRows = new();
+
+    private void OpenSplit(XeroLedgerLine line)
+    {
+        splitLine = line;
+        splitProjectId = SelectedProjectFor(line);
+        splitError = null;
+        // First row pre-filled from the line's chosen/suggested centre; second blank.
+        splitRows = new List<SplitRow>
+        {
+            new() { Code = SelectedCostCenterFor(line) },
+            new()
+        };
+    }
+
+    private void CloseSplit()
+    {
+        splitLine = null;
+        splitError = null;
+    }
+
+    private void AddSplitRow() => splitRows.Add(new SplitRow());
+
+    private void RemoveSplitRow(SplitRow row)
+    {
+        if (splitRows.Count > 2) splitRows.Remove(row);
+    }
+
+    private void OnSplitCodeChanged(SplitRow row, string? code) => row.Code = code ?? "";
+
+    private void OnSplitAmountChanged(SplitRow row, string? raw) =>
+        row.Amount = decimal.TryParse(raw, System.Globalization.NumberStyles.Number,
+            System.Globalization.CultureInfo.InvariantCulture, out var amount)
+            ? amount
+            : null;
+
+    private decimal SplitAssigned => splitRows.Sum(row => row.Amount ?? 0m);
+    private decimal SplitRemaining => (splitLine?.Net ?? 0m) - SplitAssigned;
+
+    private async Task ApplySplitAsync()
+    {
+        if (splitLine is null || isBusy) return;
+
+        var rows = splitRows.Where(row => !string.IsNullOrEmpty(row.Code) || row.Amount is not null).ToList();
+        if (string.IsNullOrEmpty(splitProjectId)) { splitError = "Choose a project."; return; }
+        if (rows.Count < 2) { splitError = "A split needs at least two cost centres — use Allocate for a single centre."; return; }
+        if (rows.Any(row => string.IsNullOrEmpty(row.Code) || row.Amount is not > 0m))
+        { splitError = "Every row needs a cost centre and an amount above zero."; return; }
+        if (rows.Select(row => row.Code).Distinct(StringComparer.OrdinalIgnoreCase).Count() != rows.Count)
+        { splitError = "Each cost centre can appear only once."; return; }
+        if (rows.Sum(row => row.Amount!.Value) != splitLine.Net)
+        { splitError = $"The amounts must add up to {Money(splitLine.Net)} net — currently {Money(SplitAssigned)}."; return; }
+
+        isApplying = true; splitError = null;
+        try
+        {
+            await Ledger.ApplyAsync(new SetXeroAllocation(
+                new[] { splitLine.XeroLedgerLineId },
+                XeroAllocationAction.Allocate,
+                splitProjectId,
+                Splits: rows.Select(row => new XeroCostSplit(row.Code, row.Amount!.Value)).ToList()));
+            selectedIds.Remove(splitLine.XeroLedgerLineId);
+            chosenProject.Remove(splitLine.XeroLedgerLineId);
+            chosenCostCenter.Remove(splitLine.XeroLedgerLineId);
+            chosenBucket.Remove(splitLine.XeroLedgerLineId);
+            CloseSplit();
+        }
+        catch (CommandFailedException failure) { splitError = failure.Message; }
+        finally { isApplying = false; }
+    }
+
+    // -- Xero write-back status -------------------------------------------------
+
+    private sealed record WriteBackBadgeModel(string Text, string? Tooltip, string Css);
+
+    /// <summary>Status line under an allocated line's cost centre(s): what Xero knows.</summary>
+    private WriteBackBadgeModel? WriteBackBadge(XeroLedgerLine line) => line.WriteBackStatus switch
+    {
+        XeroWriteBackStatus.Approved => new("✓ Approved in Xero",
+            line.WriteBackAtUtc?.ToLocalTime().ToString("d MMM yyyy HH:mm"), "text-positive"),
+        XeroWriteBackStatus.Failed => new("⚠ Xero write-back failed",
+            line.WriteBackError, "text-negative"),
+        _ when IsAwaitingApproval(line) => new("Draft — approves in Xero once the whole bill is allocated",
+            null, "text-content-subtle"),
+        _ => null
+    };
+
+    private static bool IsAwaitingApproval(XeroLedgerLine line) =>
+        line.InvoiceStatus.Equals("DRAFT", StringComparison.OrdinalIgnoreCase)
+        || line.InvoiceStatus.Equals("SUBMITTED", StringComparison.OrdinalIgnoreCase);
+
+    private async Task RetryWriteBackAsync(XeroLedgerLine line)
+    {
+        isApplying = true; errorMessage = null;
+        try
+        {
+            var outcome = await Ledger.RetryWriteBackAsync(line.XeroInvoiceId);
+            syncMessage = outcome.Succeeded
+                ? $"Invoice {line.InvoiceNumber ?? line.XeroInvoiceId} confirmed and approved in Xero."
+                : null;
+            errorMessage = outcome.Succeeded ? null : outcome.Error;
         }
         catch (CommandFailedException failure) { errorMessage = failure.Message; }
         finally { isApplying = false; }

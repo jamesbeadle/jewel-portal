@@ -19,5 +19,6 @@ internal static class ProjectEntityMapping
         OnBehalfOfClientId: entity.OnBehalfOfClientId,
         AddressLine: entity.AddressLine,
         Town: entity.Town,
-        Postcode: entity.Postcode);
+        Postcode: entity.Postcode,
+        XeroSiteName: entity.XeroSiteName);
 }

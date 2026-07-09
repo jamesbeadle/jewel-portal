@@ -71,6 +71,7 @@ public sealed class JpmsContext : DbContext
     public DbSet<CostCenterEntity> CostCenters => Set<CostCenterEntity>();
 
     public DbSet<XeroLedgerLineEntity> XeroLedgerLines => Set<XeroLedgerLineEntity>();
+    public DbSet<XeroCostSplitEntity> XeroCostSplits => Set<XeroCostSplitEntity>();
 
     public DbSet<TodoItemEntity> TodoItems => Set<TodoItemEntity>();
 

@@ -18,16 +18,26 @@ public sealed class ListXeroLedgerLinesHandler : IQueryHandler<ListXeroLedgerLin
             .OrderByDescending(line => line.Date)
             .ToListAsync(cancellationToken);
 
+        var splitsByLine = (await context.XeroCostSplits.AsNoTracking().ToListAsync(cancellationToken))
+            .GroupBy(split => split.XeroLedgerLineId)
+            .ToDictionary(group => group.Key, group => (IReadOnlyList<XeroCostSplit>)group
+                .Select(split => new XeroCostSplit(split.CostCenterCode, split.Net))
+                .ToList());
+
         var projects = await context.Projects.AsNoTracking().ToListAsync(cancellationToken);
         var costCenters = await context.CostCenters.AsNoTracking()
             .Where(centre => centre.IsActive)
             .ToListAsync(cancellationToken);
         var suggester = new XeroAllocationSuggester(projects, costCenters);
 
-        return entities.Select(entity => ToModel(entity, suggester)).ToList();
+        return entities.Select(entity => ToModel(
+            entity,
+            splitsByLine.TryGetValue(entity.XeroLedgerLineId, out var splits) ? splits : null,
+            suggester)).ToList();
     }
 
-    private static XeroLedgerLine ToModel(XeroLedgerLineEntity entity, XeroAllocationSuggester suggester)
+    private static XeroLedgerLine ToModel(
+        XeroLedgerLineEntity entity, IReadOnlyList<XeroCostSplit>? splits, XeroAllocationSuggester suggester)
     {
         // Suggestions only matter while a line still needs a decision.
         var unallocated = entity.AllocationStatus == (int)XeroAllocationStatus.Unallocated;
@@ -58,6 +68,10 @@ public sealed class ListXeroLedgerLinesHandler : IQueryHandler<ListXeroLedgerLin
             unallocated ? suggester.SuggestCostCenter(entity.XeroCostCode) : null,
             unallocated ? suggester.SuggestBucket(entity.ContactName, entity.Description) : null,
             entity.FirstSeenAtUtc,
-            entity.LastSyncedAtUtc);
+            entity.LastSyncedAtUtc,
+            splits,
+            (XeroWriteBackStatus)entity.WriteBackStatus,
+            entity.WriteBackError,
+            entity.WriteBackAtUtc);
     }
 }

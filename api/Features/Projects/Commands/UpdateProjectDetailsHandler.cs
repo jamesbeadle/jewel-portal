@@ -26,6 +26,7 @@ public sealed class UpdateProjectDetailsHandler
         entity.AddressLine = (command.AddressLine ?? "").Trim();
         entity.Town = (command.Town ?? "").Trim();
         entity.Postcode = (command.Postcode ?? "").Trim();
+        entity.XeroSiteName = string.IsNullOrWhiteSpace(command.XeroSiteName) ? null : command.XeroSiteName.Trim();
 
         // The party this project corresponds with (client directly, or architect on a client's
         // behalf). A null/empty PartyId clears the assignment.

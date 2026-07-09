@@ -18,5 +18,8 @@ public interface IXeroLedgerStore
     /// <summary>Allocates every unallocated line whose project AND cost centre both matched, then refreshes.</summary>
     Task<int> AllocateSuggestedAsync(CancellationToken cancellationToken = default);
 
+    /// <summary>Re-attempts a failed Xero write-back (tracking + approval) for one invoice, then refreshes.</summary>
+    Task<XeroWriteBackOutcome> RetryWriteBackAsync(string xeroInvoiceId, CancellationToken cancellationToken = default);
+
     event Action? OnChange;
 }

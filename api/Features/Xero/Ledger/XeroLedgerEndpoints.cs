@@ -112,6 +112,36 @@ public sealed class AllocateSuggestedXeroLinesEndpoint
     }
 }
 
+public sealed class RetryXeroWriteBackEndpoint
+{
+    private readonly SignedInUserResolver users;
+    private readonly ICommandHandler<RetryXeroWriteBack, XeroWriteBackOutcome> handler;
+
+    public RetryXeroWriteBackEndpoint(
+        SignedInUserResolver users,
+        ICommandHandler<RetryXeroWriteBack, XeroWriteBackOutcome> handler)
+    {
+        this.users = users;
+        this.handler = handler;
+    }
+
+    [Function(nameof(RetryXeroWriteBack))]
+    public async Task<IActionResult> Run(
+        [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "xero/writeback/retry")] HttpRequest request)
+    {
+        var signedInUser = await users.ResolveAsync(request, request.HttpContext.RequestAborted);
+        if (signedInUser is null) return new UnauthorizedResult();
+        if (!XeroLedgerRoles.AllowedToAllocate.IncludesAny(signedInUser.Roles))
+            return new StatusCodeResult(StatusCodes.Status403Forbidden);
+
+        var command = await request.ReadFromJsonAsync<RetryXeroWriteBack>();
+        if (command is null || string.IsNullOrWhiteSpace(command.XeroInvoiceId)) return new BadRequestResult();
+
+        var outcome = await handler.HandleAsync(command, request.HttpContext.RequestAborted);
+        return new OkObjectResult(outcome);
+    }
+}
+
 public sealed class SetXeroAllocationEndpoint
 {
     private readonly SignedInUserResolver users;

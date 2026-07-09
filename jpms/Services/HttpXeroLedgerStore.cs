@@ -55,6 +55,13 @@ public sealed class HttpXeroLedgerStore : IXeroLedgerStore
         return allocated;
     }
 
+    public async Task<XeroWriteBackOutcome> RetryWriteBackAsync(string xeroInvoiceId, CancellationToken cancellationToken = default)
+    {
+        var outcome = await commands.SendAsync(new RetryXeroWriteBack(xeroInvoiceId), cancellationToken);
+        await RefreshAsync(cancellationToken);
+        return outcome;
+    }
+
     private void EnsureRequested()
     {
         if (!requested) { requested = true; _ = LoadAsync(); }

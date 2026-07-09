@@ -40,12 +40,14 @@ public sealed class SyncXeroLedgerHandler : ICommandHandler<SyncXeroLedger, Xero
             accountCode.StartsWith(prefix, StringComparison.OrdinalIgnoreCase));
     }
 
-    // Statuses that never enter the allocation queue: drafts aren't committed costs,
-    // voided/deleted bills aren't costs at all. SUBMITTED (awaiting approval),
-    // AUTHORISED and PAID count — matching the accountant's payable basis.
+    // Statuses that never enter the allocation queue: voided/deleted bills aren't
+    // costs at all. DRAFT bills DO enter — Dext publishes transcribed purchase
+    // invoices into Xero as drafts, and allocating a draft here is what confirms
+    // its cost codes back to Xero and approves it (DRAFT → AUTHORISED). SUBMITTED,
+    // AUTHORISED and PAID count as before.
     private static readonly HashSet<string> ExcludedStatuses = new(StringComparer.OrdinalIgnoreCase)
     {
-        "DRAFT", "VOIDED", "DELETED"
+        "VOIDED", "DELETED"
     };
 
     public async Task<XeroLedgerSyncResult> HandleAsync(SyncXeroLedger command, CancellationToken cancellationToken)
@@ -81,7 +83,7 @@ public sealed class SyncXeroLedgerHandler : ICommandHandler<SyncXeroLedger, Xero
 
                 if (excluded)
                 {
-                    // Never add drafts/voided/deleted to the queue. (Stored lines for these
+                    // Never add voided/deleted to the queue. (Stored lines for these
                     // invoices are cleaned up in the invoice-level pass below — deleted
                     // invoices usually come back with NO line items at all, so a per-line
                     // check here would miss them.)
@@ -138,7 +140,7 @@ public sealed class SyncXeroLedgerHandler : ICommandHandler<SyncXeroLedger, Xero
         // Invoice-level cleanup pass. Deleted invoices come back from Xero with no
         // line items (so the loop above never sees them), and lines can be edited
         // off a bill entirely. For any invoice present in the snapshot:
-        //   * unallocated stored lines of draft/voided/deleted invoices -> removed
+        //   * unallocated stored lines of voided/deleted invoices -> removed
         //   * unallocated stored lines that no longer exist on the bill -> removed
         //   * allocated/ignored lines are always kept; their InvoiceStatus is
         //     refreshed so a post-allocation void/delete is visible, never silent.

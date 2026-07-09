@@ -19,4 +19,8 @@ public sealed record Project(
     // site's location matters). Free-text; Town + Postcode are what the local search needs.
     string AddressLine = "",
     string Town = "",
-    string Postcode = "");
+    string Postcode = "",
+    // The project's option in Xero's "Sites" tracking category, exactly as named in Xero.
+    // Explicit mapping: the Xero write-back (cost-code confirmation + invoice approval)
+    // stamps it on every allocated line and refuses to run while it's unset.
+    string? XeroSiteName = null);

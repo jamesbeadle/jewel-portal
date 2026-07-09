@@ -56,7 +56,10 @@ public sealed class GetProjectFinancialSummaryHandler : IQueryHandler<GetProject
         }
 
         // Actuals: Xero purchase lines allocated to this project. Net is stored
-        // positive; supplier credit notes (ACCPAYCREDIT) subtract.
+        // positive; supplier credit notes (ACCPAYCREDIT) subtract. Whole-line
+        // allocations carry their centre on the line; split lines carry theirs
+        // in XeroCostSplits (each row a share of the line's net), so both
+        // populations sum into the same per-centre totals.
         var actuals = await context.XeroLedgerLines
             .Where(line => line.ProjectId == query.ProjectId
                            && line.AllocationStatus == (int)XeroAllocationStatus.Allocated
@@ -69,8 +72,27 @@ public sealed class GetProjectFinancialSummaryHandler : IQueryHandler<GetProject
             })
             .ToListAsync(cancellationToken);
 
+        var splitActuals = await context.XeroCostSplits
+            .Join(context.XeroLedgerLines,
+                split => split.XeroLedgerLineId,
+                line => line.XeroLedgerLineId,
+                (split, line) => new { split.CostCenterCode, split.Net, line.ProjectId, line.AllocationStatus, line.Type })
+            .Where(joined => joined.ProjectId == query.ProjectId
+                             && joined.AllocationStatus == (int)XeroAllocationStatus.Allocated)
+            .GroupBy(joined => joined.CostCenterCode)
+            .Select(group => new
+            {
+                CostCode = group.Key,
+                Amount = group.Sum(joined => joined.Type == "ACCPAYCREDIT" ? -joined.Net : joined.Net)
+            })
+            .ToListAsync(cancellationToken);
+
         var salesByCode = sales.ToDictionary(s => s.CostCode, s => s.Amount, StringComparer.OrdinalIgnoreCase);
         var actualByCode = actuals.ToDictionary(a => a.CostCode, a => a.Amount, StringComparer.OrdinalIgnoreCase);
+        foreach (var splitActual in splitActuals)
+            actualByCode[splitActual.CostCode] = actualByCode.TryGetValue(splitActual.CostCode, out var existing)
+                ? existing + splitActual.Amount
+                : splitActual.Amount;
 
         return salesByCode.Keys.Union(actualByCode.Keys, StringComparer.OrdinalIgnoreCase)
             .Select(code =>

@@ -24,5 +24,6 @@ public static class XeroRouteRegistration
         commands.Register<SyncXeroLedger, XeroLedgerSyncResult>(CommandRoute.Post("/api/xero/ledger/sync"));
         commands.Register<SetXeroAllocation, int>(CommandRoute.Post("/api/xero/allocations"));
         commands.Register<AllocateSuggestedXeroLines, int>(CommandRoute.Post("/api/xero/allocations/suggested"));
+        commands.Register<RetryXeroWriteBack, XeroWriteBackOutcome>(CommandRoute.Post("/api/xero/writeback/retry"));
     }
 }

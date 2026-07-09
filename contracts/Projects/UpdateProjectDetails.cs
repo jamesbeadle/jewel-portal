@@ -20,4 +20,6 @@ public sealed record UpdateProjectDetails(
     // Site address — Town + Postcode drive the "find local subcontractors" search.
     string AddressLine = "",
     string Town = "",
-    string Postcode = "") : ICommand<Project>;
+    string Postcode = "",
+    // The project's option in Xero's "Sites" tracking category (exact name). Null/blank clears it.
+    string? XeroSiteName = null) : ICommand<Project>;

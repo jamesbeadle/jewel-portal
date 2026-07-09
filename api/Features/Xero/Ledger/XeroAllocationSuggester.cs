@@ -66,6 +66,7 @@ public sealed class XeroAllocationSuggester
     };
 
     private readonly List<(string Normalised, string ProjectId)> projects;
+    private readonly Dictionary<string, string> projectsByMappedSite;
     private readonly List<(string Normalised, string Code)> costCenters;
     private readonly HashSet<string> activeCodes;
 
@@ -73,7 +74,16 @@ public sealed class XeroAllocationSuggester
         IEnumerable<ProjectEntity> projects,
         IEnumerable<CostCenterEntity> activeCostCenters)
     {
-        this.projects = projects
+        var projectList = projects.ToList();
+
+        // Explicit project → Xero Sites mapping wins outright: it is what the
+        // write-back stamps onto invoices, so suggestions should agree with it.
+        projectsByMappedSite = projectList
+            .Where(p => !string.IsNullOrWhiteSpace(p.XeroSiteName))
+            .GroupBy(p => Normalise(p.XeroSiteName!))
+            .ToDictionary(group => group.Key, group => group.First().ProjectId);
+
+        this.projects = projectList
             .Where(p => !string.IsNullOrWhiteSpace(p.Name))
             .Select(p => (Normalise(p.Name), p.ProjectId))
             .ToList();
@@ -87,6 +97,8 @@ public sealed class XeroAllocationSuggester
     {
         if (string.IsNullOrWhiteSpace(xeroSite)) return null;
         var site = Normalise(xeroSite);
+
+        if (projectsByMappedSite.TryGetValue(site, out var mapped)) return mapped;
 
         foreach (var (name, id) in projects)
             if (name == site) return id;

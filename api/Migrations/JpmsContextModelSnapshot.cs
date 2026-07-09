@@ -2123,6 +2123,10 @@ namespace Jewel.JPMS.Api.Migrations
                         .HasMaxLength(128)
                         .HasColumnType("nvarchar(128)");
 
+                    b.Property<string>("XeroSiteName")
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
                     b.HasKey("ProjectId");
 
                     b.ToTable("Projects");
@@ -3396,6 +3400,35 @@ namespace Jewel.JPMS.Api.Migrations
                     b.ToTable("AgentProposals");
                 });
 
+            modelBuilder.Entity("Jewel.JPMS.Api.Data.Entities.XeroCostSplitEntity", b =>
+                {
+                    b.Property<string>("XeroCostSplitId")
+                        .HasMaxLength(180)
+                        .HasColumnType("nvarchar(180)");
+
+                    b.Property<string>("CostCenterCode")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)");
+
+                    b.Property<decimal>("Net")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("decimal(18,4)");
+
+                    b.Property<string>("XeroLedgerLineId")
+                        .IsRequired()
+                        .HasMaxLength(140)
+                        .HasColumnType("nvarchar(140)");
+
+                    b.HasKey("XeroCostSplitId");
+
+                    b.HasIndex("CostCenterCode");
+
+                    b.HasIndex("XeroLedgerLineId");
+
+                    b.ToTable("XeroCostSplits");
+                });
+
             modelBuilder.Entity("Jewel.JPMS.Api.Data.Entities.XeroLedgerLineEntity", b =>
                 {
                     b.Property<string>("XeroLedgerLineId")
@@ -3478,6 +3511,16 @@ namespace Jewel.JPMS.Api.Migrations
                         .IsRequired()
                         .HasMaxLength(16)
                         .HasColumnType("nvarchar(16)");
+
+                    b.Property<DateTimeOffset?>("WriteBackAtUtc")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("WriteBackError")
+                        .HasMaxLength(1024)
+                        .HasColumnType("nvarchar(1024)");
+
+                    b.Property<int>("WriteBackStatus")
+                        .HasColumnType("int");
 
                     b.Property<string>("XeroCostCode")
                         .HasMaxLength(128)
