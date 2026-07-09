@@ -1,0 +1,211 @@
+@using Jewel.JPMS.Contracts.Commercial
+@using Jewel.JPMS.Contracts.Xero
+@inject IQueryClient Queries
+@inject IXeroLedgerStore Ledger
+@inject ICostCenterStore CostCenters
+
+@* The purchase invoices behind one report line's Cost of Sales figure on the Financials
+   tab: every allocated Xero purchase line coded to the centre — or to any member centre,
+   for a roll-up (credit notes negative, split lines showing this centre's share). Whole
+   lines can be moved to another cost centre from here; splits are re-cut on the cost
+   allocation screen. Fetched on open via ListCostCentreActualCosts, one ask per centre. *@
+<Modal IsOpen="IsOpen"
+       Title="@($"{Heading} · Cost of sales")"
+       ShowFooter="false"
+       OnCancel="OnClose"
+       Class="max-w-3xl">
+    @if (loading)
+    {
+        <p class="text-sm text-content-subtle italic">Loading allocated costs…</p>
+    }
+    else if (entries.Count == 0)
+    {
+        <p class="text-sm text-content-subtle italic">
+            No Xero purchase lines have been allocated to this report line yet.
+        </p>
+    }
+    else
+    {
+        <div class="space-y-4">
+            <div class="rounded-lg border border-line overflow-x-auto">
+                <table class="w-full text-sm border-collapse">
+                    <thead class="bg-surface-raised border-b border-line">
+                        <tr class="text-left text-[11px] uppercase tracking-wider text-content-subtle font-semibold">
+                            <th class="px-4 py-2.5 whitespace-nowrap">Date</th>
+                            @if (ShowCentreColumn)
+                            {
+                                <th class="px-4 py-2.5 whitespace-nowrap">Centre</th>
+                            }
+                            <th class="px-4 py-2.5">Supplier</th>
+                            <th class="px-4 py-2.5 whitespace-nowrap">Invoice</th>
+                            <th class="px-4 py-2.5">Description</th>
+                            <th class="px-4 py-2.5 text-right whitespace-nowrap">Net £</th>
+                            <th class="px-4 py-2.5"><span class="sr-only">Move</span></th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-line">
+                        @foreach (var entry in entries)
+                        {
+                            var line = entry.Line;
+                            <tr>
+                                <td class="px-4 py-2.5 whitespace-nowrap text-content-muted">@(line.Date?.ToString("dd MMM yyyy") ?? "—")</td>
+                                @if (ShowCentreColumn)
+                                {
+                                    <td class="px-4 py-2.5 font-mono text-[11px] text-content-subtle whitespace-nowrap">@entry.CostCode</td>
+                                }
+                                <td class="px-4 py-2.5 text-content">@line.Supplier</td>
+                                <td class="px-4 py-2.5 whitespace-nowrap text-content-muted">@line.InvoiceNumber</td>
+                                <td class="px-4 py-2.5 text-content-muted">
+                                    @line.Description
+                                    @if (line.IsSplit)
+                                    {
+                                        <span class="ml-1.5 text-[10px] uppercase tracking-wider font-semibold border border-line rounded px-1 py-0.5"
+                                              title="This centre's share of a line split across several cost centres">Split</span>
+                                    }
+                                </td>
+                                <td class="px-4 py-2.5 text-right whitespace-nowrap @(line.Net < 0 ? "text-negative" : "text-content")">@MoneyExact(line.Net)</td>
+                                <td class="px-4 py-2.5 whitespace-nowrap text-right">
+                                    @if (line.IsSplit)
+                                    {
+                                        @* Only a share of the line sits here — moving the whole line from this
+                                           modal would silently drag the other centres' shares with it. Splits
+                                           are re-cut on the cost allocation screen. *@
+                                        <span class="text-xs text-content-subtle" title="Re-allocate split lines from the cost allocation screen">—</span>
+                                    }
+                                    else if (movingLineId == line.XeroLedgerLineId)
+                                    {
+                                        <span class="inline-flex items-center gap-1.5">
+                                            <select class="bg-surface border border-line rounded-lg px-2 py-1 text-content text-sm w-52"
+                                                    disabled="@isMoving"
+                                                    @onchange="e => MoveAsync(entry, e.Value?.ToString())">
+                                                <option value="" selected>Move to…</option>
+                                                @foreach (var centre in CostCenters.Active().Where(c => !string.Equals(c.Code, entry.CostCode, StringComparison.OrdinalIgnoreCase)))
+                                                {
+                                                    <option value="@centre.Code">@centre.Code @centre.Name</option>
+                                                }
+                                            </select>
+                                            <button type="button" aria-label="Cancel move" disabled="@isMoving"
+                                                    class="inline-flex items-center justify-center w-7 h-7 rounded-md text-content-subtle hover:text-content hover:bg-surface-raised"
+                                                    @onclick="CancelMove">
+                                                <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                                     stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6L6 18" /></svg>
+                                            </button>
+                                        </span>
+                                    }
+                                    else
+                                    {
+                                        <button type="button" disabled="@isMoving"
+                                                class="text-xs font-medium text-content-subtle hover:text-content underline underline-offset-4"
+                                                @onclick="() => movingLineId = line.XeroLedgerLineId">Move</button>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                    <tfoot class="border-t-2 border-line-strong bg-surface-raised">
+                        <tr class="font-semibold text-content">
+                            <td class="px-4 py-2.5" colspan="@(ShowCentreColumn ? 5 : 4)">Total — cost of sales</td>
+                            <td class="px-4 py-2.5 text-right whitespace-nowrap">@MoneyExact(entries.Sum(entry => entry.Line.Net))</td>
+                            <td class="px-4 py-2.5"></td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+            @if (moveError is not null)
+            {
+                <p class="text-sm text-negative">@moveError</p>
+            }
+        </div>
+    }
+</Modal>
+
+@code {
+    [Parameter] public bool IsOpen { get; set; }
+    [Parameter] public string ProjectId { get; set; } = "";
+
+    /// <summary>Modal heading: "CODE — Name" for one centre, or the roll-up's name.</summary>
+    [Parameter] public string Heading { get; set; } = "";
+
+    /// <summary>The cost codes behind the clicked figure — one for an individual row,
+    /// all members for a roll-up (the Centre column appears when there are several).</summary>
+    [Parameter] public IReadOnlyList<string> CostCodes { get; set; } = Array.Empty<string>();
+
+    [Parameter] public EventCallback OnClose { get; set; }
+
+    /// <summary>Raised after a line has been reallocated to another cost centre,
+    /// so the parent can close the modal and refresh the financial summary.</summary>
+    [Parameter] public EventCallback OnInvoiceMoved { get; set; }
+
+    // Each fetched line tagged with the centre it came from (the per-centre query
+    // doesn't echo the code back).
+    private sealed record Entry(string CostCode, CostCentreActualCostLine Line);
+
+    private List<Entry> entries = new();
+    private bool loading;
+    private string? loadedKey;
+    private string? movingLineId;
+    private bool isMoving;
+    private string? moveError;
+
+    private bool ShowCentreColumn => CostCodes.Count > 1;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (!IsOpen)
+        {
+            // Refetch on next open so the detail always matches the live table.
+            loadedKey = null;
+            movingLineId = null;
+            moveError = null;
+            return;
+        }
+        var key = $"{ProjectId}|{string.Join("|", CostCodes)}";
+        if (key == loadedKey) return;
+        loadedKey = key;
+        loading = true;
+        entries = new List<Entry>();
+        foreach (var costCode in CostCodes)
+        {
+            var lines = await Queries.AskAsync(new ListCostCentreActualCosts(ProjectId, costCode), CancellationToken.None);
+            entries.AddRange(lines.Select(line => new Entry(costCode, line)));
+        }
+        entries = entries.OrderBy(entry => entry.Line.Date ?? DateTime.MaxValue).ToList();
+        loading = false;
+    }
+
+    private void CancelMove()
+    {
+        movingLineId = null;
+        moveError = null;
+    }
+
+    private async Task MoveAsync(Entry entry, string? newCostCode)
+    {
+        if (string.IsNullOrEmpty(newCostCode) || isMoving) return;
+        isMoving = true;
+        moveError = null;
+        try
+        {
+            // Note: SetXeroAllocation replaces the line's Note, so record the move there.
+            await Ledger.ApplyAsync(new SetXeroAllocation(
+                new[] { entry.Line.XeroLedgerLineId },
+                XeroAllocationAction.Allocate,
+                ProjectId,
+                newCostCode,
+                Note: $"Moved from {entry.CostCode} on the Financials tab"));
+            movingLineId = null;
+            await OnInvoiceMoved.InvokeAsync();
+        }
+        catch (Exception ex)
+        {
+            moveError = $"Couldn't move this line: {ex.Message}";
+        }
+        finally
+        {
+            isMoving = false;
+        }
+    }
+
+    private static string MoneyExact(decimal value) =>
+        value.ToString("C2", System.Globalization.CultureInfo.GetCultureInfo("en-GB"));
+}

@@ -33,7 +33,8 @@
                 <th class="px-4 py-3 text-right whitespace-nowrap">Claim Value</th>
                 @* Cost side: what we expect to pay out. *@
                 <th class="px-4 py-3 text-right whitespace-nowrap border-l border-line">Target Cost Value</th>
-                <th class="px-4 py-3 text-right whitespace-nowrap">WO Committed</th>
+                <th class="px-4 py-3 text-right whitespace-nowrap">Work Orders</th>
+                <th class="px-4 py-3 text-right whitespace-nowrap">Cost of Sales</th>
                 <th class="px-4 py-3 text-right whitespace-nowrap">Drawdown</th>
                 <th class="px-4 py-3 text-right whitespace-nowrap">Cost % Complete</th>
             </tr>
@@ -123,6 +124,22 @@
                         <td class="px-4 py-3 text-right text-content-muted">@Money(0m)</td>
                     }
 
+                    @if (CostOfSalesFor(reportLine.CostCodes) != 0m)
+                    {
+                        <td class="px-4 py-3 text-right">
+                            <button type="button"
+                                    class="underline decoration-dotted underline-offset-2 hover:decoration-solid text-content"
+                                    title="Show the allocated purchase invoices behind this figure"
+                                    @onclick="() => OnCostOfSalesSelected.InvokeAsync((Heading(reportLine), reportLine.CostCodes))">
+                                @Money(CostOfSalesFor(reportLine.CostCodes))
+                            </button>
+                        </td>
+                    }
+                    else
+                    {
+                        <td class="px-4 py-3 text-right text-content-muted">@Money(0m)</td>
+                    }
+
                     <td class="px-4 py-3 text-right @DrawdownClass(drawdown)">@Money(drawdown)</td>
 
                     <td class="px-4 py-3 text-right">
@@ -149,6 +166,7 @@
                 <td class="px-4 py-3 text-right">@Money(TotalClaimValue)</td>
                 <td class="px-4 py-3 text-right border-l border-line">@Money(TotalTargetCost)</td>
                 <td class="px-4 py-3 text-right">@Money(TotalWoCommitted)</td>
+                <td class="px-4 py-3 text-right">@Money(TotalCostOfSales)</td>
                 <td class="px-4 py-3 text-right">@Money(TotalDrawdown)</td>
                 <td class="px-4 py-3 text-right pr-6">@Percent(WeightedCostCompletion)</td>
             </tr>
@@ -172,8 +190,11 @@
     /// is clicked (one code for an individual row, all members for a roll-up).</summary>
     [Parameter] public EventCallback<(string Heading, IReadOnlyList<string> CostCodes)> OnContractSalesSelected { get; set; }
 
-    /// <summary>Raised with a heading and the line's cost codes when a WO Committed figure is clicked.</summary>
+    /// <summary>Raised with a heading and the line's cost codes when a Work Orders figure is clicked.</summary>
     [Parameter] public EventCallback<(string Heading, IReadOnlyList<string> CostCodes)> OnWorkOrderCommittedSelected { get; set; }
+
+    /// <summary>Raised with a heading and the line's cost codes when a Cost of Sales figure is clicked.</summary>
+    [Parameter] public EventCallback<(string Heading, IReadOnlyList<string> CostCodes)> OnCostOfSalesSelected { get; set; }
 
     /// <summary>Raised with the selected cost codes when the user asks to roll them up;
     /// the parent collects a name and creates the group.</summary>
@@ -196,8 +217,10 @@
     //   Claim Value          = the latest claim's cumulative claimed £
     //   Target Cost Value    = Contract Sales Value ÷ (1 + FinancialSummaryAssumptions.MarkupPercent)
     //                          — what the line should cost us; target cost + markup = sales value
-    //   WO Committed         = committed work-order line totals (click for the line's work orders)
-    //   Drawdown             = Target Cost Value minus WO Committed — budget still to be
+    //   Work Orders          = committed work-order line totals (click for the line's work orders)
+    //   Cost of Sales        = allocated Xero purchase spend, net of credit notes (click for
+    //                          the invoices; the first step of linking invoices to work orders)
+    //   Drawdown             = Target Cost Value minus Work Orders — budget still to be
     //                          spent outside work orders; negative = over-committed
     //   Cost % Complete      = cost-side completion, edited inline here
 
@@ -277,6 +300,9 @@
     private decimal WoCommittedFor(IReadOnlyList<string> costCodes) =>
         costCodes.Sum(entryCode => WorkOrderCommittedByCode.TryGetValue(entryCode, out var committed) ? committed : 0m);
 
+    // Allocated Xero purchase spend, net of credit notes.
+    private decimal CostOfSalesFor(IReadOnlyList<string> costCodes) => SumFor(costCodes, row => row.ActualCost);
+
     private bool IsSaving(string key) => string.Equals(savingKey, key, StringComparison.OrdinalIgnoreCase);
 
     private async Task HandleCostCompletionChangedAsync(ReportLine line, ChangeEventArgs args)
@@ -295,7 +321,7 @@
         costCodes.Any(entryCode =>
             (byCode.TryGetValue(entryCode, out var row) &&
              (row.BudgetedSales != 0m || row.CompletionPercent != 0m || row.ClaimedToDate != 0m ||
-              row.BudgetedCost != 0m || row.CostCompletionPercent != 0m)) ||
+              row.BudgetedCost != 0m || row.CostCompletionPercent != 0m || row.ActualCost != 0m)) ||
             (WorkOrderCommittedByCode.TryGetValue(entryCode, out var committed) && committed != 0m));
 
     private IEnumerable<ReportLine> VisibleLines
@@ -330,6 +356,7 @@
     private decimal TotalClaimValue => SummaryRows.Sum(row => row.ClaimedToDate);
     private decimal TotalTargetCost => SummaryRows.Sum(row => row.BudgetedCost);
     private decimal TotalWoCommitted => WorkOrderCommittedByCode.Values.Sum();
+    private decimal TotalCostOfSales => SummaryRows.Sum(row => row.ActualCost);
     private decimal TotalDrawdown => TotalTargetCost - TotalWoCommitted;
 
     // Weighted by contract sales value, matching the per-line calculation.
