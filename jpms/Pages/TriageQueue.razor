@@ -408,6 +408,96 @@ else
 
                             @MessageBody
 
+                            @*
+                                AI-assisted triage: Claude reads the whole thread server-side and suggests the
+                                next action. Advisory only — "Set this up" just pre-fills the normal link/create/
+                                discard controls below; nothing is actioned until the triager submits as usual.
+                            *@
+                            <div class="pt-3 border-t border-line">
+                                @if (recommendLoading)
+                                {
+                                    <p class="text-xs text-content-subtle italic">Reading the thread and suggesting an action…</p>
+                                }
+                                else if (recommendation is null)
+                                {
+                                    <button type="button" class="btn-secondary text-xs" disabled="@busy" @onclick="DoRecommend">
+                                        ✦ Suggest an action
+                                    </button>
+                                    @if (recommendError is not null)
+                                    {
+                                        <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-xs text-negative mt-2">@recommendError</p>
+                                    }
+                                }
+                                else
+                                {
+                                    <div class="rounded-lg border border-accent/40 bg-accent/5 p-4 space-y-3">
+                                        <div class="flex items-center justify-between gap-2">
+                                            <p class="text-xs uppercase tracking-wider text-accent font-semibold">✦ Suggested action</p>
+                                            <button type="button" class="text-content-subtle hover:text-content text-xs" title="Dismiss suggestion"
+                                                    @onclick="() => recommendation = null">✕</button>
+                                        </div>
+
+                                        <div class="flex flex-wrap items-center gap-2">
+                                            <span class="inline-flex items-center rounded-full bg-accent/10 text-accent text-xs font-medium px-2.5 py-1">
+                                                @RecommendationActionLabel(recommendation.RecommendedAction)
+                                            </span>
+                                            @if (RecommendedProject is { } suggestedProject)
+                                            {
+                                                <span class="inline-flex items-center rounded-full border border-line text-content-muted text-xs px-2.5 py-1">
+                                                    @suggestedProject.Reference — @suggestedProject.Name
+                                                </span>
+                                            }
+                                            @if (recommendation.Urgency == "high")
+                                            {
+                                                <span class="inline-flex items-center rounded-full bg-negative/10 text-negative text-xs font-medium px-2.5 py-1">High urgency</span>
+                                            }
+                                            <span class="text-[11px] text-content-subtle">@recommendation.Confidence confidence</span>
+                                        </div>
+
+                                        <p class="text-sm text-content">@recommendation.Summary</p>
+
+                                        @if (recommendation.KeyDates.Count > 0)
+                                        {
+                                            <ul class="space-y-0.5">
+                                                @foreach (var keyDate in recommendation.KeyDates)
+                                                {
+                                                    <li class="text-xs text-content-muted"><span class="font-medium text-content">@keyDate.Date</span> — @keyDate.Meaning</li>
+                                                }
+                                            </ul>
+                                        }
+
+                                        @if (recommendation.RecommendedAction == "create_todos" && recommendation.TodoItems.Count > 0)
+                                        {
+                                            <ul class="list-disc pl-4 space-y-0.5">
+                                                @foreach (var todoTitle in recommendation.TodoItems)
+                                                {
+                                                    <li class="text-xs text-content-muted">@todoTitle</li>
+                                                }
+                                            </ul>
+                                        }
+
+                                        @if (!string.IsNullOrWhiteSpace(recommendation.Reasoning))
+                                        {
+                                            <p class="text-xs text-content-subtle">@recommendation.Reasoning</p>
+                                        }
+
+                                        @if (recommendation.SecondaryActions.Count > 0)
+                                        {
+                                            <p class="text-xs text-content-subtle">
+                                                Also consider: @string.Join(", ", recommendation.SecondaryActions.Select(RecommendationActionLabel)).
+                                            </p>
+                                        }
+
+                                        @if (recommendation.RecommendedAction != "none")
+                                        {
+                                            <button type="button" class="btn-primary text-xs" disabled="@busy" @onclick="ApplyRecommendation">
+                                                Set this up below
+                                            </button>
+                                        }
+                                    </div>
+                                }
+                            </div>
+
                             <div class="pt-3 border-t border-line">
                                 <div class="flex flex-wrap gap-2 mb-4">
                                     <button type="button" class="@ModeTabClass(TriageMode.Link)" @onclick="() => SetMode(TriageMode.Link)">Link to existing</button>
@@ -1031,6 +1121,14 @@ else
     // happened and where the email they actually clicked sits. Cleared on every new selection.
     private string? threadNote;
 
+    // AI suggestion state: Claude's recommendation for the selected email (null until asked for or
+    // after dismissal), the in-flight flag, and the same cancellation shape as the detail/thread
+    // loads so rapid clicking can't race a stale suggestion onto a newly selected email.
+    private TriageRecommendation? recommendation;
+    private bool recommendLoading;
+    private string? recommendError;
+    private CancellationTokenSource? recommendCts;
+
     private IReadOnlyList<Request> unassigned = Array.Empty<Request>();
     private string? unassignedError;
 
@@ -1318,6 +1416,10 @@ else
         mode = TriageMode.None;
         actionError = null;
         threadNote = null;
+        recommendCts?.Cancel();
+        recommendation = null;
+        recommendError = null;
+        recommendLoading = false;
         ResetLinkState();
         createRecordType = RecordType.Request;
         createProjectId = "";
@@ -1429,6 +1531,115 @@ else
         mode = next;
         actionError = null;
     }
+
+    // ---- AI-assisted triage suggestion ----
+
+    // Ask Claude (server-side) to read the selected email's whole thread and recommend the next
+    // action. Advisory only; a failed or unconfigured call shows a soft error, never blocks triage.
+    private async Task DoRecommend()
+    {
+        if (selected is null || recommendLoading) return;
+        recommendCts?.Cancel();
+        var cts = new CancellationTokenSource();
+        recommendCts = cts;
+
+        var item = selected;
+        recommendation = null;
+        recommendError = null;
+        recommendLoading = true;
+        try
+        {
+            var result = await Intake.RecommendActionAsync(item, cts.Token);
+            if (cts.IsCancellationRequested || selected?.Id != item.Id) return;
+            if (result.Available) recommendation = result;
+            else recommendError = "Suggestions aren't available right now — triage the email as usual.";
+        }
+        catch (OperationCanceledException) { /* superseded by a newer selection */ }
+        catch
+        {
+            if (selected?.Id == item.Id)
+                recommendError = "Couldn't get a suggestion. Please try again.";
+        }
+        finally
+        {
+            if (selected?.Id == item.Id)
+                recommendLoading = false;
+        }
+    }
+
+    // Pre-fill the normal triage controls from the suggestion. Nothing is submitted here — the
+    // triager reviews the pre-filled form and confirms through the same buttons as always.
+    private async Task ApplyRecommendation()
+    {
+        if (recommendation is null || selected is null) return;
+        var suggestion = recommendation;
+
+        switch (suggestion.RecommendedAction)
+        {
+            case "link_to_existing":
+                SetMode(TriageMode.Link);
+                if (suggestion.ProjectId is not null)
+                {
+                    linkProjectId = suggestion.ProjectId;
+                    linkRecordId = "";
+                    await LoadLinkRecordsAsync();
+                }
+                break;
+
+            case "create_request":
+                SetMode(TriageMode.Create);
+                createRecordType = RecordType.Request;
+                PrefillCreate(suggestion);
+                break;
+
+            case "create_bid_package":
+                SetMode(TriageMode.Create);
+                createRecordType = RecordType.BidPackageInvite;
+                PrefillCreate(suggestion);
+                break;
+
+            case "tag_scheduling":
+                SetMode(TriageMode.Create);
+                createRecordType = RecordType.Scheduling;
+                PrefillCreate(suggestion);
+                break;
+
+            case "create_todos":
+                SetMode(TriageMode.Create);
+                createRecordType = RecordType.Todo;
+                PrefillCreate(suggestion);
+                if (suggestion.TodoItems.Count > 0)
+                    createTodoRows = suggestion.TodoItems.Select(title => new TodoDraftRow { Title = title }).ToList();
+                break;
+
+            case "discard":
+                SetMode(TriageMode.Discard);
+                break;
+        }
+    }
+
+    private void PrefillCreate(TriageRecommendation suggestion)
+    {
+        if (suggestion.ProjectId is not null) createProjectId = suggestion.ProjectId;
+        if (!string.IsNullOrWhiteSpace(suggestion.SuggestedTitle)) createTitle = suggestion.SuggestedTitle;
+    }
+
+    private Project? RecommendedProject =>
+        recommendation?.ProjectId is { } projectId
+            ? ProjectOptions.FirstOrDefault(p => p.ProjectId == projectId)
+            : null;
+
+    private static string RecommendationActionLabel(string action) => action switch
+    {
+        "link_to_existing"   => "Link to an existing record",
+        "create_request"     => "Create a request",
+        "create_bid_package" => "Create a bid package",
+        "tag_scheduling"     => "Tag to scheduling",
+        "create_todos"       => "Create to-do items",
+        "discard"            => "Discard",
+        "none"               => "Needs a human decision",
+        _                    => action
+    };
 
     private async Task OnLinkRecordTypeChanged(ChangeEventArgs e)
     {
@@ -1871,5 +2082,6 @@ else
     {
         RequestRegister.OnChange -= StateHasChanged;
         DrawingStore.OnChange -= StateHasChanged;
+        recommendCts?.Cancel();
     }
 }

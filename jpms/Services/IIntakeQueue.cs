@@ -21,6 +21,12 @@ public interface IIntakeQueue
     // the older messages should be triaged, and link/discard already apply conversation-wide.
     Task<MailboxPage> ListConversationLiveAsync(string conversationId, CancellationToken cancellationToken = default);
     Task<MailboxMessageDetail> GetMessageDetailAsync(string messageId, string? internetMessageId, CancellationToken cancellationToken = default);
+
+    // AI-assisted triage: ask Claude to read this email's whole thread and recommend the next
+    // action. Advisory only — the result renders as a suggestion box; the triager still acts through
+    // the normal link/create/discard controls. Available=false means the feature is off or failed.
+    Task<TriageRecommendation> RecommendActionAsync(MailboxMessage message, CancellationToken cancellationToken = default);
+
     Task<Acknowledgement> DiscardMessageAsync(string messageId, string? internetMessageId, CancellationToken cancellationToken = default);
     Task<Acknowledgement> RestoreMessageAsync(string messageId, string? internetMessageId, CancellationToken cancellationToken = default);
     Task<Acknowledgement> RemoveTagFromMessageAsync(string messageId, string? internetMessageId, string tag, CancellationToken cancellationToken = default);
