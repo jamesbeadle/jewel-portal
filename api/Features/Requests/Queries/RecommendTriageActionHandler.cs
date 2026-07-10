@@ -200,11 +200,26 @@ public sealed class RecommendTriageActionHandler : IQueryHandler<RecommendTriage
         "- Prefer link_to_existing over creating a new record when the thread clearly continues an " +
         "existing conversation.\n" +
         "- Only use a projectId from the PROJECT CANDIDATES list; if unsure, use null.\n\n" +
+        "DRAFTING THE RECORD (when recommending any create_* action): write suggestedTitle and " +
+        "suggestedDescription in your own words as a formal record, never by copying the email. The " +
+        "title is a concise register entry (project context + the matter, e.g. 'Front block paving " +
+        "scope dispute — 50% settlement proposal'). The description is 2-5 sentences of neutral " +
+        "record-keeping prose stating what is being asked or decided, the key figures, references " +
+        "(drawings, VOs, tender documents) and dates from the thread, and what response is needed " +
+        "from whom — it must make sense to someone who has not read the email. suggestedRaisedTo is " +
+        "the name or email of the party the request is directed at (the ball-in-court person in the " +
+        "thread, usually the counterparty, never the Jewel triager). suggestedTrade applies only to " +
+        "create_bid_package (e.g. 'Windows', 'Groundworks').\n\n" +
         "OUTPUT — return ONLY a JSON object, no markdown fences:\n" +
         "{\"summary\": string (2-3 sentences: who wants what and why it matters), " +
         "\"recommendedAction\": string (one action key), " +
         "\"projectId\": string|null, " +
         "\"suggestedTitle\": string|null (a concise record title, if creating), " +
+        "\"suggestedDescription\": string|null (the drafted record detail, if creating), " +
+        "\"suggestedRaisedTo\": string|null, " +
+        "\"suggestedTrade\": string|null (only for create_bid_package), " +
+        "\"suggestedResponseDue\": string|null (YYYY-MM-DD, only when the thread states or clearly " +
+        "implies a response deadline — never invent one), " +
         "\"todoItems\": [string] (only for create_todos, else []), " +
         "\"secondaryActions\": [string] (other action keys, may be []), " +
         "\"urgency\": \"low\"|\"normal\"|\"high\" (high = money, contractual notice, or blocked work), " +
@@ -258,6 +273,10 @@ public sealed class RecommendTriageActionHandler : IQueryHandler<RecommendTriage
                 RecommendedAction: action.ToLowerInvariant(),
                 ProjectId: projectId,
                 SuggestedTitle: GetString(root, "suggestedTitle"),
+                SuggestedDescription: GetString(root, "suggestedDescription"),
+                SuggestedRaisedTo: GetString(root, "suggestedRaisedTo"),
+                SuggestedTrade: GetString(root, "suggestedTrade"),
+                SuggestedResponseDue: GetString(root, "suggestedResponseDue"),
                 TodoItems: GetStrings(root, "todoItems"),
                 SecondaryActions: GetStrings(root, "secondaryActions")
                     .Where(a => ActionKeys.Contains(a)).Select(a => a.ToLowerInvariant()).ToList(),

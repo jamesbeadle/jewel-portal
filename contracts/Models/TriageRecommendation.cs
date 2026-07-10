@@ -16,6 +16,15 @@ public sealed record TriageRecommendation(
     // Suggested project — always validated server-side against the real project list, else null.
     string? ProjectId,
     string? SuggestedTitle,
+    // A drafted record description in Claude's own words (what's being asked/decided, key figures,
+    // references, dates) — not a copy of the email body. Pre-fills the create form's Detail field.
+    string? SuggestedDescription,
+    // Who the request should be raised to (name or email of the ball-in-court party in the thread).
+    string? SuggestedRaisedTo,
+    // The trade, when the recommendation is create_bid_package (pre-fills the Trade field).
+    string? SuggestedTrade,
+    // A response deadline (YYYY-MM-DD) only when the thread states or clearly implies one.
+    string? SuggestedResponseDue,
     // Proposed to-do titles when the recommendation is create_todos.
     IReadOnlyList<string> TodoItems,
     // Other action keys worth considering (an email can carry several signals).
@@ -26,7 +35,7 @@ public sealed record TriageRecommendation(
     string Reasoning)
 {
     public static TriageRecommendation Unavailable() => new(
-        false, "", "none", null, null,
+        false, "", "none", null, null, null, null, null, null,
         Array.Empty<string>(), Array.Empty<string>(),
         "normal", "low", Array.Empty<TriageRecommendationDate>(), "");
 }
