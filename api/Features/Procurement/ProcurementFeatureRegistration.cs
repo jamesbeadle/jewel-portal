@@ -59,10 +59,8 @@ public static class ProcurementFeatureRegistration
         services.AddScoped<SetBidPackageDrawingsAuthorisation>();
         services.AddScoped<SetBidPackageDrawingsValidation>();
 
-        services.AddScoped<ICommandHandler<SendBidPackageInvite, BidPackage>, SendBidPackageInviteHandler>();
-        services.AddScoped<SendBidPackageInviteAuthorisation>();
-        services.AddScoped<SendBidPackageInviteValidation>();
-
+        // NOTE: there is deliberately no send-invite command — invites are only ever created as
+        // mailbox drafts (PrepareBidPackageInviteDraft) for a human to review and send from Outlook.
         services.AddScoped<ICommandHandler<PrepareBidPackageInviteDraft, BidPackageInviteDraft>, PrepareBidPackageInviteDraftHandler>();
         services.AddScoped<PrepareBidPackageInviteDraftAuthorisation>();
         services.AddScoped<PrepareBidPackageInviteDraftValidation>();

@@ -1,4 +1,5 @@
 @page "/projects/{ProjectId}/work-orders"
+@using Jewel.JPMS.Contracts.Commercial
 @using Jewel.JPMS.Contracts.Procurement
 @using Jewel.JPMS.Features.CostCenters
 @using Jewel.JPMS.Features.Procurement
@@ -7,6 +8,7 @@
 @inject SessionService Session
 @inject CostCentersReadModel CostCenters
 @inject ProjectWorkOrdersReadModel WorkOrders
+@inject IQueryClient Queries
 @inject NavigationManager Nav
 @implements IDisposable
 
@@ -35,6 +37,10 @@ else
                 @Orders.Count work order@(Orders.Count == 1 ? "" : "s") issued ·
                 <span class="text-content font-medium">@Money(TotalCommitted)</span> committed ·
                 @Money(TotalPaid) paid · @Money(TotalCommitted - TotalPaid) remaining
+                @if (summariesByOrder.Count > 0)
+                {
+                    <text> · </text><span class="text-content font-medium">@Money(TotalInvoiced)</span><text> invoiced against orders · @Money(TotalCommitted - TotalInvoiced) left to invoice — see the </text><a class="underline underline-offset-4 hover:text-content" href="@($"/projects/{ProjectId}/work-order-allocation")">WO Allocation tab</a>
+                }
             </p>
 
             <div class="rounded-xl border border-line bg-surface overflow-x-auto">
@@ -91,7 +97,16 @@ else
                                                         <td class="px-3 py-2 font-mono text-[11px] text-content-subtle whitespace-nowrap" title="@line.Detail.Order.Title">@Reference(line.Detail.Order)</td>
                                                         <td class="px-3 py-2 whitespace-nowrap">@line.Detail.SubcontractorName</td>
                                                         <td class="px-3 py-2" title="@line.Line.Description">@line.Line.Title</td>
-                                                        <td class="px-3 py-2 whitespace-nowrap"><span class="inline-block rounded-full border border-line px-2 py-0.5 text-[11px] text-content-subtle">@line.Detail.Order.Status</span></td>
+                                                        <td class="px-3 py-2 whitespace-nowrap">
+                                                            <span class="inline-block rounded-full border border-line px-2 py-0.5 text-[11px] text-content-subtle">@line.Detail.Order.Status</span>
+                                                            @if (summariesByOrder.TryGetValue(line.Detail.Order.WorkOrderId, out var summary))
+                                                            {
+                                                                <span class="ml-1 inline-block rounded-full border border-line px-2 py-0.5 text-[11px] @InvoicingClass(summary.InvoicingStatus)"
+                                                                      title="@($"{MoneyExact(summary.InvoicedToDate)} invoiced of {MoneyExact(summary.Value)} · {MoneyExact(summary.RemainingToInvoice)} left to invoice (whole order)")">
+                                                                    @InvoicingLabel(summary.InvoicingStatus)
+                                                                </span>
+                                                            }
+                                                        </td>
                                                         <td class="px-3 py-2 text-right">@Money(line.Line.LineTotal)</td>
                                                         <td class="px-3 py-2 text-right">@Money(line.Line.PaidToDate)</td>
                                                     </tr>
@@ -165,6 +180,29 @@ else
 
     private decimal TotalCommitted => Orders.Sum(detail => detail.Order.Value);
     private decimal TotalPaid => AllLines.Sum(entry => entry.Line.PaidToDate);
+    private decimal TotalInvoiced => summariesByOrder.Values.Sum(summary => summary.InvoicedToDate);
+
+    // Per-order invoiced balances from the linked Xero purchase lines — the same figures
+    // the WO Allocation tab manages. Fetched once per tab entry alongside the orders.
+    private Dictionary<string, WorkOrderInvoiceSummary> summariesByOrder = new(StringComparer.OrdinalIgnoreCase);
+
+    private static string InvoicingLabel(WorkOrderInvoicingStatus status) => status switch
+    {
+        WorkOrderInvoicingStatus.NotInvoiced => "Not invoiced",
+        WorkOrderInvoicingStatus.PartInvoiced => "Part invoiced",
+        WorkOrderInvoicingStatus.FullyInvoiced => "Fully invoiced",
+        _ => "Over invoiced"
+    };
+
+    private static string InvoicingClass(WorkOrderInvoicingStatus status) => status switch
+    {
+        WorkOrderInvoicingStatus.FullyInvoiced => "text-positive",
+        WorkOrderInvoicingStatus.OverInvoiced => "text-negative",
+        _ => "text-content-subtle"
+    };
+
+    private static string MoneyExact(decimal value) =>
+        value.ToString("C2", System.Globalization.CultureInfo.GetCultureInfo("en-GB"));
     private decimal LineCommitted => AllLines.Sum(entry => entry.Line.LineTotal);
     private decimal LinePaid => AllLines.Sum(entry => entry.Line.PaidToDate);
 
@@ -229,6 +267,8 @@ else
         _ = WorkOrders.RefreshAsync(ProjectId, CancellationToken.None);
         await CostCenters.RefreshAsync(CancellationToken.None);
         isLoaded = true;
+        var summaries = await Queries.AskAsync(new ListWorkOrderInvoiceSummaries(ProjectId), CancellationToken.None);
+        summariesByOrder = summaries.ToDictionary(summary => summary.WorkOrderId, StringComparer.OrdinalIgnoreCase);
     }
 
     public void Dispose()

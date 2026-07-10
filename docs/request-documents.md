@@ -50,15 +50,19 @@ All optional: a request without them renders exactly as before.
   Site Manager / Architect. Requires the Graph app permission `Mail.ReadWrite` on the mailbox
   (drafts are created with `POST /users/{mailbox}/messages`, which `Mail.Send` alone does not cover).
 
-Auto-send fires when a request is raised (`RaiseRequest`) or created from an intake email
-(`CreateRequestFromIntake`), provided it is in the `Open` state.
+Auto-drafting fires when a request is raised (`RaiseRequest`) or created from an intake email
+(`CreateRequestFromIntake`), provided it is in the `Open` state. The document email is only ever
+placed in the mailbox's **Drafts** folder — a human reviews and sends it from Outlook. Nothing is
+sent from code, and the request stays `Open` until a response is triaged in.
 
 ## Deployment prerequisites
 
-1. **Graph permission — `Mail.Send` (application).** The app registration used by the worker needs
-   the application permission `Mail.Send` with admin consent, scoped (ideally via an
-   ApplicationAccessPolicy) to the `projects@jewelbb.co.uk` mailbox. Sending uses the existing
-   client-credentials flow; no new secret beyond the mailbox credentials already configured.
+1. **Graph permission — `Mail.ReadWrite` (application).** The app registration used by the worker
+   needs the application permission `Mail.ReadWrite` with admin consent, scoped (ideally via an
+   ApplicationAccessPolicy) to the `projects@jewelbb.co.uk` mailbox. `Mail.Send` is deliberately
+   NOT granted: JPMS only creates drafts, so withholding it guarantees the app cannot send.
+   Drafting uses the existing client-credentials flow; no new secret beyond the mailbox
+   credentials already configured.
 2. **The client secret stays out of source control.** It lives in app settings / Key Vault only
    (`MailboxIntake:ClientSecret`), as today.
 3. **A TrueType font must be resolvable on the host.** The Linux Functions host has no GDI fonts, so

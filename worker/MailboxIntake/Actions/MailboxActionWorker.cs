@@ -14,7 +14,8 @@ namespace Jewel.JPMS.Api.Features.MailboxIntake.Actions;
 
 /// <summary>
 /// Performs the one remaining queued mailbox side-effect out-of-band: rendering a request's document
-/// (RFI etc.) and emailing it to the project's contacts. Best-effort and retried by the queue.
+/// (RFI etc.) and placing it as a pre-filled DRAFT in the mailbox for a human to review and send.
+/// Nothing is ever sent from code. Best-effort and retried by the queue.
 ///
 /// Folder moves and return-to-inbox are no longer done here — in the live-read model the triage
 /// screen performs those moves synchronously in the API against the mailbox.
@@ -55,8 +56,9 @@ public sealed class MailboxActionWorker
     }
 
     /// <summary>
-    /// Renders the request's document (RFI etc.) from the SQL source of truth and emails it as a PDF
-    /// attachment. Recipients resolve through the shared RequestRecipientResolver (request party →
+    /// Renders the request's document (RFI etc.) from the SQL source of truth and creates a Drafts-
+    /// folder email with it attached as a PDF — a human reviews and sends it from the mailbox.
+    /// Recipients resolve through the shared RequestRecipientResolver (request party →
     /// project party → project profile, with the correspondence profile supplying CC/BCC), unless an
     /// ad-hoc override address is supplied (a resend to one person, nothing copied). The same render
     /// path serves the platform download, so the emailed PDF is byte-for-byte the file the triager
@@ -113,11 +115,21 @@ public sealed class MailboxActionWorker
             Cc: recipientSet.Cc.Select(AsGraph).ToArray(),
             Bcc: recipientSet.Bcc.Select(AsGraph).ToArray());
 
-        await _graph.SendMailAsync(outbound, ct);
+        // HUMAN IN THE LOOP: the email is only ever placed in the mailbox's Drafts folder. A person
+        // reviews it in Outlook and presses Send themselves — nothing is sent from code.
+        var draft = await _graph.CreateDraftAsync(outbound, ct);
+        if (draft is null)
+        {
+            _logger.LogWarning(
+                "Request-document draft failed for {Type} {Number}; the queue will retry.",
+                model.TypeShort, model.DisplayNumber);
+            throw new InvalidOperationException(
+                $"Graph draft create failed for request {model.RequestId}; retrying via the queue.");
+        }
 
-        // Record the send on the request's shared activity history (the audit trail the document
-        // renders). This trail is client-facing, so it lists To and CC only — BCC never appears on
-        // any shared surface (it is logged below as a count, nothing more).
+        // Record the drafted document on the request's shared activity history (the audit trail the
+        // document renders). This trail is client-facing, so it lists To and CC only — BCC never
+        // appears on any shared surface (it is logged below as a count, nothing more).
         var recipientList = string.Join(", ", recipientSet.To.Select(r => r.Email));
         if (recipientSet.Cc.Count > 0)
             recipientList += " (copied: " + string.Join(", ", recipientSet.Cc.Select(r => r.Email)) + ")";
@@ -127,20 +139,19 @@ public sealed class MailboxActionWorker
             RequestId = model.RequestId,
             AuthorEmail = _options.Mailbox,
             AuthorName = model.ProjectName,
-            Body = $"{model.TypeShort} {model.DisplayNumber} document issued to {recipientList}.",
+            Body = $"{model.TypeShort} {model.DisplayNumber} document drafted to {recipientList} — awaiting review and send from the mailbox.",
             Visibility = (int)MessageVisibility.Shared,
             PostedAt = DateTimeOffset.UtcNow,
             Direction = (int)MessageDirection.Outbound,
-            SentStatus = (int)MessageSentStatus.Sent
+            SentStatus = (int)MessageSentStatus.Pending
         });
 
-        // First issue moves an Open request to AwaitingResponse; a resend never regresses the status.
-        if (request.Status == (int)RequestStatus.Open)
-            request.Status = (int)RequestStatus.AwaitingResponse;
+        // The request stays Open: the document has only been drafted, not sent. Status moves to
+        // AwaitingResponse when a reply is triaged in (or manually) — never on draft creation.
 
         await _context.SaveChangesAsync(ct);
         _logger.LogInformation(
-            "Issued {Type} {Number} to {ToCount} recipient(s), {CcCount} copied, {BccCount} blind-copied.",
+            "Drafted {Type} {Number} for {ToCount} recipient(s), {CcCount} copied, {BccCount} blind-copied — awaiting human review in the mailbox Drafts folder.",
             model.TypeShort, model.DisplayNumber,
             recipientSet.To.Count, recipientSet.Cc.Count, recipientSet.Bcc.Count);
     }

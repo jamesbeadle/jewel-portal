@@ -61,16 +61,10 @@ public sealed class NullGraphMailClient : IGraphMailClient
         return Task.FromResult(string.Empty);
     }
 
-    public Task SendMailAsync(GraphOutboundMessage message, CancellationToken ct)
+    public Task<GraphDraft?> CreateDraftAsync(GraphOutboundMessage message, CancellationToken ct)
     {
-        _logger.LogWarning("Mailbox intake not configured; skipping Graph sendMail.");
-        return Task.CompletedTask;
-    }
-
-    public Task ReplyAsync(string graphMessageId, string htmlBody, CancellationToken ct)
-    {
-        _logger.LogWarning("Mailbox intake not configured; skipping Graph reply.");
-        return Task.CompletedTask;
+        _logger.LogWarning("Mailbox intake not configured; skipping Graph draft create.");
+        return Task.FromResult<GraphDraft?>(null);
     }
 
     public Task<GraphSubscription> CreateSubscriptionAsync(string notificationUrl, string clientState, DateTimeOffset expiry, CancellationToken ct)

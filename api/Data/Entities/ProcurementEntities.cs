@@ -219,6 +219,12 @@ public sealed class RequestEntity
     // Optional — an EOT can stand alone; never set for other kinds.
     [MaxLength(64)]      public string? RelatedNodRequestId { get; set; }
 
+    // Set when this (General) request was merged into another: the survivor's id and when it
+    // happened. A merged request is closed at the same time and kept purely as the audit trail —
+    // its conversation, items and emails all live on the survivor from then on.
+    [MaxLength(64)]      public string? MergedIntoRequestId { get; set; }
+    public DateTimeOffset? MergedAt { get; set; }
+
     // The unqualified reference stem for this record's mailbox tag. Prefers the human reference;
     // falls back to REQ-NNNN when blank so a stem is always well-formed. Computed, not stored.
     // NB: the actual mailbox tag is project-qualified (references are only unique per project, tags

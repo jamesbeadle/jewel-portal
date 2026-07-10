@@ -95,6 +95,7 @@ public sealed class SetXeroAllocationHandler : ICommandHandler<SetXeroAllocation
         var now = DateTimeOffset.UtcNow;
         foreach (var line in lines)
         {
+            var previousProjectId = line.ProjectId;
             switch (command.Action)
             {
                 case XeroAllocationAction.Allocate:
@@ -138,6 +139,17 @@ public sealed class SetXeroAllocationHandler : ICommandHandler<SetXeroAllocation
                     line.Note = null;
                     break;
             }
+
+            // A work-order link only describes a whole line allocated to the order's
+            // project. Moving the line to another project, re-cutting it as a split,
+            // bucketing, ignoring or resetting it orphans the link — clear it so the
+            // order's invoiced balance never counts a line that left it. Moving between
+            // cost centres within the same project keeps the link.
+            if (line.LinkedWorkOrderId is not null
+                && (command.Action != XeroAllocationAction.Allocate
+                    || line.CostCenterCode is null
+                    || !string.Equals(line.ProjectId, previousProjectId, StringComparison.OrdinalIgnoreCase)))
+                line.LinkedWorkOrderId = null;
         }
 
         await context.SaveChangesAsync(cancellationToken);

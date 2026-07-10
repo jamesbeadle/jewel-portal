@@ -49,6 +49,11 @@
                         {
                             <span class="ml-1.5 inline-flex items-center rounded bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-600">Variation</span>
                         }
+                        @if (record.MergedIntoRequestId is not null)
+                        {
+                            <span class="ml-1.5 inline-flex items-center rounded bg-surface-raised border border-line px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-content-muted"
+                                  title="Merged into another request — its conversation, queries and emails live there now">Merged</span>
+                        }
                     </td>
                     <td class="px-4 py-3 text-content-muted hidden lg:table-cell whitespace-nowrap">@Dash(record.RaisedTo)</td>
                     <td class="px-4 py-3 text-content-subtle hidden xl:table-cell font-mono text-xs">@Dash(record.DrawingRef)</td>

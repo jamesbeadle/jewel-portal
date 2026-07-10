@@ -79,16 +79,23 @@
                                     {
                                         @* Keyed on a nonce so a failed save recreates the element — otherwise the
                                            browser keeps showing the picked work order even though it didn't stick. *@
-                                        <select class="bg-surface border border-line rounded-lg px-2 py-1 text-content text-sm w-48"
+                                        <select class="bg-surface border border-line rounded-lg px-2 py-1 text-content text-sm w-64"
                                                 @key="@($"{line.XeroLedgerLineId}|{linkRevertNonce}")"
                                                 disabled="@linkingLineIds.Contains(line.XeroLedgerLineId)"
-                                                title="The work order this invoice line pays against — unlinked lines count as non-work-order cost of sales"
+                                                title="The work order this invoice line pays against — options that can't take the line's value are disabled; unlinked lines count as non-work-order cost of sales"
                                                 @onchange="e => LinkAsync(entry, e.Value?.ToString())">
                                             <option value="" selected="@(line.LinkedWorkOrderId is null)">Not linked</option>
                                             @foreach (var order in LinkableWorkOrders)
                                             {
-                                                <option value="@order.Order.WorkOrderId" selected="@(line.LinkedWorkOrderId == order.Order.WorkOrderId)">
-                                                    @($"WO-{order.Order.Number:0000} · {order.SubcontractorName}")
+                                                var isCurrent = line.LinkedWorkOrderId == order.Order.WorkOrderId;
+                                                var remaining = RemainingFor(order.Order.WorkOrderId);
+                                                // Mirror the API's hard balance check so doomed picks aren't offered: a
+                                                // positive line must fit the order's remaining balance (plus its own net
+                                                // when re-selecting the order it's already linked to).
+                                                var fits = remaining is null || line.Net <= 0m
+                                                    || line.Net <= remaining.Value + (isCurrent ? Math.Max(line.Net, 0m) : 0m);
+                                                <option value="@order.Order.WorkOrderId" selected="@isCurrent" disabled="@(!fits && !isCurrent)">
+                                                    @($"WO-{order.Order.Number:0000} · {order.SubcontractorName}{(remaining is null ? "" : $" · {MoneyExact(remaining.Value)} left")}")
                                                 </option>
                                             }
                                         </select>
@@ -187,6 +194,10 @@
     private sealed record Entry(string CostCode, CostCentreActualCostLine Line);
 
     private List<Entry> entries = new();
+    // Per-order invoiced balances, fetched with the lines and refreshed after every link
+    // change — the dropdown shows each order's remaining balance and disables orders the
+    // line can't fit into (the API hard-blocks over-invoicing regardless).
+    private Dictionary<string, WorkOrderInvoiceSummary> summariesByOrder = new(StringComparer.OrdinalIgnoreCase);
     private bool loading;
     private string? loadedKey;
     private string? movingLineId;
@@ -224,8 +235,18 @@
             entries.AddRange(lines.Select(line => new Entry(costCode, line)));
         }
         entries = entries.OrderBy(entry => entry.Line.Date ?? DateTime.MaxValue).ToList();
+        await RefreshSummariesAsync();
         loading = false;
     }
+
+    private async Task RefreshSummariesAsync()
+    {
+        var summaries = await Queries.AskAsync(new ListWorkOrderInvoiceSummaries(ProjectId), CancellationToken.None);
+        summariesByOrder = summaries.ToDictionary(summary => summary.WorkOrderId, StringComparer.OrdinalIgnoreCase);
+    }
+
+    private decimal? RemainingFor(string workOrderId) =>
+        summariesByOrder.TryGetValue(workOrderId, out var summary) ? summary.RemainingToInvoice : null;
 
     private void CancelMove()
     {
@@ -238,8 +259,10 @@
     // own centre: on a roll-up, the invoice often sits on a sibling centre of the one
     // the work order is coded to (e.g. timber-windows invoice paying an aluminium-
     // windows order inside a "Windows, doors and glazing" group).
+    // Cancelled orders are omitted — the API refuses links to them.
     private IEnumerable<ProjectWorkOrderDetail> LinkableWorkOrders =>
-        Orders.Where(detail => detail.Lines.Any(line =>
+        Orders.Where(detail => detail.Order.Status != WorkOrderStatus.Cancelled
+                               && detail.Lines.Any(line =>
                 CostCodes.Contains(line.CostCode, StringComparer.OrdinalIgnoreCase)))
             .OrderBy(detail => detail.Order.Number);
 
@@ -259,6 +282,7 @@
                 new LinkXeroLineToWorkOrder(ProjectId, entry.Line.XeroLedgerLineId, newLink), CancellationToken.None);
             var index = entries.FindIndex(candidate => candidate.Line.XeroLedgerLineId == entry.Line.XeroLedgerLineId);
             if (index >= 0) entries[index] = entries[index] with { Line = entries[index].Line with { LinkedWorkOrderId = newLink } };
+            await RefreshSummariesAsync(); // the balances the dropdowns show just moved
             await OnWorkOrderLinkChanged.InvokeAsync();
         }
         catch (CommandFailedException ex)

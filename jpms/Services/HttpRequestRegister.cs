@@ -84,6 +84,13 @@ public sealed class HttpRequestRegister : IRequestRegister
     public Task<RequestMessage> PostMessageAsync(PostRequestMessage command, CancellationToken cancellationToken = default) =>
         commands.SendAsync(command, cancellationToken);
 
+    public async Task<Request> MergeAsync(string survivorRequestId, string mergedRequestId, string projectId, CancellationToken cancellationToken = default)
+    {
+        var survivor = await commands.SendAsync(new MergeRequests(survivorRequestId, mergedRequestId), cancellationToken);
+        await readModel.RefreshAsync(projectId, cancellationToken);
+        return survivor;
+    }
+
     public async Task DeleteAsync(string requestId, string projectId, CancellationToken cancellationToken = default)
     {
         await commands.SendAsync(new DeleteRequest(requestId), cancellationToken);

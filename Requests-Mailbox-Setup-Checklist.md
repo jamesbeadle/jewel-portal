@@ -25,8 +25,10 @@ Triage is **manual** at launch (your decision). LLM-assisted classification can 
    - Single tenant.
 2. **API permissions → Add → Microsoft Graph → Application permissions** (NOT delegated):
    - `Mail.ReadWrite`
-   - `Mail.Send`
-3. **Grant admin consent** for the tenant (one click, once). Confirm the two permissions show "Granted".
+   - (`Mail.Send` is NOT required — and deliberately not granted. JPMS only ever creates drafts;
+     a human reviews and sends every email from the mailbox. Withholding `Mail.Send` means the
+     app *cannot* send even by mistake.)
+3. **Grant admin consent** for the tenant (one click, once). Confirm the permission shows "Granted".
 4. **Certificates & secrets** — create a client secret (or upload a certificate). Record the value immediately; it's shown once.
 5. Record for the Functions app config: **Tenant ID, Client ID, Client secret**.
 

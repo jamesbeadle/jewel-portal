@@ -223,9 +223,11 @@ public sealed class GraphMailClient : IGraphMailClient
         }
     }
 
-    public async Task SendMailAsync(GraphOutboundMessage message, CancellationToken ct)
+    public async Task<GraphDraft?> CreateDraftAsync(GraphOutboundMessage message, CancellationToken ct)
     {
-        var url = $"{GraphBase}/users/{Mailbox}/sendMail";
+        // POST /users/{mailbox}/messages creates the message in the Drafts folder and CANNOT send.
+        // A human reviews the draft in Outlook and presses Send — code never calls /send or /sendMail.
+        var url = $"{GraphBase}/users/{Mailbox}/messages";
 
         static object Recipient(GraphRecipient r) =>
             new { emailAddress = new { address = r.Email, name = r.Name ?? r.Email } };
@@ -257,31 +259,15 @@ public sealed class GraphMailClient : IGraphMailClient
         if (message.Bcc is { Count: > 0 } bcc)
             messageBody["bccRecipients"] = bcc.Select(Recipient).ToArray();
 
-        var payload = new { message = messageBody, saveToSentItems = true };
-        using var response = await SendAsync(HttpMethod.Post, url, JsonContent.Create(payload), ct);
-        _ = response;
-    }
-
-    public async Task ReplyAsync(string graphMessageId, string htmlBody, CancellationToken ct)
-    {
-        // createReply -> draft with a new id, then set the HTML body, then send. This gives full
-        // control of the body while preserving conversation threading.
-        var createUrl = $"{GraphBase}/users/{Mailbox}/messages/{Uri.EscapeDataString(graphMessageId)}/createReply";
-        string draftId;
-        using (var created = await SendAsync(HttpMethod.Post, createUrl, content: null, ct))
-        {
-            await using var stream = await created.Content.ReadAsStreamAsync(ct);
-            using var doc = await JsonDocument.ParseAsync(stream, cancellationToken: ct);
-            draftId = doc.RootElement.GetProperty("id").GetString()
-                ?? throw new InvalidOperationException("Graph createReply did not return a draft id.");
-        }
-
-        var patchUrl = $"{GraphBase}/users/{Mailbox}/messages/{Uri.EscapeDataString(draftId)}";
-        var patchBody = JsonContent.Create(new { body = new { contentType = "HTML", content = htmlBody } });
-        using (await SendAsync(HttpMethod.Patch, patchUrl, patchBody, ct)) { }
-
-        var sendUrl = $"{GraphBase}/users/{Mailbox}/messages/{Uri.EscapeDataString(draftId)}/send";
-        using (await SendAsync(HttpMethod.Post, sendUrl, content: null, ct)) { }
+        using var response = await SendAsync(HttpMethod.Post, url, JsonContent.Create(messageBody), ct);
+        await using var stream = await response.Content.ReadAsStreamAsync(ct);
+        using var doc = await JsonDocument.ParseAsync(stream, cancellationToken: ct);
+        var root = doc.RootElement;
+        var id = root.TryGetProperty("id", out var idEl) ? idEl.GetString() : null;
+        if (string.IsNullOrEmpty(id))
+            return null;
+        var webLink = root.TryGetProperty("webLink", out var wl) ? wl.GetString() : null;
+        return new GraphDraft(id, webLink);
     }
 
     public async Task<GraphSubscription> CreateSubscriptionAsync(

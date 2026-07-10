@@ -103,6 +103,15 @@ public static class CommercialRouteRegistration
             new QueryRoute("/api/projects/{projectId}/cost-centres/{costCode}/actual-costs",
                 query => $"/api/projects/{((ListCostCentreActualCosts)query).ProjectId}/cost-centres/{Uri.EscapeDataString(((ListCostCentreActualCosts)query).CostCode)}/actual-costs"));
 
+        // Work-order invoice allocation — per-order balances and the project-wide queue.
+        queries.Register<ListWorkOrderInvoiceSummaries, IReadOnlyList<WorkOrderInvoiceSummary>>(
+            new QueryRoute("/api/projects/{projectId}/work-order-invoice-summaries",
+                query => $"/api/projects/{((ListWorkOrderInvoiceSummaries)query).ProjectId}/work-order-invoice-summaries"));
+
+        queries.Register<ListProjectCostOfSalesLines, IReadOnlyList<ProjectCostOfSalesLine>>(
+            new QueryRoute("/api/projects/{projectId}/cost-of-sales-lines",
+                query => $"/api/projects/{((ListProjectCostOfSalesLines)query).ProjectId}/cost-of-sales-lines"));
+
         queries.Register<ListValuationClaimsForProject, IReadOnlyList<ValuationClaim>>(
             new QueryRoute("/api/projects/{projectId}/valuation-claims",
                 query => $"/api/projects/{((ListValuationClaimsForProject)query).ProjectId}/valuation-claims"));

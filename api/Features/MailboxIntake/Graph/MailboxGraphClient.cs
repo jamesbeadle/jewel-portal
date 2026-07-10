@@ -118,19 +118,13 @@ public interface IMailboxGraphClient
     /// </summary>
     Task<MailboxDraft?> CreateDraftAsync(MailboxDraftMessage draft, CancellationToken ct);
 
-    /// <summary>
-    /// Send a message from the mailbox (Graph sendMail, saved to Sent Items). Unlike
-    /// <see cref="CreateDraftAsync"/> this SENDS immediately — callers own the human-review step
-    /// before invoking it. Categories are stamped on the sent copy so tag-based reads (e.g. a bid
-    /// package's "JPMS/BPI-0001") can find it. Returns false when the mailbox is unconfigured or
-    /// Graph refuses (e.g. missing Mail.Send application permission).
-    /// </summary>
-    Task<bool> SendMailAsync(MailboxDraftMessage message, CancellationToken ct);
+    // NOTE: there is deliberately NO send method on this interface. Every outbound email is created
+    // as a draft for a human to review and send from the mailbox itself — code never sends.
 }
 
-/// <summary>A new message for the mailbox: placed in Drafts via CreateDraftAsync, or sent via
-/// SendMailAsync. Cc, Bcc and Categories are optional so existing draft-only callers are
-/// unchanged (Cc sits last purely to preserve older positional constructions).</summary>
+/// <summary>A new message for the mailbox, placed in Drafts via CreateDraftAsync. Cc, Bcc and
+/// Categories are optional so existing draft-only callers are unchanged (Cc sits last purely to
+/// preserve older positional constructions).</summary>
 public sealed record MailboxDraftMessage(
     IReadOnlyList<MailboxDraftRecipient> To,
     string Subject,
@@ -191,8 +185,6 @@ public sealed class NullMailboxGraphClient : IMailboxGraphClient
         Task.FromResult<IReadOnlyList<string>>(Array.Empty<string>());
     public Task<MailboxDraft?> CreateDraftAsync(MailboxDraftMessage draft, CancellationToken ct) =>
         Task.FromResult<MailboxDraft?>(null);
-    public Task<bool> SendMailAsync(MailboxDraftMessage message, CancellationToken ct) =>
-        Task.FromResult(false);
 }
 
 /// <summary>Graph REST implementation (HttpClient + app-only token).</summary>
@@ -767,47 +759,6 @@ public sealed class MailboxGraphClient : IMailboxGraphClient
         return new MailboxDraft(id, webLink);
     }
 
-    public async Task<bool> SendMailAsync(MailboxDraftMessage message, CancellationToken ct)
-    {
-        // Graph only accepts attachments up to ~3 MB inline. Anything larger needs the draft route:
-        // create the draft (which streams big files through upload sessions), then send the draft.
-        // Messages with only small attachments use one-call sendMail.
-        var large = message.Attachments.Where(a => a.Content.LongLength > InlineAttachmentLimit).ToList();
-
-        if (large.Count == 0)
-        {
-            // POST /users/{mailbox}/sendMail sends in one call and saves to Sent Items. Categories are
-            // set on the message itself, so the sent copy carries the record tag (e.g. "JPMS/BPI-0001")
-            // without a second round trip.
-            var url = $"{GraphBase}/users/{Mailbox}/sendMail";
-
-            var payload = new Dictionary<string, object?>
-            {
-                ["message"] = BuildMessagePayload(message),
-                ["saveToSentItems"] = true
-            };
-
-            using var content = JsonContent.Create(payload);
-            using var response = await SendAsync(HttpMethod.Post, url, content, ct);
-            if (response.IsSuccessStatusCode) return true;
-
-            _logger.LogWarning("sendMail failed: {Status}. {Detail}",
-                (int)response.StatusCode, await SafeBodyAsync(response, ct));
-            return false;
-        }
-
-        var draft = await CreateDraftAsync(message, ct); // handles the large-attachment upload sessions
-        if (draft is null) return false;
-
-        var sendUrl = $"{GraphBase}/users/{Mailbox}/messages/{Uri.EscapeDataString(draft.Id)}/send";
-        using var sendResponse = await SendAsync(HttpMethod.Post, sendUrl, null, ct);
-        if (sendResponse.IsSuccessStatusCode) return true;
-
-        _logger.LogWarning("Draft send failed: {Status}. {Detail}",
-            (int)sendResponse.StatusCode, await SafeBodyAsync(sendResponse, ct));
-        return false;
-    }
-
     // Streams one >3 MB file onto a draft via Graph's attachment upload session (chunked PUTs to a
     // pre-authenticated URL — no bearer header on the chunks).
     private async Task<bool> UploadLargeAttachmentAsync(string messageId, MailboxDraftAttachment attachment, CancellationToken ct)
@@ -858,7 +809,7 @@ public sealed class MailboxGraphClient : IMailboxGraphClient
         return true;
     }
 
-    // The Graph message shape shared by draft-create and sendMail.
+    // The Graph message shape used by draft-create.
     private static Dictionary<string, object?> BuildMessagePayload(MailboxDraftMessage message)
     {
         static Dictionary<string, object?> Recipient(MailboxDraftRecipient r) => new()

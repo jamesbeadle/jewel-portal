@@ -134,6 +134,12 @@ public static class RequestsRouteRegistration
             new CommandRoute("POST", "/api/requests/{requestId}/messages",
                 command => $"/api/requests/{((PostRequestMessage)command).RequestId}/messages"));
 
+        // Pre-RFI merge: fold one General request into another. The survivor is the route's
+        // request; the merged-away request id travels in the body.
+        commands.Register<MergeRequests, Request>(
+            new CommandRoute("POST", "/api/requests/{requestId}/merge",
+                command => $"/api/requests/{((MergeRequests)command).SurvivorRequestId}/merge"));
+
         commands.Register<DeleteRequest, Acknowledgement>(
             new CommandRoute("DELETE", "/api/requests/{requestId}",
                 command => $"/api/requests/{((DeleteRequest)command).RequestId}"));

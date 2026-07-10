@@ -1,0 +1,408 @@
+@page "/projects/{ProjectId}/work-order-allocation"
+@using Jewel.JPMS.Contracts.Commercial
+@using Jewel.JPMS.Contracts.Procurement
+@using Jewel.JPMS.Features.Procurement
+@using Jewel.JPMS.Models
+@inject AuthService Auth
+@inject SessionService Session
+@inject ProjectWorkOrdersReadModel WorkOrders
+@inject IQueryClient Queries
+@inject ICommandSender Commands
+@inject NavigationManager Nav
+@implements IDisposable
+
+<PageTitle>WO Allocation · JPMS</PageTitle>
+
+@if (!isLoaded)
+{
+    <section class="px-6 md:px-8 py-12 text-content-subtle text-sm">Loading…</section>
+}
+else if (!Session.IsApproved)
+{
+    <RequestAccessView Email="@Auth.CurrentUser!.Email" DisplayName="@Auth.CurrentUser.DisplayName" />
+}
+else
+{
+    <ProjectPageShell ProjectId="@ProjectId" ActiveTab="work-order-allocation">
+        <h2 class="text-lg font-semibold text-content mb-1">Work order invoice allocation</h2>
+        <p class="text-sm text-content-subtle mb-4">
+            Tie each Xero purchase line to the work order it pays against. A work order can never be
+            invoiced past its value; unlinked lines count as non-work-order cost of sales on the
+            Financials tab.
+        </p>
+
+        @* ── Headline figures ─────────────────────────────────────────────── *@
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+            <div class="rounded-xl border border-line bg-surface px-4 py-3">
+                <p class="text-[11px] uppercase tracking-wider text-content-subtle font-semibold">Cost of sales</p>
+                <p class="text-lg font-semibold text-content">@Money(AllLines.Sum(line => line.Net))</p>
+            </div>
+            <div class="rounded-xl border border-line bg-surface px-4 py-3">
+                <p class="text-[11px] uppercase tracking-wider text-content-subtle font-semibold">Linked to work orders</p>
+                <p class="text-lg font-semibold text-content">@Money(AllLines.Where(line => line.LinkedWorkOrderId is not null).Sum(line => line.Net))</p>
+            </div>
+            <div class="rounded-xl border border-line bg-surface px-4 py-3">
+                <p class="text-[11px] uppercase tracking-wider text-content-subtle font-semibold">Not linked</p>
+                <p class="text-lg font-semibold @(UnlinkedTotal == 0m ? "text-content" : "text-negative")">@Money(UnlinkedTotal)</p>
+            </div>
+            <div class="rounded-xl border border-line bg-surface px-4 py-3">
+                <p class="text-[11px] uppercase tracking-wider text-content-subtle font-semibold">Orders fully invoiced</p>
+                <p class="text-lg font-semibold text-content">@(summaries.Count(s => s.InvoicingStatus is WorkOrderInvoicingStatus.FullyInvoiced or WorkOrderInvoicingStatus.OverInvoiced)) of @summaries.Count</p>
+            </div>
+        </div>
+
+        @* ── Work orders and their invoiced balances ──────────────────────── *@
+        <h3 class="text-sm font-semibold text-content mb-2">Work orders</h3>
+        @if (summaries.Count == 0)
+        {
+            <p class="text-sm text-content-subtle italic mb-6">No work orders recorded for this project yet.</p>
+        }
+        else
+        {
+            <div class="rounded-xl border border-line bg-surface overflow-x-auto mb-6">
+                <table class="w-full text-sm border-collapse">
+                    <thead class="bg-surface-raised border-b border-line">
+                        <tr class="text-left text-[11px] uppercase tracking-wider text-content-subtle font-semibold">
+                            <th class="px-4 py-2.5 w-[90px]">Order</th>
+                            <th class="px-4 py-2.5 min-w-[180px]">Supplier</th>
+                            <th class="px-4 py-2.5">Title</th>
+                            <th class="px-4 py-2.5 whitespace-nowrap">Invoicing</th>
+                            <th class="px-4 py-2.5 text-right whitespace-nowrap">Value</th>
+                            <th class="px-4 py-2.5 text-right whitespace-nowrap">Invoiced</th>
+                            <th class="px-4 py-2.5 text-right whitespace-nowrap">Left to invoice</th>
+                            <th class="px-4 py-2.5 w-[130px]"><span class="sr-only">Progress</span></th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-line">
+                        @foreach (var summary in summaries)
+                        {
+                            <tr class="cursor-pointer hover:bg-surface-raised" @onclick="() => ToggleOrder(summary.WorkOrderId)">
+                                <td class="px-4 py-2.5 font-mono text-[11px] text-content-subtle whitespace-nowrap">
+                                    <span class="inline-block w-4">@(expandedOrderIds.Contains(summary.WorkOrderId) ? "▾" : "▸")</span>@($"WO-{summary.Number:0000}")
+                                </td>
+                                <td class="px-4 py-2.5 whitespace-nowrap">@summary.SubcontractorName</td>
+                                <td class="px-4 py-2.5 text-content-muted">@summary.Title</td>
+                                <td class="px-4 py-2.5 whitespace-nowrap">@InvoicingPill(summary)</td>
+                                <td class="px-4 py-2.5 text-right whitespace-nowrap">@Money(summary.Value)</td>
+                                <td class="px-4 py-2.5 text-right whitespace-nowrap">@Money(summary.InvoicedToDate)</td>
+                                <td class="px-4 py-2.5 text-right whitespace-nowrap @(summary.RemainingToInvoice < 0m ? "text-negative font-medium" : "text-content")">@Money(summary.RemainingToInvoice)</td>
+                                <td class="px-4 py-2.5">
+                                    <div class="h-1.5 rounded-full bg-surface-raised border border-line overflow-hidden" title="@ProgressTitle(summary)">
+                                        <div class="h-full @(summary.InvoicingStatus == WorkOrderInvoicingStatus.OverInvoiced ? "bg-negative/80" : "bg-accent")"
+                                             style="width: @(ProgressPercent(summary))%"></div>
+                                    </div>
+                                </td>
+                            </tr>
+                            @if (expandedOrderIds.Contains(summary.WorkOrderId))
+                            {
+                                <tr>
+                                    <td colspan="8" class="px-4 pb-4 pt-1 bg-surface-raised/50">
+                                        @{ var linkedLines = LinesLinkedTo(summary.WorkOrderId); }
+                                        @if (linkedLines.Count == 0)
+                                        {
+                                            <p class="text-xs text-content-subtle italic px-3 py-2">No invoice lines linked to this order yet.</p>
+                                        }
+                                        else
+                                        {
+                                            <table class="w-full text-sm border-collapse">
+                                                <thead>
+                                                    <tr class="text-left text-[11px] uppercase tracking-wider text-content-subtle font-semibold border-b border-line">
+                                                        <th class="px-3 py-2 whitespace-nowrap">Date</th>
+                                                        <th class="px-3 py-2">Supplier</th>
+                                                        <th class="px-3 py-2 whitespace-nowrap">Invoice</th>
+                                                        <th class="px-3 py-2">Description</th>
+                                                        <th class="px-3 py-2 whitespace-nowrap">Centre</th>
+                                                        <th class="px-3 py-2 text-right whitespace-nowrap">Net £</th>
+                                                        <th class="px-3 py-2"><span class="sr-only">Unlink</span></th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody class="divide-y divide-line">
+                                                    @foreach (var line in linkedLines)
+                                                    {
+                                                        <tr>
+                                                            <td class="px-3 py-2 whitespace-nowrap text-content-muted">@(line.Date?.ToString("dd MMM yyyy") ?? "—")</td>
+                                                            <td class="px-3 py-2">@line.Supplier</td>
+                                                            <td class="px-3 py-2 whitespace-nowrap text-content-muted">@line.InvoiceNumber</td>
+                                                            <td class="px-3 py-2 text-content-muted">@line.Description</td>
+                                                            <td class="px-3 py-2 font-mono text-[11px] text-content-subtle whitespace-nowrap">@line.CostCode</td>
+                                                            <td class="px-3 py-2 text-right whitespace-nowrap @(line.Net < 0m ? "text-negative" : "")">@MoneyExact(line.Net)</td>
+                                                            <td class="px-3 py-2 text-right whitespace-nowrap">
+                                                                <button type="button" disabled="@busyLineIds.Contains(line.XeroLedgerLineId)"
+                                                                        class="text-xs font-medium text-content-subtle hover:text-content underline underline-offset-4"
+                                                                        @onclick="() => LinkAsync(line, null)" @onclick:stopPropagation="true">Unlink</button>
+                                                            </td>
+                                                        </tr>
+                                                    }
+                                                </tbody>
+                                            </table>
+                                        }
+                                    </td>
+                                </tr>
+                            }
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+
+        @* ── The invoice-line queue ───────────────────────────────────────── *@
+        <div class="flex items-center gap-3 mb-2">
+            <h3 class="text-sm font-semibold text-content">Invoice lines</h3>
+            <div class="flex items-center gap-1 text-xs">
+                @foreach (var (filter, label) in FilterOptions)
+                {
+                    <button type="button"
+                            class="@(queueFilter == filter
+                                       ? "rounded-full border border-accent px-2.5 py-0.5 text-content font-medium"
+                                       : "rounded-full border border-line px-2.5 py-0.5 text-content-subtle hover:text-content")"
+                            @onclick="() => queueFilter = filter">@label</button>
+                }
+            </div>
+        </div>
+
+        @if (QueueLines.Count == 0)
+        {
+            <p class="text-sm text-content-subtle italic">
+                @(queueFilter == QueueFilter.Unlinked
+                    ? "Every allocated purchase line is linked to a work order — nothing left to do here."
+                    : "No purchase lines to show.")
+            </p>
+        }
+        else
+        {
+            <div class="rounded-xl border border-line bg-surface overflow-x-auto">
+                <table class="w-full text-sm border-collapse">
+                    <thead class="bg-surface-raised border-b border-line">
+                        <tr class="text-left text-[11px] uppercase tracking-wider text-content-subtle font-semibold">
+                            <th class="px-4 py-2.5 whitespace-nowrap">Date</th>
+                            <th class="px-4 py-2.5">Supplier</th>
+                            <th class="px-4 py-2.5 whitespace-nowrap">Invoice</th>
+                            <th class="px-4 py-2.5">Description</th>
+                            <th class="px-4 py-2.5 whitespace-nowrap">Centre</th>
+                            <th class="px-4 py-2.5 text-right whitespace-nowrap">Net £</th>
+                            <th class="px-4 py-2.5 whitespace-nowrap">Work Order</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-line">
+                        @foreach (var line in QueueLines)
+                        {
+                            <tr>
+                                <td class="px-4 py-2.5 whitespace-nowrap text-content-muted">@(line.Date?.ToString("dd MMM yyyy") ?? "—")</td>
+                                <td class="px-4 py-2.5">@line.Supplier</td>
+                                <td class="px-4 py-2.5 whitespace-nowrap text-content-muted">@line.InvoiceNumber</td>
+                                <td class="px-4 py-2.5 text-content-muted">
+                                    @line.Description
+                                    @if (line.IsSplit)
+                                    {
+                                        <span class="ml-1.5 text-[10px] uppercase tracking-wider font-semibold border border-line rounded px-1 py-0.5"
+                                              title="This centre's share of a line split across several cost centres">Split</span>
+                                    }
+                                </td>
+                                <td class="px-4 py-2.5 font-mono text-[11px] text-content-subtle whitespace-nowrap">@line.CostCode</td>
+                                <td class="px-4 py-2.5 text-right whitespace-nowrap @(line.Net < 0m ? "text-negative" : "text-content")">@MoneyExact(line.Net)</td>
+                                <td class="px-4 py-2.5 whitespace-nowrap">
+                                    @if (line.IsSplit)
+                                    {
+                                        <span class="text-xs text-content-subtle" title="Split lines can't be linked to a work order — re-cut them as a whole-line allocation first">—</span>
+                                    }
+                                    else
+                                    {
+                                        @* Keyed on a nonce so a failed save recreates the element — otherwise the
+                                           browser keeps showing the picked work order even though it didn't stick. *@
+                                        <select class="bg-surface border border-line rounded-lg px-2 py-1 text-content text-sm w-64"
+                                                @key="@($"{line.XeroLedgerLineId}|{revertNonce}")"
+                                                disabled="@busyLineIds.Contains(line.XeroLedgerLineId)"
+                                                title="The work order this invoice line pays against — options that can't take the line's value are disabled"
+                                                @onchange="e => LinkAsync(line, e.Value?.ToString())">
+                                            <option value="" selected="@(line.LinkedWorkOrderId is null)">Not linked</option>
+                                            @{ var (matching, others) = OptionsFor(line); }
+                                            @if (matching.Count > 0)
+                                            {
+                                                <optgroup label="@($"Coded to {line.CostCode}")">
+                                                    @foreach (var option in matching) { @OptionFor(line, option) }
+                                                </optgroup>
+                                            }
+                                            @if (others.Count > 0)
+                                            {
+                                                <optgroup label="Other work orders">
+                                                    @foreach (var option in others) { @OptionFor(line, option) }
+                                                </optgroup>
+                                            }
+                                        </select>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                    <tfoot class="border-t-2 border-line-strong bg-surface-raised">
+                        <tr class="font-semibold text-content">
+                            <td class="px-4 py-2.5" colspan="5">Total shown</td>
+                            <td class="px-4 py-2.5 text-right whitespace-nowrap">@MoneyExact(QueueLines.Sum(line => line.Net))</td>
+                            <td class="px-4 py-2.5"></td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        }
+
+        @if (linkError is not null)
+        {
+            <p class="text-sm text-negative mt-3">@linkError</p>
+        }
+    </ProjectPageShell>
+}
+
+@code {
+    [Parameter] public string ProjectId { get; set; } = "";
+
+    private enum QueueFilter { Unlinked, Linked, All }
+
+    private static readonly (QueueFilter Filter, string Label)[] FilterOptions =
+    {
+        (QueueFilter.Unlinked, "Unlinked"),
+        (QueueFilter.Linked, "Linked"),
+        (QueueFilter.All, "All")
+    };
+
+    private bool isLoaded;
+    private List<WorkOrderInvoiceSummary> summaries = new();
+    private List<ProjectCostOfSalesLine> AllLines = new();
+    private QueueFilter queueFilter = QueueFilter.Unlinked;
+    private readonly HashSet<string> expandedOrderIds = new(StringComparer.OrdinalIgnoreCase);
+    // Lines whose link is being saved — only those rows' controls disable.
+    private readonly HashSet<string> busyLineIds = new();
+    private string? linkError;
+    // Bumped when a save fails, recreating the selects so they fall back to the stored link.
+    private int revertNonce;
+
+    private decimal UnlinkedTotal => AllLines.Where(line => line.LinkedWorkOrderId is null).Sum(line => line.Net);
+
+    private List<ProjectCostOfSalesLine> QueueLines => queueFilter switch
+    {
+        QueueFilter.Unlinked => AllLines.Where(line => line.LinkedWorkOrderId is null).ToList(),
+        QueueFilter.Linked => AllLines.Where(line => line.LinkedWorkOrderId is not null).ToList(),
+        _ => AllLines
+    };
+
+    // Split shares of one ledger line all carry the same link, so a linked split would
+    // repeat per share — the WO drill-down dedupes by ledger line id.
+    private List<ProjectCostOfSalesLine> LinesLinkedTo(string workOrderId) =>
+        AllLines.Where(line => string.Equals(line.LinkedWorkOrderId, workOrderId, StringComparison.OrdinalIgnoreCase))
+            .GroupBy(line => line.XeroLedgerLineId, StringComparer.OrdinalIgnoreCase)
+            .Select(group => group.First())
+            .OrderBy(line => line.Date ?? DateTime.MaxValue)
+            .ToList();
+
+    // The dropdown offers live orders whose lines are coded to the invoice line's centre
+    // first (the natural match), then everything else under a separate group. Cancelled
+    // orders are omitted — the API refuses links to them.
+    private (List<WorkOrderInvoiceSummary> Matching, List<WorkOrderInvoiceSummary> Others) OptionsFor(ProjectCostOfSalesLine line)
+    {
+        var codesByOrder = WorkOrders.Current(ProjectId)
+            .ToDictionary(detail => detail.Order.WorkOrderId,
+                detail => detail.Lines.Select(orderLine => orderLine.CostCode).ToHashSet(StringComparer.OrdinalIgnoreCase),
+                StringComparer.OrdinalIgnoreCase);
+
+        var live = summaries.Where(summary => summary.Status != WorkOrderStatus.Cancelled).ToList();
+        var matching = live.Where(summary =>
+                codesByOrder.TryGetValue(summary.WorkOrderId, out var codes) && codes.Contains(line.CostCode))
+            .ToList();
+        var others = live.Except(matching).ToList();
+        return (matching, others);
+    }
+
+    private RenderFragment OptionFor(ProjectCostOfSalesLine line, WorkOrderInvoiceSummary option) => __builder =>
+    {
+        var isCurrent = string.Equals(line.LinkedWorkOrderId, option.WorkOrderId, StringComparison.OrdinalIgnoreCase);
+        // Mirror the API's hard balance check so doomed picks aren't offered: a positive
+        // line must fit the order's remaining balance (plus its own net when re-selecting
+        // the order it's already linked to).
+        var available = option.RemainingToInvoice + (isCurrent ? Math.Max(line.Net, 0m) : 0m);
+        var fits = line.Net <= 0m || line.Net <= available;
+        <option value="@option.WorkOrderId" selected="@isCurrent" disabled="@(!fits && !isCurrent)">
+            @($"WO-{option.Number:0000} · {option.SubcontractorName} · {MoneyExact(option.RemainingToInvoice)} left")
+        </option>
+    };
+
+    private async Task LinkAsync(ProjectCostOfSalesLine line, string? workOrderId)
+    {
+        if (!busyLineIds.Add(line.XeroLedgerLineId)) return;
+        var newLink = string.IsNullOrEmpty(workOrderId) ? null : workOrderId;
+        if (newLink == line.LinkedWorkOrderId)
+        {
+            busyLineIds.Remove(line.XeroLedgerLineId);
+            return;
+        }
+        linkError = null;
+        try
+        {
+            await Commands.SendAsync(new LinkXeroLineToWorkOrder(ProjectId, line.XeroLedgerLineId, newLink), CancellationToken.None);
+            await RefreshAsync();
+        }
+        catch (CommandFailedException ex)
+        {
+            linkError = $"Couldn't link this line: {ex.Message}";
+            revertNonce++; // snap the dropdown back to the stored link — the save didn't happen
+        }
+        finally
+        {
+            busyLineIds.Remove(line.XeroLedgerLineId);
+        }
+    }
+
+    private async Task RefreshAsync()
+    {
+        var summariesTask = Queries.AskAsync(new ListWorkOrderInvoiceSummaries(ProjectId), CancellationToken.None);
+        var linesTask = Queries.AskAsync(new ListProjectCostOfSalesLines(ProjectId), CancellationToken.None);
+        summaries = (await summariesTask).ToList();
+        AllLines = (await linesTask).ToList();
+    }
+
+    private void ToggleOrder(string workOrderId)
+    {
+        if (!expandedOrderIds.Remove(workOrderId)) expandedOrderIds.Add(workOrderId);
+    }
+
+    private RenderFragment InvoicingPill(WorkOrderInvoiceSummary summary) => __builder =>
+    {
+        var (label, classes) = summary.InvoicingStatus switch
+        {
+            WorkOrderInvoicingStatus.NotInvoiced => ("Not invoiced", "border-line text-content-subtle"),
+            WorkOrderInvoicingStatus.PartInvoiced => ("Part invoiced", "border-line text-content"),
+            WorkOrderInvoicingStatus.FullyInvoiced => ("Fully invoiced", "border-line text-positive"),
+            _ => ("Over invoiced", "border-line text-negative")
+        };
+        <span class="inline-block rounded-full border px-2 py-0.5 text-[11px] @classes" title="@ProgressTitle(summary)">@label</span>
+    };
+
+    private string ProgressTitle(WorkOrderInvoiceSummary summary) =>
+        $"{MoneyExact(summary.InvoicedToDate)} invoiced of {MoneyExact(summary.Value)} · {MoneyExact(summary.RemainingToInvoice)} left · {summary.LinkedLineCount} line{(summary.LinkedLineCount == 1 ? "" : "s")}";
+
+    private static int ProgressPercent(WorkOrderInvoiceSummary summary) =>
+        summary.Value <= 0m ? (summary.InvoicedToDate > 0m ? 100 : 0)
+            : (int)Math.Clamp(Math.Round(summary.InvoicedToDate / summary.Value * 100m), 0, 100);
+
+    private static string Money(decimal value) =>
+        value.ToString(value == Math.Truncate(value) ? "C0" : "C2",
+            System.Globalization.CultureInfo.GetCultureInfo("en-GB"));
+
+    private static string MoneyExact(decimal value) =>
+        value.ToString("C2", System.Globalization.CultureInfo.GetCultureInfo("en-GB"));
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Session.EnsureLoadedAsync();
+        if (!Auth.IsSignedIn) { Nav.NavigateTo("/login", forceLoad: true); return; }
+        WorkOrders.OnChanged += StateHasChanged;
+        // Refresh once per tab entry (stale-while-revalidate, per the front-end
+        // data-loading convention) — the read model backs the dropdown's centre matching.
+        _ = WorkOrders.RefreshAsync(ProjectId, CancellationToken.None);
+        await RefreshAsync();
+        isLoaded = true;
+    }
+
+    public void Dispose()
+    {
+        WorkOrders.OnChanged -= StateHasChanged;
+    }
+}

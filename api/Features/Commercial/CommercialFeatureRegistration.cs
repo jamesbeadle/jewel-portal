@@ -68,6 +68,12 @@ public static class CommercialFeatureRegistration
         services.AddScoped<IQueryHandler<ListValuationLinesForProject, IReadOnlyList<ValuationLineItem>>, ListValuationLinesForProjectHandler>();
         services.AddScoped<IQueryHandler<GetProjectFinancialSummary, IReadOnlyList<ProjectFinancialSummaryRow>>, GetProjectFinancialSummaryHandler>();
         services.AddScoped<IQueryHandler<ListCostCentreActualCosts, IReadOnlyList<CostCentreActualCostLine>>, ListCostCentreActualCostsHandler>();
+
+        // Work-order invoice allocation — per-order invoiced balances and the
+        // project-wide cost-of-sales queue behind the WO Allocation tab.
+        services.AddScoped<IQueryHandler<ListWorkOrderInvoiceSummaries, IReadOnlyList<WorkOrderInvoiceSummary>>, ListWorkOrderInvoiceSummariesHandler>();
+        services.AddScoped<IQueryHandler<ListProjectCostOfSalesLines, IReadOnlyList<ProjectCostOfSalesLine>>, ListProjectCostOfSalesLinesHandler>();
+
         services.AddScoped<IQueryHandler<ListValuationClaimsForProject, IReadOnlyList<ValuationClaim>>, ListValuationClaimsForProjectHandler>();
         services.AddScoped<IQueryHandler<ListClaimLines, IReadOnlyList<ClaimLine>>, ListClaimLinesHandler>();
 

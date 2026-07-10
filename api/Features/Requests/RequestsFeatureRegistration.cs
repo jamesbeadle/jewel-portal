@@ -83,6 +83,12 @@ public static class RequestsFeatureRegistration
         services.AddScoped<PostRequestMessageAuthorisation>();
         services.AddScoped<PostRequestMessageValidation>();
 
+        // Pre-RFI merge: fold one General request into another (survivor keeps its identity;
+        // conversation, items and emails follow; the merged request closes with an audit link).
+        services.AddScoped<ICommandHandler<MergeRequests, Request>, MergeRequestsHandler>();
+        services.AddScoped<MergeRequestsAuthorisation>();
+        services.AddScoped<MergeRequestsValidation>();
+
         services.AddScoped<ICommandHandler<DeleteRequest, Acknowledgement>, DeleteRequestHandler>();
         services.AddScoped<DeleteRequestAuthorisation>();
         services.AddScoped<DeleteRequestValidation>();

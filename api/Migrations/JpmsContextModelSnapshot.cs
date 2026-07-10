@@ -513,6 +513,13 @@ namespace Jewel.JPMS.Api.Migrations
                         .HasMaxLength(450)
                         .HasColumnType("nvarchar(450)");
 
+                    b.Property<DateTimeOffset?>("MergedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("MergedIntoRequestId")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
                     b.Property<int>("Number")
                         .HasColumnType("int");
 

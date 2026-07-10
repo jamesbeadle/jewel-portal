@@ -47,18 +47,57 @@ else
             }
         </div>
 
-        @if (CanDraftEmail && SelectedCount > 0)
+        @if (CanDraftEmail && SelectedRfis.Count > 0)
         {
             <div class="rounded-xl border border-line bg-surface px-4 py-3 mb-4">
                 <div class="flex flex-wrap items-center gap-3">
-                    <span class="text-sm font-medium text-content">@SelectedCount RFI@(SelectedCount == 1 ? "" : "s") selected</span>
+                    <span class="text-sm font-medium text-content">@SelectedRfis.Count RFI@(SelectedRfis.Count == 1 ? "" : "s") selected</span>
                     <button type="button" class="btn-primary" disabled="@preparingDrafts" @onclick="PrepareSelectedDrafts">
-                        @(preparingDrafts ? "Preparing drafts…" : $"Prepare email drafts ({SelectedCount})")
+                        @(preparingDrafts ? "Preparing drafts…" : $"Prepare email drafts ({SelectedRfis.Count})")
                     </button>
                     <button type="button" class="btn-secondary" disabled="@preparingDrafts" @onclick="ClearSelection">Clear selection</button>
                 </div>
                 <p class="text-xs text-content-subtle mt-2">Creates one draft per RFI in the projects mailbox — PDF attached, To/CC/BCC pre-filled from the correspondence profile. Review and send each from Outlook; nothing is sent from here.</p>
             </div>
+        }
+
+        @if (CanMerge && SelectedGenerals.Count > 0)
+        {
+            <div class="rounded-xl border border-line bg-surface px-4 py-3 mb-4">
+                @if (SelectedGenerals.Count == 2)
+                {
+                    <div class="flex flex-wrap items-center gap-3">
+                        <span class="text-sm font-medium text-content">Merge 2 general requests — keep:</span>
+                        @foreach (var record in SelectedGenerals)
+                        {
+                            <label class="flex items-center gap-1.5 text-sm text-content cursor-pointer">
+                                <input type="radio" name="merge-survivor" class="cursor-pointer"
+                                       checked="@(SurvivorId == record.RequestId)"
+                                       @onchange="() => mergeSurvivorId = record.RequestId" />
+                                <span class="font-mono text-xs text-content-muted">@RefLabel(record)</span>
+                                <span>@record.Title</span>
+                            </label>
+                        }
+                        <button type="button" class="btn-primary" disabled="@merging" @onclick="MergeSelected">
+                            @(merging ? "Merging…" : "Merge")
+                        </button>
+                    </div>
+                    <p class="text-xs text-content-subtle mt-2">The kept request absorbs the other's description, conversation, itemised queries and linked emails. The other request closes with a "merged into" link — it stays under Closed for the audit trail and is never counted as open.</p>
+                }
+                else
+                {
+                    <p class="text-sm text-content">@SelectedGenerals.Count general request@(SelectedGenerals.Count == 1 ? "" : "s") selected — select exactly 2 to merge them.</p>
+                }
+            </div>
+        }
+
+        @if (mergeError is not null)
+        {
+            <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-4">@mergeError</p>
+        }
+        @if (mergeResult is not null)
+        {
+            <p class="rounded-lg border border-line bg-surface px-3 py-2 text-sm text-emerald-600 mb-4">@mergeResult</p>
         }
 
         @if (draftBatchError is not null)
@@ -107,8 +146,8 @@ else
         else
         {
             <RequestTable Records="FilteredRecords" ProjectId="@ProjectId"
-                          SelectionEnabled="CanDraftEmail"
-                          RowSelectable="IsRfi"
+                          SelectionEnabled="@(CanDraftEmail || CanMerge)"
+                          RowSelectable="IsSelectableRow"
                           SelectedIds="selectedIds"
                           OnToggleSelect="ToggleSelect"
                           OnToggleSelectAll="ToggleSelectAll" />
@@ -135,36 +174,53 @@ else
     private void OpenRaiseDialog() => raiseDialogOpen = true;
     private void CloseRaiseDialog() => raiseDialogOpen = false;
 
-    // ---- Bulk email drafts -------------------------------------------------------------------
-    // Selection is limited to RFIs (a General request has no official document to send yet) and
-    // survives filter/tab switches within the page, so someone can tick RFIs across views before
-    // drafting the lot in one go.
+    // ---- Bulk selection ----------------------------------------------------------------------
+    // One selection set serves two bulk actions: email drafts (RFIs — a General request has no
+    // official document to send yet) and pre-RFI merging (open General requests). Selection
+    // survives filter/tab switches within the page, so someone can tick rows across views.
 
     private readonly HashSet<string> selectedIds = new();
     private bool preparingDrafts;
     private string? draftBatchError;
     private RequestEmailDraftBatch? draftBatch;
 
-    private int SelectedCount => selectedIds.Count;
-
     // Mirrors PrepareRequestEmailDraftsAuthorisation server-side (directors, project managers,
     // site managers and architects; admins carry every role server-side).
     private bool CanDraftEmail => Session.AvailableRoles.Any(role =>
         role is Role.Admin or Role.ManagingDirector or Role.ProjectManager or Role.SiteManager or Role.Architect);
 
+    // Mirrors MergeRequestsAuthorisation server-side (admins, directors and project managers).
+    private bool CanMerge => Session.AvailableRoles.Any(role =>
+        role is Role.Admin or Role.ManagingDirector or Role.ProjectManager);
+
     private static bool IsRfi(Request record) => record.Kind == RequestType.Rfi;
+
+    // Open General requests that haven't already been merged away — the merge candidates.
+    private static bool IsMergeableGeneral(Request record) =>
+        record.Kind == RequestType.General
+        && record.MergedIntoRequestId is null
+        && record.Status is not RequestStatus.Closed;
+
+    private bool IsSelectableRow(Request record) =>
+        (CanDraftEmail && IsRfi(record)) || (CanMerge && IsMergeableGeneral(record));
+
+    private List<Request> SelectedRfis =>
+        AllRecords.Where(r => selectedIds.Contains(r.RequestId) && IsRfi(r)).ToList();
+
+    private List<Request> SelectedGenerals =>
+        AllRecords.Where(r => selectedIds.Contains(r.RequestId) && IsMergeableGeneral(r)).ToList();
 
     private void ToggleSelect(Request record)
     {
-        if (!IsRfi(record)) return;
+        if (!IsSelectableRow(record)) return;
         if (!selectedIds.Remove(record.RequestId)) selectedIds.Add(record.RequestId);
     }
 
-    // The header checkbox acts on the RFIs currently shown: ticking it adds them all, unticking
-    // removes them — without touching selections made under other filters.
+    // The header checkbox acts on the selectable rows currently shown: ticking it adds them all,
+    // unticking removes them — without touching selections made under other filters.
     private void ToggleSelectAll(bool select)
     {
-        var visible = FilteredRecords.Where(IsRfi).Select(r => r.RequestId).ToList();
+        var visible = FilteredRecords.Where(IsSelectableRow).Select(r => r.RequestId).ToList();
         if (select) selectedIds.UnionWith(visible);
         else selectedIds.ExceptWith(visible);
     }
@@ -174,6 +230,58 @@ else
         selectedIds.Clear();
         draftBatch = null;
         draftBatchError = null;
+        mergeSurvivorId = null;
+        mergeError = null;
+        mergeResult = null;
+    }
+
+    // ---- Pre-RFI merge -----------------------------------------------------------------------
+    // Exactly two selected General requests can be combined: the chosen survivor keeps its
+    // reference/title and absorbs the other's description, conversation, items and emails; the
+    // other closes with a "merged into" audit link (visible under Closed, never counted as open).
+
+    private string? mergeSurvivorId;
+    private bool merging;
+    private string? mergeError;
+    private string? mergeResult;
+
+    private string? SurvivorId =>
+        SelectedGenerals.Any(r => r.RequestId == mergeSurvivorId)
+            ? mergeSurvivorId
+            : SelectedGenerals.FirstOrDefault()?.RequestId;
+
+    private static string RefLabel(Request record) =>
+        !string.IsNullOrWhiteSpace(record.Reference) ? record.Reference
+        : record.DisplayNumber.Length > 0 ? record.DisplayNumber
+        : "(no ref)";
+
+    private async Task MergeSelected()
+    {
+        var generals = SelectedGenerals;
+        if (merging || generals.Count != 2) return;
+
+        var survivor = generals.FirstOrDefault(r => r.RequestId == SurvivorId) ?? generals[0];
+        var mergedAway = generals.First(r => r.RequestId != survivor.RequestId);
+
+        merging = true;
+        mergeError = null;
+        mergeResult = null;
+        try
+        {
+            await RequestRegister.MergeAsync(survivor.RequestId, mergedAway.RequestId, ProjectId);
+            mergeResult = $"{RefLabel(mergedAway)} merged into {RefLabel(survivor)} — its conversation, queries and emails now live there.";
+            selectedIds.Remove(survivor.RequestId);
+            selectedIds.Remove(mergedAway.RequestId);
+            mergeSurvivorId = null;
+        }
+        catch (Exception ex)
+        {
+            mergeError = ex.Message;
+        }
+        finally
+        {
+            merging = false;
+        }
     }
 
     private string LabelFor(RequestEmailDraftOutcome outcome) =>
@@ -183,13 +291,14 @@ else
 
     private async Task PrepareSelectedDrafts()
     {
-        if (preparingDrafts || selectedIds.Count == 0) return;
+        var rfiIds = SelectedRfis.Select(r => r.RequestId).ToList();
+        if (preparingDrafts || rfiIds.Count == 0) return;
         preparingDrafts = true;
         draftBatch = null;
         draftBatchError = null;
         try
         {
-            var batch = await RequestRegister.PrepareEmailDraftsAsync(selectedIds.ToList());
+            var batch = await RequestRegister.PrepareEmailDraftsAsync(rfiIds);
             draftBatch = batch;
             // Drafted RFIs come off the selection; failures stay ticked for a fix-and-retry.
             foreach (var outcome in batch.Outcomes.Where(o => o.Succeeded))

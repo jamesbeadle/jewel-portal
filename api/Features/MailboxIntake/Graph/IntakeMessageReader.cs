@@ -19,7 +19,7 @@ public sealed record IntakeAttachmentContent(string Name, string ContentType, by
 /// <summary>
 /// Reads a single mailbox message's full body and attachment metadata from Microsoft Graph, on
 /// demand, when a triager opens an email. Deliberately read-only and narrow — the producer/webhook
-/// API has no other Graph reach; the background sweep/move/send paths live in the worker.
+/// API has no other Graph reach; the background sweep/move/draft paths live in the worker.
 /// </summary>
 public interface IIntakeMessageReader
 {

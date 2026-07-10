@@ -55,11 +55,13 @@ public interface IGraphMailClient
     /// </summary>
     Task<string> EnsureFolderAsync(string displayName, string? parentFolderId, CancellationToken ct);
 
-    /// <summary>Send a brand-new message (new thread).</summary>
-    Task SendMailAsync(GraphOutboundMessage message, CancellationToken ct);
-
-    /// <summary>Reply to an existing message so the reply threads into the original conversation.</summary>
-    Task ReplyAsync(string graphMessageId, string htmlBody, CancellationToken ct);
+    /// <summary>
+    /// Create a new message in the mailbox's Drafts folder — recipients, subject, HTML body and
+    /// attachments all pre-filled — for a person to review and send from the mailbox itself.
+    /// NOTHING IS EVER SENT FROM CODE: a human always reviews and presses Send in Outlook.
+    /// Returns the draft's identity, or null when the create failed.
+    /// </summary>
+    Task<GraphDraft?> CreateDraftAsync(GraphOutboundMessage message, CancellationToken ct);
 
     Task<GraphSubscription> CreateSubscriptionAsync(string notificationUrl, string clientState, DateTimeOffset expiry, CancellationToken ct);
     Task<GraphSubscription> RenewSubscriptionAsync(string subscriptionId, DateTimeOffset expiry, CancellationToken ct);
@@ -92,17 +94,21 @@ public sealed record GraphInboxItem(string Id, string InternetMessageId);
 
 public sealed record GraphSubscription(string Id, DateTimeOffset ExpiresAt);
 
+/// <summary>A created draft: its Graph id and (usually) a webLink that opens it in Outlook on the web.</summary>
+public sealed record GraphDraft(string Id, string? WebLink);
+
 /// <summary>A single email recipient (address plus an optional display name).</summary>
 public sealed record GraphRecipient(string Email, string? Name = null);
 
 /// <summary>
-/// A file to attach to an outbound message. Sent as a Graph fileAttachment (base64 contentBytes);
-/// suitable for the small request-document PDFs, which sit well under the sendMail size limit.
+/// A file to attach to an outbound draft. Carried as a Graph fileAttachment (base64 contentBytes);
+/// suitable for the small request-document PDFs, which sit well under the inline size limit.
 /// </summary>
 public sealed record GraphAttachment(string FileName, string ContentType, byte[] Content);
 
 /// <summary>
-/// A new outbound email to send via Graph. Supports one or more recipients, optional open and
+/// A new outbound email, created as a Drafts-folder message for a human to review and send.
+/// Supports one or more recipients, optional open and
 /// blind copies (the correspondence profile's Cc/Bcc), and zero or more attachments (e.g. the
 /// request-document PDF). Bcc is carried on the wire only — nothing rendered or recorded on a
 /// client-facing surface may be derived from it.

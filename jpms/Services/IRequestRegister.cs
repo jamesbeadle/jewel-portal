@@ -16,6 +16,11 @@ public interface IRequestRegister
     event Action? OnChange;
 
     Task<Request?> GetAsync(string requestId, CancellationToken cancellationToken = default);
+
+    /// <summary>Merges one General request into another before either reaches RFI stage. The
+    /// survivor keeps its reference/title and absorbs the other's description, conversation,
+    /// items and emails; the merged-away request closes with a "merged into" audit link.</summary>
+    Task<Request> MergeAsync(string survivorRequestId, string mergedRequestId, string projectId, CancellationToken cancellationToken = default);
     Task<Request> RaiseAsync(RaiseRequest command, CancellationToken cancellationToken = default);
     Task<Request> UpdateAsync(UpdateRequestDetails command, CancellationToken cancellationToken = default);
     Task<Request> PromoteToRfiAsync(string requestId, string projectId, CancellationToken cancellationToken = default);
