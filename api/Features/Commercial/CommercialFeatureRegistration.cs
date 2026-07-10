@@ -94,6 +94,7 @@ public static class CommercialFeatureRegistration
         services.AddScoped<RecordClaimEntryValidation>();
 
         services.AddScoped<ICommandHandler<PreapproveValuationClaim, ValuationClaim>, PreapproveValuationClaimHandler>();
+        services.AddScoped<ICommandHandler<ReopenValuationClaim, ValuationClaim>, ReopenValuationClaimHandler>();
         services.AddScoped<ICommandHandler<ConfirmValuationClaim, ValuationClaim>, ConfirmValuationClaimHandler>();
 
         // Valuation report snapshots — immutable frozen copies behind invoice submissions

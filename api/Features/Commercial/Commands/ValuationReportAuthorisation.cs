@@ -25,6 +25,7 @@ public sealed class ValuationReportAuthorisation
     public bool Allows(SignedInUser user, StartValuationClaim command) => Allowed(user);
     public bool Allows(SignedInUser user, RecordClaimEntry command) => Allowed(user);
     public bool Allows(SignedInUser user, PreapproveValuationClaim command) => Allowed(user);
+    public bool Allows(SignedInUser user, ReopenValuationClaim command) => Allowed(user);
     public bool Allows(SignedInUser user, ConfirmValuationClaim command) => Allowed(user);
     public bool Allows(SignedInUser user, TakeValuationReportSnapshot command) => RolesThatMayManageSnapshots.IncludesAny(user.Roles);
     public bool Allows(SignedInUser user, DeleteValuationReportSnapshot command) => RolesThatMayManageSnapshots.IncludesAny(user.Roles);

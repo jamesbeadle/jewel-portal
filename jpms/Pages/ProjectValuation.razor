@@ -45,6 +45,11 @@ else
                 }
                 else if (Selected is { Status: ValuationClaimStatus.Preapproved })
                 {
+                    <button @onclick="ReopenAsync" disabled="@busy"
+                            title="Undo the preapproval — back to Draft, % complete editable again"
+                            class="rounded-lg border border-line bg-surface text-content-muted font-medium text-sm px-3 py-2 hover:border-line-strong transition">
+                        Reopen as draft
+                    </button>
                     <button @onclick="ConfirmAsync" disabled="@busy"
                             class="rounded-lg bg-accent text-accent-ink font-medium text-sm px-3 py-2 hover:bg-accent-hover disabled:bg-surface-field transition">
                         Confirm payment received
@@ -62,7 +67,7 @@ else
                         <span>Draft — edit % complete per line, then mark <em>We're claiming this</em> to lock the claim.</span>
                         break;
                     case ValuationClaimStatus.Preapproved:
-                        <span>Preapproved on @(s.PreapprovedAt?.ToString("dd MMM yyyy")) — awaiting the client. Confirm once payment is received.</span>
+                        <span>Preapproved on @(s.PreapprovedAt?.ToString("dd MMM yyyy")) — awaiting the client. Confirm once payment is received, or reopen as draft if this was preapproved by mistake.</span>
                         break;
                     case ValuationClaimStatus.Confirmed:
                         <span>Confirmed on @(s.ConfirmedAt?.ToString("dd MMM yyyy")) — amounts are final and carried into the next claim.</span>
@@ -234,6 +239,15 @@ else
         if (Selected is null) return;
         busy = true;
         await Store.ConfirmClaimAsync(ProjectId, Selected.ValuationClaimId);
+        busy = false;
+    }
+
+    // Undo an unintended "We're claiming this": Preapproved → Draft.
+    private async Task ReopenAsync()
+    {
+        if (Selected is null) return;
+        busy = true;
+        await Store.ReopenClaimAsync(ProjectId, Selected.ValuationClaimId);
         busy = false;
     }
 

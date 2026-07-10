@@ -21,6 +21,8 @@ public interface IValuationReportStore
     Task<ValuationClaim> StartClaimAsync(StartValuationClaim command);
     Task<ClaimLine> RecordEntryAsync(string projectId, RecordClaimEntry command);
     Task<ValuationClaim> PreapproveClaimAsync(string projectId, string claimId);
+    /// <summary>Undo an unintended preapproval: Preapproved → Draft, totals compute live again.</summary>
+    Task<ValuationClaim> ReopenClaimAsync(string projectId, string claimId);
     Task<ValuationClaim> ConfirmClaimAsync(string projectId, string claimId);
 
     // Immutable report snapshots — frozen copies behind invoice submissions plus

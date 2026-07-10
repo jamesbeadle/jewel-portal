@@ -241,7 +241,16 @@ Per the CLAUDE.md store convention, all new stores fetch once per key with `Refr
 3. **Historic amounts** → individual backdated invoices counting fully toward Certified-to-date; no opening-balance shortcut.
 4. **Enum numbering** → existing Raised/Issued/Paid int values preserved; new states appended.
 
-## 10. Open questions
+## 10. Addendum — claim reopening (added 10 Jul 2026)
+
+An accidental "We're claiming this" left claims stranded: Preapproved had no way back, only
+forward to Confirmed. `ReopenValuationClaim` (POST `/api/valuation-claims/{claimId}/reopen`)
+undoes it — Preapproved → Draft, preapproval stamp cleared, frozen totals zeroed (a Draft's
+figures compute live from its entries). Confirmed claims stay final: their amounts advanced
+Certified-to-date, so they can never reopen. Surfaced as a secondary "Reopen as draft" button
+next to "Confirm payment received".
+
+## 11. Open questions
 
 1. Should **Approve** be recordable with the client's certificate reference/date (architects often certify a different figure)? If so, Approve could accept an optional `CertifiedAmount` that amends the invoice amount in one step.
 2. Snapshot on **Issue** as well as Submit for the skip-approval path, so even two-click invoices get a linked report? (Cheap to add; recommended default: yes.)
