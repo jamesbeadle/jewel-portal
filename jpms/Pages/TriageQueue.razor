@@ -1853,6 +1853,28 @@ else
         finally { busy = false; }
     }
 
+    // ---- Preview / open an attachment without leaving triage ----
+    // Same previewable set as the drawing viewer: browsers render PDFs and images natively in an
+    // iframe; everything else gets a Download link only. Bytes are proxied through the API on
+    // demand (mailbox/message/attachment) — nothing is stored in JPMS by previewing.
+
+    private IntakeAttachment? previewAttachment;
+
+    private static bool IsPreviewable(IntakeAttachment attachment)
+    {
+        var type = attachment.ContentType ?? "";
+        return type.Contains("pdf", StringComparison.OrdinalIgnoreCase)
+            || type.StartsWith("image/", StringComparison.OrdinalIgnoreCase);
+    }
+
+    // Ids go in the query string, never the path — Graph ids don't survive a URL path segment.
+    private string AttachmentUrl(IntakeAttachment attachment, bool inline) =>
+        $"/api/mailbox/message/attachment?id={Uri.EscapeDataString(selected?.Id ?? "")}"
+        + $"&aid={Uri.EscapeDataString(attachment.Id)}{(inline ? "&inline=1" : "")}";
+
+    private void ToggleAttachmentPreview(IntakeAttachment attachment) =>
+        previewAttachment = previewAttachment == attachment ? null : attachment;
+
     // ---- Save an attachment into a project's drawings ----
     // Unlike the record actions this does NOT consume the email: the message keeps its place in
     // triage (it may still become a request or bid package) — only the file is copied out.
