@@ -77,8 +77,11 @@
                                     }
                                     else
                                     {
+                                        @* Keyed on a nonce so a failed save recreates the element — otherwise the
+                                           browser keeps showing the picked work order even though it didn't stick. *@
                                         <select class="bg-surface border border-line rounded-lg px-2 py-1 text-content text-sm w-48"
-                                                disabled="@isLinking"
+                                                @key="@($"{line.XeroLedgerLineId}|{linkRevertNonce}")"
+                                                disabled="@linkingLineIds.Contains(line.XeroLedgerLineId)"
                                                 title="The work order this invoice line pays against — unlinked lines count as non-work-order cost of sales"
                                                 @onchange="e => LinkAsync(entry, e.Value?.ToString())">
                                             <option value="" selected="@(line.LinkedWorkOrderId is null)">Not linked</option>
@@ -189,8 +192,13 @@
     private string? movingLineId;
     private bool isMoving;
     private string? moveError;
-    private bool isLinking;
+    // The lines whose links are being saved — only those rows' dropdowns disable, so a slow
+    // call (e.g. the serverless database warming up) doesn't lock the whole table, and other
+    // rows stay linkable in the meantime.
+    private readonly HashSet<string> linkingLineIds = new();
     private string? linkError;
+    // Bumped when a save fails, recreating the selects so they fall back to the stored link.
+    private int linkRevertNonce;
 
     private bool ShowCentreColumn => CostCodes.Count > 1;
 
@@ -237,26 +245,30 @@
 
     private async Task LinkAsync(Entry entry, string? workOrderId)
     {
-        if (isLinking) return;
+        if (!linkingLineIds.Add(entry.Line.XeroLedgerLineId)) return;
         var newLink = string.IsNullOrEmpty(workOrderId) ? null : workOrderId;
-        if (newLink == entry.Line.LinkedWorkOrderId) return;
-        isLinking = true;
+        if (newLink == entry.Line.LinkedWorkOrderId)
+        {
+            linkingLineIds.Remove(entry.Line.XeroLedgerLineId);
+            return;
+        }
         linkError = null;
         try
         {
             await Commands.SendAsync(
                 new LinkXeroLineToWorkOrder(ProjectId, entry.Line.XeroLedgerLineId, newLink), CancellationToken.None);
-            var index = entries.IndexOf(entry);
-            if (index >= 0) entries[index] = entry with { Line = entry.Line with { LinkedWorkOrderId = newLink } };
+            var index = entries.FindIndex(candidate => candidate.Line.XeroLedgerLineId == entry.Line.XeroLedgerLineId);
+            if (index >= 0) entries[index] = entries[index] with { Line = entries[index].Line with { LinkedWorkOrderId = newLink } };
             await OnWorkOrderLinkChanged.InvokeAsync();
         }
         catch (CommandFailedException ex)
         {
             linkError = $"Couldn't link this line: {ex.Message}";
+            linkRevertNonce++; // snap the dropdown back to the stored link — the save didn't happen
         }
         finally
         {
-            isLinking = false;
+            linkingLineIds.Remove(entry.Line.XeroLedgerLineId);
         }
     }
 
