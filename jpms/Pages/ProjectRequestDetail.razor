@@ -466,7 +466,7 @@ else
                     {
                         <div class="mt-4 pt-4 border-t border-line">
                             <h4 class="eyebrow mb-1">Return to triage</h4>
-                            <p class="text-xs text-content-subtle mb-2">Sends every email linked to this request back to the triage queue so the whole thread can be processed again. If that empties the request, it is removed.</p>
+                            <p class="text-xs text-content-subtle mb-2">Sends every email linked to this request back to the triage queue so the whole thread can be processed again. The request and its conversation stay in the register.</p>
                             <button type="button" class="btn-secondary" disabled="@busy" @onclick="() => confirmingReturn = true">
                                 Return to triage
                             </button>
@@ -504,7 +504,7 @@ else
            OnCancel="CancelReturn"
            OnConfirm="PerformReturn">
         <p class="text-sm text-content">
-            Every email linked to <span class="font-mono">@record?.Reference</span> — “@record?.Title” — will go back to the triage queue so the thread can be triaged again from scratch. As this empties the request, it will be removed from the register.
+            Every email linked to <span class="font-mono">@record?.Reference</span> — “@record?.Title” — will go back to the triage queue so the thread can be triaged again from scratch. The request itself and its conversation history stay in the register.
         </p>
     </Modal>
 
@@ -671,7 +671,9 @@ else
     private bool CanDraftEmail => Session.AvailableRoles.Any(role =>
         role is Role.Admin or Role.ManagingDirector or Role.ProjectManager or Role.SiteManager or Role.Architect);
 
-    private bool IsAdmin => Auth.CurrentUser is not null && JpmsAdministrators.Contains(Auth.CurrentUser.Email);
+    // Mirrors DeleteRequestAuthorisation server-side: the Admin role only (master administrators
+    // carry every role, so they qualify too).
+    private bool IsAdmin => Session.AvailableRoles.Any(role => role is Role.Admin);
 
     // Returning to triage is a triage action, open to administrators and project managers (admins
     // carry every role server-side, so they always satisfy this too).
@@ -1159,7 +1161,10 @@ else
         {
             busy = true;
             await RequestRegister.ReturnToTriageAsync(record.RequestId, ProjectId);
-            Nav.NavigateTo(RegisterHref);
+            // The request survives a return to triage (only its emails re-enter the queue),
+            // so stay on the page rather than navigating back to the register.
+            confirmingReturn = false;
+            busy = false;
         }
         catch
         {
