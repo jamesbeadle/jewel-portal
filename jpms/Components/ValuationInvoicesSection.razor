@@ -414,7 +414,11 @@
     {
         if (busy) return;
         error = null;
-        if (!TryParseAmount(newAmount, out var amount)) { error = "Enter an amount greater than zero."; return; }
+        // Historic convenience: if only the Paid box was filled in, that figure IS the
+        // invoice amount (a fully paid historic invoice) — don't make people type it twice.
+        if (newIsHistoric && string.IsNullOrWhiteSpace(newAmount) && !string.IsNullOrWhiteSpace(newPaidAmount))
+            newAmount = newPaidAmount;
+        if (!TryParseAmount(newAmount, out var amount)) { error = "Enter an invoice amount greater than zero in Amount £."; return; }
         decimal? paidAmount = null;
         if (newIsHistoric && !string.IsNullOrWhiteSpace(newPaidAmount))
         {
