@@ -77,6 +77,12 @@ public static class RequestsRouteRegistration
                     return $"/api/mailbox/tagged?cursor={Uri.EscapeDataString(q.Cursor ?? string.Empty)}&take={q.Take}&tags={Uri.EscapeDataString(tags)}";
                 }));
 
+        // An email's whole thread (every Inbox message sharing its Graph conversation id), for the
+        // triage detail pane's thread panel. The conversation id goes in the query string too.
+        queries.Register<ListConversationMessages, MailboxPage>(
+            new QueryRoute("/api/mailbox/conversation",
+                query => $"/api/mailbox/conversation?id={Uri.EscapeDataString(((ListConversationMessages)query).ConversationId)}"));
+
         queries.Register<GetMailboxMessageDetail, MailboxMessageDetail>(
             new QueryRoute("/api/mailbox/message/detail",
                 query =>

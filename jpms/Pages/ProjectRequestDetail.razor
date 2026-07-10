@@ -45,7 +45,7 @@ else
                 }
                 <span class="font-mono text-sm text-content-muted">@record.Reference</span>
                 <span class="text-content-subtle text-xs uppercase tracking-wide" title="@record.Kind.LongName()">@record.Kind.DisplayName()</span>
-                <span class="inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium @StatusClass(record.Status)">@StatusLabel(record.Status)</span>
+                <span class="inline-flex items-center whitespace-nowrap rounded-full px-2 py-0.5 text-[11px] font-medium @StatusClass(record.Status)">@StatusLabel(record.Status)</span>
                 @if (record.ImpliesVariation)
                 {
                     <span class="inline-flex items-center rounded bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-600">Variation</span>

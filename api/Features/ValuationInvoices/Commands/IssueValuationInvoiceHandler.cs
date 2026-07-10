@@ -21,6 +21,12 @@ public sealed class IssueValuationInvoiceHandler : ICommandHandler<IssueValuatio
         entity.IssuedAt = DateTimeOffset.UtcNow;
 
         await context.SaveChangesAsync(cancellationToken);
+
+        // Issuing raises "Certified to date" — re-freeze any Preapproved claim's totals so
+        // the report summary reflects it (e.g. seeding historical claims under a claim
+        // that was preapproved before the invoices existed).
+        await PreapprovedClaimTotals.RefreshAsync(context, entity.ProjectId, cancellationToken);
+
         return entity.ToModel();
     }
 }

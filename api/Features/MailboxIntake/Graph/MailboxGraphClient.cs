@@ -63,6 +63,11 @@ public interface IMailboxGraphClient
     /// the management surface for the Tagged tab.</summary>
     Task<MailboxPage> ListTaggedAsync(string? cursor, int take, CancellationToken ct);
 
+    /// <summary>Every Inbox message in one Graph conversation (the email + its replies/forwards),
+    /// oldest first and regardless of tags — so a triage view can show an email's whole thread. Not
+    /// paged: a mail thread is small, so a single (capped) read returns it whole.</summary>
+    Task<MailboxPage> ListConversationAsync(string conversationId, CancellationToken ct);
+
     /// <summary>One page of emails carrying ANY of the given workflow tags (an OR filter), oldest
     /// first — backs the Tagged tab's multi-select filter.</summary>
     Task<MailboxPage> ListByTagsAsync(IReadOnlyList<string> tags, string? cursor, int take, CancellationToken ct);
@@ -169,6 +174,8 @@ public sealed class NullMailboxGraphClient : IMailboxGraphClient
         Task.FromResult(new MailboxPage(Array.Empty<MailboxMessage>(), null, 0));
     public Task<MailboxPage> ListByTagsAsync(IReadOnlyList<string> tags, string? cursor, int take, CancellationToken ct) =>
         Task.FromResult(new MailboxPage(Array.Empty<MailboxMessage>(), null, 0));
+    public Task<MailboxPage> ListConversationAsync(string conversationId, CancellationToken ct) =>
+        Task.FromResult(new MailboxPage(Array.Empty<MailboxMessage>(), null, 0));
     public Task<bool> RemoveTagAsync(string messageId, string? internetMessageId, string tag, CancellationToken ct) => Task.FromResult(false);
     public Task<bool> DiscardAsync(string messageId, string? internetMessageId, CancellationToken ct) => Task.FromResult(false);
     public Task<bool> RestoreAsync(string messageId, string? internetMessageId, CancellationToken ct) => Task.FromResult(false);
@@ -193,7 +200,7 @@ public sealed class MailboxGraphClient : IMailboxGraphClient
 {
     private const string GraphBase = "https://graph.microsoft.com/v1.0";
     private const string Summary =
-        "id,internetMessageId,subject,bodyPreview,from,receivedDateTime,hasAttachments,categories";
+        "id,internetMessageId,conversationId,subject,bodyPreview,from,receivedDateTime,hasAttachments,categories";
 
     private readonly HttpClient _http;
     private readonly GraphTokenProvider _tokens;
@@ -233,6 +240,12 @@ public sealed class MailboxGraphClient : IMailboxGraphClient
             tags.Select(t => $"categories/any(c:c eq '{t.Replace("'", "''")}')"));
         return ListFilteredAsync(filter, cursor, take, ct);
     }
+
+    public Task<MailboxPage> ListConversationAsync(string conversationId, CancellationToken ct) =>
+        // No category clause: the thread view wants every member — still-queued, discarded and
+        // already-linked alike (their tags tell the triager what's been decided so far). A thread is
+        // small, so one max-size page (100) covers it; ListFilteredAsync already orders oldest-first.
+        ListFilteredAsync($"conversationId eq '{conversationId.Replace("'", "''")}'", cursor: null, take: 100, ct);
 
     private async Task<MailboxPage> ListFilteredAsync(string filter, string? cursor, int take, CancellationToken ct)
     {
@@ -682,7 +695,9 @@ public sealed class MailboxGraphClient : IMailboxGraphClient
                 if (c.GetString() is { Length: > 0 } cat && TriageCategories.IsWorkflowTag(cat))
                     categories.Add(cat);
 
-        return new MailboxMessage(id, imid, fromEmail, fromName, subject, preview, hasAttachments, receivedAt, categories);
+        var conversationId = item.TryGetProperty("conversationId", out var conv) ? conv.GetString() ?? "" : "";
+
+        return new MailboxMessage(id, imid, fromEmail, fromName, subject, preview, hasAttachments, receivedAt, categories, conversationId);
     }
 
     // Graph only accepts attachments up to ~3 MB inline; larger files stream through an upload session.

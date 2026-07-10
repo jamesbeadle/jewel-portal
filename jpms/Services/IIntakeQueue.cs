@@ -15,6 +15,11 @@ public interface IIntakeQueue
     Task<MailboxPage> ListInboxLiveAsync(string? cursor = null, int take = 25, CancellationToken cancellationToken = default);
     Task<MailboxPage> ListDiscardedLiveAsync(string? cursor = null, int take = 25, CancellationToken cancellationToken = default);
     Task<MailboxPage> ListTaggedLiveAsync(string? cursor = null, int take = 25, IReadOnlyList<string>? tags = null, CancellationToken cancellationToken = default);
+
+    // An email's whole thread: every Inbox message sharing its Graph conversation id, oldest first,
+    // regardless of tags. Backs the triage detail pane's thread panel — later replies often say how
+    // the older messages should be triaged, and link/discard already apply conversation-wide.
+    Task<MailboxPage> ListConversationLiveAsync(string conversationId, CancellationToken cancellationToken = default);
     Task<MailboxMessageDetail> GetMessageDetailAsync(string messageId, string? internetMessageId, CancellationToken cancellationToken = default);
     Task<Acknowledgement> DiscardMessageAsync(string messageId, string? internetMessageId, CancellationToken cancellationToken = default);
     Task<Acknowledgement> RestoreMessageAsync(string messageId, string? internetMessageId, CancellationToken cancellationToken = default);

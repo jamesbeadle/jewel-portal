@@ -43,4 +43,10 @@ public sealed class HttpValuationInvoiceStore : IValuationInvoiceStore
         OnChange?.Invoke();
         return call;
     }
+
+    public async Task DeleteAsync(string valuationInvoiceId, CancellationToken cancellationToken = default)
+    {
+        await commands.SendAsync(new DeleteValuationInvoice(valuationInvoiceId), cancellationToken);
+        OnChange?.Invoke();
+    }
 }

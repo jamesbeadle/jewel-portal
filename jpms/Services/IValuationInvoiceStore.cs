@@ -11,4 +11,5 @@ public interface IValuationInvoiceStore
     Task<ValuationInvoice> CreateAsync(string projectId, DateTimeOffset periodMonth, decimal amount, string? valuationClaimId, CancellationToken cancellationToken = default);
     Task<ValuationInvoice> IssueAsync(string valuationInvoiceId, CancellationToken cancellationToken = default);
     Task<ValuationInvoice> RecordPaymentAsync(string valuationInvoiceId, decimal amountPaid, CancellationToken cancellationToken = default);
+    Task DeleteAsync(string valuationInvoiceId, CancellationToken cancellationToken = default);
 }

@@ -32,6 +32,7 @@ public static class RequestsFeatureRegistration
         services.AddScoped<IQueryHandler<ListInboxMessages, MailboxPage>, ListInboxMessagesHandler>();
         services.AddScoped<IQueryHandler<ListDiscardedMessages, MailboxPage>, ListDiscardedMessagesHandler>();
         services.AddScoped<IQueryHandler<ListTaggedMessages, MailboxPage>, ListTaggedMessagesHandler>();
+        services.AddScoped<IQueryHandler<ListConversationMessages, MailboxPage>, ListConversationMessagesHandler>();
         services.AddScoped<IQueryHandler<GetMailboxMessageDetail, MailboxMessageDetail>, GetMailboxMessageDetailHandler>();
         services.AddScoped<ICommandHandler<DiscardMessage, Acknowledgement>, DiscardMessageHandler>();
         services.AddScoped<ICommandHandler<RestoreMessage, Acknowledgement>, RestoreMessageHandler>();

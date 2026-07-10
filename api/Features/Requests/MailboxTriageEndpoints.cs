@@ -21,6 +21,7 @@ public sealed class MailboxTriageEndpoints
     private readonly IQueryHandler<ListInboxMessages, MailboxPage> listInbox;
     private readonly IQueryHandler<ListDiscardedMessages, MailboxPage> listDiscarded;
     private readonly IQueryHandler<ListTaggedMessages, MailboxPage> listTagged;
+    private readonly IQueryHandler<ListConversationMessages, MailboxPage> listConversation;
     private readonly IQueryHandler<GetMailboxMessageDetail, MailboxMessageDetail> detail;
     private readonly ICommandHandler<DiscardMessage, Acknowledgement> discard;
     private readonly ICommandHandler<RestoreMessage, Acknowledgement> restore;
@@ -33,6 +34,7 @@ public sealed class MailboxTriageEndpoints
         IQueryHandler<ListInboxMessages, MailboxPage> listInbox,
         IQueryHandler<ListDiscardedMessages, MailboxPage> listDiscarded,
         IQueryHandler<ListTaggedMessages, MailboxPage> listTagged,
+        IQueryHandler<ListConversationMessages, MailboxPage> listConversation,
         IQueryHandler<GetMailboxMessageDetail, MailboxMessageDetail> detail,
         ICommandHandler<DiscardMessage, Acknowledgement> discard,
         ICommandHandler<RestoreMessage, Acknowledgement> restore,
@@ -44,6 +46,7 @@ public sealed class MailboxTriageEndpoints
         this.listInbox = listInbox;
         this.listDiscarded = listDiscarded;
         this.listTagged = listTagged;
+        this.listConversation = listConversation;
         this.detail = detail;
         this.discard = discard;
         this.restore = restore;
@@ -81,6 +84,18 @@ public sealed class MailboxTriageEndpoints
             .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
         var query = new ListTaggedMessages(cursor, take, tags.Length == 0 ? null : tags);
         return new OkObjectResult(await listTagged.HandleAsync(query, request.HttpContext.RequestAborted));
+    }
+
+    [Function(nameof(ListConversationMessages))]
+    public async Task<IActionResult> Conversation(
+        [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "mailbox/conversation")] HttpRequest request)
+    {
+        if (await Gate(request) is { } deny) return deny;
+        // The conversation id travels in the query string like message ids do: Graph ids contain
+        // characters that don't survive a URL path segment.
+        var id = request.Query["id"].ToString();
+        if (string.IsNullOrWhiteSpace(id)) return new BadRequestObjectResult("id is required.");
+        return new OkObjectResult(await listConversation.HandleAsync(new ListConversationMessages(id), request.HttpContext.RequestAborted));
     }
 
     [Function(nameof(GetMailboxMessageDetail))]

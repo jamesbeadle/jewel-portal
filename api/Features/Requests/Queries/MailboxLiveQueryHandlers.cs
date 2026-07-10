@@ -39,6 +39,20 @@ public sealed class ListTaggedMessagesHandler : IQueryHandler<ListTaggedMessages
             : graph.ListTaggedAsync(query.Cursor, query.Take, cancellationToken);
 }
 
+/// <summary>An email's whole thread (every Inbox message sharing its Graph conversation id), read
+/// live and regardless of tags — backs the triage detail pane's thread panel, where later replies
+/// inform how the older messages should be triaged.</summary>
+public sealed class ListConversationMessagesHandler : IQueryHandler<ListConversationMessages, MailboxPage>
+{
+    private readonly IMailboxGraphClient graph;
+    public ListConversationMessagesHandler(IMailboxGraphClient graph) { this.graph = graph; }
+
+    public Task<MailboxPage> HandleAsync(ListConversationMessages query, CancellationToken cancellationToken) =>
+        string.IsNullOrWhiteSpace(query.ConversationId)
+            ? Task.FromResult(new MailboxPage(Array.Empty<MailboxMessage>(), null, 0))
+            : graph.ListConversationAsync(query.ConversationId, cancellationToken);
+}
+
 /// <summary>
 /// Full body + attachments for one mailbox message, read live and sanitised before it leaves the
 /// server. Reuses the existing on-demand message reader; the id is fresh (the list was just rendered)

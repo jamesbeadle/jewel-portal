@@ -1,6 +1,7 @@
 using Jewel.JPMS.Api.Cqrs;
 using Jewel.JPMS.Api.Features.ValuationInvoices.Commands;
 using Jewel.JPMS.Api.Features.ValuationInvoices.Queries;
+using Jewel.JPMS.Contracts.Cqrs;
 using Jewel.JPMS.Contracts.ValuationInvoices;
 using Jewel.JPMS.Models;
 using Microsoft.Extensions.DependencyInjection;
@@ -25,6 +26,9 @@ public static class ValuationInvoicesFeatureRegistration
         services.AddScoped<ICommandHandler<RecordValuationInvoicePayment, ValuationInvoice>, RecordValuationInvoicePaymentHandler>();
         services.AddScoped<RecordValuationInvoicePaymentAuthorisation>();
         services.AddScoped<RecordValuationInvoicePaymentValidation>();
+
+        services.AddScoped<ICommandHandler<DeleteValuationInvoice, Acknowledgement>, DeleteValuationInvoiceHandler>();
+        services.AddScoped<DeleteValuationInvoiceAuthorisation>();
 
         return services;
     }

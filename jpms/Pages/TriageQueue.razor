@@ -47,6 +47,64 @@
             }
         </div>
 
+        @*
+            Thread panel: the rest of this email's conversation, read live and regardless of tags.
+            Later replies often say how the older messages should be triaged (e.g. "ignore my last —
+            resolved on site"), so triaging oldest-first still shows the newest context. Click a
+            member to open it. Linking or discarding already applies to the whole thread server-side.
+        *@
+        @if (selected is not null && !string.IsNullOrEmpty(selected.ConversationId))
+        {
+            @if (threadLoading)
+            {
+                <p class="text-xs text-content-subtle italic">Checking the thread for replies…</p>
+            }
+            else if (thread.Count > 1)
+            {
+                <div class="rounded-lg bg-surface-raised border border-line p-3">
+                    <p class="text-xs uppercase tracking-wider text-content-subtle font-semibold mb-2">
+                        Thread · @thread.Count emails
+                    </p>
+                    <div class="space-y-1">
+                        @foreach (var member in thread)
+                        {
+                            var isCurrent = member.Id == selected.Id;
+                            var isLatest = member.Id == thread[^1].Id;
+                            <button type="button" @key="member.Id" disabled="@isCurrent"
+                                    @onclick="() => Select(member)" class="@ThreadRowClass(isCurrent)">
+                                <div class="flex items-center justify-between gap-2">
+                                    <span class="text-xs font-medium text-content truncate">@DisplayFrom(member)</span>
+                                    <span class="flex items-center gap-1.5 whitespace-nowrap">
+                                        @if (isLatest)
+                                        {
+                                            <span class="inline-flex items-center rounded-full bg-accent/10 text-accent text-[10px] font-medium px-2 py-0.5">Latest</span>
+                                        }
+                                        @if (isCurrent)
+                                        {
+                                            <span class="inline-flex items-center rounded-full border border-accent text-accent text-[10px] font-medium px-2 py-0.5">Viewing</span>
+                                        }
+                                        else if (member.Categories.Count == 0)
+                                        {
+                                            <span class="inline-flex items-center rounded-full border border-line text-content-subtle text-[10px] font-medium px-2 py-0.5">In queue</span>
+                                        }
+                                        @foreach (var tag in member.Categories)
+                                        {
+                                            <span class="inline-flex items-center rounded-full bg-accent/10 text-accent text-[10px] font-medium px-2 py-0.5">@TagLabel(tag)</span>
+                                        }
+                                    </span>
+                                </div>
+                                <p class="text-xs text-content-muted truncate mt-0.5">@Dash(member.BodyPreview)</p>
+                                <p class="text-[11px] text-content-subtle mt-0.5">@Date(member.ReceivedAt)</p>
+                            </button>
+                        }
+                    </div>
+                    <p class="text-[11px] text-content-subtle mt-2">
+                        Read the latest reply before triaging the oldest — linking or discarding any email here applies to the whole thread.
+                    </p>
+                </div>
+            }
+        }
+
         @if (detail is not null && detail.Attachments.Count > 0)
         {
             <div class="rounded-lg bg-surface-raised border border-line p-3">
@@ -959,6 +1017,13 @@ else
     private bool detailLoading;
     private CancellationTokenSource? detailCts;
 
+    // The selected email's whole conversation (oldest first, tags and all), for the thread panel.
+    // Guarded at render time by the current selection's ConversationId, so a stale list from a
+    // previous selection can never show against the wrong email.
+    private IReadOnlyList<MailboxMessage> thread = Array.Empty<MailboxMessage>();
+    private bool threadLoading;
+    private CancellationTokenSource? threadCts;
+
     private IReadOnlyList<Request> unassigned = Array.Empty<Request>();
     private string? unassignedError;
 
@@ -1250,7 +1315,8 @@ else
         createRaisedTo = createDrawingRef = createResponseDue = "";
         createTrade = "";
         createTodoRows = new List<TodoDraftRow> { new() { Title = item.Subject } };
-        await LoadDetailAsync(item);
+        // Body and thread are independent live reads — fetch them side by side.
+        await Task.WhenAll(LoadDetailAsync(item), LoadThreadAsync(item));
     }
 
     // Fetch the full body + attachment names on demand when an email is opened. Cancels any in-flight
@@ -1276,6 +1342,42 @@ else
             if (selected?.Id == item.Id)
                 detailLoading = false;
         }
+    }
+
+    // Fetch the selected email's whole conversation for the thread panel. Same cancellation shape as
+    // LoadDetailAsync: rapid clicking can't race a stale thread onto the newly selected email. The
+    // list is cleared up front so a previous selection's thread never flashes against this one.
+    private async Task LoadThreadAsync(MailboxMessage item)
+    {
+        threadCts?.Cancel();
+        var cts = new CancellationTokenSource();
+        threadCts = cts;
+
+        thread = Array.Empty<MailboxMessage>();
+        if (string.IsNullOrEmpty(item.ConversationId)) { threadLoading = false; return; }
+
+        threadLoading = true;
+        try
+        {
+            var page = await Intake.ListConversationLiveAsync(item.ConversationId, cts.Token);
+            if (!cts.IsCancellationRequested && selected?.Id == item.Id)
+                thread = page.Items;
+        }
+        catch (OperationCanceledException) { /* superseded by a newer selection */ }
+        catch { /* leave empty: the panel simply doesn't render */ }
+        finally
+        {
+            if (selected?.Id == item.Id)
+                threadLoading = false;
+        }
+    }
+
+    private static string ThreadRowClass(bool current)
+    {
+        var baseClass = "w-full text-left rounded-lg border px-3 py-2 transition";
+        return current
+            ? $"{baseClass} border-accent bg-surface"
+            : $"{baseClass} border-line hover:border-line-strong hover:bg-surface";
     }
 
     private static string FormatSize(long bytes)

@@ -1,3 +1,4 @@
+using Jewel.JPMS.Contracts.Cqrs;
 using Jewel.JPMS.Contracts.ValuationInvoices;
 using Jewel.JPMS.Cqrs;
 using Jewel.JPMS.Models;
@@ -27,5 +28,9 @@ public static class ValuationInvoicesRouteRegistration
         commands.Register<RecordValuationInvoicePayment, ValuationInvoice>(
             new CommandRoute("POST", "/api/valuation-invoices/{valuationInvoiceId}/payment",
                 command => $"/api/valuation-invoices/{((RecordValuationInvoicePayment)command).ValuationInvoiceId}/payment"));
+
+        commands.Register<DeleteValuationInvoice, Acknowledgement>(
+            new CommandRoute("DELETE", "/api/valuation-invoices/{valuationInvoiceId}",
+                command => $"/api/valuation-invoices/{((DeleteValuationInvoice)command).ValuationInvoiceId}"));
     }
 }

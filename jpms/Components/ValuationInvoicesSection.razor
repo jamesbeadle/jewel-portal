@@ -80,6 +80,21 @@
                                             <button type="button" disabled="@busy" @onclick="() => OpenPayment(invoice)"
                                                     class="text-content-subtle hover:text-content underline underline-offset-2 text-xs">Record payment</button>
                                         }
+                                        @if (pendingDeleteId == invoice.ValuationInvoiceId)
+                                        {
+                                            <button type="button" disabled="@busy" @onclick="() => DeleteAsync(invoice)"
+                                                    class="ml-2 text-negative underline underline-offset-2 text-xs font-medium">Confirm delete</button>
+                                            <button type="button" disabled="@busy" @onclick="() => pendingDeleteId = null"
+                                                    class="ml-1.5 text-content-subtle hover:text-content underline underline-offset-2 text-xs">Keep</button>
+                                        }
+                                        else
+                                        {
+                                            <button type="button" disabled="@busy" @onclick="() => pendingDeleteId = invoice.ValuationInvoiceId"
+                                                    title="@(invoice.Status == ValuationInvoiceStatus.Raised
+                                                              ? "Delete this invoice"
+                                                              : "Delete this invoice — certified to date (and a paid one's receipts) roll back")"
+                                                    class="ml-2 text-content-subtle hover:text-negative underline underline-offset-2 text-xs">Delete</button>
+                                        }
                                     </td>
                                 }
                             </tr>
@@ -105,6 +120,11 @@
                     <input type="number" step="any" min="0" @bind="newAmount"
                            class="rounded-lg border border-line-strong bg-surface-field px-3 py-2 text-sm text-content w-40 focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent" />
                 </div>
+                <label class="flex items-center gap-2 text-sm text-content-subtle cursor-pointer select-none pb-2.5"
+                       title="For seeding historical claims: creates the invoice already issued with payment recorded, so it counts toward certified to date immediately">
+                    <input type="checkbox" class="cursor-pointer align-middle" @bind="newAlreadyPaid" />
+                    Already invoiced &amp; paid
+                </label>
                 <button type="button" disabled="@busy" @onclick="AddAsync"
                         class="rounded-lg bg-accent text-accent-ink font-medium text-sm px-3 py-2 hover:bg-accent-hover disabled:bg-surface-field transition">
                     Add invoice
@@ -138,6 +158,11 @@
     [Parameter] public string? ValuationClaimId { get; set; }
     [Parameter] public EventCallback<decimal> OnInvoicedToDateChanged { get; set; }
 
+    /// <summary>Raised after a change that moves "Certified to date" (issue, delete,
+    /// add-as-paid). The server re-freezes any Preapproved claim's totals at the same
+    /// time, so the parent should refresh its claims to show them.</summary>
+    [Parameter] public EventCallback OnCertifiedChanged { get; set; }
+
     private static readonly System.Globalization.CultureInfo Gb = System.Globalization.CultureInfo.GetCultureInfo("en-GB");
 
     private bool isOpen;
@@ -147,9 +172,12 @@
 
     private string newMonth = DateTimeOffset.UtcNow.ToString("yyyy-MM");
     private string newAmount = "";
+    // Seeding fast path: create the invoice already issued with its payment recorded.
+    private bool newAlreadyPaid;
 
     private ValuationInvoice? paymentInvoice;
     private string paymentAmount = "";
+    private string? pendingDeleteId;
 
     private bool CanManage => Session.AvailableRoles.Any(role =>
         role is Role.Admin or Role.ManagingDirector or Role.FinanceDirector or Role.ProjectManager);
@@ -186,11 +214,36 @@
         try
         {
             busy = true;
-            await Invoices.CreateAsync(ProjectId, ParseMonth(newMonth), amount, ValuationClaimId);
+            var created = await Invoices.CreateAsync(ProjectId, ParseMonth(newMonth), amount, ValuationClaimId);
+            if (newAlreadyPaid)
+            {
+                // Historical claim already invoiced and settled: walk it through the
+                // lifecycle in one go so it counts toward certified to date immediately.
+                await Invoices.IssueAsync(created.ValuationInvoiceId);
+                await Invoices.RecordPaymentAsync(created.ValuationInvoiceId, amount);
+            }
             newAmount = "";
             await ReloadAsync();
+            if (newAlreadyPaid) await OnCertifiedChanged.InvokeAsync();
         }
         catch { error = "Couldn't add the valuation invoice. Please try again."; }
+        finally { busy = false; }
+    }
+
+    private async Task DeleteAsync(ValuationInvoice invoice)
+    {
+        if (busy) return;
+        error = null;
+        var countedTowardCertified = invoice.Status is ValuationInvoiceStatus.Issued or ValuationInvoiceStatus.Paid;
+        try
+        {
+            busy = true;
+            await Invoices.DeleteAsync(invoice.ValuationInvoiceId);
+            pendingDeleteId = null;
+            await ReloadAsync();
+            if (countedTowardCertified) await OnCertifiedChanged.InvokeAsync();
+        }
+        catch { error = "Couldn't delete the valuation invoice. Please try again."; }
         finally { busy = false; }
     }
 
@@ -198,7 +251,13 @@
     {
         if (busy) return;
         error = null;
-        try { busy = true; await Invoices.IssueAsync(invoice.ValuationInvoiceId); await ReloadAsync(); }
+        try
+        {
+            busy = true;
+            await Invoices.IssueAsync(invoice.ValuationInvoiceId);
+            await ReloadAsync();
+            await OnCertifiedChanged.InvokeAsync();
+        }
         catch { error = "Couldn't issue the invoice. Please try again."; }
         finally { busy = false; }
     }

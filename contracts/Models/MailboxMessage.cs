@@ -16,7 +16,11 @@ public sealed record MailboxMessage(
     DateTimeOffset ReceivedAt,
     // The JPMS workflow tags on this email (e.g. "JPMS/Discarded", "JPMS/RFI-001"), shown as chips on
     // the Tagged tab. Excludes the bare "JPMS" marker (internal). Empty for untagged queue messages.
-    IReadOnlyList<string> Categories);
+    IReadOnlyList<string> Categories,
+    // Graph's thread grouping id: the email plus every reply/forward of it share one ConversationId.
+    // Used to read the whole thread when a message is opened in triage, so later replies (which often
+    // say how the older messages should be triaged) are visible alongside. Empty when Graph omits it.
+    string ConversationId = "");
 
 // The full, on-demand content of one mailbox message (sanitised HTML body + non-inline attachment
 // metadata), fetched live when a triager opens it. Keyed by the live message id.

@@ -118,7 +118,8 @@ else
                    "Certified to date" and therefore the payment due. *@
                 <ValuationInvoicesSection ProjectId="@ProjectId"
                                           ValuationClaimId="@Selected?.ValuationClaimId"
-                                          OnInvoicedToDateChanged="OnInvoicedToDateChanged" />
+                                          OnInvoicedToDateChanged="OnInvoicedToDateChanged"
+                                          OnCertifiedChanged="OnCertifiedChanged" />
             </ExtraSections>
         </ValuationReportTable>
 
@@ -146,6 +147,10 @@ else
         invoicedToDate = total;
         StateHasChanged();
     }
+
+    // Certified to date moved (invoice issued / deleted / added as paid): the server has
+    // re-frozen any Preapproved claim's totals, so re-pull claims to show them.
+    private void OnCertifiedChanged() => Store.Refresh(ProjectId);
 
     private DateTime newClaimDate = DateTime.Today;
     private string newRetentionPercent = "5";
