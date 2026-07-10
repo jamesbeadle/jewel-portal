@@ -25,20 +25,20 @@
         <thead class="bg-surface-raised border-b border-line">
             <tr class="text-left text-[11px] uppercase tracking-wider text-content-subtle font-semibold">
                 <th class="sticky left-0 z-10 bg-surface-raised px-3 py-3 w-[36px]"></th>
-                <th class="sticky left-[36px] z-10 bg-surface-raised px-4 py-3 w-[88px]">Code</th>
-                <th class="sticky left-[124px] z-10 bg-surface-raised px-4 py-3 min-w-[200px]">Cost Centre</th>
+                <th class="sticky left-[36px] z-10 bg-surface-raised px-4 py-3 w-[88px]">@SortHeader("code", "Code")</th>
+                <th class="sticky left-[124px] z-10 bg-surface-raised px-4 py-3 min-w-[200px]">@SortHeader("name", "Cost Centre")</th>
                 @* Sales side: what we bill the client. *@
-                <th class="px-4 py-3 text-right whitespace-nowrap">Contract Sales Value</th>
-                <th class="px-4 py-3 text-right whitespace-nowrap">% Complete</th>
-                <th class="px-4 py-3 text-right whitespace-nowrap">Claim Value</th>
+                <th class="px-4 py-3 text-right whitespace-nowrap">@SortHeader("sales", "Contract Sales Value")</th>
+                <th class="px-4 py-3 text-right whitespace-nowrap">@SortHeader("complete", "% Complete")</th>
+                <th class="px-4 py-3 text-right whitespace-nowrap">@SortHeader("claim", "Claim Value")</th>
                 @* Cost side: what we expect to pay out. *@
-                <th class="px-4 py-3 text-right whitespace-nowrap border-l border-line">Target Cost Value</th>
-                <th class="px-4 py-3 text-right whitespace-nowrap">Work Orders</th>
-                <th class="px-4 py-3 text-right whitespace-nowrap">Actual Cost of Sales</th>
-                <th class="px-4 py-3 text-right whitespace-nowrap">Non-WO Cost of Sales</th>
-                <th class="px-4 py-3 text-right whitespace-nowrap">Drawdown</th>
-                <th class="px-4 py-3 text-right whitespace-nowrap">Profit / Loss</th>
-                <th class="px-4 py-3 text-right whitespace-nowrap">Cost % Complete</th>
+                <th class="px-4 py-3 text-right whitespace-nowrap border-l border-line">@SortHeader("target", "Target Cost Value")</th>
+                <th class="px-4 py-3 text-right whitespace-nowrap">@SortHeader("wo", "Work Orders")</th>
+                <th class="px-4 py-3 text-right whitespace-nowrap">@SortHeader("acos", "Actual Cost of Sales")</th>
+                <th class="px-4 py-3 text-right whitespace-nowrap">@SortHeader("nonwo", "Non-WO Cost of Sales")</th>
+                <th class="px-4 py-3 text-right whitespace-nowrap">@SortHeader("drawdown", "Drawdown")</th>
+                <th class="px-4 py-3 text-right whitespace-nowrap">@SortHeader("pl", "Profit / Loss")</th>
+                <th class="px-4 py-3 text-right whitespace-nowrap">@SortHeader("costpct", "Cost % Complete")</th>
                 <th class="px-4 py-3 w-[80px]"><span class="sr-only">Lock</span></th>
             </tr>
         </thead>
@@ -299,6 +299,69 @@
     // The line whose Cost % Complete edit is currently in flight, if any.
     private string? savingKey;
 
+    // Header sorting: null = the default alphabetical-by-name order. Text columns start
+    // ascending; value columns start descending (biggest first — what the numbers are
+    // usually sorted for). Clicking the active column flips the direction.
+    private string? sortColumn;
+    private bool sortDescending;
+
+    private static readonly HashSet<string> TextSortColumns = new(StringComparer.Ordinal) { "code", "name" };
+
+    private void SortBy(string column)
+    {
+        if (sortColumn == column)
+        {
+            sortDescending = !sortDescending;
+            return;
+        }
+        sortColumn = column;
+        sortDescending = !TextSortColumns.Contains(column);
+    }
+
+    private RenderFragment SortHeader(string column, string label) => __builder =>
+    {
+        <button type="button"
+                class="inline-flex items-center gap-1 uppercase tracking-wider font-semibold hover:text-content"
+                title="Sort by @label"
+                @onclick="() => SortBy(column)">
+            @label
+            @if (sortColumn == column)
+            {
+                <span aria-hidden="true">@(sortDescending ? "▼" : "▲")</span>
+            }
+        </button>
+    };
+
+    private decimal SortValue(ReportLine line, string column) => column switch
+    {
+        "sales" => ContractSalesFor(line.CostCodes),
+        "complete" => SalesCompletionFor(line.CostCodes),
+        "claim" => ClaimValueFor(line.CostCodes),
+        "target" => TargetCostFor(line.CostCodes),
+        "wo" => WoCommittedFor(line.CostCodes),
+        "acos" => CostOfSalesFor(line.CostCodes),
+        "nonwo" => NonWoCostOfSalesFor(line.CostCodes),
+        "drawdown" => DrawdownFor(line.CostCodes),
+        "pl" => ProfitLossFor(line.CostCodes),
+        "costpct" => CostCompletionFor(line.CostCodes),
+        _ => 0m
+    };
+
+    private IEnumerable<ReportLine> ApplySort(IEnumerable<ReportLine> lines) => sortColumn switch
+    {
+        null => lines.OrderBy(line => line.Name, StringComparer.OrdinalIgnoreCase),
+        "code" => sortDescending
+            ? lines.OrderByDescending(line => line.Code, StringComparer.OrdinalIgnoreCase)
+            : lines.OrderBy(line => line.Code, StringComparer.OrdinalIgnoreCase),
+        "name" => sortDescending
+            ? lines.OrderByDescending(line => line.Name, StringComparer.OrdinalIgnoreCase)
+            : lines.OrderBy(line => line.Name, StringComparer.OrdinalIgnoreCase),
+        _ => (sortDescending
+                ? lines.OrderByDescending(line => SortValue(line, sortColumn))
+                : lines.OrderBy(line => SortValue(line, sortColumn)))
+            .ThenBy(line => line.Name, StringComparer.OrdinalIgnoreCase)
+    };
+
     protected override void OnParametersSet()
     {
         byCode = SummaryRows.ToDictionary(row => row.CostCode, StringComparer.OrdinalIgnoreCase);
@@ -445,8 +508,7 @@
             var rollUps = Groups.Select(group => new ReportLine(
                 group.CostCentreGroupId, "", group.Name, InMaster: true, IsGroup: true, group.CostCodes));
 
-            return individuals.Concat(rollUps)
-                .OrderBy(line => line.Name, StringComparer.OrdinalIgnoreCase)
+            return ApplySort(individuals.Concat(rollUps))
                 .Where(line => line.IsGroup || !hideZeroRows || HasAnyValue(line.CostCodes) || selectedCodes.Contains(line.Key));
         }
     }
