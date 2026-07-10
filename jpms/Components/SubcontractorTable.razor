@@ -1,15 +1,15 @@
 @inject NavigationManager Nav
 @inject ISubcontractorStore SubcontractorStore
 
-<div class="rounded-xl border border-line bg-surface overflow-hidden">
+<div class="rounded-xl border border-line bg-surface overflow-x-auto overflow-y-auto max-h-[85vh]">
     <table class="w-full text-sm">
         <thead class="bg-surface-raised border-b border-line">
             <tr class="text-left text-[11px] uppercase tracking-wider text-content-subtle font-semibold">
-                <th class="px-4 py-3">Company</th>
-                <th class="px-4 py-3 hidden sm:table-cell">Trade</th>
-                <th class="px-4 py-3 hidden md:table-cell">Primary contact</th>
-                <th class="px-4 py-3 hidden lg:table-cell">CIS</th>
-                <th class="px-4 py-3">Compliance</th>
+                <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3">Company</th>
+                <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 hidden sm:table-cell">Trade</th>
+                <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 hidden md:table-cell">Primary contact</th>
+                <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 hidden lg:table-cell">CIS</th>
+                <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3">Compliance</th>
             </tr>
         </thead>
         <tbody class="divide-y divide-line">

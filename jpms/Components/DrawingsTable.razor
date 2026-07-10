@@ -1,15 +1,15 @@
 @inject NavigationManager Nav
 
-<div class="rounded-xl border border-line bg-surface overflow-hidden">
+<div class="rounded-xl border border-line bg-surface overflow-x-auto overflow-y-auto max-h-[85vh]">
     <table class="w-full text-sm">
         <thead class="bg-surface-raised border-b border-line">
             <tr class="text-left text-[11px] uppercase tracking-wider text-content-subtle font-semibold">
-                <th class="px-4 py-3">Code</th>
-                <th class="px-4 py-3">Title</th>
-                <th class="px-4 py-3 text-center">Latest approved</th>
-                <th class="px-4 py-3 text-center">Status</th>
-                <th class="px-4 py-3 text-center">Pipeline</th>
-                <th class="px-4 py-3 hidden md:table-cell">Added</th>
+                <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3">Code</th>
+                <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3">Title</th>
+                <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 text-center">Latest approved</th>
+                <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 text-center">Status</th>
+                <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 text-center">Pipeline</th>
+                <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 hidden md:table-cell">Added</th>
             </tr>
         </thead>
         <tbody class="divide-y divide-line">

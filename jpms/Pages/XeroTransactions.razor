@@ -98,18 +98,18 @@ else
                     }
                 </div>
 
-                <div class="rounded-xl border border-line bg-surface overflow-hidden">
+                <div class="rounded-xl border border-line bg-surface overflow-x-auto overflow-y-auto max-h-[85vh]">
                     <table class="w-full text-sm">
                         <thead class="bg-surface-raised border-b border-line">
                             <tr class="text-left text-[11px] uppercase tracking-wider text-content-subtle font-semibold">
-                                <th class="px-4 py-3">Date</th>
-                                <th class="px-4 py-3">Supplier</th>
-                                <th class="px-4 py-3 hidden md:table-cell">Number</th>
-                                <th class="px-4 py-3">Site</th>
-                                <th class="px-4 py-3 hidden lg:table-cell">Cost code</th>
-                                <th class="px-4 py-3">Status</th>
-                                <th class="px-4 py-3 text-right hidden md:table-cell">Net</th>
-                                <th class="px-4 py-3 text-right">Total</th>
+                                <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3">Date</th>
+                                <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3">Supplier</th>
+                                <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 hidden md:table-cell">Number</th>
+                                <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3">Site</th>
+                                <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 hidden lg:table-cell">Cost code</th>
+                                <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3">Status</th>
+                                <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 text-right hidden md:table-cell">Net</th>
+                                <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 text-right">Total</th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-line">
@@ -195,16 +195,16 @@ else
                     </span>
                 </p>
 
-                <div class="rounded-xl border border-line bg-surface overflow-hidden">
+                <div class="rounded-xl border border-line bg-surface overflow-x-auto overflow-y-auto max-h-[85vh]">
                     <table class="w-full text-sm">
                         <thead class="bg-surface-raised border-b border-line">
                             <tr class="text-left text-[11px] uppercase tracking-wider text-content-subtle font-semibold">
-                                <th class="px-4 py-3">Site / cost code</th>
+                                <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3">Site / cost code</th>
                                 @foreach (var year in Years)
                                 {
-                                    <th class="px-4 py-3 text-right">@year</th>
+                                    <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 text-right">@year</th>
                                 }
-                                <th class="px-4 py-3 text-right">Total</th>
+                                <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 text-right">Total</th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-line">

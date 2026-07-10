@@ -102,15 +102,15 @@ else
                 }
                 else
                 {
-                    <div class="rounded-xl border border-line bg-surface overflow-hidden">
+                    <div class="rounded-xl border border-line bg-surface overflow-x-auto overflow-y-auto max-h-[85vh]">
                         <table class="w-full text-sm">
                             <thead class="bg-surface-raised border-b border-line">
                                 <tr class="text-left text-[11px] uppercase tracking-wider text-content-subtle font-semibold">
-                                    <th class="px-4 py-3">Subcontractor</th>
-                                    <th class="px-4 py-3 hidden sm:table-cell">Trade</th>
-                                    <th class="px-4 py-3">Invited</th>
-                                    <th class="px-4 py-3">Status</th>
-                                    <th class="px-4 py-3"></th>
+                                    <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3">Subcontractor</th>
+                                    <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 hidden sm:table-cell">Trade</th>
+                                    <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3">Invited</th>
+                                    <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3">Status</th>
+                                    <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3"></th>
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-line">
@@ -163,15 +163,15 @@ else
 
                 @if (editingLines)
                 {
-                    <div class="rounded-xl border border-line bg-surface overflow-hidden mb-3">
+                    <div class="rounded-xl border border-line bg-surface overflow-x-auto overflow-y-auto max-h-[85vh] mb-3">
                         <table class="w-full text-sm">
                             <thead class="bg-surface-raised border-b border-line">
                                 <tr class="text-left text-[11px] uppercase tracking-wider text-content-subtle font-semibold">
-                                    <th class="px-3 py-2">Trade</th>
-                                    <th class="px-3 py-2">Description</th>
-                                    <th class="px-3 py-2 hidden sm:table-cell">Unit</th>
-                                    <th class="px-3 py-2">Qty</th>
-                                    <th class="px-3 py-2"></th>
+                                    <th class="sticky top-0 z-20 bg-surface-raised px-3 py-2">Trade</th>
+                                    <th class="sticky top-0 z-20 bg-surface-raised px-3 py-2">Description</th>
+                                    <th class="sticky top-0 z-20 bg-surface-raised px-3 py-2 hidden sm:table-cell">Unit</th>
+                                    <th class="sticky top-0 z-20 bg-surface-raised px-3 py-2">Qty</th>
+                                    <th class="sticky top-0 z-20 bg-surface-raised px-3 py-2"></th>
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-line">
@@ -207,17 +207,17 @@ else
                     {
                         <div class="mb-4">
                             <p class="text-xs font-semibold uppercase tracking-wide text-content-subtle mb-1">@(string.IsNullOrWhiteSpace(group.Key) ? "Unspecified" : group.Key)</p>
-                            <div class="rounded-xl border border-line bg-surface overflow-hidden">
+                            <div class="rounded-xl border border-line bg-surface overflow-x-auto overflow-y-auto max-h-[85vh]">
                                 <table class="w-full text-sm">
                                     <thead class="bg-surface-raised border-b border-line">
                                         <tr class="text-left text-[11px] uppercase tracking-wider text-content-subtle font-semibold">
-                                            <th class="px-4 py-2">Description</th>
-                                            <th class="px-4 py-2 hidden sm:table-cell">Unit</th>
-                                            <th class="px-4 py-2">Qty</th>
-                                            <th class="px-4 py-2">Covered by</th>
+                                            <th class="sticky top-0 z-20 bg-surface-raised px-4 py-2">Description</th>
+                                            <th class="sticky top-0 z-20 bg-surface-raised px-4 py-2 hidden sm:table-cell">Unit</th>
+                                            <th class="sticky top-0 z-20 bg-surface-raised px-4 py-2">Qty</th>
+                                            <th class="sticky top-0 z-20 bg-surface-raised px-4 py-2">Covered by</th>
                                             @if (CanManage)
                                             {
-                                                <th class="px-4 py-2"></th>
+                                                <th class="sticky top-0 z-20 bg-surface-raised px-4 py-2"></th>
                                             }
                                         </tr>
                                     </thead>
@@ -265,16 +265,16 @@ else
                         <p class="rounded-lg bg-accent/10 border border-accent/30 px-3 py-2 text-sm text-content mb-3">@awardNote</p>
                     }
 
-                    <div class="rounded-xl border border-line bg-surface overflow-x-auto">
+                    <div class="rounded-xl border border-line bg-surface overflow-x-auto overflow-y-auto max-h-[85vh]">
                         <table class="w-full text-sm">
                             <thead class="bg-surface-raised border-b border-line">
                                 <tr class="text-left text-[11px] uppercase tracking-wider text-content-subtle font-semibold">
-                                    <th class="px-4 py-2">Line item</th>
-                                    <th class="px-4 py-2 hidden sm:table-cell">Qty</th>
+                                    <th class="sticky top-0 z-20 bg-surface-raised px-4 py-2">Line item</th>
+                                    <th class="sticky top-0 z-20 bg-surface-raised px-4 py-2 hidden sm:table-cell">Qty</th>
                                     @foreach (var quote in quotes)
                                     {
                                         var sub = Subs.Find(quote.SubcontractorId);
-                                        <th class="px-4 py-2 text-right">@(sub?.CompanyName ?? quote.SubcontractorId)</th>
+                                        <th class="sticky top-0 z-20 bg-surface-raised px-4 py-2 text-right">@(sub?.CompanyName ?? quote.SubcontractorId)</th>
                                     }
                                 </tr>
                             </thead>
@@ -752,16 +752,16 @@ else
                 }
             </select>
 
-            <div class="rounded-xl border border-line bg-surface overflow-hidden mb-3">
+            <div class="rounded-xl border border-line bg-surface mb-3">
                 <table class="w-full text-sm">
                     <thead class="bg-surface-raised border-b border-line">
                         <tr class="text-left text-[11px] uppercase tracking-wider text-content-subtle font-semibold">
-                            <th class="px-3 py-2">Description</th>
-                            <th class="px-3 py-2 hidden sm:table-cell">Unit</th>
-                            <th class="px-3 py-2">Qty</th>
-                            <th class="px-3 py-2">Rate</th>
-                            <th class="px-3 py-2">Total</th>
-                            <th class="px-3 py-2"></th>
+                            <th class="sticky top-0 z-20 bg-surface-raised px-3 py-2">Description</th>
+                            <th class="sticky top-0 z-20 bg-surface-raised px-3 py-2 hidden sm:table-cell">Unit</th>
+                            <th class="sticky top-0 z-20 bg-surface-raised px-3 py-2">Qty</th>
+                            <th class="sticky top-0 z-20 bg-surface-raised px-3 py-2">Rate</th>
+                            <th class="sticky top-0 z-20 bg-surface-raised px-3 py-2">Total</th>
+                            <th class="sticky top-0 z-20 bg-surface-raised px-3 py-2"></th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-line">
@@ -840,16 +840,16 @@ else
             <p class="text-sm text-content-muted mb-3">@aiProposalNotes</p>
         }
 
-        <div class="rounded-xl border border-line bg-surface overflow-hidden mb-3">
+        <div class="rounded-xl border border-line bg-surface mb-3">
             <table class="w-full text-sm">
                 <thead class="bg-surface-raised border-b border-line">
                     <tr class="text-left text-[11px] uppercase tracking-wider text-content-subtle font-semibold">
-                        <th class="px-3 py-2">Add</th>
-                        <th class="px-3 py-2">Trade</th>
-                        <th class="px-3 py-2">Description</th>
-                        <th class="px-3 py-2 hidden sm:table-cell">Unit</th>
-                        <th class="px-3 py-2">Qty</th>
-                        <th class="px-3 py-2"></th>
+                        <th class="sticky top-0 z-20 bg-surface-raised px-3 py-2">Add</th>
+                        <th class="sticky top-0 z-20 bg-surface-raised px-3 py-2">Trade</th>
+                        <th class="sticky top-0 z-20 bg-surface-raised px-3 py-2">Description</th>
+                        <th class="sticky top-0 z-20 bg-surface-raised px-3 py-2 hidden sm:table-cell">Unit</th>
+                        <th class="sticky top-0 z-20 bg-surface-raised px-3 py-2">Qty</th>
+                        <th class="sticky top-0 z-20 bg-surface-raised px-3 py-2"></th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-line">

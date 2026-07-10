@@ -1,12 +1,12 @@
 @inject NavigationManager Nav
 
-<div class="rounded-xl border border-line bg-surface overflow-x-auto">
+<div class="rounded-xl border border-line bg-surface overflow-x-auto overflow-y-auto max-h-[85vh]">
     <table class="w-full text-sm data-table">
         <thead class="bg-surface-raised border-b border-line">
             <tr class="text-left text-[11px] uppercase tracking-wider text-content-subtle font-semibold">
                 @if (SelectionEnabled)
                 {
-                    <th class="pl-4 pr-1 py-3 w-8">
+                    <th class="sticky top-0 z-20 bg-surface-raised pl-4 pr-1 py-3 w-8">
                         <input type="checkbox" class="cursor-pointer align-middle"
                                title="Select all shown"
                                checked="@AllSelectableSelected"
@@ -14,16 +14,16 @@
                                @onchange="e => OnToggleSelectAll.InvokeAsync((bool)e.Value!)" />
                     </th>
                 }
-                <th class="px-4 py-3">Ref</th>
-                <th class="px-4 py-3 hidden sm:table-cell">Kind</th>
-                <th class="px-4 py-3">Subject</th>
-                <th class="px-4 py-3 hidden lg:table-cell">Raised To</th>
-                <th class="px-4 py-3 hidden xl:table-cell">Drawing / Detail</th>
-                <th class="px-4 py-3 hidden lg:table-cell">Issued</th>
-                <th class="px-4 py-3 hidden lg:table-cell">Response Due</th>
-                <th class="px-4 py-3 text-right hidden md:table-cell">Days Out</th>
-                <th class="px-4 py-3 text-right hidden md:table-cell">Value</th>
-                <th class="px-4 py-3">Status</th>
+                <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3">Ref</th>
+                <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 hidden sm:table-cell">Kind</th>
+                <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3">Subject</th>
+                <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 hidden lg:table-cell">Raised To</th>
+                <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 hidden xl:table-cell">Drawing / Detail</th>
+                <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 hidden lg:table-cell">Issued</th>
+                <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 hidden lg:table-cell">Response Due</th>
+                <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 text-right hidden md:table-cell">Days Out</th>
+                <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 text-right hidden md:table-cell">Value</th>
+                <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3">Status</th>
             </tr>
         </thead>
         <tbody class="divide-y divide-line">

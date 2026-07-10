@@ -33,6 +33,8 @@ public static class DesktopNavigation
     {
         Entry("Dashboard",      "/dashboard",      AllRoles),
         Entry("Projects",       "/projects",       Role.ManagingDirector, Role.FinanceDirector, Role.ProjectManager, Role.QuantitySurveyor, Role.SiteManager, Role.HealthSafetyOfficer, Role.OfficeComplianceCoordinator),
+        // Mirrors the API's cross-project RFI dashboard gate (RfiDashboardRoles.AllowedToViewDashboard).
+        Entry("RFIs",           "/rfis",           Role.ManagingDirector, Role.FinanceDirector, Role.ProjectManager, Role.QuantitySurveyor, Role.SiteManager, Role.HealthSafetyOfficer, Role.OfficeComplianceCoordinator),
         Entry("Directory",      "/directory",      Role.ManagingDirector),
         Entry("Clients",        "/clients",        Role.ManagingDirector, Role.ProjectManager),
         Entry("Architects",     "/architects",     Role.ManagingDirector, Role.ProjectManager),

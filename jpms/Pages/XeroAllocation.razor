@@ -166,35 +166,35 @@ else
                 </div>
             }
 
-            <div class="rounded-xl border border-line bg-surface overflow-x-auto">
+            <div class="rounded-xl border border-line bg-surface overflow-x-auto overflow-y-auto max-h-[85vh]">
                 <table class="w-full min-w-[82rem] text-sm">
                     <thead class="bg-surface-raised border-b border-line">
                         <tr class="text-left text-[11px] uppercase tracking-wider text-content-subtle font-semibold">
                             @if (activeTab == XeroAllocationStatus.Unallocated)
                             {
-                                <th class="px-3 py-3 w-8">
+                                <th class="sticky top-0 z-20 bg-surface-raised px-3 py-3 w-8">
                                     <input type="checkbox" checked="@AllVisibleSelected" @onchange="ToggleSelectAll" />
                                 </th>
                             }
-                            <th class="px-3 py-3">Date</th>
-                            <th class="px-3 py-3">Supplier</th>
-                            <th class="px-3 py-3">Description</th>
-                            <th class="px-3 py-3 text-right">Net</th>
+                            <th class="sticky top-0 z-20 bg-surface-raised px-3 py-3">Date</th>
+                            <th class="sticky top-0 z-20 bg-surface-raised px-3 py-3">Supplier</th>
+                            <th class="sticky top-0 z-20 bg-surface-raised px-3 py-3">Description</th>
+                            <th class="sticky top-0 z-20 bg-surface-raised px-3 py-3 text-right">Net</th>
                             @if (activeTab == XeroAllocationStatus.Unallocated)
                             {
-                                <th class="px-3 py-3">Project</th>
-                                <th class="px-3 py-3">Cost centre</th>
-                                <th class="px-3 py-3">Bucket</th>
-                                <th class="px-3 py-3"></th>
+                                <th class="sticky top-0 z-20 bg-surface-raised px-3 py-3">Project</th>
+                                <th class="sticky top-0 z-20 bg-surface-raised px-3 py-3">Cost centre</th>
+                                <th class="sticky top-0 z-20 bg-surface-raised px-3 py-3">Bucket</th>
+                                <th class="sticky top-0 z-20 bg-surface-raised px-3 py-3"></th>
                             }
                             else
                             {
-                                <th class="px-3 py-3">
+                                <th class="sticky top-0 z-20 bg-surface-raised px-3 py-3">
                                     @(activeTab == XeroAllocationStatus.Allocated ? "Allocated to"
                                       : activeTab == XeroAllocationStatus.Bucketed ? "Bucket" : "Reason")
                                 </th>
-                                <th class="px-3 py-3 hidden md:table-cell">By</th>
-                                <th class="px-3 py-3"></th>
+                                <th class="sticky top-0 z-20 bg-surface-raised px-3 py-3 hidden md:table-cell">By</th>
+                                <th class="sticky top-0 z-20 bg-surface-raised px-3 py-3"></th>
                             }
                         </tr>
                     </thead>

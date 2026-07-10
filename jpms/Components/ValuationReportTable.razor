@@ -51,20 +51,20 @@ else
                     }
                     else
                     {
-                        <div class="border-t border-line overflow-x-auto">
+                        <div class="border-t border-line overflow-x-auto overflow-y-auto max-h-[85vh]">
                             <table class="w-full text-sm border-collapse">
                                 <thead class="bg-surface-raised border-b border-line">
                                     <tr class="text-left text-[11px] uppercase tracking-wider text-content-subtle font-semibold">
-                                        <th class="sticky left-0 z-10 bg-surface-raised px-3 py-3 w-[72px]">Code</th>
-                                        <th class="sticky left-[72px] z-10 bg-surface-raised px-3 py-3 min-w-[220px]">Description</th>
-                                        <th class="px-3 py-3 text-right whitespace-nowrap">Qty</th>
-                                        <th class="px-3 py-3 text-right whitespace-nowrap">Rate £</th>
-                                        <th class="px-3 py-3 text-right whitespace-nowrap">Amount £</th>
-                                        <th class="px-3 py-3 text-right whitespace-nowrap">% Complete</th>
-                                        <th class="px-3 py-3 text-right whitespace-nowrap">Claimed £</th>
+                                        <th class="sticky left-0 top-0 z-30 bg-surface-raised px-3 py-3 w-[72px]">Code</th>
+                                        <th class="sticky left-[72px] top-0 z-30 bg-surface-raised px-3 py-3 min-w-[220px]">Description</th>
+                                        <th class="sticky top-0 z-20 bg-surface-raised px-3 py-3 text-right whitespace-nowrap">Qty</th>
+                                        <th class="sticky top-0 z-20 bg-surface-raised px-3 py-3 text-right whitespace-nowrap">Rate £</th>
+                                        <th class="sticky top-0 z-20 bg-surface-raised px-3 py-3 text-right whitespace-nowrap">Amount £</th>
+                                        <th class="sticky top-0 z-20 bg-surface-raised px-3 py-3 text-right whitespace-nowrap">% Complete</th>
+                                        <th class="sticky top-0 z-20 bg-surface-raised px-3 py-3 text-right whitespace-nowrap">Claimed £</th>
                                         @if (CanEditLines)
                                         {
-                                            <th class="px-3 py-3 text-right w-[80px]"></th>
+                                            <th class="sticky top-0 z-20 bg-surface-raised px-3 py-3 text-right w-[80px]"></th>
                                         }
                                     </tr>
                                 </thead>

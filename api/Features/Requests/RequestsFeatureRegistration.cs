@@ -18,6 +18,8 @@ public static class RequestsFeatureRegistration
         services.AddScoped<IQueryHandler<ListRequestMessages, IReadOnlyList<RequestMessage>>, ListRequestMessagesHandler>();
         services.AddScoped<IQueryHandler<GetRequestEmailDetail, MailboxMessageDetail>, GetRequestEmailDetailHandler>();
         services.AddScoped<IQueryHandler<ListUnassignedRequests, IReadOnlyList<Request>>, ListUnassignedRequestsHandler>();
+        // Cross-project RFI dashboard: every RFI on every live project in one register.
+        services.AddScoped<IQueryHandler<ListRfisAcrossProjects, IReadOnlyList<Request>>, ListRfisAcrossProjectsHandler>();
 
         // Recipients preview: the exact To/CC/BCC set an issue or draft would use right now,
         // resolved through the same shared RequestRecipientResolver as the send paths.

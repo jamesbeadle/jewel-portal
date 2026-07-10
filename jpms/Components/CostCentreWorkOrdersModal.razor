@@ -18,21 +18,21 @@
     else
     {
         <div class="space-y-4">
-            <div class="rounded-lg border border-line overflow-x-auto">
+            <div class="rounded-lg border border-line overflow-x-auto overflow-y-auto max-h-[60vh]">
                 <table class="w-full text-sm border-collapse">
                     <thead class="bg-surface-raised border-b border-line">
                         <tr class="text-left text-[11px] uppercase tracking-wider text-content-subtle font-semibold">
-                            <th class="px-4 py-2.5 whitespace-nowrap">Order</th>
+                            <th class="sticky top-0 z-20 bg-surface-raised px-4 py-2.5 whitespace-nowrap">Order</th>
                             @if (ShowCentreColumn)
                             {
-                                <th class="px-4 py-2.5 whitespace-nowrap">Centre</th>
+                                <th class="sticky top-0 z-20 bg-surface-raised px-4 py-2.5 whitespace-nowrap">Centre</th>
                             }
-                            <th class="px-4 py-2.5">Supplier</th>
-                            <th class="px-4 py-2.5">Line</th>
-                            <th class="px-4 py-2.5 whitespace-nowrap">Status</th>
-                            <th class="px-4 py-2.5 text-right whitespace-nowrap">Committed</th>
-                            <th class="px-4 py-2.5 text-right whitespace-nowrap">Paid</th>
-                            <th class="px-4 py-2.5 text-right whitespace-nowrap">Remaining</th>
+                            <th class="sticky top-0 z-20 bg-surface-raised px-4 py-2.5">Supplier</th>
+                            <th class="sticky top-0 z-20 bg-surface-raised px-4 py-2.5">Line</th>
+                            <th class="sticky top-0 z-20 bg-surface-raised px-4 py-2.5 whitespace-nowrap">Status</th>
+                            <th class="sticky top-0 z-20 bg-surface-raised px-4 py-2.5 text-right whitespace-nowrap">Committed</th>
+                            <th class="sticky top-0 z-20 bg-surface-raised px-4 py-2.5 text-right whitespace-nowrap">Paid</th>
+                            <th class="sticky top-0 z-20 bg-surface-raised px-4 py-2.5 text-right whitespace-nowrap">Remaining</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-line">

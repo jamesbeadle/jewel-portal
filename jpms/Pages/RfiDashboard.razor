@@ -1,0 +1,235 @@
+@page "/rfis"
+@using Jewel.JPMS.Features.Projects
+@using Jewel.JPMS.Features.Requests
+@inject AuthService Auth
+@inject SessionService Session
+@inject RfiRegisterReadModel RfiRegister
+@inject ProjectListReadModel ProjectsReadModel
+@inject NavigationManager Nav
+@implements IDisposable
+
+<PageTitle>RFIs · JPMS</PageTitle>
+
+@if (!isLoaded)
+{
+    <section class="px-6 py-6 md:px-8 text-content-subtle text-sm">Loading RFIs…</section>
+}
+else if (!Session.IsApproved)
+{
+    <RequestAccessView Email="@Auth.CurrentUser!.Email" DisplayName="@Auth.CurrentUser.DisplayName" />
+}
+else
+{
+    <section class="px-6 py-6 md:px-8">
+        <header class="mb-6">
+            <p class="eyebrow mb-1">JPMS · RFIs</p>
+            <h1 class="text-2xl md:text-3xl font-semibold text-content leading-tight">RFI register</h1>
+            <p class="text-sm text-content-muted mt-2">
+                @AllRecords.Count total · @OpenCount open · @OverdueCount overdue · across @ProjectCount project@(ProjectCount == 1 ? "" : "s")
+            </p>
+        </header>
+
+        <div class="flex flex-wrap items-center gap-2 mb-5 text-sm">
+            @foreach (var option in StatusViews)
+            {
+                <button type="button" class="@StatusViewClass(option)" @onclick="() => statusView = option">
+                    @StatusViewLabel(option) · @StatusViewCount(option)
+                </button>
+            }
+        </div>
+
+        @if (FilteredRecords.Count == 0)
+        {
+            <p class="text-sm text-content-subtle italic">No RFIs recorded.</p>
+        }
+        else
+        {
+            <div class="rounded-xl border border-line bg-surface overflow-x-auto">
+                <table class="w-full text-sm data-table">
+                    <thead class="bg-surface-raised border-b border-line">
+                        <tr class="text-left text-[11px] uppercase tracking-wider text-content-subtle font-semibold">
+                            <th class="px-4 py-3">Project</th>
+                            <th class="px-4 py-3">Ref</th>
+                            <th class="px-4 py-3">Subject</th>
+                            <th class="px-4 py-3 hidden lg:table-cell">Raised To</th>
+                            <th class="px-4 py-3 hidden xl:table-cell">Drawing / Detail</th>
+                            <th class="px-4 py-3 hidden lg:table-cell">Issued</th>
+                            <th class="px-4 py-3 hidden lg:table-cell">Response Due</th>
+                            <th class="px-4 py-3 text-right hidden md:table-cell">Days Out</th>
+                            <th class="px-4 py-3 text-right hidden md:table-cell">Value</th>
+                            <th class="px-4 py-3">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-line">
+                        @foreach (var record in FilteredRecords)
+                        {
+                            <tr class="align-top is-clickable cursor-pointer" @onclick="() => Open(record)">
+                                <td class="px-4 py-3 whitespace-nowrap">
+                                    <span class="block text-content font-medium">@ProjectName(record.ProjectId)</span>
+                                    <span class="block font-mono text-xs text-content-subtle">@ProjectReference(record.ProjectId)</span>
+                                </td>
+                                <td class="px-4 py-3 font-mono text-xs text-content-muted whitespace-nowrap">@record.Reference</td>
+                                <td class="px-4 py-3 text-content font-medium">
+                                    @record.Title
+                                    @if (record.ImpliesVariation)
+                                    {
+                                        <span class="ml-1.5 inline-flex items-center rounded bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-600">Variation</span>
+                                    }
+                                </td>
+                                <td class="px-4 py-3 text-content-muted hidden lg:table-cell whitespace-nowrap">@Dash(record.RaisedTo)</td>
+                                <td class="px-4 py-3 text-content-subtle hidden xl:table-cell font-mono text-xs">@Dash(record.DrawingRef)</td>
+                                <td class="px-4 py-3 text-content-subtle hidden lg:table-cell whitespace-nowrap">@record.RaisedAt.LocalDateTime.ToString("d MMM yyyy")</td>
+                                <td class="px-4 py-3 text-content-subtle hidden lg:table-cell whitespace-nowrap">@Date(record.ResponseDue)</td>
+                                <td class="px-4 py-3 text-right hidden md:table-cell whitespace-nowrap">
+                                    @if (record.DaysOutstanding is int days)
+                                    {
+                                        <span class="@(record.IsOverdue ? "text-red-600 font-semibold" : "text-content-muted")">@days</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-content-subtle">—</span>
+                                    }
+                                </td>
+                                <td class="px-4 py-3 text-right text-content-muted hidden md:table-cell whitespace-nowrap">
+                                    @(record.Value is null ? "—" : Money(record.Value.Value))
+                                </td>
+                                <td class="px-4 py-3">
+                                    <span class="inline-flex items-center whitespace-nowrap rounded-full px-2 py-0.5 text-[11px] font-medium @StatusClass(record.Status)">
+                                        @StatusLabel(record.Status)
+                                    </span>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </section>
+}
+
+@code {
+    private bool isLoaded;
+
+    private IReadOnlyList<Request> AllRecords => RfiRegister.Current ?? Array.Empty<Request>();
+
+    private int OpenCount => AllRecords.Count(r => r.Status is not RequestStatus.Closed);
+    private int OverdueCount => AllRecords.Count(r => r.IsOverdue);
+    private int ProjectCount => AllRecords.Select(r => r.ProjectId).Distinct(StringComparer.OrdinalIgnoreCase).Count();
+
+    private enum StatusView { Open, Closed, All }
+
+    private static readonly StatusView[] StatusViews = { StatusView.Open, StatusView.Closed, StatusView.All };
+
+    // Defaults to Open so the dashboard opens on outstanding work, like the per-project register.
+    private StatusView statusView = StatusView.Open;
+
+    // One flat register across the portfolio: grouped by project (reference order), then in
+    // reference order within each project — the same numeric-aware ordering the per-project
+    // register uses, so RFI-2 sits above RFI-10.
+    private IReadOnlyList<Request> FilteredRecords
+    {
+        get
+        {
+            IEnumerable<Request> records = statusView switch
+            {
+                StatusView.Open   => AllRecords.Where(r => r.Status is not RequestStatus.Closed),
+                StatusView.Closed => AllRecords.Where(r => r.Status is RequestStatus.Closed),
+                _                 => AllRecords
+            };
+            return records
+                .OrderBy(r => ProjectReference(r.ProjectId), StringComparer.OrdinalIgnoreCase)
+                .ThenBy(r => ReferenceKey(r.Reference).Prefix, StringComparer.OrdinalIgnoreCase)
+                .ThenBy(r => ReferenceKey(r.Reference).Number)
+                .ThenBy(r => r.Reference, StringComparer.OrdinalIgnoreCase)
+                .ToList();
+        }
+    }
+
+    private static (string Prefix, int Number) ReferenceKey(string? reference)
+    {
+        var raw = (reference ?? "").Trim();
+        if (raw.Length == 0) return ("\uFFFF", int.MaxValue); // blanks last
+
+        var dash = raw.IndexOf('-');
+        if (dash > 0)
+        {
+            var digits = new string(raw[(dash + 1)..].TakeWhile(char.IsDigit).ToArray());
+            if (int.TryParse(digits, out var number))
+                return (raw[..dash], number);
+        }
+        return (raw, int.MaxValue); // unnumbered free text after numbered refs
+    }
+
+    private int StatusViewCount(StatusView view) => view switch
+    {
+        StatusView.Open   => OpenCount,
+        StatusView.Closed => AllRecords.Count(r => r.Status is RequestStatus.Closed),
+        _                 => AllRecords.Count
+    };
+
+    private static string StatusViewLabel(StatusView view) => view switch
+    {
+        StatusView.Open   => "Open",
+        StatusView.Closed => "Closed",
+        _                 => "All"
+    };
+
+    private string StatusViewClass(StatusView view) =>
+        view == statusView
+            ? "px-3 py-1.5 rounded-md bg-accent text-accent-ink font-medium"
+            : "px-3 py-1.5 rounded-md text-content-muted hover:text-content hover:bg-surface-raised";
+
+    private string ProjectName(string projectId) =>
+        ProjectsReadModel.Find(projectId)?.Name ?? projectId;
+
+    private string ProjectReference(string projectId) =>
+        ProjectsReadModel.Find(projectId)?.Reference ?? projectId;
+
+    private void Open(Request record) =>
+        Nav.NavigateTo($"/projects/{record.ProjectId}/requests/view/{record.RequestId}");
+
+    private static string Dash(string? value) => string.IsNullOrWhiteSpace(value) ? "—" : value;
+
+    private static string Date(DateTimeOffset? value) =>
+        value is null ? "—" : value.Value.LocalDateTime.ToString("d MMM yyyy");
+
+    private static string Money(decimal value) =>
+        value.ToString("C0", System.Globalization.CultureInfo.GetCultureInfo("en-GB"));
+
+    private static string StatusLabel(RequestStatus status) => status switch
+    {
+        RequestStatus.AwaitingResponse => "Awaiting response",
+        _ => status.ToString()
+    };
+
+    private static string StatusClass(RequestStatus status) => status switch
+    {
+        RequestStatus.Open             => "bg-blue-500/10 text-blue-600",
+        RequestStatus.AwaitingResponse => "bg-amber-500/10 text-amber-600",
+        RequestStatus.Approved         => "bg-emerald-500/10 text-emerald-600",
+        RequestStatus.Responded        => "bg-emerald-500/10 text-emerald-600",
+        RequestStatus.Rejected         => "bg-red-500/10 text-red-600",
+        RequestStatus.Closed           => "bg-surface-raised border border-line text-content-muted",
+        _                              => "bg-surface-raised border border-line text-content-muted"
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Session.EnsureLoadedAsync();
+        if (!Auth.IsSignedIn) { Nav.NavigateTo("/login", forceLoad: true); return; }
+        RfiRegister.OnChanged += StateHasChanged;
+        ProjectsReadModel.OnChanged += StateHasChanged;
+        // Refresh on entry (never from render): both loads run together, and revisits re-render
+        // from cache while the reload lands in the background.
+        await Task.WhenAll(
+            RfiRegister.RefreshAsync(CancellationToken.None),
+            ProjectsReadModel.RefreshAsync(CancellationToken.None));
+        isLoaded = true;
+    }
+
+    public void Dispose()
+    {
+        RfiRegister.OnChanged -= StateHasChanged;
+        ProjectsReadModel.OnChanged -= StateHasChanged;
+    }
+}
