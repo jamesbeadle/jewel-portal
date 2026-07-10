@@ -61,7 +61,8 @@ public sealed class SchedulingLinkProvider : ILinkableRecordProvider
             Reference:    string.IsNullOrWhiteSpace(r.Reference) ? r.TagReference : r.Reference.Trim(),
             TagReference: RequestTags.Stem(projectRef, r.ProjectId, r.TagReference),
             Title:        r.Title,
-            StatusLabel:  ((RequestStatus)r.Status).ToString())));
+            StatusLabel:  ((RequestStatus)r.Status).ToString(),
+            Summary:      RecordSummaries.Clip(r.Description))));
 
         // … and the client's LADs claims against Jewel.
         var ladClaims = await context.LadClaims.AsNoTracking()
@@ -75,7 +76,8 @@ public sealed class SchedulingLinkProvider : ILinkableRecordProvider
             Reference:    l.Reference,
             TagReference: l.Reference,
             Title:        l.Title,
-            StatusLabel:  ((LadStatus)l.Status).DisplayName())));
+            StatusLabel:  ((LadStatus)l.Status).DisplayName(),
+            Summary:      RecordSummaries.Clip(l.Description))));
 
         return records;
     }

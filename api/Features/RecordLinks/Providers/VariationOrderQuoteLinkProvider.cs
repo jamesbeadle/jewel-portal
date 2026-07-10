@@ -70,6 +70,7 @@ public sealed class VariationOrderQuoteLinkProvider : ILinkableRecordProvider
             Reference:    reference,
             TagReference: $"VOQ-{projectRef}-{entity.Number:0000}",
             Title:        entity.Title,
-            StatusLabel:  ((VariationOrderQuoteStatus)entity.Status).ToString());
+            StatusLabel:  ((VariationOrderQuoteStatus)entity.Status).ToString(),
+            Summary:      RecordSummaries.Clip(entity.Description));
     }
 }

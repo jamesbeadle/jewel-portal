@@ -66,6 +66,7 @@ public sealed class VariationOrderLinkProvider : ILinkableRecordProvider
             Reference:    variationRef,
             TagReference: $"VO-{projectRef}-{variationRef}",
             Title:        entity.Title,
-            StatusLabel:  ((VariationOrderStatus)entity.Status).ToString());
+            StatusLabel:  ((VariationOrderStatus)entity.Status).ToString(),
+            Summary:      RecordSummaries.Clip(entity.Description));
     }
 }

@@ -48,6 +48,8 @@ public sealed class BidPackageInviteLinkProvider : ILinkableRecordProvider
             Reference:    reference,
             TagReference: reference,
             Title:        entity.Title,
-            StatusLabel:  ((BidPackageStatus)entity.Status).ToString());
+            StatusLabel:  ((BidPackageStatus)entity.Status).ToString(),
+            // Bid packages have no free-text description; the trade is the next-best discriminator.
+            Summary:      RecordSummaries.Clip(entity.Trade));
     }
 }

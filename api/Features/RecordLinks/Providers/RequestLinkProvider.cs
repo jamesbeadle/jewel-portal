@@ -54,5 +54,6 @@ public sealed class RequestLinkProvider : ILinkableRecordProvider
         Reference:    string.IsNullOrWhiteSpace(entity.Reference) ? entity.TagReference : entity.Reference.Trim(),
         TagReference: RequestTags.Stem(projectRef, entity.ProjectId, entity.TagReference),
         Title:        entity.Title,
-        StatusLabel:  ((RequestStatus)entity.Status).ToString());
+        StatusLabel:  ((RequestStatus)entity.Status).ToString(),
+        Summary:      RecordSummaries.Clip(entity.Description));
 }

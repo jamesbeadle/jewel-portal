@@ -14,4 +14,7 @@ public sealed record LinkableRecord(
     string     Reference,     // human reference shown in the list, e.g. "RFI-001" / "BPI-0001"
     string     TagReference,  // canonical tag stem → "JPMS/<TagReference>" (usually == Reference)
     string     Title,
-    string?    StatusLabel = null); // optional small badge, type-specific (e.g. "Open", "Draft")
+    string?    StatusLabel = null, // optional small badge, type-specific (e.g. "Open", "Draft")
+    string?    Summary     = null); // optional short description shown under the title in the picker,
+                                    // so similarly-titled records (e.g. two "Coombe Lane defects"
+                                    // requests) can be told apart. Providers clip it server-side.

@@ -576,8 +576,18 @@ else
                                                             @foreach (var record in candidates)
                                                             {
                                                                 <button type="button" @onclick="() => linkRecordId = record.RecordId" class="@RecordPickClass(record, true)">
-                                                                    <span class="font-mono text-xs text-content-muted">@record.Reference</span>
+                                                                    <span class="flex items-center gap-2">
+                                                                        <span class="font-mono text-xs text-content-muted">@record.Reference</span>
+                                                                        @if (!string.IsNullOrWhiteSpace(record.StatusLabel))
+                                                                        {
+                                                                            <span class="text-[10px] uppercase tracking-wider text-content-subtle">@record.StatusLabel</span>
+                                                                        }
+                                                                    </span>
                                                                     <span class="text-sm text-content">@record.Title</span>
+                                                                    @if (!string.IsNullOrWhiteSpace(record.Summary))
+                                                                    {
+                                                                        <span class="text-xs text-content-subtle line-clamp-2">@record.Summary</span>
+                                                                    }
                                                                 </button>
                                                             }
                                                         </div>
@@ -592,8 +602,18 @@ else
                                                             @foreach (var record in others)
                                                             {
                                                                 <button type="button" @onclick="() => linkRecordId = record.RecordId" class="@RecordPickClass(record, false)">
-                                                                    <span class="font-mono text-xs text-content-muted">@record.Reference</span>
+                                                                    <span class="flex items-center gap-2">
+                                                                        <span class="font-mono text-xs text-content-muted">@record.Reference</span>
+                                                                        @if (!string.IsNullOrWhiteSpace(record.StatusLabel))
+                                                                        {
+                                                                            <span class="text-[10px] uppercase tracking-wider text-content-subtle">@record.StatusLabel</span>
+                                                                        }
+                                                                    </span>
                                                                     <span class="text-sm text-content">@record.Title</span>
+                                                                    @if (!string.IsNullOrWhiteSpace(record.Summary))
+                                                                    {
+                                                                        <span class="text-xs text-content-subtle line-clamp-2">@record.Summary</span>
+                                                                    }
                                                                 </button>
                                                             }
                                                         </div>
