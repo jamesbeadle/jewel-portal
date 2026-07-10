@@ -79,8 +79,10 @@ else
                 is to be spent on it: its remaining drawdown moves to profit / loss, realising what was
                 made (or lost) buying against that centre. Cost % complete is the cost-side
                 completion — edit it directly in the table. Tick two or more rows to roll them up into
-                one named line; on a rolled-up line, figures are summed, the two percentages are
-                value-weighted, and editing cost % or the lock applies to every member.
+                one named line — existing roll-ups can be ticked too, merging them into the new line
+                (e.g. add a third centre to a group of two without ungrouping). On a rolled-up line,
+                figures are summed, the two percentages are value-weighted, and editing cost % or the
+                lock applies to every member.
             </p>
 
             <CostCentreSalesLinesModal IsOpen="@(selectedSales is not null)"
@@ -117,6 +119,11 @@ else
                     <p class="text-sm text-content-subtle">
                         The selected cost centres will show as one report line. Figures are summed and
                         percentages value-weighted; nothing changes underneath — ungroup at any time.
+                        @if (pendingReplaceGroupIds.Count > 0)
+                        {
+                            <text> The selected roll-up@(pendingReplaceGroupIds.Count > 1 ? "s are" : " is") merged
+                            into this new line.</text>
+                        }
                     </p>
                     <p class="text-sm text-content font-mono text-[12px]">@string.Join(", ", pendingGroupCodes ?? Array.Empty<string>())</p>
                     <label class="block text-sm text-content-subtle">
@@ -152,7 +159,9 @@ else
     private SelectedLine? selectedCostOfSales;
 
     // Roll-up naming dialog state; non-null pendingGroupCodes means the dialog is open.
+    // pendingReplaceGroupIds carries any selected roll-ups being merged into the new group.
     private IReadOnlyList<string>? pendingGroupCodes;
+    private IReadOnlyList<string> pendingReplaceGroupIds = Array.Empty<string>();
     private string groupName = "";
     private string? groupDialogError;
     private bool isCreatingGroup;
@@ -216,10 +225,22 @@ else
         await Summary.RefreshAsync(ProjectId, CancellationToken.None);
     }
 
-    private void OpenGroupDialog(IReadOnlyList<string> costCodes)
+    // Selected roll-ups are expanded to their member centres and dissolved on create —
+    // this is how a third centre joins an existing group, or two groups merge, without
+    // ungrouping first. The dialog prefills the first selected group's name.
+    private void OpenGroupDialog((IReadOnlyList<string> CostCodes, IReadOnlyList<string> GroupIds) selection)
     {
-        pendingGroupCodes = costCodes;
-        groupName = "";
+        var selectedGroups = Groups.Current(ProjectId)
+            .Where(group => selection.GroupIds.Contains(group.CostCentreGroupId, StringComparer.OrdinalIgnoreCase))
+            .ToList();
+
+        pendingGroupCodes = selection.CostCodes
+            .Concat(selectedGroups.SelectMany(group => group.CostCodes))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(costCode => costCode, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+        pendingReplaceGroupIds = selectedGroups.Select(group => group.CostCentreGroupId).ToList();
+        groupName = selectedGroups.FirstOrDefault()?.Name ?? "";
         groupDialogError = null;
     }
 
@@ -233,7 +254,8 @@ else
         try
         {
             await Commands.SendAsync(
-                new CreateCostCentreGroup(ProjectId, groupName.Trim(), pendingGroupCodes), CancellationToken.None);
+                new CreateCostCentreGroup(ProjectId, groupName.Trim(), pendingGroupCodes,
+                    pendingReplaceGroupIds.Count > 0 ? pendingReplaceGroupIds : null), CancellationToken.None);
             pendingGroupCodes = null;
             await Groups.RefreshAsync(ProjectId, CancellationToken.None);
         }

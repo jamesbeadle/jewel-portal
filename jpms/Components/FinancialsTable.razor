@@ -6,16 +6,16 @@
         <input type="checkbox" class="cursor-pointer align-middle" @bind="hideZeroRows" />
         Hide zero rows
     </label>
-    @if (selectedCodes.Count > 0)
+    @if (SelectionCount > 0)
     {
         <div class="flex items-center gap-3">
-            <span class="text-sm text-content-subtle">@selectedCodes.Count selected</span>
-            <button type="button" class="btn-primary text-sm" disabled="@(selectedCodes.Count < 2)"
-                    title="Combine the selected cost centres into one named report line"
+            <span class="text-sm text-content-subtle">@SelectionCount selected</span>
+            <button type="button" class="btn-primary text-sm" disabled="@(SelectionCount < 2)"
+                    title="Combine the selected rows into one named report line — selected roll-ups are merged in"
                     @onclick="RequestGroup">
-                Roll up @selectedCodes.Count rows
+                Roll up @SelectionCount rows
             </button>
-            <button type="button" class="btn-secondary text-sm" @onclick="() => selectedCodes.Clear()">Clear</button>
+            <button type="button" class="btn-secondary text-sm" @onclick="ClearSelection">Clear</button>
         </div>
     }
 </div>
@@ -59,7 +59,14 @@
                 var anyLocked = AnyFinalised(reportLine.CostCodes);
                 <tr>
                     <td class="sticky left-0 z-10 bg-surface px-3 py-3">
-                        @if (!reportLine.IsGroup)
+                        @if (reportLine.IsGroup)
+                        {
+                            <input type="checkbox" class="cursor-pointer align-middle"
+                                   title="Select to merge this roll-up with other rows into one line"
+                                   checked="@selectedGroupIds.Contains(reportLine.Key)"
+                                   @onchange="() => ToggleGroupSelection(reportLine.Key)" />
+                        }
+                        else
                         {
                             <input type="checkbox" class="cursor-pointer align-middle"
                                    title="Select to roll up with other rows"
@@ -236,9 +243,10 @@
     /// to apply to all of them (lock everything unless every member is already locked).</summary>
     [Parameter] public EventCallback<(IReadOnlyList<string> CostCodes, bool Finalise)> OnFinalisationToggled { get; set; }
 
-    /// <summary>Raised with the selected cost codes when the user asks to roll them up;
-    /// the parent collects a name and creates the group.</summary>
-    [Parameter] public EventCallback<IReadOnlyList<string>> OnGroupRequested { get; set; }
+    /// <summary>Raised when the user asks to roll the selection up: the individually
+    /// selected cost codes plus any selected roll-ups (which will be merged into the new
+    /// group). The parent collects a name and creates the group.</summary>
+    [Parameter] public EventCallback<(IReadOnlyList<string> CostCodes, IReadOnlyList<string> GroupIds)> OnGroupRequested { get; set; }
 
     /// <summary>Raised with the group id when a roll-up's Ungroup button is clicked.</summary>
     [Parameter] public EventCallback<string> OnUngroupRequested { get; set; }
@@ -283,8 +291,10 @@
     // shown — they exist because someone deliberately created them.
     private bool hideZeroRows = true;
 
-    // Codes ticked for the next roll-up.
+    // Codes and existing roll-ups ticked for the next roll-up. Selected roll-ups are
+    // merged into the new group rather than nested.
     private readonly HashSet<string> selectedCodes = new(StringComparer.OrdinalIgnoreCase);
+    private readonly HashSet<string> selectedGroupIds = new(StringComparer.OrdinalIgnoreCase);
 
     // The line whose Cost % Complete edit is currently in flight, if any.
     private string? savingKey;
@@ -294,20 +304,38 @@
         byCode = SummaryRows.ToDictionary(row => row.CostCode, StringComparer.OrdinalIgnoreCase);
         // New rows have arrived (or the parent re-rendered after the save): re-enable the input.
         savingKey = null;
-        // Codes that have just been rolled up can no longer be individually selected.
+        // Codes that have just been rolled up can no longer be individually selected,
+        // and merged-away roll-ups can no longer be selected either.
         selectedCodes.RemoveWhere(selected => GroupedCodes.Contains(selected));
+        selectedGroupIds.RemoveWhere(selected =>
+            !Groups.Any(group => string.Equals(group.CostCentreGroupId, selected, StringComparison.OrdinalIgnoreCase)));
     }
 
     private HashSet<string> GroupedCodes =>
         Groups.SelectMany(group => group.CostCodes).ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+    private int SelectionCount => selectedCodes.Count + selectedGroupIds.Count;
 
     private void ToggleSelection(string costCode)
     {
         if (!selectedCodes.Remove(costCode)) selectedCodes.Add(costCode);
     }
 
+    private void ToggleGroupSelection(string groupId)
+    {
+        if (!selectedGroupIds.Remove(groupId)) selectedGroupIds.Add(groupId);
+    }
+
+    private void ClearSelection()
+    {
+        selectedCodes.Clear();
+        selectedGroupIds.Clear();
+    }
+
     private Task RequestGroup() =>
-        OnGroupRequested.InvokeAsync(selectedCodes.OrderBy(selected => selected, StringComparer.OrdinalIgnoreCase).ToList());
+        OnGroupRequested.InvokeAsync((
+            (IReadOnlyList<string>)selectedCodes.OrderBy(selected => selected, StringComparer.OrdinalIgnoreCase).ToList(),
+            (IReadOnlyList<string>)selectedGroupIds.OrderBy(selected => selected, StringComparer.OrdinalIgnoreCase).ToList()));
 
     private static string Heading(ReportLine line) =>
         line.IsGroup ? line.Name : $"{line.Code} — {(line.InMaster ? line.Name : "(not in cost-code master)")}";

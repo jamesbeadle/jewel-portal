@@ -12,11 +12,15 @@ namespace Jewel.JPMS.Contracts.Commercial;
 public sealed record ListCostCentreGroupsForProject(string ProjectId) : IQuery<IReadOnlyList<CostCentreGroup>>;
 
 /// <summary>Creates a named roll-up from two or more cost centres. Rejected when any
-/// of the centres already belongs to another group on this project.</summary>
+/// of the centres already belongs to another group on this project — unless that group
+/// is listed in <paramref name="ReplaceGroupIds"/>: those groups are dissolved and their
+/// members absorbed in the same save, which is how an existing roll-up is grown or two
+/// roll-ups are merged without an ungroup-and-redo dance.</summary>
 public sealed record CreateCostCentreGroup(
     string ProjectId,
     string Name,
-    IReadOnlyList<string> CostCodes) : ICommand<CostCentreGroup>;
+    IReadOnlyList<string> CostCodes,
+    IReadOnlyList<string>? ReplaceGroupIds = null) : ICommand<CostCentreGroup>;
 
 /// <summary>Dissolves a roll-up; its cost centres return to individual rows.
 /// Nothing else is deleted — the group is presentation only.</summary>

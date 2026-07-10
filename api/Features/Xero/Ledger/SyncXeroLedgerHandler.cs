@@ -13,6 +13,9 @@ namespace Jewel.JPMS.Api.Features.Xero.Ledger;
 /// allocation fields are left untouched. Lines Xero no longer returns (e.g. a
 /// bill edited to remove a line) simply stop being refreshed — their older
 /// LastSyncedAtUtc makes them identifiable without destroying an allocation.
+/// The exception is voided/deleted invoices: voiding reverses the cost, so their
+/// stored lines are removed even when already allocated (splits included), taking
+/// them out of project financials on the next sync.
 /// </summary>
 public sealed class SyncXeroLedgerHandler : ICommandHandler<SyncXeroLedger, XeroLedgerSyncResult>
 {
@@ -139,17 +142,33 @@ public sealed class SyncXeroLedgerHandler : ICommandHandler<SyncXeroLedger, Xero
 
         // Invoice-level cleanup pass. Deleted invoices come back from Xero with no
         // line items (so the loop above never sees them), and lines can be edited
-        // off a bill entirely. For any invoice present in the snapshot:
-        //   * unallocated stored lines of voided/deleted invoices -> removed
+        // off a bill entirely.
+        //   * stored lines of voided/deleted invoices -> removed, allocated or not.
+        //     Voiding reverses the cost, so the allocation (and any split shares)
+        //     must stop counting in project financials rather than linger flagged.
         //   * unallocated stored lines that no longer exist on the bill -> removed
-        //   * allocated/ignored lines are always kept; their InvoiceStatus is
-        //     refreshed so a post-allocation void/delete is visible, never silent.
+        //   * other allocated/ignored lines are kept untouched.
         var statusByInvoiceId = snapshot.Transactions
             .GroupBy(transaction => transaction.TransactionId)
             .ToDictionary(group => group.Key, group => group.First().Status);
 
+        var removedLineIds = new List<string>();
         foreach (var entity in existingById.Values.ToList())
         {
+            var snapshotStatus = statusByInvoiceId.TryGetValue(entity.XeroInvoiceId, out var status) ? status : null;
+
+            // Voided/deleted reverses the cost regardless of allocation state. The stored
+            // status covers invoices that have dropped out of the snapshot window since
+            // they were last refreshed.
+            if ((snapshotStatus is not null && ExcludedStatuses.Contains(snapshotStatus))
+                || ExcludedStatuses.Contains(entity.InvoiceStatus))
+            {
+                context.XeroLedgerLines.Remove(entity);
+                removedLineIds.Add(entity.XeroLedgerLineId);
+                removed++;
+                continue;
+            }
+
             if (entity.AllocationStatus == (int)XeroAllocationStatus.Unallocated)
             {
                 // The account rule holds regardless of whether the invoice was in this
@@ -161,19 +180,22 @@ public sealed class SyncXeroLedgerHandler : ICommandHandler<SyncXeroLedger, Xero
                     continue;
                 }
 
-                if (statusByInvoiceId.TryGetValue(entity.XeroInvoiceId, out var status)
-                    && (ExcludedStatuses.Contains(status) || !seenLineIds.Contains(entity.XeroLedgerLineId)))
+                if (snapshotStatus is not null && !seenLineIds.Contains(entity.XeroLedgerLineId))
                 {
                     context.XeroLedgerLines.Remove(entity);
                     removed++;
                 }
             }
-            else if (statusByInvoiceId.TryGetValue(entity.XeroInvoiceId, out var status)
-                     && ExcludedStatuses.Contains(status))
-            {
-                entity.InvoiceStatus = status;
-                entity.LastSyncedAtUtc = now;
-            }
+        }
+
+        // A removed line's split shares go with it — orphaned splits would silently
+        // keep feeding the per-centre actuals the removal is meant to reverse.
+        if (removedLineIds.Count > 0)
+        {
+            var orphanedSplits = await context.XeroCostSplits
+                .Where(split => removedLineIds.Contains(split.XeroLedgerLineId))
+                .ToListAsync(cancellationToken);
+            context.XeroCostSplits.RemoveRange(orphanedSplits);
         }
 
         await context.SaveChangesAsync(cancellationToken);
