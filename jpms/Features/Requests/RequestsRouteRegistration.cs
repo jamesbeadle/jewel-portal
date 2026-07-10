@@ -51,10 +51,11 @@ public static class RequestsRouteRegistration
             new QueryRoute("/api/requests/unassigned",
                 _ => "/api/requests/unassigned"));
 
-        // Cross-project RFI dashboard: every RFI on every live project in one register.
+        // Cross-project RFI dashboard: every RFI on every live project in one register. The route
+        // sits under /rfis (not /requests/rfis) so it can never be shadowed by "requests/{requestId}".
         queries.Register<ListRfisAcrossProjects, IReadOnlyList<Request>>(
-            new QueryRoute("/api/requests/rfis",
-                _ => "/api/requests/rfis"));
+            new QueryRoute("/api/rfis",
+                _ => "/api/rfis"));
 
         // Live-read triage: read the Inbox (queue) and General (discarded) folders straight from the
         // mailbox. Message ids go in the query string, not the path (Graph ids contain path-unsafe chars).

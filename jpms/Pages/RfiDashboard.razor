@@ -38,6 +38,16 @@ else
             }
         </div>
 
+        @if (loadError is not null)
+        {
+            <div class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-4 flex flex-wrap items-center gap-3">
+                <span>Couldn't load the RFI register: @loadError</span>
+                <button type="button" class="btn-secondary" disabled="@reloading" @onclick="Reload">
+                    @(reloading ? "Retrying…" : "Retry")
+                </button>
+            </div>
+        }
+
         @if (FilteredRecords.Count == 0)
         {
             <p class="text-sm text-content-subtle italic">No RFIs recorded.</p>
@@ -109,6 +119,8 @@ else
 
 @code {
     private bool isLoaded;
+    private bool reloading;
+    private string? loadError;
 
     private IReadOnlyList<Request> AllRecords => RfiRegister.Current ?? Array.Empty<Request>();
 
@@ -213,17 +225,37 @@ else
         _                              => "bg-surface-raised border border-line text-content-muted"
     };
 
+    private async Task Reload()
+    {
+        reloading = true;
+        loadError = null;
+        try
+        {
+            // Refresh on entry (never from render): both loads run together, and revisits
+            // re-render from cache while the reload lands.
+            await Task.WhenAll(
+                RfiRegister.RefreshAsync(CancellationToken.None),
+                ProjectsReadModel.RefreshAsync(CancellationToken.None));
+        }
+        catch (Exception ex)
+        {
+            // A failed load must not take the whole app down — keep whatever is cached on
+            // screen and surface the problem with a retry.
+            loadError = ex.Message;
+        }
+        finally
+        {
+            reloading = false;
+        }
+    }
+
     protected override async Task OnInitializedAsync()
     {
         await Session.EnsureLoadedAsync();
         if (!Auth.IsSignedIn) { Nav.NavigateTo("/login", forceLoad: true); return; }
         RfiRegister.OnChanged += StateHasChanged;
         ProjectsReadModel.OnChanged += StateHasChanged;
-        // Refresh on entry (never from render): both loads run together, and revisits re-render
-        // from cache while the reload lands in the background.
-        await Task.WhenAll(
-            RfiRegister.RefreshAsync(CancellationToken.None),
-            ProjectsReadModel.RefreshAsync(CancellationToken.None));
+        await Reload();
         isLoaded = true;
     }
 

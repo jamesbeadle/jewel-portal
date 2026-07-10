@@ -15,8 +15,10 @@ public sealed class ListRfisAcrossProjectsEndpoint
     private readonly IQueryHandler<ListRfisAcrossProjects, IReadOnlyList<Request>> handler;
     public ListRfisAcrossProjectsEndpoint(SignedInUserResolver users, IQueryHandler<ListRfisAcrossProjects, IReadOnlyList<Request>> handler) { this.users = users; this.handler = handler; }
 
+    // Route lives under /rfis (not /requests/rfis) so it can never be shadowed by the
+    // GetRequestById route template "requests/{requestId}".
     [Function(nameof(ListRfisAcrossProjects))]
-    public async Task<IActionResult> Run([HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "requests/rfis")] HttpRequest request)
+    public async Task<IActionResult> Run([HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "rfis")] HttpRequest request)
     {
         var signedInUser = await users.ResolveAsync(request, request.HttpContext.RequestAborted);
         if (signedInUser is null) return new UnauthorizedResult();
