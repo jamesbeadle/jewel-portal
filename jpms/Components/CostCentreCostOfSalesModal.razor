@@ -82,7 +82,7 @@
                                                 title="The work order this invoice line pays against — unlinked lines count as non-work-order cost of sales"
                                                 @onchange="e => LinkAsync(entry, e.Value?.ToString())">
                                             <option value="" selected="@(line.LinkedWorkOrderId is null)">Not linked</option>
-                                            @foreach (var order in WorkOrdersFor(entry.CostCode))
+                                            @foreach (var order in LinkableWorkOrders)
                                             {
                                                 <option value="@order.Order.WorkOrderId" selected="@(line.LinkedWorkOrderId == order.Order.WorkOrderId)">
                                                     @($"WO-{order.Order.Number:0000} · {order.SubcontractorName}")
@@ -225,10 +225,14 @@
         moveError = null;
     }
 
-    // Work orders with any line coded to this centre — a short list that's hard to mislink.
-    private IEnumerable<ProjectWorkOrderDetail> WorkOrdersFor(string costCode) =>
+    // Work orders with any line coded to any of THIS REPORT LINE's centres — a short
+    // list that's hard to mislink. Scoped to the whole line rather than the invoice's
+    // own centre: on a roll-up, the invoice often sits on a sibling centre of the one
+    // the work order is coded to (e.g. timber-windows invoice paying an aluminium-
+    // windows order inside a "Windows, doors and glazing" group).
+    private IEnumerable<ProjectWorkOrderDetail> LinkableWorkOrders =>
         Orders.Where(detail => detail.Lines.Any(line =>
-                string.Equals(line.CostCode, costCode, StringComparison.OrdinalIgnoreCase)))
+                CostCodes.Contains(line.CostCode, StringComparer.OrdinalIgnoreCase)))
             .OrderBy(detail => detail.Order.Number);
 
     private async Task LinkAsync(Entry entry, string? workOrderId)
