@@ -28,6 +28,10 @@
 *@
 @{
     RenderFragment MessageBody =@<text>
+        @if (threadNote is not null)
+        {
+            <p class="rounded-lg bg-accent/10 border border-accent/30 px-3 py-2 text-xs text-content">@threadNote</p>
+        }
         <div class="rounded-lg bg-surface-raised border border-line p-3 max-h-[28rem] overflow-y-auto">
             @if (detailLoading)
             {
@@ -71,7 +75,7 @@
                             var isCurrent = member.Id == selected.Id;
                             var isLatest = member.Id == thread[^1].Id;
                             <button type="button" @key="member.Id" disabled="@isCurrent"
-                                    @onclick="() => Select(member)" class="@ThreadRowClass(isCurrent)">
+                                    @onclick="() => Select(member, jumpToLatest: false)" class="@ThreadRowClass(isCurrent)">
                                 <div class="flex items-center justify-between gap-2">
                                     <span class="text-xs font-medium text-content truncate">@DisplayFrom(member)</span>
                                     <span class="flex items-center gap-1.5 whitespace-nowrap">
@@ -1023,6 +1027,9 @@ else
     private IReadOnlyList<MailboxMessage> thread = Array.Empty<MailboxMessage>();
     private bool threadLoading;
     private CancellationTokenSource? threadCts;
+    // Set when the selection was auto-moved onto a thread's latest reply, telling the triager what
+    // happened and where the email they actually clicked sits. Cleared on every new selection.
+    private string? threadNote;
 
     private IReadOnlyList<Request> unassigned = Array.Empty<Request>();
     private string? unassignedError;
@@ -1302,11 +1309,15 @@ else
         finally { busy = false; }
     }
 
-    private async Task Select(MailboxMessage item)
+    // Point the detail pane at an email: set the selection and prefill the create forms. Loading
+    // the body and thread is the caller's job — Select does both; the jump-to-latest inside
+    // LoadThreadAsync reuses this directly so it doesn't re-fetch the thread it already has.
+    private void ApplySelection(MailboxMessage item)
     {
         selected = item;
         mode = TriageMode.None;
         actionError = null;
+        threadNote = null;
         ResetLinkState();
         createRecordType = RecordType.Request;
         createProjectId = "";
@@ -1315,8 +1326,17 @@ else
         createRaisedTo = createDrawingRef = createResponseDue = "";
         createTrade = "";
         createTodoRows = new List<TodoDraftRow> { new() { Title = item.Subject } };
+    }
+
+    // jumpToLatest: clicking an email in the QUEUE list triages its thread from the newest member —
+    // if later replies exist, the selection moves onto the latest one (the reply that says what to
+    // do with the rest; every action applies thread-wide anyway). Clicks inside the thread panel
+    // pass false so any member can still be read without being bounced back to the latest.
+    private async Task Select(MailboxMessage item, bool jumpToLatest = true)
+    {
+        ApplySelection(item);
         // Body and thread are independent live reads — fetch them side by side.
-        await Task.WhenAll(LoadDetailAsync(item), LoadThreadAsync(item));
+        await Task.WhenAll(LoadDetailAsync(item), LoadThreadAsync(item, jumpToLatest));
     }
 
     // Fetch the full body + attachment names on demand when an email is opened. Cancels any in-flight
@@ -1347,7 +1367,7 @@ else
     // Fetch the selected email's whole conversation for the thread panel. Same cancellation shape as
     // LoadDetailAsync: rapid clicking can't race a stale thread onto the newly selected email. The
     // list is cleared up front so a previous selection's thread never flashes against this one.
-    private async Task LoadThreadAsync(MailboxMessage item)
+    private async Task LoadThreadAsync(MailboxMessage item, bool jumpToLatest = false)
     {
         threadCts?.Cancel();
         var cts = new CancellationTokenSource();
@@ -1357,17 +1377,34 @@ else
         if (string.IsNullOrEmpty(item.ConversationId)) { threadLoading = false; return; }
 
         threadLoading = true;
+        var jumped = false;
         try
         {
             var page = await Intake.ListConversationLiveAsync(item.ConversationId, cts.Token);
-            if (!cts.IsCancellationRequested && selected?.Id == item.Id)
-                thread = page.Items;
+            if (cts.IsCancellationRequested || selected?.Id != item.Id)
+                return;
+            thread = page.Items;
+
+            // Triage the thread from its newest member: when the clicked email has later replies,
+            // move the selection onto the latest one and note where the user came from. Queue view
+            // only — the Discarded/Tagged panes are management surfaces where the clicked email is
+            // the one being managed.
+            if (jumpToLatest && view == QueueView.Active && thread.Count > 1 && thread[^1].Id != item.Id)
+            {
+                var latest = thread[^1];
+                jumped = true;
+                threadLoading = false;
+                ApplySelection(latest);
+                threadNote = $"This email has newer replies, so the latest ({Date(latest.ReceivedAt)}) is shown — triage from here. "
+                    + $"The one you clicked ({Date(item.ReceivedAt)}) is in the thread below.";
+                await LoadDetailAsync(latest);
+            }
         }
         catch (OperationCanceledException) { /* superseded by a newer selection */ }
         catch { /* leave empty: the panel simply doesn't render */ }
         finally
         {
-            if (selected?.Id == item.Id)
+            if (jumped || selected?.Id == item.Id)
                 threadLoading = false;
         }
     }

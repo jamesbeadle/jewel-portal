@@ -241,11 +241,37 @@ public sealed class MailboxGraphClient : IMailboxGraphClient
         return ListFilteredAsync(filter, cursor, take, ct);
     }
 
-    public Task<MailboxPage> ListConversationAsync(string conversationId, CancellationToken ct) =>
+    public async Task<MailboxPage> ListConversationAsync(string conversationId, CancellationToken ct)
+    {
         // No category clause: the thread view wants every member — still-queued, discarded and
-        // already-linked alike (their tags tell the triager what's been decided so far). A thread is
-        // small, so one max-size page (100) covers it; ListFilteredAsync already orders oldest-first.
-        ListFilteredAsync($"conversationId eq '{conversationId.Replace("'", "''")}'", cursor: null, take: 100, ct);
+        // already-linked alike (their tags tell the triager what's been decided so far). Unlike the
+        // category lists this must NOT use $orderby: Graph rejects a conversationId filter combined
+        // with $orderby as an inefficient filter (the same reason CollectInboxFieldAsync omits it).
+        // A thread is small, so one max-size page covers it and we sort oldest-first here instead.
+        var filter = $"conversationId eq '{conversationId.Replace("'", "''")}'";
+        var url = $"{GraphBase}/users/{Mailbox}/mailFolders/inbox/messages"
+            + $"?$filter={Uri.EscapeDataString(filter)}"
+            + $"&$select={Summary}&$top=100";
+
+        var items = new List<MailboxMessage>();
+        using var response = await SendAsync(HttpMethod.Get, url, content: null, ct, allowNotFound: true, consistencyEventual: true);
+        if (!response.IsSuccessStatusCode)
+        {
+            _logger.LogWarning("Conversation list failed: {Status}. {Detail}",
+                (int)response.StatusCode, await SafeBodyAsync(response, ct));
+            return new MailboxPage(items, null, 0);
+        }
+
+        await using var stream = await response.Content.ReadAsStreamAsync(ct);
+        using var doc = await JsonDocument.ParseAsync(stream, cancellationToken: ct);
+        if (doc.RootElement.TryGetProperty("value", out var arr) && arr.ValueKind == JsonValueKind.Array)
+            foreach (var item in arr.EnumerateArray())
+                if (Parse(item) is { } m)
+                    items.Add(m);
+
+        items.Sort((a, b) => a.ReceivedAt.CompareTo(b.ReceivedAt));
+        return new MailboxPage(items, null, items.Count);
+    }
 
     private async Task<MailboxPage> ListFilteredAsync(string filter, string? cursor, int take, CancellationToken ct)
     {
