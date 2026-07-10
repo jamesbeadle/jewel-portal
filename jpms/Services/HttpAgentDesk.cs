@@ -81,9 +81,9 @@ public sealed class HttpAgentDesk : IAgentDesk
     public Task<AgentProposal> DecideAsync(string proposalId, bool accept, CancellationToken cancellationToken = default) =>
         commands.SendAsync(new DecideAgentProposal(proposalId, accept), cancellationToken);
 
-    public async Task<RequestCloseOutcome> AttemptCloseAsync(string requestId, CancellationToken cancellationToken = default)
+    public async Task<RequestCloseOutcome> AttemptCloseAsync(string requestId, DateTimeOffset? closedAt = null, CancellationToken cancellationToken = default)
     {
-        var outcome = await commands.SendAsync(new AttemptCloseRequest(requestId), cancellationToken);
+        var outcome = await commands.SendAsync(new AttemptCloseRequest(requestId, ClosedAt: closedAt), cancellationToken);
         await readModel.RefreshRequestAsync(requestId, cancellationToken);
         return outcome;
     }

@@ -22,17 +22,18 @@ public sealed class ListWorkOrderInvoiceSummariesHandler
             .ToListAsync(cancellationToken);
         if (orders.Count == 0) return Array.Empty<WorkOrderInvoiceSummary>();
 
-        // Signed sums of the purchase lines linked to each order. Linked lines are
-        // whole-line allocations on this project by construction: the link command
-        // enforces it, and re-allocating a line off the project clears its link.
-        var linkedTotals = await context.XeroLedgerLines
-            .Where(line => line.ProjectId == query.ProjectId && line.LinkedWorkOrderId != null)
-            .GroupBy(line => line.LinkedWorkOrderId!)
+        // Signed sums of the link slices paying each order — a bill split across several
+        // orders contributes each slice to its own order. Slices only exist on whole-line
+        // allocations to this project by construction: the link command enforces it, and
+        // re-allocating a line off the project clears its links.
+        var linkedTotals = await context.XeroLineWorkOrderLinks
+            .Where(link => link.ProjectId == query.ProjectId)
+            .GroupBy(link => link.WorkOrderId)
             .Select(group => new
             {
                 WorkOrderId = group.Key,
-                Invoiced = group.Sum(line => line.Type == "ACCPAYCREDIT" ? -line.Net : line.Net),
-                Count = group.Count()
+                Invoiced = group.Sum(link => link.Amount),
+                Count = group.Select(link => link.XeroLedgerLineId).Distinct().Count()
             })
             .ToListAsync(cancellationToken);
         var totalsByOrder = linkedTotals.ToDictionary(total => total.WorkOrderId, StringComparer.OrdinalIgnoreCase);

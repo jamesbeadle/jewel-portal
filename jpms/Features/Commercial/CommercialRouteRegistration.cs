@@ -18,6 +18,7 @@ public static class CommercialRouteRegistration
         services.AddScoped<CostCentreGroupsReadModel>();
         services.AddScoped<ValuationClaimsReadModel>();
         services.AddScoped<ClaimLinesReadModel>();
+        services.AddScoped<ValuationReportSnapshotsReadModel>();
         return services;
     }
 
@@ -47,9 +48,9 @@ public static class CommercialRouteRegistration
             new CommandRoute("POST", "/api/projects/{projectId}/cost-centre-finalisation",
                 command => $"/api/projects/{((SetCostCentreFinalisation)command).ProjectId}/cost-centre-finalisation"));
 
-        commands.Register<LinkXeroLineToWorkOrder, Acknowledgement>(
+        commands.Register<SetXeroLineWorkOrderLinks, Acknowledgement>(
             new CommandRoute("POST", "/api/projects/{projectId}/xero-line-work-order-links",
-                command => $"/api/projects/{((LinkXeroLineToWorkOrder)command).ProjectId}/xero-line-work-order-links"));
+                command => $"/api/projects/{((SetXeroLineWorkOrderLinks)command).ProjectId}/xero-line-work-order-links"));
 
         // Cost centre groups — named roll-ups on the Financials tab.
         queries.Register<ListCostCentreGroupsForProject, IReadOnlyList<CostCentreGroup>>(
@@ -147,5 +148,23 @@ public static class CommercialRouteRegistration
         commands.Register<ConfirmValuationClaim, ValuationClaim>(
             new CommandRoute("POST", "/api/valuation-claims/{claimId}/confirmation",
                 command => $"/api/valuation-claims/{((ConfirmValuationClaim)command).ValuationClaimId}/confirmation"));
+
+        // Valuation report snapshots — immutable frozen copies behind invoice submissions
+        // and on-demand period-end records.
+        queries.Register<ListValuationReportSnapshotsForProject, IReadOnlyList<ValuationReportSnapshot>>(
+            new QueryRoute("/api/projects/{projectId}/valuation-report-snapshots",
+                query => $"/api/projects/{((ListValuationReportSnapshotsForProject)query).ProjectId}/valuation-report-snapshots"));
+
+        queries.Register<GetValuationReportSnapshot, ValuationReportSnapshotDetail>(
+            new QueryRoute("/api/valuation-report-snapshots/{snapshotId}",
+                query => $"/api/valuation-report-snapshots/{((GetValuationReportSnapshot)query).ValuationReportSnapshotId}"));
+
+        commands.Register<TakeValuationReportSnapshot, ValuationReportSnapshot>(
+            new CommandRoute("POST", "/api/projects/{projectId}/valuation-report-snapshots",
+                command => $"/api/projects/{((TakeValuationReportSnapshot)command).ProjectId}/valuation-report-snapshots"));
+
+        commands.Register<DeleteValuationReportSnapshot, Acknowledgement>(
+            new CommandRoute("DELETE", "/api/valuation-report-snapshots/{snapshotId}",
+                command => $"/api/valuation-report-snapshots/{((DeleteValuationReportSnapshot)command).ValuationReportSnapshotId}"));
     }
 }

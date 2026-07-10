@@ -56,6 +56,15 @@ public sealed class UpdateRequestDetailsHandler : ICommandHandler<UpdateRequestD
         if (command.RaisedAt is { } issued) entity.RaisedAt = issued;
         if (entity.RespondedAt is null && !string.IsNullOrWhiteSpace(command.ResponseText)) entity.RespondedAt = DateTimeOffset.UtcNow;
 
+        // The close date lives and dies with the Closed status. While closed it is user-manageable
+        // (today or earlier); a null on the command means "not supplied", not "clear" — most edit
+        // surfaces don't carry it. Moving to Closed without a date stamps now; leaving Closed
+        // (reopening) clears the date so a later close records its own.
+        if (command.Status == RequestStatus.Closed)
+            entity.ClosedAt = command.ClosedAt ?? entity.ClosedAt ?? DateTimeOffset.UtcNow;
+        else
+            entity.ClosedAt = null;
+
         try
         {
             await context.SaveChangesAsync(cancellationToken);

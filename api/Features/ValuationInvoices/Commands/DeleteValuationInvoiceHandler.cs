@@ -3,6 +3,7 @@ using Jewel.JPMS.Api.Data;
 using Jewel.JPMS.Contracts.Cqrs;
 using Jewel.JPMS.Contracts.ValuationInvoices;
 using Jewel.JPMS.Models;
+using Microsoft.EntityFrameworkCore;
 
 namespace Jewel.JPMS.Api.Features.ValuationInvoices.Commands;
 
@@ -30,6 +31,24 @@ public sealed class DeleteValuationInvoiceHandler : ICommandHandler<DeleteValuat
 
         var countedTowardCertified = entity.Status is (int)ValuationInvoiceStatus.Issued or (int)ValuationInvoiceStatus.Paid;
         var projectId = entity.ProjectId;
+
+        // The invoice takes its report snapshots and audit trail with it.
+        var snapshots = await context.ValuationReportSnapshots
+            .Where(snapshot => snapshot.ValuationInvoiceId == entity.ValuationInvoiceId)
+            .ToListAsync(cancellationToken);
+        if (snapshots.Count > 0)
+        {
+            var snapshotIds = snapshots.Select(snapshot => snapshot.ValuationReportSnapshotId).ToList();
+            var snapshotLines = await context.ValuationReportSnapshotLines
+                .Where(line => snapshotIds.Contains(line.ValuationReportSnapshotId))
+                .ToListAsync(cancellationToken);
+            context.ValuationReportSnapshotLines.RemoveRange(snapshotLines);
+            context.ValuationReportSnapshots.RemoveRange(snapshots);
+        }
+        var events = await context.ValuationInvoiceEvents
+            .Where(entry => entry.ValuationInvoiceId == entity.ValuationInvoiceId)
+            .ToListAsync(cancellationToken);
+        context.ValuationInvoiceEvents.RemoveRange(events);
 
         context.ValuationInvoices.Remove(entity);
         await context.SaveChangesAsync(cancellationToken);

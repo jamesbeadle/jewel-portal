@@ -83,3 +83,60 @@ public sealed record ClaimLine(
     decimal PercentComplete,    // cumulative % entered this claim
     decimal CumulativeClaimed,  // PercentComplete% x LineAmount
     decimal PeriodIncrement);   // CumulativeClaimed - previous confirmed cumulative for this line
+
+// An immutable, line-level copy of the valuation report frozen at a moment in time — what the
+// client was shown when a valuation invoice was submitted (or a period-end record when taken on
+// demand). Unlike a claim (whose Preapproved totals are re-frozen when certified moves), a
+// snapshot never changes after capture; re-submitting an amended invoice takes a NEW snapshot
+// and flags the old one superseded.
+public sealed record ValuationReportSnapshot(
+    string ValuationReportSnapshotId,
+    string ProjectId,
+    string? ValuationInvoiceId,   // the invoice this submission backs; null for on-demand snapshots
+    string? ValuationClaimId,     // the claim the figures came from, if one was open
+    string Label,                 // e.g. "VI-0007 submission" / "June 2026 period end"
+    DateTimeOffset TakenAt,
+    bool IsSuperseded,            // a later snapshot exists for the same invoice
+    // Frozen summary footer:
+    decimal ContractSum,
+    decimal NetVariations,
+    decimal RevisedContractSum,
+    decimal TotalWorksComplete,
+    decimal RetentionPercent,
+    decimal RetentionHeld,
+    decimal RetentionReleasePercent,
+    decimal RetentionReleased,
+    decimal CertifiedToDate,
+    decimal PaymentDueExVat);
+
+// One frozen row of a snapshot: values copied (not referenced) from the live line item and its
+// claim entry at capture time, so later edits/deletions of live data never disturb the snapshot.
+public sealed record ValuationReportSnapshotLine(
+    string ValuationReportSnapshotLineId,
+    string ValuationReportSnapshotId,
+    string SourceValuationLineItemId,  // provenance only — not a live FK
+    ValuationElementType ElementType,
+    string SectionCode,
+    string SectionName,
+    string VariationRef,
+    string VariationTitle,
+    ValuationLineType LineType,
+    string CostCode,
+    string Description,
+    string Unit,
+    decimal Quantity,
+    decimal Rate,
+    decimal LineAmount,
+    decimal PercentComplete,
+    decimal CumulativeClaimed,
+    decimal PeriodIncrement,
+    string Comments,
+    int DisplayOrder)
+{
+    public bool CountsTowardTotals => LineType is not (ValuationLineType.Declined or ValuationLineType.Tbc);
+}
+
+// A snapshot with its lines — the payload for the read-only snapshot viewer.
+public sealed record ValuationReportSnapshotDetail(
+    ValuationReportSnapshot Snapshot,
+    IReadOnlyList<ValuationReportSnapshotLine> Lines);

@@ -19,4 +19,8 @@ public sealed record CostCentreActualCostLine(
     string Description,
     decimal Net,
     bool IsSplit = false,
-    string? LinkedWorkOrderId = null); // the work order this line pays against, if linked
+    IReadOnlyList<XeroWorkOrderLinkSlice>? WorkOrderLinks = null) // the order(s) this line pays against, with each one's share
+{
+    public IReadOnlyList<XeroWorkOrderLinkSlice> Links => WorkOrderLinks ?? Array.Empty<XeroWorkOrderLinkSlice>();
+    public decimal LinkedTotal => Links.Sum(link => link.Amount);
+}

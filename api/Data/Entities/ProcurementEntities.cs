@@ -174,6 +174,11 @@ public sealed class RequestEntity
     public DateTimeOffset? RespondedAt { get; set; }
     [MaxLength(2048)]    public string? ResponseText { get; set; }
     [MaxLength(256)]     public string? RespondedByEmail { get; set; }
+
+    // When the request was closed. Chosen by the user at close time (defaults to today, may be a
+    // prior date when the closure is recorded after the fact); never in the future. Cleared on reopen.
+    public DateTimeOffset? ClosedAt { get; set; }
+
     public bool ImpliesVariation { get; set; }
     [MaxLength(256)]     public string? RaisedTo { get; set; }
     [MaxLength(256)]     public string? DrawingRef { get; set; }

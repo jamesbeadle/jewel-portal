@@ -1,0 +1,169 @@
+@using Jewel.JPMS.Contracts.Commercial
+@inject IValuationReportStore Store
+
+@* Read-only rendering of one frozen valuation-report snapshot: the same grouped-bill +
+   summary-footer layout as the live ValuationReportTable, fed entirely from the
+   snapshot's copied lines — later edits to the live report never show here. *@
+@if (detail is null)
+{
+    @if (loadFailed)
+    {
+        <p class="rounded-lg bg-negative/10 px-4 py-3 text-sm text-negative">Couldn't load the snapshot. Close and try again.</p>
+    }
+    else
+    {
+        <p class="px-1 py-6 text-sm text-content-subtle">Loading snapshot…</p>
+    }
+}
+else
+{
+    var snapshot = detail.Snapshot;
+    <div class="mb-4 rounded-lg bg-info/10 border border-info/30 px-4 py-2.5 text-sm text-content">
+        <span class="font-medium">Snapshot taken @snapshot.TakenAt.ToString("dd MMM yyyy HH:mm")</span>
+        <span class="text-content-muted"> — @snapshot.Label.</span>
+        @if (snapshot.IsSuperseded)
+        {
+            <span class="text-content-muted"> Superseded by a later snapshot.</span>
+        }
+        <span class="text-content-subtle"> Read-only: this is the report exactly as it stood; live changes never alter it.</span>
+    </div>
+
+    <div class="space-y-3">
+        @foreach (var section in Sections)
+        {
+            @if (section.Lines.Count > 0)
+            {
+                <div class="rounded-xl border border-line bg-surface overflow-hidden">
+                    <div class="flex items-center gap-3 px-4 py-3 bg-surface-raised/60">
+                        <span class="font-semibold text-content whitespace-nowrap">@section.Title</span>
+                        <span class="text-xs text-content-subtle whitespace-nowrap">
+                            @section.Lines.Count @(section.Lines.Count == 1 ? "line" : "lines")
+                        </span>
+                        <span class="ml-auto flex items-baseline gap-6 whitespace-nowrap">
+                            <span class="text-sm">
+                                <span class="text-[11px] uppercase tracking-wider text-content-subtle mr-1.5">Claimed</span>
+                                <span class="text-content-muted">@Money(section.Claimed)</span>
+                            </span>
+                            <span class="text-sm">
+                                <span class="text-[11px] uppercase tracking-wider text-content-subtle mr-1.5">Total</span>
+                                <span class="text-content font-medium">@Money(section.Amount)</span>
+                            </span>
+                        </span>
+                    </div>
+                    <div class="border-t border-line overflow-x-auto overflow-y-auto max-h-[60vh]">
+                        <table class="w-full text-sm border-collapse">
+                            <thead class="bg-surface-raised border-b border-line">
+                                <tr class="text-left text-[11px] uppercase tracking-wider text-content-subtle font-semibold">
+                                    <th class="px-3 py-3 w-[72px]">Code</th>
+                                    <th class="px-3 py-3 min-w-[220px]">Description</th>
+                                    <th class="px-3 py-3 text-right whitespace-nowrap">Qty</th>
+                                    <th class="px-3 py-3 text-right whitespace-nowrap">Rate £</th>
+                                    <th class="px-3 py-3 text-right whitespace-nowrap">Amount £</th>
+                                    <th class="px-3 py-3 text-right whitespace-nowrap">% Complete</th>
+                                    <th class="px-3 py-3 text-right whitespace-nowrap">Claimed £</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-line">
+                                @foreach (var line in section.Lines)
+                                {
+                                    <tr class="@(line.CountsTowardTotals ? "" : "opacity-60")">
+                                        <td class="px-3 py-2 font-mono text-[11px] text-content-subtle whitespace-nowrap">@CodeFor(line)</td>
+                                        <td class="px-3 py-2 text-content">
+                                            <div class="font-medium">@TitleFor(line)</div>
+                                            @if (!string.IsNullOrWhiteSpace(line.Comments))
+                                            {
+                                                <div class="text-[11px] text-content-subtle">@line.Comments</div>
+                                            }
+                                            @if (!line.CountsTowardTotals)
+                                            {
+                                                <span class="inline-block mt-0.5 text-[10px] uppercase tracking-wide text-content-subtle">@line.LineType</span>
+                                            }
+                                        </td>
+                                        <td class="px-3 py-2 text-right text-content-muted whitespace-nowrap">@Num(line.Quantity)</td>
+                                        <td class="px-3 py-2 text-right text-content-muted whitespace-nowrap">@Num(line.Rate)</td>
+                                        <td class="px-3 py-2 text-right text-content whitespace-nowrap">@Money(line.LineAmount)</td>
+                                        <td class="px-3 py-2 text-right text-content-muted whitespace-nowrap">@(line.CountsTowardTotals ? Pct(line.PercentComplete) : "—")</td>
+                                        <td class="px-3 py-2 text-right text-content-muted whitespace-nowrap">@(line.CountsTowardTotals ? Money(line.CumulativeClaimed) : "—")</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            }
+        }
+    </div>
+
+    <div class="mt-4 rounded-xl border border-line bg-surface-raised p-5">
+        <h3 class="text-sm font-semibold text-content mb-3">Valuation summary — @snapshot.Label</h3>
+        <dl class="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-1.5 text-sm max-w-2xl">
+            <SummaryRow Label="Original contract sum" Value="@Money(snapshot.ContractSum)" />
+            <SummaryRow Label="Net variations" Value="@Money(snapshot.NetVariations)" />
+            <SummaryRow Label="Revised contract sum" Value="@Money(snapshot.RevisedContractSum)" Strong="true" />
+            <SummaryRow Label="Total works complete" Value="@Money(snapshot.TotalWorksComplete)" />
+            <SummaryRow Label=@($"Retention held ({Pct(snapshot.RetentionPercent)})") Value="@Money(snapshot.RetentionHeld)" />
+            <SummaryRow Label=@($"Retention released ({Pct(snapshot.RetentionReleasePercent)})") Value="@Money(snapshot.RetentionReleased)" />
+            <SummaryRow Label="Certified to date" Value="@Money(snapshot.CertifiedToDate)" />
+            <SummaryRow Label="Payment due (ex VAT)" Value="@Money(snapshot.PaymentDueExVat)" Strong="true" />
+        </dl>
+    </div>
+}
+
+@code {
+    [Parameter, EditorRequired] public string SnapshotId { get; set; } = "";
+
+    private static readonly System.Globalization.CultureInfo Gb = System.Globalization.CultureInfo.GetCultureInfo("en-GB");
+
+    private ValuationReportSnapshotDetail? detail;
+    private bool loadFailed;
+    private string? loadedSnapshotId;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (SnapshotId == loadedSnapshotId) return;
+        loadedSnapshotId = SnapshotId;
+        detail = null;
+        loadFailed = false;
+        try { detail = await Store.GetSnapshotAsync(SnapshotId); }
+        catch { loadFailed = true; }
+    }
+
+    private record Section(string Title, List<ValuationReportSnapshotLine> Lines)
+    {
+        public decimal Amount => Lines.Where(l => l.CountsTowardTotals).Sum(l => l.LineAmount);
+        public decimal Claimed => Lines.Where(l => l.CountsTowardTotals).Sum(l => l.CumulativeClaimed);
+    }
+
+    private IEnumerable<Section> Sections
+    {
+        get
+        {
+            if (detail is null) yield break;
+            Section Make(string title, ValuationElementType type) =>
+                new(title, detail.Lines.Where(l => l.ElementType == type)
+                                       .OrderBy(l => l.DisplayOrder)
+                                       .ToList());
+            yield return Make("Contract Works", ValuationElementType.ContractWorks);
+            yield return Make("Provisional Sums", ValuationElementType.PcSum);
+            yield return Make("Contingency Sums", ValuationElementType.Contingency);
+            yield return Make("Variations", ValuationElementType.Variation);
+        }
+    }
+
+    private static string CodeFor(ValuationReportSnapshotLine line) =>
+        line.ElementType == ValuationElementType.Variation
+            ? (string.IsNullOrWhiteSpace(line.VariationRef) ? line.CostCode : line.VariationRef)
+            : (string.IsNullOrWhiteSpace(line.CostCode) ? line.SectionCode : line.CostCode);
+
+    private static string TitleFor(ValuationReportSnapshotLine line)
+    {
+        if (line.ElementType == ValuationElementType.Variation)
+            return string.IsNullOrWhiteSpace(line.VariationTitle) ? line.Description : line.VariationTitle;
+        if (!string.IsNullOrWhiteSpace(line.Description)) return line.Description;
+        return line.SectionName;
+    }
+
+    private static string Money(decimal v) => v.ToString("C2", Gb);
+    private static string Num(decimal v) => v.ToString("0.##", Gb);
+    private static string Pct(decimal v) => v.ToString("0.##", Gb) + "%";
+}

@@ -1,0 +1,173 @@
+@inject IValuationReportStore Store
+@inject SessionService Session
+
+@* Snapshot register: every immutable frozen copy of the valuation report — the automatic
+   captures behind invoice submissions/issues plus on-demand period-end records. Immutable
+   once taken: view or delete, never edit; an amended submission produces a NEW snapshot
+   and flags the old one superseded. *@
+<div class="rounded-xl border border-line bg-surface overflow-hidden">
+    <button type="button" @onclick="Toggle" aria-expanded="@isOpen"
+            class="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-surface-raised/60 transition">
+        <svg class="@(isOpen ? "w-4 h-4 shrink-0 text-content-subtle rotate-90 transition-transform" : "w-4 h-4 shrink-0 text-content-subtle transition-transform")"
+             viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M9 6l6 6-6 6" />
+        </svg>
+        <span class="font-semibold text-content whitespace-nowrap">Report Snapshots</span>
+        <span class="text-xs text-content-subtle whitespace-nowrap">
+            @Snapshots.Count @(Snapshots.Count == 1 ? "snapshot" : "snapshots")
+        </span>
+        @if (Latest is { } latest)
+        {
+            <span class="ml-auto text-sm whitespace-nowrap">
+                <span class="text-[11px] uppercase tracking-wider text-content-subtle mr-1.5">Latest</span>
+                <span class="text-content-muted">@latest.TakenAt.ToString("dd MMM yyyy")</span>
+            </span>
+        }
+    </button>
+
+    @if (isOpen)
+    {
+        @if (error is not null)
+        {
+            <p class="border-t border-line bg-negative/10 px-4 py-2 text-sm text-negative">@error</p>
+        }
+
+        @if (Snapshots.Count == 0)
+        {
+            <div class="border-t border-line px-4 py-5 text-center text-content-subtle italic text-sm">
+                No snapshots yet. One is frozen automatically when an invoice is submitted or issued;
+                take one manually below for a period-end record.
+            </div>
+        }
+        else
+        {
+            <div class="border-t border-line overflow-x-auto overflow-y-auto max-h-[60vh]">
+                <table class="w-full text-sm border-collapse">
+                    <thead class="bg-surface-raised border-b border-line">
+                        <tr class="text-left text-[11px] uppercase tracking-wider text-content-subtle font-semibold">
+                            <th class="sticky top-0 z-20 bg-surface-raised px-3 py-3 whitespace-nowrap">Taken</th>
+                            <th class="sticky top-0 z-20 bg-surface-raised px-3 py-3 min-w-[200px]">Label</th>
+                            <th class="sticky top-0 z-20 bg-surface-raised px-3 py-3 text-right whitespace-nowrap">Works complete £</th>
+                            <th class="sticky top-0 z-20 bg-surface-raised px-3 py-3 text-right whitespace-nowrap">Certified £</th>
+                            <th class="sticky top-0 z-20 bg-surface-raised px-3 py-3 text-right whitespace-nowrap">Payment due £</th>
+                            <th class="sticky top-0 z-20 bg-surface-raised px-3 py-3 text-right w-[150px]"></th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-line">
+                        @foreach (var snapshot in Snapshots)
+                        {
+                            <tr class="@(snapshot.IsSuperseded ? "opacity-60" : "")">
+                                <td class="px-3 py-2 text-content-muted whitespace-nowrap">@snapshot.TakenAt.ToString("dd MMM yyyy HH:mm")</td>
+                                <td class="px-3 py-2 text-content">
+                                    @snapshot.Label
+                                    @if (snapshot.IsSuperseded)
+                                    {
+                                        <span class="ml-1.5 inline-flex items-center rounded-full border border-line px-1.5 py-0.5 text-[10px] text-content-subtle"
+                                              title="A later snapshot replaced this one (the invoice was amended and resubmitted, or cancelled)">Superseded</span>
+                                    }
+                                </td>
+                                <td class="px-3 py-2 text-right text-content-muted whitespace-nowrap">@Money(snapshot.TotalWorksComplete)</td>
+                                <td class="px-3 py-2 text-right text-content-muted whitespace-nowrap">@Money(snapshot.CertifiedToDate)</td>
+                                <td class="px-3 py-2 text-right text-content whitespace-nowrap">@Money(snapshot.PaymentDueExVat)</td>
+                                <td class="px-3 py-2 text-right whitespace-nowrap">
+                                    <button type="button" @onclick="() => OnView.InvokeAsync(snapshot.ValuationReportSnapshotId)"
+                                            class="text-content-subtle hover:text-content underline underline-offset-2 text-xs">View</button>
+                                    @if (CanManage)
+                                    {
+                                        @if (pendingDeleteId == snapshot.ValuationReportSnapshotId)
+                                        {
+                                            <button type="button" disabled="@busy" @onclick="() => DeleteAsync(snapshot)"
+                                                    class="ml-2 text-negative underline underline-offset-2 text-xs font-medium">Confirm delete</button>
+                                            <button type="button" disabled="@busy" @onclick="() => pendingDeleteId = null"
+                                                    class="ml-1.5 text-content-subtle hover:text-content underline underline-offset-2 text-xs">Keep</button>
+                                        }
+                                        else
+                                        {
+                                            <button type="button" disabled="@busy" @onclick="() => pendingDeleteId = snapshot.ValuationReportSnapshotId"
+                                                    title="Remove a snapshot taken in error — never touches live report data"
+                                                    class="ml-2 text-content-subtle hover:text-negative underline underline-offset-2 text-xs">Delete</button>
+                                        }
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+
+        @if (CanManage)
+        {
+            <div class="border-t border-line px-4 py-3 flex flex-wrap items-end gap-3">
+                <div class="grow max-w-sm">
+                    <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Label</label>
+                    <input type="text" @bind="newLabel"
+                           class="w-full rounded-lg border border-line-strong bg-surface-field px-3 py-2 text-sm text-content focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent" />
+                </div>
+                <button type="button" disabled="@busy" @onclick="TakeAsync"
+                        title="Freeze the report exactly as it stands — every line and the summary footer"
+                        class="rounded-lg bg-accent text-accent-ink font-medium text-sm px-3 py-2 hover:bg-accent-hover disabled:bg-surface-field transition">
+                    Take snapshot
+                </button>
+            </div>
+        }
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public string ProjectId { get; set; } = "";
+    /// <summary>Opens the read-only snapshot viewer for the given snapshot id.</summary>
+    [Parameter] public EventCallback<string> OnView { get; set; }
+    /// <summary>Raised after a snapshot is deleted — the server clears any invoice's link
+    /// to it, so the invoices section should reload to drop its "View report" link.</summary>
+    [Parameter] public EventCallback OnDeleted { get; set; }
+
+    private static readonly System.Globalization.CultureInfo Gb = System.Globalization.CultureInfo.GetCultureInfo("en-GB");
+
+    private bool isOpen;
+    private bool busy;
+    private string? error;
+    private string newLabel = $"{DateTimeOffset.UtcNow:MMMM yyyy} period end";
+    private string? pendingDeleteId;
+
+    private bool CanManage => Session.AvailableRoles.Any(role =>
+        role is Role.Admin or Role.ManagingDirector or Role.FinanceDirector or Role.ProjectManager);
+
+    private IReadOnlyList<ValuationReportSnapshot> Snapshots => Store.SnapshotsFor(ProjectId);
+    private ValuationReportSnapshot? Latest => Snapshots.Count > 0 ? Snapshots[0] : null;
+
+    private void Toggle() => isOpen = !isOpen;
+
+    private async Task TakeAsync()
+    {
+        if (busy) return;
+        error = null;
+        if (string.IsNullOrWhiteSpace(newLabel)) { error = "Give the snapshot a label — e.g. the period it records."; return; }
+        try
+        {
+            busy = true;
+            await Store.TakeSnapshotAsync(ProjectId, newLabel.Trim());
+            newLabel = $"{DateTimeOffset.UtcNow:MMMM yyyy} period end";
+        }
+        catch { error = "Couldn't take the snapshot. Please try again."; }
+        finally { busy = false; }
+    }
+
+    private async Task DeleteAsync(ValuationReportSnapshot snapshot)
+    {
+        if (busy) return;
+        error = null;
+        try
+        {
+            busy = true;
+            await Store.DeleteSnapshotAsync(ProjectId, snapshot.ValuationReportSnapshotId);
+            pendingDeleteId = null;
+            await OnDeleted.InvokeAsync();
+        }
+        catch { error = "Couldn't delete the snapshot. Please try again."; }
+        finally { busy = false; }
+    }
+
+    private static string Money(decimal value) => value.ToString("C2", Gb);
+}

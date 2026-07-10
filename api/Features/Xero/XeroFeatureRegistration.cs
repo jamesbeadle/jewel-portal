@@ -41,6 +41,8 @@ public static class XeroFeatureRegistration
         services.AddScoped<IQueryHandler<ListXeroLedgerLines, IReadOnlyList<XeroLedgerLine>>, ListXeroLedgerLinesHandler>();
         services.AddScoped<ICommandHandler<SetXeroAllocation, int>, SetXeroAllocationHandler>();
         services.AddScoped<ICommandHandler<AllocateSuggestedXeroLines, int>, AllocateSuggestedXeroLinesHandler>();
+        services.AddScoped<IQueryHandler<ListXeroInvoiceAttachments, IReadOnlyList<XeroInvoiceAttachment>>,
+            ListXeroInvoiceAttachmentsHandler>();
 
         // Write-back: once a draft bill's lines are all allocated, its Sites/Cost Code
         // tracking is confirmed onto the Xero invoice and the invoice is approved.

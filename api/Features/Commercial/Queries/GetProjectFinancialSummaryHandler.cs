@@ -60,9 +60,6 @@ public sealed class GetProjectFinancialSummaryHandler : IQueryHandler<GetProject
         // allocations carry their project + centre on the line; split lines carry
         // theirs in XeroCostSplits (each row a share of the line's net, with its
         // own project), so both populations sum into the same per-centre totals.
-        // Each population also carries its non-work-order share: spend on lines not linked
-        // to any work order (LinkedWorkOrderId null), which draws the centre's target cost
-        // down alongside its work orders.
         var actuals = await context.XeroLedgerLines
             .Where(line => line.ProjectId == query.ProjectId
                            && line.AllocationStatus == (int)XeroAllocationStatus.Allocated
@@ -71,10 +68,7 @@ public sealed class GetProjectFinancialSummaryHandler : IQueryHandler<GetProject
             .Select(group => new
             {
                 CostCode = group.Key,
-                Amount = group.Sum(line => line.Type == "ACCPAYCREDIT" ? -line.Net : line.Net),
-                NonWoAmount = group.Sum(line => line.LinkedWorkOrderId != null
-                    ? 0m
-                    : line.Type == "ACCPAYCREDIT" ? -line.Net : line.Net)
+                Amount = group.Sum(line => line.Type == "ACCPAYCREDIT" ? -line.Net : line.Net)
             })
             .ToListAsync(cancellationToken);
 
@@ -82,18 +76,30 @@ public sealed class GetProjectFinancialSummaryHandler : IQueryHandler<GetProject
             .Join(context.XeroLedgerLines,
                 split => split.XeroLedgerLineId,
                 line => line.XeroLedgerLineId,
-                (split, line) => new { split.CostCenterCode, split.Net, split.ProjectId, line.AllocationStatus, line.Type, line.LinkedWorkOrderId })
+                (split, line) => new { split.CostCenterCode, split.Net, split.ProjectId, line.AllocationStatus, line.Type })
             .Where(joined => joined.ProjectId == query.ProjectId
                              && joined.AllocationStatus == (int)XeroAllocationStatus.Allocated)
             .GroupBy(joined => joined.CostCenterCode)
             .Select(group => new
             {
                 CostCode = group.Key,
-                Amount = group.Sum(joined => joined.Type == "ACCPAYCREDIT" ? -joined.Net : joined.Net),
-                NonWoAmount = group.Sum(joined => joined.LinkedWorkOrderId != null
-                    ? 0m
-                    : joined.Type == "ACCPAYCREDIT" ? -joined.Net : joined.Net)
+                Amount = group.Sum(joined => joined.Type == "ACCPAYCREDIT" ? -joined.Net : joined.Net)
             })
+            .ToListAsync(cancellationToken);
+
+        // Work-order-linked spend per centre: each slice in XeroLineWorkOrderLinks pays an
+        // order from a whole-line allocation (links never exist on centre-split lines).
+        // Non-WO cost of sales per centre = total actual spend less these linked slices —
+        // a partially split bill only counts its unallocated remainder.
+        var linkedActuals = await context.XeroLineWorkOrderLinks
+            .Where(link => link.ProjectId == query.ProjectId)
+            .Join(context.XeroLedgerLines,
+                link => link.XeroLedgerLineId,
+                line => line.XeroLedgerLineId,
+                (link, line) => new { line.CostCenterCode, link.Amount })
+            .Where(joined => joined.CostCenterCode != null)
+            .GroupBy(joined => joined.CostCenterCode!)
+            .Select(group => new { CostCode = group.Key, Amount = group.Sum(joined => joined.Amount) })
             .ToListAsync(cancellationToken);
 
         // Cost-side state: completion % and the finalisation lock, set inline on the
@@ -107,16 +113,17 @@ public sealed class GetProjectFinancialSummaryHandler : IQueryHandler<GetProject
 
         var salesByCode = sales.ToDictionary(s => s.CostCode, s => s.Amount, StringComparer.OrdinalIgnoreCase);
         var actualByCode = actuals.ToDictionary(a => a.CostCode, a => a.Amount, StringComparer.OrdinalIgnoreCase);
-        var nonWoActualByCode = actuals.ToDictionary(a => a.CostCode, a => a.NonWoAmount, StringComparer.OrdinalIgnoreCase);
         foreach (var splitActual in splitActuals)
-        {
             actualByCode[splitActual.CostCode] = actualByCode.TryGetValue(splitActual.CostCode, out var existing)
                 ? existing + splitActual.Amount
                 : splitActual.Amount;
-            nonWoActualByCode[splitActual.CostCode] = nonWoActualByCode.TryGetValue(splitActual.CostCode, out var existingNonWo)
-                ? existingNonWo + splitActual.NonWoAmount
-                : splitActual.NonWoAmount;
-        }
+
+        // Non-WO = actual spend less the work-order-linked slices, per centre.
+        var nonWoActualByCode = new Dictionary<string, decimal>(actualByCode, StringComparer.OrdinalIgnoreCase);
+        foreach (var linked in linkedActuals)
+            nonWoActualByCode[linked.CostCode] = nonWoActualByCode.TryGetValue(linked.CostCode, out var actualTotal)
+                ? actualTotal - linked.Amount
+                : -linked.Amount;
 
         return salesByCode.Keys.Union(actualByCode.Keys, StringComparer.OrdinalIgnoreCase)
             .Union(costProgressByCode.Keys, StringComparer.OrdinalIgnoreCase)

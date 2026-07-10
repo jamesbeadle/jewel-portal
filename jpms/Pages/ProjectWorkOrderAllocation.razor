@@ -39,7 +39,7 @@ else
             </div>
             <div class="rounded-xl border border-line bg-surface px-4 py-3">
                 <p class="text-[11px] uppercase tracking-wider text-content-subtle font-semibold">Linked to work orders</p>
-                <p class="text-lg font-semibold text-content">@Money(AllLines.Where(line => line.LinkedWorkOrderId is not null).Sum(line => line.Net))</p>
+                <p class="text-lg font-semibold text-content">@Money(AllLines.Sum(line => line.LinkedTotal))</p>
             </div>
             <div class="rounded-xl border border-line bg-surface px-4 py-3">
                 <p class="text-[11px] uppercase tracking-wider text-content-subtle font-semibold">Not linked</p>
@@ -52,10 +52,19 @@ else
         </div>
 
         @* ── Work orders and their invoiced balances ──────────────────────── *@
-        <h3 class="text-sm font-semibold text-content mb-2">Work orders</h3>
+        <div class="flex items-center gap-3 mb-2">
+            <h3 class="text-sm font-semibold text-content">Work orders</h3>
+            <input type="search" placeholder="Search supplier or title…"
+                   class="bg-surface border border-line rounded-lg px-2.5 py-1 text-sm text-content placeholder:text-content-subtle w-64"
+                   @bind="orderSearch" @bind:event="oninput" />
+        </div>
         @if (summaries.Count == 0)
         {
             <p class="text-sm text-content-subtle italic mb-6">No work orders recorded for this project yet.</p>
+        }
+        else if (FilteredSummaries.Count == 0)
+        {
+            <p class="text-sm text-content-subtle italic mb-6">No work orders match "@orderSearch".</p>
         }
         else
         {
@@ -74,7 +83,7 @@ else
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-line">
-                        @foreach (var summary in summaries)
+                        @foreach (var summary in FilteredSummaries)
                         {
                             <tr class="cursor-pointer hover:bg-surface-raised" @onclick="() => ToggleOrder(summary.WorkOrderId)">
                                 <td class="px-4 py-2.5 font-mono text-[11px] text-content-subtle whitespace-nowrap">
@@ -112,24 +121,34 @@ else
                                                         <th class="px-3 py-2 whitespace-nowrap">Invoice</th>
                                                         <th class="px-3 py-2">Description</th>
                                                         <th class="px-3 py-2 whitespace-nowrap">Centre</th>
-                                                        <th class="px-3 py-2 text-right whitespace-nowrap">Net £</th>
+                                                        <th class="px-3 py-2 text-right whitespace-nowrap">Linked £</th>
                                                         <th class="px-3 py-2"><span class="sr-only">Unlink</span></th>
                                                     </tr>
                                                 </thead>
                                                 <tbody class="divide-y divide-line">
-                                                    @foreach (var line in linkedLines)
+                                                    @foreach (var linked in linkedLines)
                                                     {
+                                                        var line = linked.Line;
                                                         <tr>
                                                             <td class="px-3 py-2 whitespace-nowrap text-content-muted">@(line.Date?.ToString("dd MMM yyyy") ?? "—")</td>
                                                             <td class="px-3 py-2">@line.Supplier</td>
                                                             <td class="px-3 py-2 whitespace-nowrap text-content-muted">@line.InvoiceNumber</td>
-                                                            <td class="px-3 py-2 text-content-muted">@line.Description</td>
+                                                            <td class="px-3 py-2 text-content-muted">
+                                                                @line.Description
+                                                                @if (linked.Slice != line.Net)
+                                                                {
+                                                                    <span class="ml-1.5 text-[10px] uppercase tracking-wider font-semibold border border-line rounded px-1 py-0.5"
+                                                                          title="@($"This order's share of a {MoneyExact(line.Net)} line split across several work orders")">Split</span>
+                                                                }
+                                                            </td>
                                                             <td class="px-3 py-2 font-mono text-[11px] text-content-subtle whitespace-nowrap">@line.CostCode</td>
-                                                            <td class="px-3 py-2 text-right whitespace-nowrap @(line.Net < 0m ? "text-negative" : "")">@MoneyExact(line.Net)</td>
+                                                            <td class="px-3 py-2 text-right whitespace-nowrap @(linked.Slice < 0m ? "text-negative" : "")"
+                                                                title="@(linked.Slice == line.Net ? "" : $"Line total {MoneyExact(line.Net)}")">@MoneyExact(linked.Slice)</td>
                                                             <td class="px-3 py-2 text-right whitespace-nowrap">
                                                                 <button type="button" disabled="@busyLineIds.Contains(line.XeroLedgerLineId)"
+                                                                        title="Remove this order's slice — the line's other slices stay put"
                                                                         class="text-xs font-medium text-content-subtle hover:text-content underline underline-offset-4"
-                                                                        @onclick="() => LinkAsync(line, null)" @onclick:stopPropagation="true">Unlink</button>
+                                                                        @onclick="() => UnlinkSliceAsync(line, summary.WorkOrderId)" @onclick:stopPropagation="true">Unlink</button>
                                                             </td>
                                                         </tr>
                                                     }
@@ -205,30 +224,49 @@ else
                                     {
                                         <span class="text-xs text-content-subtle" title="Split lines can't be linked to a work order — re-cut them as a whole-line allocation first">—</span>
                                     }
+                                    else if (IsAmountSplit(line))
+                                    {
+                                        @* The line pays several orders (or part of one) — the dropdown can't
+                                           express that, so show the split and edit it in the split editor. *@
+                                        <span class="inline-flex items-center gap-2">
+                                            <span class="text-xs text-content" title="@SplitTitle(line)">
+                                                Split · @line.Links.Count @(line.Links.Count == 1 ? "order" : "orders") · @MoneyExact(line.LinkedTotal)
+                                            </span>
+                                            <button type="button" disabled="@busyLineIds.Contains(line.XeroLedgerLineId)"
+                                                    class="text-xs font-medium text-content-subtle hover:text-content underline underline-offset-4"
+                                                    @onclick="() => splitLine = line">Edit split</button>
+                                        </span>
+                                    }
                                     else
                                     {
-                                        @* Keyed on a nonce so a failed save recreates the element — otherwise the
-                                           browser keeps showing the picked work order even though it didn't stick. *@
-                                        <select class="bg-surface border border-line rounded-lg px-2 py-1 text-content text-sm w-64"
-                                                @key="@($"{line.XeroLedgerLineId}|{revertNonce}")"
-                                                disabled="@busyLineIds.Contains(line.XeroLedgerLineId)"
-                                                title="The work order this invoice line pays against — options that can't take the line's value are disabled"
-                                                @onchange="e => LinkAsync(line, e.Value?.ToString())">
-                                            <option value="" selected="@(line.LinkedWorkOrderId is null)">Not linked</option>
-                                            @{ var (matching, others) = OptionsFor(line); }
-                                            @if (matching.Count > 0)
-                                            {
-                                                <optgroup label="@($"Coded to {line.CostCode}")">
-                                                    @foreach (var option in matching) { @OptionFor(line, option) }
-                                                </optgroup>
-                                            }
-                                            @if (others.Count > 0)
-                                            {
-                                                <optgroup label="Other work orders">
-                                                    @foreach (var option in others) { @OptionFor(line, option) }
-                                                </optgroup>
-                                            }
-                                        </select>
+                                        <span class="inline-flex items-center gap-1.5">
+                                            @* Keyed on a nonce so a failed save recreates the element — otherwise the
+                                               browser keeps showing the picked work order even though it didn't stick. *@
+                                            <select class="bg-surface border border-line rounded-lg px-2 py-1 text-content text-sm w-64"
+                                                    @key="@($"{line.XeroLedgerLineId}|{revertNonce}")"
+                                                    disabled="@busyLineIds.Contains(line.XeroLedgerLineId)"
+                                                    title="The work order this invoice line pays against — options that can't take the line's value are disabled"
+                                                    @onchange="e => LinkAsync(line, e.Value?.ToString())">
+                                                <option value="" selected="@(line.Links.Count == 0)">Not linked</option>
+                                                @{ var (matching, others) = OptionsFor(line); }
+                                                @if (matching.Count > 0)
+                                                {
+                                                    <optgroup label="@($"Coded to {line.CostCode}")">
+                                                        @foreach (var option in matching) { @OptionFor(line, option) }
+                                                    </optgroup>
+                                                }
+                                                @if (others.Count > 0)
+                                                {
+                                                    <optgroup label="Other work orders">
+                                                        @foreach (var option in others) { @OptionFor(line, option) }
+                                                    </optgroup>
+                                                }
+                                            </select>
+                                            <button type="button" disabled="@busyLineIds.Contains(line.XeroLedgerLineId)"
+                                                    title="Split this line across several work orders — for a bill that pays more than one order (e.g. a main order plus its variation orders)"
+                                                    class="text-xs font-medium text-content-subtle hover:text-content underline underline-offset-4"
+                                                    @onclick="() => splitLine = line">Split…</button>
+                                        </span>
                                     }
                                 </td>
                             </tr>
@@ -249,6 +287,16 @@ else
         {
             <p class="text-sm text-negative mt-3">@linkError</p>
         }
+
+        <WorkOrderLinkSplitModal IsOpen="@(splitLine is not null)"
+                                 ProjectId="@ProjectId"
+                                 LineId="@(splitLine?.XeroLedgerLineId ?? "")"
+                                 LineLabel="@(splitLine is null ? "" : $"{splitLine.Supplier} · {splitLine.InvoiceNumber}")"
+                                 LineNet="@(splitLine?.Net ?? 0m)"
+                                 CurrentLinks="@(splitLine?.Links ?? Array.Empty<XeroWorkOrderLinkSlice>())"
+                                 Options="LiveSummaries"
+                                 OnClose="() => splitLine = null"
+                                 OnSaved="HandleSplitSavedAsync" />
     </ProjectPageShell>
 }
 
@@ -268,30 +316,66 @@ else
     private List<WorkOrderInvoiceSummary> summaries = new();
     private List<ProjectCostOfSalesLine> AllLines = new();
     private QueueFilter queueFilter = QueueFilter.Unlinked;
+    private string orderSearch = "";
     private readonly HashSet<string> expandedOrderIds = new(StringComparer.OrdinalIgnoreCase);
     // Lines whose link is being saved — only those rows' controls disable.
     private readonly HashSet<string> busyLineIds = new();
     private string? linkError;
     // Bumped when a save fails, recreating the selects so they fall back to the stored link.
     private int revertNonce;
+    // The line whose amount split is open in the split editor, if any.
+    private ProjectCostOfSalesLine? splitLine;
 
-    private decimal UnlinkedTotal => AllLines.Where(line => line.LinkedWorkOrderId is null).Sum(line => line.Net);
+    private List<WorkOrderInvoiceSummary> FilteredSummaries =>
+        string.IsNullOrWhiteSpace(orderSearch)
+            ? summaries
+            : summaries.Where(summary =>
+                    (summary.SubcontractorName?.Contains(orderSearch.Trim(), StringComparison.OrdinalIgnoreCase) ?? false)
+                    || (summary.Title?.Contains(orderSearch.Trim(), StringComparison.OrdinalIgnoreCase) ?? false))
+                .ToList();
+
+    // Anything not yet paying a work order — partially split lines count their remainder.
+    private decimal UnlinkedTotal => AllLines.Sum(line => line.UnlinkedRemainder);
 
     private List<ProjectCostOfSalesLine> QueueLines => queueFilter switch
     {
-        QueueFilter.Unlinked => AllLines.Where(line => line.LinkedWorkOrderId is null).ToList(),
-        QueueFilter.Linked => AllLines.Where(line => line.LinkedWorkOrderId is not null).ToList(),
+        QueueFilter.Unlinked => AllLines.Where(line => line.UnlinkedRemainder != 0m).ToList(),
+        QueueFilter.Linked => AllLines.Where(line => line.Links.Count > 0).ToList(),
         _ => AllLines
     };
 
-    // Split shares of one ledger line all carry the same link, so a linked split would
-    // repeat per share — the WO drill-down dedupes by ledger line id.
-    private List<ProjectCostOfSalesLine> LinesLinkedTo(string workOrderId) =>
-        AllLines.Where(line => string.Equals(line.LinkedWorkOrderId, workOrderId, StringComparison.OrdinalIgnoreCase))
+    // The lines paying this order, each with its slice amount (a bill split across
+    // several orders contributes only its slice here).
+    private List<(ProjectCostOfSalesLine Line, decimal Slice)> LinesLinkedTo(string workOrderId) =>
+        AllLines
             .GroupBy(line => line.XeroLedgerLineId, StringComparer.OrdinalIgnoreCase)
             .Select(group => group.First())
-            .OrderBy(line => line.Date ?? DateTime.MaxValue)
+            .Select(line => (Line: line, Slice: line.Links.FirstOrDefault(link =>
+                string.Equals(link.WorkOrderId, workOrderId, StringComparison.OrdinalIgnoreCase))?.Amount ?? 0m))
+            .Where(linked => linked.Slice != 0m)
+            .OrderBy(linked => linked.Line.Date ?? DateTime.MaxValue)
             .ToList();
+
+    // A single full-amount slice renders as the plain dropdown; anything else (several
+    // orders, or one partial slice) is an amount split the dropdown can't express.
+    private static string? SingleLinkId(ProjectCostOfSalesLine line) =>
+        line.Links.Count == 1 ? line.Links[0].WorkOrderId : null;
+
+    private static bool IsAmountSplit(ProjectCostOfSalesLine line) =>
+        line.Links.Count > 1 || (line.Links.Count == 1 && line.Links[0].Amount != line.Net);
+
+    private string SplitTitle(ProjectCostOfSalesLine line) =>
+        string.Join(" · ", line.Links.Select(link =>
+        {
+            var summary = summaries.FirstOrDefault(candidate =>
+                string.Equals(candidate.WorkOrderId, link.WorkOrderId, StringComparison.OrdinalIgnoreCase));
+            return summary is null ? MoneyExact(link.Amount) : $"WO-{summary.Number:0000} {MoneyExact(link.Amount)}";
+        }))
+        + (line.UnlinkedRemainder == 0m ? "" : $" · {MoneyExact(line.UnlinkedRemainder)} not linked");
+
+    // The split editor offers every live order with its balance.
+    private IReadOnlyList<WorkOrderInvoiceSummary> LiveSummaries =>
+        summaries.Where(summary => summary.Status != WorkOrderStatus.Cancelled).ToList();
 
     // The dropdown offers live orders whose lines are coded to the invoice line's centre
     // first (the natural match), then everything else under a separate group. Cancelled
@@ -313,7 +397,7 @@ else
 
     private RenderFragment OptionFor(ProjectCostOfSalesLine line, WorkOrderInvoiceSummary option) => __builder =>
     {
-        var isCurrent = string.Equals(line.LinkedWorkOrderId, option.WorkOrderId, StringComparison.OrdinalIgnoreCase);
+        var isCurrent = string.Equals(SingleLinkId(line), option.WorkOrderId, StringComparison.OrdinalIgnoreCase);
         // Mirror the API's hard balance check so doomed picks aren't offered: a positive
         // line must fit the order's remaining balance (plus its own net when re-selecting
         // the order it's already linked to).
@@ -328,15 +412,18 @@ else
     {
         if (!busyLineIds.Add(line.XeroLedgerLineId)) return;
         var newLink = string.IsNullOrEmpty(workOrderId) ? null : workOrderId;
-        if (newLink == line.LinkedWorkOrderId)
+        if (newLink == SingleLinkId(line) && !IsAmountSplit(line))
         {
             busyLineIds.Remove(line.XeroLedgerLineId);
             return;
         }
         linkError = null;
+        var slices = newLink is null
+            ? (IReadOnlyList<XeroWorkOrderLinkSlice>)Array.Empty<XeroWorkOrderLinkSlice>()
+            : new[] { new XeroWorkOrderLinkSlice(newLink, line.Net) }; // whole line to one order
         try
         {
-            await Commands.SendAsync(new LinkXeroLineToWorkOrder(ProjectId, line.XeroLedgerLineId, newLink), CancellationToken.None);
+            await Commands.SendAsync(new SetXeroLineWorkOrderLinks(ProjectId, line.XeroLedgerLineId, slices), CancellationToken.None);
             await RefreshAsync();
         }
         catch (CommandFailedException ex)
@@ -348,6 +435,35 @@ else
         {
             busyLineIds.Remove(line.XeroLedgerLineId);
         }
+    }
+
+    // Removes one order's slice from a split, leaving the line's other slices in place.
+    private async Task UnlinkSliceAsync(ProjectCostOfSalesLine line, string workOrderId)
+    {
+        if (!busyLineIds.Add(line.XeroLedgerLineId)) return;
+        linkError = null;
+        var remaining = line.Links
+            .Where(link => !string.Equals(link.WorkOrderId, workOrderId, StringComparison.OrdinalIgnoreCase))
+            .ToList();
+        try
+        {
+            await Commands.SendAsync(new SetXeroLineWorkOrderLinks(ProjectId, line.XeroLedgerLineId, remaining), CancellationToken.None);
+            await RefreshAsync();
+        }
+        catch (CommandFailedException ex)
+        {
+            linkError = $"Couldn't unlink this line: {ex.Message}";
+        }
+        finally
+        {
+            busyLineIds.Remove(line.XeroLedgerLineId);
+        }
+    }
+
+    private async Task HandleSplitSavedAsync(IReadOnlyList<XeroWorkOrderLinkSlice> slices)
+    {
+        splitLine = null;
+        await RefreshAsync();
     }
 
     private async Task RefreshAsync()

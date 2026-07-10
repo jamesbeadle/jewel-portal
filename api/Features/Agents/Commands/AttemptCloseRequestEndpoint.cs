@@ -23,7 +23,12 @@ public sealed class AttemptCloseRequestEndpoint
         var signedInUser = await users.ResolveAsync(request, request.HttpContext.RequestAborted);
         if (signedInUser is null) return new UnauthorizedResult();
 
-        var command = new AttemptCloseRequest(requestId, signedInUser.Email);
+        // The body carries the client's command (notably the user-chosen close date); the route and
+        // the signed-in user stay authoritative for the id and the closer. Tolerate an absent body
+        // so callers that post nothing still close as at now.
+        AttemptCloseRequest? body = null;
+        try { body = await request.ReadFromJsonAsync<AttemptCloseRequest>(); } catch { /* no or malformed body */ }
+        var command = new AttemptCloseRequest(requestId, signedInUser.Email, body?.ClosedAt);
         if (!authorisation.Allows(signedInUser, command)) return new ForbidResult();
         var validationOutcome = validation.Check(command);
         if (validationOutcome.HasFailed) return new BadRequestObjectResult(validationOutcome.Errors);

@@ -8,18 +8,18 @@ using Microsoft.Azure.Functions.Worker;
 
 namespace Jewel.JPMS.Api.Features.Commercial.Commands;
 
-public sealed class LinkXeroLineToWorkOrderEndpoint
+public sealed class SetXeroLineWorkOrderLinksEndpoint
 {
     private readonly SignedInUserResolver users;
-    private readonly LinkXeroLineToWorkOrderAuthorisation authorisation;
-    private readonly LinkXeroLineToWorkOrderValidation validation;
-    private readonly ICommandHandler<LinkXeroLineToWorkOrder, Acknowledgement> handler;
+    private readonly SetXeroLineWorkOrderLinksAuthorisation authorisation;
+    private readonly SetXeroLineWorkOrderLinksValidation validation;
+    private readonly ICommandHandler<SetXeroLineWorkOrderLinks, Acknowledgement> handler;
 
-    public LinkXeroLineToWorkOrderEndpoint(
+    public SetXeroLineWorkOrderLinksEndpoint(
         SignedInUserResolver users,
-        LinkXeroLineToWorkOrderAuthorisation authorisation,
-        LinkXeroLineToWorkOrderValidation validation,
-        ICommandHandler<LinkXeroLineToWorkOrder, Acknowledgement> handler)
+        SetXeroLineWorkOrderLinksAuthorisation authorisation,
+        SetXeroLineWorkOrderLinksValidation validation,
+        ICommandHandler<SetXeroLineWorkOrderLinks, Acknowledgement> handler)
     {
         this.users = users;
         this.authorisation = authorisation;
@@ -27,7 +27,7 @@ public sealed class LinkXeroLineToWorkOrderEndpoint
         this.handler = handler;
     }
 
-    [Function(nameof(LinkXeroLineToWorkOrder))]
+    [Function(nameof(SetXeroLineWorkOrderLinks))]
     public async Task<IActionResult> Run(
         [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "projects/{projectId}/xero-line-work-order-links")] HttpRequest request,
         string projectId)
@@ -35,7 +35,7 @@ public sealed class LinkXeroLineToWorkOrderEndpoint
         var signedInUser = await users.ResolveAsync(request, request.HttpContext.RequestAborted);
         if (signedInUser is null) return new UnauthorizedResult();
 
-        var command = await request.ReadFromJsonAsync<LinkXeroLineToWorkOrder>();
+        var command = await request.ReadFromJsonAsync<SetXeroLineWorkOrderLinks>();
         if (command is null) return new BadRequestResult();
         if (command.ProjectId != projectId) return new BadRequestObjectResult("Route projectId does not match body.");
 

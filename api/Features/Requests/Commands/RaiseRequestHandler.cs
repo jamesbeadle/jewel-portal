@@ -56,6 +56,11 @@ public sealed class RaiseRequestHandler : ICommandHandler<RaiseRequest, Request>
                 RespondedAt = command.RespondedAt,
                 ResponseText = command.ResponseText,
                 RespondedByEmail = command.RespondedByEmail,
+                // A backfilled record created already-Closed takes its response date as the close
+                // date (the best evidence of when it actually closed), else the backfill moment.
+                ClosedAt = (command.Status ?? RequestStatus.Open) == RequestStatus.Closed
+                    ? command.RespondedAt ?? DateTimeOffset.UtcNow
+                    : null,
                 ImpliesVariation = false,
                 RaisedTo = command.RaisedTo,
                 DrawingRef = command.DrawingRef,

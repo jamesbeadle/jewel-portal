@@ -21,4 +21,7 @@ public sealed record UpdateRequestDetails(
     string? ClientNotes = null,
     DateTimeOffset? RaisedAt = null,
     // EOT only: the Notice of Delay this EOT arises from. Optional — an EOT can stand alone.
-    string? RelatedNodRequestId = null) : ICommand<Request>;
+    string? RelatedNodRequestId = null,
+    // The date the request closed (today or earlier). Only meaningful when Status is Closed: a
+    // value corrects the recorded close date; null means "not supplied" and keeps the existing one.
+    DateTimeOffset? ClosedAt = null) : ICommand<Request>;

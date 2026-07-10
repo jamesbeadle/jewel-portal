@@ -17,5 +17,22 @@ internal static class ValuationInvoicesEntityMapping
         Status: (ValuationInvoiceStatus)entity.Status,
         RaisedAt: entity.RaisedAt,
         IssuedAt: entity.IssuedAt,
-        PaidAt: entity.PaidAt);
+        PaidAt: entity.PaidAt,
+        SubmittedAt: entity.SubmittedAt,
+        ApprovedAt: entity.ApprovedAt,
+        RejectedAt: entity.RejectedAt,
+        CancelledAt: entity.CancelledAt,
+        RejectionReason: entity.RejectionReason,
+        AmendmentCount: entity.AmendmentCount,
+        IsManual: entity.IsManual,
+        ValuationReportSnapshotId: entity.ValuationReportSnapshotId);
+
+    public static ValuationInvoiceEvent ToModel(this ValuationInvoiceEventEntity entity) => new(
+        ValuationInvoiceEventId: entity.ValuationInvoiceEventId,
+        ValuationInvoiceId: entity.ValuationInvoiceId,
+        EventType: (ValuationInvoiceEventType)entity.EventType,
+        OccurredAt: entity.OccurredAt,
+        Note: entity.Note,
+        AmountBefore: entity.AmountBefore,
+        AmountAfter: entity.AmountAfter);
 }

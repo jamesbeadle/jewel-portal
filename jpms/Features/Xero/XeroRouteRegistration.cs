@@ -21,6 +21,14 @@ public static class XeroRouteRegistration
 
         queries.Register<ListXeroLedgerLines, IReadOnlyList<XeroLedgerLine>>(QueryRoute.Static("/api/xero/ledger"));
 
+        queries.Register<ListXeroInvoiceAttachments, IReadOnlyList<XeroInvoiceAttachment>>(
+            new QueryRoute("/api/xero/invoice/attachments", query =>
+            {
+                var attachments = (ListXeroInvoiceAttachments)query;
+                return $"/api/xero/invoice/attachments?id={Uri.EscapeDataString(attachments.XeroInvoiceId)}"
+                       + (attachments.IsCreditNote ? "&credit=1" : "");
+            }));
+
         commands.Register<SyncXeroLedger, XeroLedgerSyncResult>(CommandRoute.Post("/api/xero/ledger/sync"));
         commands.Register<SetXeroAllocation, int>(CommandRoute.Post("/api/xero/allocations"));
         commands.Register<AllocateSuggestedXeroLines, int>(CommandRoute.Post("/api/xero/allocations/suggested"));

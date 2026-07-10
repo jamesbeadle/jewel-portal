@@ -33,6 +33,17 @@ public sealed class ListCostCentreActualCostsHandler : IQueryHandler<ListCostCen
                              && joined.Line.AllocationStatus == (int)XeroAllocationStatus.Allocated)
             .ToListAsync(cancellationToken);
 
+        // Each line's work-order slices, so the modal can show and edit the split.
+        var linksByLine = (await context.XeroLineWorkOrderLinks
+                .Where(link => link.ProjectId == query.ProjectId)
+                .ToListAsync(cancellationToken))
+            .GroupBy(link => link.XeroLedgerLineId, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(group => group.Key,
+                group => (IReadOnlyList<XeroWorkOrderLinkSlice>)group
+                    .Select(link => new XeroWorkOrderLinkSlice(link.WorkOrderId, link.Amount))
+                    .ToList(),
+                StringComparer.OrdinalIgnoreCase);
+
         var whole = lines
             .Where(line => string.Equals(line.CostCenterCode, query.CostCode, StringComparison.OrdinalIgnoreCase))
             .Select(line => new CostCentreActualCostLine(
@@ -43,7 +54,7 @@ public sealed class ListCostCentreActualCostsHandler : IQueryHandler<ListCostCen
                 line.Description ?? "",
                 line.Type == "ACCPAYCREDIT" ? -line.Net : line.Net,
                 IsSplit: false,
-                line.LinkedWorkOrderId));
+                linksByLine.TryGetValue(line.XeroLedgerLineId, out var links) ? links : Array.Empty<XeroWorkOrderLinkSlice>()));
 
         var shares = splitShares
             .Where(joined => string.Equals(joined.Split.CostCenterCode, query.CostCode, StringComparison.OrdinalIgnoreCase))
@@ -55,7 +66,7 @@ public sealed class ListCostCentreActualCostsHandler : IQueryHandler<ListCostCen
                 joined.Line.Description ?? "",
                 joined.Line.Type == "ACCPAYCREDIT" ? -joined.Split.Net : joined.Split.Net,
                 IsSplit: true,
-                joined.Line.LinkedWorkOrderId));
+                Array.Empty<XeroWorkOrderLinkSlice>())); // centre-split lines can't carry links
 
         return whole.Concat(shares)
             .OrderByDescending(line => line.Date ?? DateTime.MinValue)

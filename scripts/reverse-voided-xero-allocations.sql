@@ -25,13 +25,18 @@ BEGIN TRANSACTION;
 /* Preview — run these SELECTs alone first if you want to inspect what goes.
 SELECT lines.XeroLedgerLineId, lines.InvoiceNumber, lines.ContactName,
        lines.InvoiceStatus, lines.Net, lines.ProjectId, lines.CostCenterCode,
-       lines.AllocationStatus, lines.LinkedWorkOrderId
+       lines.AllocationStatus
 FROM XeroLedgerLines AS lines
 WHERE lines.InvoiceStatus IN ('VOIDED', 'DELETED');
 
 SELECT splits.*
 FROM XeroCostSplits AS splits
 JOIN XeroLedgerLines AS lines ON lines.XeroLedgerLineId = splits.XeroLedgerLineId
+WHERE lines.InvoiceStatus IN ('VOIDED', 'DELETED');
+
+SELECT links.*
+FROM XeroLineWorkOrderLinks AS links
+JOIN XeroLedgerLines AS lines ON lines.XeroLedgerLineId = links.XeroLedgerLineId
 WHERE lines.InvoiceStatus IN ('VOIDED', 'DELETED');
 */
 
@@ -42,6 +47,14 @@ JOIN XeroLedgerLines AS lines
 WHERE lines.InvoiceStatus IN ('VOIDED', 'DELETED');
 
 PRINT CONCAT(@@ROWCOUNT, ' split share(s) removed.');
+
+DELETE links
+FROM XeroLineWorkOrderLinks AS links
+JOIN XeroLedgerLines AS lines
+    ON lines.XeroLedgerLineId = links.XeroLedgerLineId
+WHERE lines.InvoiceStatus IN ('VOIDED', 'DELETED');
+
+PRINT CONCAT(@@ROWCOUNT, ' work-order link slice(s) removed.');
 
 DELETE FROM XeroLedgerLines
 WHERE InvoiceStatus IN ('VOIDED', 'DELETED');

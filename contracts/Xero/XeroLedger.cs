@@ -104,7 +104,27 @@ public sealed record XeroLedgerLine(
     IReadOnlyList<XeroCostSplit>? Splits = null,
     XeroWriteBackStatus WriteBackStatus = XeroWriteBackStatus.None,
     string? WriteBackError = null,
-    DateTimeOffset? WriteBackAtUtc = null);
+    DateTimeOffset? WriteBackAtUtc = null,
+    // Whether Xero holds attachments for this line's invoice (the supplier's
+    // document, published by Dext) — arms the invoice viewer on the allocation
+    // page. Refreshed on every sync like the other Xero facts.
+    bool HasAttachments = false);
+
+/// <summary>
+/// The attachments Xero holds for one purchase invoice or credit note — the
+/// supplier's actual document(s), listed live from Xero (nothing stored in
+/// JPMS). <paramref name="IsCreditNote"/> picks Xero's CreditNotes collection
+/// (line Type ACCPAYCREDIT) over Invoices.
+/// </summary>
+public sealed record ListXeroInvoiceAttachments(string XeroInvoiceId, bool IsCreditNote = false)
+    : IQuery<IReadOnlyList<XeroInvoiceAttachment>>;
+
+/// <summary>One attachment as Xero holds it; the bytes are streamed on demand by file name.</summary>
+public sealed record XeroInvoiceAttachment(
+    string AttachmentId,
+    string FileName,
+    string MimeType,
+    long ContentLength);
 
 /// <summary>
 /// Pulls the latest purchase invoices + credit notes from Xero (bypassing the

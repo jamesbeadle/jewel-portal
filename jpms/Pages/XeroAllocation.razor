@@ -4,6 +4,7 @@
 @inject AuthService Auth
 @inject SessionService Session
 @inject IXeroLedgerStore Ledger
+@inject IQueryClient Queries
 @inject ICostCenterStore CostCenters
 @inject ProjectListReadModel ProjectsReadModel
 @inject NavigationManager Nav
@@ -224,8 +225,21 @@ else
                                 </td>
                                 <td class="px-3 py-2.5 text-content-muted max-w-xs">
                                     <span class="block truncate" title="@line.Description">@(line.Description ?? "—")</span>
-                                    <span class="block text-xs text-content-subtle">
-                                        @(line.InvoiceNumber ?? "—") · @(line.XeroSite ?? "no site") · @(line.XeroCostCode ?? "no Xero code")
+                                    <span class="flex items-center gap-1 text-xs text-content-subtle">
+                                        @if (line.HasAttachments)
+                                        {
+                                            @* The supplier's document as Xero holds it (published by Dext) —
+                                               previewed in place without leaving the queue. *@
+                                            <button type="button" title="View the invoice document"
+                                                    class="inline-flex items-center justify-center w-5 h-5 -ml-1 rounded text-content-subtle hover:text-content hover:bg-surface-raised"
+                                                    @onclick="() => OpenInvoiceViewAsync(line)">
+                                                <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                                     stroke-linecap="round" stroke-linejoin="round">
+                                                    <path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48" />
+                                                </svg>
+                                            </button>
+                                        }
+                                        <span>@(line.InvoiceNumber ?? "—") · @(line.XeroSite ?? "no site") · @(line.XeroCostCode ?? "no Xero code")</span>
                                     </span>
                                 </td>
                                 <td class="px-3 py-2.5 text-right text-content font-medium whitespace-nowrap">@Money(SignedNet(line))</td>
@@ -433,6 +447,73 @@ else
                         per row (amounts pro-rated, invoice total unchanged) with each row's project site and
                         cost code stamped on it.
                     </p>
+                </div>
+            }
+        </Modal>
+
+        <Modal IsOpen="@(viewLine is not null)" Title="Invoice document" ShowFooter="false"
+               OnCancel="CloseInvoiceView" Class="max-w-4xl">
+            @if (viewLine is not null)
+            {
+                <div class="space-y-3">
+                    <div class="rounded-lg border border-line bg-surface-raised px-4 py-3 text-sm">
+                        <span class="text-content font-medium">@(viewLine.ContactName ?? "—")</span>
+                        <span class="text-content-muted"> · @(viewLine.Description ?? "—")</span>
+                        <span class="block text-xs text-content-subtle mt-0.5">
+                            @(viewLine.InvoiceNumber ?? "—") · @DateText(viewLine.Date) · @Money(SignedNet(viewLine)) net
+                        </span>
+                    </div>
+
+                    @if (viewError is not null)
+                    {
+                        <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@viewError</p>
+                    }
+                    else if (viewAttachments is null)
+                    {
+                        <p class="text-sm text-content-subtle py-6">Fetching the document from Xero…</p>
+                    }
+                    else
+                    {
+                        @if (viewAttachments.Count > 1)
+                        {
+                            <div class="flex flex-wrap gap-2">
+                                @foreach (var attachment in viewAttachments)
+                                {
+                                    <button type="button" class="@InvoiceAttachmentChipClass(attachment)"
+                                            @onclick="() => viewSelected = attachment">@attachment.FileName</button>
+                                }
+                            </div>
+                        }
+
+                        @if (viewSelected is not null)
+                        {
+                            <div class="rounded-lg border border-line overflow-hidden">
+                                <div class="flex items-center justify-between gap-3 px-3 py-2 bg-surface-raised border-b border-line">
+                                    <span class="text-xs text-content-muted font-medium truncate">@viewSelected.FileName</span>
+                                    <span class="flex items-center gap-3 whitespace-nowrap">
+                                        <a class="text-xs font-medium text-content-muted hover:text-content underline underline-offset-4"
+                                           href="@InvoiceAttachmentUrl(viewSelected, inline: true)" target="_blank" rel="noopener">Open in new tab</a>
+                                        <a class="text-xs font-medium text-content-muted hover:text-content underline underline-offset-4"
+                                           href="@InvoiceAttachmentUrl(viewSelected, inline: false)" target="_blank" rel="noopener">Download</a>
+                                    </span>
+                                </div>
+                                @if (IsPreviewable(viewSelected))
+                                {
+                                    @* Same pattern as the triage attachment preview: the iframe hits the
+                                       download endpoint with ?inline=1 so the browser renders the PDF/image
+                                       in place. Bytes are proxied from Xero on demand — nothing stored. *@
+                                    <iframe src="@InvoiceAttachmentUrl(viewSelected, inline: true)"
+                                            class="w-full h-[65vh] bg-white" title="Invoice document preview"></iframe>
+                                }
+                                else
+                                {
+                                    <p class="px-4 py-8 text-sm text-content-subtle">
+                                        This file type can't be previewed here — use Download to open it.
+                                    </p>
+                                }
+                            </div>
+                        }
+                    }
                 </div>
             }
         </Modal>
@@ -736,6 +817,70 @@ else
         catch (CommandFailedException failure) { splitError = failure.Message; }
         finally { isApplying = false; }
     }
+
+    // -- invoice document viewer -------------------------------------------------
+    // The supplier's document as Xero holds it (published by Dext with the bill).
+    // The list is fetched live from Xero when the modal opens; the bytes are
+    // proxied through the API on demand — nothing is stored in JPMS.
+
+    private XeroLedgerLine? viewLine;
+    private IReadOnlyList<XeroInvoiceAttachment>? viewAttachments;
+    private XeroInvoiceAttachment? viewSelected;
+    private string? viewError;
+
+    private async Task OpenInvoiceViewAsync(XeroLedgerLine line)
+    {
+        viewLine = line;
+        viewAttachments = null;
+        viewSelected = null;
+        viewError = null;
+        try
+        {
+            var attachments = await Queries.AskAsync(
+                new ListXeroInvoiceAttachments(line.XeroInvoiceId, line.Type == "ACCPAYCREDIT"),
+                CancellationToken.None);
+            if (viewLine != line) return; // The modal was closed (or reopened) while fetching.
+            viewAttachments = attachments;
+            // PDFs and images preview in place; pre-select the first previewable one.
+            viewSelected = attachments.FirstOrDefault(IsPreviewable) ?? attachments.FirstOrDefault();
+            if (attachments.Count == 0)
+                viewError = "Xero holds no documents for this invoice — it may have been removed since the last sync.";
+        }
+        catch (Exception)
+        {
+            if (viewLine != line) return;
+            viewError = "Couldn't fetch the invoice's documents from Xero. If this keeps happening, check that the "
+                + "Xero custom connection has the accounting.attachments scope ticked in the Xero developer portal.";
+        }
+    }
+
+    private void CloseInvoiceView()
+    {
+        viewLine = null;
+        viewAttachments = null;
+        viewSelected = null;
+        viewError = null;
+    }
+
+    // Same previewable set as the triage and drawing viewers: browsers render PDFs
+    // and images natively in an iframe; everything else gets a Download link only.
+    private static bool IsPreviewable(XeroInvoiceAttachment attachment) =>
+        attachment.MimeType.Contains("pdf", StringComparison.OrdinalIgnoreCase)
+        || attachment.MimeType.StartsWith("image/", StringComparison.OrdinalIgnoreCase);
+
+    // The file name travels in the query string, never the path — supplier file
+    // names carry spaces and characters that don't survive a URL path segment.
+    private string InvoiceAttachmentUrl(XeroInvoiceAttachment attachment, bool inline) =>
+        $"/api/xero/invoice/attachment?id={Uri.EscapeDataString(viewLine?.XeroInvoiceId ?? "")}"
+        + $"&file={Uri.EscapeDataString(attachment.FileName)}"
+        + (viewLine?.Type == "ACCPAYCREDIT" ? "&credit=1" : "")
+        + (inline ? "&inline=1" : "");
+
+    private string InvoiceAttachmentChipClass(XeroInvoiceAttachment attachment) =>
+        (viewSelected == attachment
+            ? "bg-content text-surface border-content"
+            : "bg-surface text-content-muted border-line hover:text-content")
+        + " text-xs font-medium border rounded-full px-3 py-1 transition-colors";
 
     // -- Xero write-back status -------------------------------------------------
 

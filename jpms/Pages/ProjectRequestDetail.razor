@@ -243,6 +243,10 @@ else
                     <MetaRow Label="Drawing / detail" Value="@Dash(record.DrawingRef)" />
                     <MetaRow Label="Response due" Value="@Date(record.ResponseDue)" />
                     <MetaRow Label="Days outstanding" Value="@(record.DaysOutstanding is int d ? d.ToString() : "—")" />
+                    @if (record.ClosedAt is not null)
+                    {
+                        <MetaRow Label="Date closed" Value="@Date(record.ClosedAt)" />
+                    }
                     @if (record.Kind is not RequestType.Rfi)
                     {
                         <MetaRow Label="Value" Value="@(record.Value is null ? "—" : Money(record.Value.Value))" />
@@ -453,12 +457,12 @@ else
                                   placeholder="The answer or decision…"></textarea>
                         <div class="flex flex-wrap gap-2">
                             <button type="button" class="btn-secondary" disabled="@busy" @onclick="SaveResponse">Save response</button>
-                            <button type="button" class="btn-primary" disabled="@busy" @onclick="CloseRequest">Close request</button>
+                            <button type="button" class="btn-primary" disabled="@busy" @onclick="OpenCloseConfirm">Close request</button>
                         </div>
                     }
                     else
                     {
-                        <p class="text-sm text-content-subtle mb-3">This request is closed.</p>
+                        <p class="text-sm text-content-subtle mb-3">This request is closed@(record.ClosedAt is null ? "" : $" — {Date(record.ClosedAt)}").</p>
                         <button type="button" class="btn-secondary" disabled="@busy" @onclick="ReopenRequest">Reopen</button>
                     }
 
@@ -508,6 +512,23 @@ else
         </p>
     </Modal>
 
+    <Modal IsOpen="confirmingClose"
+           Title="Close this request?"
+           ConfirmLabel="@(busy ? "Closing…" : "Close request")"
+           OnCancel="CancelClose"
+           OnConfirm="PerformClose">
+        <div class="space-y-3">
+            <p class="text-sm text-content">
+                Closes <span class="font-mono">@record?.Reference</span> — “@record?.Title”. If the request was actually resolved earlier, set the date it closed below.
+            </p>
+            <FormField Label="Date closed" Value="@closeDate" OnChange="v => closeDate = v" InputType="date" />
+            @if (closeError is not null)
+            {
+                <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@closeError</p>
+            }
+        </div>
+    </Modal>
+
     <Modal IsOpen="editing"
            Title="Edit request details"
            ConfirmLabel="@(busy ? "Saving…" : "Save changes")"
@@ -543,6 +564,10 @@ else
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <FormField Label="Date issued" Value="@editRaisedAt" OnChange="v => editRaisedAt = v" InputType="date" />
                 <FormField Label="Response due" Value="@editResponseDue" OnChange="v => editResponseDue = v" InputType="date" />
+                @if (editStatus == RequestStatus.Closed)
+                {
+                    <FormField Label="Date closed" Value="@editClosedAt" OnChange="v => editClosedAt = v" InputType="date" />
+                }
             </div>
 
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -689,12 +714,19 @@ else
         RequestStatus.Approved, RequestStatus.Rejected, RequestStatus.Closed
     };
 
+    // Close confirm modal: the close date defaults to today but is editable, so a request that
+    // actually closed days ago can be recorded against the date it really closed (never a future one).
+    private bool confirmingClose;
+    private string closeDate = "";
+    private string? closeError;
+
     private bool editing;
     private string editReference = "";
     private string editTitle = "";
     private string editDescription = "";
     private string editRaisedAt = "";
     private string editResponseDue = "";
+    private string editClosedAt = "";
     private string editRaisedTo = "";
     private string editDrawingRef = "";
     private string editRelatedSpec = "";
@@ -755,10 +787,31 @@ else
 
     private async Task SaveResponse() => await Apply(RequestStatus.Responded, responseDraft);
 
+    // The close confirm modal: opens with today's date pre-filled so the common case is one click,
+    // but the date is editable for closures only recorded after the fact.
+    private void OpenCloseConfirm()
+    {
+        if (record is null || busy) return;
+        closeDate = DateTime.Today.ToString("yyyy-MM-dd");
+        closeError = null;
+        confirmingClose = true;
+    }
+
+    private void CancelClose() => confirmingClose = false;
+
+    private async Task PerformClose()
+    {
+        var closedAt = ParseDate(closeDate);
+        if (closedAt is null) { closeError = "A close date is required."; return; }
+        if (closedAt.Value.Date > DateTime.Today) { closeError = "The closed date cannot be in the future."; return; }
+        confirmingClose = false;
+        await CloseRequest(closedAt.Value);
+    }
+
     // Closing goes through the agent gate: the request only closes if every applied agent agrees
     // its work is complete. Any drafted response is persisted first so it isn't lost. The stub
     // agents always report incomplete, so a request with an applied agent stays open by design.
-    private async Task CloseRequest()
+    private async Task CloseRequest(DateTimeOffset closedAt)
     {
         if (record is null || busy) return;
         actionError = null;
@@ -771,7 +824,7 @@ else
         try
         {
             busy = true;
-            var outcome = await Agents.AttemptCloseAsync(record.RequestId);
+            var outcome = await Agents.AttemptCloseAsync(record.RequestId, closedAt);
             if (outcome.Closed)
             {
                 record = await RequestRegister.GetAsync(RequestId);
@@ -1064,6 +1117,7 @@ else
         editDescription = record.Description ?? "";
         editRaisedAt = record.RaisedAt.LocalDateTime.ToString("yyyy-MM-dd");
         editResponseDue = record.ResponseDue?.LocalDateTime.ToString("yyyy-MM-dd") ?? "";
+        editClosedAt = record.ClosedAt?.LocalDateTime.ToString("yyyy-MM-dd") ?? "";
         editRaisedTo = record.RaisedTo ?? "";
         editDrawingRef = record.DrawingRef ?? "";
         editRelatedSpec = record.RelatedDrawingSpec ?? "";
@@ -1089,6 +1143,10 @@ else
         if (string.IsNullOrWhiteSpace(editReference)) { editError = "A reference is required."; return; }
         if (string.IsNullOrWhiteSpace(editTitle)) { editError = "A subject is required."; return; }
 
+        // The close date only travels when the record is closed; backdating is fine, forward-dating isn't.
+        var closedAt = editStatus == RequestStatus.Closed ? ParseDate(editClosedAt) : null;
+        if (closedAt is { } closed && closed.Date > DateTime.Today) { editError = "The closed date cannot be in the future."; return; }
+
         var issued = ParseDate(editRaisedAt) ?? record.RaisedAt;
 
         var command = new UpdateRequestDetails(
@@ -1107,7 +1165,8 @@ else
             NullIfBlank(editRelatedSpec),
             record.InternalNotes,
             record.ClientNotes,
-            issued);
+            issued,
+            ClosedAt: closedAt);
 
         try
         {

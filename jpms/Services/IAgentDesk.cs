@@ -20,5 +20,6 @@ public interface IAgentDesk
     Task<IReadOnlyList<AgentProposal>> ListProposalsAsync(string requestId, CancellationToken cancellationToken = default);
     Task<AgentProposal> DecideAsync(string proposalId, bool accept, CancellationToken cancellationToken = default);
 
-    Task<RequestCloseOutcome> AttemptCloseAsync(string requestId, CancellationToken cancellationToken = default);
+    // closedAt is the user-chosen close date (today or earlier); null closes as at now.
+    Task<RequestCloseOutcome> AttemptCloseAsync(string requestId, DateTimeOffset? closedAt = null, CancellationToken cancellationToken = default);
 }

@@ -23,11 +23,59 @@ public sealed class HttpValuationInvoiceStore : IValuationInvoiceStore
     public Task<ProjectValuationInvoiceSummary> GetSummaryAsync(string projectId, CancellationToken cancellationToken = default) =>
         queries.AskAsync(new GetProjectValuationInvoiceSummary(projectId), cancellationToken);
 
+    public Task<IReadOnlyList<ValuationInvoiceEvent>> ListEventsAsync(string valuationInvoiceId, CancellationToken cancellationToken = default) =>
+        queries.AskAsync(new ListValuationInvoiceEvents(valuationInvoiceId), cancellationToken);
+
     public async Task<ValuationInvoice> CreateAsync(string projectId, DateTimeOffset periodMonth, decimal amount, string? valuationClaimId, CancellationToken cancellationToken = default)
     {
         var created = await commands.SendAsync(new CreateValuationInvoice(projectId, periodMonth, amount, valuationClaimId), cancellationToken);
         OnChange?.Invoke();
         return created;
+    }
+
+    public async Task<ValuationInvoice> CreateManualAsync(string projectId, DateTimeOffset periodMonth, decimal amount, decimal? amountPaid, DateTimeOffset? issuedAt, DateTimeOffset? paidAt, string? note, CancellationToken cancellationToken = default)
+    {
+        var created = await commands.SendAsync(new CreateValuationInvoice(
+            projectId, periodMonth, amount, ValuationClaimId: null,
+            IsManual: true, AmountPaid: amountPaid, IssuedAt: issuedAt, PaidAt: paidAt, Note: note), cancellationToken);
+        OnChange?.Invoke();
+        return created;
+    }
+
+    public async Task<ValuationInvoice> UpdateAsync(string valuationInvoiceId, DateTimeOffset periodMonth, decimal amount, decimal? amountPaid = null, DateTimeOffset? issuedAt = null, DateTimeOffset? paidAt = null, string? note = null, CancellationToken cancellationToken = default)
+    {
+        var updated = await commands.SendAsync(new UpdateValuationInvoice(
+            valuationInvoiceId, periodMonth, amount, amountPaid, issuedAt, paidAt, note), cancellationToken);
+        OnChange?.Invoke();
+        return updated;
+    }
+
+    public async Task<ValuationInvoice> SubmitAsync(string valuationInvoiceId, CancellationToken cancellationToken = default)
+    {
+        var invoice = await commands.SendAsync(new SubmitValuationInvoice(valuationInvoiceId), cancellationToken);
+        OnChange?.Invoke();
+        return invoice;
+    }
+
+    public async Task<ValuationInvoice> ApproveAsync(string valuationInvoiceId, string? note = null, CancellationToken cancellationToken = default)
+    {
+        var invoice = await commands.SendAsync(new ApproveValuationInvoice(valuationInvoiceId, note), cancellationToken);
+        OnChange?.Invoke();
+        return invoice;
+    }
+
+    public async Task<ValuationInvoice> RejectAsync(string valuationInvoiceId, string reason, CancellationToken cancellationToken = default)
+    {
+        var invoice = await commands.SendAsync(new RejectValuationInvoice(valuationInvoiceId, reason), cancellationToken);
+        OnChange?.Invoke();
+        return invoice;
+    }
+
+    public async Task<ValuationInvoice> CancelAsync(string valuationInvoiceId, string? note = null, CancellationToken cancellationToken = default)
+    {
+        var invoice = await commands.SendAsync(new CancelValuationInvoice(valuationInvoiceId, note), cancellationToken);
+        OnChange?.Invoke();
+        return invoice;
     }
 
     public async Task<ValuationInvoice> IssueAsync(string valuationInvoiceId, CancellationToken cancellationToken = default)

@@ -20,15 +20,24 @@ public sealed class RecordValuationInvoicePaymentHandler : ICommandHandler<Recor
         if (entity is null) throw new InvalidOperationException($"Valuation invoice {command.ValuationInvoiceId} not found.");
         if (entity.Status == (int)ValuationInvoiceStatus.Paid)
             throw new InvalidOperationException("This valuation invoice has already been paid.");
+        if (entity.Status == (int)ValuationInvoiceStatus.Cancelled)
+            throw new InvalidOperationException("A cancelled valuation invoice cannot be paid.");
+        if (entity.Status is (int)ValuationInvoiceStatus.Submitted or (int)ValuationInvoiceStatus.Approved)
+            throw new InvalidOperationException("This valuation invoice is in approval — issue it before recording a payment.");
 
         var project = await context.Projects.FindAsync(new object[] { entity.ProjectId }, cancellationToken);
         if (project is null) throw new InvalidOperationException($"Project {entity.ProjectId} not found.");
 
+        var paidBefore = entity.AmountPaid;
         entity.AmountPaid = command.AmountPaid;
         entity.Status = (int)ValuationInvoiceStatus.Paid;
         entity.PaidAt = DateTimeOffset.UtcNow;
 
         project.ValuationInvoicePaidTotal += command.AmountPaid;
+
+        ValuationInvoiceAuditTrail.Append(context, entity.ValuationInvoiceId,
+            ValuationInvoiceEventType.PaymentRecorded, "",
+            amountBefore: paidBefore, amountAfter: command.AmountPaid);
 
         await context.SaveChangesAsync(cancellationToken);
         return entity.ToModel();

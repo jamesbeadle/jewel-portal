@@ -62,6 +62,31 @@ public sealed class ClaimLinesReadModel
 }
 
 /// <summary>
+/// Snapshot headers (newest first) for one project's Valuation Report tab — the immutable
+/// frozen copies behind invoice submissions and on-demand period-end records. Fetch-once
+/// per project; ProjectValuation.razor calls RefreshAsync via the store's Refresh
+/// (stale-while-revalidate). Lines are fetched per snapshot on demand, not cached here.
+/// </summary>
+public sealed class ValuationReportSnapshotsReadModel
+{
+    private readonly IQueryClient queries;
+    private readonly Dictionary<string, IReadOnlyList<ValuationReportSnapshot>> snapshotsByProject = new();
+
+    public ValuationReportSnapshotsReadModel(IQueryClient queries) { this.queries = queries; }
+
+    public event Action? OnChanged;
+
+    public IReadOnlyList<ValuationReportSnapshot> Current(string projectId) =>
+        snapshotsByProject.TryGetValue(projectId, out var list) ? list : Array.Empty<ValuationReportSnapshot>();
+
+    public async Task RefreshAsync(string projectId, CancellationToken cancellationToken)
+    {
+        snapshotsByProject[projectId] = await queries.AskAsync(new ListValuationReportSnapshotsForProject(projectId), cancellationToken);
+        OnChanged?.Invoke();
+    }
+}
+
+/// <summary>
 /// Named cost-centre roll-ups for one project's Financials tab. Fetch-once per
 /// project; ProjectFinancials.razor calls RefreshAsync(projectId) from
 /// OnInitializedAsync (stale-while-revalidate).

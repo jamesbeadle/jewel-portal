@@ -43,6 +43,9 @@ public sealed class AttemptCloseRequestHandler : ICommandHandler<AttemptCloseReq
             return new RequestCloseOutcome(Closed: false, BlockingAgents: blocking);
 
         request.Status = (int)RequestStatus.Closed;
+        // The close date is user-chosen (validated as today or earlier) so a request closed after
+        // the fact carries the date it actually closed, not the date someone got around to recording it.
+        request.ClosedAt = command.ClosedAt ?? DateTimeOffset.UtcNow;
         await context.SaveChangesAsync(cancellationToken);
         return new RequestCloseOutcome(Closed: true, BlockingAgents: Array.Empty<AgentCompletionState>());
     }

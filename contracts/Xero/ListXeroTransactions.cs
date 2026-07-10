@@ -56,7 +56,11 @@ public sealed record XeroTransaction(
     decimal AmountDue,
     decimal AmountPaid,
     string? CurrencyCode,
-    IReadOnlyList<XeroTransactionLine> Lines);
+    IReadOnlyList<XeroTransactionLine> Lines,
+    // Whether Xero holds one or more attachments for this transaction (the source
+    // document Dext published, typically). Cheap flag off the paged read — the
+    // documents themselves are fetched on demand via the attachments endpoints.
+    bool HasAttachments = false);
 
 /// <summary>
 /// One invoice line. <see cref="Site"/> and <see cref="CostCode"/> come from Xero's tracking

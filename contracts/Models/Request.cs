@@ -56,7 +56,8 @@ public sealed record Request(
     string? ImpactIfLate = null,            // official document: consequence if no response by the required-by date
     IReadOnlyList<RequestItem>? Items = null, // official document: the itemised queries, ordered by Position
     string? RelatedNodRequestId = null,     // EOT only: the Notice of Delay this EOT arises from (optional)
-    string? MergedIntoRequestId = null)     // set when this General request was merged into another (the survivor's id)
+    string? MergedIntoRequestId = null,     // set when this General request was merged into another (the survivor's id)
+    DateTimeOffset? ClosedAt = null)        // when the request was closed — user-chosen (today or prior), cleared on reopen
 {
     // Human-readable request number / mailbox folder name (e.g. "REQ-0001"). Empty until assigned.
     public string DisplayNumber => Number > 0 ? $"REQ-{Number:0000}" : "";

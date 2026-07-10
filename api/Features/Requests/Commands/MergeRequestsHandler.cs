@@ -85,6 +85,7 @@ public sealed class MergeRequestsHandler : ICommandHandler<MergeRequests, Reques
         // 5. Close the merged request and stamp the audit link, then note the merge on the
         //    survivor's conversation so the combined history explains itself.
         merged.Status = (int)RequestStatus.Closed;
+        merged.ClosedAt = DateTimeOffset.UtcNow; // closed by the merge itself, so the close date is the merge date
         merged.MergedIntoRequestId = survivor.RequestId;
         merged.MergedAt = DateTimeOffset.UtcNow;
 

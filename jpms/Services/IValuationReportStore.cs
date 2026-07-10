@@ -23,5 +23,13 @@ public interface IValuationReportStore
     Task<ValuationClaim> PreapproveClaimAsync(string projectId, string claimId);
     Task<ValuationClaim> ConfirmClaimAsync(string projectId, string claimId);
 
+    // Immutable report snapshots — frozen copies behind invoice submissions plus
+    // on-demand period-end records. Headers are cached per project (Refresh
+    // revalidates); the full line-level detail is fetched per snapshot on demand.
+    IReadOnlyList<ValuationReportSnapshot> SnapshotsFor(string projectId);
+    Task<ValuationReportSnapshot> TakeSnapshotAsync(string projectId, string label);
+    Task<ValuationReportSnapshotDetail> GetSnapshotAsync(string snapshotId);
+    Task DeleteSnapshotAsync(string projectId, string snapshotId);
+
     event Action? OnChange;
 }

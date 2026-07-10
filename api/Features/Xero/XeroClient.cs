@@ -35,7 +35,27 @@ public interface IXeroClient
     /// throwing so callers can stamp the outcome onto the stored ledger lines.
     /// </summary>
     Task<XeroApprovalResult> ApproveInvoiceAsync(XeroApprovalRequest request, CancellationToken ct);
+
+    /// <summary>
+    /// Lists the attachments Xero holds for one invoice or credit note — the supplier's
+    /// document(s), typically published by Dext. Requires the custom connection's
+    /// accounting.attachments scope; throws <see cref="XeroCallFailedException"/> (message
+    /// safe to surface) when Xero refuses.
+    /// </summary>
+    Task<IReadOnlyList<XeroInvoiceAttachment>> ListAttachmentsAsync(
+        string invoiceId, bool isCreditNote, CancellationToken ct);
+
+    /// <summary>
+    /// Streams one attachment's bytes by file name (Xero's attachment content endpoint is
+    /// addressed by file name, with the Accept header naming the content type). Null when
+    /// the invoice has no attachment by that name.
+    /// </summary>
+    Task<XeroAttachmentContent?> GetAttachmentAsync(
+        string invoiceId, bool isCreditNote, string fileName, CancellationToken ct);
 }
+
+/// <summary>One attachment's bytes plus the content type Xero reported for it.</summary>
+public sealed record XeroAttachmentContent(byte[] Content, string ContentType, string FileName);
 
 /// <summary>No-op used when no Xero client id/secret is configured; reports itself as such.</summary>
 public sealed class NullXeroClient : IXeroClient
@@ -48,6 +68,14 @@ public sealed class NullXeroClient : IXeroClient
     public Task<XeroApprovalResult> ApproveInvoiceAsync(XeroApprovalRequest request, CancellationToken ct) =>
         Task.FromResult(XeroApprovalResult.Failed(
             "Xero isn't connected — add the Xero__ClientId / Xero__ClientSecret app settings."));
+
+    public Task<IReadOnlyList<XeroInvoiceAttachment>> ListAttachmentsAsync(
+        string invoiceId, bool isCreditNote, CancellationToken ct) =>
+        Task.FromResult<IReadOnlyList<XeroInvoiceAttachment>>(Array.Empty<XeroInvoiceAttachment>());
+
+    public Task<XeroAttachmentContent?> GetAttachmentAsync(
+        string invoiceId, bool isCreditNote, string fileName, CancellationToken ct) =>
+        Task.FromResult<XeroAttachmentContent?>(null);
 }
 
 /// <summary>REST implementation (hand-rolled HttpClient, matching the app's style — see ClaudeClient).</summary>
@@ -209,6 +237,78 @@ public sealed class XeroClient : IXeroClient
         {
             return XeroApprovalResult.Failed(failure.Message);
         }
+    }
+
+    // -- attachments: the supplier's document, viewed from the allocation page ---------
+
+    public async Task<IReadOnlyList<XeroInvoiceAttachment>> ListAttachmentsAsync(
+        string invoiceId, bool isCreditNote, CancellationToken ct)
+    {
+        var token = await GetAccessTokenAsync(ct);
+        var baseUrl = isCreditNote ? CreditNotesUrl : InvoicesUrl;
+
+        JsonDocument doc;
+        try
+        {
+            doc = await GetJsonAsync(token, $"{baseUrl}/{invoiceId}/Attachments", "attachments", ct);
+        }
+        catch (XeroCallFailedException failure) when (failure.Message.Contains("HTTP 403"))
+        {
+            throw new XeroCallFailedException(
+                "Couldn't read the invoice's attachments — the Xero custom connection needs the "
+                + "accounting.attachments scope ticked in the Xero developer portal. " + failure.Message);
+        }
+
+        using (doc)
+        {
+            if (!doc.RootElement.TryGetProperty("Attachments", out var items)
+                || items.ValueKind != JsonValueKind.Array)
+                return Array.Empty<XeroInvoiceAttachment>();
+
+            return items.EnumerateArray()
+                .Select(item => new XeroInvoiceAttachment(
+                    AttachmentId: StringOf(item, "AttachmentID") ?? "",
+                    FileName: StringOf(item, "FileName") ?? "attachment",
+                    MimeType: StringOf(item, "MimeType") ?? "application/octet-stream",
+                    ContentLength: item.TryGetProperty("ContentLength", out var length)
+                        && length.ValueKind == JsonValueKind.Number ? length.GetInt64() : 0))
+                .Where(attachment => attachment.AttachmentId.Length > 0)
+                .ToList();
+        }
+    }
+
+    public async Task<XeroAttachmentContent?> GetAttachmentAsync(
+        string invoiceId, bool isCreditNote, string fileName, CancellationToken ct)
+    {
+        // The list gives the attachment's real MimeType — Xero's content endpoint wants it
+        // in the Accept header — and confirms the file actually belongs to this invoice.
+        var attachments = await ListAttachmentsAsync(invoiceId, isCreditNote, ct);
+        var attachment = attachments.FirstOrDefault(candidate =>
+            candidate.FileName.Equals(fileName, StringComparison.OrdinalIgnoreCase));
+        if (attachment is null) return null;
+
+        var token = await GetAccessTokenAsync(ct);
+        var baseUrl = isCreditNote ? CreditNotesUrl : InvoicesUrl;
+        var url = $"{baseUrl}/{invoiceId}/Attachments/{Uri.EscapeDataString(attachment.FileName)}";
+
+        using var request = new HttpRequestMessage(HttpMethod.Get, url);
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue(attachment.MimeType));
+        if (!string.IsNullOrWhiteSpace(_options.TenantId))
+            request.Headers.Add("xero-tenant-id", _options.TenantId);
+
+        using var response = await _http.SendAsync(request, ct);
+        if (!response.IsSuccessStatusCode)
+        {
+            var body = await response.Content.ReadAsStringAsync(ct);
+            _logger.LogWarning("Xero attachment call failed: {Status} {Body}.", (int)response.StatusCode, Truncate(body));
+            throw new XeroCallFailedException(
+                $"Xero rejected the attachment request with HTTP {(int)response.StatusCode}. {Truncate(body)}");
+        }
+
+        var content = await response.Content.ReadAsByteArrayAsync(ct);
+        var contentType = response.Content.Headers.ContentType?.MediaType ?? attachment.MimeType;
+        return new XeroAttachmentContent(content, contentType, attachment.FileName);
     }
 
     /// <summary>
@@ -585,7 +685,8 @@ public sealed class XeroClient : IXeroClient
         AmountDue: item.TryGetProperty("AmountDue", out _) ? DecimalOf(item, "AmountDue") : DecimalOf(item, "RemainingCredit"),
         AmountPaid: DecimalOf(item, "AmountPaid"),
         CurrencyCode: StringOf(item, "CurrencyCode"),
-        Lines: ReadLines(item, accountNames));
+        Lines: ReadLines(item, accountNames),
+        HasAttachments: BoolOf(item, "HasAttachments"));
 
     private IReadOnlyList<XeroTransactionLine> ReadLines(JsonElement invoice, IReadOnlyDictionary<string, string> accountNames)
     {
@@ -646,6 +747,9 @@ public sealed class XeroClient : IXeroClient
         element.TryGetProperty(property, out var value) && value.ValueKind == JsonValueKind.Number
             ? value.GetDecimal()
             : 0m;
+
+    private static bool BoolOf(JsonElement element, string property) =>
+        element.TryGetProperty(property, out var value) && value.ValueKind == JsonValueKind.True;
 
     /// <summary>
     /// Xero's JSON carries dates twice: an ISO "…String" field and a legacy "/Date(ms+0000)/" field.

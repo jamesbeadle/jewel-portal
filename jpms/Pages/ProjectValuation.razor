@@ -116,10 +116,17 @@ else
             <ExtraSections>
                 @* The old Cash Calls tab, folded into the report: issued invoices feed
                    "Certified to date" and therefore the payment due. *@
-                <ValuationInvoicesSection ProjectId="@ProjectId"
+                <ValuationInvoicesSection @ref="invoicesSection"
+                                          ProjectId="@ProjectId"
                                           ValuationClaimId="@Selected?.ValuationClaimId"
                                           OnInvoicedToDateChanged="OnInvoicedToDateChanged"
-                                          OnCertifiedChanged="OnCertifiedChanged" />
+                                          OnCertifiedChanged="OnCertifiedChanged"
+                                          OnViewSnapshot="OpenSnapshot" />
+                @* Snapshot register: the frozen report behind each invoice submission,
+                   plus on-demand period-end captures. *@
+                <div class="mt-3">
+                    <ValuationSnapshotsSection ProjectId="@ProjectId" OnView="OpenSnapshot" OnDeleted="OnSnapshotDeleted" />
+                </div>
             </ExtraSections>
         </ValuationReportTable>
 
@@ -127,6 +134,15 @@ else
                Title="@(editingLine is null ? "Add a line" : "Edit line")"
                ShowFooter="false" Class="max-w-3xl" OnCancel="CloseLineForm">
             <ValuationLineForm ProjectId="@ProjectId" Editing="@editingLine" OnSaved="OnLineSaved" OnCancel="CloseLineForm" />
+        </Modal>
+
+        <Modal IsOpen="@(viewingSnapshotId is not null)"
+               Title="Valuation report snapshot"
+               ShowFooter="false" Class="max-w-6xl" OnCancel="CloseSnapshot">
+            @if (viewingSnapshotId is not null)
+            {
+                <ValuationSnapshotViewer SnapshotId="@viewingSnapshotId" />
+            }
         </Modal>
     </ProjectPageShell>
 }
@@ -151,6 +167,19 @@ else
     // Certified to date moved (invoice issued / deleted / added as paid): the server has
     // re-frozen any Preapproved claim's totals, so re-pull claims to show them.
     private void OnCertifiedChanged() => Store.Refresh(ProjectId);
+
+    // Read-only viewer for a frozen report snapshot ("show me the report behind VI-0007").
+    private string? viewingSnapshotId;
+    private void OpenSnapshot(string snapshotId) => viewingSnapshotId = snapshotId;
+    private void CloseSnapshot() => viewingSnapshotId = null;
+
+    // Deleting a snapshot clears any invoice's link to it server-side — reload the
+    // invoice section so a dead "View report" link doesn't linger.
+    private ValuationInvoicesSection? invoicesSection;
+    private async Task OnSnapshotDeleted()
+    {
+        if (invoicesSection is not null) await invoicesSection.ReloadAsync();
+    }
 
     private DateTime newClaimDate = DateTime.Today;
     private string newRetentionPercent = "5";

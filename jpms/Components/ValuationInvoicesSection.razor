@@ -3,7 +3,12 @@
 
 @* Valuation invoices (formerly Cash Calls) live inside the Valuation Report as one more
    accordion. Issued invoices drive "Certified to date" — and so the payment due — in the
-   report summary; the total is reported up via OnInvoicedToDateChanged. *@
+   report summary; the total is reported up via OnInvoicedToDateChanged.
+
+   Lifecycle: Raised → Submitted (with the client; report snapshot frozen) → Approved →
+   Issued → Paid, with Rejected returning an invoice for amendment or cancellation, and a
+   Raised → Issued skip path for projects without a formal approval loop. Manual entries
+   are backdated historic invoices recorded directly as Issued/Paid. *@
 <div class="rounded-xl border border-line bg-surface overflow-hidden">
     <button type="button" @onclick="Toggle" aria-expanded="@isOpen"
             class="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-surface-raised/60 transition">
@@ -14,9 +19,16 @@
         </svg>
         <span class="font-semibold text-content whitespace-nowrap">Valuation Invoices</span>
         <span class="text-xs text-content-subtle whitespace-nowrap">
-            @invoices.Count @(invoices.Count == 1 ? "invoice" : "invoices")
+            @LiveInvoices.Count @(LiveInvoices.Count == 1 ? "invoice" : "invoices")
         </span>
         <span class="ml-auto flex items-baseline gap-6 whitespace-nowrap">
+            @if (AwaitingApproval > 0)
+            {
+                <span class="text-sm">
+                    <span class="text-[11px] uppercase tracking-wider text-content-subtle mr-1.5">Awaiting approval</span>
+                    <span class="text-content-muted">@Money(AwaitingApproval)</span>
+                </span>
+            }
             <span class="text-sm">
                 <span class="text-[11px] uppercase tracking-wider text-content-subtle mr-1.5">Paid</span>
                 <span class="text-content-muted">@Money(TotalPaid)</span>
@@ -47,30 +59,68 @@
                 <table class="w-full text-sm border-collapse">
                     <thead class="bg-surface-raised border-b border-line">
                         <tr class="text-left text-[11px] uppercase tracking-wider text-content-subtle font-semibold">
-                            <th class="sticky top-0 z-20 bg-surface-raised px-3 py-3 w-[88px]">Ref</th>
+                            <th class="sticky top-0 z-20 bg-surface-raised px-3 py-3 w-[100px]">Ref</th>
                             <th class="sticky top-0 z-20 bg-surface-raised px-3 py-3 whitespace-nowrap">Period</th>
                             <th class="sticky top-0 z-20 bg-surface-raised px-3 py-3 text-right whitespace-nowrap">Amount £</th>
                             <th class="sticky top-0 z-20 bg-surface-raised px-3 py-3 whitespace-nowrap">Status</th>
                             <th class="sticky top-0 z-20 bg-surface-raised px-3 py-3 text-right whitespace-nowrap">Paid £</th>
+                            <th class="sticky top-0 z-20 bg-surface-raised px-3 py-3 whitespace-nowrap">Report</th>
                             @if (CanManage)
                             {
-                                <th class="sticky top-0 z-20 bg-surface-raised px-3 py-3 text-right w-[130px]"></th>
+                                <th class="sticky top-0 z-20 bg-surface-raised px-3 py-3 text-right w-[210px]"></th>
                             }
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-line">
                         @foreach (var invoice in invoices)
                         {
-                            <tr>
-                                <td class="px-3 py-2 font-mono text-[11px] text-content-subtle whitespace-nowrap">@invoice.DisplayNumber</td>
+                            <tr class="@(invoice.Status == ValuationInvoiceStatus.Cancelled ? "opacity-50" : "")">
+                                <td class="px-3 py-2 font-mono text-[11px] text-content-subtle whitespace-nowrap">
+                                    @invoice.DisplayNumber
+                                    @if (invoice.IsManual)
+                                    {
+                                        <span class="ml-1 inline-flex items-center rounded-full border border-line px-1.5 py-0.5 text-[10px] font-sans text-content-subtle"
+                                              title="Historic entry keyed in manually — counts toward certified to date and total paid">Manual</span>
+                                    }
+                                </td>
                                 <td class="px-3 py-2 text-content-muted whitespace-nowrap">@invoice.PeriodMonth.ToString("MMM yyyy")</td>
                                 <td class="px-3 py-2 text-right text-content whitespace-nowrap">@Money(invoice.Amount)</td>
-                                <td class="px-3 py-2 whitespace-nowrap"><span class="@BadgeClass(invoice.Status)">@StatusLabel(invoice.Status)</span></td>
+                                <td class="px-3 py-2 whitespace-nowrap">
+                                    <span class="@BadgeClass(invoice.Status)" title="@StatusTitle(invoice)">@StatusLabel(invoice.Status)</span>
+                                </td>
                                 <td class="px-3 py-2 text-right text-content-muted whitespace-nowrap">@(invoice.AmountPaid > 0 ? Money(invoice.AmountPaid) : "—")</td>
+                                <td class="px-3 py-2 whitespace-nowrap">
+                                    @if (invoice.ValuationReportSnapshotId is not null)
+                                    {
+                                        <button type="button" @onclick="() => OnViewSnapshot.InvokeAsync(invoice.ValuationReportSnapshotId)"
+                                                title="The valuation report frozen when this invoice was submitted/issued"
+                                                class="text-content-subtle hover:text-content underline underline-offset-2 text-xs">View report</button>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-content-subtle text-xs">—</span>
+                                    }
+                                </td>
                                 @if (CanManage)
                                 {
                                     <td class="px-3 py-2 text-right whitespace-nowrap">
-                                        @if (invoice.Status == ValuationInvoiceStatus.Raised)
+                                        @if (!invoice.IsManual && invoice.Status == ValuationInvoiceStatus.Raised)
+                                        {
+                                            <button type="button" disabled="@busy" @onclick="() => SubmitAsync(invoice)"
+                                                    title="Send to the architect/client for approval — freezes a report snapshot"
+                                                    class="text-content-subtle hover:text-content underline underline-offset-2 text-xs">Submit</button>
+                                            <button type="button" disabled="@busy" @onclick="() => IssueAsync(invoice)"
+                                                    title="Issue without the approval loop — counts toward certified to date"
+                                                    class="ml-2 text-content-subtle hover:text-content underline underline-offset-2 text-xs">Issue</button>
+                                        }
+                                        else if (invoice.Status == ValuationInvoiceStatus.Submitted)
+                                        {
+                                            <button type="button" disabled="@busy" @onclick="() => ApproveAsync(invoice)"
+                                                    class="text-content-subtle hover:text-content underline underline-offset-2 text-xs">Approve</button>
+                                            <button type="button" disabled="@busy" @onclick="() => OpenReject(invoice)"
+                                                    class="ml-2 text-content-subtle hover:text-negative underline underline-offset-2 text-xs">Reject</button>
+                                        }
+                                        else if (invoice.Status == ValuationInvoiceStatus.Approved)
                                         {
                                             <button type="button" disabled="@busy" @onclick="() => IssueAsync(invoice)"
                                                     class="text-content-subtle hover:text-content underline underline-offset-2 text-xs">Issue invoice</button>
@@ -80,6 +130,20 @@
                                             <button type="button" disabled="@busy" @onclick="() => OpenPayment(invoice)"
                                                     class="text-content-subtle hover:text-content underline underline-offset-2 text-xs">Record payment</button>
                                         }
+                                        @if (invoice.IsEditable && invoice.Status != ValuationInvoiceStatus.Cancelled)
+                                        {
+                                            <button type="button" disabled="@busy" @onclick="() => OpenEdit(invoice)"
+                                                    title="@(invoice.Status == ValuationInvoiceStatus.Rejected ? "Amend and return to Raised, ready to resubmit" : "Amend period/amount")"
+                                                    class="ml-2 text-content-subtle hover:text-content underline underline-offset-2 text-xs">@(invoice.Status == ValuationInvoiceStatus.Rejected ? "Amend" : "Edit")</button>
+                                        }
+                                        @if (!invoice.IsManual && invoice.Status is ValuationInvoiceStatus.Raised or ValuationInvoiceStatus.Rejected)
+                                        {
+                                            <button type="button" disabled="@busy" @onclick="() => CancelAsync(invoice)"
+                                                    title="Withdraw — kept for the audit trail, excluded from every total"
+                                                    class="ml-2 text-content-subtle hover:text-negative underline underline-offset-2 text-xs">Cancel</button>
+                                        }
+                                        <button type="button" disabled="@busy" @onclick="() => ToggleHistoryAsync(invoice)"
+                                                class="ml-2 text-content-subtle hover:text-content underline underline-offset-2 text-xs">History</button>
                                         @if (pendingDeleteId == invoice.ValuationInvoiceId)
                                         {
                                             <button type="button" disabled="@busy" @onclick="() => DeleteAsync(invoice)"
@@ -90,14 +154,61 @@
                                         else
                                         {
                                             <button type="button" disabled="@busy" @onclick="() => pendingDeleteId = invoice.ValuationInvoiceId"
-                                                    title="@(invoice.Status == ValuationInvoiceStatus.Raised
-                                                              ? "Delete this invoice"
-                                                              : "Delete this invoice — certified to date (and a paid one's receipts) roll back")"
+                                                    title="@(invoice.Status is ValuationInvoiceStatus.Issued or ValuationInvoiceStatus.Paid
+                                                              ? "Delete this invoice — certified to date (and a paid one's receipts) roll back"
+                                                              : "Delete this invoice")"
                                                     class="ml-2 text-content-subtle hover:text-negative underline underline-offset-2 text-xs">Delete</button>
                                         }
                                     </td>
                                 }
                             </tr>
+                            @if (invoice.Status == ValuationInvoiceStatus.Rejected && !string.IsNullOrWhiteSpace(invoice.RejectionReason))
+                            {
+                                <tr>
+                                    <td colspan="@ColumnCount" class="px-3 py-1.5 bg-negative/5 text-xs text-negative">
+                                        Rejected@(invoice.RejectedAt is { } r ? $" {r:dd MMM yyyy}" : ""): @invoice.RejectionReason
+                                    </td>
+                                </tr>
+                            }
+                            @if (historyOpenId == invoice.ValuationInvoiceId)
+                            {
+                                <tr>
+                                    <td colspan="@ColumnCount" class="px-3 py-2 bg-surface-raised/60">
+                                        @if (historyEvents is null)
+                                        {
+                                            <span class="text-xs text-content-subtle italic">Loading history…</span>
+                                        }
+                                        else if (historyEvents.Count == 0)
+                                        {
+                                            <span class="text-xs text-content-subtle italic">No history recorded for this invoice.</span>
+                                        }
+                                        else
+                                        {
+                                            <ul class="space-y-1">
+                                                @foreach (var entry in historyEvents)
+                                                {
+                                                    <li class="text-xs text-content-muted">
+                                                        <span class="font-mono text-content-subtle">@entry.OccurredAt.ToString("dd MMM yyyy HH:mm")</span>
+                                                        <span class="ml-2 font-medium text-content">@EventLabel(entry.EventType)</span>
+                                                        @if (entry.AmountBefore is not null && entry.AmountAfter is not null && entry.AmountBefore != entry.AmountAfter)
+                                                        {
+                                                            <span class="ml-2">@Money(entry.AmountBefore.Value) → @Money(entry.AmountAfter.Value)</span>
+                                                        }
+                                                        else if (entry.AmountAfter is not null)
+                                                        {
+                                                            <span class="ml-2">@Money(entry.AmountAfter.Value)</span>
+                                                        }
+                                                        @if (!string.IsNullOrWhiteSpace(entry.Note))
+                                                        {
+                                                            <span class="ml-2 text-content-subtle">— @entry.Note</span>
+                                                        }
+                                                    </li>
+                                                }
+                                            </ul>
+                                        }
+                                    </td>
+                                </tr>
+                            }
                         }
                     </tbody>
                 </table>
@@ -121,13 +232,26 @@
                            class="rounded-lg border border-line-strong bg-surface-field px-3 py-2 text-sm text-content w-40 focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent" />
                 </div>
                 <label class="flex items-center gap-2 text-sm text-content-subtle cursor-pointer select-none pb-2.5"
-                       title="For seeding historical claims: creates the invoice already issued with payment recorded, so it counts toward certified to date immediately">
-                    <input type="checkbox" class="cursor-pointer align-middle" @bind="newAlreadyPaid" />
-                    Already invoiced &amp; paid
+                       title="Backdated historic entry: recorded directly as issued (and paid, if a paid amount is given) so it counts toward certified to date immediately">
+                    <input type="checkbox" class="cursor-pointer align-middle" @bind="newIsHistoric" />
+                    Historic entry
                 </label>
+                @if (newIsHistoric)
+                {
+                    <div>
+                        <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Paid £ (blank = full, 0 = unpaid)</label>
+                        <input type="number" step="any" min="0" @bind="newPaidAmount" placeholder="Full amount"
+                               class="rounded-lg border border-line-strong bg-surface-field px-3 py-2 text-sm text-content w-36 focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent" />
+                    </div>
+                    <div>
+                        <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Note (optional)</label>
+                        <input type="text" @bind="newNote" placeholder="e.g. old system ref"
+                               class="rounded-lg border border-line-strong bg-surface-field px-3 py-2 text-sm text-content w-48 focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent" />
+                    </div>
+                }
                 <button type="button" disabled="@busy" @onclick="AddAsync"
                         class="rounded-lg bg-accent text-accent-ink font-medium text-sm px-3 py-2 hover:bg-accent-hover disabled:bg-surface-field transition">
-                    Add invoice
+                    @(newIsHistoric ? "Add historic invoice" : "Add invoice")
                 </button>
             </div>
         }
@@ -152,6 +276,55 @@
     </div>
 </Modal>
 
+<Modal IsOpen="rejectInvoice is not null"
+       Title="Reject valuation invoice"
+       ConfirmLabel="@(busy ? "Saving…" : "Reject")"
+       OnCancel="() => rejectInvoice = null"
+       OnConfirm="RejectAsync"
+       Class="max-w-md">
+    <div class="space-y-3">
+        @if (rejectInvoice is not null)
+        {
+            <p class="text-sm text-content">
+                Record the client's rejection of <span class="font-mono">@rejectInvoice.DisplayNumber</span>.
+                The invoice unlocks for amendment or cancellation.
+            </p>
+        }
+        <FormField Label="Reason (required)" Value="@rejectReason" OnChange="v => rejectReason = v" />
+    </div>
+</Modal>
+
+<Modal IsOpen="editInvoice is not null"
+       Title="@(editInvoice?.Status == ValuationInvoiceStatus.Rejected ? "Amend valuation invoice" : "Edit valuation invoice")"
+       ConfirmLabel="@(busy ? "Saving…" : "Save")"
+       OnCancel="() => editInvoice = null"
+       OnConfirm="SaveEditAsync"
+       Class="max-w-md">
+    <div class="space-y-3">
+        @if (editInvoice is not null)
+        {
+            @if (editInvoice.Status == ValuationInvoiceStatus.Rejected)
+            {
+                <p class="text-sm text-content">
+                    Amending <span class="font-mono">@editInvoice.DisplayNumber</span> returns it to
+                    Raised — resubmit to freeze a fresh report snapshot for the client.
+                </p>
+            }
+            <div>
+                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Period month</label>
+                <input type="month" value="@editMonth" @onchange="e => editMonth = e.Value?.ToString() ?? editMonth"
+                       class="w-full rounded-lg border border-line-strong bg-surface-field px-3 py-2 text-sm text-content focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent" />
+            </div>
+            <FormField Label="Amount (£)" Value="@editAmount" OnChange="v => editAmount = v" InputType="number" />
+            @if (editInvoice.IsManual)
+            {
+                <FormField Label="Paid amount (£) — blank or 0 = not paid" Value="@editPaidAmount" OnChange="v => editPaidAmount = v" InputType="number" />
+            }
+            <FormField Label="Note (optional)" Value="@editNote" OnChange="v => editNote = v" />
+        }
+    </div>
+</Modal>
+
 @code {
     [Parameter, EditorRequired] public string ProjectId { get; set; } = "";
     // When a claim is selected on the report, new invoices are drawn against it.
@@ -159,9 +332,13 @@
     [Parameter] public EventCallback<decimal> OnInvoicedToDateChanged { get; set; }
 
     /// <summary>Raised after a change that moves "Certified to date" (issue, delete,
-    /// add-as-paid). The server re-freezes any Preapproved claim's totals at the same
+    /// manual add/edit). The server re-freezes any Preapproved claim's totals at the same
     /// time, so the parent should refresh its claims to show them.</summary>
     [Parameter] public EventCallback OnCertifiedChanged { get; set; }
+
+    /// <summary>Opens the read-only report-snapshot viewer for the given snapshot id —
+    /// "show me the valuation report behind this invoice".</summary>
+    [Parameter] public EventCallback<string> OnViewSnapshot { get; set; }
 
     private static readonly System.Globalization.CultureInfo Gb = System.Globalization.CultureInfo.GetCultureInfo("en-GB");
 
@@ -172,29 +349,56 @@
 
     private string newMonth = DateTimeOffset.UtcNow.ToString("yyyy-MM");
     private string newAmount = "";
-    // Seeding fast path: create the invoice already issued with its payment recorded.
-    private bool newAlreadyPaid;
+    // Historic entry: recorded directly as Issued/Paid, backdated to the period month.
+    private bool newIsHistoric;
+    private string newPaidAmount = "";
+    private string newNote = "";
 
     private ValuationInvoice? paymentInvoice;
     private string paymentAmount = "";
     private string? pendingDeleteId;
 
+    private ValuationInvoice? rejectInvoice;
+    private string rejectReason = "";
+
+    private ValuationInvoice? editInvoice;
+    private string editMonth = "";
+    private string editAmount = "";
+    private string editPaidAmount = "";
+    private string editNote = "";
+
+    private string? historyOpenId;
+    private IReadOnlyList<ValuationInvoiceEvent>? historyEvents;
+
+    private int ColumnCount => CanManage ? 7 : 6;
+
     private bool CanManage => Session.AvailableRoles.Any(role =>
         role is Role.Admin or Role.ManagingDirector or Role.FinanceDirector or Role.ProjectManager);
 
+    // Cancelled invoices stay listed (audit trail) but never count.
+    private IReadOnlyList<ValuationInvoice> LiveInvoices =>
+        invoices.Where(invoice => invoice.Status != ValuationInvoiceStatus.Cancelled).ToList();
+
     // Issued + Paid invoices are what the client has actually been invoiced — this is the
     // figure that feeds "Certified to date" on the report summary.
-    private decimal InvoicedToDate => invoices
+    private decimal InvoicedToDate => LiveInvoices
         .Where(invoice => invoice.Status is ValuationInvoiceStatus.Issued or ValuationInvoiceStatus.Paid)
         .Sum(invoice => invoice.Amount);
 
-    private decimal TotalPaid => invoices.Sum(invoice => invoice.AmountPaid);
+    private decimal TotalPaid => LiveInvoices.Sum(invoice => invoice.AmountPaid);
+
+    // Submitted + Approved: claimed from the client but not yet certifiable.
+    private decimal AwaitingApproval => LiveInvoices
+        .Where(invoice => invoice.IsAwaitingApproval)
+        .Sum(invoice => invoice.Amount);
 
     protected override async Task OnInitializedAsync() => await ReloadAsync();
 
     private void Toggle() => isOpen = !isOpen;
 
-    private async Task ReloadAsync()
+    /// <summary>Re-pulls the invoice list. Public so the page can nudge it after an
+    /// out-of-band change — e.g. deleting a snapshot clears invoice links server-side.</summary>
+    public async Task ReloadAsync()
     {
         try
         {
@@ -203,31 +407,137 @@
         }
         catch { error = "Couldn't load valuation invoices. Please try again."; }
         await OnInvoicedToDateChanged.InvokeAsync(InvoicedToDate);
+        StateHasChanged();
     }
 
     private async Task AddAsync()
     {
         if (busy) return;
         error = null;
-        if (!decimal.TryParse(newAmount, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var amount) || amount <= 0)
-        { error = "Enter an amount greater than zero."; return; }
+        if (!TryParseAmount(newAmount, out var amount)) { error = "Enter an amount greater than zero."; return; }
+        decimal? paidAmount = null;
+        if (newIsHistoric && !string.IsNullOrWhiteSpace(newPaidAmount))
+        {
+            // 0 = issued but never paid; blank = fully paid.
+            if (!decimal.TryParse(newPaidAmount, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var paid) || paid < 0)
+            { error = "Enter a paid amount (0 = unpaid), or leave it blank for fully paid."; return; }
+            if (paid > amount) { error = "Paid amount can't exceed the invoice amount."; return; }
+            paidAmount = paid;
+        }
         try
         {
             busy = true;
-            var created = await Invoices.CreateAsync(ProjectId, ParseMonth(newMonth), amount, ValuationClaimId);
-            if (newAlreadyPaid)
+            if (newIsHistoric)
             {
-                // Historical claim already invoiced and settled: walk it through the
-                // lifecycle in one go so it counts toward certified to date immediately.
-                await Invoices.IssueAsync(created.ValuationInvoiceId);
-                await Invoices.RecordPaymentAsync(created.ValuationInvoiceId, amount);
+                // Backdated to the period month server-side; counts toward certified immediately.
+                await Invoices.CreateManualAsync(ProjectId, ParseMonth(newMonth), amount,
+                    paidAmount ?? amount, issuedAt: null, paidAt: null,
+                    note: string.IsNullOrWhiteSpace(newNote) ? null : newNote);
+            }
+            else
+            {
+                await Invoices.CreateAsync(ProjectId, ParseMonth(newMonth), amount, ValuationClaimId);
             }
             newAmount = "";
+            newPaidAmount = "";
+            newNote = "";
             await ReloadAsync();
-            if (newAlreadyPaid) await OnCertifiedChanged.InvokeAsync();
+            if (newIsHistoric) await OnCertifiedChanged.InvokeAsync();
         }
         catch { error = "Couldn't add the valuation invoice. Please try again."; }
         finally { busy = false; }
+    }
+
+    private async Task SubmitAsync(ValuationInvoice invoice)
+    {
+        await RunAsync(() => Invoices.SubmitAsync(invoice.ValuationInvoiceId),
+            "Couldn't submit the invoice. Please try again.");
+        // A snapshot was frozen — nudge the parent to refresh the report store so the
+        // snapshot register shows it.
+        if (error is null) await OnCertifiedChanged.InvokeAsync();
+    }
+
+    private async Task ApproveAsync(ValuationInvoice invoice)
+    {
+        await RunAsync(() => Invoices.ApproveAsync(invoice.ValuationInvoiceId),
+            "Couldn't approve the invoice. Please try again.");
+    }
+
+    private void OpenReject(ValuationInvoice invoice)
+    {
+        rejectInvoice = invoice;
+        rejectReason = "";
+    }
+
+    private async Task RejectAsync()
+    {
+        if (busy || rejectInvoice is null) return;
+        if (string.IsNullOrWhiteSpace(rejectReason)) { error = "A rejection reason is required."; return; }
+        var id = rejectInvoice.ValuationInvoiceId;
+        var reason = rejectReason.Trim();
+        rejectInvoice = null;
+        await RunAsync(() => Invoices.RejectAsync(id, reason),
+            "Couldn't record the rejection. Please try again.");
+    }
+
+    private async Task CancelAsync(ValuationInvoice invoice)
+    {
+        await RunAsync(() => Invoices.CancelAsync(invoice.ValuationInvoiceId),
+            "Couldn't cancel the invoice. Please try again.");
+        // Its snapshots were flagged superseded — refresh the register.
+        if (error is null) await OnCertifiedChanged.InvokeAsync();
+    }
+
+    private void OpenEdit(ValuationInvoice invoice)
+    {
+        editInvoice = invoice;
+        editMonth = invoice.PeriodMonth.ToString("yyyy-MM");
+        editAmount = invoice.Amount.ToString(System.Globalization.CultureInfo.InvariantCulture);
+        editPaidAmount = invoice.AmountPaid > 0 ? invoice.AmountPaid.ToString(System.Globalization.CultureInfo.InvariantCulture) : "";
+        editNote = "";
+    }
+
+    private async Task SaveEditAsync()
+    {
+        if (busy || editInvoice is null) return;
+        error = null;
+        if (!TryParseAmount(editAmount, out var amount)) { error = "Enter an amount greater than zero."; return; }
+        decimal? paidAmount = null;
+        if (editInvoice.IsManual && !string.IsNullOrWhiteSpace(editPaidAmount))
+        {
+            if (!decimal.TryParse(editPaidAmount, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var paid) || paid < 0)
+            { error = "Enter a valid paid amount, or leave it blank."; return; }
+            if (paid > amount) { error = "Paid amount can't exceed the invoice amount."; return; }
+            paidAmount = paid;
+        }
+        var invoice = editInvoice;
+        var certifiedMoves = invoice.IsManual;
+        editInvoice = null;
+        try
+        {
+            busy = true;
+            await Invoices.UpdateAsync(invoice.ValuationInvoiceId, ParseMonth(editMonth), amount,
+                amountPaid: paidAmount,
+                note: string.IsNullOrWhiteSpace(editNote) ? null : editNote);
+            await ReloadAsync();
+            if (certifiedMoves) await OnCertifiedChanged.InvokeAsync();
+        }
+        catch { error = "Couldn't save the invoice. Please try again."; }
+        finally { busy = false; }
+    }
+
+    private async Task ToggleHistoryAsync(ValuationInvoice invoice)
+    {
+        if (historyOpenId == invoice.ValuationInvoiceId)
+        {
+            historyOpenId = null;
+            historyEvents = null;
+            return;
+        }
+        historyOpenId = invoice.ValuationInvoiceId;
+        historyEvents = null;
+        try { historyEvents = await Invoices.ListEventsAsync(invoice.ValuationInvoiceId); }
+        catch { historyEvents = Array.Empty<ValuationInvoiceEvent>(); }
     }
 
     private async Task DeleteAsync(ValuationInvoice invoice)
@@ -272,8 +582,7 @@
     {
         if (busy || paymentInvoice is null) return;
         error = null;
-        if (!decimal.TryParse(paymentAmount, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var amount) || amount <= 0)
-        { error = "Enter an amount greater than zero."; return; }
+        if (!TryParseAmount(paymentAmount, out var amount)) { error = "Enter an amount greater than zero."; return; }
         try
         {
             busy = true;
@@ -285,6 +594,24 @@
         finally { busy = false; }
     }
 
+    // Shared wrapper for the one-click workflow actions (submit/approve/cancel).
+    private async Task RunAsync(Func<Task<ValuationInvoice>> action, string failureMessage)
+    {
+        if (busy) return;
+        error = null;
+        try
+        {
+            busy = true;
+            await action();
+            await ReloadAsync();
+        }
+        catch { error = failureMessage; }
+        finally { busy = false; }
+    }
+
+    private static bool TryParseAmount(string value, out decimal amount) =>
+        decimal.TryParse(value, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out amount) && amount > 0;
+
     private static DateTimeOffset ParseMonth(string value) =>
         DateTimeOffset.TryParse(string.IsNullOrWhiteSpace(value) ? "" : value + "-01", out var parsed)
             ? parsed
@@ -293,9 +620,25 @@
     private static string StatusLabel(ValuationInvoiceStatus status) => status switch
     {
         ValuationInvoiceStatus.Raised => "Raised",
+        ValuationInvoiceStatus.Submitted => "Submitted",
+        ValuationInvoiceStatus.Approved => "Approved",
+        ValuationInvoiceStatus.Rejected => "Rejected",
         ValuationInvoiceStatus.Issued => "Issued",
         ValuationInvoiceStatus.Paid => "Paid",
+        ValuationInvoiceStatus.Cancelled => "Cancelled",
         _ => status.ToString()
+    };
+
+    private static string StatusTitle(ValuationInvoice invoice) => invoice.Status switch
+    {
+        ValuationInvoiceStatus.Raised => "Draft — submit for approval, or issue directly",
+        ValuationInvoiceStatus.Submitted => $"With the client for approval{(invoice.SubmittedAt is { } s ? $" since {s:dd MMM yyyy}" : "")}",
+        ValuationInvoiceStatus.Approved => "Approved by the client — issue to count toward certified to date",
+        ValuationInvoiceStatus.Rejected => "Rejected — amend and resubmit, or cancel",
+        ValuationInvoiceStatus.Issued => "Issued to the client — counts toward certified to date",
+        ValuationInvoiceStatus.Paid => "Paid — rolled into the project's paid total",
+        ValuationInvoiceStatus.Cancelled => "Withdrawn — excluded from every total",
+        _ => ""
     };
 
     private static string BadgeClass(ValuationInvoiceStatus status)
@@ -305,9 +648,27 @@
         {
             ValuationInvoiceStatus.Paid => baseClass + "bg-accent/10 border-accent/30 text-accent",
             ValuationInvoiceStatus.Issued => baseClass + "bg-info/10 border-info/30 text-info",
+            ValuationInvoiceStatus.Submitted => baseClass + "bg-warning/10 border-warning/30 text-warning",
+            ValuationInvoiceStatus.Approved => baseClass + "bg-positive/10 border-positive/30 text-positive",
+            ValuationInvoiceStatus.Rejected => baseClass + "bg-negative/10 border-negative/30 text-negative",
+            ValuationInvoiceStatus.Cancelled => baseClass + "bg-surface-raised border-line text-content-subtle line-through",
             _ => baseClass + "bg-surface-raised border-line text-content-muted"
         };
     }
+
+    private static string EventLabel(ValuationInvoiceEventType type) => type switch
+    {
+        ValuationInvoiceEventType.Created => "Created",
+        ValuationInvoiceEventType.Submitted => "Submitted for approval",
+        ValuationInvoiceEventType.Approved => "Approved",
+        ValuationInvoiceEventType.Rejected => "Rejected",
+        ValuationInvoiceEventType.Amended => "Amended",
+        ValuationInvoiceEventType.Issued => "Issued",
+        ValuationInvoiceEventType.PaymentRecorded => "Payment recorded",
+        ValuationInvoiceEventType.Cancelled => "Cancelled",
+        ValuationInvoiceEventType.ManualEntry => "Historic entry",
+        _ => type.ToString()
+    };
 
     private static string Money(decimal value) => value.ToString("C2", Gb);
 }

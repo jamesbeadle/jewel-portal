@@ -27,4 +27,26 @@ internal static class ValuationReportEntityMapping
     public static ClaimLine ToModel(this ClaimLineEntity entity) =>
         new(entity.ClaimLineId, entity.ValuationClaimId, entity.ValuationLineItemId,
             entity.PercentComplete, entity.CumulativeClaimed, entity.PeriodIncrement);
+
+    public static ValuationReportSnapshot ToModel(this ValuationReportSnapshotEntity entity) =>
+        new(entity.ValuationReportSnapshotId, entity.ProjectId,
+            entity.ValuationInvoiceId, entity.ValuationClaimId,
+            entity.Label, entity.TakenAt, entity.IsSuperseded,
+            entity.ContractSum, entity.NetVariations, entity.RevisedContractSum,
+            entity.TotalWorksComplete,
+            entity.RetentionPercent, entity.RetentionHeld,
+            entity.RetentionReleasePercent, entity.RetentionReleased,
+            entity.CertifiedToDate, entity.PaymentDueExVat);
+
+    public static ValuationReportSnapshotLine ToModel(this ValuationReportSnapshotLineEntity entity) =>
+        new(entity.ValuationReportSnapshotLineId, entity.ValuationReportSnapshotId,
+            entity.SourceValuationLineItemId,
+            (ValuationElementType)entity.ElementType,
+            entity.SectionCode, entity.SectionName,
+            entity.VariationRef, entity.VariationTitle,
+            (ValuationLineType)entity.LineType,
+            entity.CostCode, entity.Description, entity.Unit,
+            entity.Quantity, entity.Rate, entity.LineAmount,
+            entity.PercentComplete, entity.CumulativeClaimed, entity.PeriodIncrement,
+            entity.Comments, entity.DisplayOrder);
 }

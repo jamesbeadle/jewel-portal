@@ -14,6 +14,7 @@ public static class ValuationInvoicesFeatureRegistration
     {
         services.AddScoped<IQueryHandler<ListValuationInvoicesForProject, IReadOnlyList<ValuationInvoice>>, ListValuationInvoicesForProjectHandler>();
         services.AddScoped<IQueryHandler<GetProjectValuationInvoiceSummary, ProjectValuationInvoiceSummary>, GetProjectValuationInvoiceSummaryHandler>();
+        services.AddScoped<IQueryHandler<ListValuationInvoiceEvents, IReadOnlyList<ValuationInvoiceEvent>>, ListValuationInvoiceEventsHandler>();
 
         services.AddScoped<ICommandHandler<CreateValuationInvoice, ValuationInvoice>, CreateValuationInvoiceHandler>();
         services.AddScoped<CreateValuationInvoiceAuthorisation>();
@@ -29,6 +30,21 @@ public static class ValuationInvoicesFeatureRegistration
 
         services.AddScoped<ICommandHandler<DeleteValuationInvoice, Acknowledgement>, DeleteValuationInvoiceHandler>();
         services.AddScoped<DeleteValuationInvoiceAuthorisation>();
+
+        // Approval workflow + amendment — Submit/Approve/Reject/Cancel/Update share one
+        // authorisation surface (same roles as raising an invoice).
+        services.AddScoped<ValuationInvoiceWorkflowAuthorisation>();
+
+        services.AddScoped<ICommandHandler<SubmitValuationInvoice, ValuationInvoice>, SubmitValuationInvoiceHandler>();
+        services.AddScoped<ICommandHandler<ApproveValuationInvoice, ValuationInvoice>, ApproveValuationInvoiceHandler>();
+
+        services.AddScoped<ICommandHandler<RejectValuationInvoice, ValuationInvoice>, RejectValuationInvoiceHandler>();
+        services.AddScoped<RejectValuationInvoiceValidation>();
+
+        services.AddScoped<ICommandHandler<CancelValuationInvoice, ValuationInvoice>, CancelValuationInvoiceHandler>();
+
+        services.AddScoped<ICommandHandler<UpdateValuationInvoice, ValuationInvoice>, UpdateValuationInvoiceHandler>();
+        services.AddScoped<UpdateValuationInvoiceValidation>();
 
         return services;
     }

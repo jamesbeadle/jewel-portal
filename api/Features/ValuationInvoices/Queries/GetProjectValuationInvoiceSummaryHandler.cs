@@ -13,8 +13,10 @@ public sealed class GetProjectValuationInvoiceSummaryHandler : IQueryHandler<Get
 
     public async Task<ProjectValuationInvoiceSummary> HandleAsync(GetProjectValuationInvoiceSummary query, CancellationToken cancellationToken)
     {
+        // Cancelled invoices are audit-trail residents only — they never count anywhere.
         var invoices = await context.ValuationInvoices
-            .Where(invoice => invoice.ProjectId == query.ProjectId)
+            .Where(invoice => invoice.ProjectId == query.ProjectId
+                              && invoice.Status != (int)ValuationInvoiceStatus.Cancelled)
             .ToListAsync(cancellationToken);
 
         var raised = invoices.Sum(invoice => invoice.Amount);
@@ -22,12 +24,16 @@ public sealed class GetProjectValuationInvoiceSummaryHandler : IQueryHandler<Get
             .Where(invoice => invoice.Status is (int)ValuationInvoiceStatus.Issued or (int)ValuationInvoiceStatus.Paid)
             .Sum(invoice => invoice.Amount);
         var paid = invoices.Sum(invoice => invoice.AmountPaid);
+        var awaitingApproval = invoices
+            .Where(invoice => invoice.Status is (int)ValuationInvoiceStatus.Submitted or (int)ValuationInvoiceStatus.Approved)
+            .Sum(invoice => invoice.Amount);
 
         return new ProjectValuationInvoiceSummary(
             ProjectId: query.ProjectId,
             TotalRaised: raised,
             TotalInvoiced: invoiced,
             TotalPaid: paid,
-            Outstanding: invoiced - paid);
+            Outstanding: invoiced - paid,
+            TotalAwaitingApproval: awaitingApproval);
     }
 }

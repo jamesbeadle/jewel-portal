@@ -17,9 +17,33 @@ public static class ValuationInvoicesRouteRegistration
             new QueryRoute("/api/projects/{projectId}/valuation-invoices/summary",
                 query => $"/api/projects/{((GetProjectValuationInvoiceSummary)query).ProjectId}/valuation-invoices/summary"));
 
+        queries.Register<ListValuationInvoiceEvents, IReadOnlyList<ValuationInvoiceEvent>>(
+            new QueryRoute("/api/valuation-invoices/{valuationInvoiceId}/events",
+                query => $"/api/valuation-invoices/{((ListValuationInvoiceEvents)query).ValuationInvoiceId}/events"));
+
         commands.Register<CreateValuationInvoice, ValuationInvoice>(
             new CommandRoute("POST", "/api/projects/{projectId}/valuation-invoices",
                 command => $"/api/projects/{((CreateValuationInvoice)command).ProjectId}/valuation-invoices"));
+
+        commands.Register<UpdateValuationInvoice, ValuationInvoice>(
+            new CommandRoute("PUT", "/api/valuation-invoices/{valuationInvoiceId}",
+                command => $"/api/valuation-invoices/{((UpdateValuationInvoice)command).ValuationInvoiceId}"));
+
+        commands.Register<SubmitValuationInvoice, ValuationInvoice>(
+            new CommandRoute("POST", "/api/valuation-invoices/{valuationInvoiceId}/submit",
+                command => $"/api/valuation-invoices/{((SubmitValuationInvoice)command).ValuationInvoiceId}/submit"));
+
+        commands.Register<ApproveValuationInvoice, ValuationInvoice>(
+            new CommandRoute("POST", "/api/valuation-invoices/{valuationInvoiceId}/approve",
+                command => $"/api/valuation-invoices/{((ApproveValuationInvoice)command).ValuationInvoiceId}/approve"));
+
+        commands.Register<RejectValuationInvoice, ValuationInvoice>(
+            new CommandRoute("POST", "/api/valuation-invoices/{valuationInvoiceId}/reject",
+                command => $"/api/valuation-invoices/{((RejectValuationInvoice)command).ValuationInvoiceId}/reject"));
+
+        commands.Register<CancelValuationInvoice, ValuationInvoice>(
+            new CommandRoute("POST", "/api/valuation-invoices/{valuationInvoiceId}/cancel",
+                command => $"/api/valuation-invoices/{((CancelValuationInvoice)command).ValuationInvoiceId}/cancel"));
 
         commands.Register<IssueValuationInvoice, ValuationInvoice>(
             new CommandRoute("POST", "/api/valuation-invoices/{valuationInvoiceId}/issue",

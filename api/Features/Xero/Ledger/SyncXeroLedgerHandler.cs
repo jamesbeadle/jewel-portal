@@ -136,6 +136,7 @@ public sealed class SyncXeroLedgerHandler : ICommandHandler<SyncXeroLedger, Xero
                 entity.AccountName = Truncate(line.AccountName, 256);
                 entity.XeroSite = Truncate(line.Site, 128);
                 entity.XeroCostCode = Truncate(line.CostCode, 128);
+                entity.HasAttachments = transaction.HasAttachments;
                 entity.LastSyncedAtUtc = now;
             }
         }
@@ -188,14 +189,20 @@ public sealed class SyncXeroLedgerHandler : ICommandHandler<SyncXeroLedger, Xero
             }
         }
 
-        // A removed line's split shares go with it — orphaned splits would silently
-        // keep feeding the per-centre actuals the removal is meant to reverse.
+        // A removed line's split shares and work-order link slices go with it — orphans
+        // would silently keep feeding the per-centre actuals and per-order invoiced
+        // balances the removal is meant to reverse.
         if (removedLineIds.Count > 0)
         {
             var orphanedSplits = await context.XeroCostSplits
                 .Where(split => removedLineIds.Contains(split.XeroLedgerLineId))
                 .ToListAsync(cancellationToken);
             context.XeroCostSplits.RemoveRange(orphanedSplits);
+
+            var orphanedLinks = await context.XeroLineWorkOrderLinks
+                .Where(link => removedLineIds.Contains(link.XeroLedgerLineId))
+                .ToListAsync(cancellationToken);
+            context.XeroLineWorkOrderLinks.RemoveRange(orphanedLinks);
         }
 
         await context.SaveChangesAsync(cancellationToken);

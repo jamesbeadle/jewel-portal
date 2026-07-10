@@ -18,4 +18,26 @@ public sealed class ValuationInvoiceEntity
     public DateTimeOffset RaisedAt { get; set; }
     public DateTimeOffset? IssuedAt { get; set; }
     public DateTimeOffset? PaidAt { get; set; }
+    public DateTimeOffset? SubmittedAt { get; set; }
+    public DateTimeOffset? ApprovedAt { get; set; }
+    public DateTimeOffset? RejectedAt { get; set; }
+    public DateTimeOffset? CancelledAt { get; set; }
+    [MaxLength(1024)]    public string? RejectionReason { get; set; }
+    public int AmendmentCount { get; set; }
+    public bool IsManual { get; set; }
+    [MaxLength(64)]      public string? ValuationReportSnapshotId { get; set; }
+}
+
+// Audit trail: everything that has happened to a valuation invoice (creation, submission,
+// approval/rejection, amendments with before/after amounts, issue, payment, cancellation,
+// manual entry). Amendments are tracked on the same invoice — no versioning.
+public sealed class ValuationInvoiceEventEntity
+{
+    [Key, MaxLength(64)] public string ValuationInvoiceEventId { get; set; } = "";
+    [MaxLength(64)]      public string ValuationInvoiceId { get; set; } = "";
+    public int EventType { get; set; }
+    public DateTimeOffset OccurredAt { get; set; }
+    [MaxLength(1024)]    public string Note { get; set; } = "";
+    public decimal? AmountBefore { get; set; }
+    public decimal? AmountAfter { get; set; }
 }

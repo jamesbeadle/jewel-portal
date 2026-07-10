@@ -33,9 +33,9 @@ public static class CommercialFeatureRegistration
         services.AddScoped<SetCostCentreFinalisationAuthorisation>();
         services.AddScoped<SetCostCentreFinalisationValidation>();
 
-        services.AddScoped<ICommandHandler<LinkXeroLineToWorkOrder, Acknowledgement>, LinkXeroLineToWorkOrderHandler>();
-        services.AddScoped<LinkXeroLineToWorkOrderAuthorisation>();
-        services.AddScoped<LinkXeroLineToWorkOrderValidation>();
+        services.AddScoped<ICommandHandler<SetXeroLineWorkOrderLinks, Acknowledgement>, SetXeroLineWorkOrderLinksHandler>();
+        services.AddScoped<SetXeroLineWorkOrderLinksAuthorisation>();
+        services.AddScoped<SetXeroLineWorkOrderLinksValidation>();
 
         // Cost centre groups — named roll-ups on the Financials tab.
         services.AddScoped<IQueryHandler<ListCostCentreGroupsForProject, IReadOnlyList<CostCentreGroup>>, ListCostCentreGroupsForProjectHandler>();
@@ -95,6 +95,16 @@ public static class CommercialFeatureRegistration
 
         services.AddScoped<ICommandHandler<PreapproveValuationClaim, ValuationClaim>, PreapproveValuationClaimHandler>();
         services.AddScoped<ICommandHandler<ConfirmValuationClaim, ValuationClaim>, ConfirmValuationClaimHandler>();
+
+        // Valuation report snapshots — immutable frozen copies behind invoice submissions
+        // and on-demand period-end records.
+        services.AddScoped<IQueryHandler<ListValuationReportSnapshotsForProject, IReadOnlyList<ValuationReportSnapshot>>, ListValuationReportSnapshotsForProjectHandler>();
+        services.AddScoped<IQueryHandler<GetValuationReportSnapshot, ValuationReportSnapshotDetail>, GetValuationReportSnapshotHandler>();
+
+        services.AddScoped<ICommandHandler<TakeValuationReportSnapshot, ValuationReportSnapshot>, TakeValuationReportSnapshotHandler>();
+        services.AddScoped<TakeValuationReportSnapshotValidation>();
+
+        services.AddScoped<ICommandHandler<DeleteValuationReportSnapshot, Acknowledgement>, DeleteValuationReportSnapshotHandler>();
 
         return services;
     }

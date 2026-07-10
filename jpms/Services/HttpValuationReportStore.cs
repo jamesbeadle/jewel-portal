@@ -10,6 +10,8 @@ public sealed class HttpValuationReportStore : IValuationReportStore
     private readonly ValuationLinesReadModel linesReadModel;
     private readonly ValuationClaimsReadModel claimsReadModel;
     private readonly ClaimLinesReadModel claimLinesReadModel;
+    private readonly ValuationReportSnapshotsReadModel snapshotsReadModel;
+    private readonly IQueryClient queries;
     private readonly ICommandSender commands;
 
     // Keys that have had a load started — prevents an empty result from
@@ -17,20 +19,26 @@ public sealed class HttpValuationReportStore : IValuationReportStore
     private readonly HashSet<string> linesRequested = new();
     private readonly HashSet<string> claimsRequested = new();
     private readonly HashSet<string> claimLinesRequested = new();
+    private readonly HashSet<string> snapshotsRequested = new();
 
     public HttpValuationReportStore(
         ValuationLinesReadModel linesReadModel,
         ValuationClaimsReadModel claimsReadModel,
         ClaimLinesReadModel claimLinesReadModel,
+        ValuationReportSnapshotsReadModel snapshotsReadModel,
+        IQueryClient queries,
         ICommandSender commands)
     {
         this.linesReadModel = linesReadModel;
         this.claimsReadModel = claimsReadModel;
         this.claimLinesReadModel = claimLinesReadModel;
+        this.snapshotsReadModel = snapshotsReadModel;
+        this.queries = queries;
         this.commands = commands;
         linesReadModel.OnChanged += () => OnChange?.Invoke();
         claimsReadModel.OnChanged += () => OnChange?.Invoke();
         claimLinesReadModel.OnChanged += () => OnChange?.Invoke();
+        snapshotsReadModel.OnChanged += () => OnChange?.Invoke();
     }
 
     public event Action? OnChange;
@@ -79,9 +87,11 @@ public sealed class HttpValuationReportStore : IValuationReportStore
     {
         linesRequested.Add(projectId);
         claimsRequested.Add(projectId);
+        snapshotsRequested.Add(projectId);
         claimLinesRequested.Clear();
         _ = LoadLinesAsync(projectId);
         _ = LoadClaimsAsync(projectId);
+        _ = LoadSnapshotsAsync(projectId);
     }
 
     public async Task<ValuationLineItem> AddLineAsync(AddValuationLineItem command)
@@ -131,5 +141,35 @@ public sealed class HttpValuationReportStore : IValuationReportStore
         var result = await commands.SendAsync(new ConfirmValuationClaim(claimId), CancellationToken.None);
         await claimsReadModel.RefreshAsync(projectId, CancellationToken.None);
         return result;
+    }
+
+    public IReadOnlyList<ValuationReportSnapshot> SnapshotsFor(string projectId)
+    {
+        if (snapshotsRequested.Add(projectId)) _ = LoadSnapshotsAsync(projectId);
+        return snapshotsReadModel.Current(projectId);
+    }
+
+    private async Task LoadSnapshotsAsync(string projectId)
+    {
+        try { await snapshotsReadModel.RefreshAsync(projectId, CancellationToken.None); }
+        catch { snapshotsRequested.Remove(projectId); }
+    }
+
+    public async Task<ValuationReportSnapshot> TakeSnapshotAsync(string projectId, string label)
+    {
+        var result = await commands.SendAsync(new TakeValuationReportSnapshot(projectId, label), CancellationToken.None);
+        await snapshotsReadModel.RefreshAsync(projectId, CancellationToken.None);
+        return result;
+    }
+
+    // Detail (header + frozen lines) is fetched per snapshot on demand — the viewer is
+    // read-only and rarely opened, so there's nothing to keep in a read model.
+    public Task<ValuationReportSnapshotDetail> GetSnapshotAsync(string snapshotId) =>
+        queries.AskAsync(new GetValuationReportSnapshot(snapshotId), CancellationToken.None);
+
+    public async Task DeleteSnapshotAsync(string projectId, string snapshotId)
+    {
+        await commands.SendAsync(new DeleteValuationReportSnapshot(snapshotId), CancellationToken.None);
+        await snapshotsReadModel.RefreshAsync(projectId, CancellationToken.None);
     }
 }

@@ -20,4 +20,11 @@ public sealed record ProjectCostOfSalesLine(
     string CostCode,
     decimal Net,
     bool IsSplit,
-    string? LinkedWorkOrderId);
+    IReadOnlyList<XeroWorkOrderLinkSlice>? WorkOrderLinks = null) // the order(s) this line pays against, with each one's share
+{
+    public IReadOnlyList<XeroWorkOrderLinkSlice> Links => WorkOrderLinks ?? Array.Empty<XeroWorkOrderLinkSlice>();
+    public decimal LinkedTotal => Links.Sum(link => link.Amount);
+    // The share of the line not yet paying any work order — non-work-order cost of
+    // sales. Split shares can't carry links, so their whole net is unlinked.
+    public decimal UnlinkedRemainder => Net - LinkedTotal;
+}

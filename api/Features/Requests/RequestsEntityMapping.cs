@@ -35,7 +35,8 @@ internal static class RequestsEntityMapping
         ResponseActionRequired: entity.ResponseActionRequired,
         ImpactIfLate: entity.ImpactIfLate,
         RelatedNodRequestId: entity.RelatedNodRequestId,
-        MergedIntoRequestId: entity.MergedIntoRequestId);
+        MergedIntoRequestId: entity.MergedIntoRequestId,
+        ClosedAt: entity.ClosedAt);
 
     /// <summary>The model including its itemised queries (the numbered rows of the official document).</summary>
     public static Request ToModel(this RequestEntity entity, IEnumerable<RequestItemEntity> items) =>

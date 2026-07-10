@@ -72,6 +72,7 @@ public sealed class ListXeroLedgerLinesHandler : IQueryHandler<ListXeroLedgerLin
             splits,
             (XeroWriteBackStatus)entity.WriteBackStatus,
             entity.WriteBackError,
-            entity.WriteBackAtUtc);
+            entity.WriteBackAtUtc,
+            entity.HasAttachments);
     }
 }

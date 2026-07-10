@@ -32,6 +32,10 @@ public sealed class XeroLedgerLineEntity
     [MaxLength(128)]      public string? XeroSite { get; set; }
     [MaxLength(128)]      public string? XeroCostCode { get; set; }
 
+    // Whether Xero holds attachments for this line's invoice (the supplier's document,
+    // published by Dext) — arms the invoice viewer on the allocation page.
+    public bool HasAttachments { get; set; }
+
     // Allocation — owned by JPMS, survives syncs.
     // Status: 0 Unallocated, 1 Allocated (project + cost centre), 2 Ignored,
     // 3 Bucketed (cost of sales with no identifiable project — Parking, Fuel, ...).
@@ -45,9 +49,9 @@ public sealed class XeroLedgerLineEntity
     public DateTimeOffset? AllocatedAtUtc { get; set; }
     [MaxLength(512)]      public string? Note { get; set; }
 
-    // Financials tab: the work order this purchase line pays against (null = not linked —
-    // such lines count as non-work-order cost of sales). Owned by JPMS, survives syncs.
-    [MaxLength(64)]       public string? LinkedWorkOrderId { get; set; }
+    // The work order(s) this purchase line pays against live in XeroLineWorkOrderLinks —
+    // one row per order with its share of the net, so one bill can pay several orders.
+    // Owned by JPMS, survives syncs. Unlinked value counts as non-work-order cost of sales.
 
     // Xero write-back (tracking + DRAFT → AUTHORISED approval) — per invoice,
     // stamped on every stored line of the invoice when attempted.

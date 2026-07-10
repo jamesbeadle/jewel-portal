@@ -1,10 +1,16 @@
 using Jewel.JPMS.Api.Cqrs;
 using Jewel.JPMS.Api.Data;
+using Jewel.JPMS.Api.Features.Commercial;
 using Jewel.JPMS.Contracts.ValuationInvoices;
 using Jewel.JPMS.Models;
 
 namespace Jewel.JPMS.Api.Features.ValuationInvoices.Commands;
 
+/// <summary>
+/// Approved -> Issued (or Raised -> Issued for projects that skip the formal approval loop). From
+/// here the amount counts toward "Certified to date". The skip path freezes a report snapshot if
+/// none is linked yet, so even two-click invoices keep the report behind them.
+/// </summary>
 public sealed class IssueValuationInvoiceHandler : ICommandHandler<IssueValuationInvoice, ValuationInvoice>
 {
     private readonly JpmsContext context;
@@ -14,11 +20,37 @@ public sealed class IssueValuationInvoiceHandler : ICommandHandler<IssueValuatio
     {
         var entity = await context.ValuationInvoices.FindAsync(new object[] { command.ValuationInvoiceId }, cancellationToken);
         if (entity is null) throw new InvalidOperationException($"Valuation invoice {command.ValuationInvoiceId} not found.");
-        if (entity.Status == (int)ValuationInvoiceStatus.Paid)
-            throw new InvalidOperationException("A paid valuation invoice cannot be re-issued.");
+
+        switch ((ValuationInvoiceStatus)entity.Status)
+        {
+            case ValuationInvoiceStatus.Raised:
+            case ValuationInvoiceStatus.Approved:
+                break; // the two legal starting points
+            case ValuationInvoiceStatus.Submitted:
+                throw new InvalidOperationException("This valuation invoice is awaiting approval — approve or reject it first.");
+            case ValuationInvoiceStatus.Rejected:
+                throw new InvalidOperationException("This valuation invoice was rejected — amend and resubmit it first.");
+            case ValuationInvoiceStatus.Cancelled:
+                throw new InvalidOperationException("A cancelled valuation invoice cannot be issued.");
+            case ValuationInvoiceStatus.Issued:
+                throw new InvalidOperationException("This valuation invoice has already been issued.");
+            case ValuationInvoiceStatus.Paid:
+                throw new InvalidOperationException("A paid valuation invoice cannot be re-issued.");
+        }
+
+        // Skip-approval path: make sure a report snapshot backs the invoice anyway.
+        if (entity.ValuationReportSnapshotId is null)
+        {
+            var snapshot = await ValuationReportSnapshotCapture.CaptureAsync(
+                context, entity.ProjectId, $"{entity.Reference} issue", entity.ValuationInvoiceId, cancellationToken);
+            entity.ValuationReportSnapshotId = snapshot.ValuationReportSnapshotId;
+        }
 
         entity.Status = (int)ValuationInvoiceStatus.Issued;
         entity.IssuedAt = DateTimeOffset.UtcNow;
+
+        ValuationInvoiceAuditTrail.Append(context, entity.ValuationInvoiceId,
+            ValuationInvoiceEventType.Issued, "", amountAfter: entity.Amount);
 
         await context.SaveChangesAsync(cancellationToken);
 

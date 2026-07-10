@@ -72,6 +72,7 @@ public sealed class JpmsContext : DbContext
 
     public DbSet<XeroLedgerLineEntity> XeroLedgerLines => Set<XeroLedgerLineEntity>();
     public DbSet<XeroCostSplitEntity> XeroCostSplits => Set<XeroCostSplitEntity>();
+    public DbSet<XeroLineWorkOrderLinkEntity> XeroLineWorkOrderLinks => Set<XeroLineWorkOrderLinkEntity>();
 
     public DbSet<TodoItemEntity> TodoItems => Set<TodoItemEntity>();
 
@@ -103,6 +104,9 @@ public sealed class JpmsContext : DbContext
     public DbSet<TimesheetEntity> Timesheets => Set<TimesheetEntity>();
     public DbSet<CashflowSnapshotEntity> CashflowSnapshots => Set<CashflowSnapshotEntity>();
     public DbSet<ValuationInvoiceEntity> ValuationInvoices => Set<ValuationInvoiceEntity>();
+    public DbSet<ValuationInvoiceEventEntity> ValuationInvoiceEvents => Set<ValuationInvoiceEventEntity>();
+    public DbSet<ValuationReportSnapshotEntity> ValuationReportSnapshots => Set<ValuationReportSnapshotEntity>();
+    public DbSet<ValuationReportSnapshotLineEntity> ValuationReportSnapshotLines => Set<ValuationReportSnapshotLineEntity>();
     public DbSet<DayworkEntity> Dayworks => Set<DayworkEntity>();
     public DbSet<ContraChargeEntity> ContraCharges => Set<ContraChargeEntity>();
     public DbSet<SubcontractorRetentionEntity> SubcontractorRetentions => Set<SubcontractorRetentionEntity>();

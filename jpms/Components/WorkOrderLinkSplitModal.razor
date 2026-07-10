@@ -1,0 +1,213 @@
+@using Jewel.JPMS.Contracts.Commercial
+@using Jewel.JPMS.Models
+@inject ICommandSender Commands
+
+@* Splits one Xero purchase line across several work orders by amount — for bills that
+   pay more than one order at once (a subcontractor invoicing a main order plus its
+   variation orders together). Slices may total less than the line (the remainder stays
+   non-work-order cost of sales) but never more; the API also refuses any slice that
+   would take its order past its value. Used from the Financials cost-of-sales modal
+   and the WO Allocation tab. *@
+<Modal IsOpen="IsOpen"
+       Title="@($"Split across work orders · {LineLabel}")"
+       ConfirmLabel="@(busy ? "Saving…" : "Save split")"
+       ConfirmDisabled="@(busy || !CanSave)"
+       OnConfirm="SaveAsync"
+       OnCancel="OnClose"
+       Class="max-w-2xl">
+    <div class="space-y-3">
+        <p class="text-sm text-content-subtle">
+            Invoice line total <span class="text-content font-medium">@MoneyExact(LineNet)</span>.
+            Allocate it across the orders it pays — anything left unallocated counts as
+            non-work-order cost of sales.
+        </p>
+
+        <div class="space-y-2">
+            @for (var index = 0; index < rows.Count; index++)
+            {
+                var rowIndex = index;
+                var row = rows[rowIndex];
+                <div class="flex items-center gap-2">
+                    <select class="bg-surface border border-line rounded-lg px-2 py-1.5 text-content text-sm flex-1"
+                            disabled="@busy"
+                            @onchange="e => SetRowOrder(rowIndex, e.Value?.ToString())">
+                        <option value="" selected="@(row.WorkOrderId is null)">Choose a work order…</option>
+                        @foreach (var option in Options)
+                        {
+                            <option value="@option.WorkOrderId" selected="@(row.WorkOrderId == option.WorkOrderId)">
+                                @($"WO-{option.Number:0000} · {option.SubcontractorName} · {MoneyExact(AvailableFor(option))} available")
+                            </option>
+                        }
+                    </select>
+                    <input type="number" step="any" placeholder="Amount £" disabled="@busy"
+                           class="bg-surface border border-line rounded-lg px-2 py-1.5 text-right text-content text-sm w-36"
+                           value="@row.AmountText"
+                           @onchange="e => SetRowAmount(rowIndex, e.Value?.ToString())" />
+                    <button type="button" aria-label="Remove this slice" disabled="@busy"
+                            class="inline-flex items-center justify-center w-7 h-7 rounded-md text-content-subtle hover:text-negative hover:bg-surface-raised"
+                            @onclick="() => rows.RemoveAt(rowIndex)">
+                        <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                             stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6L6 18" /></svg>
+                    </button>
+                </div>
+            }
+        </div>
+
+        <button type="button" disabled="@busy" @onclick="AddRow"
+                class="text-xs font-medium text-content-subtle hover:text-content underline underline-offset-4">
+            + Add another work order
+        </button>
+
+        <div class="rounded-lg border border-line bg-surface-raised px-3 py-2 text-sm flex items-center justify-between gap-4">
+            <span class="text-content-muted">Allocated @MoneyExact(AllocatedTotal) of @MoneyExact(LineNet)</span>
+            <span class="@(Remainder == 0m ? "text-content-subtle" : "text-content font-medium")">
+                @MoneyExact(Remainder) not linked
+            </span>
+        </div>
+
+        @if (ClientValidationError is not null)
+        {
+            <p class="text-sm text-negative">@ClientValidationError</p>
+        }
+        @if (saveError is not null)
+        {
+            <p class="text-sm text-negative">@saveError</p>
+        }
+    </div>
+</Modal>
+
+@code {
+    [Parameter] public bool IsOpen { get; set; }
+    [Parameter] public string ProjectId { get; set; } = "";
+
+    /// <summary>The ledger line being split.</summary>
+    [Parameter] public string LineId { get; set; } = "";
+
+    /// <summary>Short human label for the line, e.g. "BVMH Groundworks Ltd · 1715".</summary>
+    [Parameter] public string LineLabel { get; set; } = "";
+
+    /// <summary>The line's signed net (credit notes negative).</summary>
+    [Parameter] public decimal LineNet { get; set; }
+
+    /// <summary>The line's saved slices, used to seed the editor.</summary>
+    [Parameter] public IReadOnlyList<XeroWorkOrderLinkSlice> CurrentLinks { get; set; } = Array.Empty<XeroWorkOrderLinkSlice>();
+
+    /// <summary>Linkable orders (live, with invoiced balances) offered by the selects.</summary>
+    [Parameter] public IReadOnlyList<WorkOrderInvoiceSummary> Options { get; set; } = Array.Empty<WorkOrderInvoiceSummary>();
+
+    [Parameter] public EventCallback OnClose { get; set; }
+
+    /// <summary>Raised with the saved slices after a successful save.</summary>
+    [Parameter] public EventCallback<IReadOnlyList<XeroWorkOrderLinkSlice>> OnSaved { get; set; }
+
+    private sealed class Row
+    {
+        public string? WorkOrderId { get; set; }
+        public string AmountText { get; set; } = "";
+    }
+
+    private List<Row> rows = new();
+    private string? seededForLineId;
+    private bool busy;
+    private string? saveError;
+
+    protected override void OnParametersSet()
+    {
+        if (!IsOpen)
+        {
+            seededForLineId = null;
+            saveError = null;
+            return;
+        }
+        if (seededForLineId == LineId) return;
+        seededForLineId = LineId;
+        saveError = null;
+        rows = CurrentLinks
+            .Select(link => new Row
+            {
+                WorkOrderId = link.WorkOrderId,
+                AmountText = link.Amount.ToString(System.Globalization.CultureInfo.InvariantCulture)
+            })
+            .ToList();
+        if (rows.Count == 0) AddRow();
+    }
+
+    private void AddRow() => rows.Add(new Row());
+
+    private void SetRowOrder(int index, string? workOrderId)
+    {
+        rows[index].WorkOrderId = string.IsNullOrEmpty(workOrderId) ? null : workOrderId;
+        // Convenience: an empty amount defaults to whatever the line still has spare.
+        if (rows[index].WorkOrderId is not null && string.IsNullOrWhiteSpace(rows[index].AmountText) && Remainder != 0m)
+            rows[index].AmountText = Remainder.ToString(System.Globalization.CultureInfo.InvariantCulture);
+    }
+
+    private void SetRowAmount(int index, string? text) => rows[index].AmountText = text ?? "";
+
+    private static decimal? Parse(string text) =>
+        decimal.TryParse(text, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var value)
+            ? value
+            : null;
+
+    private decimal AllocatedTotal =>
+        rows.Sum(row => Parse(row.AmountText) ?? 0m);
+
+    private decimal Remainder => LineNet - AllocatedTotal;
+
+    // The order's remaining balance, with this line's own saved slice added back —
+    // re-saving the same split must not read as over-invoicing.
+    private decimal AvailableFor(WorkOrderInvoiceSummary option) =>
+        option.RemainingToInvoice + (CurrentLinks.FirstOrDefault(link =>
+            string.Equals(link.WorkOrderId, option.WorkOrderId, StringComparison.OrdinalIgnoreCase))?.Amount ?? 0m);
+
+    private string? ClientValidationError
+    {
+        get
+        {
+            var filled = rows.Where(row => row.WorkOrderId is not null || !string.IsNullOrWhiteSpace(row.AmountText)).ToList();
+            if (filled.Any(row => row.WorkOrderId is null)) return "Choose a work order for every slice.";
+            if (filled.Any(row => Parse(row.AmountText) is not { } amount || amount == 0m)) return "Every slice needs a non-zero amount.";
+            if (filled.Select(row => row.WorkOrderId!).Distinct(StringComparer.OrdinalIgnoreCase).Count() != filled.Count)
+                return "Each work order can only appear once — combine the amounts instead.";
+            if (filled.Any(row => Math.Sign(Parse(row.AmountText)!.Value) != Math.Sign(LineNet)))
+                return LineNet < 0m ? "This is a credit note — amounts must be negative." : "Amounts must be positive.";
+            if (Math.Abs(AllocatedTotal) > Math.Abs(LineNet))
+                return $"The split allocates {MoneyExact(AllocatedTotal)} but the line is only {MoneyExact(LineNet)}.";
+            return null;
+        }
+    }
+
+    private bool CanSave => ClientValidationError is null;
+
+    private async Task SaveAsync()
+    {
+        if (busy || !CanSave) return;
+        busy = true;
+        saveError = null;
+        var slices = new List<XeroWorkOrderLinkSlice>();
+        foreach (var row in rows)
+        {
+            if (row.WorkOrderId is null) continue;
+            var amount = Parse(row.AmountText);
+            if (amount is null || amount.Value == 0m) continue;
+            slices.Add(new XeroWorkOrderLinkSlice(row.WorkOrderId, amount.Value));
+        }
+        try
+        {
+            await Commands.SendAsync(new SetXeroLineWorkOrderLinks(ProjectId, LineId, slices), CancellationToken.None);
+            seededForLineId = null; // reseed from the saved state on next open
+            await OnSaved.InvokeAsync(slices);
+        }
+        catch (CommandFailedException ex)
+        {
+            saveError = $"Couldn't save the split: {ex.Message}";
+        }
+        finally
+        {
+            busy = false;
+        }
+    }
+
+    private static string MoneyExact(decimal value) =>
+        value.ToString("C2", System.Globalization.CultureInfo.GetCultureInfo("en-GB"));
+}
