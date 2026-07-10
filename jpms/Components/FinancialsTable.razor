@@ -2,10 +2,15 @@
 @using Jewel.JPMS.Contracts.Commercial
 
 <div class="mb-3 flex flex-wrap items-center justify-between gap-3">
-    <label class="flex w-fit items-center gap-2 text-sm text-content-subtle cursor-pointer select-none">
-        <input type="checkbox" class="cursor-pointer align-middle" @bind="hideZeroRows" />
-        Hide zero rows
-    </label>
+    <div class="flex flex-wrap items-center gap-4">
+        <input class="text-sm bg-surface border border-line rounded-lg px-3 py-1.5 text-content placeholder:text-content-subtle w-64"
+               placeholder="Search cost centre or code…"
+               value="@search" @oninput="e => search = e.Value?.ToString() ?? string.Empty" />
+        <label class="flex w-fit items-center gap-2 text-sm text-content-subtle cursor-pointer select-none">
+            <input type="checkbox" class="cursor-pointer align-middle" @bind="hideZeroRows" />
+            Hide zero rows
+        </label>
+    </div>
     @if (SelectionCount > 0)
     {
         <div class="flex items-center gap-3">
@@ -20,26 +25,29 @@
     }
 </div>
 
-<div class="rounded-xl border border-line bg-surface overflow-x-auto">
+@* max-h + overflow-y makes this wrapper the vertical scroll container, so the sticky
+   header row stays visible while the rows scroll under it. Corner cells (checkbox /
+   code / name) are sticky on both axes and sit above everything else. *@
+<div class="rounded-xl border border-line bg-surface overflow-x-auto overflow-y-auto max-h-[85vh]">
     <table class="w-full text-sm border-collapse">
         <thead class="bg-surface-raised border-b border-line">
             <tr class="text-left text-[11px] uppercase tracking-wider text-content-subtle font-semibold">
-                <th class="sticky left-0 z-10 bg-surface-raised px-3 py-3 w-[36px]"></th>
-                <th class="sticky left-[36px] z-10 bg-surface-raised px-4 py-3 w-[88px]">@SortHeader("code", "Code")</th>
-                <th class="sticky left-[124px] z-10 bg-surface-raised px-4 py-3 min-w-[200px]">@SortHeader("name", "Cost Centre")</th>
+                <th class="sticky left-0 top-0 z-30 bg-surface-raised px-3 py-3 w-[36px]"></th>
+                <th class="sticky left-[36px] top-0 z-30 bg-surface-raised px-4 py-3 w-[88px]">@SortHeader("code", "Code")</th>
+                <th class="sticky left-[124px] top-0 z-30 bg-surface-raised px-4 py-3 min-w-[200px]">@SortHeader("name", "Cost Centre")</th>
                 @* Sales side: what we bill the client. *@
-                <th class="px-4 py-3 text-right whitespace-nowrap">@SortHeader("sales", "Contract Sales Value")</th>
-                <th class="px-4 py-3 text-right whitespace-nowrap">@SortHeader("complete", "% Complete")</th>
-                <th class="px-4 py-3 text-right whitespace-nowrap">@SortHeader("claim", "Claim Value")</th>
+                <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 text-right whitespace-nowrap">@SortHeader("sales", "Contract Sales Value")</th>
+                <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 text-right whitespace-nowrap">@SortHeader("complete", "% Complete")</th>
+                <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 text-right whitespace-nowrap">@SortHeader("claim", "Claim Value")</th>
                 @* Cost side: what we expect to pay out. *@
-                <th class="px-4 py-3 text-right whitespace-nowrap border-l border-line">@SortHeader("target", "Target Cost Value")</th>
-                <th class="px-4 py-3 text-right whitespace-nowrap">@SortHeader("wo", "Work Orders")</th>
-                <th class="px-4 py-3 text-right whitespace-nowrap">@SortHeader("acos", "Actual Cost of Sales")</th>
-                <th class="px-4 py-3 text-right whitespace-nowrap">@SortHeader("nonwo", "Non-WO Cost of Sales")</th>
-                <th class="px-4 py-3 text-right whitespace-nowrap">@SortHeader("drawdown", "Drawdown")</th>
-                <th class="px-4 py-3 text-right whitespace-nowrap">@SortHeader("pl", "Profit / Loss")</th>
-                <th class="px-4 py-3 text-right whitespace-nowrap">@SortHeader("costpct", "Cost % Complete")</th>
-                <th class="px-4 py-3 w-[80px]"><span class="sr-only">Lock</span></th>
+                <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 text-right whitespace-nowrap border-l border-line">@SortHeader("target", "Target Cost Value")</th>
+                <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 text-right whitespace-nowrap">@SortHeader("wo", "Work Orders")</th>
+                <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 text-right whitespace-nowrap">@SortHeader("acos", "Actual Cost of Sales")</th>
+                <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 text-right whitespace-nowrap">@SortHeader("nonwo", "Non-WO Cost of Sales")</th>
+                <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 text-right whitespace-nowrap">@SortHeader("drawdown", "Drawdown")</th>
+                <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 text-right whitespace-nowrap">@SortHeader("pl", "Profit / Loss")</th>
+                <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 text-right whitespace-nowrap">@SortHeader("costpct", "Cost % Complete")</th>
+                <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 w-[80px]"><span class="sr-only">Lock</span></th>
             </tr>
         </thead>
         <tbody class="divide-y divide-line">
@@ -291,6 +299,20 @@
     // shown — they exist because someone deliberately created them.
     private bool hideZeroRows = true;
 
+    // Filters rows by cost centre name or code; roll-ups match on their name or any
+    // member code. Selected rows stay visible so a selection can't silently vanish
+    // mid-roll-up. Totals stay project-wide, matching the hide-zero behaviour.
+    private string search = string.Empty;
+
+    private bool MatchesSearch(ReportLine line)
+    {
+        if (string.IsNullOrWhiteSpace(search)) return true;
+        if (selectedCodes.Contains(line.Key) || selectedGroupIds.Contains(line.Key)) return true;
+        var term = search.Trim();
+        return line.Name.Contains(term, StringComparison.OrdinalIgnoreCase)
+               || line.CostCodes.Any(entryCode => entryCode.Contains(term, StringComparison.OrdinalIgnoreCase));
+    }
+
     // Codes and existing roll-ups ticked for the next roll-up. Selected roll-ups are
     // merged into the new group rather than nested.
     private readonly HashSet<string> selectedCodes = new(StringComparer.OrdinalIgnoreCase);
@@ -509,7 +531,8 @@
                 group.CostCentreGroupId, "", group.Name, InMaster: true, IsGroup: true, group.CostCodes));
 
             return ApplySort(individuals.Concat(rollUps))
-                .Where(line => line.IsGroup || !hideZeroRows || HasAnyValue(line.CostCodes) || selectedCodes.Contains(line.Key));
+                .Where(line => line.IsGroup || !hideZeroRows || HasAnyValue(line.CostCodes) || selectedCodes.Contains(line.Key))
+                .Where(MatchesSearch);
         }
     }
 
