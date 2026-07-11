@@ -75,7 +75,7 @@ else
                     @if (CanManage)
                     {
                         <div class="flex items-center gap-4">
-                            @if (recipients.Count > 0 && lineItems.Count > 0)
+                            @if (recipients.Count > 0)
                             {
                                 <button type="button" class="text-xs text-accent hover:underline" @onclick="OpenComposeModal">Draft invite email</button>
                             }
@@ -145,8 +145,8 @@ else
                     </div>
                     <p class="text-xs text-content-subtle mt-2">
                         Adding a subcontractor only builds the invite list — nothing is emailed until you use
-                        “Send invite email”, which creates a draft in the shared mailbox's Drafts folder for you
-                        to review and send.
+                        “Draft invite email” above, which creates a draft in the shared mailbox's Drafts folder
+                        for you to review and send.
                     </p>
                 }
             </section>
@@ -687,6 +687,14 @@ else
                 }
             </div>
         }
+        @if (lineItems.Count == 0)
+        {
+            <p class="rounded-lg bg-amber-50 border border-amber-200 px-3 py-2 text-xs text-amber-800 mb-3">
+                This package has no line items yet, so the pre-filled message has nothing for subcontractors
+                to price. You can still create the draft — or cancel, add line items, and reopen this window
+                to include them.
+            </p>
+        }
         @if (MissingEmail().Count > 0)
         {
             <p class="rounded-lg bg-amber-50 border border-amber-200 px-3 py-2 text-xs text-amber-800 mb-3">
@@ -708,14 +716,14 @@ else
         @if (editingBody)
         {
             <textarea class="field font-mono text-xs" rows="14" @bind="composeBody"></textarea>
-            <p class="text-[11px] text-content-subtle mt-1">Sent as HTML — the pre-filled message includes the package's line items for pricing.</p>
+            <p class="text-[11px] text-content-subtle mt-1">Sent as HTML — the pre-filled message includes the package's line items for pricing, when there are any.</p>
         }
         else
         {
             <div class="rounded-lg border border-line bg-white text-gray-900 p-4 text-sm max-h-80 overflow-y-auto">
                 @((MarkupString)composeBody)
             </div>
-            <p class="text-[11px] text-content-subtle mt-1">This is how the email will look. It includes the package's line items for the subcontractor to price.</p>
+            <p class="text-[11px] text-content-subtle mt-1">This is how the email will look. It includes the package's line items for the subcontractor to price, when there are any.</p>
         }
     </Modal>
 
@@ -1476,7 +1484,10 @@ else
     {
         var sb = new System.Text.StringBuilder();
         sb.AppendLine("<p>Hello,</p>");
-        sb.AppendLine($"<p>Jewel Bespoke Build invites you to tender for the <strong>{package!.Title}</strong> package (ref {package.Reference}). Please price the items below and reply to this email with your rates, exclusions and lead times, quoting the reference in your reply.</p>");
+        if (lineItems.Count > 0)
+            sb.AppendLine($"<p>Jewel Bespoke Build invites you to tender for the <strong>{package!.Title}</strong> package (ref {package.Reference}). Please price the items below and reply to this email with your rates, exclusions and lead times, quoting the reference in your reply.</p>");
+        else
+            sb.AppendLine($"<p>Jewel Bespoke Build invites you to tender for the <strong>{package!.Title}</strong> package (ref {package.Reference}). Please price the works described in the attached documents and reply to this email with your rates, exclusions and lead times, quoting the reference in your reply.</p>");
         foreach (var group in lineItems.GroupBy(item => item.Trade).OrderBy(g => g.Key))
         {
             var heading = string.IsNullOrWhiteSpace(group.Key) ? "General" : group.Key;
