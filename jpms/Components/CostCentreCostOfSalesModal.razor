@@ -48,7 +48,7 @@
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-line">
-                        @foreach (var entry in entries)
+                        @foreach (var entry in ResidentEntries)
                         {
                             var line = entry.Line;
                             <tr>
@@ -161,16 +161,56 @@
                     </tbody>
                     <tfoot class="border-t-2 border-line-strong bg-surface-raised">
                         <tr class="font-semibold text-content">
-                            <td class="px-4 py-2.5" colspan="@(ShowCentreColumn ? 5 : 4)">Total — actual cost of sales</td>
-                            <td class="px-4 py-2.5 text-right whitespace-nowrap">@MoneyExact(entries.Sum(entry => entry.Line.Net))</td>
+                            <td class="px-4 py-2.5" colspan="@(ShowCentreColumn ? 5 : 4)">Total — allocated to this centre</td>
+                            <td class="px-4 py-2.5 text-right whitespace-nowrap">@MoneyExact(ResidentEntries.Sum(entry => entry.Line.Net))</td>
                             <td class="px-4 py-2.5 whitespace-nowrap text-content-subtle text-xs">
-                                @MoneyExact(entries.Sum(entry => entry.Line.Net - (entry.Line.IsSplit ? 0m : entry.Line.LinkedTotal))) not linked
+                                @MoneyExact(ResidentEntries.Sum(entry => entry.Line.Net - (entry.Line.IsSplit ? 0m : entry.Line.LinkedTotal))) not linked
                             </td>
                             <td class="px-4 py-2.5"></td>
                         </tr>
                     </tfoot>
                 </table>
             </div>
+
+            @if (AttributionEntries.Count > 0)
+            {
+                @* The same re-attribution the Financials column applies: spend linked to a work
+                   order moves from the invoice's Xero centre onto the order's centres, pro-rata
+                   to the order's line values. Negative rows are this centre's spend moving out;
+                   positive rows arrive via orders coded here. *@
+                <div class="rounded-lg border border-line overflow-x-auto">
+                    <p class="px-4 pt-3 pb-1 text-[11px] uppercase tracking-wider text-content-subtle font-semibold">
+                        Moved via work orders — linked spend follows the order's cost centres
+                    </p>
+                    <table class="w-full text-sm border-collapse">
+                        <tbody class="divide-y divide-line">
+                            @foreach (var entry in AttributionEntries)
+                            {
+                                var line = entry.Line;
+                                <tr class="text-content-muted">
+                                    <td class="px-4 py-2.5 whitespace-nowrap">@(line.Date?.ToString("dd MMM yyyy") ?? "—")</td>
+                                    <td class="px-4 py-2.5">@line.Supplier</td>
+                                    <td class="px-4 py-2.5 whitespace-nowrap">@line.InvoiceNumber</td>
+                                    <td class="px-4 py-2.5">@line.Description</td>
+                                    <td class="px-4 py-2.5 whitespace-nowrap">
+                                        <span class="inline-block rounded-full border border-line px-2 py-0.5 text-[11px]"
+                                              title="@(line.Net < 0m
+                                                         ? $"Linked to {line.ViaWorkOrderRef} — moved onto that order's cost centres"
+                                                         : $"Arrives via {line.ViaWorkOrderRef}, invoiced on {line.SourceCostCode}")">
+                                            @line.ViaWorkOrderRef
+                                        </span>
+                                    </td>
+                                    <td class="px-4 py-2.5 text-right whitespace-nowrap @(line.Net < 0m ? "text-negative" : "text-content")">@MoneyExact(line.Net)</td>
+                                </tr>
+                            }
+                            <tr class="border-t-2 border-line-strong bg-surface-raised font-semibold text-content">
+                                <td class="px-4 py-2.5" colspan="5">Total — actual cost of sales for this centre</td>
+                                <td class="px-4 py-2.5 text-right whitespace-nowrap">@MoneyExact(entries.Sum(entry => entry.Line.Net))</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            }
             @if (moveError is not null)
             {
                 <p class="text-sm text-negative">@moveError</p>
@@ -244,6 +284,11 @@
     private Entry? splitEntry;
 
     private bool ShowCentreColumn => CostCodes.Count > 1;
+
+    // Invoice lines allocated to this centre (editable) vs the ± rows that mirror the
+    // summary's work-order re-attribution (read-only). Together they total the column.
+    private List<Entry> ResidentEntries => entries.Where(entry => !entry.Line.IsWorkOrderAttribution).ToList();
+    private List<Entry> AttributionEntries => entries.Where(entry => entry.Line.IsWorkOrderAttribution).ToList();
 
     protected override async Task OnParametersSetAsync()
     {

@@ -1,5 +1,6 @@
 using Jewel.JPMS.Api.Cqrs;
 using Jewel.JPMS.Api.Data;
+using Jewel.JPMS.Api.Data.Entities;
 using Jewel.JPMS.Contracts.Commercial;
 using Jewel.JPMS.Contracts.Xero;
 using Microsoft.EntityFrameworkCore;
@@ -68,8 +69,52 @@ public sealed class ListCostCentreActualCostsHandler : IQueryHandler<ListCostCen
                 IsSplit: true,
                 Array.Empty<XeroWorkOrderLinkSlice>())); // centre-split lines can't carry links
 
+        // The ± adjustment rows behind the summary's work-order re-attribution: each linked
+        // slice leaves the invoice's Xero centre (a negative row there) and lands on the
+        // order's centres pro-rata (positive rows), using the exact same apportionment the
+        // financial summary applies — so this centre's rows total to its column figure.
+        var codeTotalsByOrder = await WorkOrderCostApportionment.CodeTotalsByOrderAsync(context, query.ProjectId, cancellationToken);
+        var orderNumbers = (await context.WorkOrders
+                .Where(order => order.ProjectId == query.ProjectId)
+                .Select(order => new { order.WorkOrderId, order.Number })
+                .ToListAsync(cancellationToken))
+            .ToDictionary(order => order.WorkOrderId, order => order.Number, StringComparer.OrdinalIgnoreCase);
+
+        var attributions = new List<CostCentreActualCostLine>();
+        var linesById = lines.ToDictionary(line => line.XeroLedgerLineId, StringComparer.OrdinalIgnoreCase);
+        foreach (var lineLinks in linksByLine)
+        {
+            if (!linesById.TryGetValue(lineLinks.Key, out var sourceLine) || sourceLine.CostCenterCode is null) continue;
+            foreach (var slice in lineLinks.Value)
+            {
+                if (!codeTotalsByOrder.TryGetValue(slice.WorkOrderId, out var codeTotals)) continue; // stays on the invoice's centre
+                var reference = orderNumbers.TryGetValue(slice.WorkOrderId, out var number) ? $"WO-{number:0000}" : "WO";
+
+                if (string.Equals(sourceLine.CostCenterCode, query.CostCode, StringComparison.OrdinalIgnoreCase))
+                    attributions.Add(AttributionRow(sourceLine, -slice.Amount, reference, sourceLine.CostCenterCode));
+
+                foreach (var (costCode, share) in WorkOrderCostApportionment.Apportion(slice.Amount, codeTotals))
+                    if (share != 0m && string.Equals(costCode, query.CostCode, StringComparison.OrdinalIgnoreCase))
+                        attributions.Add(AttributionRow(sourceLine, share, reference, sourceLine.CostCenterCode));
+            }
+        }
+
         return whole.Concat(shares)
             .OrderByDescending(line => line.Date ?? DateTime.MinValue)
+            .Concat(attributions.OrderByDescending(line => line.Date ?? DateTime.MinValue))
             .ToList();
     }
+
+    private static CostCentreActualCostLine AttributionRow(
+        XeroLedgerLineEntity sourceLine, decimal amount, string workOrderReference, string sourceCostCode) =>
+        new($"{sourceLine.XeroLedgerLineId}:{workOrderReference}:{Math.Sign(amount)}",
+            sourceLine.Date,
+            sourceLine.ContactName ?? "",
+            sourceLine.InvoiceNumber ?? "",
+            sourceLine.Description ?? "",
+            amount,
+            IsSplit: false,
+            Array.Empty<XeroWorkOrderLinkSlice>(),
+            ViaWorkOrderRef: workOrderReference,
+            SourceCostCode: sourceCostCode);
 }

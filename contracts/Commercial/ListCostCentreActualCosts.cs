@@ -19,8 +19,15 @@ public sealed record CostCentreActualCostLine(
     string Description,
     decimal Net,
     bool IsSplit = false,
-    IReadOnlyList<XeroWorkOrderLinkSlice>? WorkOrderLinks = null) // the order(s) this line pays against, with each one's share
+    IReadOnlyList<XeroWorkOrderLinkSlice>? WorkOrderLinks = null, // the order(s) this line pays against, with each one's share
+    string? ViaWorkOrderRef = null,   // set on re-attribution rows: spend moved via this order's cost-code mix
+    string? SourceCostCode = null)    // …from the centre the invoice was allocated to in Xero
 {
     public IReadOnlyList<XeroWorkOrderLinkSlice> Links => WorkOrderLinks ?? Array.Empty<XeroWorkOrderLinkSlice>();
     public decimal LinkedTotal => Links.Sum(link => link.Amount);
+
+    /// <summary>True for the ± adjustment rows that move work-order-linked spend from the
+    /// invoice's Xero centre onto the order's centres (pro-rata) — presentation of the same
+    /// re-attribution the financial summary applies, so the modal reconciles to the column.</summary>
+    public bool IsWorkOrderAttribution => ViaWorkOrderRef is not null;
 }

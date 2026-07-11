@@ -55,8 +55,13 @@ else
         <div class="flex items-center gap-3 mb-2">
             <h3 class="text-sm font-semibold text-content">Work orders</h3>
             <input type="search" placeholder="Search supplier or title…"
+                   title="Filters both tables — the work orders and the invoice lines below — so a supplier's orders and unlinked bills line up"
                    class="bg-surface border border-line rounded-lg px-2.5 py-1 text-sm text-content placeholder:text-content-subtle w-64"
                    @bind="orderSearch" @bind:event="oninput" />
+            @if (!string.IsNullOrWhiteSpace(orderSearch))
+            {
+                <span class="text-xs text-content-subtle">filtering work orders and invoice lines</span>
+            }
         </div>
         @if (summaries.Count == 0)
         {
@@ -337,12 +342,24 @@ else
     // Anything not yet paying a work order — partially split lines count their remainder.
     private decimal UnlinkedTotal => AllLines.Sum(line => line.UnlinkedRemainder);
 
-    private List<ProjectCostOfSalesLine> QueueLines => queueFilter switch
+    // The one search box filters BOTH tables: matching a supplier at the top brings up the
+    // same supplier's invoice lines below, so orders and unlinked bills line up side by side.
+    private bool MatchesSearch(ProjectCostOfSalesLine line)
     {
-        QueueFilter.Unlinked => AllLines.Where(line => line.UnlinkedRemainder != 0m).ToList(),
-        QueueFilter.Linked => AllLines.Where(line => line.Links.Count > 0).ToList(),
-        _ => AllLines
-    };
+        if (string.IsNullOrWhiteSpace(orderSearch)) return true;
+        var term = orderSearch.Trim();
+        return line.Supplier.Contains(term, StringComparison.OrdinalIgnoreCase)
+               || line.InvoiceNumber.Contains(term, StringComparison.OrdinalIgnoreCase)
+               || line.Description.Contains(term, StringComparison.OrdinalIgnoreCase)
+               || line.CostCode.Contains(term, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private List<ProjectCostOfSalesLine> QueueLines => (queueFilter switch
+    {
+        QueueFilter.Unlinked => AllLines.Where(line => line.UnlinkedRemainder != 0m),
+        QueueFilter.Linked => AllLines.Where(line => line.Links.Count > 0),
+        _ => AllLines.AsEnumerable()
+    }).Where(MatchesSearch).ToList();
 
     // The lines paying this order, each with its slice amount (a bill split across
     // several orders contributes only its slice here).

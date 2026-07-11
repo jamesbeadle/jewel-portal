@@ -87,20 +87,22 @@ public sealed class GetProjectFinancialSummaryHandler : IQueryHandler<GetProject
             })
             .ToListAsync(cancellationToken);
 
-        // Work-order-linked spend per centre: each slice in XeroLineWorkOrderLinks pays an
+        // Work-order-linked spend, slice by slice: each row in XeroLineWorkOrderLinks pays an
         // order from a whole-line allocation (links never exist on centre-split lines).
         // Non-WO cost of sales per centre = total actual spend less these linked slices —
-        // a partially split bill only counts its unallocated remainder.
-        var linkedActuals = await context.XeroLineWorkOrderLinks
+        // a partially split bill only counts its unallocated remainder. The linked slices
+        // themselves are then re-attributed to the order's cost centres pro-rata, so the
+        // Actual Cost of Sales column lines up with the Work Orders column.
+        var linkSlices = await context.XeroLineWorkOrderLinks
             .Where(link => link.ProjectId == query.ProjectId)
             .Join(context.XeroLedgerLines,
                 link => link.XeroLedgerLineId,
                 line => line.XeroLedgerLineId,
-                (link, line) => new { line.CostCenterCode, link.Amount })
-            .Where(joined => joined.CostCenterCode != null)
-            .GroupBy(joined => joined.CostCenterCode!)
-            .Select(group => new { CostCode = group.Key, Amount = group.Sum(joined => joined.Amount) })
+                (link, line) => new { link.WorkOrderId, link.Amount, InvoiceCode = line.CostCenterCode })
+            .Where(joined => joined.InvoiceCode != null)
             .ToListAsync(cancellationToken);
+
+        var codeTotalsByOrder = await WorkOrderCostApportionment.CodeTotalsByOrderAsync(context, query.ProjectId, cancellationToken);
 
         // Cost-side state: completion % and the finalisation lock, set inline on the
         // Financials tab, one row per cost centre. Centres never edited default to 0% / unlocked.
@@ -118,12 +120,30 @@ public sealed class GetProjectFinancialSummaryHandler : IQueryHandler<GetProject
                 ? existing + splitActual.Amount
                 : splitActual.Amount;
 
-        // Non-WO = actual spend less the work-order-linked slices, per centre.
+        // Non-WO = actual spend less the work-order-linked slices, per the invoice's own
+        // centre — computed BEFORE the re-attribution below moves the linked spend around.
         var nonWoActualByCode = new Dictionary<string, decimal>(actualByCode, StringComparer.OrdinalIgnoreCase);
-        foreach (var linked in linkedActuals)
-            nonWoActualByCode[linked.CostCode] = nonWoActualByCode.TryGetValue(linked.CostCode, out var actualTotal)
-                ? actualTotal - linked.Amount
-                : -linked.Amount;
+        foreach (var slice in linkSlices)
+            nonWoActualByCode[slice.InvoiceCode!] = nonWoActualByCode.TryGetValue(slice.InvoiceCode!, out var beforeLink)
+                ? beforeLink - slice.Amount
+                : -slice.Amount;
+
+        // Re-attribute each linked slice from the invoice's Xero centre to the order's
+        // cost-code mix (pro-rata by the order's line values). Orders with no coded lines
+        // can't be apportioned — those slices stay on the invoice's centre.
+        foreach (var slice in linkSlices)
+        {
+            if (!codeTotalsByOrder.TryGetValue(slice.WorkOrderId, out var codeTotals)) continue;
+
+            actualByCode[slice.InvoiceCode!] = actualByCode.TryGetValue(slice.InvoiceCode!, out var sourceTotal)
+                ? sourceTotal - slice.Amount
+                : -slice.Amount;
+
+            foreach (var (costCode, share) in WorkOrderCostApportionment.Apportion(slice.Amount, codeTotals))
+                actualByCode[costCode] = actualByCode.TryGetValue(costCode, out var destinationTotal)
+                    ? destinationTotal + share
+                    : share;
+        }
 
         return salesByCode.Keys.Union(actualByCode.Keys, StringComparer.OrdinalIgnoreCase)
             .Union(costProgressByCode.Keys, StringComparer.OrdinalIgnoreCase)
