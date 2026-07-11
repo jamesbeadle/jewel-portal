@@ -72,11 +72,45 @@
                         }
                         @if (message.Direction == MessageDirection.Inbound && !string.IsNullOrEmpty(message.MailboxId))
                         {
-                            <button type="button"
-                                    class="mt-1 text-xs font-medium text-accent hover:underline"
-                                    @onclick="() => ToggleExpandAsync(message)">
-                                @(expanded.Contains(message.MessageId) ? "Show summary" : "Show full email")
-                            </button>
+                            <div class="mt-1 flex flex-wrap items-center gap-3">
+                                <button type="button"
+                                        class="text-xs font-medium text-accent hover:underline"
+                                        @onclick="() => ToggleExpandAsync(message)">
+                                    @(expanded.Contains(message.MessageId) ? "Show summary" : "Show full email")
+                                </button>
+                                @if (CanDraftReply)
+                                {
+                                    <button type="button"
+                                            class="text-xs font-medium text-accent hover:underline"
+                                            disabled="@(replyingId is not null)"
+                                            @onclick="() => DraftReplyAsync(message)">
+                                        @(replyingId == message.MessageId ? "Drafting reply…" : "Reply with official PDF")
+                                    </button>
+                                }
+                            </div>
+                            @if (replyForMessageId == message.MessageId && replyError is not null)
+                            {
+                                <p class="mt-2 rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@replyError</p>
+                            }
+                            @if (replyForMessageId == message.MessageId && replyDraft is not null)
+                            {
+                                <div class="mt-2 rounded-lg bg-emerald-500/10 border border-emerald-500/30 px-3 py-2">
+                                    <p class="text-sm font-medium text-emerald-600">
+                                        Reply draft created in the projects mailbox — official PDF attached, in this email's thread.
+                                    </p>
+                                    <p class="text-xs text-content-subtle mt-1">To: @string.Join(", ", replyDraft.Recipients)</p>
+                                    @if (replyDraft.Cc is { Count: > 0 } replyCc)
+                                    {
+                                        <p class="text-xs text-content-subtle">CC: @string.Join(", ", replyCc)</p>
+                                    }
+                                    <p class="text-xs text-content-subtle">Review the recipients and send it from Outlook — nothing has been sent.</p>
+                                    @if (!string.IsNullOrWhiteSpace(replyDraft.WebLink))
+                                    {
+                                        <a href="@replyDraft.WebLink" target="_blank" rel="noopener"
+                                           class="text-xs text-accent hover:underline underline-offset-2">Open the draft in Outlook</a>
+                                    }
+                                </div>
+                            }
                         }
                     </li>
                 }
@@ -105,6 +139,10 @@
 
 @code {
     [Parameter, EditorRequired] public string RequestId { get; set; } = "";
+
+    /// <summary>Whether the signed-in user may stage reply drafts carrying the official PDF —
+    /// mirrors the page-level draft gate (directors, PMs, site managers, architects).</summary>
+    [Parameter] public bool CanDraftReply { get; set; }
 
     private bool loaded;
     private bool busy;
@@ -184,6 +222,38 @@
         {
             // Fetch failed — fall back to the preview body inside the expanded pane.
             details[message.MessageId] = new MailboxMessageDetail(message.MailboxId, "", false, Array.Empty<IntakeAttachment>());
+        }
+    }
+
+    // ---- Reply with the official PDF: an Outlook draft in this email's thread ----
+
+    private string? replyingId;        // message currently being drafted against (disables the buttons)
+    private string? replyForMessageId; // where the latest outcome (error or draft) is displayed
+    private string? replyError;
+    private RequestEmailDraft? replyDraft;
+
+    private async Task DraftReplyAsync(RequestMessage message)
+    {
+        if (replyingId is not null || string.IsNullOrEmpty(message.MailboxId)) return;
+        replyError = null;
+        replyDraft = null;
+        replyForMessageId = message.MessageId;
+        replyingId = message.MessageId;
+        try
+        {
+            replyDraft = await RequestRegister.PrepareReplyDraftAsync(RequestId, message.MailboxId!);
+        }
+        catch (CommandFailedException ex)
+        {
+            replyError = $"Couldn't create the reply draft: {ex.Message}";
+        }
+        catch
+        {
+            replyError = "Couldn't create the reply draft. Check the mailbox connection and try again.";
+        }
+        finally
+        {
+            replyingId = null;
         }
     }
 

@@ -118,6 +118,16 @@ public interface IMailboxGraphClient
     /// </summary>
     Task<MailboxDraft?> CreateDraftAsync(MailboxDraftMessage draft, CancellationToken ct);
 
+    /// <summary>
+    /// Create a draft REPLY to an existing mailbox message — same conversation thread, "RE:" subject,
+    /// original recipients and quoted history all supplied by Graph (createReplyAll) — then prepend
+    /// the given cover note above the quoted history, apply the workflow categories and attach the
+    /// files. The recipient's mail client threads the sent copy under the existing conversation.
+    /// Nothing is sent. Returns null when the mailbox is unconfigured, the original message is gone,
+    /// or a step failed (a partially prepared draft may remain in Drafts for a human to inspect).
+    /// </summary>
+    Task<MailboxReplyDraft?> CreateReplyDraftAsync(MailboxReplyDraftMessage reply, CancellationToken ct);
+
     // NOTE: there is deliberately NO send method on this interface. Every outbound email is created
     // as a draft for a human to review and send from the mailbox itself — code never sends.
 }
@@ -142,6 +152,23 @@ public sealed record MailboxDraftAttachment(string FileName, string ContentType,
 
 /// <summary>A created draft: its Graph id and (usually) a webLink that opens it in Outlook on the web.</summary>
 public sealed record MailboxDraft(string Id, string? WebLink);
+
+/// <summary>A reply-draft to stage on an existing mailbox message: the cover note goes above the
+/// quoted history Graph supplies; recipients come from the original message (reply-all).</summary>
+public sealed record MailboxReplyDraftMessage(
+    string MessageId,
+    string HtmlCoverNote,
+    IReadOnlyList<MailboxDraftAttachment> Attachments,
+    IReadOnlyList<string>? Categories = null);
+
+/// <summary>A created reply draft: identity plus the subject and recipients Graph pre-filled from
+/// the original message, so callers can report who the reply is addressed to.</summary>
+public sealed record MailboxReplyDraft(
+    string Id,
+    string? WebLink,
+    string Subject,
+    IReadOnlyList<string> To,
+    IReadOnlyList<string> Cc);
 
 /// <summary>The subset of a mailbox message recorded against a request when an email is assigned.</summary>
 public sealed record MailboxSnapshot(
@@ -185,6 +212,8 @@ public sealed class NullMailboxGraphClient : IMailboxGraphClient
         Task.FromResult<IReadOnlyList<string>>(Array.Empty<string>());
     public Task<MailboxDraft?> CreateDraftAsync(MailboxDraftMessage draft, CancellationToken ct) =>
         Task.FromResult<MailboxDraft?>(null);
+    public Task<MailboxReplyDraft?> CreateReplyDraftAsync(MailboxReplyDraftMessage reply, CancellationToken ct) =>
+        Task.FromResult<MailboxReplyDraft?>(null);
 }
 
 /// <summary>Graph REST implementation (HttpClient + app-only token).</summary>
@@ -757,6 +786,113 @@ public sealed class MailboxGraphClient : IMailboxGraphClient
         }
 
         return new MailboxDraft(id, webLink);
+    }
+
+    public async Task<MailboxReplyDraft?> CreateReplyDraftAsync(MailboxReplyDraftMessage reply, CancellationToken ct)
+    {
+        // 1. createReplyAll stages the reply draft in Drafts: same conversation, "RE:" subject,
+        //    thread headers (In-Reply-To/References), quoted history in the body, and the original
+        //    sender + copied recipients pre-filled — everything a mail client needs to show the sent
+        //    copy inside the existing thread.
+        var createUrl = $"{GraphBase}/users/{Mailbox}/messages/{Uri.EscapeDataString(reply.MessageId)}/createReplyAll";
+        string? id, webLink;
+        string subject, existingBody, existingType;
+        List<string> to, cc;
+        using (var createContent = JsonContent.Create(new Dictionary<string, object?>()))
+        using (var createResponse = await SendAsync(HttpMethod.Post, createUrl, createContent, ct))
+        {
+            if (!createResponse.IsSuccessStatusCode)
+            {
+                _logger.LogWarning("Reply-draft create failed: {Status}. {Detail}",
+                    (int)createResponse.StatusCode, await SafeBodyAsync(createResponse, ct));
+                return null;
+            }
+            await using var stream = await createResponse.Content.ReadAsStreamAsync(ct);
+            using var doc = await JsonDocument.ParseAsync(stream, cancellationToken: ct);
+            var root = doc.RootElement;
+            id = root.TryGetProperty("id", out var idEl) ? idEl.GetString() : null;
+            if (string.IsNullOrEmpty(id)) return null;
+            webLink = root.TryGetProperty("webLink", out var wl) ? wl.GetString() : null;
+            subject = root.TryGetProperty("subject", out var s) ? s.GetString() ?? "" : "";
+            (existingType, existingBody) = ReadBody(root);
+            to = ReadRecipients(root, "toRecipients");
+            cc = ReadRecipients(root, "ccRecipients");
+        }
+
+        // 2. Put the cover note ABOVE the quoted history Graph supplied, and tag the draft with the
+        //    workflow categories so the sent copy (and its tagged replies) group under the record.
+        var quoted = string.Equals(existingType, "html", StringComparison.OrdinalIgnoreCase)
+            ? existingBody
+            : $"<pre style=\"font-family:inherit;white-space:pre-wrap\">{System.Net.WebUtility.HtmlEncode(existingBody)}</pre>";
+        var patchPayload = new Dictionary<string, object?>
+        {
+            ["body"] = new Dictionary<string, object?>
+            {
+                ["contentType"] = "HTML",
+                ["content"] = reply.HtmlCoverNote + quoted
+            }
+        };
+        if (reply.Categories is { Count: > 0 } categories)
+            patchPayload["categories"] = categories.ToArray();
+
+        using (var patchContent = JsonContent.Create(patchPayload))
+        using (var patchResponse = await SendAsync(HttpMethod.Patch, $"{GraphBase}/users/{Mailbox}/messages/{Uri.EscapeDataString(id)}", patchContent, ct))
+        {
+            if (!patchResponse.IsSuccessStatusCode)
+            {
+                _logger.LogWarning("Reply-draft body patch failed: {Status}. {Detail}",
+                    (int)patchResponse.StatusCode, await SafeBodyAsync(patchResponse, ct));
+                return null; // the bare reply draft is left in Drafts for a human to inspect
+            }
+        }
+
+        // 3. Attach the files — small ones inline, anything larger through an upload session.
+        foreach (var attachment in reply.Attachments)
+        {
+            if (attachment.Content.LongLength > InlineAttachmentLimit)
+            {
+                if (!await UploadLargeAttachmentAsync(id, attachment, ct)) return null;
+                continue;
+            }
+            var attachPayload = new Dictionary<string, object?>
+            {
+                ["@odata.type"] = "#microsoft.graph.fileAttachment",
+                ["name"] = attachment.FileName,
+                ["contentType"] = attachment.ContentType,
+                ["contentBytes"] = Convert.ToBase64String(attachment.Content)
+            };
+            using var attachContent = JsonContent.Create(attachPayload);
+            using var attachResponse = await SendAsync(
+                HttpMethod.Post, $"{GraphBase}/users/{Mailbox}/messages/{Uri.EscapeDataString(id)}/attachments", attachContent, ct);
+            if (!attachResponse.IsSuccessStatusCode)
+            {
+                _logger.LogWarning("Reply-draft attachment failed: {Status}. {Detail}",
+                    (int)attachResponse.StatusCode, await SafeBodyAsync(attachResponse, ct));
+                return null; // the incomplete draft is left in Drafts for a human to inspect/retry
+            }
+        }
+
+        return new MailboxReplyDraft(id, webLink, subject, to, cc);
+    }
+
+    private static (string ContentType, string Content) ReadBody(JsonElement message)
+    {
+        if (message.TryGetProperty("body", out var body) && body.ValueKind == JsonValueKind.Object)
+            return (
+                body.TryGetProperty("contentType", out var t) ? t.GetString() ?? "html" : "html",
+                body.TryGetProperty("content", out var c) ? c.GetString() ?? "" : "");
+        return ("html", "");
+    }
+
+    private static List<string> ReadRecipients(JsonElement message, string property)
+    {
+        var result = new List<string>();
+        if (message.TryGetProperty(property, out var recipients) && recipients.ValueKind == JsonValueKind.Array)
+            foreach (var r in recipients.EnumerateArray())
+                if (r.TryGetProperty("emailAddress", out var addr) && addr.ValueKind == JsonValueKind.Object
+                    && addr.TryGetProperty("address", out var a) && a.GetString() is { Length: > 0 } email)
+                    result.Add(email);
+        return result;
     }
 
     // Streams one >3 MB file onto a draft via Graph's attachment upload session (chunked PUTs to a

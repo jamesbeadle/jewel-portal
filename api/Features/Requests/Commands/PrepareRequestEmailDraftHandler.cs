@@ -84,8 +84,9 @@ public sealed class PrepareRequestEmailDraftHandler : ICommandHandler<PrepareReq
         new(r.Email, string.IsNullOrWhiteSpace(r.Name) ? null : r.Name);
 
     /// <summary>The short branded HTML cover note — mirrors the worker's outbound send so a drafted
-    /// email reads the same as an auto-issued one.</summary>
-    private static string BuildCoverNote(RequestDocumentModel model)
+    /// email reads the same as an auto-issued one. Internal so the reply-draft path
+    /// (<see cref="PrepareRequestReplyDraftHandler"/>) reuses the identical note.</summary>
+    internal static string BuildCoverNote(RequestDocumentModel model)
     {
         var due = model.ResponseDue is { } d
             ? $"<p style=\"margin:0 0 12px\">A response is requested by <strong>{d:dd MMM yyyy}</strong>.</p>"

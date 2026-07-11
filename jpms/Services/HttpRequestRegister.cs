@@ -133,6 +133,9 @@ public sealed class HttpRequestRegister : IRequestRegister
     public Task<RequestEmailDraft> PrepareEmailDraftAsync(string requestId, string? recipientOverride = null, CancellationToken cancellationToken = default) =>
         commands.SendAsync(new PrepareRequestEmailDraft(requestId, recipientOverride), cancellationToken);
 
+    public Task<RequestEmailDraft> PrepareReplyDraftAsync(string requestId, string mailboxMessageId, CancellationToken cancellationToken = default) =>
+        commands.SendAsync(new PrepareRequestReplyDraft(requestId, mailboxMessageId), cancellationToken);
+
     // The api caps each call (PDF render + Graph call per draft must fit one function
     // invocation), so larger selections go up in chunks and the outcomes merge back into a
     // single batch — callers see one result however many round trips it took.

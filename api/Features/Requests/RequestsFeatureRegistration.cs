@@ -63,6 +63,11 @@ public static class RequestsFeatureRegistration
         services.AddScoped<PrepareRequestEmailDraftAuthorisation>();
         services.AddScoped<PrepareRequestEmailDraftValidation>();
 
+        // Reply drafting: the official PDF staged as a reply inside an existing email thread.
+        services.AddScoped<ICommandHandler<PrepareRequestReplyDraft, RequestEmailDraft>, PrepareRequestReplyDraftHandler>();
+        services.AddScoped<PrepareRequestReplyDraftAuthorisation>();
+        services.AddScoped<PrepareRequestReplyDraftValidation>();
+
         // Bulk drafting: one Outlook draft per selected request, delegating each to the single
         // handler above so the drafts are identical to detail-page ones.
         services.AddScoped<ICommandHandler<PrepareRequestEmailDrafts, RequestEmailDraftBatch>, PrepareRequestEmailDraftsHandler>();

@@ -35,6 +35,11 @@ public interface IRequestRegister
     /// recipients and cover note pre-filled. Nothing is sent; the draft waits in Drafts.</summary>
     Task<RequestEmailDraft> PrepareEmailDraftAsync(string requestId, string? recipientOverride = null, CancellationToken cancellationToken = default);
 
+    /// <summary>Creates an Outlook draft REPLY to a conversation email linked to the request —
+    /// same thread, official PDF attached, cover note above the quoted history. Nothing is sent;
+    /// the draft waits in Drafts. <paramref name="mailboxMessageId"/> is the email's Graph id.</summary>
+    Task<RequestEmailDraft> PrepareReplyDraftAsync(string requestId, string mailboxMessageId, CancellationToken cancellationToken = default);
+
     /// <summary>The bulk form of <see cref="PrepareEmailDraftAsync"/>: one Outlook draft per
     /// request id. Partial success is expected — every id gets an outcome carrying either its
     /// created draft or the user-fixable reason it couldn't be drafted. Selections larger than
