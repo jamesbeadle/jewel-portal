@@ -34,7 +34,10 @@ public sealed class RemoveCostCentreGroupEndpoint
         if (signedInUser is null) return new UnauthorizedResult();
 
         var command = new RemoveCostCentreGroup(projectId, groupId);
-        if (!authorisation.Allows(signedInUser, command)) return new ForbidResult();
+        // Readable 403 rather than ForbidResult — see CreateCostCentreGroupEndpoint.
+        if (!authorisation.Allows(signedInUser, command))
+            return new ObjectResult("Your role doesn't have permission to manage cost centre groups.")
+            { StatusCode = StatusCodes.Status403Forbidden };
 
         return new OkObjectResult(await handler.HandleAsync(command, request.HttpContext.RequestAborted));
     }

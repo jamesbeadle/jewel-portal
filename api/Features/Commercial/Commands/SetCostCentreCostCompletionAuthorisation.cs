@@ -1,14 +1,16 @@
 using Jewel.JPMS.Api.Gates;
 using Jewel.JPMS.Contracts.Commercial;
+using Jewel.JPMS.Models;
 
 namespace Jewel.JPMS.Api.Features.Commercial.Commands;
 
 public sealed class SetCostCentreCostCompletionAuthorisation
 {
-    // Same roles that may set cost-code budgets: this is the commercial team's
-    // assessment of cost-side progress, not a site-level entry.
+    // The commercial team's assessment of cost-side progress, plus the Finance
+    // Director (the Financials tab is a finance surface) and Role.Admin per the
+    // newer authorisation convention.
     private static readonly RoleSet RolesThatMaySetCostCompletion =
-        RoleSet.Of(JpmsRoles.Director, JpmsRoles.ProjectManager, JpmsRoles.Estimator);
+        RoleSet.Of(Role.Admin, JpmsRoles.Director, JpmsRoles.FinanceDirector, JpmsRoles.ProjectManager, JpmsRoles.Estimator);
 
     public bool Allows(SignedInUser user, SetCostCentreCostCompletion command) =>
         RolesThatMaySetCostCompletion.IncludesAny(user.Roles);

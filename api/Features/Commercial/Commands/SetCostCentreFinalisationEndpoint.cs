@@ -39,7 +39,10 @@ public sealed class SetCostCentreFinalisationEndpoint
         if (command is null) return new BadRequestResult();
         if (command.ProjectId != projectId) return new BadRequestObjectResult("Route projectId does not match body.");
 
-        if (!authorisation.Allows(signedInUser, command)) return new ForbidResult();
+        // Readable 403 rather than ForbidResult — see CreateCostCentreGroupEndpoint.
+        if (!authorisation.Allows(signedInUser, command))
+            return new ObjectResult("Your role doesn't have permission to lock or unlock cost centres.")
+            { StatusCode = StatusCodes.Status403Forbidden };
 
         var validationOutcome = validation.Check(command);
         if (validationOutcome.HasFailed) return new BadRequestObjectResult(validationOutcome.Errors);

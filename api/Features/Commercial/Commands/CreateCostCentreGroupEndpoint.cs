@@ -39,7 +39,12 @@ public sealed class CreateCostCentreGroupEndpoint
         if (command is null) return new BadRequestResult();
         if (command.ProjectId != projectId) return new BadRequestObjectResult("Route projectId does not match body.");
 
-        if (!authorisation.Allows(signedInUser, command)) return new ForbidResult();
+        // Not ForbidResult: executing it needs a registered authentication scheme, and this app's
+        // cookie-session auth has none — it throws, the function 500s, and the client sees an
+        // opaque "Backend call failure". Return the 403 with a message the dialog can show.
+        if (!authorisation.Allows(signedInUser, command))
+            return new ObjectResult("Your role doesn't have permission to manage cost centre groups.")
+            { StatusCode = StatusCodes.Status403Forbidden };
 
         var validationOutcome = validation.Check(command);
         if (validationOutcome.HasFailed) return new BadRequestObjectResult(validationOutcome.Errors);
