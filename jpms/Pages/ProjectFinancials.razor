@@ -89,6 +89,12 @@ else
                 lock applies to every member.
             </p>
 
+            @* Reconciliation packages: a sub's work orders against the valuation lines that
+               priced their scope — the truth at the level the work was bought and sold. *@
+            <PackageReconciliationSection ProjectId="@ProjectId"
+                                          ValuationLines="ValuationLines.Current(ProjectId)"
+                                          Orders="WorkOrders.Current(ProjectId)" />
+
             <CostCentreSalesLinesModal IsOpen="@(selectedSales is not null)"
                                        ProjectId="@ProjectId"
                                        Heading="@(selectedSales?.Heading ?? "")"

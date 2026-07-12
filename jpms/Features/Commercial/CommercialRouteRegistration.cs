@@ -52,6 +52,27 @@ public static class CommercialRouteRegistration
             new CommandRoute("POST", "/api/projects/{projectId}/xero-line-work-order-links",
                 command => $"/api/projects/{((SetXeroLineWorkOrderLinks)command).ProjectId}/xero-line-work-order-links"));
 
+        // Reconciliation packages — work orders vs valuation sales lines.
+        queries.Register<ListReconciliationPackagesForProject, IReadOnlyList<ReconciliationPackage>>(
+            new QueryRoute("/api/projects/{projectId}/reconciliation-packages",
+                query => $"/api/projects/{((ListReconciliationPackagesForProject)query).ProjectId}/reconciliation-packages"));
+
+        queries.Register<ListPackageReconciliation, IReadOnlyList<PackageReconciliationRow>>(
+            new QueryRoute("/api/projects/{projectId}/package-reconciliation",
+                query => $"/api/projects/{((ListPackageReconciliation)query).ProjectId}/package-reconciliation"));
+
+        commands.Register<SaveReconciliationPackage, ReconciliationPackage>(
+            new CommandRoute("POST", "/api/projects/{projectId}/reconciliation-packages",
+                command => $"/api/projects/{((SaveReconciliationPackage)command).ProjectId}/reconciliation-packages"));
+
+        commands.Register<RemoveReconciliationPackage, Acknowledgement>(
+            new CommandRoute("DELETE", "/api/projects/{projectId}/reconciliation-packages/{packageId}",
+                command => $"/api/projects/{((RemoveReconciliationPackage)command).ProjectId}/reconciliation-packages/{((RemoveReconciliationPackage)command).ReconciliationPackageId}"));
+
+        commands.Register<SetReconciliationPackageLock, ReconciliationPackage>(
+            new CommandRoute("POST", "/api/projects/{projectId}/reconciliation-packages/{packageId}/lock",
+                command => $"/api/projects/{((SetReconciliationPackageLock)command).ProjectId}/reconciliation-packages/{((SetReconciliationPackageLock)command).ReconciliationPackageId}/lock"));
+
         // Cost centre groups — named roll-ups on the Financials tab.
         queries.Register<ListCostCentreGroupsForProject, IReadOnlyList<CostCentreGroup>>(
             new QueryRoute("/api/projects/{projectId}/cost-centre-groups",

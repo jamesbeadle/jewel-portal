@@ -1,0 +1,314 @@
+@using Jewel.JPMS.Contracts.Commercial
+@using Jewel.JPMS.Models
+@inject ICommandSender Commands
+
+@* Builds one reconciliation package: tick the sub's work orders on the left, and on the
+   right the valuation sales lines that priced that scope — whole lines by default, or a
+   partial £ amount where a client line covers more than one sub (the remainder stays
+   available for other packages). Running totals of both sides show mismatched scope
+   immediately. *@
+<Modal IsOpen="IsOpen"
+       Title="@(Editing is null ? "New package" : $"Edit package · {Editing.Name}")"
+       ConfirmLabel="@(busy ? "Saving…" : "Save package")"
+       ConfirmDisabled="@(busy || !CanSave)"
+       OnConfirm="SaveAsync"
+       OnCancel="OnClose"
+       Class="max-w-6xl">
+    <div class="space-y-4">
+        <div>
+            <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Package name</label>
+            <input type="text" maxlength="128" placeholder="e.g. BVMH groundworks & civils"
+                   class="w-full md:w-1/2 rounded-lg border border-line-strong bg-surface-field px-3 py-2 text-sm text-content focus:outline-none focus:border-accent"
+                   @bind="name" @bind:event="oninput" />
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            @* ── Cost side: the sub's work orders ─────────────────────────── *@
+            <div class="rounded-lg border border-line bg-surface p-3">
+                <div class="flex items-center justify-between gap-2 mb-2">
+                    <p class="text-[11px] uppercase tracking-wider text-content-subtle font-semibold">Cost side — work orders</p>
+                    <input type="search" placeholder="Search…"
+                           class="bg-surface border border-line rounded-lg px-2 py-1 text-xs text-content placeholder:text-content-subtle w-36"
+                           @bind="orderSearch" @bind:event="oninput" />
+                </div>
+                <div class="overflow-y-auto max-h-72 space-y-1">
+                    @foreach (var detail in FilteredOrders)
+                    {
+                        var order = detail.Order;
+                        var owner = OwnerOf(order.WorkOrderId);
+                        var taken = owner is not null;
+                        <label class="flex items-center gap-2 text-sm @(taken ? "opacity-50" : "cursor-pointer")"
+                               title="@(taken ? $"Already in \"{owner}\" — a work order has one home" : detail.Order.Title)">
+                            <input type="checkbox" class="cursor-pointer" disabled="@taken"
+                                   checked="@selectedOrderIds.Contains(order.WorkOrderId)"
+                                   @onchange="() => ToggleOrder(order.WorkOrderId)" />
+                            <span class="font-mono text-[11px] text-content-subtle">@($"WO-{order.Number:0000}")</span>
+                            <span class="text-content truncate">@detail.SubcontractorName</span>
+                            <span class="ml-auto text-content-muted whitespace-nowrap">@Money(CommittedOf(detail))</span>
+                        </label>
+                    }
+                </div>
+            </div>
+
+            @* ── Sales side: the valuation lines that priced the scope ─────── *@
+            <div class="rounded-lg border border-line bg-surface p-3">
+                <div class="flex items-center justify-between gap-2 mb-2">
+                    <p class="text-[11px] uppercase tracking-wider text-content-subtle font-semibold"
+                       title="Tick a line to take its full remaining value; edit the amount for a partial share when a client line covers more than one sub">
+                        Sales side — valuation lines
+                    </p>
+                    <input type="search" placeholder="Search…"
+                           class="bg-surface border border-line rounded-lg px-2 py-1 text-xs text-content placeholder:text-content-subtle w-36"
+                           @bind="lineSearch" @bind:event="oninput" />
+                </div>
+                <div class="overflow-y-auto max-h-72 space-y-1">
+                    @foreach (var entry in FilteredLines)
+                    {
+                        var line = entry.Line;
+                        var picked = pickedAmounts.ContainsKey(line.ValuationLineItemId);
+                        var exhausted = !picked && entry.AvailableElsewhere == 0m;
+                        <div class="flex items-center gap-2 text-sm @(exhausted ? "opacity-50" : "")">
+                            <input type="checkbox" class="cursor-pointer" disabled="@exhausted"
+                                   title="@(exhausted ? "Fully assigned to other packages" : "")"
+                                   checked="@picked"
+                                   @onchange="() => ToggleLine(entry)" />
+                            <span class="font-mono text-[11px] text-content-subtle whitespace-nowrap">@line.CostCode</span>
+                            <span class="text-content-muted truncate" title="@line.Description">@line.Description</span>
+                            <span class="ml-auto flex items-center gap-1.5 whitespace-nowrap">
+                                @if (picked)
+                                {
+                                    <input type="number" step="any"
+                                           class="bg-surface border border-line rounded-lg px-2 py-0.5 text-right text-content text-xs w-24"
+                                           title="@($"This package's share — {Money(entry.AvailableElsewhere)} of the line's {Money(line.LineAmount)} is available")"
+                                           value="@pickedAmounts[line.ValuationLineItemId]"
+                                           @onchange="e => SetLineAmount(line.ValuationLineItemId, e.Value?.ToString())" />
+                                }
+                                else
+                                {
+                                    <span class="text-content-muted text-xs">@Money(entry.AvailableElsewhere) avail.</span>
+                                }
+                            </span>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+
+        @* ── Running totals: mismatched scope is visible before saving ─────── *@
+        <div class="rounded-lg border border-line bg-surface-raised px-4 py-3 text-sm flex flex-wrap items-center gap-x-6 gap-y-1">
+            <span class="text-content-muted">Sales <span class="text-content font-medium">@Money(SalesTotal)</span></span>
+            <span class="text-content-muted">Target cost (÷@DivisorText) <span class="text-content font-medium">@Money(TargetTotal)</span></span>
+            <span class="text-content-muted">WO committed <span class="text-content font-medium">@Money(CommittedTotal)</span></span>
+            <span class="@(Difference < 0m ? "text-negative" : "text-content-muted")"
+                  title="Target cost less WO committed — a large gap either way suggests the scope on the two sides doesn't match yet">
+                Difference <span class="font-medium">@Money(Difference)</span>
+            </span>
+        </div>
+
+        @if (ClientValidationError is not null)
+        {
+            <p class="text-sm text-negative">@ClientValidationError</p>
+        }
+        @if (saveError is not null)
+        {
+            <p class="text-sm text-negative">@saveError</p>
+        }
+    </div>
+</Modal>
+
+@code {
+    [Parameter] public bool IsOpen { get; set; }
+    [Parameter] public string ProjectId { get; set; } = "";
+
+    /// <summary>The package being edited, or null when creating.</summary>
+    [Parameter] public ReconciliationPackage? Editing { get; set; }
+
+    /// <summary>Every package on the project — for one-home checks and remaining-available maths.</summary>
+    [Parameter] public IReadOnlyList<ReconciliationPackage> AllPackages { get; set; } = Array.Empty<ReconciliationPackage>();
+
+    [Parameter] public IReadOnlyList<ValuationLineItem> ValuationLines { get; set; } = Array.Empty<ValuationLineItem>();
+    [Parameter] public IReadOnlyList<ProjectWorkOrderDetail> Orders { get; set; } = Array.Empty<ProjectWorkOrderDetail>();
+
+    [Parameter] public EventCallback OnClose { get; set; }
+    [Parameter] public EventCallback OnSaved { get; set; }
+
+    private string name = "";
+    private string orderSearch = "";
+    private string lineSearch = "";
+    private readonly HashSet<string> selectedOrderIds = new(StringComparer.OrdinalIgnoreCase);
+    // Line id → this package's £ share, as typed (invariant decimal text).
+    private readonly Dictionary<string, string> pickedAmounts = new(StringComparer.OrdinalIgnoreCase);
+    private string? seededForKey;
+    private bool busy;
+    private string? saveError;
+
+    protected override void OnParametersSet()
+    {
+        if (!IsOpen)
+        {
+            seededForKey = null;
+            saveError = null;
+            return;
+        }
+        var key = Editing?.ReconciliationPackageId ?? "(new)";
+        if (seededForKey == key) return;
+        seededForKey = key;
+        saveError = null;
+        name = Editing?.Name ?? "";
+        selectedOrderIds.Clear();
+        pickedAmounts.Clear();
+        if (Editing is not null)
+        {
+            foreach (var workOrderId in Editing.WorkOrderIds) selectedOrderIds.Add(workOrderId);
+            foreach (var slice in Editing.SalesLines)
+                pickedAmounts[slice.ValuationLineItemId] = slice.Amount.ToString(System.Globalization.CultureInfo.InvariantCulture);
+        }
+    }
+
+    // Which OTHER package owns this order, if any (one-home rule shown, not just enforced).
+    private string? OwnerOf(string workOrderId) =>
+        AllPackages.FirstOrDefault(package =>
+                package.ReconciliationPackageId != (Editing?.ReconciliationPackageId ?? "")
+                && package.WorkOrderIds.Contains(workOrderId, StringComparer.OrdinalIgnoreCase))
+            ?.Name;
+
+    private static decimal CommittedOf(ProjectWorkOrderDetail detail) => detail.Lines.Sum(line => line.LineTotal);
+
+    private List<ProjectWorkOrderDetail> FilteredOrders =>
+        Orders.Where(detail => detail.Order.Status != WorkOrderStatus.Cancelled)
+            .Where(detail => string.IsNullOrWhiteSpace(orderSearch)
+                             || detail.SubcontractorName.Contains(orderSearch.Trim(), StringComparison.OrdinalIgnoreCase)
+                             || detail.Order.Title.Contains(orderSearch.Trim(), StringComparison.OrdinalIgnoreCase))
+            .OrderBy(detail => detail.Order.Number)
+            .ToList();
+
+    // Counting lines with how much of each is still available to THIS package
+    // (the line's value less what other packages have taken).
+    private List<(ValuationLineItem Line, decimal AvailableElsewhere)> FilteredLines
+    {
+        get
+        {
+            var takenByOthers = AllPackages
+                .Where(package => package.ReconciliationPackageId != (Editing?.ReconciliationPackageId ?? ""))
+                .SelectMany(package => package.SalesLines)
+                .GroupBy(slice => slice.ValuationLineItemId, StringComparer.OrdinalIgnoreCase)
+                .ToDictionary(group => group.Key, group => group.Sum(slice => slice.Amount), StringComparer.OrdinalIgnoreCase);
+            return ValuationLines
+                .Where(line => line.CountsTowardTotals && line.LineAmount != 0m)
+                .Where(line => string.IsNullOrWhiteSpace(lineSearch)
+                               || line.Description.Contains(lineSearch.Trim(), StringComparison.OrdinalIgnoreCase)
+                               || line.CostCode.Contains(lineSearch.Trim(), StringComparison.OrdinalIgnoreCase)
+                               || line.SectionName.Contains(lineSearch.Trim(), StringComparison.OrdinalIgnoreCase))
+                .Select(line => (Line: line,
+                    AvailableElsewhere: line.LineAmount - (takenByOthers.TryGetValue(line.ValuationLineItemId, out var taken) ? taken : 0m)))
+                .OrderBy(entry => entry.Line.CostCode, StringComparer.OrdinalIgnoreCase)
+                .ThenBy(entry => entry.Line.DisplayOrder)
+                .ToList();
+        }
+    }
+
+    private void ToggleOrder(string workOrderId)
+    {
+        if (!selectedOrderIds.Remove(workOrderId)) selectedOrderIds.Add(workOrderId);
+    }
+
+    private void ToggleLine((ValuationLineItem Line, decimal AvailableElsewhere) entry)
+    {
+        if (pickedAmounts.Remove(entry.Line.ValuationLineItemId)) return;
+        // Whole-line default: the full remaining value; edit the amount for a partial share.
+        pickedAmounts[entry.Line.ValuationLineItemId] =
+            entry.AvailableElsewhere.ToString(System.Globalization.CultureInfo.InvariantCulture);
+    }
+
+    private void SetLineAmount(string lineItemId, string? text) => pickedAmounts[lineItemId] = text ?? "";
+
+    private static decimal? Parse(string text) =>
+        decimal.TryParse(text, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var value)
+            ? value
+            : null;
+
+    private decimal SalesTotal => pickedAmounts.Values.Sum(text => Parse(text) ?? 0m);
+    private decimal TargetTotal => Math.Round(SalesTotal * FinancialSummaryAssumptions.CostFactor, 2);
+    private decimal CommittedTotal =>
+        Orders.Where(detail => selectedOrderIds.Contains(detail.Order.WorkOrderId)).Sum(CommittedOf);
+    private decimal Difference => TargetTotal - CommittedTotal;
+
+    private static string DivisorText =>
+        $"{1m + FinancialSummaryAssumptions.MarkupPercent / 100m:0.##}";
+
+    private string? ClientValidationError
+    {
+        get
+        {
+            if (string.IsNullOrWhiteSpace(name)) return null; // save button already disabled; don't nag
+            if (pickedAmounts.Values.Any(text => Parse(text) is not { } amount || amount == 0m))
+                return "Every ticked sales line needs a non-zero amount.";
+            var linesById = ValuationLines.ToDictionary(line => line.ValuationLineItemId, StringComparer.OrdinalIgnoreCase);
+            foreach (var picked in pickedAmounts)
+            {
+                if (!linesById.TryGetValue(picked.Key, out var line)) continue;
+                var amount = Parse(picked.Value)!.Value;
+                if (Math.Sign(amount) != Math.Sign(line.LineAmount))
+                    return $"\"{Truncate(line.Description, 40)}\" — the share must carry the line's sign ({Money(line.LineAmount)}).";
+                var available = FilteredLinesAvailable(picked.Key, line);
+                if (Math.Abs(amount) > Math.Abs(available))
+                    return $"\"{Truncate(line.Description, 40)}\" — only {Money(available)} of the line is still available.";
+            }
+            return null;
+        }
+    }
+
+    private decimal FilteredLinesAvailable(string lineItemId, ValuationLineItem line)
+    {
+        var takenByOthers = AllPackages
+            .Where(package => package.ReconciliationPackageId != (Editing?.ReconciliationPackageId ?? ""))
+            .SelectMany(package => package.SalesLines)
+            .Where(slice => string.Equals(slice.ValuationLineItemId, lineItemId, StringComparison.OrdinalIgnoreCase))
+            .Sum(slice => slice.Amount);
+        return line.LineAmount - takenByOthers;
+    }
+
+    private bool CanSave =>
+        !string.IsNullOrWhiteSpace(name)
+        && (selectedOrderIds.Count > 0 || pickedAmounts.Count > 0)
+        && ClientValidationError is null;
+
+    private async Task SaveAsync()
+    {
+        if (busy || !CanSave) return;
+        busy = true;
+        saveError = null;
+        var slices = new List<PackageSalesSlice>();
+        foreach (var picked in pickedAmounts)
+        {
+            var amount = Parse(picked.Value);
+            if (amount is null || amount.Value == 0m) continue;
+            slices.Add(new PackageSalesSlice(picked.Key, amount.Value));
+        }
+        try
+        {
+            await Commands.SendAsync(new SaveReconciliationPackage(
+                ProjectId,
+                Editing?.ReconciliationPackageId,
+                name.Trim(),
+                selectedOrderIds.OrderBy(id => id, StringComparer.OrdinalIgnoreCase).ToList(),
+                slices), CancellationToken.None);
+            seededForKey = null; // reseed from saved state on next open
+            await OnSaved.InvokeAsync();
+        }
+        catch (CommandFailedException ex)
+        {
+            saveError = $"Couldn't save the package: {ex.Message}";
+        }
+        finally
+        {
+            busy = false;
+        }
+    }
+
+    private static string Truncate(string value, int max) =>
+        value.Length <= max ? value : value[..max] + "…";
+
+    private static string Money(decimal value) =>
+        value.ToString("C2", System.Globalization.CultureInfo.GetCultureInfo("en-GB"));
+}

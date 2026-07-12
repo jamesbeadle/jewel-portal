@@ -1,0 +1,321 @@
+@using Jewel.JPMS.Contracts.Commercial
+@using Jewel.JPMS.Models
+@inject IQueryClient Queries
+@inject ICommandSender Commands
+@inject SessionService Session
+
+@* Reconciliation packages: work orders (cost side) matched against valuation sales
+   lines (sales side) at the level the work was actually bought and sold — because a
+   sub's single order spans several cost centres while the client valuation prices the
+   same scope on differently-shaped lines. Whole sales lines tick in by default; a
+   partial £ slice covers client lines shared between subs. Presentation only. *@
+<section class="mt-8">
+    <div class="flex items-center justify-between gap-3 mb-1 flex-wrap">
+        <h2 class="text-lg font-semibold text-content">Packages</h2>
+        @if (CanManage)
+        {
+            <button type="button" class="btn-secondary text-sm" @onclick="OpenCreate">New package</button>
+        }
+    </div>
+    <p class="text-sm text-content-subtle mb-3">
+        Match a sub's work orders against the valuation lines that priced that scope, and read the
+        true position at package level — sales, claimed, target cost, committed, invoiced, margin.
+    </p>
+
+    @if (error is not null)
+    {
+        <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-3">@error</p>
+    }
+
+    @if (loading)
+    {
+        <p class="text-sm text-content-subtle italic">Loading packages…</p>
+    }
+    else if (rows.Count == 0)
+    {
+        <p class="text-sm text-content-subtle italic">
+            No packages yet. Create one to reconcile a subcontractor's orders against the sales that cover their scope.
+        </p>
+    }
+    else
+    {
+        <div class="rounded-xl border border-line bg-surface overflow-x-auto">
+            <table class="w-full text-sm border-collapse">
+                <thead class="bg-surface-raised border-b border-line">
+                    <tr class="text-left text-[11px] uppercase tracking-wider text-content-subtle font-semibold">
+                        <th class="px-4 py-3 min-w-[180px]">Package</th>
+                        <th class="px-4 py-3 text-right whitespace-nowrap">Sales Value</th>
+                        <th class="px-4 py-3 text-right whitespace-nowrap">Claimed</th>
+                        <th class="px-4 py-3 text-right whitespace-nowrap border-l border-line">Target Cost</th>
+                        <th class="px-4 py-3 text-right whitespace-nowrap">WO Committed</th>
+                        <th class="px-4 py-3 text-right whitespace-nowrap">Invoiced</th>
+                        <th class="px-4 py-3 text-right whitespace-nowrap">Drawdown</th>
+                        <th class="px-4 py-3 text-right whitespace-nowrap" title="Open packages: forecast buying gain — target cost less the higher of committed and invoiced. Locked packages: realised profit / loss, banked against actual invoiced cost.">Margin / P&L</th>
+                        <th class="px-4 py-3 w-[190px]"><span class="sr-only">Actions</span></th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-line">
+                    @foreach (var row in rows)
+                    {
+                        <tr>
+                            <td class="px-4 py-3 whitespace-nowrap">
+                                <span class="text-content font-medium">@row.Name</span>
+                                <span class="ml-2 text-[11px] text-content-subtle">@row.WorkOrderCount WO · @row.SalesLineCount lines</span>
+                                @if (row.IsLocked)
+                                {
+                                    <span class="ml-2 inline-block rounded-full border border-line px-2 py-0.5 text-[11px] text-content-subtle"
+                                          title="@($"Locked {row.LockedAt?.ToString("dd MMM yyyy")} — figures frozen; profit / loss realised against actual invoiced cost")">Locked</span>
+                                }
+                            </td>
+                            <td class="px-4 py-3 text-right whitespace-nowrap text-content">@Money(row.SalesValue)</td>
+                            <td class="px-4 py-3 text-right whitespace-nowrap text-content-muted"
+                                title="@(row.SalesValue == 0m ? "" : $"{Math.Round(row.ClaimedToDate / row.SalesValue * 100m, 1)}% of the package's sales value claimed")">
+                                @Money(row.ClaimedToDate)
+                            </td>
+                            <td class="px-4 py-3 text-right whitespace-nowrap border-l border-line text-content">@Money(row.TargetCost)</td>
+                            <td class="px-4 py-3 text-right whitespace-nowrap text-content">@Money(row.WoCommitted)</td>
+                            <td class="px-4 py-3 text-right whitespace-nowrap text-content-muted"
+                                title="@(row.WoCommitted == 0m ? "" : $"{Math.Round(row.InvoicedToDate / row.WoCommitted * 100m, 1)}% of committed orders invoiced")">
+                                @Money(row.InvoicedToDate)
+                            </td>
+                            @if (row.IsLocked)
+                            {
+                                <td class="px-4 py-3 text-right whitespace-nowrap text-content-muted" title="Locked — the remainder is realised as profit / loss">—</td>
+                                <td class="px-4 py-3 text-right whitespace-nowrap font-medium @(row.ProfitLoss == 0m ? "text-content-muted" : row.ProfitLoss > 0m ? "text-positive" : "text-negative")">@Money(row.ProfitLoss)</td>
+                            }
+                            else
+                            {
+                                <td class="px-4 py-3 text-right whitespace-nowrap @(row.Drawdown < 0m ? "text-negative" : row.Drawdown == 0m ? "text-content-muted" : "text-content")">@Money(row.Drawdown)</td>
+                                <td class="px-4 py-3 text-right whitespace-nowrap @(row.Margin < 0m ? "text-negative" : "text-content")"
+                                    title="Forecast — becomes realised profit / loss when the package is locked">@Money(row.Margin)</td>
+                            }
+                            <td class="px-4 py-3 text-right whitespace-nowrap">
+                                @if (CanManage)
+                                {
+                                    @if (!row.IsLocked)
+                                    {
+                                        <button type="button" disabled="@busy" @onclick="() => OpenEdit(row.ReconciliationPackageId)"
+                                                class="text-xs font-medium text-content-subtle hover:text-content underline underline-offset-4">Edit</button>
+                                        <button type="button" disabled="@busy" @onclick="() => SetLockAsync(row, true)"
+                                                title="Lock — no more buying expected: figures freeze and the remaining margin is banked as profit / loss against actual invoiced cost"
+                                                class="ml-2 text-xs font-medium text-content-subtle hover:text-content underline underline-offset-4">Lock</button>
+                                        @if (pendingDeleteId == row.ReconciliationPackageId)
+                                        {
+                                            <button type="button" disabled="@busy" @onclick="() => RemoveAsync(row)"
+                                                    class="ml-2 text-xs font-medium text-negative underline underline-offset-4">Confirm</button>
+                                            <button type="button" disabled="@busy" @onclick="() => pendingDeleteId = null"
+                                                    class="ml-1.5 text-xs text-content-subtle hover:text-content underline underline-offset-4">Keep</button>
+                                        }
+                                        else
+                                        {
+                                            <button type="button" disabled="@busy" @onclick="() => pendingDeleteId = row.ReconciliationPackageId"
+                                                    class="ml-2 text-xs font-medium text-content-subtle hover:text-negative underline underline-offset-4">Dissolve</button>
+                                        }
+                                    }
+                                    else
+                                    {
+                                        <button type="button" disabled="@busy" @onclick="() => SetLockAsync(row, false)"
+                                                title="Unlock — the snapshot clears and the figures go live again"
+                                                class="text-xs font-medium text-content-subtle hover:text-content underline underline-offset-4">Unlock</button>
+                                    }
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+
+    @* What's not yet reconciled — nothing falls through the cracks. *@
+    <div class="mt-3">
+        <button type="button" @onclick="() => showUnallocated = !showUnallocated"
+                class="text-sm text-content-subtle hover:text-content underline underline-offset-4">
+            @(showUnallocated ? "Hide" : "Show") not-yet-packaged
+            (@UnpackagedOrders.Count work orders · @Money(UnpackagedOrders.Sum(detail => detail.Lines.Sum(line => line.LineTotal))) ·
+            @Money(LinesWithRemaining.Sum(entry => entry.Remaining)) sales unassigned)
+        </button>
+        @if (showUnallocated)
+        {
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mt-2">
+                <div class="rounded-lg border border-line bg-surface p-3">
+                    <p class="text-[11px] uppercase tracking-wider text-content-subtle font-semibold mb-1.5">Work orders in no package</p>
+                    @if (UnpackagedOrders.Count == 0)
+                    {
+                        <p class="text-sm text-content-subtle italic">Every work order is packaged.</p>
+                    }
+                    else
+                    {
+                        @foreach (var detail in UnpackagedOrders)
+                        {
+                            <p class="text-sm text-content-muted">
+                                <span class="font-mono text-[11px] text-content-subtle">@($"WO-{detail.Order.Number:0000}")</span>
+                                @detail.SubcontractorName · @Money(detail.Lines.Sum(line => line.LineTotal))
+                            </p>
+                        }
+                    }
+                </div>
+                <div class="rounded-lg border border-line bg-surface p-3">
+                    <p class="text-[11px] uppercase tracking-wider text-content-subtle font-semibold mb-1.5">Sales value not yet in a package</p>
+                    @if (LinesWithRemaining.Count == 0)
+                    {
+                        <p class="text-sm text-content-subtle italic">Every sales line is fully assigned.</p>
+                    }
+                    else
+                    {
+                        @foreach (var entry in LinesWithRemaining.Take(30))
+                        {
+                            <p class="text-sm text-content-muted" title="@entry.Line.Description">
+                                <span class="font-mono text-[11px] text-content-subtle">@entry.Line.CostCode</span>
+                                @Truncate(entry.Line.Description, 44) · @Money(entry.Remaining) remaining
+                            </p>
+                        }
+                        @if (LinesWithRemaining.Count > 30)
+                        {
+                            <p class="text-xs text-content-subtle mt-1">…and @(LinesWithRemaining.Count - 30) more.</p>
+                        }
+                    }
+                </div>
+            </div>
+        }
+    </div>
+</section>
+
+<ReconciliationPackageBuilderModal IsOpen="@builderOpen"
+                                   ProjectId="@ProjectId"
+                                   Editing="@editing"
+                                   AllPackages="@packages"
+                                   ValuationLines="@ValuationLines"
+                                   Orders="@Orders"
+                                   OnClose="CloseBuilder"
+                                   OnSaved="HandleSavedAsync" />
+
+@code {
+    [Parameter, EditorRequired] public string ProjectId { get; set; } = "";
+
+    /// <summary>The project's valuation lines (already loaded by the Financials page).</summary>
+    [Parameter] public IReadOnlyList<ValuationLineItem> ValuationLines { get; set; } = Array.Empty<ValuationLineItem>();
+
+    /// <summary>The project's work orders (already loaded by the Financials page).</summary>
+    [Parameter] public IReadOnlyList<ProjectWorkOrderDetail> Orders { get; set; } = Array.Empty<ProjectWorkOrderDetail>();
+
+    private IReadOnlyList<ReconciliationPackage> packages = Array.Empty<ReconciliationPackage>();
+    private IReadOnlyList<PackageReconciliationRow> rows = Array.Empty<PackageReconciliationRow>();
+    private bool loading = true;
+    private bool busy;
+    private string? error;
+    private bool showUnallocated;
+    private string? pendingDeleteId;
+    private bool builderOpen;
+    private ReconciliationPackage? editing;
+
+    private bool CanManage => Session.AvailableRoles.Any(role =>
+        role is Role.Admin or Role.ManagingDirector or Role.FinanceDirector or Role.ProjectManager or Role.QuantitySurveyor);
+
+    private HashSet<string> PackagedOrderIds =>
+        packages.SelectMany(package => package.WorkOrderIds).ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+    private List<ProjectWorkOrderDetail> UnpackagedOrders =>
+        Orders.Where(detail => detail.Order.Status != WorkOrderStatus.Cancelled
+                               && !PackagedOrderIds.Contains(detail.Order.WorkOrderId))
+            .OrderBy(detail => detail.Order.Number)
+            .ToList();
+
+    // Counting sales lines with value not yet assigned to any package.
+    private List<(ValuationLineItem Line, decimal Remaining)> LinesWithRemaining
+    {
+        get
+        {
+            var assignedByLine = packages
+                .SelectMany(package => package.SalesLines)
+                .GroupBy(slice => slice.ValuationLineItemId, StringComparer.OrdinalIgnoreCase)
+                .ToDictionary(group => group.Key, group => group.Sum(slice => slice.Amount), StringComparer.OrdinalIgnoreCase);
+            return ValuationLines
+                .Where(line => line.CountsTowardTotals && line.LineAmount != 0m)
+                .Select(line => (Line: line,
+                    Remaining: line.LineAmount - (assignedByLine.TryGetValue(line.ValuationLineItemId, out var assigned) ? assigned : 0m)))
+                .Where(entry => entry.Remaining != 0m)
+                .OrderByDescending(entry => Math.Abs(entry.Remaining))
+                .ToList();
+        }
+    }
+
+    protected override async Task OnInitializedAsync() => await ReloadAsync();
+
+    private async Task ReloadAsync()
+    {
+        try
+        {
+            var definitionsTask = Queries.AskAsync(new ListReconciliationPackagesForProject(ProjectId), CancellationToken.None);
+            var rowsTask = Queries.AskAsync(new ListPackageReconciliation(ProjectId), CancellationToken.None);
+            packages = await definitionsTask;
+            rows = await rowsTask;
+            error = null;
+        }
+        catch { error = "Couldn't load packages. Please try again."; }
+        loading = false;
+    }
+
+    private void OpenCreate()
+    {
+        editing = null;
+        builderOpen = true;
+    }
+
+    private void OpenEdit(string packageId)
+    {
+        editing = packages.FirstOrDefault(package =>
+            string.Equals(package.ReconciliationPackageId, packageId, StringComparison.OrdinalIgnoreCase));
+        builderOpen = editing is not null;
+    }
+
+    private void CloseBuilder()
+    {
+        builderOpen = false;
+        editing = null;
+    }
+
+    private async Task HandleSavedAsync()
+    {
+        builderOpen = false;
+        editing = null;
+        await ReloadAsync();
+    }
+
+    private async Task SetLockAsync(PackageReconciliationRow row, bool locked)
+    {
+        if (busy) return;
+        busy = true;
+        error = null;
+        try
+        {
+            await Commands.SendAsync(
+                new SetReconciliationPackageLock(ProjectId, row.ReconciliationPackageId, locked), CancellationToken.None);
+            await ReloadAsync();
+        }
+        catch (CommandFailedException ex) { error = ex.Message; }
+        finally { busy = false; }
+    }
+
+    private async Task RemoveAsync(PackageReconciliationRow row)
+    {
+        if (busy) return;
+        busy = true;
+        error = null;
+        try
+        {
+            await Commands.SendAsync(
+                new RemoveReconciliationPackage(ProjectId, row.ReconciliationPackageId), CancellationToken.None);
+            pendingDeleteId = null;
+            await ReloadAsync();
+        }
+        catch (CommandFailedException ex) { error = ex.Message; }
+        finally { busy = false; }
+    }
+
+    private static string Truncate(string value, int max) =>
+        value.Length <= max ? value : value[..max] + "…";
+
+    private static string Money(decimal value) =>
+        value.ToString("C0", System.Globalization.CultureInfo.GetCultureInfo("en-GB"));
+}

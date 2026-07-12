@@ -52,6 +52,44 @@ public sealed record CostCentreCostProgress(
     decimal CostCompletionPercent,
     bool IsFinalised = false);  // locked down: drawdown reads as realised profit / loss
 
+/// <summary>One sales line's share inside a reconciliation package: the whole line's
+/// value, or a partial £ amount when a client line covers more than one sub's scope
+/// (the remainder stays available for other packages). Signed like the line.</summary>
+public sealed record PackageSalesSlice(string ValuationLineItemId, decimal Amount);
+
+/// <summary>A reconciliation package: work orders (cost side) against valuation sales
+/// lines (sales side), matched at the level the work was bought and sold. Locked
+/// packages carry frozen snapshot figures; open ones compute live.</summary>
+public sealed record ReconciliationPackage(
+    string ReconciliationPackageId,
+    string ProjectId,
+    string Name,
+    IReadOnlyList<string> WorkOrderIds,
+    IReadOnlyList<PackageSalesSlice> SalesLines,
+    bool IsLocked,
+    DateTimeOffset? LockedAt);
+
+/// <summary>One package's computed report row. Open packages compute live from source;
+/// locked ones return the snapshot frozen at lock. Drawdown = target cost − WO committed
+/// (budget left to commit). Margin is the live forecast buying gain: target cost less the
+/// higher of committed and invoiced (so invoicing past the orders tightens it). Profit /
+/// Loss is only realised on lock: target cost − actual invoiced cost.</summary>
+public sealed record PackageReconciliationRow(
+    string ReconciliationPackageId,
+    string Name,
+    bool IsLocked,
+    DateTimeOffset? LockedAt,
+    int WorkOrderCount,
+    int SalesLineCount,
+    decimal SalesValue,
+    decimal ClaimedToDate,
+    decimal TargetCost,
+    decimal WoCommitted,
+    decimal InvoicedToDate,
+    decimal Drawdown,
+    decimal Margin,
+    decimal ProfitLoss);
+
 /// <summary>A named roll-up of cost centres shown as one line on the Financials tab.
 /// Presentation only — figures are still stored per cost centre.</summary>
 public sealed record CostCentreGroup(

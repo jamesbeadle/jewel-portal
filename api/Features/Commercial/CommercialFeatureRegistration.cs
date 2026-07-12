@@ -37,6 +37,16 @@ public static class CommercialFeatureRegistration
         services.AddScoped<SetXeroLineWorkOrderLinksAuthorisation>();
         services.AddScoped<SetXeroLineWorkOrderLinksValidation>();
 
+        // Reconciliation packages — work orders vs valuation sales lines, matched at the
+        // level the work was bought and sold.
+        services.AddScoped<IQueryHandler<ListReconciliationPackagesForProject, IReadOnlyList<ReconciliationPackage>>, ListReconciliationPackagesForProjectHandler>();
+        services.AddScoped<IQueryHandler<ListPackageReconciliation, IReadOnlyList<PackageReconciliationRow>>, ListPackageReconciliationHandler>();
+        services.AddScoped<ICommandHandler<SaveReconciliationPackage, ReconciliationPackage>, SaveReconciliationPackageHandler>();
+        services.AddScoped<ICommandHandler<RemoveReconciliationPackage, Acknowledgement>, RemoveReconciliationPackageHandler>();
+        services.AddScoped<ICommandHandler<SetReconciliationPackageLock, ReconciliationPackage>, SetReconciliationPackageLockHandler>();
+        services.AddScoped<ReconciliationPackageAuthorisation>();
+        services.AddScoped<SaveReconciliationPackageValidation>();
+
         // Cost centre groups — named roll-ups on the Financials tab.
         services.AddScoped<IQueryHandler<ListCostCentreGroupsForProject, IReadOnlyList<CostCentreGroup>>, ListCostCentreGroupsForProjectHandler>();
         services.AddScoped<ICommandHandler<CreateCostCentreGroup, CostCentreGroup>, CreateCostCentreGroupHandler>();

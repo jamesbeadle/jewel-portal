@@ -116,6 +116,49 @@ public sealed class CostCentreGroupMemberEntity
     [MaxLength(32)]      public string CostCode { get; set; } = "";
 }
 
+/// <summary>A reconciliation package: work orders (cost side) matched against valuation
+/// sales lines (sales side) at the level the work was bought and sold — see the
+/// members below. Presentation only. Locking freezes the snapshot columns, realising
+/// profit / loss against actual invoiced cost.</summary>
+public sealed class ReconciliationPackageEntity
+{
+    [Key, MaxLength(64)] public string ReconciliationPackageId { get; set; } = "";
+    [MaxLength(64)]      public string ProjectId { get; set; } = "";
+    [MaxLength(128)]     public string Name { get; set; } = "";
+
+    public bool IsLocked { get; set; }
+    public DateTimeOffset? LockedAt { get; set; }
+    // Snapshot frozen at lock; meaningless while unlocked.
+    public decimal LockedSalesValue { get; set; }
+    public decimal LockedClaimedToDate { get; set; }
+    public decimal LockedTargetCost { get; set; }
+    public decimal LockedWoCommitted { get; set; }
+    public decimal LockedInvoicedCost { get; set; }
+    public decimal LockedProfitLoss { get; set; }
+}
+
+/// <summary>A work order inside a package. The unique (ProjectId, WorkOrderId) index
+/// keeps each order in at most one package.</summary>
+public sealed class ReconciliationPackageOrderEntity
+{
+    [Key, MaxLength(64)] public string ReconciliationPackageOrderId { get; set; } = "";
+    [MaxLength(64)]      public string ReconciliationPackageId { get; set; } = "";
+    [MaxLength(64)]      public string ProjectId { get; set; } = "";
+    [MaxLength(64)]      public string WorkOrderId { get; set; } = "";
+}
+
+/// <summary>A sales line's share inside a package — the whole line's value or a partial
+/// £ amount (signed like the line). A line's value can be shared across packages but the
+/// slices may never total past the line; the save command enforces it.</summary>
+public sealed class ReconciliationPackageSalesLineEntity
+{
+    [Key, MaxLength(64)] public string ReconciliationPackageSalesLineId { get; set; } = "";
+    [MaxLength(64)]      public string ReconciliationPackageId { get; set; } = "";
+    [MaxLength(64)]      public string ProjectId { get; set; } = "";
+    [MaxLength(64)]      public string ValuationLineItemId { get; set; } = "";
+    public decimal Amount { get; set; }
+}
+
 /// <summary>Cost-side completion per cost centre per project (0–100), edited inline
 /// on the Financials tab. Distinct from sales-side completion, which is derived from
 /// the latest claim's cumulative claimed value on the valuation report.</summary>
