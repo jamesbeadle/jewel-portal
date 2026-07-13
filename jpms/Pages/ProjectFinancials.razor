@@ -50,13 +50,10 @@ else
                     @actionError
                 </p>
             }
-            @{
-                var pendingLabourTotal = Summary.Current(ProjectId).Sum(row => row.PendingLabourCost);
-            }
-            @if (pendingLabourTotal > 0m)
+            @if (PendingLabourTotal > 0m)
             {
                 <p class="rounded-lg bg-amber-500/10 border border-amber-500/30 px-3 py-2 text-sm text-amber-600 mb-3">
-                    Pending labour: £@pendingLabourTotal.ToString("N2") submitted on timesheets but not yet approved —
+                    Pending labour: £@PendingLabourTotal.ToString("N2") submitted on timesheets but not yet approved —
                     it posts to cost of sales only once approved on the
                     <a class="underline underline-offset-2" href="@($"/projects/{ProjectId}/labour")">Labour tab</a>.
                 </p>
@@ -170,6 +167,10 @@ else
 
     private bool isLoaded;
     private string? actionError;
+
+    // Computed here rather than in an inline @{ } block: the banner sits inside an else { } code
+    // block where Razor (RZ1010) forbids re-entering code with @{.
+    private decimal PendingLabourTotal => Summary.Current(ProjectId).Sum(row => row.PendingLabourCost);
 
     // A clicked-through figure: its heading and the cost codes behind it (one for an
     // individual row, all members for a roll-up).
