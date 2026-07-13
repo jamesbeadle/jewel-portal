@@ -110,7 +110,6 @@ public sealed class JpmsContext : DbContext
     public DbSet<WorkerRateHistoryEntity> WorkerRateHistories => Set<WorkerRateHistoryEntity>();
     public DbSet<ProjectWorkerAssignmentEntity> ProjectWorkerAssignments => Set<ProjectWorkerAssignmentEntity>();
     public DbSet<SiteAttendanceEntity> SiteAttendances => Set<SiteAttendanceEntity>();
-    public DbSet<SiteAccessTokenEntity> SiteAccessTokens => Set<SiteAccessTokenEntity>();
     public DbSet<XeroLineTimesheetCoverEntity> XeroLineTimesheetCovers => Set<XeroLineTimesheetCoverEntity>();
     public DbSet<LabourSettlementVarianceEntity> LabourSettlementVariances => Set<LabourSettlementVarianceEntity>();
     public DbSet<CashflowSnapshotEntity> CashflowSnapshots => Set<CashflowSnapshotEntity>();

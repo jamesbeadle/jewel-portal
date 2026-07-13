@@ -11,7 +11,7 @@ public sealed class HttpLabourStore : ILabourStore
     private readonly WorkerAssignmentsReadModel assignmentsReadModel;
     private readonly LabourTimesheetsReadModel timesheetsReadModel;
     private readonly SiteAttendanceReadModel attendanceReadModel;
-    private readonly SiteAccessReadModel siteAccessReadModel;
+    private readonly MyLabourDayReadModel myDayReadModel;
     private readonly LabourSettlementReadModel settlementReadModel;
     private readonly IQueryClient queries;
     private readonly ICommandSender commands;
@@ -22,19 +22,19 @@ public sealed class HttpLabourStore : ILabourStore
     private readonly HashSet<string> assignmentsRequested = new();
     private readonly HashSet<string> timesheetsRequested = new();
     private readonly HashSet<string> attendanceRequested = new();
-    private readonly HashSet<string> siteAccessRequested = new();
+    private bool myDayRequested;
     private readonly HashSet<string> settlementRequested = new();
 
     public HttpLabourStore(WorkersReadModel workersReadModel, WorkerAssignmentsReadModel assignmentsReadModel,
         LabourTimesheetsReadModel timesheetsReadModel, SiteAttendanceReadModel attendanceReadModel,
-        SiteAccessReadModel siteAccessReadModel, LabourSettlementReadModel settlementReadModel,
+        MyLabourDayReadModel myDayReadModel, LabourSettlementReadModel settlementReadModel,
         IQueryClient queries, ICommandSender commands)
     {
         this.workersReadModel = workersReadModel;
         this.assignmentsReadModel = assignmentsReadModel;
         this.timesheetsReadModel = timesheetsReadModel;
         this.attendanceReadModel = attendanceReadModel;
-        this.siteAccessReadModel = siteAccessReadModel;
+        this.myDayReadModel = myDayReadModel;
         this.settlementReadModel = settlementReadModel;
         this.queries = queries;
         this.commands = commands;
@@ -42,7 +42,7 @@ public sealed class HttpLabourStore : ILabourStore
         assignmentsReadModel.OnChanged += () => OnChange?.Invoke();
         timesheetsReadModel.OnChanged += () => OnChange?.Invoke();
         attendanceReadModel.OnChanged += () => OnChange?.Invoke();
-        siteAccessReadModel.OnChanged += () => OnChange?.Invoke();
+        myDayReadModel.OnChanged += () => OnChange?.Invoke();
         settlementReadModel.OnChanged += () => OnChange?.Invoke();
     }
 
@@ -91,18 +91,36 @@ public sealed class HttpLabourStore : ILabourStore
         await assignmentsReadModel.RefreshAsync(projectId, CancellationToken.None);
     }
 
-    public SiteAccess? SiteAccessFor(string projectId)
+    public MyLabourDay? MyDay()
     {
-        if (siteAccessRequested.Add(projectId)) _ = LoadAsync(() => siteAccessReadModel.RefreshAsync(projectId, CancellationToken.None), siteAccessRequested, projectId);
-        return siteAccessReadModel.Current(projectId);
+        if (!myDayRequested) { myDayRequested = true; _ = LoadMyDayAsync(); }
+        return myDayReadModel.Current;
     }
 
-    public Task RefreshSiteAccessAsync(string projectId) => siteAccessReadModel.RefreshAsync(projectId, CancellationToken.None);
-
-    public async Task RotateSiteAccessAsync(string projectId)
+    private async Task LoadMyDayAsync()
     {
-        await commands.SendAsync(new RotateSiteAccessToken(projectId), CancellationToken.None);
-        await siteAccessReadModel.RefreshAsync(projectId, CancellationToken.None);
+        try { await myDayReadModel.RefreshAsync(CancellationToken.None); }
+        catch { myDayRequested = false; }
+    }
+
+    public Task RefreshMyDayAsync() => myDayReadModel.RefreshAsync(CancellationToken.None);
+
+    public async Task MySignInAsync(string projectId)
+    {
+        await commands.SendAsync(new MySiteSignIn(projectId), CancellationToken.None);
+        await myDayReadModel.RefreshAsync(CancellationToken.None);
+    }
+
+    public async Task MySignOutAsync(string projectId, IReadOnlyList<SiteSignOutEntry> entries)
+    {
+        await commands.SendAsync(new MySiteSignOut(projectId, entries), CancellationToken.None);
+        await myDayReadModel.RefreshAsync(CancellationToken.None);
+    }
+
+    public async Task MyResubmitAsync(string timesheetId, decimal hours, string costCode)
+    {
+        await commands.SendAsync(new MyResubmitTimesheet(timesheetId, hours, costCode), CancellationToken.None);
+        await myDayReadModel.RefreshAsync(CancellationToken.None);
     }
 
     public IReadOnlyList<TimesheetDetail> TimesheetsFor(string projectId)

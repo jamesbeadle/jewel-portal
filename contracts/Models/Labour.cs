@@ -61,9 +61,6 @@ public sealed record TimesheetDetail(
     DateTimeOffset? ApprovedAt,
     string RejectionReason);
 
-/// <summary>The project's site QR token. The capture URL is /site-labour.html?t={Token}.</summary>
-public sealed record SiteAccess(string ProjectId, string Token);
-
 public sealed record LabourApprovalFailure(string TimesheetId, string Reason);
 
 /// <summary>
@@ -98,31 +95,35 @@ public sealed record LabourSettlementVariance(
     string CreatedByEmail,
     DateTimeOffset CreatedAt);
 
-// --- Site capture DTOs (anonymous, token-authenticated). ---
-// These are the ONLY labour shapes the capture page ever sees. No rates, no £, anywhere.
-
-public sealed record SiteSignInSheet(
-    string ProjectId,
-    string ProjectName,
-    IReadOnlyList<SiteSheetWorker> Workers,
-    IReadOnlyList<SiteSheetCostCode> CostCodes);
-
-public sealed record SiteSheetWorker(
-    string WorkerId,
-    string Name,
-    bool IsSignedInToday,
-    bool HasSignedOutToday,
-    int RejectedDayCount);
+// --- "My day" DTOs: the worker-facing shapes on the authenticated self-service page. ---
+// Workers are normal portal users (SiteOperative role); these shapes still carry no rates
+// or £ — hours only.
 
 public sealed record SiteSheetCostCode(string Code, string Name);
 
 public sealed record SiteSignOutEntry(string CostCode, decimal Hours);
 
-/// <summary>A worker-safe view of their own timesheet — hours and status only, never £.</summary>
-public sealed record WorkerTimesheetView(
+/// <summary>Today's state for the signed-in worker across their assigned projects.</summary>
+public sealed record MyLabourDay(
+    string WorkerId,
+    string WorkerName,
+    DateTimeOffset WorkDate,
+    IReadOnlyList<MyLabourProject> Projects,
+    IReadOnlyList<MyRejectedTimesheet> Rejected);
+
+public sealed record MyLabourProject(
+    string ProjectId,
+    string ProjectName,
+    bool IsSignedInToday,
+    bool HasSignedOutToday,
+    IReadOnlyList<SiteSheetCostCode> CostCodes);
+
+/// <summary>One of the caller's rejected timesheets — re-opened for correction. Hours only.</summary>
+public sealed record MyRejectedTimesheet(
     string TimesheetId,
+    string ProjectId,
+    string ProjectName,
     DateTimeOffset WorkedOn,
     decimal Hours,
     string CostCode,
-    TimesheetStatus Status,
     string RejectionReason);

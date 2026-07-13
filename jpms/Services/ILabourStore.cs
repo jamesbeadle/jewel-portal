@@ -22,10 +22,12 @@ public interface ILabourStore
     Task RefreshAssignmentsAsync(string projectId);
     Task SetAssignmentAsync(string projectId, string workerId, bool isActive);
 
-    // Site access (QR).
-    SiteAccess? SiteAccessFor(string projectId);
-    Task RefreshSiteAccessAsync(string projectId);
-    Task RotateSiteAccessAsync(string projectId);
+    // My Day — the signed-in worker's own timesheet surface.
+    MyLabourDay? MyDay();
+    Task RefreshMyDayAsync();
+    Task MySignInAsync(string projectId);
+    Task MySignOutAsync(string projectId, IReadOnlyList<SiteSignOutEntry> entries);
+    Task MyResubmitAsync(string timesheetId, decimal hours, string costCode);
 
     // Timesheets + register.
     IReadOnlyList<TimesheetDetail> TimesheetsFor(string projectId);

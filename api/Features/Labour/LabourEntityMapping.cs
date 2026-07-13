@@ -26,10 +26,6 @@ internal static class LabourEntityMapping
     public static TimesheetDetail ToModelWithoutMoney(this TimesheetEntity entity, string workerName) =>
         entity.ToDetail(workerName) with { RateApplied = 0m, CostAmount = 0m };
 
-    public static WorkerTimesheetView ToWorkerView(this TimesheetEntity entity) =>
-        new(entity.TimesheetId, entity.WorkedOn, entity.Hours, entity.CostCode,
-            (TimesheetStatus)entity.Status, entity.RejectionReason);
-
     public static LabourSettlementVariance ToModel(this LabourSettlementVarianceEntity entity) =>
         new(entity.LabourSettlementVarianceId, entity.ProjectId, entity.CostCode,
             entity.SubcontractorId, entity.Amount, entity.Reason, entity.XeroLedgerLineId,

@@ -80,21 +80,21 @@ public sealed class SiteAttendanceReadModel
     }
 }
 
-public sealed class SiteAccessReadModel
+/// <summary>The signed-in worker's own day (My Day page). Single-key cache.</summary>
+public sealed class MyLabourDayReadModel
 {
     private readonly IQueryClient queries;
-    private readonly Dictionary<string, SiteAccess> accessByProject = new();
+    private MyLabourDay? day;
 
-    public SiteAccessReadModel(IQueryClient queries) { this.queries = queries; }
+    public MyLabourDayReadModel(IQueryClient queries) { this.queries = queries; }
 
     public event Action? OnChanged;
 
-    public SiteAccess? Current(string projectId) =>
-        accessByProject.TryGetValue(projectId, out var access) ? access : null;
+    public MyLabourDay? Current => day;
 
-    public async Task RefreshAsync(string projectId, CancellationToken cancellationToken)
+    public async Task RefreshAsync(CancellationToken cancellationToken)
     {
-        accessByProject[projectId] = await queries.AskAsync(new GetSiteAccess(projectId), cancellationToken);
+        day = await queries.AskAsync(new GetMyLabourDay(), cancellationToken);
         OnChanged?.Invoke();
     }
 }

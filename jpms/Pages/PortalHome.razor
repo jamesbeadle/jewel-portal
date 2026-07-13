@@ -23,6 +23,19 @@ else if (!CanAccess)
         <p class="text-content-muted">The portal is for subcontractor accounts.</p>
     </section>
 }
+else if (!HasLinkedRecord)
+{
+    @* The session has the Subcontractor role but no linked record (typically an admin or internal
+       user browsing here) — say so immediately instead of firing portal calls that will 403. *@
+    <section class="px-4 md:px-8 py-12">
+        <h1 class="text-2xl font-semibold text-content mb-2">No record linked</h1>
+        <p class="text-content-muted">
+            This page shows a subcontractor their own record, work orders and variations. Your login
+            isn't linked to a subcontractor record — subcontractors are invited from their directory
+            record, which links their login and scopes everything here to their company.
+        </p>
+    </section>
+}
 else if (!PortalStore.IsLoaded)
 {
     <section class="px-4 md:px-8 py-12 text-content-subtle text-sm">Loading…</section>
@@ -342,6 +355,10 @@ else
 
     private bool CanAccess => Session.AvailableRoles.Contains(Role.Subcontractor);
 
+    // Resolved server-side by /auth/me. Null for internal users (including admins, who carry
+    // every role): they must never trigger the portal fetches, which would 403 after a wait.
+    private bool HasLinkedRecord => !string.IsNullOrEmpty(Auth.CurrentSubcontractorId);
+
     private IReadOnlyList<ComplianceDocument> CurrentDocuments =>
         myRecord is null
             ? Array.Empty<ComplianceDocument>()
@@ -519,13 +536,14 @@ else
         if (!Auth.IsSignedIn) { Nav.NavigateTo("/login", forceLoad: true); return; }
         PortalStore.OnChange += HandleChange;
         // Revalidate in the background on every visit (stale-while-revalidate, per CLAUDE.md).
-        if (CanAccess) _ = PortalStore.Refresh();
+        // Only for linked portal logins — unlinked sessions get an immediate explanation instead.
+        if (CanAccess && HasLinkedRecord) _ = PortalStore.Refresh();
         Reload();
         isLoaded = true;
     }
 
-    // Don't touch the store for non-subcontractor sessions — avoids a pointless 403 fetch.
-    private void Reload() => myRecord = CanAccess ? PortalStore.MyRecord() : null;
+    // Don't touch the store for unlinked sessions — avoids a pointless 403 fetch.
+    private void Reload() => myRecord = CanAccess && HasLinkedRecord ? PortalStore.MyRecord() : null;
     private void HandleChange() { Reload(); StateHasChanged(); }
 
     public void Dispose() => PortalStore.OnChange -= HandleChange;

@@ -3,6 +3,7 @@ using System;
 using Jewel.JPMS.Api.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
@@ -11,9 +12,10 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Jewel.JPMS.Api.Migrations
 {
     [DbContext(typeof(JpmsContext))]
-    partial class JpmsContextModelSnapshot : ModelSnapshot
+    [Migration("20260713150000_DropSiteAccessTokens")]
+    partial class DropSiteAccessTokens
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder

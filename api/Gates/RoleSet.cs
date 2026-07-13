@@ -29,4 +29,5 @@ public static class JpmsRoles
     public const Role Client = Role.Client;
     public const Role Subcontractor = Role.Subcontractor;
     public const Role Foreman = Role.Foreman;
+    public const Role SiteOperative = Role.SiteOperative;
 }

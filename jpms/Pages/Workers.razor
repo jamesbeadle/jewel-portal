@@ -27,7 +27,12 @@ else
 {
     <section class="px-6 md:px-8 py-8 max-w-3xl">
         <h2 class="text-lg font-semibold text-content mb-1">Workers</h2>
-        <p class="text-sm text-content-subtle mb-5">Day-rate site operatives and their cost rates. Assign workers to projects from each project's Labour tab.</p>
+        <p class="text-sm text-content-subtle mb-5">
+            Day-rate site operatives and their cost rates. Each worker logs their own time on the
+            My day page: invite them as a user with the Site Operative role, then enter the same
+            email here — that links their account to this record. Assign workers to projects from
+            each project's Labour tab.
+        </p>
 
         @if (actionError is not null)
         {
@@ -39,6 +44,9 @@ else
             <div class="flex flex-wrap items-end gap-3">
                 <label class="text-xs text-content-subtle">Name
                     <input class="field mt-1" @bind="formName" placeholder="e.g. Marek Kowalski" />
+                </label>
+                <label class="text-xs text-content-subtle">Portal email (their user account)
+                    <input class="field mt-1 w-56" type="email" @bind="formEmail" placeholder="name@example.com" />
                 </label>
                 <label class="text-xs text-content-subtle">Day rate £ (÷ 8 = hourly)
                     <input class="field mt-1 w-28" type="number" step="1" min="0" @bind="formDayRate" />
@@ -82,7 +90,7 @@ else
             <table class="data-table">
                 <thead>
                     <tr>
-                        <th>Name</th><th>Subcontractor</th><th class="text-right">Hourly £</th>
+                        <th>Name</th><th>Portal email</th><th>Subcontractor</th><th class="text-right">Hourly £</th>
                         <th class="text-right">Day £ (8h)</th><th>Status</th><th></th>
                     </tr>
                 </thead>
@@ -91,6 +99,7 @@ else
                     {
                         <tr>
                             <td class="text-content">@worker.Name</td>
+                            <td class="text-content-subtle">@(worker.ContactEmail == "" ? "— not linked —" : worker.ContactEmail)</td>
                             <td>@SubcontractorName(worker.SubcontractorId)</td>
                             <td class="text-right">@worker.HourlyRate.ToString("N2")</td>
                             <td class="text-right">@((worker.HourlyRate * 8m).ToString("N2"))</td>

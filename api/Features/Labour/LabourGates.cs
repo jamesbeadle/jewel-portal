@@ -16,4 +16,9 @@ internal static class LabourRoleSets
 
     /// <summary>May manage the settlement reconciliation (covers, variances).</summary>
     public static readonly RoleSet ManageSettlement = JpmsRoleSets.CommercialTeam;
+
+    /// <summary>May log their own time on the My Day page. Site operatives are the primary
+    /// audience; foremen and site managers can log their own days too.</summary>
+    public static readonly RoleSet LogOwnTime =
+        RoleSet.Of(JpmsRoles.SiteOperative, JpmsRoles.Foreman, JpmsRoles.SiteManager);
 }

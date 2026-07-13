@@ -12,8 +12,6 @@ public static class LabourFeatureRegistration
 {
     public static IServiceCollection AddLabourFeature(this IServiceCollection services)
     {
-        services.AddScoped<SiteAccessGate>();
-
         // Worker registry + project assignment.
         services.AddScoped<IQueryHandler<ListWorkers, IReadOnlyList<Worker>>, ListWorkersHandler>();
         services.AddScoped<IQueryHandler<ListWorkerAssignmentsForProject, IReadOnlyList<ProjectWorkerAssignment>>, ListWorkerAssignmentsForProjectHandler>();
@@ -21,17 +19,15 @@ public static class LabourFeatureRegistration
         services.AddScoped<ICommandHandler<UpdateWorker, Worker>, UpdateWorkerHandler>();
         services.AddScoped<ICommandHandler<SetProjectWorkerAssignment, ProjectWorkerAssignment>, SetProjectWorkerAssignmentHandler>();
 
-        // Site access (QR token) + register.
-        services.AddScoped<IQueryHandler<GetSiteAccess, SiteAccess>, GetSiteAccessHandler>();
-        services.AddScoped<ICommandHandler<RotateSiteAccessToken, SiteAccess>, RotateSiteAccessTokenHandler>();
+        // Site register.
         services.AddScoped<IQueryHandler<ListSiteAttendanceForProject, IReadOnlyList<SiteAttendance>>, ListSiteAttendanceForProjectHandler>();
 
-        // Site capture (anonymous, token-authenticated).
-        services.AddScoped<IQueryHandler<GetSiteSignInSheet, SiteSignInSheet>, GetSiteSignInSheetHandler>();
-        services.AddScoped<ICommandHandler<SiteSignIn, Acknowledgement>, SiteSignInHandler>();
-        services.AddScoped<ICommandHandler<SiteSignOut, Acknowledgement>, SiteSignOutHandler>();
-        services.AddScoped<IQueryHandler<ListWorkerRejectedTimesheets, IReadOnlyList<WorkerTimesheetView>>, ListWorkerRejectedTimesheetsHandler>();
-        services.AddScoped<ICommandHandler<ResubmitTimesheet, Acknowledgement>, ResubmitTimesheetHandler>();
+        // My Day — the worker's own authenticated timesheet surface. Handlers are resolved
+        // concretely because they need the signed-in email alongside the command.
+        services.AddScoped<GetMyLabourDayHandler>();
+        services.AddScoped<MySiteSignInHandler>();
+        services.AddScoped<MySiteSignOutHandler>();
+        services.AddScoped<MyResubmitTimesheetHandler>();
 
         // Labour tab: week grid, adjust / approve / reject.
         services.AddScoped<ListTimesheetDetailsForProjectHandler>();

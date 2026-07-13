@@ -56,7 +56,7 @@ else
         @{ var week = WeekTimesheets(); }
         @if (week.Count == 0)
         {
-            <p class="text-sm text-content-subtle italic mb-6">No timesheets this week. Workers sign in via the site QR link below; their submitted hours appear here for approval.</p>
+            <p class="text-sm text-content-subtle italic mb-6">No timesheets this week. Workers log time from their My day page; their submitted hours appear here for approval.</p>
         }
         else
         {
@@ -188,18 +188,35 @@ else
             </section>
 
             <section>
-                <h3 class="text-base font-semibold text-content mb-2">Site access (QR link)</h3>
-                @if (Labour.SiteAccessFor(ProjectId) is { } access)
+                <h3 class="text-base font-semibold text-content mb-2">How workers log time</h3>
+                <p class="text-xs text-content-subtle mb-2">
+                    Workers sign in to the portal like any other user and use their <span class="text-content">My day</span>
+                    page to sign in/out and log hours. To set one up: invite them as a user with the
+                    <span class="text-content">Site Operative</span> role, then add a worker record with the same
+                    email on the <a class="underline underline-offset-2" href="/labour/workers">Workers page</a>
+                    and assign them to this project below.
+                </p>
+                <div class="flex flex-wrap items-end gap-2">
+                    <select class="field" @bind="assignWorkerId">
+                        <option value="">Add worker to project…</option>
+                        @foreach (var worker in UnassignedWorkers())
+                        {
+                            <option value="@worker.WorkerId">@worker.Name</option>
+                        }
+                    </select>
+                    <button type="button" class="btn-secondary" @onclick="AssignWorkerAsync">Assign</button>
+                </div>
+                @if (Labour.AssignmentsFor(ProjectId).Any(assignment => assignment.IsActive))
                 {
-                    var link = $"{Nav.BaseUri}site-labour.html?t={access.Token}";
-                    <p class="text-xs text-content-subtle mb-2">Workers scan or open this link on their phone to sign in and out. Print it as a QR code for the site board. Rotating kills the old link immediately.</p>
-                    <input class="field w-full mb-2 text-xs" readonly value="@link" />
-                    <a class="btn-secondary mr-2" href="@link" target="_blank" rel="noopener">Open</a>
-                    <button type="button" class="btn-secondary" @onclick="RotateAsync">Rotate link</button>
-                }
-                else
-                {
-                    <p class="text-sm text-content-subtle italic">Loading site access…</p>
+                    <ul class="mt-3 space-y-1 text-sm">
+                        @foreach (var assignment in Labour.AssignmentsFor(ProjectId).Where(assignment => assignment.IsActive))
+                        {
+                            <li class="flex items-center justify-between max-w-xs">
+                                <span class="text-content">@assignment.WorkerName</span>
+                                <button type="button" class="btn-ghost" @onclick="() => UnassignAsync(assignment.WorkerId)">Remove</button>
+                            </li>
+                        }
+                    </ul>
                 }
             </section>
         </div>
@@ -380,7 +397,6 @@ else
         _ = Labour.RefreshTimesheetsAsync(ProjectId);
         _ = Labour.RefreshAttendanceAsync(ProjectId);
         _ = Labour.RefreshAssignmentsAsync(ProjectId);
-        _ = Labour.RefreshSiteAccessAsync(ProjectId);
         _ = Labour.RefreshSettlementAsync(ProjectId);
         _ = CostCenters.RefreshAsync(CancellationToken.None);
     }
@@ -532,10 +548,35 @@ else
         catch (Exception) { actionError = "Could not mark the line as covered — try again."; }
     }
 
-    private async Task RotateAsync()
+    private string assignWorkerId = "";
+
+    private List<Worker> UnassignedWorkers()
+    {
+        var assigned = Labour.AssignmentsFor(ProjectId)
+            .Where(assignment => assignment.IsActive)
+            .Select(assignment => assignment.WorkerId)
+            .ToHashSet();
+        return Labour.Workers()
+            .Where(worker => worker.IsActive && !assigned.Contains(worker.WorkerId))
+            .ToList();
+    }
+
+    private async Task AssignWorkerAsync()
+    {
+        if (assignWorkerId == "") return;
+        actionError = null;
+        try
+        {
+            await Labour.SetAssignmentAsync(ProjectId, assignWorkerId, true);
+            assignWorkerId = "";
+        }
+        catch (Exception) { actionError = "Could not assign the worker — try again."; }
+    }
+
+    private async Task UnassignAsync(string workerId)
     {
         actionError = null;
-        try { await Labour.RotateSiteAccessAsync(ProjectId); }
-        catch (Exception) { actionError = "Could not rotate the site link — try again."; }
+        try { await Labour.SetAssignmentAsync(ProjectId, workerId, false); }
+        catch (Exception) { actionError = "Could not remove the worker — try again."; }
     }
 }

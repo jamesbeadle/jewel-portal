@@ -13,5 +13,9 @@ public enum Role
     Architect,
     Client,
     Subcontractor,
-    Foreman
+    Foreman,
+
+    // Day-rate site operatives logging their own time on the My Day page. Same account /
+    // password / session model as every other user (docs/Labour-Time-Tracking-Scope.md).
+    SiteOperative
 }

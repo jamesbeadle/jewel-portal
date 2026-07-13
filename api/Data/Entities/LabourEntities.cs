@@ -59,20 +59,6 @@ public sealed class SiteAttendanceEntity
 }
 
 /// <summary>
-/// The opaque token embedded in a project's site QR code. The capture endpoints authenticate by
-/// token alone (workers have no accounts), so the token is the only secret: rotating it kills
-/// old QR codes immediately. Exactly one active token per project.
-/// </summary>
-public sealed class SiteAccessTokenEntity
-{
-    [Key, MaxLength(64)] public string SiteAccessTokenId { get; set; } = "";
-    [MaxLength(64)]      public string ProjectId { get; set; } = "";
-    [MaxLength(64)]      public string Token { get; set; } = "";
-    public bool IsActive { get; set; } = true;
-    public DateTimeOffset CreatedAt { get; set; }
-}
-
-/// <summary>
 /// Marks a Xero purchase line as settlement of approved timesheets rather than fresh cost
 /// (docs/Labour-Time-Tracking-Scope.md §6 — the approved timesheet is the timely actual, the
 /// paid invoice is the truth at settlement). Covered lines are excluded from the cost-of-sales

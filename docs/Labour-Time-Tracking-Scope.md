@@ -47,13 +47,13 @@ Corrections to the PM spec so it fits JPMS:
 
 New entities:
 
-**`WorkerEntity`** — WorkerId, Name, HourlyRate (decimal £/hr), IsActive, optional Email/Phone, optional `SubcontractorId` (FK → existing `SubcontractorEntity`). The system is for **subcontractor day-rate labour** (consistent with the glossary: a Timesheet records subcontractor time for cost tracking and payment), so each worker is normally an operative of a subcontractor and the rate is that operative's agreed day rate ÷ 8. Rate is server-side only; never serialised to the capture app. Registry and rates are maintained by the FD and PM roles. A per-worker standard-hours override is deferred until a real case needs it.
+**`WorkerEntity`** — WorkerId, Name, HourlyRate (decimal £/hr), IsActive, optional Email/Phone, optional `SubcontractorId` (FK → existing `SubcontractorEntity`). The system is for **subcontractor day-rate labour** (consistent with the glossary: a Timesheet records subcontractor time for cost tracking and payment), so each worker is normally an operative of a subcontractor and the rate is that operative's agreed day rate ÷ 8. Rate is server-side only; never serialised to any worker-facing response. Registry and rates are maintained by the FD and PM roles. A per-worker standard-hours override is deferred until a real case needs it.
 
 **`WorkerRateHistoryEntity`** — WorkerId, HourlyRate, EffectiveFrom. Rate used for costing is the rate effective on `WorkedOn`, snapshotted onto the timesheet at approval so historic cost never changes when rates change.
 
-**`SiteAttendanceEntity`** — AttendanceId, ProjectId, WorkerId, Date, SignedInAt, SignedOutAt, DeviceKey (optional, see §8). One per worker per project per day. Drives the daily site register.
+**`SiteAttendanceEntity`** — AttendanceId, ProjectId, WorkerId, Date, SignedInAt, SignedOutAt. One per worker per project per day. Drives the daily site register.
 
-**`ProjectWorkerAssignmentEntity`** — ProjectId, WorkerId, IsActive. Controls whose names appear on that project's sign-in list.
+**`ProjectWorkerAssignmentEntity`** — ProjectId, WorkerId, IsActive. Controls which projects appear on a worker's My day page.
 
 Changes to `TimesheetEntity`:
 
@@ -64,18 +64,19 @@ Constraints (from PM spec, kept): 0.5-hour increments, min 0.5; at least one ent
 
 ---
 
-## 5. Capture app (Phase 1)
+## 5. Capture: the My Day page (Phase 1)
 
-A minimal mobile web page (not the Blazor portal — see §8), reached via project QR code / short URL:
+**Decision (July 2026, revised): no anonymous QR capture.** Workers are normal portal users — one RBAC system everywhere. Each worker is invited as a user with the **Site Operative** role, sets a password like anyone else, and their account is linked to their worker record by email on the Workers page.
 
-1. **Sign in** — worker picks their name from the project's assigned list, taps Sign In → `SiteAttendance` row created.
-2. **During day** — page shows the project's active cost codes as reference. Nothing to do.
-3. **Sign out** — worker enters hours per cost code worked (0.5 steppers, large touch targets), running total shown, soft >12 hr warning, Submit & Sign Out → attendance closed, timesheet rows created with Status = Submitted.
-4. **Confirmation** — summary of hours logged. No £ anywhere in the worker UI, ever.
+Their whole portal experience is the mobile-first **My day** page (`/my-day`):
 
-Missed sign-outs: attendance left open overnight is flagged in the PM approval view; the PM enters/adjusts hours on the worker's behalf.
+1. **Sign in** — tap Sign in on the project card → `SiteAttendance` row created (the site register).
+2. **Sign out** — enter hours per cost code (0.5 steppers), running total, soft >12 hr warning, Submit & sign out → attendance closed, timesheet rows created with Status = Submitted.
+3. **Rejected days** appear on the same page for correction and resubmission. No £ anywhere in the worker UI, ever.
 
-Offline: Phase 1 requires connectivity at sign-in and sign-out only (a few seconds each) — much smaller exposure than per-task clocking. Full offline queue is Phase 2.
+Missed sign-outs: attendance left open overnight is flagged in the PM approval view; the PM enters hours on the worker's behalf (manual entry on the Labour tab).
+
+Offline: connectivity is needed at sign-in and sign-out only (a few seconds each). Full offline queue is Phase 2.
 
 ## 6. Approval & posting (Phase 1)
 
@@ -109,15 +110,15 @@ Reporting (Phase 1): hours and £ by worker / cost code / project / week; labour
 
 ## 8. Security & platform notes
 
-- **Anonymous capture surface is new risk.** The QR encodes a per-project opaque token; the endpoint only exposes worker names assigned to that project and only accepts sign-in/out actions. Token rotatable by the PM. Rates are never sent to the client (both briefs agree). Accepted residual risk in Phase 1: a worker can sign in as a colleague — mitigated by the PM approval review and the site register being visible to the foreman; device-key pinning can tighten this later if abused.
-- **Capture page is not Blazor WASM.** The portal's WASM payload and cookie-auth session are wrong for an anonymous, poor-signal phone page. Build the capture page as a small static page + JS against dedicated `/api/site-labour/*` endpoints. The PM-facing Labour tab lives in jpms as normal.
+- **No anonymous surface.** All labour endpoints use the standard session-cookie auth and role gates. Worker self-service endpoints (`/api/my/labour/*`) are gated to the LogOwnTime role set (SiteOperative, Foreman, SiteManager) and resolve the caller to their own worker record by email — no impersonation is possible, and rates are never sent to any worker-facing response.
+- **My day is a normal jpms page.** Same Blazor WASM app, same session, mobile-first layout.
 - Terminology: all UI copy, identifiers and docs use *timesheet*, *cost code*, *non-WO cost of sales*. (No "valuation invoice" interactions anywhere in this feature.)
 
 ---
 
 ## 9. Decisions log & open questions
 
-Resolved (July 2026): standard day = 8.0 hours, override deferred (§4) · worker registry and rates managed by FD/PM (§4) · rejected timesheets re-submittable via the capture app with no enforced deadline, PM-side correction always available (§6) · pending labour is Financials-tab only; cashflow/CVR consume approved cost exclusively (§6) · **the system is for subcontractor day-rate labour** — workers link to `SubcontractorEntity`, approved timesheets are the actual cost, covering Xero invoices are marked as settlement and excluded from cost of sales to prevent double-counting (§4, §6).
+Resolved (July 2026, revised): **QR/anonymous capture dropped** — workers are portal users with the SiteOperative role, logging time on the authenticated My day page; one RBAC system everywhere · standard day = 8.0 hours, override deferred (§4) · worker registry and rates managed by FD/PM (§4) · rejected timesheets re-submittable via the capture app with no enforced deadline, PM-side correction always available (§6) · pending labour is Financials-tab only; cashflow/CVR consume approved cost exclusively (§6) · **the system is for subcontractor day-rate labour** — workers link to `SubcontractorEntity`, approved timesheets are the actual cost, covering Xero invoices are marked as settlement and excluded from cost of sales to prevent double-counting (§4, §6).
 
 **Open — for the accountant to confirm:** the settlement model in §6 — timesheet as timely actual, paid invoice as final truth, variances closed only via the four defined paths (correct timesheets / amend invoice / split non-labour / post settlement variance). Specifically: are they happy that cost of sales for day-rate labour is timesheet-driven intra-month, and that their Xero allocation workflow gains the covered-by-timesheets linking step?
 
@@ -127,8 +128,8 @@ Resolved (July 2026): standard day = 8.0 hours, override deferred (§4) · worke
 
 **Data:** `WorkerEntity`, `WorkerRateHistoryEntity`, `ProjectWorkerAssignmentEntity`, `SiteAttendanceEntity`, `SiteAccessTokenEntity`, `XeroLineTimesheetCoverEntity`, `LabourSettlementVarianceEntity` (`api/Data/Entities/LabourEntities.cs`); `TimesheetEntity` extended (WorkerId, SiteAttendanceId, Status, RateApplied, CostAmount, ApprovedByEmail/At, RejectionReason). Migration `20260713100000_AddLabourTracking` (legacy `IsApproved` rows backfilled to Status Approved).
 
-**API:** vertical slices in `api/Features/Labour/` — registry/assignment/site-access (ManageWorkers gate: MD/FD/PM), Labour-tab queries and adjust/add/approve/reject (approve gate MD/PM; £ stripped for non-commercial roles), settlement (CommercialTeam gate), and the anonymous token-gated capture surface under `api/site-labour/{token}/…` (`SiteAccessGate`; rates never serialised). Pure rules in `contracts/Labour/LabourRules.cs` (half-hour steps, rate-effective-on-date, hours × rate, budget hard-block) — tested in `tests/Jewel.JPMS.Tests/LabourRulesTests.cs`. `GetProjectFinancialSummaryHandler` now adds approved labour + settlement variances to ActualCost/Non-WO, excludes covered Xero lines, and returns `LabourActualCost` / `PendingLabourCost` per row.
+**API:** vertical slices in `api/Features/Labour/` — registry/assignment (ManageWorkers gate: MD/FD/PM), Labour-tab queries and adjust/add/approve/reject (approve gate MD/PM; £ stripped for non-commercial roles), settlement (CommercialTeam gate), and the worker self-service surface under `api/my/labour/*` (LogOwnTime gate; caller resolved to their worker record by email via `WorkerByEmail`; rates never serialised). Pure rules in `contracts/Labour/LabourRules.cs` (half-hour steps, rate-effective-on-date, hours × rate, budget hard-block) — tested in `tests/Jewel.JPMS.Tests/LabourRulesTests.cs`. `GetProjectFinancialSummaryHandler` now adds approved labour + settlement variances to ActualCost/Non-WO, excludes covered Xero lines, and returns `LabourActualCost` / `PendingLabourCost` per row.
 
-**Front end:** project **Labour** tab (`jpms/Pages/ProjectLabour.razor` — week grid with batch approve, manual entry for missed sign-outs, QR link + rotate, site register, settlement view with covered-line marking); **Workers** registry page (`/labour/workers`, day-rate ÷ 8 entry); pending-labour banner on Financials; capture page `jpms/wwwroot/site-labour.html` (static, dark, mobile-first, no £).
+**Front end:** project **Labour** tab (`jpms/Pages/ProjectLabour.razor` — week grid with batch approve, manual entry for missed sign-outs, worker assignment, site register, settlement view with covered-line marking); **Workers** registry page (`/labour/workers`, day-rate ÷ 8 entry, portal-email link); **My day** worker page (`jpms/Pages/MyDay.razor`, mobile-first, no £); pending-labour banner on Financials. New `Role.SiteOperative` (users invited through the normal directory flow). Migration `20260713150000_DropSiteAccessTokens` removes the abandoned QR token table.
 
-**Before deploy:** run `dotnet build` + `dotnet test` locally (this change was authored without a compiler to hand — expect at most minor fix-ups); apply the migration through the usual process; if the EF model snapshot drifts, regenerate with `dotnet ef migrations add` rather than trusting the hand-written Designer. Known polish items: QR image rendering (link-only today — print via any QR generator), unmarking covered lines from the UI (API supports it), worker capture-page offline queue (Phase 2), `docs/05-data-model/entities.md` registry not yet updated.
+**Before deploy:** run `dotnet build` + `dotnet test` locally (this change was authored without a compiler to hand — expect at most minor fix-ups); apply the migration through the usual process; if the EF model snapshot drifts, regenerate with `dotnet ef migrations add` rather than trusting the hand-written Designer. Known polish items: unmarking covered lines from the UI (API supports it), offline queue for My day (Phase 2), `docs/05-data-model/entities.md` registry not yet updated.

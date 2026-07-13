@@ -2,6 +2,7 @@ using Jewel.JPMS.Api.Cqrs;
 using Jewel.JPMS.Api.Data;
 using Jewel.JPMS.Api.Data.Entities;
 using Jewel.JPMS.Api.Features.Commercial;
+using Jewel.JPMS.Api.Gates;
 using Jewel.JPMS.Contracts.Cqrs;
 using Jewel.JPMS.Contracts.Labour;
 using Jewel.JPMS.Models;
@@ -12,27 +13,27 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Jewel.JPMS.Api.Features.Labour.Commands;
 
-// Anonymous, token-authenticated (SiteAccessGate): the end-of-day allocation. One Submitted
-// timesheet per cost code, attendance closed, all in a single SaveChanges. One sign-out per
-// worker per day (spec constraint) — a second attempt gets a friendly rejection.
+// End-of-day allocation + sign-out for the signed-in worker: one Submitted timesheet per cost
+// code, attendance closed, single SaveChanges. One sign-out per project per day.
 
-public sealed class SiteSignOutEndpoint
+public sealed class MySiteSignOutEndpoint
 {
-    private readonly SiteAccessGate gate;
-    private readonly ICommandHandler<SiteSignOut, Acknowledgement> handler;
-    public SiteSignOutEndpoint(SiteAccessGate gate, ICommandHandler<SiteSignOut, Acknowledgement> handler)
-    { this.gate = gate; this.handler = handler; }
+    private readonly SignedInUserResolver users;
+    private readonly MySiteSignOutHandler handler;
+    public MySiteSignOutEndpoint(SignedInUserResolver users, MySiteSignOutHandler handler)
+    { this.users = users; this.handler = handler; }
 
-    [Function(nameof(SiteSignOut))]
-    public async Task<IActionResult> Run([HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "site-labour/{token}/sign-out")] HttpRequest request, string token)
+    [Function(nameof(MySiteSignOut))]
+    public async Task<IActionResult> Run([HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "my/labour/sign-out")] HttpRequest request)
     {
-        var access = await gate.ResolveAsync(token, request.HttpContext.RequestAborted);
-        if (access is null) return new UnauthorizedResult();
-        var body = await request.ReadFromJsonAsync<SiteSignOut>();
-        if (body is null || string.IsNullOrWhiteSpace(body.WorkerId) || body.Entries is null) return new BadRequestResult();
+        var signedInUser = await users.ResolveAsync(request, request.HttpContext.RequestAborted);
+        if (signedInUser is null) return new UnauthorizedResult();
+        if (!LabourRoleSets.LogOwnTime.IncludesAny(signedInUser.Roles)) return new ForbidResult();
+        var command = await request.ReadFromJsonAsync<MySiteSignOut>();
+        if (command is null || string.IsNullOrWhiteSpace(command.ProjectId) || command.Entries is null) return new BadRequestResult();
         try
         {
-            return new OkObjectResult(await handler.HandleAsync(body with { Token = token }, request.HttpContext.RequestAborted));
+            return new OkObjectResult(await handler.HandleAsync(command, signedInUser.Email, request.HttpContext.RequestAborted));
         }
         catch (InvalidOperationException rejection)
         {
@@ -41,21 +42,22 @@ public sealed class SiteSignOutEndpoint
     }
 }
 
-public sealed class SiteSignOutHandler : ICommandHandler<SiteSignOut, Acknowledgement>
+public sealed class MySiteSignOutHandler : ICommandHandler<MySiteSignOut, Acknowledgement>
 {
     private readonly JpmsContext context;
-    private readonly SiteAccessGate gate;
-    public SiteSignOutHandler(JpmsContext context, SiteAccessGate gate) { this.context = context; this.gate = gate; }
+    public MySiteSignOutHandler(JpmsContext context) { this.context = context; }
 
-    public async Task<Acknowledgement> HandleAsync(SiteSignOut command, CancellationToken cancellationToken)
+    public Task<Acknowledgement> HandleAsync(MySiteSignOut command, CancellationToken cancellationToken) =>
+        throw new InvalidOperationException("MySiteSignOut requires the signed-in email — use the endpoint.");
+
+    public async Task<Acknowledgement> HandleAsync(MySiteSignOut command, string email, CancellationToken cancellationToken)
     {
-        var access = await gate.ResolveAsync(command.Token, cancellationToken)
-            ?? throw new InvalidOperationException("Site access token is not valid.");
+        var worker = await WorkerByEmail.ResolveAsync(context, email, cancellationToken);
 
         var today = SiteClock.Today();
         var attendance = await context.SiteAttendances.FirstOrDefaultAsync(
-            row => row.ProjectId == access.ProjectId
-                   && row.WorkerId == command.WorkerId
+            row => row.ProjectId == command.ProjectId
+                   && row.WorkerId == worker.WorkerId
                    && row.WorkDate == today, cancellationToken)
             ?? throw new InvalidOperationException("You haven't signed in today — sign in first.");
 
@@ -63,7 +65,7 @@ public sealed class SiteSignOutHandler : ICommandHandler<SiteSignOut, Acknowledg
             throw new InvalidOperationException("You've already signed out today. Contact your Project Manager if you need to amend your hours.");
 
         var budgetedCodes = await context.CostCodeBudgets
-            .Where(budget => budget.ProjectId == access.ProjectId)
+            .Where(budget => budget.ProjectId == command.ProjectId)
             .Select(budget => budget.CostCode)
             .ToListAsync(cancellationToken);
         var allowedCodes = budgetedCodes.Count > 0
@@ -75,16 +77,13 @@ public sealed class SiteSignOutHandler : ICommandHandler<SiteSignOut, Acknowledg
         var errors = LabourRules.CheckSignOutEntries(command.Entries, allowedCodes);
         if (errors.Count > 0) throw new InvalidOperationException(string.Join(" ", errors));
 
-        var worker = await context.Workers.FindAsync(new object[] { command.WorkerId }, cancellationToken)
-            ?? throw new InvalidOperationException("Worker not found.");
-
         foreach (var entry in command.Entries)
         {
             context.Timesheets.Add(new TimesheetEntity
             {
                 TimesheetId = CommercialIdentifierFactory.NextTimesheetId(),
-                ProjectId = access.ProjectId,
-                PersonEmail = worker.ContactEmail,
+                ProjectId = command.ProjectId,
+                PersonEmail = email,
                 WorkerId = worker.WorkerId,
                 SiteAttendanceId = attendance.SiteAttendanceId,
                 WorkedOn = today,

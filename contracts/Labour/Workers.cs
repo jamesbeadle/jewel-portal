@@ -30,3 +30,7 @@ public sealed record ListWorkerAssignmentsForProject(string ProjectId)
 /// <summary>Assign (IsActive true) or remove (false) a worker from a project's sign-in sheet.</summary>
 public sealed record SetProjectWorkerAssignment(string ProjectId, string WorkerId, bool IsActive)
     : ICommand<ProjectWorkerAssignment>;
+
+/// <summary>The daily site register — who was on site, signed in/out when.</summary>
+public sealed record ListSiteAttendanceForProject(string ProjectId)
+    : IQuery<IReadOnlyList<SiteAttendance>>;
