@@ -77,15 +77,15 @@ else
                     else
                     {
                         <p class="text-xs text-content-subtle mt-2 mb-2">Hours per task today (half-hour steps):</p>
-                        @foreach (var code in project.CostCodes)
+                        @foreach (var costCode in project.CostCodes)
                         {
-                            var current = HoursFor(code.Code);
+                            var current = HoursFor(costCode.Code);
                             <div class="border-t border-line/60 py-2">
-                                <p class="text-sm text-content">@code.Name <span class="text-content-subtle text-xs">@code.Code</span></p>
+                                <p class="text-sm text-content">@costCode.Name <span class="text-content-subtle text-xs">@costCode.Code</span></p>
                                 <div class="flex items-center gap-3 mt-1">
-                                    <button type="button" class="btn-secondary" @onclick="() => Bump(code.Code, -0.5m)">−</button>
+                                    <button type="button" class="btn-secondary" @onclick="() => Bump(costCode.Code, -0.5m)">−</button>
                                     <span class="text-content font-semibold w-10 text-center">@current</span>
-                                    <button type="button" class="btn-secondary" @onclick="() => Bump(code.Code, +0.5m)">+</button>
+                                    <button type="button" class="btn-secondary" @onclick="() => Bump(costCode.Code, +0.5m)">+</button>
                                 </div>
                             </div>
                         }
