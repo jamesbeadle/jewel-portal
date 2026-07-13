@@ -1,0 +1,127 @@
+@using Jewel.JPMS.Models
+
+@*
+    The record-lineage bar: a compact, always-visible map of the process chain a request moves
+    through, rendered on every page in the chain so related records are one click away:
+
+        Request (REQ-#### · kind · status) → VOQ (VOQ-#### · status) → VO (V## · status)
+                                              └ bid packages (BPI chips), which hang off the VOQ
+
+    Each node is a chip: the record you are ON is highlighted (not a link); records that exist are
+    links; steps not yet reached render as muted placeholders explaining how they come about.
+    Purely navigational — no actions live here, so it stays safe on every page.
+*@
+
+<nav class="panel px-4 py-3 mb-5 overflow-x-auto" aria-label="Related records">
+    <div class="flex items-center gap-2 min-w-max text-sm">
+
+        @* ---- Request (the container; its kind shows the RFI promotion state) ---- *@
+        @if (Request is not null)
+        {
+            <LineageChip Href="@RequestHref"
+                         IsActive="@(ActiveId == "request")"
+                         Eyebrow="@(Request.Kind == RequestType.General ? "Request" : Request.Kind.DisplayName())"
+                         Label="@ChipReference(Request)"
+                         Status="@RequestStatusLabel(Request.Status)"
+                         Title="@Request.Title" />
+        }
+        else
+        {
+            <span class="inline-flex items-center rounded-lg border border-dashed border-line px-2.5 py-1.5 text-xs text-content-subtle italic select-none" title="This record has no originating request.">No request</span>
+        }
+
+        <span class="text-content-subtle select-none" aria-hidden="true">→</span>
+
+        @* ---- VOQ (created from an RFI carrying an RFQ) ---- *@
+        @if (Voq is not null)
+        {
+            <LineageChip Href="@VoqHref"
+                         IsActive="@(ActiveId == "voq")"
+                         Eyebrow="VOQ"
+                         Label="@Voq.DisplayNumber"
+                         Status="@Voq.Status.ToString()"
+                         Title="@Voq.Title" />
+        }
+        else
+        {
+            <span class="inline-flex items-center rounded-lg border border-dashed border-line px-2.5 py-1.5 text-xs text-content-subtle italic select-none" title="@VoqPlaceholderHint">No VOQ</span>
+        }
+
+        <span class="text-content-subtle select-none" aria-hidden="true">→</span>
+
+        @* ---- VO (raised when the VOQ is approved; managed on the VOQ page) ---- *@
+        @if (Vo is not null)
+        {
+            <LineageChip Href="@VoqHref"
+                         IsActive="@(ActiveId == "vo")"
+                         Eyebrow="VO"
+                         Label="@Vo.VariationRef"
+                         Status="@Vo.Status.ToString()"
+                         Title="@($"{Vo.Title} — managed on the VOQ page")" />
+        }
+        else
+        {
+            <span class="inline-flex items-center rounded-lg border border-dashed border-line px-2.5 py-1.5 text-xs text-content-subtle italic select-none" title="A Variation Order is raised when the VOQ is approved.">No VO</span>
+        }
+
+        @* ---- Bid packages branch off the VOQ ---- *@
+        @if (Voq is not null)
+        {
+            <span class="mx-1 h-5 w-px bg-line select-none" aria-hidden="true"></span>
+            <span class="text-[10px] uppercase tracking-wide font-semibold text-content-subtle select-none">Bid packages</span>
+            @if (BidPackages is { Count: > 0 })
+            {
+                @foreach (var package in BidPackages)
+                {
+                    <LineageChip Href="@PackageHref(package.BidPackageId)"
+                                 IsActive="@(ActiveId == package.BidPackageId)"
+                                 Eyebrow="@(string.IsNullOrWhiteSpace(package.Reference) ? "BPI" : package.Reference)"
+                                 Label="@package.Title"
+                                 Status="@package.Status.ToString()"
+                                 Title="@($"{package.Trade} — invited subcontractors and their tenders")" />
+                }
+            }
+            else
+            {
+                <span class="inline-flex items-center rounded-lg border border-dashed border-line px-2.5 py-1.5 text-xs text-content-subtle italic select-none" title="Add bid packages on the VOQ page to invite subcontractors to tender.">None yet</span>
+            }
+        }
+    </div>
+</nav>
+
+@code {
+    [Parameter, EditorRequired] public string ProjectId { get; set; } = "";
+
+    /// <summary>Which chip is the current page: "request", "voq", "vo", or a bid package id.</summary>
+    [Parameter, EditorRequired] public string ActiveId { get; set; } = "";
+
+    [Parameter] public Request? Request { get; set; }
+    [Parameter] public VariationOrderQuote? Voq { get; set; }
+    [Parameter] public VariationOrder? Vo { get; set; }
+    [Parameter] public IReadOnlyList<BidPackage>? BidPackages { get; set; }
+
+    private string RequestHref => Request is null ? "" : $"/projects/{ProjectId}/requests/view/{Request.RequestId}";
+    private string VoqHref => Voq is null ? "" : $"/projects/{ProjectId}/voq/{Voq.VariationOrderQuoteId}";
+    private string PackageHref(string bidPackageId) => $"/projects/{ProjectId}/bid-package-invites/{bidPackageId}";
+
+    // REQ-#### where assigned, falling back to the reference (e.g. a back-filled legacy RFI-012).
+    private static string ChipReference(Request request) =>
+        string.IsNullOrEmpty(request.DisplayNumber) ? request.Reference : request.DisplayNumber;
+
+    private string VoqPlaceholderHint =>
+        Request is null ? "A VOQ is created from an RFI that carries an RFQ."
+        : Request.Kind != RequestType.Rfi ? "Promote the request to an RFI and enable RFQ to unlock a VOQ."
+        : !Request.HasRfq ? "Enable RFQ on the RFI to unlock a VOQ."
+        : "Create the VOQ from the request page.";
+
+    private static string RequestStatusLabel(RequestStatus status) => status switch
+    {
+        RequestStatus.Open             => "Open",
+        RequestStatus.AwaitingResponse => "Awaiting response",
+        RequestStatus.Responded        => "Responded",
+        RequestStatus.Approved         => "Approved",
+        RequestStatus.Rejected         => "Rejected",
+        RequestStatus.Closed           => "Closed",
+        _ => status.ToString()
+    };
+}

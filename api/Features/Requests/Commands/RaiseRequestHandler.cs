@@ -87,10 +87,11 @@ public sealed class RaiseRequestHandler : ICommandHandler<RaiseRequest, Request>
             }
         }
 
-        // Issue the document to the project's contacts when a fresh (Open) request is raised. Requests
-        // imported in an already-resolved state are skipped, and the send is a no-op when the mailbox
-        // feature is unconfigured, so this is safe to call unconditionally on the creation path.
-        if (entity.Status == (int)RequestStatus.Open)
+        // Draft the document email only for the emailable kinds (RFI / NOD / EOT — see
+        // RequestTypeExtensions.IsEmailable). A General request (or RFA/RFC/RFQ/RFP) is never
+        // emailed. Requests imported in an already-resolved state are skipped, and the draft is a
+        // no-op when the mailbox feature is unconfigured.
+        if (entity.Status == (int)RequestStatus.Open && command.Kind.IsEmailable())
             await mailbox.ScheduleRequestDocumentSendAsync(entity.RequestId, recipientOverride: null, cancellationToken);
 
         return entity.ToModel();

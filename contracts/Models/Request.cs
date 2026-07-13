@@ -91,6 +91,14 @@ public sealed record RequestItem(
 
 public static class RequestTypeExtensions
 {
+    // EMAIL POLICY — which request kinds may ever produce an email draft of their official
+    // document. Only the official instruments are emailed: the RFI and the JCT time notices
+    // (NOD / EOT). A General container, RFA, RFC, RFQ and RFP are NEVER emailed: an RFQ reaches
+    // subcontractors as a bid-package invite (its own draft flow), and VOQ / VO financial
+    // documents are not request emails. Server handlers and UI both consult this single gate.
+    public static bool IsEmailable(this RequestType kind) =>
+        kind is RequestType.Rfi or RequestType.NoticeOfDelay or RequestType.ExtensionOfTime;
+
     public static string DisplayName(this RequestType kind) => kind switch
     {
         RequestType.Rfi             => "RFI",

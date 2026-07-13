@@ -77,6 +77,17 @@ public sealed class MailboxActionWorker
             return;
         }
 
+        // EMAIL POLICY (defence in depth — the API gates this too): only RFI / NOD / EOT documents
+        // are ever drafted for sending. A stray queue message for any other kind is dropped.
+        var requestKind = (RequestType)request.Kind;
+        if (!requestKind.IsEmailable())
+        {
+            _logger.LogWarning(
+                "Request-document draft skipped: request {RequestId} is a {Kind}, which is never emailed.",
+                action.RequestId, requestKind.DisplayName());
+            return;
+        }
+
         // Either the ad-hoc override (resend to one address, nothing copied) or the full resolved set.
         var recipientSet = !string.IsNullOrWhiteSpace(action.RecipientOverride)
             ? new RequestRecipientSet(

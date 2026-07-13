@@ -117,8 +117,10 @@ public sealed class CreateRequestFromMessageHandler : ICommandHandler<CreateRequ
             throw RequestReferenceConflict.AsFriendlyError(reference);
         }
 
-        // Issue the rendered document to the project's contacts (no-op when unconfigured / no contacts).
-        await mailbox.ScheduleRequestDocumentSendAsync(request.RequestId, recipientOverride: null, cancellationToken);
+        // Draft the rendered document email only for emailable kinds (RFI / NOD / EOT). A request
+        // created as a General container from a triaged email is never emailed.
+        if (command.Kind.IsEmailable())
+            await mailbox.ScheduleRequestDocumentSendAsync(request.RequestId, recipientOverride: null, cancellationToken);
 
         return request.ToModel();
     }

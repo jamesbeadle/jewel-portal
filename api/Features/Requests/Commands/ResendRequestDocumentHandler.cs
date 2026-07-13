@@ -3,6 +3,7 @@ using Jewel.JPMS.Api.Data;
 using Jewel.JPMS.Api.Features.MailboxIntake.Actions;
 using Jewel.JPMS.Contracts.Cqrs;
 using Jewel.JPMS.Contracts.Requests;
+using Jewel.JPMS.Models;
 using Microsoft.EntityFrameworkCore;
 
 namespace Jewel.JPMS.Api.Features.Requests.Commands;
@@ -20,8 +21,17 @@ public sealed class ResendRequestDocumentHandler : ICommandHandler<ResendRequest
 
     public async Task<Acknowledgement> HandleAsync(ResendRequestDocument command, CancellationToken cancellationToken)
     {
-        var exists = await context.Requests.AnyAsync(r => r.RequestId == command.RequestId, cancellationToken);
-        if (!exists) throw new InvalidOperationException($"Request '{command.RequestId}' not found.");
+        var request = await context.Requests
+            .Where(r => r.RequestId == command.RequestId)
+            .Select(r => new { r.Kind })
+            .FirstOrDefaultAsync(cancellationToken);
+        if (request is null) throw new InvalidOperationException($"Request '{command.RequestId}' not found.");
+
+        var kind = (RequestType)request.Kind;
+        if (!kind.IsEmailable())
+            throw new InvalidOperationException(
+                $"A {kind.DisplayName()} request is never emailed — only RFI, NOD and EOT documents " +
+                "are drafted for sending. Promote the request first if it should go out as an RFI.");
 
         // The PDF is regenerated from SQL by the worker, so the resend carries only the request id and
         // the optional ad-hoc recipient. A normalised empty override means "use the project's contacts".

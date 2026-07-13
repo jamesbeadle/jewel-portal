@@ -39,6 +39,13 @@ public sealed class PrepareRequestEmailDraftHandler : ICommandHandler<PrepareReq
             .FirstOrDefaultAsync(r => r.RequestId == command.RequestId, cancellationToken);
         if (request is null) throw new InvalidOperationException($"Request '{command.RequestId}' not found.");
 
+        // EMAIL POLICY: only RFI / NOD / EOT documents are ever drafted for sending.
+        var kind = (RequestType)request.Kind;
+        if (!kind.IsEmailable())
+            throw new InvalidOperationException(
+                $"A {kind.DisplayName()} request is never emailed — only RFI, NOD and EOT documents " +
+                "are drafted for sending. Promote the request first if it should go out as an RFI.");
+
         // An ad-hoc override addresses the draft to that one email, nothing copied; otherwise the
         // shared resolver supplies the full To/CC/BCC set the send path would use.
         var recipients = !string.IsNullOrWhiteSpace(command.RecipientOverride)

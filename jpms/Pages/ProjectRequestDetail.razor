@@ -54,6 +54,9 @@ else
         </div>
         <h2 class="text-xl font-semibold text-content mb-5">@record.Title</h2>
 
+        <RecordLineage ProjectId="@ProjectId" ActiveId="request"
+                       Request="record" Voq="voq" Vo="vo" BidPackages="bidPackages" />
+
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
             <div class="lg:col-span-2 space-y-5">
                 <div class="panel p-5">
@@ -260,7 +263,7 @@ else
                        class="btn-secondary w-full inline-flex justify-center">Download @record.Kind.DisplayName() PDF</a>
                     <p class="text-xs text-content-subtle">Regenerated from the register on every download, so it always reflects the request as it stands.</p>
 
-                    @if (CanDraftEmail)
+                    @if (CanDraftEmail && record.Kind.IsEmailable())
                     {
                         <div class="pt-3 border-t border-line">
                             <button type="button" class="btn-primary w-full" disabled="@(busy || preparingDraft)" @onclick="PrepareEmailDraft">
@@ -294,6 +297,13 @@ else
                             </div>
                         }
                     }
+                    else if (CanDraftEmail)
+                    {
+                        <p class="text-xs text-content-subtle pt-3 border-t border-line">
+                            A @record.Kind.DisplayName() request is never emailed — only RFI, NOD and EOT
+                            documents go out. Promote it to an RFI to issue it.
+                        </p>
+                    }
                 </div>
 
                 @if (CanEditDetails)
@@ -317,7 +327,7 @@ else
                         {
                             <div>
                                 <button type="button" class="btn-primary w-full" disabled="@busy" @onclick="PromoteToRfi">Promote to RFI</button>
-                                <p class="text-xs text-content-subtle mt-1">Issues the official RFI to the resolved recipients below — the linked party's primary contact, with the project's CC/BCC recipients copied.</p>
+                                <p class="text-xs text-content-subtle mt-1">Mints the RFI reference and drafts the official RFI email to the resolved recipients below — the linked party's primary contact, with the project's CC/BCC recipients copied. The draft waits in the projects mailbox for review; nothing is sent from here.</p>
                             </div>
                         }
                         else if (!record.HasRfq)
@@ -669,6 +679,9 @@ else
     private string? ladderError;
     private VariationOrderQuote? voq;
     private string? voqError;
+    // Downstream lineage (VO + bid packages hang off the VOQ) for the RecordLineage bar.
+    private VariationOrder? vo;
+    private IReadOnlyList<BidPackage> bidPackages = Array.Empty<BidPackage>();
 
     // Official document form editor (the itemised queries + narrative sections).
     private bool editingForm;
@@ -769,6 +782,21 @@ else
         else
         {
             voq = null;
+        }
+
+        // Downstream of the VOQ, for the lineage bar: the VO it produced (if approved) and its bid
+        // packages. Best-effort — the bar simply shows placeholders when these can't be read.
+        if (voq is not null)
+        {
+            try { vo = await Variations.GetVariationOrderByVoqAsync(voq.VariationOrderQuoteId); }
+            catch { vo = null; }
+            try { bidPackages = await Variations.ListBidPackagesAsync(voq.VariationOrderQuoteId); }
+            catch { bidPackages = Array.Empty<BidPackage>(); }
+        }
+        else
+        {
+            vo = null;
+            bidPackages = Array.Empty<BidPackage>();
         }
     }
 

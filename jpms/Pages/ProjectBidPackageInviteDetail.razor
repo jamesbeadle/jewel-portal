@@ -10,6 +10,7 @@
 @inject IQueryClient Queries
 @inject ICommandSender Commands
 @inject ISubcontractorStore Subs
+@inject IRequestRegister RequestRegister
 @inject Jewel.JPMS.Features.Subcontractors.SubcontractorsReadModel SubsReadModel
 @inject NavigationManager Nav
 @implements IDisposable
@@ -62,6 +63,12 @@ else
                     </button>
                 }
             </header>
+
+            @if (lineageVoq is not null)
+            {
+                <RecordLineage ProjectId="@ProjectId" ActiveId="@BidPackageId"
+                               Request="lineageRequest" Voq="lineageVoq" Vo="lineageVo" BidPackages="siblingPackages" />
+            }
 
             @if (aiNote is not null)
             {
@@ -970,6 +977,39 @@ else
 
         try { voqs = await Queries.AskAsync(new ListVoqsForProject(ProjectId), CancellationToken.None); }
         catch { /* picker simply shows no variations */ }
+
+        await LoadLineageAsync();
+    }
+
+    // ---- Record lineage (Request → VOQ → VO, plus sibling packages) for the navigation bar ----
+    // Only packages that belong to a VOQ have a lineage; BoQ-covered packages show no bar. Every
+    // read is best-effort: a missing piece renders as a placeholder chip, never an error.
+
+    private Request? lineageRequest;
+    private VariationOrderQuote? lineageVoq;
+    private VariationOrder? lineageVo;
+    private IReadOnlyList<BidPackage> siblingPackages = Array.Empty<BidPackage>();
+
+    private async Task LoadLineageAsync()
+    {
+        if (string.IsNullOrEmpty(package?.VariationOrderQuoteId))
+        {
+            lineageRequest = null; lineageVoq = null; lineageVo = null;
+            siblingPackages = Array.Empty<BidPackage>();
+            return;
+        }
+
+        var voqId = package.VariationOrderQuoteId;
+        try { lineageVoq = await Queries.AskAsync(new GetVoqById(voqId), CancellationToken.None); }
+        catch { lineageVoq = null; }
+        if (lineageVoq is null) return;
+
+        try { lineageRequest = await RequestRegister.GetAsync(lineageVoq.RequestId); }
+        catch { lineageRequest = null; }
+        try { lineageVo = await Queries.AskAsync(new GetVariationOrderByVoq(voqId), CancellationToken.None); }
+        catch { lineageVo = null; }
+        try { siblingPackages = await Queries.AskAsync(new ListBidPackagesForVoq(voqId), CancellationToken.None); }
+        catch { siblingPackages = Array.Empty<BidPackage>(); }
     }
 
     // ---- Line-item coverage (link to a contract BoQ line or a variation) ----

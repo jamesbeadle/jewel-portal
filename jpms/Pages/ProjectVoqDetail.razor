@@ -3,6 +3,7 @@
 @inject SessionService Session
 @inject IVariationStore Variations
 @inject ISubcontractorStore Subcontractors
+@inject IRequestRegister RequestRegister
 @inject NavigationManager Nav
 @implements IDisposable
 
@@ -34,6 +35,9 @@ else
             <span class="inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium bg-surface-raised text-content-muted">@StatusLabel(voq.Status)</span>
         </div>
         <h2 class="text-xl font-semibold text-content mb-5">@voq.Title</h2>
+
+        <RecordLineage ProjectId="@ProjectId" ActiveId="voq"
+                       Request="request" Voq="voq" Vo="vo" BidPackages="packages" />
 
         @if (error is not null)
         {
@@ -170,6 +174,7 @@ else
     private VariationOrderQuote? voq;
     private VariationOrder? vo;
     private IReadOnlyList<BidPackage> packages = Array.Empty<BidPackage>();
+    private Request? request; // originating request, for the lineage bar
 
     private string approveCostCode = "";
     private string approveValue = "";
@@ -209,6 +214,12 @@ else
             voq = await Variations.GetByIdAsync(VoqId);
             packages = await Variations.ListBidPackagesAsync(VoqId);
             vo = await Variations.GetVariationOrderByVoqAsync(VoqId);
+            // Originating request for the lineage bar — best-effort, the bar shows a placeholder without it.
+            if (voq is not null)
+            {
+                try { request = await RequestRegister.GetAsync(voq.RequestId); }
+                catch { request = null; }
+            }
             if (string.IsNullOrEmpty(approveValue) && voq?.EstimatedValue is { } est)
                 approveValue = est.ToString(System.Globalization.CultureInfo.InvariantCulture);
             error = null;
