@@ -32,8 +32,6 @@ public static class DesktopNavigation
     private static readonly IReadOnlyList<DesktopNavigationEntry> Entries = new DesktopNavigationEntry[]
     {
         Entry("Dashboard",      "/dashboard",      AllRoles),
-        // The subcontractor portal home — record-scoped server-side (SubcontractorScope).
-        Entry("My record",      "/portal",         Role.Subcontractor),
         // Site operatives' own timesheet page — sign in/out and end-of-day hours.
         Entry("My day",         "/my-day",         Role.SiteOperative, Role.Foreman, Role.SiteManager),
         Entry("Projects",       "/projects",       Role.ManagingDirector, Role.FinanceDirector, Role.ProjectManager, Role.QuantitySurveyor, Role.SiteManager, Role.HealthSafetyOfficer, Role.OfficeComplianceCoordinator),

@@ -48,7 +48,16 @@ public sealed class GetMyLabourDayHandler : IQueryHandler<GetMyLabourDay, MyLabo
 
     public async Task<MyLabourDay> HandleAsync(string email, CancellationToken cancellationToken)
     {
-        var worker = await WorkerByEmail.ResolveAsync(context, email, cancellationToken);
+        // No worker record for this email is an expected state (admins, staff browsing the
+        // page, a worker not yet linked) — return an unlinked day rather than an error; the
+        // page explains what to do. Write actions still require a linked, active record.
+        var unlinked = await context.Workers.FirstOrDefaultAsync(
+            candidate => candidate.ContactEmail == email, cancellationToken);
+        if (unlinked is null || !unlinked.IsActive)
+            return new MyLabourDay("", "", SiteClock.Today(),
+                Array.Empty<MyLabourProject>(), Array.Empty<MyRejectedTimesheet>());
+
+        var worker = unlinked;
         var today = SiteClock.Today();
 
         var assignments = await context.ProjectWorkerAssignments

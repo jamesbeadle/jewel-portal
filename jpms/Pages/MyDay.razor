@@ -36,6 +36,17 @@ else
         {
             <p class="text-sm text-content-subtle italic">Loading your projects…</p>
         }
+        else if (day.WorkerId == "")
+        {
+            <div class="panel p-4">
+                <p class="text-sm text-content mb-1">Your account isn't linked to a worker record.</p>
+                <p class="text-xs text-content-subtle">
+                    This page is for site operatives logging their daily hours. If that's you, ask
+                    your Project Manager to add your email on the Workers page. If you're staff,
+                    there's nothing to do here.
+                </p>
+            </div>
+        }
         else
         {
             <p class="text-sm text-content-subtle mb-4">@day.WorkerName · @day.WorkDate.ToString("dddd dd MMMM")</p>
