@@ -47,7 +47,7 @@ Corrections to the PM spec so it fits JPMS:
 
 New entities:
 
-**`WorkerEntity`** — WorkerId, Name, HourlyRate (decimal £/hr), IsActive, optional Email/Phone. Rate is server-side only; never serialised to the capture app.
+**`WorkerEntity`** — WorkerId, Name, HourlyRate (decimal £/hr), IsActive, optional Email/Phone, optional `SubcontractorId` (FK → existing `SubcontractorEntity`). The system is for **subcontractor day-rate labour** (consistent with the glossary: a Timesheet records subcontractor time for cost tracking and payment), so each worker is normally an operative of a subcontractor and the rate is that operative's agreed day rate ÷ 8. Rate is server-side only; never serialised to the capture app. Registry and rates are maintained by the FD and PM roles. A per-worker standard-hours override is deferred until a real case needs it.
 
 **`WorkerRateHistoryEntity`** — WorkerId, HourlyRate, EffectiveFrom. Rate used for costing is the rate effective on `WorkedOn`, snapshotted onto the timesheet at approval so historic cost never changes when rates change.
 
@@ -83,8 +83,12 @@ New **Labour** tab on the project (follows the existing tab pattern: store with 
 
 - Week grid: workers × days, hours per cost code, submitted vs approved state.
 - PM can adjust hours, re-code to a different cost code, reject with reason, and approve individually or batch-approve the week (`ApproveTimesheet`, extended to batch).
+- **Rejected timesheets** re-open for the worker: next time they open the capture page they see the rejected day and can re-submit corrected hours. No deadline is enforced (site reality: workers won't reliably act next day) — rejected entries simply stay visible in the PM's approval view until resolved, and the PM can always correct and approve on the worker's behalf instead.
 - **On approval:** rate resolved from history → `RateApplied`/`CostAmount` snapshotted → **budget hard-block check** against `CostCodeBudget` remaining (reject with "raise WO or re-allocate" message per workflow 07-D) → cost joins the non-WO actual cost of sales aggregation.
 - Financials tab: labour appears in **Non-WO cost of sales** once approved; a *Pending labour* figure (submitted, unapproved hours × current rate) shows separately so PMs get the live view without polluting actuals.
+- Pending labour is a Financials-tab figure only in Phase 1. The cashflow forecast and CVR consume **approved** labour cost exclusively (per workflow 07: Cost Incurred includes "day-rate timesheets approved") — unapproved entries are too noisy to steer FD-level forecasts. Feeding a labour-commitment line into the cashflow forecast can be revisited in Phase 2 once data quality is proven.
+
+**Avoiding double-count with Xero invoices.** Day-rate subcontractors also invoice, and those invoices land in Xero and are today allocated to cost codes as actual cost of sales. If approved timesheet cost *and* the covering invoice both post, labour double-counts. Rule: **the approved timesheet is the actual; the invoice is settlement of it.** During Xero line allocation, lines from a day-rate subcontractor can be marked *covered by timesheets* — they link to the approved timesheets for the period (same pattern as `XeroLineWorkOrderLink`) and are excluded from the cost-of-sales aggregation. A reconciliation view shows invoiced £ vs approved timesheet £ per subcontractor per period, surfacing over/under-billing — which is exactly the control the accountant wants from this system.
 - Rate visibility restricted: rates and £ visible to ProjectManager/QS/FD/Admin roles only; the tab shows hours-only to other roles.
 
 Reporting (Phase 1): hours and £ by worker / cost code / project / week; labour budget vs actual per cost code (Financials tab drill-down); daily site register (who was on site, in/out times) per project per date.
@@ -109,10 +113,8 @@ Reporting (Phase 1): hours and £ by worker / cost code / project / week; labour
 
 ---
 
-## 9. Open questions
+## 9. Decisions log & open questions
 
-1. Standard hours for day-rate → hourly conversion: 8.0 confirmed? Per-worker override needed?
-2. Who maintains the worker registry and rates — FD only, or PM for names with FD for rates?
-3. Should subcontractor day-rate labour (glossary currently defines Timesheet as subcontractor time) run through this same capture flow in Phase 1, or is this employed/agency labour only?
-4. Rejected timesheets: does the worker re-submit next day via the capture app, or is correction always PM-side?
-5. Does Pending labour need to appear in the cashflow forecast's labour commitment, or only on the Financials tab?
+Resolved (July 2026): standard day = 8.0 hours, override deferred (§4) · worker registry and rates managed by FD/PM (§4) · rejected timesheets re-submittable via the capture app with no enforced deadline, PM-side correction always available (§6) · pending labour is Financials-tab only; cashflow/CVR consume approved cost exclusively (§6) · **the system is for subcontractor day-rate labour** — workers link to `SubcontractorEntity`, approved timesheets are the actual cost, covering Xero invoices are marked as settlement and excluded from cost of sales to prevent double-counting (§4, §6).
+
+**Open — for the accountant to confirm:** the timesheet-vs-invoice reconciliation rule in §6 (timesheet = actual, invoice = settlement), and what happens when a subcontractor's invoice disputes the approved hours.

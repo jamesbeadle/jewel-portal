@@ -4,30 +4,51 @@
     The record-lineage bar: a compact, always-visible map of the process chain a request moves
     through, rendered on every page in the chain so related records are one click away:
 
-        Request (REQ-#### · kind · status) → VOQ (VOQ-#### · status) → VO (V## · status)
-                                              └ bid packages (BPI chips), which hang off the VOQ
+        Request (REQ-####) → RFI (RFI-### · official stage) → VOQ (VOQ-####) → VO (V##)
+                                                               └ bid packages (BPI chips)
 
-    Each node is a chip: the record you are ON is highlighted (not a link); records that exist are
-    links; steps not yet reached render as muted placeholders explaining how they come about.
-    Purely navigational — no actions live here, so it stays safe on every page.
+    The request is the PRE-OFFICIAL stage: promotion turns the same record into its official
+    instrument (RFI / NOD / EOT), so the second node shows that stage — or a "No RFI" placeholder
+    until promoted, exactly like the unreached VOQ / VO steps. Each node is a chip: the record you
+    are ON is highlighted (not a link); records that exist are links; steps not yet reached render
+    as muted placeholders explaining how they come about. Purely navigational — no actions live
+    here, so it stays safe on every page.
 *@
 
 <nav class="panel px-4 py-3 mb-5 overflow-x-auto" aria-label="Related records">
     <div class="flex items-center gap-2 min-w-max text-sm">
 
-        @* ---- Request (the container; its kind shows the RFI promotion state) ---- *@
+        @* ---- Request: the pre-official container every chain starts from ---- *@
         @if (Request is not null)
         {
             <LineageChip Href="@RequestHref"
                          IsActive="@(ActiveId == "request")"
-                         Eyebrow="@(Request.Kind == RequestType.General ? "Request" : Request.Kind.DisplayName())"
-                         Label="@ChipReference(Request)"
+                         Eyebrow="Request"
+                         Label="@ContainerReference(Request)"
                          Status="@RequestStatusLabel(Request.Status)"
                          Title="@Request.Title" />
         }
         else
         {
             <span class="inline-flex items-center rounded-lg border border-dashed border-line px-2.5 py-1.5 text-xs text-content-subtle italic select-none" title="This record has no originating request.">No request</span>
+        }
+
+        <span class="text-content-subtle select-none" aria-hidden="true">→</span>
+
+        @* ---- Official stage: the same record once promoted (RFI / NOD / EOT), a placeholder
+               until then — a request only becomes official when it is promoted ---- *@
+        @if (Request is not null && Request.Kind != RequestType.General)
+        {
+            <LineageChip Href="@RequestHref"
+                         IsActive="@(ActiveId == "request")"
+                         Eyebrow="@Request.Kind.DisplayName()"
+                         Label="@Request.Reference"
+                         Status="@RequestStatusLabel(Request.Status)"
+                         Title="@($"{Request.Title} — the request promoted to its official {Request.Kind.DisplayName()}")" />
+        }
+        else
+        {
+            <span class="inline-flex items-center rounded-lg border border-dashed border-line px-2.5 py-1.5 text-xs text-content-subtle italic select-none" title="A request is the pre-official stage. Promote it to mint the official RFI — only then can it be issued.">No RFI</span>
         }
 
         <span class="text-content-subtle select-none" aria-hidden="true">→</span>
@@ -104,12 +125,10 @@
     private string VoqHref => Voq is null ? "" : $"/projects/{ProjectId}/voq/{Voq.VariationOrderQuoteId}";
     private string PackageHref(string bidPackageId) => $"/projects/{ProjectId}/bid-package-invites/{bidPackageId}";
 
-    // The reference the chip leads with: once promoted, the official instrument number (RFI-014),
-    // not the REQ container number; a General request shows its REQ-#### container number.
-    private static string ChipReference(Request request) =>
-        request.Kind != RequestType.General && !string.IsNullOrWhiteSpace(request.Reference)
-            ? request.Reference
-            : string.IsNullOrEmpty(request.DisplayNumber) ? request.Reference : request.DisplayNumber;
+    // The container chip always shows the REQ-#### number (the official reference lives on the
+    // official-stage chip); a back-filled record with no number falls back to its reference.
+    private static string ContainerReference(Request request) =>
+        string.IsNullOrEmpty(request.DisplayNumber) ? request.Reference : request.DisplayNumber;
 
     private string VoqPlaceholderHint =>
         Request is null ? "A VOQ is created from an RFI that carries an RFQ."
