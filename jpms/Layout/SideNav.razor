@@ -1,6 +1,7 @@
 @inject AuthService Auth
 @inject SessionService Session
 @inject NavigationManager Nav
+@inject ILabourStore Labour
 @implements IDisposable
 
 <div class="h-full flex flex-col bg-surface">
@@ -64,15 +65,33 @@
         ? "h-14 px-2 flex items-center justify-center md:justify-between"
         : "px-2 py-3 flex flex-col items-center gap-2";
 
-    private IReadOnlyList<NavigationItem> VisibleItems =>
-        Session.ActiveRole is null
-            ? Array.Empty<NavigationItem>()
-            : NavigationCatalog.ItemsFor(Session.ActiveRole.Value);
+    private IReadOnlyList<NavigationItem> VisibleItems
+    {
+        get
+        {
+            if (Session.ActiveRole is null) return Array.Empty<NavigationItem>();
+            var items = NavigationCatalog.ItemsFor(Session.ActiveRole.Value);
+
+            // "My day" is role-visible (Site Operative / Foreman / Site Manager) but only
+            // useful to accounts linked to a worker record — hide it until the link is
+            // confirmed. The MyDay lookup is fetch-once via the store, so this costs one
+            // call and only for roles that could see the entry at all.
+            if (items.Any(item => item.Href == "/my-day") && !HasWorkerRecord)
+                items = items.Where(item => item.Href != "/my-day").ToList();
+            return items;
+        }
+    }
+
+    private bool HasWorkerRecord => Labour.MyDay() is { WorkerId: not "" };
 
     private string HomeHref =>
         Session.ActiveRole is null ? "/dashboard" : NavigationCatalog.HomeRouteFor(Session.ActiveRole.Value);
 
-    protected override void OnInitialized() => Session.OnChange += StateHasChanged;
+    protected override void OnInitialized()
+    {
+        Session.OnChange += StateHasChanged;
+        Labour.OnChange += StateHasChanged;
+    }
 
     private string LinkClassFor(string href)
     {
@@ -88,5 +107,9 @@
 
     private void SignOut() => Nav.NavigateTo("/logout", forceLoad: true);
 
-    public void Dispose() => Session.OnChange -= StateHasChanged;
+    public void Dispose()
+    {
+        Session.OnChange -= StateHasChanged;
+        Labour.OnChange -= StateHasChanged;
+    }
 }
