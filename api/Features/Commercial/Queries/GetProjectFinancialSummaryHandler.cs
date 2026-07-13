@@ -60,10 +60,17 @@ public sealed class GetProjectFinancialSummaryHandler : IQueryHandler<GetProject
         // allocations carry their project + centre on the line; split lines carry
         // theirs in XeroCostSplits (each row a share of the line's net, with its
         // own project), so both populations sum into the same per-centre totals.
+        // Lines marked covered-by-timesheets are settlement of approved labour, not fresh
+        // cost — excluded here so labour never double-counts (Labour-Time-Tracking-Scope §6).
+        var coveredLineIds = (await context.XeroLineTimesheetCovers
+            .Select(cover => cover.XeroLedgerLineId)
+            .ToListAsync(cancellationToken)).ToHashSet();
+
         var actuals = await context.XeroLedgerLines
             .Where(line => line.ProjectId == query.ProjectId
                            && line.AllocationStatus == (int)XeroAllocationStatus.Allocated
-                           && line.CostCenterCode != null)
+                           && line.CostCenterCode != null
+                           && !coveredLineIds.Contains(line.XeroLedgerLineId))
             .GroupBy(line => line.CostCenterCode!)
             .Select(group => new
             {
@@ -76,9 +83,10 @@ public sealed class GetProjectFinancialSummaryHandler : IQueryHandler<GetProject
             .Join(context.XeroLedgerLines,
                 split => split.XeroLedgerLineId,
                 line => line.XeroLedgerLineId,
-                (split, line) => new { split.CostCenterCode, split.Net, split.ProjectId, line.AllocationStatus, line.Type })
+                (split, line) => new { split.CostCenterCode, split.Net, split.ProjectId, line.AllocationStatus, line.Type, line.XeroLedgerLineId })
             .Where(joined => joined.ProjectId == query.ProjectId
-                             && joined.AllocationStatus == (int)XeroAllocationStatus.Allocated)
+                             && joined.AllocationStatus == (int)XeroAllocationStatus.Allocated
+                             && !coveredLineIds.Contains(joined.XeroLedgerLineId))
             .GroupBy(joined => joined.CostCenterCode)
             .Select(group => new
             {
@@ -112,6 +120,41 @@ public sealed class GetProjectFinancialSummaryHandler : IQueryHandler<GetProject
             .ToListAsync(cancellationToken);
         var costProgressByCode = new Dictionary<string, (decimal Percent, bool IsFinalised)>(StringComparer.OrdinalIgnoreCase);
         foreach (var entry in costProgress) costProgressByCode[entry.CostCode] = (entry.CostCompletionPercent, entry.IsFinalised);
+
+        // Labour (Labour-Time-Tracking-Scope §6): approved timesheet cost posts as direct
+        // (non-WO) actual cost of sales, settlement variances alongside it; submitted hours
+        // surface as pending labour only — visible, never posted.
+        var approvedLabour = await context.Timesheets
+            .Where(timesheet => timesheet.ProjectId == query.ProjectId
+                                && timesheet.Status == (int)TimesheetStatus.Approved)
+            .GroupBy(timesheet => timesheet.CostCode)
+            .Select(group => new { CostCode = group.Key, Amount = group.Sum(timesheet => timesheet.CostAmount) })
+            .ToListAsync(cancellationToken);
+
+        var labourVariances = await context.LabourSettlementVariances
+            .Where(variance => variance.ProjectId == query.ProjectId)
+            .GroupBy(variance => variance.CostCode)
+            .Select(group => new { CostCode = group.Key, Amount = group.Sum(variance => variance.Amount) })
+            .ToListAsync(cancellationToken);
+
+        var pendingLabour = await context.Timesheets
+            .Where(timesheet => timesheet.ProjectId == query.ProjectId
+                                && timesheet.Status == (int)TimesheetStatus.Submitted
+                                && timesheet.WorkerId != "")
+            .Join(context.Workers, timesheet => timesheet.WorkerId, worker => worker.WorkerId,
+                (timesheet, worker) => new { timesheet.CostCode, timesheet.Hours, worker.HourlyRate })
+            .GroupBy(row => row.CostCode)
+            .Select(group => new { CostCode = group.Key, Amount = group.Sum(row => row.Hours * row.HourlyRate) })
+            .ToListAsync(cancellationToken);
+
+        var labourByCode = new Dictionary<string, decimal>(StringComparer.OrdinalIgnoreCase);
+        foreach (var entry in approvedLabour) labourByCode[entry.CostCode] = entry.Amount;
+        foreach (var entry in labourVariances)
+            labourByCode[entry.CostCode] = labourByCode.TryGetValue(entry.CostCode, out var labourSum)
+                ? labourSum + entry.Amount
+                : entry.Amount;
+        var pendingLabourByCode = new Dictionary<string, decimal>(StringComparer.OrdinalIgnoreCase);
+        foreach (var entry in pendingLabour) pendingLabourByCode[entry.CostCode] = Math.Round(entry.Amount, 2);
 
         var salesByCode = sales.ToDictionary(s => s.CostCode, s => s.Amount, StringComparer.OrdinalIgnoreCase);
         var actualByCode = actuals.ToDictionary(a => a.CostCode, a => a.Amount, StringComparer.OrdinalIgnoreCase);
@@ -147,18 +190,25 @@ public sealed class GetProjectFinancialSummaryHandler : IQueryHandler<GetProject
 
         return salesByCode.Keys.Union(actualByCode.Keys, StringComparer.OrdinalIgnoreCase)
             .Union(costProgressByCode.Keys, StringComparer.OrdinalIgnoreCase)
+            .Union(labourByCode.Keys, StringComparer.OrdinalIgnoreCase)
+            .Union(pendingLabourByCode.Keys, StringComparer.OrdinalIgnoreCase)
             .Select(code =>
             {
                 var budgetedSales = salesByCode.TryGetValue(code, out var salesAmount) ? salesAmount : 0m;
                 var claimedAmount = claimedByCode.TryGetValue(code, out var claimedValue) ? claimedValue : 0m;
-                var actualCost = actualByCode.TryGetValue(code, out var actual) ? actual : 0m;
+
+                // Approved labour (and its settlement variances) is direct non-WO actual cost
+                // of sales, on top of the Xero-side spend computed above.
+                var labourActualCost = labourByCode.TryGetValue(code, out var labour) ? labour : 0m;
+                var actualCost = (actualByCode.TryGetValue(code, out var actual) ? actual : 0m) + labourActualCost;
 
                 var budgetedCost = Math.Round(budgetedSales * FinancialSummaryAssumptions.CostFactor, 2);
                 var completionPercent = budgetedSales == 0m ? 0m : Math.Round(claimedAmount / budgetedSales * 100m, 1);
                 var expectedActualCost = Math.Round(budgetedCost * completionPercent / 100m, 2);
 
                 var costState = costProgressByCode.TryGetValue(code, out var state) ? state : (Percent: 0m, IsFinalised: false);
-                var nonWoActualCost = nonWoActualByCode.TryGetValue(code, out var nonWo) ? nonWo : 0m;
+                var nonWoActualCost = (nonWoActualByCode.TryGetValue(code, out var nonWo) ? nonWo : 0m) + labourActualCost;
+                var pendingLabourCost = pendingLabourByCode.TryGetValue(code, out var pending) ? pending : 0m;
 
                 return new ProjectFinancialSummaryRow(
                     code,
@@ -171,7 +221,9 @@ public sealed class GetProjectFinancialSummaryHandler : IQueryHandler<GetProject
                     claimedAmount,
                     costState.Percent,
                     nonWoActualCost,
-                    costState.IsFinalised);
+                    costState.IsFinalised,
+                    labourActualCost,
+                    pendingLabourCost);
             })
             .ToList();
     }

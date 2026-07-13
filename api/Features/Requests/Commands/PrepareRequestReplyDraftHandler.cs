@@ -36,6 +36,14 @@ public sealed class PrepareRequestReplyDraftHandler : ICommandHandler<PrepareReq
             .FirstOrDefaultAsync(r => r.RequestId == command.RequestId, cancellationToken);
         if (request is null) throw new InvalidOperationException($"Request '{command.RequestId}' not found.");
 
+        // EMAIL POLICY: the official document only exists at the official stage (RFI / NOD / EOT),
+        // so only those kinds can be replied with it attached.
+        var kind = (RequestType)request.Kind;
+        if (!kind.IsEmailable())
+            throw new InvalidOperationException(
+                $"A {kind.DisplayName()} request has no official document to send — promote it to an " +
+                "RFI first, then reply into the thread with the official PDF.");
+
         // Recipients are NOT resolved here — a reply inherits the original conversation's
         // participants from Graph, which is the point: the document lands in the existing thread.
         var tagged = await emails.ForRequestAsync(command.RequestId, cancellationToken);

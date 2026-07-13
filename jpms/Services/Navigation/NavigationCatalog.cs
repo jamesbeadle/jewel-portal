@@ -14,6 +14,8 @@ public static class NavigationCatalog
 
     public static string HomeRouteFor(Role role)
     {
+        // Subcontractors land on their portal home, not the internal dashboard.
+        if (role == Role.Subcontractor) return "/portal";
         var items = ItemsFor(role);
         return items.Count == 0 ? "/dashboard" : items[0].Href;
     }

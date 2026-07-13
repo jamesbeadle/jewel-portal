@@ -124,7 +124,10 @@ public sealed record WorkOrder(
     string Title,
     WorkOrderStatus Status,
     DateTimeOffset CreatedAt,
-    DateTimeOffset? ScheduledCompletion);
+    DateTimeOffset? ScheduledCompletion,
+    // Set when this order was issued to instruct an approved variation order (never an uplift of
+    // an existing order -- variations always produce a new WO).
+    string? VariationOrderId = null);
 
 // A priced line on a work order. Each line carries its own cost centre code (CostCode, from the
 // current master list) — cost-centre totals aggregate lines, not orders. PaidToDate is what has

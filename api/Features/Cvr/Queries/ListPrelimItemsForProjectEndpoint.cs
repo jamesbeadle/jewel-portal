@@ -14,10 +14,15 @@ public sealed class ListPrelimItemsForProjectEndpoint
     private readonly IQueryHandler<ListPrelimItemsForProject, IReadOnlyList<PrelimItem>> handler;
     public ListPrelimItemsForProjectEndpoint(SignedInUserResolver users, IQueryHandler<ListPrelimItemsForProject, IReadOnlyList<PrelimItem>> handler) { this.users = users; this.handler = handler; }
 
+    // CVR reads are internal-only; external portal logins have no view of margin and forecast.
+    private static readonly RoleSet InternalReadRoles = JpmsRoleSets.AllInternal;
+
     [Function(nameof(ListPrelimItemsForProject))]
     public async Task<IActionResult> Run([HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "projects/{projectId}/prelims")] HttpRequest request, string projectId)
     {
-        if (await users.ResolveAsync(request, request.HttpContext.RequestAborted) is null) return new UnauthorizedResult();
+        var signedInUser = await users.ResolveAsync(request, request.HttpContext.RequestAborted);
+        if (signedInUser is null) return new UnauthorizedResult();
+        if (!InternalReadRoles.IncludesAny(signedInUser.Roles)) return new ForbidResult();
         return new OkObjectResult(await handler.HandleAsync(new ListPrelimItemsForProject(projectId), request.HttpContext.RequestAborted));
     }
 }

@@ -1,6 +1,6 @@
 # Labour Time Tracking — Scope
 
-**Status:** Draft for review · July 2026
+**Status:** Phase 1 implemented (see §10) · July 2026
 **Inputs:** Junior PM technical spec (`labourtrackingspec.md`), accountant's build brief, existing JPMS codebase and docs.
 **Owner decisions taken:** approval-gated posting with pending visibility · attendance + end-of-day allocation capture · hourly cost rates.
 
@@ -120,3 +120,15 @@ Reporting (Phase 1): hours and £ by worker / cost code / project / week; labour
 Resolved (July 2026): standard day = 8.0 hours, override deferred (§4) · worker registry and rates managed by FD/PM (§4) · rejected timesheets re-submittable via the capture app with no enforced deadline, PM-side correction always available (§6) · pending labour is Financials-tab only; cashflow/CVR consume approved cost exclusively (§6) · **the system is for subcontractor day-rate labour** — workers link to `SubcontractorEntity`, approved timesheets are the actual cost, covering Xero invoices are marked as settlement and excluded from cost of sales to prevent double-counting (§4, §6).
 
 **Open — for the accountant to confirm:** the settlement model in §6 — timesheet as timely actual, paid invoice as final truth, variances closed only via the four defined paths (correct timesheets / amend invoice / split non-labour / post settlement variance). Specifically: are they happy that cost of sales for day-rate labour is timesheet-driven intra-month, and that their Xero allocation workflow gains the covered-by-timesheets linking step?
+
+---
+
+## 10. Implementation notes (Phase 1, July 2026)
+
+**Data:** `WorkerEntity`, `WorkerRateHistoryEntity`, `ProjectWorkerAssignmentEntity`, `SiteAttendanceEntity`, `SiteAccessTokenEntity`, `XeroLineTimesheetCoverEntity`, `LabourSettlementVarianceEntity` (`api/Data/Entities/LabourEntities.cs`); `TimesheetEntity` extended (WorkerId, SiteAttendanceId, Status, RateApplied, CostAmount, ApprovedByEmail/At, RejectionReason). Migration `20260713100000_AddLabourTracking` (legacy `IsApproved` rows backfilled to Status Approved).
+
+**API:** vertical slices in `api/Features/Labour/` — registry/assignment/site-access (ManageWorkers gate: MD/FD/PM), Labour-tab queries and adjust/add/approve/reject (approve gate MD/PM; £ stripped for non-commercial roles), settlement (CommercialTeam gate), and the anonymous token-gated capture surface under `api/site-labour/{token}/…` (`SiteAccessGate`; rates never serialised). Pure rules in `contracts/Labour/LabourRules.cs` (half-hour steps, rate-effective-on-date, hours × rate, budget hard-block) — tested in `tests/Jewel.JPMS.Tests/LabourRulesTests.cs`. `GetProjectFinancialSummaryHandler` now adds approved labour + settlement variances to ActualCost/Non-WO, excludes covered Xero lines, and returns `LabourActualCost` / `PendingLabourCost` per row.
+
+**Front end:** project **Labour** tab (`jpms/Pages/ProjectLabour.razor` — week grid with batch approve, manual entry for missed sign-outs, QR link + rotate, site register, settlement view with covered-line marking); **Workers** registry page (`/labour/workers`, day-rate ÷ 8 entry); pending-labour banner on Financials; capture page `jpms/wwwroot/site-labour.html` (static, dark, mobile-first, no £).
+
+**Before deploy:** run `dotnet build` + `dotnet test` locally (this change was authored without a compiler to hand — expect at most minor fix-ups); apply the migration through the usual process; if the EF model snapshot drifts, regenerate with `dotnet ef migrations add` rather than trusting the hand-written Designer. Known polish items: QR image rendering (link-only today — print via any QR generator), unmarking covered lines from the UI (API supports it), worker capture-page offline queue (Phase 2), `docs/05-data-model/entities.md` registry not yet updated.

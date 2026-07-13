@@ -21,12 +21,16 @@ public sealed class ListClientsEndpoint
         this.handler = handler;
     }
 
+    // The client directory (contact details) is an internal-only read.
+    private static readonly RoleSet RolesThatMayReadClients = JpmsRoleSets.AllInternal;
+
     [Function(nameof(ListClients))]
     public async Task<IActionResult> Run(
         [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "clients")] HttpRequest request)
     {
         var signedInUser = await users.ResolveAsync(request, request.HttpContext.RequestAborted);
         if (signedInUser is null) return new UnauthorizedResult();
+        if (!RolesThatMayReadClients.IncludesAny(signedInUser.Roles)) return new ForbidResult();
 
         var clients = await handler.HandleAsync(new ListClients(), request.HttpContext.RequestAborted);
         return new OkObjectResult(clients);

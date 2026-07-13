@@ -57,7 +57,16 @@ public sealed record ComplianceDocument(
     string Kind,
     string FileName,
     DateTimeOffset? ExpiresAt,
-    DateTimeOffset UploadedAt);
+    DateTimeOffset UploadedAt,
+    int Version = 1,
+    DateTimeOffset? SupersededAt = null,
+    bool HasFile = false,
+    long FileSize = 0)
+{
+    /// <summary>The live version of its Kind. Superseded versions are audit history and should
+    /// not drive expiry banners or status pills.</summary>
+    public bool IsCurrentVersion => SupersededAt is null;
+}
 
 public static class ComplianceDocumentExtensions
 {

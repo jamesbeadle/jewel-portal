@@ -1,0 +1,532 @@
+@page "/portal"
+@using Jewel.JPMS.Contracts.Portal
+@inject AuthService Auth
+@inject SessionService Session
+@inject IPortalStore PortalStore
+@inject NavigationManager Nav
+@implements IDisposable
+
+<PageTitle>My record · JPMS</PageTitle>
+
+@if (!isLoaded)
+{
+    <section class="px-4 md:px-8 py-12 text-content-subtle text-sm">Loading…</section>
+}
+else if (!Session.IsApproved)
+{
+    <RequestAccessView Email="@Auth.CurrentUser!.Email" DisplayName="@Auth.CurrentUser.DisplayName" />
+}
+else if (!CanAccess)
+{
+    <section class="px-4 md:px-8 py-12">
+        <h1 class="text-2xl font-semibold text-content mb-2">Not available</h1>
+        <p class="text-content-muted">The portal is for subcontractor accounts.</p>
+    </section>
+}
+else if (!PortalStore.IsLoaded)
+{
+    <section class="px-4 md:px-8 py-12 text-content-subtle text-sm">Loading…</section>
+}
+else if (myRecord is null)
+{
+    <section class="px-4 md:px-8 py-12">
+        <h1 class="text-2xl font-semibold text-content mb-2">No record linked</h1>
+        <p class="text-content-muted">
+            Your login isn't linked to a subcontractor record yet. Ask your JBB contact to re-send
+            your portal invite.
+        </p>
+    </section>
+}
+else
+{
+    <section class="px-4 md:px-8 py-8 md:py-12 max-w-3xl">
+        <header class="mb-6">
+            <h1 class="text-2xl md:text-3xl font-semibold text-content">@myRecord.Record.CompanyName</h1>
+            <p class="text-sm text-content-muted mt-1">
+                @string.Join(" · ", new[] { myRecord.Record.TradesLabel, myRecord.Record.ContactName, myRecord.Record.ContactEmail }
+                    .Where(x => !string.IsNullOrWhiteSpace(x)))
+            </p>
+        </header>
+
+        @if (ExpiringOrExpired.Count > 0)
+        {
+            <div class="rounded-xl border border-amber-200 bg-amber-50 p-4 mb-6">
+                <h2 class="text-sm font-semibold text-amber-900 mb-1">Documents needing attention</h2>
+                <ul class="text-sm text-amber-900">
+                    @foreach (var document in ExpiringOrExpired)
+                    {
+                        <li>@document.Kind — @document.Status().DisplayName().ToLowerInvariant()@(document.ExpiresAt is null ? "" : $" ({document.ExpiresAt.Value.LocalDateTime:d MMM yyyy})")</li>
+                    }
+                </ul>
+            </div>
+        }
+
+        <div class="rounded-xl border border-line bg-surface overflow-hidden mb-6">
+            <header class="px-5 py-3 border-b border-line bg-surface-raised flex items-center justify-between">
+                <h2 class="text-sm font-medium text-content-muted">Your compliance documents</h2>
+                <span class="text-xs text-content-subtle">@CurrentDocuments.Count on file</span>
+            </header>
+            @if (CurrentDocuments.Count == 0)
+            {
+                <p class="p-5 text-sm text-content-subtle italic">No documents on file yet — upload your first below.</p>
+            }
+            else
+            {
+                <ul class="divide-y divide-line">
+                    @foreach (var document in CurrentDocuments)
+                    {
+                        <li class="p-4 text-sm flex items-start justify-between gap-3">
+                            <div>
+                                <p class="font-medium text-content">
+                                    @document.Kind
+                                    @if (document.Version > 1)
+                                    {
+                                        <span class="ml-1.5 text-xs font-normal text-content-subtle">v@(document.Version)</span>
+                                    }
+                                </p>
+                                <p class="text-xs text-content-subtle mt-1">
+                                    @if (document.HasFile)
+                                    {
+                                        <a class="underline underline-offset-2 hover:text-content" target="_blank" rel="noopener" href="/api/portal/my/documents/@document.ComplianceDocumentId/content">@document.FileName</a>
+                                    }
+                                    else
+                                    {
+                                        @document.FileName
+                                    }
+                                    <span> · uploaded @document.UploadedAt.LocalDateTime.ToString("d MMM yyyy")</span>
+                                </p>
+                                @if (document.ExpiresAt is not null)
+                                {
+                                    <p class="text-xs text-content-subtle">Expires @document.ExpiresAt.Value.LocalDateTime.ToString("d MMM yyyy")</p>
+                                }
+                            </div>
+                            <ComplianceStatusPill Status="document.Status()" />
+                        </li>
+                    }
+                </ul>
+            }
+            @if (SupersededDocuments.Count > 0)
+            {
+                <details class="border-t border-line px-5 py-3">
+                    <summary class="text-xs text-content-subtle cursor-pointer">Previous versions (@SupersededDocuments.Count)</summary>
+                    <ul class="mt-2 space-y-1">
+                        @foreach (var document in SupersededDocuments)
+                        {
+                            <li class="text-xs text-content-subtle">
+                                @document.Kind v@(document.Version) —
+                                @if (document.HasFile)
+                                {
+                                    <a class="underline underline-offset-2 hover:text-content" target="_blank" rel="noopener" href="/api/portal/my/documents/@document.ComplianceDocumentId/content">@document.FileName</a>
+                                }
+                                else
+                                {
+                                    @document.FileName
+                                }
+                                <span> · replaced @(document.SupersededAt?.LocalDateTime.ToString("d MMM yyyy"))</span>
+                            </li>
+                        }
+                    </ul>
+                </details>
+            }
+        </div>
+
+        @* Upload: re-uploading an existing kind supersedes the old version (kept as history). *@
+        <div class="rounded-xl border border-line bg-surface p-5 mb-6">
+            <h2 class="text-sm font-semibold text-content mb-3">Upload a document</h2>
+            @if (uploadError is not null)
+            {
+                <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-3">@uploadError</p>
+            }
+            @if (uploadNote is not null)
+            {
+                <p class="rounded-lg bg-emerald-50 border border-emerald-200 px-3 py-2 text-sm text-emerald-900 mb-3">@uploadNote</p>
+            }
+            <div class="grid gap-3 sm:grid-cols-2">
+                <div>
+                    <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Document type *</label>
+                    <input class="field w-full" list="portal-doc-kinds" placeholder="e.g. Public liability insurance"
+                           @bind="uploadKind" @bind:event="oninput" />
+                    <datalist id="portal-doc-kinds">
+                        @foreach (var kind in SuggestedKinds)
+                        {
+                            <option value="@kind" />
+                        }
+                    </datalist>
+                </div>
+                <div>
+                    <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Expiry date</label>
+                    <input type="date" class="field w-full" @bind="uploadExpiry" />
+                </div>
+            </div>
+            <div class="mt-3">
+                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">File *</label>
+                <InputFile OnChange="OnUploadFileSelected" class="w-full text-sm text-content-muted" />
+                @if (uploadFile is not null)
+                {
+                    <p class="text-xs text-content-subtle mt-1">@uploadFile.Name · @FormatSize(uploadFile.Size)</p>
+                }
+            </div>
+            <button type="button" class="btn-secondary mt-4"
+                    disabled="@(uploadBusy || uploadFile is null || string.IsNullOrWhiteSpace(uploadKind))"
+                    @onclick="HandleUpload">
+                @(uploadBusy ? "Uploading…" : "Upload document")
+            </button>
+        </div>
+
+        <div class="rounded-xl border border-line bg-surface overflow-hidden mb-6">
+            <header class="px-5 py-3 border-b border-line bg-surface-raised flex items-center justify-between">
+                <h2 class="text-sm font-medium text-content-muted">Your work orders</h2>
+                <span class="text-xs text-content-subtle">@WorkOrders.Count work order@(WorkOrders.Count == 1 ? "" : "s")</span>
+            </header>
+            @if (WorkOrders.Count == 0)
+            {
+                <p class="p-5 text-sm text-content-subtle italic">No work orders have been issued to you yet.</p>
+            }
+            else
+            {
+                <ul class="divide-y divide-line">
+                    @foreach (var workOrder in WorkOrders)
+                    {
+                        <li class="p-4 text-sm">
+                            <div class="flex items-start justify-between gap-3">
+                                <div>
+                                    <p class="font-medium text-content">
+                                        WO-@workOrder.Order.Number.ToString("0000")
+                                        @if (!string.IsNullOrWhiteSpace(workOrder.Order.Title))
+                                        {
+                                            <span class="font-normal"> · @workOrder.Order.Title</span>
+                                        }
+                                    </p>
+                                    <p class="text-xs text-content-subtle mt-1">
+                                        @workOrder.ProjectName · issued @workOrder.Order.AwardedAt.LocalDateTime.ToString("d MMM yyyy")@(workOrder.Order.ScheduledCompletion is null ? "" : $" · completion {workOrder.Order.ScheduledCompletion.Value.LocalDateTime:d MMM yyyy}")
+                                    </p>
+                                </div>
+                                <div class="text-right shrink-0">
+                                    <p class="font-medium text-content">@workOrder.Order.Value.ToString("C0", GbCulture)</p>
+                                    <span class="inline-block mt-1 rounded-full border px-2 py-0.5 text-xs font-medium @StatusPillClass(workOrder.Order.Status)">
+                                        @StatusLabel(workOrder.Order.Status)
+                                    </span>
+                                </div>
+                            </div>
+                            @if (workOrder.Lines.Count > 0)
+                            {
+                                <details class="mt-2">
+                                    <summary class="text-xs text-content-subtle cursor-pointer">@workOrder.Lines.Count line item@(workOrder.Lines.Count == 1 ? "" : "s")</summary>
+                                    <ul class="mt-2 space-y-1">
+                                        @foreach (var line in workOrder.Lines)
+                                        {
+                                            <li class="flex items-baseline justify-between gap-3 text-xs text-content-muted">
+                                                <span>@line.Title</span>
+                                                <span class="shrink-0">@line.LineTotal.ToString("C0", GbCulture)</span>
+                                            </li>
+                                        }
+                                    </ul>
+                                </details>
+                            }
+                        </li>
+                    }
+                </ul>
+            }
+        </div>
+
+        <div class="rounded-xl border border-line bg-surface overflow-hidden mb-6">
+            <header class="px-5 py-3 border-b border-line bg-surface-raised flex items-center justify-between">
+                <h2 class="text-sm font-medium text-content-muted">Your variation requests</h2>
+                <span class="text-xs text-content-subtle">@VariationRequests.Count request@(VariationRequests.Count == 1 ? "" : "s")</span>
+            </header>
+            @if (VariationRequests.Count == 0)
+            {
+                <p class="p-5 text-sm text-content-subtle italic">
+                    No variation requests yet. If the scope of your work has changed, raise one below —
+                    JBB will review it and, if approved, issue a further work order.
+                </p>
+            }
+            else
+            {
+                <ul class="divide-y divide-line">
+                    @foreach (var variationRequest in VariationRequests)
+                    {
+                        <li class="p-4 text-sm">
+                            <div class="flex items-start justify-between gap-3">
+                                <div>
+                                    <p class="font-medium text-content">@variationRequest.Title</p>
+                                    <p class="text-xs text-content-subtle mt-1">
+                                        Against WO-@variationRequest.WorkOrderNumber.ToString("0000")@(string.IsNullOrWhiteSpace(variationRequest.ProjectName) ? "" : $" · {variationRequest.ProjectName}") · raised @variationRequest.SubmittedAt.LocalDateTime.ToString("d MMM yyyy")
+                                    </p>
+                                    @if (variationRequest.Status == VariationRequestStatus.Rejected && !string.IsNullOrWhiteSpace(variationRequest.RejectionReason))
+                                    {
+                                        <p class="text-xs text-rose-700 mt-1">Rejected: @variationRequest.RejectionReason</p>
+                                    }
+                                </div>
+                                <div class="text-right shrink-0">
+                                    <p class="font-medium text-content">@variationRequest.ProposedValue.ToString("C0", GbCulture)</p>
+                                    <span class="inline-block mt-1 rounded-full border px-2 py-0.5 text-xs font-medium @RequestStatusPillClass(variationRequest.Status)">
+                                        @RequestStatusLabel(variationRequest.Status)
+                                    </span>
+                                    @if (variationRequest.IsOpen)
+                                    {
+                                        <button type="button" class="block ml-auto mt-1 text-xs text-content-subtle underline underline-offset-2 hover:text-content"
+                                                disabled="@variationBusy" @onclick="() => WithdrawVariationRequest(variationRequest.VariationRequestId)">
+                                            Withdraw
+                                        </button>
+                                    }
+                                </div>
+                            </div>
+                        </li>
+                    }
+                </ul>
+            }
+        </div>
+
+        @* Raise a variation: the request goes to JBB for review; acceptance runs the commercial
+           approval pipeline and, when approved, a NEW work order is issued (never an uplift). *@
+        <div class="rounded-xl border border-line bg-surface p-5">
+            <h2 class="text-sm font-semibold text-content mb-1">Raise a variation</h2>
+            <p class="text-xs text-content-subtle mb-3">
+                Propose and price a change against one of your work orders. JBB will review it; if
+                approved you'll receive a further work order for the extra work.
+            </p>
+            @if (variationError is not null)
+            {
+                <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-3">@variationError</p>
+            }
+            @if (variationNote is not null)
+            {
+                <p class="rounded-lg bg-emerald-50 border border-emerald-200 px-3 py-2 text-sm text-emerald-900 mb-3">@variationNote</p>
+            }
+            @if (OpenWorkOrders.Count == 0)
+            {
+                <p class="text-sm text-content-subtle italic">You need an issued work order before you can raise a variation.</p>
+            }
+            else
+            {
+                <div class="grid gap-3 sm:grid-cols-2">
+                    <div>
+                        <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Work order *</label>
+                        <select class="field w-full" @bind="variationWorkOrderId">
+                            <option value="">Choose a work order…</option>
+                            @foreach (var workOrder in OpenWorkOrders)
+                            {
+                                <option value="@workOrder.Order.WorkOrderId">WO-@workOrder.Order.Number.ToString("0000") · @workOrder.Order.Title</option>
+                            }
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Proposed value (£) *</label>
+                        <input type="number" min="0" step="0.01" class="field w-full" @bind="variationValue" />
+                    </div>
+                </div>
+                <div class="mt-3">
+                    <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Title *</label>
+                    <input class="field w-full" placeholder="e.g. Additional stud wall to plot 2 utility" @bind="variationTitle" @bind:event="oninput" />
+                </div>
+                <div class="mt-3">
+                    <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">What changed, and why? *</label>
+                    <textarea class="field w-full" rows="3" placeholder="Describe the change against your work order and why it's needed."
+                              @bind="variationDescription" @bind:event="oninput"></textarea>
+                </div>
+                <button type="button" class="btn-secondary mt-4"
+                        disabled="@(variationBusy || string.IsNullOrWhiteSpace(variationWorkOrderId) || string.IsNullOrWhiteSpace(variationTitle) || string.IsNullOrWhiteSpace(variationDescription) || variationValue <= 0)"
+                        @onclick="RaiseVariation">
+                    @(variationBusy ? "Sending…" : "Send variation request")
+                </button>
+            }
+        </div>
+    </section>
+}
+
+@code {
+    private bool isLoaded;
+
+    private SubcontractorPortalRecord? myRecord;
+
+    private bool CanAccess => Session.AvailableRoles.Contains(Role.Subcontractor);
+
+    private IReadOnlyList<ComplianceDocument> CurrentDocuments =>
+        myRecord is null
+            ? Array.Empty<ComplianceDocument>()
+            : myRecord.ComplianceDocuments.Where(document => document.IsCurrentVersion)
+                .OrderBy(document => document.Kind, StringComparer.OrdinalIgnoreCase).ToList();
+
+    private IReadOnlyList<ComplianceDocument> SupersededDocuments =>
+        myRecord is null
+            ? Array.Empty<ComplianceDocument>()
+            : myRecord.ComplianceDocuments.Where(document => !document.IsCurrentVersion)
+                .OrderBy(document => document.Kind, StringComparer.OrdinalIgnoreCase)
+                .ThenByDescending(document => document.Version).ToList();
+
+    // ---- Work orders ----
+
+    private static readonly System.Globalization.CultureInfo GbCulture =
+        System.Globalization.CultureInfo.GetCultureInfo("en-GB");
+
+    private IReadOnlyList<PortalWorkOrder> WorkOrders =>
+        (CanAccess ? PortalStore.MyWorkOrders() : null) ?? Array.Empty<PortalWorkOrder>();
+
+    private static string StatusLabel(WorkOrderStatus status) => status switch
+    {
+        WorkOrderStatus.Released  => "Issued",
+        WorkOrderStatus.Complete  => "Complete",
+        WorkOrderStatus.Cancelled => "Cancelled",
+        _ => status.ToString()
+    };
+
+    private static string StatusPillClass(WorkOrderStatus status) => status switch
+    {
+        WorkOrderStatus.Released  => "bg-emerald-50 border-emerald-200 text-emerald-800",
+        WorkOrderStatus.Complete  => "bg-slate-100 border-slate-200 text-slate-700",
+        WorkOrderStatus.Cancelled => "bg-rose-50 border-rose-200 text-rose-800",
+        _ => "bg-slate-100 border-slate-200 text-slate-700"
+    };
+
+    // ---- Variation requests ----
+
+    private IReadOnlyList<SubcontractorVariationRequest> VariationRequests =>
+        (CanAccess ? PortalStore.MyVariationRequests() : null) ?? Array.Empty<SubcontractorVariationRequest>();
+
+    // Variations can only be raised against orders that are live (issued or complete-but-varied).
+    private IReadOnlyList<PortalWorkOrder> OpenWorkOrders =>
+        WorkOrders.Where(workOrder => workOrder.Order.Status is WorkOrderStatus.Released or WorkOrderStatus.Complete).ToList();
+
+    private bool variationBusy;
+    private string? variationError;
+    private string? variationNote;
+    private string variationWorkOrderId = "";
+    private string variationTitle = "";
+    private string variationDescription = "";
+    private decimal variationValue;
+
+    private async Task RaiseVariation()
+    {
+        if (variationBusy) return;
+        variationError = null;
+        variationNote = null;
+        try
+        {
+            variationBusy = true;
+            var raised = await PortalStore.RaiseVariationRequestAsync(
+                variationWorkOrderId, variationTitle.Trim(), variationDescription.Trim(), variationValue);
+            variationNote = $"\"{raised.Title}\" sent to JBB for review.";
+            variationWorkOrderId = "";
+            variationTitle = "";
+            variationDescription = "";
+            variationValue = 0;
+        }
+        catch (CommandFailedException ex) { variationError = ex.Message; }
+        catch { variationError = "Couldn't send the request. Please try again."; }
+        finally { variationBusy = false; }
+    }
+
+    private async Task WithdrawVariationRequest(string variationRequestId)
+    {
+        if (variationBusy) return;
+        variationError = null;
+        try
+        {
+            variationBusy = true;
+            await PortalStore.WithdrawVariationRequestAsync(variationRequestId);
+        }
+        catch (CommandFailedException ex) { variationError = ex.Message; }
+        catch { variationError = "Couldn't withdraw the request. Please try again."; }
+        finally { variationBusy = false; }
+    }
+
+    private static string RequestStatusLabel(VariationRequestStatus status) => status switch
+    {
+        VariationRequestStatus.Submitted   => "Awaiting review",
+        VariationRequestStatus.UnderReview => "Under review",
+        VariationRequestStatus.Accepted    => "Accepted",
+        VariationRequestStatus.Rejected    => "Rejected",
+        VariationRequestStatus.Withdrawn   => "Withdrawn",
+        _ => status.ToString()
+    };
+
+    private static string RequestStatusPillClass(VariationRequestStatus status) => status switch
+    {
+        VariationRequestStatus.Submitted   => "bg-amber-50 border-amber-200 text-amber-800",
+        VariationRequestStatus.UnderReview => "bg-amber-50 border-amber-200 text-amber-800",
+        VariationRequestStatus.Accepted    => "bg-emerald-50 border-emerald-200 text-emerald-800",
+        VariationRequestStatus.Rejected    => "bg-rose-50 border-rose-200 text-rose-800",
+        VariationRequestStatus.Withdrawn   => "bg-slate-100 border-slate-200 text-slate-700",
+        _ => "bg-slate-100 border-slate-200 text-slate-700"
+    };
+
+    // Only live versions drive the attention banner; superseded ones are history.
+    private IReadOnlyList<ComplianceDocument> ExpiringOrExpired =>
+        CurrentDocuments
+            .Where(document => document.Status() is ComplianceStatus.ExpiringSoon or ComplianceStatus.Expired)
+            .ToList();
+
+    // ---- Upload ----
+
+    private static readonly string[] SuggestedKinds =
+    {
+        "Public liability insurance", "Employers liability insurance", "CIS certificate",
+        "RAMS", "Method statement", "Training certificate", "Waste carrier licence"
+    };
+
+    private bool uploadBusy;
+    private string? uploadError;
+    private string? uploadNote;
+    private string uploadKind = "";
+    private DateTime? uploadExpiry;
+    private IBrowserFile? uploadFile;
+
+    private void OnUploadFileSelected(InputFileChangeEventArgs e)
+    {
+        uploadFile = e.File;
+        uploadError = null;
+        uploadNote = null;
+    }
+
+    private async Task HandleUpload()
+    {
+        if (uploadBusy || uploadFile is null || string.IsNullOrWhiteSpace(uploadKind)) return;
+        uploadError = null;
+        uploadNote = null;
+        try
+        {
+            uploadBusy = true;
+            DateTimeOffset? expiresAt = uploadExpiry is null
+                ? null
+                : new DateTimeOffset(DateTime.SpecifyKind(uploadExpiry.Value.Date, DateTimeKind.Utc));
+            await PortalStore.UploadDocumentAsync(uploadKind.Trim(), expiresAt, uploadFile, CancellationToken.None);
+            uploadNote = $"{uploadKind.Trim()} uploaded.";
+            uploadKind = "";
+            uploadExpiry = null;
+            uploadFile = null;
+        }
+        catch (Exception ex)
+        {
+            uploadError = $"Upload failed: {ex.Message}";
+        }
+        finally
+        {
+            uploadBusy = false;
+        }
+    }
+
+    private static string FormatSize(long bytes)
+    {
+        if (bytes >= 1024 * 1024) return $"{bytes / (1024.0 * 1024.0):0.#} MB";
+        if (bytes >= 1024) return $"{bytes / 1024.0:0.#} KB";
+        return $"{bytes} B";
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Session.EnsureLoadedAsync();
+        if (!Auth.IsSignedIn) { Nav.NavigateTo("/login", forceLoad: true); return; }
+        PortalStore.OnChange += HandleChange;
+        // Revalidate in the background on every visit (stale-while-revalidate, per CLAUDE.md).
+        if (CanAccess) _ = PortalStore.Refresh();
+        Reload();
+        isLoaded = true;
+    }
+
+    // Don't touch the store for non-subcontractor sessions — avoids a pointless 403 fetch.
+    private void Reload() => myRecord = CanAccess ? PortalStore.MyRecord() : null;
+    private void HandleChange() { Reload(); StateHasChanged(); }
+
+    public void Dispose() => PortalStore.OnChange -= HandleChange;
+}

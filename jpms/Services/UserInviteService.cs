@@ -1,5 +1,6 @@
 using System.Net.Http.Json;
 using Jewel.JPMS.Contracts.Auth;
+using Jewel.JPMS.Contracts.Subcontractors;
 using Jewel.JPMS.Models;
 
 namespace Jewel.JPMS.Services;
@@ -34,6 +35,32 @@ public sealed class UserInviteService
 
             var error = await TryReadErrorAsync(response);
             return new InviteOutcome(false, null, error ?? "Couldn't create the invite. Please try again.");
+        }
+        catch
+        {
+            return new InviteOutcome(false, null, "Couldn't reach the server. Check your connection and try again.");
+        }
+    }
+
+    /// <summary>Invites a subcontractor's contact to the portal: mints the set-password link and
+    /// links the login to the record so their session is scoped to their own company.</summary>
+    public async Task<InviteOutcome> InviteSubcontractorAsync(string subcontractorId, string? email = null, string? displayName = null)
+    {
+        try
+        {
+            var request = new InviteSubcontractorPortalUserRequest(email, displayName);
+            var response = await httpClient.PostAsJsonAsync(
+                $"/api/subcontractors/{Uri.EscapeDataString(subcontractorId)}/portal-invite", request);
+            if (response.IsSuccessStatusCode)
+            {
+                var result = await response.Content.ReadFromJsonAsync<InviteResult>();
+                return result is null
+                    ? new InviteOutcome(false, null, "The server returned an unexpected response.")
+                    : new InviteOutcome(true, result, null);
+            }
+
+            var error = await TryReadErrorAsync(response);
+            return new InviteOutcome(false, null, error ?? "Couldn't create the portal invite. Please try again.");
         }
         catch
         {

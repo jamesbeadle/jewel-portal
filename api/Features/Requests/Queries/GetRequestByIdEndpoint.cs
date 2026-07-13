@@ -21,6 +21,9 @@ public sealed class GetRequestByIdEndpoint
         this.handler = handler;
     }
 
+    // Request reads are internal plus the architect, who reads/approves RFIs per the permissions matrix.
+    private static readonly RoleSet RolesThatMayReadRequests = JpmsRoleSets.InternalAndArchitect;
+
     [Function(nameof(GetRequestById))]
     public async Task<IActionResult> Run(
         [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "requests/{requestId}")] HttpRequest request,
@@ -28,6 +31,7 @@ public sealed class GetRequestByIdEndpoint
     {
         var signedInUser = await users.ResolveAsync(request, request.HttpContext.RequestAborted);
         if (signedInUser is null) return new UnauthorizedResult();
+        if (!RolesThatMayReadRequests.IncludesAny(signedInUser.Roles)) return new ForbidResult();
 
         var change = await handler.HandleAsync(new GetRequestById(requestId), request.HttpContext.RequestAborted);
         return new OkObjectResult(change);

@@ -21,6 +21,10 @@ public sealed class ListProjectContactsEndpoint
         this.handler = handler;
     }
 
+    // Reading the contact sheet is open to all internal staff; managing contacts is gated
+    // separately by ProjectContactAuthorisation.
+    private static readonly RoleSet RolesThatMayReadContacts = JpmsRoleSets.AllInternal;
+
     [Function(nameof(ListProjectContacts))]
     public async Task<IActionResult> Run(
         [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "projects/{projectId}/contacts")] HttpRequest request,
@@ -28,6 +32,7 @@ public sealed class ListProjectContactsEndpoint
     {
         var signedInUser = await users.ResolveAsync(request, request.HttpContext.RequestAborted);
         if (signedInUser is null) return new UnauthorizedResult();
+        if (!RolesThatMayReadContacts.IncludesAny(signedInUser.Roles)) return new ForbidResult();
 
         var contacts = await handler.HandleAsync(new ListProjectContacts(projectId), request.HttpContext.RequestAborted);
         return new OkObjectResult(contacts);

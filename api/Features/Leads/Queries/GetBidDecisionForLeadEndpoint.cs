@@ -21,6 +21,9 @@ public sealed class GetBidDecisionForLeadEndpoint
         this.handler = handler;
     }
 
+    // Lead pipeline reads are internal-only; external portal logins have no business here.
+    private static readonly RoleSet RolesThatMayReadLeads = JpmsRoleSets.AllInternal;
+
     [Function(nameof(GetBidDecisionForLead))]
     public async Task<IActionResult> Run(
         [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "leads/{leadId}/bid-decision")] HttpRequest request,
@@ -28,6 +31,7 @@ public sealed class GetBidDecisionForLeadEndpoint
     {
         var signedInUser = await users.ResolveAsync(request, request.HttpContext.RequestAborted);
         if (signedInUser is null) return new UnauthorizedResult();
+        if (!RolesThatMayReadLeads.IncludesAny(signedInUser.Roles)) return new ForbidResult();
 
         var bidDecision = await handler.HandleAsync(new GetBidDecisionForLead(leadId), request.HttpContext.RequestAborted);
         return new OkObjectResult(bidDecision);

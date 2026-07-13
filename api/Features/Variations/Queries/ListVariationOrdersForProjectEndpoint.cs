@@ -19,6 +19,9 @@ public sealed class ListVariationOrdersForProjectEndpoint
         this.handler = handler;
     }
 
+    // Variation reads are internal plus the architect, who reads/approves variations per the permissions matrix.
+    private static readonly RoleSet RolesThatMayReadVariations = JpmsRoleSets.InternalAndArchitect;
+
     [Function(nameof(ListVariationOrdersForProject))]
     public async Task<IActionResult> Run(
         [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "projects/{projectId}/variation-orders")] HttpRequest request,
@@ -26,6 +29,7 @@ public sealed class ListVariationOrdersForProjectEndpoint
     {
         var signedInUser = await users.ResolveAsync(request, request.HttpContext.RequestAborted);
         if (signedInUser is null) return new UnauthorizedResult();
+        if (!RolesThatMayReadVariations.IncludesAny(signedInUser.Roles)) return new ForbidResult();
 
         var vos = await handler.HandleAsync(new ListVariationOrdersForProject(projectId), request.HttpContext.RequestAborted);
         return new OkObjectResult(vos);

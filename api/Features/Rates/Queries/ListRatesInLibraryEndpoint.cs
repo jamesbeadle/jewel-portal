@@ -21,12 +21,16 @@ public sealed class ListRatesInLibraryEndpoint
         this.handler = handler;
     }
 
+    // The rate library is an internal estimating read; external portal logins have no business here.
+    private static readonly RoleSet RolesThatMayReadRates = JpmsRoleSets.AllInternal;
+
     [Function(nameof(ListRatesInLibrary))]
     public async Task<IActionResult> Run(
         [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "rates")] HttpRequest request)
     {
         var signedInUser = await users.ResolveAsync(request, request.HttpContext.RequestAborted);
         if (signedInUser is null) return new UnauthorizedResult();
+        if (!RolesThatMayReadRates.IncludesAny(signedInUser.Roles)) return new ForbidResult();
 
         var rates = await handler.HandleAsync(new ListRatesInLibrary(), request.HttpContext.RequestAborted);
         return new OkObjectResult(rates);

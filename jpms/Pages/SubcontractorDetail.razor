@@ -2,6 +2,7 @@
 @inject AuthService Auth
 @inject SessionService Session
 @inject ISubcontractorStore SubcontractorStore
+@inject UserInviteService Invites
 @inject NavigationManager Nav
 @implements IDisposable
 
@@ -93,6 +94,35 @@ else
             </div>
         </div>
 
+        @* Portal access: invites the record's contact to the subcontractor portal. The login is
+           linked to this record server-side, scoping their session to their own company's data. *@
+        <div class="rounded-xl border border-line bg-surface p-4 mb-6">
+            <div class="flex items-center justify-between mb-2">
+                <h2 class="text-sm font-semibold text-content">Portal access</h2>
+            </div>
+            @if (inviteError is not null)
+            {
+                <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-3">@inviteError</p>
+            }
+            @if (inviteResult is not null)
+            {
+                <div class="rounded-lg bg-emerald-50 border border-emerald-200 px-3 py-2 text-sm text-emerald-900 mb-3">
+                    <p class="mb-1">Invite sent to <span class="font-medium">@inviteResult.Email</span>. If the email doesn't arrive, share this link (valid until @inviteResult.ExpiresAt.LocalDateTime.ToString("d MMM yyyy")):</p>
+                    <code class="block break-all text-xs bg-white/60 rounded px-2 py-1">@inviteResult.InviteLink</code>
+                </div>
+            }
+            <div class="flex flex-wrap items-center gap-3">
+                <button type="button" class="btn-secondary" disabled="@(inviteBusy || string.IsNullOrWhiteSpace(subcontractor.ContactEmail))" @onclick="InviteToPortal">
+                    @(inviteBusy ? "Inviting…" : inviteResult is null ? "Invite to portal" : "Re-send invite")
+                </button>
+                <span class="text-xs text-content-subtle">
+                    @(string.IsNullOrWhiteSpace(subcontractor.ContactEmail)
+                        ? "Add a contact email to this record before inviting."
+                        : $"Sends a set-password link to {subcontractor.ContactEmail}.")
+                </span>
+            </div>
+        </div>
+
         <SubcontractorComplianceList SubcontractorId="@subcontractor.SubcontractorId" />
     </section>
 }
@@ -125,6 +155,26 @@ else
 
     private static string ContactLine(Subcontractor sub) =>
         string.Join(" · ", new[] { sub.TradesLabel, sub.ContactName, sub.ContactEmail }.Where(x => !string.IsNullOrWhiteSpace(x)));
+
+    // ---- Portal access ----
+
+    private bool inviteBusy;
+    private string? inviteError;
+    private Contracts.Auth.InviteResult? inviteResult;
+
+    private async Task InviteToPortal()
+    {
+        if (inviteBusy || subcontractor is null) return;
+        inviteError = null;
+        try
+        {
+            inviteBusy = true;
+            var outcome = await Invites.InviteSubcontractorAsync(subcontractor.SubcontractorId);
+            if (outcome.Success) inviteResult = outcome.Result;
+            else inviteError = outcome.Error;
+        }
+        finally { inviteBusy = false; }
+    }
 
     // ---- Trade management ----
 

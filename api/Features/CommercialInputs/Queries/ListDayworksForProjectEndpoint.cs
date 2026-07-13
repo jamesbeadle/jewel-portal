@@ -21,6 +21,9 @@ public sealed class ListDayworksForProjectEndpoint
         this.handler = handler;
     }
 
+    // Commercial input reads are internal-only; external portal logins have no view of project money.
+    private static readonly RoleSet InternalReadRoles = JpmsRoleSets.AllInternal;
+
     [Function(nameof(ListDayworksForProject))]
     public async Task<IActionResult> Run(
         [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "projects/{projectId}/dayworks")] HttpRequest request,
@@ -28,6 +31,7 @@ public sealed class ListDayworksForProjectEndpoint
     {
         var signedInUser = await users.ResolveAsync(request, request.HttpContext.RequestAborted);
         if (signedInUser is null) return new UnauthorizedResult();
+        if (!InternalReadRoles.IncludesAny(signedInUser.Roles)) return new ForbidResult();
 
         var dayworks = await handler.HandleAsync(new ListDayworksForProject(projectId), request.HttpContext.RequestAborted);
         return new OkObjectResult(dayworks);

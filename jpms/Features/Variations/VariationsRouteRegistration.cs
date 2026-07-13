@@ -53,6 +53,19 @@ public static class VariationsRouteRegistration
             new QueryRoute("/api/projects/{projectId}/variation-orders",
                 query => $"/api/projects/{((ListVariationOrdersForProject)query).ProjectId}/variation-orders"));
 
+        // Subcontractor variation requests (portal-raised; internal review queue).
+        queries.Register<ListVariationRequestsForProject, IReadOnlyList<SubcontractorVariationRequest>>(
+            new QueryRoute("/api/projects/{projectId}/variation-requests",
+                query => $"/api/projects/{((ListVariationRequestsForProject)query).ProjectId}/variation-requests"));
+
+        commands.Register<AcceptVariationRequest, VariationOrderQuote>(
+            new CommandRoute("POST", "/api/variation-requests/{variationRequestId}/accept",
+                command => $"/api/variation-requests/{((AcceptVariationRequest)command).VariationRequestId}/accept"));
+
+        commands.Register<RejectVariationRequest, SubcontractorVariationRequest>(
+            new CommandRoute("POST", "/api/variation-requests/{variationRequestId}/reject",
+                command => $"/api/variation-requests/{((RejectVariationRequest)command).VariationRequestId}/reject"));
+
         commands.Register<ApproveVariationOrderQuote, VariationOrder>(
             new CommandRoute("POST", "/api/voqs/{voqId}/approve",
                 command => $"/api/voqs/{((ApproveVariationOrderQuote)command).VariationOrderQuoteId}/approve"));

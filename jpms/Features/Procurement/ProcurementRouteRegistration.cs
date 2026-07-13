@@ -133,5 +133,10 @@ public static class ProcurementRouteRegistration
         commands.Register<UpdateWorkOrder, WorkOrder>(
             new CommandRoute("PUT", "/api/work-orders/{workOrderId}",
                 command => $"/api/work-orders/{((UpdateWorkOrder)command).WorkOrderId}"));
+        // Issues the new work order that instructs an approved variation order.
+        commands.Register<IssueWorkOrderForVariationOrder, WorkOrder>(
+            new CommandRoute("POST", "/api/variation-orders/{variationOrderId}/work-order",
+                command => $"/api/variation-orders/{((IssueWorkOrderForVariationOrder)command).VariationOrderId}/work-order"));
+
     }
 }

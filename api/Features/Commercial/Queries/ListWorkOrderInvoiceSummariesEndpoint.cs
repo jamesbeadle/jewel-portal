@@ -20,6 +20,9 @@ public sealed class ListWorkOrderInvoiceSummariesEndpoint
         this.handler = handler;
     }
 
+    // Commercial reads are internal-only; external portal logins have no view of project money.
+    private static readonly RoleSet InternalReadRoles = JpmsRoleSets.AllInternal;
+
     [Function(nameof(ListWorkOrderInvoiceSummaries))]
     public async Task<IActionResult> Run(
         [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "projects/{projectId}/work-order-invoice-summaries")] HttpRequest request,
@@ -27,6 +30,7 @@ public sealed class ListWorkOrderInvoiceSummariesEndpoint
     {
         var signedInUser = await users.ResolveAsync(request, request.HttpContext.RequestAborted);
         if (signedInUser is null) return new UnauthorizedResult();
+        if (!InternalReadRoles.IncludesAny(signedInUser.Roles)) return new ForbidResult();
 
         var summaries = await handler.HandleAsync(new ListWorkOrderInvoiceSummaries(projectId), request.HttpContext.RequestAborted);
         return new OkObjectResult(summaries);

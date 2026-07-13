@@ -21,6 +21,10 @@ public sealed class GetArchitectByIdEndpoint
         this.handler = handler;
     }
 
+    // Architect practice records are internal-only reads; managing them is gated separately
+    // by ArchitectRoles.AllowedToManageArchitects.
+    private static readonly RoleSet RolesThatMayReadArchitects = JpmsRoleSets.AllInternal;
+
     [Function(nameof(GetArchitectById))]
     public async Task<IActionResult> Run(
         [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "architects/{architectId}")] HttpRequest request,
@@ -28,6 +32,7 @@ public sealed class GetArchitectByIdEndpoint
     {
         var signedInUser = await users.ResolveAsync(request, request.HttpContext.RequestAborted);
         if (signedInUser is null) return new UnauthorizedResult();
+        if (!RolesThatMayReadArchitects.IncludesAny(signedInUser.Roles)) return new ForbidResult();
 
         var architect = await handler.HandleAsync(new GetArchitectById(architectId), request.HttpContext.RequestAborted);
         return new OkObjectResult(architect);

@@ -83,4 +83,30 @@ public sealed class HttpVariationStore : IVariationStore
         OnChange?.Invoke();
         return vo;
     }
+
+    public Task<IReadOnlyList<SubcontractorVariationRequest>> ListVariationRequestsForProjectAsync(string projectId, CancellationToken cancellationToken = default) =>
+        queries.AskAsync(new ListVariationRequestsForProject(projectId), cancellationToken);
+
+    public async Task<VariationOrderQuote> AcceptVariationRequestAsync(string variationRequestId, CancellationToken cancellationToken = default)
+    {
+        // AcceptedByEmail is stamped from the signed-in user server-side.
+        var voq = await commands.SendAsync(new AcceptVariationRequest(variationRequestId), cancellationToken);
+        OnChange?.Invoke();
+        return voq;
+    }
+
+    public async Task<SubcontractorVariationRequest> RejectVariationRequestAsync(string variationRequestId, string reason, CancellationToken cancellationToken = default)
+    {
+        var rejected = await commands.SendAsync(new RejectVariationRequest(variationRequestId, reason), cancellationToken);
+        OnChange?.Invoke();
+        return rejected;
+    }
+
+    public async Task<WorkOrder> IssueWorkOrderForVariationOrderAsync(string variationOrderId, CancellationToken cancellationToken = default)
+    {
+        // IssuedByEmail is stamped from the signed-in user server-side.
+        var workOrder = await commands.SendAsync(new Jewel.JPMS.Contracts.Procurement.IssueWorkOrderForVariationOrder(variationOrderId), cancellationToken);
+        OnChange?.Invoke();
+        return workOrder;
+    }
 }

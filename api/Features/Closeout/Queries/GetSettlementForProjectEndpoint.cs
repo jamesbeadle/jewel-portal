@@ -14,10 +14,15 @@ public sealed class GetSettlementForProjectEndpoint
     private readonly IQueryHandler<GetSettlementForProject, SettlementRecord?> handler;
     public GetSettlementForProjectEndpoint(SignedInUserResolver users, IQueryHandler<GetSettlementForProject, SettlementRecord?> handler) { this.users = users; this.handler = handler; }
 
+    // Closeout reads are internal-only; external portal logins have no view here.
+    private static readonly RoleSet InternalReadRoles = JpmsRoleSets.AllInternal;
+
     [Function(nameof(GetSettlementForProject))]
     public async Task<IActionResult> Run([HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "projects/{projectId}/settlement")] HttpRequest request, string projectId)
     {
-        if (await users.ResolveAsync(request, request.HttpContext.RequestAborted) is null) return new UnauthorizedResult();
+        var signedInUser = await users.ResolveAsync(request, request.HttpContext.RequestAborted);
+        if (signedInUser is null) return new UnauthorizedResult();
+        if (!InternalReadRoles.IncludesAny(signedInUser.Roles)) return new ForbidResult();
         return new OkObjectResult(await handler.HandleAsync(new GetSettlementForProject(projectId), request.HttpContext.RequestAborted));
     }
 }

@@ -6,6 +6,11 @@ public sealed class DirectoryUserEntity
 {
     [Key, MaxLength(256)] public string Email { get; set; } = "";
     [MaxLength(256)]      public string DisplayName { get; set; } = "";
+
+    /// <summary>Set when this login belongs to an external subcontractor contact. Portal endpoints
+    /// scope every read/write to this id — a Role.Subcontractor session with no link sees nothing.
+    /// Null for all internal users.</summary>
+    [MaxLength(64)] public string? SubcontractorId { get; set; }
 }
 
 public sealed class DirectoryUserRoleEntity

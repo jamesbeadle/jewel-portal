@@ -50,6 +50,17 @@ else
                     @actionError
                 </p>
             }
+            @{
+                var pendingLabourTotal = Summary.Current(ProjectId).Sum(row => row.PendingLabourCost);
+            }
+            @if (pendingLabourTotal > 0m)
+            {
+                <p class="rounded-lg bg-amber-500/10 border border-amber-500/30 px-3 py-2 text-sm text-amber-600 mb-3">
+                    Pending labour: £@pendingLabourTotal.ToString("N2") submitted on timesheets but not yet approved —
+                    it posts to cost of sales only once approved on the
+                    <a class="underline underline-offset-2" href="@($"/projects/{ProjectId}/labour")">Labour tab</a>.
+                </p>
+            }
             <FinancialsTable CostCenters="CostCenters.Current"
                              SummaryRows="Summary.Current(ProjectId)"
                              Groups="Groups.Current(ProjectId)"

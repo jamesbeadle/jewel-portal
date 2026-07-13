@@ -183,6 +183,21 @@ public sealed class TimesheetEntity
     public decimal Hours { get; set; }
     [MaxLength(32)]      public string CostCode { get; set; } = "";
     public bool IsApproved { get; set; }
+
+    // Labour tracking (docs/Labour-Time-Tracking-Scope.md). WorkerId/SiteAttendanceId are empty
+    // on legacy rows submitted before the site capture flow existed. Status mirrors
+    // TimesheetStatus (contracts); IsApproved is kept in sync for legacy readers.
+    [MaxLength(64)]      public string WorkerId { get; set; } = "";
+    [MaxLength(64)]      public string SiteAttendanceId { get; set; } = "";
+    public int Status { get; set; }
+
+    // Costing snapshot, written at approval: the worker's rate effective on WorkedOn and the
+    // resulting cost. Zero until approved — unapproved time is never cost.
+    public decimal RateApplied { get; set; }
+    public decimal CostAmount { get; set; }
+    [MaxLength(256)]     public string ApprovedByEmail { get; set; } = "";
+    public DateTimeOffset? ApprovedAt { get; set; }
+    [MaxLength(1024)]    public string RejectionReason { get; set; } = "";
 }
 
 public sealed class DefectEntity

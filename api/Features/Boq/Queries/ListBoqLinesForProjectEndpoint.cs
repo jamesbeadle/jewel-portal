@@ -21,6 +21,9 @@ public sealed class ListBoqLinesForProjectEndpoint
         this.handler = handler;
     }
 
+    // BoQ reads are internal-only; external portal logins have no view of the priced bill.
+    private static readonly RoleSet InternalReadRoles = JpmsRoleSets.AllInternal;
+
     [Function(nameof(ListBoqLinesForProject))]
     public async Task<IActionResult> Run(
         [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "projects/{projectId}/boq")] HttpRequest request,
@@ -28,6 +31,7 @@ public sealed class ListBoqLinesForProjectEndpoint
     {
         var signedInUser = await users.ResolveAsync(request, request.HttpContext.RequestAborted);
         if (signedInUser is null) return new UnauthorizedResult();
+        if (!InternalReadRoles.IncludesAny(signedInUser.Roles)) return new ForbidResult();
 
         var lines = await handler.HandleAsync(new ListBoqLinesForProject(projectId), request.HttpContext.RequestAborted);
         return new OkObjectResult(lines);

@@ -30,6 +30,9 @@ public sealed class AuthService
 
     public IReadOnlyList<Role> CurrentRoles { get; private set; } = Array.Empty<Role>();
 
+    /// <summary>Set only for portal-scoped subcontractor contacts (resolved server-side).</summary>
+    public string? CurrentSubcontractorId { get; private set; }
+
     public bool IsSignedIn => CurrentUser is not null;
 
     public event Action? OnChange;
@@ -159,9 +162,11 @@ public sealed class AuthService
         {
             CurrentUser = null;
             CurrentRoles = Array.Empty<Role>();
+            CurrentSubcontractorId = null;
             return;
         }
         CurrentUser = new AuthenticatedUser(response.Email, response.DisplayName);
         CurrentRoles = response.Roles;
+        CurrentSubcontractorId = response.SubcontractorId;
     }
 }

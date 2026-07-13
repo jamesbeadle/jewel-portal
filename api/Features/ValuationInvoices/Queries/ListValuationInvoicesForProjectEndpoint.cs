@@ -19,6 +19,9 @@ public sealed class ListValuationInvoicesForProjectEndpoint
         this.handler = handler;
     }
 
+    // Valuation invoice reads are internal-only; external portal logins have no view of project money.
+    private static readonly RoleSet InternalReadRoles = JpmsRoleSets.AllInternal;
+
     [Function(nameof(ListValuationInvoicesForProject))]
     public async Task<IActionResult> Run(
         [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "projects/{projectId}/valuation-invoices")] HttpRequest request,
@@ -26,6 +29,7 @@ public sealed class ListValuationInvoicesForProjectEndpoint
     {
         var signedInUser = await users.ResolveAsync(request, request.HttpContext.RequestAborted);
         if (signedInUser is null) return new UnauthorizedResult();
+        if (!InternalReadRoles.IncludesAny(signedInUser.Roles)) return new ForbidResult();
 
         var calls = await handler.HandleAsync(new ListValuationInvoicesForProject(projectId), request.HttpContext.RequestAborted);
         return new OkObjectResult(calls);

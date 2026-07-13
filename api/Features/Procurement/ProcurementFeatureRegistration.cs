@@ -85,6 +85,8 @@ public static class ProcurementFeatureRegistration
         services.AddScoped<AwardBidPackageAuthorisation>();
         services.AddScoped<AwardBidPackageValidation>();
 
+        services.AddScoped<ICommandHandler<IssueWorkOrderForVariationOrder, WorkOrder>, IssueWorkOrderForVariationOrderHandler>();
+
         services.AddScoped<ICommandHandler<UpdateWorkOrder, WorkOrder>, UpdateWorkOrderHandler>();
         services.AddScoped<UpdateWorkOrderAuthorisation>();
         services.AddScoped<UpdateWorkOrderValidation>();

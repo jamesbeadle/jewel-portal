@@ -21,6 +21,9 @@ public sealed class GetRequestDocumentEndpoint
         this.handler = handler;
     }
 
+    // Request reads are internal plus the architect, who reads/approves RFIs per the permissions matrix.
+    private static readonly RoleSet RolesThatMayReadRequests = JpmsRoleSets.InternalAndArchitect;
+
     [Function(nameof(GetRequestDocument))]
     public async Task<IActionResult> Run(
         [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "requests/{requestId}/document")] HttpRequest request,
@@ -28,6 +31,7 @@ public sealed class GetRequestDocumentEndpoint
     {
         var signedInUser = await users.ResolveAsync(request, request.HttpContext.RequestAborted);
         if (signedInUser is null) return new UnauthorizedResult();
+        if (!RolesThatMayReadRequests.IncludesAny(signedInUser.Roles)) return new ForbidResult();
 
         var file = await handler.HandleAsync(new GetRequestDocument(requestId), request.HttpContext.RequestAborted);
         if (file is null) return new NotFoundResult();

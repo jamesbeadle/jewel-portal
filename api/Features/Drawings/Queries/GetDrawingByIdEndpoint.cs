@@ -21,6 +21,9 @@ public sealed class GetDrawingByIdEndpoint
         this.handler = handler;
     }
 
+    // Drawing reads span internal roles plus the externals who work from drawings (architect, subcontractor).
+    private static readonly RoleSet RolesThatMayReadDrawings = JpmsRoleSets.DrawingReaders;
+
     [Function(nameof(GetDrawingById))]
     public async Task<IActionResult> Run(
         [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "drawings/{drawingId}")] HttpRequest request,
@@ -28,6 +31,7 @@ public sealed class GetDrawingByIdEndpoint
     {
         var signedInUser = await users.ResolveAsync(request, request.HttpContext.RequestAborted);
         if (signedInUser is null) return new UnauthorizedResult();
+        if (!RolesThatMayReadDrawings.IncludesAny(signedInUser.Roles)) return new ForbidResult();
 
         var drawing = await handler.HandleAsync(new GetDrawingById(drawingId), request.HttpContext.RequestAborted);
         return new OkObjectResult(drawing);

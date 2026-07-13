@@ -28,7 +28,9 @@ public sealed record ProjectFinancialSummaryRow(
     decimal ClaimedToDate = 0m,          // claim value: the latest claim's cumulative claimed £ for this centre
     decimal CostCompletionPercent = 0m,  // 0–100, cost-side, edited inline on the Financials tab
     decimal NonWorkOrderActualCost = 0m, // allocated Xero spend not linked to any work order
-    bool IsFinalised = false);           // locked down: drawdown reads as realised profit / loss
+    bool IsFinalised = false,            // locked down: drawdown reads as realised profit / loss
+    decimal LabourActualCost = 0m,       // approved timesheet labour + settlement variances (inside ActualCost and Non-WO)
+    decimal PendingLabourCost = 0m);     // submitted-not-yet-approved hours x current rate: visible, never posted
 
 /// <summary>Assumptions shared by the API calculation and the UI's explanation of it.</summary>
 public static class FinancialSummaryAssumptions

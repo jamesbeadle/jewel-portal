@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<meta name="robots" content="noindex">
+<title>Site Sign-In · JPMS</title>
+<style>
+  /* Self-contained dark theme (matches JPMS design language). No £ ever appears here. */
+  :root {
+    --bg: #0f1115; --panel: #181b22; --panel-2: #1f232c; --line: #2a2f3a;
+    --text: #e8eaf0; --subtle: #9aa1b0; --accent: #e8842c; --accent-ink: #10131a;
+    --good: #3fbf7f; --warn: #e0b13e; --bad: #e05c5c;
+  }
+  * { box-sizing: border-box; margin: 0; }
+  body { background: var(--bg); color: var(--text); font: 16px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; min-height: 100vh; }
+  .wrap { max-width: 480px; margin: 0 auto; padding: 16px 16px 48px; }
+  header { padding: 18px 0 6px; }
+  header h1 { font-size: 1.15rem; font-weight: 600; }
+  header .project { color: var(--subtle); font-size: .9rem; margin-top: 2px; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 16px; margin-top: 14px; }
+  .hint { color: var(--subtle); font-size: .85rem; }
+  button { font: inherit; border: 0; border-radius: 12px; cursor: pointer; touch-action: manipulation; }
+  .primary { background: var(--accent); color: var(--accent-ink); font-weight: 700; width: 100%; padding: 16px; font-size: 1.05rem; }
+  .primary:disabled { opacity: .35; cursor: default; }
+  .ghost { background: var(--panel-2); color: var(--text); width: 100%; padding: 14px; border: 1px solid var(--line); }
+  .worker { display: flex; align-items: center; justify-content: space-between; width: 100%; text-align: left;
+            background: var(--panel-2); border: 1px solid var(--line); color: var(--text);
+            padding: 16px 14px; border-radius: 12px; margin-top: 10px; font-size: 1.05rem; }
+  .badge { font-size: .72rem; font-weight: 700; border-radius: 99px; padding: 3px 9px; letter-spacing: .02em; }
+  .badge.in { background: rgba(63,191,127,.15); color: var(--good); }
+  .badge.done { background: rgba(154,161,176,.15); color: var(--subtle); }
+  .badge.rej { background: rgba(224,92,92,.15); color: var(--bad); }
+  .task { border-top: 1px solid var(--line); padding: 12px 0; }
+  .task:first-child { border-top: 0; }
+  .task .name { font-weight: 600; }
+  .task .code { color: var(--subtle); font-size: .8rem; }
+  .stepper { display: flex; align-items: center; gap: 10px; margin-top: 8px; }
+  .stepper button { width: 52px; height: 44px; font-size: 1.4rem; background: var(--panel-2); color: var(--text); border: 1px solid var(--line); }
+  .stepper .hrs { min-width: 72px; text-align: center; font-size: 1.2rem; font-weight: 700; }
+  .totalbar { position: sticky; bottom: 0; background: var(--panel); border: 1px solid var(--line);
+              border-radius: 14px; padding: 12px 16px; margin-top: 14px; }
+  .totalbar .row { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 10px; }
+  .warn { color: var(--warn); font-size: .85rem; margin-bottom: 8px; display: none; }
+  .error { background: rgba(224,92,92,.12); border: 1px solid rgba(224,92,92,.4); color: var(--bad);
+           border-radius: 10px; padding: 10px 12px; margin-top: 12px; font-size: .9rem; display: none; }
+  .ok-icon { font-size: 2.4rem; text-align: center; margin: 10px 0 4px; }
+  .summary li { list-style: none; display: flex; justify-content: space-between; padding: 8px 0; border-top: 1px solid var(--line); }
+  .summary li:first-child { border-top: 0; }
+  .screen { display: none; } .screen.active { display: block; }
+  .back { background: none; color: var(--subtle); padding: 8px 0; margin-top: 4px; font-size: .9rem; }
+  input.hours-input { width: 82px; background: var(--panel-2); color: var(--text); border: 1px solid var(--line);
+                      border-radius: 10px; padding: 10px; font-size: 1.1rem; text-align: center; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1 id="title">Site Sign-In</h1>
+    <div class="project" id="projectName">Loading…</div>
+  </header>
+  <div class="error" id="error"></div>
+
+  <!-- Screen 1: pick your name -->
+  <section class="screen active" id="screen-workers">
+    <div class="card">
+      <div class="hint">Tap your name to sign in or continue.</div>
+      <div id="workerList"></div>
+    </div>
+  </section>
+
+  <!-- Screen 2: on site today -->
+  <section class="screen" id="screen-day">
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <strong id="dayWorkerName"></strong>
+        <span class="badge in">Signed in</span>
+      </div>
+      <p class="hint" style="margin-top:8px">You're on the register for today. At the end of the day, tap Sign Out and log your hours against each task you worked on.</p>
+    </div>
+    <div class="card">
+      <div class="hint" style="margin-bottom:6px">Today's cost codes (reference)</div>
+      <div id="codeReference"></div>
+    </div>
+    <div class="card" id="rejectedCard" style="display:none">
+      <div class="hint" style="margin-bottom:6px">Days sent back to you — fix and resubmit:</div>
+      <div id="rejectedList"></div>
+    </div>
+    <button class="primary" style="margin-top:14px" onclick="showSignOut()">Sign Out — log today's hours</button>
+    <button class="back" onclick="show('screen-workers')">‹ Not you? Back to names</button>
+  </section>
+
+  <!-- Screen 3: end-of-day allocation -->
+  <section class="screen" id="screen-signout">
+    <div class="card">
+      <div class="hint">Enter hours for each task you worked on today. Half-hour steps.</div>
+      <div id="taskList"></div>
+    </div>
+    <div class="totalbar">
+      <div class="row"><span class="hint">Total hours today</span><strong id="totalHours" style="font-size:1.3rem">0</strong></div>
+      <div class="warn" id="overtimeWarn">Over 12 hours — that's fine if it's right, just double-check.</div>
+      <button class="primary" id="submitBtn" disabled onclick="submitSignOut()">Submit &amp; Sign Out</button>
+      <button class="back" onclick="show('screen-day')">‹ Back</button>
+    </div>
+  </section>
+
+  <!-- Screen 4: confirmation -->
+  <section class="screen" id="screen-done">
+    <div class="card">
+      <div class="ok-icon">✓</div>
+      <h2 style="text-align:center;font-size:1.1rem">Signed out — thanks!</h2>
+      <p class="hint" style="text-align:center;margin-top:4px">Your hours have gone to the Project Manager for approval.</p>
+      <ul class="summary" id="doneSummary" style="margin-top:12px;padding:0"></ul>
+    </div>
+  </section>
+
+  <!-- Already done today -->
+  <section class="screen" id="screen-already">
+    <div class="card">
+      <div class="ok-icon">✓</div>
+      <h2 style="text-align:center;font-size:1.1rem">You've already signed out today</h2>
+      <p class="hint" style="text-align:center;margin-top:6px">Contact your Project Manager if you need to amend your hours.</p>
+    </div>
+    <button class="back" onclick="show('screen-workers')">‹ Back to names</button>
+  </section>
+</div>
+
+<script>
+(function () {
+  'use strict';
+  var token = new URLSearchParams(location.search).get('t') || '';
+  var base = '/api/site-labour/' + encodeURIComponent(token);
+  var sheet = null;         // SiteSignInSheet
+  var currentWorker = null; // SiteSheetWorker
+  var hoursByCode = {};     // costCode -> hours for the sign-out form
+
+  function el(id) { return document.getElementById(id); }
+  window.show = function (id) {
+    document.querySelectorAll('.screen').forEach(function (screen) { screen.classList.remove('active'); });
+    el(id).classList.add('active');
+    el('error').style.display = 'none';
+  };
+  function fail(message) {
+    var box = el('error');
+    box.textContent = message;
+    box.style.display = 'block';
+  }
+  function api(path, options) {
+    return fetch(base + path, options).then(function (response) {
+      if (response.ok) return response.json();
+      return response.json().catch(function () { return null; }).then(function (body) {
+        var message = Array.isArray(body) ? body.join(' ') : 'Something went wrong — check your signal and try again.';
+        if (response.status === 401) message = 'This QR code is no longer valid — ask your Project Manager for the new one.';
+        throw new Error(message);
+      });
+    });
+  }
+
+  function loadSheet() {
+    return api('').then(function (data) {
+      sheet = data;
+      el('projectName').textContent = data.projectName;
+      renderWorkers();
+    }).catch(function (problem) { el('projectName').textContent = ''; fail(problem.message); });
+  }
+
+  function renderWorkers() {
+    var list = el('workerList');
+    list.innerHTML = '';
+    if (!sheet.workers.length) {
+      list.innerHTML = '<p class="hint" style="margin-top:10px">No workers are assigned to this project yet — ask your Project Manager.</p>';
+      return;
+    }
+    sheet.workers.forEach(function (worker) {
+      var button = document.createElement('button');
+      button.className = 'worker';
+      var badge = worker.hasSignedOutToday ? '<span class="badge done">Done today</span>'
+        : worker.isSignedInToday ? '<span class="badge in">Signed in</span>'
+        : worker.rejectedDayCount > 0 ? '<span class="badge rej">' + worker.rejectedDayCount + ' to fix</span>' : '';
+      button.innerHTML = '<span>' + escapeHtml(worker.name) + '</span>' + badge;
+      button.onclick = function () { pick(worker); };
+      list.appendChild(button);
+    });
+  }
+
+  function pick(worker) {
+    currentWorker = worker;
+    if (worker.hasSignedOutToday) { show('screen-already'); return; }
+    if (worker.isSignedInToday) { enterDay(); return; }
+    api('/sign-in', postJson({ token: token, workerId: worker.workerId }))
+      .then(function () { worker.isSignedInToday = true; enterDay(); })
+      .catch(function (problem) { fail(problem.message); });
+  }
+
+  function enterDay() {
+    el('dayWorkerName').textContent = currentWorker.name;
+    var reference = el('codeReference');
+    reference.innerHTML = sheet.costCodes.map(function (code) {
+      return '<div class="task"><span class="name">' + escapeHtml(code.name) + '</span> <span class="code">' + escapeHtml(code.code) + '</span></div>';
+    }).join('');
+    loadRejected();
+    show('screen-day');
+  }
+
+  function loadRejected() {
+    el('rejectedCard').style.display = 'none';
+    api('/workers/' + encodeURIComponent(currentWorker.workerId) + '/rejected')
+      .then(function (rejected) {
+        if (!rejected.length) return;
+        var list = el('rejectedList');
+        list.innerHTML = '';
+        rejected.forEach(function (timesheet) {
+          var row = document.createElement('div');
+          row.className = 'task';
+          var date = new Date(timesheet.workedOn).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
+          row.innerHTML = '<div class="name">' + date + ' — ' + escapeHtml(timesheet.costCode) + '</div>'
+            + '<div class="code">Reason: ' + escapeHtml(timesheet.rejectionReason || 'not given') + '</div>'
+            + '<div class="stepper"><input class="hours-input" type="number" step="0.5" min="0.5" value="' + timesheet.hours + '">'
+            + '<button class="ghost" style="width:auto;padding:10px 16px">Resubmit</button></div>';
+          var input = row.querySelector('input');
+          row.querySelector('.ghost').onclick = function () {
+            api('/resubmit', postJson({
+              token: token, workerId: currentWorker.workerId, timesheetId: timesheet.timesheetId,
+              hours: parseFloat(input.value || '0'), costCode: timesheet.costCode
+            })).then(function () { row.remove(); }).catch(function (problem) { fail(problem.message); });
+          };
+          list.appendChild(row);
+        });
+        el('rejectedCard').style.display = 'block';
+      })
+      .catch(function () { /* non-fatal — reference view still works */ });
+  }
+
+  window.showSignOut = function () {
+    hoursByCode = {};
+    var list = el('taskList');
+    list.innerHTML = '';
+    sheet.costCodes.forEach(function (code) {
+      var row = document.createElement('div');
+      row.className = 'task';
+      row.innerHTML = '<div class="name">' + escapeHtml(code.name) + '</div><div class="code">' + escapeHtml(code.code) + '</div>'
+        + '<div class="stepper"><button type="button">−</button><span class="hrs">0</span><button type="button">+</button></div>';
+      var buttons = row.querySelectorAll('.stepper button');
+      var display = row.querySelector('.hrs');
+      function bump(delta) {
+        var hours = Math.max(0, (hoursByCode[code.code] || 0) + delta);
+        hoursByCode[code.code] = hours;
+        display.textContent = hours;
+        refreshTotal();
+      }
+      buttons[0].onclick = function () { bump(-0.5); };
+      buttons[1].onclick = function () { bump(+0.5); };
+      list.appendChild(row);
+    });
+    refreshTotal();
+    show('screen-signout');
+  };
+
+  function refreshTotal() {
+    var total = Object.keys(hoursByCode).reduce(function (sum, code) { return sum + hoursByCode[code]; }, 0);
+    el('totalHours').textContent = total;
+    el('overtimeWarn').style.display = total > 12 ? 'block' : 'none';
+    el('submitBtn').disabled = total <= 0;
+  }
+
+  window.submitSignOut = function () {
+    var entries = Object.keys(hoursByCode)
+      .filter(function (code) { return hoursByCode[code] > 0; })
+      .map(function (code) { return { costCode: code, hours: hoursByCode[code] }; });
+    el('submitBtn').disabled = true;
+    api('/sign-out', postJson({ token: token, workerId: currentWorker.workerId, entries: entries }))
+      .then(function () {
+        el('doneSummary').innerHTML = entries.map(function (entry) {
+          var code = sheet.costCodes.find(function (candidate) { return candidate.code === entry.costCode; });
+          return '<li><span>' + escapeHtml(code ? code.name : entry.costCode) + '</span><strong>' + entry.hours + ' h</strong></li>';
+        }).join('');
+        show('screen-done');
+      })
+      .catch(function (problem) { el('submitBtn').disabled = false; fail(problem.message); });
+  };
+
+  function postJson(body) {
+    return { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) };
+  }
+  function escapeHtml(text) {
+    return String(text).replace(/[&<>"']/g, function (char) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char];
+    });
+  }
+
+  if (!token) { fail('No site code in this link — scan the QR code on the site board.'); }
+  else { loadSheet(); }
+})();
+</script>
+</body>
+</html>

@@ -21,6 +21,9 @@ public sealed class GetProjectByIdEndpoint
         this.handler = handler;
     }
 
+    // Project detail is an internal read; external portal sessions use their own scoped endpoints.
+    private static readonly RoleSet RolesThatMayReadProjects = JpmsRoleSets.AllInternal;
+
     [Function(nameof(GetProjectById))]
     public async Task<IActionResult> Run(
         [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "projects/{projectId}")] HttpRequest request,
@@ -28,6 +31,7 @@ public sealed class GetProjectByIdEndpoint
     {
         var signedInUser = await users.ResolveAsync(request, request.HttpContext.RequestAborted);
         if (signedInUser is null) return new UnauthorizedResult();
+        if (!RolesThatMayReadProjects.IncludesAny(signedInUser.Roles)) return new ForbidResult();
 
         var project = await handler.HandleAsync(new GetProjectById(projectId), request.HttpContext.RequestAborted);
         return new OkObjectResult(project);

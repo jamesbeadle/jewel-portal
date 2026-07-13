@@ -261,7 +261,8 @@ else
                     </div>
                 }
 
-                <RequestConversation RequestId="@RequestId" CanDraftReply="CanDraftEmail" />
+                @* Reply-with-document only exists at the official stage — same gate as the document itself. *@
+                <RequestConversation RequestId="@RequestId" CanDraftReply="@(CanDraftEmail && record.Kind.IsEmailable())" />
 
                 @* Agents are parked for now — the workspace is hidden until we settle on whether
                    attaching agents to requests is the right model. Re-add <AgentWorkspace> here. *@

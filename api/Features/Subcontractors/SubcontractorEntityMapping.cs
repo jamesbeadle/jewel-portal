@@ -12,5 +12,6 @@ internal static class SubcontractorEntityMapping
     public static Trade ToModel(this TradeEntity entity) => new(entity.TradeId, entity.Name);
 
     public static ComplianceDocument ToModel(this ComplianceDocumentEntity entity) =>
-        new(entity.ComplianceDocumentId, entity.SubcontractorId, entity.Kind, entity.FileName, entity.ExpiresAt, entity.UploadedAt);
+        new(entity.ComplianceDocumentId, entity.SubcontractorId, entity.Kind, entity.FileName, entity.ExpiresAt, entity.UploadedAt,
+            entity.Version, entity.SupersededAt, HasFile: !string.IsNullOrEmpty(entity.BlobPath), entity.FileSize);
 }

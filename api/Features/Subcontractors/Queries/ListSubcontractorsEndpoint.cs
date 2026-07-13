@@ -19,11 +19,21 @@ public sealed class ListSubcontractorsEndpoint
         this.handler = handler;
     }
 
+    // The full company directory (with contact details) is internal-only. External sessions
+    // (client, architect, subcontractor) get their own scoped views — a portal login reads its
+    // own record via /portal/my/record, never the whole directory.
+    private static readonly RoleSet InternalRolesThatMayListDirectory = RoleSet.Of(
+        JpmsRoles.Director, JpmsRoles.FinanceDirector, JpmsRoles.ProjectManager, JpmsRoles.Estimator,
+        JpmsRoles.SiteManager, JpmsRoles.HealthAndSafetyLead, JpmsRoles.OfficeComplianceCoordinator,
+        JpmsRoles.Foreman);
+
     [Function(nameof(ListSubcontractors))]
     public async Task<IActionResult> Run(
         [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "subcontractors")] HttpRequest request)
     {
-        if (await users.ResolveAsync(request, request.HttpContext.RequestAborted) is null) return new UnauthorizedResult();
+        var signedInUser = await users.ResolveAsync(request, request.HttpContext.RequestAborted);
+        if (signedInUser is null) return new UnauthorizedResult();
+        if (!InternalRolesThatMayListDirectory.IncludesAny(signedInUser.Roles)) return new ForbidResult();
         return new OkObjectResult(await handler.HandleAsync(new ListSubcontractors(), request.HttpContext.RequestAborted));
     }
 }

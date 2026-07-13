@@ -21,12 +21,16 @@ public sealed class ListProjectsVisibleToUserEndpoint
         this.handler = handler;
     }
 
+    // The project list is an internal read; external portal sessions use their own scoped endpoints.
+    private static readonly RoleSet RolesThatMayListProjects = JpmsRoleSets.AllInternal;
+
     [Function(nameof(ListProjectsVisibleToUser))]
     public async Task<IActionResult> Run(
         [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "projects")] HttpRequest request)
     {
         var signedInUser = await users.ResolveAsync(request, request.HttpContext.RequestAborted);
         if (signedInUser is null) return new UnauthorizedResult();
+        if (!RolesThatMayListProjects.IncludesAny(signedInUser.Roles)) return new ForbidResult();
 
         var projects = await handler.HandleAsync(new ListProjectsVisibleToUser(), request.HttpContext.RequestAborted);
         return new OkObjectResult(projects);

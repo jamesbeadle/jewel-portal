@@ -26,6 +26,26 @@ internal static class VariationsEntityMapping
         entity.BidPackageId, entity.ProjectId, entity.Title, entity.Trade,
         (BidPackageStatus)entity.Status, entity.CreatedAt, entity.OwnerEmail, entity.VariationOrderQuoteId, entity.Number);
 
+    public static SubcontractorVariationRequest ToModel(
+        this SubcontractorVariationRequestEntity entity,
+        string projectName = "", int workOrderNumber = 0, string subcontractorName = "") => new(
+        entity.VariationRequestId,
+        entity.ProjectId,
+        entity.WorkOrderId,
+        entity.SubcontractorId,
+        entity.Title,
+        entity.Description,
+        entity.ProposedValue,
+        (VariationRequestStatus)entity.Status,
+        entity.SubmittedAt,
+        entity.ReviewedAt,
+        entity.ReviewedByEmail,
+        entity.RejectionReason,
+        entity.VariationOrderQuoteId,
+        projectName,
+        workOrderNumber,
+        subcontractorName);
+
     public static VariationOrder ToModel(this VariationOrderEntity entity) => new(
         VariationOrderId: entity.VariationOrderId,
         ProjectId: entity.ProjectId,

@@ -124,6 +124,10 @@ public sealed class WorkOrderEntity
     // re-running the seed is idempotent. Null for orders raised in JPMS.
     [MaxLength(64)]      public string? SourceReference { get; set; }
 
+    // Set when this order was issued to instruct an approved variation order. Variations always
+    // produce a NEW work order — existing orders are never uplifted (subcontractor-crm-scope §6).
+    [MaxLength(64)]      public string? VariationOrderId { get; set; }
+
     // Human reference, falling back to an id-derived stem for legacy rows that predate numbering.
     // Computed, not stored — mirrors BidPackageEntity.Reference.
     [System.ComponentModel.DataAnnotations.Schema.NotMapped]

@@ -19,12 +19,18 @@ public sealed class SearchLocalSubcontractorsEndpoint
         this.handler = handler;
     }
 
+    // Procurement reads are internal-only; subcontractor portal sessions get their own
+    // scoped endpoints rather than the staff procurement views.
+    private static readonly RoleSet RolesThatMayReadProcurement = JpmsRoleSets.AllInternal;
+
     [Function(nameof(SearchLocalSubcontractors))]
     public async Task<IActionResult> Run(
         [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "projects/{projectId}/local-subcontractors")] HttpRequest request,
         string projectId)
     {
-        if (await users.ResolveAsync(request, request.HttpContext.RequestAborted) is null) return new UnauthorizedResult();
+        var signedInUser = await users.ResolveAsync(request, request.HttpContext.RequestAborted);
+        if (signedInUser is null) return new UnauthorizedResult();
+        if (!RolesThatMayReadProcurement.IncludesAny(signedInUser.Roles)) return new ForbidResult();
 
         var trade = request.Query["trade"].ToString();
         var pageToken = request.Query["pageToken"].ToString();

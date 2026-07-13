@@ -14,10 +14,15 @@ public sealed class ListRequestsForProjectEndpoint
     private readonly IQueryHandler<ListRequestsForProject, IReadOnlyList<Request>> handler;
     public ListRequestsForProjectEndpoint(SignedInUserResolver users, IQueryHandler<ListRequestsForProject, IReadOnlyList<Request>> handler) { this.users = users; this.handler = handler; }
 
+    // Request reads are internal plus the architect, who reads/approves RFIs per the permissions matrix.
+    private static readonly RoleSet RolesThatMayReadRequests = JpmsRoleSets.InternalAndArchitect;
+
     [Function(nameof(ListRequestsForProject))]
     public async Task<IActionResult> Run([HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "projects/{projectId}/requests")] HttpRequest request, string projectId)
     {
-        if (await users.ResolveAsync(request, request.HttpContext.RequestAborted) is null) return new UnauthorizedResult();
+        var signedInUser = await users.ResolveAsync(request, request.HttpContext.RequestAborted);
+        if (signedInUser is null) return new UnauthorizedResult();
+        if (!RolesThatMayReadRequests.IncludesAny(signedInUser.Roles)) return new ForbidResult();
         return new OkObjectResult(await handler.HandleAsync(new ListRequestsForProject(projectId), request.HttpContext.RequestAborted));
     }
 }

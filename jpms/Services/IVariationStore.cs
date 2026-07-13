@@ -19,6 +19,14 @@ public interface IVariationStore
     Task<BidPackage> AddBidPackageAsync(string voqId, string title, string trade, CancellationToken cancellationToken = default);
     Task<VariationOrderQuote> SelectTenderAsync(string voqId, string bidPackageId, string subcontractorId, decimal? estimatedValue, CancellationToken cancellationToken = default);
 
+    // Subcontractor variation requests (portal-raised). Accepting creates a Selected VOQ carrying
+    // the sub's price; the normal approve pipeline then applies. Issuing creates the NEW work order
+    // that instructs an approved VO.
+    Task<IReadOnlyList<SubcontractorVariationRequest>> ListVariationRequestsForProjectAsync(string projectId, CancellationToken cancellationToken = default);
+    Task<VariationOrderQuote> AcceptVariationRequestAsync(string variationRequestId, CancellationToken cancellationToken = default);
+    Task<SubcontractorVariationRequest> RejectVariationRequestAsync(string variationRequestId, string reason, CancellationToken cancellationToken = default);
+    Task<WorkOrder> IssueWorkOrderForVariationOrderAsync(string variationOrderId, CancellationToken cancellationToken = default);
+
     Task<VariationOrder?> GetVariationOrderByVoqAsync(string voqId, CancellationToken cancellationToken = default);
     Task<VariationOrder> ApproveVoqAsync(string voqId, string costCode, decimal? value, CancellationToken cancellationToken = default);
     Task<VariationOrder> IssueVariationOrderAsync(string voId, CancellationToken cancellationToken = default);

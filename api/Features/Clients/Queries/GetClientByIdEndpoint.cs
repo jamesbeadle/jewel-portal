@@ -21,6 +21,9 @@ public sealed class GetClientByIdEndpoint
         this.handler = handler;
     }
 
+    // Client records (contact details) are internal-only reads.
+    private static readonly RoleSet RolesThatMayReadClients = JpmsRoleSets.AllInternal;
+
     [Function(nameof(GetClientById))]
     public async Task<IActionResult> Run(
         [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "clients/{clientId}")] HttpRequest request,
@@ -28,6 +31,7 @@ public sealed class GetClientByIdEndpoint
     {
         var signedInUser = await users.ResolveAsync(request, request.HttpContext.RequestAborted);
         if (signedInUser is null) return new UnauthorizedResult();
+        if (!RolesThatMayReadClients.IncludesAny(signedInUser.Roles)) return new ForbidResult();
 
         var client = await handler.HandleAsync(new GetClientById(clientId), request.HttpContext.RequestAborted);
         return new OkObjectResult(client);

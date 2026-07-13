@@ -21,6 +21,10 @@ public sealed class GetBidPackageByIdEndpoint
         this.handler = handler;
     }
 
+    // Procurement reads are internal-only; subcontractor portal sessions get their own
+    // scoped endpoints rather than the staff procurement views.
+    private static readonly RoleSet RolesThatMayReadProcurement = JpmsRoleSets.AllInternal;
+
     [Function(nameof(GetBidPackageById))]
     public async Task<IActionResult> Run(
         [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "bid-packages/{bidPackageId}")] HttpRequest request,
@@ -28,6 +32,7 @@ public sealed class GetBidPackageByIdEndpoint
     {
         var signedInUser = await users.ResolveAsync(request, request.HttpContext.RequestAborted);
         if (signedInUser is null) return new UnauthorizedResult();
+        if (!RolesThatMayReadProcurement.IncludesAny(signedInUser.Roles)) return new ForbidResult();
 
         var package = await handler.HandleAsync(new GetBidPackageById(bidPackageId), request.HttpContext.RequestAborted);
         return new OkObjectResult(package);

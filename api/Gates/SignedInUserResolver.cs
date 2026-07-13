@@ -29,16 +29,11 @@ public sealed class SignedInUserResolver
         var email = await sessions.ResolveEmailAsync(secret, cancellationToken);
         if (string.IsNullOrWhiteSpace(email)) return null;
 
-        var displayName = await ResolveDisplayNameAsync(email, cancellationToken);
-        var roles = await ResolveRolesAsync(email, cancellationToken);
-        return new SignedInUser(email, displayName, roles);
-    }
-
-    private async Task<string> ResolveDisplayNameAsync(string email, CancellationToken cancellationToken)
-    {
         var directoryUser = await context.DirectoryUsers
             .FirstOrDefaultAsync(row => row.Email == email, cancellationToken);
-        return string.IsNullOrWhiteSpace(directoryUser?.DisplayName) ? email : directoryUser!.DisplayName;
+        var displayName = string.IsNullOrWhiteSpace(directoryUser?.DisplayName) ? email : directoryUser!.DisplayName;
+        var roles = await ResolveRolesAsync(email, cancellationToken);
+        return new SignedInUser(email, displayName, roles, directoryUser?.SubcontractorId);
     }
 
     private async Task<IReadOnlyList<Role>> ResolveRolesAsync(string email, CancellationToken cancellationToken)

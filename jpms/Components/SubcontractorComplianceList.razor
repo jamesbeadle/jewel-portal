@@ -3,21 +3,38 @@
 <section class="rounded-xl border border-line bg-surface overflow-hidden">
     <header class="px-5 py-3 border-b border-line bg-surface-raised flex items-center justify-between">
         <h2 class="text-sm font-medium text-content-muted">Compliance documents</h2>
-        <span class="text-xs text-content-subtle">@Documents.Count documents</span>
+        <span class="text-xs text-content-subtle">@CurrentDocuments.Count documents</span>
     </header>
-    @if (Documents.Count == 0)
+    @if (CurrentDocuments.Count == 0)
     {
         <p class="p-5 text-sm text-content-subtle italic">No compliance documents on file.</p>
     }
     else
     {
         <ul class="divide-y divide-line">
-            @foreach (var document in Documents)
+            @foreach (var document in CurrentDocuments)
             {
                 <li class="p-4 text-sm flex items-start justify-between gap-3">
                     <div>
-                        <p class="font-medium text-content">@document.Kind</p>
-                        <p class="text-xs text-content-subtle mt-1">@document.FileName · uploaded @document.UploadedAt.LocalDateTime.ToString("d MMM yyyy")</p>
+                        <p class="font-medium text-content">
+                            @document.Kind
+                            @if (document.Version > 1)
+                            {
+                                <span class="ml-1.5 text-xs font-normal text-content-subtle">v@(document.Version)</span>
+                            }
+                        </p>
+                        <p class="text-xs text-content-subtle mt-1">
+                            @if (document.HasFile)
+                            {
+                                <a class="underline underline-offset-2 hover:text-content" target="_blank" rel="noopener"
+                                   href="/api/subcontractors/@SubcontractorId/compliance/@document.ComplianceDocumentId/content">@document.FileName</a>
+                            }
+                            else
+                            {
+                                @document.FileName
+                            }
+                            <span> · uploaded @document.UploadedAt.LocalDateTime.ToString("d MMM yyyy")</span>
+                        </p>
                         @if (document.ExpiresAt is not null)
                         {
                             <p class="text-xs text-content-subtle">Expires @document.ExpiresAt.Value.LocalDateTime.ToString("d MMM yyyy")</p>
@@ -28,6 +45,30 @@
             }
         </ul>
     }
+    @if (SupersededDocuments.Count > 0)
+    {
+        <details class="border-t border-line px-5 py-3">
+            <summary class="text-xs text-content-subtle cursor-pointer">Previous versions (@SupersededDocuments.Count)</summary>
+            <ul class="mt-2 space-y-1">
+                @foreach (var document in SupersededDocuments)
+                {
+                    <li class="text-xs text-content-subtle">
+                        @document.Kind v@(document.Version) —
+                        @if (document.HasFile)
+                        {
+                            <a class="underline underline-offset-2 hover:text-content" target="_blank" rel="noopener"
+                               href="/api/subcontractors/@SubcontractorId/compliance/@document.ComplianceDocumentId/content">@document.FileName</a>
+                        }
+                        else
+                        {
+                            @document.FileName
+                        }
+                        <span> · replaced @(document.SupersededAt?.LocalDateTime.ToString("d MMM yyyy"))</span>
+                    </li>
+                }
+            </ul>
+        </details>
+    }
 </section>
 
 @code {
@@ -35,4 +76,13 @@
 
     private IReadOnlyList<ComplianceDocument> Documents =>
         SubcontractorStore.ComplianceFor(SubcontractorId);
+
+    private IReadOnlyList<ComplianceDocument> CurrentDocuments =>
+        Documents.Where(document => document.IsCurrentVersion)
+            .OrderBy(document => document.Kind, StringComparer.OrdinalIgnoreCase).ToList();
+
+    private IReadOnlyList<ComplianceDocument> SupersededDocuments =>
+        Documents.Where(document => !document.IsCurrentVersion)
+            .OrderBy(document => document.Kind, StringComparer.OrdinalIgnoreCase)
+            .ThenByDescending(document => document.Version).ToList();
 }

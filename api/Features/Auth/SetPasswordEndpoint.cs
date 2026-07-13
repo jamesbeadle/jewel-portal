@@ -71,14 +71,9 @@ public sealed class SetPasswordEndpoint
         SessionCookie.Set(request.HttpContext.Response, secret);
 
         var roles = await UserRoles.ForAsync(context, email, cancellationToken);
-        var displayName = await ResolveDisplayNameAsync(email, cancellationToken);
-        return new OkObjectResult(new AuthenticatedUserResponse(email, displayName, roles));
-    }
-
-    private async Task<string> ResolveDisplayNameAsync(string email, CancellationToken cancellationToken)
-    {
         var directoryUser = await context.DirectoryUsers
             .FirstOrDefaultAsync(row => row.Email == email, cancellationToken);
-        return string.IsNullOrWhiteSpace(directoryUser?.DisplayName) ? email : directoryUser!.DisplayName;
+        var displayName = string.IsNullOrWhiteSpace(directoryUser?.DisplayName) ? email : directoryUser!.DisplayName;
+        return new OkObjectResult(new AuthenticatedUserResponse(email, displayName, roles, directoryUser?.SubcontractorId));
     }
 }

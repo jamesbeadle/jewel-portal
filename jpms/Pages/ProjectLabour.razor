@@ -1,0 +1,541 @@
+@page "/projects/{ProjectId}/labour"
+@using Jewel.JPMS.Features.CostCenters
+@inject AuthService Auth
+@inject SessionService Session
+@inject ILabourStore Labour
+@inject CostCentersReadModel CostCenters
+@inject NavigationManager Nav
+@inject IQueryClient Queries
+@implements IDisposable
+
+<PageTitle>Labour · JPMS</PageTitle>
+
+@*
+    The Labour tab (docs/Labour-Time-Tracking-Scope.md): weekly timesheet approval grid,
+    site QR access, the daily site register and the subcontractor settlement view. Only
+    approved time becomes cost — the grid is where submitted hours get adjusted, re-coded,
+    approved (budget hard-block enforced server-side) or rejected back to the worker.
+*@
+
+@if (!isLoaded)
+{
+    <section class="px-6 md:px-8 py-12 text-content-subtle text-sm">Loading…</section>
+}
+else if (!Session.IsApproved)
+{
+    <RequestAccessView Email="@Auth.CurrentUser!.Email" DisplayName="@Auth.CurrentUser.DisplayName" />
+}
+else
+{
+    <ProjectPageShell ProjectId="@ProjectId" ActiveTab="labour">
+
+        @if (actionError is not null)
+        {
+            <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-3">@actionError</p>
+        }
+        @if (approvalFailures.Count > 0)
+        {
+            <div class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-3">
+                <p class="font-medium mb-1">Some timesheets could not be approved:</p>
+                @foreach (var failure in approvalFailures)
+                {
+                    <p>· @failure.Reason</p>
+                }
+            </div>
+        }
+
+        <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+            <h2 class="text-lg font-semibold text-content">Timesheets</h2>
+            <div class="flex items-center gap-2 text-sm">
+                <button type="button" class="btn-secondary" @onclick="() => MoveWeek(-7)">‹ Prev</button>
+                <span class="text-content-subtle">w/c @weekStart.ToString("dd MMM yyyy")</span>
+                <button type="button" class="btn-secondary" @onclick="() => MoveWeek(7)">Next ›</button>
+            </div>
+        </div>
+
+        @{ var week = WeekTimesheets(); }
+        @if (week.Count == 0)
+        {
+            <p class="text-sm text-content-subtle italic mb-6">No timesheets this week. Workers sign in via the site QR link below; their submitted hours appear here for approval.</p>
+        }
+        else
+        {
+            <div class="overflow-x-auto mb-3">
+                <table class="w-full text-sm">
+                    <thead>
+                        <tr class="text-left text-content-subtle border-b border-line">
+                            <th class="py-2 pr-3"><input type="checkbox" checked="@AllSubmittedSelected(week)" @onchange="@(args => ToggleAll(week, (bool)args.Value!))" /></th>
+                            <th class="py-2 pr-3">Worker</th>
+                            <th class="py-2 pr-3">Day</th>
+                            <th class="py-2 pr-3">Cost code</th>
+                            <th class="py-2 pr-3">Hours</th>
+                            <th class="py-2 pr-3">£</th>
+                            <th class="py-2 pr-3">Status</th>
+                            <th class="py-2"></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var timesheet in week)
+                        {
+                            var isEditing = editingId == timesheet.TimesheetId;
+                            <tr class="border-b border-line/60 align-middle">
+                                <td class="py-2 pr-3">
+                                    @if (timesheet.Status == TimesheetStatus.Submitted)
+                                    {
+                                        <input type="checkbox" checked="@selectedIds.Contains(timesheet.TimesheetId)"
+                                               @onchange="@(args => ToggleSelected(timesheet.TimesheetId, (bool)args.Value!))" />
+                                    }
+                                </td>
+                                <td class="py-2 pr-3 text-content font-medium">@timesheet.WorkerName</td>
+                                <td class="py-2 pr-3 text-content-subtle">@timesheet.WorkedOn.ToString("ddd dd MMM")</td>
+                                <td class="py-2 pr-3">
+                                    @if (isEditing)
+                                    {
+                                        <select class="field" @bind="editCostCode">
+                                            @foreach (var centre in CostCenters.Current.Where(centre => centre.IsActive))
+                                            {
+                                                <option value="@centre.Code">@centre.Code — @centre.Name</option>
+                                            }
+                                        </select>
+                                    }
+                                    else { @timesheet.CostCode }
+                                </td>
+                                <td class="py-2 pr-3">
+                                    @if (isEditing)
+                                    {
+                                        <input class="field w-20" type="number" step="0.5" min="0.5" @bind="editHours" />
+                                    }
+                                    else { @timesheet.Hours }
+                                </td>
+                                <td class="py-2 pr-3 text-content-subtle">
+                                    @(timesheet.Status == TimesheetStatus.Approved ? timesheet.CostAmount.ToString("N2") : "—")
+                                </td>
+                                <td class="py-2 pr-3">
+                                    @if (timesheet.Status == TimesheetStatus.Approved)
+                                    {
+                                        <span class="text-positive">Approved</span>
+                                    }
+                                    else if (timesheet.Status == TimesheetStatus.Rejected)
+                                    {
+                                        <span class="text-negative" title="@timesheet.RejectionReason">Rejected</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-content-subtle">Submitted</span>
+                                    }
+                                </td>
+                                <td class="py-2 text-right whitespace-nowrap">
+                                    @if (timesheet.Status == TimesheetStatus.Submitted)
+                                    {
+                                        @if (isEditing)
+                                        {
+                                            <button type="button" class="btn-secondary mr-1" @onclick="SaveEditAsync">Save</button>
+                                            <button type="button" class="btn-secondary" @onclick="() => editingId = null">Cancel</button>
+                                        }
+                                        else
+                                        {
+                                            <button type="button" class="btn-secondary mr-1" @onclick="() => StartEdit(timesheet)">Adjust</button>
+                                            <button type="button" class="btn-secondary" @onclick="() => StartReject(timesheet)">Reject</button>
+                                        }
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+            <div class="flex items-center gap-3 mb-6">
+                <button type="button" class="btn-primary" disabled="@(selectedIds.Count == 0 || isApproving)" @onclick="ApproveSelectedAsync">
+                    Approve @(selectedIds.Count > 0 ? $"{selectedIds.Count} " : "")selected
+                </button>
+                <span class="text-xs text-content-subtle">Only approved time posts to Financials as cost. Budget hard-block applies per cost code.</span>
+            </div>
+        }
+
+        @if (rejectingId is not null)
+        {
+            <div class="rounded-lg border border-line bg-surface-raised p-4 mb-6 max-w-lg">
+                <p class="text-sm text-content mb-2">Reason for rejection (the worker sees this):</p>
+                <input class="field w-full mb-2" @bind="rejectReason" placeholder="e.g. Hours look double-entered — please re-check Tuesday" />
+                <button type="button" class="btn-primary mr-2" @onclick="ConfirmRejectAsync">Reject timesheet</button>
+                <button type="button" class="btn-secondary" @onclick="() => rejectingId = null">Cancel</button>
+            </div>
+        }
+
+        <div class="grid sm:grid-cols-2 gap-6 mb-8">
+            <section>
+                <h3 class="text-base font-semibold text-content mb-2">Missed sign-outs / manual entry</h3>
+                <p class="text-xs text-content-subtle mb-3">For workers who forgot to sign out, enter their day here — it joins the approval queue as normal.</p>
+                <div class="flex flex-wrap items-end gap-2">
+                    <select class="field" @bind="manualWorkerId">
+                        <option value="">Worker…</option>
+                        @foreach (var assignment in Labour.AssignmentsFor(ProjectId).Where(assignment => assignment.IsActive))
+                        {
+                            <option value="@assignment.WorkerId">@assignment.WorkerName</option>
+                        }
+                    </select>
+                    <input class="field w-36" type="date" @bind="manualDate" />
+                    <select class="field" @bind="manualCostCode">
+                        <option value="">Cost code…</option>
+                        @foreach (var centre in CostCenters.Current.Where(centre => centre.IsActive))
+                        {
+                            <option value="@centre.Code">@centre.Code — @centre.Name</option>
+                        }
+                    </select>
+                    <input class="field w-20" type="number" step="0.5" min="0.5" @bind="manualHours" placeholder="hrs" />
+                    <button type="button" class="btn-secondary" @onclick="AddManualAsync">Add</button>
+                </div>
+            </section>
+
+            <section>
+                <h3 class="text-base font-semibold text-content mb-2">Site access (QR link)</h3>
+                @if (Labour.SiteAccessFor(ProjectId) is { } access)
+                {
+                    var link = $"{Nav.BaseUri}site-labour.html?t={access.Token}";
+                    <p class="text-xs text-content-subtle mb-2">Workers scan or open this link on their phone to sign in and out. Print it as a QR code for the site board. Rotating kills the old link immediately.</p>
+                    <input class="field w-full mb-2 text-xs" readonly value="@link" />
+                    <a class="btn-secondary mr-2" href="@link" target="_blank" rel="noopener">Open</a>
+                    <button type="button" class="btn-secondary" @onclick="RotateAsync">Rotate link</button>
+                }
+                else
+                {
+                    <p class="text-sm text-content-subtle italic">Loading site access…</p>
+                }
+            </section>
+        </div>
+
+        <section class="mb-8">
+            <h3 class="text-base font-semibold text-content mb-2">Site register</h3>
+            @{ var register = Labour.AttendanceFor(ProjectId).Take(60).ToList(); }
+            @if (register.Count == 0)
+            {
+                <p class="text-sm text-content-subtle italic">No attendance recorded yet.</p>
+            }
+            else
+            {
+                <table class="w-full text-sm max-w-2xl">
+                    <thead>
+                        <tr class="text-left text-content-subtle border-b border-line">
+                            <th class="py-2 pr-3">Date</th><th class="py-2 pr-3">Worker</th>
+                            <th class="py-2 pr-3">In</th><th class="py-2 pr-3">Out</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var row in register)
+                        {
+                            <tr class="border-b border-line/60">
+                                <td class="py-1.5 pr-3">@row.WorkDate.ToString("ddd dd MMM")</td>
+                                <td class="py-1.5 pr-3 text-content">@row.WorkerName</td>
+                                <td class="py-1.5 pr-3 text-content-subtle">@row.SignedInAt.ToLocalTime().ToString("HH:mm")</td>
+                                <td class="py-1.5 pr-3">
+                                    @if (row.SignedOutAt is { } signedOut)
+                                    {
+                                        <span class="text-content-subtle">@signedOut.ToLocalTime().ToString("HH:mm")</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-negative text-xs font-medium">no sign-out</span>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            }
+        </section>
+
+        <section class="mb-8">
+            <h3 class="text-base font-semibold text-content mb-2">Subcontractor settlement</h3>
+            <p class="text-xs text-content-subtle mb-3">
+                Approved timesheets are the actual cost; the subbie's invoice settles them — mark
+                the invoice lines as covered below. A non-zero unresolved variance
+                stays open until timesheets are corrected, the invoice is amended or split, or the
+                difference is posted as a settlement variance.
+            </p>
+            @{ var settlement = Labour.SettlementFor(ProjectId); }
+            @if (settlement.Count == 0)
+            {
+                <p class="text-sm text-content-subtle italic">Nothing to reconcile yet.</p>
+            }
+            else
+            {
+                <table class="w-full text-sm max-w-3xl">
+                    <thead>
+                        <tr class="text-left text-content-subtle border-b border-line">
+                            <th class="py-2 pr-3">Subcontractor</th>
+                            <th class="py-2 pr-3 text-right">Approved £</th>
+                            <th class="py-2 pr-3 text-right">Covered invoices £</th>
+                            <th class="py-2 pr-3 text-right">Posted variances £</th>
+                            <th class="py-2 text-right">Unresolved £</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var row in settlement)
+                        {
+                            <tr class="border-b border-line/60">
+                                <td class="py-1.5 pr-3 text-content">@row.SubcontractorName</td>
+                                <td class="py-1.5 pr-3 text-right">@row.ApprovedCost.ToString("N2")</td>
+                                <td class="py-1.5 pr-3 text-right">@row.CoveredInvoiceTotal.ToString("N2")</td>
+                                <td class="py-1.5 pr-3 text-right">@row.PostedVarianceTotal.ToString("N2")</td>
+                                <td class="py-1.5 text-right @(row.UnresolvedVariance == 0m ? "text-positive" : "text-negative font-medium")">
+                                    @row.UnresolvedVariance.ToString("N2")
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            }
+
+            <div class="mt-4">
+                @if (!showCoverPanel)
+                {
+                    <button type="button" class="btn-secondary" @onclick="LoadLedgerAsync">Mark invoice lines as covered…</button>
+                }
+                else
+                {
+                    <h4 class="text-sm font-semibold text-content mb-2">Invoice lines on this project</h4>
+                    <p class="text-xs text-content-subtle mb-2">Pick the subcontractor whose timesheets each line settles, then mark it covered — the line leaves cost of sales and joins the reconciliation above.</p>
+                    @if (ledgerLines is null)
+                    {
+                        <p class="text-sm text-content-subtle italic">Loading ledger…</p>
+                    }
+                    else if (ProjectLedgerLines().Count == 0)
+                    {
+                        <p class="text-sm text-content-subtle italic">No allocated invoice lines on this project yet.</p>
+                    }
+                    else
+                    {
+                        <table class="w-full text-sm max-w-3xl">
+                            <thead>
+                                <tr class="text-left text-content-subtle border-b border-line">
+                                    <th class="py-2 pr-3">Supplier</th><th class="py-2 pr-3">Date</th>
+                                    <th class="py-2 pr-3">Description</th><th class="py-2 pr-3 text-right">Net £</th>
+                                    <th class="py-2 pr-3">Settles timesheets of</th><th class="py-2"></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var line in ProjectLedgerLines())
+                                {
+                                    <tr class="border-b border-line/60">
+                                        <td class="py-1.5 pr-3 text-content">@line.ContactName</td>
+                                        <td class="py-1.5 pr-3 text-content-subtle">@(line.Date?.ToString("dd MMM yy") ?? "—")</td>
+                                        <td class="py-1.5 pr-3 text-content-subtle truncate max-w-xs" title="@line.Description">@line.Description</td>
+                                        <td class="py-1.5 pr-3 text-right">@line.Net.ToString("N2")</td>
+                                        <td class="py-1.5 pr-3">
+                                            <select class="field" @onchange="@(args => coverSubcontractorByLine[line.XeroLedgerLineId] = (string)args.Value!)">
+                                                <option value="">Subcontractor…</option>
+                                                @foreach (var subcontractor in WorkerSubcontractors())
+                                                {
+                                                    <option value="@subcontractor.Id">@subcontractor.Name</option>
+                                                }
+                                            </select>
+                                        </td>
+                                        <td class="py-1.5 text-right">
+                                            <button type="button" class="btn-secondary" @onclick="() => MarkCoveredAsync(line)">Mark covered</button>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    }
+                }
+            </div>
+        </section>
+    </ProjectPageShell>
+}
+
+@code {
+    [Parameter] public string ProjectId { get; set; } = "";
+
+    private bool isLoaded;
+    private string? actionError;
+    private DateTimeOffset weekStart = StartOfWeek(DateTimeOffset.Now);
+
+    private readonly HashSet<string> selectedIds = new();
+    private IReadOnlyList<LabourApprovalFailure> approvalFailures = Array.Empty<LabourApprovalFailure>();
+    private bool isApproving;
+
+    private string? editingId;
+    private decimal editHours;
+    private string editCostCode = "";
+
+    private string? rejectingId;
+    private string rejectReason = "";
+
+    private string manualWorkerId = "";
+    private DateTime manualDate = DateTime.Today;
+    private string manualCostCode = "";
+    private decimal manualHours;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Session.EnsureLoadedAsync();
+        if (!Auth.IsSignedIn) { Nav.NavigateTo("/login", forceLoad: true); return; }
+        Labour.OnChange += StateHasChanged;
+        CostCenters.OnChanged += StateHasChanged;
+        isLoaded = true;
+
+        // Revalidate cached data in the background on every visit (stale-while-revalidate —
+        // see the front-end data-loading convention in CLAUDE.md).
+        _ = Labour.RefreshTimesheetsAsync(ProjectId);
+        _ = Labour.RefreshAttendanceAsync(ProjectId);
+        _ = Labour.RefreshAssignmentsAsync(ProjectId);
+        _ = Labour.RefreshSiteAccessAsync(ProjectId);
+        _ = Labour.RefreshSettlementAsync(ProjectId);
+        _ = CostCenters.RefreshAsync(CancellationToken.None);
+    }
+
+    public void Dispose()
+    {
+        Labour.OnChange -= StateHasChanged;
+        CostCenters.OnChanged -= StateHasChanged;
+    }
+
+    private static DateTimeOffset StartOfWeek(DateTimeOffset moment)
+    {
+        var daysSinceMonday = ((int)moment.DayOfWeek + 6) % 7;
+        return new DateTimeOffset(moment.Date.AddDays(-daysSinceMonday), TimeSpan.Zero);
+    }
+
+    private void MoveWeek(int days) => weekStart = weekStart.AddDays(days);
+
+    private List<TimesheetDetail> WeekTimesheets() =>
+        Labour.TimesheetsFor(ProjectId)
+            .Where(timesheet => timesheet.WorkedOn >= weekStart && timesheet.WorkedOn < weekStart.AddDays(7))
+            .OrderBy(timesheet => timesheet.WorkedOn).ThenBy(timesheet => timesheet.WorkerName)
+            .ToList();
+
+    private bool AllSubmittedSelected(List<TimesheetDetail> week) =>
+        week.Any(timesheet => timesheet.Status == TimesheetStatus.Submitted)
+        && week.Where(timesheet => timesheet.Status == TimesheetStatus.Submitted)
+               .All(timesheet => selectedIds.Contains(timesheet.TimesheetId));
+
+    private void ToggleAll(List<TimesheetDetail> week, bool selected)
+    {
+        foreach (var timesheet in week.Where(timesheet => timesheet.Status == TimesheetStatus.Submitted))
+        {
+            if (selected) selectedIds.Add(timesheet.TimesheetId);
+            else selectedIds.Remove(timesheet.TimesheetId);
+        }
+    }
+
+    private void ToggleSelected(string timesheetId, bool selected)
+    {
+        if (selected) selectedIds.Add(timesheetId);
+        else selectedIds.Remove(timesheetId);
+    }
+
+    private async Task ApproveSelectedAsync()
+    {
+        actionError = null;
+        approvalFailures = Array.Empty<LabourApprovalFailure>();
+        isApproving = true;
+        try
+        {
+            var result = await Labour.ApproveTimesheetsAsync(ProjectId, selectedIds.ToList());
+            approvalFailures = result.Failures;
+            selectedIds.Clear();
+        }
+        catch (Exception) { actionError = "Approval failed — check your connection and try again."; }
+        finally { isApproving = false; }
+    }
+
+    private void StartEdit(TimesheetDetail timesheet)
+    {
+        editingId = timesheet.TimesheetId;
+        editHours = timesheet.Hours;
+        editCostCode = timesheet.CostCode;
+    }
+
+    private async Task SaveEditAsync()
+    {
+        if (editingId is null) return;
+        actionError = null;
+        try
+        {
+            await Labour.AdjustTimesheetAsync(ProjectId, editingId, editHours, editCostCode);
+            editingId = null;
+        }
+        catch (Exception) { actionError = "Could not save the adjustment — hours must be in half-hour steps of at least 0.5."; }
+    }
+
+    private void StartReject(TimesheetDetail timesheet)
+    {
+        rejectingId = timesheet.TimesheetId;
+        rejectReason = "";
+    }
+
+    private async Task ConfirmRejectAsync()
+    {
+        if (rejectingId is null || string.IsNullOrWhiteSpace(rejectReason)) return;
+        actionError = null;
+        try
+        {
+            await Labour.RejectTimesheetAsync(ProjectId, rejectingId, rejectReason);
+            rejectingId = null;
+        }
+        catch (Exception) { actionError = "Could not reject the timesheet — try again."; }
+    }
+
+    private async Task AddManualAsync()
+    {
+        if (manualWorkerId == "" || manualCostCode == "" || manualHours <= 0) return;
+        actionError = null;
+        try
+        {
+            await Labour.AddWorkerTimesheetAsync(ProjectId, manualWorkerId, new DateTimeOffset(manualDate, TimeSpan.Zero), manualHours, manualCostCode);
+            manualHours = 0;
+        }
+        catch (Exception) { actionError = "Could not add the timesheet — hours must be in half-hour steps of at least 0.5."; }
+    }
+
+    private bool showCoverPanel;
+    private IReadOnlyList<Jewel.JPMS.Contracts.Xero.XeroLedgerLine>? ledgerLines;
+    private readonly Dictionary<string, string> coverSubcontractorByLine = new();
+
+    private async Task LoadLedgerAsync()
+    {
+        showCoverPanel = true;
+        try { ledgerLines = await Queries.AskAsync(new Jewel.JPMS.Contracts.Xero.ListXeroLedgerLines(), CancellationToken.None); }
+        catch (Exception) { actionError = "Could not load the Xero ledger — try again."; showCoverPanel = false; }
+    }
+
+    private List<Jewel.JPMS.Contracts.Xero.XeroLedgerLine> ProjectLedgerLines() =>
+        (ledgerLines ?? Array.Empty<Jewel.JPMS.Contracts.Xero.XeroLedgerLine>())
+            .Where(line => line.ProjectId == ProjectId
+                           && line.AllocationStatus == Jewel.JPMS.Contracts.Xero.XeroAllocationStatus.Allocated)
+            .OrderByDescending(line => line.Date)
+            .Take(100)
+            .ToList();
+
+    private List<(string Id, string Name)> WorkerSubcontractors() =>
+        Labour.SettlementFor(ProjectId)
+            .Where(row => row.SubcontractorId != "")
+            .Select(row => (row.SubcontractorId, row.SubcontractorName))
+            .ToList();
+
+    private async Task MarkCoveredAsync(Jewel.JPMS.Contracts.Xero.XeroLedgerLine line)
+    {
+        if (!coverSubcontractorByLine.TryGetValue(line.XeroLedgerLineId, out var subcontractorId) || subcontractorId == "")
+        {
+            actionError = "Pick which subcontractor's timesheets the invoice line settles first.";
+            return;
+        }
+        actionError = null;
+        var lineDate = line.Date ?? DateTime.Today;
+        var periodStart = new DateTimeOffset(new DateTime(lineDate.Year, lineDate.Month, 1), TimeSpan.Zero);
+        try
+        {
+            await Labour.SetTimesheetCoverAsync(ProjectId, line.XeroLedgerLineId, true, subcontractorId, periodStart, periodStart.AddMonths(1));
+            ledgerLines = ledgerLines!.Where(candidate => candidate.XeroLedgerLineId != line.XeroLedgerLineId).ToList();
+        }
+        catch (Exception) { actionError = "Could not mark the line as covered — try again."; }
+    }
+
+    private async Task RotateAsync()
+    {
+        actionError = null;
+        try { await Labour.RotateSiteAccessAsync(ProjectId); }
+        catch (Exception) { actionError = "Could not rotate the site link — try again."; }
+    }
+}

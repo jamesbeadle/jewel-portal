@@ -29,6 +29,9 @@ public sealed class DownloadDrawingRevisionFileEndpoint
         this.blobStore = blobStore;
     }
 
+    // Drawing reads span internal roles plus the externals who work from drawings (architect, subcontractor).
+    private static readonly RoleSet RolesThatMayReadDrawings = JpmsRoleSets.DrawingReaders;
+
     [Function(nameof(DownloadDrawingRevisionFileEndpoint))]
     public async Task<IActionResult> Run(
         [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "drawings/revisions/{revisionId}/file")] HttpRequest request,
@@ -38,6 +41,7 @@ public sealed class DownloadDrawingRevisionFileEndpoint
 
         var signedInUser = await users.ResolveAsync(request, cancellationToken);
         if (signedInUser is null) return new UnauthorizedResult();
+        if (!RolesThatMayReadDrawings.IncludesAny(signedInUser.Roles)) return new ForbidResult();
 
         var revision = await context.DrawingRevisions
             .FirstOrDefaultAsync(row => row.DrawingRevisionId == revisionId, cancellationToken);

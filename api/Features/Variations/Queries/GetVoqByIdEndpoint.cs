@@ -19,6 +19,9 @@ public sealed class GetVoqByIdEndpoint
         this.handler = handler;
     }
 
+    // Variation reads are internal plus the architect, who reads/approves variations per the permissions matrix.
+    private static readonly RoleSet RolesThatMayReadVariations = JpmsRoleSets.InternalAndArchitect;
+
     [Function(nameof(GetVoqById))]
     public async Task<IActionResult> Run(
         [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "voqs/{voqId}")] HttpRequest request,
@@ -26,6 +29,7 @@ public sealed class GetVoqByIdEndpoint
     {
         var signedInUser = await users.ResolveAsync(request, request.HttpContext.RequestAborted);
         if (signedInUser is null) return new UnauthorizedResult();
+        if (!RolesThatMayReadVariations.IncludesAny(signedInUser.Roles)) return new ForbidResult();
 
         var voq = await handler.HandleAsync(new GetVoqById(voqId), request.HttpContext.RequestAborted);
         return new OkObjectResult(voq);

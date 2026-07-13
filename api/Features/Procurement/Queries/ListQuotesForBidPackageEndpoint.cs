@@ -19,12 +19,18 @@ public sealed class ListQuotesForBidPackageEndpoint
         this.handler = handler;
     }
 
+    // Procurement reads are internal-only; subcontractor portal sessions get their own
+    // scoped endpoints rather than the staff procurement views.
+    private static readonly RoleSet RolesThatMayReadProcurement = JpmsRoleSets.AllInternal;
+
     [Function(nameof(ListQuotesForBidPackage))]
     public async Task<IActionResult> Run(
         [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "bid-packages/{bidPackageId}/quotes")] HttpRequest request,
         string bidPackageId)
     {
-        if (await users.ResolveAsync(request, request.HttpContext.RequestAborted) is null) return new UnauthorizedResult();
+        var signedInUser = await users.ResolveAsync(request, request.HttpContext.RequestAborted);
+        if (signedInUser is null) return new UnauthorizedResult();
+        if (!RolesThatMayReadProcurement.IncludesAny(signedInUser.Roles)) return new ForbidResult();
         return new OkObjectResult(await handler.HandleAsync(new ListQuotesForBidPackage(bidPackageId), request.HttpContext.RequestAborted));
     }
 }

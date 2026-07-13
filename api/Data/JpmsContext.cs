@@ -62,6 +62,7 @@ public sealed class JpmsContext : DbContext
     public DbSet<WorkOrderLineEntity> WorkOrderLines => Set<WorkOrderLineEntity>();
     public DbSet<VariationOrderQuoteEntity> VariationOrderQuotes => Set<VariationOrderQuoteEntity>();
     public DbSet<VariationOrderEntity> VariationOrders => Set<VariationOrderEntity>();
+    public DbSet<SubcontractorVariationRequestEntity> SubcontractorVariationRequests => Set<SubcontractorVariationRequestEntity>();
     public DbSet<RequestEntity> Requests => Set<RequestEntity>();
     public DbSet<RequestItemEntity> RequestItems => Set<RequestItemEntity>();
     public DbSet<RequestMessageEntity> RequestMessages => Set<RequestMessageEntity>();
@@ -105,6 +106,13 @@ public sealed class JpmsContext : DbContext
     public DbSet<ReconciliationPackageOrderEntity> ReconciliationPackageOrders => Set<ReconciliationPackageOrderEntity>();
     public DbSet<ReconciliationPackageSalesLineEntity> ReconciliationPackageSalesLines => Set<ReconciliationPackageSalesLineEntity>();
     public DbSet<TimesheetEntity> Timesheets => Set<TimesheetEntity>();
+    public DbSet<WorkerEntity> Workers => Set<WorkerEntity>();
+    public DbSet<WorkerRateHistoryEntity> WorkerRateHistories => Set<WorkerRateHistoryEntity>();
+    public DbSet<ProjectWorkerAssignmentEntity> ProjectWorkerAssignments => Set<ProjectWorkerAssignmentEntity>();
+    public DbSet<SiteAttendanceEntity> SiteAttendances => Set<SiteAttendanceEntity>();
+    public DbSet<SiteAccessTokenEntity> SiteAccessTokens => Set<SiteAccessTokenEntity>();
+    public DbSet<XeroLineTimesheetCoverEntity> XeroLineTimesheetCovers => Set<XeroLineTimesheetCoverEntity>();
+    public DbSet<LabourSettlementVarianceEntity> LabourSettlementVariances => Set<LabourSettlementVarianceEntity>();
     public DbSet<CashflowSnapshotEntity> CashflowSnapshots => Set<CashflowSnapshotEntity>();
     public DbSet<ValuationInvoiceEntity> ValuationInvoices => Set<ValuationInvoiceEntity>();
     public DbSet<ValuationInvoiceEventEntity> ValuationInvoiceEvents => Set<ValuationInvoiceEventEntity>();

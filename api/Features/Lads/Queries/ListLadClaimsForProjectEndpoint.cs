@@ -14,10 +14,15 @@ public sealed class ListLadClaimsForProjectEndpoint
     private readonly IQueryHandler<ListLadClaimsForProject, IReadOnlyList<LadClaim>> handler;
     public ListLadClaimsForProjectEndpoint(SignedInUserResolver users, IQueryHandler<ListLadClaimsForProject, IReadOnlyList<LadClaim>> handler) { this.users = users; this.handler = handler; }
 
+    // LAD claim reads are internal-only; external portal logins have no view here.
+    private static readonly RoleSet InternalReadRoles = JpmsRoleSets.AllInternal;
+
     [Function(nameof(ListLadClaimsForProject))]
     public async Task<IActionResult> Run([HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "projects/{projectId}/lad-claims")] HttpRequest request, string projectId)
     {
-        if (await users.ResolveAsync(request, request.HttpContext.RequestAborted) is null) return new UnauthorizedResult();
+        var signedInUser = await users.ResolveAsync(request, request.HttpContext.RequestAborted);
+        if (signedInUser is null) return new UnauthorizedResult();
+        if (!InternalReadRoles.IncludesAny(signedInUser.Roles)) return new ForbidResult();
         return new OkObjectResult(await handler.HandleAsync(new ListLadClaimsForProject(projectId), request.HttpContext.RequestAborted));
     }
 }

@@ -23,6 +23,26 @@ public sealed class VariationOrderQuoteEntity
     [MaxLength(256)]     public string? ApprovedByEmail { get; set; }
 }
 
+// A subcontractor-raised variation request (see Jewel.JPMS.Models.SubcontractorVariationRequest).
+// Raised from the portal against one of the sub's own work orders; on acceptance it creates a VOQ
+// (VariationOrderQuoteId is then set) which runs the normal approval pipeline.
+public sealed class SubcontractorVariationRequestEntity
+{
+    [Key, MaxLength(64)] public string VariationRequestId { get; set; } = "";
+    [MaxLength(64)]      public string ProjectId { get; set; } = "";
+    [MaxLength(64)]      public string WorkOrderId { get; set; } = "";
+    [MaxLength(64)]      public string SubcontractorId { get; set; } = "";
+    [MaxLength(256)]     public string Title { get; set; } = "";
+    [MaxLength(2048)]    public string Description { get; set; } = "";
+    public decimal ProposedValue { get; set; }
+    public int Status { get; set; }
+    public DateTimeOffset SubmittedAt { get; set; }
+    public DateTimeOffset? ReviewedAt { get; set; }
+    [MaxLength(256)]     public string? ReviewedByEmail { get; set; }
+    [MaxLength(1024)]    public string RejectionReason { get; set; } = "";
+    [MaxLength(64)]      public string? VariationOrderQuoteId { get; set; }
+}
+
 // A Variation Order (see Jewel.JPMS.Models.VariationOrder). Raised when a VOQ is approved.
 public sealed class VariationOrderEntity
 {

@@ -2,6 +2,7 @@
 @inject AuthService Auth
 @inject SessionService Session
 @inject IVariationStore Variations
+@inject IProcurementStore Procurement
 @inject NavigationManager Nav
 
 <PageTitle>Variations · JPMS</PageTitle>
@@ -45,10 +46,102 @@ else
             </div>
         </div>
 
+        @* Subcontractor-raised variation requests: the portal-side entry to this register. Accepting
+           creates a Selected VOQ carrying the sub's price (it appears in the table below); the
+           normal approve step then writes the VO to the valuation and CVR. *@
+        @if (OpenRequests.Count > 0 || ReviewedRequests.Count > 0)
+        {
+            <div class="rounded-xl border border-line bg-surface overflow-hidden mb-6">
+                <header class="px-5 py-3 border-b border-line bg-surface-raised flex items-center justify-between">
+                    <h3 class="text-sm font-medium text-content-muted">Subcontractor variation requests</h3>
+                    <span class="text-xs text-content-subtle">@OpenRequests.Count awaiting review</span>
+                </header>
+                @if (requestError is not null)
+                {
+                    <p class="mx-5 mt-3 rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@requestError</p>
+                }
+                @if (OpenRequests.Count == 0)
+                {
+                    <p class="p-5 text-sm text-content-subtle italic">Nothing awaiting review.</p>
+                }
+                else
+                {
+                    <ul class="divide-y divide-line">
+                        @foreach (var variationRequest in OpenRequests)
+                        {
+                            <li class="p-4 text-sm">
+                                <div class="flex items-start justify-between gap-3">
+                                    <div>
+                                        <p class="font-medium text-content">@variationRequest.Title</p>
+                                        <p class="text-xs text-content-subtle mt-1">
+                                            @variationRequest.SubcontractorName · against WO-@variationRequest.WorkOrderNumber.ToString("0000") · raised @variationRequest.SubmittedAt.LocalDateTime.ToString("d MMM yyyy")
+                                        </p>
+                                        <p class="text-sm text-content-muted mt-2 whitespace-pre-line">@variationRequest.Description</p>
+                                    </div>
+                                    <div class="text-right shrink-0">
+                                        <p class="font-medium text-content">@Money(variationRequest.ProposedValue)</p>
+                                        @if (CanManageVariations)
+                                        {
+                                            <div class="flex gap-2 mt-2 justify-end">
+                                                <button type="button" class="rounded-lg bg-accent text-accent-ink text-xs font-medium px-2.5 py-1 hover:bg-accent-hover transition disabled:opacity-60"
+                                                        disabled="@requestBusy" @onclick="() => AcceptRequest(variationRequest.VariationRequestId)">
+                                                    Accept → VOQ
+                                                </button>
+                                                <button type="button" class="rounded-lg border border-line text-xs font-medium px-2.5 py-1 text-content-muted hover:text-content transition disabled:opacity-60"
+                                                        disabled="@requestBusy" @onclick="() => StartReject(variationRequest.VariationRequestId)">
+                                                    Reject
+                                                </button>
+                                            </div>
+                                        }
+                                    </div>
+                                </div>
+                                @if (rejectingRequestId == variationRequest.VariationRequestId)
+                                {
+                                    <div class="mt-3 flex flex-wrap gap-2 items-center">
+                                        <input class="field w-72" placeholder="Reason (the subcontractor sees this)"
+                                               @bind="rejectReason" @bind:event="oninput" />
+                                        <button type="button" class="btn-secondary" disabled="@(requestBusy || string.IsNullOrWhiteSpace(rejectReason))"
+                                                @onclick="() => ConfirmReject(variationRequest.VariationRequestId)">
+                                            @(requestBusy ? "Rejecting…" : "Confirm reject")
+                                        </button>
+                                        <button type="button" class="text-xs text-content-subtle underline underline-offset-2"
+                                                @onclick="() => rejectingRequestId = null">Cancel</button>
+                                    </div>
+                                }
+                            </li>
+                        }
+                    </ul>
+                }
+                @if (ReviewedRequests.Count > 0)
+                {
+                    <details class="border-t border-line px-5 py-3">
+                        <summary class="text-xs text-content-subtle cursor-pointer">Reviewed (@ReviewedRequests.Count)</summary>
+                        <ul class="mt-2 space-y-1">
+                            @foreach (var reviewed in ReviewedRequests)
+                            {
+                                <li class="text-xs text-content-subtle">
+                                    @reviewed.Title — @reviewed.Status.ToString().ToLowerInvariant()
+                                    @(reviewed.Status == VariationRequestStatus.Rejected && !string.IsNullOrWhiteSpace(reviewed.RejectionReason) ? $" ({reviewed.RejectionReason})" : "")
+                                    · @reviewed.SubcontractorName · @Money(reviewed.ProposedValue)
+                                </li>
+                            }
+                        </ul>
+                    </details>
+                }
+            </div>
+        }
+
+        @* Issue-WO errors need a home even when the review section above is not rendered. *@
+        @if (requestError is not null && OpenRequests.Count == 0 && ReviewedRequests.Count == 0)
+        {
+            <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-4">@requestError</p>
+        }
+
         @if (Rows.Count == 0)
         {
             <p class="text-sm text-content-subtle italic">
-                No variations yet. Raise a VOQ from an RFQ on the Requests tab to start one.
+                No variations yet. Raise a VOQ from an RFQ on the Requests tab, or accept a
+                subcontractor's variation request above.
             </p>
         }
         else
@@ -63,6 +156,7 @@ else
                             <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 text-right">Value</th>
                             <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 hidden lg:table-cell">Raised</th>
                             <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 hidden lg:table-cell">Approved</th>
+                            <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3">Work order</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-line">
@@ -86,6 +180,25 @@ else
                                 <td class="px-4 py-3 text-content-subtle hidden lg:table-cell whitespace-nowrap">@row.Voq.CreatedAt.LocalDateTime.ToString("d MMM yyyy")</td>
                                 <td class="px-4 py-3 text-content-subtle hidden lg:table-cell whitespace-nowrap">
                                     @(row.Order?.ApprovedAt.LocalDateTime.ToString("d MMM yyyy") ?? "—")
+                                </td>
+                                <td class="px-4 py-3 whitespace-nowrap">
+                                    @{ var issued = IssuedWorkOrdersFor(row.Order); }
+                                    @if (issued.Count > 0)
+                                    {
+                                        <span class="text-xs text-content-muted">@string.Join(", ", issued.Select(order => $"WO-{order.Number:0000}"))</span>
+                                    }
+                                    @if (CanIssueWorkOrder(row.Order))
+                                    {
+                                        <button type="button" class="@(issued.Count > 0 ? "block " : "")text-xs text-accent underline underline-offset-2 disabled:opacity-60"
+                                                title="@(issued.Count > 0 ? "Issue a further work order for this variation" : "Issue the work order instructing this variation")"
+                                                disabled="@requestBusy" @onclick="() => IssueWorkOrder(row.Order!.VariationOrderId)">
+                                            @(issued.Count > 0 ? "Issue another" : "Issue WO")
+                                        </button>
+                                    }
+                                    else if (issued.Count == 0)
+                                    {
+                                        <span class="text-content-subtle">—</span>
+                                    }
                                 </td>
                             </tr>
                         }
@@ -127,10 +240,18 @@ else
     {
         await Session.EnsureLoadedAsync();
         if (!Auth.IsSignedIn) { Nav.NavigateTo("/login", forceLoad: true); return; }
+        Procurement.Refresh(ProjectId); // Background revalidation of work orders (issued-WO column).
+        await LoadAsync();
+        isLoaded = true;
+    }
+
+    private async Task LoadAsync()
+    {
         try
         {
             quotes = await Variations.ListForProjectAsync(ProjectId);
             orders = await Variations.ListVariationOrdersForProjectAsync(ProjectId);
+            variationRequests = await Variations.ListVariationRequestsForProjectAsync(ProjectId);
             var byVoq = orders.ToDictionary(vo => vo.VariationOrderQuoteId);
             Rows = quotes
                 .Select(q => new Row(q, byVoq.GetValueOrDefault(q.VariationOrderQuoteId)))
@@ -138,7 +259,96 @@ else
                 .ToList();
         }
         catch { error = "Couldn't load variations. Please try again."; }
-        isLoaded = true;
+    }
+
+    // ---- Subcontractor variation requests ----
+
+    private IReadOnlyList<SubcontractorVariationRequest> variationRequests = Array.Empty<SubcontractorVariationRequest>();
+    private bool requestBusy;
+    private string? requestError;
+    private string? rejectingRequestId;
+    private string rejectReason = "";
+
+    private List<SubcontractorVariationRequest> OpenRequests =>
+        variationRequests.Where(r => r.IsOpen).ToList();
+
+    private List<SubcontractorVariationRequest> ReviewedRequests =>
+        variationRequests.Where(r => !r.IsOpen).ToList();
+
+    // Mirrors the API's VariationRoles.AllowedToManageVariations.
+    private bool CanManageVariations => Session.AvailableRoles.Any(role =>
+        role is Role.Admin or Role.ManagingDirector or Role.ProjectManager or Role.QuantitySurveyor);
+
+    // Mirrors the API's issue gate (Director/PM, like awarding a bid package).
+    private bool CanIssueWorkOrders => Session.AvailableRoles.Any(role =>
+        role is Role.Admin or Role.ManagingDirector or Role.ProjectManager);
+
+    private async Task AcceptRequest(string variationRequestId)
+    {
+        if (requestBusy) return;
+        requestError = null;
+        try
+        {
+            requestBusy = true;
+            await Variations.AcceptVariationRequestAsync(variationRequestId);
+            await LoadAsync(); // The new Selected VOQ appears in the register below.
+        }
+        catch (CommandFailedException ex) { requestError = ex.Message; }
+        catch { requestError = "Couldn't accept the request. Please try again."; }
+        finally { requestBusy = false; }
+    }
+
+    private void StartReject(string variationRequestId)
+    {
+        rejectingRequestId = variationRequestId;
+        rejectReason = "";
+        requestError = null;
+    }
+
+    private async Task ConfirmReject(string variationRequestId)
+    {
+        if (requestBusy || string.IsNullOrWhiteSpace(rejectReason)) return;
+        requestError = null;
+        try
+        {
+            requestBusy = true;
+            await Variations.RejectVariationRequestAsync(variationRequestId, rejectReason.Trim());
+            rejectingRequestId = null;
+            await LoadAsync();
+        }
+        catch (CommandFailedException ex) { requestError = ex.Message; }
+        catch { requestError = "Couldn't reject the request. Please try again."; }
+        finally { requestBusy = false; }
+    }
+
+    // ---- Issue work order for a VO ----
+
+    private IReadOnlyList<WorkOrder> IssuedWorkOrdersFor(VariationOrder? order) =>
+        order is null
+            ? Array.Empty<WorkOrder>()
+            : Procurement.WorkOrdersFor(ProjectId)
+                .Where(wo => string.Equals(wo.VariationOrderId, order.VariationOrderId, StringComparison.OrdinalIgnoreCase))
+                .ToList();
+
+    private bool CanIssueWorkOrder(VariationOrder? order) =>
+        CanIssueWorkOrders
+        && order is { Status: VariationOrderStatus.Approved or VariationOrderStatus.Issued }
+        && !string.IsNullOrWhiteSpace(order.SubcontractorId);
+
+    private async Task IssueWorkOrder(string variationOrderId)
+    {
+        if (requestBusy) return;
+        requestError = null;
+        try
+        {
+            requestBusy = true;
+            await Variations.IssueWorkOrderForVariationOrderAsync(variationOrderId);
+            Procurement.Refresh(ProjectId); // Show the new order in the issued-WO column.
+            await LoadAsync();              // VO may have moved Approved → Issued.
+        }
+        catch (CommandFailedException ex) { requestError = ex.Message; }
+        catch { requestError = "Couldn't issue the work order. Please try again."; }
+        finally { requestBusy = false; }
     }
 
     private static string StatusLabel(Row row)

@@ -20,6 +20,9 @@ public sealed class ListCostCentreActualCostsEndpoint
         this.handler = handler;
     }
 
+    // Commercial reads are internal-only; external portal logins have no view of project money.
+    private static readonly RoleSet InternalReadRoles = JpmsRoleSets.AllInternal;
+
     [Function(nameof(ListCostCentreActualCosts))]
     public async Task<IActionResult> Run(
         [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "projects/{projectId}/cost-centres/{costCode}/actual-costs")] HttpRequest request,
@@ -28,6 +31,7 @@ public sealed class ListCostCentreActualCostsEndpoint
     {
         var signedInUser = await users.ResolveAsync(request, request.HttpContext.RequestAborted);
         if (signedInUser is null) return new UnauthorizedResult();
+        if (!InternalReadRoles.IncludesAny(signedInUser.Roles)) return new ForbidResult();
 
         var lines = await handler.HandleAsync(new ListCostCentreActualCosts(projectId, costCode), request.HttpContext.RequestAborted);
         return new OkObjectResult(lines);

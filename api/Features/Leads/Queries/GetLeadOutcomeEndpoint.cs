@@ -21,6 +21,9 @@ public sealed class GetLeadOutcomeEndpoint
         this.handler = handler;
     }
 
+    // Lead pipeline reads are internal-only; external portal logins have no business here.
+    private static readonly RoleSet RolesThatMayReadLeads = JpmsRoleSets.AllInternal;
+
     [Function(nameof(GetLeadOutcome))]
     public async Task<IActionResult> Run(
         [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "leads/{leadId}/outcome")] HttpRequest request,
@@ -28,6 +31,7 @@ public sealed class GetLeadOutcomeEndpoint
     {
         var signedInUser = await users.ResolveAsync(request, request.HttpContext.RequestAborted);
         if (signedInUser is null) return new UnauthorizedResult();
+        if (!RolesThatMayReadLeads.IncludesAny(signedInUser.Roles)) return new ForbidResult();
 
         var outcome = await handler.HandleAsync(new GetLeadOutcome(leadId), request.HttpContext.RequestAborted);
         return new OkObjectResult(outcome);

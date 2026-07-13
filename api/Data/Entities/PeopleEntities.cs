@@ -49,6 +49,17 @@ public sealed class ComplianceDocumentEntity
     [MaxLength(256)]     public string FileName { get; set; } = "";
     public DateTimeOffset? ExpiresAt { get; set; }
     public DateTimeOffset UploadedAt { get; set; }
+
+    // File storage (empty BlobPath = metadata-only record from before files were stored).
+    [MaxLength(1024)]    public string BlobPath { get; set; } = "";
+    [MaxLength(256)]     public string ContentType { get; set; } = "";
+    public long FileSize { get; set; }
+
+    // Versioning: re-uploading the same Kind supersedes the previous latest rather than replacing
+    // it (scoping decision, docs/06-backlog/subcontractor-crm-scope.md §4). The latest version of
+    // a Kind has SupersededAt == null and drives its expiry status.
+    public int Version { get; set; } = 1;
+    public DateTimeOffset? SupersededAt { get; set; }
 }
 
 public sealed class HsRecordEntity

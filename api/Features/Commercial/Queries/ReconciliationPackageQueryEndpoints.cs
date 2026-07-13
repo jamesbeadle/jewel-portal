@@ -24,6 +24,9 @@ public sealed class ReconciliationPackageQueryEndpoints
         this.reportHandler = reportHandler;
     }
 
+    // Commercial reads are internal-only; external portal logins have no view of project money.
+    private static readonly RoleSet InternalReadRoles = JpmsRoleSets.AllInternal;
+
     [Function(nameof(ListReconciliationPackagesForProject))]
     public async Task<IActionResult> Definitions(
         [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "projects/{projectId}/reconciliation-packages")] HttpRequest request,
@@ -31,6 +34,7 @@ public sealed class ReconciliationPackageQueryEndpoints
     {
         var signedInUser = await users.ResolveAsync(request, request.HttpContext.RequestAborted);
         if (signedInUser is null) return new UnauthorizedResult();
+        if (!InternalReadRoles.IncludesAny(signedInUser.Roles)) return new ForbidResult();
 
         var packages = await definitionsHandler.HandleAsync(
             new ListReconciliationPackagesForProject(projectId), request.HttpContext.RequestAborted);
@@ -44,6 +48,7 @@ public sealed class ReconciliationPackageQueryEndpoints
     {
         var signedInUser = await users.ResolveAsync(request, request.HttpContext.RequestAborted);
         if (signedInUser is null) return new UnauthorizedResult();
+        if (!InternalReadRoles.IncludesAny(signedInUser.Roles)) return new ForbidResult();
 
         var rows = await reportHandler.HandleAsync(
             new ListPackageReconciliation(projectId), request.HttpContext.RequestAborted);

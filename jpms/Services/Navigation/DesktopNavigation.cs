@@ -32,6 +32,8 @@ public static class DesktopNavigation
     private static readonly IReadOnlyList<DesktopNavigationEntry> Entries = new DesktopNavigationEntry[]
     {
         Entry("Dashboard",      "/dashboard",      AllRoles),
+        // The subcontractor portal home — record-scoped server-side (SubcontractorScope).
+        Entry("My record",      "/portal",         Role.Subcontractor),
         Entry("Projects",       "/projects",       Role.ManagingDirector, Role.FinanceDirector, Role.ProjectManager, Role.QuantitySurveyor, Role.SiteManager, Role.HealthSafetyOfficer, Role.OfficeComplianceCoordinator),
         // Mirrors the API's cross-project RFI dashboard gate (RfiDashboardRoles.AllowedToViewDashboard).
         Entry("RFIs",           "/rfis",           Role.ManagingDirector, Role.FinanceDirector, Role.ProjectManager, Role.QuantitySurveyor, Role.SiteManager, Role.HealthSafetyOfficer, Role.OfficeComplianceCoordinator),
@@ -45,6 +47,8 @@ public static class DesktopNavigation
         // everything via the early return above).
         Entry("Agents",         "/agents",          Role.ManagingDirector, Role.ProjectManager, Role.QuantitySurveyor, Role.SiteManager),
         Entry("Rates",          "/rate-library",   Role.ManagingDirector, Role.ProjectManager, Role.QuantitySurveyor),
+        // Mirrors the API's labour registry authorisation (LabourRoleSets.ManageWorkers).
+        Entry("Workers",        "/labour/workers", Role.ManagingDirector, Role.FinanceDirector, Role.ProjectManager),
         // Mirrors the API's cost-centre command authorisation (admins see everything via the early return above).
         Entry("Cost codes",     "/cost-codes",     Role.ManagingDirector, Role.FinanceDirector, Role.QuantitySurveyor),
         // Mirrors the API's Xero ledger authorisation (ListXeroTransactionsEndpoint).

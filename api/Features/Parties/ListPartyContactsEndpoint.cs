@@ -21,6 +21,10 @@ public sealed class ListPartyContactsEndpoint
         this.handler = handler;
     }
 
+    // Reading a party's contact book is open to all internal staff; managing it is gated
+    // separately by PartyContactAuthorisation.
+    private static readonly RoleSet RolesThatMayReadPartyContacts = JpmsRoleSets.AllInternal;
+
     [Function(nameof(ListPartyContacts))]
     public async Task<IActionResult> Run(
         [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "parties/{partyKind}/{partyId}/contacts")] HttpRequest request,
@@ -29,6 +33,7 @@ public sealed class ListPartyContactsEndpoint
     {
         var signedInUser = await users.ResolveAsync(request, request.HttpContext.RequestAborted);
         if (signedInUser is null) return new UnauthorizedResult();
+        if (!RolesThatMayReadPartyContacts.IncludesAny(signedInUser.Roles)) return new ForbidResult();
 
         var kind = PartyContactMapping.ParsePartyKind(partyKind);
         if (kind is null) return new BadRequestObjectResult("partyKind must be 'client' or 'architect'.");

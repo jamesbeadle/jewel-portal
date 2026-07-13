@@ -47,6 +47,9 @@ public static class VariationsFeatureRegistration
         services.AddScoped<CancelVariationOrderAuthorisation>();
         services.AddScoped<CancelVariationOrderValidation>();
 
+        // Subcontractor variation requests (portal-raised; see subcontractor-crm-scope §6).
+        services.AddScoped<ICommandHandler<AcceptVariationRequest, VariationOrderQuote>, AcceptVariationRequestHandler>();
+
         return services;
     }
 }

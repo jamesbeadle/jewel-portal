@@ -11,8 +11,10 @@ public sealed record SetPasswordRequest(string Token, string Password);
 /// <summary>Posted by an admin to /api/auth/invite to create a user and mint an invite link.</summary>
 public sealed record InviteUserRequest(string Email, string DisplayName, IReadOnlyList<Role> Roles);
 
-/// <summary>The signed-in user, returned by /api/auth/me, /api/auth/login and set-password.</summary>
-public sealed record AuthenticatedUserResponse(string Email, string DisplayName, IReadOnlyList<Role> Roles);
+/// <summary>The signed-in user, returned by /api/auth/me, /api/auth/login and set-password.
+/// SubcontractorId is set only for portal-scoped subcontractor contacts.</summary>
+public sealed record AuthenticatedUserResponse(
+    string Email, string DisplayName, IReadOnlyList<Role> Roles, string? SubcontractorId = null);
 
 /// <summary>Result of creating an invite — includes the copyable link for the admin to send.</summary>
 public sealed record InviteResult(string Email, string DisplayName, string InviteLink, DateTimeOffset ExpiresAt);
