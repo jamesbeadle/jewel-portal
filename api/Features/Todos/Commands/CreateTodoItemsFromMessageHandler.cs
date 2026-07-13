@@ -2,6 +2,7 @@ using Jewel.JPMS.Api.Cqrs;
 using Jewel.JPMS.Api.Data;
 using Jewel.JPMS.Api.Data.Entities;
 using Jewel.JPMS.Api.Features.MailboxIntake.Graph;
+using Jewel.JPMS.Api.Features.RecordLinks;
 using Jewel.JPMS.Contracts.Todos;
 using Jewel.JPMS.Models;
 using Microsoft.EntityFrameworkCore;
@@ -19,8 +20,9 @@ public sealed class CreateTodoItemsFromMessageHandler : ICommandHandler<CreateTo
 {
     private readonly JpmsContext context;
     private readonly IMailboxGraphClient graph;
-    public CreateTodoItemsFromMessageHandler(JpmsContext context, IMailboxGraphClient graph)
-    { this.context = context; this.graph = graph; }
+    private readonly RecordThreadTagger threadTagger;
+    public CreateTodoItemsFromMessageHandler(JpmsContext context, IMailboxGraphClient graph, RecordThreadTagger threadTagger)
+    { this.context = context; this.graph = graph; this.threadTagger = threadTagger; }
 
     public async Task<IReadOnlyList<TodoItem>> HandleAsync(CreateTodoItemsFromMessage command, CancellationToken cancellationToken)
     {
@@ -52,11 +54,15 @@ public sealed class CreateTodoItemsFromMessageHandler : ICommandHandler<CreateTo
         }).ToList();
 
         // Tag the email to every new item first (one "JPMS/TODO-####" category per item, verified by
-        // read-back); only persist the rows once every tag sticks.
+        // read-back); only persist the rows once every tag sticks. Tag the WHOLE conversation, not just
+        // the clicked message (same as LinkMessageToRecordHandler) — otherwise the thread's other emails
+        // never gain the JPMS marker and the thread stays in the triage queue. The anchor tag is
+        // verified; sibling tagging is best-effort.
         foreach (var entity in entities)
         {
-            var tagged = await graph.AssignAsync(
-                command.MessageId, snapshot.InternetMessageId, TriageCategories.ForRecord(entity.Reference), cancellationToken);
+            var tagged = await threadTagger.TagThreadAsync(
+                command.MessageId, snapshot.InternetMessageId, snapshot.ConversationId,
+                TriageCategories.ForRecord(entity.Reference), cancellationToken);
             if (!tagged)
                 throw new InvalidOperationException("The email couldn't be tagged to the new to-do items. Please try again.");
         }
