@@ -100,8 +100,10 @@ else
                 <div class="panel p-5">
                     <div class="flex items-start justify-between gap-3 mb-3">
                         <div>
-                            <h3 class="eyebrow">Official @record.Kind.DisplayName() form</h3>
-                            <p class="text-xs text-content-subtle mt-0.5">The itemised queries and sections rendered on the issued document.</p>
+                            <h3 class="eyebrow">@(record.Kind.IsEmailable() ? $"Official {record.Kind.DisplayName()} form" : "Official form")</h3>
+                            <p class="text-xs text-content-subtle mt-0.5">@(record.Kind.IsEmailable()
+                                ? "The itemised queries and sections rendered on the issued document."
+                                : "Prepared ahead: these sections are carried onto the official document when the request is promoted to an RFI.")</p>
                         </div>
                         @if (CanEditDetails && !editingForm)
                         {
@@ -268,9 +270,22 @@ else
             <div class="space-y-5">
                 <div class="panel p-5 space-y-3">
                     <h3 class="eyebrow">Official document &amp; issue</h3>
-                    <a href="@DocumentHref" target="_blank" rel="noopener"
-                       class="btn-secondary w-full inline-flex justify-center">Download @record.Kind.DisplayName() PDF</a>
-                    <p class="text-xs text-content-subtle">Regenerated from the register on every download, so it always reflects the request as it stands.</p>
+                    @* The official document only exists once the request reaches its official stage
+                       (RFI / NOD / EOT). A pre-official request has no PDF and is never emailed. *@
+                    @if (record.Kind.IsEmailable())
+                    {
+                        <a href="@DocumentHref" target="_blank" rel="noopener"
+                           class="btn-secondary w-full inline-flex justify-center">Download @record.Kind.DisplayName() PDF</a>
+                        <p class="text-xs text-content-subtle">Regenerated from the register on every download, so it always reflects the request as it stands.</p>
+                    }
+                    else
+                    {
+                        <p class="text-sm text-content-subtle">
+                            A @record.Kind.DisplayName() request is the pre-official stage — there is no
+                            official document yet and nothing is emailed. Promoting it to an RFI mints the
+                            reference, creates the official document and drafts the email for review.
+                        </p>
+                    }
 
                     @if (CanDraftEmail && record.Kind.IsEmailable())
                     {
@@ -306,14 +321,6 @@ else
                             </div>
                         }
                     }
-                    else if (CanDraftEmail)
-                    {
-                        <p class="text-xs text-content-subtle pt-3 border-t border-line">
-                            A @record.Kind.DisplayName() request is never emailed — only RFI, NOD and EOT
-                            documents go out. Promote it to an RFI to issue it.
-                        </p>
-                    }
-
                     @* Type / promotion / recipients live with the document they shape — one panel,
                        not two, so the rail stays short. *@
                     @if (CanEditDetails)
