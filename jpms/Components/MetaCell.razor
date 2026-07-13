@@ -1,0 +1,11 @@
+@* One label-over-value cell in a horizontal summary band (the row-per-fact counterpart of MetaRow). *@
+
+<div>
+    <p class="text-[10px] uppercase tracking-wide font-semibold text-content-subtle mb-0.5">@Label</p>
+    <p class="text-content truncate" title="@Value">@Value</p>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public string Label { get; set; } = "";
+    [Parameter] public string? Value { get; set; }
+}

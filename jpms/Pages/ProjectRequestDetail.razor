@@ -39,11 +39,13 @@ else
 
         <div class="flex flex-wrap items-start justify-between gap-3 mb-1">
             <div class="flex items-center gap-3">
-                @if (!string.IsNullOrEmpty(record.DisplayNumber))
+                @* Lead with the official instrument number (RFI-014) once promoted; the REQ container
+                   number is secondary context (it names the request's folder in the projects mailbox). *@
+                <span class="font-mono text-base font-semibold text-content" title="@record.Kind.LongName()">@PrimaryReference</span>
+                @if (ShowContainerNumber)
                 {
-                    <span class="font-mono text-sm font-semibold text-content" title="Mailbox folder name">@record.DisplayNumber</span>
+                    <span class="font-mono text-sm text-content-muted" title="Container number — the request's folder in the projects mailbox">@record.DisplayNumber</span>
                 }
-                <span class="font-mono text-sm text-content-muted">@record.Reference</span>
                 <span class="text-content-subtle text-xs uppercase tracking-wide" title="@record.Kind.LongName()">@record.Kind.DisplayName()</span>
                 <span class="inline-flex items-center whitespace-nowrap rounded-full px-2 py-0.5 text-[11px] font-medium @StatusClass(record.Status)">@StatusLabel(record.Status)</span>
                 @if (record.ImpliesVariation)
@@ -56,6 +58,31 @@ else
 
         <RecordLineage ProjectId="@ProjectId" ActiveId="request"
                        Request="record" Voq="voq" Vo="vo" BidPackages="bidPackages" />
+
+        @* At-a-glance facts run across the top rather than down a rail, so the columns below are
+           left for the substance: the request itself on the left, actions on the right. *@
+        <div class="panel px-5 py-4 mb-5">
+            <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-x-6 gap-y-3 text-sm">
+                <MetaCell Label="Raised by" Value="@record.RaisedByEmail" />
+                <MetaCell Label="Date issued" Value="@Date(record.RaisedAt)" />
+                <MetaCell Label="Raised to" Value="@Dash(record.RaisedTo)" />
+                <MetaCell Label="Response due" Value="@Date(record.ResponseDue)" />
+                <div>
+                    <p class="text-[10px] uppercase tracking-wide font-semibold text-content-subtle mb-0.5">Days outstanding</p>
+                    <p class="@(record.IsOverdue ? "text-negative font-semibold" : "text-content")">@(record.DaysOutstanding is int d ? d.ToString() : "—")</p>
+                </div>
+                @if (record.ClosedAt is not null)
+                {
+                    <MetaCell Label="Date closed" Value="@Date(record.ClosedAt)" />
+                }
+                <MetaCell Label="Drawing / detail" Value="@Dash(record.DrawingRef)" />
+                <MetaCell Label="Related drawing / spec" Value="@Dash(record.RelatedDrawingSpec)" />
+                @if (record.Kind is not RequestType.Rfi)
+                {
+                    <MetaCell Label="Value" Value="@(record.Value is null ? "—" : Money(record.Value.Value))" />
+                }
+            </div>
+        </div>
 
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
             <div class="lg:col-span-2 space-y-5">
@@ -239,26 +266,8 @@ else
             </div>
 
             <div class="space-y-5">
-                <div class="panel p-5 space-y-3 text-sm">
-                    <MetaRow Label="Raised by" Value="@record.RaisedByEmail" />
-                    <MetaRow Label="Date issued" Value="@Date(record.RaisedAt)" />
-                    <MetaRow Label="Raised to" Value="@Dash(record.RaisedTo)" />
-                    <MetaRow Label="Drawing / detail" Value="@Dash(record.DrawingRef)" />
-                    <MetaRow Label="Response due" Value="@Date(record.ResponseDue)" />
-                    <MetaRow Label="Days outstanding" Value="@(record.DaysOutstanding is int d ? d.ToString() : "—")" />
-                    @if (record.ClosedAt is not null)
-                    {
-                        <MetaRow Label="Date closed" Value="@Date(record.ClosedAt)" />
-                    }
-                    @if (record.Kind is not RequestType.Rfi)
-                    {
-                        <MetaRow Label="Value" Value="@(record.Value is null ? "—" : Money(record.Value.Value))" />
-                    }
-                    <MetaRow Label="Related drawing / spec" Value="@Dash(record.RelatedDrawingSpec)" />
-                </div>
-
                 <div class="panel p-5 space-y-3">
-                    <h3 class="eyebrow">Official document</h3>
+                    <h3 class="eyebrow">Official document &amp; issue</h3>
                     <a href="@DocumentHref" target="_blank" rel="noopener"
                        class="btn-secondary w-full inline-flex justify-center">Download @record.Kind.DisplayName() PDF</a>
                     <p class="text-xs text-content-subtle">Regenerated from the register on every download, so it always reflects the request as it stands.</p>
@@ -304,12 +313,13 @@ else
                             documents go out. Promote it to an RFI to issue it.
                         </p>
                     }
-                </div>
 
-                @if (CanEditDetails)
-                {
-                    <div class="panel p-5 space-y-4">
-                        <h3 class="eyebrow">Request type</h3>
+                    @* Type / promotion / recipients live with the document they shape — one panel,
+                       not two, so the rail stays short. *@
+                    @if (CanEditDetails)
+                    {
+                        <div class="pt-4 border-t border-line space-y-4">
+                            <h4 class="eyebrow">Request type</h4>
                         <p class="text-sm text-content">
                             Current: <span class="font-medium">@record.Kind.DisplayName()</span>
                             @if (record.HasRfq)
@@ -382,7 +392,7 @@ else
                         @if (recipientPreview is not null)
                         {
                             <div class="rounded-lg bg-surface-raised border border-line px-3 py-2 space-y-1">
-                                <p class="text-[10px] uppercase tracking-wide font-semibold text-content-subtle">Will be sent</p>
+                                <p class="text-[10px] uppercase tracking-wide font-semibold text-content-subtle">Draft will be addressed to</p>
                                 @if (recipientPreview.To.Count == 0)
                                 {
                                     <p class="text-xs text-negative">No correspondent resolves — link a party or set a project contact's routing to To.</p>
@@ -402,8 +412,9 @@ else
                                 <p class="text-[10px] text-content-subtle">From the project's correspondence profile (Setup tab). BCC never appears on the document or the shared trail.</p>
                             </div>
                         }
-                    </div>
-                }
+                        </div>
+                    }
+                </div>
 
                 @if (record.HasRfq)
                 {
@@ -698,6 +709,18 @@ else
     private RequestRecipientSet? recipientPreview;
 
     private string VoqHref => voq is null ? "" : $"/projects/{ProjectId}/voq/{voq.VariationOrderQuoteId}";
+
+    // The reference the page leads with: once promoted, the official instrument number (RFI-014) —
+    // the number correspondents know it by — with the REQ container number as secondary context.
+    // A General request leads with its REQ-#### container number.
+    private string PrimaryReference =>
+        record is null ? "" :
+        record.Kind != RequestType.General && !string.IsNullOrWhiteSpace(record.Reference)
+            ? record.Reference
+            : string.IsNullOrEmpty(record.DisplayNumber) ? record.Reference : record.DisplayNumber;
+
+    private bool ShowContainerNumber =>
+        record is not null && !string.IsNullOrEmpty(record.DisplayNumber) && record.DisplayNumber != PrimaryReference;
 
     private string RegisterHref => $"/projects/{ProjectId}/requests";
 
