@@ -23,4 +23,6 @@ public sealed record Project(
     // The project's option in Xero's "Sites" tracking category, exactly as named in Xero.
     // Explicit mapping: the Xero write-back (cost-code confirmation + invoice approval)
     // stamps it on every allocated line and refuses to run while it's unset.
-    string? XeroSiteName = null);
+    string? XeroSiteName = null,
+    // When the next valuation is expected. Set manually via SetNextValuationDate; informational.
+    DateTimeOffset? NextExpectedValuationDate = null);

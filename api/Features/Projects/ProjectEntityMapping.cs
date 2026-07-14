@@ -20,5 +20,6 @@ internal static class ProjectEntityMapping
         AddressLine: entity.AddressLine,
         Town: entity.Town,
         Postcode: entity.Postcode,
-        XeroSiteName: entity.XeroSiteName);
+        XeroSiteName: entity.XeroSiteName,
+        NextExpectedValuationDate: entity.NextExpectedValuationDate);
 }

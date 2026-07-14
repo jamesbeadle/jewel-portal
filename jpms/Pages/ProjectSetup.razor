@@ -31,10 +31,11 @@ else
                 <ProjectDetailsEditor ProjectId="@ProjectId" />
             </div>
 
-            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-4 mb-6">
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 mb-6">
                 <Stat Label="Stage"           Value="@Project.Stage.DisplayName()" />
                 <Stat Label="Entity"          Value="@Project.Organisation.ShortCode()" />
                 <Stat Label="Project Manager" Value="@Project.ProjectManagerEmail" />
+                <NextValuationDateEditor ProjectId="@ProjectId" />
             </div>
 
             <ProjectCorrespondencePanel ProjectId="@ProjectId" />

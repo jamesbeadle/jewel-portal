@@ -1,0 +1,135 @@
+@using Jewel.JPMS.Contracts.Projects
+@using Jewel.JPMS.Features.Projects
+@inject SessionService Session
+@inject ICommandSender Commands
+@inject ProjectListReadModel Projects
+
+@*
+    Stat panel showing when the next valuation is expected, with a "Set date" button (directors
+    and project managers) that opens a small date-maths modal: pick a base date, add an exact
+    number of days/weeks/months, and the resulting date is previewed live before saving. Sends
+    SetNextValuationDate and refreshes the project list read model so the stat updates in place.
+*@
+
+<article class="panel p-4">
+    <p class="eyebrow mb-1">Next Valuation</p>
+    <div class="flex items-center justify-between gap-2">
+        <p class="text-content text-sm leading-snug">@(CurrentDate?.ToString("d MMM yyyy") ?? "—")</p>
+        @if (CanEdit)
+        {
+            <button type="button" class="btn-secondary text-xs px-2.5 py-1.5 shrink-0" @onclick="Open">Set date</button>
+        }
+    </div>
+</article>
+
+<Modal IsOpen="@open" Title="Set next valuation date" ConfirmLabel="@(busy ? "Saving…" : "Save date")"
+       CancelLabel="Cancel" ConfirmDisabled="@(busy || Result is null)" OnConfirm="Save" OnCancel="Close">
+    <div class="space-y-3">
+        @if (error is not null)
+        {
+            <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@error</p>
+        }
+
+        <div>
+            <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Base date</label>
+            <input type="date" class="field" @bind="baseDate" />
+            <p class="text-xs text-content-subtle mt-1">Usually the current or last valuation date — or just pick the date itself and add nothing.</p>
+        </div>
+
+        <div class="grid grid-cols-2 gap-4">
+            <div>
+                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Add</label>
+                <input type="number" class="field" @bind="amount" />
+            </div>
+            <div>
+                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Unit</label>
+                <select class="field" @bind="unit">
+                    <option value="@Unit.Days">Days</option>
+                    <option value="@Unit.Weeks">Weeks</option>
+                    <option value="@Unit.Months">Months</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="rounded-lg border border-line bg-surface-raised px-3 py-2">
+            <p class="text-xs uppercase tracking-wider text-content-subtle font-semibold mb-0.5">Next valuation date</p>
+            <p class="text-sm font-medium text-content">
+                @(Result?.ToString("dddd d MMMM yyyy") ?? "Pick a base date")
+            </p>
+        </div>
+
+        @if (CurrentDate is not null)
+        {
+            <button type="button" class="text-xs text-content-subtle underline underline-offset-4 hover:text-content"
+                    disabled="@busy" @onclick="ClearAsync">Clear the current date</button>
+        }
+    </div>
+</Modal>
+
+@code {
+    [Parameter, EditorRequired] public string ProjectId { get; set; } = "";
+
+    private enum Unit { Days, Weeks, Months }
+
+    private bool open;
+    private bool busy;
+    private string? error;
+
+    private DateTime? baseDate;
+    private int amount;
+    private Unit unit = Unit.Weeks;
+
+    private DateTimeOffset? CurrentDate => Projects.Find(ProjectId)?.NextExpectedValuationDate;
+
+    // Mirrors SetNextValuationDateAuthorisation server-side (directors and project managers;
+    // administrators carry every role).
+    private bool CanEdit =>
+        Session.AvailableRoles.Any(role => role is Role.Admin or Role.ManagingDirector or Role.ProjectManager);
+
+    // The date maths: base date plus an exact number of days / weeks / months.
+    private DateTime? Result => baseDate is { } start
+        ? unit switch
+        {
+            Unit.Days => start.AddDays(amount),
+            Unit.Weeks => start.AddDays(amount * 7),
+            Unit.Months => start.AddMonths(amount),
+            _ => start,
+        }
+        : null;
+
+    private void Open()
+    {
+        // Start from the currently set date (rolling it forward is the common case), else today.
+        baseDate = CurrentDate?.Date ?? DateTime.Today;
+        amount = 0;
+        unit = Unit.Weeks;
+        error = null;
+        open = true;
+    }
+
+    private void Close()
+    {
+        open = false;
+        error = null;
+    }
+
+    private Task Save() => SendAsync(Result is { } result ? new DateTimeOffset(result.Date, TimeSpan.Zero) : null);
+
+    private Task ClearAsync() => SendAsync(null);
+
+    private async Task SendAsync(DateTimeOffset? nextExpectedValuationDate)
+    {
+        if (busy) return;
+        error = null;
+        busy = true;
+        try
+        {
+            await Commands.SendAsync(new SetNextValuationDate(ProjectId, nextExpectedValuationDate), CancellationToken.None);
+            await Projects.RefreshAsync(CancellationToken.None);
+            Close();
+        }
+        catch (CommandFailedException ex) { error = ex.Message; }
+        catch { error = "Couldn't save the date. Please try again."; }
+        finally { busy = false; }
+    }
+}

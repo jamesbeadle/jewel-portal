@@ -24,6 +24,9 @@ public static class ProjectsFeatureRegistration
         services.AddScoped<UpdateProjectDetailsAuthorisation>();
         services.AddScoped<UpdateProjectDetailsValidation>();
 
+        services.AddScoped<ICommandHandler<SetNextValuationDate, Project>, SetNextValuationDateHandler>();
+        services.AddScoped<SetNextValuationDateAuthorisation>();
+
         // Project contacts — the clients/architects a project's RFIs and requests are issued to.
         services.AddScoped<IQueryHandler<ListProjectContacts, IReadOnlyList<ProjectContact>>, ListProjectContactsHandler>();
         services.AddScoped<ICommandHandler<UpsertProjectContact, ProjectContact>, UpsertProjectContactHandler>();

@@ -26,6 +26,10 @@ public sealed class ProjectEntity
     // call is marked Received. Denormalised for the directors' project-level view.
     public decimal ValuationInvoicePaidTotal { get; set; }
 
+    // When the next valuation is expected on this project. Set manually from the project view
+    // (date-maths editor: base date plus N days/weeks/months); purely informational.
+    public DateTimeOffset? NextExpectedValuationDate { get; set; }
+
     // Site address — Town + Postcode drive the "find local subcontractors" search near the project.
     [MaxLength(256)]     public string AddressLine { get; set; } = "";
     [MaxLength(128)]     public string Town { get; set; } = "";
