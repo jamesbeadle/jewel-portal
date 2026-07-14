@@ -16,6 +16,7 @@ public interface ILabourStore
     Task RefreshWorkersAsync();
     Task<Worker> AddWorkerAsync(string name, decimal hourlyRate, string? subcontractorId, string contactEmail, string contactPhone);
     Task<Worker> UpdateWorkerAsync(Worker worker);
+    Task DeleteWorkerAsync(string workerId);
 
     // Project assignment.
     IReadOnlyList<ProjectWorkerAssignment> AssignmentsFor(string projectId);

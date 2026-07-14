@@ -49,6 +49,10 @@ public static class LabourRouteRegistration
             new CommandRoute("PUT", "/api/labour/workers/{workerId}",
                 command => $"/api/labour/workers/{((UpdateWorker)command).WorkerId}"));
 
+        commands.Register<DeleteWorker, Acknowledgement>(
+            new CommandRoute("DELETE", "/api/labour/workers/{workerId}",
+                command => $"/api/labour/workers/{((DeleteWorker)command).WorkerId}"));
+
         commands.Register<SetProjectWorkerAssignment, ProjectWorkerAssignment>(
             new CommandRoute("POST", "/api/projects/{projectId}/labour/assignments",
                 command => $"/api/projects/{((SetProjectWorkerAssignment)command).ProjectId}/labour/assignments"));

@@ -31,6 +31,10 @@ public sealed record ListWorkerAssignmentsForProject(string ProjectId)
 public sealed record SetProjectWorkerAssignment(string ProjectId, string WorkerId, bool IsActive)
     : ICommand<ProjectWorkerAssignment>;
 
+/// <summary>Deletes a worker with no timesheet or attendance history. Workers with history
+/// can only be deactivated — their record backs recorded cost.</summary>
+public sealed record DeleteWorker(string WorkerId) : ICommand<Acknowledgement>;
+
 /// <summary>The daily site register — who was on site, signed in/out when.</summary>
 public sealed record ListSiteAttendanceForProject(string ProjectId)
     : IQuery<IReadOnlyList<SiteAttendance>>;

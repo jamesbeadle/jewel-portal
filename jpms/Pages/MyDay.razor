@@ -25,7 +25,10 @@ else if (!Session.IsApproved)
 else
 {
     <section class="px-4 md:px-8 py-6 max-w-md">
-        <h2 class="text-lg font-semibold text-content mb-1">My day</h2>
+        <div class="flex items-center justify-between mb-1">
+            <h2 class="text-lg font-semibold text-content">My day</h2>
+            <button type="button" class="btn-ghost" disabled="@isBusy" @onclick="RefreshSafelyAsync">Refresh</button>
+        </div>
 
         @if (actionError is not null)
         {
@@ -73,12 +76,27 @@ else
 
                     @if (project.HasSignedOutToday)
                     {
-                        <p class="text-xs text-content-subtle">You've signed out. Contact your Project Manager if you need to amend your hours.</p>
+                        var todays = TodaysEntriesFor(day, project.ProjectId);
+                        @if (todays.Count > 0)
+                        {
+                            @foreach (var entry in todays)
+                            {
+                                <div class="flex items-center justify-between border-t border-line/60 py-1.5 text-sm">
+                                    <span class="text-content-subtle">@entry.CostCode</span>
+                                    <span><span class="text-content font-medium">@entry.Hours h</span> <StatusPill Status="@entry.Status" /></span>
+                                </div>
+                            }
+                            <div class="flex items-center justify-between border-t border-line pt-2 mt-1 text-sm">
+                                <span class="text-content-subtle">Total today</span>
+                                <span class="text-content font-semibold">@todays.Sum(entry => entry.Hours) h</span>
+                            </div>
+                        }
+                        <p class="text-xs text-content-subtle mt-2">Signed out — your hours are with the Project Manager. Contact them if anything needs amending.</p>
                     }
                     else if (!project.IsSignedInToday)
                     {
                         <button type="button" class="btn-primary w-full mt-2" disabled="@isBusy"
-                                @onclick="() => SignInAsync(project.ProjectId)">Sign in</button>
+                                @onclick="() => SignInAsync(project.ProjectId)">@(isBusy ? "Signing in…" : "Sign in")</button>
                     }
                     else if (signingOutProjectId != project.ProjectId)
                     {
@@ -109,8 +127,23 @@ else
                             <p class="text-xs text-amber-600 mb-2">Over 12 hours — fine if it's right, just double-check.</p>
                         }
                         <button type="button" class="btn-primary w-full" disabled="@(TotalHours() <= 0m || isBusy)"
-                                @onclick="() => SubmitSignOutAsync(project.ProjectId)">Submit &amp; sign out</button>
+                                @onclick="() => SubmitSignOutAsync(project.ProjectId)">@(isBusy ? "Sending…" : "Submit & sign out")</button>
                         <button type="button" class="btn-ghost w-full mt-1" @onclick="() => signingOutProjectId = null">Cancel</button>
+                    }
+                </div>
+            }
+
+            @{ var history = day.Recent.Where(entry => entry.WorkedOn < day.WorkDate).ToList(); }
+            @if (history.Count > 0)
+            {
+                <div class="panel p-4 mb-4">
+                    <h3 class="text-sm font-semibold text-content mb-2">Recent days</h3>
+                    @foreach (var entry in history.Take(20))
+                    {
+                        <div class="flex items-center justify-between border-t border-line/60 py-1.5 text-sm">
+                            <span class="text-content-subtle">@entry.WorkedOn.ToString("ddd dd") · @entry.CostCode</span>
+                            <span><span class="text-content font-medium">@entry.Hours h</span> <StatusPill Status="@entry.Status" /></span>
+                        </div>
                     }
                 </div>
             }
@@ -162,10 +195,15 @@ else
     private async Task RefreshSafelyAsync()
     {
         try { await Labour.RefreshMyDayAsync(); }
-        catch (Exception) { actionError = "Could not load your day — check your signal and pull to refresh."; StateHasChanged(); }
+        catch (Exception) { actionError = "Could not load your day — check your signal and tap Refresh."; StateHasChanged(); }
     }
 
     private decimal HoursFor(string code) => hoursByCode.TryGetValue(code, out var hours) ? hours : 0m;
+
+    private static List<MyRecentTimesheet> TodaysEntriesFor(MyLabourDay day, string projectId) =>
+        day.Recent
+            .Where(entry => entry.ProjectId == projectId && entry.WorkedOn == day.WorkDate)
+            .ToList();
 
     private decimal TotalHours() => hoursByCode.Values.Sum();
 

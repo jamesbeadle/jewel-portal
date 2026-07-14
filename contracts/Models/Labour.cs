@@ -103,13 +103,25 @@ public sealed record SiteSheetCostCode(string Code, string Name);
 
 public sealed record SiteSignOutEntry(string CostCode, decimal Hours);
 
-/// <summary>Today's state for the signed-in worker across their assigned projects.</summary>
+/// <summary>Today's state for the signed-in worker across their assigned projects, plus their
+/// recent timesheets so they can see what they submitted and whether it was approved.</summary>
 public sealed record MyLabourDay(
     string WorkerId,
     string WorkerName,
     DateTimeOffset WorkDate,
     IReadOnlyList<MyLabourProject> Projects,
-    IReadOnlyList<MyRejectedTimesheet> Rejected);
+    IReadOnlyList<MyRejectedTimesheet> Rejected,
+    IReadOnlyList<MyRecentTimesheet> Recent);
+
+/// <summary>One of the caller's recent timesheets (last two weeks) — hours and status only.</summary>
+public sealed record MyRecentTimesheet(
+    string TimesheetId,
+    string ProjectId,
+    string ProjectName,
+    DateTimeOffset WorkedOn,
+    decimal Hours,
+    string CostCode,
+    TimesheetStatus Status);
 
 public sealed record MyLabourProject(
     string ProjectId,

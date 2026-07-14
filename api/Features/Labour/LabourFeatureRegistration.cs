@@ -17,6 +17,7 @@ public static class LabourFeatureRegistration
         services.AddScoped<IQueryHandler<ListWorkerAssignmentsForProject, IReadOnlyList<ProjectWorkerAssignment>>, ListWorkerAssignmentsForProjectHandler>();
         services.AddScoped<ICommandHandler<AddWorker, Worker>, AddWorkerHandler>();
         services.AddScoped<ICommandHandler<UpdateWorker, Worker>, UpdateWorkerHandler>();
+        services.AddScoped<ICommandHandler<DeleteWorker, Acknowledgement>, DeleteWorkerHandler>();
         services.AddScoped<ICommandHandler<SetProjectWorkerAssignment, ProjectWorkerAssignment>, SetProjectWorkerAssignmentHandler>();
 
         // Site register.

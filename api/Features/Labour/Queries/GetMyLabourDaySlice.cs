@@ -55,7 +55,8 @@ public sealed class GetMyLabourDayHandler : IQueryHandler<GetMyLabourDay, MyLabo
             candidate => candidate.ContactEmail == email, cancellationToken);
         if (unlinked is null || !unlinked.IsActive)
             return new MyLabourDay("", "", SiteClock.Today(),
-                Array.Empty<MyLabourProject>(), Array.Empty<MyRejectedTimesheet>());
+                Array.Empty<MyLabourProject>(), Array.Empty<MyRejectedTimesheet>(),
+                Array.Empty<MyRecentTimesheet>());
 
         var worker = unlinked;
         var today = SiteClock.Today();
@@ -107,10 +108,24 @@ public sealed class GetMyLabourDayHandler : IQueryHandler<GetMyLabourDay, MyLabo
             .OrderByDescending(row => row.timesheet.WorkedOn)
             .ToListAsync(cancellationToken);
 
+        // The worker's own recent history (last two weeks, any status) — lets them confirm
+        // what they submitted today and see approvals land, without ever showing £.
+        var recentSince = today.AddDays(-13);
+        var recent = await context.Timesheets
+            .Where(timesheet => timesheet.WorkerId == worker.WorkerId
+                                && timesheet.WorkedOn >= recentSince)
+            .Join(context.Projects, timesheet => timesheet.ProjectId, project => project.ProjectId,
+                (timesheet, project) => new { timesheet, project.Name })
+            .OrderByDescending(row => row.timesheet.WorkedOn)
+            .ToListAsync(cancellationToken);
+
         return new MyLabourDay(
             worker.WorkerId, worker.Name, today, projects,
             rejected.Select(row => new MyRejectedTimesheet(
                 row.timesheet.TimesheetId, row.timesheet.ProjectId, row.Name, row.timesheet.WorkedOn,
-                row.timesheet.Hours, row.timesheet.CostCode, row.timesheet.RejectionReason)).ToList());
+                row.timesheet.Hours, row.timesheet.CostCode, row.timesheet.RejectionReason)).ToList(),
+            recent.Select(row => new MyRecentTimesheet(
+                row.timesheet.TimesheetId, row.timesheet.ProjectId, row.Name, row.timesheet.WorkedOn,
+                row.timesheet.Hours, row.timesheet.CostCode, (TimesheetStatus)row.timesheet.Status)).ToList());
     }
 }

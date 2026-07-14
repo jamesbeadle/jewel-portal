@@ -107,8 +107,17 @@ else
                                 @if (worker.IsActive) { <span class="text-positive">Active</span> }
                                 else { <span class="text-content-subtle">Inactive</span> }
                             </td>
-                            <td class="text-right">
-                                <button type="button" class="btn-secondary" @onclick="() => StartEdit(worker)">Edit</button>
+                            <td class="text-right whitespace-nowrap">
+                                <button type="button" class="btn-secondary mr-1" @onclick="() => StartEdit(worker)">Edit</button>
+                                @if (deletingWorkerId == worker.WorkerId)
+                                {
+                                    <button type="button" class="btn-primary mr-1" @onclick="() => ConfirmDeleteAsync(worker.WorkerId)">Confirm</button>
+                                    <button type="button" class="btn-ghost" @onclick="() => deletingWorkerId = null">Cancel</button>
+                                }
+                                else
+                                {
+                                    <button type="button" class="btn-ghost" @onclick="() => deletingWorkerId = worker.WorkerId">Delete</button>
+                                }
                             </td>
                         </tr>
                     }
@@ -125,6 +134,7 @@ else
     private string? actionError;
 
     private string? editingWorkerId;
+    private string? deletingWorkerId;
     private string formName = "";
     private decimal formDayRate;
     private string formSubcontractorId = "";
@@ -148,6 +158,22 @@ else
     private string SubcontractorName(string? subcontractorId) =>
         subcontractorId is null ? "—"
         : Subcontractors.All().FirstOrDefault(subcontractor => subcontractor.SubcontractorId == subcontractorId)?.CompanyName ?? "—";
+
+    private async Task ConfirmDeleteAsync(string workerId)
+    {
+        actionError = null;
+        deletingWorkerId = null;
+        try
+        {
+            await Labour.DeleteWorkerAsync(workerId);
+        }
+        catch (CommandFailedException failure)
+        {
+            // e.g. the worker has timesheet/register history and can only be deactivated.
+            actionError = failure.Message;
+        }
+        catch (Exception) { actionError = "Could not delete the worker — try again."; }
+    }
 
     private void StartEdit(Worker worker)
     {

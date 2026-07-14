@@ -77,6 +77,12 @@ public sealed class HttpLabourStore : ILabourStore
         return updated;
     }
 
+    public async Task DeleteWorkerAsync(string workerId)
+    {
+        await commands.SendAsync(new DeleteWorker(workerId), CancellationToken.None);
+        await workersReadModel.RefreshAsync(CancellationToken.None);
+    }
+
     public IReadOnlyList<ProjectWorkerAssignment> AssignmentsFor(string projectId)
     {
         if (assignmentsRequested.Add(projectId)) _ = LoadAsync(() => assignmentsReadModel.RefreshAsync(projectId, CancellationToken.None), assignmentsRequested, projectId);
