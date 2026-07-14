@@ -5,8 +5,8 @@
 @inject ProjectListReadModel Projects
 
 @*
-    Stat panel showing when the next valuation is expected, with a "Set date" button (directors
-    and project managers) that opens a small date-maths modal: pick a base date, add an exact
+    Stat panel showing when the next valuation is expected, with a "Set date" button (directors,
+    the finance director and project managers) that opens a small date-maths modal: pick a base date, add an exact
     number of days/weeks/months, and the resulting date is previewed live before saving. Sends
     SetNextValuationDate and refreshes the project list read model so the stat updates in place.
 *@
@@ -81,10 +81,10 @@
 
     private DateTimeOffset? CurrentDate => Projects.Find(ProjectId)?.NextExpectedValuationDate;
 
-    // Mirrors SetNextValuationDateAuthorisation server-side (directors and project managers;
-    // administrators carry every role).
+    // Mirrors SetNextValuationDateAuthorisation server-side (directors, the finance director and
+    // project managers; administrators carry every role).
     private bool CanEdit =>
-        Session.AvailableRoles.Any(role => role is Role.Admin or Role.ManagingDirector or Role.ProjectManager);
+        Session.AvailableRoles.Any(role => role is Role.Admin or Role.ManagingDirector or Role.FinanceDirector or Role.ProjectManager);
 
     // The date maths: base date plus an exact number of days / weeks / months.
     private DateTime? Result => baseDate is { } start

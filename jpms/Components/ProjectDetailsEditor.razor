@@ -10,7 +10,8 @@
     "Edit details" button + modal for a project's core details (reference, name, client, entity,
     stage, project manager). Sends the existing UpdateProjectDetails command and refreshes the
     project list read model, so the page header, stage badge and Overview stats update in place.
-    Server-side the command is gated to directors and project managers; the button mirrors that.
+    Server-side the command is gated to directors, the finance director and project managers; the
+    button mirrors that.
 *@
 
 @if (CanEdit)
@@ -141,10 +142,10 @@
     private IReadOnlyList<Client> clients = Array.Empty<Client>();
     private IReadOnlyList<Architect> architects = Array.Empty<Architect>();
 
-    // Mirrors UpdateProjectDetailsAuthorisation server-side (directors and project managers;
-    // administrators carry every role).
+    // Mirrors UpdateProjectDetailsAuthorisation server-side (directors, the finance director and
+    // project managers; administrators carry every role).
     private bool CanEdit =>
-        Session.AvailableRoles.Any(role => role is Role.Admin or Role.ManagingDirector or Role.ProjectManager);
+        Session.AvailableRoles.Any(role => role is Role.Admin or Role.ManagingDirector or Role.FinanceDirector or Role.ProjectManager);
 
     private void Open()
     {

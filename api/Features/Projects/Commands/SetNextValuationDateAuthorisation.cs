@@ -7,7 +7,7 @@ public sealed class SetNextValuationDateAuthorisation
 {
     // Same gate as UpdateProjectDetails — the next valuation date is part of a project's details.
     private static readonly RoleSet RolesThatMayUpdateProjects =
-        RoleSet.Of(JpmsRoles.Director, JpmsRoles.ProjectManager);
+        RoleSet.Of(JpmsRoles.Director, JpmsRoles.FinanceDirector, JpmsRoles.ProjectManager);
 
     public bool Allows(SignedInUser user, SetNextValuationDate command) =>
         RolesThatMayUpdateProjects.IncludesAny(user.Roles);

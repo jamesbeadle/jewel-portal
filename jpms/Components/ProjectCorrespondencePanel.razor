@@ -171,7 +171,7 @@
 
     // Mirrors ProjectContactAuthorisation server-side.
     private bool CanManage =>
-        Session.AvailableRoles.Any(role => role is Role.Admin or Role.ManagingDirector or Role.ProjectManager or Role.SiteManager);
+        Session.AvailableRoles.Any(role => role is Role.Admin or Role.ManagingDirector or Role.FinanceDirector or Role.ProjectManager or Role.SiteManager);
 
     private IReadOnlyList<ProjectContact> adHocContacts =>
         profileRows.Where(row => row.PartyContactId is null).ToList();
