@@ -30,7 +30,13 @@ public sealed record ProjectFinancialSummaryRow(
     decimal NonWorkOrderActualCost = 0m, // allocated Xero spend not linked to any work order
     bool IsFinalised = false,            // locked down: drawdown reads as realised profit / loss
     decimal LabourActualCost = 0m,       // approved timesheet labour + settlement variances (inside ActualCost and Non-WO)
-    decimal PendingLabourCost = 0m);     // submitted-not-yet-approved hours x current rate: visible, never posted
+    decimal PendingLabourCost = 0m,      // submitted-not-yet-approved hours x current rate: visible, never posted
+    // This centre's share of scope sitting in reconciliation packages, so the table can
+    // net it out (the packaged money's position lives on the package row instead):
+    decimal PackagedSales = 0m,          // sales slices assigned to packages, by the line's centre
+    decimal PackagedClaimed = 0m,        // those slices' pro-rata share of claimed to date
+    decimal PackagedWoCommitted = 0m,    // packaged orders' committed value, by the order lines' centres
+    decimal PackagedActualCost = 0m);    // packaged orders' invoiced spend, re-attributed like ActualCost
 
 /// <summary>Assumptions shared by the API calculation and the UI's explanation of it.</summary>
 public static class FinancialSummaryAssumptions

@@ -133,6 +133,15 @@ public static class ProcurementRouteRegistration
         commands.Register<UpdateWorkOrder, WorkOrder>(
             new CommandRoute("PUT", "/api/work-orders/{workOrderId}",
                 command => $"/api/work-orders/{((UpdateWorkOrder)command).WorkOrderId}"));
+
+        // Re-codes / splits one priced line across cost centres, by £ amount.
+        commands.Register<RecodeWorkOrderLine, IReadOnlyList<WorkOrderLine>>(
+            new CommandRoute("POST", "/api/projects/{projectId}/work-order-lines/{lineId}/recode",
+                command =>
+                {
+                    var c = (RecodeWorkOrderLine)command;
+                    return $"/api/projects/{c.ProjectId}/work-order-lines/{c.WorkOrderLineId}/recode";
+                }));
         // Issues the new work order that instructs an approved variation order.
         commands.Register<IssueWorkOrderForVariationOrder, WorkOrder>(
             new CommandRoute("POST", "/api/variation-orders/{variationOrderId}/work-order",

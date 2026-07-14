@@ -112,6 +112,61 @@ public sealed class GetProjectFinancialSummaryHandler : IQueryHandler<GetProject
 
         var codeTotalsByOrder = await WorkOrderCostApportionment.CodeTotalsByOrderAsync(context, query.ProjectId, cancellationToken);
 
+        // Packaged scope per centre — what reconciliation packages already account for,
+        // so the table can net it out and show only unreconciled scope. Sales slices land
+        // on their line's centre (with a pro-rata share of that line's claimed value);
+        // packaged orders' committed value lands on the order lines' centres; and their
+        // invoiced spend follows the same re-attribution as ActualCost below.
+        static void Accumulate(Dictionary<string, decimal> map, string code, decimal amount) =>
+            map[code] = map.TryGetValue(code, out var current) ? current + amount : amount;
+
+        var packagedOrderIds = await context.ReconciliationPackageOrders
+            .Where(member => member.ProjectId == query.ProjectId)
+            .Select(member => member.WorkOrderId)
+            .ToListAsync(cancellationToken);
+        var packagedOrderIdSet = packagedOrderIds.ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        var packagedSlices = await context.ReconciliationPackageSalesLines
+            .Where(slice => slice.ProjectId == query.ProjectId)
+            .Join(context.ValuationLineItems,
+                slice => slice.ValuationLineItemId,
+                line => line.ValuationLineItemId,
+                (slice, line) => new { line.ValuationLineItemId, line.CostCode, line.LineAmount, slice.Amount })
+            .Where(joined => joined.CostCode != "")
+            .ToListAsync(cancellationToken);
+
+        var packagedLineIds = packagedSlices.Select(slice => slice.ValuationLineItemId).Distinct().ToList();
+        var claimedByPackagedLine = new Dictionary<string, decimal>(StringComparer.OrdinalIgnoreCase);
+        if (latestClaimId is not null && packagedLineIds.Count > 0)
+        {
+            var claimedLines = await context.ClaimLines
+                .Where(claimLine => claimLine.ValuationClaimId == latestClaimId
+                                    && packagedLineIds.Contains(claimLine.ValuationLineItemId))
+                .Select(claimLine => new { claimLine.ValuationLineItemId, claimLine.CumulativeClaimed })
+                .ToListAsync(cancellationToken);
+            foreach (var entry in claimedLines) claimedByPackagedLine[entry.ValuationLineItemId] = entry.CumulativeClaimed;
+        }
+
+        var packagedSalesByCode = new Dictionary<string, decimal>(StringComparer.OrdinalIgnoreCase);
+        var packagedClaimedByCode = new Dictionary<string, decimal>(StringComparer.OrdinalIgnoreCase);
+        foreach (var slice in packagedSlices)
+        {
+            Accumulate(packagedSalesByCode, slice.CostCode, slice.Amount);
+            if (slice.LineAmount != 0m && claimedByPackagedLine.TryGetValue(slice.ValuationLineItemId, out var lineClaimed))
+                Accumulate(packagedClaimedByCode, slice.CostCode, Math.Round(lineClaimed * slice.Amount / slice.LineAmount, 2));
+        }
+
+        var packagedWoByCode = new Dictionary<string, decimal>(StringComparer.OrdinalIgnoreCase);
+        if (packagedOrderIds.Count > 0)
+        {
+            var packagedWoRows = await context.WorkOrderLines
+                .Where(line => packagedOrderIds.Contains(line.WorkOrderId) && line.CostCode != "")
+                .GroupBy(line => line.CostCode)
+                .Select(group => new { CostCode = group.Key, Total = group.Sum(line => line.LineTotal) })
+                .ToListAsync(cancellationToken);
+            foreach (var entry in packagedWoRows) packagedWoByCode[entry.CostCode] = entry.Total;
+        }
+
         // Cost-side state: completion % and the finalisation lock, set inline on the
         // Financials tab, one row per cost centre. Centres never edited default to 0% / unlocked.
         var costProgress = await context.CostCentreCostProgress
@@ -173,25 +228,42 @@ public sealed class GetProjectFinancialSummaryHandler : IQueryHandler<GetProject
 
         // Re-attribute each linked slice from the invoice's Xero centre to the order's
         // cost-code mix (pro-rata by the order's line values). Orders with no coded lines
-        // can't be apportioned — those slices stay on the invoice's centre.
+        // can't be apportioned — those slices stay on the invoice's centre. Slices paying
+        // a PACKAGED order also accumulate into the packaged-actuals map, on the same
+        // centres, so netting them out mirrors this attribution exactly.
+        var packagedActualByCode = new Dictionary<string, decimal>(StringComparer.OrdinalIgnoreCase);
         foreach (var slice in linkSlices)
         {
-            if (!codeTotalsByOrder.TryGetValue(slice.WorkOrderId, out var codeTotals)) continue;
+            var isPackaged = packagedOrderIdSet.Contains(slice.WorkOrderId);
+
+            if (!codeTotalsByOrder.TryGetValue(slice.WorkOrderId, out var codeTotals))
+            {
+                if (isPackaged) Accumulate(packagedActualByCode, slice.InvoiceCode!, slice.Amount);
+                continue;
+            }
 
             actualByCode[slice.InvoiceCode!] = actualByCode.TryGetValue(slice.InvoiceCode!, out var sourceTotal)
                 ? sourceTotal - slice.Amount
                 : -slice.Amount;
 
             foreach (var (costCode, share) in WorkOrderCostApportionment.Apportion(slice.Amount, codeTotals))
+            {
                 actualByCode[costCode] = actualByCode.TryGetValue(costCode, out var destinationTotal)
                     ? destinationTotal + share
                     : share;
+                if (isPackaged) Accumulate(packagedActualByCode, costCode, share);
+            }
         }
 
         return salesByCode.Keys.Union(actualByCode.Keys, StringComparer.OrdinalIgnoreCase)
             .Union(costProgressByCode.Keys, StringComparer.OrdinalIgnoreCase)
             .Union(labourByCode.Keys, StringComparer.OrdinalIgnoreCase)
             .Union(pendingLabourByCode.Keys, StringComparer.OrdinalIgnoreCase)
+            .Union(packagedSalesByCode.Keys, StringComparer.OrdinalIgnoreCase)
+            .Union(packagedWoByCode.Keys, StringComparer.OrdinalIgnoreCase)
+            // Always a subset of actualByCode's keys today (both branches above write the
+            // same key there), but unioned defensively so a refactor can't drop a row.
+            .Union(packagedActualByCode.Keys, StringComparer.OrdinalIgnoreCase)
             .Select(code =>
             {
                 var budgetedSales = salesByCode.TryGetValue(code, out var salesAmount) ? salesAmount : 0m;
@@ -223,7 +295,11 @@ public sealed class GetProjectFinancialSummaryHandler : IQueryHandler<GetProject
                     nonWoActualCost,
                     costState.IsFinalised,
                     labourActualCost,
-                    pendingLabourCost);
+                    pendingLabourCost,
+                    packagedSalesByCode.TryGetValue(code, out var packagedSales) ? packagedSales : 0m,
+                    packagedClaimedByCode.TryGetValue(code, out var packagedClaimed) ? packagedClaimed : 0m,
+                    packagedWoByCode.TryGetValue(code, out var packagedWo) ? packagedWo : 0m,
+                    packagedActualByCode.TryGetValue(code, out var packagedActual) ? packagedActual : 0m);
             })
             .ToList();
     }

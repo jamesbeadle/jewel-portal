@@ -88,6 +88,7 @@ else
                                                     <th class="px-3 py-2 whitespace-nowrap">Status</th>
                                                     <th class="px-3 py-2 text-right whitespace-nowrap">Total</th>
                                                     <th class="px-3 py-2 text-right whitespace-nowrap">Paid</th>
+                                                    <th class="px-3 py-2 w-[90px]"><span class="sr-only">Re-code</span></th>
                                                 </tr>
                                             </thead>
                                             <tbody class="divide-y divide-line">
@@ -109,6 +110,14 @@ else
                                                         </td>
                                                         <td class="px-3 py-2 text-right">@Money(line.Line.LineTotal)</td>
                                                         <td class="px-3 py-2 text-right">@Money(line.Line.PaidToDate)</td>
+                                                        <td class="px-3 py-2 text-right">
+                                                            <button type="button"
+                                                                    class="text-xs font-medium text-content-subtle hover:text-content underline underline-offset-4"
+                                                                    title="Move this line to another cost centre, or split its amount across several — the order's value never changes"
+                                                                    @onclick="() => OpenRecode(line)" @onclick:stopPropagation>
+                                                                Re-code…
+                                                            </button>
+                                                        </td>
                                                     </tr>
                                                 }
                                             </tbody>
@@ -153,8 +162,22 @@ else
             <p class="text-xs text-content-subtle mt-3">
                 Committed is the sum of work-order line totals per cost centre; one order can span several
                 cost centres, so its value may appear split across rows. Paid is what has been paid against
-                each line so far. Click a row to see the orders behind it.
+                each line so far. Click a row to see the orders behind it. Re-code a line to move it to
+                another cost centre, or to split its amount across several — for orders priced wholesale
+                under one code whose lines belong to different centres. The parts must total the line
+                exactly, so the order's value never changes; the Financials tab, invoice re-attribution
+                and reconciliation packages all follow the new coding automatically.
             </p>
+
+            <WorkOrderLineRecodeModal IsOpen="@(recoding is not null)"
+                                      ProjectId="@ProjectId"
+                                      LineId="@(recoding?.Line.WorkOrderLineId ?? "")"
+                                      LineLabel="@(recoding is null ? "" : $"{Reference(recoding.Detail.Order)} · {recoding.Line.Title}")"
+                                      LineTotal="@(recoding?.Line.LineTotal ?? 0m)"
+                                      CurrentCostCode="@(recoding?.Line.CostCode ?? "")"
+                                      CostCenters="CostCenters.Current"
+                                      OnClose="CloseRecode"
+                                      OnSaved="HandleRecodedAsync" />
         }
     </ProjectPageShell>
 }
@@ -244,6 +267,19 @@ else
             .ToList();
 
     private bool IsExpanded(string costCode) => expandedCodes.Contains(costCode);
+
+    // The line being re-coded across cost centres, if the modal is open.
+    private OrderLine? recoding;
+
+    private void OpenRecode(OrderLine line) => recoding = line;
+
+    private void CloseRecode() => recoding = null;
+
+    private async Task HandleRecodedAsync()
+    {
+        recoding = null;
+        await WorkOrders.RefreshAsync(ProjectId, CancellationToken.None);
+    }
 
     private void Toggle(string costCode)
     {

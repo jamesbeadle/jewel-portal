@@ -10,6 +10,11 @@
             <input type="checkbox" class="cursor-pointer align-middle" @bind="hideZeroRows" />
             Hide zero rows
         </label>
+        <label class="flex w-fit items-center gap-2 text-sm text-content-subtle cursor-pointer select-none"
+               title="Net off the sales, work orders and invoiced cost already accounted for by reconciliation packages — the packaged money's position shows on the package rows instead. Untick to see gross figures.">
+            <input type="checkbox" class="cursor-pointer align-middle" @bind="hidePackagedScope" />
+            Hide scope in packages
+        </label>
     </div>
     @if (SelectionCount > 0)
     {
@@ -299,6 +304,12 @@
     // shown — they exist because someone deliberately created them.
     private bool hideZeroRows = true;
 
+    // Net reconciliation-package scope out of every figure; on by default. The packaged
+    // money's position lives on the package rows below, so counting it here too would
+    // double-count it — e.g. a packaged purchase invoice still showing in the centre's
+    // Actual Cost of Sales.
+    private bool hidePackagedScope = true;
+
     // Filters rows by cost centre name or code; roll-ups match on their name or any
     // member code. Selected rows stay visible so a selection can't silently vanish
     // mid-roll-up. Totals stay project-wide, matching the hide-zero behaviour.
@@ -428,12 +439,33 @@
     private decimal SumFor(IReadOnlyList<string> costCodes, Func<ProjectFinancialSummaryRow, decimal> value) =>
         costCodes.Sum(entryCode => byCode.TryGetValue(entryCode, out var row) ? value(row) : 0m);
 
-    private decimal ContractSalesFor(IReadOnlyList<string> costCodes) => SumFor(costCodes, row => row.BudgetedSales);
+    // With "Hide scope in packages" on (the default), every figure nets off what
+    // reconciliation packages already account for — the packaged money's position lives
+    // on the package row instead, so this table shows only unreconciled scope and its
+    // drawdown stops being polluted by mismatches that a package has already resolved.
+    private decimal RowSales(ProjectFinancialSummaryRow row) =>
+        row.BudgetedSales - (hidePackagedScope ? row.PackagedSales : 0m);
 
-    private decimal ClaimValueFor(IReadOnlyList<string> costCodes) => SumFor(costCodes, row => row.ClaimedToDate);
+    private decimal RowClaimed(ProjectFinancialSummaryRow row) =>
+        row.ClaimedToDate - (hidePackagedScope ? row.PackagedClaimed : 0m);
+
+    private decimal RowTarget(ProjectFinancialSummaryRow row) =>
+        hidePackagedScope
+            ? Math.Round((row.BudgetedSales - row.PackagedSales) * FinancialSummaryAssumptions.CostFactor, 2)
+            : row.BudgetedCost;
+
+    private decimal RowActual(ProjectFinancialSummaryRow row) =>
+        row.ActualCost - (hidePackagedScope ? row.PackagedActualCost : 0m);
+
+    private decimal PackagedWoFor(string costCode) =>
+        hidePackagedScope && byCode.TryGetValue(costCode, out var row) ? row.PackagedWoCommitted : 0m;
+
+    private decimal ContractSalesFor(IReadOnlyList<string> costCodes) => SumFor(costCodes, RowSales);
+
+    private decimal ClaimValueFor(IReadOnlyList<string> costCodes) => SumFor(costCodes, RowClaimed);
 
     // Contract sales value with the markup backed out — what the line should cost us.
-    private decimal TargetCostFor(IReadOnlyList<string> costCodes) => SumFor(costCodes, row => row.BudgetedCost);
+    private decimal TargetCostFor(IReadOnlyList<string> costCodes) => SumFor(costCodes, RowTarget);
 
     // Value-weighted across the line's centres: claimed £ over contract £.
     private decimal SalesCompletionFor(IReadOnlyList<string> costCodes)
@@ -447,7 +479,7 @@
     {
         var target = TargetCostFor(costCodes);
         if (target != 0m)
-            return Math.Round(SumFor(costCodes, row => row.CostCompletionPercent * row.BudgetedCost) / target, 1);
+            return Math.Round(SumFor(costCodes, row => row.CostCompletionPercent * RowTarget(row)) / target, 1);
         var percents = costCodes
             .Select(entryCode => byCode.TryGetValue(entryCode, out var row) ? row.CostCompletionPercent : 0m)
             .ToList();
@@ -455,10 +487,12 @@
     }
 
     private decimal WoCommittedFor(IReadOnlyList<string> costCodes) =>
-        costCodes.Sum(entryCode => WorkOrderCommittedByCode.TryGetValue(entryCode, out var committed) ? committed : 0m);
+        costCodes.Sum(entryCode =>
+            (WorkOrderCommittedByCode.TryGetValue(entryCode, out var committed) ? committed : 0m)
+            - PackagedWoFor(entryCode));
 
     // Allocated Xero purchase spend, net of credit notes.
-    private decimal CostOfSalesFor(IReadOnlyList<string> costCodes) => SumFor(costCodes, row => row.ActualCost);
+    private decimal CostOfSalesFor(IReadOnlyList<string> costCodes) => SumFor(costCodes, RowActual);
 
     // The share of that spend not linked to any work order.
     private decimal NonWoCostOfSalesFor(IReadOnlyList<string> costCodes) => SumFor(costCodes, row => row.NonWorkOrderActualCost);
@@ -470,10 +504,12 @@
 
     private bool AnyFinalised(IReadOnlyList<string> costCodes) => costCodes.Any(IsCentreFinalised);
 
-    // What one centre has left of its target cost after work orders and unlinked spend.
+    // What one centre has left of its target cost after work orders and unlinked spend
+    // (all netted of packaged scope when the toggle is on).
     private decimal RemainderFor(string costCode) =>
-        (byCode.TryGetValue(costCode, out var row) ? row.BudgetedCost - row.NonWorkOrderActualCost : 0m)
-        - (WorkOrderCommittedByCode.TryGetValue(costCode, out var committed) ? committed : 0m);
+        (byCode.TryGetValue(costCode, out var row) ? RowTarget(row) - row.NonWorkOrderActualCost : 0m)
+        - (WorkOrderCommittedByCode.TryGetValue(costCode, out var committed) ? committed : 0m)
+        + PackagedWoFor(costCode);
 
     // Unlocked centres' remainders: funds still available on the line.
     private decimal DrawdownFor(IReadOnlyList<string> costCodes) =>
@@ -542,11 +578,14 @@
             .Where(rowCode => !CostCenters.Any(centre => string.Equals(centre.Code, rowCode, StringComparison.OrdinalIgnoreCase)))
             .OrderBy(rowCode => rowCode, StringComparer.OrdinalIgnoreCase);
 
-    private decimal TotalContractSales => SummaryRows.Sum(row => row.BudgetedSales);
-    private decimal TotalClaimValue => SummaryRows.Sum(row => row.ClaimedToDate);
-    private decimal TotalTargetCost => SummaryRows.Sum(row => row.BudgetedCost);
-    private decimal TotalWoCommitted => WorkOrderCommittedByCode.Values.Sum();
-    private decimal TotalCostOfSales => SummaryRows.Sum(row => row.ActualCost);
+    // Totals go through the same per-row accessors as the lines, so they respect the
+    // hide-packaged-scope toggle and always equal the sum of what's on screen.
+    private decimal TotalContractSales => SummaryRows.Sum(RowSales);
+    private decimal TotalClaimValue => SummaryRows.Sum(RowClaimed);
+    private decimal TotalTargetCost => SummaryRows.Sum(RowTarget);
+    private decimal TotalWoCommitted =>
+        WorkOrderCommittedByCode.Sum(entry => entry.Value - PackagedWoFor(entry.Key));
+    private decimal TotalCostOfSales => SummaryRows.Sum(RowActual);
     private decimal TotalNonWoCostOfSales => SummaryRows.Sum(row => row.NonWorkOrderActualCost);
 
     // Every code with any figure — summary rows plus work-order-only codes.
@@ -556,17 +595,19 @@
     private decimal TotalDrawdown => AllCodes.Where(entryCode => !IsCentreFinalised(entryCode)).Sum(RemainderFor);
     private decimal TotalProfitLoss => AllCodes.Where(IsCentreFinalised).Sum(RemainderFor);
 
-    // Weighted by contract sales value, matching the per-line calculation.
+    // Matching the per-line calculation: claimed £ over contract £ (both netted of
+    // packaged scope when the toggle is on).
     private decimal WeightedSalesCompletion =>
         TotalContractSales == 0m
             ? 0m
-            : SummaryRows.Sum(row => row.CompletionPercent * row.BudgetedSales) / TotalContractSales;
+            : TotalClaimValue / TotalContractSales * 100m;
 
-    // Weighted by target cost, the base the cost side draws down against.
+    // Weighted by target cost, the base the cost side draws down against (netted when
+    // the toggle is on, so the weights match the total they divide by).
     private decimal WeightedCostCompletion =>
         TotalTargetCost == 0m
             ? 0m
-            : SummaryRows.Sum(row => row.CostCompletionPercent * row.BudgetedCost) / TotalTargetCost;
+            : SummaryRows.Sum(row => row.CostCompletionPercent * RowTarget(row)) / TotalTargetCost;
 
     private string MoneyClass(decimal value) => value == 0m ? "text-content-muted" : "text-content";
 

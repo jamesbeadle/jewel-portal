@@ -91,6 +91,10 @@ public static class ProcurementFeatureRegistration
         services.AddScoped<UpdateWorkOrderAuthorisation>();
         services.AddScoped<UpdateWorkOrderValidation>();
 
+        services.AddScoped<ICommandHandler<RecodeWorkOrderLine, IReadOnlyList<WorkOrderLine>>, RecodeWorkOrderLineHandler>();
+        services.AddScoped<RecodeWorkOrderLineAuthorisation>();
+        services.AddScoped<RecodeWorkOrderLineValidation>();
+
         return services;
     }
 }
