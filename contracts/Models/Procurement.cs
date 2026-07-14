@@ -127,7 +127,15 @@ public sealed record WorkOrder(
     DateTimeOffset? ScheduledCompletion,
     // Set when this order was issued to instruct an approved variation order (never an uplift of
     // an existing order -- variations always produce a new WO).
-    string? VariationOrderId = null);
+    string? VariationOrderId = null,
+    // External id of the record this order was seeded from (e.g. the Buildertrend PO id).
+    // Null for orders raised in JPMS.
+    string? SourceReference = null)
+{
+    /// <summary>Raised directly in JPMS — no tender, no variation, no seed — so its supplier,
+    /// title, scope and priced lines can be edited wholesale via UpdateManualWorkOrder.</summary>
+    public bool IsManual => BidPackageId is null && VariationOrderId is null && SourceReference is null;
+}
 
 // A priced line on a work order. Each line carries its own cost centre code (CostCode, from the
 // current master list) — cost-centre totals aggregate lines, not orders. PaidToDate is what has

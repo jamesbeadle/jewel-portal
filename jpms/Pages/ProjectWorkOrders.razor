@@ -27,11 +27,16 @@ else
     <ProjectPageShell ProjectId="@ProjectId" ActiveTab="work-orders">
         <div class="flex items-center justify-between gap-3 mb-3 flex-wrap">
             <h2 class="text-lg font-semibold text-content">Work orders by cost centre</h2>
-            <button type="button" class="btn-secondary text-sm"
-                    title="Raise a work order directly — no bid package — and optionally package it against the valuation lines that priced its scope"
-                    @onclick="() => manualOrderOpen = true">
-                Add work order
-            </button>
+            <div class="flex items-center gap-2">
+                <input type="search" placeholder="Search by supplier…"
+                       class="bg-surface border border-line rounded-lg px-3 py-1.5 text-sm text-content placeholder:text-content-subtle w-52 focus:outline-none focus:border-accent"
+                       @bind="supplierSearch" @bind:event="oninput" />
+                <button type="button" class="btn-secondary text-sm"
+                        title="Raise a work order directly — no bid package — and optionally package it against the valuation lines that priced its scope"
+                        @onclick="OpenAdd">
+                    Add work order
+                </button>
+            </div>
         </div>
 
         @if (Orders.Count == 0)
@@ -50,6 +55,12 @@ else
                 }
             </p>
 
+            @if (Searching && Rows.Count == 0 && OrdersWithoutLines.Count == 0)
+            {
+                <p class="text-sm text-content-subtle italic">No work orders match “@supplierSearch.Trim()”.</p>
+            }
+            else
+            {
             <div class="rounded-xl border border-line bg-surface overflow-x-auto overflow-y-auto max-h-[85vh]">
                 <table class="w-full text-sm border-collapse">
                     <thead class="bg-surface-raised border-b border-line">
@@ -95,7 +106,7 @@ else
                                                     <th class="px-3 py-2 whitespace-nowrap">Status</th>
                                                     <th class="px-3 py-2 text-right whitespace-nowrap">Total</th>
                                                     <th class="px-3 py-2 text-right whitespace-nowrap">Paid</th>
-                                                    <th class="px-3 py-2 w-[90px]"><span class="sr-only">Re-code</span></th>
+                                                    <th class="px-3 py-2 w-[140px]"><span class="sr-only">Actions</span></th>
                                                 </tr>
                                             </thead>
                                             <tbody class="divide-y divide-line">
@@ -117,7 +128,16 @@ else
                                                         </td>
                                                         <td class="px-3 py-2 text-right">@Money(line.Line.LineTotal)</td>
                                                         <td class="px-3 py-2 text-right">@Money(line.Line.PaidToDate)</td>
-                                                        <td class="px-3 py-2 text-right">
+                                                        <td class="px-3 py-2 text-right whitespace-nowrap">
+                                                            @if (line.Detail.Order.IsManual)
+                                                            {
+                                                                <button type="button"
+                                                                        class="mr-3 text-xs font-medium text-content-subtle hover:text-content underline underline-offset-4"
+                                                                        title="This order was raised manually — edit its supplier, title, scope and priced lines"
+                                                                        @onclick="() => OpenEdit(line.Detail)" @onclick:stopPropagation>
+                                                                    Edit…
+                                                                </button>
+                                                            }
                                                             <button type="button"
                                                                     class="text-xs font-medium text-content-subtle hover:text-content underline underline-offset-4"
                                                                     title="Move this line to another cost centre, or split its amount across several — the order's value never changes"
@@ -136,8 +156,8 @@ else
                     </tbody>
                     <tfoot class="border-t-2 border-line-strong bg-surface-raised">
                         <tr class="font-semibold text-content">
-                            <td class="px-4 py-3" colspan="2">Total</td>
-                            <td class="px-4 py-3 text-right">@Orders.Count</td>
+                            <td class="px-4 py-3" colspan="2">@(Searching ? "Total (filtered)" : "Total")</td>
+                            <td class="px-4 py-3 text-right">@VisibleOrderCount</td>
                             <td class="px-4 py-3 text-right">@Money(LineCommitted)</td>
                             <td class="px-4 py-3 text-right">@Money(LinePaid)</td>
                             <td class="px-4 py-3 text-right">@Money(LineCommitted - LinePaid)</td>
@@ -145,6 +165,7 @@ else
                     </tfoot>
                 </table>
             </div>
+            }
 
             @if (OrdersWithoutLines.Count > 0)
             {
@@ -161,6 +182,15 @@ else
                             <span class="text-content font-medium">@detail.Order.Title</span>
                             <span class="text-content-subtle">@detail.SubcontractorName</span>
                             <span class="ml-auto">@Money(detail.Order.Value)</span>
+                            @if (detail.Order.IsManual)
+                            {
+                                <button type="button"
+                                        class="text-xs font-medium text-content-subtle hover:text-content underline underline-offset-4"
+                                        title="This order was raised manually — edit its supplier, title, scope and priced lines"
+                                        @onclick="() => OpenEdit(detail)">
+                                    Edit…
+                                </button>
+                            }
                         </li>
                     }
                 </ul>
@@ -189,7 +219,8 @@ else
 
         <ManualWorkOrderModal IsOpen="@manualOrderOpen"
                               ProjectId="@ProjectId"
-                              OnClose="() => manualOrderOpen = false"
+                              Editing="@editingOrder"
+                              OnClose="CloseManualOrder"
                               OnSaved="HandleManualOrderSavedAsync" />
     </ProjectPageShell>
 }
@@ -210,8 +241,23 @@ else
     private List<OrderLine> AllLines =>
         Orders.SelectMany(detail => detail.Lines.Select(line => new OrderLine(detail, line))).ToList();
 
+    // Supplier search: typing narrows the table (and the no-breakdown list) to orders
+    // whose supplier matches, auto-expanding the cost-centre groups that remain.
+    private string supplierSearch = "";
+
+    private bool Searching => !string.IsNullOrWhiteSpace(supplierSearch);
+
+    private bool MatchesSearch(ProjectWorkOrderDetail detail) =>
+        !Searching || detail.SubcontractorName.Contains(supplierSearch.Trim(), StringComparison.OrdinalIgnoreCase);
+
+    private List<OrderLine> VisibleLines =>
+        AllLines.Where(entry => MatchesSearch(entry.Detail)).ToList();
+
+    private int VisibleOrderCount =>
+        Orders.Count(detail => MatchesSearch(detail));
+
     private List<ProjectWorkOrderDetail> OrdersWithoutLines =>
-        Orders.Where(detail => detail.Lines.Count == 0).ToList();
+        Orders.Where(detail => detail.Lines.Count == 0 && MatchesSearch(detail)).ToList();
 
     private decimal TotalCommitted => Orders.Sum(detail => detail.Order.Value);
     private decimal TotalPaid => AllLines.Sum(entry => entry.Line.PaidToDate);
@@ -238,8 +284,10 @@ else
 
     private static string MoneyExact(decimal value) =>
         value.ToString("C2", System.Globalization.CultureInfo.GetCultureInfo("en-GB"));
-    private decimal LineCommitted => AllLines.Sum(entry => entry.Line.LineTotal);
-    private decimal LinePaid => AllLines.Sum(entry => entry.Line.PaidToDate);
+    // Table footer totals — over the visible (search-filtered) lines, so a supplier
+    // search reads as that supplier's committed / paid position.
+    private decimal LineCommitted => VisibleLines.Sum(entry => entry.Line.LineTotal);
+    private decimal LinePaid => VisibleLines.Sum(entry => entry.Line.PaidToDate);
 
     // Master cost centres in master order first, then codes not in the active master (legacy /
     // retired), then lines with no code at all — shown rather than silently swallowed.
@@ -252,7 +300,7 @@ else
                 .ToDictionary(entry => entry.Code, entry => entry.index, StringComparer.OrdinalIgnoreCase);
             var namesByCode = CostCenters.Current.ToDictionary(centre => centre.Code, centre => centre.Name, StringComparer.OrdinalIgnoreCase);
 
-            return AllLines
+            return VisibleLines
                 .GroupBy(entry => string.IsNullOrWhiteSpace(entry.Line.CostCode) ? UnassignedCode : entry.Line.CostCode,
                          StringComparer.OrdinalIgnoreCase)
                 .Select(group => new CostCentreRow(
@@ -270,7 +318,7 @@ else
     }
 
     private List<OrderLine> LinesFor(string costCode) =>
-        AllLines
+        VisibleLines
             .Where(entry => string.Equals(
                 string.IsNullOrWhiteSpace(entry.Line.CostCode) ? UnassignedCode : entry.Line.CostCode,
                 costCode, StringComparison.OrdinalIgnoreCase))
@@ -278,7 +326,9 @@ else
             .ThenBy(entry => entry.Line.SortOrder)
             .ToList();
 
-    private bool IsExpanded(string costCode) => expandedCodes.Contains(costCode);
+    // While a supplier search is active every remaining group stays open — the point of
+    // the search is to see the matching orders, not to click each group open.
+    private bool IsExpanded(string costCode) => Searching || expandedCodes.Contains(costCode);
 
     // The line being re-coded across cost centres, if the modal is open.
     private OrderLine? recoding;
@@ -294,12 +344,33 @@ else
     }
 
     // The manual "Add work order" flow, which can also package the fresh order
-    // against the valuation lines that priced its scope.
+    // against the valuation lines that priced its scope. The same modal edits a
+    // manually raised order when editingOrder is set.
     private bool manualOrderOpen;
+    private ProjectWorkOrderDetail? editingOrder;
+
+    private void OpenAdd()
+    {
+        editingOrder = null;
+        manualOrderOpen = true;
+    }
+
+    private void OpenEdit(ProjectWorkOrderDetail detail)
+    {
+        editingOrder = detail;
+        manualOrderOpen = true;
+    }
+
+    private void CloseManualOrder()
+    {
+        manualOrderOpen = false;
+        editingOrder = null;
+    }
 
     private async Task HandleManualOrderSavedAsync()
     {
         manualOrderOpen = false;
+        editingOrder = null;
         await WorkOrders.RefreshAsync(ProjectId, CancellationToken.None);
     }
 

@@ -139,6 +139,15 @@ public static class ProcurementRouteRegistration
             new CommandRoute("POST", "/api/projects/{projectId}/work-orders",
                 command => $"/api/projects/{((CreateManualWorkOrder)command).ProjectId}/work-orders"));
 
+        // Edits a manually raised order wholesale — supplier, title, scope and priced lines.
+        commands.Register<UpdateManualWorkOrder, WorkOrder>(
+            new CommandRoute("PUT", "/api/projects/{projectId}/work-orders/{workOrderId}",
+                command =>
+                {
+                    var c = (UpdateManualWorkOrder)command;
+                    return $"/api/projects/{c.ProjectId}/work-orders/{c.WorkOrderId}";
+                }));
+
         // Re-codes / splits one priced line across cost centres, by £ amount.
         commands.Register<RecodeWorkOrderLine, IReadOnlyList<WorkOrderLine>>(
             new CommandRoute("POST", "/api/projects/{projectId}/work-order-lines/{lineId}/recode",

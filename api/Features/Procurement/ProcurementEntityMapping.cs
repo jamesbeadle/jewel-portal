@@ -24,7 +24,7 @@ internal static class ProcurementEntityMapping
 
     public static WorkOrder ToModel(this WorkOrderEntity entity) =>
         new(entity.WorkOrderId, entity.ProjectId, entity.BidPackageId, entity.SubcontractorId, entity.Value, entity.Scope, entity.AwardedAt, entity.AwardedByEmail,
-            entity.Number, entity.Title, (WorkOrderStatus)entity.Status, entity.CreatedAt, entity.ScheduledCompletion, entity.VariationOrderId);
+            entity.Number, entity.Title, (WorkOrderStatus)entity.Status, entity.CreatedAt, entity.ScheduledCompletion, entity.VariationOrderId, entity.SourceReference);
 
     public static WorkOrderLine ToModel(this WorkOrderLineEntity entity) =>
         new(entity.WorkOrderLineId, entity.WorkOrderId, entity.Title, entity.Description, entity.CostType, entity.CostCode,

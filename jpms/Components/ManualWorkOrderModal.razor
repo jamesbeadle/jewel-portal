@@ -14,10 +14,12 @@
 @* Raises a work order directly — no bid package, no tender — and, in the same act,
    matches it against the valuation sales lines that priced its scope, creating a
    reconciliation package with the order already assigned. For commitments made outside
-   the tendering flow. The package step is optional: untick it to just raise the order. *@
+   the tendering flow. The package step is optional: untick it to just raise the order.
+   With Editing set, the same form edits a manually raised order wholesale instead —
+   supplier, title, scope and priced lines — without the packaging step. *@
 <Modal IsOpen="IsOpen"
-       Title="Add work order"
-       ConfirmLabel="@(busy ? "Saving…" : createPackage && pickedAmounts.Count > 0 ? "Save order + package" : "Save order")"
+       Title="@(IsEditing ? $"Edit work order {EditingReference}" : "Add work order")"
+       ConfirmLabel="@(busy ? "Saving…" : IsEditing ? "Save changes" : createPackage && pickedAmounts.Count > 0 ? "Save order + package" : "Save order")"
        ConfirmDisabled="@(busy || !CanSave)"
        OnConfirm="SaveAsync"
        OnCancel="OnClose"
@@ -75,9 +77,12 @@
                                @onchange="e => SetLineTitle(line, e.Value?.ToString())" />
                         <input type="number" step="any" placeholder="Amount £" disabled="@busy"
                                class="bg-surface border border-line rounded-lg px-2 py-1.5 text-right text-content text-sm w-32"
+                               title="@(line.PaidToDate != 0m ? $"{Money(line.PaidToDate)} already paid against this line — the amount can't drop below that" : "")"
                                value="@line.AmountText"
                                @onchange="e => SetLineAmount(line, e.Value?.ToString())" />
-                        <button type="button" aria-label="Remove this line" disabled="@(busy || lines.Count == 1)"
+                        <button type="button" aria-label="Remove this line"
+                                disabled="@(busy || lines.Count == 1 || line.PaidToDate != 0m)"
+                                title="@(line.PaidToDate != 0m ? $"{Money(line.PaidToDate)} already paid against this line — it can't be removed" : "")"
                                 class="inline-flex items-center justify-center w-7 h-7 rounded-md text-content-subtle hover:text-negative hover:bg-surface-raised"
                                 @onclick="() => lines.RemoveAt(lineIndex)">
                             <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
@@ -95,7 +100,10 @@
             </div>
         </div>
 
-        @* ── Optional: package the order against its sales lines right away ── *@
+        @* ── Optional: package the order against its sales lines right away ──
+           Creation only: an existing order's packaging lives in the Packages section. *@
+        @if (!IsEditing)
+        {
         <div class="rounded-lg border border-line bg-surface p-3">
             <label class="flex w-fit items-center gap-2 text-sm text-content cursor-pointer select-none mb-2">
                 <input type="checkbox" class="cursor-pointer align-middle" disabled="@busy" @bind="createPackage" />
@@ -160,6 +168,7 @@
                 </div>
             }
         </div>
+        }
 
         @if (ClientValidationError is not null)
         {
@@ -181,8 +190,19 @@
     /// <summary>Raised after a successful save so hosts can refresh their stores.</summary>
     [Parameter] public EventCallback OnSaved { get; set; }
 
+    /// <summary>The order being edited, with its lines — null when raising a new order.
+    /// Only manually raised orders (Order.IsManual) may be passed here.</summary>
+    [Parameter] public ProjectWorkOrderDetail? Editing { get; set; }
+
+    private bool IsEditing => Editing is not null;
+    private string EditingReference => Editing is null ? "" : $"WO-{Editing.Order.Number:0000}";
+
     private sealed class LineRow
     {
+        // Ties the row to an existing line so its paid-to-date and invoice history
+        // survive the edit; null for rows added in this session.
+        public string? WorkOrderLineId { get; set; }
+        public decimal PaidToDate { get; set; }
         public string CostCode { get; set; } = "";
         public string Title { get; set; } = "";
         public string AmountText { get; set; } = "";
@@ -215,17 +235,47 @@
         }
         if (seeded) return;
         seeded = true;
-        subcontractorId = "";
-        title = "";
-        scope = "";
-        lines = new List<LineRow> { new LineRow() };
-        createPackage = true;
+        if (Editing is not null)
+        {
+            subcontractorId = Editing.Order.SubcontractorId;
+            title = Editing.Order.Title;
+            scope = Editing.Order.Scope;
+            lines = Editing.Lines
+                .OrderBy(line => line.SortOrder)
+                .Select(line => new LineRow
+                {
+                    WorkOrderLineId = line.WorkOrderLineId,
+                    PaidToDate = line.PaidToDate,
+                    CostCode = line.CostCode,
+                    Title = line.Title,
+                    AmountText = line.LineTotal.ToString(System.Globalization.CultureInfo.InvariantCulture)
+                })
+                .ToList();
+            if (lines.Count == 0) lines = new List<LineRow> { new LineRow() };
+            createPackage = false;
+        }
+        else
+        {
+            subcontractorId = "";
+            title = "";
+            scope = "";
+            lines = new List<LineRow> { new LineRow() };
+            createPackage = true;
+        }
         packageName = "";
         lineSearch = "";
         pickedAmounts.Clear();
         saveError = null;
         createdOrder = null;
-        // Freshen everything the pickers show; cached values render immediately.
+        // Freshen everything the pickers show; cached values render immediately. Editing
+        // has no packaging step, so the sales-side lookups are only needed when raising.
+        if (IsEditing)
+        {
+            await Task.WhenAll(
+                Subcontractors.RefreshAsync(CancellationToken.None),
+                CostCenters.RefreshAsync(CancellationToken.None));
+            return;
+        }
         var packagesTask = Queries.AskAsync(new ListReconciliationPackagesForProject(ProjectId), CancellationToken.None);
         await Task.WhenAll(
             Subcontractors.RefreshAsync(CancellationToken.None),
@@ -300,7 +350,14 @@
             if (filledLines.Any(line => string.IsNullOrWhiteSpace(line.Title))) return "Every line needs a title.";
             if (filledLines.Any(line => Parse(line.AmountText) is not { } amount || amount == 0m))
                 return "Every line needs a non-zero amount.";
-            if (createPackage)
+            // A paid line anchors the Financials tab's paid figures: its amount can
+            // change, but never below what has already been paid against it.
+            foreach (var line in filledLines.Where(line => line.PaidToDate != 0m))
+            {
+                if (Parse(line.AmountText) is { } amount && Math.Abs(amount) < Math.Abs(line.PaidToDate))
+                    return $"\"{Truncate(line.Title, 40)}\" — {Money(line.PaidToDate)} has been paid against this line; its amount can't drop below that.";
+            }
+            if (createPackage && !IsEditing)
             {
                 if (pickedAmounts.Values.Any(text => Parse(text) is not { } amount || amount == 0m))
                     return "Every ticked sales line needs a non-zero amount.";
@@ -337,6 +394,22 @@
         saveError = null;
         try
         {
+            // Editing: the whole editable surface travels in one command — no packaging step.
+            if (Editing is not null)
+            {
+                var editedLines = lines
+                    .Where(line => line.CostCode != "" && Parse(line.AmountText) is { } amount && amount != 0m)
+                    .Select(line => new UpdatedManualWorkOrderLine(
+                        line.WorkOrderLineId, line.CostCode, line.Title.Trim(), Parse(line.AmountText)!.Value))
+                    .ToList();
+                await Commands.SendAsync(new UpdateManualWorkOrder(
+                    ProjectId, Editing.Order.WorkOrderId, subcontractorId,
+                    title.Trim(), scope.Trim(), editedLines), CancellationToken.None);
+                seeded = false; // reseed fresh on next open
+                await OnSaved.InvokeAsync();
+                return;
+            }
+
             // Step 1 — the order itself (skipped on a retry after a package failure,
             // so the order is never raised twice).
             if (createdOrder is null)
@@ -370,7 +443,9 @@
         }
         catch (CommandFailedException ex)
         {
-            saveError = createdOrder is null
+            saveError = IsEditing
+                ? $"Couldn't save the changes: {ex.Message}"
+                : createdOrder is null
                 ? $"Couldn't raise the order: {ex.Message}"
                 : $"The order was raised (WO-{createdOrder.Number:0000}) but the package couldn't be created: {ex.Message} — fix and save again, or close and build the package from the Packages section.";
         }
