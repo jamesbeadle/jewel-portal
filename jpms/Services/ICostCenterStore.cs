@@ -5,8 +5,11 @@ namespace Jewel.JPMS.Services;
 
 public interface ICostCenterStore
 {
-    /// <summary>Active cost codes, sorted — for dropdowns and read-side views.</summary>
+    /// <summary>Active cost codes in master (SortOrder) order — for read-side views.</summary>
     IReadOnlyList<CostCenter> Active();
+
+    /// <summary>Active cost codes in alphabetical order (by code, then name) — for dropdowns.</summary>
+    IReadOnlyList<CostCenter> ActiveAlphabetical();
 
     /// <summary>Every cost code including retired ones — for the admin page.</summary>
     IReadOnlyList<CostCenter> All();

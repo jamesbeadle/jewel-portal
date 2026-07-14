@@ -33,7 +33,7 @@
                             disabled="@busy"
                             @onchange="e => SetRowCode(rowIndex, e.Value?.ToString())">
                         <option value="" selected="@(row.CostCode is null)">Choose a cost centre…</option>
-                        @foreach (var centre in CostCenters)
+                        @foreach (var centre in CostCenters.OrderBy(c => c.Code, StringComparer.OrdinalIgnoreCase).ThenBy(c => c.Name, StringComparer.OrdinalIgnoreCase))
                         {
                             <option value="@centre.Code" selected="@(string.Equals(row.CostCode, centre.Code, StringComparison.OrdinalIgnoreCase))">
                                 @($"{centre.Code} — {centre.Name}")

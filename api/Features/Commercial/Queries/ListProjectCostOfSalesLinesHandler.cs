@@ -53,7 +53,8 @@ public sealed class ListProjectCostOfSalesLinesHandler
             line.CostCenterCode ?? "",
             line.Type == "ACCPAYCREDIT" ? -line.Net : line.Net,
             IsSplit: false,
-            linksByLine.TryGetValue(line.XeroLedgerLineId, out var links) ? links : Array.Empty<XeroWorkOrderLinkSlice>()));
+            linksByLine.TryGetValue(line.XeroLedgerLineId, out var links) ? links : Array.Empty<XeroWorkOrderLinkSlice>(),
+            line.InvoiceStatus));
 
         var shares = splitShares.Select(joined => new ProjectCostOfSalesLine(
             joined.Line.XeroLedgerLineId,
@@ -64,7 +65,8 @@ public sealed class ListProjectCostOfSalesLinesHandler
             joined.Split.CostCenterCode,
             joined.Line.Type == "ACCPAYCREDIT" ? -joined.Split.Net : joined.Split.Net,
             IsSplit: true,
-            Array.Empty<XeroWorkOrderLinkSlice>())); // centre-split lines can't carry links
+            Array.Empty<XeroWorkOrderLinkSlice>(), // centre-split lines can't carry links
+            joined.Line.InvoiceStatus));
 
         return whole.Concat(shares)
             .OrderByDescending(line => line.Date ?? DateTime.MinValue)

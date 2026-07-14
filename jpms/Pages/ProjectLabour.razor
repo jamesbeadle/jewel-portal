@@ -92,7 +92,7 @@ else
                                     @if (isEditing)
                                     {
                                         <select class="field" @bind="editCostCode">
-                                            @foreach (var centre in CostCenters.Current.Where(centre => centre.IsActive))
+                                            @foreach (var centre in CostCenters.Alphabetical.Where(centre => centre.IsActive))
                                             {
                                                 <option value="@centre.Code">@centre.Code — @centre.Name</option>
                                             }
@@ -177,7 +177,7 @@ else
                     <input class="field w-36" type="date" @bind="manualDate" />
                     <select class="field" @bind="manualCostCode">
                         <option value="">Cost code…</option>
-                        @foreach (var centre in CostCenters.Current.Where(centre => centre.IsActive))
+                        @foreach (var centre in CostCenters.Alphabetical.Where(centre => centre.IsActive))
                         {
                             <option value="@centre.Code">@centre.Code — @centre.Name</option>
                         }

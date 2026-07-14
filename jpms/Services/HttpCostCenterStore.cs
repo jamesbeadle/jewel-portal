@@ -29,6 +29,12 @@ public sealed class HttpCostCenterStore : ICostCenterStore
         return readModel.Current;
     }
 
+    public IReadOnlyList<CostCenter> ActiveAlphabetical()
+    {
+        EnsureRequested();
+        return readModel.Alphabetical;
+    }
+
     public IReadOnlyList<CostCenter> All()
     {
         EnsureRequested();

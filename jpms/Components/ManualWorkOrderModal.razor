@@ -64,7 +64,7 @@
                         <select class="bg-surface border border-line rounded-lg px-2 py-1.5 text-content text-sm w-64"
                                 disabled="@busy" @onchange="e => SetLineCode(line, e.Value?.ToString())">
                             <option value="" selected="@(line.CostCode == "")">Cost centre…</option>
-                            @foreach (var centre in CostCenters.Current)
+                            @foreach (var centre in CostCenters.Alphabetical)
                             {
                                 <option value="@centre.Code" selected="@(string.Equals(line.CostCode, centre.Code, StringComparison.OrdinalIgnoreCase))">
                                     @($"{centre.Code} — {centre.Name}")

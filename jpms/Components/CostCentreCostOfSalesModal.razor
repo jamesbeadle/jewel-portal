@@ -136,7 +136,7 @@
                                                     disabled="@isMoving"
                                                     @onchange="e => MoveAsync(entry, e.Value?.ToString())">
                                                 <option value="" selected>Move to…</option>
-                                                @foreach (var centre in CostCenters.Active().Where(c => !string.Equals(c.Code, entry.CostCode, StringComparison.OrdinalIgnoreCase)))
+                                                @foreach (var centre in CostCenters.ActiveAlphabetical().Where(c => !string.Equals(c.Code, entry.CostCode, StringComparison.OrdinalIgnoreCase)))
                                                 {
                                                     <option value="@centre.Code">@centre.Code @centre.Name</option>
                                                 }

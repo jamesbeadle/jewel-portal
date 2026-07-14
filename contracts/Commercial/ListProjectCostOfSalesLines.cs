@@ -20,8 +20,13 @@ public sealed record ProjectCostOfSalesLine(
     string CostCode,
     decimal Net,
     bool IsSplit,
-    IReadOnlyList<XeroWorkOrderLinkSlice>? WorkOrderLinks = null) // the order(s) this line pays against, with each one's share
+    IReadOnlyList<XeroWorkOrderLinkSlice>? WorkOrderLinks = null, // the order(s) this line pays against, with each one's share
+    // Xero's invoice status as last synced (PAID, AUTHORISED, SUBMITTED, DRAFT …) —
+    // whether the supplier's bill has actually been settled, for cash-position views.
+    string InvoiceStatus = "")
 {
+    public bool IsPaid => string.Equals(InvoiceStatus, "PAID", StringComparison.OrdinalIgnoreCase);
+
     public IReadOnlyList<XeroWorkOrderLinkSlice> Links => WorkOrderLinks ?? Array.Empty<XeroWorkOrderLinkSlice>();
     public decimal LinkedTotal => Links.Sum(link => link.Amount);
     // The share of the line not yet paying any work order — non-work-order cost of

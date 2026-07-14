@@ -9,13 +9,21 @@ public sealed class CostCentersReadModel
     private readonly IQueryClient queries;
     private IReadOnlyList<CostCenter>? costCenters;
     private IReadOnlyList<CostCenter>? allCostCenters;
+    private IReadOnlyList<CostCenter>? alphabetical;
 
     public CostCentersReadModel(IQueryClient queries) { this.queries = queries; }
 
     public event Action? OnChanged;
 
-    /// <summary>Active cost codes only — what dropdowns and the Financials tab consume.</summary>
+    /// <summary>Active cost codes in master (SortOrder) order — what the Financials tab consumes.</summary>
     public IReadOnlyList<CostCenter> Current => costCenters ?? Array.Empty<CostCenter>();
+
+    /// <summary>Active cost codes in alphabetical order (by code, then name) — what select boxes consume.</summary>
+    public IReadOnlyList<CostCenter> Alphabetical => alphabetical ??= Current
+        .OrderBy(c => c.Code, StringComparer.OrdinalIgnoreCase)
+        .ThenBy(c => c.Name, StringComparer.OrdinalIgnoreCase)
+        .ToList()
+        .AsReadOnly();
 
     /// <summary>Every cost code including retired ones — what the admin page consumes.</summary>
     public IReadOnlyList<CostCenter> All => allCostCenters ?? Array.Empty<CostCenter>();
@@ -23,6 +31,7 @@ public sealed class CostCentersReadModel
     public async Task RefreshAsync(CancellationToken cancellationToken)
     {
         costCenters = await queries.AskAsync(new ListCostCenters(), cancellationToken);
+        alphabetical = null;
         OnChanged?.Invoke();
     }
 
@@ -31,6 +40,7 @@ public sealed class CostCentersReadModel
     {
         allCostCenters = await queries.AskAsync(new ListCostCenters(IncludeInactive: true), cancellationToken);
         costCenters = allCostCenters.Where(c => c.IsActive).ToList().AsReadOnly();
+        alphabetical = null;
         OnChanged?.Invoke();
     }
 }

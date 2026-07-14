@@ -131,7 +131,7 @@ else
                     </select>
                     <select class="bg-surface border border-line rounded-lg px-2 py-1.5 text-content text-sm" @bind="bulkCostCenterCode">
                         <option value="">Cost centre…</option>
-                        @foreach (var centre in CostCenters.Active())
+                        @foreach (var centre in CostCenters.ActiveAlphabetical())
                         {
                             <option value="@centre.Code">@centre.Code @centre.Name</option>
                         }
@@ -262,7 +262,7 @@ else
                                                 value="@SelectedCostCenterFor(line)"
                                                 @onchange="e => SetCostCenter(line.XeroLedgerLineId, e.Value?.ToString())">
                                             <option value="">—</option>
-                                            @foreach (var centre in CostCenters.Active())
+                                            @foreach (var centre in CostCenters.ActiveAlphabetical())
                                             {
                                                 <option value="@centre.Code">@centre.Code @centre.Name</option>
                                             }
@@ -423,7 +423,7 @@ else
                                 <select class="grow bg-surface border border-line rounded-lg px-2 py-1.5 text-content text-sm"
                                         value="@row.Code" @onchange="e => OnSplitCodeChanged(row, e.Value?.ToString())">
                                     <option value="">—</option>
-                                    @foreach (var centre in CostCenters.Active())
+                                    @foreach (var centre in CostCenters.ActiveAlphabetical())
                                     {
                                         <option value="@centre.Code">@centre.Code @centre.Name</option>
                                     }
