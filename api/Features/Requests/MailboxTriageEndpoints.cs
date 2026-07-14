@@ -191,9 +191,10 @@ public sealed class MailboxTriageEndpoints
         return new OkObjectResult(await create.HandleAsync(command, request.HttpContext.RequestAborted));
     }
 
-    // Triage "Reply in thread": stage an Outlook reply draft on the email (projects mailbox, thread
-    // quoted behind it) and create a General request from it in the background — replying IS the
-    // triage. Nothing is sent; the triager writes and sends the reply from the mailbox itself.
+    // Triage "Reply in thread": the reply written in the portal is staged as an Outlook draft on
+    // the email (projects mailbox, thread quoted behind it) and a General request carrying the same
+    // reply is created in the background — replying IS the triage. Nothing is sent; the pre-filled
+    // draft is reviewed and sent from the mailbox itself.
     [Function(nameof(ReplyInThreadFromMessage))]
     public async Task<IActionResult> ReplyInThread(
         [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "mailbox/message/reply-in-thread")] HttpRequest request)
@@ -203,8 +204,9 @@ public sealed class MailboxTriageEndpoints
         if (!TriageRoles.AllowedToTriage.IncludesAny(signedInUser.Roles)) return new ForbidResult();
 
         var command = await ReadBody<ReplyInThreadFromMessage>(request);
-        if (command is null || string.IsNullOrWhiteSpace(command.MessageId) || string.IsNullOrWhiteSpace(command.ProjectId))
-            return new BadRequestObjectResult("messageId and projectId are required.");
+        if (command is null || string.IsNullOrWhiteSpace(command.MessageId) || string.IsNullOrWhiteSpace(command.ProjectId)
+            || string.IsNullOrWhiteSpace(command.ReplyBody))
+            return new BadRequestObjectResult("messageId, projectId and replyBody are required.");
 
         // The raiser is always the signed-in triager.
         command = command with { RaisedByEmail = signedInUser.Email };

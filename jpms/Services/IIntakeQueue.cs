@@ -33,10 +33,11 @@ public interface IIntakeQueue
     Task<Acknowledgement> AssignMessageAsync(string messageId, string? internetMessageId, string requestId, CancellationToken cancellationToken = default);
     Task<Request> CreateRequestFromMessageAsync(CreateRequestFromMessage command, CancellationToken cancellationToken = default);
 
-    // Triage "Reply in thread": stage an Outlook reply draft on the email (projects mailbox, whole
-    // thread quoted behind it) and create a General request from the email in the background —
-    // replying IS the triage. The outcome carries the created request and the draft's weblink so
-    // the triager can open it in Outlook, write the reply and send it themselves.
+    // Triage "Reply in thread": the reply written in the portal is staged as an Outlook draft on
+    // the email (projects mailbox, whole thread quoted behind it) and doubles as the description of
+    // a General request created from the email in the background — replying IS the triage. The
+    // outcome carries the created request and the draft's weblink so the triager can open the
+    // pre-filled draft in Outlook, review it and send it themselves.
     Task<ReplyInThreadOutcome> ReplyInThreadFromMessageAsync(ReplyInThreadFromMessage command, CancellationToken cancellationToken = default);
 
     // Record-agnostic linking: list the records of a type on a project (for the category-first picker),
