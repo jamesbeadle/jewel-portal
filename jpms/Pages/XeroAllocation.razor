@@ -326,6 +326,12 @@ else
                                             @if (WriteBackBadge(line) is { } badge)
                                             {
                                                 <span class="block text-xs mt-0.5 @badge.Css" title="@badge.Tooltip">@badge.Text</span>
+                                                @* The tooltip is easy to miss — failures need their reason readable at a glance. *@
+                                                @if (line.WriteBackStatus == XeroWriteBackStatus.Failed
+                                                     && !string.IsNullOrWhiteSpace(line.WriteBackError))
+                                                {
+                                                    <span class="block text-xs mt-0.5 text-content-subtle whitespace-normal max-w-md">@line.WriteBackError</span>
+                                                }
                                             }
                                         }
                                         else if (activeTab == XeroAllocationStatus.Bucketed)
