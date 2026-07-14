@@ -16,6 +16,15 @@
         <Stat Label="Status"      Value="Approved" />
     </div>
 
+    @if (Role == Role.FinanceDirector)
+    {
+        @* The FD's at-a-glance view of which valuations are coming up (or overdue) across
+           every project — the dates themselves are set on each project's Setup tab. *@
+        <div class="mb-8">
+            <NextValuationsPanel />
+        </div>
+    }
+
     <h2 class="text-sm font-medium text-content-muted mb-3">Where to next</h2>
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
         @foreach (var destination in Destinations)
