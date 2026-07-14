@@ -1,6 +1,10 @@
 <Router AppAssembly="@typeof(App).Assembly">
     <Found Context="routeData">
-        <RouteView RouteData="@routeData" DefaultLayout="@typeof(Layout.MainLayout)" />
+        @* KeyedPageRouteView (not the stock RouteView) so navigating between two URLs of the
+           same route template — e.g. the project prev/next arrows — recreates the page and
+           re-runs OnInitializedAsync (loading state + store refresh) instead of silently
+           reusing the old project's component. *@
+        <KeyedPageRouteView RouteData="@routeData" DefaultLayout="@typeof(Layout.MainLayout)" />
         <FocusOnNavigate RouteData="@routeData" Selector="h1" />
     </Found>
     <NotFound>
