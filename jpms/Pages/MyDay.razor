@@ -133,7 +133,7 @@ else
                 </div>
             }
 
-            @{ var history = day.Recent.Where(entry => entry.WorkedOn < day.WorkDate).ToList(); }
+            var history = day.Recent.Where(entry => entry.WorkedOn < day.WorkDate).ToList();
             @if (history.Count > 0)
             {
                 <div class="panel p-4 mb-4">
