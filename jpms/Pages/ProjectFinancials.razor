@@ -109,7 +109,8 @@ else
             <PackageReconciliationSection ProjectId="@ProjectId"
                                           ValuationLines="ValuationLines.Current(ProjectId)"
                                           Orders="WorkOrders.Current(ProjectId)"
-                                          OnRowsChanged="HandlePackageRowsChangedAsync" />
+                                          OnRowsChanged="HandlePackageRowsChangedAsync"
+                                          OnOrdersChanged="HandleOrdersChangedAsync" />
 
             <CostCentreSalesLinesModal IsOpen="@(selectedSales is not null)"
                                        ProjectId="@ProjectId"
@@ -229,6 +230,11 @@ else
         }
         await Summary.RefreshAsync(ProjectId, CancellationToken.None);
     }
+
+    // A manual work order was raised from the Packages section: the WO Committed column
+    // reads from the work-orders store, so re-pull it (the summary follows via the
+    // package reload's OnRowsChanged).
+    private Task HandleOrdersChangedAsync() => WorkOrders.RefreshAsync(ProjectId, CancellationToken.None);
 
     private void OpenSalesLinesModal((string Heading, IReadOnlyList<string> CostCodes) line) =>
         selectedSales = new SelectedLine(line.Heading, line.CostCodes);

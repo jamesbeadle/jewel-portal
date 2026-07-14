@@ -1,0 +1,388 @@
+@using Jewel.JPMS.Contracts.Commercial
+@using Jewel.JPMS.Contracts.Procurement
+@using Jewel.JPMS.Features.CostCenters
+@using Jewel.JPMS.Features.Commercial
+@using Jewel.JPMS.Features.Subcontractors
+@using Jewel.JPMS.Models
+@inject ICommandSender Commands
+@inject IQueryClient Queries
+@inject SubcontractorsReadModel Subcontractors
+@inject CostCentersReadModel CostCenters
+@inject ValuationLinesReadModel ValuationLines
+@inject AuthService Auth
+
+@* Raises a work order directly — no bid package, no tender — and, in the same act,
+   matches it against the valuation sales lines that priced its scope, creating a
+   reconciliation package with the order already assigned. For commitments made outside
+   the tendering flow. The package step is optional: untick it to just raise the order. *@
+<Modal IsOpen="IsOpen"
+       Title="Add work order"
+       ConfirmLabel="@(busy ? "Saving…" : createPackage && pickedAmounts.Count > 0 ? "Save order + package" : "Save order")"
+       ConfirmDisabled="@(busy || !CanSave)"
+       OnConfirm="SaveAsync"
+       OnCancel="OnClose"
+       Class="max-w-6xl">
+    <div class="space-y-4">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div>
+                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Subcontractor</label>
+                <select class="w-full bg-surface border border-line-strong rounded-lg px-3 py-2 text-sm text-content focus:outline-none focus:border-accent"
+                        disabled="@busy" @onchange="e => SetSubcontractor(e.Value?.ToString())">
+                    <option value="" selected="@(subcontractorId == "")">Choose a subcontractor…</option>
+                    @foreach (var sub in SortedSubcontractors)
+                    {
+                        <option value="@sub.SubcontractorId" selected="@(subcontractorId == sub.SubcontractorId)">@sub.CompanyName</option>
+                    }
+                </select>
+            </div>
+            <div>
+                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Order title</label>
+                <input type="text" maxlength="256" placeholder="e.g. Groundworks package — BVMH"
+                       class="w-full rounded-lg border border-line-strong bg-surface-field px-3 py-2 text-sm text-content focus:outline-none focus:border-accent"
+                       disabled="@busy" @bind="title" @bind:event="oninput" />
+            </div>
+        </div>
+        <div>
+            <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Scope</label>
+            <textarea rows="2" maxlength="4000" placeholder="What the order instructs (optional)"
+                      class="w-full rounded-lg border border-line-strong bg-surface-field px-3 py-2 text-sm text-content focus:outline-none focus:border-accent"
+                      disabled="@busy" @bind="scope" @bind:event="oninput"></textarea>
+        </div>
+
+        @* ── Priced lines: each carries its own cost centre ────────────────── *@
+        <div class="rounded-lg border border-line bg-surface p-3">
+            <p class="text-[11px] uppercase tracking-wider text-content-subtle font-semibold mb-2"
+               title="Each line lands on its own cost centre — the order's value is their sum">Priced lines</p>
+            <div class="space-y-2">
+                @for (var index = 0; index < lines.Count; index++)
+                {
+                    var lineIndex = index;
+                    var line = lines[lineIndex];
+                    <div class="flex items-center gap-2">
+                        <select class="bg-surface border border-line rounded-lg px-2 py-1.5 text-content text-sm w-64"
+                                disabled="@busy" @onchange="e => SetLineCode(line, e.Value?.ToString())">
+                            <option value="" selected="@(line.CostCode == "")">Cost centre…</option>
+                            @foreach (var centre in CostCenters.Current)
+                            {
+                                <option value="@centre.Code" selected="@(string.Equals(line.CostCode, centre.Code, StringComparison.OrdinalIgnoreCase))">
+                                    @($"{centre.Code} — {centre.Name}")
+                                </option>
+                            }
+                        </select>
+                        <input type="text" maxlength="256" placeholder="What this line covers" disabled="@busy"
+                               class="bg-surface border border-line rounded-lg px-2 py-1.5 text-content text-sm flex-1"
+                               value="@line.Title"
+                               @onchange="e => SetLineTitle(line, e.Value?.ToString())" />
+                        <input type="number" step="any" placeholder="Amount £" disabled="@busy"
+                               class="bg-surface border border-line rounded-lg px-2 py-1.5 text-right text-content text-sm w-32"
+                               value="@line.AmountText"
+                               @onchange="e => SetLineAmount(line, e.Value?.ToString())" />
+                        <button type="button" aria-label="Remove this line" disabled="@(busy || lines.Count == 1)"
+                                class="inline-flex items-center justify-center w-7 h-7 rounded-md text-content-subtle hover:text-negative hover:bg-surface-raised"
+                                @onclick="() => lines.RemoveAt(lineIndex)">
+                            <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                 stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6L6 18" /></svg>
+                        </button>
+                    </div>
+                }
+            </div>
+            <div class="flex items-center justify-between mt-2">
+                <button type="button" disabled="@busy" @onclick="() => lines.Add(new LineRow())"
+                        class="text-xs font-medium text-content-subtle hover:text-content underline underline-offset-4">
+                    + Add another line
+                </button>
+                <span class="text-sm text-content-muted">Order value <span class="text-content font-medium">@Money(OrderTotal)</span></span>
+            </div>
+        </div>
+
+        @* ── Optional: package the order against its sales lines right away ── *@
+        <div class="rounded-lg border border-line bg-surface p-3">
+            <label class="flex w-fit items-center gap-2 text-sm text-content cursor-pointer select-none mb-2">
+                <input type="checkbox" class="cursor-pointer align-middle" disabled="@busy" @bind="createPackage" />
+                Create a reconciliation package with this order
+            </label>
+            @if (createPackage)
+            {
+                <div class="mb-2">
+                    <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Package name</label>
+                    <input type="text" maxlength="128" placeholder="@(string.IsNullOrWhiteSpace(title) ? "e.g. BVMH groundworks & civils" : title)"
+                           class="w-full md:w-1/2 rounded-lg border border-line-strong bg-surface-field px-3 py-2 text-sm text-content focus:outline-none focus:border-accent"
+                           disabled="@busy" @bind="packageName" @bind:event="oninput" />
+                </div>
+                <div class="flex items-center justify-between gap-2 mb-2">
+                    <p class="text-[11px] uppercase tracking-wider text-content-subtle font-semibold"
+                       title="Tick a line to take its full remaining value; edit the amount for a partial share when a client line covers more than one sub">
+                        Sales side — valuation lines
+                    </p>
+                    <input type="search" placeholder="Search…"
+                           class="bg-surface border border-line rounded-lg px-2 py-1 text-xs text-content placeholder:text-content-subtle w-36"
+                           @bind="lineSearch" @bind:event="oninput" />
+                </div>
+                <div class="overflow-y-auto max-h-60 space-y-1">
+                    @foreach (var entry in FilteredSalesLines)
+                    {
+                        var salesLine = entry.Line;
+                        var picked = pickedAmounts.ContainsKey(salesLine.ValuationLineItemId);
+                        var exhausted = !picked && entry.Available == 0m;
+                        <div class="flex items-center gap-2 text-sm @(exhausted ? "opacity-50" : "")">
+                            <input type="checkbox" class="cursor-pointer" disabled="@(busy || exhausted)"
+                                   title="@(exhausted ? "Fully assigned to other packages" : "")"
+                                   checked="@picked"
+                                   @onchange="() => ToggleSalesLine(entry)" />
+                            <span class="font-mono text-[11px] text-content-subtle whitespace-nowrap">@salesLine.CostCode</span>
+                            <span class="text-content-muted truncate" title="@salesLine.Description">@salesLine.Description</span>
+                            <span class="ml-auto flex items-center gap-1.5 whitespace-nowrap">
+                                @if (picked)
+                                {
+                                    <input type="number" step="any"
+                                           class="bg-surface border border-line rounded-lg px-2 py-0.5 text-right text-content text-xs w-24"
+                                           title="@($"This package's share — {Money(entry.Available)} of the line's {Money(salesLine.LineAmount)} is available")"
+                                           disabled="@busy"
+                                           value="@pickedAmounts[salesLine.ValuationLineItemId]"
+                                           @onchange="e => SetSalesAmount(salesLine.ValuationLineItemId, e.Value?.ToString())" />
+                                }
+                                else
+                                {
+                                    <span class="text-content-muted text-xs">@Money(entry.Available) avail.</span>
+                                }
+                            </span>
+                        </div>
+                    }
+                </div>
+                <div class="rounded-lg border border-line bg-surface-raised px-3 py-2 mt-2 text-sm flex flex-wrap items-center gap-x-6 gap-y-1">
+                    <span class="text-content-muted">Sales <span class="text-content font-medium">@Money(SalesTotal)</span></span>
+                    <span class="text-content-muted">Target cost (÷@DivisorText) <span class="text-content font-medium">@Money(TargetTotal)</span></span>
+                    <span class="text-content-muted">Order value <span class="text-content font-medium">@Money(OrderTotal)</span></span>
+                    <span class="@(Difference < 0m ? "text-negative" : "text-content-muted")"
+                          title="Target cost less the order's value — a large gap either way suggests the scope on the two sides doesn't match yet">
+                        Difference <span class="font-medium">@Money(Difference)</span>
+                    </span>
+                </div>
+            }
+        </div>
+
+        @if (ClientValidationError is not null)
+        {
+            <p class="text-sm text-negative">@ClientValidationError</p>
+        }
+        @if (saveError is not null)
+        {
+            <p class="text-sm text-negative">@saveError</p>
+        }
+    </div>
+</Modal>
+
+@code {
+    [Parameter] public bool IsOpen { get; set; }
+    [Parameter] public string ProjectId { get; set; } = "";
+
+    [Parameter] public EventCallback OnClose { get; set; }
+
+    /// <summary>Raised after a successful save so hosts can refresh their stores.</summary>
+    [Parameter] public EventCallback OnSaved { get; set; }
+
+    private sealed class LineRow
+    {
+        public string CostCode { get; set; } = "";
+        public string Title { get; set; } = "";
+        public string AmountText { get; set; } = "";
+    }
+
+    private string subcontractorId = "";
+    private string title = "";
+    private string scope = "";
+    private List<LineRow> lines = new() { new LineRow() };
+    private bool createPackage = true;
+    private string packageName = "";
+    private string lineSearch = "";
+    // Sales line id → this package's £ share, as typed (invariant decimal text).
+    private readonly Dictionary<string, string> pickedAmounts = new(StringComparer.OrdinalIgnoreCase);
+    private IReadOnlyList<ReconciliationPackage> allPackages = Array.Empty<ReconciliationPackage>();
+
+    private bool seeded;
+    private bool busy;
+    private string? saveError;
+    // Set once the order itself has saved, so a package failure can be retried
+    // without raising a duplicate order.
+    private WorkOrder? createdOrder;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (!IsOpen)
+        {
+            seeded = false;
+            return;
+        }
+        if (seeded) return;
+        seeded = true;
+        subcontractorId = "";
+        title = "";
+        scope = "";
+        lines = new List<LineRow> { new LineRow() };
+        createPackage = true;
+        packageName = "";
+        lineSearch = "";
+        pickedAmounts.Clear();
+        saveError = null;
+        createdOrder = null;
+        // Freshen everything the pickers show; cached values render immediately.
+        var packagesTask = Queries.AskAsync(new ListReconciliationPackagesForProject(ProjectId), CancellationToken.None);
+        await Task.WhenAll(
+            Subcontractors.RefreshAsync(CancellationToken.None),
+            CostCenters.RefreshAsync(CancellationToken.None),
+            ValuationLines.RefreshAsync(ProjectId, CancellationToken.None));
+        allPackages = await packagesTask;
+    }
+
+    private IEnumerable<Subcontractor> SortedSubcontractors =>
+        (Subcontractors.Current ?? Array.Empty<Subcontractor>())
+            .OrderBy(sub => sub.CompanyName, StringComparer.OrdinalIgnoreCase);
+
+    private static decimal? Parse(string text) =>
+        decimal.TryParse(text, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var value)
+            ? value
+            : null;
+
+    private decimal OrderTotal => lines.Sum(line => Parse(line.AmountText) ?? 0m);
+
+    // Counting sales lines with how much of each is still available to this new package
+    // (the line's value less what existing packages have taken).
+    private List<(ValuationLineItem Line, decimal Available)> FilteredSalesLines
+    {
+        get
+        {
+            var taken = allPackages
+                .SelectMany(package => package.SalesLines)
+                .GroupBy(slice => slice.ValuationLineItemId, StringComparer.OrdinalIgnoreCase)
+                .ToDictionary(group => group.Key, group => group.Sum(slice => slice.Amount), StringComparer.OrdinalIgnoreCase);
+            return ValuationLines.Current(ProjectId)
+                .Where(line => line.CountsTowardTotals && line.LineAmount != 0m)
+                .Where(line => string.IsNullOrWhiteSpace(lineSearch)
+                               || line.Description.Contains(lineSearch.Trim(), StringComparison.OrdinalIgnoreCase)
+                               || line.CostCode.Contains(lineSearch.Trim(), StringComparison.OrdinalIgnoreCase)
+                               || line.SectionName.Contains(lineSearch.Trim(), StringComparison.OrdinalIgnoreCase))
+                .Select(line => (Line: line,
+                    Available: line.LineAmount - (taken.TryGetValue(line.ValuationLineItemId, out var amount) ? amount : 0m)))
+                .OrderBy(entry => entry.Line.CostCode, StringComparer.OrdinalIgnoreCase)
+                .ThenBy(entry => entry.Line.DisplayOrder)
+                .ToList();
+        }
+    }
+
+    private void SetSubcontractor(string? value) => subcontractorId = value ?? "";
+    private static void SetLineCode(LineRow line, string? value) => line.CostCode = value ?? "";
+    private static void SetLineTitle(LineRow line, string? value) => line.Title = value ?? "";
+    private static void SetLineAmount(LineRow line, string? value) => line.AmountText = value ?? "";
+    private void SetSalesAmount(string lineItemId, string? value) => pickedAmounts[lineItemId] = value ?? "";
+
+    private void ToggleSalesLine((ValuationLineItem Line, decimal Available) entry)
+    {
+        if (pickedAmounts.Remove(entry.Line.ValuationLineItemId)) return;
+        // Whole-line default: the full remaining value; edit the amount for a partial share.
+        pickedAmounts[entry.Line.ValuationLineItemId] =
+            entry.Available.ToString(System.Globalization.CultureInfo.InvariantCulture);
+    }
+
+    private decimal SalesTotal => pickedAmounts.Values.Sum(text => Parse(text) ?? 0m);
+    private decimal TargetTotal => Math.Round(SalesTotal * FinancialSummaryAssumptions.CostFactor, 2);
+    private decimal Difference => TargetTotal - OrderTotal;
+
+    private static string DivisorText =>
+        $"{1m + FinancialSummaryAssumptions.MarkupPercent / 100m:0.##}";
+
+    private string? ClientValidationError
+    {
+        get
+        {
+            var filledLines = lines.Where(line =>
+                line.CostCode != "" || !string.IsNullOrWhiteSpace(line.Title) || !string.IsNullOrWhiteSpace(line.AmountText)).ToList();
+            if (filledLines.Any(line => line.CostCode == "")) return "Choose a cost centre for every line.";
+            if (filledLines.Any(line => string.IsNullOrWhiteSpace(line.Title))) return "Every line needs a title.";
+            if (filledLines.Any(line => Parse(line.AmountText) is not { } amount || amount == 0m))
+                return "Every line needs a non-zero amount.";
+            if (createPackage)
+            {
+                if (pickedAmounts.Values.Any(text => Parse(text) is not { } amount || amount == 0m))
+                    return "Every ticked sales line needs a non-zero amount.";
+                var linesById = ValuationLines.Current(ProjectId)
+                    .ToDictionary(line => line.ValuationLineItemId, StringComparer.OrdinalIgnoreCase);
+                foreach (var picked in pickedAmounts)
+                {
+                    if (!linesById.TryGetValue(picked.Key, out var salesLine)) continue;
+                    var amount = Parse(picked.Value)!.Value;
+                    if (Math.Sign(amount) != Math.Sign(salesLine.LineAmount))
+                        return $"\"{Truncate(salesLine.Description, 40)}\" — the share must carry the line's sign ({Money(salesLine.LineAmount)}).";
+                    var available = salesLine.LineAmount - allPackages
+                        .SelectMany(package => package.SalesLines)
+                        .Where(slice => string.Equals(slice.ValuationLineItemId, picked.Key, StringComparison.OrdinalIgnoreCase))
+                        .Sum(slice => slice.Amount);
+                    if (Math.Abs(amount) > Math.Abs(available))
+                        return $"\"{Truncate(salesLine.Description, 40)}\" — only {Money(available)} of the line is still available.";
+                }
+            }
+            return null;
+        }
+    }
+
+    private bool CanSave =>
+        subcontractorId != ""
+        && !string.IsNullOrWhiteSpace(title)
+        && lines.Any(line => line.CostCode != "" && Parse(line.AmountText) is { } amount && amount != 0m)
+        && ClientValidationError is null;
+
+    private async Task SaveAsync()
+    {
+        if (busy || !CanSave) return;
+        busy = true;
+        saveError = null;
+        try
+        {
+            // Step 1 — the order itself (skipped on a retry after a package failure,
+            // so the order is never raised twice).
+            if (createdOrder is null)
+            {
+                var orderLines = lines
+                    .Where(line => line.CostCode != "" && Parse(line.AmountText) is { } amount && amount != 0m)
+                    .Select(line => new ManualWorkOrderLine(line.CostCode, line.Title.Trim(), Parse(line.AmountText)!.Value))
+                    .ToList();
+                createdOrder = await Commands.SendAsync(new CreateManualWorkOrder(
+                    ProjectId, subcontractorId, title.Trim(), scope.Trim(),
+                    Auth.CurrentUser?.Email ?? "", orderLines), CancellationToken.None);
+            }
+
+            // Step 2 — the package, with the fresh order already assigned.
+            if (createPackage && pickedAmounts.Count > 0)
+            {
+                var slices = pickedAmounts
+                    .Where(picked => Parse(picked.Value) is { } amount && amount != 0m)
+                    .Select(picked => new PackageSalesSlice(picked.Key, Parse(picked.Value)!.Value))
+                    .ToList();
+                await Commands.SendAsync(new SaveReconciliationPackage(
+                    ProjectId,
+                    null,
+                    string.IsNullOrWhiteSpace(packageName) ? title.Trim() : packageName.Trim(),
+                    new List<string> { createdOrder.WorkOrderId },
+                    slices), CancellationToken.None);
+            }
+
+            seeded = false; // reseed fresh on next open
+            await OnSaved.InvokeAsync();
+        }
+        catch (CommandFailedException ex)
+        {
+            saveError = createdOrder is null
+                ? $"Couldn't raise the order: {ex.Message}"
+                : $"The order was raised (WO-{createdOrder.Number:0000}) but the package couldn't be created: {ex.Message} — fix and save again, or close and build the package from the Packages section.";
+        }
+        finally
+        {
+            busy = false;
+        }
+    }
+
+    private static string Truncate(string value, int max) =>
+        value.Length <= max ? value : value[..max] + "…";
+
+    private static string Money(decimal value) =>
+        value.ToString("C2", System.Globalization.CultureInfo.GetCultureInfo("en-GB"));
+}

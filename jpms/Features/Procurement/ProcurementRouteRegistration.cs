@@ -134,6 +134,11 @@ public static class ProcurementRouteRegistration
             new CommandRoute("PUT", "/api/work-orders/{workOrderId}",
                 command => $"/api/work-orders/{((UpdateWorkOrder)command).WorkOrderId}"));
 
+        // Raises a work order directly — no bid package — with per-centre priced lines.
+        commands.Register<CreateManualWorkOrder, WorkOrder>(
+            new CommandRoute("POST", "/api/projects/{projectId}/work-orders",
+                command => $"/api/projects/{((CreateManualWorkOrder)command).ProjectId}/work-orders"));
+
         // Re-codes / splits one priced line across cost centres, by £ amount.
         commands.Register<RecodeWorkOrderLine, IReadOnlyList<WorkOrderLine>>(
             new CommandRoute("POST", "/api/projects/{projectId}/work-order-lines/{lineId}/recode",

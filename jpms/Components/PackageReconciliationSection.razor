@@ -14,7 +14,14 @@
         <h2 class="text-lg font-semibold text-content">Packages</h2>
         @if (CanManage)
         {
-            <button type="button" class="btn-secondary text-sm" @onclick="OpenCreate">New package</button>
+            <div class="flex items-center gap-2">
+                <button type="button" class="btn-secondary text-sm"
+                        title="Raise a work order directly and package it against the valuation lines that priced its scope, in one go"
+                        @onclick="() => manualOrderOpen = true">
+                    New work order + package
+                </button>
+                <button type="button" class="btn-secondary text-sm" @onclick="OpenCreate">New package</button>
+            </div>
         }
     </div>
     <p class="text-sm text-content-subtle mb-3">
@@ -181,6 +188,11 @@
     </div>
 </section>
 
+<ManualWorkOrderModal IsOpen="@manualOrderOpen"
+                      ProjectId="@ProjectId"
+                      OnClose="() => manualOrderOpen = false"
+                      OnSaved="HandleManualOrderSavedAsync" />
+
 <ReconciliationPackageBuilderModal IsOpen="@builderOpen"
                                    ProjectId="@ProjectId"
                                    Editing="@editing"
@@ -202,6 +214,10 @@
     /// <summary>Raised with the computed package rows whenever they (re)load, so the
     /// page can show them as lines in the main Financials table without a second fetch.</summary>
     [Parameter] public EventCallback<IReadOnlyList<PackageReconciliationRow>> OnRowsChanged { get; set; }
+
+    /// <summary>Raised when the manual work-order flow raises a new order, so the page
+    /// can refresh its work-orders store (the WO Committed column reads from it).</summary>
+    [Parameter] public EventCallback OnOrdersChanged { get; set; }
 
     private IReadOnlyList<ReconciliationPackage> packages = Array.Empty<ReconciliationPackage>();
     private IReadOnlyList<PackageReconciliationRow> rows = Array.Empty<PackageReconciliationRow>();
@@ -284,6 +300,17 @@
     {
         builderOpen = false;
         editing = null;
+        await ReloadAsync();
+    }
+
+    // The manual "add work order (+ package)" flow saved: a new order now exists, and
+    // possibly a new package holding it — refresh both sides.
+    private bool manualOrderOpen;
+
+    private async Task HandleManualOrderSavedAsync()
+    {
+        manualOrderOpen = false;
+        await OnOrdersChanged.InvokeAsync();
         await ReloadAsync();
     }
 

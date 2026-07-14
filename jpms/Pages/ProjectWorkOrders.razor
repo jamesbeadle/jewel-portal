@@ -25,7 +25,14 @@ else if (!Session.IsApproved)
 else
 {
     <ProjectPageShell ProjectId="@ProjectId" ActiveTab="work-orders">
-        <h2 class="text-lg font-semibold text-content mb-3">Work orders by cost centre</h2>
+        <div class="flex items-center justify-between gap-3 mb-3 flex-wrap">
+            <h2 class="text-lg font-semibold text-content">Work orders by cost centre</h2>
+            <button type="button" class="btn-secondary text-sm"
+                    title="Raise a work order directly — no bid package — and optionally package it against the valuation lines that priced its scope"
+                    @onclick="() => manualOrderOpen = true">
+                Add work order
+            </button>
+        </div>
 
         @if (Orders.Count == 0)
         {
@@ -179,6 +186,11 @@ else
                                       OnClose="CloseRecode"
                                       OnSaved="HandleRecodedAsync" />
         }
+
+        <ManualWorkOrderModal IsOpen="@manualOrderOpen"
+                              ProjectId="@ProjectId"
+                              OnClose="() => manualOrderOpen = false"
+                              OnSaved="HandleManualOrderSavedAsync" />
     </ProjectPageShell>
 }
 
@@ -278,6 +290,16 @@ else
     private async Task HandleRecodedAsync()
     {
         recoding = null;
+        await WorkOrders.RefreshAsync(ProjectId, CancellationToken.None);
+    }
+
+    // The manual "Add work order" flow, which can also package the fresh order
+    // against the valuation lines that priced its scope.
+    private bool manualOrderOpen;
+
+    private async Task HandleManualOrderSavedAsync()
+    {
+        manualOrderOpen = false;
         await WorkOrders.RefreshAsync(ProjectId, CancellationToken.None);
     }
 

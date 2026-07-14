@@ -165,6 +165,15 @@ else
                             }
                         }
                     </tbody>
+                    <tfoot class="border-t-2 border-line-strong bg-surface-raised">
+                        <tr class="font-semibold text-content">
+                            <td class="px-4 py-2.5" colspan="4">Total shown</td>
+                            <td class="px-4 py-2.5 text-right whitespace-nowrap">@Money(FilteredSummaries.Sum(summary => summary.Value))</td>
+                            <td class="px-4 py-2.5 text-right whitespace-nowrap">@Money(FilteredSummaries.Sum(summary => summary.InvoicedToDate))</td>
+                            <td class="px-4 py-2.5 text-right whitespace-nowrap">@Money(FilteredSummaries.Sum(summary => summary.RemainingToInvoice))</td>
+                            <td class="px-4 py-2.5"></td>
+                        </tr>
+                    </tfoot>
                 </table>
             </div>
         }
