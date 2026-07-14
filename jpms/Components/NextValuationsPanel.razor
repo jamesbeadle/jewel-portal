@@ -3,8 +3,9 @@
 @implements IDisposable
 
 @*
-    Finance director's dashboard panel: every visible project with its next expected valuation
-    date, soonest first (projects without a date sit at the bottom as "Not set"). Overdue dates
+    Finance director's dashboard panel: every visible project (Completed projects excluded —
+    nothing left to value) with its next expected valuation date, soonest first (projects
+    without a date sit at the bottom as "Not set"). Overdue dates
     are flagged red, dates within the next seven days amber, so the FD can see at a glance which
     valuations need chasing. Rows link to the project; the date itself is set from the project's
     Setup tab.
@@ -84,14 +85,14 @@
 
     private IReadOnlyList<Project> Ordered =>
         (Projects.Current ?? Array.Empty<Project>())
+            .Where(project => project.Stage != ProjectStage.Completed)
             .OrderBy(project => project.NextExpectedValuationDate is null)
             .ThenBy(project => project.NextExpectedValuationDate)
             .ThenBy(project => project.Reference, StringComparer.OrdinalIgnoreCase)
             .ToList();
 
     private int Overdue =>
-        (Projects.Current ?? Array.Empty<Project>())
-            .Count(project => StatusOf(project.NextExpectedValuationDate) == DateStatus.Overdue);
+        Ordered.Count(project => StatusOf(project.NextExpectedValuationDate) == DateStatus.Overdue);
 
     private static DateStatus StatusOf(DateTimeOffset? date)
     {
