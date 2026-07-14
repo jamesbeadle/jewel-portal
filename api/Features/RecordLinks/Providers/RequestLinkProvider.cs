@@ -30,8 +30,11 @@ public sealed class RequestLinkProvider : ILinkableRecordProvider
     public async Task<IReadOnlyList<LinkableRecord>> ForProjectAsync(string projectId, CancellationToken ct)
     {
         var projectRef = await RequestTags.ProjectRefAsync(context, projectId, ct);
+        // Closed requests are finished business, so they're not offered in the triage picker — an
+        // email must be linked to a live request (any status but Closed). Reopen the request first
+        // if a late reply genuinely belongs to it.
         var entities = await context.Requests.AsNoTracking()
-            .Where(r => r.ProjectId == projectId)
+            .Where(r => r.ProjectId == projectId && r.Status != (int)RequestStatus.Closed)
             .OrderByDescending(r => r.RaisedAt)
             .ToListAsync(ct);
         return entities.Select(e => ToLinkable(e, projectRef)).ToList().AsReadOnly();

@@ -50,8 +50,11 @@ public sealed class SchedulingLinkProvider : ILinkableRecordProvider
 
         // The schedule's claims documents: Jewel's own NOD/EOT notices (Request family) …
         var projectRef = await RequestTags.ProjectRefAsync(context, projectId, ct);
+        // Closed claims documents are excluded for the same reason RequestLinkProvider excludes
+        // closed requests: triage links emails to live records only.
         var claimRequests = await context.Requests.AsNoTracking()
-            .Where(r => r.ProjectId == projectId && ClaimRequestKinds.Contains(r.Kind))
+            .Where(r => r.ProjectId == projectId && ClaimRequestKinds.Contains(r.Kind)
+                        && r.Status != (int)RequestStatus.Closed)
             .OrderByDescending(r => r.RaisedAt)
             .ToListAsync(ct);
         records.AddRange(claimRequests.Select(r => new LinkableRecord(
@@ -102,7 +105,7 @@ public sealed class SchedulingLinkProvider : ILinkableRecordProvider
             ProjectId:    project.ProjectId,
             Reference:    reference,
             TagReference: reference,
-            Title:        "Schedule communications",
+            Title:        "Programme communications",
             StatusLabel:  null);
     }
 }

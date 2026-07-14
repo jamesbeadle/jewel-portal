@@ -2,6 +2,7 @@ using Jewel.JPMS.Api.Cqrs;
 using Jewel.JPMS.Api.Features.MailboxIntake.Graph;
 using Jewel.JPMS.Contracts.Cqrs;
 using Jewel.JPMS.Contracts.RecordLinks;
+using Jewel.JPMS.Models;
 
 namespace Jewel.JPMS.Api.Features.RecordLinks.Commands;
 
@@ -28,6 +29,13 @@ public sealed class LinkMessageToRecordHandler : ICommandHandler<LinkMessageToRe
 
         var record = await provider.FindAsync(command.RecordId, cancellationToken)
             ?? throw new InvalidOperationException($"{command.Type} record '{command.RecordId}' not found.");
+
+        // A closed request can't receive new triage emails — the pickers already hide them (see
+        // RequestLinkProvider); this guards the command path itself so no caller can link one.
+        if (record.Type == RecordType.Request &&
+            string.Equals(record.StatusLabel, nameof(RequestStatus.Closed), StringComparison.OrdinalIgnoreCase))
+            throw new InvalidOperationException(
+                $"{record.Reference} is closed, so this email can't be linked to it. Reopen the request first, or link the email to another record.");
 
         // Read the email back from the mailbox to confirm it's there and pick up a fresh threading id +
         // its conversation id (so we can tag the whole thread, not just this message).

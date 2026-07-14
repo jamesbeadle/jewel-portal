@@ -51,8 +51,18 @@ public sealed partial class HttpCommercialStore
 
     public Timesheet ApproveTimesheet(string timesheetId)
     {
-        _ = commands.SendAsync(new ApproveTimesheet(timesheetId), CancellationToken.None);
+        _ = ApproveAsync(timesheetId);
         return new Timesheet(timesheetId, "", "", DateTimeOffset.UtcNow, 0, "", true);
+    }
+
+    private async Task ApproveAsync(string timesheetId)
+    {
+        // Resolve the owning project from the cached lists so the approval can be re-pulled —
+        // previously the timesheet kept showing as unapproved until a manual reload.
+        var projectId = timesheetsRequested.FirstOrDefault(id => timesheetsReadModel.Current(id).Any(sheet =>
+            string.Equals(sheet.TimesheetId, timesheetId, StringComparison.OrdinalIgnoreCase)));
+        await commands.SendAsync(new ApproveTimesheet(timesheetId), CancellationToken.None);
+        if (projectId is not null) await timesheetsReadModel.RefreshAsync(projectId, CancellationToken.None);
     }
 
     private async Task SubmitAsync(Timesheet timesheet)

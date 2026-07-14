@@ -160,7 +160,10 @@
 
     private async Task LoadAsync()
     {
-        messages = await RequestRegister.ListMessagesAsync(RequestId);
+        // Newest first — the latest exchange is what people come to check.
+        messages = (await RequestRegister.ListMessagesAsync(RequestId))
+            .OrderByDescending(m => m.PostedAt)
+            .ToList();
         loaded = true;
     }
 

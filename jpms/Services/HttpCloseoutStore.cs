@@ -50,11 +50,19 @@ public sealed class HttpCloseoutStore : ICloseoutStore
 
     public Defect SaveDefect(Defect defect)
     {
-        if (string.IsNullOrEmpty(defect.DefectId))
-            _ = commands.SendAsync(new RaiseDefect(defect.ProjectId, defect.Description, defect.Location, defect.AssignedToEmail), CancellationToken.None);
-        else
-            _ = commands.SendAsync(new UpdateDefect(defect.DefectId, defect.Description, defect.Location, defect.AssignedToEmail, defect.Status), CancellationToken.None);
+        _ = SaveDefectAsync(defect);
         return defect;
+    }
+
+    private async Task SaveDefectAsync(Defect defect)
+    {
+        // Await the command, then re-pull the project's defects so the new/updated defect shows
+        // without a manual reload (fire-and-forget sends with no refresh left the list stale).
+        if (string.IsNullOrEmpty(defect.DefectId))
+            await commands.SendAsync(new RaiseDefect(defect.ProjectId, defect.Description, defect.Location, defect.AssignedToEmail), CancellationToken.None);
+        else
+            await commands.SendAsync(new UpdateDefect(defect.DefectId, defect.Description, defect.Location, defect.AssignedToEmail, defect.Status), CancellationToken.None);
+        await defectsReadModel.RefreshAsync(defect.ProjectId, CancellationToken.None);
     }
 
     public SettlementRecord? SettlementFor(string projectId) =>

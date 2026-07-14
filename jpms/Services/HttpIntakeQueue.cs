@@ -54,6 +54,9 @@ public sealed class HttpIntakeQueue : IIntakeQueue
     public Task<Request> CreateRequestFromMessageAsync(CreateRequestFromMessage command, CancellationToken cancellationToken = default) =>
         commands.SendAsync(command, cancellationToken);
 
+    public Task<ReplyInThreadOutcome> ReplyInThreadFromMessageAsync(ReplyInThreadFromMessage command, CancellationToken cancellationToken = default) =>
+        commands.SendAsync(command, cancellationToken);
+
     public Task<IReadOnlyList<LinkableRecord>> ListLinkableRecordsAsync(string projectId, RecordType type, CancellationToken cancellationToken = default) =>
         queries.AskAsync(new ListLinkableRecords(projectId, type), cancellationToken);
 

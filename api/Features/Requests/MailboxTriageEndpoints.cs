@@ -29,6 +29,7 @@ public sealed class MailboxTriageEndpoints
     private readonly ICommandHandler<RemoveTagFromMessage, Acknowledgement> removeTag;
     private readonly ICommandHandler<AssignMessageToRequest, Acknowledgement> assign;
     private readonly ICommandHandler<CreateRequestFromMessage, Request> create;
+    private readonly ICommandHandler<ReplyInThreadFromMessage, ReplyInThreadOutcome> replyInThread;
 
     public MailboxTriageEndpoints(
         SignedInUserResolver users,
@@ -42,7 +43,8 @@ public sealed class MailboxTriageEndpoints
         ICommandHandler<RestoreMessage, Acknowledgement> restore,
         ICommandHandler<RemoveTagFromMessage, Acknowledgement> removeTag,
         ICommandHandler<AssignMessageToRequest, Acknowledgement> assign,
-        ICommandHandler<CreateRequestFromMessage, Request> create)
+        ICommandHandler<CreateRequestFromMessage, Request> create,
+        ICommandHandler<ReplyInThreadFromMessage, ReplyInThreadOutcome> replyInThread)
     {
         this.users = users;
         this.listInbox = listInbox;
@@ -56,6 +58,7 @@ public sealed class MailboxTriageEndpoints
         this.removeTag = removeTag;
         this.assign = assign;
         this.create = create;
+        this.replyInThread = replyInThread;
     }
 
     [Function(nameof(ListInboxMessages))]
@@ -186,6 +189,26 @@ public sealed class MailboxTriageEndpoints
         // The raiser is always the signed-in triager.
         command = command with { RaisedByEmail = signedInUser.Email };
         return new OkObjectResult(await create.HandleAsync(command, request.HttpContext.RequestAborted));
+    }
+
+    // Triage "Reply in thread": stage an Outlook reply draft on the email (projects mailbox, thread
+    // quoted behind it) and create a General request from it in the background — replying IS the
+    // triage. Nothing is sent; the triager writes and sends the reply from the mailbox itself.
+    [Function(nameof(ReplyInThreadFromMessage))]
+    public async Task<IActionResult> ReplyInThread(
+        [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "mailbox/message/reply-in-thread")] HttpRequest request)
+    {
+        var signedInUser = await users.ResolveAsync(request, request.HttpContext.RequestAborted);
+        if (signedInUser is null) return new UnauthorizedResult();
+        if (!TriageRoles.AllowedToTriage.IncludesAny(signedInUser.Roles)) return new ForbidResult();
+
+        var command = await ReadBody<ReplyInThreadFromMessage>(request);
+        if (command is null || string.IsNullOrWhiteSpace(command.MessageId) || string.IsNullOrWhiteSpace(command.ProjectId))
+            return new BadRequestObjectResult("messageId and projectId are required.");
+
+        // The raiser is always the signed-in triager.
+        command = command with { RaisedByEmail = signedInUser.Email };
+        return new OkObjectResult(await replyInThread.HandleAsync(command, request.HttpContext.RequestAborted));
     }
 
     // Returns a deny result (401/403) when the caller may not triage, or null when they may.

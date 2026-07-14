@@ -46,8 +46,19 @@ public sealed class HttpBoqStore : IBoqStore
 
     public bool Remove(string boqLineItemId)
     {
-        _ = commands.SendAsync(new RemoveBoqLine(boqLineItemId), CancellationToken.None);
+        _ = RemoveAsync(boqLineItemId);
         return true;
+    }
+
+    private async Task RemoveAsync(string boqLineItemId)
+    {
+        // Resolve the owning project from the cached lists before the line disappears, so the
+        // table can be re-pulled after the delete (previously the removed line lingered on
+        // screen until a manual reload).
+        var projectId = requested.FirstOrDefault(id => readModel.Current(id).Any(line =>
+            string.Equals(line.BoqLineItemId, boqLineItemId, StringComparison.OrdinalIgnoreCase)));
+        await commands.SendAsync(new RemoveBoqLine(boqLineItemId), CancellationToken.None);
+        if (projectId is not null) await readModel.RefreshAsync(projectId, CancellationToken.None);
     }
 
     public decimal TotalFor(string projectId) => LinesFor(projectId).Sum(line => line.LineTotal);
@@ -57,10 +68,18 @@ public sealed class HttpBoqStore : IBoqStore
 
     public BoqSignOff RecordSignOff(BoqSignOff signOff)
     {
-        _ = commands.SendAsync(
+        _ = RecordSignOffAsync(signOff);
+        return signOff;
+    }
+
+    private async Task RecordSignOffAsync(BoqSignOff signOff)
+    {
+        await commands.SendAsync(
             new SignOffBoqForProject(signOff.ProjectId, signOff.SignedOffByEmail, signOff.TenderTotalAtSignOff),
             CancellationToken.None);
-        return signOff;
+        // Sign-off itself isn't cached (SignOffForAsync asks fresh), but notify so any open
+        // view re-reads its state after the save lands.
+        OnChange?.Invoke();
     }
 
     private async Task AddAsync(BoqLineItem line)

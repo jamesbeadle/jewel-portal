@@ -33,6 +33,12 @@ public interface IIntakeQueue
     Task<Acknowledgement> AssignMessageAsync(string messageId, string? internetMessageId, string requestId, CancellationToken cancellationToken = default);
     Task<Request> CreateRequestFromMessageAsync(CreateRequestFromMessage command, CancellationToken cancellationToken = default);
 
+    // Triage "Reply in thread": stage an Outlook reply draft on the email (projects mailbox, whole
+    // thread quoted behind it) and create a General request from the email in the background —
+    // replying IS the triage. The outcome carries the created request and the draft's weblink so
+    // the triager can open it in Outlook, write the reply and send it themselves.
+    Task<ReplyInThreadOutcome> ReplyInThreadFromMessageAsync(ReplyInThreadFromMessage command, CancellationToken cancellationToken = default);
+
     // Record-agnostic linking: list the records of a type on a project (for the category-first picker),
     // and link a message to one. The link tags "JPMS/<ref>" identically for every record type, and the
     // record reads its mail back live by that tag. AssignMessageAsync is the Request-only special case.

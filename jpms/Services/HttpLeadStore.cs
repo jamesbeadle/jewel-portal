@@ -49,9 +49,8 @@ public sealed class HttpLeadStore : ILeadStore
         queries.AskAsync(new GetLeadQualification(leadId), CancellationToken.None);
 
     public void SaveQualification(QualificationAssessment assessment) =>
-        _ = commands.SendAsync(
-            new RecordLeadQualificationScore(assessment.LeadId, assessment.Score, assessment.Notes, assessment.AssessedByEmail),
-            CancellationToken.None);
+        _ = SendThenRefreshPipelineAsync(
+            new RecordLeadQualificationScore(assessment.LeadId, assessment.Score, assessment.Notes, assessment.AssessedByEmail));
 
     public IReadOnlyList<SiteVisit> SiteVisitsFor(string leadId) =>
         siteVisits.Get(leadId, Array.Empty<SiteVisit>());
@@ -84,9 +83,8 @@ public sealed class HttpLeadStore : ILeadStore
         queries.AskAsync(new GetBidDecisionForLead(leadId), CancellationToken.None);
 
     public void SaveBidDecision(BidDecision decision) =>
-        _ = commands.SendAsync(
-            new RecordBidDecision(decision.LeadId, decision.ShouldBid, decision.Reason, decision.DecidedByEmail),
-            CancellationToken.None);
+        _ = SendThenRefreshPipelineAsync(
+            new RecordBidDecision(decision.LeadId, decision.ShouldBid, decision.Reason, decision.DecidedByEmail));
 
     public Task<Proposal?> GetProposalAsync(string leadId) =>
         queries.AskAsync(new GetProposalForLead(leadId), CancellationToken.None);
@@ -94,9 +92,9 @@ public sealed class HttpLeadStore : ILeadStore
     public void SaveProposal(Proposal proposal)
     {
         if (string.IsNullOrEmpty(proposal.ProposalId))
-            _ = commands.SendAsync(new IssueProposal(proposal.LeadId, proposal.Value), CancellationToken.None);
+            _ = SendThenRefreshPipelineAsync(new IssueProposal(proposal.LeadId, proposal.Value));
         else
-            _ = commands.SendAsync(new ReviseProposal(proposal.LeadId, proposal.Value, "Revised via legacy shim"), CancellationToken.None);
+            _ = SendThenRefreshPipelineAsync(new ReviseProposal(proposal.LeadId, proposal.Value, "Revised via legacy shim"));
     }
 
     public Task<LeadOutcome?> GetOutcomeAsync(string leadId) =>
@@ -104,8 +102,16 @@ public sealed class HttpLeadStore : ILeadStore
 
     public void SaveOutcome(LeadOutcome outcome)
     {
-        if (outcome.IsWon) _ = commands.SendAsync(new MarkLeadAsWon(outcome.LeadId, outcome.DecidedByEmail), CancellationToken.None);
-        else _ = commands.SendAsync(new MarkLeadAsLost(outcome.LeadId, outcome.Reason, outcome.DecidedByEmail), CancellationToken.None);
+        if (outcome.IsWon) _ = SendThenRefreshPipelineAsync(new MarkLeadAsWon(outcome.LeadId, outcome.DecidedByEmail));
+        else _ = SendThenRefreshPipelineAsync(new MarkLeadAsLost(outcome.LeadId, outcome.Reason, outcome.DecidedByEmail));
+    }
+
+    // Await the command, then re-pull the pipeline so lead stage / score / status changes show
+    // without a manual reload (fire-and-forget sends with no refresh left the UI stale).
+    private async Task SendThenRefreshPipelineAsync<TResult>(Jewel.JPMS.Contracts.Cqrs.ICommand<TResult> command)
+    {
+        await commands.SendAsync(command, CancellationToken.None);
+        await readModel.RefreshAsync(CancellationToken.None);
     }
 
     private async Task CaptureLeadAsync(Lead lead)

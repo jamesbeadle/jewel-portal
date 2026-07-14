@@ -411,6 +411,25 @@ else
                 <div class="lg:col-span-2">
                     @if (selected is null)
                     {
+                        @if (replyOutcome is { } outcome)
+                        {
+                            <div class="panel p-5 mb-4 border-accent/40 space-y-2">
+                                <div class="flex items-center justify-between gap-2">
+                                    <p class="text-xs uppercase tracking-wider text-accent font-semibold">Reply draft staged</p>
+                                    <button type="button" class="text-content-subtle hover:text-content text-xs" title="Dismiss"
+                                            @onclick="() => replyOutcome = null">✕</button>
+                                </div>
+                                <p class="text-sm text-content">
+                                    <span class="font-mono text-xs text-content-muted mr-1">@outcome.Request.Reference</span>
+                                    was created from the email, and a reply draft is waiting in the projects mailbox
+                                    (to @(string.Join("; ", outcome.Draft.Recipients))) — write the reply and send it from Outlook.
+                                </p>
+                                @if (!string.IsNullOrWhiteSpace(outcome.Draft.WebLink))
+                                {
+                                    <a class="text-accent underline text-sm" href="@outcome.Draft.WebLink" target="_blank" rel="noopener">Open the draft in Outlook</a>
+                                }
+                            </div>
+                        }
                         <div class="panel p-8 text-center text-sm text-content-subtle">
                             Select an email to triage it.
                         </div>
@@ -530,6 +549,7 @@ else
                                 <div class="flex flex-wrap gap-2 mb-4">
                                     <button type="button" class="@ModeTabClass(TriageMode.Link)" @onclick="() => SetMode(TriageMode.Link)">Link to existing</button>
                                     <button type="button" class="@ModeTabClass(TriageMode.Create)" @onclick="() => SetMode(TriageMode.Create)">Create new</button>
+                                    <button type="button" class="@ModeTabClass(TriageMode.Reply)" @onclick="() => SetMode(TriageMode.Reply)">Reply in thread</button>
                                     <button type="button" class="@ModeTabClass(TriageMode.Discard)" @onclick="() => SetMode(TriageMode.Discard)">Discard</button>
                                 </div>
 
@@ -691,10 +711,10 @@ else
                                         else if (createRecordType == RecordType.Scheduling)
                                         {
                                             <p class="rounded-lg bg-surface-raised border border-line px-3 py-2 text-xs text-content-subtle">
-                                                This email (and its whole thread) is tagged to the project's <span class="font-medium text-content">scheduling communications</span> and appears under the project's Schedule tab. You can add further tags later from the Tagged view — the same email can also feed a request or bid package.
+                                                This email (and its whole thread) is tagged to the project's <span class="font-medium text-content">programme communications</span> and appears under the project's Schedule tab. You can add further tags later from the Tagged view — the same email can also feed a request or bid package.
                                             </p>
 
-                                            <button type="button" class="btn-primary" disabled="@(busy || string.IsNullOrWhiteSpace(createProjectId))" @onclick="DoTagScheduling">Tag email to scheduling</button>
+                                            <button type="button" class="btn-primary" disabled="@(busy || string.IsNullOrWhiteSpace(createProjectId))" @onclick="DoTagScheduling">Tag email to programme</button>
                                         }
                                         else if (createRecordType == RecordType.Todo)
                                         {
@@ -735,6 +755,29 @@ else
                                                 Create @(TodoRowCountLabel) from email
                                             </button>
                                         }
+                                    </div>
+                                }
+                                else if (mode == TriageMode.Reply)
+                                {
+                                    <div class="space-y-3">
+                                        <p class="rounded-lg bg-surface-raised border border-line px-3 py-2 text-xs text-content-subtle">
+                                            A reply draft is staged in the <span class="font-medium text-content">projects mailbox</span> with the whole thread quoted behind it — you write the reply and send it from Outlook. In the background a <span class="font-medium text-content">General</span> request (auto-numbered REQ-####) is created from this email on the chosen project, so replying triages the thread. Nothing is sent from here.
+                                        </p>
+
+                                        <div>
+                                            <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Project *</label>
+                                            <select class="field" value="@replyProjectId" @onchange="OnReplyProjectChanged">
+                                                <option value="">Select a project…</option>
+                                                @foreach (var project in ProjectOptions)
+                                                {
+                                                    <option value="@project.ProjectId">@project.Reference — @project.Name</option>
+                                                }
+                                            </select>
+                                        </div>
+
+                                        <button type="button" class="btn-primary" disabled="@(busy || string.IsNullOrWhiteSpace(replyProjectId))" @onclick="DoReplyInThread">
+                                            Create reply draft and request
+                                        </button>
                                     </div>
                                 }
                                 else if (mode == TriageMode.Discard)
@@ -1062,7 +1105,7 @@ else
 }
 
 @code {
-    private enum TriageMode { None, Link, Create, Discard }
+    private enum TriageMode { None, Link, Create, Reply, Discard }
 
     // The page shows the live queue (untagged Inbox), the discarded pile, or every tagged email (the
     // management surface for adding/removing workflow tags). The detail pane is shared.
@@ -1090,7 +1133,9 @@ else
         RecordType.Request          => "Request",
         RecordType.BidPackageInvite => "Bid Package Invite",
         RecordType.CostCentre       => "Cost Centre",
-        RecordType.Scheduling       => "Scheduling",
+        // UI terminology is "Programme" (UK construction usage); the RecordType/tag layer keeps
+        // its Scheduling identifiers.
+        RecordType.Scheduling       => "Programme",
         RecordType.Variation        => "Variation Order",
         RecordType.VariationQuote   => "Variation Order Quote",
         RecordType.Lad              => "LADs claim",
@@ -1102,7 +1147,7 @@ else
     // the project's bucket plus its claims documents (NOD/EOT/LADs), so its plural reads as that set.
     private static string RecordTypeLabelPlural(RecordType type) => type switch
     {
-        RecordType.Scheduling => "scheduling records",
+        RecordType.Scheduling => "programme records",
         RecordType.Variation      => "variation orders",
         RecordType.VariationQuote => "variation order quotes",
         RecordType.Lad        => "LADs claims",
@@ -1112,7 +1157,7 @@ else
 
     private static string RecordTypeLabelSingular(RecordType type) => type switch
     {
-        RecordType.Scheduling => "scheduling record",
+        RecordType.Scheduling => "programme record",
         RecordType.Variation      => "variation order",
         RecordType.VariationQuote => "variation order quote",
         RecordType.Lad        => "LADs claim",
@@ -1217,6 +1262,13 @@ else
     // Bid Package Invite create fields (shares createProjectId + createTitle with the Request form).
     private string createTrade = "";
 
+    // Reply-in-thread state: the chosen project, and the last successful outcome (created request +
+    // staged draft). The outcome outlives the action — RunAction clears the selection because the
+    // email left the queue — so the banner with the draft's Outlook link renders in the empty
+    // detail pane until the triager selects another email or switches view.
+    private string replyProjectId = "";
+    private ReplyInThreadOutcome? replyOutcome;
+
     // To-do create rows: one per item to capture from this email (the form starts with a single row
     // pre-filled from the subject; "+ Add another item" appends more). Class instances so the Blazor
     // input lambdas mutate the row in place.
@@ -1269,6 +1321,7 @@ else
         detailLoading = false;
         mode = TriageMode.None;
         actionError = null;
+        replyOutcome = null;
         if (next == QueueView.Discarded) { ResetDiscardedPaging(); await LoadDiscardedAsync(); }
         else if (next == QueueView.Tagged) { selectedTags.Clear(); filterOpen = false; ResetTaggedPaging(); await LoadTaggedAsync(); }
         else { ResetQueuePaging(); await LoadAsync(); }
@@ -1470,6 +1523,8 @@ else
         recommendError = null;
         recommendLoading = false;
         ResetLinkState();
+        replyOutcome = null;
+        replyProjectId = "";
         createRecordType = RecordType.Request;
         createProjectId = "";
         createTitle = item.Subject;
@@ -1692,7 +1747,7 @@ else
         "link_to_existing"   => "Link to an existing record",
         "create_request"     => "Create a request",
         "create_bid_package" => "Create a bid package",
-        "tag_scheduling"     => "Tag to scheduling",
+        "tag_scheduling"     => "Tag to programme",
         "create_todos"       => "Create to-do items",
         "discard"            => "Discard",
         "none"               => "Needs a human decision",
@@ -1835,6 +1890,25 @@ else
 
         await RunAction("Creating to-dos", async () => await Intake.CreateTodoItemsFromMessageAsync(command));
     }
+
+    // "Reply in thread": one action stages an Outlook reply draft on the email (projects mailbox,
+    // thread quoted behind it) AND creates a General request from it in the background — so the
+    // email is triaged by the act of replying. The outcome (request + draft weblink) is kept for
+    // the success banner; the triager writes and sends the reply from Outlook itself.
+    private async Task DoReplyInThread()
+    {
+        if (selected is null || busy) return;
+        if (string.IsNullOrWhiteSpace(replyProjectId)) { actionError = "Choose a project."; return; }
+
+        var command = new ReplyInThreadFromMessage(selected.Id, replyProjectId, selected.InternetMessageId);
+        await RunAction("Preparing reply draft", async () =>
+        {
+            replyOutcome = await Intake.ReplyInThreadFromMessageAsync(command);
+            replyProjectId = "";
+        });
+    }
+
+    private void OnReplyProjectChanged(ChangeEventArgs e) => replyProjectId = e.Value?.ToString() ?? "";
 
     // "Create new → Scheduling": nothing is created — every project already has its scheduling
     // bucket, whose RecordId is the project id — so this is a straight link to the chosen project.

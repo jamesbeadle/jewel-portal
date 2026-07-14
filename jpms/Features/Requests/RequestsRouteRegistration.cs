@@ -191,5 +191,10 @@ public static class RequestsRouteRegistration
 
         commands.Register<CreateRequestFromMessage, Request>(
             new CommandRoute("POST", "/api/mailbox/message/create-request", _ => "/api/mailbox/message/create-request"));
+
+        // Triage "Reply in thread": an Outlook reply draft staged on the email (projects mailbox,
+        // thread quoted behind it) plus a background General request created from the same email.
+        commands.Register<ReplyInThreadFromMessage, ReplyInThreadOutcome>(
+            new CommandRoute("POST", "/api/mailbox/message/reply-in-thread", _ => "/api/mailbox/message/reply-in-thread"));
     }
 }

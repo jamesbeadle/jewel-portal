@@ -43,6 +43,9 @@ public static class RequestsFeatureRegistration
         services.AddScoped<ICommandHandler<RemoveTagFromMessage, Acknowledgement>, RemoveTagFromMessageHandler>();
         services.AddScoped<ICommandHandler<AssignMessageToRequest, Acknowledgement>, AssignMessageToRequestHandler>();
         services.AddScoped<ICommandHandler<CreateRequestFromMessage, Request>, CreateRequestFromMessageHandler>();
+        // Triage "Reply in thread": reply draft in the projects mailbox + a background General
+        // request from the same email, in one action.
+        services.AddScoped<ICommandHandler<ReplyInThreadFromMessage, ReplyInThreadOutcome>, ReplyInThreadFromMessageHandler>();
 
         // One-off admin sweep migrating legacy flat request tags to project-qualified ones.
         services.AddScoped<ICommandHandler<RetagRequestWorkflowTags, RequestRetagSummary>, RetagRequestWorkflowTagsHandler>();
