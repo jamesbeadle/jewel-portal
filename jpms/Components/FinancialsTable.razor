@@ -208,6 +208,53 @@
                     </td>
                 </tr>
             }
+            @* Reconciliation packages as first-class lines: the scope netted off the
+               centres above lives here, so the table — and its total — still covers the
+               whole project. Only rendered while "Hide scope in packages" is on;
+               unticked, the centres carry the gross figures and these rows would
+               double-count. Managed (edit / lock / dissolve) in the Packages section
+               below the table. *@
+            @foreach (var package in VisiblePackages)
+            {
+                <tr class="bg-surface-raised/40">
+                    <td class="sticky left-0 z-10 bg-surface px-3 py-3"></td>
+                    <td class="sticky left-[36px] z-10 bg-surface px-4 py-3 font-mono text-[11px] text-content-subtle whitespace-nowrap">PKG</td>
+                    <td class="sticky left-[124px] z-10 bg-surface px-4 py-3 whitespace-nowrap">
+                        <span class="text-content font-medium">@package.Name</span>
+                        <span class="ml-2 inline-block rounded-full border border-line px-2 py-0.5 text-[11px] text-content-subtle"
+                              title="A reconciliation package: work orders matched against the valuation lines that priced their scope — manage it in the Packages section below">Package</span>
+                        @if (package.IsLocked)
+                        {
+                            <span class="ml-1 inline-block rounded-full border border-line px-2 py-0.5 text-[11px] text-content-subtle"
+                                  title="Locked — figures frozen; profit / loss realised against actual invoiced cost">Locked</span>
+                        }
+                    </td>
+                    <td class="px-4 py-3 text-right whitespace-nowrap @MoneyClass(package.SalesValue)">@Money(package.SalesValue)</td>
+                    <td class="px-4 py-3 text-right text-content-muted">
+                        @Percent(package.SalesValue == 0m ? 0m : Math.Round(package.ClaimedToDate / package.SalesValue * 100m, 1))
+                    </td>
+                    <td class="px-4 py-3 text-right whitespace-nowrap @MoneyClass(package.ClaimedToDate)">@Money(package.ClaimedToDate)</td>
+                    <td class="px-4 py-3 text-right whitespace-nowrap border-l border-line @MoneyClass(package.TargetCost)">@Money(package.TargetCost)</td>
+                    <td class="px-4 py-3 text-right whitespace-nowrap @MoneyClass(package.WoCommitted)">@Money(package.WoCommitted)</td>
+                    <td class="px-4 py-3 text-right whitespace-nowrap @MoneyClass(package.InvoicedToDate)">@Money(package.InvoicedToDate)</td>
+                    <td class="px-4 py-3 text-right text-content-muted"
+                        title="Packages only hold work orders, so they never carry non-work-order spend">—</td>
+                    @if (package.IsLocked)
+                    {
+                        <td class="px-4 py-3 text-right text-content-muted" title="Locked — the remainder is realised as profit / loss">—</td>
+                        <td class="px-4 py-3 text-right font-medium @(package.ProfitLoss == 0m ? "text-content-muted" : package.ProfitLoss > 0m ? "text-positive" : "text-negative")">@Money(package.ProfitLoss)</td>
+                    }
+                    else
+                    {
+                        <td class="px-4 py-3 text-right @(package.Drawdown < 0m ? "text-negative" : package.Drawdown == 0m ? "text-content-muted" : "text-content")">@Money(package.Drawdown)</td>
+                        <td class="px-4 py-3 text-right text-content-muted" title="Lock the package below to realise its remainder as profit / loss">—</td>
+                    }
+                    <td class="px-4 py-3 text-right text-content-muted">—</td>
+                    <td class="px-4 py-3 text-right whitespace-nowrap">
+                        <span class="text-xs text-content-subtle" title="Edit, lock or dissolve this package in the Packages section below the table">below</span>
+                    </td>
+                </tr>
+            }
         </tbody>
         <tfoot class="border-t-2 border-line-strong bg-surface-raised">
             <tr class="font-semibold text-content">
@@ -241,6 +288,11 @@
     /// project's work orders. Rendered as the WO Committed column.</summary>
     [Parameter] public IReadOnlyDictionary<string, decimal> WorkOrderCommittedByCode { get; set; } =
         new Dictionary<string, decimal>(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>Reconciliation package rows, rendered as first-class lines (and counted
+    /// in the total) while "Hide scope in packages" is on — the scope netted off the
+    /// centres sits here, so the table still covers the whole project.</summary>
+    [Parameter] public IReadOnlyList<PackageReconciliationRow> Packages { get; set; } = Array.Empty<PackageReconciliationRow>();
 
     /// <summary>Raised with a heading and the line's cost codes when a Contract Sales Value figure
     /// is clicked (one code for an individual row, all members for a roll-up).</summary>
@@ -572,6 +624,18 @@
         }
     }
 
+    // Packages count in the table (rows + totals) only while the netting toggle is on —
+    // with gross figures on the centres, package rows would double-count their scope.
+    private IEnumerable<PackageReconciliationRow> IncludedPackages =>
+        hidePackagedScope ? Packages : Array.Empty<PackageReconciliationRow>();
+
+    // Rendered package rows follow the search like centre rows do; totals stay
+    // project-wide, matching the hide-zero and search behaviour.
+    private IEnumerable<PackageReconciliationRow> VisiblePackages =>
+        IncludedPackages.Where(package =>
+            string.IsNullOrWhiteSpace(search)
+            || package.Name.Contains(search.Trim(), StringComparison.OrdinalIgnoreCase));
+
     private IEnumerable<string> UnmatchedCodes =>
         SummaryRows.Select(row => row.CostCode)
             .Union(WorkOrderCommittedByCode.Keys, StringComparer.OrdinalIgnoreCase)
@@ -579,21 +643,29 @@
             .OrderBy(rowCode => rowCode, StringComparer.OrdinalIgnoreCase);
 
     // Totals go through the same per-row accessors as the lines, so they respect the
-    // hide-packaged-scope toggle and always equal the sum of what's on screen.
-    private decimal TotalContractSales => SummaryRows.Sum(RowSales);
-    private decimal TotalClaimValue => SummaryRows.Sum(RowClaimed);
-    private decimal TotalTargetCost => SummaryRows.Sum(RowTarget);
+    // hide-packaged-scope toggle and always equal the sum of what's on screen. Package
+    // rows are added back in, so the total covers the whole project either way — with
+    // the toggle on, the packaged scope simply arrives via the package rows instead of
+    // the centres.
+    private decimal TotalContractSales => SummaryRows.Sum(RowSales) + IncludedPackages.Sum(package => package.SalesValue);
+    private decimal TotalClaimValue => SummaryRows.Sum(RowClaimed) + IncludedPackages.Sum(package => package.ClaimedToDate);
+    private decimal TotalTargetCost => SummaryRows.Sum(RowTarget) + IncludedPackages.Sum(package => package.TargetCost);
     private decimal TotalWoCommitted =>
-        WorkOrderCommittedByCode.Sum(entry => entry.Value - PackagedWoFor(entry.Key));
-    private decimal TotalCostOfSales => SummaryRows.Sum(RowActual);
+        WorkOrderCommittedByCode.Sum(entry => entry.Value - PackagedWoFor(entry.Key))
+        + IncludedPackages.Sum(package => package.WoCommitted);
+    private decimal TotalCostOfSales => SummaryRows.Sum(RowActual) + IncludedPackages.Sum(package => package.InvoicedToDate);
     private decimal TotalNonWoCostOfSales => SummaryRows.Sum(row => row.NonWorkOrderActualCost);
 
     // Every code with any figure — summary rows plus work-order-only codes.
     private IEnumerable<string> AllCodes =>
         byCode.Keys.Union(WorkOrderCommittedByCode.Keys, StringComparer.OrdinalIgnoreCase);
 
-    private decimal TotalDrawdown => AllCodes.Where(entryCode => !IsCentreFinalised(entryCode)).Sum(RemainderFor);
-    private decimal TotalProfitLoss => AllCodes.Where(IsCentreFinalised).Sum(RemainderFor);
+    private decimal TotalDrawdown =>
+        AllCodes.Where(entryCode => !IsCentreFinalised(entryCode)).Sum(RemainderFor)
+        + IncludedPackages.Where(package => !package.IsLocked).Sum(package => package.Drawdown);
+    private decimal TotalProfitLoss =>
+        AllCodes.Where(IsCentreFinalised).Sum(RemainderFor)
+        + IncludedPackages.Where(package => package.IsLocked).Sum(package => package.ProfitLoss);
 
     // Matching the per-line calculation: claimed £ over contract £ (both netted of
     // packaged scope when the toggle is on).
@@ -602,12 +674,19 @@
             ? 0m
             : TotalClaimValue / TotalContractSales * 100m;
 
-    // Weighted by target cost, the base the cost side draws down against (netted when
-    // the toggle is on, so the weights match the total they divide by).
-    private decimal WeightedCostCompletion =>
-        TotalTargetCost == 0m
-            ? 0m
-            : SummaryRows.Sum(row => row.CostCompletionPercent * RowTarget(row)) / TotalTargetCost;
+    // Weighted by target cost, the base the cost side draws down against. Weighted over
+    // the centre rows only — packages carry no cost-side completion — so the weights
+    // match the base they divide by.
+    private decimal WeightedCostCompletion
+    {
+        get
+        {
+            var rowsTarget = SummaryRows.Sum(RowTarget);
+            return rowsTarget == 0m
+                ? 0m
+                : SummaryRows.Sum(row => row.CostCompletionPercent * RowTarget(row)) / rowsTarget;
+        }
+    }
 
     private string MoneyClass(decimal value) => value == 0m ? "text-content-muted" : "text-content";
 

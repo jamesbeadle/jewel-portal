@@ -199,6 +199,10 @@
     /// <summary>The project's work orders (already loaded by the Financials page).</summary>
     [Parameter] public IReadOnlyList<ProjectWorkOrderDetail> Orders { get; set; } = Array.Empty<ProjectWorkOrderDetail>();
 
+    /// <summary>Raised with the computed package rows whenever they (re)load, so the
+    /// page can show them as lines in the main Financials table without a second fetch.</summary>
+    [Parameter] public EventCallback<IReadOnlyList<PackageReconciliationRow>> OnRowsChanged { get; set; }
+
     private IReadOnlyList<ReconciliationPackage> packages = Array.Empty<ReconciliationPackage>();
     private IReadOnlyList<PackageReconciliationRow> rows = Array.Empty<PackageReconciliationRow>();
     private bool loading = true;
@@ -251,6 +255,7 @@
             packages = await definitionsTask;
             rows = await rowsTask;
             error = null;
+            await OnRowsChanged.InvokeAsync(rows);
         }
         catch { error = "Couldn't load packages. Please try again."; }
         loading = false;

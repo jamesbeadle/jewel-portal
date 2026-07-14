@@ -62,6 +62,7 @@ else
                              SummaryRows="Summary.Current(ProjectId)"
                              Groups="Groups.Current(ProjectId)"
                              WorkOrderCommittedByCode="WoCommittedByCode"
+                             Packages="packageRows"
                              OnContractSalesSelected="OpenSalesLinesModal"
                              OnWorkOrderCommittedSelected="OpenWorkOrdersModal"
                              OnCostOfSalesSelected="OpenCostOfSalesModal"
@@ -96,16 +97,19 @@ else
                 figures are summed, the two percentages are value-weighted, and editing cost % or the
                 lock applies to every member. With "Hide scope in packages" ticked (the default),
                 sales, work orders and invoiced cost already assigned to a reconciliation package
-                below are netted off every figure — the packaged money's position lives on the
-                package row, so this table shows only unreconciled scope; untick to see gross
-                figures.
+                are netted off the cost-centre rows and appear instead as PKG lines in this table —
+                so every pound shows exactly once and the Total row still covers the whole project.
+                Package lines are managed (edit / lock / dissolve) in the Packages section below.
+                Untick to see gross figures on the centres; the package lines drop out so nothing
+                double-counts.
             </p>
 
             @* Reconciliation packages: a sub's work orders against the valuation lines that
                priced their scope — the truth at the level the work was bought and sold. *@
             <PackageReconciliationSection ProjectId="@ProjectId"
                                           ValuationLines="ValuationLines.Current(ProjectId)"
-                                          Orders="WorkOrders.Current(ProjectId)" />
+                                          Orders="WorkOrders.Current(ProjectId)"
+                                          OnRowsChanged="HandlePackageRowsChangedAsync" />
 
             <CostCentreSalesLinesModal IsOpen="@(selectedSales is not null)"
                                        ProjectId="@ProjectId"
@@ -205,6 +209,26 @@ else
                           StringComparer.OrdinalIgnoreCase);
 
     private Task RetrySummaryAsync() => Summary.RefreshAsync(ProjectId, CancellationToken.None);
+
+    // The computed package rows, surfaced by the Packages section whenever it (re)loads —
+    // shown as first-class lines in the main table so the total covers the whole project.
+    private IReadOnlyList<PackageReconciliationRow> packageRows = Array.Empty<PackageReconciliationRow>();
+    private bool packageRowsSeen;
+
+    // Package membership also drives the summary's netted (PackagedX) figures, so any
+    // package change re-pulls the summary to keep the centre rows and package rows in
+    // step. The first load after page init is the section's initial fetch — the summary
+    // is already loading, so skip the extra round-trip.
+    private async Task HandlePackageRowsChangedAsync(IReadOnlyList<PackageReconciliationRow> rows)
+    {
+        packageRows = rows;
+        if (!packageRowsSeen)
+        {
+            packageRowsSeen = true;
+            return;
+        }
+        await Summary.RefreshAsync(ProjectId, CancellationToken.None);
+    }
 
     private void OpenSalesLinesModal((string Heading, IReadOnlyList<string> CostCodes) line) =>
         selectedSales = new SelectedLine(line.Heading, line.CostCodes);
