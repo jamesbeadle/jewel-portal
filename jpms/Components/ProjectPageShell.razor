@@ -1,5 +1,6 @@
 @using Jewel.JPMS.Features.Projects
 @inject ProjectListReadModel Projects
+@inject NavigationManager Nav
 @implements IDisposable
 
 @if (Projects.Current is null)
@@ -28,7 +29,29 @@ else
 
         <header class="mb-4">
             <p class="text-xs uppercase tracking-wider text-content-subtle font-medium mb-1 font-mono">@Project.Reference</p>
-            <h1 class="text-2xl md:text-3xl font-semibold text-content leading-tight">@Project.Name</h1>
+            <div class="flex items-center gap-2">
+                @* Cycle through active (non-Completed) projects by reference, looping at either
+                   end, staying on the current tab. Hidden when there's nowhere else to go. *@
+                @if (Neighbour(-1) is { } previous)
+                {
+                    <button type="button" @onclick="() => GoTo(previous)"
+                            aria-label="Previous project" title="@($"{previous.Reference} · {previous.Name}")"
+                            class="inline-flex items-center justify-center w-8 h-8 rounded-md text-content-subtle hover:text-content hover:bg-surface-raised shrink-0">
+                        <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6" /></svg>
+                    </button>
+                }
+                <h1 class="text-2xl md:text-3xl font-semibold text-content leading-tight">@Project.Name</h1>
+                @if (Neighbour(1) is { } next)
+                {
+                    <button type="button" @onclick="() => GoTo(next)"
+                            aria-label="Next project" title="@($"{next.Reference} · {next.Name}")"
+                            class="inline-flex items-center justify-center w-8 h-8 rounded-md text-content-subtle hover:text-content hover:bg-surface-raised shrink-0">
+                        <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6" /></svg>
+                    </button>
+                }
+            </div>
             <p class="text-sm text-content-muted mt-1">@Project.ClientName · @Project.Organisation.ShortCode() · <ProjectStageBadge Stage="Project.Stage" /></p>
         </header>
 
@@ -44,6 +67,31 @@ else
     [Parameter] public RenderFragment? ChildContent { get; set; }
 
     private Project? Project => Projects.Find(ProjectId);
+
+    // The prev/next loop: active (non-Completed) projects ordered by reference.
+    private List<Project> Cycle =>
+        (Projects.Current ?? (IReadOnlyList<Project>)Array.Empty<Project>())
+            .Where(project => project.Stage != ProjectStage.Completed)
+            .OrderBy(project => project.Reference, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+    private Project? Neighbour(int step)
+    {
+        var cycle = Cycle;
+        var index = cycle.FindIndex(project =>
+            string.Equals(project.ProjectId, ProjectId, StringComparison.OrdinalIgnoreCase));
+
+        // Viewing a Completed project (not in the loop): both arrows enter the loop at its
+        // nearest end rather than disappearing entirely.
+        if (index < 0)
+            return cycle.Count == 0 ? null : (step > 0 ? cycle[0] : cycle[^1]);
+
+        if (cycle.Count < 2) return null;
+        return cycle[(index + step + cycle.Count) % cycle.Count];
+    }
+
+    private void GoTo(Project project) =>
+        Nav.NavigateTo($"/projects/{project.ProjectId}/{ActiveTab}");
 
     protected override async Task OnInitializedAsync()
     {
