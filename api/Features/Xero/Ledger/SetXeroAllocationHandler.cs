@@ -55,9 +55,10 @@ public sealed class SetXeroAllocationHandler : ICommandHandler<SetXeroAllocation
 
         if (command.Action == XeroAllocationAction.SetProject)
         {
-            var projectExists = await context.Projects
-                .AnyAsync(project => project.ProjectId == command.ProjectId, cancellationToken);
-            if (!projectExists)
+            // A null project is a deliberate unset (clears the saved project and the
+            // Xero site); a supplied project must exist.
+            if (command.ProjectId is not null
+                && !await context.Projects.AnyAsync(project => project.ProjectId == command.ProjectId, cancellationToken))
                 throw new InvalidOperationException("Choose a project to set.");
             if (lines.Any(line => line.AllocationStatus != (int)XeroAllocationStatus.Unallocated))
                 throw new InvalidOperationException("Set applies to queued (unallocated) lines only.");
@@ -149,9 +150,10 @@ public sealed class SetXeroAllocationHandler : ICommandHandler<SetXeroAllocation
                     line.Note = null;
                     break;
                 case XeroAllocationAction.SetProject:
-                    // The half-step: project decided, cost centre still pending. The
-                    // line stays Unallocated (queued under its project) and is not
-                    // stamped as allocated — Allocate does that when the centre lands.
+                    // The half-step: project decided (or, with null, un-decided), cost
+                    // centre still pending. The line stays Unallocated — queued under
+                    // its project when one is set — and is not stamped as allocated;
+                    // Allocate does that when the centre lands.
                     line.ProjectId = command.ProjectId;
                     break;
             }

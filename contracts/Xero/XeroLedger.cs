@@ -164,11 +164,13 @@ public sealed record AllocateSuggestedXeroLines(string? AllocatedBy = null) : IC
 /// single line, never a batch). A split entry without a ProjectId falls back
 /// to the command's ProjectId. AllocateToBucket requires a Bucket from
 /// <see cref="XeroBuckets.All"/>; Ignore takes an optional Note (reason);
-/// Reset returns lines to Unallocated. SetProject requires ProjectId only and
+/// Reset returns lines to Unallocated. SetProject takes ProjectId only and
 /// applies to Unallocated lines: the project is saved (line stays Unallocated,
 /// queued under that project) and its Xero Site tracking is written without
-/// approving the bill. AllocatedBy is stamped server-side from the signed-in
-/// user — any client-supplied value is ignored.
+/// approving the bill; a null ProjectId unsets — the saved project is cleared
+/// and the Site tracking removed from the still-draft bill. AllocatedBy is
+/// stamped server-side from the signed-in user — any client-supplied value is
+/// ignored.
 /// </summary>
 public sealed record SetXeroAllocation(
     IReadOnlyList<string> XeroLedgerLineIds,

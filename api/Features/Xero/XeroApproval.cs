@@ -44,8 +44,11 @@ public sealed record XeroSiteTrackingRequest(
     bool IsCreditNote,
     IReadOnlyList<XeroSiteTrackingLine> Lines);
 
-/// <summary>Which Sites option to stamp on one Xero line item.</summary>
-public sealed record XeroSiteTrackingLine(string LineItemId, string SiteOption);
+/// <summary>
+/// Which Sites option to stamp on one Xero line item. A null option means
+/// remove the line's Sites tracking (unsetting an accidentally set project).
+/// </summary>
+public sealed record XeroSiteTrackingLine(string LineItemId, string? SiteOption);
 
 /// <summary>
 /// What happened. AlreadyApproved is a success without any write — the

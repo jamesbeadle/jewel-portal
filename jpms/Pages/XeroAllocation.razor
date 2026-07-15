@@ -100,10 +100,11 @@ else
             }
 
             <div class="mb-4 flex items-center justify-between gap-4 flex-wrap">
-                @* The incoming queue is split by project: a line whose project is set
-                   (Xero suggestion, or the dropdown pick) sits in that project's tab, so
-                   people working a specific project approve just their own costs.
-                   "Unallocated" keeps only the lines nobody has pointed at a project yet. *@
+                @* The incoming queue is split by project: a line whose project is real —
+                   saved via Set, or suggested by its Xero tracking — sits in that
+                   project's tab, so people working a specific project approve just their
+                   own costs. Dropdown picks alone don't move rows; Set/Allocate do.
+                   "Unallocated" keeps only the lines nothing points at a project yet. *@
                 <div class="inline-flex flex-wrap rounded-lg border border-line overflow-hidden">
                     <button class="@TabClass(XeroAllocationStatus.Unallocated)" @onclick="() => SwitchTab(XeroAllocationStatus.Unallocated)">
                         Unallocated (@UnassignedCount)
@@ -286,12 +287,22 @@ else
                                                 disabled="@(isBusy || !CanAllocate(line) || CanBucket(line))"
                                                 @onclick="() => AllocateAsync(line)">Allocate</button>
                                         @* The half-step: project known, cost centre not yet. Saves the
-                                           project (line stays queued under its tab) and writes the Xero
-                                           site without approving. Pressing it again is the Xero retry. *@
+                                           project — which is when the row moves to that project's tab —
+                                           and writes the Xero site without approving. Pressing it again
+                                           is the Xero retry. Unset (only on lines with a saved project)
+                                           reverses an accidental Set: project cleared here and the site
+                                           removed from the still-draft bill in Xero. *@
                                         <button class="text-xs font-medium rounded-lg px-2.5 py-1 border border-line text-content-muted hover:text-content ml-2 disabled:opacity-40"
                                                 title="Save the project and set its Xero site now — cost centre to follow"
                                                 disabled="@(isBusy || !CanSetProject(line))"
                                                 @onclick="() => SetProjectAsync(line)">Set</button>
+                                        @if (line.ProjectId is not null)
+                                        {
+                                            <button class="text-xs text-content-subtle underline underline-offset-4 ml-2"
+                                                    title="Clear the saved project (and its Xero site) — the line returns to Unallocated"
+                                                    disabled="@isBusy"
+                                                    @onclick="() => UnsetProjectAsync(line)">Unset</button>
+                                        }
                                         <button class="text-xs text-content-subtle underline underline-offset-4 ml-2"
                                                 disabled="@isBusy"
                                                 @onclick="() => OpenSplit(line)">Split…</button>
@@ -562,12 +573,11 @@ else
 
     // Which project tab of the incoming queue is open. Only meaningful while
     // activeTab is Unallocated: null is the plain "Unallocated" tab (no project
-    // set yet); otherwise the tab for that project. Changing a line's project
-    // dropdown moves it between these tabs (projectChoiceVersion invalidates the
-    // memoized filter — chosenProject is mutated in place, so the dictionary
-    // reference alone can't tell the cache anything changed).
+    // set yet); otherwise the tab for that project. Grouping follows only what's
+    // real — the persisted project (Set) or the Xero suggestion — never the
+    // dropdown pick, so choosing a project doesn't move the row anywhere until
+    // Set or Allocate makes it official.
     private string? activeProjectId;
-    private int projectChoiceVersion;
 
     private readonly HashSet<string> selectedIds = new();
     private readonly Dictionary<string, string?> chosenProject = new();
@@ -595,22 +605,21 @@ else
     private int page;
     private IReadOnlyList<XeroLedgerLine>? visibleCache;
     private (IReadOnlyList<XeroLedgerLine>? Lines, object Projects, string Search, XeroAllocationStatus Tab,
-             string? ProjectTab, string? Bucket, int ChoiceVersion) visibleCacheKey;
+             string? ProjectTab, string? Bucket) visibleCacheKey;
 
     private IReadOnlyList<XeroLedgerLine> Visible
     {
         get
         {
-            // Projects and projectChoiceVersion are in the key because the
-            // unallocated filter groups by SelectedProjectFor, which reads both.
-            var key = (Lines, (object)Projects, search, activeTab, activeProjectId, bucketFilter, projectChoiceVersion);
+            // Projects is in the key because GroupProjectFor validates against it.
+            var key = (Lines, (object)Projects, search, activeTab, activeProjectId, bucketFilter);
             if (visibleCache is null || key != visibleCacheKey)
             {
                 visibleCache = Lines is null
                     ? Array.Empty<XeroLedgerLine>()
                     : Lines.Where(line => line.AllocationStatus == activeTab)
                            .Where(line => activeTab != XeroAllocationStatus.Unallocated
-                                          || SelectedProjectFor(line) == (activeProjectId ?? ""))
+                                          || GroupProjectFor(line) == (activeProjectId ?? ""))
                            .Where(line => activeTab != XeroAllocationStatus.Bucketed
                                           || bucketFilter is null || line.Bucket == bucketFilter)
                            .Where(MatchesSearch)
@@ -623,24 +632,25 @@ else
     }
 
     // -- project tabs -----------------------------------------------------------
-    // One tab per project that has incoming lines pointing at it (suggestion or a
-    // user's dropdown pick), alphabetical. The open tab stays in the bar even at
-    // zero lines — allocating the last line mustn't yank the user elsewhere, and a
-    // remembered tab restored on load may be empty by now.
+    // One tab per project that has incoming lines pointing at it — persisted (Set)
+    // or Xero-suggested — alphabetical. Dropdown picks don't count: a row moves
+    // tabs only when Set or Allocate makes the project official. The open tab
+    // stays in the bar even at zero lines — allocating the last line mustn't yank
+    // the user elsewhere, and a remembered tab restored on load may be empty.
 
     private IReadOnlyList<(string ProjectId, string Name, int Count)>? projectTabsCache;
-    private (IReadOnlyList<XeroLedgerLine>? Lines, object Projects, string? ProjectTab, int ChoiceVersion) projectTabsCacheKey;
+    private (IReadOnlyList<XeroLedgerLine>? Lines, object Projects, string? ProjectTab) projectTabsCacheKey;
 
     private IReadOnlyList<(string ProjectId, string Name, int Count)> ProjectTabs
     {
         get
         {
-            var key = (Lines, (object)Projects, activeProjectId, projectChoiceVersion);
+            var key = (Lines, (object)Projects, activeProjectId);
             if (projectTabsCache is null || key != projectTabsCacheKey)
             {
                 var tabs = (Lines ?? Array.Empty<XeroLedgerLine>())
                     .Where(line => line.AllocationStatus == XeroAllocationStatus.Unallocated)
-                    .GroupBy(SelectedProjectFor)
+                    .GroupBy(GroupProjectFor)
                     .Where(group => group.Key != "")
                     .Select(group => (ProjectId: group.Key, Name: ProjectName(group.Key), Count: group.Count()))
                     .ToList();
@@ -654,9 +664,17 @@ else
         }
     }
 
+    // The tab a line belongs to: its persisted project (Set) or, failing that,
+    // the Xero suggestion. Deliberately blind to chosenProject — see ProjectTabs.
+    private string GroupProjectFor(XeroLedgerLine line)
+    {
+        var value = line.ProjectId ?? line.SuggestedProjectId ?? "";
+        return ValidProjectIds.Contains(value) ? value : "";
+    }
+
     private int UnassignedCount =>
         Lines?.Count(line => line.AllocationStatus == XeroAllocationStatus.Unallocated
-                             && SelectedProjectFor(line) == "") ?? 0;
+                             && GroupProjectFor(line) == "") ?? 0;
 
     private int PageCount => Math.Max(1, (Visible.Count + PageSize - 1) / PageSize);
 
@@ -756,6 +774,14 @@ else
             XeroAllocationAction.SetProject,
             SelectedProjectFor(line)));
 
+    // SetProject with no project = unset: clears the saved project (the line
+    // returns to the plain Unallocated tab, unless a suggestion still claims it)
+    // and removes the Site tracking from the still-draft bill in Xero.
+    private async Task UnsetProjectAsync(XeroLedgerLine line) =>
+        await ApplyAsync(new SetXeroAllocation(
+            new[] { line.XeroLedgerLineId },
+            XeroAllocationAction.SetProject));
+
     private async Task BulkSetProjectAsync() =>
         await ApplyAsync(new SetXeroAllocation(selectedIds.ToList(), XeroAllocationAction.SetProject, bulkProjectId));
 
@@ -822,9 +848,6 @@ else
                 chosenCostCenter.Remove(id);
                 chosenBucket.Remove(id);
             }
-            // Dropping local picks can change lines' effective projects; the memoized
-            // grouping only watches this counter (and Lines) for that.
-            projectChoiceVersion++;
         }
         catch (CommandFailedException failure) { errorMessage = failure.Message; }
         finally { isApplying = false; }
@@ -987,7 +1010,6 @@ else
             chosenProject.Remove(line.XeroLedgerLineId);
             chosenCostCenter.Remove(line.XeroLedgerLineId);
             chosenBucket.Remove(line.XeroLedgerLineId);
-            projectChoiceVersion++;
             if (viewLine == line) CloseInvoiceView();
         }
         catch (CommandFailedException failure)
@@ -1014,7 +1036,6 @@ else
                 XeroAllocationAction.SetProject,
                 SelectedProjectFor(line)));
             chosenProject.Remove(line.XeroLedgerLineId);
-            projectChoiceVersion++;
             if (viewLine == line) CloseInvoiceView();
         }
         catch (CommandFailedException failure)
@@ -1094,9 +1115,9 @@ else
         return ValidProjectIds.Contains(value) ? value : "";
     }
 
-    // SelectedProjectFor now runs for every line when grouping the queue into
-    // project tabs (not just the 50 rendered rows), so the validity check is a
-    // set lookup rather than a scan of the project list per line.
+    // GroupProjectFor runs for every line when grouping the queue into project
+    // tabs (not just the 50 rendered rows), so the validity check is a set
+    // lookup rather than a scan of the project list per line.
     private HashSet<string>? validProjectIdsCache;
     private object? validProjectIdsCacheKey;
 
@@ -1119,15 +1140,9 @@ else
         return CostCenters.Active().Any(centre => centre.Code == value) ? value : "";
     }
 
-    private void SetProject(string lineId, string? projectId)
-    {
-        chosenProject[lineId] = projectId;
-        projectChoiceVersion++;
-        // Pointing a line at a different project moves it to that project's tab;
-        // don't leave it invisibly selected in a tab it no longer belongs to.
-        if (activeTab == XeroAllocationStatus.Unallocated && (projectId ?? "") != (activeProjectId ?? ""))
-            selectedIds.Remove(lineId);
-    }
+    // A dropdown pick arms the row's buttons but moves nothing — the row changes
+    // tab only when Set or Allocate persists the project.
+    private void SetProject(string lineId, string? projectId) => chosenProject[lineId] = projectId;
 
     private void SetCostCenter(string lineId, string? code) => chosenCostCenter[lineId] = code;
 

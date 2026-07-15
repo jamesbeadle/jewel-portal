@@ -16,7 +16,7 @@ namespace Jewel.JPMS.Api.Features.Xero.Ledger;
 internal static class XeroLedgerRoles
 {
     public static readonly RoleSet AllowedToAllocate = RoleSet.Of(
-        Role.Admin, JpmsRoles.Director, JpmsRoles.FinanceDirector, JpmsRoles.Estimator);
+        Role.Admin, JpmsRoles.Director, JpmsRoles.FinanceDirector, JpmsRoles.ProjectManager, JpmsRoles.Estimator);
 }
 
 public sealed class ListXeroLedgerLinesEndpoint

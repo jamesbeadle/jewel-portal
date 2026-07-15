@@ -87,9 +87,11 @@ public sealed class XeroWriteBackService : IXeroWriteBackService
         List<XeroLedgerLineEntity> lines;
         try
         {
+            // Lines with a project get its site stamped; lines whose project was just
+            // cleared (unset) get their Site tracking removed from the draft bill.
             var ids = xeroLedgerLineIds.Distinct().ToList();
             lines = await context.XeroLedgerLines
-                .Where(line => ids.Contains(line.XeroLedgerLineId) && line.ProjectId != null)
+                .Where(line => ids.Contains(line.XeroLedgerLineId))
                 .ToListAsync(ct);
         }
         catch (Exception unexpected)
@@ -120,7 +122,8 @@ public sealed class XeroWriteBackService : IXeroWriteBackService
         if (!AwaitingApprovalStatuses.Contains(lines[0].InvoiceStatus, StringComparer.OrdinalIgnoreCase))
             return;
 
-        var projectIds = lines.Select(line => line.ProjectId!).Distinct().ToList();
+        var projectIds = lines.Where(line => line.ProjectId is not null)
+            .Select(line => line.ProjectId!).Distinct().ToList();
         var projects = await context.Projects
             .Where(project => projectIds.Contains(project.ProjectId))
             .ToDictionaryAsync(project => project.ProjectId, ct);
@@ -136,11 +139,13 @@ public sealed class XeroWriteBackService : IXeroWriteBackService
             return;
         }
 
+        // A null SiteOption removes the line's Sites tracking (the unset case).
         var result = await xero.SetSiteTrackingAsync(new XeroSiteTrackingRequest(
             lines[0].XeroInvoiceId,
             lines[0].Type == "ACCPAYCREDIT",
             lines.Select(line => new XeroSiteTrackingLine(
-                line.XeroLineItemId, projects[line.ProjectId!].XeroSiteName!)).ToList()), ct);
+                line.XeroLineItemId,
+                line.ProjectId is null ? null : projects[line.ProjectId].XeroSiteName!)).ToList()), ct);
 
         if (result.Succeeded)
         {

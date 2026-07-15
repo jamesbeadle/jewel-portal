@@ -290,7 +290,8 @@ public sealed class XeroClient : IXeroClient
 
             var missingSites = request.Lines
                 .Select(line => line.SiteOption)
-                .Where(site => !categories.SiteOptions.Contains(site))
+                .Where(site => site is not null && !categories.SiteOptions.Contains(site))
+                .Select(site => site!)
                 .Distinct(StringComparer.OrdinalIgnoreCase)
                 .ToList();
             if (missingSites.Count > 0)
@@ -354,13 +355,15 @@ public sealed class XeroClient : IXeroClient
     }
 
     /// <summary>
-    /// The target line's new tracking: the Sites entry replaced with <paramref name="siteOption"/>,
-    /// every other category (Xero's own Cost Code, anything else) carried over untouched.
+    /// The target line's new tracking: the Sites entry replaced with <paramref name="siteOption"/>
+    /// — or removed outright when it is null (unset) — with every other category
+    /// (Xero's own Cost Code, anything else) carried over untouched.
     /// </summary>
-    private static JsonArray ReplaceSiteTracking(JsonElement line, TrackingCategoryLookup categories, string siteOption)
+    private static JsonArray ReplaceSiteTracking(JsonElement line, TrackingCategoryLookup categories, string? siteOption)
     {
-        var tracking = new JsonArray(
-            new JsonObject { ["TrackingCategoryID"] = categories.SiteCategoryId, ["Option"] = siteOption });
+        var tracking = new JsonArray();
+        if (siteOption is not null)
+            tracking.Add(new JsonObject { ["TrackingCategoryID"] = categories.SiteCategoryId, ["Option"] = siteOption });
         if (line.TryGetProperty("Tracking", out var existing) && existing.ValueKind == JsonValueKind.Array)
             foreach (var entry in existing.EnumerateArray())
             {
