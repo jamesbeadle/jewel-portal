@@ -28,6 +28,7 @@ using Jewel.JPMS.Api.Features.Mobilisation;
 using Jewel.JPMS.Api.Features.Places;
 using Jewel.JPMS.Api.Features.Portal;
 using Jewel.JPMS.Api.Features.Procurement;
+using Jewel.JPMS.Api.Features.Progress;
 using Jewel.JPMS.Api.Features.Retention;
 using Jewel.JPMS.Api.Features.Projects;
 using Jewel.JPMS.Api.Features.Rates;
@@ -70,6 +71,7 @@ var host = new HostBuilder()
         services.AddBoqFeature();
         services.AddRatesFeature();
         services.AddDrawingsFeature(context.Configuration);
+        services.AddProgressFeature(context.Configuration);
         services.AddProcurementFeature();
         services.AddLocalSearchFeature(context.Configuration);
         services.AddVariationsFeature();

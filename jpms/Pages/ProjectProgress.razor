@@ -1,0 +1,264 @@
+@page "/projects/{ProjectId}/progress"
+@inject AuthService Auth
+@inject SessionService Session
+@inject IProgressStore ProgressStore
+@inject NavigationManager Nav
+@implements IDisposable
+
+<PageTitle>Progress · JPMS</PageTitle>
+
+@if (!isLoaded)
+{
+    <section class="px-6 md:px-8 py-12 text-content-subtle text-sm">Loading…</section>
+}
+else if (!Session.IsApproved)
+{
+    <RequestAccessView Email="@Auth.CurrentUser!.Email" DisplayName="@Auth.CurrentUser.DisplayName" />
+}
+else
+{
+    <ProjectPageShell ProjectId="@ProjectId" ActiveTab="progress">
+
+        @* ---- Progress reports -------------------------------------------------------------- *@
+        <div class="flex flex-wrap items-end justify-between gap-3 mb-5">
+            <div>
+                <h2 class="text-lg font-semibold text-content">Progress reports</h2>
+                <p class="text-sm text-content-muted">Client-facing reports assembled from the progress updates below. The PDF is regenerated from the register on every download.</p>
+            </div>
+            @if (CanContribute && !isBuildingReport)
+            {
+                <button type="button" @onclick="() => { editingReport = null; isBuildingReport = true; }"
+                        class="rounded-lg bg-accent text-accent-ink font-medium text-sm px-3 py-2 hover:bg-accent-hover transition">
+                    + New report
+                </button>
+            }
+        </div>
+
+        @if (isBuildingReport)
+        {
+            <div class="mb-5">
+                <ProgressReportForm ProjectId="@ProjectId" Existing="editingReport"
+                                    OnSaved="() => isBuildingReport = false"
+                                    OnCancelled="() => isBuildingReport = false" />
+            </div>
+        }
+
+        @if (Reports.Count == 0)
+        {
+            <p class="text-sm text-content-subtle italic mb-8">No progress reports yet.</p>
+        }
+        else
+        {
+            <ul class="space-y-2 mb-8">
+                @foreach (var report in Reports)
+                {
+                    <li class="rounded-xl border border-line bg-surface px-4 py-3 flex flex-wrap items-center justify-between gap-3">
+                        <div class="min-w-0">
+                            <p class="text-sm font-medium text-content truncate">@report.Title</p>
+                            <p class="text-xs text-content-subtle">
+                                @Period(report) · @report.SelectedUpdateIds.Count photo group@(report.SelectedUpdateIds.Count == 1 ? "" : "s")
+                                · created @report.CreatedAt.ToString("dd MMM yyyy") by @report.CreatedByEmail
+                            </p>
+                        </div>
+                        <div class="flex items-center gap-2 shrink-0">
+                            <a href="@($"/api/progress-reports/{report.ProgressReportId}/pdf")"
+                               title="Regenerated from the register on every download, so it always reflects the report as it stands"
+                               class="rounded-lg border border-line-strong text-sm text-content-muted px-3 py-1.5 hover:bg-surface-raised transition">
+                                Download PDF
+                            </a>
+                            @if (CanContribute)
+                            {
+                                <button type="button" @onclick="() => { editingReport = report; isBuildingReport = true; }"
+                                        class="rounded-lg border border-line-strong text-sm text-content-muted px-3 py-1.5 hover:bg-surface-raised transition">
+                                    Edit
+                                </button>
+                                <button type="button" @onclick="() => DeleteReportAsync(report.ProgressReportId)"
+                                        class="rounded-lg border text-sm px-3 py-1.5 transition @(pendingReportDelete == report.ProgressReportId ? "border-red-300 bg-red-50 text-red-700" : "border-line-strong text-content-muted hover:bg-surface-raised")">
+                                    @(pendingReportDelete == report.ProgressReportId ? "Confirm delete" : "Delete")
+                                </button>
+                            }
+                        </div>
+                    </li>
+                }
+            </ul>
+        }
+
+        @* ---- Progress updates -------------------------------------------------------------- *@
+        <div class="flex flex-wrap items-end justify-between gap-3 mb-5">
+            <div>
+                <h2 class="text-lg font-semibold text-content">Progress of the works</h2>
+                <p class="text-sm text-content-muted">@Updates.Count update@(Updates.Count == 1 ? "" : "s") · groups of photos with a description, recorded as the works progress</p>
+            </div>
+            @if (CanContribute)
+            {
+                <button type="button" @onclick="() => isRecording = !isRecording"
+                        class="rounded-lg bg-accent text-accent-ink font-medium text-sm px-3 py-2 hover:bg-accent-hover transition">
+                    @(isRecording ? "Cancel" : "+ Record progress")
+                </button>
+            }
+        </div>
+
+        @if (isRecording)
+        {
+            <div class="mb-5">
+                <ProgressUpdateForm ProjectId="@ProjectId" OnSaved="() => isRecording = false" />
+            </div>
+        }
+
+        @if (Updates.Count == 0)
+        {
+            <p class="text-sm text-content-subtle italic">
+                @(ProgressStore.UpdatesLoadedFor(ProjectId) ? "No progress recorded yet." : "Loading…")
+            </p>
+        }
+        else
+        {
+            <ul class="space-y-4">
+                @foreach (var update in Updates)
+                {
+                    <li class="rounded-2xl border border-line bg-surface p-4">
+                        <div class="flex flex-wrap items-start justify-between gap-3 mb-2">
+                            <div class="min-w-0">
+                                <p class="text-sm font-semibold text-content">@update.Title</p>
+                                <p class="text-xs text-content-subtle">
+                                    @(update.WorkDate?.ToString("dd MMM yyyy") ?? update.CreatedAt.ToString("dd MMM yyyy"))
+                                    · @update.Photos.Count photo@(update.Photos.Count == 1 ? "" : "s")
+                                    · @update.CreatedByEmail
+                                </p>
+                            </div>
+                            @if (CanContribute)
+                            {
+                                <button type="button" @onclick="() => DeleteUpdateAsync(update.ProgressUpdateId)"
+                                        class="rounded-lg border text-xs px-2.5 py-1.5 transition shrink-0 @(pendingUpdateDelete == update.ProgressUpdateId ? "border-red-300 bg-red-50 text-red-700" : "border-line-strong text-content-subtle hover:bg-surface-raised")">
+                                    @(pendingUpdateDelete == update.ProgressUpdateId ? "Confirm delete" : "Delete")
+                                </button>
+                            }
+                        </div>
+
+                        @if (!string.IsNullOrWhiteSpace(update.Description))
+                        {
+                            <p class="text-sm text-content-muted mb-3">@update.Description</p>
+                        }
+
+                        <div class="flex flex-wrap gap-2">
+                            @foreach (var photo in update.Photos)
+                            {
+                                <div class="relative group">
+                                    <a href="@($"/api/progress-photos/{photo.ProgressPhotoId}/file")" title="@photo.FileName">
+                                        <img src="@($"/api/progress-photos/{photo.ProgressPhotoId}/file?inline=1")"
+                                             alt="@photo.FileName" loading="lazy"
+                                             class="h-28 w-36 object-cover rounded-lg border border-line" />
+                                    </a>
+                                    @if (CanContribute)
+                                    {
+                                        <button type="button" @onclick="() => DeletePhotoAsync(update.ProgressUpdateId, photo.ProgressPhotoId)"
+                                                aria-label="Delete photo" title="@(pendingPhotoDelete == photo.ProgressPhotoId ? "Click again to confirm" : "Delete photo")"
+                                                class="absolute top-1 right-1 rounded-md text-xs px-1.5 py-0.5 transition @(pendingPhotoDelete == photo.ProgressPhotoId ? "bg-red-600 text-white" : "bg-black/50 text-white opacity-0 group-hover:opacity-100")">
+                                            ✕
+                                        </button>
+                                    }
+                                </div>
+                            }
+                            @if (CanContribute)
+                            {
+                                <label class="h-28 w-36 rounded-lg border border-dashed border-line-strong flex flex-col items-center justify-center text-content-subtle text-xs cursor-pointer hover:bg-surface-raised transition">
+                                    <span class="text-lg leading-none mb-1">+</span>
+                                    <span>@(addingPhotosTo == update.ProgressUpdateId ? "Uploading…" : "Add photos")</span>
+                                    <InputFile OnChange="@(e => AddPhotosAsync(update.ProgressUpdateId, e))" multiple accept="image/*" class="hidden" />
+                                </label>
+                            }
+                        </div>
+                    </li>
+                }
+            </ul>
+        }
+
+        @if (actionError is not null)
+        {
+            <p class="text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2 mt-4">@actionError</p>
+        }
+    </ProjectPageShell>
+}
+
+@code {
+    private const int MaxPhotosPerBatch = 30;
+
+    [Parameter] public string ProjectId { get; set; } = "";
+
+    private bool isLoaded;
+    private bool isRecording;
+    private bool isBuildingReport;
+    private ProgressReport? editingReport;
+    private string? pendingReportDelete;
+    private string? pendingUpdateDelete;
+    private string? pendingPhotoDelete;
+    private string? addingPhotosTo;
+    private string? actionError;
+
+    private IReadOnlyList<ProgressUpdate> Updates => ProgressStore.UpdatesFor(ProjectId);
+    private IReadOnlyList<ProgressReport> Reports => ProgressStore.ReportsFor(ProjectId);
+
+    // Site Managers collate progress on site; Project Managers and the Managing Director may
+    // contribute too (the MD helps out). Administrators pass every gate.
+    private bool CanContribute =>
+        Auth.CurrentRoles.Any(role => role is Role.Admin or Role.ManagingDirector or Role.ProjectManager or Role.SiteManager);
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Session.EnsureLoadedAsync();
+        if (!Auth.IsSignedIn) { Nav.NavigateTo("/login", forceLoad: true); return; }
+        ProgressStore.OnChange += StateHasChanged;
+        // Refresh on entry: cached updates/reports render immediately, then update when the
+        // background reload lands — so navigating back to this tab never shows stale data.
+        ProgressStore.Refresh(ProjectId);
+        isLoaded = true;
+    }
+
+    private static string Period(ProgressReport report) => (report.PeriodStart, report.PeriodEnd) switch
+    {
+        ({ } start, { } end) => $"{start:dd MMM yyyy} – {end:dd MMM yyyy}",
+        ({ } start, null) => $"From {start:dd MMM yyyy}",
+        (null, { } end) => $"To {end:dd MMM yyyy}",
+        _ => "No period set"
+    };
+
+    // Deletes are two-click: the first click arms the button, the second confirms.
+    private async Task DeleteReportAsync(string progressReportId)
+    {
+        if (pendingReportDelete != progressReportId) { pendingReportDelete = progressReportId; return; }
+        pendingReportDelete = null;
+        await RunAsync(() => ProgressStore.DeleteReportAsync(ProjectId, progressReportId, CancellationToken.None));
+    }
+
+    private async Task DeleteUpdateAsync(string progressUpdateId)
+    {
+        if (pendingUpdateDelete != progressUpdateId) { pendingUpdateDelete = progressUpdateId; return; }
+        pendingUpdateDelete = null;
+        await RunAsync(() => ProgressStore.DeleteUpdateAsync(ProjectId, progressUpdateId, CancellationToken.None));
+    }
+
+    private async Task DeletePhotoAsync(string progressUpdateId, string progressPhotoId)
+    {
+        if (pendingPhotoDelete != progressPhotoId) { pendingPhotoDelete = progressPhotoId; return; }
+        pendingPhotoDelete = null;
+        await RunAsync(() => ProgressStore.DeletePhotoAsync(ProjectId, progressUpdateId, progressPhotoId, CancellationToken.None));
+    }
+
+    private async Task AddPhotosAsync(string progressUpdateId, InputFileChangeEventArgs e)
+    {
+        var files = e.GetMultipleFiles(MaxPhotosPerBatch);
+        if (files.Count == 0) return;
+        addingPhotosTo = progressUpdateId;
+        await RunAsync(() => ProgressStore.AddPhotosAsync(ProjectId, progressUpdateId, files, CancellationToken.None));
+        addingPhotosTo = null;
+    }
+
+    private async Task RunAsync(Func<Task> action)
+    {
+        actionError = null;
+        try { await action(); }
+        catch (Exception ex) { actionError = ex.Message; }
+    }
+
+    public void Dispose() => ProgressStore.OnChange -= StateHasChanged;
+}

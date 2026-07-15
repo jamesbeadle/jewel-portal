@@ -1,6 +1,8 @@
 using Jewel.JPMS.Api.Cqrs;
 using Jewel.JPMS.Api.Data;
 using Jewel.JPMS.Api.Data.Entities;
+// DirectoryEntityMapping.ToModel(entity, roles) — the picker reuses the directory's mapping.
+using Jewel.JPMS.Api.Features.Directory;
 using Jewel.JPMS.Contracts.Todos;
 using Jewel.JPMS.Models;
 using Microsoft.EntityFrameworkCore;

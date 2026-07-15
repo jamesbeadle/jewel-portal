@@ -86,6 +86,11 @@ public sealed class JpmsContext : DbContext
     public DbSet<ProgrammeBaselineTaskEntity> ProgrammeBaselineTasks => Set<ProgrammeBaselineTaskEntity>();
     public DbSet<PhotoEntity> Photos => Set<PhotoEntity>();
 
+    public DbSet<ProgressUpdateEntity> ProgressUpdates => Set<ProgressUpdateEntity>();
+    public DbSet<ProgressPhotoEntity> ProgressPhotos => Set<ProgressPhotoEntity>();
+    public DbSet<ProgressReportEntity> ProgressReports => Set<ProgressReportEntity>();
+    public DbSet<ProgressReportSelectionEntity> ProgressReportSelections => Set<ProgressReportSelectionEntity>();
+
     public DbSet<ClaimPeriodEntity> ClaimPeriods => Set<ClaimPeriodEntity>();
     public DbSet<ValuationEntity> Valuations => Set<ValuationEntity>();
     public DbSet<ValuationLineItemEntity> ValuationLineItems => Set<ValuationLineItemEntity>();

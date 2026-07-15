@@ -1,0 +1,103 @@
+@inject IProgressStore ProgressStore
+
+<EditForm Model="this" OnValidSubmit="HandleSubmit"
+      class="rounded-2xl border border-line bg-surface p-5 space-y-3">
+
+    <div>
+        <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Photos *</label>
+        <InputFile OnChange="OnFilesSelected" multiple accept="image/*" class="w-full text-sm text-content-muted" />
+        @if (selectedFiles.Count > 0)
+        {
+            <p class="text-xs text-content-subtle mt-1">
+                @selectedFiles.Count photo@(selectedFiles.Count == 1 ? "" : "s") · @FormatSize(selectedFiles.Sum(file => file.Size))
+            </p>
+        }
+    </div>
+
+    <div>
+        <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Title *</label>
+        <input type="text" @bind="title" required placeholder="First-fix carpentry complete to first floor"
+               class="field" />
+    </div>
+
+    <div>
+        <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Description</label>
+        <textarea @bind="description" rows="3" placeholder="What the photos show, which areas, any context worth giving the client…"
+                  class="field"></textarea>
+    </div>
+
+    <div>
+        <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Date of works</label>
+        <input type="date" @bind="workDate" class="field" />
+    </div>
+
+    @if (error is not null)
+    {
+        <p class="text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2">@error</p>
+    }
+
+    <p class="text-xs text-content-subtle">Progress updates feed the client-facing progress reports — write the description as you'd want the client to read it.</p>
+
+    <button type="submit" disabled="@busy"
+            class="w-full rounded-lg bg-accent text-accent-ink font-medium px-4 py-2.5 hover:bg-accent-hover transition disabled:opacity-60">
+        @(busy ? "Uploading…" : "Record progress")
+    </button>
+</EditForm>
+
+@code {
+    private const int MaxPhotosPerUpdate = 30;
+
+    [Parameter, EditorRequired] public string ProjectId { get; set; } = "";
+    [Parameter] public EventCallback OnSaved { get; set; }
+
+    private IReadOnlyList<IBrowserFile> selectedFiles = Array.Empty<IBrowserFile>();
+    private string title = "";
+    private string description = "";
+    private DateTime? workDate = DateTime.Today;
+    private bool busy;
+    private string? error;
+
+    private void OnFilesSelected(InputFileChangeEventArgs e)
+    {
+        selectedFiles = e.GetMultipleFiles(MaxPhotosPerUpdate);
+        error = null;
+    }
+
+    private async Task HandleSubmit()
+    {
+        if (selectedFiles.Count == 0) { error = "Choose at least one photo to upload."; return; }
+        if (string.IsNullOrWhiteSpace(title)) { error = "Enter a title for this group of photos."; return; }
+
+        busy = true;
+        error = null;
+        try
+        {
+            // SpecifyKind: DateTime.Today is Kind=Local, and the DateTimeOffset ctor throws when
+            // a Local kind disagrees with the given offset (i.e. whenever the UK is on BST).
+            DateTimeOffset? date = workDate is { } value
+                ? new DateTimeOffset(DateTime.SpecifyKind(value, DateTimeKind.Unspecified), TimeSpan.Zero)
+                : null;
+            await ProgressStore.CreateUpdateAsync(
+                ProjectId, title.Trim(), description.Trim(), date, selectedFiles, CancellationToken.None);
+
+            selectedFiles = Array.Empty<IBrowserFile>();
+            title = ""; description = ""; workDate = DateTime.Today;
+            await OnSaved.InvokeAsync();
+        }
+        catch (Exception ex)
+        {
+            error = $"Upload failed: {ex.Message}";
+        }
+        finally
+        {
+            busy = false;
+        }
+    }
+
+    private static string FormatSize(long bytes)
+    {
+        if (bytes >= 1024 * 1024) return $"{bytes / (1024.0 * 1024.0):0.#} MB";
+        if (bytes >= 1024) return $"{bytes / 1024.0:0.#} KB";
+        return $"{bytes} B";
+    }
+}

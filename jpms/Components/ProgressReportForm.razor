@@ -1,0 +1,185 @@
+@inject IProgressStore ProgressStore
+
+<EditForm Model="this" OnValidSubmit="HandleSubmit"
+      class="rounded-2xl border border-line bg-surface p-5 space-y-3">
+
+    <div>
+        <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Report title *</label>
+        <input type="text" @bind="title" required placeholder="Progress report — July 2026"
+               class="field" />
+    </div>
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div>
+            <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Period start</label>
+            <input type="date" @bind="periodStart" class="field" />
+        </div>
+        <div>
+            <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Period end</label>
+            <input type="date" @bind="periodEnd" class="field" />
+        </div>
+    </div>
+
+    <div>
+        <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Introduction</label>
+        <textarea @bind="introduction" rows="2" placeholder="A short opening the client reads first…"
+                  class="field"></textarea>
+    </div>
+
+    <div>
+        <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Work completed</label>
+        <textarea @bind="workCompleted" rows="3" placeholder="Narrative summary of the works completed this period…"
+                  class="field"></textarea>
+    </div>
+
+    <div>
+        <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Upcoming works</label>
+        <textarea @bind="upcomingWorks" rows="3" placeholder="What the client should expect next…"
+                  class="field"></textarea>
+    </div>
+
+    <div>
+        <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Progress of the works — select the photo updates to include</label>
+        @if (AvailableUpdates.Count == 0)
+        {
+            <p class="text-sm text-content-subtle italic">No progress updates recorded yet — record progress first, then build the report from it.</p>
+        }
+        else
+        {
+            <ul class="space-y-1.5 max-h-72 overflow-y-auto pr-1">
+                @foreach (var update in AvailableUpdates)
+                {
+                    var order = selectedIds.IndexOf(update.ProgressUpdateId);
+                    <li>
+                        <button type="button" @onclick="() => Toggle(update.ProgressUpdateId)"
+                                class="w-full flex items-center gap-3 rounded-lg border px-3 py-2 text-left transition @(order >= 0 ? "border-accent bg-accent/5" : "border-line hover:bg-surface-raised")">
+                            <span class="inline-flex items-center justify-center w-6 h-6 rounded-full text-xs font-semibold shrink-0 @(order >= 0 ? "bg-accent text-accent-ink" : "bg-surface-raised text-content-subtle border border-line-strong")">
+                                @(order >= 0 ? (order + 1).ToString() : "+")
+                            </span>
+                            <span class="min-w-0">
+                                <span class="block text-sm text-content font-medium truncate">@update.Title</span>
+                                <span class="block text-xs text-content-subtle">
+                                    @(update.WorkDate?.ToString("dd MMM yyyy") ?? update.CreatedAt.ToString("dd MMM yyyy")) · @update.Photos.Count photo@(update.Photos.Count == 1 ? "" : "s")
+                                </span>
+                            </span>
+                        </button>
+                    </li>
+                }
+            </ul>
+            <p class="text-xs text-content-subtle mt-1.5">Photo groups appear on the report in the order you select them.</p>
+        }
+    </div>
+
+    @if (error is not null)
+    {
+        <p class="text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2">@error</p>
+    }
+
+    <div class="flex items-center gap-2">
+        <button type="submit" disabled="@busy"
+                class="flex-1 rounded-lg bg-accent text-accent-ink font-medium px-4 py-2.5 hover:bg-accent-hover transition disabled:opacity-60">
+            @(busy ? "Saving…" : Existing is null ? "Create report" : "Save changes")
+        </button>
+        <button type="button" @onclick="() => OnCancelled.InvokeAsync()"
+                class="rounded-lg border border-line-strong text-sm text-content-muted px-4 py-2.5 hover:bg-surface-raised transition">
+            Cancel
+        </button>
+    </div>
+</EditForm>
+
+@code {
+    [Parameter, EditorRequired] public string ProjectId { get; set; } = "";
+    [Parameter] public ProgressReport? Existing { get; set; }
+    [Parameter] public EventCallback OnSaved { get; set; }
+    [Parameter] public EventCallback OnCancelled { get; set; }
+
+    private string title = "";
+    private DateTime? periodStart;
+    private DateTime? periodEnd;
+    private string introduction = "";
+    private string workCompleted = "";
+    private string upcomingWorks = "";
+    private List<string> selectedIds = new();
+    private bool busy;
+    private string? error;
+
+    private IReadOnlyList<ProgressUpdate> AvailableUpdates => ProgressStore.UpdatesFor(ProjectId);
+
+    // Initialise the fields once per report (keyed by id, "" for a new report) — never on every
+    // parameter set, because the parent re-renders whenever a background store refresh lands and
+    // that must not clobber text the user is typing.
+    private string? initialisedFor;
+
+    protected override void OnParametersSet()
+    {
+        var key = Existing?.ProgressReportId ?? "";
+        if (initialisedFor == key) return;
+        initialisedFor = key;
+
+        if (Existing is null)
+        {
+            title = ""; periodStart = null; periodEnd = null;
+            introduction = ""; workCompleted = ""; upcomingWorks = "";
+            selectedIds = new List<string>();
+            return;
+        }
+
+        title = Existing.Title;
+        periodStart = Existing.PeriodStart?.Date;
+        periodEnd = Existing.PeriodEnd?.Date;
+        introduction = Existing.Introduction;
+        workCompleted = Existing.WorkCompleted;
+        upcomingWorks = Existing.UpcomingWorks;
+        selectedIds = Existing.SelectedUpdateIds.ToList();
+    }
+
+    // Selection order is presentation order, so toggling appends/removes rather than sorting.
+    private void Toggle(string progressUpdateId)
+    {
+        if (!selectedIds.Remove(progressUpdateId)) selectedIds.Add(progressUpdateId);
+    }
+
+    private async Task HandleSubmit()
+    {
+        if (string.IsNullOrWhiteSpace(title)) { error = "Enter a report title."; return; }
+
+        busy = true;
+        error = null;
+        try
+        {
+            // SpecifyKind: the DateTimeOffset ctor throws when a Local-kind DateTime disagrees
+            // with the given offset (i.e. whenever the UK is on BST).
+            DateTimeOffset? start = periodStart is { } s
+                ? new DateTimeOffset(DateTime.SpecifyKind(s, DateTimeKind.Unspecified), TimeSpan.Zero)
+                : null;
+            DateTimeOffset? end = periodEnd is { } e
+                ? new DateTimeOffset(DateTime.SpecifyKind(e, DateTimeKind.Unspecified), TimeSpan.Zero)
+                : null;
+
+            if (Existing is null)
+            {
+                await ProgressStore.CreateReportAsync(
+                    ProjectId, title.Trim(), start, end,
+                    introduction.Trim(), workCompleted.Trim(), upcomingWorks.Trim(),
+                    selectedIds, CancellationToken.None);
+            }
+            else
+            {
+                await ProgressStore.UpdateReportAsync(
+                    ProjectId, Existing.ProgressReportId, title.Trim(), start, end,
+                    introduction.Trim(), workCompleted.Trim(), upcomingWorks.Trim(),
+                    selectedIds, CancellationToken.None);
+            }
+
+            await OnSaved.InvokeAsync();
+        }
+        catch (Exception ex)
+        {
+            error = $"Could not save the report: {ex.Message}";
+        }
+        finally
+        {
+            busy = false;
+        }
+    }
+}
