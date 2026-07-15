@@ -175,6 +175,12 @@ public sealed class RequestEntity
     public decimal? Value { get; set; }
     [MaxLength(256)]     public string RaisedByEmail { get; set; } = "";
     public DateTimeOffset RaisedAt { get; set; }
+
+    // When the official document (RFI / NOD / EOT) was issued to the correspondent. Distinct from
+    // RaisedAt (when the request was raised in the register): set and updated by the user from the
+    // detail view — never stamped automatically. Null until the document has actually been issued.
+    public DateTimeOffset? IssuedAt { get; set; }
+
     public DateTimeOffset? RespondedAt { get; set; }
     [MaxLength(2048)]    public string? ResponseText { get; set; }
     [MaxLength(256)]     public string? RespondedByEmail { get; set; }

@@ -1,7 +1,6 @@
 using Jewel.JPMS.Api.Cqrs;
 using Jewel.JPMS.Api.Data;
 using Jewel.JPMS.Api.Data.Entities;
-using Jewel.JPMS.Api.Features.MailboxIntake.Actions;
 using Jewel.JPMS.Contracts.Requests;
 using Jewel.JPMS.Models;
 using Microsoft.EntityFrameworkCore;
@@ -9,21 +8,18 @@ using Microsoft.EntityFrameworkCore;
 namespace Jewel.JPMS.Api.Features.Requests.Commands;
 
 /// <summary>
-/// Promotes a request to an RFI and issues its document. Recipients (To/CC/BCC) are resolved by
-/// the worker through the shared RequestRecipientResolver — the request's party first, then the
-/// project's party, then the project profile's To rows, with the project's correspondence profile
-/// supplying the copied recipients. Promotion never fails for want of a recipient (the worker
-/// logs and skips when nothing resolves).
+/// Promotes a request to an RFI: mints the RFI reference and unlocks the official document.
+/// Promotion deliberately does NOT stage an email — the draft is created only when a person
+/// explicitly asks for one ("Prepare email draft" for a fresh email, or a reply draft into a
+/// tagged email chain), so promoting is a pure register action with no mailbox side effects.
 /// </summary>
 public sealed class PromoteRequestToRfiHandler : ICommandHandler<PromoteRequestToRfi, Request>
 {
     private readonly JpmsContext context;
-    private readonly IMailboxActionScheduler mailbox;
 
-    public PromoteRequestToRfiHandler(JpmsContext context, IMailboxActionScheduler mailbox)
+    public PromoteRequestToRfiHandler(JpmsContext context)
     {
         this.context = context;
-        this.mailbox = mailbox;
     }
 
     public async Task<Request> HandleAsync(PromoteRequestToRfi command, CancellationToken cancellationToken)
@@ -61,10 +57,6 @@ public sealed class PromoteRequestToRfiHandler : ICommandHandler<PromoteRequestT
                 // Lost the race for that number — loop and take the next one.
             }
         }
-
-        // No override: the worker resolves the full To/CC/BCC set from the correspondence profile
-        // at send time (the override slot stays reserved for genuine ad-hoc resends).
-        await mailbox.ScheduleRequestDocumentSendAsync(entity.RequestId, recipientOverride: null, cancellationToken);
 
         // Return with the itemised queries so the detail view keeps them across the promotion.
         var items = await context.RequestItems

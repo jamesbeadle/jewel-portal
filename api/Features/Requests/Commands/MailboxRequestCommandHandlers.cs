@@ -1,7 +1,6 @@
 using Jewel.JPMS.Api.Cqrs;
 using Jewel.JPMS.Api.Data;
 using Jewel.JPMS.Api.Data.Entities;
-using Jewel.JPMS.Api.Features.MailboxIntake.Actions;
 using Jewel.JPMS.Api.Features.MailboxIntake.Graph;
 using Jewel.JPMS.Contracts.Cqrs;
 using Jewel.JPMS.Contracts.RecordLinks;
@@ -30,17 +29,16 @@ public sealed class AssignMessageToRequestHandler : ICommandHandler<AssignMessag
 }
 
 /// <summary>
-/// Create a brand-new request from a mailbox message (live-read model). Creates the request, records
-/// the email as the opening conversation message, moves the email into the new request's folder, and
-/// queues the request document to the project's contacts (the worker still owns outbound sending).
+/// Create a brand-new request from a mailbox message (live-read model). Creates the request and tags
+/// the email to it. No document email is drafted here — drafts are only created when explicitly
+/// requested (PrepareRequestEmailDraft / PrepareRequestReplyDraft).
 /// </summary>
 public sealed class CreateRequestFromMessageHandler : ICommandHandler<CreateRequestFromMessage, Request>
 {
     private readonly JpmsContext context;
     private readonly IMailboxGraphClient graph;
-    private readonly IMailboxActionScheduler mailbox;
-    public CreateRequestFromMessageHandler(JpmsContext context, IMailboxGraphClient graph, IMailboxActionScheduler mailbox)
-    { this.context = context; this.graph = graph; this.mailbox = mailbox; }
+    public CreateRequestFromMessageHandler(JpmsContext context, IMailboxGraphClient graph)
+    { this.context = context; this.graph = graph; }
 
     public async Task<Request> HandleAsync(CreateRequestFromMessage command, CancellationToken cancellationToken)
     {
@@ -117,11 +115,8 @@ public sealed class CreateRequestFromMessageHandler : ICommandHandler<CreateRequ
             throw RequestReferenceConflict.AsFriendlyError(reference);
         }
 
-        // Draft the rendered document email only for emailable kinds (RFI / NOD / EOT). A request
-        // created as a General container from a triaged email is never emailed.
-        if (command.Kind.IsEmailable())
-            await mailbox.ScheduleRequestDocumentSendAsync(request.RequestId, recipientOverride: null, cancellationToken);
-
+        // No email is drafted here — a draft is only created when a person explicitly asks for one
+        // (PrepareRequestEmailDraft / PrepareRequestReplyDraft).
         return request.ToModel();
     }
 

@@ -64,7 +64,8 @@ else
         <div class="panel px-5 py-4 mb-5">
             <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-x-6 gap-y-3 text-sm">
                 <MetaCell Label="Raised by" Value="@record.RaisedByEmail" />
-                <MetaCell Label="Date issued" Value="@Date(record.RaisedAt)" />
+                <MetaCell Label="Date raised" Value="@Date(record.RaisedAt)" />
+                <MetaCell Label="Date issued" Value="@Date(record.IssuedAt)" />
                 <MetaCell Label="Raised to" Value="@Dash(record.RaisedTo)" />
                 <MetaCell Label="Response due" Value="@Date(record.ResponseDue)" />
                 <div>
@@ -284,7 +285,7 @@ else
                         <p class="text-sm text-content-subtle">
                             A @record.Kind.DisplayName() request is the pre-official stage — there is no
                             official document yet and nothing is emailed. Promoting it to an RFI mints the
-                            reference, creates the official document and drafts the email for review.
+                            reference and creates the official document, ready to email when you choose.
                         </p>
                     }
 
@@ -294,7 +295,34 @@ else
                             <button type="button" class="btn-primary w-full" disabled="@(busy || preparingDraft)" @onclick="PrepareEmailDraft">
                                 @(preparingDraft ? "Preparing draft…" : "Prepare email draft")
                             </button>
-                            <p class="text-xs text-content-subtle mt-1">Creates a draft in the projects mailbox — PDF attached, To/CC/BCC pre-filled from the correspondence profile. Review and send from Outlook; nothing is sent from here.</p>
+                            <p class="text-xs text-content-subtle mt-1">Starts a fresh email: creates a draft in the projects mailbox — PDF attached, To/CC/BCC pre-filled from the correspondence profile. Review and send from Outlook; nothing is sent from here.</p>
+                        </div>
+
+                        @* Or issue the document inside an existing conversation: pick one of the emails
+                           tagged to this request and the draft is staged as a reply-all in that thread —
+                           PDF attached, the whole chain quoted beneath. *@
+                        <div class="pt-3 border-t border-line">
+                            <label class="eyebrow block mb-1">Or append to a tagged email chain</label>
+                            @if (taggedEmails.Count == 0)
+                            {
+                                <p class="text-xs text-content-subtle">No emails are tagged to this request yet — tag one from triage (or wait for a reply) and it will appear here to reply into.</p>
+                            }
+                            else
+                            {
+                                <select class="field" value="@selectedChainMailboxId" @onchange="OnChainSelected" disabled="@(busy || preparingDraft)">
+                                    <option value="">— Choose an email —</option>
+                                    @foreach (var email in taggedEmails)
+                                    {
+                                        <option value="@email.MailboxId">@ChainOptionLabel(email)</option>
+                                    }
+                                </select>
+                                <button type="button" class="btn-secondary w-full mt-2"
+                                        disabled="@(busy || preparingDraft || string.IsNullOrEmpty(selectedChainMailboxId))"
+                                        @onclick="PrepareReplyDraftIntoChain">
+                                    @(preparingDraft ? "Preparing draft…" : $"Draft {record.Kind.DisplayName()} reply in that chain")
+                                </button>
+                                <p class="text-xs text-content-subtle mt-1">Creates a reply-all draft in that email's thread — @record.Kind.DisplayName() PDF attached, the entire chain quoted beneath. Review and send from Outlook; nothing is sent from here.</p>
+                            }
                         </div>
 
                         @if (draftError is not null)
@@ -345,7 +373,7 @@ else
                         {
                             <div>
                                 <button type="button" class="btn-primary w-full" disabled="@busy" @onclick="PromoteToRfi">Promote to RFI</button>
-                                <p class="text-xs text-content-subtle mt-1">Mints the RFI reference and drafts the official RFI email to the resolved recipients below — the linked party's primary contact, with the project's CC/BCC recipients copied. The draft waits in the projects mailbox for review; nothing is sent from here.</p>
+                                <p class="text-xs text-content-subtle mt-1">Mints the RFI reference and creates the official document. No email is drafted by promotion — when you're ready to issue, use “Prepare email draft” above or append the RFI to a tagged email chain.</p>
                             </div>
                         }
                         else if (!record.HasRfq)
@@ -591,7 +619,8 @@ else
             </div>
 
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <FormField Label="Date issued" Value="@editRaisedAt" OnChange="v => editRaisedAt = v" InputType="date" />
+                <FormField Label="Date raised" Value="@editRaisedAt" OnChange="v => editRaisedAt = v" InputType="date" />
+                <FormField Label="Date issued" Value="@editIssuedAt" OnChange="v => editIssuedAt = v" InputType="date" />
                 <FormField Label="Response due" Value="@editResponseDue" OnChange="v => editResponseDue = v" InputType="date" />
                 @if (editStatus == RequestStatus.Closed)
                 {
@@ -716,6 +745,11 @@ else
     private RequestEmailDraft? draftResult;
     private RequestRecipientSet? recipientPreview;
 
+    // The emails tagged to this request (inbound legs with a live mailbox id), offered as chains
+    // the official document can be issued into as a reply — newest first.
+    private IReadOnlyList<RequestMessage> taggedEmails = Array.Empty<RequestMessage>();
+    private string selectedChainMailboxId = "";
+
     private string VoqHref => voq is null ? "" : $"/projects/{ProjectId}/voq/{voq.VariationOrderQuoteId}";
 
     // The reference the page leads with: once promoted, the official instrument number (RFI-014) —
@@ -744,9 +778,9 @@ else
     // carry every role, so they qualify too).
     private bool IsAdmin => Session.AvailableRoles.Any(role => role is Role.Admin);
 
-    // Returning to triage is a triage action, open to administrators and project managers (admins
-    // carry every role server-side, so they always satisfy this too).
-    private bool CanTriage => Session.AvailableRoles.Any(role => role is Role.Admin or Role.ProjectManager);
+    // Returning to triage is a triage action, open to administrators, project managers, and the
+    // finance director (admins carry every role server-side, so they always satisfy this too).
+    private bool CanTriage => Session.AvailableRoles.Any(role => role is Role.Admin or Role.ProjectManager or Role.FinanceDirector);
 
     // Editing request field values (date issued, references, status, etc.) is open to project
     // managers and administrators. Admins carry every role server-side, so they always qualify.
@@ -769,6 +803,7 @@ else
     private string editTitle = "";
     private string editDescription = "";
     private string editRaisedAt = "";
+    private string editIssuedAt = "";
     private string editResponseDue = "";
     private string editClosedAt = "";
     private string editRaisedTo = "";
@@ -789,7 +824,31 @@ else
         }
         await LoadVoqAsync();
         await LoadRecipientPreviewAsync();
+        await LoadTaggedEmailsAsync();
         isLoaded = true;
+    }
+
+    // The tagged emails offered as reply targets in the issue panel. Only fetched when the panel
+    // can actually show them (emailable kind + draft rights). Best-effort: the picker just shows
+    // its empty state on error.
+    private async Task LoadTaggedEmailsAsync()
+    {
+        if (record is null || !record.Kind.IsEmailable() || !CanDraftEmail)
+        {
+            taggedEmails = Array.Empty<RequestMessage>();
+            return;
+        }
+        try
+        {
+            taggedEmails = (await RequestRegister.ListMessagesAsync(record.RequestId))
+                .Where(m => m.Direction == MessageDirection.Inbound && !string.IsNullOrEmpty(m.MailboxId))
+                .OrderByDescending(m => m.PostedAt)
+                .ToList();
+        }
+        catch
+        {
+            taggedEmails = Array.Empty<RequestMessage>();
+        }
     }
 
     // The resolved To/CC/BCC an issue or draft would use right now — same resolver as the send
@@ -915,6 +974,8 @@ else
             busy = true;
             record = await RequestRegister.PromoteToRfiAsync(record.RequestId, ProjectId);
             responseDraft = record.ResponseText ?? "";
+            // Promotion unlocks the issue panel, so the tagged chains become selectable now.
+            await LoadTaggedEmailsAsync();
         }
         catch
         {
@@ -1175,6 +1236,7 @@ else
         editTitle = record.Title;
         editDescription = record.Description ?? "";
         editRaisedAt = record.RaisedAt.LocalDateTime.ToString("yyyy-MM-dd");
+        editIssuedAt = record.IssuedAt?.LocalDateTime.ToString("yyyy-MM-dd") ?? "";
         editResponseDue = record.ResponseDue?.LocalDateTime.ToString("yyyy-MM-dd") ?? "";
         editClosedAt = record.ClosedAt?.LocalDateTime.ToString("yyyy-MM-dd") ?? "";
         editRaisedTo = record.RaisedTo ?? "";
@@ -1206,7 +1268,11 @@ else
         var closedAt = editStatus == RequestStatus.Closed ? ParseDate(editClosedAt) : null;
         if (closedAt is { } closed && closed.Date > DateTime.Today) { editError = "The closed date cannot be in the future."; return; }
 
-        var issued = ParseDate(editRaisedAt) ?? record.RaisedAt;
+        var raised = ParseDate(editRaisedAt) ?? record.RaisedAt;
+
+        // The issue date records when the document actually went out — today or earlier.
+        var issuedAt = ParseDate(editIssuedAt);
+        if (issuedAt is { } issuedDate && issuedDate.Date > DateTime.Today) { editError = "The issued date cannot be in the future."; return; }
 
         var command = new UpdateRequestDetails(
             record.RequestId,
@@ -1224,8 +1290,9 @@ else
             NullIfBlank(editRelatedSpec),
             record.InternalNotes,
             record.ClientNotes,
-            issued,
-            ClosedAt: closedAt);
+            raised,
+            ClosedAt: closedAt,
+            IssuedAt: issuedAt);
 
         try
         {
@@ -1399,6 +1466,45 @@ else
             preparingDraft = false;
         }
     }
+
+    private void OnChainSelected(ChangeEventArgs e) => selectedChainMailboxId = e.Value?.ToString() ?? "";
+
+    // Issue the official document INTO the selected tagged chain: a reply-all draft in that
+    // email's thread with the PDF attached and the whole conversation quoted beneath.
+    private async Task PrepareReplyDraftIntoChain()
+    {
+        if (record is null || busy || preparingDraft || !CanDraftEmail || string.IsNullOrEmpty(selectedChainMailboxId)) return;
+        draftError = null;
+        draftResult = null;
+        try
+        {
+            preparingDraft = true;
+            draftResult = await RequestRegister.PrepareReplyDraftAsync(record.RequestId, selectedChainMailboxId);
+        }
+        catch (CommandFailedException ex)
+        {
+            draftError = ex.Message;
+        }
+        catch
+        {
+            draftError = "Couldn't create the reply draft. The email may no longer be in the mailbox — refresh and try again.";
+        }
+        finally
+        {
+            preparingDraft = false;
+        }
+    }
+
+    // "12 Mar 2026 — Subject (sender)": the chain by the name its correspondents know it by.
+    private static string ChainOptionLabel(RequestMessage email)
+    {
+        var subject = string.IsNullOrWhiteSpace(email.Subject) ? Truncate(email.Body, 60) : email.Subject;
+        var sender = string.IsNullOrWhiteSpace(email.AuthorName) ? email.AuthorEmail : email.AuthorName;
+        return $"{email.PostedAt.LocalDateTime:d MMM yyyy} — {subject} ({sender})";
+    }
+
+    private static string Truncate(string value, int max) =>
+        string.IsNullOrEmpty(value) || value.Length <= max ? value : value[..max].TrimEnd() + "…";
 
     private static string Dash(string? value) => string.IsNullOrWhiteSpace(value) ? "—" : value;
 

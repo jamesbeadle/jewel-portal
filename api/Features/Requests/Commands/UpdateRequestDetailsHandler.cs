@@ -53,7 +53,10 @@ public sealed class UpdateRequestDetailsHandler : ICommandHandler<UpdateRequestD
         // carry it), NOT "clear the link" — so an existing link is preserved unless a value arrives.
         if ((RequestType)entity.Kind == RequestType.ExtensionOfTime && command.RelatedNodRequestId is not null)
             entity.RelatedNodRequestId = string.IsNullOrWhiteSpace(command.RelatedNodRequestId) ? null : command.RelatedNodRequestId;
-        if (command.RaisedAt is { } issued) entity.RaisedAt = issued;
+        if (command.RaisedAt is { } raised) entity.RaisedAt = raised;
+        // The issue date is user-managed: a supplied value (over)writes it; null means "not
+        // supplied" (most edit surfaces don't carry it), so an existing date is preserved.
+        if (command.IssuedAt is { } issued) entity.IssuedAt = issued;
         if (entity.RespondedAt is null && !string.IsNullOrWhiteSpace(command.ResponseText)) entity.RespondedAt = DateTimeOffset.UtcNow;
 
         // The close date lives and dies with the Closed status. While closed it is user-manageable

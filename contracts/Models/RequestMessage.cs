@@ -50,4 +50,7 @@ public sealed record RequestMessage(
     // The live Graph mailbox id of an Inbound message (null for in-app/outbound legs). Lets the
     // conversation view fetch the email's FULL body + attachments on demand (the listed Body is only
     // Graph's short bodyPreview snippet, which truncates long emails and drops the quoted thread).
-    string? MailboxId = null);
+    string? MailboxId = null,
+    // The email's subject line (Inbound messages only; null for in-app messages). Lets pickers
+    // present a tagged email chain by the name its correspondents know it by.
+    string? Subject = null);

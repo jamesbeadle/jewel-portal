@@ -1,7 +1,6 @@
 using Jewel.JPMS.Api.Cqrs;
 using Jewel.JPMS.Api.Data;
 using Jewel.JPMS.Api.Data.Entities;
-using Jewel.JPMS.Api.Features.MailboxIntake.Actions;
 using Jewel.JPMS.Contracts.Requests;
 using Jewel.JPMS.Models;
 using Microsoft.EntityFrameworkCore;
@@ -15,8 +14,7 @@ public sealed class RaiseRequestHandler : ICommandHandler<RaiseRequest, Request>
     private const int MaxMintAttempts = 3;
 
     private readonly JpmsContext context;
-    private readonly IMailboxActionScheduler mailbox;
-    public RaiseRequestHandler(JpmsContext context, IMailboxActionScheduler mailbox) { this.context = context; this.mailbox = mailbox; }
+    public RaiseRequestHandler(JpmsContext context) { this.context = context; }
 
     public async Task<Request> HandleAsync(RaiseRequest command, CancellationToken cancellationToken)
     {
@@ -87,13 +85,9 @@ public sealed class RaiseRequestHandler : ICommandHandler<RaiseRequest, Request>
             }
         }
 
-        // Draft the document email only for the emailable kinds (RFI / NOD / EOT — see
-        // RequestTypeExtensions.IsEmailable). A General request (or RFA/RFC/RFQ/RFP) is never
-        // emailed. Requests imported in an already-resolved state are skipped, and the draft is a
-        // no-op when the mailbox feature is unconfigured.
-        if (entity.Status == (int)RequestStatus.Open && command.Kind.IsEmailable())
-            await mailbox.ScheduleRequestDocumentSendAsync(entity.RequestId, recipientOverride: null, cancellationToken);
-
+        // No email is drafted here — creating a request (even an emailable kind: RFI / NOD / EOT)
+        // is a pure register action. A draft is only created when a person explicitly asks for one
+        // (PrepareRequestEmailDraft / PrepareRequestReplyDraft).
         return entity.ToModel();
     }
 

@@ -1231,10 +1231,10 @@ else
     private IReadOnlyList<Request> unassigned = Array.Empty<Request>();
     private string? unassignedError;
 
-    // Triage is restricted to administrators and project managers. Administrators are granted every
-    // role server-side, so they always carry Role.ProjectManager too.
+    // Triage is restricted to administrators, project managers, and the finance director.
+    // Administrators are granted every role server-side, so they always carry Role.ProjectManager too.
     private bool CanTriage =>
-        Session.AvailableRoles.Any(role => role is Role.Admin or Role.ProjectManager);
+        Session.AvailableRoles.Any(role => role is Role.Admin or Role.ProjectManager or Role.FinanceDirector);
 
     // Total pages for each list, derived from the server-reported total count.
     private int QueuePageCount => Math.Max(1, (int)Math.Ceiling(total / (double)PageSize));

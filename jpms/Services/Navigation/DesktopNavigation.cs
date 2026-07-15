@@ -40,9 +40,10 @@ public static class DesktopNavigation
         Entry("Directory",      "/directory",      Role.ManagingDirector),
         Entry("Clients",        "/clients",        Role.ManagingDirector, Role.ProjectManager),
         Entry("Architects",     "/architects",     Role.ManagingDirector, Role.ProjectManager),
-        // Triage is restricted to administrators (who see everything via the early return above)
-        // and project managers for now. A dedicated triage-visibility role can be added later.
-        Entry("Triage",         "/requests/triage", Role.ProjectManager),
+        // Triage is restricted to administrators (who see everything via the early return above),
+        // project managers, and the finance director for now. A dedicated triage-visibility role
+        // can be added later. Mirrors the API's TriageRoles.AllowedToTriage gate.
+        Entry("Triage",         "/requests/triage", Role.ProjectManager, Role.FinanceDirector),
         // The agent queue mirrors the API's AgentRoles.AllowedToOperateAgents gate (admins see
         // everything via the early return above).
         Entry("Agents",         "/agents",          Role.ManagingDirector, Role.ProjectManager, Role.QuantitySurveyor, Role.SiteManager),

@@ -14,6 +14,9 @@ public sealed class UpdateRequestDetailsValidation
         // Backdating a close is allowed; forward-dating is not.
         if (command.ClosedAt is { } closedAt && closedAt.UtcDateTime.Date > DateTimeOffset.UtcNow.Date)
             errors.Add("The closed date cannot be in the future.");
+        // The issue date records when the document actually went out — today or earlier.
+        if (command.IssuedAt is { } issuedAt && issuedAt.UtcDateTime.Date > DateTimeOffset.UtcNow.Date)
+            errors.Add("The issued date cannot be in the future.");
         if (errors.Count == 0) return ValidationOutcome.Passed;
         return new ValidationOutcome(errors);
     }

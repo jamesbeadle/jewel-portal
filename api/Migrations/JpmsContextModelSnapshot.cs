@@ -509,6 +509,9 @@ namespace Jewel.JPMS.Api.Migrations
                         .HasMaxLength(4000)
                         .HasColumnType("nvarchar(4000)");
 
+                    b.Property<DateTimeOffset?>("IssuedAt")
+                        .HasColumnType("datetimeoffset");
+
                     b.Property<int>("Kind")
                         .HasColumnType("int");
 

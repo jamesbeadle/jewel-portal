@@ -88,7 +88,8 @@ else
                                 </td>
                                 <td class="px-4 py-3 text-content-muted hidden lg:table-cell whitespace-nowrap">@Dash(record.RaisedTo)</td>
                                 <td class="px-4 py-3 text-content-subtle hidden xl:table-cell font-mono text-xs">@Dash(record.DrawingRef)</td>
-                                <td class="px-4 py-3 text-content-subtle hidden lg:table-cell whitespace-nowrap">@record.RaisedAt.LocalDateTime.ToString("d MMM yyyy")</td>
+                                @* The user-set issue date once recorded; falls back to the raised date until one is set. *@
+                                <td class="px-4 py-3 text-content-subtle hidden lg:table-cell whitespace-nowrap">@((record.IssuedAt ?? record.RaisedAt).LocalDateTime.ToString("d MMM yyyy"))</td>
                                 <td class="px-4 py-3 text-content-subtle hidden lg:table-cell whitespace-nowrap">@Date(record.ResponseDue)</td>
                                 <td class="px-4 py-3 text-right hidden md:table-cell whitespace-nowrap">
                                     @if (record.DaysOutstanding is int days)
