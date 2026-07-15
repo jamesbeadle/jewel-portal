@@ -28,6 +28,7 @@ using Jewel.JPMS.Api.Features.Mobilisation;
 using Jewel.JPMS.Api.Features.Places;
 using Jewel.JPMS.Api.Features.Portal;
 using Jewel.JPMS.Api.Features.Procurement;
+using Jewel.JPMS.Api.Features.Retention;
 using Jewel.JPMS.Api.Features.Projects;
 using Jewel.JPMS.Api.Features.Rates;
 using Jewel.JPMS.Api.Features.RecordLinks;
@@ -80,6 +81,7 @@ var host = new HostBuilder()
         services.AddCommercialFeature();
         services.AddLabourFeature();
         services.AddCommercialInputsFeature();
+        services.AddRetentionFeature();
         services.AddCashflowFeature();
         services.AddValuationInvoicesFeature();
         services.AddCvrFeature();

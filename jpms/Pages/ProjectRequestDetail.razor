@@ -53,6 +53,27 @@ else
                     <span class="inline-flex items-center rounded bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-600">Variation</span>
                 }
             </div>
+
+            @* The page's actions live up here with the record they act on — one row, not a rail of
+               scattered buttons. Email opens a single modal covering both fresh emails and replies
+               into a tagged chain. *@
+            <div class="flex flex-wrap items-center gap-2">
+                @if (CanEditDetails)
+                {
+                    <button type="button" class="btn-secondary" disabled="@busy" @onclick="OpenEdit">Edit details</button>
+                }
+                @if (record.Kind.IsEmailable())
+                {
+                    <a href="@DocumentHref" target="_blank" rel="noopener" class="btn-secondary"
+                       title="Regenerated from the register on every download, so it always reflects the request as it stands">Download @record.Kind.DisplayName() PDF</a>
+                    @if (CanDraftEmail)
+                    {
+                        <button type="button" class="btn-primary" disabled="@(busy || preparingDraft)" @onclick="OpenEmailModal">
+                            Email @record.Kind.DisplayName()
+                        </button>
+                    }
+                }
+            </div>
         </div>
         <h2 class="text-xl font-semibold text-content mb-5">@record.Title</h2>
 
@@ -262,25 +283,23 @@ else
                     </div>
                 }
 
-                @* Reply-with-document only exists at the official stage — same gate as the document itself. *@
-                <RequestConversation RequestId="@RequestId" CanDraftReply="@(CanDraftEmail && record.Kind.IsEmailable())" />
+                @* Per-message reply drafting is off: emailing the document (fresh or into a tagged
+                   chain) is consolidated behind the single Email button in the page header. *@
+                <RequestConversation RequestId="@RequestId" CanDraftReply="false" />
 
                 @* Agents are parked for now — the workspace is hidden until we settle on whether
                    attaching agents to requests is the right model. Re-add <AgentWorkspace> here. *@
             </div>
 
             <div class="space-y-5">
+                @* Document + email actions live in the page header; this rail panel is just the
+                   record's shape — its type (with promotion) and who it corresponds with. Hidden
+                   entirely when there is nothing to show (official kind, no edit rights). *@
+                @if (!record.Kind.IsEmailable() || CanEditDetails)
+                {
                 <div class="panel p-5 space-y-3">
-                    <h3 class="eyebrow">Official document &amp; issue</h3>
-                    @* The official document only exists once the request reaches its official stage
-                       (RFI / NOD / EOT). A pre-official request has no PDF and is never emailed. *@
-                    @if (record.Kind.IsEmailable())
-                    {
-                        <a href="@DocumentHref" target="_blank" rel="noopener"
-                           class="btn-secondary w-full inline-flex justify-center">Download @record.Kind.DisplayName() PDF</a>
-                        <p class="text-xs text-content-subtle">Regenerated from the register on every download, so it always reflects the request as it stands.</p>
-                    }
-                    else
+                    <h3 class="eyebrow">Request type &amp; recipients</h3>
+                    @if (!record.Kind.IsEmailable())
                     {
                         <p class="text-sm text-content-subtle">
                             A @record.Kind.DisplayName() request is the pre-official stage — there is no
@@ -289,73 +308,9 @@ else
                         </p>
                     }
 
-                    @if (CanDraftEmail && record.Kind.IsEmailable())
-                    {
-                        <div class="pt-3 border-t border-line">
-                            <button type="button" class="btn-primary w-full" disabled="@(busy || preparingDraft)" @onclick="PrepareEmailDraft">
-                                @(preparingDraft ? "Preparing draft…" : "Prepare email draft")
-                            </button>
-                            <p class="text-xs text-content-subtle mt-1">Starts a fresh email: creates a draft in the projects mailbox — PDF attached, To/CC/BCC pre-filled from the correspondence profile. Review and send from Outlook; nothing is sent from here.</p>
-                        </div>
-
-                        @* Or issue the document inside an existing conversation: pick one of the emails
-                           tagged to this request and the draft is staged as a reply-all in that thread —
-                           PDF attached, the whole chain quoted beneath. *@
-                        <div class="pt-3 border-t border-line">
-                            <label class="eyebrow block mb-1">Or append to a tagged email chain</label>
-                            @if (taggedEmails.Count == 0)
-                            {
-                                <p class="text-xs text-content-subtle">No emails are tagged to this request yet — tag one from triage (or wait for a reply) and it will appear here to reply into.</p>
-                            }
-                            else
-                            {
-                                <select class="field" value="@selectedChainMailboxId" @onchange="OnChainSelected" disabled="@(busy || preparingDraft)">
-                                    <option value="">— Choose an email —</option>
-                                    @foreach (var email in taggedEmails)
-                                    {
-                                        <option value="@email.MailboxId">@ChainOptionLabel(email)</option>
-                                    }
-                                </select>
-                                <button type="button" class="btn-secondary w-full mt-2"
-                                        disabled="@(busy || preparingDraft || string.IsNullOrEmpty(selectedChainMailboxId))"
-                                        @onclick="PrepareReplyDraftIntoChain">
-                                    @(preparingDraft ? "Preparing draft…" : $"Draft {record.Kind.DisplayName()} reply in that chain")
-                                </button>
-                                <p class="text-xs text-content-subtle mt-1">Creates a reply-all draft in that email's thread — @record.Kind.DisplayName() PDF attached, the entire chain quoted beneath. Review and send from Outlook; nothing is sent from here.</p>
-                            }
-                        </div>
-
-                        @if (draftError is not null)
-                        {
-                            <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@draftError</p>
-                        }
-                        @if (draftResult is not null)
-                        {
-                            <div class="rounded-lg bg-emerald-500/10 border border-emerald-500/30 px-3 py-2">
-                                <p class="text-sm font-medium text-emerald-600">Draft created in the projects mailbox.</p>
-                                <p class="text-xs text-content-subtle mt-1">To: @string.Join(", ", draftResult.Recipients)</p>
-                                @if (draftResult.Cc is { Count: > 0 } draftCc)
-                                {
-                                    <p class="text-xs text-content-subtle">CC: @string.Join(", ", draftCc)</p>
-                                }
-                                @if (draftResult.Bcc is { Count: > 0 } draftBcc)
-                                {
-                                    <p class="text-xs text-content-subtle">BCC: @string.Join(", ", draftBcc)</p>
-                                }
-                                @if (!string.IsNullOrWhiteSpace(draftResult.WebLink))
-                                {
-                                    <a href="@draftResult.WebLink" target="_blank" rel="noopener"
-                                       class="text-xs text-accent hover:underline underline-offset-2">Open the draft in Outlook</a>
-                                }
-                            </div>
-                        }
-                    }
-                    @* Type / promotion / recipients live with the document they shape — one panel,
-                       not two, so the rail stays short. *@
                     @if (CanEditDetails)
                     {
-                        <div class="pt-4 border-t border-line space-y-4">
-                            <h4 class="eyebrow">Request type</h4>
+                        <div class="space-y-4">
                         <p class="text-sm text-content">
                             Current: <span class="font-medium">@record.Kind.DisplayName()</span>
                             @if (record.HasRfq)
@@ -373,7 +328,7 @@ else
                         {
                             <div>
                                 <button type="button" class="btn-primary w-full" disabled="@busy" @onclick="PromoteToRfi">Promote to RFI</button>
-                                <p class="text-xs text-content-subtle mt-1">Mints the RFI reference and creates the official document. No email is drafted by promotion — when you're ready to issue, use “Prepare email draft” above or append the RFI to a tagged email chain.</p>
+                                <p class="text-xs text-content-subtle mt-1">Mints the RFI reference and creates the official document. No email is drafted by promotion — when you're ready to issue, use the Email button at the top of the page.</p>
                             </div>
                         }
                         else if (!record.HasRfq)
@@ -451,6 +406,7 @@ else
                         </div>
                     }
                 </div>
+                }
 
                 @if (record.HasRfq)
                 {
@@ -484,13 +440,6 @@ else
                     @if (actionError is not null)
                     {
                         <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-3">@actionError</p>
-                    }
-
-                    @if (CanEditDetails)
-                    {
-                        <div class="mb-4 pb-4 border-b border-line">
-                            <button type="button" class="btn-secondary w-full" disabled="@busy" @onclick="OpenEdit">Edit details</button>
-                        </div>
                     }
 
                     @if (blockingAgents.Count > 0)
@@ -582,6 +531,89 @@ else
             @if (closeError is not null)
             {
                 <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@closeError</p>
+            }
+        </div>
+    </Modal>
+
+    <Modal IsOpen="emailModalOpen"
+           Title="@($"Email this {record.Kind.DisplayName()}")"
+           ConfirmLabel="@(preparingDraft ? "Creating draft…" : "Create draft")"
+           ConfirmDisabled="@preparingDraft"
+           ShowFooter="@(draftResult is null)"
+           OnCancel="CloseEmailModal"
+           OnConfirm="ConfirmEmailDraft"
+           Class="max-w-xl">
+        <div class="space-y-4">
+            @if (draftResult is null)
+            {
+                <p class="text-sm text-content-subtle">
+                    Stages a draft in the projects mailbox with the @record.Kind.DisplayName() PDF attached.
+                    Review and send it from Outlook — nothing is sent from here.
+                </p>
+
+                <div class="space-y-2">
+                    <label class="flex items-start gap-2.5 rounded-lg border p-3 cursor-pointer @(selectedChainMailboxId == "" ? "border-accent bg-accent/5" : "border-line hover:border-line-strong")">
+                        <input type="radio" name="email-target" class="mt-0.5" checked="@(selectedChainMailboxId == "")"
+                               @onchange="@(() => selectedChainMailboxId = "")" />
+                        <span>
+                            <span class="block text-sm font-medium text-content">Start a fresh email</span>
+                            <span class="block text-xs text-content-subtle mt-0.5">A new thread — To/CC/BCC pre-filled from the project's correspondence profile.</span>
+                        </span>
+                    </label>
+
+                    @if (taggedEmailsLoading)
+                    {
+                        <p class="text-xs text-content-subtle italic px-1">Loading tagged emails…</p>
+                    }
+                    else if (taggedEmails.Count == 0)
+                    {
+                        <p class="text-xs text-content-subtle px-1">No emails are tagged to this request yet, so there is no chain to append to.</p>
+                    }
+                    else
+                    {
+                        <p class="eyebrow pt-1">Or append to a tagged email chain</p>
+                        @foreach (var email in taggedEmails)
+                        {
+                            <label class="flex items-start gap-2.5 rounded-lg border p-3 cursor-pointer @(selectedChainMailboxId == email.MailboxId ? "border-accent bg-accent/5" : "border-line hover:border-line-strong")">
+                                <input type="radio" name="email-target" class="mt-0.5" checked="@(selectedChainMailboxId == email.MailboxId)"
+                                       @onchange="@(() => selectedChainMailboxId = email.MailboxId!)" />
+                                <span class="min-w-0">
+                                    <span class="block text-sm font-medium text-content truncate">@(string.IsNullOrWhiteSpace(email.Subject) ? Truncate(email.Body, 80) : email.Subject)</span>
+                                    <span class="block text-xs text-content-subtle mt-0.5">@AuthorLabel(email) · @email.PostedAt.LocalDateTime.ToString("d MMM yyyy, HH:mm") — reply-all in this thread, the whole chain quoted beneath.</span>
+                                </span>
+                            </label>
+                        }
+                    }
+                </div>
+
+                @if (draftError is not null)
+                {
+                    <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@draftError</p>
+                }
+            }
+            else
+            {
+                <div class="rounded-lg bg-emerald-500/10 border border-emerald-500/30 px-3 py-2.5">
+                    <p class="text-sm font-medium text-emerald-600">Draft created in the projects mailbox.</p>
+                    <p class="text-xs text-content-subtle mt-1">To: @string.Join(", ", draftResult.Recipients)</p>
+                    @if (draftResult.Cc is { Count: > 0 } draftCc)
+                    {
+                        <p class="text-xs text-content-subtle">CC: @string.Join(", ", draftCc)</p>
+                    }
+                    @if (draftResult.Bcc is { Count: > 0 } draftBcc)
+                    {
+                        <p class="text-xs text-content-subtle">BCC: @string.Join(", ", draftBcc)</p>
+                    }
+                    <p class="text-xs text-content-subtle mt-1">Review the recipients and send it from Outlook — nothing has been sent.</p>
+                    @if (!string.IsNullOrWhiteSpace(draftResult.WebLink))
+                    {
+                        <a href="@draftResult.WebLink" target="_blank" rel="noopener"
+                           class="text-xs text-accent hover:underline underline-offset-2">Open the draft in Outlook</a>
+                    }
+                </div>
+                <div class="flex justify-end">
+                    <button type="button" class="btn-primary" @onclick="CloseEmailModal">Done</button>
+                </div>
             }
         </div>
     </Modal>
@@ -739,15 +771,18 @@ else
     private string formResponseAction = "";
     private string formImpact = "";
 
-    // Email draft staging (Outlook draft in the projects mailbox).
+    // Email draft staging (Outlook draft in the projects mailbox) — all lives in the email modal.
+    private bool emailModalOpen;
     private bool preparingDraft;
     private string? draftError;
     private RequestEmailDraft? draftResult;
     private RequestRecipientSet? recipientPreview;
 
-    // The emails tagged to this request (inbound legs with a live mailbox id), offered as chains
-    // the official document can be issued into as a reply — newest first.
+    // The emails tagged to this request (inbound legs with a live mailbox id), offered in the
+    // modal as chains the official document can be issued into as a reply — newest first.
+    // "" = no chain selected = start a fresh email.
     private IReadOnlyList<RequestMessage> taggedEmails = Array.Empty<RequestMessage>();
+    private bool taggedEmailsLoading;
     private string selectedChainMailboxId = "";
 
     private string VoqHref => voq is null ? "" : $"/projects/{ProjectId}/voq/{voq.VariationOrderQuoteId}";
@@ -824,13 +859,11 @@ else
         }
         await LoadVoqAsync();
         await LoadRecipientPreviewAsync();
-        await LoadTaggedEmailsAsync();
         isLoaded = true;
     }
 
-    // The tagged emails offered as reply targets in the issue panel. Only fetched when the panel
-    // can actually show them (emailable kind + draft rights). Best-effort: the picker just shows
-    // its empty state on error.
+    // The tagged emails offered as reply targets in the email modal, fetched fresh each time the
+    // modal opens. Best-effort: the modal just shows its empty state on error.
     private async Task LoadTaggedEmailsAsync()
     {
         if (record is null || !record.Kind.IsEmailable() || !CanDraftEmail)
@@ -840,6 +873,7 @@ else
         }
         try
         {
+            taggedEmailsLoading = true;
             taggedEmails = (await RequestRegister.ListMessagesAsync(record.RequestId))
                 .Where(m => m.Direction == MessageDirection.Inbound && !string.IsNullOrEmpty(m.MailboxId))
                 .OrderByDescending(m => m.PostedAt)
@@ -848,6 +882,10 @@ else
         catch
         {
             taggedEmails = Array.Empty<RequestMessage>();
+        }
+        finally
+        {
+            taggedEmailsLoading = false;
         }
     }
 
@@ -974,8 +1012,6 @@ else
             busy = true;
             record = await RequestRegister.PromoteToRfiAsync(record.RequestId, ProjectId);
             responseDraft = record.ResponseText ?? "";
-            // Promotion unlocks the issue panel, so the tagged chains become selectable now.
-            await LoadTaggedEmailsAsync();
         }
         catch
         {
@@ -1443,7 +1479,28 @@ else
 
     // ---- Email draft staging --------------------------------------------------------------------
 
-    private async Task PrepareEmailDraft()
+    // Opens the email modal with a clean slate; the tagged chains load in while it's open
+    // (the fresh-email option is available immediately).
+    private async Task OpenEmailModal()
+    {
+        if (record is null || busy || preparingDraft || !CanDraftEmail) return;
+        draftError = null;
+        draftResult = null;
+        selectedChainMailboxId = "";
+        emailModalOpen = true;
+        await LoadTaggedEmailsAsync();
+    }
+
+    private void CloseEmailModal()
+    {
+        if (preparingDraft) return;
+        emailModalOpen = false;
+    }
+
+    // One confirm for both paths: no chain selected stages a fresh email (recipients from the
+    // correspondence profile); a selected chain stages a reply-all draft in that email's thread
+    // with the whole conversation quoted beneath. The PDF is attached either way.
+    private async Task ConfirmEmailDraft()
     {
         if (record is null || busy || preparingDraft || !CanDraftEmail) return;
         draftError = null;
@@ -1451,7 +1508,9 @@ else
         try
         {
             preparingDraft = true;
-            draftResult = await RequestRegister.PrepareEmailDraftAsync(record.RequestId);
+            draftResult = string.IsNullOrEmpty(selectedChainMailboxId)
+                ? await RequestRegister.PrepareEmailDraftAsync(record.RequestId)
+                : await RequestRegister.PrepareReplyDraftAsync(record.RequestId, selectedChainMailboxId);
         }
         catch (CommandFailedException ex)
         {
@@ -1459,7 +1518,9 @@ else
         }
         catch
         {
-            draftError = "Couldn't create the draft. Please try again.";
+            draftError = string.IsNullOrEmpty(selectedChainMailboxId)
+                ? "Couldn't create the draft. Please try again."
+                : "Couldn't create the reply draft. The email may no longer be in the mailbox — refresh and try again.";
         }
         finally
         {
@@ -1467,41 +1528,8 @@ else
         }
     }
 
-    private void OnChainSelected(ChangeEventArgs e) => selectedChainMailboxId = e.Value?.ToString() ?? "";
-
-    // Issue the official document INTO the selected tagged chain: a reply-all draft in that
-    // email's thread with the PDF attached and the whole conversation quoted beneath.
-    private async Task PrepareReplyDraftIntoChain()
-    {
-        if (record is null || busy || preparingDraft || !CanDraftEmail || string.IsNullOrEmpty(selectedChainMailboxId)) return;
-        draftError = null;
-        draftResult = null;
-        try
-        {
-            preparingDraft = true;
-            draftResult = await RequestRegister.PrepareReplyDraftAsync(record.RequestId, selectedChainMailboxId);
-        }
-        catch (CommandFailedException ex)
-        {
-            draftError = ex.Message;
-        }
-        catch
-        {
-            draftError = "Couldn't create the reply draft. The email may no longer be in the mailbox — refresh and try again.";
-        }
-        finally
-        {
-            preparingDraft = false;
-        }
-    }
-
-    // "12 Mar 2026 — Subject (sender)": the chain by the name its correspondents know it by.
-    private static string ChainOptionLabel(RequestMessage email)
-    {
-        var subject = string.IsNullOrWhiteSpace(email.Subject) ? Truncate(email.Body, 60) : email.Subject;
-        var sender = string.IsNullOrWhiteSpace(email.AuthorName) ? email.AuthorEmail : email.AuthorName;
-        return $"{email.PostedAt.LocalDateTime:d MMM yyyy} — {subject} ({sender})";
-    }
+    private static string AuthorLabel(RequestMessage email) =>
+        string.IsNullOrWhiteSpace(email.AuthorName) ? email.AuthorEmail : email.AuthorName;
 
     private static string Truncate(string value, int max) =>
         string.IsNullOrEmpty(value) || value.Length <= max ? value : value[..max].TrimEnd() + "…";

@@ -51,6 +51,15 @@ public sealed class AsyncQueryCache<TKey, TValue> where TKey : notnull
         EnsureLoaded(key);
     }
 
+    /// <summary>Starts a background refetch of a key without dropping its cached value, so reads
+    /// keep serving the stale value until fresh data lands (stale-while-revalidate). Call on page
+    /// entry; use <see cref="Invalidate"/> after mutations instead.</summary>
+    public void Refetch(TKey key)
+    {
+        requested.Remove(key);
+        EnsureLoaded(key);
+    }
+
     /// <summary>Drops every cached value and lets the next read refetch. Use when a mutation's
     /// impact spans keys that aren't known at the call site.</summary>
     public void InvalidateAll()

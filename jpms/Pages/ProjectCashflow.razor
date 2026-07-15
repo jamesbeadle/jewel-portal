@@ -1,4 +1,5 @@
 @page "/projects/{ProjectId}/cashflow"
+@using Jewel.JPMS.Commercial
 @using Jewel.JPMS.Contracts.Commercial
 @using Jewel.JPMS.Contracts.Procurement
 @using Jewel.JPMS.Contracts.ValuationInvoices
@@ -9,6 +10,8 @@
 @inject SessionService Session
 @inject ProjectFinancialSummaryReadModel Summary
 @inject ProjectWorkOrdersReadModel WorkOrders
+@inject IValuationReportStore ValuationReport
+@inject IProjectRetentionStore Retention
 @inject IQueryClient Queries
 @inject NavigationManager Nav
 @implements IDisposable
@@ -34,7 +37,7 @@ else
 
         @* ── Funds in — the client side, from valuation invoices ─────────────── *@
         <h3 class="text-sm font-semibold text-content mb-2">Funds in — client</h3>
-        <div class="grid grid-cols-2 md:grid-cols-5 gap-3 mb-6">
+        <div class="grid grid-cols-2 md:grid-cols-3 gap-3 mb-6">
             <div class="rounded-xl border border-line bg-surface px-4 py-3">
                 <p class="text-[11px] uppercase tracking-wider text-content-subtle font-semibold"
                    title="The valuation report's counting lines — contract works, provisional sums, contingency and variations">Contract sales value</p>
@@ -61,9 +64,33 @@ else
             </div>
             <div class="rounded-xl border border-line bg-surface px-4 py-3">
                 <p class="text-[11px] uppercase tracking-wider text-content-subtle font-semibold"
-                   title="Contract sales value less funds in — everything not yet received, whether invoiced or still to invoice">Left to come in</p>
+                   title="Retention withheld by the client on works complete — held less released. From the project's retention terms when set (see the Setup tab), else the latest claim on the Valuation Report. Earned but not invoiceable until released">Retention held</p>
+                <p class="text-lg font-semibold text-content">@Money(RetentionOutstanding)</p>
+                @if (RetentionTerms is { } terms && Schedule is { } schedule)
+                {
+                    <p class="text-xs text-content-subtle mt-0.5">
+                        @Money(schedule.HeldToDate) held (@Pct(terms.RetentionPercent)) ·
+                        @Money(schedule.ReleasedToDate) released
+                    </p>
+                    <p class="text-xs text-content-subtle mt-0.5">@ReleaseLine(schedule.CompletionRelease, $"{Pct(terms.CompletionReleasePercent)} at completion")</p>
+                    <p class="text-xs text-content-subtle">@ReleaseLine(schedule.FinalRelease, $"balance after {terms.DefectsPeriodMonths} months")</p>
+                }
+                else if (ValuationFigures.RetentionHeld != 0m || ValuationFigures.RetentionReleased != 0m)
+                {
+                    <p class="text-xs text-content-subtle mt-0.5">
+                        @Money(ValuationFigures.RetentionHeld) held (@Pct(ValuationFigures.RetentionPercent)) ·
+                        @Money(ValuationFigures.RetentionReleased) released
+                    </p>
+                }
+            </div>
+            <div class="rounded-xl border border-line bg-surface px-4 py-3">
+                <p class="text-[11px] uppercase tracking-wider text-content-subtle font-semibold"
+                   title="Contract sales value less funds in — everything not yet received, whether invoiced, retained or still to invoice">Left to come in</p>
                 <p class="text-lg font-semibold text-content">@Money(LeftToComeIn)</p>
-                <p class="text-xs text-content-subtle mt-0.5">of which @Money(invoiceSummary?.Outstanding ?? 0m) invoiced</p>
+                <p class="text-xs text-content-subtle mt-0.5">
+                    of which @Money(invoiceSummary?.Outstanding ?? 0m) invoiced ·
+                    @Money(RetentionOutstanding) retention
+                </p>
             </div>
         </div>
 
@@ -112,7 +139,8 @@ else
                     <p class="text-xl font-semibold text-content">@Money(LeftToComeIn)</p>
                     <p class="text-xs text-content-subtle mt-1">
                         @Money(invoiceSummary?.Outstanding ?? 0m) invoiced &amp; awaiting payment ·
-                        @Money(NotYetInvoicedIncome) not yet invoiced
+                        @Money(RetentionOutstanding) retention held ·
+                        @Money(NotYetInvoicedIncome - RetentionOutstanding) works not yet invoiced
                     </p>
                 </div>
                 <div>
@@ -140,7 +168,12 @@ else
             Due to be paid out is the sum of those unpaid bills and the work-order value suppliers
             haven't billed yet — spend on top of work orders (non-WO cost of sales) appears here
             only once billed. Drawdown matches the Financials tab: target cost less work orders and
-            non-WO cost of sales.
+            non-WO cost of sales. Retention comes from the project's retention terms (Setup tab)
+            when they're recorded — held to date is the retention % of works complete, with the
+            two releases forecast against the revised contract sum and their due dates anchored
+            to practical completion — otherwise from the latest claim on the Valuation Report.
+            Valuation invoices are raised net of retention, so retention held is money earned but
+            not invoiceable until it's released.
         </p>
     </ProjectPageShell>
 }
@@ -162,6 +195,33 @@ else
     private decimal LeftToComeIn => ContractSales - (invoiceSummary?.TotalPaid ?? 0m);
     private decimal NotYetInvoicedIncome => ContractSales - (invoiceSummary?.TotalInvoiced ?? 0m);
 
+    // ── Retention — from the latest claim on the Valuation Report (live for drafts),
+    // computed by the same helper as the valuation summary footer so the tabs agree.
+    private ValuationClaim? LatestClaim =>
+        ValuationReport.ClaimsFor(ProjectId).OrderByDescending(claim => claim.ClaimNumber).FirstOrDefault();
+
+    private ValuationSummaryFigures ValuationFigures => ValuationSummaryFigures.For(
+        ValuationReport.LinesFor(ProjectId),
+        LatestClaim is { Status: ValuationClaimStatus.Draft } draft
+            ? ValuationReport.EntriesFor(draft.ValuationClaimId)
+            : Array.Empty<ClaimLine>(),
+        LatestClaim,
+        invoiceSummary?.TotalInvoiced ?? 0m);
+
+    // ── Retention terms + schedule — the project's retention record (Setup tab) when one
+    // exists; the claim-based figure is the fallback for projects without terms recorded.
+    private ProjectRetention? RetentionTerms => Retention.RetentionFor(ProjectId);
+
+    private RetentionSchedule? Schedule => RetentionTerms is { } terms
+        ? RetentionSchedule.For(terms, ValuationFigures.TotalWorksComplete, ValuationFigures.RevisedContractSum)
+        : null;
+
+    private decimal RetentionOutstanding => Schedule?.Outstanding ?? ValuationFigures.RetentionOutstanding;
+
+    private static string ReleaseLine(RetentionScheduleLine line, string label) => line.IsConfirmed
+        ? $"{label}: {Money(line.Amount)} released {line.ConfirmedAt?.ToString("d MMM yyyy")}"
+        : $"{label}: {Money(line.Amount)}{(line.DueOn is { } due ? $" due {due:d MMM yyyy}" : "")} (forecast)";
+
     // ── Funds out — work orders committed and Xero purchase spend ──
     private decimal WoCommitted => WorkOrders.Current(ProjectId).Sum(detail => detail.Order.Value);
     private decimal WoInvoiced => woSummaries.Sum(summary => summary.InvoicedToDate);
@@ -181,16 +241,23 @@ else
         value.ToString(value == Math.Truncate(value) ? "C0" : "C2",
             System.Globalization.CultureInfo.GetCultureInfo("en-GB"));
 
+    private static string Pct(decimal value) =>
+        value.ToString("0.##", System.Globalization.CultureInfo.GetCultureInfo("en-GB")) + "%";
+
     protected override async Task OnInitializedAsync()
     {
         await Session.EnsureLoadedAsync();
         if (!Auth.IsSignedIn) { Nav.NavigateTo("/login", forceLoad: true); return; }
         Summary.OnChanged += StateHasChanged;
         WorkOrders.OnChanged += StateHasChanged;
+        ValuationReport.OnChange += StateHasChanged;
+        Retention.OnChange += StateHasChanged;
         // Refresh once per tab entry (stale-while-revalidate, per the front-end
         // data-loading convention) — cached figures render immediately, then update.
         _ = Summary.RefreshAsync(ProjectId, CancellationToken.None);
         _ = WorkOrders.RefreshAsync(ProjectId, CancellationToken.None);
+        ValuationReport.Refresh(ProjectId);
+        Retention.Refresh(ProjectId);
         isLoaded = true;
 
         var invoiceSummaryTask = Queries.AskAsync(new GetProjectValuationInvoiceSummary(ProjectId), CancellationToken.None);
@@ -205,5 +272,7 @@ else
     {
         Summary.OnChanged -= StateHasChanged;
         WorkOrders.OnChanged -= StateHasChanged;
+        ValuationReport.OnChange -= StateHasChanged;
+        Retention.OnChange -= StateHasChanged;
     }
 }

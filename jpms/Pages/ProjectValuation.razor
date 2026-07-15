@@ -3,6 +3,7 @@
 @inject AuthService Auth
 @inject SessionService Session
 @inject IValuationReportStore Store
+@inject IProjectRetentionStore Retention
 @inject NavigationManager Nav
 @implements IDisposable
 
@@ -202,6 +203,8 @@ else
         // Refresh on entry: cached lines/claims render immediately, then update when the
         // background reload lands — so navigating back to this tab never shows stale data.
         Store.Refresh(ProjectId);
+        // Warm the retention terms so the new-claim form can default its percentages.
+        Retention.Refresh(ProjectId);
         isLoaded = true;
     }
 
@@ -212,7 +215,14 @@ else
         StateHasChanged();
     }
 
-    private void ToggleStartClaim() => showStartClaim = !showStartClaim;
+    private void ToggleStartClaim()
+    {
+        showStartClaim = !showStartClaim;
+        // Default the percentages from the project's retention terms (Setup tab) when recorded.
+        if (showStartClaim && Retention.RetentionFor(ProjectId) is { } terms)
+            newRetentionPercent = terms.RetentionPercent.ToString(
+                "0.##", System.Globalization.CultureInfo.GetCultureInfo("en-GB"));
+    }
 
     private async Task StartClaimAsync()
     {

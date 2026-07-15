@@ -120,6 +120,7 @@ public sealed class JpmsContext : DbContext
     public DbSet<DayworkEntity> Dayworks => Set<DayworkEntity>();
     public DbSet<ContraChargeEntity> ContraCharges => Set<ContraChargeEntity>();
     public DbSet<SubcontractorRetentionEntity> SubcontractorRetentions => Set<SubcontractorRetentionEntity>();
+    public DbSet<ProjectRetentionEntity> ProjectRetentions => Set<ProjectRetentionEntity>();
 
     public DbSet<DefectEntity> Defects => Set<DefectEntity>();
     public DbSet<PracticalCompletionEntity> PracticalCompletions => Set<PracticalCompletionEntity>();

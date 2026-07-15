@@ -228,41 +228,18 @@ else
 
     private void Recompute()
     {
-        contractSum = ValuationCalculations.ContractSum(lines);
-        netVariations = ValuationCalculations.NetVariations(lines);
-        revisedContractSum = ValuationCalculations.RevisedContractSum(contractSum, netVariations);
-
-        retentionPercent = SelectedClaim?.RetentionPercent ?? 0m;
-        retentionReleasePercent = SelectedClaim?.RetentionReleasePercent ?? 0m;
-
-        if (SelectedClaim is { Status: ValuationClaimStatus.Draft })
-        {
-            // Live preview for an editable draft. Certified to date tracks the valuation
-            // invoices issued so far, so adding/issuing an invoice updates the payment due.
-            var live = lines.Where(l => l.CountsTowardTotals)
-                            .Select(l => ValuationCalculations.CumulativeClaimed(PercentFor(l), l.LineAmount));
-            totalWorksComplete = live.Sum();
-            retentionHeld = ValuationCalculations.RetentionHeld(totalWorksComplete, retentionPercent);
-            retentionReleased = ValuationCalculations.RetentionReleased(revisedContractSum, retentionReleasePercent);
-            certifiedToDate = InvoicedToDate;
-            paymentDueExVat = ValuationCalculations.PaymentDueExVat(totalWorksComplete, retentionHeld, retentionReleased, certifiedToDate);
-        }
-        else if (SelectedClaim is not null)
-        {
-            // Frozen totals from the locked claim (its CertifiedToDate captured the invoiced
-            // total at the moment it was locked).
-            totalWorksComplete = SelectedClaim.TotalWorksComplete;
-            retentionHeld = SelectedClaim.RetentionHeld;
-            retentionReleased = SelectedClaim.RetentionReleased;
-            certifiedToDate = SelectedClaim.CertifiedToDate;
-            paymentDueExVat = SelectedClaim.PaymentDueExVat;
-        }
-        else
-        {
-            // No claim selected: nothing is being claimed, but what's been invoiced still reads.
-            totalWorksComplete = retentionHeld = retentionReleased = paymentDueExVat = 0m;
-            certifiedToDate = InvoicedToDate;
-        }
+        // Shared with the Cashflow tab (ValuationSummaryFigures) so the two tabs can't drift.
+        var figures = ValuationSummaryFigures.For(lines, entries, SelectedClaim, InvoicedToDate);
+        contractSum = figures.ContractSum;
+        netVariations = figures.NetVariations;
+        revisedContractSum = figures.RevisedContractSum;
+        totalWorksComplete = figures.TotalWorksComplete;
+        retentionPercent = figures.RetentionPercent;
+        retentionHeld = figures.RetentionHeld;
+        retentionReleasePercent = figures.RetentionReleasePercent;
+        retentionReleased = figures.RetentionReleased;
+        certifiedToDate = figures.CertifiedToDate;
+        paymentDueExVat = figures.PaymentDueExVat;
     }
 
     private record Section(ValuationElementType Type, string Title, List<ValuationLineItem> Lines)

@@ -25,13 +25,20 @@
         <div class="rounded-lg border border-line bg-surface-raised shadow-lg overflow-y-auto max-h-56 py-1"
              style="@popupStyle" @onmousedown:preventDefault="true">
             @{ var index = 0; }
+            @* Selection happens on mousedown, not click: click only fires on
+               mouse-up, by which time the input's focusout (also triggered by
+               the same press) may already have closed the popup and removed the
+               button — the click then lands on nothing and the pick is lost.
+               Mousedown runs first, before any focus change can interfere; its
+               preventDefault also keeps focus on the input. *@
             @foreach (var option in Filtered)
             {
                 var i = index++;
                 var value = option.Value;
                 <button type="button" id="@ItemId(i)" tabindex="-1"
                         class="block w-full text-left px-3 py-1.5 text-sm truncate @ItemClass(i, value)"
-                        @onclick="() => SelectAsync(value)">
+                        @onmousedown="() => SelectAsync(value)" @onmousedown:preventDefault="true"
+                        @onmousedown:stopPropagation="true">
                     @option.Label
                 </button>
             }

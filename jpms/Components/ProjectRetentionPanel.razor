@@ -1,0 +1,282 @@
+@using Jewel.JPMS.Commercial
+@using Jewel.JPMS.Contracts.Retention
+@inject SessionService Session
+@inject IProjectRetentionStore Retention
+@inject IValuationReportStore ValuationReport
+@implements IDisposable
+
+@*
+    The project's client-retention terms and release schedule. Terms are stored (typically
+    5% / 2.5% / 6 or 12 months); everything else is calculated live from the valuation
+    figures via RetentionSchedule — held to date from works complete, forecast release
+    amounts from the revised contract sum, due dates from the practical-completion date.
+    Releases are confirmed manually: the schedule only ever forecasts.
+*@
+
+<div class="rounded-xl border border-line bg-surface-raised p-5 mb-6">
+    <div class="flex items-center justify-between mb-3">
+        <h3 class="text-sm font-semibold text-content">Retention</h3>
+        @if (CanEdit)
+        {
+            <button type="button" class="btn-secondary text-xs px-2.5 py-1.5" @onclick="OpenTerms">
+                @(Current is null ? "Add retention" : "Edit terms")
+            </button>
+        }
+    </div>
+
+    @if (Current is null)
+    {
+        <p class="text-sm text-content-subtle">
+            No retention terms recorded. Add them to see held-to-date and the release
+            schedule here and on the Cashflow tab.
+        </p>
+    }
+    else
+    {
+        <p class="text-sm text-content-subtle mb-3">
+            @Pct(Current.RetentionPercent) held on works complete until practical completion ·
+            @Pct(Current.CompletionReleasePercent) released at completion ·
+            balance @Current.DefectsPeriodMonths months later
+            @if (Current.PracticalCompletionAt is { } pc)
+            {
+                <text> · practical completion @pc.ToString("d MMM yyyy")</text>
+            }
+            else
+            {
+                <text> · practical completion date not set</text>
+            }
+        </p>
+
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
+            <div class="rounded-lg border border-line bg-surface px-3 py-2">
+                <p class="text-[11px] uppercase tracking-wider text-content-subtle font-semibold"
+                   title="Retention % of total works complete on the latest valuation claim">Held to date</p>
+                <p class="text-base font-semibold text-content">@Money(Schedule.HeldToDate)</p>
+            </div>
+            <div class="rounded-lg border border-line bg-surface px-3 py-2">
+                <p class="text-[11px] uppercase tracking-wider text-content-subtle font-semibold"
+                   title="Confirmed releases only — money actually freed">Released to date</p>
+                <p class="text-base font-semibold text-content">@Money(Schedule.ReleasedToDate)</p>
+            </div>
+            <div class="rounded-lg border border-line bg-surface px-3 py-2">
+                <p class="text-[11px] uppercase tracking-wider text-content-subtle font-semibold"
+                   title="Held less released — still withheld by the client">Outstanding</p>
+                <p class="text-base font-semibold text-content">@Money(Schedule.Outstanding)</p>
+            </div>
+        </div>
+
+        <div class="space-y-2">
+            @foreach (var (line, label) in new[]
+            {
+                (Schedule.CompletionRelease, $"{Pct(Current.CompletionReleasePercent)} at practical completion"),
+                (Schedule.FinalRelease, $"Balance {Current.DefectsPeriodMonths} months after completion")
+            })
+            {
+                <div class="flex items-center justify-between rounded-lg border border-line bg-surface px-3 py-2">
+                    <div>
+                        <p class="text-sm text-content">@label</p>
+                        <p class="text-xs text-content-subtle">
+                            @if (line.IsConfirmed)
+                            {
+                                <text>Released @line.ConfirmedAt?.ToString("d MMM yyyy")</text>
+                            }
+                            else if (line.DueOn is { } due)
+                            {
+                                <text>Due @due.ToString("d MMM yyyy") (forecast)</text>
+                            }
+                            else
+                            {
+                                <text>Due when practical completion is set (forecast)</text>
+                            }
+                        </p>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <p class="text-sm font-semibold text-content">@Money(line.Amount)</p>
+                        @if (!line.IsConfirmed && CanEdit)
+                        {
+                            <button type="button" class="btn-secondary text-xs px-2.5 py-1.5"
+                                    @onclick="() => OpenConfirm(line)">Confirm release</button>
+                        }
+                    </div>
+                </div>
+            }
+        </div>
+    }
+</div>
+
+<Modal IsOpen="@termsOpen" Title="@(Current is null ? "Add retention" : "Edit retention terms")"
+       ConfirmLabel="@(busy ? "Saving…" : "Save terms")" CancelLabel="Cancel"
+       ConfirmDisabled="@busy" OnConfirm="SaveTerms" OnCancel="CloseTerms">
+    <div class="space-y-3">
+        @if (error is not null)
+        {
+            <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@error</p>
+        }
+
+        <div class="grid grid-cols-2 gap-4">
+            <div>
+                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Retention %</label>
+                <input type="number" step="0.5" class="field" @bind="retentionPercent" />
+            </div>
+            <div>
+                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Released at completion %</label>
+                <input type="number" step="0.5" class="field" @bind="completionReleasePercent" />
+            </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-4">
+            <div>
+                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Defects period</label>
+                <select class="field" @bind="defectsPeriodMonths">
+                    <option value="6">6 months</option>
+                    <option value="12">12 months</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Practical completion</label>
+                <input type="date" class="field" @bind="practicalCompletionDate" />
+                <p class="text-xs text-content-subtle mt-1">Planned or achieved — anchors both release due dates. Leave empty if unknown.</p>
+            </div>
+        </div>
+    </div>
+</Modal>
+
+<Modal IsOpen="@confirmOpen" Title="Confirm retention release"
+       ConfirmLabel="@(busy ? "Saving…" : "Confirm release")" CancelLabel="Cancel"
+       ConfirmDisabled="@(busy || ParsedConfirmAmount is not { } parsed || parsed <= 0m)" OnConfirm="SaveConfirm" OnCancel="CloseConfirm">
+    <div class="space-y-3">
+        @if (error is not null)
+        {
+            <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@error</p>
+        }
+
+        <p class="text-sm text-content-subtle">
+            Records that this release actually happened and freezes the amount — the figure is
+            prefilled with the forecast but can be adjusted to what was actually agreed.
+        </p>
+
+        <div>
+            <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Amount released (ex VAT)</label>
+            <input type="number" step="0.01" class="field" @bind="confirmAmount" />
+        </div>
+    </div>
+</Modal>
+
+@code {
+    [Parameter, EditorRequired] public string ProjectId { get; set; } = "";
+
+    private bool termsOpen;
+    private bool confirmOpen;
+    private bool busy;
+    private string? error;
+
+    private decimal retentionPercent = 5m;
+    private decimal completionReleasePercent = 2.5m;
+    private int defectsPeriodMonths = 12;
+    private DateTime? practicalCompletionDate;
+
+    private RetentionMilestone confirmMilestone;
+    private string confirmAmount = "";
+
+    private ProjectRetention? Current => Retention.RetentionFor(ProjectId);
+
+    // Mirrors the server-side authorisations (directors and the finance director;
+    // administrators carry every role).
+    private bool CanEdit =>
+        Session.AvailableRoles.Any(role => role is Role.Admin or Role.ManagingDirector or Role.FinanceDirector);
+
+    // Works complete / revised contract sum from the latest claim (live for drafts), the same
+    // figures the Valuation Report footer and Cashflow tab use. Certified-to-date doesn't
+    // affect the schedule, so no invoice summary is needed here.
+    private RetentionSchedule Schedule
+    {
+        get
+        {
+            var claims = ValuationReport.ClaimsFor(ProjectId);
+            var latest = claims.OrderByDescending(claim => claim.ClaimNumber).FirstOrDefault();
+            var entries = latest is { Status: ValuationClaimStatus.Draft }
+                ? ValuationReport.EntriesFor(latest.ValuationClaimId)
+                : Array.Empty<ClaimLine>();
+            var figures = ValuationSummaryFigures.For(ValuationReport.LinesFor(ProjectId), entries, latest, 0m);
+            return RetentionSchedule.For(Current!, figures.TotalWorksComplete, figures.RevisedContractSum);
+        }
+    }
+
+    private decimal? ParsedConfirmAmount =>
+        decimal.TryParse(confirmAmount, System.Globalization.NumberStyles.Number,
+            System.Globalization.CultureInfo.GetCultureInfo("en-GB"), out var value) ? value : null;
+
+    protected override void OnInitialized()
+    {
+        Retention.OnChange += StateHasChanged;
+        ValuationReport.OnChange += StateHasChanged;
+        Retention.Refresh(ProjectId);
+    }
+
+    private void OpenTerms()
+    {
+        retentionPercent = Current?.RetentionPercent ?? 5m;
+        completionReleasePercent = Current?.CompletionReleasePercent ?? 2.5m;
+        defectsPeriodMonths = Current?.DefectsPeriodMonths ?? 12;
+        practicalCompletionDate = Current?.PracticalCompletionAt?.Date;
+        error = null;
+        termsOpen = true;
+    }
+
+    private void CloseTerms() { termsOpen = false; error = null; }
+
+    private async Task SaveTerms()
+    {
+        if (busy) return;
+        error = null;
+        busy = true;
+        try
+        {
+            await Retention.SetAsync(new SetProjectRetention(
+                ProjectId, retentionPercent, completionReleasePercent, defectsPeriodMonths,
+                practicalCompletionDate is { } date ? new DateTimeOffset(date.Date, TimeSpan.Zero) : null));
+            CloseTerms();
+        }
+        catch (CommandFailedException ex) { error = ex.Message; }
+        catch { error = "Couldn't save the retention terms. Please try again."; }
+        finally { busy = false; }
+    }
+
+    private void OpenConfirm(RetentionScheduleLine line)
+    {
+        confirmMilestone = line.Milestone;
+        confirmAmount = line.Amount.ToString("0.##", System.Globalization.CultureInfo.GetCultureInfo("en-GB"));
+        error = null;
+        confirmOpen = true;
+    }
+
+    private void CloseConfirm() { confirmOpen = false; error = null; }
+
+    private async Task SaveConfirm()
+    {
+        if (busy || ParsedConfirmAmount is not { } amount) return;
+        error = null;
+        busy = true;
+        try
+        {
+            await Retention.ConfirmReleaseAsync(new ConfirmRetentionRelease(ProjectId, confirmMilestone, amount));
+            CloseConfirm();
+        }
+        catch (CommandFailedException ex) { error = ex.Message; }
+        catch { error = "Couldn't confirm the release. Please try again."; }
+        finally { busy = false; }
+    }
+
+    private static string Money(decimal value) =>
+        value.ToString(value == Math.Truncate(value) ? "C0" : "C2",
+            System.Globalization.CultureInfo.GetCultureInfo("en-GB"));
+
+    private static string Pct(decimal value) =>
+        value.ToString("0.##", System.Globalization.CultureInfo.GetCultureInfo("en-GB")) + "%";
+
+    public void Dispose()
+    {
+        Retention.OnChange -= StateHasChanged;
+        ValuationReport.OnChange -= StateHasChanged;
+    }
+}
