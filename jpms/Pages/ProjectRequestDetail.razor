@@ -54,25 +54,86 @@ else
                 }
             </div>
 
-            @* The page's actions live up here with the record they act on — one row, not a rail of
-               scattered buttons. Email opens a single modal covering both fresh emails and replies
-               into a tagged chain. *@
+            @* The page's actions live up here with the record they act on: emailing (the most-used
+               action) as its own button, everything else behind one Actions dropdown — no rail of
+               scattered buttons. *@
             <div class="flex flex-wrap items-center gap-2">
-                @if (CanEditDetails)
+                @if (record.Kind.IsEmailable() && CanDraftEmail)
                 {
-                    <button type="button" class="btn-secondary" disabled="@busy" @onclick="OpenEdit">Edit details</button>
+                    <button type="button" class="btn-primary" disabled="@(busy || preparingDraft)" @onclick="OpenEmailModal">
+                        Email @record.Kind.DisplayName()
+                    </button>
                 }
-                @if (record.Kind.IsEmailable())
-                {
-                    <a href="@DocumentHref" target="_blank" rel="noopener" class="btn-secondary"
-                       title="Regenerated from the register on every download, so it always reflects the request as it stands">Download @record.Kind.DisplayName() PDF</a>
-                    @if (CanDraftEmail)
+                <div class="relative">
+                    <button type="button" class="btn-secondary inline-flex items-center gap-1.5" @onclick="() => actionsOpen = !actionsOpen">
+                        Actions <span class="text-content-faint text-xs" aria-hidden="true">@(actionsOpen ? "▲" : "▼")</span>
+                    </button>
+                    @if (actionsOpen)
                     {
-                        <button type="button" class="btn-primary" disabled="@(busy || preparingDraft)" @onclick="OpenEmailModal">
-                            Email @record.Kind.DisplayName()
-                        </button>
+                        <div class="absolute right-0 mt-2 w-64 rounded-lg border border-line bg-surface shadow-lg z-20 overflow-hidden">
+                            <ul class="divide-y divide-line">
+                                @if (CanEditDetails)
+                                {
+                                    <li>
+                                        <button type="button" class="w-full text-left px-3 py-2 text-sm text-content hover:bg-surface-raised transition"
+                                                @onclick="() => { actionsOpen = false; OpenEdit(); }">Edit details</button>
+                                    </li>
+                                }
+                                @if (record.Kind.IsEmailable())
+                                {
+                                    <li>
+                                        <a href="@DocumentHref" target="_blank" rel="noopener"
+                                           class="block w-full text-left px-3 py-2 text-sm text-content hover:bg-surface-raised transition"
+                                           @onclick="() => actionsOpen = false"
+                                           title="Regenerated from the register on every download, so it always reflects the request as it stands">Download @record.Kind.DisplayName() PDF</a>
+                                    </li>
+                                }
+                                @if (record.Status is not RequestStatus.Closed)
+                                {
+                                    <li>
+                                        <button type="button" class="w-full text-left px-3 py-2 text-sm text-content hover:bg-surface-raised transition"
+                                                @onclick="OpenResponseModal"
+                                                title="The formal answer recorded on the request — it prints on the official document">Record response…</button>
+                                    </li>
+                                    <li>
+                                        <button type="button" class="w-full text-left px-3 py-2 text-sm text-content hover:bg-surface-raised transition"
+                                                @onclick="() => { actionsOpen = false; OpenCloseConfirm(); }">Close request…</button>
+                                    </li>
+                                }
+                                else
+                                {
+                                    <li>
+                                        <button type="button" class="w-full text-left px-3 py-2 text-sm text-content hover:bg-surface-raised transition"
+                                                @onclick="ReopenFromMenu">Reopen request</button>
+                                    </li>
+                                }
+                                @if (CanEditDetails && record.Kind is RequestType.Rfi && !record.HasRfq)
+                                {
+                                    <li>
+                                        <button type="button" class="w-full text-left px-3 py-2 text-sm text-content hover:bg-surface-raised transition"
+                                                @onclick="CreateBidPackagesFromMenu"
+                                                title="Marks this RFI as carrying an RFQ, unlocking a Variation Order Quote and its bid packages">Create bid packages</button>
+                                    </li>
+                                }
+                                @if (CanTriage)
+                                {
+                                    <li>
+                                        <button type="button" class="w-full text-left px-3 py-2 text-sm text-content hover:bg-surface-raised transition"
+                                                @onclick="() => { actionsOpen = false; confirmingReturn = true; }"
+                                                title="Sends every email linked to this request back to the triage queue">Return to triage…</button>
+                                    </li>
+                                }
+                                @if (IsAdmin)
+                                {
+                                    <li>
+                                        <button type="button" class="w-full text-left px-3 py-2 text-sm text-negative hover:bg-negative/10 transition"
+                                                @onclick="() => { actionsOpen = false; confirmingDelete = true; }">Delete request…</button>
+                                    </li>
+                                }
+                            </ul>
+                        </div>
                     }
-                }
+                </div>
             </div>
         </div>
         <h2 class="text-xl font-semibold text-content mb-5">@record.Title</h2>
@@ -105,6 +166,26 @@ else
                 }
             </div>
         </div>
+
+        @* Outcomes of header actions (close/reopen/response/triage/delete) surface here, under the
+           facts strip, now that the Manage panel is gone. *@
+        @if (actionError is not null)
+        {
+            <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-5">@actionError</p>
+        }
+        @if (blockingAgents.Count > 0)
+        {
+            <div class="rounded-lg bg-amber-500/10 border border-amber-500/30 px-3 py-2 mb-5">
+                <p class="text-sm font-medium text-amber-700 mb-1">This request can't be closed yet.</p>
+                <p class="text-xs text-content-subtle mb-2">The following agents have outstanding work:</p>
+                <ul class="space-y-1">
+                    @foreach (var blocker in blockingAgents)
+                    {
+                        <li class="text-xs text-content"><span class="font-medium">@blocker.DisplayName</span> — @blocker.Message</li>
+                    }
+                </ul>
+            </div>
+        }
 
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
             <div class="lg:col-span-2 space-y-5">
@@ -331,14 +412,6 @@ else
                                 <p class="text-xs text-content-subtle mt-1">Mints the RFI reference and creates the official document. No email is drafted by promotion — when you're ready to issue, use the Email button at the top of the page.</p>
                             </div>
                         }
-                        else if (!record.HasRfq)
-                        {
-                            <div>
-                                <button type="button" class="btn-secondary w-full" disabled="@busy" @onclick="EnableRfq">Enable RFQ</button>
-                                <p class="text-xs text-content-subtle mt-1">Marks this RFI as carrying an RFQ, unlocking a Variation Order Quote.</p>
-                            </div>
-                        }
-
                         <div>
                             <label class="eyebrow block mb-1">Issued to</label>
                             <select class="field" value="@PartySelectionValue" @onchange="OnPartyChanged" disabled="@busy">
@@ -435,65 +508,6 @@ else
                     </div>
                 }
 
-                <div class="panel p-5">
-                    <h3 class="eyebrow mb-3">Manage</h3>
-                    @if (actionError is not null)
-                    {
-                        <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-3">@actionError</p>
-                    }
-
-                    @if (blockingAgents.Count > 0)
-                    {
-                        <div class="rounded-lg bg-amber-500/10 border border-amber-500/30 px-3 py-2 mb-3">
-                            <p class="text-sm font-medium text-amber-700 mb-1">This request can't be closed yet.</p>
-                            <p class="text-xs text-content-subtle mb-2">The following agents have outstanding work:</p>
-                            <ul class="space-y-1">
-                                @foreach (var blocker in blockingAgents)
-                                {
-                                    <li class="text-xs text-content"><span class="font-medium">@blocker.DisplayName</span> — @blocker.Message</li>
-                                }
-                            </ul>
-                        </div>
-                    }
-
-                    @if (record.Status is not RequestStatus.Closed)
-                    {
-                        <label class="eyebrow block mb-1">Record a response</label>
-                        <textarea class="field mb-2" rows="3" value="@responseDraft" @oninput="OnResponseDraftInput"
-                                  placeholder="The answer or decision…"></textarea>
-                        <div class="flex flex-wrap gap-2">
-                            <button type="button" class="btn-secondary" disabled="@busy" @onclick="SaveResponse">Save response</button>
-                            <button type="button" class="btn-primary" disabled="@busy" @onclick="OpenCloseConfirm">Close request</button>
-                        </div>
-                    }
-                    else
-                    {
-                        <p class="text-sm text-content-subtle mb-3">This request is closed@(record.ClosedAt is null ? "" : $" — {Date(record.ClosedAt)}").</p>
-                        <button type="button" class="btn-secondary" disabled="@busy" @onclick="ReopenRequest">Reopen</button>
-                    }
-
-                    @if (CanTriage)
-                    {
-                        <div class="mt-4 pt-4 border-t border-line">
-                            <h4 class="eyebrow mb-1">Return to triage</h4>
-                            <p class="text-xs text-content-subtle mb-2">Sends every email linked to this request back to the triage queue so the whole thread can be processed again. The request and its conversation stay in the register.</p>
-                            <button type="button" class="btn-secondary" disabled="@busy" @onclick="() => confirmingReturn = true">
-                                Return to triage
-                            </button>
-                        </div>
-                    }
-
-                    @if (IsAdmin)
-                    {
-                        <div class="mt-4 pt-4 border-t border-line">
-                            <h4 class="eyebrow mb-1 text-negative">Danger zone</h4>
-                            <p class="text-xs text-content-subtle mb-2">Permanently deletes this request and its conversation. Administrators only.</p>
-                            <button type="button" class="btn-secondary border-negative/40 text-negative hover:border-negative" disabled="@busy" @onclick="() => confirmingDelete = true">
-                                Delete request
-                            </button>
-                        </div>
-                    }
-                </div>
             </div>
         </div>
     </ProjectPageShell>
@@ -614,6 +628,27 @@ else
                 <div class="flex justify-end">
                     <button type="button" class="btn-primary" @onclick="CloseEmailModal">Done</button>
                 </div>
+            }
+        </div>
+    </Modal>
+
+    <Modal IsOpen="respondingOpen"
+           Title="Record a response"
+           ConfirmLabel="@(busy ? "Saving…" : "Save response")"
+           ConfirmDisabled="@busy"
+           OnCancel="CancelResponseModal"
+           OnConfirm="SaveResponseFromModal">
+        <div class="space-y-3">
+            <p class="text-sm text-content-subtle">
+                The formal answer or decision recorded on the request itself — it appears in the
+                Response panel, prints on the official document, and marks the request as Responded.
+                (Use the conversation for ordinary discussion.)
+            </p>
+            <textarea class="field" rows="4" value="@responseDraft" @oninput="OnResponseDraftInput"
+                      placeholder="The answer or decision…"></textarea>
+            @if (actionError is not null)
+            {
+                <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@actionError</p>
             }
         </div>
     </Modal>
@@ -744,6 +779,10 @@ else
     private string? actionError;
     private bool confirmingDelete;
     private bool confirmingReturn;
+    // The header's Actions dropdown; every item closes it before running (same pattern as
+    // RoleSwitcher — no outside-click handling, the toggle is the dismiss).
+    private bool actionsOpen;
+    private bool respondingOpen;
     private IReadOnlyList<AgentCompletionState> blockingAgents = Array.Empty<AgentCompletionState>();
     private IReadOnlyList<Client> clients = Array.Empty<Client>();
     private IReadOnlyList<Architect> architects = Array.Empty<Architect>();
@@ -941,7 +980,41 @@ else
 
     private void OnResponseDraftInput(ChangeEventArgs e) => responseDraft = e.Value?.ToString() ?? "";
 
-    private async Task SaveResponse() => await Apply(RequestStatus.Responded, responseDraft);
+    // ---- Actions dropdown items -----------------------------------------------------------------
+
+    private void OpenResponseModal()
+    {
+        actionsOpen = false;
+        actionError = null;
+        responseDraft = record?.ResponseText ?? "";
+        respondingOpen = true;
+    }
+
+    private void CancelResponseModal()
+    {
+        if (busy) return;
+        respondingOpen = false;
+    }
+
+    private async Task SaveResponseFromModal()
+    {
+        await Apply(RequestStatus.Responded, responseDraft);
+        if (actionError is null) respondingOpen = false;
+    }
+
+    private async Task ReopenFromMenu()
+    {
+        actionsOpen = false;
+        await ReopenRequest();
+    }
+
+    // "Create bid packages": marks the RFI as carrying an RFQ, which unlocks the Variation Order
+    // Quote (and its bid packages) in the rail.
+    private async Task CreateBidPackagesFromMenu()
+    {
+        actionsOpen = false;
+        await EnableRfq();
+    }
 
     // The close confirm modal: opens with today's date pre-filled so the common case is one click,
     // but the date is editable for closures only recorded after the fact.
@@ -1035,7 +1108,7 @@ else
         }
         catch
         {
-            ladderError = "Couldn't enable the RFQ. Please try again.";
+            ladderError = "Couldn't enable bid packages on this RFI. Please try again.";
         }
         finally
         {
