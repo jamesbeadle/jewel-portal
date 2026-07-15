@@ -109,12 +109,13 @@ public interface IMailboxGraphClient
 
     /// <summary>Message ids in the given conversation that do NOT yet carry the category — i.e. the
     /// thread members still to be tagged (e.g. replies that arrived after the original link).
-    /// Mailbox-wide; unsent drafts are skipped.</summary>
+    /// Mailbox-wide; unsent drafts are skipped. The category test is applied client-side: the
+    /// all-mailbox view only reliably supports the plain conversationId filter.</summary>
     Task<IReadOnlyList<string>> ListUntaggedIdsInConversationAsync(string conversationId, string category, CancellationToken ct);
 
     /// <summary>Message ids in the given conversation that currently carry the category — i.e. the
     /// thread members to un-tag when reversing a thread-wide tag (e.g. restoring a discarded thread).
-    /// Mailbox-wide, drafts included, so a pending tagged draft is stripped too.</summary>
+    /// Mailbox-wide; unsent drafts are skipped (a tagged draft is the drafting flow's to manage).</summary>
     Task<IReadOnlyList<string>> ListTaggedIdsInConversationAsync(string conversationId, string category, CancellationToken ct);
 
     /// <summary>
@@ -633,34 +634,48 @@ public sealed class MailboxGraphClient : IMailboxGraphClient
         // Mailbox-wide (drafts skipped): a tagged SENT copy — e.g. a document draft the mailbox
         // sent to open a brand-new thread — seeds its conversation for the sweep, so replies to an
         // outbound-initiated thread auto-link even though no inbox member was ever hand-tagged.
-        var conversationIds = await CollectFieldAsync(filter, "conversationId", includeDrafts: false, ct);
+        var conversationIds = await CollectFieldAsync(filter, "conversationId", ct);
         return conversationIds.Distinct(StringComparer.Ordinal).ToList();
     }
 
-    public Task<IReadOnlyList<string>> ListUntaggedIdsInConversationAsync(string conversationId, string category, CancellationToken ct)
+    // The two per-conversation sibling queries read the thread with the PLAIN conversationId filter
+    // (via ListConversationAsync — the one filter shape the mailbox-wide view reliably supports) and
+    // apply the category test CLIENT-SIDE. They previously pushed a combined server-side filter
+    // (conversationId + [negated] categories/any), which the inbox-folder endpoint accepted but the
+    // all-mailbox view rejects as too complex — and because sibling tagging is best-effort, the
+    // failure surfaced as silently-empty results: the anchor tagged fine, its thread never followed.
+    // A thread is small (one capped page), so the client-side check costs nothing.
+    // NB: MailboxMessage.Categories carries exactly the JPMS workflow tags (Parse strips the marker
+    // and user categories), and both callers pass workflow tags, so Contains is a faithful test.
+
+    public async Task<IReadOnlyList<string>> ListUntaggedIdsInConversationAsync(string conversationId, string category, CancellationToken ct)
     {
-        // conversationId eq '…' AND the email doesn't already carry the tag → the thread members still
-        // to be tagged. The negated category clause needs eventual consistency (handled in CollectFieldAsync).
-        // Drafts are skipped: an unsent draft in the thread is tagged by its drafting flow, not swept.
-        var filter = $"conversationId eq '{conversationId.Replace("'", "''")}' "
-            + $"and not categories/any(c:c eq '{category.Replace("'", "''")}')";
-        return CollectFieldAsync(filter, "id", includeDrafts: false, ct);
+        // Thread members that don't yet carry the tag → still to be tagged. Drafts never surface
+        // from ListConversationAsync: an unsent draft is tagged by its drafting flow, not swept.
+        var thread = await ListConversationAsync(conversationId, ct);
+        return thread.Items
+            .Where(m => !m.Categories.Contains(category, StringComparer.OrdinalIgnoreCase))
+            .Select(m => m.Id)
+            .ToList();
     }
 
-    public Task<IReadOnlyList<string>> ListTaggedIdsInConversationAsync(string conversationId, string category, CancellationToken ct)
+    public async Task<IReadOnlyList<string>> ListTaggedIdsInConversationAsync(string conversationId, string category, CancellationToken ct)
     {
-        // conversationId eq '…' AND the email carries the tag → the thread members to un-tag. Drafts
-        // ARE included: reversing a thread-wide tag must also strip a pending tagged draft, or its
-        // eventual sent copy would resurrect the association.
-        var filter = $"conversationId eq '{conversationId.Replace("'", "''")}' "
-            + $"and categories/any(c:c eq '{category.Replace("'", "''")}')";
-        return CollectFieldAsync(filter, "id", includeDrafts: true, ct);
+        // Thread members that carry the tag → to un-tag when reversing a thread-wide tag.
+        var thread = await ListConversationAsync(conversationId, ct);
+        return thread.Items
+            .Where(m => m.Categories.Contains(category, StringComparer.OrdinalIgnoreCase))
+            .Select(m => m.Id)
+            .ToList();
     }
 
-    // Page through the mailbox's messages matching the filter and collect one string field ("id" /
-    // "conversationId") from each. Mirrors ListFilteredAsync's $skip paging; eventual consistency for
-    // $count + negated filters. Guard-bounded so a pathological thread can't loop forever.
-    private async Task<IReadOnlyList<string>> CollectFieldAsync(string filter, string field, bool includeDrafts, CancellationToken ct)
+    // Page through the mailbox's messages matching a SIMPLE filter (a single categories/any clause —
+    // nothing combined; the all-mailbox view rejects complex filters) and collect one string field
+    // from each, skipping unsent drafts. Mirrors ListFilteredAsync's $skip paging; eventual
+    // consistency for $count. Guard-bounded so a pathological result can't loop forever. Failures
+    // are logged loudly (status + body): callers treat an empty result as "nothing to do", so a
+    // silent break here is invisible at the call site.
+    private async Task<IReadOnlyList<string>> CollectFieldAsync(string filter, string field, CancellationToken ct)
     {
         var results = new List<string>();
         var skip = 0;
@@ -670,7 +685,12 @@ public sealed class MailboxGraphClient : IMailboxGraphClient
                 + $"?$filter={Uri.EscapeDataString(filter)}"
                 + $"&$select={field},isDraft&$top=100&$skip={skip}&$count=true";
             using var response = await SendAsync(HttpMethod.Get, url, content: null, ct, allowNotFound: true, consistencyEventual: true);
-            if (!response.IsSuccessStatusCode) break;
+            if (!response.IsSuccessStatusCode)
+            {
+                _logger.LogWarning("Mailbox field collect ({Field}) failed: {Status}. {Detail}",
+                    field, (int)response.StatusCode, await SafeBodyAsync(response, ct));
+                break;
+            }
 
             await using var stream = await response.Content.ReadAsStreamAsync(ct);
             using var doc = await JsonDocument.ParseAsync(stream, cancellationToken: ct);
@@ -679,7 +699,7 @@ public sealed class MailboxGraphClient : IMailboxGraphClient
                 foreach (var item in arr.EnumerateArray())
                 {
                     pageCount++;
-                    if (!includeDrafts && IsDraft(item))
+                    if (IsDraft(item))
                         continue;
                     if (item.TryGetProperty(field, out var el) && el.GetString() is { Length: > 0 } value)
                         results.Add(value);
