@@ -1,0 +1,176 @@
+@inject IJSRuntime Js
+
+@* A select whose options can be found by typing: click the control (or press
+   ArrowDown) to open the full list, type to filter it — case-insensitive
+   "contains" across the whole label, so for cost centres both the code and the
+   name match ("kit" finds CARP-KIT Carpentry kitchens). Arrows + Enter pick,
+   Escape closes, clicking away closes.
+
+   The popup is position:fixed and measured via JS (jpmsSearchSelect in
+   wwwroot/js/search-select.js) because every surface that hosts one — the
+   allocation table, the invoice modal, the split editor — scrolls inside an
+   overflow container that would clip an absolutely positioned popup. Fixed
+   positioning escapes the clipping; the trade-off is the popup doesn't track
+   the container while it scrolls, so it closes on any focus loss. *@
+<div class="relative @WidthClass" @ref="wrapperRef" @onfocusout="Close">
+    <input @ref="inputRef" type="text" disabled="@Disabled" autocomplete="off"
+           class="w-full bg-surface border border-line rounded-lg px-2 py-1 pr-6 text-sm placeholder:text-content-subtle disabled:opacity-40 @(HasValue || isOpen ? "text-content" : "text-content-subtle")"
+           style="text-overflow:ellipsis"
+           value="@DisplayText" placeholder="@InputPlaceholder"
+           @onclick="OpenAsync" @oninput="OnInput" @onkeydown="OnKeyDown" />
+    <span class="text-content-subtle text-xs"
+          style="position:absolute;right:.5rem;top:50%;transform:translateY(-50%);pointer-events:none">▾</span>
+    @if (isOpen)
+    {
+        <div class="rounded-lg border border-line bg-surface-raised shadow-lg overflow-y-auto max-h-56 py-1"
+             style="@popupStyle" @onmousedown:preventDefault="true">
+            @{ var index = 0; }
+            @foreach (var option in Filtered)
+            {
+                var i = index++;
+                var value = option.Value;
+                <button type="button" id="@ItemId(i)" tabindex="-1"
+                        class="block w-full text-left px-3 py-1.5 text-sm truncate @ItemClass(i, value)"
+                        @onclick="() => SelectAsync(value)">
+                    @option.Label
+                </button>
+            }
+            @if (Filtered.Count == 0)
+            {
+                <p class="px-3 py-1.5 text-sm text-content-subtle">No matches for “@filter”</p>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    /// <summary>One selectable entry: the value posted back and the label shown/searched.</summary>
+    public sealed record Option(string Value, string Label);
+
+    [Parameter, EditorRequired] public IReadOnlyList<Option> Options { get; set; } = Array.Empty<Option>();
+    [Parameter] public string Value { get; set; } = "";
+    [Parameter] public EventCallback<string> ValueChanged { get; set; }
+    [Parameter] public string Placeholder { get; set; } = "—";
+    /// <summary>Width utility class(es) for the control, e.g. "w-44" or "grow".</summary>
+    [Parameter] public string WidthClass { get; set; } = "w-52";
+    [Parameter] public bool Disabled { get; set; }
+
+    private ElementReference wrapperRef;
+    private ElementReference inputRef;
+    private readonly string uid = Guid.NewGuid().ToString("N")[..8];
+
+    private bool isOpen;
+    private string filter = "";
+    private int highlight;
+    private string popupStyle = "";
+    private bool revealHighlight;
+
+    private bool HasValue => !string.IsNullOrEmpty(Value);
+    private string? CurrentLabel => Options.FirstOrDefault(option => option.Value == Value)?.Label;
+
+    // Closed: the input shows the selection (read-only in spirit — any typing
+    // opens the list). Open: it's the filter box, with the selection demoted to
+    // the placeholder so it stays visible while typing.
+    private string DisplayText => isOpen ? filter : CurrentLabel ?? "";
+    private string InputPlaceholder => (isOpen ? CurrentLabel : null) ?? Placeholder;
+
+    // A blank "clear" entry leads the unfiltered list (same as the native
+    // selects' "—" option); once the user types, only real options compete.
+    private IReadOnlyList<Option> Filtered
+    {
+        get
+        {
+            if (string.IsNullOrWhiteSpace(filter))
+            {
+                var all = new List<Option>(Options.Count + 1) { new("", Placeholder) };
+                all.AddRange(Options);
+                return all;
+            }
+            var term = filter.Trim();
+            return Options.Where(option => option.Label.Contains(term, StringComparison.OrdinalIgnoreCase)).ToList();
+        }
+    }
+
+    private async Task OpenAsync()
+    {
+        if (isOpen || Disabled) return;
+        var rect = await Js.InvokeAsync<PopupRect>("jpmsSearchSelect.rect", wrapperRef);
+        // Downward unless the popup can't fit below and there's more room above.
+        const double popupMax = 236; // max-h-56 plus margin
+        var below = rect.ViewportHeight - rect.Bottom;
+        var left = Math.Round(rect.Left);
+        var width = Math.Round(rect.Width);
+        popupStyle = below >= popupMax || below >= rect.Top
+            ? FormattableString.Invariant($"position:fixed;left:{left}px;width:{width}px;top:{Math.Round(rect.Bottom + 4)}px;z-index:70;")
+            : FormattableString.Invariant($"position:fixed;left:{left}px;width:{width}px;bottom:{Math.Round(rect.ViewportHeight - rect.Top + 4)}px;z-index:70;");
+        filter = "";
+        isOpen = true;
+        // Start on the current selection; otherwise the first real option.
+        var options = Filtered;
+        highlight = 0;
+        for (var i = 0; i < options.Count; i++)
+            if (options[i].Value == Value) { highlight = i; break; }
+        if (highlight == 0 && !HasValue && options.Count > 1) highlight = 1;
+        revealHighlight = true;
+    }
+
+    private async Task OnInput(ChangeEventArgs args)
+    {
+        if (!isOpen) await OpenAsync();
+        filter = args.Value?.ToString() ?? "";
+        highlight = string.IsNullOrWhiteSpace(filter) && Filtered.Count > 1 ? 1 : 0;
+        revealHighlight = true;
+    }
+
+    private async Task OnKeyDown(KeyboardEventArgs args)
+    {
+        switch (args.Key)
+        {
+            case "ArrowDown":
+                if (!isOpen) { await OpenAsync(); break; }
+                if (Filtered.Count > 0) { highlight = Math.Min(highlight + 1, Filtered.Count - 1); revealHighlight = true; }
+                break;
+            case "ArrowUp":
+                if (isOpen && Filtered.Count > 0) { highlight = Math.Max(highlight - 1, 0); revealHighlight = true; }
+                break;
+            case "Enter":
+                if (isOpen && highlight >= 0 && highlight < Filtered.Count)
+                    await SelectAsync(Filtered[highlight].Value);
+                break;
+            case "Escape":
+            case "Tab":
+                Close();
+                break;
+        }
+    }
+
+    private async Task SelectAsync(string value)
+    {
+        Close();
+        if (value != Value) await ValueChanged.InvokeAsync(value);
+    }
+
+    private void Close()
+    {
+        isOpen = false;
+        filter = "";
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (isOpen && revealHighlight)
+        {
+            revealHighlight = false;
+            await Js.InvokeVoidAsync("jpmsSearchSelect.reveal", ItemId(highlight));
+        }
+    }
+
+    private string ItemId(int index) => $"jpms-ss-{uid}-{index}";
+
+    private string ItemClass(int index, string value) =>
+        index == highlight
+            ? "bg-content text-surface"
+            : (value == Value && value != "" ? "text-content" : "text-content-muted") + " hover:bg-surface hover:text-content";
+
+    private sealed record PopupRect(double Top, double Left, double Width, double Bottom, double ViewportHeight);
+}

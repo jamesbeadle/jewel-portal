@@ -134,20 +134,10 @@ else
             {
                 <div class="mb-4 rounded-xl border border-line bg-surface-raised px-4 py-3 flex items-center gap-3 flex-wrap text-sm">
                     <span class="text-content font-medium">@selectedIds.Count selected</span>
-                    <select class="bg-surface border border-line rounded-lg px-2 py-1.5 text-content text-sm" @bind="bulkProjectId">
-                        <option value="">Project…</option>
-                        @foreach (var project in Projects)
-                        {
-                            <option value="@project.ProjectId">@project.Name</option>
-                        }
-                    </select>
-                    <select class="bg-surface border border-line rounded-lg px-2 py-1.5 text-content text-sm" @bind="bulkCostCenterCode">
-                        <option value="">Cost centre…</option>
-                        @foreach (var centre in CostCenters.ActiveAlphabetical())
-                        {
-                            <option value="@centre.Code">@centre.Code @centre.Name</option>
-                        }
-                    </select>
+                    <SearchSelect Options="@ProjectOptions" WidthClass="w-44" Placeholder="Project…"
+                                  @bind-Value="bulkProjectId" />
+                    <SearchSelect Options="@CostCenterOptions" WidthClass="w-52" Placeholder="Cost centre…"
+                                  @bind-Value="bulkCostCenterCode" />
                     <button class="text-sm font-medium rounded-lg px-3 py-1.5 bg-content text-surface disabled:opacity-50"
                             disabled="@(isBusy || string.IsNullOrEmpty(bulkProjectId) || string.IsNullOrEmpty(bulkCostCenterCode))"
                             @onclick="BulkAllocateAsync">Allocate selected</button>
@@ -259,26 +249,14 @@ else
                                 @if (activeTab == XeroAllocationStatus.Unallocated)
                                 {
                                     <td class="px-3 py-2.5">
-                                        <select class="bg-surface border border-line rounded-lg px-2 py-1 text-content text-sm w-44"
-                                                value="@SelectedProjectFor(line)"
-                                                @onchange="e => SetProject(line.XeroLedgerLineId, e.Value?.ToString())">
-                                            <option value="">—</option>
-                                            @foreach (var project in Projects)
-                                            {
-                                                <option value="@project.ProjectId">@project.Name</option>
-                                            }
-                                        </select>
+                                        <SearchSelect Options="@ProjectOptions" WidthClass="w-44"
+                                                      Value="@SelectedProjectFor(line)"
+                                                      ValueChanged="value => SetProject(line.XeroLedgerLineId, value)" />
                                     </td>
                                     <td class="px-3 py-2.5">
-                                        <select class="bg-surface border border-line rounded-lg px-2 py-1 text-content text-sm w-52"
-                                                value="@SelectedCostCenterFor(line)"
-                                                @onchange="e => SetCostCenter(line.XeroLedgerLineId, e.Value?.ToString())">
-                                            <option value="">—</option>
-                                            @foreach (var centre in CostCenters.ActiveAlphabetical())
-                                            {
-                                                <option value="@centre.Code">@centre.Code @centre.Name</option>
-                                            }
-                                        </select>
+                                        <SearchSelect Options="@CostCenterOptions" WidthClass="w-52"
+                                                      Value="@SelectedCostCenterFor(line)"
+                                                      ValueChanged="value => SetCostCenter(line.XeroLedgerLineId, value)" />
                                     </td>
                                     <td class="px-3 py-2.5">
                                         <select class="bg-surface border border-line rounded-lg px-2 py-1 text-content text-sm w-36"
@@ -424,22 +402,12 @@ else
                         @foreach (var row in splitRows)
                         {
                             <div class="flex items-center gap-2">
-                                <select class="w-56 bg-surface border border-line rounded-lg px-2 py-1.5 text-content text-sm"
-                                        value="@row.ProjectId" @onchange="e => OnSplitProjectChanged(row, e.Value?.ToString())">
-                                    <option value="">—</option>
-                                    @foreach (var project in Projects)
-                                    {
-                                        <option value="@project.ProjectId">@project.Name</option>
-                                    }
-                                </select>
-                                <select class="grow bg-surface border border-line rounded-lg px-2 py-1.5 text-content text-sm"
-                                        value="@row.Code" @onchange="e => OnSplitCodeChanged(row, e.Value?.ToString())">
-                                    <option value="">—</option>
-                                    @foreach (var centre in CostCenters.ActiveAlphabetical())
-                                    {
-                                        <option value="@centre.Code">@centre.Code @centre.Name</option>
-                                    }
-                                </select>
+                                <SearchSelect Options="@ProjectOptions" WidthClass="w-56"
+                                              Value="@row.ProjectId"
+                                              ValueChanged="value => OnSplitProjectChanged(row, value)" />
+                                <SearchSelect Options="@CostCenterOptions" WidthClass="grow min-w-0"
+                                              Value="@row.Code"
+                                              ValueChanged="value => OnSplitCodeChanged(row, value)" />
                                 <input class="w-32 bg-surface border border-line rounded-lg px-2 py-1.5 text-content text-sm text-right"
                                        type="number" step="0.01" min="0" placeholder="0.00"
                                        value="@(row.Amount?.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture))"
@@ -492,24 +460,12 @@ else
                         var docLine = viewLine;
                         <div class="rounded-lg border border-line bg-surface-raised px-4 py-3 flex items-center gap-2 flex-wrap">
                             <span class="text-xs uppercase tracking-wider text-content-subtle font-semibold">Allocate</span>
-                            <select class="bg-surface border border-line rounded-lg px-2 py-1 text-content text-sm w-44"
-                                    value="@SelectedProjectFor(docLine)"
-                                    @onchange="e => SetProject(docLine.XeroLedgerLineId, e.Value?.ToString())">
-                                <option value="">Project…</option>
-                                @foreach (var project in Projects)
-                                {
-                                    <option value="@project.ProjectId">@project.Name</option>
-                                }
-                            </select>
-                            <select class="bg-surface border border-line rounded-lg px-2 py-1 text-content text-sm w-52"
-                                    value="@SelectedCostCenterFor(docLine)"
-                                    @onchange="e => SetCostCenter(docLine.XeroLedgerLineId, e.Value?.ToString())">
-                                <option value="">Cost centre…</option>
-                                @foreach (var centre in CostCenters.ActiveAlphabetical())
-                                {
-                                    <option value="@centre.Code">@centre.Code @centre.Name</option>
-                                }
-                            </select>
+                            <SearchSelect Options="@ProjectOptions" WidthClass="w-44" Placeholder="Project…"
+                                          Value="@SelectedProjectFor(docLine)"
+                                          ValueChanged="value => SetProject(docLine.XeroLedgerLineId, value)" />
+                            <SearchSelect Options="@CostCenterOptions" WidthClass="w-52" Placeholder="Cost centre…"
+                                          Value="@SelectedCostCenterFor(docLine)"
+                                          ValueChanged="value => SetCostCenter(docLine.XeroLedgerLineId, value)" />
                             <button class="text-xs font-medium rounded-lg px-2.5 py-1 bg-content text-surface disabled:opacity-40"
                                     disabled="@(isBusy || !CanAllocate(docLine))"
                                     @onclick="AllocateFromViewAsync">
@@ -1102,6 +1058,48 @@ else
 
     private bool CanAllocate(XeroLedgerLine line) =>
         !string.IsNullOrEmpty(SelectedProjectFor(line)) && !string.IsNullOrEmpty(SelectedCostCenterFor(line));
+
+    // -- searchable dropdown options -------------------------------------------
+    // Option lists for the SearchSelect dropdowns, memoized on the source list
+    // references (both stores hand back stable lists until they refresh) so the
+    // 50 rendered rows don't rebuild them per component per render.
+
+    private IReadOnlyList<SearchSelect.Option>? projectOptionsCache;
+    private object? projectOptionsCacheKey;
+
+    private IReadOnlyList<SearchSelect.Option> ProjectOptions
+    {
+        get
+        {
+            if (projectOptionsCache is null || !ReferenceEquals(projectOptionsCacheKey, Projects))
+            {
+                projectOptionsCache = Projects
+                    .Select(project => new SearchSelect.Option(project.ProjectId, project.Name)).ToList();
+                projectOptionsCacheKey = Projects;
+            }
+            return projectOptionsCache;
+        }
+    }
+
+    private IReadOnlyList<SearchSelect.Option>? costCenterOptionsCache;
+    private object? costCenterOptionsCacheKey;
+
+    // The label carries code + name so typing matches either ("kit" finds
+    // CARP-KIT Carpentry kitchens; "ELE" finds every electrical centre).
+    private IReadOnlyList<SearchSelect.Option> CostCenterOptions
+    {
+        get
+        {
+            var centres = CostCenters.ActiveAlphabetical();
+            if (costCenterOptionsCache is null || !ReferenceEquals(costCenterOptionsCacheKey, centres))
+            {
+                costCenterOptionsCache = centres
+                    .Select(centre => new SearchSelect.Option(centre.Code, $"{centre.Code} {centre.Name}")).ToList();
+                costCenterOptionsCacheKey = centres;
+            }
+            return costCenterOptionsCache;
+        }
+    }
 
     private void ToggleSelected(string lineId)
     {
