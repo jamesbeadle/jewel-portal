@@ -25,6 +25,16 @@ public interface IXeroWriteBackService
 
     /// <summary>Explicit re-attempt for one invoice (the allocation page's Retry button).</summary>
     Task<XeroWriteBackOutcome> RetryAsync(string xeroInvoiceId, CancellationToken ct);
+
+    /// <summary>
+    /// Best-effort Sites-tracking write for lines whose project was just set while
+    /// they stay queued (SetProject half-step) — no approval. Never throws; a
+    /// failure is stamped on the affected lines only (WriteBackStatus Failed, so
+    /// the queue can flag it), and pressing Set again is the retry. Invoices
+    /// already approved outside JPMS are skipped silently — those stay
+    /// portal-side only, like allocation itself.
+    /// </summary>
+    Task TrySetSiteAsync(IReadOnlyCollection<string> xeroLedgerLineIds, CancellationToken ct);
 }
 
 public sealed class XeroWriteBackService : IXeroWriteBackService
@@ -70,6 +80,88 @@ public sealed class XeroWriteBackService : IXeroWriteBackService
             logger.LogError(unexpected, "Xero write-back retry failed unexpectedly for invoice {InvoiceId}.", xeroInvoiceId);
             return new XeroWriteBackOutcome(false, unexpected.Message);
         }
+    }
+
+    public async Task TrySetSiteAsync(IReadOnlyCollection<string> xeroLedgerLineIds, CancellationToken ct)
+    {
+        List<XeroLedgerLineEntity> lines;
+        try
+        {
+            var ids = xeroLedgerLineIds.Distinct().ToList();
+            lines = await context.XeroLedgerLines
+                .Where(line => ids.Contains(line.XeroLedgerLineId) && line.ProjectId != null)
+                .ToListAsync(ct);
+        }
+        catch (Exception unexpected)
+        {
+            logger.LogError(unexpected, "Loading lines for a Xero site-tracking write failed unexpectedly.");
+            return;
+        }
+
+        foreach (var invoiceLines in lines.GroupBy(line => line.XeroInvoiceId))
+        {
+            try
+            {
+                await SetSiteForInvoiceLinesAsync(invoiceLines.ToList(), ct);
+            }
+            catch (Exception unexpected)
+            {
+                // Same contract as TryWriteBackAsync: a Xero hiccup never undoes the save.
+                logger.LogError(unexpected, "Xero site-tracking write failed unexpectedly for invoice {InvoiceId}.",
+                    invoiceLines.Key);
+            }
+        }
+    }
+
+    private async Task SetSiteForInvoiceLinesAsync(List<XeroLedgerLineEntity> lines, CancellationToken ct)
+    {
+        // Only bills still awaiting approval can carry the update; approved/paid ones
+        // stay portal-side only (same rule as the full write-back), silently.
+        if (!AwaitingApprovalStatuses.Contains(lines[0].InvoiceStatus, StringComparer.OrdinalIgnoreCase))
+            return;
+
+        var projectIds = lines.Select(line => line.ProjectId!).Distinct().ToList();
+        var projects = await context.Projects
+            .Where(project => projectIds.Contains(project.ProjectId))
+            .ToDictionaryAsync(project => project.ProjectId, ct);
+        var unmapped = projectIds
+            .Where(id => !projects.TryGetValue(id, out var project) || string.IsNullOrWhiteSpace(project.XeroSiteName))
+            .Select(id => projects.TryGetValue(id, out var project) ? project.Name : id)
+            .ToList();
+        if (unmapped.Count > 0)
+        {
+            await StampFailureAsync(lines,
+                "No Xero site is mapped for " + string.Join(", ", unmapped)
+                + " — set \"Xero site (tracking option)\" in the project's details, then press Set again.", ct);
+            return;
+        }
+
+        var result = await xero.SetSiteTrackingAsync(new XeroSiteTrackingRequest(
+            lines[0].XeroInvoiceId,
+            lines[0].Type == "ACCPAYCREDIT",
+            lines.Select(line => new XeroSiteTrackingLine(
+                line.XeroLineItemId, projects[line.ProjectId!].XeroSiteName!)).ToList()), ct);
+
+        if (result.Succeeded)
+        {
+            // Clear any earlier failure mark; these lines are queued, so their
+            // write-back story starts clean again (None, not Approved — nothing
+            // was approved here).
+            var changed = false;
+            foreach (var line in lines.Where(line => line.WriteBackStatus == (int)XeroWriteBackStatus.Failed))
+            {
+                line.WriteBackStatus = (int)XeroWriteBackStatus.None;
+                line.WriteBackError = null;
+                line.WriteBackAtUtc = null;
+                changed = true;
+            }
+            if (changed) await context.SaveChangesAsync(ct);
+            logger.LogInformation("Xero site tracking set for {LineCount} line(s) of invoice {InvoiceId}{Skipped}.",
+                lines.Count, lines[0].XeroInvoiceId, result.AlreadyApproved ? " (already approved in Xero — skipped)" : "");
+            return;
+        }
+
+        await StampFailureAsync(lines, result.Error ?? "Xero rejected the tracking update.", ct);
     }
 
     private async Task<XeroWriteBackOutcome> WriteBackInvoiceAsync(string invoiceId, bool explicitRetry, CancellationToken ct)

@@ -53,6 +53,16 @@ public sealed class SetXeroAllocationHandler : ICommandHandler<SetXeroAllocation
             && !XeroBuckets.All.Contains(command.Bucket ?? "", StringComparer.OrdinalIgnoreCase))
             throw new InvalidOperationException("Choose a bucket (Parking, Fuel, Software subscriptions or Other).");
 
+        if (command.Action == XeroAllocationAction.SetProject)
+        {
+            var projectExists = await context.Projects
+                .AnyAsync(project => project.ProjectId == command.ProjectId, cancellationToken);
+            if (!projectExists)
+                throw new InvalidOperationException("Choose a project to set.");
+            if (lines.Any(line => line.AllocationStatus != (int)XeroAllocationStatus.Unallocated))
+                throw new InvalidOperationException("Set applies to queued (unallocated) lines only.");
+        }
+
         // Whatever the action, the previous split rows no longer describe these lines.
         // Reconciled in place rather than delete-and-re-add: EF's identity map refuses a
         // new instance whose key matches a deleted-but-tracked row, and a re-cut split
@@ -138,6 +148,12 @@ public sealed class SetXeroAllocationHandler : ICommandHandler<SetXeroAllocation
                     line.AllocatedAtUtc = null;
                     line.Note = null;
                     break;
+                case XeroAllocationAction.SetProject:
+                    // The half-step: project decided, cost centre still pending. The
+                    // line stays Unallocated (queued under its project) and is not
+                    // stamped as allocated — Allocate does that when the centre lands.
+                    line.ProjectId = command.ProjectId;
+                    break;
             }
 
             // Work-order link slices only describe a whole line allocated to the order's
@@ -163,6 +179,12 @@ public sealed class SetXeroAllocationHandler : ICommandHandler<SetXeroAllocation
         if (command.Action == XeroAllocationAction.Allocate && lines.Count > 0)
             await writeBack.TryWriteBackAsync(
                 lines.Select(line => line.XeroInvoiceId).Distinct().ToList(), cancellationToken);
+
+        // A set project writes its Site tracking to Xero without approving — same
+        // best-effort contract: the saved project stands whatever Xero says.
+        if (command.Action == XeroAllocationAction.SetProject && lines.Count > 0)
+            await writeBack.TrySetSiteAsync(
+                lines.Select(line => line.XeroLedgerLineId).ToList(), cancellationToken);
 
         return lines.Count;
     }

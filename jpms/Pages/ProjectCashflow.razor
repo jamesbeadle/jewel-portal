@@ -64,10 +64,10 @@ else
             </div>
             <div class="rounded-xl border border-line bg-surface px-4 py-3">
                 <p class="text-[11px] uppercase tracking-wider text-content-subtle font-semibold"
-                   title="Retention withheld by the client on works complete — held less released. From the project's retention terms when set (see the Setup tab), else the latest claim on the Valuation Report. Earned but not invoiceable until released">Retention held</p>
-                <p class="text-lg font-semibold text-content">@Money(RetentionOutstanding)</p>
+                   title="Retention withheld by the client on works complete — held less confirmed releases, from the project's retention terms on the Setup tab. Earned but not invoiceable until released">Retention held</p>
                 @if (RetentionTerms is { } terms && Schedule is { } schedule)
                 {
+                    <p class="text-lg font-semibold text-content">@Money(schedule.Outstanding)</p>
                     <p class="text-xs text-content-subtle mt-0.5">
                         @Money(schedule.HeldToDate) held (@Pct(terms.RetentionPercent)) ·
                         @Money(schedule.ReleasedToDate) released
@@ -75,12 +75,10 @@ else
                     <p class="text-xs text-content-subtle mt-0.5">@ReleaseLine(schedule.CompletionRelease, $"{Pct(terms.CompletionReleasePercent)} at completion")</p>
                     <p class="text-xs text-content-subtle">@ReleaseLine(schedule.FinalRelease, $"balance after {terms.DefectsPeriodMonths} months")</p>
                 }
-                else if (ValuationFigures.RetentionHeld != 0m || ValuationFigures.RetentionReleased != 0m)
+                else
                 {
-                    <p class="text-xs text-content-subtle mt-0.5">
-                        @Money(ValuationFigures.RetentionHeld) held (@Pct(ValuationFigures.RetentionPercent)) ·
-                        @Money(ValuationFigures.RetentionReleased) released
-                    </p>
+                    <p class="text-lg font-semibold text-content-subtle">—</p>
+                    <p class="text-xs text-content-subtle mt-0.5">No retention terms — add them on the Setup tab.</p>
                 }
             </div>
             <div class="rounded-xl border border-line bg-surface px-4 py-3">
@@ -88,8 +86,7 @@ else
                    title="Contract sales value less funds in — everything not yet received, whether invoiced, retained or still to invoice">Left to come in</p>
                 <p class="text-lg font-semibold text-content">@Money(LeftToComeIn)</p>
                 <p class="text-xs text-content-subtle mt-0.5">
-                    of which @Money(invoiceSummary?.Outstanding ?? 0m) invoiced ·
-                    @Money(RetentionOutstanding) retention
+                    of which @Money(invoiceSummary?.Outstanding ?? 0m) invoiced@(RetentionTerms is null ? "" : $" · {Money(RetentionOutstanding)} retention")
                 </p>
             </div>
         </div>
@@ -137,11 +134,21 @@ else
                     <p class="text-[11px] uppercase tracking-wider text-content-subtle font-semibold"
                        title="Contract sales value less funds in">Still to come in from income</p>
                     <p class="text-xl font-semibold text-content">@Money(LeftToComeIn)</p>
-                    <p class="text-xs text-content-subtle mt-1">
-                        @Money(invoiceSummary?.Outstanding ?? 0m) invoiced &amp; awaiting payment ·
-                        @Money(RetentionOutstanding) retention held ·
-                        @Money(NotYetInvoicedIncome - RetentionOutstanding) works not yet invoiced
-                    </p>
+                    @if (RetentionTerms is not null)
+                    {
+                        <p class="text-xs text-content-subtle mt-1">
+                            @Money(invoiceSummary?.Outstanding ?? 0m) invoiced &amp; awaiting payment ·
+                            @Money(RetentionOutstanding) retention held ·
+                            @Money(NotYetInvoicedIncome - RetentionOutstanding) works not yet invoiced
+                        </p>
+                    }
+                    else
+                    {
+                        <p class="text-xs text-content-subtle mt-1">
+                            @Money(invoiceSummary?.Outstanding ?? 0m) invoiced &amp; awaiting payment ·
+                            @Money(NotYetInvoicedIncome) not yet invoiced
+                        </p>
+                    }
                 </div>
                 <div>
                     <p class="text-[11px] uppercase tracking-wider text-content-subtle font-semibold"
@@ -168,12 +175,12 @@ else
             Due to be paid out is the sum of those unpaid bills and the work-order value suppliers
             haven't billed yet — spend on top of work orders (non-WO cost of sales) appears here
             only once billed. Drawdown matches the Financials tab: target cost less work orders and
-            non-WO cost of sales. Retention comes from the project's retention terms (Setup tab)
-            when they're recorded — held to date is the retention % of works complete, with the
-            two releases forecast against the revised contract sum and their due dates anchored
-            to practical completion — otherwise from the latest claim on the Valuation Report.
-            Valuation invoices are raised net of retention, so retention held is money earned but
-            not invoiceable until it's released.
+            non-WO cost of sales. Retention shows only once the project's retention terms are
+            recorded on the Setup tab: held to date is the retention % of works complete, the two
+            releases are forecast against the revised contract sum with due dates anchored to
+            practical completion, and released counts confirmed releases only. Valuation invoices
+            are raised net of retention, so retention held is money earned but not invoiceable
+            until it's released.
         </p>
     </ProjectPageShell>
 }
@@ -208,15 +215,17 @@ else
         LatestClaim,
         invoiceSummary?.TotalInvoiced ?? 0m);
 
-    // ── Retention terms + schedule — the project's retention record (Setup tab) when one
-    // exists; the claim-based figure is the fallback for projects without terms recorded.
+    // ── Retention terms + schedule — the project's retention record (Setup tab). No record
+    // means no retention shows anywhere on this tab: a claim's retention/release percentages
+    // are a valuation-report concern (the "add back release" line in payment due), not
+    // evidence that money has actually been withheld or freed.
     private ProjectRetention? RetentionTerms => Retention.RetentionFor(ProjectId);
 
     private RetentionSchedule? Schedule => RetentionTerms is { } terms
         ? RetentionSchedule.For(terms, ValuationFigures.TotalWorksComplete, ValuationFigures.RevisedContractSum)
         : null;
 
-    private decimal RetentionOutstanding => Schedule?.Outstanding ?? ValuationFigures.RetentionOutstanding;
+    private decimal RetentionOutstanding => Schedule?.Outstanding ?? 0m;
 
     private static string ReleaseLine(RetentionScheduleLine line, string label) => line.IsConfirmed
         ? $"{label}: {Money(line.Amount)} released {line.ConfirmedAt?.ToString("d MMM yyyy")}"

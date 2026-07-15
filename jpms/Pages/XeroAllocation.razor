@@ -141,6 +141,10 @@ else
                     <button class="text-sm font-medium rounded-lg px-3 py-1.5 bg-content text-surface disabled:opacity-50"
                             disabled="@(isBusy || string.IsNullOrEmpty(bulkProjectId) || string.IsNullOrEmpty(bulkCostCenterCode))"
                             @onclick="BulkAllocateAsync">Allocate selected</button>
+                    <button class="text-sm font-medium rounded-lg px-3 py-1.5 border border-line text-content-muted hover:text-content disabled:opacity-50"
+                            title="Save the project and set its Xero site on every selected line — cost centres to follow"
+                            disabled="@(isBusy || string.IsNullOrEmpty(bulkProjectId) || !string.IsNullOrEmpty(bulkCostCenterCode))"
+                            @onclick="BulkSetProjectAsync">Set selected</button>
                     <span class="text-content-subtle">·</span>
                     <select class="bg-surface border border-line rounded-lg px-2 py-1.5 text-content text-sm" @bind="bulkBucket">
                         <option value="">Bucket…</option>
@@ -252,6 +256,11 @@ else
                                         <SearchSelect Options="@ProjectOptions" WidthClass="w-44"
                                                       Value="@SelectedProjectFor(line)"
                                                       ValueChanged="value => SetProject(line.XeroLedgerLineId, value)" />
+                                        @if (line.WriteBackStatus == XeroWriteBackStatus.Failed)
+                                        {
+                                            <span class="block w-44 truncate text-xs text-negative mt-0.5"
+                                                  title="@($"{line.WriteBackError} Press Set to retry.")">⚠ Xero write failed</span>
+                                        }
                                     </td>
                                     <td class="px-3 py-2.5">
                                         <SearchSelect Options="@CostCenterOptions" WidthClass="w-52"
@@ -276,6 +285,13 @@ else
                                         <button class="text-xs font-medium rounded-lg px-2.5 py-1 bg-content text-surface disabled:opacity-40"
                                                 disabled="@(isBusy || !CanAllocate(line) || CanBucket(line))"
                                                 @onclick="() => AllocateAsync(line)">Allocate</button>
+                                        @* The half-step: project known, cost centre not yet. Saves the
+                                           project (line stays queued under its tab) and writes the Xero
+                                           site without approving. Pressing it again is the Xero retry. *@
+                                        <button class="text-xs font-medium rounded-lg px-2.5 py-1 border border-line text-content-muted hover:text-content ml-2 disabled:opacity-40"
+                                                title="Save the project and set its Xero site now — cost centre to follow"
+                                                disabled="@(isBusy || !CanSetProject(line))"
+                                                @onclick="() => SetProjectAsync(line)">Set</button>
                                         <button class="text-xs text-content-subtle underline underline-offset-4 ml-2"
                                                 disabled="@isBusy"
                                                 @onclick="() => OpenSplit(line)">Split…</button>
@@ -471,6 +487,10 @@ else
                                     @onclick="AllocateFromViewAsync">
                                 @(isApplying ? "Allocating…" : "Allocate")
                             </button>
+                            <button class="text-xs font-medium rounded-lg px-2.5 py-1 border border-line text-content-muted hover:text-content disabled:opacity-40"
+                                    title="Save the project and set its Xero site now — cost centre to follow"
+                                    disabled="@(isBusy || !CanSetProject(docLine))"
+                                    @onclick="SetProjectFromViewAsync">Set</button>
                         </div>
                     }
 
@@ -721,6 +741,24 @@ else
     private async Task BulkAllocateAsync() =>
         await ApplyAsync(new SetXeroAllocation(selectedIds.ToList(), XeroAllocationAction.Allocate, bulkProjectId, bulkCostCenterCode));
 
+    // -- SetProject: the half-step (project saved + Xero site written, line stays queued) --
+
+    // Mirrors the Allocate arming rule: exactly a project, no cost centre, and no
+    // bucket choice competing for the row's intent.
+    private bool CanSetProject(XeroLedgerLine line) =>
+        !string.IsNullOrEmpty(SelectedProjectFor(line))
+        && string.IsNullOrEmpty(SelectedCostCenterFor(line))
+        && !CanBucket(line);
+
+    private async Task SetProjectAsync(XeroLedgerLine line) =>
+        await ApplyAsync(new SetXeroAllocation(
+            new[] { line.XeroLedgerLineId },
+            XeroAllocationAction.SetProject,
+            SelectedProjectFor(line)));
+
+    private async Task BulkSetProjectAsync() =>
+        await ApplyAsync(new SetXeroAllocation(selectedIds.ToList(), XeroAllocationAction.SetProject, bulkProjectId));
+
     private async Task BulkIgnoreAsync() =>
         await ApplyAsync(new SetXeroAllocation(selectedIds.ToList(), XeroAllocationAction.Ignore));
 
@@ -752,9 +790,11 @@ else
             : "bg-surface text-content-muted border-line hover:text-content")
         + " text-xs font-medium border rounded-full px-3 py-1 transition-colors";
 
+    // Mirrors the server's rule: a set (persisted) project counts as matched —
+    // it's a human decision and beats the suggestion — the centre must match.
     private int FullyMatchedCount =>
         Lines?.Count(line => line.AllocationStatus == XeroAllocationStatus.Unallocated
-                             && line.SuggestedProjectId is not null
+                             && (line.ProjectId ?? line.SuggestedProjectId) is not null
                              && line.SuggestedCostCenterCode is not null) ?? 0;
 
     private async Task AllocateMatchedAsync()
@@ -782,6 +822,9 @@ else
                 chosenCostCenter.Remove(id);
                 chosenBucket.Remove(id);
             }
+            // Dropping local picks can change lines' effective projects; the memoized
+            // grouping only watches this counter (and Lines) for that.
+            projectChoiceVersion++;
         }
         catch (CommandFailedException failure) { errorMessage = failure.Message; }
         finally { isApplying = false; }
@@ -944,6 +987,34 @@ else
             chosenProject.Remove(line.XeroLedgerLineId);
             chosenCostCenter.Remove(line.XeroLedgerLineId);
             chosenBucket.Remove(line.XeroLedgerLineId);
+            projectChoiceVersion++;
+            if (viewLine == line) CloseInvoiceView();
+        }
+        catch (CommandFailedException failure)
+        {
+            if (viewLine == line) viewError = failure.Message;
+        }
+        finally { isApplying = false; }
+    }
+
+    /// <summary>
+    /// The Set half-step from the document viewer: the reader identified the
+    /// site but not yet the cost centre. Saves the project (the line stays
+    /// queued under its project tab, Xero site written best-effort) and closes.
+    /// </summary>
+    private async Task SetProjectFromViewAsync()
+    {
+        if (viewLine is null || isBusy || !CanSetProject(viewLine)) return;
+        var line = viewLine;
+        isApplying = true; viewError = null;
+        try
+        {
+            await Ledger.ApplyAsync(new SetXeroAllocation(
+                new[] { line.XeroLedgerLineId },
+                XeroAllocationAction.SetProject,
+                SelectedProjectFor(line)));
+            chosenProject.Remove(line.XeroLedgerLineId);
+            projectChoiceVersion++;
             if (viewLine == line) CloseInvoiceView();
         }
         catch (CommandFailedException failure)
@@ -1013,9 +1084,13 @@ else
     // A value that isn't in the dropdown's options (e.g. a suggestion for a project or
     // code that no longer exists) counts as empty — otherwise the select renders blank
     // while the Allocate button believes a value is set.
+    // Priority: the user's local pick > the persisted project (a Set line stays
+    // queued with its project saved server-side) > the Xero-tracking suggestion.
     private string SelectedProjectFor(XeroLedgerLine line)
     {
-        var value = (chosenProject.TryGetValue(line.XeroLedgerLineId, out var chosen) ? chosen : line.SuggestedProjectId) ?? "";
+        var value = (chosenProject.TryGetValue(line.XeroLedgerLineId, out var chosen)
+            ? chosen
+            : line.ProjectId ?? line.SuggestedProjectId) ?? "";
         return ValidProjectIds.Contains(value) ? value : "";
     }
 

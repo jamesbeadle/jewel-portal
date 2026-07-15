@@ -21,7 +21,13 @@ namespace Jewel.JPMS.Contracts.Xero;
 
 public enum XeroAllocationStatus { Unallocated = 0, Allocated = 1, Ignored = 2, Bucketed = 3 }
 
-public enum XeroAllocationAction { Allocate = 0, Ignore = 1, Reset = 2, AllocateToBucket = 3 }
+/// <summary>
+/// SetProject is the half-step before Allocate: it persists the project on a
+/// line that STAYS Unallocated (so it sits in that project's queue awaiting a
+/// cost centre) and best-effort writes the project's Site tracking to Xero
+/// without approving the bill. The line leaves the queue only via Allocate.
+/// </summary>
+public enum XeroAllocationAction { Allocate = 0, Ignore = 1, Reset = 2, AllocateToBucket = 3, SetProject = 4 }
 
 /// <summary>
 /// Outcome of the last attempt to write an invoice's allocation back to Xero
@@ -158,8 +164,11 @@ public sealed record AllocateSuggestedXeroLines(string? AllocatedBy = null) : IC
 /// single line, never a batch). A split entry without a ProjectId falls back
 /// to the command's ProjectId. AllocateToBucket requires a Bucket from
 /// <see cref="XeroBuckets.All"/>; Ignore takes an optional Note (reason);
-/// Reset returns lines to Unallocated. AllocatedBy is stamped server-side from
-/// the signed-in user — any client-supplied value is ignored.
+/// Reset returns lines to Unallocated. SetProject requires ProjectId only and
+/// applies to Unallocated lines: the project is saved (line stays Unallocated,
+/// queued under that project) and its Xero Site tracking is written without
+/// approving the bill. AllocatedBy is stamped server-side from the signed-in
+/// user — any client-supplied value is ignored.
 /// </summary>
 public sealed record SetXeroAllocation(
     IReadOnlyList<string> XeroLedgerLineIds,

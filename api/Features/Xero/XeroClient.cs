@@ -37,6 +37,17 @@ public interface IXeroClient
     Task<XeroApprovalResult> ApproveInvoiceAsync(XeroApprovalRequest request, CancellationToken ct);
 
     /// <summary>
+    /// Writes the Sites tracking option onto specific line items of a draft (or
+    /// submitted) bill / credit note WITHOUT approving it — the SetProject
+    /// half-step, when a queued line's project is decided before its cost
+    /// centre. Untargeted lines pass through untouched; targeted lines keep any
+    /// other tracking (Xero's own cost code) they already carry. Returns
+    /// AlreadyApproved (a silent success) when the invoice was approved outside
+    /// JPMS — those keep flowing through allocation portal-side only.
+    /// </summary>
+    Task<XeroApprovalResult> SetSiteTrackingAsync(XeroSiteTrackingRequest request, CancellationToken ct);
+
+    /// <summary>
     /// Lists the attachments Xero holds for one invoice or credit note — the supplier's
     /// document(s), typically published by Dext. Requires the custom connection's
     /// accounting.attachments scope; throws <see cref="XeroCallFailedException"/> (message
@@ -66,6 +77,10 @@ public sealed class NullXeroClient : IXeroClient
         Task.FromResult(XeroTransactionsSnapshot.NotConfigured());
 
     public Task<XeroApprovalResult> ApproveInvoiceAsync(XeroApprovalRequest request, CancellationToken ct) =>
+        Task.FromResult(XeroApprovalResult.Failed(
+            "Xero isn't connected — add the Xero__ClientId / Xero__ClientSecret app settings."));
+
+    public Task<XeroApprovalResult> SetSiteTrackingAsync(XeroSiteTrackingRequest request, CancellationToken ct) =>
         Task.FromResult(XeroApprovalResult.Failed(
             "Xero isn't connected — add the Xero__ClientId / Xero__ClientSecret app settings."));
 
@@ -237,6 +252,124 @@ public sealed class XeroClient : IXeroClient
         {
             return XeroApprovalResult.Failed(failure.Message);
         }
+    }
+
+    // -- site-only tracking update (SetProject half-step, no approval) -----------------
+
+    public async Task<XeroApprovalResult> SetSiteTrackingAsync(XeroSiteTrackingRequest request, CancellationToken ct)
+    {
+        if (!_options.IsConfigured)
+            return XeroApprovalResult.Failed(
+                "Xero isn't connected — add the Xero__ClientId / Xero__ClientSecret app settings.");
+
+        try
+        {
+            var token = await GetAccessTokenAsync(ct);
+
+            var baseUrl = request.IsCreditNote ? CreditNotesUrl : InvoicesUrl;
+            var collection = request.IsCreditNote ? "CreditNotes" : "Invoices";
+            var idProperty = request.IsCreditNote ? "CreditNoteID" : "InvoiceID";
+
+            // Fresh read, same as approval: the update below replaces the whole line list.
+            using var doc = await GetJsonAsync(token, $"{baseUrl}/{request.InvoiceId}", collection.ToLowerInvariant(), ct);
+            if (!doc.RootElement.TryGetProperty(collection, out var items)
+                || items.ValueKind != JsonValueKind.Array || items.GetArrayLength() == 0)
+                return XeroApprovalResult.Failed("Xero returned no invoice for this id — it may have been deleted.");
+
+            var invoice = items[0];
+            var status = StringOf(invoice, "Status") ?? "UNKNOWN";
+            if (status.Equals("AUTHORISED", StringComparison.OrdinalIgnoreCase)
+                || status.Equals("PAID", StringComparison.OrdinalIgnoreCase))
+                return XeroApprovalResult.SkippedAlreadyApproved(status);
+            if (!status.Equals("DRAFT", StringComparison.OrdinalIgnoreCase)
+                && !status.Equals("SUBMITTED", StringComparison.OrdinalIgnoreCase))
+                return XeroApprovalResult.Failed(
+                    $"The invoice is {status} in Xero — tracking can only be updated on draft or submitted bills.");
+
+            var categories = await GetTrackingCategoriesAsync(token, ct);
+
+            var missingSites = request.Lines
+                .Select(line => line.SiteOption)
+                .Where(site => !categories.SiteOptions.Contains(site))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
+            if (missingSites.Count > 0)
+                return XeroApprovalResult.Failed(
+                    $"Xero's \"{_options.SiteTrackingCategory}\" tracking category has no option named "
+                    + string.Join(", ", missingSites.Select(site => $"\"{site}\""))
+                    + " — check the project's Xero site mapping against Xero's tracking options.");
+
+            // Rebuild the full line list: every line passes through as-is except the
+            // targets, whose Sites entry is replaced. No amount checks needed — nothing
+            // about the money changes, and no lines are split.
+            var sitesByLineId = request.Lines.ToDictionary(
+                line => line.LineItemId, line => line.SiteOption, StringComparer.OrdinalIgnoreCase);
+            var seenLineIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var lineItems = new JsonArray();
+            if (invoice.TryGetProperty("LineItems", out var originals) && originals.ValueKind == JsonValueKind.Array)
+            {
+                foreach (var line in originals.EnumerateArray())
+                {
+                    var lineItemId = StringOf(line, "LineItemID");
+                    if (lineItemId is not null && sitesByLineId.TryGetValue(lineItemId, out var siteOption))
+                    {
+                        seenLineIds.Add(lineItemId);
+                        var copy = CopyLine(line, keepLineItemId: true, keepTracking: false, includeTaxAmount: true);
+                        copy["Tracking"] = ReplaceSiteTracking(line, categories, siteOption);
+                        lineItems.Add(copy);
+                    }
+                    else
+                    {
+                        lineItems.Add(CopyLine(line, keepLineItemId: true, keepTracking: true, includeTaxAmount: true));
+                    }
+                }
+            }
+
+            var unmatched = sitesByLineId.Keys.Where(id => !seenLineIds.Contains(id)).ToList();
+            if (unmatched.Count > 0)
+                return XeroApprovalResult.Failed(
+                    "The bill's lines have changed in Xero since they were synced "
+                    + $"({unmatched.Count} line(s) no longer exist). Sync from Xero and try again.");
+
+            // No Status in the payload: the bill stays DRAFT/SUBMITTED — approval only
+            // ever happens through the full write-back once every line is allocated.
+            var payload = new JsonObject
+            {
+                [idProperty] = request.InvoiceId,
+                ["LineItems"] = lineItems
+            };
+            using var response = await SendJsonAsync(HttpMethod.Post, token,
+                $"{baseUrl}/{request.InvoiceId}", payload, "set site tracking", ct);
+
+            // The cached snapshot now holds stale tracking for this invoice.
+            _cachedSnapshot = null;
+            _cachedSnapshotAt = DateTimeOffset.MinValue;
+
+            return XeroApprovalResult.Ok(status);
+        }
+        catch (XeroCallFailedException failure)
+        {
+            return XeroApprovalResult.Failed(failure.Message);
+        }
+    }
+
+    /// <summary>
+    /// The target line's new tracking: the Sites entry replaced with <paramref name="siteOption"/>,
+    /// every other category (Xero's own Cost Code, anything else) carried over untouched.
+    /// </summary>
+    private static JsonArray ReplaceSiteTracking(JsonElement line, TrackingCategoryLookup categories, string siteOption)
+    {
+        var tracking = new JsonArray(
+            new JsonObject { ["TrackingCategoryID"] = categories.SiteCategoryId, ["Option"] = siteOption });
+        if (line.TryGetProperty("Tracking", out var existing) && existing.ValueKind == JsonValueKind.Array)
+            foreach (var entry in existing.EnumerateArray())
+            {
+                var categoryId = StringOf(entry, "TrackingCategoryID");
+                if (categoryId is not null
+                    && !categoryId.Equals(categories.SiteCategoryId, StringComparison.OrdinalIgnoreCase))
+                    tracking.Add(JsonNode.Parse(entry.GetRawText()));
+            }
+        return tracking;
     }
 
     // -- attachments: the supplier's document, viewed from the allocation page ---------

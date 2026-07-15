@@ -34,6 +34,20 @@ public sealed record XeroApprovalLineInstruction(
 public sealed record XeroApprovalShare(string SiteOption, string CostCenterCode, decimal Net);
 
 /// <summary>
+/// Everything the Xero client needs to stamp Sites tracking onto specific line
+/// items of one invoice WITHOUT approving it — the SetProject half-step, taken
+/// when a queued line's project is known before its cost centre. Only the named
+/// line items are touched; each keeps whatever other tracking it already has.
+/// </summary>
+public sealed record XeroSiteTrackingRequest(
+    string InvoiceId,
+    bool IsCreditNote,
+    IReadOnlyList<XeroSiteTrackingLine> Lines);
+
+/// <summary>Which Sites option to stamp on one Xero line item.</summary>
+public sealed record XeroSiteTrackingLine(string LineItemId, string SiteOption);
+
+/// <summary>
 /// What happened. AlreadyApproved is a success without any write — the
 /// invoice was approved in Xero outside JPMS between allocation and now.
 /// FreshStatus is the invoice status as Xero reported it during the attempt.
