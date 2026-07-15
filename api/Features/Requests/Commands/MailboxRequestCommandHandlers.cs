@@ -2,6 +2,7 @@ using Jewel.JPMS.Api.Cqrs;
 using Jewel.JPMS.Api.Data;
 using Jewel.JPMS.Api.Data.Entities;
 using Jewel.JPMS.Api.Features.MailboxIntake.Graph;
+using Jewel.JPMS.Api.Features.RecordLinks;
 using Jewel.JPMS.Contracts.Cqrs;
 using Jewel.JPMS.Contracts.RecordLinks;
 using Jewel.JPMS.Contracts.Requests;
@@ -30,15 +31,20 @@ public sealed class AssignMessageToRequestHandler : ICommandHandler<AssignMessag
 
 /// <summary>
 /// Create a brand-new request from a mailbox message (live-read model). Creates the request and tags
-/// the email to it. No document email is drafted here — drafts are only created when explicitly
-/// requested (PrepareRequestEmailDraft / PrepareRequestReplyDraft).
+/// the email to it — and, like the link-to-existing path, the tag is applied across the email's whole
+/// conversation (anchor verified, siblings best-effort via <see cref="RecordThreadTagger"/>) so the
+/// entire thread leaves the triage queue together, not just the one clicked message. This is also the
+/// path "Reply in thread" delegates to, so replying triages the whole thread as well. No document
+/// email is drafted here — drafts are only created when explicitly requested
+/// (PrepareRequestEmailDraft / PrepareRequestReplyDraft).
 /// </summary>
 public sealed class CreateRequestFromMessageHandler : ICommandHandler<CreateRequestFromMessage, Request>
 {
     private readonly JpmsContext context;
     private readonly IMailboxGraphClient graph;
-    public CreateRequestFromMessageHandler(JpmsContext context, IMailboxGraphClient graph)
-    { this.context = context; this.graph = graph; }
+    private readonly RecordThreadTagger threadTagger;
+    public CreateRequestFromMessageHandler(JpmsContext context, IMailboxGraphClient graph, RecordThreadTagger threadTagger)
+    { this.context = context; this.graph = graph; this.threadTagger = threadTagger; }
 
     public async Task<Request> HandleAsync(CreateRequestFromMessage command, CancellationToken cancellationToken)
     {
@@ -94,9 +100,12 @@ public sealed class CreateRequestFromMessageHandler : ICommandHandler<CreateRequ
         };
         // Tag the email to this new request first, verified by read-back; only persist the request
         // once the tag sticks, so we never create a request whose email is still sitting in the queue.
+        // The tag spans the whole conversation (siblings best-effort), matching the link-to-existing
+        // path — otherwise older messages and replies in the same thread would stay in triage.
         var tag = TriageCategories.ForRequest(
             RequestTags.Stem(await RequestTags.ProjectRefAsync(context, command.ProjectId, cancellationToken), command.ProjectId, request.TagReference));
-        var tagged = await graph.AssignAsync(command.MessageId, snapshot.InternetMessageId, tag, cancellationToken);
+        var tagged = await threadTagger.TagThreadAsync(
+            command.MessageId, snapshot.InternetMessageId, snapshot.ConversationId, tag, cancellationToken);
         if (!tagged)
             throw new InvalidOperationException("The email couldn't be tagged to the new request. Please try again.");
 

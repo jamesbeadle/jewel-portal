@@ -14,4 +14,19 @@ internal static class TodoRoles
             JpmsRoles.Director,
             JpmsRoles.ProjectManager,
             JpmsRoles.SiteManager);
+
+    // Who a to-do can be *assigned to*: internal office/management staff. Deliberately narrower
+    // than JpmsRoleSets.AllInternal — besides the external roles (Architect, Client,
+    // Subcontractor) it also excludes Foreman and SiteOperative, who work the site rather than
+    // the to-do list. Backs the assignee picker's ListTodoAssignees query.
+    public static readonly RoleSet AssignableAsTodoAssignee =
+        RoleSet.Of(
+            Role.Admin,
+            JpmsRoles.Director,
+            JpmsRoles.FinanceDirector,
+            JpmsRoles.ProjectManager,
+            JpmsRoles.Estimator,
+            JpmsRoles.SiteManager,
+            JpmsRoles.HealthAndSafetyLead,
+            JpmsRoles.OfficeComplianceCoordinator);
 }

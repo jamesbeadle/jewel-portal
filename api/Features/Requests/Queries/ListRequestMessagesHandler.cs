@@ -1,5 +1,6 @@
 using Jewel.JPMS.Api.Cqrs;
 using Jewel.JPMS.Api.Data;
+using Jewel.JPMS.Api.Features.MailboxIntake;
 using Jewel.JPMS.Api.Features.MailboxIntake.Graph;
 using Jewel.JPMS.Api.Features.RecordLinks;
 using Jewel.JPMS.Contracts.Requests;
@@ -13,8 +14,10 @@ public sealed class ListRequestMessagesHandler : IQueryHandler<ListRequestMessag
     private readonly JpmsContext context;
     private readonly RequestEmailReader emails;
     private readonly RecordThreadTagger threadTagger;
-    public ListRequestMessagesHandler(JpmsContext context, RequestEmailReader emails, RecordThreadTagger threadTagger)
-    { this.context = context; this.emails = emails; this.threadTagger = threadTagger; }
+    private readonly MailboxIntakeOptions mailboxOptions;
+    public ListRequestMessagesHandler(
+        JpmsContext context, RequestEmailReader emails, RecordThreadTagger threadTagger, MailboxIntakeOptions mailboxOptions)
+    { this.context = context; this.emails = emails; this.threadTagger = threadTagger; this.mailboxOptions = mailboxOptions; }
 
     public async Task<IReadOnlyList<RequestMessage>> HandleAsync(ListRequestMessages query, CancellationToken cancellationToken)
     {
@@ -29,8 +32,9 @@ public sealed class ListRequestMessagesHandler : IQueryHandler<ListRequestMessag
             catch { /* best-effort: never fail the conversation view on a tagging hiccup */ }
         }
 
-        // Stored rows are the request's own in-app activity (notes, outbound sends). The inbound email
-        // leg is no longer stored — it's read live by tag — so exclude any stored Inbound rows (legacy
+        // Stored rows are the request's own in-app activity (notes, drafted-document audit lines).
+        // The email legs — inbound AND the mailbox's own sent replies (read from Sent Items) — are
+        // no longer stored; they're read live by tag, so exclude any stored Inbound rows (legacy
         // snapshots) and merge the live emails in their place, ordered by time.
         var stored = await context.RequestMessages
             .Where(m => m.RequestId == query.RequestId && m.Direction != (int)MessageDirection.Inbound)
@@ -39,7 +43,7 @@ public sealed class ListRequestMessagesHandler : IQueryHandler<ListRequestMessag
         var live = await emails.ForRequestAsync(query.RequestId, cancellationToken);
 
         return stored.Select(e => e.ToModel())
-            .Concat(live.Select(e => e.ToInboundMessage(query.RequestId)))
+            .Concat(live.Select(e => e.ToConversationMessage(query.RequestId, mailboxOptions.Mailbox)))
             .OrderBy(m => m.PostedAt)
             .ToList()
             .AsReadOnly();

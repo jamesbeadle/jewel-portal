@@ -19,6 +19,9 @@ public sealed class HttpTodoStore : ITodoStore
     public Task<IReadOnlyList<TodoItem>> ListForProjectAsync(string projectId, CancellationToken cancellationToken = default) =>
         queries.AskAsync(new ListTodoItemsForProject(projectId), cancellationToken);
 
+    public Task<IReadOnlyList<DirectoryUser>> ListAssigneesAsync(CancellationToken cancellationToken = default) =>
+        queries.AskAsync(new ListTodoAssignees(), cancellationToken);
+
     public Task<TodoItem> AddAsync(AddTodoItem command, CancellationToken cancellationToken = default) =>
         commands.SendAsync(command, cancellationToken);
 

@@ -10,8 +10,9 @@ namespace Jewel.JPMS.Api.Features.Requests.Commands;
 /// <summary>
 /// Triage "Reply in thread": the triager writes the reply in the portal, and this one command turns
 /// it into both halves of the triage. First it creates a General request from the email (delegating
-/// to the same handler as "Create new → Request", so the email is tagged to the new request first,
-/// verified, and the request is auto-numbered REQ-####) whose description carries the written reply
+/// to the same handler as "Create new → Request", so the email — and its whole conversation, so the
+/// entire thread leaves the queue — is tagged to the new request first, the anchor verified, and the
+/// request is auto-numbered REQ-####) whose description carries the written reply
 /// ("Replied to email in thread with: …"). Then it stages that reply as an Outlook draft on the
 /// email in the projects mailbox: Graph's createReplyAll keeps the draft in the original
 /// conversation — "RE:" subject, thread headers, quoted history, original recipients — the written

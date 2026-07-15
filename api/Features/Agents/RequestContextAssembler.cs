@@ -1,5 +1,6 @@
 using System.Text;
 using Jewel.JPMS.Api.Data;
+using Jewel.JPMS.Api.Features.MailboxIntake;
 using Jewel.JPMS.Api.Features.Requests;
 using Jewel.JPMS.Models;
 using Microsoft.EntityFrameworkCore;
@@ -16,9 +17,10 @@ public sealed class RequestContextAssembler
 {
     private readonly JpmsContext context;
     private readonly RequestEmailReader emails;
+    private readonly MailboxIntakeOptions mailboxOptions;
 
-    public RequestContextAssembler(JpmsContext context, RequestEmailReader emails)
-    { this.context = context; this.emails = emails; }
+    public RequestContextAssembler(JpmsContext context, RequestEmailReader emails, MailboxIntakeOptions mailboxOptions)
+    { this.context = context; this.emails = emails; this.mailboxOptions = mailboxOptions; }
 
     public async Task<RequestAgentContext?> AssembleAsync(string requestId, CancellationToken cancellationToken)
     {
@@ -61,9 +63,10 @@ public sealed class RequestContextAssembler
 
     private async Task<string> BuildConversationAsync(string requestId, CancellationToken cancellationToken)
     {
-        // In-app activity (notes, outbound sends) from SQL, plus the emails tagged to this request read
-        // live by tag — merged and ordered by time. Legacy stored Inbound rows are excluded; the email
-        // leg now comes from the mailbox, not a stored copy.
+        // In-app activity (notes, drafted-document audit lines) from SQL, plus the emails tagged to
+        // this request read live by tag — inbound and the mailbox's own sent replies alike — merged
+        // and ordered by time. Legacy stored Inbound rows are excluded; the email legs now come from
+        // the mailbox, not a stored copy.
         var stored = await context.RequestMessages
             .Where(m => m.RequestId == requestId && m.Direction != (int)MessageDirection.Inbound)
             .ToListAsync(cancellationToken);
@@ -71,7 +74,7 @@ public sealed class RequestContextAssembler
         var live = await emails.ForRequestAsync(requestId, cancellationToken);
 
         var messages = stored.Select(m => m.ToModel())
-            .Concat(live.Select(e => e.ToInboundMessage(requestId)))
+            .Concat(live.Select(e => e.ToConversationMessage(requestId, mailboxOptions.Mailbox)))
             .OrderBy(m => m.PostedAt)
             .ToList();
 

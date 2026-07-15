@@ -258,6 +258,10 @@ public sealed class GraphMailClient : IGraphMailClient
             messageBody["ccRecipients"] = cc.Select(Recipient).ToArray();
         if (message.Bcc is { Count: > 0 } bcc)
             messageBody["bccRecipients"] = bcc.Select(Recipient).ToArray();
+        // Workflow categories ride on the draft and survive the send, keeping the sent copy — and,
+        // via the thread sweep, its replies — associated with the record that drafted it.
+        if (message.Categories is { Count: > 0 } categories)
+            messageBody["categories"] = categories.ToArray();
 
         using var response = await SendAsync(HttpMethod.Post, url, JsonContent.Create(messageBody), ct);
         await using var stream = await response.Content.ReadAsStreamAsync(ct);

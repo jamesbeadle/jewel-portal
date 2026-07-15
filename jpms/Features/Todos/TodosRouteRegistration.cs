@@ -16,6 +16,9 @@ public static class TodosRouteRegistration
             new QueryRoute("/api/projects/{projectId}/todos",
                 query => $"/api/projects/{((ListTodoItemsForProject)query).ProjectId}/todos"));
 
+        queries.Register<ListTodoAssignees, IReadOnlyList<DirectoryUser>>(
+            QueryRoute.Static("/api/todo-assignees"));
+
         commands.Register<AddTodoItem, TodoItem>(
             new CommandRoute("POST", "/api/projects/{projectId}/todos",
                 command => $"/api/projects/{((AddTodoItem)command).ProjectId}/todos"));

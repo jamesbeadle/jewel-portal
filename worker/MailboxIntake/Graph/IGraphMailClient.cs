@@ -111,7 +111,9 @@ public sealed record GraphAttachment(string FileName, string ContentType, byte[]
 /// Supports one or more recipients, optional open and
 /// blind copies (the correspondence profile's Cc/Bcc), and zero or more attachments (e.g. the
 /// request-document PDF). Bcc is carried on the wire only — nothing rendered or recorded on a
-/// client-facing surface may be derived from it.
+/// client-facing surface may be derived from it. Categories (the JPMS workflow tags) survive the
+/// send, so the Sent Items copy stays associated with its record — and, because it opens a brand-new
+/// conversation, replies to it inherit the tag through the thread sweep without any manual triage.
 /// </summary>
 public sealed record GraphOutboundMessage(
     IReadOnlyList<GraphRecipient> To,
@@ -119,7 +121,8 @@ public sealed record GraphOutboundMessage(
     string HtmlBody,
     IReadOnlyList<GraphAttachment>? Attachments = null,
     IReadOnlyList<GraphRecipient>? Cc = null,
-    IReadOnlyList<GraphRecipient>? Bcc = null)
+    IReadOnlyList<GraphRecipient>? Bcc = null,
+    IReadOnlyList<string>? Categories = null)
 {
     /// <summary>Convenience constructor for a single recipient with no attachments.</summary>
     public GraphOutboundMessage(string toEmail, string? toName, string subject, string htmlBody)

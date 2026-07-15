@@ -13,6 +13,7 @@ public static class TodosFeatureRegistration
     public static IServiceCollection AddTodosFeature(this IServiceCollection services)
     {
         services.AddScoped<IQueryHandler<ListTodoItemsForProject, IReadOnlyList<TodoItem>>, ListTodoItemsForProjectHandler>();
+        services.AddScoped<IQueryHandler<ListTodoAssignees, IReadOnlyList<DirectoryUser>>, ListTodoAssigneesHandler>();
 
         services.AddScoped<ICommandHandler<AddTodoItem, TodoItem>, AddTodoItemHandler>();
         services.AddScoped<AddTodoItemAuthorisation>();

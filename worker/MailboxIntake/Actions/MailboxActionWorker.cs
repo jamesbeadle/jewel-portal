@@ -118,13 +118,19 @@ public sealed class MailboxActionWorker
 
         var pdf = RequestDocumentRenderer.Render(model);
         var attachment = new GraphAttachment(model.FileName, "application/pdf", pdf);
+
+        // The workflow tag rides on the draft and survives the send, so the Sent Items copy self-
+        // associates with the record — and because this document opens a brand-new conversation,
+        // replies to it inherit the tag through the thread sweep instead of waiting in triage.
+        var recordTag = TriageCategories.ForRecord(await RequestTags.StemAsync(_context, request, ct));
         var outbound = new GraphOutboundMessage(
             recipientSet.To.Select(AsGraph).ToArray(),
             model.EmailSubject,
             BuildCoverNote(model),
             new[] { attachment },
             Cc: recipientSet.Cc.Select(AsGraph).ToArray(),
-            Bcc: recipientSet.Bcc.Select(AsGraph).ToArray());
+            Bcc: recipientSet.Bcc.Select(AsGraph).ToArray(),
+            Categories: new[] { TriageCategories.Marker, recordTag });
 
         // HUMAN IN THE LOOP: the email is only ever placed in the mailbox's Drafts folder. A person
         // reviews it in Outlook and presses Send themselves — nothing is sent from code.

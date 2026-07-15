@@ -33,7 +33,9 @@
                                 <span class="inline-flex items-center rounded bg-surface-raised border border-line px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-content-muted">Shared</span>
                             }
                         </div>
-                        @if (message.Direction == MessageDirection.Inbound && !string.IsNullOrEmpty(message.MailboxId)
+                        @* A MailboxId marks a LIVE email leg (inbound, or the mailbox's own sent
+                           reply read from Sent Items) — both expand to their full body on demand. *@
+                        @if (!string.IsNullOrEmpty(message.MailboxId)
                              && expanded.Contains(message.MessageId))
                         {
                             @* Expanded email: the full body (incl. the quoted thread), fetched live on demand.
@@ -70,7 +72,7 @@
                         {
                             <p class="text-sm text-content whitespace-pre-wrap">@message.Body</p>
                         }
-                        @if (message.Direction == MessageDirection.Inbound && !string.IsNullOrEmpty(message.MailboxId))
+                        @if (!string.IsNullOrEmpty(message.MailboxId))
                         {
                             <div class="mt-1 flex flex-wrap items-center gap-3">
                                 <button type="button"

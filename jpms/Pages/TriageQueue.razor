@@ -7,6 +7,7 @@
 @inject SessionService Session
 @inject NavigationManager Nav
 @inject IIntakeQueue Intake
+@inject ITodoStore Todos
 @inject IRequestRegister RequestRegister
 @inject IDrawingStore DrawingStore
 @inject ICommandSender Commands
@@ -738,7 +739,11 @@ else
                                                     <FormField Label="Title" Value="@row.Title" OnChange="v => row.Title = v" Required="true" />
 
                                                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                                        <FormField Label="Assignee email" Value="@row.AssigneeEmail" OnChange="v => row.AssigneeEmail = v" />
+                                                        <div>
+                                                            <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Assignee</label>
+                                                            <SearchSelect Options="@todoAssigneeOptions" Value="@row.AssigneeEmail" ValueChanged="v => row.AssigneeEmail = v"
+                                                                          Placeholder="Unassigned" WidthClass="w-full" />
+                                                        </div>
                                                         <FormField Label="Due" Value="@row.Due" OnChange="v => row.Due = v" InputType="date" />
                                                     </div>
 
@@ -1289,6 +1294,11 @@ else
     }
     private List<TodoDraftRow> createTodoRows = new() { new TodoDraftRow() };
 
+    // The assignee picker's option pool: internal staff only (server-filtered by
+    // TodoRoles.AssignableAsTodoAssignee), fetched once when the page loads and shared by every
+    // to-do draft row. Assignment is picker-only; there is no free-text email entry.
+    private IReadOnlyList<SearchSelect.Option> todoAssigneeOptions = Array.Empty<SearchSelect.Option>();
+
     private string TodoRowCountLabel
     {
         get
@@ -1308,6 +1318,19 @@ else
 
     private void OnTodoNotesInput(TodoDraftRow row, ChangeEventArgs e) => row.Notes = e.Value?.ToString() ?? "";
 
+    private async Task LoadTodoAssigneesAsync()
+    {
+        // A failed load leaves the picker with no options rather than blocking triage — to-dos can
+        // still be created, they just go in unassigned.
+        try
+        {
+            todoAssigneeOptions = (await Todos.ListAssigneesAsync())
+                .Select(user => new SearchSelect.Option(user.Email, $"{user.DisplayName} — {user.Email}"))
+                .ToList();
+        }
+        catch { }
+    }
+
     protected override async Task OnInitializedAsync()
     {
         await Session.EnsureLoadedAsync();
@@ -1317,6 +1340,7 @@ else
         await Projects.RefreshAsync(CancellationToken.None);
         await LoadAsync();
         await LoadUnassignedAsync();
+        await LoadTodoAssigneesAsync();
         isLoaded = true;
     }
 
@@ -1540,7 +1564,7 @@ else
         createDescription = item.BodyPreview;
         createRaisedTo = createDrawingRef = createResponseDue = "";
         createTrade = "";
-        createTodoRows = new List<TodoDraftRow> { new() { Title = item.Subject } };
+        createTodoRows = new List<TodoDraftRow> { new() };
     }
 
     // jumpToLatest: clicking an email in the QUEUE list triages its thread from the newest member —

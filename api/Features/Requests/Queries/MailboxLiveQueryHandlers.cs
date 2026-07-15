@@ -1,20 +1,39 @@
 using Ganss.Xss;
 using Jewel.JPMS.Api.Cqrs;
 using Jewel.JPMS.Api.Features.MailboxIntake.Graph;
+using Jewel.JPMS.Api.Features.RecordLinks;
 using Jewel.JPMS.Contracts.Cqrs;
 using Jewel.JPMS.Contracts.Requests;
 using Jewel.JPMS.Models;
 
 namespace Jewel.JPMS.Api.Features.Requests.Queries;
 
-/// <summary>The triage queue, read live from the Inbox (messages not tagged triaged). No database.</summary>
+/// <summary>The triage queue, read live from the Inbox (messages not tagged triaged). No database.
+/// Before the page is returned it is swept: a queued email whose conversation already carries a
+/// record's tag (a reply to an already-triaged thread, or a thread whose sent copy was tagged)
+/// inherits that tag and is dropped from the page — replies to triaged threads never sit in triage
+/// waiting for a manual sync. The sweep is best-effort and cached, so a clean queue costs little.</summary>
 public sealed class ListInboxMessagesHandler : IQueryHandler<ListInboxMessages, MailboxPage>
 {
     private readonly IMailboxGraphClient graph;
-    public ListInboxMessagesHandler(IMailboxGraphClient graph) { this.graph = graph; }
+    private readonly RecordThreadTagger threadTagger;
+    public ListInboxMessagesHandler(IMailboxGraphClient graph, RecordThreadTagger threadTagger)
+    { this.graph = graph; this.threadTagger = threadTagger; }
 
-    public Task<MailboxPage> HandleAsync(ListInboxMessages query, CancellationToken cancellationToken) =>
-        graph.ListInboxAsync(query.Cursor, query.Take, cancellationToken);
+    public async Task<MailboxPage> HandleAsync(ListInboxMessages query, CancellationToken cancellationToken)
+    {
+        var page = await graph.ListInboxAsync(query.Cursor, query.Take, cancellationToken);
+
+        var swept = await threadTagger.SweepQueuePageAsync(page.Items, cancellationToken);
+        if (swept.Count == 0)
+            return page;
+
+        // Drop the swept conversations' messages locally rather than re-reading: the writes are
+        // verified, but the category-filtered list is eventually consistent and could briefly
+        // return them again. Total shrinks by the number dropped.
+        var remaining = page.Items.Where(m => !swept.Contains(m.ConversationId)).ToList();
+        return new MailboxPage(remaining, page.NextCursor, Math.Max(0, page.Total - (page.Items.Count - remaining.Count)));
+    }
 }
 
 /// <summary>The discarded pile, read live from the Inbox (messages tagged discarded).</summary>
@@ -39,9 +58,10 @@ public sealed class ListTaggedMessagesHandler : IQueryHandler<ListTaggedMessages
             : graph.ListTaggedAsync(query.Cursor, query.Take, cancellationToken);
 }
 
-/// <summary>An email's whole thread (every Inbox message sharing its Graph conversation id), read
-/// live and regardless of tags — backs the triage detail pane's thread panel, where later replies
-/// inform how the older messages should be triaged.</summary>
+/// <summary>An email's whole thread (every mailbox message sharing its Graph conversation id — the
+/// mailbox's own sent replies included, unsent drafts excluded), read live and regardless of tags —
+/// backs the triage detail pane's thread panel, where later replies inform how the older messages
+/// should be triaged.</summary>
 public sealed class ListConversationMessagesHandler : IQueryHandler<ListConversationMessages, MailboxPage>
 {
     private readonly IMailboxGraphClient graph;

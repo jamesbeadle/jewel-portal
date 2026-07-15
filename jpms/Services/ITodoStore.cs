@@ -9,6 +9,8 @@ namespace Jewel.JPMS.Services;
 public interface ITodoStore
 {
     Task<IReadOnlyList<TodoItem>> ListForProjectAsync(string projectId, CancellationToken cancellationToken = default);
+    /// <summary>The internal staff a to-do can be assigned to — feeds the assignee pickers.</summary>
+    Task<IReadOnlyList<DirectoryUser>> ListAssigneesAsync(CancellationToken cancellationToken = default);
     Task<TodoItem> AddAsync(AddTodoItem command, CancellationToken cancellationToken = default);
     Task<TodoItem> UpdateAsync(UpdateTodoItem command, CancellationToken cancellationToken = default);
     Task<Acknowledgement> DeleteAsync(string todoItemId, CancellationToken cancellationToken = default);

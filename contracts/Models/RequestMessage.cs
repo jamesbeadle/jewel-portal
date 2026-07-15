@@ -47,10 +47,11 @@ public sealed record RequestMessage(
     string? InReplyTo = null,
     string? ConversationId = null,
     MessageSentStatus SentStatus = MessageSentStatus.NotApplicable,
-    // The live Graph mailbox id of an Inbound message (null for in-app/outbound legs). Lets the
+    // The live Graph mailbox id of an email leg — an Inbound message, or the mailbox's own sent
+    // reply read live from Sent Items (null for in-app messages and stored audit rows). Lets the
     // conversation view fetch the email's FULL body + attachments on demand (the listed Body is only
     // Graph's short bodyPreview snippet, which truncates long emails and drops the quoted thread).
     string? MailboxId = null,
-    // The email's subject line (Inbound messages only; null for in-app messages). Lets pickers
+    // The email's subject line (live email legs only; null for in-app messages). Lets pickers
     // present a tagged email chain by the name its correspondents know it by.
     string? Subject = null);

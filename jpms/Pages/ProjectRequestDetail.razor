@@ -913,8 +913,10 @@ else
         try
         {
             taggedEmailsLoading = true;
+            // Any live email leg (MailboxId set) can anchor a reply — including the mailbox's own
+            // sent copy, where reply-all correctly re-addresses the original recipients.
             taggedEmails = (await RequestRegister.ListMessagesAsync(record.RequestId))
-                .Where(m => m.Direction == MessageDirection.Inbound && !string.IsNullOrEmpty(m.MailboxId))
+                .Where(m => !string.IsNullOrEmpty(m.MailboxId))
                 .OrderByDescending(m => m.PostedAt)
                 .ToList();
         }

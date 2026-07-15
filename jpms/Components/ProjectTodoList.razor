@@ -102,7 +102,11 @@
         <FormField Label="Title" Value="@newTitle" OnChange="v => newTitle = v" Required="true" />
 
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <FormField Label="Assignee email" Value="@newAssignee" OnChange="v => newAssignee = v" />
+            <div>
+                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Assignee</label>
+                <SearchSelect Options="@AssigneeOptions" Value="@newAssignee" ValueChanged="v => newAssignee = v"
+                              Placeholder="Unassigned" WidthClass="w-full" />
+            </div>
             <FormField Label="Due" Value="@newDue" OnChange="v => newDue = v" InputType="date" />
         </div>
 
@@ -117,6 +121,11 @@
     [Parameter, EditorRequired] public string ProjectId { get; set; } = "";
 
     private IReadOnlyList<TodoItem> items = Array.Empty<TodoItem>();
+
+    // The assignee picker's option pool: internal staff only, fetched once when the tab loads.
+    // The server filters by role (TodoRoles.AssignableAsTodoAssignee) — external and site-floor
+    // users never appear. Assignment is picker-only; there is no free-text email entry.
+    private IReadOnlyList<SearchSelect.Option> AssigneeOptions = Array.Empty<SearchSelect.Option>();
     private bool loading = true;
     private bool busy;
     private string? error;
@@ -135,7 +144,24 @@
     private bool CanManage =>
         Session.AvailableRoles.Any(role => role is Role.Admin or Role.ManagingDirector or Role.ProjectManager or Role.SiteManager);
 
-    protected override async Task OnInitializedAsync() => await LoadAsync();
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadAsync();
+        if (CanManage) await LoadAssigneesAsync();
+    }
+
+    private async Task LoadAssigneesAsync()
+    {
+        // A failed load leaves the picker with no options rather than blocking the tab — the add
+        // modal still works, the item just goes in unassigned.
+        try
+        {
+            AssigneeOptions = (await Todos.ListAssigneesAsync())
+                .Select(user => new SearchSelect.Option(user.Email, $"{user.DisplayName} — {user.Email}"))
+                .ToList();
+        }
+        catch { }
+    }
 
     private async Task LoadAsync()
     {

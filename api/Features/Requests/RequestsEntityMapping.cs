@@ -69,23 +69,32 @@ internal static class RequestsEntityMapping
         ConversationId: entity.ConversationId,
         SentStatus: (MessageSentStatus)entity.SentStatus);
 
-    // A mailbox email read live by tag, presented as the inbound, Shared leg of a request's
-    // conversation. The body is the preview text (parity with the old snapshot); full bodies are
-    // fetched on demand elsewhere. Never persisted — built fresh on every read.
-    public static RequestMessage ToInboundMessage(this MailboxMessage e, string requestId) => new(
-        MessageId: string.IsNullOrEmpty(e.InternetMessageId) ? e.Id : e.InternetMessageId,
-        RequestId: requestId,
-        AuthorEmail: e.FromEmail,
-        AuthorName: string.IsNullOrWhiteSpace(e.FromName) ? e.FromEmail : e.FromName,
-        Body: string.IsNullOrWhiteSpace(e.BodyPreview) ? "(no message body)" : e.BodyPreview,
-        Visibility: MessageVisibility.Shared,
-        PostedAt: e.ReceivedAt,
-        Direction: MessageDirection.Inbound,
-        EmailMessageId: e.InternetMessageId,
-        InReplyTo: null,
-        ConversationId: null,
-        SentStatus: MessageSentStatus.NotApplicable,
-        // Carried so the conversation view can expand the email to its full body on demand.
-        MailboxId: e.Id,
-        Subject: e.Subject);
+    // A mailbox email read live by tag, presented as one Shared leg of a request's conversation:
+    // inbound when a correspondent sent it, outbound when the project mailbox itself did (sent
+    // copies live in Sent Items — a sent message never arrives back in the Inbox, which is why the
+    // mailbox-wide read exists at all). The body is the preview text (parity with the old
+    // snapshot); full bodies are fetched on demand elsewhere. Never persisted — built fresh on
+    // every read.
+    public static RequestMessage ToConversationMessage(this MailboxMessage e, string requestId, string? mailboxAddress = null)
+    {
+        var outbound = !string.IsNullOrWhiteSpace(mailboxAddress)
+            && string.Equals(e.FromEmail, mailboxAddress, StringComparison.OrdinalIgnoreCase);
+        return new(
+            MessageId: string.IsNullOrEmpty(e.InternetMessageId) ? e.Id : e.InternetMessageId,
+            RequestId: requestId,
+            AuthorEmail: e.FromEmail,
+            AuthorName: string.IsNullOrWhiteSpace(e.FromName) ? e.FromEmail : e.FromName,
+            Body: string.IsNullOrWhiteSpace(e.BodyPreview) ? "(no message body)" : e.BodyPreview,
+            Visibility: MessageVisibility.Shared,
+            PostedAt: e.ReceivedAt,
+            Direction: outbound ? MessageDirection.Outbound : MessageDirection.Inbound,
+            EmailMessageId: e.InternetMessageId,
+            InReplyTo: null,
+            ConversationId: null,
+            // A live outbound copy exists in Sent Items, so it has demonstrably been sent.
+            SentStatus: outbound ? MessageSentStatus.Sent : MessageSentStatus.NotApplicable,
+            // Carried so the conversation view can expand the email to its full body on demand.
+            MailboxId: e.Id,
+            Subject: e.Subject);
+    }
 }
