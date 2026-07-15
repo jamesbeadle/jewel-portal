@@ -6,13 +6,13 @@ namespace Jewel.JPMS.Api.Features.Procurement;
 internal static class ProcurementEntityMapping
 {
     public static BidPackage ToModel(this BidPackageEntity entity) =>
-        new(entity.BidPackageId, entity.ProjectId, entity.Title, entity.Trade, (BidPackageStatus)entity.Status, entity.CreatedAt, entity.OwnerEmail, entity.VariationOrderQuoteId, entity.Number);
+        new(entity.BidPackageId, entity.ProjectId, entity.Title, entity.Trade, (BidPackageStatus)entity.Status, entity.CreatedAt, entity.OwnerEmail, entity.VariationOrderQuoteId, entity.Number, entity.MaterialsApplicable);
 
     public static BidPackageRecipient ToModel(this BidPackageRecipientEntity entity) =>
         new(entity.RecipientId, entity.BidPackageId, entity.SubcontractorId, (BidPackageRecipientStatus)entity.Status, entity.InvitedAt, entity.RespondedAt);
 
     public static BidPackageLineItem ToModel(this BidPackageLineItemEntity entity) =>
-        new(entity.LineItemId, entity.BidPackageId, entity.Description, entity.Unit, entity.Quantity, entity.Trade, entity.SortOrder,
+        new(entity.LineItemId, entity.BidPackageId, entity.Description, entity.Unit, entity.Quantity, entity.Trade, entity.CostCode, entity.SortOrder,
             (BidPackageLineCoverage)entity.Coverage, entity.BoqLineItemId, entity.VariationOrderQuoteId);
 
     public static Quote ToModel(this QuoteEntity entity) =>

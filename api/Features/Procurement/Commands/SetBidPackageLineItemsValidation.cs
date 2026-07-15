@@ -19,6 +19,10 @@ public sealed class SetBidPackageLineItemsValidation
             {
                 if (string.IsNullOrWhiteSpace(item.Description)) { errors.Add("Each line item needs a description."); break; }
             }
+            foreach (var item in command.LineItems)
+            {
+                if (string.IsNullOrWhiteSpace(item.CostCode)) { errors.Add("Each line item needs a cost code."); break; }
+            }
         }
         if (errors.Count == 0) return ValidationOutcome.Passed;
         return new ValidationOutcome(errors);

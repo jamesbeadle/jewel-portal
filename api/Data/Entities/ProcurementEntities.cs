@@ -19,6 +19,10 @@ public sealed class BidPackageEntity
     // tagged on the package's emails so RFT responses group under it in the Bid Package Invites section.
     public int Number { get; set; }
 
+    // Materials matter to this scope: the tender invite asks each subcontractor to state whether
+    // they will supply their own materials or price labour-only.
+    public bool MaterialsApplicable { get; set; }
+
     // Canonical reference this package's emails are tagged with ("JPMS/BPI-0001"). Falls back to an
     // id-derived stem for legacy rows that predate numbering. Computed, not stored.
     [System.ComponentModel.DataAnnotations.Schema.NotMapped]
@@ -47,6 +51,11 @@ public sealed class BidPackageLineItemEntity
     [MaxLength(32)]      public string Unit { get; set; } = "";
     public decimal Quantity { get; set; }
     [MaxLength(64)]      public string Trade { get; set; } = "";
+
+    // Cost centre code in the current master list (CostCenterEntity.Code) — the cost-centre home the
+    // line's committed value lands on when the package is awarded. Required on every line saved since
+    // the rule landed; empty only on legacy rows that predate it.
+    [MaxLength(32)]      public string CostCode { get; set; } = "";
     public int SortOrder { get; set; }
 
     // Commercial home of this line — 0 Unassigned, 1 ContractLine, 2 Variation (BidPackageLineCoverage).

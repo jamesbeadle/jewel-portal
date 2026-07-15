@@ -42,8 +42,11 @@ public enum BidPackageLineCoverage
 
 // A priced line on a bid package — the scope items a subcontractor tenders against. Grouped in the UI
 // by Trade/speciality (e.g. electrician, plumber). Quantity + Unit describe the work; pricing is
-// captured per response, not here. Coverage links the line to exactly one commercial home: a contract
-// BoQ line (ContractLine + BoqLineItemId) or a Variation Order Quote (Variation + VariationOrderQuoteId).
+// captured per response, not here. CostCode is the cost centre (from the master list) the line's
+// committed value lands on — required for every line put out to tender, so the cost-centre home is
+// known before a work order is ever raised (empty only on legacy rows that predate the rule).
+// Coverage links the line to exactly one commercial home: a contract BoQ line (ContractLine +
+// BoqLineItemId) or a Variation Order Quote (Variation + VariationOrderQuoteId).
 public sealed record BidPackageLineItem(
     string LineItemId,
     string BidPackageId,
@@ -51,6 +54,7 @@ public sealed record BidPackageLineItem(
     string Unit,
     decimal Quantity,
     string Trade,
+    string CostCode,
     int SortOrder,
     BidPackageLineCoverage Coverage = BidPackageLineCoverage.Unassigned,
     string? BoqLineItemId = null,
@@ -65,7 +69,9 @@ public sealed record BidPackage(
     DateTimeOffset CreatedAt,
     string OwnerEmail,
     string? VariationOrderQuoteId = null,   // parent VOQ, when this package belongs to one
-    int Number = 0)                          // sequential; rendered BPI-0001 via Reference
+    int Number = 0,                          // sequential; rendered BPI-0001 via Reference
+    bool MaterialsApplicable = false)        // materials matter to this scope — the tender invite asks
+                                             // whether the subcontractor will supply their own
 {
     // Human, collision-safe reference and the stem tagged on the package's emails ("JPMS/BPI-0001"),
     // so RFT responses group under the package in the Bid Package Invites section. Blank until numbered.

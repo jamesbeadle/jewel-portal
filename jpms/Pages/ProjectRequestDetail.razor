@@ -2,8 +2,10 @@
 @using Jewel.JPMS.Contracts.Requests
 @using Jewel.JPMS.Contracts.Procurement
 @using Jewel.JPMS.Contracts.Variations
+@using Jewel.JPMS.Features.CostCenters
 @inject AuthService Auth
 @inject ICommandSender Commands
+@inject CostCentersReadModel CostCenters
 @inject SessionService Session
 @inject IRequestRegister RequestRegister
 @inject IClientStore ClientStore
@@ -747,7 +749,7 @@ else
                 {
                     <div>
                         <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Suggested scope lines</label>
-                        <p class="text-xs text-content-subtle mb-2">Ticked lines are added to a draft bid package (@DraftPackageTrade) under the VOQ, ready to send to subcontractors.</p>
+                        <p class="text-xs text-content-subtle mb-2">Ticked lines are added to a draft bid package (@DraftPackageTrade) under the VOQ, ready to send to subcontractors. Every ticked line needs a cost centre — that's the cost code its committed value lands on.</p>
                         <ul class="space-y-1.5">
                             @foreach (var (row, index) in draftVoqLines.Select((r, i) => (r, i)))
                             {
@@ -758,6 +760,17 @@ else
                                                @onchange="e => draftVoqLines[i] = draftVoqLines[i] with { Accepted = e.Value is true }" />
                                         <span>@row.Line.Description <span class="text-content-subtle">— @row.Line.Quantity @row.Line.Unit · @row.Line.Trade</span></span>
                                     </label>
+                                    @if (row.Accepted)
+                                    {
+                                        <select class="field mt-1 ml-6 min-w-[14rem] text-sm" value="@row.CostCode"
+                                                @onchange="e => draftVoqLines[i] = draftVoqLines[i] with { CostCode = e.Value?.ToString() ?? string.Empty }">
+                                            <option value="">Cost centre…</option>
+                                            @foreach (var centre in CostCenters.Alphabetical)
+                                            {
+                                                <option value="@centre.Code">@($"{centre.Code} — {centre.Name}")</option>
+                                            }
+                                        </select>
+                                    }
                                 </li>
                             }
                         </ul>
@@ -1128,7 +1141,7 @@ else
     private string draftVoqValue = "";
     private List<DraftLineRow> draftVoqLines = new();
 
-    private sealed record DraftLineRow(VoqDraftLine Line, bool Accepted);
+    private sealed record DraftLineRow(VoqDraftLine Line, bool Accepted, string CostCode = "");
 
     // The trade for the draft bid package: the first accepted line's, else the model's suggestion.
     private string DraftPackageTrade
@@ -1153,6 +1166,9 @@ else
         draftVoqDescription = record.Description;
         draftVoqValue = "";
         draftVoqLines = new();
+
+        // Cost centres feed the scope lines' cost-code selects — best-effort background refresh.
+        try { _ = CostCenters.RefreshAsync(CancellationToken.None); } catch { }
 
         try
         {
@@ -1202,21 +1218,29 @@ else
             estimatedValue = parsedValue;
         }
 
+        // Accepted scope lines become the VOQ's first (draft) bid package — every line put out to
+        // tender must know its cost-centre home, so a ticked line without a code blocks the create.
+        var acceptedRows = draftVoqLines.Where(row => row.Accepted).ToList();
+        if (acceptedRows.Any(row => string.IsNullOrWhiteSpace(row.CostCode)))
+        {
+            voqDraftError = "Every ticked scope line needs a cost code — pick a cost centre for each, or untick it.";
+            return;
+        }
+
         try
         {
             busy = true;
             voq = await Variations.CreateFromRfqAsync(
                 record.RequestId, draftVoqTitle.Trim(), draftVoqDescription.Trim(), estimatedValue);
 
-            // Accepted scope lines become the VOQ's first (draft) bid package, ready to invite.
-            var accepted = draftVoqLines.Where(row => row.Accepted).Select(row => row.Line).ToList();
-            if (accepted.Count > 0)
+            if (acceptedRows.Count > 0)
             {
                 var package = await Variations.AddBidPackageAsync(voq.VariationOrderQuoteId, voq.Title, DraftPackageTrade);
-                var inputs = accepted
-                    .Select(line => new BidPackageLineItemInput(
-                        line.Description, line.Unit, line.Quantity,
-                        string.IsNullOrWhiteSpace(line.Trade) ? DraftPackageTrade : line.Trade))
+                var inputs = acceptedRows
+                    .Select(row => new BidPackageLineItemInput(
+                        row.Line.Description, row.Line.Unit, row.Line.Quantity,
+                        string.IsNullOrWhiteSpace(row.Line.Trade) ? DraftPackageTrade : row.Line.Trade,
+                        row.CostCode.Trim()))
                     .ToList();
                 await Commands.SendAsync(new AddBidPackageLineItems(package.BidPackageId, inputs), CancellationToken.None);
             }

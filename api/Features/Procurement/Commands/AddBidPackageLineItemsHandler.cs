@@ -19,6 +19,10 @@ public sealed class AddBidPackageLineItemsHandler
 
     public async Task<IReadOnlyList<BidPackageLineItem>> HandleAsync(AddBidPackageLineItems command, CancellationToken cancellationToken)
     {
+        // Every line must land on a centre in the master list (same rule as manual work orders) —
+        // a line put out to tender already knows the cost-centre home its committed value takes.
+        await context.EnsureCostCodesInMasterAsync(command.LineItems.Select(input => input.CostCode), cancellationToken);
+
         var maxSortOrder = await context.BidPackageLineItems
             .Where(item => item.BidPackageId == command.BidPackageId)
             .Select(item => (int?)item.SortOrder)
@@ -35,6 +39,7 @@ public sealed class AddBidPackageLineItemsHandler
                 Unit = input.Unit,
                 Quantity = input.Quantity,
                 Trade = input.Trade,
+                CostCode = input.CostCode.Trim(),
                 SortOrder = order++
             });
         }

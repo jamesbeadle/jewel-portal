@@ -21,6 +21,7 @@ public sealed class UpdateBidPackageScopeHandler
         entity.Trade = command.Trade;
         entity.Status = (int)command.Status;
         entity.OwnerEmail = command.OwnerEmail;
+        entity.MaterialsApplicable = command.MaterialsApplicable;
         await context.SaveChangesAsync(cancellationToken);
         return entity.ToModel();
     }

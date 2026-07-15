@@ -5,10 +5,12 @@
 @using Jewel.JPMS.Contracts.Drawings
 @using Jewel.JPMS.Contracts.Variations
 @using Jewel.JPMS.Cqrs
+@using Jewel.JPMS.Features.CostCenters
 @inject AuthService Auth
 @inject SessionService Session
 @inject IQueryClient Queries
 @inject ICommandSender Commands
+@inject CostCentersReadModel CostCenters
 @inject ISubcontractorStore Subs
 @inject IRequestRegister RequestRegister
 @inject Jewel.JPMS.Features.Subcontractors.SubcontractorsReadModel SubsReadModel
@@ -54,6 +56,19 @@ else
                         <span class="inline-flex items-center rounded-full bg-surface-raised border border-line px-2 py-0.5 text-[11px] font-medium text-content-muted">@package.Status</span>
                     </div>
                     <p class="text-sm text-content-muted">@package.Trade</p>
+                    @if (CanManage)
+                    {
+                        <label class="mt-1.5 flex items-center gap-2 text-xs text-content-muted cursor-pointer"
+                               title="When ticked, the tender-invite email asks each subcontractor to state whether they will supply their own materials or price labour-only.">
+                            <input type="checkbox" checked="@package.MaterialsApplicable" disabled="@busy"
+                                   @onchange="e => ToggleMaterialsApplicable(e.Value is true)" />
+                            Materials apply — ask tenderers whether they supply their own
+                        </label>
+                    }
+                    else if (package.MaterialsApplicable)
+                    {
+                        <p class="text-xs text-content-subtle mt-1.5">Materials apply — the invite asks tenderers whether they supply their own.</p>
+                    }
                 </div>
                 @if (CanManage)
                 {
@@ -178,6 +193,7 @@ else
                                     <th class="sticky top-0 z-20 bg-surface-raised px-3 py-2">Description</th>
                                     <th class="sticky top-0 z-20 bg-surface-raised px-3 py-2 hidden sm:table-cell">Unit</th>
                                     <th class="sticky top-0 z-20 bg-surface-raised px-3 py-2">Qty</th>
+                                    <th class="sticky top-0 z-20 bg-surface-raised px-3 py-2">Cost code</th>
                                     <th class="sticky top-0 z-20 bg-surface-raised px-3 py-2"></th>
                                 </tr>
                             </thead>
@@ -190,6 +206,15 @@ else
                                         <td class="px-3 py-2"><input class="field" @bind="draft.Description" placeholder="Description" /></td>
                                         <td class="px-3 py-2 hidden sm:table-cell"><input class="field" @bind="draft.Unit" placeholder="e.g. m²" /></td>
                                         <td class="px-3 py-2"><input class="field" type="number" step="any" @bind="draft.Quantity" /></td>
+                                        <td class="px-3 py-2">
+                                            <select class="field min-w-[14rem]" @bind="draft.CostCode">
+                                                <option value="">Cost centre…</option>
+                                                @foreach (var centre in CostCenters.Alphabetical)
+                                                {
+                                                    <option value="@centre.Code">@($"{centre.Code} — {centre.Name}")</option>
+                                                }
+                                            </select>
+                                        </td>
                                         <td class="px-3 py-2 text-right">
                                             <button type="button" class="text-xs text-content-muted hover:text-negative" @onclick="() => RemoveLine(draft)">Remove</button>
                                         </td>
@@ -221,6 +246,7 @@ else
                                             <th class="sticky top-0 z-20 bg-surface-raised px-4 py-2">Description</th>
                                             <th class="sticky top-0 z-20 bg-surface-raised px-4 py-2 hidden sm:table-cell">Unit</th>
                                             <th class="sticky top-0 z-20 bg-surface-raised px-4 py-2">Qty</th>
+                                            <th class="sticky top-0 z-20 bg-surface-raised px-4 py-2">Cost code</th>
                                             <th class="sticky top-0 z-20 bg-surface-raised px-4 py-2">Covered by</th>
                                             @if (CanManage)
                                             {
@@ -235,6 +261,17 @@ else
                                                 <td class="px-4 py-2 text-content">@item.Description</td>
                                                 <td class="px-4 py-2 text-content-muted hidden sm:table-cell">@item.Unit</td>
                                                 <td class="px-4 py-2 text-content-muted">@item.Quantity</td>
+                                                <td class="px-4 py-2">
+                                                    @if (string.IsNullOrWhiteSpace(item.CostCode))
+                                                    {
+                                                        <span class="inline-flex items-center rounded-full bg-amber-50 border border-amber-200 px-1.5 py-0.5 text-[10px] font-medium text-amber-800"
+                                                              title="This line predates the cost-code rule — edit the line items to set one.">No cost code</span>
+                                                    }
+                                                    else
+                                                    {
+                                                        <span class="text-content-muted" title="@CostCentreLabel(item.CostCode)">@item.CostCode</span>
+                                                    }
+                                                </td>
                                                 <td class="px-4 py-2">
                                                     @if (item.Coverage == BidPackageLineCoverage.Unassigned)
                                                     {
@@ -864,6 +901,7 @@ else
                         <th class="sticky top-0 z-20 bg-surface-raised px-3 py-2">Description</th>
                         <th class="sticky top-0 z-20 bg-surface-raised px-3 py-2 hidden sm:table-cell">Unit</th>
                         <th class="sticky top-0 z-20 bg-surface-raised px-3 py-2">Qty</th>
+                        <th class="sticky top-0 z-20 bg-surface-raised px-3 py-2">Cost code</th>
                         <th class="sticky top-0 z-20 bg-surface-raised px-3 py-2"></th>
                     </tr>
                 </thead>
@@ -885,6 +923,15 @@ else
                             </td>
                             <td class="px-3 py-2 hidden sm:table-cell"><input class="field w-16" @bind="draft.Unit" /></td>
                             <td class="px-3 py-2"><input class="field w-20" type="number" step="any" @bind="draft.Quantity" /></td>
+                            <td class="px-3 py-2">
+                                <select class="field min-w-[12rem]" @bind="draft.CostCode">
+                                    <option value="">Cost centre…</option>
+                                    @foreach (var centre in CostCenters.Alphabetical)
+                                    {
+                                        <option value="@centre.Code">@($"{centre.Code} — {centre.Name}")</option>
+                                    }
+                                </select>
+                            </td>
                             <td class="px-3 py-2 text-right">
                                 <button type="button" class="text-xs text-content-muted hover:text-negative" @onclick="() => aiDrafts.Remove(draft)">Remove</button>
                             </td>
@@ -930,7 +977,10 @@ else
             await Session.EnsureLoadedAsync();
             if (!Auth.IsSignedIn) { Nav.NavigateTo("/login", forceLoad: true); return; }
             Subs.OnChange += OnStoreChanged;
+            CostCenters.OnChanged += OnStoreChanged;
             try { _ = Subs.All(); } catch { /* directory load is best-effort */ }
+            // Cost centres feed the line-item cost-code selects — best-effort background refresh.
+            try { _ = CostCenters.RefreshAsync(CancellationToken.None); } catch { }
             await LoadAsync();
         }
         catch (Exception ex)
@@ -943,7 +993,11 @@ else
         }
     }
 
-    public void Dispose() => Subs.OnChange -= OnStoreChanged;
+    public void Dispose()
+    {
+        Subs.OnChange -= OnStoreChanged;
+        CostCenters.OnChanged -= OnStoreChanged;
+    }
 
     private void OnStoreChanged() => InvokeAsync(StateHasChanged);
 
@@ -1079,6 +1133,7 @@ else
         public string Description { get; set; } = "";
         public string Unit { get; set; } = "";
         public decimal Quantity { get; set; }
+        public string CostCode { get; set; } = "";
         public bool Include { get; set; } = true;
         public bool AlreadyOnPackage { get; set; }
     }
@@ -1154,12 +1209,18 @@ else
         error = null;
         try
         {
-            busy = true;
             var accepted = aiDrafts.Where(d => d.Include && !string.IsNullOrWhiteSpace(d.Description)).ToList();
             if (accepted.Count == 0) { showAiReviewModal = false; return; }
+            // Every line put out to tender must know its cost-centre home.
+            if (accepted.Any(d => string.IsNullOrWhiteSpace(d.CostCode)))
+            {
+                error = "Every accepted line needs a cost code — pick a cost centre for each ticked line before applying.";
+                return;
+            }
+            busy = true;
             var inputs = accepted
                 .Select(d => new BidPackageLineItemInput(
-                    d.Description.Trim(), (d.Unit ?? "").Trim(), d.Quantity, (d.Trade ?? "").Trim()))
+                    d.Description.Trim(), (d.Unit ?? "").Trim(), d.Quantity, (d.Trade ?? "").Trim(), d.CostCode.Trim()))
                 .ToList();
             lineItems = await Commands.SendAsync(new AddBidPackageLineItems(BidPackageId, inputs), CancellationToken.None);
             showAiReviewModal = false;
@@ -1540,6 +1601,8 @@ else
         }
         sb.AppendLine("<p><strong>Please include the following with your tender:</strong></p>");
         sb.AppendLine("<ul>");
+        if (package!.MaterialsApplicable)
+            sb.AppendLine("<li><strong>Materials</strong> — please state whether you will be supplying your own materials for this work. If your rates are supply-and-fit, itemise the materials included; if they are labour-only, state what you expect us to supply.</li>");
         sb.AppendLine("<li><strong>Deposit</strong> — our preference is not to pay a deposit upfront. If one is required for you to take on the work, please state the amount and terms in your tender.</li>");
         sb.AppendLine("<li><strong>Duration</strong> — how long the work will take.</li>");
         sb.AppendLine("<li><strong>Availability</strong> — if selected, when you would be able to start.</li>");
@@ -1700,6 +1763,31 @@ else
         public string Description { get; set; } = "";
         public string Unit { get; set; } = "";
         public decimal Quantity { get; set; }
+        public string CostCode { get; set; } = "";
+    }
+
+    // "00006-12 — Plastering" for a known code; the bare code when the master list hasn't loaded.
+    private string CostCentreLabel(string code)
+    {
+        var centre = CostCenters.Alphabetical.FirstOrDefault(c => string.Equals(c.Code, code, StringComparison.OrdinalIgnoreCase));
+        return centre is null ? code : $"{centre.Code} — {centre.Name}";
+    }
+
+    // Flip the package's materials flag: when on, the drafted tender invite asks each
+    // subcontractor to state whether they will supply their own materials or price labour-only.
+    private async Task ToggleMaterialsApplicable(bool applicable)
+    {
+        if (busy || package is null || !CanManage) return;
+        error = null;
+        try
+        {
+            busy = true;
+            package = await Commands.SendAsync(
+                new UpdateBidPackageScope(package.BidPackageId, package.Title, package.Trade, package.Status, package.OwnerEmail, applicable),
+                CancellationToken.None);
+        }
+        catch { error = "Couldn't update the materials setting. Please try again."; }
+        finally { busy = false; }
     }
 
     private bool editingLines;
@@ -1708,7 +1796,7 @@ else
     private void EditLines()
     {
         lineDrafts = lineItems
-            .Select(item => new LineDraft { Trade = item.Trade, Description = item.Description, Unit = item.Unit, Quantity = item.Quantity })
+            .Select(item => new LineDraft { Trade = item.Trade, Description = item.Description, Unit = item.Unit, Quantity = item.Quantity, CostCode = item.CostCode })
             .ToList();
         if (lineDrafts.Count == 0) lineDrafts.Add(new LineDraft());
         editingLines = true;
@@ -1730,14 +1818,23 @@ else
         error = null;
         try
         {
-            busy = true;
-            var inputs = lineDrafts
+            var kept = lineDrafts
                 .Where(draft => !string.IsNullOrWhiteSpace(draft.Description))
+                .ToList();
+            // Every line put out to tender must know its cost-centre home.
+            if (kept.Any(draft => string.IsNullOrWhiteSpace(draft.CostCode)))
+            {
+                error = "Every line item needs a cost code — pick a cost centre for each line before saving.";
+                return;
+            }
+            busy = true;
+            var inputs = kept
                 .Select(draft => new BidPackageLineItemInput(
                     draft.Description.Trim(),
                     (draft.Unit ?? "").Trim(),
                     draft.Quantity,
-                    (draft.Trade ?? "").Trim()))
+                    (draft.Trade ?? "").Trim(),
+                    draft.CostCode.Trim()))
                 .ToList();
             lineItems = await Commands.SendAsync(new SetBidPackageLineItems(BidPackageId, inputs), CancellationToken.None);
             editingLines = false;

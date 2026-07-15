@@ -17,6 +17,10 @@ public sealed class SetBidPackageLineItemsHandler
 
     public async Task<IReadOnlyList<BidPackageLineItem>> HandleAsync(SetBidPackageLineItems command, CancellationToken cancellationToken)
     {
+        // Every line must land on a centre in the master list (same rule as manual work orders) —
+        // a line put out to tender already knows the cost-centre home its committed value takes.
+        await context.EnsureCostCodesInMasterAsync(command.LineItems.Select(input => input.CostCode), cancellationToken);
+
         var existing = await context.BidPackageLineItems
             .Where(item => item.BidPackageId == command.BidPackageId)
             .ToListAsync(cancellationToken);
@@ -33,6 +37,7 @@ public sealed class SetBidPackageLineItemsHandler
                 Unit = input.Unit,
                 Quantity = input.Quantity,
                 Trade = input.Trade,
+                CostCode = input.CostCode.Trim(),
                 SortOrder = order++
             });
         }

@@ -8,4 +8,5 @@ public sealed record UpdateBidPackageScope(
     string Title,
     string Trade,
     BidPackageStatus Status,
-    string OwnerEmail) : ICommand<BidPackage>;
+    string OwnerEmail,
+    bool MaterialsApplicable = false) : ICommand<BidPackage>;

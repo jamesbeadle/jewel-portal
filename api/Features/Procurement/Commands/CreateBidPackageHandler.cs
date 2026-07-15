@@ -27,7 +27,8 @@ public sealed class CreateBidPackageHandler
             Status = (int)BidPackageStatus.Draft,
             CreatedAt = DateTimeOffset.UtcNow,
             OwnerEmail = command.OwnerEmail,
-            Number = nextNumber
+            Number = nextNumber,
+            MaterialsApplicable = command.MaterialsApplicable
         };
         context.BidPackages.Add(entity);
         await context.SaveChangesAsync(cancellationToken);

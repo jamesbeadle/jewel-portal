@@ -102,13 +102,13 @@ public sealed class HttpProcurementStore : IProcurementStore
 
     private async Task CreatePackageAsync(BidPackage package)
     {
-        await commands.SendAsync(new CreateBidPackage(package.ProjectId, package.Title, package.Trade, package.OwnerEmail), CancellationToken.None);
+        await commands.SendAsync(new CreateBidPackage(package.ProjectId, package.Title, package.Trade, package.OwnerEmail, package.MaterialsApplicable), CancellationToken.None);
         await packagesReadModel.RefreshAsync(package.ProjectId, CancellationToken.None);
     }
 
     private async Task UpdatePackageAsync(BidPackage package)
     {
-        await commands.SendAsync(new UpdateBidPackageScope(package.BidPackageId, package.Title, package.Trade, package.Status, package.OwnerEmail), CancellationToken.None);
+        await commands.SendAsync(new UpdateBidPackageScope(package.BidPackageId, package.Title, package.Trade, package.Status, package.OwnerEmail, package.MaterialsApplicable), CancellationToken.None);
         await packagesReadModel.RefreshAsync(package.ProjectId, CancellationToken.None);
     }
 
