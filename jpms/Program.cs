@@ -105,6 +105,7 @@ builder.Services.AddScoped<StoreChangeHub>();
 builder.Services.AddScoped<AuthService>();
 builder.Services.AddScoped<UserInviteService>();
 builder.Services.AddScoped<ActiveRoleStorage>();
+builder.Services.AddScoped<AllocationTabStorage>();
 builder.Services.AddScoped<SessionService>();
 
 var app = builder.Build();
