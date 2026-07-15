@@ -482,6 +482,42 @@ else
                         </span>
                     </div>
 
+                    @* Allocate without leaving the document: the reader identifies the
+                       site and cost centre from the invoice itself, so the controls live
+                       here too. Same state as the line's row — a pick made here shows on
+                       the row (and moves it between project tabs) if the modal is closed
+                       without allocating. *@
+                    @if (viewLine.AllocationStatus == XeroAllocationStatus.Unallocated)
+                    {
+                        var docLine = viewLine;
+                        <div class="rounded-lg border border-line bg-surface-raised px-4 py-3 flex items-center gap-2 flex-wrap">
+                            <span class="text-xs uppercase tracking-wider text-content-subtle font-semibold">Allocate</span>
+                            <select class="bg-surface border border-line rounded-lg px-2 py-1 text-content text-sm w-44"
+                                    value="@SelectedProjectFor(docLine)"
+                                    @onchange="e => SetProject(docLine.XeroLedgerLineId, e.Value?.ToString())">
+                                <option value="">Project…</option>
+                                @foreach (var project in Projects)
+                                {
+                                    <option value="@project.ProjectId">@project.Name</option>
+                                }
+                            </select>
+                            <select class="bg-surface border border-line rounded-lg px-2 py-1 text-content text-sm w-52"
+                                    value="@SelectedCostCenterFor(docLine)"
+                                    @onchange="e => SetCostCenter(docLine.XeroLedgerLineId, e.Value?.ToString())">
+                                <option value="">Cost centre…</option>
+                                @foreach (var centre in CostCenters.ActiveAlphabetical())
+                                {
+                                    <option value="@centre.Code">@centre.Code @centre.Name</option>
+                                }
+                            </select>
+                            <button class="text-xs font-medium rounded-lg px-2.5 py-1 bg-content text-surface disabled:opacity-40"
+                                    disabled="@(isBusy || !CanAllocate(docLine))"
+                                    @onclick="AllocateFromViewAsync">
+                                @(isApplying ? "Allocating…" : "Allocate")
+                            </button>
+                        </div>
+                    }
+
                     @if (viewError is not null)
                     {
                         <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@viewError</p>
@@ -929,6 +965,36 @@ else
         viewAttachments = null;
         viewSelected = null;
         viewError = null;
+    }
+
+    /// <summary>
+    /// Allocate straight from the document viewer. Success closes the modal
+    /// (back to the queue); failure surfaces the reason inside the modal —
+    /// the page-level error banner would sit invisibly behind it.
+    /// </summary>
+    private async Task AllocateFromViewAsync()
+    {
+        if (viewLine is null || isBusy || !CanAllocate(viewLine)) return;
+        var line = viewLine;
+        isApplying = true; viewError = null;
+        try
+        {
+            await Ledger.ApplyAsync(new SetXeroAllocation(
+                new[] { line.XeroLedgerLineId },
+                XeroAllocationAction.Allocate,
+                SelectedProjectFor(line),
+                SelectedCostCenterFor(line)));
+            selectedIds.Remove(line.XeroLedgerLineId);
+            chosenProject.Remove(line.XeroLedgerLineId);
+            chosenCostCenter.Remove(line.XeroLedgerLineId);
+            chosenBucket.Remove(line.XeroLedgerLineId);
+            if (viewLine == line) CloseInvoiceView();
+        }
+        catch (CommandFailedException failure)
+        {
+            if (viewLine == line) viewError = failure.Message;
+        }
+        finally { isApplying = false; }
     }
 
     // Same previewable set as the triage and drawing viewers: browsers render PDFs
