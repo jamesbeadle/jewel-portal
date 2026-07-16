@@ -51,7 +51,9 @@ else
                     }
                     else
                     {
-                        <div class="border-t border-line overflow-x-auto overflow-y-auto max-h-[85vh]">
+                        @* `isolate` traps the sticky cells' z-10/20/30 in a local stacking context so they
+                           never paint over the app header (sticky z-30 in MainLayout) when the page scrolls. *@
+                        <div class="isolate border-t border-line overflow-x-auto overflow-y-auto max-h-[85vh]">
                             <table class="w-full text-sm border-collapse">
                                 <thead class="bg-surface-raised border-b border-line">
                                     <tr class="text-left text-[11px] uppercase tracking-wider text-content-subtle font-semibold">

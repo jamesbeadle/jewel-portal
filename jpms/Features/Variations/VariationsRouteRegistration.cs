@@ -77,5 +77,9 @@ public static class VariationsRouteRegistration
         commands.Register<CancelVariationOrder, VariationOrder>(
             new CommandRoute("POST", "/api/variation-orders/{voId}/cancel",
                 command => $"/api/variation-orders/{((CancelVariationOrder)command).VariationOrderId}/cancel"));
+
+        commands.Register<ReviseVariationOrderValue, VariationOrder>(
+            new CommandRoute("POST", "/api/variation-orders/{voId}/revise-value",
+                command => $"/api/variation-orders/{((ReviseVariationOrderValue)command).VariationOrderId}/revise-value"));
     }
 }

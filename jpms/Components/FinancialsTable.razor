@@ -32,8 +32,10 @@
 
 @* max-h + overflow-y makes this wrapper the vertical scroll container, so the sticky
    header row stays visible while the rows scroll under it. Corner cells (checkbox /
-   code / name) are sticky on both axes and sit above everything else. *@
-<div class="rounded-xl border border-line bg-surface overflow-x-auto overflow-y-auto max-h-[85vh]">
+   code / name) are sticky on both axes and sit above everything else. `isolate` traps
+   the cells' z-10/20/30 in a local stacking context so they never paint over the app
+   header (sticky z-30 in MainLayout) when the page scrolls under it. *@
+<div class="isolate rounded-xl border border-line bg-surface overflow-x-auto overflow-y-auto max-h-[85vh]">
     <table class="w-full text-sm border-collapse">
         <thead class="bg-surface-raised border-b border-line">
             <tr class="text-left text-[11px] uppercase tracking-wider text-content-subtle font-semibold">

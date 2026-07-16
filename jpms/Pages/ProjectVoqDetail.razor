@@ -128,6 +128,27 @@ else
                         {
                             <button type="button" class="btn-secondary w-full" disabled="@busy" @onclick="IssueVo">Mark as issued</button>
                         }
+                        @if (CanManage && vo.Status != VariationOrderStatus.Cancelled)
+                        {
+                            @if (!revisingValue)
+                            {
+                                <button type="button" class="btn-secondary w-full" disabled="@busy" @onclick="StartReviseValue">Revise value</button>
+                            }
+                            else
+                            {
+                                <div class="pt-3 border-t border-line space-y-3">
+                                    <FormField Label="Revised value (£)" Value="@reviseValue" OnChange="v => reviseValue = v" InputType="number" Required="true" />
+                                    <p class="text-xs text-content-subtle">
+                                        Re-prices the @vo.VariationRef line on the Valuation Report, records the
+                                        difference on the CVR and moves the committed cost-centre budget.
+                                    </p>
+                                    <div class="flex gap-2">
+                                        <button type="button" class="btn-primary" disabled="@busy" @onclick="ReviseVoValue">Save revised value</button>
+                                        <button type="button" class="btn-secondary" disabled="@busy" @onclick="() => revisingValue = false">Cancel</button>
+                                    </div>
+                                </div>
+                            }
+                        }
                     </div>
                 }
                 else if (CanManage && voq.Status == VariationOrderQuoteStatus.Selected)
@@ -188,6 +209,9 @@ else
 
     private string approveCostCode = "";
     private string approveValue = "";
+
+    private bool revisingValue;
+    private string reviseValue = "";
 
     private bool addingPackage;
     private string newTitle = "";
@@ -285,6 +309,33 @@ else
             await ReloadAsync();
         }
         catch { error = "Couldn't issue the variation order. Please try again."; }
+        finally { busy = false; }
+    }
+
+    private void StartReviseValue()
+    {
+        reviseValue = vo?.Value.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? "";
+        revisingValue = true;
+        error = null;
+    }
+
+    private async Task ReviseVoValue()
+    {
+        if (busy || vo is null) return;
+        error = null;
+        if (!decimal.TryParse(reviseValue, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var value))
+        {
+            error = "Enter a valid revised value.";
+            return;
+        }
+        try
+        {
+            busy = true;
+            vo = await Variations.ReviseVariationOrderValueAsync(vo.VariationOrderId, value);
+            revisingValue = false;
+            await ReloadAsync();
+        }
+        catch { error = "Couldn't revise the variation order value. Please try again."; }
         finally { busy = false; }
     }
 

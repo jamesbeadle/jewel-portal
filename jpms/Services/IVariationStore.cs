@@ -31,4 +31,7 @@ public interface IVariationStore
     Task<VariationOrder> ApproveVoqAsync(string voqId, string costCode, decimal? value, CancellationToken cancellationToken = default);
     Task<VariationOrder> IssueVariationOrderAsync(string voId, CancellationToken cancellationToken = default);
     Task<VariationOrder> CancelVariationOrderAsync(string voId, CancellationToken cancellationToken = default);
+
+    /// <summary>Revises the value of a live VO; the delta writes through to the valuation report, CVR and budget.</summary>
+    Task<VariationOrder> ReviseVariationOrderValueAsync(string voId, decimal value, CancellationToken cancellationToken = default);
 }
