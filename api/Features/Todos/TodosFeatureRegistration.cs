@@ -20,6 +20,10 @@ public static class TodosFeatureRegistration
         services.AddScoped<IQueryHandler<ListMyTodoItems, IReadOnlyList<TodoItem>>, ListMyTodoItemsHandler>();
         services.AddScoped<IQueryHandler<ListAllTodoItems, IReadOnlyList<TodoItem>>, ListAllTodoItemsHandler>();
 
+        // A to-do item's linked emails ("JPMS/TODO-####"-tagged mail, read live by tag via the
+        // record-link layer) — the detail modal's linked-mail list.
+        services.AddScoped<IQueryHandler<ListTodoEmails, IReadOnlyList<MailboxMessage>>, ListTodoEmailsHandler>();
+
         services.AddScoped<ICommandHandler<AddTodoItem, TodoItem>, AddTodoItemHandler>();
         services.AddScoped<AddTodoItemAuthorisation>();
         services.AddScoped<AddTodoItemValidation>();

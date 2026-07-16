@@ -28,6 +28,11 @@ public static class TodosRouteRegistration
         queries.Register<ListAllTodoItems, IReadOnlyList<TodoItem>>(
             QueryRoute.Static("/api/todos"));
 
+        // A to-do item's linked emails ("JPMS/TODO-####"-tagged mail, read live) — the detail modal.
+        queries.Register<ListTodoEmails, IReadOnlyList<MailboxMessage>>(
+            new QueryRoute("/api/todo-items/{todoItemId}/emails",
+                query => $"/api/todo-items/{((ListTodoEmails)query).TodoItemId}/emails"));
+
         commands.Register<AddTodoItem, TodoItem>(
             new CommandRoute("POST", "/api/projects/{projectId}/todos",
                 command => $"/api/projects/{((AddTodoItem)command).ProjectId}/todos"));

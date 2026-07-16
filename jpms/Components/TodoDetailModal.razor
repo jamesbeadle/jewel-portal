@@ -1,0 +1,238 @@
+@using Jewel.JPMS.Contracts.Todos
+@inject ITodoStore Todos
+
+@*
+    The to-do item detail modal — opened by clicking an item's title on the project To-do tab, the
+    /todos browser page, or the "My to-dos" dashboard panel (the rows themselves show only the
+    title). Shows everything about the item plus its LINKED EMAILS, read live by tag: an item
+    created from an email at triage tags the email "JPMS/<reference>", so whatever carries that tag
+    now is the item's mail. Completing (or reopening) happens here — the parent moves the item to
+    its done section — and delete, where permitted, lives here too rather than on the row.
+
+    The modal is presentation-only for actions: complete/reopen and delete are raised as events so
+    each parent keeps its own reload/refresh behaviour. Only the linked-email read lives here.
+*@
+
+<Modal IsOpen="@(Item is not null)" Title="@(Item is null ? "" : $"To-do · {Item.Reference}")" OnCancel="Close">
+    <ChildContent>
+        @if (Item is not null)
+        {
+            <div class="space-y-4">
+                @if (Error is not null)
+                {
+                    <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@Error</p>
+                }
+
+                <div>
+                    <div class="flex items-start justify-between gap-3">
+                        <h3 class="text-base font-medium @(Item.IsComplete ? "text-content-subtle line-through" : "text-content")">@Item.Title</h3>
+                        <span class="shrink-0 inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium @(Item.IsComplete ? "bg-positive/10 text-positive" : "bg-accent/10 text-accent")">
+                            @(Item.IsComplete ? "Done" : "Open")
+                        </span>
+                    </div>
+                    @if (!string.IsNullOrWhiteSpace(Item.Notes))
+                    {
+                        <p class="text-sm text-content-muted mt-2 whitespace-pre-wrap">@Item.Notes</p>
+                    }
+                </div>
+
+                <dl class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2 text-sm">
+                    @if (!string.IsNullOrWhiteSpace(ScopeLabel))
+                    {
+                        <div>
+                            <dt class="text-[11px] uppercase tracking-wider text-content-subtle font-semibold">Scope</dt>
+                            <dd class="text-content mt-0.5">@ScopeLabel</dd>
+                        </div>
+                    }
+                    <div>
+                        <dt class="text-[11px] uppercase tracking-wider text-content-subtle font-semibold">Assigned role</dt>
+                        <dd class="text-content mt-0.5">@(Item.AssigneeRole is Role role ? role.DisplayName() : "Unassigned")</dd>
+                    </div>
+                    <div>
+                        <dt class="text-[11px] uppercase tracking-wider text-content-subtle font-semibold">Due</dt>
+                        <dd class="mt-0.5 @(IsOverdue ? "text-negative font-medium" : "text-content")">
+                            @(Item.DueAt is null ? "—" : Item.DueAt.Value.LocalDateTime.ToString("d MMM yyyy"))@(IsOverdue ? " (overdue)" : "")
+                        </dd>
+                    </div>
+                    <div>
+                        <dt class="text-[11px] uppercase tracking-wider text-content-subtle font-semibold">Added</dt>
+                        <dd class="text-content mt-0.5">
+                            @Item.CreatedAt.LocalDateTime.ToString("d MMM yyyy")@(string.IsNullOrWhiteSpace(Item.CreatedByEmail) ? "" : $" by {Item.CreatedByEmail}")
+                        </dd>
+                    </div>
+                    @if (Item.CompletedAt is not null)
+                    {
+                        <div>
+                            <dt class="text-[11px] uppercase tracking-wider text-content-subtle font-semibold">Completed</dt>
+                            <dd class="text-content mt-0.5">@Item.CompletedAt.Value.LocalDateTime.ToString("d MMM yyyy")</dd>
+                        </div>
+                    }
+                </dl>
+
+                <div class="border-t border-line pt-4">
+                    <h4 class="text-sm font-semibold text-content mb-1">
+                        Linked emails
+                        @if (!emailsLoading && emailsError is null && emails.Count > 0)
+                        {
+                            <span class="ml-1.5 inline-flex items-center rounded-full bg-accent/10 px-2 py-0.5 text-[11px] font-medium text-accent">@emails.Count</span>
+                        }
+                    </h4>
+                    <p class="text-xs text-content-subtle mb-3">
+                        Mail tagged <span class="font-mono">JPMS/@Item.Reference</span> in the mailbox, read live — tag or untag an email in triage and this list follows.
+                    </p>
+
+                    @if (emailsLoading)
+                    {
+                        <JewelSpinner Class="py-6" Label="Loading" />
+                    }
+                    else if (emailsError is not null)
+                    {
+                        <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@emailsError</p>
+                    }
+                    else if (emails.Count == 0)
+                    {
+                        <p class="text-sm text-content-subtle italic">No emails are linked to this item.</p>
+                    }
+                    else
+                    {
+                        <ul class="space-y-2">
+                            @foreach (var email in emails)
+                            {
+                                <li class="rounded-lg border border-line bg-surface px-4 py-3">
+                                    <div class="flex flex-wrap items-center justify-between gap-2">
+                                        <span class="text-sm font-medium text-content">@(string.IsNullOrWhiteSpace(email.FromName) ? email.FromEmail : email.FromName)</span>
+                                        <span class="text-xs text-content-subtle">@email.ReceivedAt.LocalDateTime.ToString("d MMM yyyy, HH:mm")</span>
+                                    </div>
+                                    <p class="text-sm text-content mt-0.5">
+                                        @email.Subject
+                                        @if (email.HasAttachments)
+                                        {
+                                            <span class="ml-2 inline-flex items-center rounded bg-surface-raised border border-line px-1.5 py-0.5 text-[10px] text-content-subtle">attachment</span>
+                                        }
+                                    </p>
+                                    @if (!string.IsNullOrWhiteSpace(email.BodyPreview))
+                                    {
+                                        <p class="text-xs text-content-subtle mt-1 line-clamp-2">@email.BodyPreview</p>
+                                    }
+                                </li>
+                            }
+                        </ul>
+                    }
+                </div>
+            </div>
+        }
+    </ChildContent>
+    <FooterContent>
+        @if (Item is not null)
+        {
+            @if (CanDelete)
+            {
+                @* Two-step delete, confirmed in place (no nested modal): the first click arms the
+                   button — it restyles and asks — and only the second click actually deletes.
+                   Anything else (Close, Mark done, opening another item) disarms it. *@
+                <button type="button" disabled="@Busy" @onclick="HandleDelete"
+                        class="btn-ghost text-negative mr-auto @(deleteArmed ? "bg-negative/10 font-semibold" : "")">
+                    @(deleteArmed ? "Delete this item? Click again to confirm" : "Delete")
+                </button>
+            }
+            <button type="button" class="btn-secondary" @onclick="Close">Close</button>
+            @if (CanComplete)
+            {
+                <button type="button" class="btn-primary" disabled="@Busy"
+                        @onclick="HandleToggleComplete">
+                    @(Item.IsComplete ? "Reopen" : "Mark done")
+                </button>
+            }
+        }
+    </FooterContent>
+</Modal>
+
+@code {
+    /// <summary>The item to show; null keeps the modal closed.</summary>
+    [Parameter] public TodoItem? Item { get; set; }
+    /// <summary>Optional scope line ("General" or "P-021 — Name") — the global list and dashboard
+    /// pass it; the project To-do tab, where scope is implicit, omits it.</summary>
+    [Parameter] public string? ScopeLabel { get; set; }
+    [Parameter] public bool CanComplete { get; set; }
+    [Parameter] public bool CanDelete { get; set; }
+    /// <summary>The parent's in-flight-action flag — disables the action buttons while a
+    /// complete/reopen/delete round-trip runs.</summary>
+    [Parameter] public bool Busy { get; set; }
+    /// <summary>The parent's action error, surfaced inside the modal so a failed complete/delete
+    /// is visible where it was clicked.</summary>
+    [Parameter] public string? Error { get; set; }
+    [Parameter] public EventCallback OnClose { get; set; }
+    [Parameter] public EventCallback<TodoItem> OnToggleComplete { get; set; }
+    [Parameter] public EventCallback<TodoItem> OnDelete { get; set; }
+
+    private string? loadedForItemId;
+    private bool emailsLoading;
+    private string? emailsError;
+    private IReadOnlyList<MailboxMessage> emails = Array.Empty<MailboxMessage>();
+
+    // The delete button's arm-and-confirm state: one click arms, the next deletes. Reset whenever
+    // the shown item changes, the modal closes, or the user does something else instead.
+    private bool deleteArmed;
+
+    // Fetch the linked emails once per opened item (an on-demand read, not a cached render-time
+    // store — so no fetch-once-per-key store bookkeeping applies here). Re-opening the same item
+    // while the modal never left the page re-reads, since closing clears the key.
+    protected override async Task OnParametersSetAsync()
+    {
+        if (Item is null)
+        {
+            loadedForItemId = null;
+            emails = Array.Empty<MailboxMessage>();
+            emailsError = null;
+            emailsLoading = false;
+            deleteArmed = false;
+            return;
+        }
+
+        if (Item.TodoItemId == loadedForItemId) return;
+
+        var itemId = Item.TodoItemId;
+        loadedForItemId = itemId;
+        deleteArmed = false;
+        emailsLoading = true;
+        emailsError = null;
+        emails = Array.Empty<MailboxMessage>();
+        try
+        {
+            var result = await Todos.ListEmailsAsync(itemId);
+            if (loadedForItemId == itemId) emails = result;
+        }
+        catch
+        {
+            if (loadedForItemId == itemId) emailsError = "Couldn't load the linked emails. Please try again.";
+        }
+        finally
+        {
+            if (loadedForItemId == itemId) emailsLoading = false;
+        }
+    }
+
+    private bool IsOverdue =>
+        Item is not null && !Item.IsComplete && Item.DueAt is not null && Item.DueAt.Value < DateTimeOffset.Now.Date;
+
+    private async Task HandleDelete()
+    {
+        if (Item is null) return;
+        if (!deleteArmed) { deleteArmed = true; return; }
+        deleteArmed = false;
+        await OnDelete.InvokeAsync(Item);
+    }
+
+    private async Task HandleToggleComplete()
+    {
+        if (Item is null) return;
+        deleteArmed = false;
+        await OnToggleComplete.InvokeAsync(Item);
+    }
+
+    private Task Close()
+    {
+        deleteArmed = false;
+        return OnClose.InvokeAsync();
+    }
+}

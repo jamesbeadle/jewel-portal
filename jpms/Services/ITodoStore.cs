@@ -20,6 +20,9 @@ public interface ITodoStore
     Task<IReadOnlyList<TodoItem>> ListAllAsync(CancellationToken cancellationToken = default);
     /// <summary>The roles a to-do can be assigned to — feeds the assignee role pickers.</summary>
     Task<IReadOnlyList<Role>> ListAssignableRolesAsync(CancellationToken cancellationToken = default);
+    /// <summary>The emails currently tagged to one item ("JPMS/TODO-####"), read live from the
+    /// mailbox — the linked-mail list in the to-do detail modal.</summary>
+    Task<IReadOnlyList<MailboxMessage>> ListEmailsAsync(string todoItemId, CancellationToken cancellationToken = default);
     Task<TodoItem> AddAsync(AddTodoItem command, CancellationToken cancellationToken = default);
     /// <summary>Add a general (company-wide, no-project) item from the /todos browser page.</summary>
     Task<TodoItem> AddGeneralAsync(AddGeneralTodoItem command, CancellationToken cancellationToken = default);

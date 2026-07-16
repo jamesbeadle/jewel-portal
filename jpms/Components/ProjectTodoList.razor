@@ -5,8 +5,10 @@
 @*
     The project's to-do list, shown on the To-do tab. Items are added here directly or created
     from an email at the triage stage ("Create new → To-do item"), in which case the email is tagged
-    "JPMS/TODO-####" per item — the item's reference chip is that tag stem. Full manage: add,
-    complete/reopen, delete.
+    "JPMS/TODO-####" per item. The list itself shows only each item's title — clicking one opens the
+    detail modal (TodoDetailModal) with the full detail, the item's linked emails read live by tag,
+    and the actions: completing there moves the item to the Done section below, and delete lives
+    there too. Full manage: add, complete/reopen, delete.
 *@
 
 <div class="panel p-5">
@@ -24,8 +26,8 @@
         }
     </div>
     <p class="text-xs text-content-subtle mb-4">
-        Items added here or captured from an email at triage. An item created from an email carries its
-        TODO reference as a mailbox tag, so its linked mail is always a tag-filter away in the Tagged view.
+        Items added here or captured from an email at triage. Click an item for its full detail and
+        linked emails@(CanManage ? ", and to mark it done" : "").
     </p>
 
     @if (error is not null)
@@ -45,51 +47,50 @@
         }
         else
         {
-            <div class="space-y-2 mb-4">
-                @foreach (var item in items)
-                {
-                    <div @key="item.TodoItemId" class="flex items-start gap-3 rounded-lg border border-line px-3 py-2">
-                        <input type="checkbox" class="mt-1" checked="@item.IsComplete" disabled="@(!CanManage || busy)"
-                               @onchange="() => ToggleComplete(item)" title="@(item.IsComplete ? "Reopen" : "Mark done")" />
-                        <div class="min-w-0 flex-1">
-                            <p class="text-sm @(item.IsComplete ? "text-content-subtle line-through" : "text-content")">
-                                <span class="font-mono text-xs text-content-muted mr-2">@item.Reference</span>@item.Title
-                            </p>
-                            @if (!string.IsNullOrWhiteSpace(item.Notes))
-                            {
-                                <p class="text-xs text-content-muted mt-0.5 whitespace-pre-wrap">@item.Notes</p>
-                            }
-                            <div class="flex flex-wrap items-center gap-x-3 gap-y-0.5 mt-1 text-[11px] text-content-subtle">
-                                @if (item.DueAt is not null)
-                                {
-                                    <span class="@(IsOverdue(item) ? "text-negative font-medium" : "")">Due @item.DueAt.Value.LocalDateTime.ToString("d MMM yyyy")</span>
-                                }
-                                @if (item.AssigneeRole is Role assignedRole)
-                                {
-                                    <span>Assigned to @assignedRole.DisplayName()</span>
-                                }
-                                @if (!string.IsNullOrWhiteSpace(item.CreatedByEmail))
-                                {
-                                    <span>Added by @item.CreatedByEmail</span>
-                                }
-                                @if (item.CompletedAt is not null)
-                                {
-                                    <span>Done @item.CompletedAt.Value.LocalDateTime.ToString("d MMM yyyy")</span>
-                                }
-                            </div>
-                        </div>
-                        @if (CanManage)
-                        {
-                            <button type="button" class="text-content-subtle hover:text-negative text-xs mt-1" disabled="@busy"
-                                    @onclick="() => Delete(item)" title="Delete this item">✕</button>
-                        }
-                    </div>
-                }
-            </div>
+            var open = items.Where(i => !i.IsComplete).ToList();
+            var done = items.Where(i => i.IsComplete).ToList();
+
+            @if (open.Count == 0)
+            {
+                <p class="text-sm text-content-subtle italic mb-4">Nothing open — every item is done.</p>
+            }
+            else
+            {
+                <div class="space-y-2 mb-4">
+                    @foreach (var item in open)
+                    {
+                        <button type="button" @key="item.TodoItemId" title="Open this item"
+                                class="w-full rounded-lg border border-line px-3 py-2 text-left hover:border-line-strong hover:bg-surface-raised"
+                                @onclick="() => selected = item">
+                            <span class="block truncate text-sm text-content">@item.Title</span>
+                        </button>
+                    }
+                </div>
+            }
+
+            @if (done.Count > 0)
+            {
+                <h3 class="text-[11px] uppercase tracking-wider text-content-subtle font-semibold mb-2">Done</h3>
+                <div class="space-y-2 mb-4">
+                    @foreach (var item in done)
+                    {
+                        <button type="button" @key="item.TodoItemId" title="Open this item"
+                                class="w-full rounded-lg border border-line px-3 py-2 text-left hover:border-line-strong hover:bg-surface-raised"
+                                @onclick="() => selected = item">
+                            <span class="block truncate text-sm text-content-subtle line-through">@item.Title</span>
+                        </button>
+                    }
+                </div>
+            }
         }
 
     }
 </div>
+
+<TodoDetailModal Item="@selected" Busy="@busy" Error="@(selected is null ? null : error)"
+                 CanComplete="@CanManage" CanDelete="@CanManage"
+                 OnClose="() => selected = null"
+                 OnToggleComplete="ToggleComplete" OnDelete="Delete" />
 
 <Modal IsOpen="@addOpen" Title="Add a to-do item" ConfirmLabel="Add to-do item" CancelLabel="Cancel"
        OnConfirm="Add" OnCancel="CloseAdd">
@@ -130,6 +131,10 @@
     private bool loading = true;
     private bool busy;
     private string? error;
+
+    // The item open in the detail modal (null = closed). Complete/reopen and delete happen there;
+    // a successful action closes it, and the refreshed list re-groups the item into Open/Done.
+    private TodoItem? selected;
 
     // "Add a to-do item" modal state. The form lives in the modal; opening it starts from a clean
     // slate, and a successful add closes it.
@@ -216,12 +221,16 @@
             item.AssigneeRole,
             item.DueAt,
             !item.IsComplete)));
+        // Success closes the detail modal — the reloaded list shows the item in its new section.
+        // A failure keeps it open with the error surfaced inside.
+        if (error is null) selected = null;
     }
 
     private async Task Delete(TodoItem item)
     {
         if (busy) return;
         await Run(() => Todos.DeleteAsync(item.TodoItemId));
+        if (error is null) selected = null;
     }
 
     private async Task Run(Func<Task> action)
@@ -231,31 +240,15 @@
         {
             busy = true;
             await action();
-            items = PreserveOrder(items, await Todos.ListForProjectAsync(ProjectId));
+            // Take the server's fresh open-first/done-pile order: with completion happening in the
+            // detail modal (not via an inline checkbox), re-grouping on reload is the expected
+            // "moves to the done section" behaviour rather than a row jumping under the cursor.
+            items = await Todos.ListForProjectAsync(ProjectId);
         }
         catch (CommandFailedException ex) { error = ex.Message; }
         catch { error = "That action didn't complete. Please try again."; }
         finally { busy = false; }
     }
-
-    // Keep rows where they are while the user works the list: without this, ticking an item makes the
-    // reloaded list re-sort it into the done pile at the bottom, which reads as "I clicked the top item
-    // and the bottom one got checked". Existing items keep their on-screen position (a ticked item is
-    // struck through in place); new items append at the end. The server's open-first/done-pile order
-    // still applies fresh the next time the tab loads.
-    private static IReadOnlyList<TodoItem> PreserveOrder(IReadOnlyList<TodoItem> current, IReadOnlyList<TodoItem> refreshed)
-    {
-        var position = current
-            .Select((item, index) => (item.TodoItemId, index))
-            .ToDictionary(entry => entry.TodoItemId, entry => entry.index);
-        return refreshed
-            .OrderBy(item => position.TryGetValue(item.TodoItemId, out var index) ? index : int.MaxValue)
-            .ToList()
-            .AsReadOnly();
-    }
-
-    private static bool IsOverdue(TodoItem item) =>
-        !item.IsComplete && item.DueAt is not null && item.DueAt.Value < DateTimeOffset.Now.Date;
 
     private static string? NullIfBlank(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 

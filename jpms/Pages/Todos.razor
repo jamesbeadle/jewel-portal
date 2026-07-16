@@ -15,6 +15,10 @@
     (general and project alike, read through ListMyTodoItems) and can tick those off. Items are
     assigned to a role, not a person, so they survive staff changes. General items are captured
     from a company-wide email at triage ("General to-do") or added here directly.
+
+    Rows show only the item's title; clicking one opens the detail modal (TodoDetailModal) with the
+    full detail, the item's linked emails read live by tag, and the complete/reopen and delete
+    actions — completing moves the item onto the Done tab.
 *@
 
 @if (!isLoaded)
@@ -92,13 +96,14 @@ else
         {
             var visible = VisibleItems;
             <div class="panel p-5">
-                <div class="flex items-center gap-3 mb-4">
+                <div class="flex items-center gap-3 mb-1">
                     <h2 class="text-sm font-semibold text-content">To-do list</h2>
                     @if (items.Count > 0)
                     {
                         <span class="text-[11px] text-content-subtle">@items.Count(i => i.IsComplete) of @items.Count done</span>
                     }
                 </div>
+                <p class="text-xs text-content-subtle mb-4">Click an item for its full detail, linked emails and actions.</p>
 
                 @if (visible.Count == 0)
                 {
@@ -111,44 +116,11 @@ else
                     <div class="space-y-2">
                         @foreach (var item in visible)
                         {
-                            var canTick = CanSeeAll || IsMine(item);
-                            <div @key="item.TodoItemId" class="flex items-start gap-3 rounded-lg border border-line px-3 py-2">
-                                <input type="checkbox" class="mt-1" checked="@item.IsComplete" disabled="@(!canTick || busy)"
-                                       @onchange="() => ToggleComplete(item)" title="@(item.IsComplete ? "Reopen" : "Mark done")" />
-                                <div class="min-w-0 flex-1">
-                                    <p class="text-sm @(item.IsComplete ? "text-content-subtle line-through" : "text-content")">
-                                        <span class="font-mono text-xs text-content-muted mr-2">@item.Reference</span>@item.Title
-                                    </p>
-                                    @if (!string.IsNullOrWhiteSpace(item.Notes))
-                                    {
-                                        <p class="text-xs text-content-muted mt-0.5 whitespace-pre-wrap">@item.Notes</p>
-                                    }
-                                    <div class="flex flex-wrap items-center gap-x-3 gap-y-0.5 mt-1 text-[11px] text-content-subtle">
-                                        <span class="@(IsGeneral(item) ? "text-accent font-medium" : "")">@ScopeLabel(item)</span>
-                                        @if (item.DueAt is not null)
-                                        {
-                                            <span class="@(IsOverdue(item) ? "text-negative font-medium" : "")">Due @item.DueAt.Value.LocalDateTime.ToString("d MMM yyyy")</span>
-                                        }
-                                        @if (item.AssigneeRole is Role assignedRole)
-                                        {
-                                            <span>Assigned to @assignedRole.DisplayName()</span>
-                                        }
-                                        @if (!string.IsNullOrWhiteSpace(item.CreatedByEmail))
-                                        {
-                                            <span>Added by @item.CreatedByEmail</span>
-                                        }
-                                        @if (item.CompletedAt is not null)
-                                        {
-                                            <span>Done @item.CompletedAt.Value.LocalDateTime.ToString("d MMM yyyy")</span>
-                                        }
-                                    </div>
-                                </div>
-                                @if (CanSeeAll)
-                                {
-                                    <button type="button" class="text-content-subtle hover:text-negative text-xs mt-1" disabled="@busy"
-                                            @onclick="() => Delete(item)" title="Delete this item">✕</button>
-                                }
-                            </div>
+                            <button type="button" @key="item.TodoItemId" title="Open this item"
+                                    class="w-full rounded-lg border border-line px-3 py-2 text-left hover:border-line-strong hover:bg-surface-raised"
+                                    @onclick="() => selected = item">
+                                <span class="block truncate text-sm @(item.IsComplete ? "text-content-subtle line-through" : "text-content")">@item.Title</span>
+                            </button>
                         }
                     </div>
                 }
@@ -157,6 +129,13 @@ else
 
     </section>
 }
+
+<TodoDetailModal Item="@selected" Busy="@busy" Error="@(selected is null ? null : error)"
+                 ScopeLabel="@(selected is null ? null : ScopeLabel(selected))"
+                 CanComplete="@(selected is not null && (CanSeeAll || IsMine(selected)))"
+                 CanDelete="@CanSeeAll"
+                 OnClose="() => selected = null"
+                 OnToggleComplete="ToggleComplete" OnDelete="Delete" />
 
 <Modal IsOpen="@addOpen" Title="Add a general to-do" ConfirmLabel="Add to-do item" CancelLabel="Cancel"
        OnConfirm="Add" OnCancel="CloseAdd">
@@ -207,6 +186,10 @@ else
     private StatusFilter statusFilter = StatusFilter.Open;
     private string scopeFilter = ScopeAll;
     private string assigneeFilter = "";
+
+    // The item open in the detail modal (null = closed). Complete/reopen and delete happen there;
+    // a successful action closes it, and the refreshed list re-files the item under its new status.
+    private TodoItem? selected;
 
     // "Add a general to-do" modal state (MD / administrators only).
     private bool addOpen;
@@ -356,12 +339,16 @@ else
             item.AssigneeRole,
             item.DueAt,
             !item.IsComplete)));
+        // Success closes the detail modal — the reloaded list re-files the item (a completed item
+        // leaves the Open tab for Done). A failure keeps it open with the error surfaced inside.
+        if (error is null) selected = null;
     }
 
     private async Task Delete(TodoItem item)
     {
         if (busy) return;
         await Run(() => TodoStore.DeleteAsync(item.TodoItemId));
+        if (error is null) selected = null;
     }
 
     private async Task Run(Func<Task> action)
@@ -371,29 +358,15 @@ else
         {
             busy = true;
             await action();
-            items = PreserveOrder(items, CanSeeAll ? await TodoStore.ListAllAsync() : await TodoStore.ListMineAsync());
+            // Take the server's fresh open-first/done-pile order: with completion happening in the
+            // detail modal (not via an inline checkbox), re-filing on reload is the expected
+            // "moves to the done section" behaviour rather than a row jumping under the cursor.
+            items = CanSeeAll ? await TodoStore.ListAllAsync() : await TodoStore.ListMineAsync();
         }
         catch (CommandFailedException ex) { error = ex.Message; }
         catch { error = "That action didn't complete. Please try again."; }
         finally { busy = false; }
     }
-
-    // Keep rows where they are while the user works the list (same rationale as ProjectTodoList):
-    // ticking an item must not re-sort it under the cursor. New items append at the end; the
-    // server's open-first order applies fresh on the next visit.
-    private static IReadOnlyList<TodoItem> PreserveOrder(IReadOnlyList<TodoItem> current, IReadOnlyList<TodoItem> refreshed)
-    {
-        var position = current
-            .Select((item, index) => (item.TodoItemId, index))
-            .ToDictionary(entry => entry.TodoItemId, entry => entry.index);
-        return refreshed
-            .OrderBy(item => position.TryGetValue(item.TodoItemId, out var index) ? index : int.MaxValue)
-            .ToList()
-            .AsReadOnly();
-    }
-
-    private static bool IsOverdue(TodoItem item) =>
-        !item.IsComplete && item.DueAt is not null && item.DueAt.Value < DateTimeOffset.Now.Date;
 
     private static string? NullIfBlank(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 

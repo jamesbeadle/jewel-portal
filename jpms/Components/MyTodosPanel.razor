@@ -5,9 +5,11 @@
 @*
     "My to-dos" — the dashboard home panel. Shows the OPEN items assigned to any ROLE the
     signed-in user holds, general (company-wide) and project items alike, read through
-    ListMyTodoItems (the server stamps the roles from the session). Ticking an item completes it
-    in place — the API allows a role-holder to update their role's items even outside the
-    manage-todos gate. The full list, with filters and done items, lives on the /todos page.
+    ListMyTodoItems (the server stamps the roles from the session). Rows show only the title;
+    clicking one opens the detail modal (TodoDetailModal) with the full detail, the item's linked
+    emails, and the Mark done action — the API allows a role-holder to update their role's items
+    even outside the manage-todos gate. Completing removes the item from this open-only panel.
+    The full list, with filters and done items, lives on the /todos page.
 *@
 
 <div class="panel p-5">
@@ -22,7 +24,8 @@
         <a href="/todos" class="text-xs font-medium text-accent hover:underline">View all</a>
     </div>
     <p class="text-xs text-content-subtle mb-4">
-        Items assigned to your role — general and project to-dos alike. Tick one off to complete it.
+        Items assigned to your role — general and project to-dos alike. Click one for its detail,
+        linked emails and to mark it done.
     </p>
 
     @if (error is not null)
@@ -43,26 +46,21 @@
         <div class="space-y-2">
             @foreach (var item in openItems)
             {
-                <div @key="item.TodoItemId" class="flex items-start gap-3 rounded-lg border border-line px-3 py-2">
-                    <input type="checkbox" class="mt-1" checked="@item.IsComplete" disabled="@busy"
-                           @onchange="() => Complete(item)" title="Mark done" />
-                    <div class="min-w-0 flex-1">
-                        <p class="text-sm text-content">
-                            <span class="font-mono text-xs text-content-muted mr-2">@item.Reference</span>@item.Title
-                        </p>
-                        <div class="flex flex-wrap items-center gap-x-3 gap-y-0.5 mt-1 text-[11px] text-content-subtle">
-                            <span class="@(IsGeneral(item) ? "text-accent font-medium" : "")">@ScopeLabel(item)</span>
-                            @if (item.DueAt is not null)
-                            {
-                                <span class="@(IsOverdue(item) ? "text-negative font-medium" : "")">Due @item.DueAt.Value.LocalDateTime.ToString("d MMM yyyy")</span>
-                            }
-                        </div>
-                    </div>
-                </div>
+                <button type="button" @key="item.TodoItemId" title="Open this item"
+                        class="w-full rounded-lg border border-line px-3 py-2 text-left hover:border-line-strong hover:bg-surface-raised"
+                        @onclick="() => selected = item">
+                    <span class="block truncate text-sm text-content">@item.Title</span>
+                </button>
             }
         </div>
     }
 </div>
+
+<TodoDetailModal Item="@selected" Busy="@busy" Error="@(selected is null ? null : error)"
+                 ScopeLabel="@(selected is null ? null : ScopeLabel(selected))"
+                 CanComplete="true" CanDelete="false"
+                 OnClose="() => selected = null"
+                 OnToggleComplete="Complete" />
 
 @code {
     private IReadOnlyList<TodoItem> openItems = Array.Empty<TodoItem>();
@@ -70,10 +68,15 @@
     private bool busy;
     private string? error;
 
+    // The item open in the detail modal (null = closed). This panel lists open items only, so a
+    // successful complete closes the modal and drops the item from the panel; the /todos page is
+    // where it reappears under Done.
+    private TodoItem? selected;
+
     protected override async Task OnInitializedAsync()
     {
         await LoadAsync();
-        // Project labels for the scope chips — a failed load degrades the label, never the list.
+        // Project labels for the modal's scope line — a failed load degrades the label, never the list.
         try { if (Projects.Current is null) await Projects.RefreshAsync(CancellationToken.None); } catch { }
     }
 
@@ -103,6 +106,7 @@
                 item.DueAt,
                 IsComplete: true));
             openItems = openItems.Where(open => open.TodoItemId != item.TodoItemId).ToList();
+            selected = null;
         }
         catch (CommandFailedException ex) { error = ex.Message; }
         catch { error = "That action didn't complete. Please try again."; }
@@ -118,9 +122,6 @@
             .FirstOrDefault(p => p.ProjectId == item.ProjectId);
         return project is null ? "Project" : $"{project.Reference} — {project.Name}";
     }
-
-    private static bool IsOverdue(TodoItem item) =>
-        !item.IsComplete && item.DueAt is not null && item.DueAt.Value < DateTimeOffset.Now.Date;
 
     private static string? NullIfBlank(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 }
