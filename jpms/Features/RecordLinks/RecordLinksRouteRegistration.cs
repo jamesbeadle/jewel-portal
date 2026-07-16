@@ -24,6 +24,17 @@ public static class RecordLinksRouteRegistration
             new QueryRoute("/api/projects/{projectId}/scheduling/emails",
                 query => $"/api/projects/{((ListSchedulingEmails)query).ProjectId}/scheduling/emails"));
 
+        queries.Register<ListProjectCommunications, ProjectCommunicationsPage>(
+            new QueryRoute("/api/projects/{projectId}/communications",
+                query =>
+                {
+                    var q = (ListProjectCommunications)query;
+                    var url = $"/api/projects/{q.ProjectId}/communications?take={q.Take}";
+                    if (q.Type is { } type) url += $"&type={type}";
+                    if (!string.IsNullOrWhiteSpace(q.Cursor)) url += $"&cursor={Uri.EscapeDataString(q.Cursor)}";
+                    return url;
+                }));
+
         commands.Register<LinkMessageToRecord, Acknowledgement>(
             new CommandRoute("POST", "/api/mailbox/message/link", _ => "/api/mailbox/message/link"));
 

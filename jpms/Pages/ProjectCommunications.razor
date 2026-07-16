@@ -1,0 +1,233 @@
+@page "/projects/{ProjectId}/communications"
+@using Jewel.JPMS.Contracts.RecordLinks
+@inject AuthService Auth
+@inject SessionService Session
+@inject IQueryClient Queries
+@inject NavigationManager Nav
+
+<PageTitle>Communications · JPMS</PageTitle>
+
+@*
+    The project's Communications tab — every email tagged to one of this project's records, read
+    live from the mailbox in one place. Triage stamps "JPMS/<TagReference>" categories on emails
+    (cost centres, requests, bid package invites, programme, to-dos, LADs, VOs, VOQs); the per-record
+    views read their own tag, and this tab is the cross-cutting roll-up: all of it, newest paged
+    first, filterable by the type of thing tagged. Each row shows WHICH record(s) the email is
+    tagged to — an email can feed several records at once (e.g. a request AND a cost centre).
+    Informational only: tagging itself stays in mailbox triage.
+*@
+
+@if (!isLoaded)
+{
+    <section class="px-6 md:px-8 py-12 text-content-subtle text-sm">Loading…</section>
+}
+else if (!Session.IsApproved)
+{
+    <RequestAccessView Email="@Auth.CurrentUser!.Email" DisplayName="@Auth.CurrentUser.DisplayName" />
+}
+else
+{
+    <ProjectPageShell ProjectId="@ProjectId" ActiveTab="communications">
+        <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+            <div class="flex items-center gap-2">
+                <label for="comms-type" class="text-sm text-content-subtle">Tagged to</label>
+                <select id="comms-type" class="field w-52" value="@typeFilterRaw" @onchange="OnTypeFilterChanged">
+                    <option value="">All types</option>
+                    @foreach (var option in TypeOptions)
+                    {
+                        <option value="@option.Type">@option.Label</option>
+                    }
+                </select>
+            </div>
+            @if (loaded && total > 0)
+            {
+                <p class="text-xs text-content-subtle">Showing @items.Count of @total</p>
+            }
+        </div>
+
+        @if (loadError is not null)
+        {
+            <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-4">@loadError</p>
+        }
+
+        @if (!loaded)
+        {
+            <JewelSpinner Class="py-16" Label="Loading" />
+        }
+        else if (items.Count == 0)
+        {
+            <div class="panel p-8 text-center">
+                <p class="text-sm text-content">@EmptyHeadline</p>
+                <p class="text-xs text-content-subtle mt-1">
+                    Tag an email to a record in mailbox triage and it will appear here.
+                </p>
+            </div>
+        }
+        else
+        {
+            <ul class="space-y-2">
+                @foreach (var item in items)
+                {
+                    <li @key="item.Message.Id" class="rounded-lg border border-line bg-surface px-4 py-3">
+                        <div class="flex flex-wrap items-center justify-between gap-2">
+                            <span class="text-sm font-medium text-content">@DisplayFrom(item.Message)</span>
+                            <span class="text-xs text-content-subtle">@item.Message.ReceivedAt.LocalDateTime.ToString("d MMM yyyy, HH:mm")</span>
+                        </div>
+                        <p class="text-sm text-content mt-0.5">
+                            @item.Message.Subject
+                            @if (item.Message.HasAttachments)
+                            {
+                                <span class="ml-2 inline-flex items-center rounded bg-surface-raised border border-line px-1.5 py-0.5 text-[10px] text-content-subtle">attachment</span>
+                            }
+                        </p>
+                        @if (!string.IsNullOrWhiteSpace(item.Message.BodyPreview))
+                        {
+                            <p class="text-xs text-content-subtle mt-1 line-clamp-2">@item.Message.BodyPreview</p>
+                        }
+                        <div class="flex flex-wrap items-center gap-1 mt-2">
+                            @foreach (var link in item.Links)
+                            {
+                                <span class="inline-flex items-center gap-1 rounded-full bg-accent/10 px-2 py-0.5 text-[10px] font-medium text-accent"
+                                      title="@link.Tag">
+                                    <span class="uppercase tracking-wide">@TypeLabel(link.Type)</span>
+                                    <span class="font-mono">@link.Reference</span>
+                                    @if (!string.IsNullOrWhiteSpace(link.Title) && link.Title != link.Reference)
+                                    {
+                                        <span class="font-normal max-w-[16rem] truncate">· @link.Title</span>
+                                    }
+                                </span>
+                            }
+                            @* Workflow tags that didn't resolve to one of this project's records —
+                               e.g. another project's tag on a shared thread — shown raw so nothing
+                               the email carries is hidden. *@
+                            @foreach (var tag in UnresolvedTags(item))
+                            {
+                                <span class="inline-flex items-center rounded-full bg-surface-raised border border-line px-2 py-0.5 text-[10px] text-content-subtle">@TagStem(tag)</span>
+                            }
+                        </div>
+                    </li>
+                }
+            </ul>
+
+            @if (nextCursor is not null)
+            {
+                <div class="mt-4 text-center">
+                    <button type="button" class="btn-secondary text-sm" disabled="@loadingMore" @onclick="LoadMoreAsync">
+                        @(loadingMore ? "Loading…" : "Load more")
+                    </button>
+                </div>
+            }
+        }
+    </ProjectPageShell>
+}
+
+@code {
+    [Parameter] public string ProjectId { get; set; } = "";
+
+    private const int PageSize = 25;
+
+    private bool isLoaded;
+    private bool loaded;
+    private bool loadingMore;
+    private string? loadError;
+
+    private string typeFilterRaw = "";
+    private RecordType? TypeFilter =>
+        Enum.TryParse<RecordType>(typeFilterRaw, out var parsed) ? parsed : null;
+
+    private readonly List<ProjectCommunication> items = new();
+    private string? nextCursor;
+    private int total;
+
+    // Every linkable record type, labelled in canonical UI terms — RecordType.Scheduling is the
+    // programme's bucket, so it reads "Programme" here (never "Scheduling" in UI copy).
+    private static readonly (RecordType Type, string Label)[] TypeOptions =
+    {
+        (RecordType.CostCentre,       "Cost centres"),
+        (RecordType.Request,          "Requests (RFI/RFA/…)"),
+        (RecordType.BidPackageInvite, "Bid package invites"),
+        (RecordType.Scheduling,       "Programme"),
+        (RecordType.Todo,             "To-dos"),
+        (RecordType.Lad,              "LADs"),
+        (RecordType.Variation,        "Variation orders"),
+        (RecordType.VariationQuote,   "VO quotes")
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Session.EnsureLoadedAsync();
+        if (!Auth.IsSignedIn) { Nav.NavigateTo("/login", forceLoad: true); return; }
+        isLoaded = true;
+        await LoadAsync(reset: true);
+    }
+
+    private async Task OnTypeFilterChanged(ChangeEventArgs e)
+    {
+        typeFilterRaw = e.Value?.ToString() ?? "";
+        await LoadAsync(reset: true);
+    }
+
+    private Task LoadMoreAsync() => LoadAsync(reset: false);
+
+    private async Task LoadAsync(bool reset)
+    {
+        if (reset)
+        {
+            loaded = false;
+            items.Clear();
+            nextCursor = null;
+            total = 0;
+        }
+        loadError = null;
+        loadingMore = !reset;
+        try
+        {
+            var page = await Queries.AskAsync(
+                new ListProjectCommunications(ProjectId, TypeFilter, nextCursor, PageSize),
+                CancellationToken.None);
+            items.AddRange(page.Items);
+            nextCursor = page.NextCursor;
+            total = page.Total;
+        }
+        catch
+        {
+            loadError = "Couldn't load the project's communications. Please try again.";
+        }
+        finally
+        {
+            loaded = true;
+            loadingMore = false;
+        }
+    }
+
+    private string EmptyHeadline =>
+        TypeFilter is { } type
+            ? $"No emails tagged to {TypeOptions.First(o => o.Type == type).Label} yet."
+            : "No tagged emails yet.";
+
+    // Chip label per record type — singular, canonical UI terms.
+    private static string TypeLabel(RecordType type) => type switch
+    {
+        RecordType.Request          => "Request",
+        RecordType.BidPackageInvite => "Bid package",
+        RecordType.CostCentre       => "Cost centre",
+        RecordType.Scheduling       => "Programme",
+        RecordType.Todo             => "To-do",
+        RecordType.Lad              => "LADs",
+        RecordType.Variation        => "VO",
+        RecordType.VariationQuote   => "VOQ",
+        _                           => type.ToString()
+    };
+
+    private static string DisplayFrom(MailboxMessage message) =>
+        string.IsNullOrWhiteSpace(message.FromName) ? message.FromEmail : message.FromName;
+
+    // The email's workflow tags that didn't resolve to one of this project's records (the resolved
+    // ones already render as record chips). The bare "JPMS" marker never reaches the client.
+    private static IEnumerable<string> UnresolvedTags(ProjectCommunication item) =>
+        item.Message.Categories.Where(category =>
+            !item.Links.Any(link => string.Equals(link.Tag, category, StringComparison.OrdinalIgnoreCase)));
+
+    private static string TagStem(string tag) =>
+        tag.StartsWith("JPMS/", StringComparison.OrdinalIgnoreCase) ? tag["JPMS/".Length..] : tag;
+}

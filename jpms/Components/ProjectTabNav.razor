@@ -28,7 +28,9 @@
     // tabs follow the commercial flow: requests raise variations, drawings drive change detection,
     // cost centre line items group by trade into bid packages whose winners become work orders, and
     // the valuation report rolls it up (it also carries valuation invoices — the old Cash Calls
-    // tab). Setup — correspondence and project details, formerly on the Overview tab — sits last.
+    // tab). Setup — correspondence and project details, formerly on the Overview tab — sits after
+    // the flow, and Communications — every email tagged to one of this project's records — sits
+    // last as the cross-cutting reference view.
     private static readonly Tab[] Tabs =
     {
         new("financials",          "Financials",          true),
@@ -44,7 +46,8 @@
         new("labour",              "Labour",              true),
         new("programme",           "Programme",           true),
         new("progress",            "Progress",            true),
-        new("setup",               "Setup",               true)
+        new("setup",               "Setup",               true),
+        new("communications",      "Communications",      true)
     };
 
     private string HrefFor(string slug) => $"/projects/{ProjectId}/{slug}";
