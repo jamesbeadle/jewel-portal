@@ -11,7 +11,7 @@ internal static class TodosEntityMapping
             entity.Reference,
             entity.Title,
             entity.Notes,
-            entity.AssigneeEmail,
+            entity.AssigneeRole is int role ? (Role?)role : null,
             entity.CreatedByEmail,
             entity.IsComplete,
             entity.CreatedAt,

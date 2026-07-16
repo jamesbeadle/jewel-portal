@@ -9,8 +9,9 @@ timestamp).
 ## How it fits together
 
 - `RequestDocumentBuilder` (api/Features/Requests/Documents) collates a flat `RequestDocumentModel`
-  from SQL: the request, its project, the project contacts flagged `ReceivesRequests`, and the
-  **Shared** leg of the message thread (internal notes never leave the platform).
+  from SQL: the request, its project, the structured RFI-sheet body, and the resolved recipients.
+  The document deliberately carries **no activity/correspondence history** — it is the formal
+  request sheet only; the conversation lives on the request page and in the mailbox thread.
 - `RequestDocumentRenderer` turns that model into PDF bytes with PDFsharp/MigraDoc. The model and
   renderer are linked into both the api and the worker, so the emailed PDF is byte-for-byte the file
   the download endpoint serves.

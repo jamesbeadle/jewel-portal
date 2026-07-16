@@ -3,11 +3,11 @@
 @inject Jewel.JPMS.Features.Projects.ProjectListReadModel Projects
 
 @*
-    "My to-dos" — the dashboard home panel. Shows the OPEN items assigned to the signed-in user,
-    general (company-wide) and project items alike, read through ListMyTodoItems (the server stamps
-    the assignee from the session). Ticking an item completes it in place — the API allows an
-    assignee to update their own item even outside the manage-todos role gate. The full list, with
-    filters and done items, lives on the /todos page.
+    "My to-dos" — the dashboard home panel. Shows the OPEN items assigned to any ROLE the
+    signed-in user holds, general (company-wide) and project items alike, read through
+    ListMyTodoItems (the server stamps the roles from the session). Ticking an item completes it
+    in place — the API allows a role-holder to update their role's items even outside the
+    manage-todos gate. The full list, with filters and done items, lives on the /todos page.
 *@
 
 <div class="panel p-5">
@@ -22,7 +22,7 @@
         <a href="/todos" class="text-xs font-medium text-accent hover:underline">View all</a>
     </div>
     <p class="text-xs text-content-subtle mb-4">
-        Items assigned to you — general and project to-dos alike. Tick one off to complete it.
+        Items assigned to your role — general and project to-dos alike. Tick one off to complete it.
     </p>
 
     @if (error is not null)
@@ -36,7 +36,7 @@
     }
     else if (openItems.Count == 0)
     {
-        <p class="text-sm text-content-subtle italic">Nothing is assigned to you right now.</p>
+        <p class="text-sm text-content-subtle italic">Nothing is assigned to your role right now.</p>
     }
     else
     {
@@ -99,7 +99,7 @@
                 item.TodoItemId,
                 item.Title,
                 NullIfBlank(item.Notes),
-                NullIfBlank(item.AssigneeEmail),
+                item.AssigneeRole,
                 item.DueAt,
                 IsComplete: true));
             openItems = openItems.Where(open => open.TodoItemId != item.TodoItemId).ToList();

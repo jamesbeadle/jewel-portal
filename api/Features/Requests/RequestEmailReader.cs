@@ -12,10 +12,11 @@ namespace Jewel.JPMS.Api.Features.Requests;
 /// snapshot-into-RequestMessages approach: a request no longer keeps a copy of its emails.
 ///
 /// NB: this stays self-contained (reads the request entity + graph directly) rather than delegating to
-/// the record-agnostic <see cref="RecordLinks.RecordEmailReader"/>, because this file is compiled into
-/// the worker via linked source (see Jewel.JPMS.Worker.csproj) and the worker does not share the
-/// provider seam. RecordEmailReader is the generic reader for in-app code; the two share the same tag
-/// convention (TriageCategories.ForRecord/ForRequest) and produce identical results for a request.
+/// the record-agnostic <see cref="RecordLinks.RecordEmailReader"/>. (It was once also compiled into the
+/// worker via linked source, which forced that self-containment; the worker no longer reads mail — the
+/// request document is built from SQL alone — but the shape is kept as-is.) RecordEmailReader is the
+/// generic reader for in-app code; the two share the same tag convention
+/// (TriageCategories.ForRecord/ForRequest) and produce identical results for a request.
 /// </summary>
 public sealed class RequestEmailReader
 {

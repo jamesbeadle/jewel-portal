@@ -40,7 +40,7 @@ public sealed class LadLinkProvider : ILinkableRecordProvider
     private static LinkableRecord ToLinkable(LadClaimEntity entity)
     {
         // The claim's sequential LAD-0001 reference is the tag stem (globally unique, like TODO
-        // numbers), so an email tagged "JPMS/LAD-0001" surfaces under the claim on the Schedule tab.
+        // numbers), so an email tagged "JPMS/LAD-0001" surfaces under the claim on the Programme tab.
         var reference = entity.Reference;
         return new LinkableRecord(
             Type:         RecordType.Lad,

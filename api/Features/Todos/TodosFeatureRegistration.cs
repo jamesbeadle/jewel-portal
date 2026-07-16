@@ -13,7 +13,7 @@ public static class TodosFeatureRegistration
     public static IServiceCollection AddTodosFeature(this IServiceCollection services)
     {
         services.AddScoped<IQueryHandler<ListTodoItemsForProject, IReadOnlyList<TodoItem>>, ListTodoItemsForProjectHandler>();
-        services.AddScoped<IQueryHandler<ListTodoAssignees, IReadOnlyList<DirectoryUser>>, ListTodoAssigneesHandler>();
+        services.AddScoped<IQueryHandler<ListTodoAssignableRoles, IReadOnlyList<Role>>, ListTodoAssignableRolesHandler>();
 
         // The To-dos browser + "My to-dos" dashboard panel: the MD / administrators read everything,
         // everyone else reads the items assigned to them.

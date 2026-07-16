@@ -25,7 +25,7 @@ public sealed record RequestDocumentModel(
     string RaisedByEmail,
     DateTimeOffset RaisedAt,
     DateTimeOffset? ResponseDue,
-    string? RaisedTo,             // ball-in-court / responding party
+    string? RaisedTo,             // responding party the RFI is issued to
     string? DrawingRef,
     string? RelatedDrawingSpec,
     decimal? Value,
@@ -35,7 +35,6 @@ public sealed record RequestDocumentModel(
     string? RespondedByEmail,
     DateTimeOffset? RespondedAt,
     IReadOnlyList<RequestDocumentRecipient> Recipients,
-    IReadOnlyList<RequestDocumentActivity> Activity,
     DateTimeOffset GeneratedAt,
     // ---- Official document (RFI sheet) body: all optional, rendered only when present ----------
     string Reference = "",                            // client-visible reference, e.g. RFI-052
@@ -99,6 +98,3 @@ public sealed record RequestDocumentItem(
 public sealed record RequestDocumentRecipient(
     string Name, string Email, string Role, string? Organisation,
     CorrespondenceRouting Routing = CorrespondenceRouting.To);
-
-/// <summary>One entry in the request's shared activity history, rendered as the audit trail.</summary>
-public sealed record RequestDocumentActivity(string AuthorName, string Body, DateTimeOffset PostedAt, bool Inbound);

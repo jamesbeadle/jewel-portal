@@ -7,7 +7,7 @@ namespace Jewel.JPMS.Api.Features.RecordLinks.Providers;
 
 // Linkable-record provider for a project's Scheduling bucket. Unlike Requests / Bid Package Invites
 // there is no per-item table behind this: every project has exactly ONE scheduling record — a bucket
-// that collects programme/scheduling correspondence for the project's Schedule tab. So FindAsync
+// that collects programme/scheduling correspondence for the project's Programme tab. So FindAsync
 // resolves a single LinkableRecord and the RecordId is simply the project id.
 //
 // JPMS tags share one flat mailbox-category space, so the tag stem is project-qualified the same way
@@ -20,7 +20,7 @@ namespace Jewel.JPMS.Api.Features.RecordLinks.Providers;
 // rather than only the general bucket. Each of those records carries its OWN Type/RecordId, so the
 // link and read paths still resolve through the owning provider; nothing here changes the tag layer.
 //
-// The Schedule tab's Communications view reads the bucket's emails back live by tag
+// The Programme tab's Communications view reads the bucket's emails back live by tag
 // (RecordEmailReader), identically to every other record type. The bucket itself is link-only:
 // nothing is ever created from an email — it exists implicitly for every project.
 public sealed class SchedulingLinkProvider : ILinkableRecordProvider

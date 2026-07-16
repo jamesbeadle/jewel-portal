@@ -486,6 +486,9 @@ namespace Jewel.JPMS.Api.Migrations
                     b.Property<DateTimeOffset?>("ClosedAt")
                         .HasColumnType("datetimeoffset");
 
+                    b.Property<bool>("CriticalPath")
+                        .HasColumnType("bit");
+
                     b.Property<string>("Description")
                         .IsRequired()
                         .HasMaxLength(2048)
@@ -556,6 +559,10 @@ namespace Jewel.JPMS.Api.Migrations
                     b.Property<string>("RaisedTo")
                         .HasMaxLength(256)
                         .HasColumnType("nvarchar(256)");
+
+                    b.Property<string>("RaisedToContactId")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
 
                     b.Property<string>("Reference")
                         .IsRequired()

@@ -1,0 +1,52 @@
+@*
+    The "Raised to" dropdown: offers the project's own contact list (Setup tab → Project
+    contacts) and nothing else — no free text, by design, so the ball-in-court party is always a
+    known contact. Value is the selected ProjectContact's ContactId, "" for none, or
+    LegacyValue when the bound record carries an old free-text RaisedTo that matches no contact
+    (the option shown via LegacyText) — picking it keeps that recorded text untouched.
+*@
+
+<div>
+    <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">@Label</label>
+    <select class="field" value="@Value" disabled="@Disabled" @onchange="HandleChange">
+        <option value="">—</option>
+        @if (!string.IsNullOrWhiteSpace(LegacyText))
+        {
+            <option value="@LegacyValue">@LegacyText (as recorded)</option>
+        }
+        @foreach (var contact in Contacts)
+        {
+            <option value="@contact.ContactId">@OptionLabel(contact)</option>
+        }
+    </select>
+    @if (Contacts.Count == 0 && !Loading)
+    {
+        <p class="mt-1 text-xs text-content-subtle">No contacts on this project yet — add them under <span class="font-medium">Project contacts</span> on the Setup tab.</p>
+    }
+</div>
+
+@code {
+    /// <summary>Sentinel Value meaning "keep the record's existing free-text RaisedTo".</summary>
+    public const string LegacyValue = "__legacy";
+
+    [Parameter] public string Label { get; set; } = "Raised to";
+    [Parameter, EditorRequired] public IReadOnlyList<ProjectContact> Contacts { get; set; } = Array.Empty<ProjectContact>();
+    [Parameter] public string Value { get; set; } = "";
+    [Parameter] public EventCallback<string> OnChange { get; set; }
+    [Parameter] public bool Disabled { get; set; }
+    [Parameter] public bool Loading { get; set; }
+
+    /// <summary>An old free-text RaisedTo that matches no contact; shown as a pickable option so
+    /// editing other fields never silently wipes it.</summary>
+    [Parameter] public string? LegacyText { get; set; }
+
+    // Mirrors the server's display-string derivation (RaisedToContactResolver) so what the picker
+    // shows is exactly what the request will record.
+    private static string OptionLabel(ProjectContact contact) =>
+        string.IsNullOrWhiteSpace(contact.Organisation)
+            ? contact.Name
+            : $"{contact.Name} ({contact.Organisation})";
+
+    private Task HandleChange(ChangeEventArgs e) =>
+        OnChange.InvokeAsync(e.Value?.ToString() ?? "");
+}

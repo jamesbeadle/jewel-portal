@@ -42,7 +42,15 @@ public sealed class UpdateRequestDetailsHandler : ICommandHandler<UpdateRequestD
         entity.ResponseText = command.ResponseText;
         entity.RespondedByEmail = command.RespondedByEmail;
         entity.ImpliesVariation = command.ImpliesVariation;
-        entity.RaisedTo = command.RaisedTo;
+        // A "Raised to" picked from the project's contact list wins and re-derives the display
+        // string (contact renames flow through on the next edit); a null contact id clears the
+        // link and keeps whatever RaisedTo string travelled — legacy free text survives edits.
+        // Lenient resolve: a stale link (contact since removed from the project) drops quietly
+        // rather than failing edits and status changes on old requests.
+        var raisedToContact = await RaisedToContactResolver.ResolveAsync(
+            context, entity.ProjectId, command.RaisedToContactId, cancellationToken, required: false);
+        entity.RaisedTo = raisedToContact?.Display ?? command.RaisedTo;
+        entity.RaisedToContactId = raisedToContact?.ContactId;
         entity.DrawingRef = command.DrawingRef;
         entity.ResponseDue = command.ResponseDue;
         entity.RelatedDrawingSpec = command.RelatedDrawingSpec;
@@ -57,6 +65,9 @@ public sealed class UpdateRequestDetailsHandler : ICommandHandler<UpdateRequestD
         // The issue date is user-managed: a supplied value (over)writes it; null means "not
         // supplied" (most edit surfaces don't carry it), so an existing date is preserved.
         if (command.IssuedAt is { } issued) entity.IssuedAt = issued;
+        // The Critical Path tag follows the same convention: a supplied value (over)writes it,
+        // null means "not supplied" — so surfaces that don't carry the tag never shed it.
+        if (command.CriticalPath is { } criticalPath) entity.CriticalPath = criticalPath;
         if (entity.RespondedAt is null && !string.IsNullOrWhiteSpace(command.ResponseText)) entity.RespondedAt = DateTimeOffset.UtcNow;
 
         // The close date lives and dies with the Closed status. While closed it is user-manageable

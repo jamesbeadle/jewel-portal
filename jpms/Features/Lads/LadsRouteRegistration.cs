@@ -6,7 +6,7 @@ using Jewel.JPMS.Models;
 namespace Jewel.JPMS.Features.Lads;
 
 // Client routes for Liquidated Damages claims. Mirrors the api endpoints in Features/Lads: list +
-// add are project-scoped, update addresses the claim. LADs surface on the project Schedule tab's
+// add are project-scoped, update addresses the claim. LADs surface on the project Programme tab's
 // Claims view alongside the NOD/EOT requests.
 public static class LadsRouteRegistration
 {

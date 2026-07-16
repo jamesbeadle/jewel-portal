@@ -1,7 +1,7 @@
 using Jewel.JPMS.Api.Features.Requests.Documents;
 
-// A representative RFI with recipients and a short activity trail, mirroring what the SQL builder
-// produces. Rendering this proves the renderer + font resolver work end-to-end on this machine.
+// A representative RFI with recipients, mirroring what the SQL builder produces. Rendering this
+// proves the renderer + font resolver work end-to-end on this machine.
 var model = new RequestDocumentModel(
     RequestId: "smoke-0001",
     DisplayNumber: "REQ-0001",
@@ -32,11 +32,6 @@ var model = new RequestDocumentModel(
     {
         new RequestDocumentRecipient("Jane Foster", "jane@fosterstudio.co.uk", "Architect", "Foster Studio Architects"),
         new RequestDocumentRecipient("Mr & Mrs Harrington", "harrington@example.com", "Client", null)
-    },
-    Activity: new[]
-    {
-        new RequestDocumentActivity("Tom Reilly (Jewel)", "RFI raised and issued to the design team.", DateTimeOffset.Now.AddDays(-3), false),
-        new RequestDocumentActivity("Jane Foster", "Acknowledged — checking with the structural engineer.", DateTimeOffset.Now.AddDays(-2), true)
     },
     GeneratedAt: DateTimeOffset.Now,
     // The structured RFI-sheet body, proving the itemised-queries table and narrative sections render.

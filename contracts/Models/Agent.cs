@@ -9,9 +9,9 @@ public enum RecordType
     Request = 0,           // the RF* family (RFI/RFA/RFC/RFQ/RFP) plus NOD/EOT
     BidPackageInvite = 1,  // a bid package and the subcontractors invited to tender (Part B)
     CostCentre = 2,        // a valuation-report cost centre on a project (project + cost-centre grouping)
-    Scheduling = 3,        // a project's scheduling bucket — one per project, feeds the Schedule tab
+    Scheduling = 3,        // a project's scheduling bucket — one per project, feeds the Programme tab
     Todo = 4,              // a project to-do item — created at triage or on the project's Overview tab
-    Lad = 5,               // a Liquidated Damages claim — a claims document on the Schedule tab
+    Lad = 5,               // a Liquidated Damages claim — a claims document on the Programme tab
     Variation = 6,         // a Variation Order — the approved change feeding the valuation report
     VariationQuote = 7     // a Variation Order Quote (VOQ) — the pre-approval quote a VO is raised from
 }

@@ -17,7 +17,7 @@ public sealed class UpdateTodoItemHandler : ICommandHandler<UpdateTodoItem, Todo
 
         entity.Title = Clamp(command.Title.Trim(), 256);
         entity.Notes = Clamp(command.Notes?.Trim() ?? "", 2048);
-        entity.AssigneeEmail = Clamp(command.AssigneeEmail?.Trim() ?? "", 256);
+        entity.AssigneeRole = (int?)command.AssigneeRole;
         entity.DueAt = command.DueAt;
 
         var wasComplete = entity.IsComplete;

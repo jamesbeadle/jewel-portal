@@ -722,7 +722,7 @@ else
                                                 <input type="checkbox" class="mt-0.5" @bind="createAddToProgramme" />
                                                 <span class="text-sm text-content">
                                                     Also add to Programme
-                                                    <span class="block text-xs text-content-subtle">The email (and its thread) is also tagged to the project's <span class="font-medium">programme communications</span>, so it appears under the Schedule tab as well as on the new request.</span>
+                                                    <span class="block text-xs text-content-subtle">The email (and its thread) is also tagged to the project's <span class="font-medium">programme communications</span>, so it appears under the Programme tab as well as on the new request.</span>
                                                 </span>
                                             </label>
 
@@ -740,7 +740,7 @@ else
                                         else if (createRecordType == RecordType.Scheduling)
                                         {
                                             <p class="rounded-lg bg-surface-raised border border-line px-3 py-2 text-xs text-content-subtle">
-                                                This email (and its whole thread) is tagged to the project's <span class="font-medium text-content">programme communications</span> and appears under the project's Schedule tab. You can add further tags later from the Tagged view — the same email can also feed a request or bid package.
+                                                This email (and its whole thread) is tagged to the project's <span class="font-medium text-content">programme communications</span> and appears under the project's Programme tab. You can add further tags later from the Tagged view — the same email can also feed a request or bid package.
                                             </p>
 
                                             <button type="button" class="btn-primary" disabled="@(busy || string.IsNullOrWhiteSpace(createProjectId))" @onclick="DoTagScheduling">Tag email to programme</button>
@@ -800,8 +800,8 @@ else
 
                                                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                                         <div>
-                                                            <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Assignee</label>
-                                                            <SearchSelect Options="@todoAssigneeOptions" Value="@row.AssigneeEmail" ValueChanged="v => row.AssigneeEmail = v"
+                                                            <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Assigned role</label>
+                                                            <SearchSelect Options="@todoAssigneeOptions" Value="@row.AssigneeRole" ValueChanged="v => row.AssigneeRole = v"
                                                                           Placeholder="Unassigned" WidthClass="w-full" />
                                                         </div>
                                                         <FormField Label="Due" Value="@row.Due" OnChange="v => row.Due = v" InputType="date" />
@@ -827,10 +827,10 @@ else
                                     @* Company-wide emails that don't belong to any project: capture them straight onto
                                        the GENERAL to-do list. Same row editor as "Create new → To-do item", but no
                                        project is chosen — items are created with no project and live on the To-dos
-                                       browser page (and the assignee's dashboard). *@
+                                       browser page (and the dashboards of everyone holding the assigned role). *@
                                     <div class="space-y-4">
                                         <p class="rounded-lg bg-surface-raised border border-line px-3 py-2 text-xs text-content-subtle">
-                                            For <span class="font-medium text-content">company-wide</span> emails that don't belong to a project. Each item is numbered TODO-#### and this email is tagged to <span class="font-medium text-content">every item</span> you add here. The items appear on the To-dos page and on the assignee's dashboard — not on any project.
+                                            For <span class="font-medium text-content">company-wide</span> emails that don't belong to a project. Each item is numbered TODO-#### and this email is tagged to <span class="font-medium text-content">every item</span> you add here. The items appear on the To-dos page and on the dashboard of everyone holding the assigned role — not on any project.
                                         </p>
 
                                         @for (var i = 0; i < createTodoRows.Count; i++)
@@ -850,8 +850,8 @@ else
 
                                                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                                     <div>
-                                                        <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Assignee</label>
-                                                        <SearchSelect Options="@todoAssigneeOptions" Value="@row.AssigneeEmail" ValueChanged="v => row.AssigneeEmail = v"
+                                                        <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Assigned role</label>
+                                                        <SearchSelect Options="@todoAssigneeOptions" Value="@row.AssigneeRole" ValueChanged="v => row.AssigneeRole = v"
                                                                       Placeholder="Unassigned" WidthClass="w-full" />
                                                     </div>
                                                     <FormField Label="Due" Value="@row.Due" OnChange="v => row.Due = v" InputType="date" />
@@ -1381,7 +1381,7 @@ else
     private string createResponseDue = "";
     // "Also add to Programme": as well as tagging the email to the new request, the server tags it
     // to the project's scheduling bucket (the same tag "Tag email to programme" applies) so the
-    // thread appears under the Schedule tab too. Reset per selection like the rest of the form.
+    // thread appears under the Programme tab too. Reset per selection like the rest of the form.
     private bool createAddToProgramme;
     // Bid Package Invite create fields (shares createProjectId + createTitle with the Request form).
     private string createTrade = "";
@@ -1402,7 +1402,8 @@ else
     {
         public string Title { get; set; } = "";
         public string Notes { get; set; } = "";
-        public string AssigneeEmail { get; set; } = "";
+        // The assigned ROLE, held as the SearchSelect's string value (the role's int; "" = unassigned).
+        public string AssigneeRole { get; set; } = "";
         public string Due { get; set; } = "";
     }
     private List<TodoDraftRow> createTodoRows = new() { new TodoDraftRow() };
@@ -1417,9 +1418,10 @@ else
     private IReadOnlyList<LinkableRecord> createTodoLinkRequests = Array.Empty<LinkableRecord>();
     private bool createTodoLinkRequestsLoading;
 
-    // The assignee picker's option pool: internal staff only (server-filtered by
-    // TodoRoles.AssignableAsTodoAssignee), fetched once when the page loads and shared by every
-    // to-do draft row. Assignment is picker-only; there is no free-text email entry.
+    // The assignee picker's option pool: the ROLES a to-do can be assigned to
+    // (TodoRoles.AssignableAsTodoAssignee, served by ListTodoAssignableRoles), fetched once when
+    // the page loads and shared by every to-do draft row. Items are assigned to a role, not a
+    // person, so they survive staff changes. Assignment is picker-only.
     private IReadOnlyList<SearchSelect.Option> todoAssigneeOptions = Array.Empty<SearchSelect.Option>();
 
     private string TodoRowCountLabel
@@ -1441,14 +1443,14 @@ else
 
     private void OnTodoNotesInput(TodoDraftRow row, ChangeEventArgs e) => row.Notes = e.Value?.ToString() ?? "";
 
-    private async Task LoadTodoAssigneesAsync()
+    private async Task LoadTodoAssignableRolesAsync()
     {
         // A failed load leaves the picker with no options rather than blocking triage — to-dos can
         // still be created, they just go in unassigned.
         try
         {
-            todoAssigneeOptions = (await Todos.ListAssigneesAsync())
-                .Select(user => new SearchSelect.Option(user.Email, $"{user.DisplayName} — {user.Email}"))
+            todoAssigneeOptions = (await Todos.ListAssignableRolesAsync())
+                .Select(role => new SearchSelect.Option(((int)role).ToString(), role.DisplayName()))
                 .ToList();
         }
         catch { }
@@ -1463,7 +1465,7 @@ else
         await Projects.RefreshAsync(CancellationToken.None);
         await LoadAsync();
         await LoadUnassignedAsync();
-        await LoadTodoAssigneesAsync();
+        await LoadTodoAssignableRolesAsync();
         isLoaded = true;
     }
 
@@ -2015,7 +2017,7 @@ else
     }
 
     // The type to link as is the picked RECORD's own type, not the dropdown's: the Scheduling picker
-    // lists the bucket alongside the schedule's claims documents (NOD/EOT requests, LADs claims), and
+    // lists the bucket alongside the programme's claims documents (NOD/EOT requests, LADs claims), and
     // each of those must link through its owning provider so the tag stem resolves correctly.
     private RecordType SelectedLinkRecordType() =>
         linkRecords.FirstOrDefault(r => r.RecordId == linkRecordId)?.Type ?? linkRecordType;
@@ -2082,7 +2084,7 @@ else
             .Select(row => new TodoItemDraft(
                 row.Title.Trim(),
                 NullIfBlank(row.Notes),
-                NullIfBlank(row.AssigneeEmail),
+                ParseTodoRole(row.AssigneeRole),
                 ParseDate(row.Due)))
             .ToList();
         if (drafts.Count == 0) { actionError = "At least one to-do item needs a title."; return; }
@@ -2099,7 +2101,7 @@ else
 
     // "General to-do": same as DoCreateTodos but with NO project — the items are created as general
     // (company-wide) entries for emails that don't belong to any project. They surface on the /todos
-    // browser page and each assignee's dashboard instead of a project's To-do tab.
+    // browser page and the assigned roles' dashboards instead of a project's To-do tab.
     private async Task DoCreateGeneralTodos()
     {
         if (selected is null || busy) return;
@@ -2109,7 +2111,7 @@ else
             .Select(row => new TodoItemDraft(
                 row.Title.Trim(),
                 NullIfBlank(row.Notes),
-                NullIfBlank(row.AssigneeEmail),
+                ParseTodoRole(row.AssigneeRole),
                 ParseDate(row.Due)))
             .ToList();
         if (drafts.Count == 0) { actionError = "At least one to-do item needs a title."; return; }
@@ -2465,6 +2467,10 @@ else
     private static string Date(DateTimeOffset value) => value.LocalDateTime.ToString("d MMM yyyy, HH:mm");
 
     private static string? NullIfBlank(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+
+    // The to-do rows' SearchSelect holds the assigned role as its int-in-a-string value ("" = unassigned).
+    private static Role? ParseTodoRole(string value) =>
+        int.TryParse(value, out var parsed) ? (Role)parsed : null;
 
     private static DateTimeOffset? ParseDate(string value) =>
         DateTimeOffset.TryParse(value, out var parsed) ? parsed : null;

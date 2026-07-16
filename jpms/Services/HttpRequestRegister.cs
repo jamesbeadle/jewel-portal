@@ -154,13 +154,13 @@ public sealed class HttpRequestRegister : IRequestRegister
 
     private async Task RaiseRecordAsync(Request record)
     {
-        await commands.SendAsync(new RaiseRequest(record.ProjectId, record.Kind, record.Reference, record.Title, record.Description, record.Value, record.RaisedByEmail, record.RaisedTo, record.DrawingRef, record.ResponseDue, record.InternalNotes, record.ClientNotes), CancellationToken.None);
+        await commands.SendAsync(new RaiseRequest(record.ProjectId, record.Kind, record.Reference, record.Title, record.Description, record.Value, record.RaisedByEmail, record.RaisedTo, record.DrawingRef, record.ResponseDue, record.InternalNotes, record.ClientNotes, RaisedToContactId: record.RaisedToContactId), CancellationToken.None);
         await readModel.RefreshAsync(record.ProjectId, CancellationToken.None);
     }
 
     private async Task UpdateRecordAsync(Request record)
     {
-        await commands.SendAsync(new UpdateRequestDetails(record.RequestId, record.Reference, record.Title, record.Description, record.Status, record.Value, record.ResponseText, record.RespondedByEmail, record.ImpliesVariation, record.RaisedTo, record.DrawingRef, record.ResponseDue, record.RelatedDrawingSpec, record.InternalNotes, record.ClientNotes), CancellationToken.None);
+        await commands.SendAsync(new UpdateRequestDetails(record.RequestId, record.Reference, record.Title, record.Description, record.Status, record.Value, record.ResponseText, record.RespondedByEmail, record.ImpliesVariation, record.RaisedTo, record.DrawingRef, record.ResponseDue, record.RelatedDrawingSpec, record.InternalNotes, record.ClientNotes, RaisedToContactId: record.RaisedToContactId), CancellationToken.None);
         await readModel.RefreshAsync(record.ProjectId, CancellationToken.None);
     }
 }

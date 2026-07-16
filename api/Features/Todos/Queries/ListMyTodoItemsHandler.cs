@@ -6,9 +6,10 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Jewel.JPMS.Api.Features.Todos.Queries;
 
-// Every to-do item assigned to the signed-in user — general (no-project) and project items alike.
-// The endpoint stamps AssigneeEmail from the session, so the client never chooses whose items it
-// reads. Backs the "My to-dos" dashboard panel and the To-dos browser for non-admin roles.
+// Every to-do item assigned to any ROLE the signed-in user holds — general (no-project) and
+// project items alike. The endpoint stamps Roles from the session, so the client never chooses
+// whose items it reads. Backs the "My to-dos" dashboard panel and the To-dos browser for
+// non-admin roles.
 public sealed class ListMyTodoItemsHandler : IQueryHandler<ListMyTodoItems, IReadOnlyList<TodoItem>>
 {
     private readonly JpmsContext context;
@@ -16,11 +17,11 @@ public sealed class ListMyTodoItemsHandler : IQueryHandler<ListMyTodoItems, IRea
 
     public async Task<IReadOnlyList<TodoItem>> HandleAsync(ListMyTodoItems query, CancellationToken cancellationToken)
     {
-        if (string.IsNullOrWhiteSpace(query.AssigneeEmail)) return Array.Empty<TodoItem>();
+        if (query.Roles is null || query.Roles.Count == 0) return Array.Empty<TodoItem>();
 
-        var email = query.AssigneeEmail.Trim();
+        var roleValues = query.Roles.Select(role => (int)role).ToList();
         var entities = await context.TodoItems.AsNoTracking()
-            .Where(t => t.AssigneeEmail == email)
+            .Where(t => t.AssigneeRole != null && roleValues.Contains(t.AssigneeRole.Value))
             .ToListAsync(cancellationToken);
 
         return entities

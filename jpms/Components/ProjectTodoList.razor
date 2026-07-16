@@ -64,9 +64,9 @@
                                 {
                                     <span class="@(IsOverdue(item) ? "text-negative font-medium" : "")">Due @item.DueAt.Value.LocalDateTime.ToString("d MMM yyyy")</span>
                                 }
-                                @if (!string.IsNullOrWhiteSpace(item.AssigneeEmail))
+                                @if (item.AssigneeRole is Role assignedRole)
                                 {
-                                    <span>Assigned to @item.AssigneeEmail</span>
+                                    <span>Assigned to @assignedRole.DisplayName()</span>
                                 }
                                 @if (!string.IsNullOrWhiteSpace(item.CreatedByEmail))
                                 {
@@ -103,7 +103,7 @@
 
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Assignee</label>
+                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Assigned role</label>
                 <SearchSelect Options="@AssigneeOptions" Value="@newAssignee" ValueChanged="v => newAssignee = v"
                               Placeholder="Unassigned" WidthClass="w-full" />
             </div>
@@ -122,9 +122,10 @@
 
     private IReadOnlyList<TodoItem> items = Array.Empty<TodoItem>();
 
-    // The assignee picker's option pool: internal staff only, fetched once when the tab loads.
-    // The server filters by role (TodoRoles.AssignableAsTodoAssignee) — external and site-floor
-    // users never appear. Assignment is picker-only; there is no free-text email entry.
+    // The assignee picker's option pool: the ROLES a to-do can be assigned to (internal
+    // office/management roles — TodoRoles.AssignableAsTodoAssignee, served by
+    // ListTodoAssignableRoles), fetched once when the tab loads. Items are assigned to a role,
+    // not a person, so they survive staff changes. Assignment is picker-only.
     private IReadOnlyList<SearchSelect.Option> AssigneeOptions = Array.Empty<SearchSelect.Option>();
     private bool loading = true;
     private bool busy;
@@ -147,17 +148,17 @@
     protected override async Task OnInitializedAsync()
     {
         await LoadAsync();
-        if (CanManage) await LoadAssigneesAsync();
+        if (CanManage) await LoadAssignableRolesAsync();
     }
 
-    private async Task LoadAssigneesAsync()
+    private async Task LoadAssignableRolesAsync()
     {
         // A failed load leaves the picker with no options rather than blocking the tab — the add
         // modal still works, the item just goes in unassigned.
         try
         {
-            AssigneeOptions = (await Todos.ListAssigneesAsync())
-                .Select(user => new SearchSelect.Option(user.Email, $"{user.DisplayName} — {user.Email}"))
+            AssigneeOptions = (await Todos.ListAssignableRolesAsync())
+                .Select(role => new SearchSelect.Option(RoleValue(role), role.DisplayName()))
                 .ToList();
         }
         catch { }
@@ -197,7 +198,7 @@
                 ProjectId,
                 newTitle.Trim(),
                 NullIfBlank(newNotes),
-                NullIfBlank(newAssignee),
+                ParseRole(newAssignee),
                 ParseDate(newDue)));
             CloseAdd();
         });
@@ -212,7 +213,7 @@
             item.TodoItemId,
             item.Title,
             NullIfBlank(item.Notes),
-            NullIfBlank(item.AssigneeEmail),
+            item.AssigneeRole,
             item.DueAt,
             !item.IsComplete)));
     }
@@ -260,4 +261,10 @@
 
     private static DateTimeOffset? ParseDate(string value) =>
         DateTimeOffset.TryParse(value, out var parsed) ? parsed : null;
+
+    // Role <-> SearchSelect value plumbing: options carry the role's int as a string ("" = unassigned).
+    private static string RoleValue(Role role) => ((int)role).ToString();
+
+    private static Role? ParseRole(string value) =>
+        int.TryParse(value, out var parsed) ? (Role)parsed : null;
 }

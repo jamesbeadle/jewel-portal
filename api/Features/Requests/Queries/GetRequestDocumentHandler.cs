@@ -2,7 +2,6 @@ using Jewel.JPMS.Api.Cqrs;
 using Jewel.JPMS.Api.Data;
 using Jewel.JPMS.Api.Features.Requests.Documents;
 using Jewel.JPMS.Contracts.Requests;
-using Jewel.JPMS.Models;
 
 namespace Jewel.JPMS.Api.Features.Requests.Queries;
 
@@ -13,15 +12,13 @@ namespace Jewel.JPMS.Api.Features.Requests.Queries;
 public sealed class GetRequestDocumentHandler : IQueryHandler<GetRequestDocument, RequestDocumentFile?>
 {
     private readonly JpmsContext context;
-    private readonly RequestEmailReader emails;
 
-    public GetRequestDocumentHandler(JpmsContext context, RequestEmailReader emails)
-    { this.context = context; this.emails = emails; }
+    public GetRequestDocumentHandler(JpmsContext context)
+    { this.context = context; }
 
     public async Task<RequestDocumentFile?> HandleAsync(GetRequestDocument query, CancellationToken cancellationToken)
     {
-        var tagged = await emails.ForRequestAsync(query.RequestId, cancellationToken);
-        var model = await RequestDocumentBuilder.BuildAsync(context, query.RequestId, tagged, cancellationToken);
+        var model = await RequestDocumentBuilder.BuildAsync(context, query.RequestId, cancellationToken);
         if (model is null) return null;
 
         var pdf = RequestDocumentRenderer.Render(model);

@@ -13,6 +13,8 @@ public sealed class RoleSet
 
     public bool IncludesAny(IEnumerable<Role> roles) => roles.Any(allowedRoles.Contains);
 
+    public bool Includes(Role role) => allowedRoles.Contains(role);
+
     public static RoleSet Of(params Role[] allowedRoles) => new(allowedRoles);
 }
 

@@ -99,6 +99,12 @@ public interface IMailboxGraphClient
     /// never bounces back to triage). Verified per message. Returns how many were retagged.</summary>
     Task<int> RetagAsync(string oldCategory, string newCategory, CancellationToken ct);
 
+    /// <summary>Add <paramref name="aliasCategory"/> to every email carrying <paramref name="existingCategory"/>,
+    /// KEEPING the existing tag in place — used when a record gains a new reference on RFI promotion
+    /// (REQ-#### → RFI-NNN): the immutable REQ tag stays on the mail as a permanent audit alias while
+    /// live reads follow the new tag. Verified per message. Returns how many emails gained the alias.</summary>
+    Task<int> AddAliasTagAsync(string existingCategory, string aliasCategory, CancellationToken ct);
+
     /// <summary>Read the fields needed to record an email against a request, or null if it's gone.</summary>
     Task<MailboxSnapshot?> GetSnapshotAsync(string messageId, string? internetMessageId, CancellationToken ct);
 
@@ -211,6 +217,7 @@ public sealed class NullMailboxGraphClient : IMailboxGraphClient
     public Task<bool> AssignAsync(string messageId, string? internetMessageId, string requestCategory, CancellationToken ct) => Task.FromResult(false);
     public Task<int> ClearRequestTagsAsync(string requestCategory, CancellationToken ct) => Task.FromResult(0);
     public Task<int> RetagAsync(string oldCategory, string newCategory, CancellationToken ct) => Task.FromResult(0);
+    public Task<int> AddAliasTagAsync(string existingCategory, string aliasCategory, CancellationToken ct) => Task.FromResult(0);
     public Task<MailboxSnapshot?> GetSnapshotAsync(string messageId, string? internetMessageId, CancellationToken ct) => Task.FromResult<MailboxSnapshot?>(null);
     public Task<IReadOnlyList<string>> ListConversationIdsByCategoryAsync(string category, CancellationToken ct) =>
         Task.FromResult<IReadOnlyList<string>>(Array.Empty<string>());
@@ -431,6 +438,30 @@ public sealed class MailboxGraphClient : IMailboxGraphClient
                 break;
         }
         return retagged;
+    }
+
+    public async Task<int> AddAliasTagAsync(string existingCategory, string aliasCategory, CancellationToken ct)
+    {
+        if (string.Equals(existingCategory, aliasCategory, StringComparison.OrdinalIgnoreCase))
+            return 0;
+
+        // Unlike RetagAsync, nothing is removed, so the category query keeps matching the messages
+        // already processed — track them and stop once a pass yields nothing new. The query returns
+        // one page per pass; in practice a record has aliased tags applied early in its life (RFI
+        // promotion), long before its correspondence could outgrow a page.
+        var aliased = 0;
+        var seen = new HashSet<string>(StringComparer.Ordinal);
+        for (var guard = 0; guard < 20; guard++)
+        {
+            var ids = (await FindIdsByCategoryAsync(existingCategory, ct)).Where(seen.Add).ToList();
+            if (ids.Count == 0)
+                break;
+
+            foreach (var id in ids)
+                if (await AddTagAsync(id, null, aliasCategory, ct))
+                    aliased++;
+        }
+        return aliased;
     }
 
     // --- Verified tag operations: write the categories, then read them back to confirm. ---

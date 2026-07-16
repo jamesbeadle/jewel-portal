@@ -64,7 +64,6 @@ public static class RequestDocumentRenderer
         AddResponseActionRequired(section, model);
         AddResponseSection(section, model);
         AddRecipients(section, model);
-        AddActivity(section, model);
         AddFooter(section, model);
 
         var renderer = new PdfDocumentRenderer { Document = document };
@@ -171,7 +170,7 @@ public static class RequestDocumentRenderer
             "Status", model.StatusLabel);
         AddGridRow(table,
             "Requesting party", model.RaisedByEmail,
-            "Issued to (ball-in-court)", string.IsNullOrWhiteSpace(model.RaisedTo) ? "—" : model.RaisedTo!);
+            "Issued to", string.IsNullOrWhiteSpace(model.RaisedTo) ? "—" : model.RaisedTo!);
 
         SpaceAfterTable(section);
     }
@@ -407,41 +406,6 @@ public static class RequestDocumentRenderer
             BodyCell(row.Cells[1], r.Email);
             BodyCell(row.Cells[2], string.IsNullOrWhiteSpace(r.Organisation) ? "—" : r.Organisation!);
             BodyCell(row.Cells[3], r.Role);
-        }
-
-        SpaceAfterTable(section);
-    }
-
-    private static void AddActivity(Section section, RequestDocumentModel model)
-    {
-        if (model.Activity.Count == 0)
-            return;
-
-        SectionHeading(section, "Activity history");
-
-        var table = section.AddTable();
-        table.Borders.Color = Hair;
-        table.Borders.Width = 0.5;
-        table.AddColumn(Unit.FromCentimeter(3.4));
-        table.AddColumn(Unit.FromCentimeter(3.4));
-        table.AddColumn(Unit.FromCentimeter(11.0));
-
-        var head = table.AddRow();
-        head.Shading.Color = Navy;
-        HeaderCell(head.Cells[0], "When");
-        HeaderCell(head.Cells[1], "Who");
-        HeaderCell(head.Cells[2], "Message");
-
-        var zebra = false;
-        foreach (var a in model.Activity)
-        {
-            var row = table.AddRow();
-            if (zebra) row.Shading.Color = Panel;
-            zebra = !zebra;
-            BodyCell(row.Cells[0], DateTime(a.PostedAt));
-            var who = a.AuthorName + (a.Inbound ? " (in)" : "");
-            BodyCell(row.Cells[1], who);
-            BodyCell(row.Cells[2], a.Body);
         }
 
         SpaceAfterTable(section);

@@ -27,9 +27,10 @@
 
     @if (ShowMyTodos)
     {
-        @* Open to-do items assigned to this user — general (company-wide) and project items alike.
-           Shown only for the internal office/management roles a to-do can be assigned to (mirrors
-           TodoRoles.AssignableAsTodoAssignee); site-floor and external roles never carry items. *@
+        @* Open to-do items assigned to any role this user holds — general (company-wide) and
+           project items alike. Shown only for the internal office/management roles a to-do can be
+           assigned to (mirrors TodoRoles.AssignableAsTodoAssignee); site-floor and external roles
+           never carry items. *@
         <div class="mb-8">
             <MyTodosPanel />
         </div>

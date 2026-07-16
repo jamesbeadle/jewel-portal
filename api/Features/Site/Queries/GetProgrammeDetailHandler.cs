@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Jewel.JPMS.Api.Features.Site.Queries;
 
-// Everything the Schedule tab's programme view needs in one round trip: live tasks, dependency
+// Everything the Programme tab's programme view needs in one round trip: live tasks, dependency
 // links, and the latest baseline with its task snapshots (movement is computed from the pair via
 // ProgrammeMovementCalculator, client- or agent-side).
 public sealed class GetProgrammeDetailHandler : IQueryHandler<GetProgrammeDetail, ProgrammeDetail>

@@ -58,7 +58,9 @@ public sealed record Request(
     string? RelatedNodRequestId = null,     // EOT only: the Notice of Delay this EOT arises from (optional)
     string? MergedIntoRequestId = null,     // set when this General request was merged into another (the survivor's id)
     DateTimeOffset? ClosedAt = null,        // when the request was closed — user-chosen (today or prior), cleared on reopen
-    DateTimeOffset? IssuedAt = null)        // when the official document was issued — user-set/updated, never stamped automatically
+    DateTimeOffset? IssuedAt = null,        // when the official document was issued — user-set/updated, never stamped automatically
+    string? RaisedToContactId = null,       // the project contact RaisedTo points at, when picked from the project's contact list (RaisedTo stays the denormalised display string)
+    bool CriticalPath = false)              // Critical Path tag — the RFI is programme-related; shows in the Programme tab's "Critical Path RFIs" view
 {
     // Human-readable request number / mailbox folder name (e.g. "REQ-0001"). Empty until assigned.
     public string DisplayNumber => Number > 0 ? $"REQ-{Number:0000}" : "";

@@ -12,8 +12,10 @@
       contact book supplies the people, each at their default To/CC/BCC routing.
     - Per-project overrides re-route a party contact for this project only (e.g. BCC the
       practice's finance person here but nowhere else).
-    - Ad-hoc recipients — internal Jewel staff or any third party — can be copied on every
-      issued document for this project.
+    - Project contacts — the project's own contact list: consultants, engineers, internal Jewel
+      staff or any third party. Each has a role and a routing; Off means the contact is on the
+      list (so requests can be raised to them) without being copied on issued documents. This
+      list also feeds the "Raised to" dropdown when raising a request.
 *@
 
 <div class="panel p-5 mb-6">
@@ -34,94 +36,111 @@
     {
         <p class="text-sm text-content-subtle">Project not loaded.</p>
     }
-    else if (string.IsNullOrEmpty(Project.PartyId))
-    {
-        <p class="text-sm text-content-subtle">No corresponding party is set. Use <span class="font-medium">Edit details</span> to choose the client or architect this project corresponds with; their contacts then appear here.</p>
-    }
     else
     {
-        <p class="text-sm text-content mb-3">
-            Corresponds with <span class="font-medium">@(partyName ?? "…")</span>
-            <span class="text-content-subtle">(@Project.PartyKind.DisplayName().ToLowerInvariant())</span>
-            — request documents are addressed to the practice's primary contact; CC/BCC contacts are copied on every issue.
-        </p>
-
-        @if (partyContacts.Count > 0)
+        @if (string.IsNullOrEmpty(Project.PartyId))
         {
-            <div class="border border-line rounded-lg overflow-hidden mb-4">
-                <table class="w-full text-sm">
-                    <thead>
-                        <tr class="text-left text-content-subtle border-b border-line">
-                            <th class="px-3 py-2 font-medium">Contact</th>
-                            <th class="px-3 py-2 font-medium">Email</th>
-                            <th class="px-3 py-2 font-medium">On this project</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach (var contact in partyContacts)
-                        {
-                            var effective = EffectiveRouting(contact);
-                            var overridden = OverrideFor(contact.PartyContactId) is not null;
-                            <tr class="border-b border-line last:border-0">
-                                <td class="px-3 py-2 text-content">
-                                    @contact.Name
-                                    @if (contact.IsPrimary)
-                                    {
-                                        <span class="ml-2 inline-flex items-center rounded bg-accent/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-accent">Primary</span>
-                                    }
-                                </td>
-                                <td class="px-3 py-2 text-content-muted">@contact.Email</td>
-                                <td class="px-3 py-2 whitespace-nowrap">
-                                    <select class="field text-xs py-1 inline-block w-auto" value="@((int)effective)" disabled="@(busy || !CanManage)"
-                                            @onchange="e => SetPartyContactRoutingAsync(contact, e)">
-                                        <option value="@((int)CorrespondenceRouting.To)">To</option>
-                                        <option value="@((int)CorrespondenceRouting.Cc)">CC</option>
-                                        <option value="@((int)CorrespondenceRouting.Bcc)">BCC</option>
-                                        <option value="@((int)CorrespondenceRouting.None)">Off</option>
-                                    </select>
-                                    @if (overridden)
-                                    {
-                                        <span class="ml-2 text-[10px] uppercase tracking-wide text-content-subtle" title="This project overrides the contact's default routing">overridden</span>
-                                    }
-                                </td>
+            <p class="text-sm text-content-subtle mb-4">No corresponding party is set. Use <span class="font-medium">Edit details</span> to choose the client or architect this project corresponds with; their contacts then appear here.</p>
+        }
+        else
+        {
+            <p class="text-sm text-content mb-3">
+                Corresponds with <span class="font-medium">@(partyName ?? "…")</span>
+                <span class="text-content-subtle">(@Project.PartyKind.DisplayName().ToLowerInvariant())</span>
+                — request documents are addressed to the practice's primary contact; CC/BCC contacts are copied on every issue.
+            </p>
+
+            @if (partyContacts.Count > 0)
+            {
+                <div class="border border-line rounded-lg overflow-hidden mb-4">
+                    <table class="w-full text-sm">
+                        <thead>
+                            <tr class="text-left text-content-subtle border-b border-line">
+                                <th class="px-3 py-2 font-medium">Contact</th>
+                                <th class="px-3 py-2 font-medium">Email</th>
+                                <th class="px-3 py-2 font-medium">On this project</th>
                             </tr>
-                        }
-                    </tbody>
-                </table>
-            </div>
-        }
-        else if (!loading)
-        {
-            <p class="text-sm text-content-subtle mb-4">The @Project.PartyKind.DisplayName().ToLowerInvariant() has no contacts on its book yet — add them from the @(Project.PartyKind == PartyKind.Architect ? "Architects" : "Clients") page.</p>
+                        </thead>
+                        <tbody>
+                            @foreach (var contact in partyContacts)
+                            {
+                                var effective = EffectiveRouting(contact);
+                                var overridden = OverrideFor(contact.PartyContactId) is not null;
+                                <tr class="border-b border-line last:border-0">
+                                    <td class="px-3 py-2 text-content">
+                                        @contact.Name
+                                        @if (contact.IsPrimary)
+                                        {
+                                            <span class="ml-2 inline-flex items-center rounded bg-accent/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-accent">Primary</span>
+                                        }
+                                    </td>
+                                    <td class="px-3 py-2 text-content-muted">@contact.Email</td>
+                                    <td class="px-3 py-2 whitespace-nowrap">
+                                        <select class="field text-xs py-1 inline-block w-auto" value="@((int)effective)" disabled="@(busy || !CanManage)"
+                                                @onchange="e => SetPartyContactRoutingAsync(contact, e)">
+                                            <option value="@((int)CorrespondenceRouting.To)">To</option>
+                                            <option value="@((int)CorrespondenceRouting.Cc)">CC</option>
+                                            <option value="@((int)CorrespondenceRouting.Bcc)">BCC</option>
+                                            <option value="@((int)CorrespondenceRouting.None)">Off</option>
+                                        </select>
+                                        @if (overridden)
+                                        {
+                                            <span class="ml-2 text-[10px] uppercase tracking-wide text-content-subtle" title="This project overrides the contact's default routing">overridden</span>
+                                        }
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+            else if (!loading)
+            {
+                <p class="text-sm text-content-subtle mb-4">The @Project.PartyKind.DisplayName().ToLowerInvariant() has no contacts on its book yet — add them from the @(Project.PartyKind == PartyKind.Architect ? "Architects" : "Clients") page.</p>
+            }
         }
 
-        <h4 class="eyebrow mb-2">Also on this project</h4>
+        <h4 class="eyebrow mb-2">Project contacts</h4>
         @if (adHocContacts.Count == 0)
         {
-            <p class="text-xs text-content-subtle mb-3">No project-specific recipients. Add colleagues or third parties to CC or BCC on every document this project issues.</p>
+            <p class="text-xs text-content-subtle mb-3">No contacts on this project yet. Contacts appear in the "Raised to" dropdown when raising a request, and can be copied (CC/BCC) on every document this project issues.</p>
         }
         else
         {
             <div class="border border-line rounded-lg overflow-hidden mb-3">
                 <table class="w-full text-sm">
+                    <thead>
+                        <tr class="text-left text-content-subtle border-b border-line">
+                            <th class="px-3 py-2 font-medium">Contact</th>
+                            <th class="px-3 py-2 font-medium">Email</th>
+                            <th class="px-3 py-2 font-medium">Organisation</th>
+                            <th class="px-3 py-2 font-medium">Role</th>
+                            <th class="px-3 py-2 font-medium">Routing</th>
+                            <th class="px-3 py-2"></th>
+                        </tr>
+                    </thead>
                     <tbody>
                         @foreach (var contact in adHocContacts)
                         {
-                            <tr class="border-b border-line last:border-0">
+                            <tr class="border-b border-line last:border-0 @(contact.ContactId == editingContactId ? "bg-surface-raised" : null)">
                                 <td class="px-3 py-2 text-content">@contact.Name</td>
                                 <td class="px-3 py-2 text-content-muted">@contact.Email</td>
+                                <td class="px-3 py-2 text-content-muted">@(contact.Organisation ?? "—")</td>
+                                <td class="px-3 py-2 text-content-muted">@contact.Role.DisplayName()</td>
                                 <td class="px-3 py-2 whitespace-nowrap">
                                     <select class="field text-xs py-1 inline-block w-auto" value="@((int)contact.Routing)" disabled="@(busy || !CanManage)"
                                             @onchange="e => SetAdHocRoutingAsync(contact, e)">
+                                        <option value="@((int)CorrespondenceRouting.None)">Off</option>
                                         <option value="@((int)CorrespondenceRouting.To)">To</option>
                                         <option value="@((int)CorrespondenceRouting.Cc)">CC</option>
                                         <option value="@((int)CorrespondenceRouting.Bcc)">BCC</option>
-                                        <option value="@((int)CorrespondenceRouting.None)">Off</option>
                                     </select>
                                 </td>
-                                <td class="px-3 py-2 text-right">
+                                <td class="px-3 py-2 text-right whitespace-nowrap">
                                     @if (CanManage)
                                     {
+                                        <button type="button" class="text-xs font-medium text-content-muted hover:text-content mr-3"
+                                                disabled="@busy" @onclick="() => BeginEdit(contact)">Edit</button>
                                         <button type="button" class="text-xs font-medium text-negative/80 hover:text-negative"
                                                 disabled="@busy" @onclick="() => RemoveAdHocAsync(contact)">Remove</button>
                                     }
@@ -135,19 +154,41 @@
 
         @if (CanManage)
         {
-            <div class="grid grid-cols-1 sm:grid-cols-4 gap-3 items-end">
-                <FormField Label="Name" Value="@newName" OnChange="v => newName = v" />
-                <FormField Label="Email" Value="@newEmail" OnChange="v => newEmail = v" InputType="email" />
-                <div>
-                    <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Routing</label>
-                    <select class="field" @bind="newRouting">
-                        <option value="@((int)CorrespondenceRouting.Cc)">CC</option>
-                        <option value="@((int)CorrespondenceRouting.Bcc)">BCC</option>
-                    </select>
+            <div class="space-y-3">
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <FormField Label="Name" Value="@formName" OnChange="v => formName = v" />
+                    <FormField Label="Email" Value="@formEmail" OnChange="v => formEmail = v" InputType="email" />
+                    <FormField Label="Organisation" Value="@formOrganisation" OnChange="v => formOrganisation = v" />
                 </div>
-                <button type="button" class="btn-secondary" disabled="@busy" @onclick="AddAdHocAsync">
-                    @(busy ? "Saving…" : "Add recipient")
-                </button>
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 items-end">
+                    <div>
+                        <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Role</label>
+                        <select class="field" @bind="formRole">
+                            @foreach (var role in RoleOptions)
+                            {
+                                <option value="@((int)role)">@role.DisplayName()</option>
+                            }
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Routing</label>
+                        <select class="field" @bind="formRouting">
+                            <option value="@((int)CorrespondenceRouting.None)">Off — contact list only</option>
+                            <option value="@((int)CorrespondenceRouting.To)">To</option>
+                            <option value="@((int)CorrespondenceRouting.Cc)">CC</option>
+                            <option value="@((int)CorrespondenceRouting.Bcc)">BCC</option>
+                        </select>
+                    </div>
+                    <div class="flex gap-2">
+                        <button type="button" class="btn-secondary" disabled="@busy" @onclick="SaveContactAsync">
+                            @(busy ? "Saving…" : editingContactId is null ? "Add contact" : "Save contact")
+                        </button>
+                        @if (editingContactId is not null)
+                        {
+                            <button type="button" class="text-sm text-content-muted hover:text-content" disabled="@busy" @onclick="CancelEdit">Cancel</button>
+                        }
+                    </div>
+                </div>
             </div>
         }
     }
@@ -156,6 +197,12 @@
 @code {
     [Parameter, EditorRequired] public string ProjectId { get; set; } = "";
 
+    private static readonly ProjectContactRole[] RoleOptions =
+    {
+        ProjectContactRole.Client, ProjectContactRole.Architect, ProjectContactRole.Consultant,
+        ProjectContactRole.Engineer, ProjectContactRole.Contractor, ProjectContactRole.Other
+    };
+
     private bool loading = true;
     private bool busy;
     private string? error;
@@ -163,9 +210,12 @@
     private IReadOnlyList<PartyContact> partyContacts = Array.Empty<PartyContact>();
     private IReadOnlyList<ProjectContact> profileRows = Array.Empty<ProjectContact>();
 
-    private string newName = "";
-    private string newEmail = "";
-    private int newRouting = (int)CorrespondenceRouting.Cc;
+    private string? editingContactId;
+    private string formName = "";
+    private string formEmail = "";
+    private string formOrganisation = "";
+    private int formRole = (int)ProjectContactRole.Other;
+    private int formRouting = (int)CorrespondenceRouting.None;
 
     private Project? Project => Projects.Find(ProjectId);
 
@@ -252,27 +302,57 @@
             Routing: routing)));
     }
 
-    private async Task AddAdHocAsync()
+    private void BeginEdit(ProjectContact contact)
+    {
+        editingContactId = contact.ContactId;
+        formName = contact.Name;
+        formEmail = contact.Email;
+        formOrganisation = contact.Organisation ?? "";
+        formRole = (int)contact.Role;
+        formRouting = (int)contact.Routing;
+        error = null;
+    }
+
+    private void CancelEdit()
+    {
+        editingContactId = null;
+        ResetForm();
+    }
+
+    private void ResetForm()
+    {
+        formName = formEmail = formOrganisation = "";
+        formRole = (int)ProjectContactRole.Other;
+        formRouting = (int)CorrespondenceRouting.None;
+    }
+
+    private async Task SaveContactAsync()
     {
         if (busy) return;
-        if (string.IsNullOrWhiteSpace(newName) || string.IsNullOrWhiteSpace(newEmail))
+        if (string.IsNullOrWhiteSpace(formName) || string.IsNullOrWhiteSpace(formEmail))
         {
             error = "A name and email are required.";
             return;
         }
+        var routing = (CorrespondenceRouting)formRouting;
         await MutateAsync(() => Correspondence.UpsertProjectContactAsync(new UpsertProjectContact(
-            ProjectId, newName.Trim(), newEmail.Trim(), ProjectContactRole.Other,
-            ReceivesRequests: false,
-            Routing: (CorrespondenceRouting)newRouting)));
+            ProjectId, formName.Trim(), formEmail.Trim(), (ProjectContactRole)formRole,
+            ReceivesRequests: routing == CorrespondenceRouting.To,
+            Organisation: string.IsNullOrWhiteSpace(formOrganisation) ? null : formOrganisation.Trim(),
+            ContactId: editingContactId,
+            Routing: routing)));
         if (error is null)
         {
-            newName = newEmail = "";
-            newRouting = (int)CorrespondenceRouting.Cc;
+            editingContactId = null;
+            ResetForm();
         }
     }
 
-    private async Task RemoveAdHocAsync(ProjectContact contact) =>
+    private async Task RemoveAdHocAsync(ProjectContact contact)
+    {
+        if (contact.ContactId == editingContactId) CancelEdit();
         await MutateAsync(() => Correspondence.RemoveProjectContactAsync(ProjectId, contact.ContactId));
+    }
 
     private async Task MutateAsync(Func<Task> action)
     {

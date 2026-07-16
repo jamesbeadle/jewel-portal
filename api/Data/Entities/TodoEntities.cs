@@ -11,7 +11,13 @@ public sealed class TodoItemEntity
     [MaxLength(64)]      public string ProjectId { get; set; } = "";
     [MaxLength(256)]     public string Title { get; set; } = "";
     [MaxLength(2048)]    public string Notes { get; set; } = "";
-    [MaxLength(256)]     public string AssigneeEmail { get; set; } = "";
+
+    // The ROLE the item is assigned to (a Models.Role value stored as int, same convention as
+    // DirectoryUserRoleEntity.Role; null = unassigned). Items belong to a role, not a person, so
+    // they survive staff changes: whoever holds the role sees them, and a new starter taking over
+    // the role inherits the open items with no re-assignment.
+    public int? AssigneeRole { get; set; }
+
     [MaxLength(256)]     public string CreatedByEmail { get; set; } = "";
     public bool IsComplete { get; set; }
     public DateTimeOffset CreatedAt { get; set; }

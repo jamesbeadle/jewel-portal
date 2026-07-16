@@ -27,7 +27,7 @@ the behaviour requested for this iteration.
 | Key | Agent | Discipline | When implemented it will… |
 |-----|-------|------------|---------------------------|
 | `bid-packages` | Bid Packages Agent | Procurement | Issue bid packages, select bids, raise purchase orders, hand off to scheduling. |
-| `scheduling` | Scheduling Agent | Programme | Schedule all work, issue EoT and NoD notices. |
+| `scheduling` | Programme Agent | Programme | Schedule all work, issue EoT and NoD notices. |
 | `valuations` | Valuations Agent | Commercial | Create & confirm variation-order quotes, pull latest financials. |
 
 All three derive from `StubAgent`, which returns the not-implemented chat reply, an `Unavailable`

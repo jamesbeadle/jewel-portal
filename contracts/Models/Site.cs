@@ -50,7 +50,7 @@ public sealed record ProgrammeBaselineTask(
     DateTimeOffset PlannedStart,
     DateTimeOffset PlannedEnd);
 
-// Everything the Schedule tab's programme view needs in one round trip: the live tasks, their
+// Everything the Programme tab's programme view needs in one round trip: the live tasks, their
 // dependency links, and the latest baseline (with its task snapshots) to overlay movement against.
 public sealed record ProgrammeDetail(
     IReadOnlyList<ProgrammeTask> Tasks,

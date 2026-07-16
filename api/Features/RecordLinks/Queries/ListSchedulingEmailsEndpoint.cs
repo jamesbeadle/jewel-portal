@@ -8,7 +8,7 @@ using Microsoft.Azure.Functions.Worker;
 
 namespace Jewel.JPMS.Api.Features.RecordLinks.Queries;
 
-// GET a project's scheduling-tagged emails for the Schedule tab's Communications view. Reading a
+// GET a project's scheduling-tagged emails for the Programme tab's Communications view. Reading a
 // record's mail is a project-view concern, not a triage one — but it is still internal-only mailbox
 // content, so the gate is every internal role (never external portal logins).
 public sealed class ListSchedulingEmailsEndpoint

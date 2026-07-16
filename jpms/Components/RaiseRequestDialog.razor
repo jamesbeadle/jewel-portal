@@ -1,6 +1,7 @@
 @using Jewel.JPMS.Contracts.Requests
 @inject AuthService Auth
 @inject IRequestRegister RequestRegister
+@inject ICorrespondenceStore Correspondence
 
 <Modal IsOpen="IsOpen"
        Title="Raise a request"
@@ -50,7 +51,10 @@
         </div>
 
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <FormField Label="Raised to" Value="@raisedTo" OnChange="v => raisedTo = v" />
+            <ProjectContactSelect Contacts="@projectContacts"
+                                  Value="@raisedToContactId"
+                                  OnChange="v => raisedToContactId = v"
+                                  Loading="@contactsLoading" />
             <FormField Label="Drawing / detail ref" Value="@drawingRef" OnChange="v => drawingRef = v" />
         </div>
 
@@ -115,8 +119,14 @@
 
     private string title = "";
     private string description = "";
-    private string raisedTo = "";
+    private string raisedToContactId = "";
     private string drawingRef = "";
+
+    // The project's own contact list (Setup tab → Project contacts) backing the "Raised to"
+    // dropdown. Fetched when the dialog opens — ICorrespondenceStore is an on-demand async store,
+    // so no fetch-once-per-key bookkeeping applies here.
+    private IReadOnlyList<ProjectContact> projectContacts = Array.Empty<ProjectContact>();
+    private bool contactsLoading;
     private string responseDue = "";
     private string valueText = "";
 
@@ -130,15 +140,37 @@
     private string? error;
     private bool wasOpen;
 
-    protected override void OnParametersSet()
+    protected override async Task OnParametersSetAsync()
     {
-        if (IsOpen && !wasOpen) Reset();
+        var opening = IsOpen && !wasOpen;
         wasOpen = IsOpen;
+        if (!opening) return;
+
+        Reset();
+        await LoadContactsAsync();
+    }
+
+    private async Task LoadContactsAsync()
+    {
+        contactsLoading = true;
+        try
+        {
+            // Ad-hoc rows only: the contacts added on the Setup tab's Project contacts list.
+            // (Party-linked rows are per-project routing overrides, not list entries.)
+            var rows = await Correspondence.ListProjectContactsAsync(ProjectId);
+            projectContacts = rows.Where(row => row.PartyContactId is null).ToList();
+        }
+        catch
+        {
+            // The dropdown just renders empty; raising a request without a Raised-to stays possible.
+            projectContacts = Array.Empty<ProjectContact>();
+        }
+        finally { contactsLoading = false; }
     }
 
     private void Reset()
     {
-        title = description = raisedTo = drawingRef = responseDue = valueText = "";
+        title = description = raisedToContactId = drawingRef = responseDue = valueText = "";
         backfill = false;
         raisedAt = respondedAt = responseText = "";
         status = RequestStatus.Open;
@@ -219,7 +251,8 @@
             description?.Trim() ?? "",
             value,
             email,
-            RaisedTo: NullIfBlank(raisedTo),
+            RaisedTo: null,
+            RaisedToContactId: NullIfBlank(raisedToContactId),
             DrawingRef: NullIfBlank(drawingRef),
             ResponseDue: ParseDate(responseDue),
             RaisedAt: backfill ? ParseDate(raisedAt) : null,

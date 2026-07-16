@@ -20,13 +20,11 @@ namespace Jewel.JPMS.Api.Features.Requests.Commands;
 public sealed class PrepareRequestReplyDraftHandler : ICommandHandler<PrepareRequestReplyDraft, RequestEmailDraft>
 {
     private readonly JpmsContext context;
-    private readonly RequestEmailReader emails;
     private readonly IMailboxGraphClient graph;
 
-    public PrepareRequestReplyDraftHandler(JpmsContext context, RequestEmailReader emails, IMailboxGraphClient graph)
+    public PrepareRequestReplyDraftHandler(JpmsContext context, IMailboxGraphClient graph)
     {
         this.context = context;
-        this.emails = emails;
         this.graph = graph;
     }
 
@@ -46,8 +44,7 @@ public sealed class PrepareRequestReplyDraftHandler : ICommandHandler<PrepareReq
 
         // Recipients are NOT resolved here — a reply inherits the original conversation's
         // participants from Graph, which is the point: the document lands in the existing thread.
-        var tagged = await emails.ForRequestAsync(command.RequestId, cancellationToken);
-        var model = await RequestDocumentBuilder.BuildAsync(context, command.RequestId, tagged, cancellationToken);
+        var model = await RequestDocumentBuilder.BuildAsync(context, command.RequestId, cancellationToken);
         if (model is null) throw new InvalidOperationException($"Request '{command.RequestId}' not found.");
 
         var pdf = RequestDocumentRenderer.Render(model);

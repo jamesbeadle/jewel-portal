@@ -24,17 +24,15 @@ public sealed class MailboxActionWorker
 {
     private readonly JpmsContext _context;
     private readonly IGraphMailClient _graph;
-    private readonly RequestEmailReader _emails;
     private readonly MailboxIntakeOptions _options;
     private readonly ILogger<MailboxActionWorker> _logger;
 
     public MailboxActionWorker(
-        JpmsContext context, IGraphMailClient graph, RequestEmailReader emails,
+        JpmsContext context, IGraphMailClient graph,
         MailboxIntakeOptions options, ILogger<MailboxActionWorker> logger)
     {
         _context = context;
         _graph = graph;
-        _emails = emails;
         _options = options;
         _logger = logger;
     }
@@ -96,8 +94,7 @@ public sealed class MailboxActionWorker
                 Array.Empty<CorrespondenceRecipient>())
             : await RequestRecipientResolver.ResolveAsync(_context, request, ct);
 
-        var tagged = await _emails.ForRequestAsync(action.RequestId, ct);
-        var model = await RequestDocumentBuilder.BuildAsync(_context, action.RequestId, tagged, ct, recipientSet);
+        var model = await RequestDocumentBuilder.BuildAsync(_context, action.RequestId, ct, recipientSet);
         if (model is null)
         {
             _logger.LogWarning("Request-document send skipped: request {RequestId} not found.", action.RequestId);
@@ -144,9 +141,10 @@ public sealed class MailboxActionWorker
                 $"Graph draft create failed for request {model.RequestId}; retrying via the queue.");
         }
 
-        // Record the drafted document on the request's shared activity history (the audit trail the
-        // document renders). This trail is client-facing, so it lists To and CC only — BCC never
-        // appears on any shared surface (it is logged below as a count, nothing more).
+        // Record the drafted document on the request's shared activity history (shown on the request
+        // page — the issued PDF carries no activity trail). This trail is client-facing, so it lists
+        // To and CC only — BCC never appears on any shared surface (it is logged below as a count,
+        // nothing more).
         var recipientList = string.Join(", ", recipientSet.To.Select(r => r.Email));
         if (recipientSet.Cc.Count > 0)
             recipientList += " (copied: " + string.Join(", ", recipientSet.Cc.Select(r => r.Email)) + ")";

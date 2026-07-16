@@ -12,7 +12,7 @@ namespace Jewel.JPMS.Api.Features.Agents;
 // compares the live programme against the latest baseline (ProgrammeMovementCalculator) and turns
 // the slippage into a delay-event proposal — which tasks moved, whether completion moved, and which
 // delay events still need a Notice of Delay under the JCT ICD 2024 cl. 2.19 duty to notify
-// forthwith. A human reviews the proposal and raises the NOD/EOT from the Schedule tab; nothing is
+// forthwith. A human reviews the proposal and raises the NOD/EOT from the Programme tab; nothing is
 // issued automatically (the CEO sign-off gate on notices stays with the humans).
 //
 // Agents are singletons but JpmsContext is scoped, so data access goes through an IServiceScopeFactory
@@ -25,7 +25,7 @@ public sealed class SchedulingAgent : StubAgent
     public SchedulingAgent(IServiceScopeFactory scopes) { this.scopes = scopes; }
 
     public override string Key => AgentKey;
-    public override string DisplayName => "Scheduling Agent";
+    public override string DisplayName => "Programme Agent";
     public override AgentDiscipline Discipline => AgentDiscipline.Programme;
     public override IReadOnlyCollection<RecordType> AppliesTo => new[] { RecordType.Scheduling };
     public override string Summary =>
@@ -36,7 +36,7 @@ public sealed class SchedulingAgent : StubAgent
     // The scheduling bucket never "closes" — programme oversight is continuous — so this agent
     // never blocks, mirroring the Requests Agent's non-blocking stance.
     public override AgentCompletionState EvaluateCompletion(AgentAssignmentStatus status) =>
-        new(Key, DisplayName, IsComplete: true, Message: "Programme oversight is continuous; the Scheduling Agent does not block closing.");
+        new(Key, DisplayName, IsComplete: true, Message: "Programme oversight is continuous; the Programme Agent does not block closing.");
 
     public override async Task<string> RespondAsync(RequestAgentContext context, string userMessage, CancellationToken cancellationToken)
     {
@@ -70,7 +70,7 @@ public sealed class SchedulingAgent : StubAgent
             return new ProgrammeAnalysis(
                 "No programme tasks exist yet.",
                 "{}",
-                "There is no programme to analyse yet — add tasks on the Schedule tab, then take a baseline so movement can be measured.");
+                "There is no programme to analyse yet — add tasks on the Programme tab, then take a baseline so movement can be measured.");
 
         var baseline = await db.ProgrammeBaselines
             .Where(b => b.ProjectId == projectId)
@@ -81,7 +81,7 @@ public sealed class SchedulingAgent : StubAgent
             return new ProgrammeAnalysis(
                 "No baseline has been taken, so movement cannot be measured.",
                 "{}",
-                $"The programme has {tasks.Count} task(s) but no baseline. Take a baseline on the Schedule tab — without one, slippage can't be evidenced and delay notices can't be substantiated.");
+                $"The programme has {tasks.Count} task(s) but no baseline. Take a baseline on the Programme tab — without one, slippage can't be evidenced and delay notices can't be substantiated.");
 
         var baselineTasks = (await db.ProgrammeBaselineTasks
                 .Where(t => t.ProgrammeBaselineId == baseline.ProgrammeBaselineId)
@@ -156,7 +156,7 @@ public sealed class SchedulingAgent : StubAgent
         {
             sb.AppendLine($"Project completion has moved {movement.CompletionSlipDays} day(s): {movement.BaselineCompletion:d MMM yyyy} → {movement.CurrentCompletion:d MMM yyyy}.");
             sb.AppendLine(noticeDue
-                ? "No Notice of Delay has been raised since this baseline was taken. Under JCT ICD 2024 cl. 2.19 notice is due forthwith once delay is apparent — raise the NOD from the Schedule tab's Claims view."
+                ? "No Notice of Delay has been raised since this baseline was taken. Under JCT ICD 2024 cl. 2.19 notice is due forthwith once delay is apparent — raise the NOD from the Programme tab's Claims view."
                 : $"{nodsSinceBaseline} Notice(s) of Delay have been raised since the baseline — check they cover the events above before considering an Extension of Time (cl. 2.19/2.20).");
         }
         else

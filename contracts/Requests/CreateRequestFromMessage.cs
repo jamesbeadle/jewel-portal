@@ -9,7 +9,7 @@ namespace Jewel.JPMS.Contracts.Requests;
 // triager. InternetMessageId lets the move re-find the message if its Graph id has changed.
 // AddToProgramme ("Also add to Programme" on the triage create form) additionally tags the email's
 // thread to the project's programme communications (the Scheduling bucket) — exactly what the
-// standalone "Tag email to programme" action does — so the email shows under the Schedule tab as
+// standalone "Tag email to programme" action does — so the email shows under the Programme tab as
 // well as on the new request.
 public sealed record CreateRequestFromMessage(
     string MessageId,

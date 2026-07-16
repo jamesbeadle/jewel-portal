@@ -11,9 +11,10 @@
 @*
     The To-dos browser. The managing director and administrators see EVERY item — general
     (company-wide, no-project) items and every project's items — and can add general items, tick
-    anything off, or delete. Everyone else sees only the items assigned to THEM (general and
-    project alike, read through ListMyTodoItems) and can tick their own items off. General items
-    are captured from a company-wide email at triage ("General to-do") or added here directly.
+    anything off, or delete. Everyone else sees only the items assigned to a ROLE THEY HOLD
+    (general and project alike, read through ListMyTodoItems) and can tick those off. Items are
+    assigned to a role, not a person, so they survive staff changes. General items are captured
+    from a company-wide email at triage ("General to-do") or added here directly.
 *@
 
 @if (!isLoaded)
@@ -42,7 +43,7 @@ else
                 <p class="text-sm text-content-muted mt-1">
                     @(CanSeeAll
                         ? "Every to-do item — general (company-wide) and project items alike."
-                        : "The items assigned to you — general (company-wide) and project items alike.")
+                        : "The items assigned to your role — general (company-wide) and project items alike.")
                 </p>
             </div>
             @if (CanSeeAll)
@@ -73,7 +74,7 @@ else
             @if (CanSeeAll && assigneeOptions.Count > 0)
             {
                 <select class="field !w-auto text-xs" value="@assigneeFilter" @onchange="e => assigneeFilter = e.Value?.ToString() ?? string.Empty">
-                    <option value="">Anyone</option>
+                    <option value="">Any role</option>
                     <option value="@Unassigned">Unassigned</option>
                     @foreach (var option in assigneeOptions)
                     {
@@ -102,7 +103,7 @@ else
                 @if (visible.Count == 0)
                 {
                     <p class="text-sm text-content-subtle italic">
-                        @(items.Count == 0 ? (CanSeeAll ? "No to-do items yet." : "Nothing is assigned to you right now.") : "Nothing matches these filters.")
+                        @(items.Count == 0 ? (CanSeeAll ? "No to-do items yet." : "Nothing is assigned to your role right now.") : "Nothing matches these filters.")
                     </p>
                 }
                 else
@@ -128,9 +129,9 @@ else
                                         {
                                             <span class="@(IsOverdue(item) ? "text-negative font-medium" : "")">Due @item.DueAt.Value.LocalDateTime.ToString("d MMM yyyy")</span>
                                         }
-                                        @if (!string.IsNullOrWhiteSpace(item.AssigneeEmail))
+                                        @if (item.AssigneeRole is Role assignedRole)
                                         {
-                                            <span>Assigned to @item.AssigneeEmail</span>
+                                            <span>Assigned to @assignedRole.DisplayName()</span>
                                         }
                                         @if (!string.IsNullOrWhiteSpace(item.CreatedByEmail))
                                         {
@@ -166,14 +167,15 @@ else
         }
 
         <p class="text-xs text-content-subtle">
-            A general item belongs to no project — it lives on this page and on the assignee's dashboard.
+            A general item belongs to no project — it lives on this page and on the dashboard of
+            everyone holding the assigned role.
         </p>
 
         <FormField Label="Title" Value="@newTitle" OnChange="v => newTitle = v" Required="true" />
 
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Assignee</label>
+                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Assigned role</label>
                 <SearchSelect Options="@assigneeOptions" Value="@newAssignee" ValueChanged="v => newAssignee = v"
                               Placeholder="Unassigned" WidthClass="w-full" />
             </div>
@@ -234,15 +236,15 @@ else
 
         await LoadAsync();
 
-        // Project labels for the scope chips/filter, and the assignee pool for the picker/filter.
-        // Either failing degrades the labels, never the list itself.
+        // Project labels for the scope chips/filter, and the assignable-role pool for the
+        // picker/filter. Either failing degrades the labels, never the list itself.
         try { if (Projects.Current is null) await Projects.RefreshAsync(CancellationToken.None); } catch { }
         if (CanSeeAll)
         {
             try
             {
-                assigneeOptions = (await TodoStore.ListAssigneesAsync())
-                    .Select(user => new SearchSelect.Option(user.Email, $"{user.DisplayName} — {user.Email}"))
+                assigneeOptions = (await TodoStore.ListAssignableRolesAsync())
+                    .Select(role => new SearchSelect.Option(RoleValue(role), role.DisplayName()))
                     .ToList();
             }
             catch { }
@@ -274,8 +276,8 @@ else
             .Where(item => assigneeFilter switch
             {
                 "" => true,
-                Unassigned => string.IsNullOrWhiteSpace(item.AssigneeEmail),
-                _ => string.Equals(item.AssigneeEmail, assigneeFilter, StringComparison.OrdinalIgnoreCase)
+                Unassigned => item.AssigneeRole is null,
+                _ => item.AssigneeRole is not null && RoleValue(item.AssigneeRole.Value) == assigneeFilter
             })
             .ToList();
 
@@ -293,8 +295,10 @@ else
 
     private static bool IsGeneral(TodoItem item) => string.IsNullOrWhiteSpace(item.ProjectId);
 
+    // "Mine" = assigned to a role the signed-in user holds — the same rule the API's
+    // UpdateTodoItemAuthorisation applies for the tick-off path.
     private bool IsMine(TodoItem item) =>
-        string.Equals(item.AssigneeEmail, Auth.CurrentUser?.Email, StringComparison.OrdinalIgnoreCase);
+        item.AssigneeRole is Role role && Session.AvailableRoles.Contains(role);
 
     private string ScopeLabel(TodoItem item)
     {
@@ -334,7 +338,7 @@ else
             await TodoStore.AddGeneralAsync(new AddGeneralTodoItem(
                 newTitle.Trim(),
                 NullIfBlank(newNotes),
-                NullIfBlank(newAssignee),
+                ParseRole(newAssignee),
                 ParseDate(newDue)));
             CloseAdd();
         });
@@ -349,7 +353,7 @@ else
             item.TodoItemId,
             item.Title,
             NullIfBlank(item.Notes),
-            NullIfBlank(item.AssigneeEmail),
+            item.AssigneeRole,
             item.DueAt,
             !item.IsComplete)));
     }
@@ -395,4 +399,10 @@ else
 
     private static DateTimeOffset? ParseDate(string value) =>
         DateTimeOffset.TryParse(value, out var parsed) ? parsed : null;
+
+    // Role <-> SearchSelect value plumbing: options carry the role's int as a string ("" = unassigned).
+    private static string RoleValue(Role role) => ((int)role).ToString();
+
+    private static Role? ParseRole(string value) =>
+        int.TryParse(value, out var parsed) ? (Role)parsed : null;
 }

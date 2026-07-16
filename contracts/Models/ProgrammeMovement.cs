@@ -28,7 +28,7 @@ public sealed record ProgrammeMovement(
 }
 
 // Pure comparison of the live programme against a baseline snapshot. Shared by the API (the
-// Scheduling Agent's delay analysis) and the Blazor Schedule tab (the movement banner), so both
+// Programme Agent's delay analysis) and the Blazor Programme tab (the movement banner), so both
 // always agree on what "the programme has moved" means. No I/O, no clock — trivially testable.
 public static class ProgrammeMovementCalculator
 {

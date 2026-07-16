@@ -54,6 +54,11 @@ else
                 {
                     <span class="inline-flex items-center rounded bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-600">Variation</span>
                 }
+                @if (record.CriticalPath)
+                {
+                    <span class="inline-flex items-center rounded bg-rose-500/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-rose-600"
+                          title="Programme-related — the answer gates work on the programme's critical path">Critical path</span>
+                }
             </div>
 
             @* The page's actions live up here with the record they act on: emailing (the most-used
@@ -107,6 +112,16 @@ else
                                     <li>
                                         <button type="button" class="w-full text-left px-3 py-2 text-sm text-content hover:bg-surface-raised transition"
                                                 @onclick="ReopenFromMenu">Reopen request</button>
+                                    </li>
+                                }
+                                @if (CanEditDetails && record.Kind is RequestType.Rfi)
+                                {
+                                    <li>
+                                        <button type="button" class="w-full text-left px-3 py-2 text-sm text-content hover:bg-surface-raised transition"
+                                                @onclick="ToggleCriticalPathFromMenu"
+                                                title="The Critical Path tag marks this RFI as programme-related; tagged RFIs show under Critical Path RFIs on the Programme tab">
+                                            @(record.CriticalPath ? "Remove critical path tag" : "Mark as critical path")
+                                        </button>
                                     </li>
                                 }
                                 @if (CanEditDetails && record.Kind is RequestType.Rfi && !record.HasRfq)
@@ -698,11 +713,22 @@ else
             </div>
 
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <FormField Label="Raised to" Value="@editRaisedTo" OnChange="v => editRaisedTo = v" />
+                <ProjectContactSelect Contacts="@projectContacts"
+                                      Value="@editRaisedToContactId"
+                                      OnChange="v => editRaisedToContactId = v"
+                                      LegacyText="@editLegacyRaisedTo" />
                 <FormField Label="Drawing / detail ref" Value="@editDrawingRef" OnChange="v => editDrawingRef = v" />
             </div>
 
             <FormField Label="Related drawing / spec" Value="@editRelatedSpec" OnChange="v => editRelatedSpec = v" />
+
+            @if (record.Kind is RequestType.Rfi)
+            {
+                <label class="flex items-start gap-2 text-sm text-content">
+                    <input type="checkbox" class="mt-0.5" @bind="editCriticalPath" />
+                    <span>Critical path <span class="text-content-subtle">— programme-related; shows under Critical Path RFIs on the Programme tab</span></span>
+                </label>
+            }
         </div>
     </Modal>
 
@@ -893,11 +919,17 @@ else
     private string editIssuedAt = "";
     private string editResponseDue = "";
     private string editClosedAt = "";
-    private string editRaisedTo = "";
+    private string editRaisedToContactId = "";
+    private string? editLegacyRaisedTo;
     private string editDrawingRef = "";
     private string editRelatedSpec = "";
     private RequestStatus editStatus = RequestStatus.Open;
+    private bool editCriticalPath;
     private string? editError;
+
+    // The project's own contact list (Setup tab → Project contacts) backing the "Raised to"
+    // dropdown in the edit modal. On-demand async store, fetched once with the page.
+    private IReadOnlyList<ProjectContact> projectContacts = Array.Empty<ProjectContact>();
 
     protected override async Task OnInitializedAsync()
     {
@@ -908,6 +940,15 @@ else
         {
             try { clients = await ClientStore.ListAsync(); } catch { clients = Array.Empty<Client>(); }
             try { architects = await ArchitectStore.ListAsync(); } catch { architects = Array.Empty<Architect>(); }
+            try
+            {
+                // Ad-hoc rows only: the contacts added on the Setup tab's Project contacts list
+                // (party-linked rows are routing overrides, not list entries).
+                projectContacts = (await Correspondence.ListProjectContactsAsync(ProjectId))
+                    .Where(row => row.PartyContactId is null)
+                    .ToList();
+            }
+            catch { projectContacts = Array.Empty<ProjectContact>(); }
         }
         await LoadVoqAsync();
         await LoadRecipientPreviewAsync();
@@ -1342,7 +1383,9 @@ else
             record.ResponseDue,
             record.RelatedDrawingSpec,
             record.InternalNotes,
-            record.ClientNotes);
+            record.ClientNotes,
+            // A status change must not shed the structured Raised-to link.
+            RaisedToContactId: record.RaisedToContactId);
 
         try
         {
@@ -1364,6 +1407,53 @@ else
         }
     }
 
+    // Flips the Critical Path tag in place from the Actions menu — a one-click alternative to the
+    // edit modal. Everything else on the command echoes the record unchanged (and CriticalPath is
+    // "keep existing" on every other surface, so only this toggle and the edit modal move it).
+    private async Task ToggleCriticalPathFromMenu()
+    {
+        if (record is null || busy) return;
+        actionsOpen = false;
+        actionError = null;
+
+        var command = new UpdateRequestDetails(
+            record.RequestId,
+            record.Reference,
+            record.Title,
+            record.Description,
+            record.Status,
+            record.Value,
+            record.ResponseText,
+            record.RespondedByEmail,
+            record.ImpliesVariation,
+            record.RaisedTo,
+            record.DrawingRef,
+            record.ResponseDue,
+            record.RelatedDrawingSpec,
+            record.InternalNotes,
+            record.ClientNotes,
+            RaisedToContactId: record.RaisedToContactId,
+            CriticalPath: !record.CriticalPath);
+
+        try
+        {
+            busy = true;
+            record = await RequestRegister.UpdateAsync(command);
+        }
+        catch (CommandFailedException ex)
+        {
+            actionError = ex.Message;
+        }
+        catch
+        {
+            actionError = "Couldn't update the critical path tag. Please try again.";
+        }
+        finally
+        {
+            busy = false;
+        }
+    }
+
     private void OpenEdit()
     {
         if (record is null) return;
@@ -1374,10 +1464,19 @@ else
         editIssuedAt = record.IssuedAt?.LocalDateTime.ToString("yyyy-MM-dd") ?? "";
         editResponseDue = record.ResponseDue?.LocalDateTime.ToString("yyyy-MM-dd") ?? "";
         editClosedAt = record.ClosedAt?.LocalDateTime.ToString("yyyy-MM-dd") ?? "";
-        editRaisedTo = record.RaisedTo ?? "";
+        // Raised-to: a live contact link selects that contact; anything else (legacy free text, or
+        // a link whose contact has since been removed from the project) falls back to a "keep as
+        // recorded" option so opening the editor never silently wipes the recorded value.
+        var hasLiveContactLink = record.RaisedToContactId is { } linkedId
+            && projectContacts.Any(c => c.ContactId == linkedId);
+        editRaisedToContactId = hasLiveContactLink
+            ? record.RaisedToContactId!
+            : !string.IsNullOrWhiteSpace(record.RaisedTo) ? ProjectContactSelect.LegacyValue : "";
+        editLegacyRaisedTo = hasLiveContactLink ? null : record.RaisedTo;
         editDrawingRef = record.DrawingRef ?? "";
         editRelatedSpec = record.RelatedDrawingSpec ?? "";
         editStatus = record.Status;
+        editCriticalPath = record.CriticalPath;
         editError = null;
         editing = true;
     }
@@ -1419,7 +1518,9 @@ else
             record.ResponseText,
             record.RespondedByEmail,
             record.ImpliesVariation,
-            NullIfBlank(editRaisedTo),
+            // "Keep as recorded" preserves the existing free text; a picked contact travels as the
+            // structured id (the server derives the display string); "—" clears both.
+            editRaisedToContactId == ProjectContactSelect.LegacyValue ? record.RaisedTo : null,
             NullIfBlank(editDrawingRef),
             ParseDate(editResponseDue),
             NullIfBlank(editRelatedSpec),
@@ -1427,7 +1528,11 @@ else
             record.ClientNotes,
             raised,
             ClosedAt: closedAt,
-            IssuedAt: issuedAt);
+            IssuedAt: issuedAt,
+            RaisedToContactId: editRaisedToContactId == ProjectContactSelect.LegacyValue
+                ? null
+                : NullIfBlank(editRaisedToContactId),
+            CriticalPath: editCriticalPath);
 
         try
         {

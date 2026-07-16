@@ -30,8 +30,16 @@ public sealed class ReturnRequestToTriageHandler : ICommandHandler<ReturnRequest
             return new Acknowledgement(command.RequestId);
 
         // Clear the request's tags from its emails so they re-enter the triage queue (best-effort).
-        // The request row and its conversation history deliberately stay untouched.
-        await graph.ClearRequestTagsAsync(TriageCategories.ForRequest(await RequestTags.StemAsync(context, request, cancellationToken)), cancellationToken);
+        // The request row and its conversation history deliberately stay untouched. Both the current
+        // reference tag AND the immutable REQ-#### alias (kept on the mail across an RFI promotion —
+        // see PromoteRequestToRfiHandler) are cleared: the marker only drops with the LAST workflow
+        // tag, so a leftover alias would strand the emails outside the queue.
+        var projectRef = await RequestTags.ProjectRefAsync(context, request.ProjectId, cancellationToken);
+        var currentTag = TriageCategories.ForRequest(RequestTags.Stem(projectRef, request.ProjectId, request.TagReference));
+        var aliasTag = TriageCategories.ForRequest(RequestTags.Stem(projectRef, request.ProjectId, $"REQ-{request.Number:0000}"));
+        await graph.ClearRequestTagsAsync(currentTag, cancellationToken);
+        if (!string.Equals(aliasTag, currentTag, StringComparison.OrdinalIgnoreCase))
+            await graph.ClearRequestTagsAsync(aliasTag, cancellationToken);
 
         // One exception: a stranded request (blank project id, or one that no longer matches any
         // project) is a broken row that can never appear in a register. The unassigned-requests

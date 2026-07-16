@@ -88,7 +88,7 @@ public sealed class CreateTodoItemsFromMessageHandler : ICommandHandler<CreateTo
             Number = nextNumber + index,
             Title = Clamp(draft.Title.Trim(), 256),
             Notes = Clamp(draft.Notes?.Trim() ?? "", 2048),
-            AssigneeEmail = Clamp(draft.AssigneeEmail?.Trim() ?? "", 256),
+            AssigneeRole = (int?)draft.AssigneeRole,
             CreatedByEmail = command.CreatedByEmail,
             IsComplete = false,
             CreatedAt = snapshot.ReceivedAt,

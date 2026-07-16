@@ -3,7 +3,7 @@ using System.ComponentModel.DataAnnotations;
 namespace Jewel.JPMS.Api.Data.Entities;
 
 // A Liquidated Damages (LADs) claim the client has notified against the project — the client-side
-// counterpart to Jewel's own NOD/EOT notices on the Schedule tab's Claims view. The sequential
+// counterpart to Jewel's own NOD/EOT notices on the Programme tab's Claims view. The sequential
 // Number renders as "LAD-0001", which doubles as the mailbox tag stem ("JPMS/LAD-0001") — the link
 // between a claim and its emails is the tag, never a stored copy (same mechanism as to-do items).
 public sealed class LadClaimEntity

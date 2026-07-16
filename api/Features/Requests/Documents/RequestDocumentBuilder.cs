@@ -13,7 +13,7 @@ namespace Jewel.JPMS.Api.Features.Requests.Documents;
 public static class RequestDocumentBuilder
 {
     public static async Task<RequestDocumentModel?> BuildAsync(
-        JpmsContext context, string requestId, IReadOnlyList<MailboxMessage> emails, CancellationToken ct,
+        JpmsContext context, string requestId, CancellationToken ct,
         RequestRecipientSet? resolvedRecipients = null)
     {
         var request = await context.Requests
@@ -36,24 +36,9 @@ public static class RequestDocumentBuilder
                 r.Name, r.Email, r.RoleLabel ?? "Contact", r.Organisation, r.Routing))
             .ToList();
 
-        // Only the Shared leg of the thread belongs on a client-facing document; internal Jewel
-        // discussion never leaves the platform. In-app Shared activity comes from SQL; the inbound
-        // email leg is the emails tagged to this request, read live (legacy stored Inbound rows are
-        // excluded so they don't double up). The two are merged and ordered by time.
-        var storedActivity = await context.RequestMessages
-            .Where(m => m.RequestId == requestId
-                && m.Visibility == (int)MessageVisibility.Shared
-                && m.Direction != (int)MessageDirection.Inbound)
-            .Select(m => new RequestDocumentActivity(m.AuthorName, m.Body, m.PostedAt, false))
-            .ToListAsync(ct);
-
-        var activity = storedActivity
-            .Concat(emails.Select(e => new RequestDocumentActivity(
-                string.IsNullOrWhiteSpace(e.FromName) ? e.FromEmail : e.FromName,
-                string.IsNullOrWhiteSpace(e.BodyPreview) ? "(no message body)" : e.BodyPreview,
-                e.ReceivedAt, true)))
-            .OrderBy(a => a.PostedAt)
-            .ToList();
+        // The document deliberately carries NO activity/correspondence history: it is the formal
+        // request sheet only. Conversation (in-app messages and tagged emails) lives on the request
+        // page and in the mailbox thread, never on the issued PDF.
 
         // The official document's itemised queries, in display order.
         var items = await context.RequestItems
@@ -89,7 +74,6 @@ public static class RequestDocumentBuilder
             RespondedByEmail: request.RespondedByEmail,
             RespondedAt: request.RespondedAt,
             Recipients: recipients,
-            Activity: activity,
             GeneratedAt: DateTimeOffset.UtcNow,
             Reference: request.Reference,
             BasisOfQueries: request.BasisOfQueries,

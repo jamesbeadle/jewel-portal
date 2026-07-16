@@ -6,13 +6,17 @@ namespace Jewel.JPMS.Models;
 // item owns a sequential "TODO-0001" reference which is also its mailbox tag stem, so an email
 // tagged "JPMS/TODO-0001" is the item's linked mail — the same live-read link mechanism the
 // Request / Bid Package families use.
+//
+// Items are assigned to a ROLE, not a person (null = unassigned). Everyone currently holding the
+// role sees the item on their list and may tick it off; when someone leaves and a new starter
+// takes over the role, the open items are simply theirs — nothing needs re-assigning.
 public sealed record TodoItem(
     string TodoItemId,
     string ProjectId,        // "" = general (company-wide) item with no project
     string Reference,        // sequential human reference, e.g. "TODO-0001" (also the tag stem)
     string Title,
     string Notes,
-    string AssigneeEmail,
+    Role? AssigneeRole,      // null = unassigned; otherwise a TodoRoles.AssignableAsTodoAssignee role
     string CreatedByEmail,
     bool IsComplete,
     DateTimeOffset CreatedAt,
@@ -24,5 +28,5 @@ public sealed record TodoItem(
 public sealed record TodoItemDraft(
     string Title,
     string? Notes = null,
-    string? AssigneeEmail = null,
+    Role? AssigneeRole = null,
     DateTimeOffset? DueAt = null);

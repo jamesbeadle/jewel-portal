@@ -25,8 +25,8 @@ public sealed class HttpTodoStore : ITodoStore
     public Task<IReadOnlyList<TodoItem>> ListAllAsync(CancellationToken cancellationToken = default) =>
         queries.AskAsync(new ListAllTodoItems(), cancellationToken);
 
-    public Task<IReadOnlyList<DirectoryUser>> ListAssigneesAsync(CancellationToken cancellationToken = default) =>
-        queries.AskAsync(new ListTodoAssignees(), cancellationToken);
+    public Task<IReadOnlyList<Role>> ListAssignableRolesAsync(CancellationToken cancellationToken = default) =>
+        queries.AskAsync(new ListTodoAssignableRoles(), cancellationToken);
 
     public Task<TodoItem> AddAsync(AddTodoItem command, CancellationToken cancellationToken = default) =>
         commands.SendAsync(command, cancellationToken);

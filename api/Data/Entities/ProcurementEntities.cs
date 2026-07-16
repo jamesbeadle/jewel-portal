@@ -199,7 +199,19 @@ public sealed class RequestEntity
     public DateTimeOffset? ClosedAt { get; set; }
 
     public bool ImpliesVariation { get; set; }
+
+    // Critical Path tag: marks an RFI as programme-related — its answer gates work on the
+    // programme's critical path. Surfaces the RFI in the project Programme tab's
+    // "Critical Path RFIs" view. User-set from the RFI detail page; defaults to off.
+    public bool CriticalPath { get; set; }
+
     [MaxLength(256)]     public string? RaisedTo { get; set; }
+
+    // When RaisedTo was picked from the project's contact list (Setup tab), the ProjectContact it
+    // points at. RaisedTo keeps the denormalised display string so documents, tables and old rows
+    // render without a join; the id is the structured link (survives renames, enables future
+    // routing behaviour). Null for legacy free-text rows and non-dropdown callers.
+    [MaxLength(64)]      public string? RaisedToContactId { get; set; }
     [MaxLength(256)]     public string? DrawingRef { get; set; }
     public DateTimeOffset? ResponseDue { get; set; }
     [MaxLength(512)]     public string? RelatedDrawingSpec { get; set; }

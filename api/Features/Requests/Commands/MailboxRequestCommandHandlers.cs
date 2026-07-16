@@ -113,7 +113,8 @@ public sealed class CreateRequestFromMessageHandler : ICommandHandler<CreateRequ
             throw new InvalidOperationException("The email couldn't be tagged to the new request. Please try again.");
 
         // The tag is the only link to the email — no copy is stored. The request reads its emails live
-        // by tag (RequestEmailReader) for the conversation view, LLM context, and document.
+        // by tag (RequestEmailReader) for the conversation view and LLM context (never the issued
+        // document, which carries no correspondence).
         context.Requests.Add(request);
         try
         {

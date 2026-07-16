@@ -16,10 +16,10 @@ public static class TodosRouteRegistration
             new QueryRoute("/api/projects/{projectId}/todos",
                 query => $"/api/projects/{((ListTodoItemsForProject)query).ProjectId}/todos"));
 
-        queries.Register<ListTodoAssignees, IReadOnlyList<DirectoryUser>>(
-            QueryRoute.Static("/api/todo-assignees"));
+        queries.Register<ListTodoAssignableRoles, IReadOnlyList<Role>>(
+            QueryRoute.Static("/api/todo-assignable-roles"));
 
-        // The signed-in user's own items (assignee stamped server-side) — dashboard panel + the
+        // The signed-in user's own items (their roles stamped server-side) — dashboard panel + the
         // browser for non-admin roles.
         queries.Register<ListMyTodoItems, IReadOnlyList<TodoItem>>(
             QueryRoute.Static("/api/my/todos"));

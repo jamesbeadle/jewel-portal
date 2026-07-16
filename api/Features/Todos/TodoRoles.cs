@@ -17,24 +17,30 @@ internal static class TodoRoles
 
     // Who sees EVERY to-do item in the To-dos browser (and may add/manage general, no-project
     // items there): the managing director and administrators only. Everyone else reads their own
-    // assigned items through ListMyTodoItems.
+    // items — the ones assigned to a role they hold — through ListMyTodoItems.
     public static readonly RoleSet AllowedToSeeAllTodos =
         RoleSet.Of(
             Role.Admin,
             JpmsRoles.Director);
 
-    // Who a to-do can be *assigned to*: internal office/management staff. Deliberately narrower
-    // than JpmsRoleSets.AllInternal — besides the external roles (Architect, Client,
-    // Subcontractor) it also excludes Foreman and SiteOperative, who work the site rather than
-    // the to-do list. Backs the assignee picker's ListTodoAssignees query.
+    // The ROLES a to-do can be assigned to, in the order the pickers present them: internal
+    // office/management roles. Deliberately narrower than JpmsRoleSets.AllInternal — besides the
+    // external roles (Architect, Client, Subcontractor) it also excludes Foreman and SiteOperative,
+    // who work the site rather than the to-do list. Items are assigned to a role, not a person, so
+    // they survive staff changes; ListTodoAssignableRoles serves this list to the pickers.
+    public static readonly IReadOnlyList<Role> AssignableTodoRolesInPickerOrder = new[]
+    {
+        JpmsRoles.Director,
+        JpmsRoles.FinanceDirector,
+        JpmsRoles.ProjectManager,
+        JpmsRoles.Estimator,
+        JpmsRoles.SiteManager,
+        JpmsRoles.HealthAndSafetyLead,
+        JpmsRoles.OfficeComplianceCoordinator,
+        Role.Admin
+    };
+
+    // The same pool as a set, for gate checks ("is this AssigneeRole value allowed?").
     public static readonly RoleSet AssignableAsTodoAssignee =
-        RoleSet.Of(
-            Role.Admin,
-            JpmsRoles.Director,
-            JpmsRoles.FinanceDirector,
-            JpmsRoles.ProjectManager,
-            JpmsRoles.Estimator,
-            JpmsRoles.SiteManager,
-            JpmsRoles.HealthAndSafetyLead,
-            JpmsRoles.OfficeComplianceCoordinator);
+        RoleSet.Of(AssignableTodoRolesInPickerOrder.ToArray());
 }
