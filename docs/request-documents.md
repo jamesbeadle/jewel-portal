@@ -17,8 +17,8 @@ timestamp).
   the download endpoint serves.
 - Sending is out-of-band: handlers enqueue a `SendRequestDocument` mailbox action; the worker
   (`MailboxActionWorker`) renders and sends it via Microsoft Graph, logs an outbound activity entry,
-  and moves an `Open` request to `Awaiting response`. Failures retry on the queue — the DB stays the
-  source of truth.
+  and moves an `Open` request to `Awaiting response` (staff set it back to `Open` by hand if the
+  send is cancelled). Failures retry on the queue — the DB stays the source of truth.
 
 ## The structured RFI form
 
@@ -44,7 +44,9 @@ All optional: a request without them renders exactly as before.
   Restricted to Director / Project Manager / Architect.
 - `POST /api/requests/{requestId}/email-draft` — create an **Outlook draft** in the projects
   mailbox: recipients, subject, branded cover note and the freshly rendered PDF all pre-filled.
-  Nothing is sent — staff review and send from the mailbox itself. Recipients resolve from the
+  Nothing is sent — staff review and send from the mailbox itself — but an `Open` request moves
+  to `Awaiting response` as soon as the draft is created (a drafted document is assumed to go
+  out; staff set it back to `Open` by hand if the send is cancelled). Recipients resolve from the
   request's linked party (an architect's contact email, or a client's primary contact), falling
   back to the project's party, then the flagged project contacts. Optional JSON body
   `{ "recipientOverride": "someone@example.com" }`. Restricted to Director / Project Manager /
@@ -54,7 +56,11 @@ All optional: a request without them renders exactly as before.
 Auto-drafting fires when a request is raised (`RaiseRequest`) or created from an intake email
 (`CreateRequestFromIntake`), provided it is in the `Open` state. The document email is only ever
 placed in the mailbox's **Drafts** folder — a human reviews and sends it from Outlook. Nothing is
-sent from code, and the request stays `Open` until a response is triaged in.
+sent from code, but every draft-creation path (on-demand, bulk, reply-into-thread, and the
+worker's queued send) moves an `Open` request to `Awaiting response` — the working assumption is
+that a drafted document goes out. If the send is cancelled, staff manually set the request back
+to `Open`; a request already past `Open` (responded / approved / closed) is never rewound by a
+re-draft.
 
 ## Deployment prerequisites
 

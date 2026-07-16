@@ -79,13 +79,6 @@ else
                     {
                         <div class="absolute right-0 mt-2 w-64 rounded-lg border border-line bg-surface shadow-lg z-20 overflow-hidden">
                             <ul class="divide-y divide-line">
-                                @if (CanEditDetails)
-                                {
-                                    <li>
-                                        <button type="button" class="w-full text-left px-3 py-2 text-sm text-content hover:bg-surface-raised transition"
-                                                @onclick="() => { actionsOpen = false; OpenEdit(); }">Edit details</button>
-                                    </li>
-                                }
                                 @if (record.Kind.IsEmailable())
                                 {
                                     <li>
@@ -153,7 +146,14 @@ else
                 </div>
             </div>
         </div>
-        <h2 class="text-xl font-semibold text-content mb-5">@record.Title</h2>
+        <div class="flex items-baseline gap-3 mb-5">
+            <h2 class="text-xl font-semibold text-content">@record.Title</h2>
+            @if (CanEditDetails)
+            {
+                <button type="button" class="text-xs font-medium text-content-muted hover:text-content underline underline-offset-2"
+                        title="Edit the reference, status and subject" @onclick="OpenHeaderEdit">Edit</button>
+            }
+        </div>
 
         <RecordLineage ProjectId="@ProjectId" ActiveId="request"
                        Request="record" Voq="voq" Vo="vo" BidPackages="bidPackages" />
@@ -161,10 +161,12 @@ else
         @* At-a-glance facts run across the top rather than down a rail, so the columns below are
            left for the substance: the request itself on the left, actions on the right. *@
         <div class="panel px-5 py-4 mb-5">
-            <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-x-6 gap-y-3 text-sm">
+            <div class="flex items-start justify-between gap-6">
+            <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-x-6 gap-y-3 text-sm flex-1">
                 <MetaCell Label="Raised by" Value="@record.RaisedByEmail" />
-                <MetaCell Label="Date raised" Value="@Date(record.RaisedAt)" />
-                <MetaCell Label="Date issued" Value="@Date(record.IssuedAt)" />
+                @* The one visible date. Rows predating the IssuedAt backfill fall back to the
+                   internal created-on stamp rather than showing a dash. *@
+                <MetaCell Label="Date issued" Value="@Date(record.IssuedAt ?? record.RaisedAt)" />
                 <MetaCell Label="Raised to" Value="@Dash(record.RaisedTo)" />
                 <MetaCell Label="Response due" Value="@Date(record.ResponseDue)" />
                 <div>
@@ -181,6 +183,12 @@ else
                 {
                     <MetaCell Label="Value" Value="@(record.Value is null ? "—" : Money(record.Value.Value))" />
                 }
+            </div>
+            @if (CanEditDetails)
+            {
+                <button type="button" class="text-xs font-medium text-content-muted hover:text-content underline underline-offset-2"
+                        title="Edit the dates, raised to and drawing references" @onclick="OpenFactsEdit">Edit</button>
+            }
             </div>
         </div>
 
@@ -211,7 +219,7 @@ else
                         <h3 class="eyebrow">Detail</h3>
                         @if (CanEditDetails)
                         {
-                            <button type="button" class="text-xs font-medium text-content-muted hover:text-content underline underline-offset-2" @onclick="OpenEdit">Edit</button>
+                            <button type="button" class="text-xs font-medium text-content-muted hover:text-content underline underline-offset-2" @onclick="OpenDetailEdit">Edit</button>
                         }
                     </div>
                     <p class="text-sm text-content whitespace-pre-wrap">@(string.IsNullOrWhiteSpace(record.Description) ? "—" : record.Description)</p>
@@ -670,12 +678,15 @@ else
         </div>
     </Modal>
 
-    <Modal IsOpen="editing"
-           Title="Edit request details"
+    @* The old single "Edit request details" modal is split three ways, each opened from an Edit
+       control on the surface it edits: the page header (reference, status, subject), the facts
+       strip (dates, raised to, drawing refs, value) and the Detail panel (the detail text). *@
+    <Modal IsOpen="editingHeader"
+           Title="Edit reference &amp; status"
            ConfirmLabel="@(busy ? "Saving…" : "Save changes")"
-           OnCancel="CancelEdit"
-           OnConfirm="SaveEdit"
-           Class="max-w-2xl">
+           OnCancel="CancelHeaderEdit"
+           OnConfirm="SaveHeaderEdit"
+           Class="max-w-xl">
         <div class="space-y-4">
             @if (editError is not null)
             {
@@ -697,16 +708,37 @@ else
 
             <FormField Label="Subject" Value="@editTitle" OnChange="v => editTitle = v" Required="true" />
 
-            <div>
-                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Detail</label>
-                <textarea class="field" rows="4" value="@editDescription" @oninput="OnEditDescriptionInput"></textarea>
-            </div>
+            @if (editStatus == RequestStatus.Closed)
+            {
+                <FormField Label="Date closed" Value="@editClosedAt" OnChange="v => editClosedAt = v" InputType="date" />
+            }
+
+            @if (record.Kind is RequestType.Rfi)
+            {
+                <label class="flex items-start gap-2 text-sm text-content">
+                    <input type="checkbox" class="mt-0.5" @bind="editCriticalPath" />
+                    <span>Critical path <span class="text-content-subtle">— programme-related; shows under Critical Path RFIs on the Programme tab</span></span>
+                </label>
+            }
+        </div>
+    </Modal>
+
+    <Modal IsOpen="editingFacts"
+           Title="Edit request facts"
+           ConfirmLabel="@(busy ? "Saving…" : "Save changes")"
+           OnCancel="CancelFactsEdit"
+           OnConfirm="SaveFactsEdit"
+           Class="max-w-2xl">
+        <div class="space-y-4">
+            @if (editError is not null)
+            {
+                <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@editError</p>
+            }
 
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <FormField Label="Date raised" Value="@editRaisedAt" OnChange="v => editRaisedAt = v" InputType="date" />
                 <FormField Label="Date issued" Value="@editIssuedAt" OnChange="v => editIssuedAt = v" InputType="date" />
                 <FormField Label="Response due" Value="@editResponseDue" OnChange="v => editResponseDue = v" InputType="date" />
-                @if (editStatus == RequestStatus.Closed)
+                @if (record.ClosedAt is not null)
                 {
                     <FormField Label="Date closed" Value="@editClosedAt" OnChange="v => editClosedAt = v" InputType="date" />
                 }
@@ -722,13 +754,29 @@ else
 
             <FormField Label="Related drawing / spec" Value="@editRelatedSpec" OnChange="v => editRelatedSpec = v" />
 
-            @if (record.Kind is RequestType.Rfi)
+            @if (record.Kind is not RequestType.Rfi)
             {
-                <label class="flex items-start gap-2 text-sm text-content">
-                    <input type="checkbox" class="mt-0.5" @bind="editCriticalPath" />
-                    <span>Critical path <span class="text-content-subtle">— programme-related; shows under Critical Path RFIs on the Programme tab</span></span>
-                </label>
+                <FormField Label="Value (£, optional)" Value="@editValue" OnChange="v => editValue = v" />
             }
+        </div>
+    </Modal>
+
+    <Modal IsOpen="editingDetail"
+           Title="Edit detail"
+           ConfirmLabel="@(busy ? "Saving…" : "Save changes")"
+           OnCancel="CancelDetailEdit"
+           OnConfirm="SaveDetailEdit"
+           Class="max-w-2xl">
+        <div class="space-y-4">
+            @if (editError is not null)
+            {
+                <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@editError</p>
+            }
+
+            <div>
+                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Detail</label>
+                <textarea class="field" rows="6" value="@editDescription" @oninput="OnEditDescriptionInput"></textarea>
+            </div>
         </div>
     </Modal>
 
@@ -911,11 +959,15 @@ else
     private string closeDate = "";
     private string? closeError;
 
-    private bool editing;
+    // One flag per edit modal — header (reference/status/subject), facts strip, Detail panel.
+    // The edit* fields below are shared scratch state; each Open* seeds the ones its modal uses,
+    // and only one modal is ever open at a time.
+    private bool editingHeader;
+    private bool editingFacts;
+    private bool editingDetail;
     private string editReference = "";
     private string editTitle = "";
     private string editDescription = "";
-    private string editRaisedAt = "";
     private string editIssuedAt = "";
     private string editResponseDue = "";
     private string editClosedAt = "";
@@ -923,6 +975,7 @@ else
     private string? editLegacyRaisedTo;
     private string editDrawingRef = "";
     private string editRelatedSpec = "";
+    private string editValue = "";
     private RequestStatus editStatus = RequestStatus.Open;
     private bool editCriticalPath;
     private string? editError;
@@ -1454,14 +1507,73 @@ else
         }
     }
 
-    private void OpenEdit()
+    // ---- Header edit: reference, status, subject (+ critical path, + close date when closing) --
+
+    private void OpenHeaderEdit()
     {
         if (record is null) return;
         editReference = record.Reference;
         editTitle = record.Title;
-        editDescription = record.Description ?? "";
-        editRaisedAt = record.RaisedAt.LocalDateTime.ToString("yyyy-MM-dd");
-        editIssuedAt = record.IssuedAt?.LocalDateTime.ToString("yyyy-MM-dd") ?? "";
+        editStatus = record.Status;
+        editClosedAt = record.ClosedAt?.LocalDateTime.ToString("yyyy-MM-dd") ?? "";
+        editCriticalPath = record.CriticalPath;
+        editError = null;
+        editingHeader = true;
+    }
+
+    private void CancelHeaderEdit() => editingHeader = false;
+
+    private void OnEditStatusChanged(ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), out var raw)) editStatus = (RequestStatus)raw;
+    }
+
+    private void OnEditDescriptionInput(ChangeEventArgs e) => editDescription = e.Value?.ToString() ?? "";
+
+    private async Task SaveHeaderEdit()
+    {
+        if (record is null || busy || !CanEditDetails) return;
+        editError = null;
+
+        if (string.IsNullOrWhiteSpace(editReference)) { editError = "A reference is required."; return; }
+        if (string.IsNullOrWhiteSpace(editTitle)) { editError = "A subject is required."; return; }
+
+        // The close date only travels when the record is closed; backdating is fine, forward-dating isn't.
+        var closedAt = editStatus == RequestStatus.Closed ? ParseDate(editClosedAt) : null;
+        if (closedAt is { } closed && closed.Date > DateTime.Today) { editError = "The closed date cannot be in the future."; return; }
+
+        var command = new UpdateRequestDetails(
+            record.RequestId,
+            editReference.Trim(),
+            editTitle.Trim(),
+            record.Description,
+            editStatus,
+            record.Value,
+            record.ResponseText,
+            record.RespondedByEmail,
+            record.ImpliesVariation,
+            record.RaisedTo,
+            record.DrawingRef,
+            record.ResponseDue,
+            record.RelatedDrawingSpec,
+            record.InternalNotes,
+            record.ClientNotes,
+            ClosedAt: closedAt,
+            RaisedToContactId: record.RaisedToContactId,
+            // Only the RFI modal shows the checkbox; null keeps the tag untouched elsewhere.
+            CriticalPath: record.Kind is RequestType.Rfi ? editCriticalPath : null);
+
+        // e.g. the reference was manually edited onto a number already in use on this project.
+        if (await SendEdit(command)) editingHeader = false;
+    }
+
+    // ---- Facts edit: the at-a-glance strip (dates, raised to, drawing refs, value) --------------
+
+    private void OpenFactsEdit()
+    {
+        if (record is null) return;
+        // The one visible date; rows predating the backfill show the created-on stamp.
+        editIssuedAt = (record.IssuedAt ?? record.RaisedAt).LocalDateTime.ToString("yyyy-MM-dd");
         editResponseDue = record.ResponseDue?.LocalDateTime.ToString("yyyy-MM-dd") ?? "";
         editClosedAt = record.ClosedAt?.LocalDateTime.ToString("yyyy-MM-dd") ?? "";
         // Raised-to: a live contact link selects that contact; anything else (legacy free text, or
@@ -1475,46 +1587,53 @@ else
         editLegacyRaisedTo = hasLiveContactLink ? null : record.RaisedTo;
         editDrawingRef = record.DrawingRef ?? "";
         editRelatedSpec = record.RelatedDrawingSpec ?? "";
-        editStatus = record.Status;
-        editCriticalPath = record.CriticalPath;
+        editValue = record.Value?.ToString("0.##") ?? "";
         editError = null;
-        editing = true;
+        editingFacts = true;
     }
 
-    private void CancelEdit() => editing = false;
+    private void CancelFactsEdit() => editingFacts = false;
 
-    private void OnEditStatusChanged(ChangeEventArgs e)
-    {
-        if (int.TryParse(e.Value?.ToString(), out var raw)) editStatus = (RequestStatus)raw;
-    }
-
-    private void OnEditDescriptionInput(ChangeEventArgs e) => editDescription = e.Value?.ToString() ?? "";
-
-    private async Task SaveEdit()
+    private async Task SaveFactsEdit()
     {
         if (record is null || busy || !CanEditDetails) return;
         editError = null;
-
-        if (string.IsNullOrWhiteSpace(editReference)) { editError = "A reference is required."; return; }
-        if (string.IsNullOrWhiteSpace(editTitle)) { editError = "A subject is required."; return; }
-
-        // The close date only travels when the record is closed; backdating is fine, forward-dating isn't.
-        var closedAt = editStatus == RequestStatus.Closed ? ParseDate(editClosedAt) : null;
-        if (closedAt is { } closed && closed.Date > DateTime.Today) { editError = "The closed date cannot be in the future."; return; }
-
-        var raised = ParseDate(editRaisedAt) ?? record.RaisedAt;
 
         // The issue date records when the document actually went out — today or earlier.
         var issuedAt = ParseDate(editIssuedAt);
         if (issuedAt is { } issuedDate && issuedDate.Date > DateTime.Today) { editError = "The issued date cannot be in the future."; return; }
 
+        // The close date is only offered (and only shown in the strip) once the record has one;
+        // a blank means "not supplied" and keeps the recorded date. Never a future one.
+        var closedAt = record.ClosedAt is null ? null : ParseDate(editClosedAt);
+        if (closedAt is { } closed && closed.Date > DateTime.Today) { editError = "The closed date cannot be in the future."; return; }
+
+        var value = record.Value;
+        if (record.Kind is not RequestType.Rfi)
+        {
+            if (string.IsNullOrWhiteSpace(editValue))
+            {
+                value = null;
+            }
+            else
+            {
+                var raw = editValue.Replace("£", "").Replace(",", "").Trim();
+                if (!decimal.TryParse(raw, out var parsedValue) || parsedValue < 0)
+                {
+                    editError = "Value must be a number.";
+                    return;
+                }
+                value = parsedValue;
+            }
+        }
+
         var command = new UpdateRequestDetails(
             record.RequestId,
-            editReference.Trim(),
-            editTitle.Trim(),
-            editDescription?.Trim() ?? "",
-            editStatus,
-            record.Value,
+            record.Reference,
+            record.Title,
+            record.Description,
+            record.Status,
+            value,
             record.ResponseText,
             record.RespondedByEmail,
             record.ImpliesVariation,
@@ -1526,29 +1645,73 @@ else
             NullIfBlank(editRelatedSpec),
             record.InternalNotes,
             record.ClientNotes,
-            raised,
             ClosedAt: closedAt,
             IssuedAt: issuedAt,
             RaisedToContactId: editRaisedToContactId == ProjectContactSelect.LegacyValue
                 ? null
-                : NullIfBlank(editRaisedToContactId),
-            CriticalPath: editCriticalPath);
+                : NullIfBlank(editRaisedToContactId));
 
+        if (await SendEdit(command)) editingFacts = false;
+    }
+
+    // ---- Detail edit: the Detail panel's text ---------------------------------------------------
+
+    private void OpenDetailEdit()
+    {
+        if (record is null) return;
+        editDescription = record.Description ?? "";
+        editError = null;
+        editingDetail = true;
+    }
+
+    private void CancelDetailEdit() => editingDetail = false;
+
+    private async Task SaveDetailEdit()
+    {
+        if (record is null || busy || !CanEditDetails) return;
+        editError = null;
+
+        var command = new UpdateRequestDetails(
+            record.RequestId,
+            record.Reference,
+            record.Title,
+            editDescription?.Trim() ?? "",
+            record.Status,
+            record.Value,
+            record.ResponseText,
+            record.RespondedByEmail,
+            record.ImpliesVariation,
+            record.RaisedTo,
+            record.DrawingRef,
+            record.ResponseDue,
+            record.RelatedDrawingSpec,
+            record.InternalNotes,
+            record.ClientNotes,
+            RaisedToContactId: record.RaisedToContactId);
+
+        if (await SendEdit(command)) editingDetail = false;
+    }
+
+    /// <summary>Shared send for the three edit modals: true on success (the caller closes its
+    /// modal), false leaves the modal open with the error shown inside it.</summary>
+    private async Task<bool> SendEdit(UpdateRequestDetails command)
+    {
         try
         {
             busy = true;
             record = await RequestRegister.UpdateAsync(command);
             responseDraft = record.ResponseText ?? "";
-            editing = false;
+            return true;
         }
         catch (CommandFailedException ex)
         {
-            // e.g. the reference was manually edited onto a number already in use on this project.
             editError = ex.Message;
+            return false;
         }
         catch
         {
             editError = "Couldn't save the changes. Please try again.";
+            return false;
         }
         finally
         {
@@ -1715,6 +1878,9 @@ else
             draftResult = string.IsNullOrEmpty(selectedChainMailboxId)
                 ? await RequestRegister.PrepareEmailDraftAsync(record.RequestId)
                 : await RequestRegister.PrepareReplyDraftAsync(record.RequestId, selectedChainMailboxId);
+            // Drafting the official document moves an Open request to Awaiting Response server-side
+            // (manually set back to Open if the send is cancelled) — reload so the status pill agrees.
+            await LoadAsync();
         }
         catch (CommandFailedException ex)
         {

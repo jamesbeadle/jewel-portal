@@ -24,6 +24,7 @@ public sealed record RequestDocumentModel(
     string ClientName,
     string RaisedByEmail,
     DateTimeOffset RaisedAt,
+    DateTimeOffset? IssuedAt,     // when the document was issued — user-set on the request, null until then
     DateTimeOffset? ResponseDue,
     string? RaisedTo,             // responding party the RFI is issued to
     string? DrawingRef,
@@ -49,6 +50,11 @@ public sealed record RequestDocumentModel(
     /// <summary>The client-facing reference: the project-local number (RFI-052) when one has been
     /// minted, otherwise the internal REQ number.</summary>
     public string DisplayReference => string.IsNullOrWhiteSpace(Reference) ? DisplayNumber : Reference;
+
+    /// <summary>The date the document presents as its issue date: the recorded issued date once the
+    /// user has set one, otherwise the raised date (a draft rendered before issue has no better
+    /// client-facing date than when the request was raised).</summary>
+    public DateTimeOffset IssuedDisplayDate => IssuedAt ?? RaisedAt;
 
     /// <summary>True when a still-open request has been outstanding past its response-due date.</summary>
     public bool IsOverdue =>

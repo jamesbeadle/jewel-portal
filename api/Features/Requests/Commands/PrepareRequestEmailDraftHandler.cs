@@ -12,8 +12,11 @@ namespace Jewel.JPMS.Api.Features.Requests.Commands;
 /// <summary>
 /// Creates an Outlook draft in the connected projects mailbox carrying the request's official
 /// document — recipients, subject, cover note and the freshly rendered PDF all pre-filled — so a
-/// person can review, adjust and send it from the mailbox itself. Nothing is sent and no status
-/// changes: issuing remains the send path's job.
+/// person can review, adjust and send it from the mailbox itself. Nothing is sent, but an Open
+/// request moves to Awaiting Response the moment its draft lands in the mailbox — the working
+/// assumption is that a drafted document goes out. If the team cancels the send they set the
+/// request back to Open by hand. Requests already past Open (Responded, Approved, Closed…)
+/// keep their status: re-drafting never rewinds a lifecycle.
 ///
 /// Recipients come from the shared <see cref="RequestRecipientResolver"/> (request party →
 /// project party → project profile To rows, with the correspondence profile supplying CC/BCC) —
@@ -74,6 +77,15 @@ public sealed class PrepareRequestEmailDraftHandler : ICommandHandler<PrepareReq
         if (created is null)
             throw new InvalidOperationException(
                 "The draft couldn't be created in the projects mailbox. Check the mailbox connection and try again.");
+
+        // Drafted means it's going out: an Open request moves to Awaiting Response now, and the
+        // team manually returns it to Open if the send is cancelled. Only Open moves — a request
+        // that has already been responded to, approved or closed is never rewound by a re-draft.
+        if ((RequestStatus)request.Status == RequestStatus.Open)
+        {
+            request.Status = (int)RequestStatus.AwaitingResponse;
+            await context.SaveChangesAsync(cancellationToken);
+        }
 
         return new RequestEmailDraft(
             request.RequestId,

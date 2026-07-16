@@ -43,6 +43,14 @@ public static class SiteFeatureRegistration
         services.AddScoped<TakeProgrammeBaselineAuthorisation>();
         services.AddScoped<TakeProgrammeBaselineValidation>();
 
+        services.AddScoped<ICommandHandler<RemoveProgrammeTask, Jewel.JPMS.Contracts.Cqrs.Acknowledgement>, RemoveProgrammeTaskHandler>();
+        services.AddScoped<RemoveProgrammeTaskAuthorisation>();
+        services.AddScoped<RemoveProgrammeTaskValidation>();
+
+        services.AddScoped<ICommandHandler<RemoveProgrammeBaseline, Jewel.JPMS.Contracts.Cqrs.Acknowledgement>, RemoveProgrammeBaselineHandler>();
+        services.AddScoped<RemoveProgrammeBaselineAuthorisation>();
+        services.AddScoped<RemoveProgrammeBaselineValidation>();
+
         return services;
     }
 }

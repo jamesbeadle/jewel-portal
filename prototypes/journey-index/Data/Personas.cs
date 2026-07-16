@@ -15,7 +15,7 @@ public static class Personas
             Code: "P01",
             Name: "Architect",
             ShortDescription: "External client who sends tenders with drawings and specs; defines cost codes carried through the system.",
-            Role: "External client architect commissioning work from Jewel Enterprises",
+            Role: "External client architect commissioning work from Jewel Bespoke Build",
             ReportsTo: "Their own firm / their own client",
             ToolingToday: "Architecture / CAD software, email, drawing packages, client portals",
             Frequency: "Periodic — at tender submission and during VO discussions",

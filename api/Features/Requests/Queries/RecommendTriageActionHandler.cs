@@ -171,7 +171,7 @@ public sealed class RecommendTriageActionHandler : IQueryHandler<RecommendTriage
     }
 
     private const string SystemPrompt =
-        "You are a triage assistant for JPMS, the project-management system of Jewel Enterprises, a " +
+        "You are a triage assistant for JPMS, the project-management system of Jewel Bespoke Build, a " +
         "super-prime residential construction company in Surrey, UK. Inbound email to the projects " +
         "mailbox sits in a triage queue until a member of staff assigns it to a record. Read one email " +
         "thread and recommend the single best next action, with a short summary the triager can act on " +

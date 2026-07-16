@@ -32,10 +32,10 @@ The role responsible for pricing tenders into line items and capturing site meas
 A formal question raised by a Subcontractor (or other party on site) seeking clarification on scope, specification, or drawing when work cannot proceed without an answer. RFI resolutions often produce VOs.
 
 **Subcontractor**
-A field worker delivering work against tender line items. External to Jewel Enterprises.
+A field worker delivering work against tender line items. External to Jewel Bespoke Build.
 
 **Tender**
-A package of drawings and specifications sent by an Architect to Jewel Enterprises, defining the work to be delivered. Tenders are priced by the QS into line items.
+A package of drawings and specifications sent by an Architect to Jewel Bespoke Build, defining the work to be delivered. Tenders are priced by the QS into line items.
 
 **Timesheet**
 A record of time spent on a project by a Subcontractor, used for cost tracking and payment.

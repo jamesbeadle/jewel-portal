@@ -1,5 +1,5 @@
 {
-  "name": "Jewel Enterprises Journey Index",
+  "name": "Jewel Bespoke Build Journey Index",
   "short_name": "Jewel",
   "id": "/",
   "start_url": "/",
@@ -8,7 +8,7 @@
   "orientation": "any",
   "background_color": "#0f172a",
   "theme_color": "#0f172a",
-  "description": "Walkthrough menu of user journeys for the Jewel Enterprises platform — scoping prototype.",
+  "description": "Walkthrough menu of user journeys for the Jewel Bespoke Build platform — scoping prototype.",
   "prefer_related_applications": false,
   "icons": [
     {

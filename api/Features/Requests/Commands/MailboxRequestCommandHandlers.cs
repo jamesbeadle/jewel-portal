@@ -96,6 +96,9 @@ public sealed class CreateRequestFromMessageHandler : ICommandHandler<CreateRequ
             Value = command.Value,
             RaisedByEmail = command.RaisedByEmail,
             RaisedAt = snapshot.ReceivedAt,
+            // The one visible date: a request born from an email takes the email's received
+            // date as its issue date (user-editable thereafter).
+            IssuedAt = snapshot.ReceivedAt,
             ImpliesVariation = false,
             RaisedTo = command.RaisedTo,
             DrawingRef = command.DrawingRef,

@@ -1,6 +1,6 @@
 # JPMS — Jewel Project Management System (Blazor WebAssembly PWA)
 
-The production web app for Jewel Enterprises and its clients. Blazor WebAssembly + Tailwind, hosted on Azure Static Web Apps with database-backed email/password authentication and Azure SQL Serverless for persistence.
+The production web app for Jewel Bespoke Build and its clients. Blazor WebAssembly + Tailwind, hosted on Azure Static Web Apps with database-backed email/password authentication and Azure SQL Serverless for persistence.
 
 ## Stack
 

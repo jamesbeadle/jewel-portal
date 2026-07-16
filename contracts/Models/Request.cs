@@ -35,7 +35,7 @@ public sealed record Request(
     RequestStatus Status,
     decimal? Value,
     string RaisedByEmail,
-    DateTimeOffset RaisedAt,
+    DateTimeOffset RaisedAt,          // internal created-on audit stamp — never shown; IssuedAt is the one visible date
     DateTimeOffset? RespondedAt,
     string? ResponseText = null,
     string? RespondedByEmail = null,
@@ -58,7 +58,7 @@ public sealed record Request(
     string? RelatedNodRequestId = null,     // EOT only: the Notice of Delay this EOT arises from (optional)
     string? MergedIntoRequestId = null,     // set when this General request was merged into another (the survivor's id)
     DateTimeOffset? ClosedAt = null,        // when the request was closed — user-chosen (today or prior), cleared on reopen
-    DateTimeOffset? IssuedAt = null,        // when the official document was issued — user-set/updated, never stamped automatically
+    DateTimeOffset? IssuedAt = null,        // the one visible request date — stamped on creation (today / backfill date), user-editable thereafter
     string? RaisedToContactId = null,       // the project contact RaisedTo points at, when picked from the project's contact list (RaisedTo stays the denormalised display string)
     bool CriticalPath = false)              // Critical Path tag — the RFI is programme-related; shows in the Programme tab's "Critical Path RFIs" view
 {
@@ -68,11 +68,13 @@ public sealed record Request(
     // The itemised queries, never null (Items is nullable so old payloads deserialize cleanly).
     public IReadOnlyList<RequestItem> ItemList => Items ?? Array.Empty<RequestItem>();
 
-    // Working days a still-open request has been outstanding since it was issued.
+    // Days a still-open request has been outstanding since it was issued. IssuedAt is the one
+    // visible date (RaisedAt is only the internal created-on stamp, kept as a fallback for rows
+    // predating the IssuedAt backfill).
     public int? DaysOutstanding =>
         Status is RequestStatus.Closed || RespondedAt is not null
             ? null
-            : Math.Max(0, (int)(DateTimeOffset.UtcNow.Date - RaisedAt.Date).TotalDays);
+            : Math.Max(0, (int)(DateTimeOffset.UtcNow.Date - (IssuedAt ?? RaisedAt).Date).TotalDays);
 
     // Open and older than 7 days without a response.
     public bool IsOverdue => DaysOutstanding is > 7;

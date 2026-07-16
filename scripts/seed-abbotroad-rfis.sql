@@ -116,7 +116,7 @@ DECLARE @Base INT = ISNULL((SELECT MAX(Number) FROM dbo.Requests), 0);
 
 INSERT INTO dbo.Requests
     (RequestId, ProjectId, Kind, Reference, Title, Description, Status, Value,
-     RaisedByEmail, RaisedAt, RespondedAt, ResponseText, RespondedByEmail,
+     RaisedByEmail, RaisedAt, IssuedAt, RespondedAt, ResponseText, RespondedByEmail,
      ImpliesVariation, RaisedTo, DrawingRef, ResponseDue, RelatedDrawingSpec,
      InternalNotes, ClientNotes, Number, MailboxFolderId)
 SELECT
@@ -130,6 +130,7 @@ SELECT
     NULL,                                                        -- Value
     @RaisedBy,
     s.RaisedAt,
+    s.RaisedAt,                                                  -- IssuedAt: the register's issue date (same as the "Date Issued" column)
     s.RespondedAt,
     s.ResponseText,
     NULL,                                                        -- RespondedByEmail

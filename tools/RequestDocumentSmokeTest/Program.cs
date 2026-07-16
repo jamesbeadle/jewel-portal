@@ -18,6 +18,7 @@ var model = new RequestDocumentModel(
     ClientName: "Mr & Mrs Harrington",
     RaisedByEmail: "site.manager@jewelbb.co.uk",
     RaisedAt: DateTimeOffset.Now.AddDays(-3),
+    IssuedAt: DateTimeOffset.Now.AddDays(-2),
     ResponseDue: DateTimeOffset.Now.AddDays(2),
     RaisedTo: "Foster Studio Architects",
     DrawingRef: "S-204 rev C; A-330",

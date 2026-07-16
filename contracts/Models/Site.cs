@@ -52,8 +52,11 @@ public sealed record ProgrammeBaselineTask(
 
 // Everything the Programme tab's programme view needs in one round trip: the live tasks, their
 // dependency links, and the latest baseline (with its task snapshots) to overlay movement against.
+// Baselines lists every baseline taken, newest first (so Baselines[0] is the current yardstick,
+// the same one Baseline carries), for the tab's baseline-management view.
 public sealed record ProgrammeDetail(
     IReadOnlyList<ProgrammeTask> Tasks,
     IReadOnlyList<ProgrammeTaskLink> Links,
     ProgrammeBaseline? Baseline,
-    IReadOnlyList<ProgrammeBaselineTask> BaselineTasks);
+    IReadOnlyList<ProgrammeBaselineTask> BaselineTasks,
+    IReadOnlyList<ProgrammeBaseline> Baselines);

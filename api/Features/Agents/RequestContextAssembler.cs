@@ -50,7 +50,9 @@ public sealed class RequestContextAssembler
         if (!string.IsNullOrWhiteSpace(r.RaisedTo)) sb.AppendLine($"Ball-in-court: {r.RaisedTo}");
         if (!string.IsNullOrWhiteSpace(r.DrawingRef)) sb.AppendLine($"Drawing ref: {r.DrawingRef}");
         if (r.ResponseDue is not null) sb.AppendLine($"Response due: {r.ResponseDue:yyyy-MM-dd}");
-        sb.AppendLine($"Raised by: {r.RaisedByEmail} on {r.RaisedAt:yyyy-MM-dd}");
+        // IssuedAt is the one visible request date; RaisedAt is only the internal created-on stamp
+        // (kept as a fallback for rows predating the IssuedAt backfill).
+        sb.AppendLine($"Raised by: {r.RaisedByEmail}, issued {(r.IssuedAt ?? r.RaisedAt):yyyy-MM-dd}");
         sb.AppendLine("Description:");
         sb.AppendLine(r.Description);
         if (!string.IsNullOrWhiteSpace(r.ResponseText))

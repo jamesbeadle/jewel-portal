@@ -120,10 +120,12 @@ public static class RequestDocumentRenderer
         status.Format.Font.Color = model.IsOverdue ? Orange : White;
         SpaceAfter(status, 2);
 
-        var raised = row.Cells[1].AddParagraph($"Raised  {Date(model.RaisedAt)}");
-        raised.Format.Font.Size = 8;
-        raised.Format.Font.Color = White;
-        SpaceAfter(raised, 0.5);
+        // The issued date is what the correspondent cares about; the recorded issue date when one has
+        // been set on the request, falling back to the raised date until then (see IssuedDisplayDate).
+        var issued = row.Cells[1].AddParagraph($"Issued  {Date(model.IssuedDisplayDate)}");
+        issued.Format.Font.Size = 8;
+        issued.Format.Font.Color = White;
+        SpaceAfter(issued, 0.5);
 
         var dueText = model.ResponseDue is { } due ? Date(due) : "—";
         var due2 = row.Cells[1].AddParagraph($"Response due  {dueText}");

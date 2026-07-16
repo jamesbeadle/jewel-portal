@@ -355,7 +355,7 @@ else
                                 <p class="text-sm text-content truncate">
                                     <span class="font-mono text-xs text-content-muted mr-2">@Dash(request.Reference)</span>@Dash(request.Title)
                                 </p>
-                                <p class="text-[11px] text-content-subtle mt-0.5">Raised @Date(request.RaisedAt) · @Dash(request.RaisedByEmail)</p>
+                                <p class="text-[11px] text-content-subtle mt-0.5">Issued @Date(request.IssuedAt ?? request.RaisedAt) · @Dash(request.RaisedByEmail)</p>
                             </div>
                             <button type="button" class="btn-secondary text-xs whitespace-nowrap"
                                     disabled="@busy" @onclick="() => ReturnUnassigned(request)">

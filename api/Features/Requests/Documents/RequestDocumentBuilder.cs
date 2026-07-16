@@ -63,6 +63,7 @@ public static class RequestDocumentBuilder
             ClientName: project?.ClientName ?? "",
             RaisedByEmail: request.RaisedByEmail,
             RaisedAt: request.RaisedAt,
+            IssuedAt: request.IssuedAt,
             ResponseDue: request.ResponseDue,
             RaisedTo: request.RaisedTo,
             DrawingRef: request.DrawingRef,

@@ -441,7 +441,7 @@ DECLARE @Inserted TABLE (RequestId NVARCHAR(64), Reference NVARCHAR(64));
 
 INSERT INTO dbo.Requests
     (RequestId, ProjectId, Kind, Reference, Title, Description, Status, Value,
-     RaisedByEmail, RaisedAt, RespondedAt, ResponseText, RespondedByEmail,
+     RaisedByEmail, RaisedAt, IssuedAt, RespondedAt, ResponseText, RespondedByEmail,
      ImpliesVariation, RaisedTo, DrawingRef, ResponseDue, RelatedDrawingSpec,
      InternalNotes, ClientNotes, BasisOfQueries, ResponseActionRequired,
      ImpactIfLate, Number, MailboxFolderId)
@@ -457,6 +457,7 @@ SELECT
     NULL,                                                        -- Value
     @RaisedBy,
     @RaisedAt,
+    @RaisedAt,          -- IssuedAt: the register's issue date
     NULL,                                                        -- RespondedAt
     NULL,                                                        -- ResponseText
     NULL,                                                        -- RespondedByEmail

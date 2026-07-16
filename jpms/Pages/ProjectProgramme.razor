@@ -127,7 +127,7 @@ else
                 <div class="flex flex-wrap gap-2 mb-5">
                     <button type="button" class="btn-secondary" @onclick="() => ToggleProgrammeForm(ProgrammeForm.AddTask)">Add task</button>
                     <button type="button" class="btn-secondary" disabled="@(Tasks.Count < 2)" @onclick="() => ToggleProgrammeForm(ProgrammeForm.AddLink)">Add dependency</button>
-                    <button type="button" class="btn-secondary" disabled="@(Tasks.Count == 0)" @onclick="() => ToggleProgrammeForm(ProgrammeForm.Baseline)">Take baseline</button>
+                    <button type="button" class="btn-secondary" disabled="@(Tasks.Count == 0 && Baselines.Count == 0)" @onclick="() => ToggleProgrammeForm(ProgrammeForm.Baseline)">Baselines</button>
                 </div>
 
                 @if (openProgrammeForm == ProgrammeForm.AddTask)
@@ -199,9 +199,38 @@ else
                             <input class="field" @bind="baselineLabel" placeholder="e.g. Contract programme rev A" />
                         </div>
                         <div class="flex gap-2">
-                            <button type="button" class="btn-primary" disabled="@(programmeBusy || string.IsNullOrWhiteSpace(baselineLabel))" @onclick="TakeBaselineAsync">Take baseline</button>
+                            <button type="button" class="btn-primary" disabled="@(programmeBusy || Tasks.Count == 0 || string.IsNullOrWhiteSpace(baselineLabel))" @onclick="TakeBaselineAsync">Take baseline</button>
                             <button type="button" class="btn-secondary" @onclick="() => ToggleProgrammeForm(ProgrammeForm.None)">Cancel</button>
                         </div>
+                        @if (Baselines.Count > 0)
+                        {
+                            <div class="pt-3 border-t border-line">
+                                <p class="text-xs uppercase tracking-wider text-content-subtle font-semibold mb-2">Baselines taken</p>
+                                <ul class="space-y-1.5">
+                                    @foreach (var baselineEntry in Baselines)
+                                    {
+                                        <li class="flex flex-wrap items-center gap-2">
+                                            <span class="text-sm text-content">@baselineEntry.Label</span>
+                                            @if (baselineEntry.ProgrammeBaselineId == programme?.Baseline?.ProgrammeBaselineId)
+                                            {
+                                                <span class="inline-flex items-center rounded bg-accent/10 px-1.5 py-0.5 text-[10px] font-medium text-accent">current yardstick</span>
+                                            }
+                                            <span class="text-xs text-content-subtle">taken @baselineEntry.TakenAt.LocalDateTime.ToString("d MMM yyyy, HH:mm") by @baselineEntry.TakenByEmail</span>
+                                            @if (confirmingRemoveBaselineId == baselineEntry.ProgrammeBaselineId)
+                                            {
+                                                <button type="button" class="text-xs font-semibold text-negative hover:underline" disabled="@programmeBusy" @onclick="() => RemoveBaselineAsync(baselineEntry.ProgrammeBaselineId)">Confirm remove</button>
+                                                <button type="button" class="text-xs text-content-subtle hover:underline" @onclick="() => confirmingRemoveBaselineId = null">Keep</button>
+                                            }
+                                            else
+                                            {
+                                                <button type="button" class="text-xs text-negative hover:underline" title="Remove this baseline" @onclick="() => confirmingRemoveBaselineId = baselineEntry.ProgrammeBaselineId">Remove</button>
+                                            }
+                                        </li>
+                                    }
+                                </ul>
+                                <p class="text-xs text-content-subtle mt-2">Movement is measured against the latest baseline — removing it makes the previous one the yardstick again.</p>
+                            </div>
+                        }
                     </div>
                 }
 
@@ -292,9 +321,19 @@ else
                                                 <input type="number" min="0" max="100" class="field" @bind="editProgress" />
                                             </div>
                                         </div>
-                                        <div class="flex gap-2">
+                                        <div class="flex flex-wrap items-center gap-2">
                                             <button type="button" class="btn-primary" disabled="@(programmeBusy || string.IsNullOrWhiteSpace(editTitle) || editStart is null || editEnd is null)" @onclick="SaveEditTaskAsync">Save</button>
-                                            <button type="button" class="btn-secondary" @onclick="() => editingTaskId = null">Cancel</button>
+                                            <button type="button" class="btn-secondary" @onclick="CancelEditTask">Cancel</button>
+                                            @if (confirmingRemoveTask)
+                                            {
+                                                <span class="ml-auto text-xs text-content-subtle">Removes the task and its dependencies — baseline snapshots are kept.</span>
+                                                <button type="button" class="btn-secondary text-negative" disabled="@programmeBusy" @onclick="RemoveTaskAsync">Confirm remove</button>
+                                                <button type="button" class="btn-secondary" @onclick="() => confirmingRemoveTask = false">Keep</button>
+                                            }
+                                            else
+                                            {
+                                                <button type="button" class="btn-secondary text-negative ml-auto" disabled="@programmeBusy" @onclick="() => confirmingRemoveTask = true">Remove task…</button>
+                                            }
                                         </div>
                                     </div>
                                 }
@@ -427,7 +466,7 @@ else
                                         </div>
                                         <div class="flex items-center gap-2">
                                             <span class="inline-flex items-center rounded bg-surface-raised border border-line px-1.5 py-0.5 text-[10px] text-content-subtle">@nod.Status</span>
-                                            <span class="text-xs text-content-subtle">@nod.RaisedAt.LocalDateTime.ToString("d MMM yyyy")</span>
+                                            <span class="text-xs text-content-subtle">@((nod.IssuedAt ?? nod.RaisedAt).LocalDateTime.ToString("d MMM yyyy"))</span>
                                         </div>
                                     </div>
                                     @if (!string.IsNullOrWhiteSpace(nod.Description))
@@ -463,7 +502,7 @@ else
                                                 <span class="inline-flex items-center rounded bg-accent/10 px-1.5 py-0.5 text-[10px] text-accent" title="Arises from this Notice of Delay">from @nodRef</span>
                                             }
                                             <span class="inline-flex items-center rounded bg-surface-raised border border-line px-1.5 py-0.5 text-[10px] text-content-subtle">@eot.Status</span>
-                                            <span class="text-xs text-content-subtle">@eot.RaisedAt.LocalDateTime.ToString("d MMM yyyy")</span>
+                                            <span class="text-xs text-content-subtle">@((eot.IssuedAt ?? eot.RaisedAt).LocalDateTime.ToString("d MMM yyyy"))</span>
                                         </div>
                                     </div>
                                     @if (!string.IsNullOrWhiteSpace(eot.Description))
@@ -552,7 +591,7 @@ else
                                                   title="Days outstanding since raised">@days d outstanding</span>
                                         }
                                         <span class="inline-flex items-center whitespace-nowrap rounded-full px-2 py-0.5 text-[11px] font-medium @RfiStatusClass(rfi.Status)">@RfiStatusLabel(rfi.Status)</span>
-                                        <span class="text-xs text-content-subtle">@rfi.RaisedAt.LocalDateTime.ToString("d MMM yyyy")</span>
+                                        <span class="text-xs text-content-subtle">@((rfi.IssuedAt ?? rfi.RaisedAt).LocalDateTime.ToString("d MMM yyyy"))</span>
                                     </div>
                                 </div>
                                 <div class="flex flex-wrap items-center gap-x-4 gap-y-1 mt-1 text-xs text-content-subtle">
@@ -702,14 +741,17 @@ else
     private DateTime? editEnd;
     private decimal editProgress;
     private string? editBoqLineItemId;
+    private bool confirmingRemoveTask;
 
     private string linkPredecessorId = "";
     private string linkSuccessorId = "";
     private int linkLagDays;
 
     private string baselineLabel = "";
+    private string? confirmingRemoveBaselineId;
 
     private IReadOnlyList<ProgrammeTask> Tasks => programme?.Tasks ?? Array.Empty<ProgrammeTask>();
+    private IReadOnlyList<ProgrammeBaseline> Baselines => programme?.Baselines ?? Array.Empty<ProgrammeBaseline>();
     private IReadOnlyList<ProgrammeTaskLink> Links => programme?.Links ?? Array.Empty<ProgrammeTaskLink>();
     private IReadOnlyList<ProgrammeBaselineTask> BaselineTasks => programme?.BaselineTasks ?? Array.Empty<ProgrammeBaselineTask>();
     private ProgrammeMovement Movement => ProgrammeMovementCalculator.Compare(Tasks, BaselineTasks);
@@ -762,6 +804,7 @@ else
     {
         openProgrammeForm = openProgrammeForm == form ? ProgrammeForm.None : form;
         programmeError = null;
+        confirmingRemoveBaselineId = null;
     }
 
     private async Task AddTaskAsync()
@@ -801,6 +844,13 @@ else
         editEnd = task.PlannedEnd.UtcDateTime.Date;
         editProgress = task.ProgressPercent;
         editBoqLineItemId = task.BoqLineItemId;
+        confirmingRemoveTask = false;
+    }
+
+    private void CancelEditTask()
+    {
+        editingTaskId = null;
+        confirmingRemoveTask = false;
     }
 
     private async Task SaveEditTaskAsync()
@@ -822,6 +872,28 @@ else
         catch
         {
             programmeError = "Couldn't save the task. Please try again.";
+        }
+        finally
+        {
+            programmeBusy = false;
+        }
+    }
+
+    private async Task RemoveTaskAsync()
+    {
+        if (programmeBusy || editingTaskId is null) return;
+        programmeBusy = true;
+        programmeError = null;
+        try
+        {
+            await Commands.SendAsync(new RemoveProgrammeTask(editingTaskId), CancellationToken.None);
+            editingTaskId = null;
+            confirmingRemoveTask = false;
+            await LoadProgrammeAsync();
+        }
+        catch
+        {
+            programmeError = "Couldn't remove the task. Please try again.";
         }
         finally
         {
@@ -890,6 +962,27 @@ else
         catch
         {
             programmeError = "Couldn't take the baseline. Please try again.";
+        }
+        finally
+        {
+            programmeBusy = false;
+        }
+    }
+
+    private async Task RemoveBaselineAsync(string programmeBaselineId)
+    {
+        if (programmeBusy) return;
+        programmeBusy = true;
+        programmeError = null;
+        try
+        {
+            await Commands.SendAsync(new RemoveProgrammeBaseline(programmeBaselineId), CancellationToken.None);
+            confirmingRemoveBaselineId = null;
+            await LoadProgrammeAsync();
+        }
+        catch
+        {
+            programmeError = "Couldn't remove the baseline. Please try again.";
         }
         finally
         {

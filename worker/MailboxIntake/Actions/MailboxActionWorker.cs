@@ -161,8 +161,12 @@ public sealed class MailboxActionWorker
             SentStatus = (int)MessageSentStatus.Pending
         });
 
-        // The request stays Open: the document has only been drafted, not sent. Status moves to
-        // AwaitingResponse when a reply is triaged in (or manually) — never on draft creation.
+        // Drafted means it's going out: an Open request moves to Awaiting Response as soon as the
+        // draft lands in the mailbox (matching the API's on-demand draft path). The team manually
+        // sets it back to Open if the send is cancelled. Only Open moves — a request already
+        // responded to, approved or closed keeps its status through a re-draft.
+        if ((RequestStatus)request.Status == RequestStatus.Open)
+            request.Status = (int)RequestStatus.AwaitingResponse;
 
         await _context.SaveChangesAsync(ct);
         _logger.LogInformation(

@@ -56,6 +56,10 @@ public sealed class RaiseRequestHandler : ICommandHandler<RaiseRequest, Request>
                 Value = command.Value,
                 RaisedByEmail = command.RaisedByEmail,
                 RaisedAt = command.RaisedAt ?? DateTimeOffset.UtcNow,
+                // "Date issued" is the one date shown across the register — stamp it on creation
+                // (today, or the backfill date for a historical record). RaisedAt survives only as
+                // the internal created-on audit stamp; the user edits IssuedAt thereafter.
+                IssuedAt = command.RaisedAt ?? DateTimeOffset.UtcNow,
                 RespondedAt = command.RespondedAt,
                 ResponseText = command.ResponseText,
                 RespondedByEmail = command.RespondedByEmail,

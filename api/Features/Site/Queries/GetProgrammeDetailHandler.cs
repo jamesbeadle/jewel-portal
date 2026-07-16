@@ -25,10 +25,12 @@ public sealed class GetProgrammeDetailHandler : IQueryHandler<GetProgrammeDetail
             .Where(link => link.ProjectId == query.ProjectId)
             .ToListAsync(cancellationToken);
 
-        var baseline = await context.ProgrammeBaselines
+        var baselines = await context.ProgrammeBaselines
             .Where(b => b.ProjectId == query.ProjectId)
             .OrderByDescending(b => b.TakenAt)
-            .FirstOrDefaultAsync(cancellationToken);
+            .ToListAsync(cancellationToken);
+
+        var baseline = baselines.FirstOrDefault();
 
         var baselineTasks = baseline is null
             ? new List<Data.Entities.ProgrammeBaselineTaskEntity>()
@@ -40,6 +42,7 @@ public sealed class GetProgrammeDetailHandler : IQueryHandler<GetProgrammeDetail
             tasks.Select(t => t.ToModel()).ToList().AsReadOnly(),
             links.Select(l => l.ToModel()).ToList().AsReadOnly(),
             baseline?.ToModel(),
-            baselineTasks.Select(t => t.ToModel()).ToList().AsReadOnly());
+            baselineTasks.Select(t => t.ToModel()).ToList().AsReadOnly(),
+            baselines.Select(b => b.ToModel()).ToList().AsReadOnly());
     }
 }

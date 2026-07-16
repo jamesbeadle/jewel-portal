@@ -1,4 +1,4 @@
-# Jewel Enterprises — working notes
+# Jewel Bespoke Build — working notes
 
 ## Terminology
 

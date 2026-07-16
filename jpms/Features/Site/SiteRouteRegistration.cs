@@ -56,5 +56,13 @@ public static class SiteRouteRegistration
         commands.Register<TakeProgrammeBaseline, ProgrammeBaseline>(
             new CommandRoute("POST", "/api/projects/{projectId}/programme/baselines",
                 command => $"/api/projects/{((TakeProgrammeBaseline)command).ProjectId}/programme/baselines"));
+
+        commands.Register<RemoveProgrammeTask, Acknowledgement>(
+            new CommandRoute("DELETE", "/api/programme-tasks/{programmeTaskId}",
+                command => $"/api/programme-tasks/{((RemoveProgrammeTask)command).ProgrammeTaskId}"));
+
+        commands.Register<RemoveProgrammeBaseline, Acknowledgement>(
+            new CommandRoute("DELETE", "/api/programme-baselines/{programmeBaselineId}",
+                command => $"/api/programme-baselines/{((RemoveProgrammeBaseline)command).ProgrammeBaselineId}"));
     }
 }

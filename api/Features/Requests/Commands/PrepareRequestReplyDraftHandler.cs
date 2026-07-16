@@ -14,8 +14,10 @@ namespace Jewel.JPMS.Api.Features.Requests.Commands;
 /// conversation — "RE:" subject, thread headers, quoted history, original recipients — and the
 /// branded cover note is placed above the quoted history, so the formal document arrives inside the
 /// email chain it relates to. The draft is tagged with the request's workflow category so the sent
-/// copy and its replies group under the request in triage. Nothing is sent and no status changes —
-/// a person reviews, adjusts recipients if needed, and sends from the mailbox itself.
+/// copy and its replies group under the request in triage. Nothing is sent — a person reviews,
+/// adjusts recipients if needed, and sends from the mailbox itself — but as with the fresh-email
+/// draft, an Open request moves to Awaiting Response the moment the document is drafted; the team
+/// manually sets it back to Open if the send is cancelled.
 /// </summary>
 public sealed class PrepareRequestReplyDraftHandler : ICommandHandler<PrepareRequestReplyDraft, RequestEmailDraft>
 {
@@ -61,6 +63,15 @@ public sealed class PrepareRequestReplyDraftHandler : ICommandHandler<PrepareReq
             throw new InvalidOperationException(
                 "The reply draft couldn't be created in the projects mailbox. The original email may " +
                 "no longer be there, or the mailbox connection failed — check and try again.");
+
+        // Same rule as the fresh-email draft: drafted means it's going out, so an Open request
+        // moves to Awaiting Response now (manually set back to Open if the send is cancelled).
+        // Requests already past Open keep their status — a re-draft never rewinds a lifecycle.
+        if ((RequestStatus)request.Status == RequestStatus.Open)
+        {
+            request.Status = (int)RequestStatus.AwaitingResponse;
+            await context.SaveChangesAsync(cancellationToken);
+        }
 
         return new RequestEmailDraft(
             request.RequestId,
