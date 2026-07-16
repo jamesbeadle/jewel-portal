@@ -16,9 +16,10 @@
     assigned to a role, not a person, so they survive staff changes. General items are captured
     from a company-wide email at triage ("General to-do") or added here directly.
 
-    Rows show only the item's title; clicking one opens the detail modal (TodoDetailModal) with the
-    full detail, the item's linked emails read live by tag, and the complete/reopen and delete
-    actions — completing moves the item onto the Done tab.
+    Each row is a fixed-height line of title + key facts (never the multiline notes); clicking one
+    opens the detail modal (TodoDetailModal) with the full detail including those notes, the item's
+    linked emails read live by tag, and the complete/reopen and delete actions — completing moves
+    the item onto the Done tab.
 *@
 
 @if (!isLoaded)
@@ -119,7 +120,28 @@ else
                             <button type="button" @key="item.TodoItemId" title="Open this item"
                                     class="w-full rounded-lg border border-line px-3 py-2 text-left hover:border-line-strong hover:bg-surface-raised"
                                     @onclick="() => selected = item">
-                                <span class="block truncate text-sm @(item.IsComplete ? "text-content-subtle line-through" : "text-content")">@item.Title</span>
+                                <p class="truncate text-sm @(item.IsComplete ? "text-content-subtle line-through" : "text-content")">
+                                    <span class="font-mono text-xs text-content-muted mr-2">@item.Reference</span>@item.Title
+                                </p>
+                                <div class="mt-1 flex items-center gap-x-3 overflow-hidden text-[11px] text-content-subtle">
+                                    <span class="whitespace-nowrap @(IsGeneral(item) ? "text-accent font-medium" : "")">@ScopeLabel(item)</span>
+                                    @if (item.DueAt is not null)
+                                    {
+                                        <span class="whitespace-nowrap @(IsOverdue(item) ? "text-negative font-medium" : "")">Due @item.DueAt.Value.LocalDateTime.ToString("d MMM yyyy")</span>
+                                    }
+                                    @if (item.AssigneeRole is Role assignedRole)
+                                    {
+                                        <span class="whitespace-nowrap">Assigned to @assignedRole.DisplayName()</span>
+                                    }
+                                    @if (item.CompletedAt is not null)
+                                    {
+                                        <span class="whitespace-nowrap">Done @item.CompletedAt.Value.LocalDateTime.ToString("d MMM yyyy")</span>
+                                    }
+                                    @if (!string.IsNullOrWhiteSpace(item.CreatedByEmail))
+                                    {
+                                        <span class="truncate">Added by @item.CreatedByEmail</span>
+                                    }
+                                </div>
                             </button>
                         }
                     </div>
@@ -367,6 +389,9 @@ else
         catch { error = "That action didn't complete. Please try again."; }
         finally { busy = false; }
     }
+
+    private static bool IsOverdue(TodoItem item) =>
+        !item.IsComplete && item.DueAt is not null && item.DueAt.Value < DateTimeOffset.Now.Date;
 
     private static string? NullIfBlank(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 

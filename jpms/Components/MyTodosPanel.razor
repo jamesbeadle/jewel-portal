@@ -49,7 +49,20 @@
                 <button type="button" @key="item.TodoItemId" title="Open this item"
                         class="w-full rounded-lg border border-line px-3 py-2 text-left hover:border-line-strong hover:bg-surface-raised"
                         @onclick="() => selected = item">
-                    <span class="block truncate text-sm text-content">@item.Title</span>
+                    <p class="truncate text-sm text-content">
+                        <span class="font-mono text-xs text-content-muted mr-2">@item.Reference</span>@item.Title
+                    </p>
+                    <div class="mt-1 flex items-center gap-x-3 overflow-hidden text-[11px] text-content-subtle">
+                        <span class="whitespace-nowrap @(IsGeneral(item) ? "text-accent font-medium" : "")">@ScopeLabel(item)</span>
+                        @if (item.DueAt is not null)
+                        {
+                            <span class="whitespace-nowrap @(IsOverdue(item) ? "text-negative font-medium" : "")">Due @item.DueAt.Value.LocalDateTime.ToString("d MMM yyyy")</span>
+                        }
+                        @if (item.AssigneeRole is Role assignedRole)
+                        {
+                            <span class="whitespace-nowrap">Assigned to @assignedRole.DisplayName()</span>
+                        }
+                    </div>
                 </button>
             }
         </div>
@@ -122,6 +135,9 @@
             .FirstOrDefault(p => p.ProjectId == item.ProjectId);
         return project is null ? "Project" : $"{project.Reference} — {project.Name}";
     }
+
+    private static bool IsOverdue(TodoItem item) =>
+        !item.IsComplete && item.DueAt is not null && item.DueAt.Value < DateTimeOffset.Now.Date;
 
     private static string? NullIfBlank(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 }
