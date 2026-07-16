@@ -150,6 +150,10 @@ public static class CommercialRouteRegistration
             new CommandRoute("PUT", "/api/valuation-lines/{lineItemId}",
                 command => $"/api/valuation-lines/{((UpdateValuationLineItem)command).ValuationLineItemId}"));
 
+        commands.Register<SetValuationLineCostCentre, ValuationLineItem>(
+            new CommandRoute("PUT", "/api/valuation-lines/{lineItemId}/cost-centre",
+                command => $"/api/valuation-lines/{((SetValuationLineCostCentre)command).ValuationLineItemId}/cost-centre"));
+
         commands.Register<RemoveValuationLineItem, Acknowledgement>(
             new CommandRoute("DELETE", "/api/valuation-lines/{lineItemId}",
                 command => $"/api/valuation-lines/{((RemoveValuationLineItem)command).ValuationLineItemId}"));

@@ -95,6 +95,9 @@ public static class CommercialFeatureRegistration
         services.AddScoped<ICommandHandler<UpdateValuationLineItem, ValuationLineItem>, UpdateValuationLineItemHandler>();
         services.AddScoped<UpdateValuationLineItemValidation>();
 
+        services.AddScoped<ICommandHandler<SetValuationLineCostCentre, ValuationLineItem>, SetValuationLineCostCentreHandler>();
+        services.AddScoped<SetValuationLineCostCentreValidation>();
+
         services.AddScoped<ICommandHandler<RemoveValuationLineItem, Acknowledgement>, RemoveValuationLineItemHandler>();
 
         services.AddScoped<ICommandHandler<StartValuationClaim, ValuationClaim>, StartValuationClaimHandler>();

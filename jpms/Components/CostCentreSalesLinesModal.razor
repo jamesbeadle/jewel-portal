@@ -42,7 +42,7 @@
                                 {
                                     <td class="px-4 py-2.5 font-mono text-[11px] text-content-subtle whitespace-nowrap">@line.CostCode</td>
                                 }
-                                <td class="px-4 py-2.5 text-content" title="@line.Comments">@line.Description</td>
+                                <td class="px-4 py-2.5 text-content" title="@line.Comments">@DescriptionFor(line)</td>
                                 <td class="px-4 py-2.5 whitespace-nowrap"><span class="inline-block rounded-full border border-line px-2 py-0.5 text-[11px] text-content-subtle">@TypeLabel(line)</span></td>
                                 <td class="px-4 py-2.5 text-right whitespace-nowrap @(line.LineAmount < 0m ? "text-negative" : "text-content")">@Money(line.LineAmount)</td>
                             </tr>
@@ -73,7 +73,7 @@
                                     {
                                         <td class="px-4 py-2.5 font-mono text-[11px] whitespace-nowrap">@line.CostCode</td>
                                     }
-                                    <td class="px-4 py-2.5" title="@line.Comments">@line.Description</td>
+                                    <td class="px-4 py-2.5" title="@line.Comments">@DescriptionFor(line)</td>
                                     <td class="px-4 py-2.5 whitespace-nowrap"><span class="inline-block rounded-full border border-line px-2 py-0.5 text-[11px]">@(line.LineType == ValuationLineType.Tbc ? "TBC" : "Declined")</span></td>
                                     <td class="px-4 py-2.5 text-right whitespace-nowrap">@Money(line.LineAmount)</td>
                                 </tr>
@@ -118,6 +118,14 @@
 
     private List<ValuationLineItem> NonCountingLines =>
         LinesForCentres.Where(line => !line.CountsTowardTotals).ToList();
+
+    // Variation lines mirror an approved VO whose descriptive text lives in VariationTitle;
+    // older lines have an empty Description, so fall back to the title (same rule as the
+    // Valuation Report tab's TitleFor) instead of rendering a blank cell.
+    private static string DescriptionFor(ValuationLineItem line) =>
+        line.ElementType == ValuationElementType.Variation && string.IsNullOrWhiteSpace(line.Description)
+            ? line.VariationTitle
+            : line.Description;
 
     // Variations show their V-ref; works/PC lines show their section code.
     private static string Ref(ValuationLineItem line) =>

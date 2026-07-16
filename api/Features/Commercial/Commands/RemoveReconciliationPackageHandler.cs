@@ -29,9 +29,13 @@ public sealed class RemoveReconciliationPackageHandler : ICommandHandler<RemoveR
         var slices = await context.ReconciliationPackageSalesLines
             .Where(slice => slice.ReconciliationPackageId == package.ReconciliationPackageId)
             .ToListAsync(cancellationToken);
+        var costSlices = await context.ReconciliationPackageCostLines
+            .Where(slice => slice.ReconciliationPackageId == package.ReconciliationPackageId)
+            .ToListAsync(cancellationToken);
 
         context.ReconciliationPackageOrders.RemoveRange(orders);
         context.ReconciliationPackageSalesLines.RemoveRange(slices);
+        context.ReconciliationPackageCostLines.RemoveRange(costSlices);
         context.ReconciliationPackages.Remove(package);
         await context.SaveChangesAsync(cancellationToken);
         return new Acknowledgement(package.ReconciliationPackageId);

@@ -57,9 +57,14 @@ public sealed record CostCentreCostProgress(
 /// (the remainder stays available for other packages). Signed like the line.</summary>
 public sealed record PackageSalesSlice(string ValuationLineItemId, decimal Amount);
 
-/// <summary>A reconciliation package: work orders (cost side) against valuation sales
-/// lines (sales side), matched at the level the work was bought and sold. Locked
-/// packages carry frozen snapshot figures; open ones compute live.</summary>
+/// <summary>One direct purchase cost's share inside a package: a £ slice of an allocated
+/// Xero line not paying any work order — materials bought directly for the packaged
+/// scope. Signed like the line's net (credit notes negative).</summary>
+public sealed record PackageCostSlice(string XeroLedgerLineId, decimal Amount);
+
+/// <summary>A reconciliation package: work orders and direct purchase costs (cost side)
+/// against valuation sales lines (sales side), matched at the level the work was bought
+/// and sold. Locked packages carry frozen snapshot figures; open ones compute live.</summary>
 public sealed record ReconciliationPackage(
     string ReconciliationPackageId,
     string ProjectId,
@@ -67,7 +72,11 @@ public sealed record ReconciliationPackage(
     IReadOnlyList<string> WorkOrderIds,
     IReadOnlyList<PackageSalesSlice> SalesLines,
     bool IsLocked,
-    DateTimeOffset? LockedAt);
+    DateTimeOffset? LockedAt,
+    IReadOnlyList<PackageCostSlice>? CostLines = null)
+{
+    public IReadOnlyList<PackageCostSlice> DirectCosts => CostLines ?? Array.Empty<PackageCostSlice>();
+}
 
 /// <summary>One package's computed report row. Open packages compute live from source;
 /// locked ones return the snapshot frozen at lock. Drawdown = target cost − WO committed
@@ -88,7 +97,8 @@ public sealed record PackageReconciliationRow(
     decimal InvoicedToDate,
     decimal Drawdown,
     decimal Margin,
-    decimal ProfitLoss);
+    decimal ProfitLoss,
+    int CostLineCount = 0); // direct purchase slices on the cost side, alongside the orders
 
 /// <summary>A named roll-up of cost centres shown as one line on the Financials tab.
 /// Presentation only — figures are still stored per cost centre.</summary>

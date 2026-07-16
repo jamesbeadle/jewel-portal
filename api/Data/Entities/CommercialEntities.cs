@@ -159,6 +159,23 @@ public sealed class ReconciliationPackageSalesLineEntity
     public decimal Amount { get; set; }
 }
 
+/// <summary>A direct purchase cost's share inside a package — a £ slice of an allocated
+/// Xero purchase line that isn't paying any work order (materials bought directly for
+/// the packaged scope, e.g. roofing supplies alongside the roofer's labour-only order).
+/// Signed like the line's net (credit notes negative). Only whole-line allocations can
+/// be sliced (centre-split lines can't — same rule as work-order links); the slices of
+/// one line across all packages may never exceed its non-work-order remainder.</summary>
+public sealed class ReconciliationPackageCostLineEntity
+{
+    [Key, MaxLength(64)] public string ReconciliationPackageCostLineId { get; set; } = "";
+    [MaxLength(64)]      public string ReconciliationPackageId { get; set; } = "";
+    [MaxLength(64)]      public string ProjectId { get; set; } = "";
+    // 140 like every table keyed on this id: it's "{TransactionId}:{LineItemId}", two
+    // Xero GUIDs plus a colon (~73 chars) — 64 would truncate and never match again.
+    [MaxLength(140)]     public string XeroLedgerLineId { get; set; } = "";
+    public decimal Amount { get; set; }
+}
+
 /// <summary>Cost-side completion per cost centre per project (0–100), edited inline
 /// on the Financials tab. Distinct from sales-side completion, which is derived from
 /// the latest claim's cumulative claimed value on the valuation report.</summary>

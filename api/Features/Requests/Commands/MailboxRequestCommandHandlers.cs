@@ -43,8 +43,11 @@ public sealed class CreateRequestFromMessageHandler : ICommandHandler<CreateRequ
     private readonly JpmsContext context;
     private readonly IMailboxGraphClient graph;
     private readonly RecordThreadTagger threadTagger;
-    public CreateRequestFromMessageHandler(JpmsContext context, IMailboxGraphClient graph, RecordThreadTagger threadTagger)
-    { this.context = context; this.graph = graph; this.threadTagger = threadTagger; }
+    private readonly ICommandHandler<LinkMessageToRecord, Acknowledgement> linkToRecord;
+    public CreateRequestFromMessageHandler(
+        JpmsContext context, IMailboxGraphClient graph, RecordThreadTagger threadTagger,
+        ICommandHandler<LinkMessageToRecord, Acknowledgement> linkToRecord)
+    { this.context = context; this.graph = graph; this.threadTagger = threadTagger; this.linkToRecord = linkToRecord; }
 
     public async Task<Request> HandleAsync(CreateRequestFromMessage command, CancellationToken cancellationToken)
     {
@@ -122,6 +125,28 @@ public sealed class CreateRequestFromMessageHandler : ICommandHandler<CreateRequ
             // (best-effort) so the email stays in the triage queue, then surface the clash.
             try { await graph.ClearRequestTagsAsync(tag, cancellationToken); } catch { /* best-effort */ }
             throw RequestReferenceConflict.AsFriendlyError(reference);
+        }
+
+        // "Also add to Programme": tag the same thread to the project's Scheduling bucket as well,
+        // by delegating to the record-agnostic link path — the exact action the standalone
+        // "Tag email to programme" button performs — so the "SCH-<projectRef>" stem rule stays in
+        // one place (SchedulingLinkProvider). Applied only after the request is saved, so a
+        // reference-clash rollback can never leave a stray programme tag behind. If this second tag
+        // fails the request already exists and the email is linked to it, so say exactly that and
+        // how to finish by hand instead of reporting a bare failure.
+        if (command.AddToProgramme)
+        {
+            try
+            {
+                await linkToRecord.HandleAsync(
+                    new LinkMessageToRecord(command.MessageId, RecordType.Scheduling, command.ProjectId, snapshot.InternetMessageId),
+                    cancellationToken);
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                throw new InvalidOperationException(
+                    $"{reference} was created and the email is linked to it, but the email couldn't also be tagged to the programme. Add the programme tag from the Tagged view.", ex);
+            }
         }
 
         // No email is drafted here — a draft is only created when a person explicitly asks for one

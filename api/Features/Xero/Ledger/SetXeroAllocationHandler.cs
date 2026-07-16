@@ -171,6 +171,13 @@ public sealed class SetXeroAllocationHandler : ICommandHandler<SetXeroAllocation
                     .Where(link => link.XeroLedgerLineId == line.XeroLedgerLineId)
                     .ToListAsync(cancellationToken);
                 context.XeroLineWorkOrderLinks.RemoveRange(orphanedLinks);
+
+                // Package cost slices describe the same whole-line allocation, so they
+                // orphan under exactly the same moves — clear them with the links.
+                var orphanedPackageCosts = await context.ReconciliationPackageCostLines
+                    .Where(slice => slice.XeroLedgerLineId == line.XeroLedgerLineId)
+                    .ToListAsync(cancellationToken);
+                context.ReconciliationPackageCostLines.RemoveRange(orphanedPackageCosts);
             }
         }
 

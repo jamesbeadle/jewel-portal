@@ -1,6 +1,8 @@
 @using Jewel.JPMS.Commercial
 @using Jewel.JPMS.Contracts.Commercial
 @inject IValuationReportStore Store
+@inject ICostCenterStore CostCenters
+@implements IDisposable
 
 <form @onsubmit="SaveAsync" @onsubmit:preventDefault="true" class="space-y-3">
         <div class="grid grid-cols-1 sm:grid-cols-4 gap-3">
@@ -39,7 +41,13 @@
         </div>
 
         <div class="grid grid-cols-1 sm:grid-cols-4 gap-3">
-            <FormField Label="Cost code" Value="@costCode" OnChange="@(v => costCode = v)" />
+            <div>
+                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Cost centre</label>
+                @* Picked from the cost-centre master rather than typed free — a mistyped
+                   code would silently drop the line from the Financials roll-ups. *@
+                <SearchSelect Options="@CostCentreOptions" WidthClass="w-full" Placeholder="Cost centre…"
+                              @bind-Value="costCode" />
+            </div>
             <div class="sm:col-span-3">
                 <FormField Label="Description" Value="@description" OnChange="@(v => description = v)" />
             </div>
@@ -85,6 +93,32 @@
     private bool busy;
 
     private bool IsEditing => Editing is not null;
+
+    protected override void OnInitialized()
+    {
+        // The cost-centre master loads in the background on first read; re-render when it
+        // lands so the dropdown fills in.
+        CostCenters.OnChange += OnCostCentresChanged;
+    }
+
+    private void OnCostCentresChanged() => InvokeAsync(StateHasChanged);
+
+    public void Dispose() => CostCenters.OnChange -= OnCostCentresChanged;
+
+    // The label carries code + name so typing matches either (same as XeroAllocation).
+    // A line already coded to a retired centre keeps it selectable until recoded.
+    private IReadOnlyList<SearchSelect.Option> CostCentreOptions
+    {
+        get
+        {
+            var options = CostCenters.ActiveAlphabetical()
+                .Select(centre => new SearchSelect.Option(centre.Code, $"{centre.Code} {centre.Name}"))
+                .ToList();
+            if (!string.IsNullOrWhiteSpace(costCode) && options.All(option => option.Value != costCode))
+                options.Insert(0, new SearchSelect.Option(costCode, $"{costCode} (retired)"));
+            return options;
+        }
+    }
 
     private ValuationLineItem? lastLoaded;
 

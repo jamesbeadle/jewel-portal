@@ -718,6 +718,14 @@ else
                                                 <FormField Label="Response due" Value="@createResponseDue" OnChange="v => createResponseDue = v" InputType="date" />
                                             </div>
 
+                                            <label class="flex items-start gap-2 cursor-pointer">
+                                                <input type="checkbox" class="mt-0.5" @bind="createAddToProgramme" />
+                                                <span class="text-sm text-content">
+                                                    Also add to Programme
+                                                    <span class="block text-xs text-content-subtle">The email (and its thread) is also tagged to the project's <span class="font-medium">programme communications</span>, so it appears under the Schedule tab as well as on the new request.</span>
+                                                </span>
+                                            </label>
+
                                             <button type="button" class="btn-primary" disabled="@(busy || string.IsNullOrWhiteSpace(createProjectId))" @onclick="DoCreate">Create request from email</button>
                                         }
                                         else if (createRecordType == RecordType.BidPackageInvite)
@@ -1371,6 +1379,10 @@ else
     private string createRaisedTo = "";
     private string createDrawingRef = "";
     private string createResponseDue = "";
+    // "Also add to Programme": as well as tagging the email to the new request, the server tags it
+    // to the project's scheduling bucket (the same tag "Tag email to programme" applies) so the
+    // thread appears under the Schedule tab too. Reset per selection like the rest of the form.
+    private bool createAddToProgramme;
     // Bid Package Invite create fields (shares createProjectId + createTitle with the Request form).
     private string createTrade = "";
 
@@ -1677,6 +1689,7 @@ else
         createTitle = "";
         createDescription = "";
         createRaisedTo = createDrawingRef = createResponseDue = "";
+        createAddToProgramme = false;
         createTrade = "";
         createTodoRows = new List<TodoDraftRow> { new() };
         createTodoLinkRequestId = "";
@@ -2024,7 +2037,8 @@ else
             RaisedTo: NullIfBlank(createRaisedTo),
             DrawingRef: NullIfBlank(createDrawingRef),
             ResponseDue: ParseDate(createResponseDue),
-            InternetMessageId: selected.InternetMessageId);
+            InternetMessageId: selected.InternetMessageId,
+            AddToProgramme: createAddToProgramme);
 
         await RunAction("Creating request", async () => await Intake.CreateRequestFromMessageAsync(command));
     }

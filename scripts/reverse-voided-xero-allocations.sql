@@ -56,6 +56,22 @@ WHERE lines.InvoiceStatus IN ('VOIDED', 'DELETED');
 
 PRINT CONCAT(@@ROWCOUNT, ' work-order link slice(s) removed.');
 
+/* Direct-cost slices inside reconciliation packages reference the line the same
+   way splits and links do — an orphan would keep inflating its package's
+   invoiced figure forever (the calculator sums slices without re-checking the
+   ledger line still exists). Table exists from migration
+   20260716110000_AddReconciliationPackageCostLines onward. */
+IF OBJECT_ID('ReconciliationPackageCostLines', 'U') IS NOT NULL
+BEGIN
+    DELETE slices
+    FROM ReconciliationPackageCostLines AS slices
+    JOIN XeroLedgerLines AS lines
+        ON lines.XeroLedgerLineId = slices.XeroLedgerLineId
+    WHERE lines.InvoiceStatus IN ('VOIDED', 'DELETED');
+
+    PRINT CONCAT(@@ROWCOUNT, ' package direct-cost slice(s) removed.');
+END
+
 DELETE FROM XeroLedgerLines
 WHERE InvoiceStatus IN ('VOIDED', 'DELETED');
 

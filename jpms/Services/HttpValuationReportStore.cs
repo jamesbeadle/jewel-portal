@@ -108,6 +108,13 @@ public sealed class HttpValuationReportStore : IValuationReportStore
         return result;
     }
 
+    public async Task<ValuationLineItem> SetLineCostCentreAsync(SetValuationLineCostCentre command)
+    {
+        var result = await commands.SendAsync(command, CancellationToken.None);
+        await linesReadModel.RefreshAsync(result.ProjectId, CancellationToken.None);
+        return result;
+    }
+
     public async Task RemoveLineAsync(string projectId, string lineItemId)
     {
         await commands.SendAsync(new RemoveValuationLineItem(lineItemId), CancellationToken.None);

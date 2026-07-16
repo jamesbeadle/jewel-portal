@@ -109,6 +109,81 @@ public sealed class SaveReconciliationPackageHandler : ICommandHandler<SaveRecon
             }
         }
 
+        // Direct cost slices: the Xero line must be a whole-line allocation on this
+        // project (split lines can't be sliced — same rule as work-order links), a slice
+        // carries the line's signed net's sign, and all packages' slices of one line may
+        // never total past its non-work-order remainder (net less its order-link slices).
+        var costSlices = (IReadOnlyList<PackageCostSlice>?)command.CostLines ?? Array.Empty<PackageCostSlice>();
+        if (costSlices.Count > 0)
+        {
+            var costLineIds = costSlices.Select(slice => slice.XeroLedgerLineId).ToList();
+            if (costLineIds.Distinct(StringComparer.OrdinalIgnoreCase).Count() != costLineIds.Count)
+                throw new InvalidOperationException("Each purchase line can only appear once in a package — combine the amounts.");
+
+            var ledgerLines = await context.XeroLedgerLines
+                .Where(line => line.ProjectId == command.ProjectId
+                               && costLineIds.Contains(line.XeroLedgerLineId)
+                               && line.AllocationStatus == (int)Jewel.JPMS.Contracts.Xero.XeroAllocationStatus.Allocated
+                               && line.CostCenterCode != null)
+                .Select(line => new { line.XeroLedgerLineId, line.Net, line.Type })
+                .ToListAsync(cancellationToken);
+            var netsByLine = ledgerLines.ToDictionary(
+                line => line.XeroLedgerLineId,
+                line => line.Type == "ACCPAYCREDIT" ? -line.Net : line.Net,
+                StringComparer.OrdinalIgnoreCase);
+
+            var splitLineIds = (await context.XeroCostSplits
+                    .Where(split => costLineIds.Contains(split.XeroLedgerLineId))
+                    .Select(split => split.XeroLedgerLineId)
+                    .ToListAsync(cancellationToken))
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+            // Timesheet-covered lines are settlement of approved labour, not fresh cost —
+            // they never feed the actuals columns, so netting them out would corrupt them.
+            var coveredLineIds = (await context.XeroLineTimesheetCovers
+                    .Where(cover => costLineIds.Contains(cover.XeroLedgerLineId))
+                    .Select(cover => cover.XeroLedgerLineId)
+                    .ToListAsync(cancellationToken))
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+            var linkedByLine = (await context.XeroLineWorkOrderLinks
+                    .Where(link => link.ProjectId == command.ProjectId && costLineIds.Contains(link.XeroLedgerLineId))
+                    .ToListAsync(cancellationToken))
+                .GroupBy(link => link.XeroLedgerLineId, StringComparer.OrdinalIgnoreCase)
+                .ToDictionary(group => group.Key, group => group.Sum(link => link.Amount), StringComparer.OrdinalIgnoreCase);
+
+            var otherCostSlices = (await context.ReconciliationPackageCostLines
+                    .Where(slice => slice.ProjectId == command.ProjectId
+                                    && costLineIds.Contains(slice.XeroLedgerLineId)
+                                    && slice.ReconciliationPackageId != package.ReconciliationPackageId)
+                    .ToListAsync(cancellationToken))
+                .GroupBy(slice => slice.XeroLedgerLineId, StringComparer.OrdinalIgnoreCase)
+                .ToDictionary(group => group.Key, group => group.Sum(slice => slice.Amount), StringComparer.OrdinalIgnoreCase);
+
+            foreach (var slice in costSlices)
+            {
+                if (!netsByLine.TryGetValue(slice.XeroLedgerLineId, out var signedNet))
+                    throw new InvalidOperationException("A purchase line in the package is not an allocated line on this project.");
+                if (splitLineIds.Contains(slice.XeroLedgerLineId))
+                    throw new InvalidOperationException("A centre-split purchase line can't join a package — package the whole line or unsplit it first.");
+                if (coveredLineIds.Contains(slice.XeroLedgerLineId))
+                    throw new InvalidOperationException("A timesheet-covered line is settlement of approved labour, not fresh cost — it can't join a package.");
+                if (slice.Amount == 0m || signedNet == 0m)
+                    throw new InvalidOperationException("Every purchase slice needs a non-zero amount.");
+                if (Math.Sign(slice.Amount) != Math.Sign(signedNet))
+                    throw new InvalidOperationException("A purchase slice must carry the same sign as its line (credit notes are negative).");
+
+                var linked = linkedByLine.TryGetValue(slice.XeroLedgerLineId, out var linkTotal) ? linkTotal : 0m;
+                var elsewhere = otherCostSlices.TryGetValue(slice.XeroLedgerLineId, out var taken) ? taken : 0m;
+                var available = signedNet - linked - elsewhere;
+                if (Math.Abs(elsewhere + linked + slice.Amount) > Math.Abs(signedNet))
+                    throw new InvalidOperationException(
+                        $"Over-allocated purchase line: {slice.Amount.ToString("C2", Gbp)} requested but only " +
+                        $"{available.ToString("C2", Gbp)} of its {signedNet.ToString("C2", Gbp)} net is not already " +
+                        "paying a work order or sitting in another package.");
+            }
+        }
+
         // Replace both member lists wholesale.
         var existingOrders = await context.ReconciliationPackageOrders
             .Where(member => member.ReconciliationPackageId == package.ReconciliationPackageId)
@@ -141,9 +216,25 @@ public sealed class SaveReconciliationPackageHandler : ICommandHandler<SaveRecon
             });
         }
 
+        var existingCostSlices = await context.ReconciliationPackageCostLines
+            .Where(slice => slice.ReconciliationPackageId == package.ReconciliationPackageId)
+            .ToListAsync(cancellationToken);
+        context.ReconciliationPackageCostLines.RemoveRange(existingCostSlices);
+        foreach (var slice in costSlices)
+        {
+            context.ReconciliationPackageCostLines.Add(new ReconciliationPackageCostLineEntity
+            {
+                ReconciliationPackageCostLineId = CommercialIdentifierFactory.NextReconciliationPackageCostLineId(),
+                ReconciliationPackageId = package.ReconciliationPackageId,
+                ProjectId = command.ProjectId,
+                XeroLedgerLineId = slice.XeroLedgerLineId,
+                Amount = slice.Amount
+            });
+        }
+
         await context.SaveChangesAsync(cancellationToken);
         return new ReconciliationPackage(
             package.ReconciliationPackageId, package.ProjectId, package.Name,
-            orderIds, slices.ToList(), package.IsLocked, package.LockedAt);
+            orderIds, slices.ToList(), package.IsLocked, package.LockedAt, costSlices.ToList());
     }
 }

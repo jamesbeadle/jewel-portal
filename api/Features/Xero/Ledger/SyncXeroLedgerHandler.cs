@@ -189,9 +189,9 @@ public sealed class SyncXeroLedgerHandler : ICommandHandler<SyncXeroLedger, Xero
             }
         }
 
-        // A removed line's split shares and work-order link slices go with it — orphans
-        // would silently keep feeding the per-centre actuals and per-order invoiced
-        // balances the removal is meant to reverse.
+        // A removed line's split shares, work-order link slices and package cost slices
+        // go with it — orphans would silently keep feeding the per-centre actuals,
+        // per-order invoiced balances and package figures the removal is meant to reverse.
         if (removedLineIds.Count > 0)
         {
             var orphanedSplits = await context.XeroCostSplits
@@ -203,6 +203,11 @@ public sealed class SyncXeroLedgerHandler : ICommandHandler<SyncXeroLedger, Xero
                 .Where(link => removedLineIds.Contains(link.XeroLedgerLineId))
                 .ToListAsync(cancellationToken);
             context.XeroLineWorkOrderLinks.RemoveRange(orphanedLinks);
+
+            var orphanedPackageCosts = await context.ReconciliationPackageCostLines
+                .Where(slice => removedLineIds.Contains(slice.XeroLedgerLineId))
+                .ToListAsync(cancellationToken);
+            context.ReconciliationPackageCostLines.RemoveRange(orphanedPackageCosts);
         }
 
         await context.SaveChangesAsync(cancellationToken);

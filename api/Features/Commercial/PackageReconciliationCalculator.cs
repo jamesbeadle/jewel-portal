@@ -30,6 +30,12 @@ internal static class PackageReconciliationCalculator
         var slices = await context.ReconciliationPackageSalesLines
             .Where(slice => slice.ProjectId == projectId)
             .ToListAsync(cancellationToken);
+        // Direct purchase costs — slices of allocated lines not paying any work order
+        // (materials bought directly for the packaged scope). They join the invoiced
+        // total on the cost side, alongside the member orders' link slices.
+        var costSlices = await context.ReconciliationPackageCostLines
+            .Where(slice => slice.ProjectId == projectId)
+            .ToListAsync(cancellationToken);
 
         // Cost side: committed per order (line totals) and actually invoiced per order
         // (the invoice→order link slices; credit notes negative).
@@ -75,11 +81,13 @@ internal static class PackageReconciliationCalculator
 
         var ordersByPackage = orders.ToLookup(member => member.ReconciliationPackageId, StringComparer.OrdinalIgnoreCase);
         var slicesByPackage = slices.ToLookup(slice => slice.ReconciliationPackageId, StringComparer.OrdinalIgnoreCase);
+        var costSlicesByPackage = costSlices.ToLookup(slice => slice.ReconciliationPackageId, StringComparer.OrdinalIgnoreCase);
 
         return packages.Select(package =>
         {
             var memberOrders = ordersByPackage[package.ReconciliationPackageId].ToList();
             var memberSlices = slicesByPackage[package.ReconciliationPackageId].ToList();
+            var memberCostSlices = costSlicesByPackage[package.ReconciliationPackageId].ToList();
 
             if (package.IsLocked)
             {
@@ -89,7 +97,8 @@ internal static class PackageReconciliationCalculator
                     memberOrders.Count, memberSlices.Count,
                     package.LockedSalesValue, package.LockedClaimedToDate, package.LockedTargetCost,
                     package.LockedWoCommitted, package.LockedInvoicedCost,
-                    Drawdown: 0m, Margin: 0m, ProfitLoss: package.LockedProfitLoss);
+                    Drawdown: 0m, Margin: 0m, ProfitLoss: package.LockedProfitLoss,
+                    CostLineCount: memberCostSlices.Count);
             }
 
             var salesValue = memberSlices.Sum(slice => slice.Amount);
@@ -103,7 +112,11 @@ internal static class PackageReconciliationCalculator
             var woCommitted = memberOrders.Sum(member =>
                 committedByOrder.TryGetValue(member.WorkOrderId, out var committed) ? committed : 0m);
             var invoiced = memberOrders.Sum(member =>
-                invoicedByOrder.TryGetValue(member.WorkOrderId, out var total) ? total : 0m);
+                invoicedByOrder.TryGetValue(member.WorkOrderId, out var total) ? total : 0m)
+                + memberCostSlices.Sum(slice => slice.Amount);
+            // Direct spend is already invoiced cost with no order behind it, so it
+            // consumes drawdown the same way committed orders do.
+            var committedOrDirect = woCommitted + memberCostSlices.Sum(slice => slice.Amount);
 
             return new PackageReconciliationRow(
                 package.ReconciliationPackageId, package.Name, false, null,
@@ -111,9 +124,10 @@ internal static class PackageReconciliationCalculator
                 salesValue, Math.Round(claimed, 2), targetCost, woCommitted, invoiced,
                 // Budget left to commit; and the live forecast buying gain — invoicing
                 // past the committed orders tightens it (never flatters).
-                Drawdown: targetCost - woCommitted,
-                Margin: targetCost - Math.Max(woCommitted, invoiced),
-                ProfitLoss: 0m);
+                Drawdown: targetCost - committedOrDirect,
+                Margin: targetCost - Math.Max(committedOrDirect, invoiced),
+                ProfitLoss: 0m,
+                CostLineCount: memberCostSlices.Count);
         }).ToList();
     }
 }

@@ -167,6 +167,33 @@ public sealed class GetProjectFinancialSummaryHandler : IQueryHandler<GetProject
             foreach (var entry in packagedWoRows) packagedWoByCode[entry.CostCode] = entry.Total;
         }
 
+        // Direct purchase costs inside packages — slices of allocated lines not paying
+        // any work order (materials bought straight for the packaged scope). They sit
+        // on the invoice's own centre, inside both ActualCost and Non-WO cost of sales,
+        // so they net out of both when the table hides packaged scope.
+        var packagedNonWoByCode = new Dictionary<string, decimal>(StringComparer.OrdinalIgnoreCase);
+        var packagedDirectCosts = await context.ReconciliationPackageCostLines
+            .Where(slice => slice.ProjectId == query.ProjectId)
+            .Join(context.XeroLedgerLines,
+                slice => slice.XeroLedgerLineId,
+                line => line.XeroLedgerLineId,
+                (slice, line) => new
+                {
+                    InvoiceCode = line.CostCenterCode,
+                    slice.Amount,
+                    line.AllocationStatus,
+                    line.XeroLedgerLineId
+                })
+            // Mirror the ActualCost filters above: only allocated, not-timesheet-covered
+            // lines feed the columns, so only those may net out of them — anything else
+            // would push a centre's netted figures below zero.
+            .Where(joined => joined.InvoiceCode != null
+                             && joined.AllocationStatus == (int)XeroAllocationStatus.Allocated
+                             && !coveredLineIds.Contains(joined.XeroLedgerLineId))
+            .ToListAsync(cancellationToken);
+        foreach (var direct in packagedDirectCosts)
+            Accumulate(packagedNonWoByCode, direct.InvoiceCode!, direct.Amount);
+
         // Cost-side state: completion % and the finalisation lock, set inline on the
         // Financials tab, one row per cost centre. Centres never edited default to 0% / unlocked.
         var costProgress = await context.CostCentreCostProgress
@@ -255,6 +282,11 @@ public sealed class GetProjectFinancialSummaryHandler : IQueryHandler<GetProject
             }
         }
 
+        // Packaged direct spend is packaged actual cost too — it never left the
+        // invoice's own centre (no order to re-attribute it to).
+        foreach (var entry in packagedNonWoByCode)
+            Accumulate(packagedActualByCode, entry.Key, entry.Value);
+
         return salesByCode.Keys.Union(actualByCode.Keys, StringComparer.OrdinalIgnoreCase)
             .Union(costProgressByCode.Keys, StringComparer.OrdinalIgnoreCase)
             .Union(labourByCode.Keys, StringComparer.OrdinalIgnoreCase)
@@ -299,7 +331,8 @@ public sealed class GetProjectFinancialSummaryHandler : IQueryHandler<GetProject
                     packagedSalesByCode.TryGetValue(code, out var packagedSales) ? packagedSales : 0m,
                     packagedClaimedByCode.TryGetValue(code, out var packagedClaimed) ? packagedClaimed : 0m,
                     packagedWoByCode.TryGetValue(code, out var packagedWo) ? packagedWo : 0m,
-                    packagedActualByCode.TryGetValue(code, out var packagedActual) ? packagedActual : 0m);
+                    packagedActualByCode.TryGetValue(code, out var packagedActual) ? packagedActual : 0m,
+                    packagedNonWoByCode.TryGetValue(code, out var packagedNonWo) ? packagedNonWo : 0m);
             })
             .ToList();
     }

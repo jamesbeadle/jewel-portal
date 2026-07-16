@@ -1,6 +1,9 @@
 @using Jewel.JPMS.Commercial
 @using Jewel.JPMS.Contracts.Commercial
 @inject IValuationReportStore Store
+@inject ICostCenterStore CostCenters
+@inject SessionService Session
+@implements IDisposable
 
 @if (lines.Count == 0)
 {
@@ -59,6 +62,10 @@ else
                                     <tr class="text-left text-[11px] uppercase tracking-wider text-content-subtle font-semibold">
                                         <th class="sticky left-0 top-0 z-30 bg-surface-raised px-3 py-3 w-[72px]">Code</th>
                                         <th class="sticky left-[72px] top-0 z-30 bg-surface-raised px-3 py-3 min-w-[220px]">Description</th>
+                                        @if (section.Type == ValuationElementType.Variation)
+                                        {
+                                            <th class="sticky top-0 z-20 bg-surface-raised px-3 py-3 whitespace-nowrap min-w-[220px]">Cost centre</th>
+                                        }
                                         <th class="sticky top-0 z-20 bg-surface-raised px-3 py-3 text-right whitespace-nowrap">Qty</th>
                                         <th class="sticky top-0 z-20 bg-surface-raised px-3 py-3 text-right whitespace-nowrap">Rate £</th>
                                         <th class="sticky top-0 z-20 bg-surface-raised px-3 py-3 text-right whitespace-nowrap">Amount £</th>
@@ -86,6 +93,30 @@ else
                                                     <span class="inline-block mt-0.5 text-[10px] uppercase tracking-wide text-content-subtle">@line.LineType</span>
                                                 }
                                             </td>
+                                            @if (section.Type == ValuationElementType.Variation)
+                                            {
+                                                @* Where this variation's value is allocated in the cost-centre master.
+                                                   Editable for Admin/MD/FD/PM (the API enforces the same gate); the
+                                                   value itself stays locked — only the allocation moves. *@
+                                                <td class="px-3 py-2 whitespace-nowrap">
+                                                    @if (CanRecodeCostCentres)
+                                                    {
+                                                        <SearchSelect Options="@CostCentreOptionsFor(line)" WidthClass="w-52"
+                                                                      Placeholder="Cost centre…"
+                                                                      Value="@line.CostCode"
+                                                                      Disabled="@(recodingLineId == line.ValuationLineItemId)"
+                                                                      ValueChanged="value => SetCostCentreAsync(line, value)" />
+                                                        @if (costCentreErrorLineId == line.ValuationLineItemId && costCentreError is not null)
+                                                        {
+                                                            <div class="text-[11px] text-negative mt-1">@costCentreError</div>
+                                                        }
+                                                    }
+                                                    else
+                                                    {
+                                                        <span class="text-content-muted">@CostCentreLabel(line.CostCode)</span>
+                                                    }
+                                                </td>
+                                            }
                                             <td class="px-3 py-2 text-right text-content-muted whitespace-nowrap">@Num(line.Quantity)</td>
                                             <td class="px-3 py-2 text-right text-content-muted whitespace-nowrap">@Num(line.Rate)</td>
                                             <td class="px-3 py-2 text-right text-content whitespace-nowrap">@Money(line.LineAmount)</td>
@@ -220,6 +251,17 @@ else
     private decimal contractSum, netVariations, revisedContractSum, totalWorksComplete;
     private decimal retentionHeld, retentionReleased, certifiedToDate, paymentDueExVat;
     private decimal retentionPercent, retentionReleasePercent;
+
+    protected override void OnInitialized()
+    {
+        // The cost-centre master loads in the background on first read; re-render when it
+        // lands so the Variations section's cost-centre cells fill in.
+        CostCenters.OnChange += OnCostCentresChanged;
+    }
+
+    private void OnCostCentresChanged() => InvokeAsync(StateHasChanged);
+
+    public void Dispose() => CostCenters.OnChange -= OnCostCentresChanged;
 
     protected override void OnParametersSet()
     {
@@ -360,6 +402,81 @@ else
     {
         await Store.RemoveLineAsync(ProjectId, line.ValuationLineItemId);
         OnParametersSet();
+    }
+
+    // ---- Variation cost-centre recode --------------------------------------
+    // Mirrors the API gate (ValuationReportAuthorisation.RolesThatMayRecodeCostCentres):
+    // admins, the MD, the FD and project managers may move a variation's value between
+    // cost centres; everyone else sees the allocation read-only.
+    private bool CanRecodeCostCentres => Session.ActiveRole
+        is Role.Admin or Role.ManagingDirector or Role.FinanceDirector or Role.ProjectManager;
+
+    private string? recodingLineId;
+    private string? costCentreError;
+    private string? costCentreErrorLineId;
+
+    private async Task SetCostCentreAsync(ValuationLineItem line, string code)
+    {
+        // SearchSelect's leading blank entry clears — a variation's value always sits
+        // somewhere, so ignore it rather than send an update the API would reject.
+        if (string.IsNullOrWhiteSpace(code) || code == line.CostCode) return;
+        recodingLineId = line.ValuationLineItemId;
+        costCentreError = null;
+        costCentreErrorLineId = null;
+        try
+        {
+            await Store.SetLineCostCentreAsync(new SetValuationLineCostCentre(line.ValuationLineItemId, code));
+            OnParametersSet();
+        }
+        catch (CommandFailedException failure)
+        {
+            costCentreError = failure.Message;
+            costCentreErrorLineId = line.ValuationLineItemId;
+        }
+        finally
+        {
+            recodingLineId = null;
+        }
+    }
+
+    // The label carries code + name so typing matches either (same as XeroAllocation).
+    private IReadOnlyList<SearchSelect.Option>? costCentreOptionsCache;
+    private object? costCentreOptionsCacheKey;
+
+    private IReadOnlyList<SearchSelect.Option> CostCentreOptions
+    {
+        get
+        {
+            var centres = CostCenters.ActiveAlphabetical();
+            if (costCentreOptionsCache is null || !ReferenceEquals(costCentreOptionsCacheKey, centres))
+            {
+                costCentreOptionsCache = centres
+                    .Select(centre => new SearchSelect.Option(centre.Code, $"{centre.Code} {centre.Name}")).ToList();
+                costCentreOptionsCacheKey = centres;
+            }
+            return costCentreOptionsCache;
+        }
+    }
+
+    // A line coded to a retired centre still shows (and can be moved off) it.
+    private IReadOnlyList<SearchSelect.Option> CostCentreOptionsFor(ValuationLineItem line)
+    {
+        var options = CostCentreOptions;
+        if (string.IsNullOrWhiteSpace(line.CostCode) || options.Any(option => option.Value == line.CostCode))
+            return options;
+        var withCurrent = new List<SearchSelect.Option>(options.Count + 1)
+        {
+            new(line.CostCode, $"{line.CostCode} (retired)")
+        };
+        withCurrent.AddRange(options);
+        return withCurrent;
+    }
+
+    private string CostCentreLabel(string code)
+    {
+        if (string.IsNullOrWhiteSpace(code)) return "—";
+        var centre = CostCenters.All().FirstOrDefault(c => string.Equals(c.Code, code, StringComparison.OrdinalIgnoreCase));
+        return centre is null ? code : $"{code} — {centre.Name}";
     }
 
     private static string Money(decimal v) => v.ToString("C2", Gb);

@@ -16,6 +16,8 @@ public interface IValuationReportStore
 
     Task<ValuationLineItem> AddLineAsync(AddValuationLineItem command);
     Task<ValuationLineItem> UpdateLineAsync(UpdateValuationLineItem command);
+    /// <summary>Recodes the cost centre a variation line's value sits against (Admin/MD/FD/PM only).</summary>
+    Task<ValuationLineItem> SetLineCostCentreAsync(SetValuationLineCostCentre command);
     Task RemoveLineAsync(string projectId, string lineItemId);
 
     Task<ValuationClaim> StartClaimAsync(StartValuationClaim command);

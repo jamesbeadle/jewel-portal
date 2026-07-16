@@ -25,8 +25,9 @@
         }
     </div>
     <p class="text-sm text-content-subtle mb-3">
-        Match a sub's work orders against the valuation lines that priced that scope, and read the
-        true position at package level — sales, claimed, target cost, committed, invoiced, margin.
+        Match a sub's work orders — and any purchase invoices bought directly for the same scope —
+        against the valuation lines that priced it, and read the true position at package level:
+        sales, claimed, target cost, committed, invoiced, margin.
     </p>
 
     @if (error is not null)
@@ -67,7 +68,7 @@
                         <tr>
                             <td class="px-4 py-3 whitespace-nowrap">
                                 <span class="text-content font-medium">@row.Name</span>
-                                <span class="ml-2 text-[11px] text-content-subtle">@row.WorkOrderCount WO · @row.SalesLineCount lines</span>
+                                <span class="ml-2 text-[11px] text-content-subtle">@row.WorkOrderCount WO · @row.SalesLineCount lines@(row.CostLineCount > 0 ? $" · {row.CostLineCount} invoices" : "")</span>
                                 @if (row.IsLocked)
                                 {
                                     <span class="ml-2 inline-block rounded-full border border-line px-2 py-0.5 text-[11px] text-content-subtle"

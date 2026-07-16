@@ -17,6 +17,12 @@ public sealed class ValuationReportAuthorisation
     private static readonly RoleSet RolesThatMayManageSnapshots =
         RoleSet.Of(JpmsRoles.Director, JpmsRoles.ProjectManager, JpmsRoles.Estimator, JpmsRoles.FinanceDirector);
 
+    // Recoding which cost centre a variation's value sits against is a financial correction
+    // to records frozen at VO approval: the MD, FD and project manager only (administrators
+    // pass every gate — SignedInUserResolver grants them all roles).
+    private static readonly RoleSet RolesThatMayRecodeCostCentres =
+        RoleSet.Of(JpmsRoles.Director, JpmsRoles.FinanceDirector, JpmsRoles.ProjectManager);
+
     private bool Allowed(SignedInUser user) => RolesThatMayMaintainValuations.IncludesAny(user.Roles);
 
     public bool Allows(SignedInUser user, AddValuationLineItem command) => Allowed(user);
@@ -27,6 +33,7 @@ public sealed class ValuationReportAuthorisation
     public bool Allows(SignedInUser user, PreapproveValuationClaim command) => Allowed(user);
     public bool Allows(SignedInUser user, ReopenValuationClaim command) => Allowed(user);
     public bool Allows(SignedInUser user, ConfirmValuationClaim command) => Allowed(user);
+    public bool Allows(SignedInUser user, SetValuationLineCostCentre command) => RolesThatMayRecodeCostCentres.IncludesAny(user.Roles);
     public bool Allows(SignedInUser user, TakeValuationReportSnapshot command) => RolesThatMayManageSnapshots.IncludesAny(user.Roles);
     public bool Allows(SignedInUser user, DeleteValuationReportSnapshot command) => RolesThatMayManageSnapshots.IncludesAny(user.Roles);
 }

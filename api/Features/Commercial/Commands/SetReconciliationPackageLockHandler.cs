@@ -62,8 +62,12 @@ public sealed class SetReconciliationPackageLockHandler : ICommandHandler<SetRec
             .Where(slice => slice.ReconciliationPackageId == package.ReconciliationPackageId)
             .Select(slice => new PackageSalesSlice(slice.ValuationLineItemId, slice.Amount))
             .ToListAsync(cancellationToken);
+        var costSlices = await context.ReconciliationPackageCostLines
+            .Where(slice => slice.ReconciliationPackageId == package.ReconciliationPackageId)
+            .Select(slice => new PackageCostSlice(slice.XeroLedgerLineId, slice.Amount))
+            .ToListAsync(cancellationToken);
         return new ReconciliationPackage(
             package.ReconciliationPackageId, package.ProjectId, package.Name,
-            orders, slices, package.IsLocked, package.LockedAt);
+            orders, slices, package.IsLocked, package.LockedAt, costSlices);
     }
 }

@@ -4,6 +4,7 @@
 @inject SessionService Session
 @inject IValuationReportStore Store
 @inject IProjectRetentionStore Retention
+@inject ICostCenterStore CostCenters
 @inject NavigationManager Nav
 @implements IDisposable
 
@@ -205,6 +206,9 @@ else
         Store.Refresh(ProjectId);
         // Warm the retention terms so the new-claim form can default its percentages.
         Retention.Refresh(ProjectId);
+        // Revalidate the cost-centre master (stale-while-revalidate) — the report table's
+        // Variations section and the line form both offer it as a dropdown.
+        _ = CostCenters.ListAllAsync();
         isLoaded = true;
     }
 

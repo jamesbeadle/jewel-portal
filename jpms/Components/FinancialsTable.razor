@@ -240,7 +240,7 @@
                     <td class="px-4 py-3 text-right whitespace-nowrap @MoneyClass(package.WoCommitted)">@Money(package.WoCommitted)</td>
                     <td class="px-4 py-3 text-right whitespace-nowrap @MoneyClass(package.InvoicedToDate)">@Money(package.InvoicedToDate)</td>
                     <td class="px-4 py-3 text-right text-content-muted"
-                        title="Packages only hold work orders, so they never carry non-work-order spend">—</td>
+                        title="Direct invoice spend assigned to this package is included in its Actual Cost of Sales figure">—</td>
                     @if (package.IsLocked)
                     {
                         <td class="px-4 py-3 text-right text-content-muted" title="Locked — the remainder is realised as profit / loss">—</td>
@@ -511,6 +511,10 @@
     private decimal RowActual(ProjectFinancialSummaryRow row) =>
         row.ActualCost - (hidePackagedScope ? row.PackagedActualCost : 0m);
 
+    // Direct (non-WO) purchase slices inside packages net out of the Non-WO column too.
+    private decimal RowNonWo(ProjectFinancialSummaryRow row) =>
+        row.NonWorkOrderActualCost - (hidePackagedScope ? row.PackagedNonWoCost : 0m);
+
     private decimal PackagedWoFor(string costCode) =>
         hidePackagedScope && byCode.TryGetValue(costCode, out var row) ? row.PackagedWoCommitted : 0m;
 
@@ -549,7 +553,7 @@
     private decimal CostOfSalesFor(IReadOnlyList<string> costCodes) => SumFor(costCodes, RowActual);
 
     // The share of that spend not linked to any work order.
-    private decimal NonWoCostOfSalesFor(IReadOnlyList<string> costCodes) => SumFor(costCodes, row => row.NonWorkOrderActualCost);
+    private decimal NonWoCostOfSalesFor(IReadOnlyList<string> costCodes) => SumFor(costCodes, RowNonWo);
 
     private bool IsCentreFinalised(string costCode) =>
         byCode.TryGetValue(costCode, out var row) && row.IsFinalised;
@@ -561,7 +565,7 @@
     // What one centre has left of its target cost after work orders and unlinked spend
     // (all netted of packaged scope when the toggle is on).
     private decimal RemainderFor(string costCode) =>
-        (byCode.TryGetValue(costCode, out var row) ? RowTarget(row) - row.NonWorkOrderActualCost : 0m)
+        (byCode.TryGetValue(costCode, out var row) ? RowTarget(row) - RowNonWo(row) : 0m)
         - (WorkOrderCommittedByCode.TryGetValue(costCode, out var committed) ? committed : 0m)
         + PackagedWoFor(costCode);
 
@@ -656,7 +660,7 @@
         WorkOrderCommittedByCode.Sum(entry => entry.Value - PackagedWoFor(entry.Key))
         + IncludedPackages.Sum(package => package.WoCommitted);
     private decimal TotalCostOfSales => SummaryRows.Sum(RowActual) + IncludedPackages.Sum(package => package.InvoicedToDate);
-    private decimal TotalNonWoCostOfSales => SummaryRows.Sum(row => row.NonWorkOrderActualCost);
+    private decimal TotalNonWoCostOfSales => SummaryRows.Sum(RowNonWo);
 
     // Every code with any figure — summary rows plus work-order-only codes.
     private IEnumerable<string> AllCodes =>

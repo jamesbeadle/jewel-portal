@@ -20,4 +20,5 @@ internal static class CommercialIdentifierFactory
     public static string NextReconciliationPackageId() => Guid.NewGuid().ToString(CompactGuidFormat);
     public static string NextReconciliationPackageOrderId() => Guid.NewGuid().ToString(CompactGuidFormat);
     public static string NextReconciliationPackageSalesLineId() => Guid.NewGuid().ToString(CompactGuidFormat);
+    public static string NextReconciliationPackageCostLineId() => Guid.NewGuid().ToString(CompactGuidFormat);
 }

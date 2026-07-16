@@ -1,6 +1,7 @@
 @using Jewel.JPMS.Contracts.Commercial
 @using Jewel.JPMS.Models
 @inject ICommandSender Commands
+@inject IQueryClient Queries
 
 @* Builds one reconciliation package: tick the sub's work orders on the left, and on the
    right the valuation sales lines that priced that scope — whole lines by default, or a
@@ -94,13 +95,72 @@
             </div>
         </div>
 
+        @* ── Cost side, part two: direct purchase invoices — allocated Xero lines not
+             paying any work order (materials bought straight for the packaged scope,
+             e.g. roofing supplies alongside the roofer's labour-only order). ───── *@
+        <div class="rounded-lg border border-line bg-surface p-3">
+            <div class="flex items-center justify-between gap-2 mb-2">
+                <p class="text-[11px] uppercase tracking-wider text-content-subtle font-semibold"
+                   title="Tick an invoice line to take its full non-work-order remainder; edit the amount for a partial share. Spend already linked to a work order arrives through the order — only the unlinked remainder is offered here.">
+                    Cost side — direct purchase invoices (not linked to a work order)
+                </p>
+                <input type="search" placeholder="Search…"
+                       class="bg-surface border border-line rounded-lg px-2 py-1 text-xs text-content placeholder:text-content-subtle w-36"
+                       @bind="costSearch" @bind:event="oninput" />
+            </div>
+            @if (costLinesLoading)
+            {
+                <p class="text-sm text-content-subtle italic">Loading invoices…</p>
+            }
+            else if (FilteredCostLines.Count == 0)
+            {
+                <p class="text-sm text-content-subtle italic">No unlinked purchase spend to offer — everything is either paying a work order or already packaged.</p>
+            }
+            else
+            {
+                <div class="overflow-y-auto max-h-60 space-y-1">
+                    @foreach (var entry in FilteredCostLines)
+                    {
+                        var costLine = entry.Line;
+                        var picked = pickedCostAmounts.ContainsKey(costLine.XeroLedgerLineId);
+                        var exhausted = !picked && entry.Available == 0m;
+                        <div class="flex items-center gap-2 text-sm @(exhausted ? "opacity-50" : "")">
+                            <input type="checkbox" class="cursor-pointer" disabled="@exhausted"
+                                   title="@(exhausted ? "Fully linked to work orders or assigned to other packages" : "")"
+                                   checked="@picked"
+                                   @onchange="() => ToggleCostLine(entry)" />
+                            <span class="text-content-subtle text-xs whitespace-nowrap">@(costLine.Date?.ToString("dd MMM yy") ?? "—")</span>
+                            <span class="font-mono text-[11px] text-content-subtle whitespace-nowrap">@costLine.CostCode</span>
+                            <span class="text-content truncate whitespace-nowrap">@costLine.Supplier</span>
+                            <span class="text-content-muted truncate" title="@costLine.Description">@costLine.InvoiceNumber</span>
+                            <span class="ml-auto flex items-center gap-1.5 whitespace-nowrap">
+                                @if (picked)
+                                {
+                                    <input type="number" step="any"
+                                           class="bg-surface border border-line rounded-lg px-2 py-0.5 text-right text-content text-xs w-24"
+                                           title="@($"This package's share — {Money(entry.Available)} of the line's {Money(costLine.Net)} net is not paying a work order or in another package")"
+                                           value="@pickedCostAmounts[costLine.XeroLedgerLineId]"
+                                           @onchange="e => SetCostAmount(costLine.XeroLedgerLineId, e.Value?.ToString())" />
+                                }
+                                else
+                                {
+                                    <span class="text-content-muted text-xs">@Money(entry.Available) avail.</span>
+                                }
+                            </span>
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+
         @* ── Running totals: mismatched scope is visible before saving ─────── *@
         <div class="rounded-lg border border-line bg-surface-raised px-4 py-3 text-sm flex flex-wrap items-center gap-x-6 gap-y-1">
             <span class="text-content-muted">Sales <span class="text-content font-medium">@Money(SalesTotal)</span></span>
             <span class="text-content-muted">Target cost (÷@DivisorText) <span class="text-content font-medium">@Money(TargetTotal)</span></span>
             <span class="text-content-muted">WO committed <span class="text-content font-medium">@Money(CommittedTotal)</span></span>
+            <span class="text-content-muted">Direct invoices <span class="text-content font-medium">@Money(DirectCostTotal)</span></span>
             <span class="@(Difference < 0m ? "text-negative" : "text-content-muted")"
-                  title="Target cost less WO committed — a large gap either way suggests the scope on the two sides doesn't match yet">
+                  title="Target cost less WO committed and direct invoices — a large gap either way suggests the scope on the two sides doesn't match yet">
                 Difference <span class="font-medium">@Money(Difference)</span>
             </span>
         </div>
@@ -135,14 +195,19 @@
     private string name = "";
     private string orderSearch = "";
     private string lineSearch = "";
+    private string costSearch = "";
     private readonly HashSet<string> selectedOrderIds = new(StringComparer.OrdinalIgnoreCase);
     // Line id → this package's £ share, as typed (invariant decimal text).
     private readonly Dictionary<string, string> pickedAmounts = new(StringComparer.OrdinalIgnoreCase);
+    // Xero ledger line id → this package's direct-cost £ share, as typed.
+    private readonly Dictionary<string, string> pickedCostAmounts = new(StringComparer.OrdinalIgnoreCase);
+    private IReadOnlyList<ProjectCostOfSalesLine> costLines = Array.Empty<ProjectCostOfSalesLine>();
+    private bool costLinesLoading;
     private string? seededForKey;
     private bool busy;
     private string? saveError;
 
-    protected override void OnParametersSet()
+    protected override async Task OnParametersSetAsync()
     {
         if (!IsOpen)
         {
@@ -157,12 +222,21 @@
         name = Editing?.Name ?? "";
         selectedOrderIds.Clear();
         pickedAmounts.Clear();
+        pickedCostAmounts.Clear();
         if (Editing is not null)
         {
             foreach (var workOrderId in Editing.WorkOrderIds) selectedOrderIds.Add(workOrderId);
             foreach (var slice in Editing.SalesLines)
                 pickedAmounts[slice.ValuationLineItemId] = slice.Amount.ToString(System.Globalization.CultureInfo.InvariantCulture);
+            foreach (var slice in Editing.DirectCosts)
+                pickedCostAmounts[slice.XeroLedgerLineId] = slice.Amount.ToString(System.Globalization.CultureInfo.InvariantCulture);
         }
+        // The direct-cost picker's queue: every allocated purchase line with its
+        // work-order links, fetched fresh each open so availability is current.
+        costLinesLoading = true;
+        try { costLines = await Queries.AskAsync(new ListProjectCostOfSalesLines(ProjectId), CancellationToken.None); }
+        catch { costLines = Array.Empty<ProjectCostOfSalesLine>(); }
+        costLinesLoading = false;
     }
 
     // Which OTHER package owns this order, if any (one-home rule shown, not just enforced).
@@ -222,6 +296,42 @@
 
     private void SetLineAmount(string lineItemId, string? text) => pickedAmounts[lineItemId] = text ?? "";
 
+    // Direct purchase invoices with how much of each is still available to THIS package:
+    // the line's net less its work-order link slices (that spend arrives through the
+    // orders) and less what other packages' direct slices have taken. Split lines can't
+    // join a package (same rule as links), and lines with nothing left are shown only
+    // while ticked here.
+    private decimal TakenByOtherPackages(string xeroLedgerLineId) =>
+        AllPackages
+            .Where(package => package.ReconciliationPackageId != (Editing?.ReconciliationPackageId ?? ""))
+            .SelectMany(package => package.DirectCosts)
+            .Where(slice => string.Equals(slice.XeroLedgerLineId, xeroLedgerLineId, StringComparison.OrdinalIgnoreCase))
+            .Sum(slice => slice.Amount);
+
+    private List<(ProjectCostOfSalesLine Line, decimal Available)> FilteredCostLines =>
+        costLines
+            .Where(line => !line.IsSplit)
+            .Where(line => string.IsNullOrWhiteSpace(costSearch)
+                           || line.Supplier.Contains(costSearch.Trim(), StringComparison.OrdinalIgnoreCase)
+                           || line.InvoiceNumber.Contains(costSearch.Trim(), StringComparison.OrdinalIgnoreCase)
+                           || line.Description.Contains(costSearch.Trim(), StringComparison.OrdinalIgnoreCase)
+                           || line.CostCode.Contains(costSearch.Trim(), StringComparison.OrdinalIgnoreCase))
+            .Select(line => (Line: line, Available: line.UnlinkedRemainder - TakenByOtherPackages(line.XeroLedgerLineId)))
+            .Where(entry => entry.Available != 0m || pickedCostAmounts.ContainsKey(entry.Line.XeroLedgerLineId))
+            .OrderByDescending(entry => Math.Abs(entry.Available))
+            .ThenByDescending(entry => entry.Line.Date)
+            .ToList();
+
+    private void ToggleCostLine((ProjectCostOfSalesLine Line, decimal Available) entry)
+    {
+        if (pickedCostAmounts.Remove(entry.Line.XeroLedgerLineId)) return;
+        // Whole-remainder default; edit the amount for a partial share.
+        pickedCostAmounts[entry.Line.XeroLedgerLineId] =
+            entry.Available.ToString(System.Globalization.CultureInfo.InvariantCulture);
+    }
+
+    private void SetCostAmount(string xeroLedgerLineId, string? text) => pickedCostAmounts[xeroLedgerLineId] = text ?? "";
+
     private static decimal? Parse(string text) =>
         decimal.TryParse(text, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var value)
             ? value
@@ -231,7 +341,8 @@
     private decimal TargetTotal => Math.Round(SalesTotal * FinancialSummaryAssumptions.CostFactor, 2);
     private decimal CommittedTotal =>
         Orders.Where(detail => selectedOrderIds.Contains(detail.Order.WorkOrderId)).Sum(CommittedOf);
-    private decimal Difference => TargetTotal - CommittedTotal;
+    private decimal DirectCostTotal => pickedCostAmounts.Values.Sum(text => Parse(text) ?? 0m);
+    private decimal Difference => TargetTotal - CommittedTotal - DirectCostTotal;
 
     private static string DivisorText =>
         $"{1m + FinancialSummaryAssumptions.MarkupPercent / 100m:0.##}";
@@ -254,6 +365,19 @@
                 if (Math.Abs(amount) > Math.Abs(available))
                     return $"\"{Truncate(line.Description, 40)}\" — only {Money(available)} of the line is still available.";
             }
+            if (pickedCostAmounts.Values.Any(text => Parse(text) is not { } costAmount || costAmount == 0m))
+                return "Every ticked purchase invoice needs a non-zero amount.";
+            var costLinesById = costLines.ToDictionary(line => line.XeroLedgerLineId, StringComparer.OrdinalIgnoreCase);
+            foreach (var picked in pickedCostAmounts)
+            {
+                if (!costLinesById.TryGetValue(picked.Key, out var costLine)) continue;
+                var amount = Parse(picked.Value)!.Value;
+                if (costLine.Net != 0m && Math.Sign(amount) != Math.Sign(costLine.Net))
+                    return $"{costLine.Supplier} {costLine.InvoiceNumber} — the share must carry the line's sign ({Money(costLine.Net)}).";
+                var costAvailable = costLine.UnlinkedRemainder - TakenByOtherPackages(picked.Key);
+                if (Math.Abs(amount) > Math.Abs(costAvailable))
+                    return $"{costLine.Supplier} {costLine.InvoiceNumber} — only {Money(costAvailable)} is not already paying a work order or in another package.";
+            }
             return null;
         }
     }
@@ -270,7 +394,7 @@
 
     private bool CanSave =>
         !string.IsNullOrWhiteSpace(name)
-        && (selectedOrderIds.Count > 0 || pickedAmounts.Count > 0)
+        && (selectedOrderIds.Count > 0 || pickedAmounts.Count > 0 || pickedCostAmounts.Count > 0)
         && ClientValidationError is null;
 
     private async Task SaveAsync()
@@ -285,6 +409,13 @@
             if (amount is null || amount.Value == 0m) continue;
             slices.Add(new PackageSalesSlice(picked.Key, amount.Value));
         }
+        var costSlices = new List<PackageCostSlice>();
+        foreach (var picked in pickedCostAmounts)
+        {
+            var amount = Parse(picked.Value);
+            if (amount is null || amount.Value == 0m) continue;
+            costSlices.Add(new PackageCostSlice(picked.Key, amount.Value));
+        }
         try
         {
             await Commands.SendAsync(new SaveReconciliationPackage(
@@ -292,7 +423,8 @@
                 Editing?.ReconciliationPackageId,
                 name.Trim(),
                 selectedOrderIds.OrderBy(id => id, StringComparer.OrdinalIgnoreCase).ToList(),
-                slices), CancellationToken.None);
+                slices,
+                costSlices), CancellationToken.None);
             seededForKey = null; // reseed from saved state on next open
             await OnSaved.InvokeAsync();
         }

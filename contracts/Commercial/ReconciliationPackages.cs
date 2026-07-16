@@ -19,14 +19,20 @@ public sealed record ListPackageReconciliation(string ProjectId) : IQuery<IReadO
 /// <summary>
 /// Creates or replaces a package's whole definition (null id = create). Guards: a work
 /// order sits in at most one package; a sales line's value may be shared across
-/// packages by partial slices but never over-allocated; locked packages can't be edited.
+/// packages by partial slices but never over-allocated; a direct cost slice may never
+/// take a purchase line past its non-work-order remainder (and only whole-line
+/// allocations can be sliced); locked packages can't be edited.
 /// </summary>
 public sealed record SaveReconciliationPackage(
     string ProjectId,
     string? ReconciliationPackageId,
     string Name,
     IReadOnlyList<string> WorkOrderIds,
-    IReadOnlyList<PackageSalesSlice> SalesLines) : ICommand<ReconciliationPackage>;
+    IReadOnlyList<PackageSalesSlice> SalesLines,
+    // Direct purchase costs: £ slices of allocated Xero lines not paying any work
+    // order — materials bought directly for the packaged scope. Null = none (kept
+    // optional so older callers are unaffected).
+    IReadOnlyList<PackageCostSlice>? CostLines = null) : ICommand<ReconciliationPackage>;
 
 /// <summary>Dissolves a package (must be unlocked). Nothing else is deleted.</summary>
 public sealed record RemoveReconciliationPackage(

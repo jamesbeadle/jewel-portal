@@ -36,7 +36,8 @@ public sealed record ProjectFinancialSummaryRow(
     decimal PackagedSales = 0m,          // sales slices assigned to packages, by the line's centre
     decimal PackagedClaimed = 0m,        // those slices' pro-rata share of claimed to date
     decimal PackagedWoCommitted = 0m,    // packaged orders' committed value, by the order lines' centres
-    decimal PackagedActualCost = 0m);    // packaged orders' invoiced spend, re-attributed like ActualCost
+    decimal PackagedActualCost = 0m,     // packaged invoiced spend (order-linked, re-attributed like ActualCost, plus direct slices)
+    decimal PackagedNonWoCost = 0m);     // the direct (non-work-order) slices alone, on the invoice's own centre — inside NonWorkOrderActualCost
 
 /// <summary>Assumptions shared by the API calculation and the UI's explanation of it.</summary>
 public static class FinancialSummaryAssumptions

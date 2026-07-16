@@ -2,7 +2,7 @@
 @using Jewel.JPMS.Contracts.Todos
 @inject AuthService Auth
 @inject SessionService Session
-@inject ITodoStore Todos
+@inject ITodoStore TodoStore
 @inject NavigationManager Nav
 @inject Jewel.JPMS.Features.Projects.ProjectListReadModel Projects
 
@@ -241,7 +241,7 @@ else
         {
             try
             {
-                assigneeOptions = (await Todos.ListAssigneesAsync())
+                assigneeOptions = (await TodoStore.ListAssigneesAsync())
                     .Select(user => new SearchSelect.Option(user.Email, $"{user.DisplayName} — {user.Email}"))
                     .ToList();
             }
@@ -252,7 +252,7 @@ else
     private async Task LoadAsync()
     {
         loading = true;
-        try { items = CanSeeAll ? await Todos.ListAllAsync() : await Todos.ListMineAsync(); }
+        try { items = CanSeeAll ? await TodoStore.ListAllAsync() : await TodoStore.ListMineAsync(); }
         catch { error = "Couldn't load the to-do list. Please try again."; }
         finally { loading = false; }
     }
@@ -331,7 +331,7 @@ else
         addError = null;
         await Run(async () =>
         {
-            await Todos.AddGeneralAsync(new AddGeneralTodoItem(
+            await TodoStore.AddGeneralAsync(new AddGeneralTodoItem(
                 newTitle.Trim(),
                 NullIfBlank(newNotes),
                 NullIfBlank(newAssignee),
@@ -345,7 +345,7 @@ else
     private async Task ToggleComplete(TodoItem item)
     {
         if (busy) return;
-        await Run(() => Todos.UpdateAsync(new UpdateTodoItem(
+        await Run(() => TodoStore.UpdateAsync(new UpdateTodoItem(
             item.TodoItemId,
             item.Title,
             NullIfBlank(item.Notes),
@@ -357,7 +357,7 @@ else
     private async Task Delete(TodoItem item)
     {
         if (busy) return;
-        await Run(() => Todos.DeleteAsync(item.TodoItemId));
+        await Run(() => TodoStore.DeleteAsync(item.TodoItemId));
     }
 
     private async Task Run(Func<Task> action)
@@ -367,7 +367,7 @@ else
         {
             busy = true;
             await action();
-            items = PreserveOrder(items, CanSeeAll ? await Todos.ListAllAsync() : await Todos.ListMineAsync());
+            items = PreserveOrder(items, CanSeeAll ? await TodoStore.ListAllAsync() : await TodoStore.ListMineAsync());
         }
         catch (CommandFailedException ex) { error = ex.Message; }
         catch { error = "That action didn't complete. Please try again."; }
