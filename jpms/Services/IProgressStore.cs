@@ -18,21 +18,22 @@ public interface IProgressStore
     /// (stale-while-revalidate).</summary>
     void Refresh(string projectId);
 
-    /// <summary>Creates a progress update — a group of photos with a description — uploading the
-    /// files as multipart/form-data.</summary>
+    /// <summary>Creates a progress update — a group of photos with a description and optional
+    /// weather conditions — uploading the files as multipart/form-data.</summary>
     Task CreateUpdateAsync(
         string projectId, string title, string description, DateTimeOffset? workDate,
-        IReadOnlyList<IBrowserFile> photos, CancellationToken cancellationToken);
+        ProgressWeather? weather, IReadOnlyList<IBrowserFile> photos, CancellationToken cancellationToken);
 
     /// <summary>Appends photos to an existing progress update.</summary>
     Task AddPhotosAsync(
         string projectId, string progressUpdateId,
         IReadOnlyList<IBrowserFile> photos, CancellationToken cancellationToken);
 
-    /// <summary>Edits a progress update's title, description and work date.</summary>
+    /// <summary>Edits a progress update's title, description, work date and weather conditions
+    /// (null clears any recorded weather).</summary>
     Task UpdateUpdateAsync(
         string projectId, string progressUpdateId, string title, string description,
-        DateTimeOffset? workDate, CancellationToken cancellationToken);
+        DateTimeOffset? workDate, ProgressWeather? weather, CancellationToken cancellationToken);
 
     /// <summary>Permanently deletes a progress update, its photos and their stored files.
     /// Cannot be undone.</summary>

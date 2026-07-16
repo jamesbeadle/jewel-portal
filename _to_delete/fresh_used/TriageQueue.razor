@@ -743,38 +743,6 @@ else
                                                 Each item is numbered TODO-#### and this email is tagged to <span class="font-medium text-content">every item</span> you add here, so one email can feed several to-dos. The items appear on the project's To-do tab.
                                             </p>
 
-                                            <div>
-                                                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Link to an open request (optional)</label>
-                                                @if (string.IsNullOrWhiteSpace(createProjectId))
-                                                {
-                                                    <p class="text-xs text-content-subtle italic">Choose a project to see its open requests.</p>
-                                                }
-                                                else if (createTodoLinkRequestsLoading)
-                                                {
-                                                    <p class="text-sm text-content-subtle italic">Loading requests…</p>
-                                                }
-                                                else if (createTodoLinkRequests.Count == 0)
-                                                {
-                                                    <p class="text-xs text-content-subtle italic">No open requests on this project.</p>
-                                                }
-                                                else
-                                                {
-                                                    <select class="field" value="@createTodoLinkRequestId" @onchange="OnCreateTodoLinkRequestChanged">
-                                                        <option value="">No request link</option>
-                                                        @foreach (var record in createTodoLinkRequests)
-                                                        {
-                                                            <option value="@record.RecordId">@record.Reference — @record.Title</option>
-                                                        }
-                                                    </select>
-                                                    @if (!string.IsNullOrWhiteSpace(createTodoLinkRequestId))
-                                                    {
-                                                        <p class="text-xs text-content-subtle mt-1">
-                                                            This email is tagged to the request as well as to every item below, so it appears in the request's conversation too — exactly as if you'd also used "Link to existing".
-                                                        </p>
-                                                    }
-                                                }
-                                            </div>
-
                                             @for (var i = 0; i < createTodoRows.Count; i++)
                                             {
                                                 var row = createTodoRows[i];
@@ -1395,16 +1363,6 @@ else
     }
     private List<TodoDraftRow> createTodoRows = new() { new TodoDraftRow() };
 
-    // Optional "also link to an open request" for the To-do create form: one request for the whole
-    // batch — the email gets the request's tag as well as one tag per created item, so a single
-    // triage action can feed a request's conversation and capture its follow-up to-dos. The pool is
-    // the chosen project's open requests (same ListLinkableRecords call as the Link panel; closed
-    // requests are filtered server-side), reloaded whenever the To-do form gains a project. Project
-    // to-dos only — the General to-do mode has no project, so no request link.
-    private string createTodoLinkRequestId = "";
-    private IReadOnlyList<LinkableRecord> createTodoLinkRequests = Array.Empty<LinkableRecord>();
-    private bool createTodoLinkRequestsLoading;
-
     // The assignee picker's option pool: internal staff only (server-filtered by
     // TodoRoles.AssignableAsTodoAssignee), fetched once when the page loads and shared by every
     // to-do draft row. Assignment is picker-only; there is no free-text email entry.
@@ -1679,8 +1637,6 @@ else
         createRaisedTo = createDrawingRef = createResponseDue = "";
         createTrade = "";
         createTodoRows = new List<TodoDraftRow> { new() };
-        createTodoLinkRequestId = "";
-        createTodoLinkRequests = Array.Empty<LinkableRecord>();
     }
 
     // jumpToLatest: clicking an email in the QUEUE list triages its thread from the newest member —
@@ -1863,9 +1819,6 @@ else
                 PrefillCreate(suggestion);
                 if (suggestion.TodoItems.Count > 0)
                     createTodoRows = suggestion.TodoItems.Select(title => new TodoDraftRow { Title = title }).ToList();
-                // The suggestion may have set the project, so offer its open requests for the
-                // optional request link straight away.
-                await LoadCreateTodoLinkRequestsAsync();
                 break;
 
             case "discard":
@@ -1956,41 +1909,7 @@ else
         linkRecords = Array.Empty<LinkableRecord>();
     }
 
-    private async Task OnCreateProjectChanged(ChangeEventArgs e)
-    {
-        createProjectId = e.Value?.ToString() ?? "";
-        await LoadCreateTodoLinkRequestsAsync();
-    }
-
-    private void OnCreateTodoLinkRequestChanged(ChangeEventArgs e) => createTodoLinkRequestId = e.Value?.ToString() ?? "";
-
-    // Load the chosen project's open requests for the To-do form's optional request link. A failed
-    // load leaves the picker empty rather than blocking triage — the to-dos can still be created,
-    // the email just isn't linked to a request. Any change of project or record type clears the
-    // current pick: a request selected against one project must never survive into another.
-    private async Task LoadCreateTodoLinkRequestsAsync()
-    {
-        createTodoLinkRequestId = "";
-        if (createRecordType != RecordType.Todo || string.IsNullOrWhiteSpace(createProjectId))
-        {
-            createTodoLinkRequests = Array.Empty<LinkableRecord>();
-            return;
-        }
-        try
-        {
-            createTodoLinkRequestsLoading = true;
-            StateHasChanged(); // show the loading state while the fetch is in flight
-            createTodoLinkRequests = await Intake.ListLinkableRecordsAsync(createProjectId, RecordType.Request);
-        }
-        catch
-        {
-            createTodoLinkRequests = Array.Empty<LinkableRecord>();
-        }
-        finally
-        {
-            createTodoLinkRequestsLoading = false;
-        }
-    }
+    private void OnCreateProjectChanged(ChangeEventArgs e) => createProjectId = e.Value?.ToString() ?? "";
 
     private void OnCreateDescriptionInput(ChangeEventArgs e) => createDescription = e.Value?.ToString() ?? "";
 
@@ -2029,12 +1948,9 @@ else
         await RunAction("Creating request", async () => await Intake.CreateRequestFromMessageAsync(command));
     }
 
-    private async Task OnCreateRecordTypeChanged(ChangeEventArgs e)
+    private void OnCreateRecordTypeChanged(ChangeEventArgs e)
     {
         if (Enum.TryParse<RecordType>(e.Value?.ToString(), out var type)) createRecordType = type;
-        // Entering the To-do form with a project already chosen loads its open requests for the
-        // optional request link; leaving it clears the pick (the loader handles both).
-        await LoadCreateTodoLinkRequestsAsync();
     }
 
     private async Task DoCreateBidPackage()
@@ -2055,9 +1971,7 @@ else
 
     // "Create new → To-do item(s)": create every row with a title on the chosen project in one
     // command. The email is tagged "JPMS/TODO-####" once per created item, so each item reads this
-    // email back live by its own tag — the reason one email can feed several to-dos. If an open
-    // request was picked, the same command also tags the email to that request (server-verified
-    // before anything is created), so one action links the email to the request AND its to-dos.
+    // email back live by its own tag — the reason one email can feed several to-dos.
     private async Task DoCreateTodos()
     {
         if (selected is null || busy) return;
@@ -2077,7 +1991,6 @@ else
             selected.Id,
             createProjectId,
             drafts,
-            LinkRequestId: NullIfBlank(createTodoLinkRequestId),
             InternetMessageId: selected.InternetMessageId);
 
         await RunAction("Creating to-dos", async () => await Intake.CreateTodoItemsFromMessageAsync(command));

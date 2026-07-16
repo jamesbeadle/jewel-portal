@@ -1,0 +1,126 @@
+@using Jewel.JPMS.Contracts.Todos
+@inject ITodoStore Todos
+@inject Jewel.JPMS.Features.Projects.ProjectListReadModel Projects
+
+@*
+    "My to-dos" — the dashboard home panel. Shows the OPEN items assigned to the signed-in user,
+    general (company-wide) and project items alike, read through ListMyTodoItems (the server stamps
+    the assignee from the session). Ticking an item completes it in place — the API allows an
+    assignee to update their own item even outside the manage-todos role gate. The full list, with
+    filters and done items, lives on the /todos page.
+*@
+
+<div class="panel p-5">
+    <div class="flex items-center justify-between gap-2 mb-1">
+        <div class="flex items-center gap-3">
+            <h2 class="text-sm font-semibold text-content">My to-dos</h2>
+            @if (!loading && openItems.Count > 0)
+            {
+                <span class="text-[11px] text-content-subtle">@openItems.Count open</span>
+            }
+        </div>
+        <a href="/todos" class="text-xs font-medium text-accent hover:underline">View all</a>
+    </div>
+    <p class="text-xs text-content-subtle mb-4">
+        Items assigned to you — general and project to-dos alike. Tick one off to complete it.
+    </p>
+
+    @if (error is not null)
+    {
+        <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-3">@error</p>
+    }
+
+    @if (loading)
+    {
+        <JewelSpinner Class="py-6" Label="Loading" />
+    }
+    else if (openItems.Count == 0)
+    {
+        <p class="text-sm text-content-subtle italic">Nothing is assigned to you right now.</p>
+    }
+    else
+    {
+        <div class="space-y-2">
+            @foreach (var item in openItems)
+            {
+                <div @key="item.TodoItemId" class="flex items-start gap-3 rounded-lg border border-line px-3 py-2">
+                    <input type="checkbox" class="mt-1" checked="@item.IsComplete" disabled="@busy"
+                           @onchange="() => Complete(item)" title="Mark done" />
+                    <div class="min-w-0 flex-1">
+                        <p class="text-sm text-content">
+                            <span class="font-mono text-xs text-content-muted mr-2">@item.Reference</span>@item.Title
+                        </p>
+                        <div class="flex flex-wrap items-center gap-x-3 gap-y-0.5 mt-1 text-[11px] text-content-subtle">
+                            <span class="@(IsGeneral(item) ? "text-accent font-medium" : "")">@ScopeLabel(item)</span>
+                            @if (item.DueAt is not null)
+                            {
+                                <span class="@(IsOverdue(item) ? "text-negative font-medium" : "")">Due @item.DueAt.Value.LocalDateTime.ToString("d MMM yyyy")</span>
+                            }
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    private IReadOnlyList<TodoItem> openItems = Array.Empty<TodoItem>();
+    private bool loading = true;
+    private bool busy;
+    private string? error;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadAsync();
+        // Project labels for the scope chips — a failed load degrades the label, never the list.
+        try { if (Projects.Current is null) await Projects.RefreshAsync(CancellationToken.None); } catch { }
+    }
+
+    private async Task LoadAsync()
+    {
+        loading = true;
+        try
+        {
+            openItems = (await Todos.ListMineAsync()).Where(item => !item.IsComplete).ToList();
+        }
+        catch { error = "Couldn't load your to-dos right now."; }
+        finally { loading = false; }
+    }
+
+    private async Task Complete(TodoItem item)
+    {
+        if (busy) return;
+        error = null;
+        try
+        {
+            busy = true;
+            await Todos.UpdateAsync(new UpdateTodoItem(
+                item.TodoItemId,
+                item.Title,
+                NullIfBlank(item.Notes),
+                NullIfBlank(item.AssigneeEmail),
+                item.DueAt,
+                IsComplete: true));
+            openItems = openItems.Where(open => open.TodoItemId != item.TodoItemId).ToList();
+        }
+        catch (CommandFailedException ex) { error = ex.Message; }
+        catch { error = "That action didn't complete. Please try again."; }
+        finally { busy = false; }
+    }
+
+    private static bool IsGeneral(TodoItem item) => string.IsNullOrWhiteSpace(item.ProjectId);
+
+    private string ScopeLabel(TodoItem item)
+    {
+        if (IsGeneral(item)) return "General";
+        var project = (Projects.Current ?? (IReadOnlyList<Project>)Array.Empty<Project>())
+            .FirstOrDefault(p => p.ProjectId == item.ProjectId);
+        return project is null ? "Project" : $"{project.Reference} — {project.Name}";
+    }
+
+    private static bool IsOverdue(TodoItem item) =>
+        !item.IsComplete && item.DueAt is not null && item.DueAt.Value < DateTimeOffset.Now.Date;
+
+    private static string? NullIfBlank(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+}

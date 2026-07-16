@@ -25,6 +25,16 @@
         </div>
     }
 
+    @if (ShowMyTodos)
+    {
+        @* Open to-do items assigned to this user — general (company-wide) and project items alike.
+           Shown only for the internal office/management roles a to-do can be assigned to (mirrors
+           TodoRoles.AssignableAsTodoAssignee); site-floor and external roles never carry items. *@
+        <div class="mb-8">
+            <MyTodosPanel />
+        </div>
+    }
+
     <h2 class="text-sm font-medium text-content-muted mb-3">Where to next</h2>
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
         @foreach (var destination in Destinations)
@@ -46,6 +56,13 @@
 
     private IEnumerable<NavigationItem> Destinations =>
         NavigationCatalog.ItemsFor(Role).Where(item => item.Href != "/dashboard");
+
+    // Mirrors the API's TodoRoles.AssignableAsTodoAssignee: the internal office/management roles
+    // a to-do can be assigned to. Everyone else (external + site-floor roles) has no list to show.
+    private bool ShowMyTodos =>
+        Role is Role.ManagingDirector or Role.FinanceDirector or Role.ProjectManager
+            or Role.QuantitySurveyor or Role.SiteManager or Role.HealthSafetyOfficer
+            or Role.OfficeComplianceCoordinator;
 
     private string FirstName => FirstWordOf(DisplayName) ?? Role.DisplayName();
 

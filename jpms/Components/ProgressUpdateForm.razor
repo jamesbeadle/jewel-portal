@@ -31,6 +31,42 @@
         <input type="date" @bind="workDate" class="field" />
     </div>
 
+    <div class="rounded-xl border border-line p-3 space-y-3">
+        <p class="text-xs uppercase tracking-wider text-content-subtle font-semibold">
+            Weather conditions <span class="normal-case font-normal tracking-normal">— optional, printed on the client report</span>
+        </p>
+        <div>
+            <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Summary</label>
+            <input type="text" @bind="weatherSummary" placeholder="Partly cloudy with showers" class="field" />
+        </div>
+        <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+            <div>
+                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">High (°C)</label>
+                <input type="number" @bind="weatherTempHighC" class="field" />
+            </div>
+            <div>
+                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Low (°C)</label>
+                <input type="number" @bind="weatherTempLowC" class="field" />
+            </div>
+            <div>
+                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Wind (mph)</label>
+                <input type="number" min="0" @bind="weatherWindMph" class="field" />
+            </div>
+            <div>
+                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Humidity (%)</label>
+                <input type="number" min="0" max="100" @bind="weatherHumidityPercent" class="field" />
+            </div>
+            <div>
+                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Precip (inches)</label>
+                <input type="number" min="0" step="0.01" @bind="weatherPrecipInches" class="field" />
+            </div>
+            <div>
+                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Observed at</label>
+                <input type="datetime-local" @bind="weatherObservedAt" class="field" />
+            </div>
+        </div>
+    </div>
+
     @if (error is not null)
     {
         <p class="text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2">@error</p>
@@ -54,6 +90,13 @@
     private string title = "";
     private string description = "";
     private DateTime? workDate = DateTime.Today;
+    private string weatherSummary = "";
+    private DateTime? weatherObservedAt;
+    private int? weatherTempHighC;
+    private int? weatherTempLowC;
+    private int? weatherWindMph;
+    private int? weatherHumidityPercent;
+    private decimal? weatherPrecipInches;
     private bool busy;
     private string? error;
 
@@ -78,10 +121,13 @@
                 ? new DateTimeOffset(DateTime.SpecifyKind(value, DateTimeKind.Unspecified), TimeSpan.Zero)
                 : null;
             await ProgressStore.CreateUpdateAsync(
-                ProjectId, title.Trim(), description.Trim(), date, selectedFiles, CancellationToken.None);
+                ProjectId, title.Trim(), description.Trim(), date, BuildWeather(), selectedFiles, CancellationToken.None);
 
             selectedFiles = Array.Empty<IBrowserFile>();
             title = ""; description = ""; workDate = DateTime.Today;
+            weatherSummary = ""; weatherObservedAt = null;
+            weatherTempHighC = null; weatherTempLowC = null; weatherWindMph = null;
+            weatherHumidityPercent = null; weatherPrecipInches = null;
             await OnSaved.InvokeAsync();
         }
         catch (Exception ex)
@@ -92,6 +138,26 @@
         {
             busy = false;
         }
+    }
+
+    // Null when nothing was entered, so updates without weather stay clean everywhere downstream.
+    private ProgressWeather? BuildWeather()
+    {
+        // SpecifyKind: same reasoning as the work date above — a Local-kind DateTime makes the
+        // DateTimeOffset ctor throw whenever the UK is on BST.
+        DateTimeOffset? observedAt = weatherObservedAt is { } observed
+            ? new DateTimeOffset(DateTime.SpecifyKind(observed, DateTimeKind.Unspecified), TimeSpan.Zero)
+            : null;
+
+        var summary = weatherSummary.Trim();
+        if (summary.Length == 0 && observedAt is null
+            && weatherTempHighC is null && weatherTempLowC is null && weatherWindMph is null
+            && weatherHumidityPercent is null && weatherPrecipInches is null)
+            return null;
+
+        return new ProgressWeather(
+            summary, observedAt, weatherTempHighC, weatherTempLowC,
+            weatherWindMph, weatherHumidityPercent, weatherPrecipInches);
     }
 
     private static string FormatSize(long bytes)

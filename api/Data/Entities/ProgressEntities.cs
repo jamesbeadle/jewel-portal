@@ -15,6 +15,19 @@ public sealed class ProgressUpdateEntity
     [MaxLength(4096)]    public string Description { get; set; } = "";
     /// <summary>The date the photographed works were carried out (not the upload date).</summary>
     public DateTimeOffset? WorkDate { get; set; }
+
+    // Weather conditions on site, entered manually by the site manager (all optional). Units
+    // follow the client-facing report convention: temperatures in °C, wind in mph, precipitation
+    // in inches. A blank summary with all-null figures means "no weather recorded".
+    [MaxLength(256)]     public string WeatherSummary { get; set; } = "";
+    /// <summary>When the conditions were observed (e.g. "Fri, 20 Mar 2026, 10:29").</summary>
+    public DateTimeOffset? WeatherObservedAt { get; set; }
+    public int? WeatherTempHighC { get; set; }
+    public int? WeatherTempLowC { get; set; }
+    public int? WeatherWindMph { get; set; }
+    public int? WeatherHumidityPercent { get; set; }
+    public decimal? WeatherPrecipInches { get; set; }
+
     [MaxLength(256)]     public string CreatedByEmail { get; set; } = "";
     public DateTimeOffset CreatedAt { get; set; }
 }

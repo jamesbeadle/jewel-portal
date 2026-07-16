@@ -1,0 +1,398 @@
+@page "/todos"
+@using Jewel.JPMS.Contracts.Todos
+@inject AuthService Auth
+@inject SessionService Session
+@inject ITodoStore Todos
+@inject NavigationManager Nav
+@inject Jewel.JPMS.Features.Projects.ProjectListReadModel Projects
+
+<PageTitle>To-dos · JPMS</PageTitle>
+
+@*
+    The To-dos browser. The managing director and administrators see EVERY item — general
+    (company-wide, no-project) items and every project's items — and can add general items, tick
+    anything off, or delete. Everyone else sees only the items assigned to THEM (general and
+    project alike, read through ListMyTodoItems) and can tick their own items off. General items
+    are captured from a company-wide email at triage ("General to-do") or added here directly.
+*@
+
+@if (!isLoaded)
+{
+    <section class="px-6 md:px-8 py-12 text-content-subtle text-sm">Loading…</section>
+}
+else if (!Session.IsApproved)
+{
+    <RequestAccessView Email="@Auth.CurrentUser!.Email" DisplayName="@Auth.CurrentUser.DisplayName" />
+}
+else if (!HasInternalRole)
+{
+    <section class="px-6 md:px-8 py-12">
+        <h1 class="text-2xl font-semibold text-content mb-2">Not available</h1>
+        <p class="text-content-muted">The to-do list is an internal Jewel surface.</p>
+    </section>
+}
+else
+{
+    <section class="px-6 py-6 md:px-8">
+
+        <header class="mb-6 flex flex-wrap items-end justify-between gap-3">
+            <div>
+                <p class="eyebrow mb-1">JPMS</p>
+                <h1 class="text-2xl md:text-3xl font-semibold text-content leading-tight">To-dos</h1>
+                <p class="text-sm text-content-muted mt-1">
+                    @(CanSeeAll
+                        ? "Every to-do item — general (company-wide) and project items alike."
+                        : "The items assigned to you — general (company-wide) and project items alike.")
+                </p>
+            </div>
+            @if (CanSeeAll)
+            {
+                <button type="button" class="btn-primary text-xs px-3 py-2" @onclick="OpenAdd">Add general to-do</button>
+            }
+        </header>
+
+        @if (error is not null)
+        {
+            <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-3">@error</p>
+        }
+
+        <div class="flex flex-wrap items-center gap-2 mb-4">
+            <button type="button" class="@StatusTabClass(StatusFilter.Open)" @onclick="() => statusFilter = StatusFilter.Open">Open</button>
+            <button type="button" class="@StatusTabClass(StatusFilter.Done)" @onclick="() => statusFilter = StatusFilter.Done">Done</button>
+            <button type="button" class="@StatusTabClass(StatusFilter.All)" @onclick="() => statusFilter = StatusFilter.All">All</button>
+
+            <select class="field !w-auto text-xs" value="@scopeFilter" @onchange="e => scopeFilter = e.Value?.ToString() ?? ScopeAll">
+                <option value="@ScopeAll">All scopes</option>
+                <option value="@ScopeGeneral">General only</option>
+                @foreach (var project in ProjectsWithItems)
+                {
+                    <option value="@project.ProjectId">@project.Reference — @project.Name</option>
+                }
+            </select>
+
+            @if (CanSeeAll && assigneeOptions.Count > 0)
+            {
+                <select class="field !w-auto text-xs" value="@assigneeFilter" @onchange="e => assigneeFilter = e.Value?.ToString() ?? string.Empty">
+                    <option value="">Anyone</option>
+                    <option value="@Unassigned">Unassigned</option>
+                    @foreach (var option in assigneeOptions)
+                    {
+                        <option value="@option.Value">@option.Label</option>
+                    }
+                </select>
+            }
+        </div>
+
+        @if (loading)
+        {
+            <JewelSpinner Class="py-10" Label="Loading" />
+        }
+        else
+        {
+            var visible = VisibleItems;
+            <div class="panel p-5">
+                <div class="flex items-center gap-3 mb-4">
+                    <h2 class="text-sm font-semibold text-content">To-do list</h2>
+                    @if (items.Count > 0)
+                    {
+                        <span class="text-[11px] text-content-subtle">@items.Count(i => i.IsComplete) of @items.Count done</span>
+                    }
+                </div>
+
+                @if (visible.Count == 0)
+                {
+                    <p class="text-sm text-content-subtle italic">
+                        @(items.Count == 0 ? (CanSeeAll ? "No to-do items yet." : "Nothing is assigned to you right now.") : "Nothing matches these filters.")
+                    </p>
+                }
+                else
+                {
+                    <div class="space-y-2">
+                        @foreach (var item in visible)
+                        {
+                            var canTick = CanSeeAll || IsMine(item);
+                            <div @key="item.TodoItemId" class="flex items-start gap-3 rounded-lg border border-line px-3 py-2">
+                                <input type="checkbox" class="mt-1" checked="@item.IsComplete" disabled="@(!canTick || busy)"
+                                       @onchange="() => ToggleComplete(item)" title="@(item.IsComplete ? "Reopen" : "Mark done")" />
+                                <div class="min-w-0 flex-1">
+                                    <p class="text-sm @(item.IsComplete ? "text-content-subtle line-through" : "text-content")">
+                                        <span class="font-mono text-xs text-content-muted mr-2">@item.Reference</span>@item.Title
+                                    </p>
+                                    @if (!string.IsNullOrWhiteSpace(item.Notes))
+                                    {
+                                        <p class="text-xs text-content-muted mt-0.5 whitespace-pre-wrap">@item.Notes</p>
+                                    }
+                                    <div class="flex flex-wrap items-center gap-x-3 gap-y-0.5 mt-1 text-[11px] text-content-subtle">
+                                        <span class="@(IsGeneral(item) ? "text-accent font-medium" : "")">@ScopeLabel(item)</span>
+                                        @if (item.DueAt is not null)
+                                        {
+                                            <span class="@(IsOverdue(item) ? "text-negative font-medium" : "")">Due @item.DueAt.Value.LocalDateTime.ToString("d MMM yyyy")</span>
+                                        }
+                                        @if (!string.IsNullOrWhiteSpace(item.AssigneeEmail))
+                                        {
+                                            <span>Assigned to @item.AssigneeEmail</span>
+                                        }
+                                        @if (!string.IsNullOrWhiteSpace(item.CreatedByEmail))
+                                        {
+                                            <span>Added by @item.CreatedByEmail</span>
+                                        }
+                                        @if (item.CompletedAt is not null)
+                                        {
+                                            <span>Done @item.CompletedAt.Value.LocalDateTime.ToString("d MMM yyyy")</span>
+                                        }
+                                    </div>
+                                </div>
+                                @if (CanSeeAll)
+                                {
+                                    <button type="button" class="text-content-subtle hover:text-negative text-xs mt-1" disabled="@busy"
+                                            @onclick="() => Delete(item)" title="Delete this item">✕</button>
+                                }
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+        }
+
+    </section>
+}
+
+<Modal IsOpen="@addOpen" Title="Add a general to-do" ConfirmLabel="Add to-do item" CancelLabel="Cancel"
+       OnConfirm="Add" OnCancel="CloseAdd">
+    <div class="space-y-3">
+        @if (addError is not null)
+        {
+            <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@addError</p>
+        }
+
+        <p class="text-xs text-content-subtle">
+            A general item belongs to no project — it lives on this page and on the assignee's dashboard.
+        </p>
+
+        <FormField Label="Title" Value="@newTitle" OnChange="v => newTitle = v" Required="true" />
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Assignee</label>
+                <SearchSelect Options="@assigneeOptions" Value="@newAssignee" ValueChanged="v => newAssignee = v"
+                              Placeholder="Unassigned" WidthClass="w-full" />
+            </div>
+            <FormField Label="Due" Value="@newDue" OnChange="v => newDue = v" InputType="date" />
+        </div>
+
+        <div>
+            <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Notes</label>
+            <textarea class="field" rows="2" value="@newNotes" @oninput="OnNewNotesInput"></textarea>
+        </div>
+    </div>
+</Modal>
+
+@code {
+    private const string ScopeAll = "__all__";
+    private const string ScopeGeneral = "__general__";
+    private const string Unassigned = "__unassigned__";
+
+    private enum StatusFilter { Open, Done, All }
+
+    private bool isLoaded;
+    private bool loading = true;
+    private bool busy;
+    private string? error;
+
+    private IReadOnlyList<TodoItem> items = Array.Empty<TodoItem>();
+    private IReadOnlyList<SearchSelect.Option> assigneeOptions = Array.Empty<SearchSelect.Option>();
+
+    private StatusFilter statusFilter = StatusFilter.Open;
+    private string scopeFilter = ScopeAll;
+    private string assigneeFilter = "";
+
+    // "Add a general to-do" modal state (MD / administrators only).
+    private bool addOpen;
+    private string? addError;
+    private string newTitle = "";
+    private string newNotes = "";
+    private string newAssignee = "";
+    private string newDue = "";
+
+    // Mirrors the API's TodoRoles.AllowedToSeeAllTodos gate: the MD and administrators browse
+    // everything; everyone else reads their own list (ListMyTodoItems).
+    private bool CanSeeAll =>
+        Session.AvailableRoles.Any(role => role is Role.Admin or Role.ManagingDirector);
+
+    // Mirrors the API's JpmsRoleSets.AllInternal — who may read to-dos at all.
+    private bool HasInternalRole =>
+        Session.AvailableRoles.Any(role => role is Role.Admin or Role.ManagingDirector or Role.FinanceDirector
+            or Role.ProjectManager or Role.QuantitySurveyor or Role.SiteManager or Role.HealthSafetyOfficer
+            or Role.OfficeComplianceCoordinator or Role.Foreman);
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Session.EnsureLoadedAsync();
+        if (!Auth.IsSignedIn) { Nav.NavigateTo("/login", forceLoad: true); return; }
+        isLoaded = true;
+        if (!Session.IsApproved || !HasInternalRole) { loading = false; return; }
+
+        await LoadAsync();
+
+        // Project labels for the scope chips/filter, and the assignee pool for the picker/filter.
+        // Either failing degrades the labels, never the list itself.
+        try { if (Projects.Current is null) await Projects.RefreshAsync(CancellationToken.None); } catch { }
+        if (CanSeeAll)
+        {
+            try
+            {
+                assigneeOptions = (await Todos.ListAssigneesAsync())
+                    .Select(user => new SearchSelect.Option(user.Email, $"{user.DisplayName} — {user.Email}"))
+                    .ToList();
+            }
+            catch { }
+        }
+    }
+
+    private async Task LoadAsync()
+    {
+        loading = true;
+        try { items = CanSeeAll ? await Todos.ListAllAsync() : await Todos.ListMineAsync(); }
+        catch { error = "Couldn't load the to-do list. Please try again."; }
+        finally { loading = false; }
+    }
+
+    private IReadOnlyList<TodoItem> VisibleItems =>
+        items
+            .Where(item => statusFilter switch
+            {
+                StatusFilter.Open => !item.IsComplete,
+                StatusFilter.Done => item.IsComplete,
+                _ => true
+            })
+            .Where(item => scopeFilter switch
+            {
+                ScopeAll => true,
+                ScopeGeneral => IsGeneral(item),
+                _ => item.ProjectId == scopeFilter
+            })
+            .Where(item => assigneeFilter switch
+            {
+                "" => true,
+                Unassigned => string.IsNullOrWhiteSpace(item.AssigneeEmail),
+                _ => string.Equals(item.AssigneeEmail, assigneeFilter, StringComparison.OrdinalIgnoreCase)
+            })
+            .ToList();
+
+    // Only projects that actually have items on the current list appear in the scope filter.
+    private IReadOnlyList<Project> ProjectsWithItems
+    {
+        get
+        {
+            var projectIds = items.Select(i => i.ProjectId).Where(id => !string.IsNullOrWhiteSpace(id)).ToHashSet();
+            return (Projects.Current ?? (IReadOnlyList<Project>)Array.Empty<Project>())
+                .Where(p => projectIds.Contains(p.ProjectId))
+                .ToList();
+        }
+    }
+
+    private static bool IsGeneral(TodoItem item) => string.IsNullOrWhiteSpace(item.ProjectId);
+
+    private bool IsMine(TodoItem item) =>
+        string.Equals(item.AssigneeEmail, Auth.CurrentUser?.Email, StringComparison.OrdinalIgnoreCase);
+
+    private string ScopeLabel(TodoItem item)
+    {
+        if (IsGeneral(item)) return "General";
+        var project = (Projects.Current ?? (IReadOnlyList<Project>)Array.Empty<Project>())
+            .FirstOrDefault(p => p.ProjectId == item.ProjectId);
+        return project is null ? "Project" : $"{project.Reference} — {project.Name}";
+    }
+
+    private string StatusTabClass(StatusFilter tab) =>
+        statusFilter == tab
+            ? "btn-primary text-xs px-2.5 py-1.5"
+            : "btn-secondary text-xs px-2.5 py-1.5";
+
+    private void OnNewNotesInput(ChangeEventArgs e) => newNotes = e.Value?.ToString() ?? "";
+
+    private void OpenAdd()
+    {
+        newTitle = newNotes = newAssignee = newDue = "";
+        addError = null;
+        addOpen = true;
+    }
+
+    private void CloseAdd()
+    {
+        addOpen = false;
+        addError = null;
+    }
+
+    private async Task Add()
+    {
+        if (busy) return;
+        if (string.IsNullOrWhiteSpace(newTitle)) { addError = "A title is required."; return; }
+        addError = null;
+        await Run(async () =>
+        {
+            await Todos.AddGeneralAsync(new AddGeneralTodoItem(
+                newTitle.Trim(),
+                NullIfBlank(newNotes),
+                NullIfBlank(newAssignee),
+                ParseDate(newDue)));
+            CloseAdd();
+        });
+        // A failed add leaves the modal open with the page-level error mirrored inside it.
+        if (error is not null && addOpen) addError = error;
+    }
+
+    private async Task ToggleComplete(TodoItem item)
+    {
+        if (busy) return;
+        await Run(() => Todos.UpdateAsync(new UpdateTodoItem(
+            item.TodoItemId,
+            item.Title,
+            NullIfBlank(item.Notes),
+            NullIfBlank(item.AssigneeEmail),
+            item.DueAt,
+            !item.IsComplete)));
+    }
+
+    private async Task Delete(TodoItem item)
+    {
+        if (busy) return;
+        await Run(() => Todos.DeleteAsync(item.TodoItemId));
+    }
+
+    private async Task Run(Func<Task> action)
+    {
+        error = null;
+        try
+        {
+            busy = true;
+            await action();
+            items = PreserveOrder(items, CanSeeAll ? await Todos.ListAllAsync() : await Todos.ListMineAsync());
+        }
+        catch (CommandFailedException ex) { error = ex.Message; }
+        catch { error = "That action didn't complete. Please try again."; }
+        finally { busy = false; }
+    }
+
+    // Keep rows where they are while the user works the list (same rationale as ProjectTodoList):
+    // ticking an item must not re-sort it under the cursor. New items append at the end; the
+    // server's open-first order applies fresh on the next visit.
+    private static IReadOnlyList<TodoItem> PreserveOrder(IReadOnlyList<TodoItem> current, IReadOnlyList<TodoItem> refreshed)
+    {
+        var position = current
+            .Select((item, index) => (item.TodoItemId, index))
+            .ToDictionary(entry => entry.TodoItemId, entry => entry.index);
+        return refreshed
+            .OrderBy(item => position.TryGetValue(item.TodoItemId, out var index) ? index : int.MaxValue)
+            .ToList()
+            .AsReadOnly();
+    }
+
+    private static bool IsOverdue(TodoItem item) =>
+        !item.IsComplete && item.DueAt is not null && item.DueAt.Value < DateTimeOffset.Now.Date;
+
+    private static string? NullIfBlank(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+
+    private static DateTimeOffset? ParseDate(string value) =>
+        DateTimeOffset.TryParse(value, out var parsed) ? parsed : null;
+}

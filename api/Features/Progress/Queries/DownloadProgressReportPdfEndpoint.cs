@@ -94,7 +94,7 @@ public sealed class DownloadProgressReportPdfEndpoint
             }
 
             documentUpdates.Add(new ProgressReportDocumentUpdate(
-                update.Title, update.Description, update.WorkDate, photos));
+                update.Title, update.Description, update.WorkDate, update.ToWeatherModel(), photos));
         }
 
         var model = new ProgressReportDocumentModel(

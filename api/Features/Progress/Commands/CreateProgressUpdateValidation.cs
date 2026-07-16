@@ -18,6 +18,7 @@ public sealed class CreateProgressUpdateValidation
             if (string.IsNullOrWhiteSpace(photo.BlobRef)) errors.Add("Uploaded photo reference is required.");
             if (photo.FileSizeBytes <= 0) errors.Add($"Uploaded photo '{photo.FileName}' is empty.");
         }
+        ProgressWeatherRules.Check(command.Weather, errors);
         if (errors.Count == 0) return ValidationOutcome.Passed;
         return new ValidationOutcome(errors);
     }

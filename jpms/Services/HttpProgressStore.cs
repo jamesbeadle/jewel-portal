@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Net.Http.Headers;
 using Jewel.JPMS.Contracts.Progress;
 using Jewel.JPMS.Cqrs;
@@ -46,12 +47,13 @@ public sealed class HttpProgressStore : IProgressStore
 
     public async Task CreateUpdateAsync(
         string projectId, string title, string description, DateTimeOffset? workDate,
-        IReadOnlyList<IBrowserFile> photos, CancellationToken cancellationToken)
+        ProgressWeather? weather, IReadOnlyList<IBrowserFile> photos, CancellationToken cancellationToken)
     {
         using var content = new MultipartFormDataContent();
         content.Add(new StringContent(title), "title");
         content.Add(new StringContent(description), "description");
         if (workDate is { } date) content.Add(new StringContent(date.ToString("O")), "workDate");
+        AddWeatherFields(content, weather);
         AddFiles(content, photos, cancellationToken);
 
         var response = await httpClient.PostAsync($"api/projects/{projectId}/progress-updates", content, cancellationToken);
@@ -76,9 +78,9 @@ public sealed class HttpProgressStore : IProgressStore
 
     public async Task UpdateUpdateAsync(
         string projectId, string progressUpdateId, string title, string description,
-        DateTimeOffset? workDate, CancellationToken cancellationToken)
+        DateTimeOffset? workDate, ProgressWeather? weather, CancellationToken cancellationToken)
     {
-        await commands.SendAsync(new UpdateProgressUpdate(progressUpdateId, title, description, workDate), cancellationToken);
+        await commands.SendAsync(new UpdateProgressUpdate(progressUpdateId, title, description, workDate, weather), cancellationToken);
         RefreshInBackground(projectId);
     }
 
@@ -123,6 +125,20 @@ public sealed class HttpProgressStore : IProgressStore
     {
         await commands.SendAsync(new DeleteProgressReport(progressReportId), cancellationToken);
         RefreshInBackground(projectId);
+    }
+
+    // Weather values are formatted invariant — the API parses them invariant too, so a site
+    // manager's locale can never change what gets recorded.
+    private static void AddWeatherFields(MultipartFormDataContent content, ProgressWeather? weather)
+    {
+        if (weather is null) return;
+        if (!string.IsNullOrWhiteSpace(weather.Summary)) content.Add(new StringContent(weather.Summary.Trim()), "weatherSummary");
+        if (weather.ObservedAt is { } observedAt) content.Add(new StringContent(observedAt.ToString("O")), "weatherObservedAt");
+        if (weather.TempHighC is { } highC) content.Add(new StringContent(highC.ToString(CultureInfo.InvariantCulture)), "weatherTempHighC");
+        if (weather.TempLowC is { } lowC) content.Add(new StringContent(lowC.ToString(CultureInfo.InvariantCulture)), "weatherTempLowC");
+        if (weather.WindMph is { } windMph) content.Add(new StringContent(windMph.ToString(CultureInfo.InvariantCulture)), "weatherWindMph");
+        if (weather.HumidityPercent is { } humidity) content.Add(new StringContent(humidity.ToString(CultureInfo.InvariantCulture)), "weatherHumidityPercent");
+        if (weather.PrecipInches is { } precip) content.Add(new StringContent(precip.ToString(CultureInfo.InvariantCulture)), "weatherPrecipInches");
     }
 
     private static void AddFiles(MultipartFormDataContent content, IReadOnlyList<IBrowserFile> photos, CancellationToken cancellationToken)

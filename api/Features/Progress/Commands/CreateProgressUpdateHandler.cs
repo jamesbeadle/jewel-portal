@@ -28,6 +28,13 @@ public sealed class CreateProgressUpdateHandler
             Title = command.Title.Trim(),
             Description = command.Description.Trim(),
             WorkDate = command.WorkDate,
+            WeatherSummary = command.Weather?.Summary?.Trim() ?? "",
+            WeatherObservedAt = command.Weather?.ObservedAt,
+            WeatherTempHighC = command.Weather?.TempHighC,
+            WeatherTempLowC = command.Weather?.TempLowC,
+            WeatherWindMph = command.Weather?.WindMph,
+            WeatherHumidityPercent = command.Weather?.HumidityPercent,
+            WeatherPrecipInches = command.Weather?.PrecipInches,
             CreatedByEmail = command.CreatedByEmail,
             CreatedAt = now
         };

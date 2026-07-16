@@ -1,5 +1,6 @@
 using System.Globalization;
 using Jewel.JPMS.Api.Features.Requests.Documents;
+using Jewel.JPMS.Models;
 using MigraDoc.DocumentObjectModel;
 using MigraDoc.DocumentObjectModel.Tables;
 using MigraDoc.Rendering;
@@ -191,10 +192,58 @@ public static class ProgressReportRenderer
                 SpaceAfter(description, 2);
             }
 
+            if (update.Weather is { } weather)
+                AddWeather(section, weather);
+
             AddPhotoGrid(section, update.Photos);
         }
 
         SpaceAfterTable(section);
+    }
+
+    // Weather conditions recorded on site: a summary line with the observation time, then the
+    // figures (°C high/low, wind mph, humidity %, precipitation inches — the units the daily-log
+    // reports have always used). Every part is optional; only what was recorded is printed.
+    private static void AddWeather(Section section, ProgressWeather weather)
+    {
+        var label = section.AddParagraph("Weather conditions");
+        label.Format.Font.Size = 8;
+        label.Format.Font.Bold = true;
+        label.Format.Font.Color = Muted;
+        label.Format.KeepWithNext = true;
+        SpaceAfter(label, 1);
+
+        var summaryParts = new List<string>();
+        if (!string.IsNullOrWhiteSpace(weather.Summary)) summaryParts.Add(weather.Summary.Trim());
+        if (weather.ObservedAt is { } observedAt) summaryParts.Add(observedAt.ToString("ddd, dd MMM yyyy, HH:mm", Uk));
+        if (summaryParts.Count > 0)
+        {
+            var summary = section.AddParagraph(string.Join("    ", summaryParts));
+            summary.Format.Font.Size = 9.5;
+            summary.Format.KeepWithNext = true;
+            SpaceAfter(summary, 1);
+        }
+
+        var figures = new List<string>();
+        var temps = (weather.TempHighC, weather.TempLowC) switch
+        {
+            ({ } highC, { } lowC) => $"{highC}°C / {lowC}°C",
+            ({ } highC, null) => $"{highC}°C",
+            (null, { } lowC) => $"{lowC}°C",
+            _ => null
+        };
+        if (temps is not null) figures.Add(temps);
+        if (weather.WindMph is { } windMph) figures.Add($"Wind {windMph} mph");
+        if (weather.HumidityPercent is { } humidity) figures.Add($"Humidity {humidity}%");
+        if (weather.PrecipInches is { } precip) figures.Add($"Total precip {precip.ToString("0.##", Uk)}\"");
+        if (figures.Count > 0)
+        {
+            var line = section.AddParagraph(string.Join("  ·  ", figures));
+            line.Format.Font.Size = 9;
+            line.Format.Font.Bold = true;
+            line.Format.Font.Color = Navy;
+            SpaceAfter(line, 2);
+        }
     }
 
     // Photos sit two-up in a borderless table; MigraDoc keeps the aspect ratio, so rows grow to

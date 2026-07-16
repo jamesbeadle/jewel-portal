@@ -10,6 +10,7 @@ public sealed class UpdateProgressUpdateValidation
         var errors = new List<string>();
         if (string.IsNullOrWhiteSpace(command.ProgressUpdateId)) errors.Add("ProgressUpdateId is required.");
         if (string.IsNullOrWhiteSpace(command.Title)) errors.Add("A title is required.");
+        ProgressWeatherRules.Check(command.Weather, errors);
         if (errors.Count == 0) return ValidationOutcome.Passed;
         return new ValidationOutcome(errors);
     }

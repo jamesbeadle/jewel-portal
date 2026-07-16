@@ -140,6 +140,11 @@ else
                             <p class="text-sm text-content-muted mb-3">@update.Description</p>
                         }
 
+                        @if (update.Weather is { } weather)
+                        {
+                            <p class="text-xs text-content-subtle mb-3">@WeatherLine(weather)</p>
+                        }
+
                         <div class="flex flex-wrap gap-2">
                             @foreach (var photo in update.Photos)
                             {
@@ -212,6 +217,26 @@ else
         // background reload lands — so navigating back to this tab never shows stale data.
         ProgressStore.Refresh(ProjectId);
         isLoaded = true;
+    }
+
+    // One compact line, only the recorded parts: "Partly cloudy · 17°C / 9°C · Wind 6 mph · …"
+    private static string WeatherLine(ProgressWeather weather)
+    {
+        var parts = new List<string>();
+        if (!string.IsNullOrWhiteSpace(weather.Summary)) parts.Add(weather.Summary);
+        var temps = (weather.TempHighC, weather.TempLowC) switch
+        {
+            ({ } high, { } low) => $"{high}°C / {low}°C",
+            ({ } high, null) => $"{high}°C",
+            (null, { } low) => $"{low}°C",
+            _ => null
+        };
+        if (temps is not null) parts.Add(temps);
+        if (weather.WindMph is { } wind) parts.Add($"Wind {wind} mph");
+        if (weather.HumidityPercent is { } humidity) parts.Add($"Humidity {humidity}%");
+        if (weather.PrecipInches is { } precip) parts.Add($"Precip {precip:0.##}\"");
+        if (weather.ObservedAt is { } observedAt) parts.Add($"observed {observedAt:ddd dd MMM, HH:mm}");
+        return string.Join(" · ", parts);
     }
 
     private static string Period(ProgressReport report) => (report.PeriodStart, report.PeriodEnd) switch

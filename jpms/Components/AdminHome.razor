@@ -10,6 +10,12 @@
     </header>
 
     <AdminStatsRow />
+
+    @* Open to-do items assigned to this administrator — general and project items alike. *@
+    <div class="mb-6">
+        <MyTodosPanel />
+    </div>
+
     <PendingRequestsPanel />
     <ApprovedUsersPanel CurrentUserEmail="@CurrentUser.Email" />
     <WhatsNextPanel />

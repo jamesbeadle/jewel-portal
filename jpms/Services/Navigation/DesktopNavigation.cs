@@ -37,6 +37,10 @@ public static class DesktopNavigation
         Entry("Projects",       "/projects",       Role.ManagingDirector, Role.FinanceDirector, Role.ProjectManager, Role.QuantitySurveyor, Role.SiteManager, Role.HealthSafetyOfficer, Role.OfficeComplianceCoordinator),
         // Mirrors the API's cross-project RFI dashboard gate (RfiDashboardRoles.AllowedToViewDashboard).
         Entry("RFIs",           "/rfis",           Role.ManagingDirector, Role.FinanceDirector, Role.ProjectManager, Role.QuantitySurveyor, Role.SiteManager, Role.HealthSafetyOfficer, Role.OfficeComplianceCoordinator),
+        // The To-dos browser: the MD (and administrators, via the early return above) see every
+        // item; every other internal role sees the items assigned to them. Mirrors the API's
+        // TodoRoles.AllowedToSeeAllTodos / ListMyTodoItems split — the page itself picks the read.
+        Entry("To-dos",         "/todos",          Role.ManagingDirector, Role.FinanceDirector, Role.ProjectManager, Role.QuantitySurveyor, Role.SiteManager, Role.HealthSafetyOfficer, Role.OfficeComplianceCoordinator),
         Entry("Directory",      "/directory",      Role.ManagingDirector),
         Entry("Clients",        "/clients",        Role.ManagingDirector, Role.ProjectManager),
         Entry("Architects",     "/architects",     Role.ManagingDirector, Role.ProjectManager),

@@ -1,3 +1,5 @@
+using Jewel.JPMS.Models;
+
 namespace Jewel.JPMS.Api.Features.Progress.Documents;
 
 /// <summary>
@@ -23,6 +25,7 @@ public sealed record ProgressReportDocumentUpdate(
     string Title,
     string Description,
     DateTimeOffset? WorkDate,
+    ProgressWeather? Weather,
     IReadOnlyList<ProgressReportDocumentPhoto> Photos);
 
 public sealed record ProgressReportDocumentPhoto(byte[] Content);

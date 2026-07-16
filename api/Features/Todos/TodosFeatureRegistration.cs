@@ -15,9 +15,19 @@ public static class TodosFeatureRegistration
         services.AddScoped<IQueryHandler<ListTodoItemsForProject, IReadOnlyList<TodoItem>>, ListTodoItemsForProjectHandler>();
         services.AddScoped<IQueryHandler<ListTodoAssignees, IReadOnlyList<DirectoryUser>>, ListTodoAssigneesHandler>();
 
+        // The To-dos browser + "My to-dos" dashboard panel: the MD / administrators read everything,
+        // everyone else reads the items assigned to them.
+        services.AddScoped<IQueryHandler<ListMyTodoItems, IReadOnlyList<TodoItem>>, ListMyTodoItemsHandler>();
+        services.AddScoped<IQueryHandler<ListAllTodoItems, IReadOnlyList<TodoItem>>, ListAllTodoItemsHandler>();
+
         services.AddScoped<ICommandHandler<AddTodoItem, TodoItem>, AddTodoItemHandler>();
         services.AddScoped<AddTodoItemAuthorisation>();
         services.AddScoped<AddTodoItemValidation>();
+
+        // General (company-wide, no-project) items added directly from the To-dos browser page.
+        services.AddScoped<ICommandHandler<AddGeneralTodoItem, TodoItem>, AddGeneralTodoItemHandler>();
+        services.AddScoped<AddGeneralTodoItemAuthorisation>();
+        services.AddScoped<AddGeneralTodoItemValidation>();
 
         services.AddScoped<ICommandHandler<UpdateTodoItem, TodoItem>, UpdateTodoItemHandler>();
         services.AddScoped<UpdateTodoItemAuthorisation>();

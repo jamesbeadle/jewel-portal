@@ -25,9 +25,11 @@ public sealed class CreateTodoItemsFromMessageEndpoint
         var signedInUser = await users.ResolveAsync(request, request.HttpContext.RequestAborted);
         if (signedInUser is null) return new UnauthorizedResult();
 
+        // ProjectId is optional here: blank means GENERAL (company-wide) items with no project —
+        // the triage "General to-do" path.
         var posted = await request.ReadFromJsonAsync<CreateTodoItemsFromMessage>();
-        if (posted is null || string.IsNullOrWhiteSpace(posted.MessageId) || string.IsNullOrWhiteSpace(posted.ProjectId))
-            return new BadRequestObjectResult("messageId and projectId are required.");
+        if (posted is null || string.IsNullOrWhiteSpace(posted.MessageId))
+            return new BadRequestObjectResult("messageId is required.");
 
         // The creator is always the signed-in user — never trusted from the client body.
         var command = posted with { CreatedByEmail = signedInUser.Email };

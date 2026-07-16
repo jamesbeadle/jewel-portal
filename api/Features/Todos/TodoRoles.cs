@@ -15,6 +15,14 @@ internal static class TodoRoles
             JpmsRoles.ProjectManager,
             JpmsRoles.SiteManager);
 
+    // Who sees EVERY to-do item in the To-dos browser (and may add/manage general, no-project
+    // items there): the managing director and administrators only. Everyone else reads their own
+    // assigned items through ListMyTodoItems.
+    public static readonly RoleSet AllowedToSeeAllTodos =
+        RoleSet.Of(
+            Role.Admin,
+            JpmsRoles.Director);
+
     // Who a to-do can be *assigned to*: internal office/management staff. Deliberately narrower
     // than JpmsRoleSets.AllInternal — besides the external roles (Architect, Client,
     // Subcontractor) it also excludes Foreman and SiteOperative, who work the site rather than

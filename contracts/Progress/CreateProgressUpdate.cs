@@ -15,6 +15,7 @@ public sealed record CreateProgressUpdate(
     string Title,
     string Description,
     DateTimeOffset? WorkDate,
+    ProgressWeather? Weather,
     string CreatedByEmail,
     IReadOnlyList<NewProgressPhoto> Photos) : ICommand<ProgressUpdate>;
 

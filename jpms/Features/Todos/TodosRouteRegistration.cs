@@ -19,9 +19,22 @@ public static class TodosRouteRegistration
         queries.Register<ListTodoAssignees, IReadOnlyList<DirectoryUser>>(
             QueryRoute.Static("/api/todo-assignees"));
 
+        // The signed-in user's own items (assignee stamped server-side) — dashboard panel + the
+        // browser for non-admin roles.
+        queries.Register<ListMyTodoItems, IReadOnlyList<TodoItem>>(
+            QueryRoute.Static("/api/my/todos"));
+
+        // Every item in the system — the MD's / administrators' To-dos browser read.
+        queries.Register<ListAllTodoItems, IReadOnlyList<TodoItem>>(
+            QueryRoute.Static("/api/todos"));
+
         commands.Register<AddTodoItem, TodoItem>(
             new CommandRoute("POST", "/api/projects/{projectId}/todos",
                 command => $"/api/projects/{((AddTodoItem)command).ProjectId}/todos"));
+
+        // General (company-wide, no-project) items added directly from the /todos browser page.
+        commands.Register<AddGeneralTodoItem, TodoItem>(
+            new CommandRoute("POST", "/api/todos", _ => "/api/todos"));
 
         commands.Register<UpdateTodoItem, TodoItem>(
             new CommandRoute("PUT", "/api/todo-items/{todoItemId}",

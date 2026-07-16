@@ -21,6 +21,14 @@ public sealed class UpdateProgressUpdateHandler
         update.Title = command.Title.Trim();
         update.Description = command.Description.Trim();
         update.WorkDate = command.WorkDate;
+        // A null Weather clears the recorded conditions — the command carries the full new state.
+        update.WeatherSummary = command.Weather?.Summary?.Trim() ?? "";
+        update.WeatherObservedAt = command.Weather?.ObservedAt;
+        update.WeatherTempHighC = command.Weather?.TempHighC;
+        update.WeatherTempLowC = command.Weather?.TempLowC;
+        update.WeatherWindMph = command.Weather?.WindMph;
+        update.WeatherHumidityPercent = command.Weather?.HumidityPercent;
+        update.WeatherPrecipInches = command.Weather?.PrecipInches;
         await context.SaveChangesAsync(cancellationToken);
 
         var photos = await context.ProgressPhotos

@@ -10,9 +10,24 @@ public sealed record ProgressUpdate(
     string Title,
     string Description,
     DateTimeOffset? WorkDate,
+    ProgressWeather? Weather,
     string CreatedByEmail,
     DateTimeOffset CreatedAt,
     IReadOnlyList<ProgressPhoto> Photos);
+
+/// <summary>
+/// Weather conditions on site for a progress update, entered manually by the site manager.
+/// Units follow the client-facing report convention: temperatures in °C, wind in mph,
+/// precipitation in inches. Every field is optional; null on the update means nothing recorded.
+/// </summary>
+public sealed record ProgressWeather(
+    string Summary,
+    DateTimeOffset? ObservedAt,
+    int? TempHighC,
+    int? TempLowC,
+    int? WindMph,
+    int? HumidityPercent,
+    decimal? PrecipInches);
 
 public sealed record ProgressPhoto(
     string ProgressPhotoId,
