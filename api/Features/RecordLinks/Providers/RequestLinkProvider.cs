@@ -35,9 +35,35 @@ public sealed class RequestLinkProvider : ILinkableRecordProvider
         // if a late reply genuinely belongs to it.
         var entities = await context.Requests.AsNoTracking()
             .Where(r => r.ProjectId == projectId && r.Status != (int)RequestStatus.Closed)
-            .OrderByDescending(r => r.RaisedAt)
             .ToListAsync(ct);
-        return entities.Select(e => ToLinkable(e, projectRef)).ToList().AsReadOnly();
+        // Pickers read in reference order — the same ordering as the project's Requests register
+        // (ProjectRequests.razor): references grouped by prefix (NOD, REQ, RFI, …) with numbers
+        // ascending within each group, so the REQ-#### run comes first and the RFI block matches
+        // the RFI register order. Sorted here so every consumer of the list (the triage Link panel
+        // and the To-do form's request-link dropdown) agrees.
+        return entities.Select(e => ToLinkable(e, projectRef))
+            .OrderBy(r => ReferenceKey(r.Reference).Prefix, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(r => ReferenceKey(r.Reference).Number)
+            .ThenBy(r => r.Reference, StringComparer.OrdinalIgnoreCase)
+            .ToList().AsReadOnly();
+    }
+
+    // Mirrors ProjectRequests.razor's ReferenceKey: the number is parsed rather than
+    // string-compared so unpadded or suffixed references (RFI-49, RFI-049A, RFI-1000) still land
+    // in numeric order; free-text or blank references sort after the numbered run.
+    private static (string Prefix, int Number) ReferenceKey(string? reference)
+    {
+        var raw = (reference ?? "").Trim();
+        if (raw.Length == 0) return ("\uFFFF", int.MaxValue); // blanks last
+
+        var dash = raw.IndexOf('-');
+        if (dash > 0)
+        {
+            var digits = new string(raw[(dash + 1)..].TakeWhile(char.IsDigit).ToArray());
+            if (int.TryParse(digits, out var number))
+                return (raw[..dash], number);
+        }
+        return (raw, int.MaxValue); // unnumbered free text after numbered refs
     }
 
     public async Task<LinkableRecord?> FindAsync(string recordId, CancellationToken ct)
