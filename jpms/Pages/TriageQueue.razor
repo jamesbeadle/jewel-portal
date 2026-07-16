@@ -767,8 +767,8 @@ else
                                                     </div>
 
                                                     <div>
-                                                        <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Notes</label>
-                                                        <textarea class="field" rows="2" value="@row.Notes" @oninput="e => OnTodoNotesInput(row, e)"></textarea>
+                                                        <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Detail</label>
+                                                        <textarea class="field" rows="6" value="@row.Notes" @oninput="e => OnTodoNotesInput(row, e)"></textarea>
                                                     </div>
                                                 </div>
                                             }
@@ -1301,9 +1301,9 @@ else
     private string replyBody = "";
     private ReplyInThreadOutcome? replyOutcome;
 
-    // To-do create rows: one per item to capture from this email (the form starts with a single row
-    // pre-filled from the subject; "+ Add another item" appends more). Class instances so the Blazor
-    // input lambdas mutate the row in place.
+    // To-do create rows: one per item to capture from this email (the form starts with a single
+    // blank row; "+ Add another item" appends more). Class instances so the Blazor input lambdas
+    // mutate the row in place. `Notes` is the stored field name; the form labels it "Detail".
     private sealed class TodoDraftRow
     {
         public string Title { get; set; } = "";
@@ -1559,7 +1559,7 @@ else
         finally { busy = false; }
     }
 
-    // Point the detail pane at an email: set the selection and prefill the create forms. Loading
+    // Point the detail pane at an email: set the selection and reset the create forms. Loading
     // the body and thread is the caller's job — Select does both; the jump-to-latest inside
     // LoadThreadAsync reuses this directly so it doesn't re-fetch the thread it already has.
     private void ApplySelection(MailboxMessage item)
@@ -1579,8 +1579,11 @@ else
         replyBody = "";
         createRecordType = RecordType.Request;
         createProjectId = "";
-        createTitle = item.Subject;
-        createDescription = item.BodyPreview;
+        // Deliberately blank rather than copied from the email — the subject/body of the email is
+        // rarely the right subject/detail for the record, so the triager writes their own (the
+        // "Suggest an action" flow can still fill these, but only on an explicit click).
+        createTitle = "";
+        createDescription = "";
         createRaisedTo = createDrawingRef = createResponseDue = "";
         createTrade = "";
         createTodoRows = new List<TodoDraftRow> { new() };
