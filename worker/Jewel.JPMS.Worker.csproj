@@ -38,6 +38,8 @@
     <Compile Include="..\api\Features\Requests\RequestsIdentifierFactory.cs" Link="Shared\RequestsIdentifierFactory.cs" />
     <Compile Include="..\api\Features\MailboxIntake\MailboxIntakeOptions.cs" Link="Shared\MailboxIntakeOptions.cs" />
     <Compile Include="..\api\Features\MailboxIntake\Queue\MailboxQueues.cs" Link="Shared\MailboxQueues.cs" />
+    <!-- The outbound draft is stamped with the same triage marker/tag stems the API filters on. -->
+    <Compile Include="..\api\Features\MailboxIntake\Graph\TriageCategories.cs" Link="Shared\TriageCategories.cs" />
     <Compile Include="..\api\Features\MailboxIntake\Queue\IMailboxQueue.cs" Link="Shared\IMailboxQueue.cs" />
     <Compile Include="..\api\Features\MailboxIntake\Queue\StorageMailboxQueue.cs" Link="Shared\StorageMailboxQueue.cs" />
     <Compile Include="..\api\Features\MailboxIntake\Queue\NullMailboxQueue.cs" Link="Shared\NullMailboxQueue.cs" />
