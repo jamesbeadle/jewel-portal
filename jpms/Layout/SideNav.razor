@@ -28,7 +28,7 @@
             {
                 <li>
                     <a href="@item.Href" @onclick="HandleNavigate" @onclick:preventDefault="false"
-                       class="@LinkClassFor(item.Href)" title="@item.Label">
+                       class="@LinkClassFor(item)" title="@item.Label">
                         <NavIcon Route="@item.Href" Class="w-5 h-5 shrink-0" />
                         <span class="@LabelClass">@item.Label</span>
                     </a>
@@ -93,10 +93,12 @@
         Labour.OnChange += StateHasChanged;
     }
 
-    private string LinkClassFor(string href)
+    private string LinkClassFor(NavigationItem item)
     {
         var current = new Uri(Nav.Uri).AbsolutePath;
-        var isActive = current == href || current.StartsWith(href + "/");
+        // Grouped entries (Financials / Project Management / Operations) stay lit across every
+        // page folded into them, via the item's match prefixes.
+        var isActive = item.IsActiveFor(current);
         var layout = IsExpanded ? "md:justify-start" : "";
         var baseClass = $"flex items-center gap-3 justify-center {layout} px-3 py-2 rounded-lg text-sm transition";
         if (isActive) return $"{baseClass} text-content font-semibold";

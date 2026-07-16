@@ -1,61 +1,51 @@
-<nav class="border-b border-line mb-6 overflow-x-auto">
-    <ul class="flex items-center gap-1 text-sm whitespace-nowrap">
-        @foreach (var tab in Tabs)
-        {
-            <li>
-                @if (tab.Enabled)
+@using Jewel.JPMS.Services.Navigation
+
+@*
+    Section-aware replacement for the old flat 15-tab bar. Row one switches between the three
+    project sections (Financials / Project Management / Operations); row two shows only the
+    active section's tabs. The project landing page (/projects/{id}) renders the section cards
+    instead — ProjectPageShell skips this nav entirely when ActiveTab is empty.
+*@
+
+@if (Active is not null)
+{
+    <div class="mb-6">
+        <nav class="flex items-center gap-1 mb-2 text-sm" aria-label="Project sections">
+            @foreach (var sectionInfo in ProjectSections.All)
+            {
+                <a href="@ProjectSections.FirstTabHref(ProjectId, sectionInfo)"
+                   class="@SectionClassFor(sectionInfo)">@sectionInfo.Label</a>
+            }
+        </nav>
+
+        <nav class="border-b border-line overflow-x-auto" aria-label="@Active.Label tabs">
+            <ul class="flex items-center gap-1 text-sm whitespace-nowrap">
+                @foreach (var tab in Active.Tabs)
                 {
-                    <a href="@HrefFor(tab.Slug)" class="@ClassFor(tab.Slug)">@tab.Label</a>
+                    <li><a href="@ProjectSections.HrefFor(ProjectId, tab.Slug)" class="@TabClassFor(tab.Slug)">@tab.Label</a></li>
                 }
-                else
-                {
-                    <span class="@DisabledClass" title="Coming soon" aria-disabled="true">@tab.Label</span>
-                }
-            </li>
-        }
-    </ul>
-</nav>
+            </ul>
+        </nav>
+    </div>
+}
 
 @code {
     [Parameter, EditorRequired] public string ProjectId { get; set; } = "";
-    [Parameter, EditorRequired] public string ActiveTab { get; set; } = "financials";
+    [Parameter, EditorRequired] public string ActiveTab { get; set; } = "";
 
-    private record Tab(string Slug, string Label, bool Enabled);
+    private ProjectSectionInfo? Active => ProjectSections.SectionForTab(ActiveTab);
 
-    // Removed tabs (BoQ, Procurement, Mobilisation, H&S, Site, Commercial, Close-out) will be
-    // reintroduced here once their functionality is fully scoped.
-    // Financials leads — it's the project landing tab (/projects/{id} redirects to it). The middle
-    // tabs follow the commercial flow: requests raise variations, drawings drive change detection,
-    // cost centre line items group by trade into bid packages whose winners become work orders, and
-    // the valuation report rolls it up (it also carries valuation invoices — the old Cash Calls
-    // tab). Setup — correspondence and project details, formerly on the Overview tab — sits after
-    // the flow, and Communications — every email tagged to one of this project's records — sits
-    // last as the cross-cutting reference view.
-    private static readonly Tab[] Tabs =
+    private string SectionClassFor(ProjectSectionInfo section)
     {
-        new("financials",          "Financials",          true),
-        new("cashflow",            "Cashflow",            true),
-        new("todos",               "To-do",               true),
-        new("requests",            "Requests",            true),
-        new("variations",          "Variations",          true),
-        new("drawings",            "Drawings",            true),
-        new("bid-package-invites", "Bid Package Invites", true),
-        new("work-orders",         "Work Orders",         true),
-        new("work-order-allocation", "WO Allocation",     true),
-        new("valuation",           "Valuation Report",    true),
-        new("labour",              "Labour",              true),
-        new("programme",           "Programme",           true),
-        new("progress",            "Progress",            true),
-        new("setup",               "Setup",               true),
-        new("communications",      "Communications",      true)
-    };
+        var isActive = Active?.Section == section.Section;
+        if (isActive)
+        {
+            return "inline-flex items-center px-3 py-1.5 rounded-full bg-surface-raised text-content font-semibold";
+        }
+        return "inline-flex items-center px-3 py-1.5 rounded-full text-content-subtle font-medium hover:text-content hover:bg-surface-raised";
+    }
 
-    private string HrefFor(string slug) => $"/projects/{ProjectId}/{slug}";
-
-    private const string DisabledClass =
-        "inline-block px-3 py-2 border-b-2 border-transparent text-content-subtle/40 cursor-not-allowed select-none";
-
-    private string ClassFor(string slug)
+    private string TabClassFor(string slug)
     {
         var isActive = slug == ActiveTab;
         if (isActive)

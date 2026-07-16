@@ -9,9 +9,10 @@
 <PageTitle>Setup · JPMS</PageTitle>
 
 @*
-    The project's Setup tab — the configuration pieces of the retired Overview tab. Deliberately
-    last in the tab nav: project details (stage / entity / project manager, plus the Edit details
-    editor) and the correspondence profile that routes every document the project issues.
+    The Project Management section's Setup tab — the project's identity and stage banner:
+    stage / entity / project manager, plus the Edit details editor. The old catch-all Setup
+    tab's other panels moved with their sections: retention and the next valuation date to
+    Financials → Setup, the correspondence profile to Operations → Setup.
 *@
 
 @if (!isLoaded)
@@ -31,16 +32,11 @@ else
                 <ProjectDetailsEditor ProjectId="@ProjectId" />
             </div>
 
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 mb-6">
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4 mb-6">
                 <Stat Label="Stage"           Value="@Project.Stage.DisplayName()" />
                 <Stat Label="Entity"          Value="@Project.Organisation.ShortCode()" />
                 <Stat Label="Project Manager" Value="@Project.ProjectManagerEmail" />
-                <NextValuationDateEditor ProjectId="@ProjectId" />
             </div>
-
-            <ProjectRetentionPanel ProjectId="@ProjectId" />
-
-            <ProjectCorrespondencePanel ProjectId="@ProjectId" />
         }
     </ProjectPageShell>
 }

@@ -1,0 +1,48 @@
+@using Jewel.JPMS.Services.Navigation
+@inject NavigationManager Nav
+@inject SessionService Session
+@implements IDisposable
+
+@*
+    The workspace-level twin of ProjectTabNav's tab row: on any page folded into a side-nav
+    section (Financials / Project Management / Operations), renders that section's tab row so
+    the pages read as one area. Tabs are filtered by the active role using the same lists the
+    pages had as standalone side-nav entries. Renders nothing on pages outside a section.
+*@
+
+@if (Section is not null && VisibleTabs.Count > 1)
+{
+    <nav class="border-b border-line mb-6 overflow-x-auto" aria-label="@Section.Label tabs">
+        <ul class="flex items-center gap-1 text-sm whitespace-nowrap">
+            @foreach (var tab in VisibleTabs)
+            {
+                <li><a href="@tab.Href" class="@ClassFor(tab)">@tab.Label</a></li>
+            }
+        </ul>
+    </nav>
+}
+
+@code {
+    private string CurrentPath => new Uri(Nav.Uri).AbsolutePath;
+
+    private WorkspaceSectionInfo? Section => WorkspaceSections.SectionOwning(CurrentPath);
+
+    private IReadOnlyList<WorkspaceTab> VisibleTabs =>
+        Session.ActiveRole is { } role && Section is { } section
+            ? section.TabsVisibleTo(role)
+            : Array.Empty<WorkspaceTab>();
+
+    private string ClassFor(WorkspaceTab tab)
+    {
+        var isActive = Section?.BestMatch(CurrentPath) == tab;
+        if (isActive)
+        {
+            return "inline-block px-3 py-2 border-b-2 border-accent text-content font-medium";
+        }
+        return "inline-block px-3 py-2 border-b-2 border-transparent text-content-subtle hover:text-content hover:border-line-strong";
+    }
+
+    protected override void OnInitialized() => Session.OnChange += StateHasChanged;
+
+    public void Dispose() => Session.OnChange -= StateHasChanged;
+}

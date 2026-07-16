@@ -63,7 +63,8 @@ else
 
 @code {
     [Parameter, EditorRequired] public string ProjectId { get; set; } = "";
-    [Parameter, EditorRequired] public string ActiveTab { get; set; } = "financials";
+    // Empty on the project landing page (the section cards) — ProjectTabNav renders nothing there.
+    [Parameter] public string ActiveTab { get; set; } = "";
     [Parameter] public RenderFragment? ChildContent { get; set; }
 
     private Project? Project => Projects.Find(ProjectId);
@@ -91,7 +92,9 @@ else
     }
 
     private void GoTo(Project project) =>
-        Nav.NavigateTo($"/projects/{project.ProjectId}/{ActiveTab}");
+        Nav.NavigateTo(string.IsNullOrEmpty(ActiveTab)
+            ? $"/projects/{project.ProjectId}"
+            : $"/projects/{project.ProjectId}/{ActiveTab}");
 
     protected override async Task OnInitializedAsync()
     {

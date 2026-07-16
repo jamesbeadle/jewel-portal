@@ -19,8 +19,10 @@
     }
 
     private string? MatchedLabel(string path) =>
+        // IsActiveFor covers grouped entries' folded pages too (e.g. /rfis and /requests/triage
+        // both title as "Project Management"). Longest href wins where entries could overlap.
         NavigationCatalog.ItemsFor(Session.ActiveRole!.Value)
-            .Where(item => path == item.Href || path.StartsWith(item.Href + "/"))
+            .Where(item => item.IsActiveFor(path))
             .OrderByDescending(item => item.Href.Length)
             .Select(item => item.Label)
             .FirstOrDefault();

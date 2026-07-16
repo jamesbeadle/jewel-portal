@@ -1,0 +1,205 @@
+@page "/finance"
+@using Jewel.JPMS.Features.Commercial
+@using Jewel.JPMS.Features.Projects
+@inject AuthService Auth
+@inject SessionService Session
+@inject ProjectListReadModel Projects
+@inject ProjectFinancialSummaryReadModel Summary
+@inject NavigationManager Nav
+@implements IDisposable
+
+<PageTitle>Financials · JPMS</PageTitle>
+
+@*
+    The Financials section's landing page — the company-wide view. One row per active project
+    (each project's per-cost-centre financial summary rolled up to headline figures) plus an
+    all-projects total, filterable to a single project. Row-level detail stays on the project's
+    own Financials tab — each row links straight to it. Allocation, Xero, Cost codes and Rates
+    sit alongside as tabs of this section.
+*@
+
+@if (!isLoaded)
+{
+    <section class="px-6 md:px-8 py-12 text-content-subtle text-sm">Loading…</section>
+}
+else if (!Session.IsApproved)
+{
+    <RequestAccessView Email="@Auth.CurrentUser!.Email" DisplayName="@Auth.CurrentUser.DisplayName" />
+}
+else
+{
+    <section class="px-6 md:px-8 py-8 md:py-12">
+        <WorkspaceSectionNav />
+        <header class="mb-6 md:mb-8 flex items-end justify-between gap-4">
+            <div>
+                <p class="text-xs uppercase tracking-wider text-content-subtle font-medium mb-1">JPMS · Finance</p>
+                <h1 class="text-2xl md:text-3xl font-semibold text-content leading-tight">Financials</h1>
+                <p class="text-sm text-content-muted mt-2">
+                    Every active project's financial position at a glance — sales, claimed to date and cost —
+                    with the all-projects total. Open a project for its full cost-centre breakdown.
+                </p>
+            </div>
+            <div class="flex items-center gap-2">
+                <label for="finance-project" class="text-sm text-content-subtle whitespace-nowrap">Project</label>
+                <select id="finance-project" class="field w-56" value="@selectedProjectId" @onchange="OnProjectFilterChanged">
+                    <option value="">All projects</option>
+                    @foreach (var project in ActiveProjects)
+                    {
+                        <option value="@project.ProjectId">@project.Reference · @project.Name</option>
+                    }
+                </select>
+            </div>
+        </header>
+
+        @if (!summariesLoaded)
+        {
+            <JewelSpinner Class="py-16" Label="Loading project financials" />
+        }
+        else if (VisibleProjects.Count == 0)
+        {
+            <div class="panel p-8 text-center">
+                <p class="text-sm text-content">No active projects.</p>
+            </div>
+        }
+        else
+        {
+            @if (failedProjects.Count > 0)
+            {
+                <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-4">
+                    The summary could not be loaded for @string.Join(", ", failedProjects) — those rows show zeros.
+                    <button type="button" class="underline underline-offset-2 ml-1" @onclick="RefreshSummariesAsync">Retry</button>
+                </p>
+            }
+
+            <div class="rounded-xl border border-line bg-surface overflow-x-auto">
+                <table class="w-full text-sm border-collapse">
+                    <thead class="bg-surface-raised border-b border-line">
+                        <tr class="text-left text-[11px] uppercase tracking-wider text-content-subtle font-semibold">
+                            <th class="px-4 py-3 min-w-[220px]">Project</th>
+                            <th class="px-4 py-3 text-right whitespace-nowrap">Contract Sales Value</th>
+                            <th class="px-4 py-3 text-right whitespace-nowrap">Claimed To Date</th>
+                            <th class="px-4 py-3 text-right whitespace-nowrap border-l border-line">Target Cost Value</th>
+                            <th class="px-4 py-3 text-right whitespace-nowrap">Actual Cost of Sales</th>
+                            <th class="px-4 py-3 text-right whitespace-nowrap" title="Expected actual cost at current completion minus actual cost — positive is under.">Under / Over</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-line">
+                        @foreach (var project in VisibleProjects)
+                        {
+                            var figures = FiguresFor(project.ProjectId);
+                            <tr>
+                                <td class="px-4 py-3 whitespace-nowrap">
+                                    <a href="@($"/projects/{project.ProjectId}/financials")" class="hover:underline underline-offset-4">
+                                        <span class="font-mono text-[11px] text-content-subtle mr-2">@project.Reference</span>
+                                        <span class="text-content font-medium">@project.Name</span>
+                                    </a>
+                                </td>
+                                <td class="px-4 py-3 text-right whitespace-nowrap text-content">@Money(figures.Sales)</td>
+                                <td class="px-4 py-3 text-right whitespace-nowrap text-content">@Money(figures.Claimed)</td>
+                                <td class="px-4 py-3 text-right whitespace-nowrap text-content border-l border-line">@Money(figures.TargetCost)</td>
+                                <td class="px-4 py-3 text-right whitespace-nowrap text-content">@Money(figures.ActualCost)</td>
+                                <td class="px-4 py-3 text-right whitespace-nowrap @(figures.UnderOver < 0 ? "text-negative" : "text-positive")">@Money(figures.UnderOver)</td>
+                            </tr>
+                        }
+                    </tbody>
+                    @if (selectedProjectId == "" && VisibleProjects.Count > 1)
+                    {
+                        var total = Totals();
+                        <tfoot class="border-t border-line bg-surface-raised">
+                            <tr class="font-semibold">
+                                <td class="px-4 py-3 text-content">All projects</td>
+                                <td class="px-4 py-3 text-right whitespace-nowrap text-content">@Money(total.Sales)</td>
+                                <td class="px-4 py-3 text-right whitespace-nowrap text-content">@Money(total.Claimed)</td>
+                                <td class="px-4 py-3 text-right whitespace-nowrap text-content border-l border-line">@Money(total.TargetCost)</td>
+                                <td class="px-4 py-3 text-right whitespace-nowrap text-content">@Money(total.ActualCost)</td>
+                                <td class="px-4 py-3 text-right whitespace-nowrap @(total.UnderOver < 0 ? "text-negative" : "text-positive")">@Money(total.UnderOver)</td>
+                            </tr>
+                        </tfoot>
+                    }
+                </table>
+            </div>
+        }
+    </section>
+}
+
+@code {
+    private bool isLoaded;
+    private bool summariesLoaded;
+    private string selectedProjectId = "";
+    private readonly List<string> failedProjects = new();
+
+    private record Figures(decimal Sales, decimal Claimed, decimal TargetCost, decimal ActualCost, decimal UnderOver);
+
+    // The overview covers active (non-Completed) projects, ordered by reference — the same cycle
+    // as the project header's prev/next arrows.
+    private List<Project> ActiveProjects =>
+        (Projects.Current ?? (IReadOnlyList<Project>)Array.Empty<Project>())
+            .Where(project => project.Stage != ProjectStage.Completed)
+            .OrderBy(project => project.Reference, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+    private List<Project> VisibleProjects =>
+        selectedProjectId == ""
+            ? ActiveProjects
+            : ActiveProjects.Where(project => project.ProjectId == selectedProjectId).ToList();
+
+    private Figures FiguresFor(string projectId)
+    {
+        var rows = Summary.Current(projectId);
+        return new Figures(
+            rows.Sum(row => row.BudgetedSales),
+            rows.Sum(row => row.ClaimedToDate),
+            rows.Sum(row => row.BudgetedCost),
+            rows.Sum(row => row.ActualCost),
+            rows.Sum(row => row.UnderOverExpected));
+    }
+
+    private Figures Totals()
+    {
+        var all = VisibleProjects.Select(project => FiguresFor(project.ProjectId)).ToList();
+        return new Figures(
+            all.Sum(f => f.Sales),
+            all.Sum(f => f.Claimed),
+            all.Sum(f => f.TargetCost),
+            all.Sum(f => f.ActualCost),
+            all.Sum(f => f.UnderOver));
+    }
+
+    private static string Money(decimal value) => $"£{value:N0}";
+
+    private void OnProjectFilterChanged(ChangeEventArgs args) =>
+        selectedProjectId = args.Value?.ToString() ?? "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Session.EnsureLoadedAsync();
+        if (!Auth.IsSignedIn) { Nav.NavigateTo("/login", forceLoad: true); return; }
+        Projects.OnChanged += StateHasChanged;
+        Summary.OnChanged += StateHasChanged;
+        if (Projects.Current is null) await Projects.RefreshAsync(CancellationToken.None);
+        isLoaded = true;
+        await RefreshSummariesAsync();
+    }
+
+    private async Task RefreshSummariesAsync()
+    {
+        summariesLoaded = false;
+        failedProjects.Clear();
+        // One summary call per active project, concurrently; the read model records failures
+        // per project so a single bad fetch degrades to a zero row with the banner above.
+        var projects = ActiveProjects;
+        await Task.WhenAll(projects.Select(project => Summary.RefreshAsync(project.ProjectId, CancellationToken.None)));
+        foreach (var project in projects.Where(project => Summary.LastRefreshFailed(project.ProjectId)))
+        {
+            failedProjects.Add(project.Reference);
+        }
+        summariesLoaded = true;
+        StateHasChanged();
+    }
+
+    public void Dispose()
+    {
+        Projects.OnChanged -= StateHasChanged;
+        Summary.OnChanged -= StateHasChanged;
+    }
+}
