@@ -1,32 +1,22 @@
 @using Jewel.JPMS.Services.Navigation
 
 @*
-    Section-aware replacement for the old flat 15-tab bar. Row one switches between the three
-    project sections (Financials / Project Management / Operations); row two shows only the
-    active section's tabs. The project landing page (/projects/{id}) renders the section cards
-    instead — ProjectPageShell skips this nav entirely when ActiveTab is empty.
+    The active section's tab row — the only navigation the project view renders. Switching
+    section (Financials / Project Management / Operations) happens in the side nav, whose grouped
+    entries follow the last-viewed project; the project landing page (/projects/{id}) shows the
+    section cards instead. Renders nothing when ActiveTab is empty (the landing page).
 *@
 
 @if (Active is not null)
 {
-    <div class="mb-6">
-        <nav class="flex items-center gap-1 mb-2 text-sm" aria-label="Project sections">
-            @foreach (var sectionInfo in ProjectSections.All)
+    <nav class="border-b border-line mb-6 overflow-x-auto" aria-label="@Active.Label tabs">
+        <ul class="flex items-center gap-1 text-sm whitespace-nowrap">
+            @foreach (var tab in Active.Tabs)
             {
-                <a href="@ProjectSections.FirstTabHref(ProjectId, sectionInfo)"
-                   class="@SectionClassFor(sectionInfo)">@sectionInfo.Label</a>
+                <li><a href="@ProjectSections.HrefFor(ProjectId, tab)" class="@TabClassFor(tab.Slug)">@tab.Label</a></li>
             }
-        </nav>
-
-        <nav class="border-b border-line overflow-x-auto" aria-label="@Active.Label tabs">
-            <ul class="flex items-center gap-1 text-sm whitespace-nowrap">
-                @foreach (var tab in Active.Tabs)
-                {
-                    <li><a href="@ProjectSections.HrefFor(ProjectId, tab.Slug)" class="@TabClassFor(tab.Slug)">@tab.Label</a></li>
-                }
-            </ul>
-        </nav>
-    </div>
+        </ul>
+    </nav>
 }
 
 @code {
@@ -34,16 +24,6 @@
     [Parameter, EditorRequired] public string ActiveTab { get; set; } = "";
 
     private ProjectSectionInfo? Active => ProjectSections.SectionForTab(ActiveTab);
-
-    private string SectionClassFor(ProjectSectionInfo section)
-    {
-        var isActive = Active?.Section == section.Section;
-        if (isActive)
-        {
-            return "inline-flex items-center px-3 py-1.5 rounded-full bg-surface-raised text-content font-semibold";
-        }
-        return "inline-flex items-center px-3 py-1.5 rounded-full text-content-subtle font-medium hover:text-content hover:bg-surface-raised";
-    }
 
     private string TabClassFor(string slug)
     {

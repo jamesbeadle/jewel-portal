@@ -1,21 +1,22 @@
 @page "/finance"
 @using Jewel.JPMS.Features.Commercial
 @using Jewel.JPMS.Features.Projects
+@using Jewel.JPMS.Services.Navigation
 @inject AuthService Auth
 @inject SessionService Session
 @inject ProjectListReadModel Projects
 @inject ProjectFinancialSummaryReadModel Summary
+@inject CurrentProjectService CurrentProject
 @inject NavigationManager Nav
 @implements IDisposable
 
-<PageTitle>Financials · JPMS</PageTitle>
+<PageTitle>All projects · Financials · JPMS</PageTitle>
 
 @*
-    The Financials section's landing page — the company-wide view. One row per active project
-    (each project's per-cost-centre financial summary rolled up to headline figures) plus an
-    all-projects total, filterable to a single project. Row-level detail stays on the project's
-    own Financials tab — each row links straight to it. Allocation, Xero, Cost codes and Rates
-    sit alongside as tabs of this section.
+    The company-wide financials view — the "All projects" tab of the Financials tab row. One row
+    per active project (each project's per-cost-centre financial summary rolled up to headline
+    figures) plus the all-projects total; each row links into that project's Financials tab for
+    the full breakdown. The sibling tabs are project-scoped and follow the last-viewed project.
 *@
 
 @if (!isLoaded)
@@ -29,33 +30,24 @@ else if (!Session.IsApproved)
 else
 {
     <section class="px-6 md:px-8 py-8 md:py-12">
-        <WorkspaceSectionNav />
-        <header class="mb-6 md:mb-8 flex items-end justify-between gap-4">
-            <div>
-                <p class="text-xs uppercase tracking-wider text-content-subtle font-medium mb-1">JPMS · Finance</p>
-                <h1 class="text-2xl md:text-3xl font-semibold text-content leading-tight">Financials</h1>
-                <p class="text-sm text-content-muted mt-2">
-                    Every active project's financial position at a glance — sales, claimed to date and cost —
-                    with the all-projects total. Open a project for its full cost-centre breakdown.
-                </p>
-            </div>
-            <div class="flex items-center gap-2">
-                <label for="finance-project" class="text-sm text-content-subtle whitespace-nowrap">Project</label>
-                <select id="finance-project" class="field w-56" value="@selectedProjectId" @onchange="OnProjectFilterChanged">
-                    <option value="">All projects</option>
-                    @foreach (var project in ActiveProjects)
-                    {
-                        <option value="@project.ProjectId">@project.Reference · @project.Name</option>
-                    }
-                </select>
-            </div>
+        <header class="mb-4">
+            <p class="text-xs uppercase tracking-wider text-content-subtle font-medium mb-1">JPMS · Financials</p>
+            <h1 class="text-2xl md:text-3xl font-semibold text-content leading-tight">All projects</h1>
+            <p class="text-sm text-content-muted mt-1">
+                Every active project's financial position at a glance — open a project for its full cost-centre breakdown.
+            </p>
         </header>
+
+        @if (TabProjectId is { } tabProjectId)
+        {
+            <ProjectTabNav ProjectId="@tabProjectId" ActiveTab="all-projects" />
+        }
 
         @if (!summariesLoaded)
         {
             <JewelSpinner Class="py-16" Label="Loading project financials" />
         }
-        else if (VisibleProjects.Count == 0)
+        else if (ActiveProjects.Count == 0)
         {
             <div class="panel p-8 text-center">
                 <p class="text-sm text-content">No active projects.</p>
@@ -84,7 +76,7 @@ else
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-line">
-                        @foreach (var project in VisibleProjects)
+                        @foreach (var project in ActiveProjects)
                         {
                             var figures = FiguresFor(project.ProjectId);
                             <tr>
@@ -102,7 +94,7 @@ else
                             </tr>
                         }
                     </tbody>
-                    @if (selectedProjectId == "" && VisibleProjects.Count > 1)
+                    @if (ActiveProjects.Count > 1)
                     {
                         var total = Totals();
                         <tfoot class="border-t border-line bg-surface-raised">
@@ -125,23 +117,21 @@ else
 @code {
     private bool isLoaded;
     private bool summariesLoaded;
-    private string selectedProjectId = "";
     private readonly List<string> failedProjects = new();
 
     private record Figures(decimal Sales, decimal Claimed, decimal TargetCost, decimal ActualCost, decimal UnderOver);
 
     // The overview covers active (non-Completed) projects, ordered by reference — the same cycle
-    // as the project header's prev/next arrows.
+    // as the project header's switcher and prev/next arrows.
     private List<Project> ActiveProjects =>
         (Projects.Current ?? (IReadOnlyList<Project>)Array.Empty<Project>())
             .Where(project => project.Stage != ProjectStage.Completed)
             .OrderBy(project => project.Reference, StringComparer.OrdinalIgnoreCase)
             .ToList();
 
-    private List<Project> VisibleProjects =>
-        selectedProjectId == ""
-            ? ActiveProjects
-            : ActiveProjects.Where(project => project.ProjectId == selectedProjectId).ToList();
+    // The sibling tabs are project-scoped — they follow the last-viewed project. Hidden until a
+    // project exists to point them at.
+    private string? TabProjectId => CurrentProject.ResolveFor(Projects.Current);
 
     private Figures FiguresFor(string projectId)
     {
@@ -156,7 +146,7 @@ else
 
     private Figures Totals()
     {
-        var all = VisibleProjects.Select(project => FiguresFor(project.ProjectId)).ToList();
+        var all = ActiveProjects.Select(project => FiguresFor(project.ProjectId)).ToList();
         return new Figures(
             all.Sum(f => f.Sales),
             all.Sum(f => f.Claimed),
@@ -167,15 +157,14 @@ else
 
     private static string Money(decimal value) => $"£{value:N0}";
 
-    private void OnProjectFilterChanged(ChangeEventArgs args) =>
-        selectedProjectId = args.Value?.ToString() ?? "";
-
     protected override async Task OnInitializedAsync()
     {
         await Session.EnsureLoadedAsync();
         if (!Auth.IsSignedIn) { Nav.NavigateTo("/login", forceLoad: true); return; }
         Projects.OnChanged += StateHasChanged;
         Summary.OnChanged += StateHasChanged;
+        CurrentProject.OnChange += StateHasChanged;
+        _ = CurrentProject.EnsureLoadedAsync();
         if (Projects.Current is null) await Projects.RefreshAsync(CancellationToken.None);
         isLoaded = true;
         await RefreshSummariesAsync();
@@ -201,5 +190,6 @@ else
     {
         Projects.OnChanged -= StateHasChanged;
         Summary.OnChanged -= StateHasChanged;
+        CurrentProject.OnChange -= StateHasChanged;
     }
 }

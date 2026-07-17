@@ -1,3 +1,8 @@
+@using Jewel.JPMS.Features.Projects
+@inject ProjectListReadModel Projects
+@inject CurrentProjectService CurrentProject
+@implements IDisposable
+
 <section class="px-6 py-6 md:px-8">
 
     <div class="mb-8 md:mb-10">
@@ -25,6 +30,13 @@
         </div>
     }
 
+    @if (ShowMyDay)
+    {
+        <div class="mb-8">
+            <MyDayWorkspace />
+        </div>
+    }
+
     @if (ShowMyTodos)
     {
         @* Open to-do items assigned to any role this user holds — general (company-wide) and
@@ -42,8 +54,8 @@
         {
             <a href="@destination.Href"
                class="panel p-5 flex items-center gap-3 hover:border-line-strong hover:bg-surface-raised transition">
-                <NavIcon Route="@destination.Href" Class="w-5 h-5 text-accent shrink-0" />
-                <span class="text-base font-medium text-content">@destination.Label</span>
+                <NavIcon Route="@destination.Item.Href" Class="w-5 h-5 text-accent shrink-0" />
+                <span class="text-base font-medium text-content">@destination.Item.Label</span>
             </a>
         }
     </div>
@@ -55,8 +67,28 @@
     [Parameter, EditorRequired] public string DisplayName { get; set; } = "";
     [Parameter, EditorRequired] public string Email { get; set; } = "";
 
-    private IEnumerable<NavigationItem> Destinations =>
-        NavigationCatalog.ItemsFor(Role).Where(item => item.Href != "/dashboard");
+    // One card per top-level nav entry; groups land on their first page, resolved against the
+    // last-viewed project (or the project list before one exists).
+    private IEnumerable<(NavigationItem Item, string Href)> Destinations
+    {
+        get
+        {
+            var projectId = CurrentProject.ResolveFor(Projects.Current);
+            foreach (var node in NavigationCatalog.NodesFor(Role))
+            {
+                if (node.Item.Href == "/dashboard") continue;
+                var href = node.IsGroup
+                    ? node.Children[0].ResolveHref(projectId)
+                    : node.Item.ResolveHref(projectId);
+                yield return (node.Item, href);
+            }
+        }
+    }
+
+    // Site-floor roles do their day (sign in, hours, rejected timesheets) straight from the
+    // dashboard — MyDayWorkspace renders nothing for accounts without a worker record.
+    private bool ShowMyDay =>
+        Role is Role.SiteOperative or Role.Foreman or Role.SiteManager;
 
     // Mirrors the API's TodoRoles.AssignableAsTodoAssignee: the internal office/management roles
     // a to-do can be assigned to. Everyone else (external + site-floor roles) has no list to show.
@@ -66,6 +98,21 @@
             or Role.OfficeComplianceCoordinator;
 
     private string FirstName => FirstWordOf(DisplayName) ?? Role.DisplayName();
+
+    protected override void OnInitialized()
+    {
+        // Group cards resolve against the last-viewed project — re-render when either the
+        // remembered project or the project list arrives after first paint.
+        Projects.OnChanged += StateHasChanged;
+        CurrentProject.OnChange += StateHasChanged;
+        _ = CurrentProject.EnsureLoadedAsync();
+    }
+
+    public void Dispose()
+    {
+        Projects.OnChanged -= StateHasChanged;
+        CurrentProject.OnChange -= StateHasChanged;
+    }
 
     private static string? FirstWordOf(string fullName)
     {

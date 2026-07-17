@@ -1,5 +1,6 @@
 @using Jewel.JPMS.Features.Projects
 @inject ProjectListReadModel Projects
+@inject CurrentProjectService CurrentProject
 @inject NavigationManager Nav
 @implements IDisposable
 
@@ -41,7 +42,39 @@ else
                              stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6" /></svg>
                     </button>
                 }
-                <h1 class="text-2xl md:text-3xl font-semibold text-content leading-tight">@Project.Name</h1>
+
+                @* The title doubles as the project switcher: click it for the full list of active
+                   projects, or step with the arrows either side. *@
+                <div class="relative">
+                    <button type="button" @onclick="() => switcherOpen = !switcherOpen"
+                            class="flex items-center gap-2 rounded-lg px-1 -mx-1 hover:bg-surface-raised transition"
+                            aria-haspopup="listbox" aria-expanded="@switcherOpen" title="Switch project">
+                        <h1 class="text-2xl md:text-3xl font-semibold text-content leading-tight">@Project.Name</h1>
+                        <svg class="w-5 h-5 text-content-subtle shrink-0 transition-transform @(switcherOpen ? "rotate-180" : "")"
+                             viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
+                    </button>
+
+                    @if (switcherOpen)
+                    {
+                        @* Click-away layer, then the list. *@
+                        <button type="button" class="fixed inset-0 z-30 cursor-default" aria-hidden="true"
+                                @onclick="() => switcherOpen = false" tabindex="-1"></button>
+                        <div class="absolute left-0 top-full z-40 mt-2 w-80 max-h-96 overflow-y-auto rounded-xl border border-line bg-surface shadow-lg py-1"
+                             role="listbox">
+                            @foreach (var candidate in Cycle)
+                            {
+                                var isCurrent = string.Equals(candidate.ProjectId, ProjectId, StringComparison.OrdinalIgnoreCase);
+                                <button type="button" role="option" aria-selected="@isCurrent"
+                                        class="w-full text-left px-3 py-2 text-sm transition @(isCurrent ? "bg-surface-raised text-content font-semibold" : "text-content-muted hover:text-content hover:bg-surface-raised")"
+                                        @onclick="() => SwitchTo(candidate)">
+                                    <span class="font-mono text-xs text-content-subtle mr-2">@candidate.Reference</span>@candidate.Name
+                                </button>
+                            }
+                        </div>
+                    }
+                </div>
+
                 @if (Neighbour(1) is { } next)
                 {
                     <button type="button" @onclick="() => GoTo(next)"
@@ -67,9 +100,11 @@ else
     [Parameter] public string ActiveTab { get; set; } = "";
     [Parameter] public RenderFragment? ChildContent { get; set; }
 
+    private bool switcherOpen;
+
     private Project? Project => Projects.Find(ProjectId);
 
-    // The prev/next loop: active (non-Completed) projects ordered by reference.
+    // The switcher/arrow loop: active (non-Completed) projects ordered by reference.
     private List<Project> Cycle =>
         (Projects.Current ?? (IReadOnlyList<Project>)Array.Empty<Project>())
             .Where(project => project.Stage != ProjectStage.Completed)
@@ -91,6 +126,13 @@ else
         return cycle[(index + step + cycle.Count) % cycle.Count];
     }
 
+    private void SwitchTo(Project project)
+    {
+        switcherOpen = false;
+        if (!string.Equals(project.ProjectId, ProjectId, StringComparison.OrdinalIgnoreCase))
+            GoTo(project);
+    }
+
     private void GoTo(Project project) =>
         Nav.NavigateTo(string.IsNullOrEmpty(ActiveTab)
             ? $"/projects/{project.ProjectId}"
@@ -99,6 +141,9 @@ else
     protected override async Task OnInitializedAsync()
     {
         Projects.OnChanged += StateHasChanged;
+        // Every project page passing through the shell marks its project as the one the user is
+        // working on — the side nav's project-scoped entries follow it.
+        _ = CurrentProject.RememberAsync(ProjectId);
         if (Projects.Current is null) await Projects.RefreshAsync(CancellationToken.None);
         else _ = RefreshInBackgroundAsync(); // stale-while-revalidate: header/stage update on tab nav
     }

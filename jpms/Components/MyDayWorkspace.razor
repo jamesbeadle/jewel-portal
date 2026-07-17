@@ -1,0 +1,222 @@
+@inject ILabourStore Labour
+@implements IDisposable
+
+@*
+    The worker's own timesheet workspace (docs/Labour-Time-Tracking-Scope.md §5), rendered on the
+    Dashboard for site-floor roles — the retired /my-day page redirects here. Sign in on arrival,
+    log hours per cost code at the end of the day, fix rejected days. Mobile-first — big touch
+    targets, half-hour steppers. Never shows rates or £. Renders nothing for accounts without a
+    linked worker record, so staff dashboards stay clean.
+*@
+
+@if (Labour.MyDay() is { WorkerId: not "" } day)
+{
+    <div class="max-w-md">
+        <div class="flex items-center justify-between mb-1">
+            <h2 class="text-lg font-semibold text-content">My day</h2>
+            <button type="button" class="btn-ghost" disabled="@isBusy" @onclick="RefreshSafelyAsync">Refresh</button>
+        </div>
+
+        @if (actionError is not null)
+        {
+            <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-3">@actionError</p>
+        }
+
+        <p class="text-sm text-content-subtle mb-4">@day.WorkerName · @day.WorkDate.ToString("dddd dd MMMM")</p>
+
+        @if (day.Projects.Count == 0)
+        {
+            <p class="text-sm text-content-subtle italic">You're not assigned to any projects yet — ask your Project Manager.</p>
+        }
+
+        @foreach (var project in day.Projects)
+        {
+            <div class="panel p-4 mb-4">
+                <div class="flex items-center justify-between mb-1">
+                    <h3 class="text-sm font-semibold text-content">@project.ProjectName</h3>
+                    @if (project.HasSignedOutToday)
+                    {
+                        <span class="text-xs text-content-subtle font-medium">Done today ✓</span>
+                    }
+                    else if (project.IsSignedInToday)
+                    {
+                        <span class="text-xs text-positive font-medium">Signed in</span>
+                    }
+                </div>
+
+                @if (project.HasSignedOutToday)
+                {
+                    var todays = TodaysEntriesFor(day, project.ProjectId);
+                    @if (todays.Count > 0)
+                    {
+                        @foreach (var entry in todays)
+                        {
+                            <div class="flex items-center justify-between border-t border-line/60 py-1.5 text-sm">
+                                <span class="text-content-subtle">@entry.CostCode</span>
+                                <span><span class="text-content font-medium">@entry.Hours h</span> <StatusPill Status="@entry.Status" /></span>
+                            </div>
+                        }
+                        <div class="flex items-center justify-between border-t border-line pt-2 mt-1 text-sm">
+                            <span class="text-content-subtle">Total today</span>
+                            <span class="text-content font-semibold">@todays.Sum(entry => entry.Hours) h</span>
+                        </div>
+                    }
+                    <p class="text-xs text-content-subtle mt-2">Signed out — your hours are with the Project Manager. Contact them if anything needs amending.</p>
+                }
+                else if (!project.IsSignedInToday)
+                {
+                    <button type="button" class="btn-primary w-full mt-2" disabled="@isBusy"
+                            @onclick="() => SignInAsync(project.ProjectId)">@(isBusy ? "Signing in…" : "Sign in")</button>
+                }
+                else if (signingOutProjectId != project.ProjectId)
+                {
+                    <button type="button" class="btn-secondary w-full mt-2"
+                            @onclick="() => StartSignOut(project)">Sign out — log today's hours</button>
+                }
+                else
+                {
+                    <p class="text-xs text-content-subtle mt-2 mb-2">Hours per task today (half-hour steps):</p>
+                    @foreach (var costCode in project.CostCodes)
+                    {
+                        var current = HoursFor(costCode.Code);
+                        <div class="border-t border-line/60 py-2">
+                            <p class="text-sm text-content">@costCode.Name <span class="text-content-subtle text-xs">@costCode.Code</span></p>
+                            <div class="flex items-center gap-3 mt-1">
+                                <button type="button" class="btn-secondary" @onclick="() => Bump(costCode.Code, -0.5m)">−</button>
+                                <span class="text-content font-semibold w-10 text-center">@current</span>
+                                <button type="button" class="btn-secondary" @onclick="() => Bump(costCode.Code, +0.5m)">+</button>
+                            </div>
+                        </div>
+                    }
+                    <div class="flex items-center justify-between border-t border-line mt-1 pt-3 mb-2">
+                        <span class="text-sm text-content-subtle">Total</span>
+                        <span class="text-content font-semibold">@TotalHours() h</span>
+                    </div>
+                    @if (TotalHours() > 12m)
+                    {
+                        <p class="text-xs text-amber-600 mb-2">Over 12 hours — fine if it's right, just double-check.</p>
+                    }
+                    <button type="button" class="btn-primary w-full" disabled="@(TotalHours() <= 0m || isBusy)"
+                            @onclick="() => SubmitSignOutAsync(project.ProjectId)">@(isBusy ? "Sending…" : "Submit & sign out")</button>
+                    <button type="button" class="btn-ghost w-full mt-1" @onclick="() => signingOutProjectId = null">Cancel</button>
+                }
+            </div>
+        }
+
+        @{ var history = day.Recent.Where(entry => entry.WorkedOn < day.WorkDate).ToList(); }
+        @if (history.Count > 0)
+        {
+            <div class="panel p-4 mb-4">
+                <h3 class="text-sm font-semibold text-content mb-2">Recent days</h3>
+                @foreach (var entry in history.Take(20))
+                {
+                    <div class="flex items-center justify-between border-t border-line/60 py-1.5 text-sm">
+                        <span class="text-content-subtle">@entry.WorkedOn.ToString("ddd dd") · @entry.CostCode</span>
+                        <span><span class="text-content font-medium">@entry.Hours h</span> <StatusPill Status="@entry.Status" /></span>
+                    </div>
+                }
+            </div>
+        }
+
+        @if (day.Rejected.Count > 0)
+        {
+            <div class="panel p-4 mb-4">
+                <h3 class="text-sm font-semibold text-content mb-2">Sent back to you</h3>
+                @foreach (var rejected in day.Rejected)
+                {
+                    <div class="border-t border-line/60 py-2">
+                        <p class="text-sm text-content">@rejected.WorkedOn.ToString("ddd dd MMM") — @rejected.ProjectName · @rejected.CostCode</p>
+                        <p class="text-xs text-content-subtle mb-1">Reason: @(rejected.RejectionReason == "" ? "not given" : rejected.RejectionReason)</p>
+                        <div class="flex items-center gap-2">
+                            <input class="field w-20" type="number" step="0.5" min="0.5"
+                                   value="@ResubmitHoursFor(rejected)"
+                                   @onchange="@(args => resubmitHours[rejected.TimesheetId] = decimal.TryParse((string?)args.Value, out var parsed) ? parsed : rejected.Hours)" />
+                            <button type="button" class="btn-secondary" disabled="@isBusy"
+                                    @onclick="() => ResubmitAsync(rejected)">Resubmit</button>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+    </div>
+}
+
+@code {
+    private bool isBusy;
+    private string? actionError;
+
+    private string? signingOutProjectId;
+    private readonly Dictionary<string, decimal> hoursByCode = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, decimal> resubmitHours = new();
+
+    protected override void OnInitialized()
+    {
+        Labour.OnChange += StateHasChanged;
+        _ = RefreshSafelyAsync();
+    }
+
+    public void Dispose() => Labour.OnChange -= StateHasChanged;
+
+    private async Task RefreshSafelyAsync()
+    {
+        try { await Labour.RefreshMyDayAsync(); }
+        catch (Exception) { actionError = "Could not load your day — check your signal and tap Refresh."; StateHasChanged(); }
+    }
+
+    private decimal HoursFor(string code) => hoursByCode.TryGetValue(code, out var hours) ? hours : 0m;
+
+    private static List<MyRecentTimesheet> TodaysEntriesFor(MyLabourDay day, string projectId) =>
+        day.Recent
+            .Where(entry => entry.ProjectId == projectId && entry.WorkedOn == day.WorkDate)
+            .ToList();
+
+    private decimal TotalHours() => hoursByCode.Values.Sum();
+
+    private void Bump(string code, decimal delta) =>
+        hoursByCode[code] = Math.Max(0m, HoursFor(code) + delta);
+
+    private void StartSignOut(MyLabourProject project)
+    {
+        signingOutProjectId = project.ProjectId;
+        hoursByCode.Clear();
+    }
+
+    private async Task SignInAsync(string projectId)
+    {
+        actionError = null;
+        isBusy = true;
+        try { await Labour.MySignInAsync(projectId); }
+        catch (Exception) { actionError = "Sign-in didn't go through — check your signal and try again."; }
+        finally { isBusy = false; }
+    }
+
+    private async Task SubmitSignOutAsync(string projectId)
+    {
+        actionError = null;
+        isBusy = true;
+        try
+        {
+            var entries = hoursByCode
+                .Where(pair => pair.Value > 0m)
+                .Select(pair => new SiteSignOutEntry(pair.Key, pair.Value))
+                .ToList();
+            await Labour.MySignOutAsync(projectId, entries);
+            signingOutProjectId = null;
+            hoursByCode.Clear();
+        }
+        catch (Exception) { actionError = "Sign-out didn't go through — check your signal and try again."; }
+        finally { isBusy = false; }
+    }
+
+    private decimal ResubmitHoursFor(MyRejectedTimesheet rejected) =>
+        resubmitHours.TryGetValue(rejected.TimesheetId, out var hours) ? hours : rejected.Hours;
+
+    private async Task ResubmitAsync(MyRejectedTimesheet rejected)
+    {
+        actionError = null;
+        isBusy = true;
+        try { await Labour.MyResubmitAsync(rejected.TimesheetId, ResubmitHoursFor(rejected), rejected.CostCode); }
+        catch (Exception) { actionError = "Resubmit didn't go through — check the hours and try again."; }
+        finally { isBusy = false; }
+    }
+}

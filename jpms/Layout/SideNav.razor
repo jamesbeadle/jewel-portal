@@ -1,7 +1,9 @@
+@using Jewel.JPMS.Features.Projects
 @inject AuthService Auth
 @inject SessionService Session
 @inject NavigationManager Nav
-@inject ILabourStore Labour
+@inject ProjectListReadModel Projects
+@inject CurrentProjectService CurrentProject
 @implements IDisposable
 
 <div class="h-full flex flex-col bg-surface">
@@ -24,15 +26,58 @@
 
     <nav class="flex-1 px-2 py-3 overflow-y-auto">
         <ul class="space-y-1">
-            @foreach (var item in VisibleItems)
+            @foreach (var node in VisibleNodes)
             {
-                <li>
-                    <a href="@item.Href" @onclick="HandleNavigate" @onclick:preventDefault="false"
-                       class="@LinkClassFor(item)" title="@item.Label">
-                        <NavIcon Route="@item.Href" Class="w-5 h-5 shrink-0" />
-                        <span class="@LabelClass">@item.Label</span>
-                    </a>
-                </li>
+                @if (!node.IsGroup)
+                {
+                    <li>
+                        <a href="@node.Item.ResolveHref(EffectiveProjectId)" @onclick="HandleNavigate" @onclick:preventDefault="false"
+                           class="@LinkClass(node.Item.IsActiveFor(CurrentPath))" title="@node.Item.Label">
+                            <NavIcon Route="@node.Item.Href" Class="w-5 h-5 shrink-0" />
+                            <span class="@LabelClass">@node.Item.Label</span>
+                        </a>
+                    </li>
+                }
+                else
+                {
+                    var isOpen = IsOpen(node);
+                    <li>
+                        @if (IsExpanded)
+                        {
+                            @* Accordion header: toggles the group; the group containing the
+                               current page auto-opens. *@
+                            <button type="button" @onclick="() => ToggleGroup(node)"
+                                    class="@GroupClass(node.IsActiveFor(CurrentPath)) w-full" title="@node.Item.Label">
+                                <NavIcon Route="@node.Item.Href" Class="w-5 h-5 shrink-0" />
+                                <span class="@LabelClass flex-1 text-left">@node.Item.Label</span>
+                                <svg class="hidden md:block w-3.5 h-3.5 shrink-0 transition-transform @(isOpen ? "rotate-90" : "")"
+                                     viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                     stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6" /></svg>
+                            </button>
+                            @if (isOpen)
+                            {
+                                <ul class="mt-0.5 mb-1 space-y-0.5">
+                                    @foreach (var child in node.Children)
+                                    {
+                                        <li>
+                                            <a href="@child.ResolveHref(EffectiveProjectId)" @onclick="HandleNavigate" @onclick:preventDefault="false"
+                                               class="@ChildClass(child.IsActiveFor(CurrentPath))" title="@child.Label">@child.Label</a>
+                                        </li>
+                                    }
+                                </ul>
+                            }
+                        }
+                        else
+                        {
+                            @* Collapsed rail: no room for children — the icon goes straight to the
+                               group's first page. *@
+                            <a href="@node.Children[0].ResolveHref(EffectiveProjectId)" @onclick="HandleNavigate" @onclick:preventDefault="false"
+                               class="@LinkClass(node.IsActiveFor(CurrentPath))" title="@node.Item.Label">
+                                <NavIcon Route="@node.Item.Href" Class="w-5 h-5 shrink-0" />
+                            </a>
+                        }
+                    </li>
+                }
             }
         </ul>
     </nav>
@@ -59,50 +104,98 @@
     [Parameter] public bool IsExpanded { get; set; } = true;
     [Parameter] public EventCallback OnToggleExpand { get; set; }
 
+    // The user's manual accordion choice; null = follow the active page, "" = all collapsed.
+    private string? toggledGroup;
+    private bool projectsRequested;
+
     private string LabelClass => IsExpanded ? "hidden md:inline truncate" : "hidden";
 
     private string HeaderLayout => IsExpanded
         ? "h-14 px-2 flex items-center justify-center md:justify-between"
         : "px-2 py-3 flex flex-col items-center gap-2";
 
-    private IReadOnlyList<NavigationItem> VisibleItems
-    {
-        get
-        {
-            if (Session.ActiveRole is null) return Array.Empty<NavigationItem>();
-            var items = NavigationCatalog.ItemsFor(Session.ActiveRole.Value);
+    private string CurrentPath => new Uri(Nav.Uri).AbsolutePath;
 
-            // "My day" is role-visible (Site Operative / Foreman / Site Manager) but only
-            // useful to accounts linked to a worker record — hide it until the link is
-            // confirmed. The MyDay lookup is fetch-once via the store, so this costs one
-            // call and only for roles that could see the entry at all.
-            if (items.Any(item => item.Href == "/my-day") && !HasWorkerRecord)
-                items = items.Where(item => item.Href != "/my-day").ToList();
-            return items;
-        }
-    }
+    private IReadOnlyList<NavigationNode> VisibleNodes =>
+        Session.ActiveRole is { } role ? NavigationCatalog.NodesFor(role) : Array.Empty<NavigationNode>();
 
-    private bool HasWorkerRecord => Labour.MyDay() is { WorkerId: not "" };
+    // Project-scoped entries follow the last-viewed project (falling back to the first active
+    // project once the list is loaded, or the project list before then).
+    private string? EffectiveProjectId => CurrentProject.ResolveFor(Projects.Current);
+
+    private bool IsOpen(NavigationNode node) =>
+        toggledGroup is null
+            ? node.IsActiveFor(CurrentPath)
+            : toggledGroup == node.Item.Label;
+
+    private void ToggleGroup(NavigationNode node) =>
+        toggledGroup = IsOpen(node) ? "" : node.Item.Label;
 
     private string HomeHref =>
         Session.ActiveRole is null ? "/dashboard" : NavigationCatalog.HomeRouteFor(Session.ActiveRole.Value);
 
     protected override void OnInitialized()
     {
-        Session.OnChange += StateHasChanged;
-        Labour.OnChange += StateHasChanged;
+        Session.OnChange += HandleSessionChange;
+        Projects.OnChanged += StateHasChanged;
+        CurrentProject.OnChange += StateHasChanged;
+        Nav.LocationChanged += HandleLocationChanged;
+        _ = CurrentProject.EnsureLoadedAsync();
+        EnsureProjectsLoaded();
     }
 
-    private string LinkClassFor(NavigationItem item)
+    private void HandleSessionChange()
     {
-        var current = new Uri(Nav.Uri).AbsolutePath;
-        // Grouped entries (Financials / Project Management / Operations) stay lit across every
-        // page folded into them, via the item's match prefixes.
-        var isActive = item.IsActiveFor(current);
+        EnsureProjectsLoaded();
+        StateHasChanged();
+    }
+
+    // The nav resolves project-scoped hrefs itself, so it needs the project list even before any
+    // project page has loaded it. Fetch once, in the background, only for signed-in approved
+    // users with a role that can see projects at all.
+    private void EnsureProjectsLoaded()
+    {
+        if (projectsRequested || !Session.IsApproved || Projects.Current is not null) return;
+        if (VisibleNodes.All(node => !node.Item.IsProjectScoped && node.Children.All(child => !child.IsProjectScoped))) return;
+        projectsRequested = true;
+        _ = RefreshProjectsAsync();
+    }
+
+    private async Task RefreshProjectsAsync()
+    {
+        try { await Projects.RefreshAsync(CancellationToken.None); }
+        catch { } // The nav falls back to the project list link; pages retry their own loads.
+    }
+
+    private void HandleLocationChanged(object? sender, EventArgs args)
+    {
+        // Navigation resumes auto-open behaviour: the group owning the new page expands.
+        toggledGroup = null;
+        StateHasChanged();
+    }
+
+    private string LinkClass(bool isActive)
+    {
         var layout = IsExpanded ? "md:justify-start" : "";
         var baseClass = $"flex items-center gap-3 justify-center {layout} px-3 py-2 rounded-lg text-sm transition";
         if (isActive) return $"{baseClass} text-content font-semibold";
         return $"{baseClass} text-content-subtle font-medium hover:text-content hover:bg-surface-raised";
+    }
+
+    private string GroupClass(bool isActive)
+    {
+        var layout = IsExpanded ? "md:justify-start" : "";
+        var baseClass = $"flex items-center gap-3 justify-center {layout} px-3 py-2 rounded-lg text-sm transition";
+        if (isActive) return $"{baseClass} text-content font-semibold";
+        return $"{baseClass} text-content-subtle font-medium hover:text-content hover:bg-surface-raised";
+    }
+
+    // Children indent under the group icon; active state matches any project id for templates.
+    private string ChildClass(bool isActive)
+    {
+        var baseClass = "hidden md:block pl-11 pr-3 py-1.5 rounded-lg text-sm transition truncate";
+        if (isActive) return $"{baseClass} text-content font-semibold";
+        return $"{baseClass} text-content-subtle hover:text-content hover:bg-surface-raised";
     }
 
     private Task HandleNavigate() => OnNavigate.InvokeAsync();
@@ -111,7 +204,9 @@
 
     public void Dispose()
     {
-        Session.OnChange -= StateHasChanged;
-        Labour.OnChange -= StateHasChanged;
+        Session.OnChange -= HandleSessionChange;
+        Projects.OnChanged -= StateHasChanged;
+        CurrentProject.OnChange -= StateHasChanged;
+        Nav.LocationChanged -= HandleLocationChanged;
     }
 }

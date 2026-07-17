@@ -1,11 +1,12 @@
 namespace Jewel.JPMS.Services.Navigation;
 
 /// <summary>
-/// The project view's three sections. The old single 15-tab bar is replaced by a landing page
-/// (one card per section) and, inside a section, a short tab row scoped to that section. Each
-/// section carries its own Setup tab so configuration lives beside the thing it configures:
-/// retention/valuation dates with Financials, project details/stage with Project Management,
-/// and the correspondence profile with Operations.
+/// The project view's three sections. The side nav is the primary way between sections (its
+/// Financials / Project Management / Operations groups target the last-viewed project), so the
+/// project view renders only the ACTIVE section's tab row — plus a landing page (one card per
+/// section) at the bare project URL. Each section carries its own Setup tab so configuration
+/// lives beside the thing it configures: retention/valuation dates with Financials, project
+/// details/stage with Project Management, and the correspondence profile with Operations.
 /// </summary>
 public enum ProjectSection
 {
@@ -14,7 +15,9 @@ public enum ProjectSection
     Operations
 }
 
-public sealed record ProjectTabInfo(string Slug, string Label);
+/// <summary>A tab in a section. AbsoluteHref overrides the /projects/{id}/{slug} pattern for
+/// tabs that live outside the project scope (the All-projects financial overview).</summary>
+public sealed record ProjectTabInfo(string Slug, string Label, string? AbsoluteHref = null);
 
 public sealed record ProjectSectionInfo(
     ProjectSection Section,
@@ -28,8 +31,6 @@ public sealed record ProjectSectionInfo(
 public static class ProjectSections
 {
     // Tab slugs are unchanged from the old flat bar so existing links and bookmarks keep working.
-    // The three new per-section setup routes replace the old catch-all /setup (which now redirects
-    // to the Project Management setup page).
     public static readonly IReadOnlyList<ProjectSectionInfo> All = new[]
     {
         new ProjectSectionInfo(
@@ -41,12 +42,14 @@ public static class ProjectSections
                 new ProjectTabInfo("financials",       "Financials"),
                 new ProjectTabInfo("cashflow",         "Cashflow"),
                 new ProjectTabInfo("valuation",        "Valuation Report"),
-                new ProjectTabInfo("financials-setup", "Setup")
+                new ProjectTabInfo("financials-setup", "Setup"),
+                // The company-wide overview — one row per active project plus the total.
+                new ProjectTabInfo("all-projects",     "All projects", "/finance")
             }),
         new ProjectSectionInfo(
             ProjectSection.ProjectManagement,
             "Project Management",
-            "The day-to-day running of the job — to-dos, requests, variations, drawings, the programme and progress reporting.",
+            "The day-to-day running of the job — to-dos, requests, drawings, the programme and progress reporting.",
             new[]
             {
                 new ProjectTabInfo("todos",          "To-do"),
@@ -77,8 +80,9 @@ public static class ProjectSections
     public static ProjectSectionInfo? SectionForTab(string tabSlug) =>
         All.FirstOrDefault(section => section.Tabs.Any(tab => tab.Slug == tabSlug));
 
-    public static string HrefFor(string projectId, string tabSlug) => $"/projects/{projectId}/{tabSlug}";
+    public static string HrefFor(string projectId, ProjectTabInfo tab) =>
+        tab.AbsoluteHref ?? $"/projects/{projectId}/{tab.Slug}";
 
     public static string FirstTabHref(string projectId, ProjectSectionInfo section) =>
-        HrefFor(projectId, section.FirstTab.Slug);
+        HrefFor(projectId, section.FirstTab);
 }
