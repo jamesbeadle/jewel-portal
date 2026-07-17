@@ -40,6 +40,11 @@ public static class VariationsRouteRegistration
             new CommandRoute("POST", "/api/voqs/{voqId}/select-tender",
                 command => $"/api/voqs/{((SelectVoqTender)command).VariationOrderQuoteId}/select-tender"));
 
+        // Repairs a VOQ's link to its request (RFI) — for pre-link (seeded) variation records.
+        commands.Register<LinkVoqToRequest, VariationOrderQuote>(
+            new CommandRoute("POST", "/api/voqs/{voqId}/link-request",
+                command => $"/api/voqs/{((LinkVoqToRequest)command).VariationOrderQuoteId}/link-request"));
+
         // Variation Orders (Phase 3).
         queries.Register<GetVariationOrderById, VariationOrder?>(
             new QueryRoute("/api/variation-orders/{voId}",

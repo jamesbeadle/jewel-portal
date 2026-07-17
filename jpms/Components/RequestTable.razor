@@ -59,6 +59,14 @@
                             <span class="ml-1.5 inline-flex items-center rounded bg-surface-raised border border-line px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-content-muted"
                                   title="Merged into another request — its conversation, queries and emails live there now">Merged</span>
                         }
+                        @if (CanOpen && LinkedVoqs is not null && LinkedVoqs.TryGetValue(record.RequestId, out var linkedVoq))
+                        {
+                            @* The trace down the lifecycle: this request has been costed into a VOQ/VO. *@
+                            <a class="ml-1.5 inline-flex items-center rounded bg-accent/10 border border-accent/30 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-accent hover:underline underline-offset-2"
+                               title="This request has been costed into a variation — open it"
+                               href="@($"/projects/{ProjectId}/voq/{linkedVoq.VariationOrderQuoteId}")"
+                               @onclick:stopPropagation="true">@linkedVoq.Reference</a>
+                        }
                     </td>
                     <td class="px-4 py-3 text-content-muted hidden lg:table-cell whitespace-nowrap">@Dash(record.RaisedTo)</td>
                     <td class="px-4 py-3 text-content-subtle hidden xl:table-cell font-mono text-xs">@Dash(record.DrawingRef)</td>
@@ -97,6 +105,12 @@
     // selected (the register limits it to RFIs). Checkbox cells stop click propagation so ticking
     // a row doesn't also navigate into it.
     [Parameter] public bool SelectionEnabled { get; set; }
+
+    /// <summary>A linked VOQ/VO chip per request id — the register passes these so RFI rows can
+    /// jump straight to the variation that prices them (and back, via the variation's Request
+    /// column). Null when the caller has no variation context.</summary>
+    public sealed record LinkedVoq(string VariationOrderQuoteId, string Reference);
+    [Parameter] public IReadOnlyDictionary<string, LinkedVoq>? LinkedVoqs { get; set; }
     [Parameter] public Func<Request, bool>? RowSelectable { get; set; }
     [Parameter] public IReadOnlyCollection<string> SelectedIds { get; set; } = Array.Empty<string>();
     [Parameter] public EventCallback<Request> OnToggleSelect { get; set; }

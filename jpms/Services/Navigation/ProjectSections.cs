@@ -50,8 +50,9 @@ public static class ProjectSections
             new[]
             {
                 new ProjectTabInfo("todos",          "To-do"),
+                // Requests is the document register: Requests, RFIs and Variations (VOQ & VO) are
+                // one lifecycle in one tab — the old separate Variations tab redirects into it.
                 new ProjectTabInfo("requests",       "Requests"),
-                new ProjectTabInfo("variations",     "Variations"),
                 new ProjectTabInfo("drawings",       "Drawings"),
                 new ProjectTabInfo("programme",      "Programme"),
                 new ProjectTabInfo("progress",       "Progress"),

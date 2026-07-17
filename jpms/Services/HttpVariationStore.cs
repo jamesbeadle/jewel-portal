@@ -59,6 +59,13 @@ public sealed class HttpVariationStore : IVariationStore
         return voq;
     }
 
+    public async Task<VariationOrderQuote> LinkToRequestAsync(string voqId, string requestId, CancellationToken cancellationToken = default)
+    {
+        var voq = await commands.SendAsync(new LinkVoqToRequest(voqId, requestId), cancellationToken);
+        OnChange?.Invoke();
+        return voq;
+    }
+
     public Task<VariationOrder?> GetVariationOrderByVoqAsync(string voqId, CancellationToken cancellationToken = default) =>
         queries.AskAsync(new GetVariationOrderByVoq(voqId), cancellationToken);
 

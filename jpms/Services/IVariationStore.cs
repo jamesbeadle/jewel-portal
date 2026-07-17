@@ -19,6 +19,9 @@ public interface IVariationStore
     Task<BidPackage> AddBidPackageAsync(string voqId, string title, string trade, CancellationToken cancellationToken = default);
     Task<VariationOrderQuote> SelectTenderAsync(string voqId, string bidPackageId, string subcontractorId, decimal? estimatedValue, CancellationToken cancellationToken = default);
 
+    /// <summary>Attaches a VOQ to the request (RFI) it was raised from — repairs pre-link (seeded) records.</summary>
+    Task<VariationOrderQuote> LinkToRequestAsync(string voqId, string requestId, CancellationToken cancellationToken = default);
+
     // Subcontractor variation requests (portal-raised). Accepting creates a Selected VOQ carrying
     // the sub's price; the normal approve pipeline then applies. Issuing creates the NEW work order
     // that instructs an approved VO.
