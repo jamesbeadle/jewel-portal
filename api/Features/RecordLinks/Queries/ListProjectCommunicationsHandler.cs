@@ -58,7 +58,15 @@ public sealed class ListProjectCommunicationsHandler
         if (queryTags.Count == 0)
             return new ProjectCommunicationsPage(Array.Empty<ProjectCommunication>(), null, 0);
 
-        var page = await graph.ListByTagsAsync(queryTags.ToList(), query.Cursor, query.Take, cancellationToken);
+        // Exchange rejects an OR filter with too many category clauses as "too complex" — and the
+        // Graph client surfaces that as an EMPTY page, so the all-types view (one clause per
+        // record, cost centres included) silently rendered as "no tagged emails". Small tag sets
+        // keep the precise single-filter read; large ones scan the marker-tagged stream (the same
+        // read behind triage's Tagged tab — one simple clause) and intersect with the project's
+        // tags here. The scan returns Total = 0, which the UI treats as "count unknown".
+        var page = queryTags.Count <= MaxOrFilterTags
+            ? await graph.ListByTagsAsync(queryTags.ToList(), query.Cursor, query.Take, cancellationToken)
+            : await ScanTaggedForAsync(queryTags, query.Cursor, query.Take, cancellationToken);
 
         var items = page.Items
             .Select(message => new ProjectCommunication(
@@ -72,5 +80,35 @@ public sealed class ListProjectCommunicationsHandler
             .ToList();
 
         return new ProjectCommunicationsPage(items, page.NextCursor, page.Total);
+    }
+
+    // Conservatively below Exchange's "restriction or sort order is too complex" threshold for
+    // OR'd category clauses.
+    private const int MaxOrFilterTags = 10;
+
+    // How many marker-stream pages (of up to 100 messages) one request will walk before handing
+    // back a cursor. Bounds the worst case; the UI's Load more continues from the cursor.
+    private const int MaxScanPages = 20;
+
+    /// <summary>
+    /// Pages through every marker-tagged email (one simple filter Graph always accepts) and keeps
+    /// the ones carrying any of this project's tags. Whole pages are consumed so the returned
+    /// cursor is simply the underlying stream's cursor — a page can therefore run slightly over
+    /// <paramref name="take"/>. Total is unknowable without a full scan, so 0 is returned and the
+    /// UI hides its "Showing x of y" counter.
+    /// </summary>
+    private async Task<MailboxPage> ScanTaggedForAsync(
+        IReadOnlySet<string> projectTags, string? cursor, int take, CancellationToken cancellationToken)
+    {
+        var collected = new List<MailboxMessage>();
+        var next = cursor;
+        for (var pages = 0; pages < MaxScanPages; pages++)
+        {
+            var page = await graph.ListTaggedAsync(next, 100, cancellationToken);
+            collected.AddRange(page.Items.Where(message => message.Categories.Any(projectTags.Contains)));
+            next = page.NextCursor;
+            if (next is null || collected.Count >= take) break;
+        }
+        return new MailboxPage(collected, next, 0);
     }
 }
