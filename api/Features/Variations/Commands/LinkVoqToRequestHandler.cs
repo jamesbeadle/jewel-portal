@@ -33,6 +33,10 @@ public sealed class LinkVoqToRequestHandler : ICommandHandler<LinkVoqToRequest, 
         if (alreadyTaken) throw new InvalidOperationException("That request already has a VOQ linked to it.");
 
         voq.RequestId = command.RequestId;
+        // A VOQ only exists past the RFQ stage, so the linked request has implicitly climbed that
+        // ladder — set the flag so flag-driven UI (the RFQ/VOQ sections, the lineage strip) shows
+        // the link without a separate "enable RFQ" step.
+        request.HasRfq = true;
 
         await context.SaveChangesAsync(cancellationToken);
         return voq.ToModel();

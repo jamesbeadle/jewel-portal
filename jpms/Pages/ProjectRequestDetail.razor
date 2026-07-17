@@ -117,7 +117,9 @@ else
                                         </button>
                                     </li>
                                 }
-                                @if (CanEditDetails && record.Kind is RequestType.Rfi && !record.HasRfq)
+                                @* Hidden once a VOQ exists (including one attached via the register's
+                                   Link… repair) — the RFQ ladder has already been climbed. *@
+                                @if (CanEditDetails && record.Kind is RequestType.Rfi && !record.HasRfq && voq is null)
                                 {
                                     <li>
                                         <button type="button" class="w-full text-left px-3 py-2 text-sm text-content hover:bg-surface-raised transition"
@@ -506,7 +508,7 @@ else
                 </div>
                 }
 
-                @if (record.HasRfq)
+                @if (record.HasRfq || voq is not null)
                 {
                     <div class="panel p-5 space-y-3">
                         <h3 class="eyebrow">Variation Order Quote</h3>
@@ -1050,15 +1052,11 @@ else
 
     private async Task LoadVoqAsync()
     {
-        if (record?.HasRfq == true)
-        {
-            try { voq = await Variations.GetByRequestAsync(RequestId); }
-            catch { voq = null; }
-        }
-        else
-        {
-            voq = null;
-        }
+        // A VOQ normally appears only after the RFQ step (HasRfq), but a VOQ can also be attached
+        // to this request through the register's "Link…" repair — those links can predate the
+        // flag, so always look for one rather than gating on HasRfq. Returns null when none.
+        try { voq = await Variations.GetByRequestAsync(RequestId); }
+        catch { voq = null; }
 
         // Downstream of the VOQ, for the lineage bar: the VO it produced (if approved) and its bid
         // packages. Best-effort — the bar simply shows placeholders when these can't be read.
