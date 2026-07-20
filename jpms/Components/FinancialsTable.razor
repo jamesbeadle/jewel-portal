@@ -48,13 +48,16 @@
                 <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 text-right whitespace-nowrap">@SortHeader("claim", "Claim Value")</th>
                 @* Cost side: what we expect to pay out. *@
                 <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 text-right whitespace-nowrap border-l border-line">@SortHeader("target", "Target Cost Value")</th>
-                <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 text-right whitespace-nowrap">@SortHeader("wo", "Work Orders")</th>
-                <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 text-right whitespace-nowrap">@SortHeader("acos", "Actual Cost of Sales")</th>
-                <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 text-right whitespace-nowrap">@SortHeader("nonwo", "Non-WO Cost of Sales")</th>
+                <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 text-right whitespace-nowrap">@SortHeader("forecast", "Forecasted Cost of Sales")</th>
                 <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 text-right whitespace-nowrap">@SortHeader("drawdown", "Drawdown")</th>
+                <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 text-right whitespace-nowrap">@SortHeader("wo", "Work Orders")</th>
+                <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 text-right whitespace-nowrap">@SortHeader("nonwo", "Non-WO Cost of Sales")</th>
                 <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 text-right whitespace-nowrap">@SortHeader("pl", "Profit / Loss")</th>
                 <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 text-right whitespace-nowrap">@SortHeader("costpct", "Cost % Complete")</th>
                 <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 w-[80px]"><span class="sr-only">Lock</span></th>
+                @* Reference column: actual allocated spend, kept last — its click-through
+                   opens the invoice modal where actual costs are allocated to work orders. *@
+                <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 text-right whitespace-nowrap">@SortHeader("acos", "Actual Cost of Sales")</th>
             </tr>
         </thead>
         <tbody class="divide-y divide-line">
@@ -68,6 +71,7 @@
                 var reportLine = line;
                 var woCommitted = WoCommittedFor(reportLine.CostCodes);
                 var contractSales = ContractSalesFor(reportLine.CostCodes);
+                var forecast = ForecastFor(reportLine.CostCodes);
                 var drawdown = DrawdownFor(reportLine.CostCodes);
                 var profitLoss = ProfitLossFor(reportLine.CostCodes);
                 var allLocked = AllFinalised(reportLine.CostCodes);
@@ -136,6 +140,20 @@
 
                     <td class="px-4 py-3 text-right border-l border-line @MoneyClass(TargetCostFor(reportLine.CostCodes))">@Money(TargetCostFor(reportLine.CostCodes))</td>
 
+                    @* Forecasted Cost of Sales = Work Orders (committed) + Non-WO Cost of Sales —
+                       what the line is expected to cost in total; Target − Forecast = Drawdown. *@
+                    <td class="px-4 py-3 text-right @MoneyClass(forecast)"
+                        title="Work Orders + Non-WO Cost of Sales">@Money(forecast)</td>
+
+                    @if (allLocked)
+                    {
+                        <td class="px-4 py-3 text-right text-content-muted" title="Locked — the remaining value now reads as profit / loss">—</td>
+                    }
+                    else
+                    {
+                        <td class="px-4 py-3 text-right @DrawdownClass(drawdown)">@Money(drawdown)</td>
+                    }
+
                     @if (woCommitted != 0m)
                     {
                         <td class="px-4 py-3 text-right">
@@ -152,32 +170,7 @@
                         <td class="px-4 py-3 text-right text-content-muted">@Money(0m)</td>
                     }
 
-                    @if (CostOfSalesFor(reportLine.CostCodes) != 0m)
-                    {
-                        <td class="px-4 py-3 text-right">
-                            <button type="button"
-                                    class="underline decoration-dotted underline-offset-2 hover:decoration-solid text-content"
-                                    title="Show the allocated purchase invoices behind this figure, and link them to work orders"
-                                    @onclick="() => OnCostOfSalesSelected.InvokeAsync((Heading(reportLine), reportLine.CostCodes))">
-                                @Money(CostOfSalesFor(reportLine.CostCodes))
-                            </button>
-                        </td>
-                    }
-                    else
-                    {
-                        <td class="px-4 py-3 text-right text-content-muted">@Money(0m)</td>
-                    }
-
                     <td class="px-4 py-3 text-right @MoneyClass(NonWoCostOfSalesFor(reportLine.CostCodes))">@Money(NonWoCostOfSalesFor(reportLine.CostCodes))</td>
-
-                    @if (allLocked)
-                    {
-                        <td class="px-4 py-3 text-right text-content-muted" title="Locked — the remaining value now reads as profit / loss">—</td>
-                    }
-                    else
-                    {
-                        <td class="px-4 py-3 text-right @DrawdownClass(drawdown)">@Money(drawdown)</td>
-                    }
 
                     @if (anyLocked)
                     {
@@ -208,6 +201,24 @@
                             @(allLocked ? "Unlock" : anyLocked ? "Lock all" : "Lock")
                         </button>
                     </td>
+
+                    @* Reference column: actual allocated spend — click through to allocate
+                       invoices to work orders. Not part of the drawdown arithmetic. *@
+                    @if (CostOfSalesFor(reportLine.CostCodes) != 0m)
+                    {
+                        <td class="px-4 py-3 text-right">
+                            <button type="button"
+                                    class="underline decoration-dotted underline-offset-2 hover:decoration-solid text-content"
+                                    title="Show the allocated purchase invoices behind this figure, and link them to work orders"
+                                    @onclick="() => OnCostOfSalesSelected.InvokeAsync((Heading(reportLine), reportLine.CostCodes))">
+                                @Money(CostOfSalesFor(reportLine.CostCodes))
+                            </button>
+                        </td>
+                    }
+                    else
+                    {
+                        <td class="px-4 py-3 text-right text-content-muted">@Money(0m)</td>
+                    }
                 </tr>
             }
             @* Reconciliation packages as first-class lines: the scope netted off the
@@ -237,24 +248,35 @@
                     </td>
                     <td class="px-4 py-3 text-right whitespace-nowrap @MoneyClass(package.ClaimedToDate)">@Money(package.ClaimedToDate)</td>
                     <td class="px-4 py-3 text-right whitespace-nowrap border-l border-line @MoneyClass(package.TargetCost)">@Money(package.TargetCost)</td>
+                    @if (package.IsLocked)
+                    {
+                        <td class="px-4 py-3 text-right text-content-muted" title="Locked — figures frozen at lock">—</td>
+                        <td class="px-4 py-3 text-right text-content-muted" title="Locked — the remainder is realised as profit / loss">—</td>
+                    }
+                    else
+                    {
+                        @* Committed orders plus direct packaged spend — the same figure the
+                           package's drawdown nets off its target cost. *@
+                        <td class="px-4 py-3 text-right whitespace-nowrap @MoneyClass(package.TargetCost - package.Drawdown)"
+                            title="Work orders + direct packaged spend">@Money(package.TargetCost - package.Drawdown)</td>
+                        <td class="px-4 py-3 text-right @(package.Drawdown < 0m ? "text-negative" : package.Drawdown == 0m ? "text-content-muted" : "text-content")">@Money(package.Drawdown)</td>
+                    }
                     <td class="px-4 py-3 text-right whitespace-nowrap @MoneyClass(package.WoCommitted)">@Money(package.WoCommitted)</td>
-                    <td class="px-4 py-3 text-right whitespace-nowrap @MoneyClass(package.InvoicedToDate)">@Money(package.InvoicedToDate)</td>
                     <td class="px-4 py-3 text-right text-content-muted"
                         title="Direct invoice spend assigned to this package is included in its Actual Cost of Sales figure">—</td>
                     @if (package.IsLocked)
                     {
-                        <td class="px-4 py-3 text-right text-content-muted" title="Locked — the remainder is realised as profit / loss">—</td>
                         <td class="px-4 py-3 text-right font-medium @(package.ProfitLoss == 0m ? "text-content-muted" : package.ProfitLoss > 0m ? "text-positive" : "text-negative")">@Money(package.ProfitLoss)</td>
                     }
                     else
                     {
-                        <td class="px-4 py-3 text-right @(package.Drawdown < 0m ? "text-negative" : package.Drawdown == 0m ? "text-content-muted" : "text-content")">@Money(package.Drawdown)</td>
                         <td class="px-4 py-3 text-right text-content-muted" title="Lock the package below to realise its remainder as profit / loss">—</td>
                     }
                     <td class="px-4 py-3 text-right text-content-muted">—</td>
                     <td class="px-4 py-3 text-right whitespace-nowrap">
                         <span class="text-xs text-content-subtle" title="Edit, lock or dissolve this package in the Packages section below the table">below</span>
                     </td>
+                    <td class="px-4 py-3 text-right whitespace-nowrap @MoneyClass(package.InvoicedToDate)">@Money(package.InvoicedToDate)</td>
                 </tr>
             }
         </tbody>
@@ -267,13 +289,14 @@
                 <td class="px-4 py-3 text-right">@Percent(WeightedSalesCompletion)</td>
                 <td class="px-4 py-3 text-right">@Money(TotalClaimValue)</td>
                 <td class="px-4 py-3 text-right border-l border-line">@Money(TotalTargetCost)</td>
-                <td class="px-4 py-3 text-right">@Money(TotalWoCommitted)</td>
-                <td class="px-4 py-3 text-right">@Money(TotalCostOfSales)</td>
-                <td class="px-4 py-3 text-right">@Money(TotalNonWoCostOfSales)</td>
+                <td class="px-4 py-3 text-right">@Money(TotalForecastCostOfSales)</td>
                 <td class="px-4 py-3 text-right">@Money(TotalDrawdown)</td>
+                <td class="px-4 py-3 text-right">@Money(TotalWoCommitted)</td>
+                <td class="px-4 py-3 text-right">@Money(TotalNonWoCostOfSales)</td>
                 <td class="px-4 py-3 text-right @(TotalProfitLoss == 0m ? "" : TotalProfitLoss > 0m ? "text-positive" : "text-negative")">@Money(TotalProfitLoss)</td>
                 <td class="px-4 py-3 text-right pr-6">@Percent(WeightedCostCompletion)</td>
                 <td class="px-4 py-3"></td>
+                <td class="px-4 py-3 text-right">@Money(TotalCostOfSales)</td>
             </tr>
         </tfoot>
     </table>
@@ -332,16 +355,20 @@
     //   Claim Value          = the latest claim's cumulative claimed £
     //   Target Cost Value    = Contract Sales Value ÷ (1 + FinancialSummaryAssumptions.MarkupPercent)
     //                          — what the line should cost us; target cost + markup = sales value
+    //   Forecasted Cost of Sales = Work Orders + Non-WO Cost of Sales — the line's expected
+    //                          total cost (column order agreed with the accountant, 2026-07)
+    //   Drawdown             = Target Cost Value − Forecasted Cost of Sales (equivalently
+    //                          − Work Orders − Non-WO Cost of Sales) — funds still available
+    //                          on the line; negative = overspent. Locked (finalised) centres
+    //                          show — here and report in Profit / Loss instead
     //   Work Orders          = committed work-order line totals (click for the line's work orders)
-    //   Actual Cost of Sales = allocated Xero purchase spend, net of credit notes (click for
-    //                          the invoices, where each can be linked to a work order)
-    //   Non-WO Cost of Sales = the share of that spend not linked to any work order
-    //   Drawdown             = Target Cost Value − Work Orders − Non-WO Cost of Sales — funds
-    //                          still available on the line; negative = overspent. Locked
-    //                          (finalised) centres show — here and report in Profit / Loss instead
+    //   Non-WO Cost of Sales = the share of actual purchase spend not linked to any work order
     //   Profit / Loss        = the same remainder for locked centres — realised by finalising,
     //                          so it no longer reads as money available to spend
     //   Cost % Complete      = cost-side completion, edited inline here
+    //   Actual Cost of Sales = reference column, kept last: allocated Xero purchase spend, net
+    //                          of credit notes — click through to the invoice modal to allocate
+    //                          actual costs to work orders. Not part of the drawdown arithmetic.
 
     /// <summary>One rendered row: an individual cost centre or a named roll-up.</summary>
     private sealed record ReportLine(
@@ -426,6 +453,7 @@
         "claim" => ClaimValueFor(line.CostCodes),
         "target" => TargetCostFor(line.CostCodes),
         "wo" => WoCommittedFor(line.CostCodes),
+        "forecast" => ForecastFor(line.CostCodes),
         "acos" => CostOfSalesFor(line.CostCodes),
         "nonwo" => NonWoCostOfSalesFor(line.CostCodes),
         "drawdown" => DrawdownFor(line.CostCodes),
@@ -555,6 +583,11 @@
     // The share of that spend not linked to any work order.
     private decimal NonWoCostOfSalesFor(IReadOnlyList<string> costCodes) => SumFor(costCodes, RowNonWo);
 
+    // Forecasted Cost of Sales: committed work orders plus unlinked actual spend — the
+    // line's expected total cost. Target Cost Value − Forecast = Drawdown.
+    private decimal ForecastFor(IReadOnlyList<string> costCodes) =>
+        WoCommittedFor(costCodes) + NonWoCostOfSalesFor(costCodes);
+
     private bool IsCentreFinalised(string costCode) =>
         byCode.TryGetValue(costCode, out var row) && row.IsFinalised;
 
@@ -661,6 +694,14 @@
         + IncludedPackages.Sum(package => package.WoCommitted);
     private decimal TotalCostOfSales => SummaryRows.Sum(RowActual) + IncludedPackages.Sum(package => package.InvoicedToDate);
     private decimal TotalNonWoCostOfSales => SummaryRows.Sum(RowNonWo);
+
+    // Work orders + non-WO spend across the centres, plus each unlocked package's
+    // committed-or-direct figure (its target less its drawdown). Locked packages show —
+    // on the line (figures banked at lock), so they add nothing here either.
+    private decimal TotalForecastCostOfSales =>
+        WorkOrderCommittedByCode.Sum(entry => entry.Value - PackagedWoFor(entry.Key))
+        + SummaryRows.Sum(RowNonWo)
+        + IncludedPackages.Where(package => !package.IsLocked).Sum(package => package.TargetCost - package.Drawdown);
 
     // Every code with any figure — summary rows plus work-order-only codes.
     private IEnumerable<string> AllCodes =>
