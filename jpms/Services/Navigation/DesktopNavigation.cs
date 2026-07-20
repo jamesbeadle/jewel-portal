@@ -72,22 +72,10 @@ public static class DesktopNavigation
         // roles), so Dashboard is the whole top level for those roles.
         Entry(new NavigationItem("Dashboard", "/dashboard"), AllRoles),
 
-        // ShallowMatch: lit on the project list and a project's landing page only — the project
-        // tabs belong to the grouped entries below.
-        Entry(new NavigationItem("Projects", "/projects", ShallowMatch: true), ProjectRoles),
-
-        Group(new NavigationItem("Financials", "#financials"),
-            // The project's money pages (Financials, Cashflow, Valuation Report, Setup tabs) plus
-            // the All-projects overview at /finance — exact-only so /finance/xero stays Xero's.
-            Entry(new NavigationItem("Project Financials", "/projects/{project}/financials",
-                    new[] { "/projects/{project}/cashflow", "/projects/{project}/valuation", "/projects/{project}/financials-setup", "/finance$" }),
-                Role.ManagingDirector, Role.FinanceDirector, Role.ProjectManager, Role.QuantitySurveyor),
-            // Allocation + Transactions as tabs of one page — Allocation leads (it's the working
-            // screen), so the nav entry lands there.
-            Entry(new NavigationItem("Xero", "/finance/allocation", new[] { "/finance/xero" }),
-                Role.ManagingDirector, Role.FinanceDirector, Role.ProjectManager, Role.QuantitySurveyor),
-            Entry(new NavigationItem("Setup", "/cost-codes", new[] { "/rate-library" }),
-                Role.ManagingDirector, Role.FinanceDirector, Role.ProjectManager, Role.QuantitySurveyor)),
+        // There is no Projects entry — the split into the three groups below exists to REMOVE the
+        // flat project list from daily navigation. The portfolio (/projects, with New project)
+        // stays routable via the breadcrumb, the project switcher covers moving between projects,
+        // and project-scoped entries follow the last-viewed project.
 
         Group(new NavigationItem("Project Management", "#project-management"),
             Entry(new NavigationItem("To-do", "/projects/{project}/todos"), ProjectRoles),
@@ -111,7 +99,22 @@ public static class DesktopNavigation
                 Role.ManagingDirector, Role.FinanceDirector, Role.ProjectManager),
             Entry(new NavigationItem("Directory", "/directory"), Role.ManagingDirector),
             Entry(new NavigationItem("Clients", "/clients"), Role.ManagingDirector, Role.ProjectManager),
-            Entry(new NavigationItem("Architects", "/architects"), Role.ManagingDirector, Role.ProjectManager))
+            Entry(new NavigationItem("Architects", "/architects"), Role.ManagingDirector, Role.ProjectManager)),
+
+        // Financials sits last — the day-to-day flow reads top-down: manage the job, deliver it,
+        // then the money.
+        Group(new NavigationItem("Financials", "#financials"),
+            // The project's money pages (Financials, Cashflow, Valuation Report, Setup tabs) plus
+            // the cross-project Summary at /finance — exact-only so /finance/xero stays Xero's.
+            Entry(new NavigationItem("Project Financials", "/projects/{project}/financials",
+                    new[] { "/projects/{project}/cashflow", "/projects/{project}/valuation", "/projects/{project}/financials-setup", "/finance$" }),
+                Role.ManagingDirector, Role.FinanceDirector, Role.ProjectManager, Role.QuantitySurveyor),
+            // Allocation + Transactions as tabs of one page — Allocation leads (it's the working
+            // screen), so the nav entry lands there.
+            Entry(new NavigationItem("Xero", "/finance/allocation", new[] { "/finance/xero" }),
+                Role.ManagingDirector, Role.FinanceDirector, Role.ProjectManager, Role.QuantitySurveyor),
+            Entry(new NavigationItem("Setup", "/cost-codes", new[] { "/rate-library" }),
+                Role.ManagingDirector, Role.FinanceDirector, Role.ProjectManager, Role.QuantitySurveyor))
 
         // Agents is retired from the nav (nothing to manage day-to-day); /agents stays routable.
     };

@@ -30,6 +30,10 @@
             }
             if (!node.IsGroup && node.Item.IsActiveFor(path)) return node.Item.Label;
         }
+        // The portfolio and a project's landing page have no side-nav entry (Projects was
+        // deliberately removed from the nav) — keep the header titled all the same.
+        if (path == "/projects" || (path.StartsWith("/projects/") && !path["/projects/".Length..].Contains('/')))
+            return "Projects";
         return null;
     }
 

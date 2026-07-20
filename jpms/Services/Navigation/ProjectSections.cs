@@ -25,7 +25,10 @@ public sealed record ProjectSectionInfo(
     string Blurb,
     IReadOnlyList<ProjectTabInfo> Tabs)
 {
-    public ProjectTabInfo FirstTab => Tabs[0];
+    /// <summary>The first tab that belongs to THIS project — landing-page cards open here, so the
+    /// Financials card opens the project's own Financials even though the cross-project Summary
+    /// leads its tab row.</summary>
+    public ProjectTabInfo FirstProjectTab => Tabs.First(tab => tab.AbsoluteHref is null);
 }
 
 public static class ProjectSections
@@ -39,12 +42,12 @@ public static class ProjectSections
             "Cost centres, cashflow and the valuation report — what the project has earned, spent and retained.",
             new[]
             {
+                // The company-wide summary leads — one row per active project plus the total.
+                new ProjectTabInfo("all-projects",     "Summary", "/finance"),
                 new ProjectTabInfo("financials",       "Financials"),
                 new ProjectTabInfo("cashflow",         "Cashflow"),
                 new ProjectTabInfo("valuation",        "Valuation Report"),
-                new ProjectTabInfo("financials-setup", "Setup"),
-                // The company-wide overview — one row per active project plus the total.
-                new ProjectTabInfo("all-projects",     "All projects", "/finance")
+                new ProjectTabInfo("financials-setup", "Setup")
             }),
         new ProjectSectionInfo(
             ProjectSection.ProjectManagement,
@@ -84,5 +87,5 @@ public static class ProjectSections
         tab.AbsoluteHref ?? $"/projects/{projectId}/{tab.Slug}";
 
     public static string FirstTabHref(string projectId, ProjectSectionInfo section) =>
-        HrefFor(projectId, section.FirstTab);
+        HrefFor(projectId, section.FirstProjectTab);
 }
