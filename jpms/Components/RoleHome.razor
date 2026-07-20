@@ -76,8 +76,6 @@
             var projectId = CurrentProject.ResolveFor(Projects.Current);
             if (DesktopNavigation.CanSeeProjects(Role))
             {
-                yield return (DesktopNavigation.ProjectOverview.Label, DesktopNavigation.ProjectOverview.Href,
-                    DesktopNavigation.ProjectOverview.ResolveHref(projectId));
                 foreach (var block in DesktopNavigation.ProjectBlocksFor(Role))
                 {
                     yield return (block.Heading, block.IconKey, block.Items[0].ResolveHref(projectId));

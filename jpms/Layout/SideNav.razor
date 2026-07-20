@@ -95,14 +95,6 @@
                     </li>
                 }
 
-                <li>
-                    <a href="@DesktopNavigation.ProjectOverview.ResolveHref(EffectiveProjectId)" @onclick="HandleNavigate" @onclick:preventDefault="false"
-                       class="@LinkClass(DesktopNavigation.ProjectOverview.IsActiveFor(CurrentPath))" title="@DesktopNavigation.ProjectOverview.Label">
-                        <NavIcon Route="@DesktopNavigation.ProjectOverview.Href" Class="w-5 h-5 shrink-0" />
-                        <span class="@LabelClass">@DesktopNavigation.ProjectOverview.Label</span>
-                    </a>
-                </li>
-
                 @foreach (var block in ProjectBlocks)
                 {
                     @if (IsExpanded)

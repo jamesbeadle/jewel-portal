@@ -1,74 +1,16 @@
 @page "/projects/{ProjectId}"
-@using Jewel.JPMS.Features.Projects
 @using Jewel.JPMS.Services.Navigation
-@inject AuthService Auth
-@inject SessionService Session
-@inject ProjectListReadModel Projects
 @inject NavigationManager Nav
 
-<PageTitle>Project · JPMS</PageTitle>
-
 @*
-    The project landing page. Formerly a redirect straight to the Financials tab; now the front
-    door to the project's three sections — Financials, Project Management and Operations — each
-    rendered as a card listing its tabs. Deep links to individual tabs are unchanged.
+    The bare project URL has no page of its own — the Overview landing was retired (Home is the
+    landing; the sidebar's workspace blocks are the map). Redirect to the workspace's first page;
+    replace:true keeps Back working naturally.
 *@
-
-@if (!isLoaded)
-{
-    <section class="px-6 md:px-8 py-12 text-content-subtle text-sm">Loading…</section>
-}
-else if (!Session.IsApproved)
-{
-    <RequestAccessView Email="@Auth.CurrentUser!.Email" DisplayName="@Auth.CurrentUser.DisplayName" />
-}
-else
-{
-    <ProjectPageShell ProjectId="@ProjectId" ActiveTab="">
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-5 mt-2">
-            @foreach (var sectionInfo in ProjectSections.All)
-            {
-                <a href="@ProjectSections.FirstTabHref(ProjectId, sectionInfo)"
-                   class="group panel p-5 flex flex-col hover:border-line-strong transition">
-                    <h2 class="text-lg font-semibold text-content group-hover:underline underline-offset-4 mb-1">
-                        @sectionInfo.Label
-                    </h2>
-                    <p class="text-sm text-content-muted mb-4">@sectionInfo.Blurb</p>
-                    <ul class="mt-auto space-y-1.5">
-                        @foreach (var tab in sectionInfo.Tabs)
-                        {
-                            <li>
-                                <span class="inline-flex items-center gap-2 text-sm text-content-subtle group-hover:text-content transition">
-                                    <svg class="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                         stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                                        <path d="M9 6l6 6-6 6" />
-                                    </svg>
-                                    @tab.Label
-                                </span>
-                            </li>
-                        }
-                    </ul>
-                </a>
-            }
-        </div>
-
-        <p class="mt-4 text-sm text-content-subtle">
-            Project details, retention &amp; valuation dates and the correspondence profile live in
-            <a class="text-content-muted hover:text-content underline underline-offset-4" href="@($"/projects/{ProjectId}/settings")">Project settings</a>.
-        </p>
-    </ProjectPageShell>
-}
 
 @code {
     [Parameter] public string ProjectId { get; set; } = "";
 
-    private bool isLoaded;
-
-    protected override async Task OnInitializedAsync()
-    {
-        await Session.EnsureLoadedAsync();
-        if (!Auth.IsSignedIn) { Nav.NavigateTo("/login", forceLoad: true); return; }
-        if (Projects.Current is null) await Projects.RefreshAsync(CancellationToken.None);
-        isLoaded = true;
-    }
+    protected override void OnInitialized() =>
+        Nav.NavigateTo(ProjectSections.FirstTabHref(ProjectId, ProjectSections.All[0]), replace: true);
 }

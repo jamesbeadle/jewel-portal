@@ -57,8 +57,6 @@ public static class DesktopNavigation
 
     public static readonly NavigationItem Home = new("Home", "/dashboard");
 
-    public static readonly NavigationItem ProjectOverview = new("Overview", "/projects/{project}");
-
     public static readonly NavigationItem ProjectSettings = new("Project settings", "/projects/{project}/settings");
 
     public static bool CanSee(Role role, IReadOnlyList<Role> visibleTo) =>
@@ -112,7 +110,6 @@ public static class DesktopNavigation
         var items = new List<NavigationItem> { Home };
         if (CanSeeProjects(role))
         {
-            items.Add(ProjectOverview);
             items.AddRange(ProjectBlocksFor(role).SelectMany(block => block.Items));
             items.Add(ProjectSettings);
         }
