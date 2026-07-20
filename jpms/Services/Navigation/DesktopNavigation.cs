@@ -79,11 +79,12 @@ public static class DesktopNavigation
         Group(new NavigationItem("Financials", "#financials"),
             // The project's money pages (Financials, Cashflow, Valuation Report, Setup tabs) plus
             // the All-projects overview at /finance — exact-only so /finance/xero stays Xero's.
-            Entry(new NavigationItem("Project financials", "/projects/{project}/financials",
+            Entry(new NavigationItem("Project Financials", "/projects/{project}/financials",
                     new[] { "/projects/{project}/cashflow", "/projects/{project}/valuation", "/projects/{project}/financials-setup", "/finance$" }),
                 Role.ManagingDirector, Role.FinanceDirector, Role.ProjectManager, Role.QuantitySurveyor),
-            // Transactions + Allocation as tabs of one page.
-            Entry(new NavigationItem("Xero", "/finance/xero", new[] { "/finance/allocation" }),
+            // Allocation + Transactions as tabs of one page — Allocation leads (it's the working
+            // screen), so the nav entry lands there.
+            Entry(new NavigationItem("Xero", "/finance/allocation", new[] { "/finance/xero" }),
                 Role.ManagingDirector, Role.FinanceDirector, Role.ProjectManager, Role.QuantitySurveyor),
             Entry(new NavigationItem("Setup", "/cost-codes", new[] { "/rate-library" }),
                 Role.ManagingDirector, Role.FinanceDirector, Role.ProjectManager, Role.QuantitySurveyor)),

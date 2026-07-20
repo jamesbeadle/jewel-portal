@@ -37,12 +37,13 @@ public static class WorkspaceSections
         "Xero",
         new[]
         {
-            // Mirrors the API's Xero ledger authorisation (ListXeroTransactionsEndpoint).
-            new WorkspaceTab("Transactions", "/finance/xero",
-                new[] { Role.ManagingDirector, Role.FinanceDirector, Role.QuantitySurveyor }),
+            // Allocation leads — it's the working screen; Transactions is the reference view.
             // Mirrors the API's allocation authorisation (XeroLedgerRoles.AllowedToAllocate).
             new WorkspaceTab("Allocation", "/finance/allocation",
-                new[] { Role.ManagingDirector, Role.FinanceDirector, Role.ProjectManager, Role.QuantitySurveyor })
+                new[] { Role.ManagingDirector, Role.FinanceDirector, Role.ProjectManager, Role.QuantitySurveyor }),
+            // Mirrors the API's Xero ledger authorisation (ListXeroTransactionsEndpoint).
+            new WorkspaceTab("Transactions", "/finance/xero",
+                new[] { Role.ManagingDirector, Role.FinanceDirector, Role.QuantitySurveyor })
         });
 
     public static readonly WorkspaceSectionInfo FinanceSetup = new(
