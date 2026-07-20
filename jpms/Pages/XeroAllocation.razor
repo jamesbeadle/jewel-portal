@@ -401,7 +401,10 @@ else
             </div>
         }
 
-        <Modal IsOpen="@(splitLine is not null)" Title="Split across projects and cost centres"
+        @* Hidden while the invoice document modal is open — a split started from
+           the document viewer renders inline there instead, so the invoice stays
+           readable while the amounts are keyed in. *@
+        <Modal IsOpen="@(splitLine is not null && viewLine is null)" Title="Split across projects and cost centres"
                ConfirmLabel="@(isApplying ? "Allocating…" : "Allocate split")" CancelLabel="Cancel"
                ConfirmDisabled="@isBusy" OnConfirm="ApplySplitAsync" OnCancel="CloseSplit" Class="max-w-3xl">
             @if (splitLine is not null)
@@ -414,53 +417,7 @@ else
                             @(splitLine.InvoiceNumber ?? "—") · @Money(splitLine.Net) net
                         </span>
                     </div>
-
-                    @if (splitError is not null)
-                    {
-                        <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@splitError</p>
-                    }
-
-                    <div class="space-y-2">
-                        <div class="flex items-center gap-2 text-xs uppercase tracking-wider text-content-subtle font-semibold">
-                            <span class="w-56">Project</span>
-                            <span class="grow">Cost centre</span>
-                            <span class="w-32 text-right">Net £</span>
-                            <span class="w-7"></span>
-                        </div>
-                        @foreach (var row in splitRows)
-                        {
-                            <div class="flex items-center gap-2">
-                                <SearchSelect Options="@ProjectOptions" WidthClass="w-56"
-                                              Value="@row.ProjectId"
-                                              ValueChanged="value => OnSplitProjectChanged(row, value)" />
-                                <SearchSelect Options="@CostCenterOptions" WidthClass="grow min-w-0"
-                                              Value="@row.Code"
-                                              ValueChanged="value => OnSplitCodeChanged(row, value)" />
-                                <input class="w-32 bg-surface border border-line rounded-lg px-2 py-1.5 text-content text-sm text-right"
-                                       type="number" step="0.01" min="0" placeholder="0.00"
-                                       value="@(row.Amount?.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture))"
-                                       @onchange="e => OnSplitAmountChanged(row, e.Value?.ToString())" />
-                                <button type="button" aria-label="Remove row" disabled="@(splitRows.Count <= 2)"
-                                        class="inline-flex items-center justify-center w-7 h-7 rounded-md text-content-subtle hover:text-content hover:bg-surface-raised disabled:opacity-40"
-                                        @onclick="() => RemoveSplitRow(row)">
-                                    <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                                         stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6L6 18" /></svg>
-                                </button>
-                            </div>
-                        }
-                        <button type="button" class="text-xs font-medium text-content-muted hover:text-content underline underline-offset-4"
-                                @onclick="AddSplitRow">+ Add row</button>
-                    </div>
-
-                    <p class="text-sm @(SplitRemaining == 0m ? "text-content-muted" : "text-negative")">
-                        @Money(SplitAssigned) of @Money(splitLine.Net) assigned
-                        @(SplitRemaining == 0m ? "— fully assigned." : $"— {Money(SplitRemaining)} remaining.")
-                    </p>
-                    <p class="text-xs text-content-subtle">
-                        Rows can point at different projects. On approval the Xero line is split into one line
-                        per row (amounts pro-rated, invoice total unchanged) with each row's project site and
-                        cost code stamped on it.
-                    </p>
+                    @SplitEditorCore
                 </div>
             }
         </Modal>
@@ -482,28 +439,52 @@ else
                        site and cost centre from the invoice itself, so the controls live
                        here too. Same state as the line's row — a pick made here shows on
                        the row (and moves it between project tabs) if the modal is closed
-                       without allocating. *@
+                       without allocating. Split… swaps the bar for the split editor,
+                       inline so the invoice stays readable while the amounts are keyed. *@
                     @if (viewLine.AllocationStatus == XeroAllocationStatus.Unallocated)
                     {
                         var docLine = viewLine;
-                        <div class="rounded-lg border border-line bg-surface-raised px-4 py-3 flex items-center gap-2 flex-wrap">
-                            <span class="text-xs uppercase tracking-wider text-content-subtle font-semibold">Allocate</span>
-                            <SearchSelect Options="@ProjectOptions" WidthClass="w-44" Placeholder="Project…"
-                                          Value="@SelectedProjectFor(docLine)"
-                                          ValueChanged="value => SetProject(docLine.XeroLedgerLineId, value)" />
-                            <SearchSelect Options="@CostCenterOptions" WidthClass="w-52" Placeholder="Cost centre…"
-                                          Value="@SelectedCostCenterFor(docLine)"
-                                          ValueChanged="value => SetCostCenter(docLine.XeroLedgerLineId, value)" />
-                            <button class="text-xs font-medium rounded-lg px-2.5 py-1 bg-content text-surface disabled:opacity-40"
-                                    disabled="@(isBusy || !CanAllocate(docLine))"
-                                    @onclick="AllocateFromViewAsync">
-                                @(isApplying ? "Allocating…" : "Allocate")
-                            </button>
-                            <button class="text-xs font-medium rounded-lg px-2.5 py-1 border border-line text-content-muted hover:text-content disabled:opacity-40"
-                                    title="Save the project and set its Xero site now — cost centre to follow"
-                                    disabled="@(isBusy || !CanSetProject(docLine))"
-                                    @onclick="SetProjectFromViewAsync">Set</button>
-                        </div>
+                        @if (splitLine?.XeroLedgerLineId == docLine.XeroLedgerLineId)
+                        {
+                            <div class="rounded-lg border border-line bg-surface-raised px-4 py-3 space-y-4">
+                                <div class="flex items-center justify-between gap-2 flex-wrap">
+                                    <span class="text-xs uppercase tracking-wider text-content-subtle font-semibold">Split across cost centres</span>
+                                    <span class="flex items-center gap-2">
+                                        <button class="text-xs font-medium rounded-lg px-2.5 py-1 bg-content text-surface disabled:opacity-40"
+                                                disabled="@isBusy" @onclick="ApplySplitAsync">
+                                            @(isApplying ? "Allocating…" : "Allocate split")
+                                        </button>
+                                        <button class="text-xs font-medium rounded-lg px-2.5 py-1 border border-line text-content-muted hover:text-content disabled:opacity-40"
+                                                disabled="@isBusy" @onclick="CloseSplit">Cancel</button>
+                                    </span>
+                                </div>
+                                @SplitEditorCore
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="rounded-lg border border-line bg-surface-raised px-4 py-3 flex items-center gap-2 flex-wrap">
+                                <span class="text-xs uppercase tracking-wider text-content-subtle font-semibold">Allocate</span>
+                                <SearchSelect Options="@ProjectOptions" WidthClass="w-44" Placeholder="Project…"
+                                              Value="@SelectedProjectFor(docLine)"
+                                              ValueChanged="value => SetProject(docLine.XeroLedgerLineId, value)" />
+                                <SearchSelect Options="@CostCenterOptions" WidthClass="w-52" Placeholder="Cost centre…"
+                                              Value="@SelectedCostCenterFor(docLine)"
+                                              ValueChanged="value => SetCostCenter(docLine.XeroLedgerLineId, value)" />
+                                <button class="text-xs font-medium rounded-lg px-2.5 py-1 bg-content text-surface disabled:opacity-40"
+                                        disabled="@(isBusy || !CanAllocate(docLine))"
+                                        @onclick="AllocateFromViewAsync">
+                                    @(isApplying ? "Allocating…" : "Allocate")
+                                </button>
+                                <button class="text-xs font-medium rounded-lg px-2.5 py-1 border border-line text-content-muted hover:text-content disabled:opacity-40"
+                                        title="Save the project and set its Xero site now — cost centre to follow"
+                                        disabled="@(isBusy || !CanSetProject(docLine))"
+                                        @onclick="SetProjectFromViewAsync">Set</button>
+                                <button class="text-xs text-content-subtle underline underline-offset-4 disabled:opacity-40"
+                                        title="Share this line's value across several cost centres (or projects) — one Xero line per share on approval"
+                                        disabled="@isBusy" @onclick="() => OpenSplit(docLine)">Split…</button>
+                            </div>
+                        }
                     }
 
                     @if (viewError is not null)
@@ -857,7 +838,61 @@ else
     // -- split editor ----------------------------------------------------------
     // A line's value shared across several projects and/or cost centres. The
     // amounts must add up to the line's net exactly; the API enforces the same
-    // rules server-side.
+    // rules server-side. The editor renders in two places over the same state:
+    // the standalone split modal (from a queue row's Split…) and inline in the
+    // invoice document modal (from its Split…), where the accountant can read
+    // the invoice while keying the shares.
+
+    // The rows, tally and explainer — everything but the header card and the
+    // confirm/cancel buttons, which each host supplies.
+    private RenderFragment SplitEditorCore => @<div class="space-y-4">
+        @if (splitError is not null)
+        {
+            <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@splitError</p>
+        }
+
+        <div class="space-y-2">
+            <div class="flex items-center gap-2 text-xs uppercase tracking-wider text-content-subtle font-semibold">
+                <span class="w-56">Project</span>
+                <span class="grow">Cost centre</span>
+                <span class="w-32 text-right">Net £</span>
+                <span class="w-7"></span>
+            </div>
+            @foreach (var row in splitRows)
+            {
+                <div class="flex items-center gap-2">
+                    <SearchSelect Options="@ProjectOptions" WidthClass="w-56"
+                                  Value="@row.ProjectId"
+                                  ValueChanged="value => OnSplitProjectChanged(row, value)" />
+                    <SearchSelect Options="@CostCenterOptions" WidthClass="grow min-w-0"
+                                  Value="@row.Code"
+                                  ValueChanged="value => OnSplitCodeChanged(row, value)" />
+                    <input class="w-32 bg-surface border border-line rounded-lg px-2 py-1.5 text-content text-sm text-right"
+                           type="number" step="0.01" min="0" placeholder="0.00"
+                           value="@(row.Amount?.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture))"
+                           @onchange="e => OnSplitAmountChanged(row, e.Value?.ToString())" />
+                    <button type="button" aria-label="Remove row" disabled="@(splitRows.Count <= 2)"
+                            class="inline-flex items-center justify-center w-7 h-7 rounded-md text-content-subtle hover:text-content hover:bg-surface-raised disabled:opacity-40"
+                            @onclick="() => RemoveSplitRow(row)">
+                        <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                             stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6L6 18" /></svg>
+                    </button>
+                </div>
+            }
+            <button type="button" class="text-xs font-medium text-content-muted hover:text-content underline underline-offset-4"
+                    @onclick="AddSplitRow">+ Add row</button>
+        </div>
+
+        <p class="text-sm @(SplitRemaining == 0m ? "text-content-muted" : "text-negative")">
+            @Money(SplitAssigned) of @Money(splitLine?.Net ?? 0m) assigned
+            @(SplitRemaining == 0m ? "— fully assigned." : $"— {Money(SplitRemaining)} remaining.")
+        </p>
+        <p class="text-xs text-content-subtle">
+            Rows can point at different projects. On approval the Xero line is split into one line
+            per row (amounts pro-rated, invoice total unchanged) with each row's project site and
+            cost code stamped on it.
+        </p>
+    </div>;
 
     private sealed class SplitRow
     {
@@ -932,15 +967,19 @@ else
         isApplying = true; splitError = null;
         try
         {
+            var lineId = splitLine.XeroLedgerLineId;
             await Ledger.ApplyAsync(new SetXeroAllocation(
-                new[] { splitLine.XeroLedgerLineId },
+                new[] { lineId },
                 XeroAllocationAction.Allocate,
                 Splits: rows.Select(row => new XeroCostSplit(row.Code, row.Amount!.Value, row.ProjectId)).ToList()));
-            selectedIds.Remove(splitLine.XeroLedgerLineId);
-            chosenProject.Remove(splitLine.XeroLedgerLineId);
-            chosenCostCenter.Remove(splitLine.XeroLedgerLineId);
-            chosenBucket.Remove(splitLine.XeroLedgerLineId);
+            selectedIds.Remove(lineId);
+            chosenProject.Remove(lineId);
+            chosenCostCenter.Remove(lineId);
+            chosenBucket.Remove(lineId);
             CloseSplit();
+            // A split keyed inside the document viewer closes it too on success —
+            // same contract as Allocate from the viewer: back to the queue.
+            if (viewLine?.XeroLedgerLineId == lineId) CloseInvoiceView();
         }
         catch (CommandFailedException failure) { splitError = failure.Message; }
         finally { isApplying = false; }
@@ -984,6 +1023,11 @@ else
 
     private void CloseInvoiceView()
     {
+        // Closing the viewer abandons a split started inside it — otherwise the
+        // standalone split modal (hidden while the viewer is open) would pop up
+        // unbidden the moment the viewer goes.
+        if (splitLine is not null && splitLine.XeroLedgerLineId == viewLine?.XeroLedgerLineId)
+            CloseSplit();
         viewLine = null;
         viewAttachments = null;
         viewSelected = null;

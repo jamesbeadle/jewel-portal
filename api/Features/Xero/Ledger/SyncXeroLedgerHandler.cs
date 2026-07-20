@@ -16,6 +16,13 @@ namespace Jewel.JPMS.Api.Features.Xero.Ledger;
 /// The exception is voided/deleted invoices: voiding reverses the cost, so their
 /// stored lines are removed even when already allocated (splits included), taking
 /// them out of project financials on the next sync.
+///
+/// Split write-backs need one more rule: approving a split rewrites the bill's
+/// line list in Xero — the original line is replaced by one NEW line per cost
+/// centre share, each with a fresh LineItemID. Those lines are JPMS's own
+/// output (the stored split line remains the record feeding project actuals),
+/// so unrecognised lines on an invoice JPMS itself approved are NOT imported —
+/// re-queueing them would double-count the cost the moment they were allocated.
 /// </summary>
 public sealed class SyncXeroLedgerHandler : ICommandHandler<SyncXeroLedger, XeroLedgerSyncResult>
 {
@@ -68,6 +75,11 @@ public sealed class SyncXeroLedgerHandler : ICommandHandler<SyncXeroLedger, Xero
         var existingById = await context.XeroLedgerLines
             .ToDictionaryAsync(line => line.XeroLedgerLineId, cancellationToken);
 
+        // Stored lines grouped by invoice, for the split write-back rule below.
+        var existingByInvoice = existingById.Values
+            .GroupBy(line => line.XeroInvoiceId)
+            .ToDictionary(group => group.Key, group => group.ToList());
+
         var now = DateTimeOffset.UtcNow;
         int added = 0, updated = 0, removed = 0;
         var seenLineIds = new HashSet<string>();
@@ -75,6 +87,22 @@ public sealed class SyncXeroLedgerHandler : ICommandHandler<SyncXeroLedger, Xero
         foreach (var transaction in snapshot.Transactions)
         {
             var excluded = ExcludedStatuses.Contains(transaction.Status);
+
+            // A stored line JPMS approved whose LineItemID is gone from the bill
+            // means JPMS's own split write-back rewrote the line list: the
+            // unrecognised "new" lines below are the split pieces it created, not
+            // new costs — the stored split line stays the record, so they must
+            // not enter the queue. (Consequence: a line genuinely added in Xero
+            // to a bill after JPMS split-approved it is skipped too — approved
+            // bills aren't expected to grow lines; void and re-enter if one does.)
+            var currentLineIds = transaction.Lines
+                .Where(line => !string.IsNullOrWhiteSpace(line.LineItemId))
+                .Select(line => line.LineItemId!)
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+            var rewrittenByWriteBack = existingByInvoice.TryGetValue(transaction.TransactionId, out var storedLines)
+                && storedLines.Any(stored => stored.WriteBackStatus == (int)XeroWriteBackStatus.Approved
+                                             && stored.AllocationStatus == (int)XeroAllocationStatus.Allocated
+                                             && !currentLineIds.Contains(stored.XeroLineItemId));
 
             foreach (var line in transaction.Lines)
             {
@@ -97,6 +125,10 @@ public sealed class SyncXeroLedgerHandler : ICommandHandler<SyncXeroLedger, Xero
                 // allocation; overhead lines are skipped. Existing stored lines that fail
                 // the rule are cleaned up in the pass below.
                 if (!IsCostOfSales(line.AccountCode)) continue;
+
+                // The split pieces JPMS's own write-back created (see above) —
+                // known lines still refresh, unrecognised ones stay out.
+                if (rewrittenByWriteBack && !existingById.ContainsKey(id)) continue;
 
                 seenLineIds.Add(id);
 
