@@ -54,8 +54,8 @@
         {
             <a href="@destination.Href"
                class="panel p-5 flex items-center gap-3 hover:border-line-strong hover:bg-surface-raised transition">
-                <NavIcon Route="@destination.Item.Href" Class="w-5 h-5 text-accent shrink-0" />
-                <span class="text-base font-medium text-content">@destination.Item.Label</span>
+                <NavIcon Route="@destination.IconKey" Class="w-5 h-5 text-accent shrink-0" />
+                <span class="text-base font-medium text-content">@destination.Label</span>
             </a>
         }
     </div>
@@ -67,20 +67,25 @@
     [Parameter, EditorRequired] public string DisplayName { get; set; } = "";
     [Parameter, EditorRequired] public string Email { get; set; } = "";
 
-    // One card per top-level nav entry; groups land on their first page, resolved against the
-    // last-viewed project (or the project list before one exists).
-    private IEnumerable<(NavigationItem Item, string Href)> Destinations
+    // One card per destination area: the project workspace's blocks (landing on each block's
+    // first page, resolved against the last-viewed project) followed by the company tools.
+    private IEnumerable<(string Label, string IconKey, string Href)> Destinations
     {
         get
         {
             var projectId = CurrentProject.ResolveFor(Projects.Current);
-            foreach (var node in NavigationCatalog.NodesFor(Role))
+            if (DesktopNavigation.CanSeeProjects(Role))
             {
-                if (node.Item.Href == "/dashboard") continue;
-                var href = node.IsGroup
-                    ? node.Children[0].ResolveHref(projectId)
-                    : node.Item.ResolveHref(projectId);
-                yield return (node.Item, href);
+                yield return (DesktopNavigation.ProjectOverview.Label, DesktopNavigation.ProjectOverview.Href,
+                    DesktopNavigation.ProjectOverview.ResolveHref(projectId));
+                foreach (var block in DesktopNavigation.ProjectBlocksFor(Role))
+                {
+                    yield return (block.Heading, block.IconKey, block.Items[0].ResolveHref(projectId));
+                }
+            }
+            foreach (var item in DesktopNavigation.CompanyItemsFor(Role))
+            {
+                yield return (item.Label, item.Href, item.Href);
             }
         }
     }

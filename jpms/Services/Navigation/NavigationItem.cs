@@ -18,7 +18,8 @@ public sealed record NavigationItem(
     string Label,
     string Href,
     IReadOnlyList<string>? MatchPrefixes = null,
-    bool ShallowMatch = false)
+    bool ShallowMatch = false,
+    bool ExactMatch = false)
 {
     public const string ProjectToken = "{project}";
 
@@ -47,11 +48,17 @@ public sealed record NavigationItem(
             if (parts.Length != 2) return false;
             if (!path.StartsWith(parts[0], StringComparison.Ordinal)) return false;
             var rest = path[parts[0].Length..];
+            // "/projects/{project}" (no suffix) — the project landing page: exactly the id segment.
+            if (parts[1].Length == 0) return rest.Length > 0 && !rest.Contains('/');
             var slash = rest.IndexOf('/');
             if (slash < 0) return false;
             var tail = rest[slash..];
             return tail == parts[1] || tail.StartsWith(parts[1] + "/", StringComparison.Ordinal);
         }
+
+        // Exact-only — used where a prefix would swallow a sibling entry's routes (e.g. Financial
+        // Summary at "/finance" must not light up for /finance/xero, which is Xero's).
+        if (ExactMatch) return path == href;
 
         if (ShallowMatch)
         {
@@ -64,19 +71,3 @@ public sealed record NavigationItem(
     }
 }
 
-/// <summary>A rendered nav node: a plain entry (no children) or an accordion group.</summary>
-public sealed record NavigationNode(NavigationItem Item, IReadOnlyList<NavigationItem> Children)
-{
-    public bool IsGroup => Children.Count > 0;
-
-    public bool IsActiveFor(string path) =>
-        Item.IsActiveFor(path) || Children.Any(child => child.IsActiveFor(path));
-}
-
-public sealed record DesktopNavigationEntry(
-    NavigationItem Item,
-    IReadOnlyList<Role> VisibleTo,
-    IReadOnlyList<DesktopNavigationEntry>? Children = null)
-{
-    public bool IsVisibleTo(Role role) => VisibleTo.Contains(role);
-}

@@ -6,6 +6,14 @@
 @inject CurrentProjectService CurrentProject
 @implements IDisposable
 
+@*
+    The app's single navigation plane, in two explicit scopes: the PROJECT WORKSPACE — a project
+    picker with the workspace's pages beneath it, every link targeting the picked project — and
+    the COMPANY area below the divider for cross-project tools. The picker doubles as the project
+    switcher (the portfolio lives in its footer); picking a project while on a project page jumps
+    to the same page of the new project.
+*@
+
 <div class="h-full flex flex-col bg-surface">
 
     <div class="@HeaderLayout border-b border-line">
@@ -25,57 +33,127 @@
     </div>
 
     <nav class="flex-1 px-2 py-3 overflow-y-auto">
-        <ul class="space-y-1">
-            @foreach (var node in VisibleNodes)
+        <ul class="space-y-0.5">
+            <li>
+                <a href="@DesktopNavigation.Home.Href" @onclick="HandleNavigate" @onclick:preventDefault="false"
+                   class="@LinkClass(DesktopNavigation.Home.IsActiveFor(CurrentPath))" title="@DesktopNavigation.Home.Label">
+                    <NavIcon Route="@DesktopNavigation.Home.Href" Class="w-5 h-5 shrink-0" />
+                    <span class="@LabelClass">@DesktopNavigation.Home.Label</span>
+                </a>
+            </li>
+
+            @if (ShowsProjectWorkspace)
             {
-                @if (!node.IsGroup)
+                @* ---- Project workspace: everything below the picker targets this project. ---- *@
+                @if (IsExpanded)
                 {
-                    <li>
-                        <a href="@node.Item.ResolveHref(EffectiveProjectId)" @onclick="HandleNavigate" @onclick:preventDefault="false"
-                           class="@LinkClass(node.Item.IsActiveFor(CurrentPath))" title="@node.Item.Label">
-                            <NavIcon Route="@node.Item.Href" Class="w-5 h-5 shrink-0" />
-                            <span class="@LabelClass">@node.Item.Label</span>
-                        </a>
+                    <li class="hidden md:block pt-2 pb-1">
+                        <div class="relative">
+                            <button type="button" @onclick="() => pickerOpen = !pickerOpen"
+                                    class="w-full flex items-center gap-2 rounded-lg border border-line bg-surface-raised px-3 py-2 text-left hover:border-line-strong transition"
+                                    aria-haspopup="listbox" aria-expanded="@pickerOpen" title="Switch project">
+                                @if (PickedProject is { } picked)
+                                {
+                                    <span class="min-w-0 flex-1">
+                                        <span class="block font-mono text-[10px] uppercase tracking-wider text-content-subtle truncate">@picked.Reference</span>
+                                        <span class="block text-sm font-semibold text-content truncate">@picked.Name</span>
+                                    </span>
+                                }
+                                else
+                                {
+                                    <span class="min-w-0 flex-1 text-sm text-content-subtle">Pick a project…</span>
+                                }
+                                <svg class="w-4 h-4 text-content-subtle shrink-0 transition-transform @(pickerOpen ? "rotate-180" : "")"
+                                     viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                     stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
+                            </button>
+
+                            @if (pickerOpen)
+                            {
+                                <button type="button" class="fixed inset-0 z-30 cursor-default" aria-hidden="true"
+                                        @onclick="() => pickerOpen = false" tabindex="-1"></button>
+                                <div class="absolute left-0 right-0 top-full z-40 mt-1 max-h-80 overflow-y-auto rounded-xl border border-line bg-surface shadow-lg py-1"
+                                     role="listbox">
+                                    @foreach (var candidate in ActiveProjects)
+                                    {
+                                        var isCurrent = string.Equals(candidate.ProjectId, EffectiveProjectId, StringComparison.OrdinalIgnoreCase);
+                                        <button type="button" role="option" aria-selected="@isCurrent"
+                                                class="w-full text-left px-3 py-2 text-sm transition @(isCurrent ? "bg-surface-raised text-content font-semibold" : "text-content-muted hover:text-content hover:bg-surface-raised")"
+                                                @onclick="() => PickProject(candidate)">
+                                            <span class="font-mono text-xs text-content-subtle mr-2">@candidate.Reference</span>@candidate.Name
+                                        </button>
+                                    }
+                                    <div class="border-t border-line mt-1 pt-1">
+                                        <a href="/projects" class="block px-3 py-2 text-xs text-content-subtle hover:text-content hover:bg-surface-raised transition"
+                                           @onclick="ClosePickerAndNavigate" @onclick:preventDefault="false">
+                                            Project portfolio · New project →
+                                        </a>
+                                    </div>
+                                </div>
+                            }
+                        </div>
                     </li>
                 }
-                else
+
+                <li>
+                    <a href="@DesktopNavigation.ProjectOverview.ResolveHref(EffectiveProjectId)" @onclick="HandleNavigate" @onclick:preventDefault="false"
+                       class="@LinkClass(DesktopNavigation.ProjectOverview.IsActiveFor(CurrentPath))" title="@DesktopNavigation.ProjectOverview.Label">
+                        <NavIcon Route="@DesktopNavigation.ProjectOverview.Href" Class="w-5 h-5 shrink-0" />
+                        <span class="@LabelClass">@DesktopNavigation.ProjectOverview.Label</span>
+                    </a>
+                </li>
+
+                @foreach (var block in ProjectBlocks)
                 {
-                    var isOpen = IsOpen(node);
-                    <li>
-                        @if (IsExpanded)
+                    @if (IsExpanded)
+                    {
+                        <li class="hidden md:block px-3 pt-3 pb-1">
+                            <p class="eyebrow">@block.Heading</p>
+                        </li>
+                        @foreach (var item in block.Items)
                         {
-                            @* Accordion header: toggles the group; the group containing the
-                               current page auto-opens. *@
-                            <button type="button" @onclick="() => ToggleGroup(node)"
-                                    class="@GroupClass(node.IsActiveFor(CurrentPath)) w-full" title="@node.Item.Label">
-                                <NavIcon Route="@node.Item.Href" Class="w-5 h-5 shrink-0" />
-                                <span class="@LabelClass flex-1 text-left">@node.Item.Label</span>
-                                <svg class="hidden md:block w-3.5 h-3.5 shrink-0 transition-transform @(isOpen ? "rotate-90" : "")"
-                                     viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                                     stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6" /></svg>
-                            </button>
-                            @if (isOpen)
-                            {
-                                <ul class="mt-0.5 mb-1 space-y-0.5">
-                                    @foreach (var child in node.Children)
-                                    {
-                                        <li>
-                                            <a href="@child.ResolveHref(EffectiveProjectId)" @onclick="HandleNavigate" @onclick:preventDefault="false"
-                                               class="@ChildClass(child.IsActiveFor(CurrentPath))" title="@child.Label">@child.Label</a>
-                                        </li>
-                                    }
-                                </ul>
-                            }
+                            <li class="hidden md:block">
+                                <a href="@item.ResolveHref(EffectiveProjectId)" @onclick="HandleNavigate" @onclick:preventDefault="false"
+                                   class="@BlockItemClass(item.IsActiveFor(CurrentPath))" title="@item.Label">@item.Label</a>
+                            </li>
                         }
-                        else
-                        {
-                            @* Collapsed rail: no room for children — the icon goes straight to the
-                               group's first page. *@
-                            <a href="@node.Children[0].ResolveHref(EffectiveProjectId)" @onclick="HandleNavigate" @onclick:preventDefault="false"
-                               class="@LinkClass(node.IsActiveFor(CurrentPath))" title="@node.Item.Label">
-                                <NavIcon Route="@node.Item.Href" Class="w-5 h-5 shrink-0" />
+                    }
+                    else
+                    {
+                        @* Collapsed rail: one icon per block, straight to its first page. *@
+                        <li>
+                            <a href="@block.Items[0].ResolveHref(EffectiveProjectId)" @onclick="HandleNavigate" @onclick:preventDefault="false"
+                               class="@LinkClass(block.Items.Any(item => item.IsActiveFor(CurrentPath)))" title="@block.Heading">
+                                <NavIcon Route="@block.IconKey" Class="w-5 h-5 shrink-0" />
                             </a>
-                        }
+                        </li>
+                    }
+                }
+
+                <li class="@(IsExpanded ? "md:pt-1" : "")">
+                    <a href="@DesktopNavigation.ProjectSettings.ResolveHref(EffectiveProjectId)" @onclick="HandleNavigate" @onclick:preventDefault="false"
+                       class="@LinkClass(DesktopNavigation.ProjectSettings.IsActiveFor(CurrentPath))" title="@DesktopNavigation.ProjectSettings.Label">
+                        <NavIcon Route="@DesktopNavigation.ProjectSettings.Href" Class="w-5 h-5 shrink-0" />
+                        <span class="@LabelClass">@DesktopNavigation.ProjectSettings.Label</span>
+                    </a>
+                </li>
+            }
+
+            @if (CompanyItems.Count > 0)
+            {
+                @* ---- Company: cross-project tools, deliberately separated from the workspace. ---- *@
+                <li class="pt-3 pb-1">
+                    <div class="border-t border-line mx-1 mb-2"></div>
+                    <p class="eyebrow px-3 @(IsExpanded ? "hidden md:block" : "hidden")">Company</p>
+                </li>
+                @foreach (var item in CompanyItems)
+                {
+                    <li>
+                        <a href="@item.Href" @onclick="HandleNavigate" @onclick:preventDefault="false"
+                           class="@LinkClass(item.IsActiveFor(CurrentPath))" title="@item.Label">
+                            <NavIcon Route="@item.Href" Class="w-5 h-5 shrink-0" />
+                            <span class="@LabelClass">@item.Label</span>
+                        </a>
                     </li>
                 }
             }
@@ -104,8 +182,7 @@
     [Parameter] public bool IsExpanded { get; set; } = true;
     [Parameter] public EventCallback OnToggleExpand { get; set; }
 
-    // The user's manual accordion choice; null = follow the active page, "" = all collapsed.
-    private string? toggledGroup;
+    private bool pickerOpen;
     private bool projectsRequested;
 
     private string LabelClass => IsExpanded ? "hidden md:inline truncate" : "hidden";
@@ -116,20 +193,50 @@
 
     private string CurrentPath => new Uri(Nav.Uri).AbsolutePath;
 
-    private IReadOnlyList<NavigationNode> VisibleNodes =>
-        Session.ActiveRole is { } role ? NavigationCatalog.NodesFor(role) : Array.Empty<NavigationNode>();
+    private bool ShowsProjectWorkspace =>
+        Session.ActiveRole is { } role && DesktopNavigation.CanSeeProjects(role);
 
-    // Project-scoped entries follow the last-viewed project (falling back to the first active
-    // project once the list is loaded, or the project list before then).
+    private IReadOnlyList<DesktopNavigation.SidebarBlock> ProjectBlocks =>
+        Session.ActiveRole is { } role ? DesktopNavigation.ProjectBlocksFor(role) : Array.Empty<DesktopNavigation.SidebarBlock>();
+
+    private IReadOnlyList<NavigationItem> CompanyItems =>
+        Session.ActiveRole is { } role ? DesktopNavigation.CompanyItemsFor(role) : Array.Empty<NavigationItem>();
+
+    private List<Project> ActiveProjects =>
+        (Projects.Current ?? (IReadOnlyList<Project>)Array.Empty<Project>())
+            .Where(project => project.Stage != ProjectStage.Completed)
+            .OrderBy(project => project.Reference, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+    // The workspace's project: last viewed while still active, else the first active project.
     private string? EffectiveProjectId => CurrentProject.ResolveFor(Projects.Current);
 
-    private bool IsOpen(NavigationNode node) =>
-        toggledGroup is null
-            ? node.IsActiveFor(CurrentPath)
-            : toggledGroup == node.Item.Label;
+    private Project? PickedProject =>
+        EffectiveProjectId is { } id ? Projects.Find(id) : null;
 
-    private void ToggleGroup(NavigationNode node) =>
-        toggledGroup = IsOpen(node) ? "" : node.Item.Label;
+    private async Task PickProject(Project project)
+    {
+        pickerOpen = false;
+        await CurrentProject.RememberAsync(project.ProjectId);
+        // On a project page, follow the pick to the same page of the new project; on Home or a
+        // company page, just retarget the workspace links and stay put.
+        var path = CurrentPath;
+        const string prefix = "/projects/";
+        if (path.StartsWith(prefix, StringComparison.Ordinal))
+        {
+            var rest = path[prefix.Length..];
+            var slash = rest.IndexOf('/');
+            var suffix = slash < 0 ? "" : rest[slash..];
+            Nav.NavigateTo($"/projects/{project.ProjectId}{suffix}");
+        }
+        await HandleNavigate();
+    }
+
+    private Task ClosePickerAndNavigate()
+    {
+        pickerOpen = false;
+        return HandleNavigate();
+    }
 
     private string HomeHref =>
         Session.ActiveRole is null ? "/dashboard" : NavigationCatalog.HomeRouteFor(Session.ActiveRole.Value);
@@ -150,13 +257,13 @@
         StateHasChanged();
     }
 
-    // The nav resolves project-scoped hrefs itself, so it needs the project list even before any
-    // project page has loaded it. Fetch once, in the background, only for signed-in approved
-    // users with a role that can see projects at all.
+    // The sidebar resolves project-scoped hrefs (and the picker's label) itself, so it needs the
+    // project list even before any project page has loaded it. Fetch once, in the background,
+    // only for signed-in approved users with a role that can see projects.
     private void EnsureProjectsLoaded()
     {
         if (projectsRequested || !Session.IsApproved || Projects.Current is not null) return;
-        if (VisibleNodes.All(node => !node.Item.IsProjectScoped && node.Children.All(child => !child.IsProjectScoped))) return;
+        if (!ShowsProjectWorkspace) return;
         projectsRequested = true;
         _ = RefreshProjectsAsync();
     }
@@ -164,13 +271,12 @@
     private async Task RefreshProjectsAsync()
     {
         try { await Projects.RefreshAsync(CancellationToken.None); }
-        catch { } // The nav falls back to the project list link; pages retry their own loads.
+        catch { } // Workspace links fall back to the portfolio; pages retry their own loads.
     }
 
     private void HandleLocationChanged(object? sender, EventArgs args)
     {
-        // Navigation resumes auto-open behaviour: the group owning the new page expands.
-        toggledGroup = null;
+        pickerOpen = false;
         StateHasChanged();
     }
 
@@ -182,18 +288,10 @@
         return $"{baseClass} text-content-subtle font-medium hover:text-content hover:bg-surface-raised";
     }
 
-    private string GroupClass(bool isActive)
+    // Workspace pages indent under their block heading; no icons — the heading carries the group.
+    private string BlockItemClass(bool isActive)
     {
-        var layout = IsExpanded ? "md:justify-start" : "";
-        var baseClass = $"flex items-center gap-3 justify-center {layout} px-3 py-2 rounded-lg text-sm transition";
-        if (isActive) return $"{baseClass} text-content font-semibold";
-        return $"{baseClass} text-content-subtle font-medium hover:text-content hover:bg-surface-raised";
-    }
-
-    // Children indent under the group icon; active state matches any project id for templates.
-    private string ChildClass(bool isActive)
-    {
-        var baseClass = "hidden md:block pl-11 pr-3 py-1.5 rounded-lg text-sm transition truncate";
+        var baseClass = "block pl-6 pr-3 py-1.5 rounded-lg text-sm transition truncate";
         if (isActive) return $"{baseClass} text-content font-semibold";
         return $"{baseClass} text-content-subtle hover:text-content hover:bg-surface-raised";
     }

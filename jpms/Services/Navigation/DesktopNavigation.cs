@@ -3,36 +3,18 @@ using Jewel.JPMS.Models;
 namespace Jewel.JPMS.Services.Navigation;
 
 /// <summary>
-/// The side nav: plain entries plus three accordion groups (Financials, Project Management,
-/// Operations). The nav is the primary navigation — the project view keeps only its per-section
-/// tab row, and section switching happens here. Project-scoped entries ({project} templates)
-/// follow the last-viewed project via CurrentProjectService. A group is visible when any of its
-/// children is; each child keeps the role gate its page had as a standalone entry, so grouping
-/// widens nothing.
+/// The sidebar catalog — the app's single navigation plane. Two scopes, made visually explicit:
+/// the PROJECT WORKSPACE (everything under the project picker targets the picked project, via
+/// {project} templates resolved against CurrentProjectService) and the COMPANY area below the
+/// divider (cross-project tools). No page appears in both. There is deliberately no Projects
+/// list entry — the portfolio (/projects, with New project) is reachable from the picker's
+/// footer and the project breadcrumb. Role gates reproduce what each page had before; grouping
+/// widens nothing, and administrators see everything.
 /// </summary>
 public static class DesktopNavigation
 {
-    public static IReadOnlyList<NavigationNode> NodesVisibleTo(Role role)
-    {
-        var nodes = new List<NavigationNode>();
-        foreach (var entry in Entries)
-        {
-            if (entry.Children is { Count: > 0 } children)
-            {
-                var visibleChildren = children
-                    .Where(child => role == Role.Admin || child.IsVisibleTo(role))
-                    .Select(child => child.Item)
-                    .ToList();
-                if (visibleChildren.Count > 0)
-                    nodes.Add(new NavigationNode(entry.Item, visibleChildren));
-            }
-            else if (role == Role.Admin || entry.IsVisibleTo(role))
-            {
-                nodes.Add(new NavigationNode(entry.Item, Array.Empty<NavigationItem>()));
-            }
-        }
-        return nodes;
-    }
+    /// <summary>A headed block of project pages (heading is an eyebrow, not a link).</summary>
+    public sealed record SidebarBlock(string Heading, string IconKey, IReadOnlyList<NavigationItem> Items);
 
     private static readonly Role[] AllInternalRoles =
     {
@@ -53,8 +35,7 @@ public static class DesktopNavigation
             .Append(Role.Subcontractor)
             .ToArray();
 
-    // The internal office/management roles that can open projects — mirrors the old Projects
-    // entry's list; project-scoped children reuse it.
+    // The internal office/management roles that can open projects.
     private static readonly Role[] ProjectRoles =
     {
         Role.ManagingDirector,
@@ -66,62 +47,76 @@ public static class DesktopNavigation
         Role.OfficeComplianceCoordinator
     };
 
-    private static readonly IReadOnlyList<DesktopNavigationEntry> Entries = new[]
+    private static readonly Role[] FinanceRoles =
     {
-        // My day lives on the Dashboard now (RoleHome renders the worker's day for site-floor
-        // roles), so Dashboard is the whole top level for those roles.
-        Entry(new NavigationItem("Dashboard", "/dashboard"), AllRoles),
-
-        // There is no Projects entry — the split into the three groups below exists to REMOVE the
-        // flat project list from daily navigation. The portfolio (/projects, with New project)
-        // stays routable via the breadcrumb, the project switcher covers moving between projects,
-        // and project-scoped entries follow the last-viewed project.
-
-        Group(new NavigationItem("Project Management", "#project-management"),
-            Entry(new NavigationItem("To-do", "/projects/{project}/todos"), ProjectRoles),
-            Entry(new NavigationItem("Requests", "/projects/{project}/requests"), ProjectRoles),
-            Entry(new NavigationItem("Drawings", "/projects/{project}/drawings"), ProjectRoles),
-            Entry(new NavigationItem("Programme", "/projects/{project}/programme"), ProjectRoles),
-            Entry(new NavigationItem("Progress", "/projects/{project}/progress"), ProjectRoles),
-            Entry(new NavigationItem("Communications", "/projects/{project}/communications"), ProjectRoles),
-            Entry(new NavigationItem("Setup", "/projects/{project}/setup"), ProjectRoles),
-            // The cross-project mailbox triage queue — mirrors the API's TriageRoles gate.
-            Entry(new NavigationItem("Triage", "/requests/triage"), Role.ProjectManager, Role.FinanceDirector)),
-
-        Group(new NavigationItem("Operations", "#operations"),
-            // The project's delivery pages (Labour, Bid Package Invites, Work Orders, WO
-            // Allocation, Setup tabs) — one entry; the tab row covers the rest.
-            Entry(new NavigationItem("Project operations", "/projects/{project}/labour",
-                    new[] { "/projects/{project}/bid-package-invites", "/projects/{project}/work-orders", "/projects/{project}/work-order-allocation", "/projects/{project}/operations-setup" }),
-                ProjectRoles),
-            // Mirrors the API's labour registry authorisation (LabourRoleSets.ManageWorkers).
-            Entry(new NavigationItem("Workers", "/labour/workers"),
-                Role.ManagingDirector, Role.FinanceDirector, Role.ProjectManager),
-            Entry(new NavigationItem("Directory", "/directory"), Role.ManagingDirector),
-            Entry(new NavigationItem("Clients", "/clients"), Role.ManagingDirector, Role.ProjectManager),
-            Entry(new NavigationItem("Architects", "/architects"), Role.ManagingDirector, Role.ProjectManager)),
-
-        // Financials sits last — the day-to-day flow reads top-down: manage the job, deliver it,
-        // then the money.
-        Group(new NavigationItem("Financials", "#financials"),
-            // The project's money pages (Financials, Cashflow, Valuation Report, Setup tabs) plus
-            // the cross-project Summary at /finance — exact-only so /finance/xero stays Xero's.
-            Entry(new NavigationItem("Project Financials", "/projects/{project}/financials",
-                    new[] { "/projects/{project}/cashflow", "/projects/{project}/valuation", "/projects/{project}/financials-setup", "/finance$" }),
-                Role.ManagingDirector, Role.FinanceDirector, Role.ProjectManager, Role.QuantitySurveyor),
-            // Allocation + Transactions as tabs of one page — Allocation leads (it's the working
-            // screen), so the nav entry lands there.
-            Entry(new NavigationItem("Xero", "/finance/allocation", new[] { "/finance/xero" }),
-                Role.ManagingDirector, Role.FinanceDirector, Role.ProjectManager, Role.QuantitySurveyor),
-            Entry(new NavigationItem("Setup", "/cost-codes", new[] { "/rate-library" }),
-                Role.ManagingDirector, Role.FinanceDirector, Role.ProjectManager, Role.QuantitySurveyor))
-
-        // Agents is retired from the nav (nothing to manage day-to-day); /agents stays routable.
+        Role.ManagingDirector,
+        Role.FinanceDirector,
+        Role.ProjectManager,
+        Role.QuantitySurveyor
     };
 
-    private static DesktopNavigationEntry Entry(NavigationItem item, params Role[] visibleTo) =>
-        new(item, visibleTo);
+    public static readonly NavigationItem Home = new("Home", "/dashboard");
 
-    private static DesktopNavigationEntry Group(NavigationItem item, params DesktopNavigationEntry[] children) =>
-        new(item, Array.Empty<Role>(), children);
+    public static readonly NavigationItem ProjectOverview = new("Overview", "/projects/{project}");
+
+    public static readonly NavigationItem ProjectSettings = new("Project settings", "/projects/{project}/settings");
+
+    public static bool CanSee(Role role, IReadOnlyList<Role> visibleTo) =>
+        role == Role.Admin || visibleTo.Contains(role);
+
+    public static bool CanSeeProjects(Role role) => CanSee(role, ProjectRoles);
+
+    /// <summary>The project workspace's headed blocks, role-filtered. Built from ProjectSections
+    /// so the sidebar and the landing-page cards can never drift apart.</summary>
+    public static IReadOnlyList<SidebarBlock> ProjectBlocksFor(Role role)
+    {
+        var blocks = new List<SidebarBlock>();
+        foreach (var section in ProjectSections.All)
+        {
+            var visibleTo = section.Section == ProjectSection.Financials ? FinanceRoles : ProjectRoles;
+            if (!CanSee(role, visibleTo)) continue;
+            blocks.Add(new SidebarBlock(
+                section.Label,
+                section.IconKey,
+                section.Tabs.Select(tab => new NavigationItem(tab.Label, $"/projects/{{project}}/{tab.Slug}")).ToList()));
+        }
+        return blocks;
+    }
+
+    private static readonly (NavigationItem Item, Role[] VisibleTo)[] CompanyEntries =
+    {
+        // The mailbox intake queue — daily work for those who triage; mirrors the API's TriageRoles gate.
+        (new NavigationItem("Triage", "/requests/triage"),
+            new[] { Role.ProjectManager, Role.FinanceDirector }),
+        // One row per active project plus the total. Exact-only: /finance/* belongs to Xero.
+        (new NavigationItem("Financial Summary", "/finance", ExactMatch: true), FinanceRoles),
+        // Allocation + Transactions as tabs of one page — Allocation leads (the working screen).
+        (new NavigationItem("Xero", "/finance/allocation", new[] { "/finance/xero" }), FinanceRoles),
+        (new NavigationItem("Cost codes & Rates", "/cost-codes", new[] { "/rate-library" }), FinanceRoles),
+        // Mirrors the API's labour registry authorisation (LabourRoleSets.ManageWorkers).
+        (new NavigationItem("Workers", "/labour/workers"),
+            new[] { Role.ManagingDirector, Role.FinanceDirector, Role.ProjectManager }),
+        (new NavigationItem("Directory", "/directory"), new[] { Role.ManagingDirector }),
+        (new NavigationItem("Clients", "/clients"), new[] { Role.ManagingDirector, Role.ProjectManager }),
+        (new NavigationItem("Architects", "/architects"), new[] { Role.ManagingDirector, Role.ProjectManager })
+        // Agents and the flat To-dos/RFIs pages are retired from the nav; their routes remain.
+    };
+
+    public static IReadOnlyList<NavigationItem> CompanyItemsFor(Role role) =>
+        CompanyEntries.Where(entry => CanSee(role, entry.VisibleTo)).Select(entry => entry.Item).ToList();
+
+    /// <summary>Every navigable item in sidebar order — for flat consumers like the page-heading
+    /// matcher. Company items come after project items, so the more specific project routes win.</summary>
+    public static IReadOnlyList<NavigationItem> ItemsVisibleTo(Role role)
+    {
+        var items = new List<NavigationItem> { Home };
+        if (CanSeeProjects(role))
+        {
+            items.Add(ProjectOverview);
+            items.AddRange(ProjectBlocksFor(role).SelectMany(block => block.Items));
+            items.Add(ProjectSettings);
+        }
+        items.AddRange(CompanyItemsFor(role));
+        return items;
+    }
 }

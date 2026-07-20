@@ -22,18 +22,14 @@
     {
         // Group children first (they're the precise pages); then plain top-level entries.
         // Template items match any project id, so no project context is needed here.
-        foreach (var node in NavigationCatalog.NodesFor(Session.ActiveRole!.Value))
+        // Sidebar order: project items first, then company — the more specific project routes win.
+        // Template items match any project id, so no project context is needed here.
+        foreach (var item in NavigationCatalog.ItemsFor(Session.ActiveRole!.Value))
         {
-            foreach (var child in node.Children)
-            {
-                if (child.IsActiveFor(path)) return child.Label;
-            }
-            if (!node.IsGroup && node.Item.IsActiveFor(path)) return node.Item.Label;
+            if (item.IsActiveFor(path)) return item.Label;
         }
-        // The portfolio and a project's landing page have no side-nav entry (Projects was
-        // deliberately removed from the nav) — keep the header titled all the same.
-        if (path == "/projects" || (path.StartsWith("/projects/") && !path["/projects/".Length..].Contains('/')))
-            return "Projects";
+        // The portfolio has no sidebar entry (deliberately) — keep the header titled all the same.
+        if (path == "/projects") return "Projects";
         return null;
     }
 
