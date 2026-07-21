@@ -14,6 +14,23 @@
 else
 {
     <div class="space-y-3">
+        @if (CanRecodeCostCentres)
+        {
+            @* Toggle the first column into a searchable cost-centre picker for every line — a finance
+               allocation the FD/PM can correct in place, independent of any claim's lock. *@
+            <div class="flex items-center justify-end gap-2">
+                @if (editCostCentres)
+                {
+                    <span class="text-[11px] text-content-subtle">Pick a cost centre for any line — changes save as you go.</span>
+                }
+                <button type="button" @onclick="ToggleEditCostCentres"
+                        class="@(editCostCentres
+                                  ? "rounded-lg bg-accent text-accent-ink font-medium text-sm px-3 py-2 hover:bg-accent-hover transition"
+                                  : "rounded-lg border border-line bg-surface text-content-muted font-medium text-sm px-3 py-2 hover:border-line-strong transition")">
+                    @(editCostCentres ? "Done editing cost centres" : "Edit cost centres")
+                </button>
+            </div>
+        }
         @foreach (var section in Sections)
         {
             var isOpen = IsExpanded(section.Type);
@@ -64,9 +81,9 @@ else
                             <table class="w-full text-sm border-collapse">
                                 <thead class="bg-surface-raised border-b border-line">
                                     <tr class="text-left text-[11px] uppercase tracking-wider text-content-subtle font-semibold">
-                                        <th class="sticky left-0 top-0 z-30 bg-surface-raised px-3 py-3 w-[72px]">Code</th>
-                                        <th class="sticky left-[72px] top-0 z-30 bg-surface-raised px-3 py-3 min-w-[220px]">Description</th>
-                                        @if (section.Type == ValuationElementType.Variation)
+                                        <th class="@CodeHeadClass">@(editCostCentres ? "Cost centre" : "Code")</th>
+                                        <th class="@DescHeadClass">Description</th>
+                                        @if (section.Type == ValuationElementType.Variation && !editCostCentres)
                                         {
                                             <th class="sticky top-0 z-20 bg-surface-raised px-3 py-3 whitespace-nowrap min-w-[220px]">Cost centre</th>
                                         }
@@ -95,8 +112,27 @@ else
                                     @foreach (var line in section.Lines)
                                     {
                                         <tr class="@(line.CountsTowardTotals ? "" : "opacity-60")">
-                                            <td class="sticky left-0 z-10 bg-surface px-3 py-2 font-mono text-[11px] text-content-subtle whitespace-nowrap">@CodeFor(line)</td>
-                                            <td class="sticky left-[72px] z-10 bg-surface px-3 py-2 text-content">
+                                            <td class="@CodeCellClass">
+                                                @if (editCostCentres)
+                                                {
+                                                    @* Every section's value can be recoded here; variations also move their
+                                                       mirrored VO's committed budget server-side (SetValuationLineCostCentreHandler). *@
+                                                    <SearchSelect Options="@CostCentreOptionsFor(line)" WidthClass="w-full"
+                                                                  Placeholder="Cost centre…"
+                                                                  Value="@line.CostCode"
+                                                                  Disabled="@(recodingLineId == line.ValuationLineItemId)"
+                                                                  ValueChanged="value => SetCostCentreAsync(line, value)" />
+                                                    @if (costCentreErrorLineId == line.ValuationLineItemId && costCentreError is not null)
+                                                    {
+                                                        <div class="text-[11px] text-negative mt-1">@costCentreError</div>
+                                                    }
+                                                }
+                                                else
+                                                {
+                                                    @CodeFor(line)
+                                                }
+                                            </td>
+                                            <td class="@DescCellClass">
                                                 <div class="font-medium">@TitleFor(line)</div>
                                                 @if (!string.IsNullOrWhiteSpace(line.Comments))
                                                 {
@@ -107,11 +143,12 @@ else
                                                     <span class="inline-block mt-0.5 text-[10px] uppercase tracking-wide text-content-subtle">@line.LineType</span>
                                                 }
                                             </td>
-                                            @if (section.Type == ValuationElementType.Variation)
+                                            @if (section.Type == ValuationElementType.Variation && !editCostCentres)
                                             {
                                                 @* Where this variation's value is allocated in the cost-centre master.
                                                    Editable for Admin/MD/FD/PM (the API enforces the same gate); the
-                                                   value itself stays locked — only the allocation moves. *@
+                                                   value itself stays locked — only the allocation moves. While the
+                                                   "Edit cost centres" mode is on, the first column handles this instead. *@
                                                 <td class="px-3 py-2 whitespace-nowrap">
                                                     @if (CanRecodeCostCentres)
                                                     {
@@ -500,6 +537,23 @@ else
     // cost centres; everyone else sees the allocation read-only.
     private bool CanRecodeCostCentres => Session.ActiveRole
         is Role.Admin or Role.ManagingDirector or Role.FinanceDirector or Role.ProjectManager;
+
+    // "Edit cost centres" mode: the first column becomes a searchable cost-centre picker for every
+    // line in every section. Off by default so the report reads as a normal bill.
+    private bool editCostCentres;
+    private void ToggleEditCostCentres() => editCostCentres = !editCostCentres;
+
+    // The first column widens to hold the dropdown in edit mode; the sticky Description column's
+    // left offset must track that width so the two frozen columns stay flush (w-64 == left-64).
+    private string CodeHeadClass =>
+        "sticky left-0 top-0 z-30 bg-surface-raised px-3 py-3 " + (editCostCentres ? "w-64" : "w-[72px]");
+    private string DescHeadClass =>
+        "sticky " + (editCostCentres ? "left-64" : "left-[72px]") + " top-0 z-30 bg-surface-raised px-3 py-3 min-w-[220px]";
+    private string CodeCellClass => editCostCentres
+        ? "sticky left-0 z-10 bg-surface px-3 py-2 align-top w-64"
+        : "sticky left-0 z-10 bg-surface px-3 py-2 font-mono text-[11px] text-content-subtle whitespace-nowrap";
+    private string DescCellClass =>
+        "sticky " + (editCostCentres ? "left-64" : "left-[72px]") + " z-10 bg-surface px-3 py-2 text-content";
 
     private string? recodingLineId;
     private string? costCentreError;

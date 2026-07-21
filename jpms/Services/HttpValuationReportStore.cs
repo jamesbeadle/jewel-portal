@@ -136,6 +136,14 @@ public sealed class HttpValuationReportStore : IValuationReportStore
         return result;
     }
 
+    public async Task<IReadOnlyList<ClaimLine>> RecordEntriesAsync(string projectId, RecordClaimEntries command)
+    {
+        var result = await commands.SendAsync(command, CancellationToken.None);
+        await claimLinesReadModel.RefreshAsync(command.ValuationClaimId, CancellationToken.None);
+        await claimsReadModel.RefreshAsync(projectId, CancellationToken.None);
+        return result;
+    }
+
     public async Task<ValuationClaim> PreapproveClaimAsync(string projectId, string claimId)
     {
         var result = await commands.SendAsync(new PreapproveValuationClaim(claimId), CancellationToken.None);

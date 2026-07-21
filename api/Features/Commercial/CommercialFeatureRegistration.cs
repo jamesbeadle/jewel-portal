@@ -106,6 +106,9 @@ public static class CommercialFeatureRegistration
         services.AddScoped<ICommandHandler<RecordClaimEntry, ClaimLine>, RecordClaimEntryHandler>();
         services.AddScoped<RecordClaimEntryValidation>();
 
+        services.AddScoped<ICommandHandler<RecordClaimEntries, IReadOnlyList<ClaimLine>>, RecordClaimEntriesHandler>();
+        services.AddScoped<RecordClaimEntriesValidation>();
+
         services.AddScoped<ICommandHandler<PreapproveValuationClaim, ValuationClaim>, PreapproveValuationClaimHandler>();
         services.AddScoped<ICommandHandler<ReopenValuationClaim, ValuationClaim>, ReopenValuationClaimHandler>();
         services.AddScoped<ICommandHandler<ConfirmValuationClaim, ValuationClaim>, ConfirmValuationClaimHandler>();

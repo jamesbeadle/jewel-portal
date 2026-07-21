@@ -166,6 +166,10 @@ public static class CommercialRouteRegistration
             new CommandRoute("POST", "/api/valuation-claims/{claimId}/entries",
                 command => $"/api/valuation-claims/{((RecordClaimEntry)command).ValuationClaimId}/entries"));
 
+        commands.Register<RecordClaimEntries, IReadOnlyList<ClaimLine>>(
+            new CommandRoute("POST", "/api/valuation-claims/{claimId}/entries/bulk",
+                command => $"/api/valuation-claims/{((RecordClaimEntries)command).ValuationClaimId}/entries/bulk"));
+
         commands.Register<PreapproveValuationClaim, ValuationClaim>(
             new CommandRoute("POST", "/api/valuation-claims/{claimId}/preapproval",
                 command => $"/api/valuation-claims/{((PreapproveValuationClaim)command).ValuationClaimId}/preapproval"));
