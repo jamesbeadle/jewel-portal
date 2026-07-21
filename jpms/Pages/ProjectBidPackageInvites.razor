@@ -18,11 +18,16 @@ else if (!Session.IsApproved)
 else
 {
     <ProjectPageShell ProjectId="@ProjectId" ActiveTab="bid-package-invites">
-        <div class="mb-5">
-            <h2 class="text-lg font-semibold text-content">Bid package invites</h2>
-            <p class="text-sm text-content-muted">
-                Bid packages issued to subcontractors to tender. @Packages.Count package@(Packages.Count == 1 ? "" : "s") on this project.
-            </p>
+        <div class="flex flex-wrap items-end justify-between gap-3 mb-5">
+            <div>
+                <h2 class="text-lg font-semibold text-content">Bid package invites</h2>
+                <p class="text-sm text-content-muted">
+                    Bid packages issued to subcontractors to tender. @Packages.Count package@(Packages.Count == 1 ? "" : "s") on this project.
+                </p>
+            </div>
+            <ExportToExcelButton FileName="Bid package invites"
+                                 Disabled="@(Packages.Count == 0)"
+                                 BuildWorkbook="BuildExportWorkbook" />
         </div>
 
         @if (Packages.Count == 0)
@@ -70,6 +75,29 @@ else
 
     private bool isLoaded;
     private IReadOnlyList<BidPackage> Packages => ProcurementStore.PackagesFor(ProjectId);
+
+    private ExcelWorkbook? BuildExportWorkbook(bool _)
+    {
+        var packages = Packages;
+        if (packages.Count == 0) return null;
+
+        var workbook = new ExcelWorkbook();
+        var sheet = workbook.AddSheet("Bid package invites",
+            new ExcelColumn("Package"),
+            new ExcelColumn("Trade"),
+            new ExcelColumn("Status"),
+            new ExcelColumn("Created", ExcelFormat.Date));
+
+        foreach (var package in packages)
+        {
+            sheet.AddRow(
+                package.Title,
+                package.Trade,
+                package.Status.ToString(),
+                package.CreatedAt.LocalDateTime);
+        }
+        return workbook;
+    }
 
     protected override async Task OnInitializedAsync()
     {

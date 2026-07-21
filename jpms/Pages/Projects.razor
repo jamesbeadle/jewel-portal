@@ -43,11 +43,14 @@ else
             }
         </header>
 
-        <div class="mb-3 flex items-center justify-end">
+        <div class="mb-3 flex items-center justify-end gap-4">
             <label class="flex items-center gap-2 text-sm text-content-muted cursor-pointer select-none">
                 <input type="checkbox" checked="@showCompleted" @onchange="e => showCompleted = (bool)e.Value!" />
                 <span>Show completed</span>
             </label>
+            <ExportToExcelButton FileName="Projects"
+                                 Disabled="@(VisibleProjects.Count == 0)"
+                                 BuildWorkbook="BuildExportWorkbook" />
         </div>
 
         <ProjectsTable Projects="VisibleProjects" />
@@ -79,6 +82,31 @@ else
     private void OpenForm() => showForm = true;
 
     private void CloseForm() => showForm = false;
+
+    private ExcelWorkbook? BuildExportWorkbook(bool _)
+    {
+        var projects = VisibleProjects;
+        if (projects.Count == 0) return null;
+
+        var workbook = new ExcelWorkbook();
+        var sheet = workbook.AddSheet("Projects",
+            new ExcelColumn("Reference"),
+            new ExcelColumn("Name"),
+            new ExcelColumn("Client"),
+            new ExcelColumn("Entity"),
+            new ExcelColumn("Stage"));
+
+        foreach (var project in projects)
+        {
+            sheet.AddRow(
+                project.Reference,
+                project.Name,
+                project.ClientName,
+                project.Organisation.ShortCode(),
+                project.Stage.DisplayName());
+        }
+        return workbook;
+    }
 
     private void HandleCreated(Project project)
     {

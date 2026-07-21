@@ -6,25 +6,28 @@
    once taken: view or delete, never edit; an amended submission produces a NEW snapshot
    and flags the old one superseded. *@
 <div class="rounded-xl border border-line bg-surface overflow-hidden">
-    <button type="button" @onclick="Toggle" aria-expanded="@isOpen"
-            class="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-surface-raised/60 transition">
-        <svg class="@(isOpen ? "w-4 h-4 shrink-0 text-content-subtle rotate-90 transition-transform" : "w-4 h-4 shrink-0 text-content-subtle transition-transform")"
-             viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <path d="M9 6l6 6-6 6" />
-        </svg>
-        <span class="font-semibold text-content whitespace-nowrap">Report Snapshots</span>
-        <span class="text-xs text-content-subtle whitespace-nowrap">
-            @Snapshots.Count @(Snapshots.Count == 1 ? "snapshot" : "snapshots")
-        </span>
-        @if (Latest is { } latest)
-        {
-            <span class="ml-auto text-sm whitespace-nowrap">
-                <span class="text-[11px] uppercase tracking-wider text-content-subtle mr-1.5">Latest</span>
-                <span class="text-content-muted">@latest.TakenAt.ToString("dd MMM yyyy")</span>
+    <div class="w-full flex items-center gap-3 px-4 py-3 hover:bg-surface-raised/60 transition">
+        <button type="button" @onclick="Toggle" aria-expanded="@isOpen"
+                class="flex items-center gap-3 text-left grow min-w-0">
+            <svg class="@(isOpen ? "w-4 h-4 shrink-0 text-content-subtle rotate-90 transition-transform" : "w-4 h-4 shrink-0 text-content-subtle transition-transform")"
+                 viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                 stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M9 6l6 6-6 6" />
+            </svg>
+            <span class="font-semibold text-content whitespace-nowrap">Report Snapshots</span>
+            <span class="text-xs text-content-subtle whitespace-nowrap">
+                @Snapshots.Count @(Snapshots.Count == 1 ? "snapshot" : "snapshots")
             </span>
-        }
-    </button>
+            @if (Latest is { } latest)
+            {
+                <span class="text-sm whitespace-nowrap">
+                    <span class="text-[11px] uppercase tracking-wider text-content-subtle mr-1.5">Latest</span>
+                    <span class="text-content-muted">@latest.TakenAt.ToString("dd MMM yyyy")</span>
+                </span>
+            }
+        </button>
+        <ExportToExcelButton FileName="Valuation snapshots" Disabled="@(Snapshots.Count == 0)" BuildWorkbook="BuildExportWorkbook" />
+    </div>
 
     @if (isOpen)
     {
@@ -170,4 +173,30 @@
     }
 
     private static string Money(decimal value) => value.ToString("C2", Gb);
+
+    // Same register, same order (newest first — Snapshots is already sorted that way).
+    private ExcelWorkbook? BuildExportWorkbook(bool _)
+    {
+        var snapshots = Snapshots;
+        if (snapshots.Count == 0) return null;
+
+        var workbook = new ExcelWorkbook();
+        var sheet = workbook.AddSheet("Valuation snapshots",
+            new ExcelColumn("Taken", ExcelFormat.Date),
+            new ExcelColumn("Label"),
+            new ExcelColumn("Works complete £", ExcelFormat.Currency),
+            new ExcelColumn("Certified £", ExcelFormat.Currency),
+            new ExcelColumn("Payment due £", ExcelFormat.Currency));
+
+        foreach (var snapshot in snapshots)
+        {
+            sheet.AddRow(
+                snapshot.TakenAt.LocalDateTime,
+                snapshot.Label,
+                snapshot.TotalWorksComplete,
+                snapshot.CertifiedToDate,
+                snapshot.PaymentDueExVat);
+        }
+        return workbook;
+    }
 }

@@ -31,6 +31,12 @@ else
             </p>
         </header>
 
+        <div class="mb-3 flex items-center justify-end">
+            <ExportToExcelButton FileName="Stale rates"
+                                 Disabled="@(Stale.Count == 0)"
+                                 BuildWorkbook="BuildExportWorkbook" />
+        </div>
+
         @if (Stale.Count == 0)
         {
             <p class="text-sm text-content-subtle italic">No rates currently stale.</p>
@@ -47,6 +53,33 @@ else
     private bool isLoaded;
 
     private IReadOnlyList<Rate> Stale => RateLibrary.Stale(StaleDayThreshold);
+
+    private ExcelWorkbook? BuildExportWorkbook(bool _)
+    {
+        var rates = Stale;
+        if (rates.Count == 0) return null;
+
+        var workbook = new ExcelWorkbook();
+        var sheet = workbook.AddSheet("Rates",
+            new ExcelColumn("Trade"),
+            new ExcelColumn("Description"),
+            new ExcelColumn("Supplier"),
+            new ExcelColumn("Unit"),
+            new ExcelColumn("Rate", ExcelFormat.Currency),
+            new ExcelColumn("Last priced", ExcelFormat.Date));
+
+        foreach (var rate in rates)
+        {
+            sheet.AddRow(
+                rate.Trade,
+                rate.Description,
+                rate.SupplierName,
+                rate.Unit,
+                rate.Value,
+                rate.LastPricedAt.LocalDateTime);
+        }
+        return workbook;
+    }
 
     protected override async Task OnInitializedAsync()
     {

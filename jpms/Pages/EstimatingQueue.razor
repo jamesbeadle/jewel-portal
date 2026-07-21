@@ -26,6 +26,12 @@ else
             </p>
         </header>
 
+        <div class="mb-3 flex items-center justify-end">
+            <ExportToExcelButton FileName="Estimating queue"
+                                 Disabled="@(Queue.Count == 0)"
+                                 BuildWorkbook="BuildExportWorkbook" />
+        </div>
+
         @if (Queue.Count == 0)
         {
             <p class="text-sm text-content-subtle italic">No leads currently in the estimating queue.</p>
@@ -46,6 +52,33 @@ else
             .OrderBy(lead => lead.CapturedAt)
             .ToList()
             .AsReadOnly();
+
+    private ExcelWorkbook? BuildExportWorkbook(bool _)
+    {
+        var leads = Queue;
+        if (leads.Count == 0) return null;
+
+        var workbook = new ExcelWorkbook();
+        var sheet = workbook.AddSheet("Estimating queue",
+            new ExcelColumn("Reference"),
+            new ExcelColumn("Contact"),
+            new ExcelColumn("Site"),
+            new ExcelColumn("Source"),
+            new ExcelColumn("Value", ExcelFormat.Currency),
+            new ExcelColumn("Stage"));
+
+        foreach (var lead in leads)
+        {
+            sheet.AddRow(
+                lead.Reference,
+                lead.ContactName,
+                lead.SiteAddress,
+                lead.Source.DisplayName(),
+                lead.EstimatedValue,
+                lead.Stage.DisplayName());
+        }
+        return workbook;
+    }
 
     protected override async Task OnInitializedAsync()
     {

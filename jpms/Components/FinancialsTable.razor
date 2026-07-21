@@ -18,9 +18,12 @@
             Hide scope in packages
         </label>
     </div>
-    @if (SelectionCount > 0)
-    {
-        <div class="flex items-center gap-3">
+    <div class="flex items-center gap-3">
+        <ExportToExcelButton FileName="Financial report"
+                             Disabled="@(!VisibleLines.Any() && !VisiblePackages.Any())"
+                             BuildWorkbook="BuildExportWorkbook" />
+        @if (SelectionCount > 0)
+        {
             <span class="text-sm text-content-subtle">@SelectionCount selected</span>
             <button type="button" class="btn-primary text-sm" disabled="@(SelectionCount < 2)"
                     title="Combine the selected rows into one named report line — selected roll-ups are merged in"
@@ -28,8 +31,8 @@
                 Roll up @SelectionCount rows
             </button>
             <button type="button" class="btn-secondary text-sm" @onclick="ClearSelection">Clear</button>
-        </div>
-    }
+        }
+    </div>
 </div>
 
 @* max-h + overflow-y makes this wrapper the vertical scroll container, so the sticky
@@ -763,6 +766,88 @@
 
     private static string Percent(decimal value) =>
         $"{value.ToString(value == Math.Truncate(value) ? "0" : "0.#")}%";
+
+    // Exports exactly what's on screen: VisibleLines (respecting search, hide-zero-rows
+    // and sort) plus VisiblePackages (respecting "hide scope in packages" and search),
+    // then a total row matching the tfoot. Percentages are stored here as 0–100 — the
+    // sheet wants fractions, so every percentage is divided by 100.
+    private ExcelWorkbook? BuildExportWorkbook(bool _)
+    {
+        var lines = VisibleLines.ToList();
+        var packages = VisiblePackages.ToList();
+        if (lines.Count == 0 && packages.Count == 0) return null;
+
+        var workbook = new ExcelWorkbook();
+        var sheet = workbook.AddSheet("Financial report",
+            new ExcelColumn("Code"),
+            new ExcelColumn("Cost centre"),
+            new ExcelColumn("Contract sales value", ExcelFormat.Currency),
+            new ExcelColumn("% complete", ExcelFormat.Percent),
+            new ExcelColumn("Claim value", ExcelFormat.Currency),
+            new ExcelColumn("Target cost value", ExcelFormat.Currency),
+            new ExcelColumn("Forecasted cost of sales", ExcelFormat.Currency),
+            new ExcelColumn("Drawdown", ExcelFormat.Currency),
+            new ExcelColumn("Work orders", ExcelFormat.Currency),
+            new ExcelColumn("Non-WO cost of sales", ExcelFormat.Currency),
+            new ExcelColumn("Profit / loss", ExcelFormat.Currency),
+            new ExcelColumn("Cost % complete", ExcelFormat.Percent),
+            new ExcelColumn("Actual cost of sales", ExcelFormat.Currency));
+
+        foreach (var line in lines)
+        {
+            var allLocked = AllFinalised(line.CostCodes);
+            var anyLocked = AnyFinalised(line.CostCodes);
+            sheet.AddRow(
+                line.IsGroup ? $"{line.CostCodes.Count} centres" : line.Code,
+                line.IsGroup ? line.Name : (line.InMaster ? line.Name : "(not in cost-code master)"),
+                ContractSalesFor(line.CostCodes),
+                SalesCompletionFor(line.CostCodes) / 100m,
+                ClaimValueFor(line.CostCodes),
+                TargetCostFor(line.CostCodes),
+                ForecastFor(line.CostCodes),
+                allLocked ? (decimal?)null : DrawdownFor(line.CostCodes),
+                WoCommittedFor(line.CostCodes),
+                NonWoCostOfSalesFor(line.CostCodes),
+                anyLocked ? (decimal?)ProfitLossFor(line.CostCodes) : null,
+                CostCompletionFor(line.CostCodes) / 100m,
+                CostOfSalesFor(line.CostCodes));
+        }
+
+        foreach (var package in packages)
+        {
+            sheet.AddRow(
+                "PKG",
+                package.Name,
+                package.SalesValue,
+                (package.SalesValue == 0m ? 0m : Math.Round(package.ClaimedToDate / package.SalesValue * 100m, 1)) / 100m,
+                package.ClaimedToDate,
+                package.TargetCost,
+                package.IsLocked ? (decimal?)null : package.TargetCost - package.Drawdown,
+                package.IsLocked ? (decimal?)null : package.Drawdown,
+                package.WoCommitted,
+                (decimal?)null,
+                package.IsLocked ? (decimal?)package.ProfitLoss : null,
+                (decimal?)null,
+                package.InvoicedToDate);
+        }
+
+        sheet.AddRow(
+            null,
+            "Total",
+            TotalContractSales,
+            WeightedSalesCompletion / 100m,
+            TotalClaimValue,
+            TotalTargetCost,
+            TotalForecastCostOfSales,
+            TotalDrawdown,
+            TotalWoCommitted,
+            TotalNonWoCostOfSales,
+            TotalProfitLoss,
+            WeightedCostCompletion / 100m,
+            TotalCostOfSales);
+
+        return workbook;
+    }
 
     // Pinned horizontal scrollbar (see the proxy markup after the table): the JS side
     // owns all the observation and syncing; the component just hands over the four

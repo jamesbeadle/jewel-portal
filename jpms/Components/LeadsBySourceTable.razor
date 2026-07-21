@@ -1,3 +1,8 @@
+<div class="mb-2 flex items-center justify-end">
+    <ExportToExcelButton FileName="Leads by source"
+                         Disabled="@(Rows.Count == 0)"
+                         BuildWorkbook="BuildExportWorkbook" />
+</div>
 <div class="rounded-xl border border-line bg-surface overflow-hidden">
     <table class="w-full text-sm">
         <thead class="bg-surface-raised border-b border-line">
@@ -44,4 +49,29 @@
 
     private static string FormatValue(decimal value) =>
         value.ToString("C0", System.Globalization.CultureInfo.GetCultureInfo("en-GB"));
+
+    private ExcelWorkbook? BuildExportWorkbook(bool _)
+    {
+        var rows = Rows;
+        if (rows.Count == 0) return null;
+
+        var workbook = new ExcelWorkbook();
+        var sheet = workbook.AddSheet("Leads by source",
+            new ExcelColumn("Source"),
+            new ExcelColumn("Leads", ExcelFormat.Integer),
+            new ExcelColumn("Won", ExcelFormat.Integer),
+            new ExcelColumn("Win rate", ExcelFormat.Percent),
+            new ExcelColumn("Pipeline value", ExcelFormat.Currency));
+
+        foreach (var row in rows)
+        {
+            sheet.AddRow(
+                row.Source.DisplayName(),
+                row.Count,
+                row.Won,
+                row.Count > 0 ? (decimal)row.Won / row.Count : (decimal?)null,
+                row.PipelineValue);
+        }
+        return workbook;
+    }
 }

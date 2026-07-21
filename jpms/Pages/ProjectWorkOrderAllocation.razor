@@ -51,6 +51,12 @@ else
             </div>
         </div>
 
+        <div class="mb-3 flex items-center justify-end">
+            <ExportToExcelButton FileName="Work order allocation"
+                                 Disabled="@(summaries.Count == 0 && AllLines.Count == 0)"
+                                 BuildWorkbook="BuildExportWorkbook" />
+        </div>
+
         @* ── Work orders and their invoiced balances ──────────────────────── *@
         <div class="flex items-center gap-3 mb-2">
             <h3 class="text-sm font-semibold text-content">Work orders</h3>
@@ -530,6 +536,89 @@ else
 
     private static string MoneyExact(decimal value) =>
         value.ToString("C2", System.Globalization.CultureInfo.GetCultureInfo("en-GB"));
+
+    private static string InvoicingLabel(WorkOrderInvoicingStatus status) => status switch
+    {
+        WorkOrderInvoicingStatus.NotInvoiced => "Not invoiced",
+        WorkOrderInvoicingStatus.PartInvoiced => "Part invoiced",
+        WorkOrderInvoicingStatus.FullyInvoiced => "Fully invoiced",
+        _ => "Over invoiced"
+    };
+
+    // The queue's Work order column reuses the page's own split/link helpers so the
+    // text matches what the dropdown/split summary shows: "—" for a cost-centre split
+    // (can't be linked at all), the split summary for an amount split, otherwise the
+    // single linked order's reference (or "Not linked").
+    private string? WorkOrderText(ProjectCostOfSalesLine line)
+    {
+        if (line.IsSplit) return null;
+        if (IsAmountSplit(line)) return SplitTitle(line);
+        var linkId = SingleLinkId(line);
+        if (linkId is null) return "Not linked";
+        var summary = summaries.FirstOrDefault(candidate =>
+            string.Equals(candidate.WorkOrderId, linkId, StringComparison.OrdinalIgnoreCase));
+        return summary is null ? linkId : $"WO-{summary.Number:0000}";
+    }
+
+    // One workbook, two sheets: the work-order table (respecting the supplier/title
+    // search) and the invoice-line queue (respecting that same search plus the
+    // Unlinked/Linked/All chip) — both with their tfoot total row.
+    private ExcelWorkbook? BuildExportWorkbook(bool _)
+    {
+        if (summaries.Count == 0 && AllLines.Count == 0) return null;
+
+        var workbook = new ExcelWorkbook();
+
+        var ordersSheet = workbook.AddSheet("Work orders",
+            new ExcelColumn("Order"),
+            new ExcelColumn("Supplier"),
+            new ExcelColumn("Title"),
+            new ExcelColumn("Invoicing"),
+            new ExcelColumn("Value", ExcelFormat.Currency),
+            new ExcelColumn("Invoiced", ExcelFormat.Currency),
+            new ExcelColumn("Left to invoice", ExcelFormat.Currency));
+        var filteredSummaries = FilteredSummaries;
+        foreach (var summary in filteredSummaries)
+        {
+            ordersSheet.AddRow(
+                $"WO-{summary.Number:0000}",
+                summary.SubcontractorName,
+                summary.Title,
+                InvoicingLabel(summary.InvoicingStatus),
+                summary.Value,
+                summary.InvoicedToDate,
+                summary.RemainingToInvoice);
+        }
+        ordersSheet.AddRow(
+            "Total shown", null, null, null,
+            filteredSummaries.Sum(summary => summary.Value),
+            filteredSummaries.Sum(summary => summary.InvoicedToDate),
+            filteredSummaries.Sum(summary => summary.RemainingToInvoice));
+
+        var linesSheet = workbook.AddSheet("Invoice lines",
+            new ExcelColumn("Date", ExcelFormat.Date),
+            new ExcelColumn("Supplier"),
+            new ExcelColumn("Invoice"),
+            new ExcelColumn("Description"),
+            new ExcelColumn("Centre"),
+            new ExcelColumn("Net £", ExcelFormat.Currency),
+            new ExcelColumn("Work order"));
+        var queueLines = QueueLines;
+        foreach (var line in queueLines)
+        {
+            linesSheet.AddRow(
+                line.Date,
+                line.Supplier,
+                line.InvoiceNumber,
+                line.Description,
+                line.CostCode,
+                line.Net,
+                WorkOrderText(line));
+        }
+        linesSheet.AddRow("Total shown", null, null, null, null, queueLines.Sum(line => line.Net), null);
+
+        return workbook;
+    }
 
     protected override async Task OnInitializedAsync()
     {

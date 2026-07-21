@@ -38,7 +38,12 @@ else
                     · @quotes.Count variation@(quotes.Count == 1 ? "" : "s")
                 </p>
             </div>
-            <button type="button" class="btn-primary" @onclick="OpenRaiseDialog">Raise request</button>
+            <div class="flex items-center gap-3">
+                <ExportToExcelButton FileName="Requests register"
+                                     Disabled="@(!HasExportableRows)"
+                                     BuildWorkbook="BuildExportWorkbook" />
+                <button type="button" class="btn-primary" @onclick="OpenRaiseDialog">Raise request</button>
+            </div>
         </div>
 
         <div class="flex flex-wrap items-center gap-2 mb-3 text-sm">
@@ -997,6 +1002,85 @@ else
 
     private static string Money(decimal value) =>
         value.ToString("C2", System.Globalization.CultureInfo.GetCultureInfo("en-GB"));
+
+    // ---- Excel export ----------------------------------------------------------------------
+    // One workbook, one sheet per register currently shown — following the active document-type
+    // filter (ShowsRequestRows / ShowsVariationRows), same as the register's on-screen sections.
+
+    private bool HasExportableRows =>
+        (ShowsRequestRows && FilteredRecords.Count > 0) || (ShowsVariationRows && Rows.Count > 0);
+
+    private ExcelWorkbook? BuildExportWorkbook(bool _)
+    {
+        var workbook = new ExcelWorkbook();
+
+        if (ShowsRequestRows && FilteredRecords.Count > 0)
+        {
+            var sheet = workbook.AddSheet("Requests & RFIs",
+                new ExcelColumn("Ref"),
+                new ExcelColumn("Kind"),
+                new ExcelColumn("Subject"),
+                new ExcelColumn("Raised to"),
+                new ExcelColumn("Drawing / detail"),
+                new ExcelColumn("Issued", ExcelFormat.Date),
+                new ExcelColumn("Response due", ExcelFormat.Date),
+                new ExcelColumn("Days out", ExcelFormat.Integer),
+                new ExcelColumn("Value", ExcelFormat.Currency),
+                new ExcelColumn("Status"));
+
+            foreach (var record in FilteredRecords)
+            {
+                sheet.AddRow(
+                    record.Reference,
+                    record.Kind.DisplayName(),
+                    record.Title,
+                    record.RaisedTo,
+                    record.DrawingRef,
+                    (record.IssuedAt ?? record.RaisedAt).LocalDateTime,
+                    record.ResponseDue?.LocalDateTime,
+                    record.DaysOutstanding,
+                    record.Value,
+                    RequestStatusLabel(record.Status));
+            }
+        }
+
+        if (ShowsVariationRows && Rows.Count > 0)
+        {
+            var sheet = workbook.AddSheet("Variations",
+                new ExcelColumn("Ref"),
+                new ExcelColumn("Title"),
+                new ExcelColumn("Request"),
+                new ExcelColumn("Status"),
+                new ExcelColumn("Value", ExcelFormat.Currency),
+                new ExcelColumn("Raised", ExcelFormat.Date),
+                new ExcelColumn("Approved", ExcelFormat.Date),
+                new ExcelColumn("Work order"));
+
+            foreach (var row in Rows)
+            {
+                var sourceRequest = RequestFor(row.Voq);
+                var issued = IssuedWorkOrdersFor(row.Order);
+                sheet.AddRow(
+                    row.Reference,
+                    row.Voq.Title,
+                    sourceRequest is null ? null : RefLabel(sourceRequest),
+                    VariationStatusLabel(row),
+                    row.Value,
+                    row.Voq.CreatedAt.LocalDateTime,
+                    row.Order?.ApprovedAt.LocalDateTime,
+                    issued.Count == 0 ? null : string.Join(", ", issued.Select(order => $"WO-{order.Number:0000}")));
+            }
+        }
+
+        return workbook.Sheets.Count == 0 ? null : workbook;
+    }
+
+    // Matches RequestTable's Status cell text.
+    private static string RequestStatusLabel(RequestStatus status) => status switch
+    {
+        RequestStatus.AwaitingResponse => "Awaiting response",
+        _ => status.ToString()
+    };
 
     private async Task LoadVariationsAsync()
     {

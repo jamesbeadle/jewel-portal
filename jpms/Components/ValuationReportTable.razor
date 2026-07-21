@@ -5,6 +5,10 @@
 @inject SessionService Session
 @implements IDisposable
 
+<div class="mb-3 flex items-center justify-end">
+    <ExportToExcelButton FileName="Valuation report" Disabled="@(lines.Count == 0)" BuildWorkbook="BuildExportWorkbook" />
+</div>
+
 @if (lines.Count == 0)
 {
     <div class="rounded-xl border border-line bg-surface px-3 py-6 text-center text-content-subtle italic">
@@ -14,23 +18,6 @@
 else
 {
     <div class="space-y-3">
-        @if (CanRecodeCostCentres)
-        {
-            @* Toggle the first column into a searchable cost-centre picker for every line — a finance
-               allocation the FD/PM can correct in place, independent of any claim's lock. *@
-            <div class="flex items-center justify-end gap-2">
-                @if (editCostCentres)
-                {
-                    <span class="text-[11px] text-content-subtle">Pick a cost centre for any line — changes save as you go.</span>
-                }
-                <button type="button" @onclick="ToggleEditCostCentres"
-                        class="@(editCostCentres
-                                  ? "rounded-lg bg-accent text-accent-ink font-medium text-sm px-3 py-2 hover:bg-accent-hover transition"
-                                  : "rounded-lg border border-line bg-surface text-content-muted font-medium text-sm px-3 py-2 hover:border-line-strong transition")">
-                    @(editCostCentres ? "Done editing cost centres" : "Edit cost centres")
-                </button>
-            </div>
-        }
         @foreach (var section in Sections)
         {
             var isOpen = IsExpanded(section.Type);
@@ -52,10 +39,6 @@ else
                             <span class="text-sm">
                                 <span class="text-[11px] uppercase tracking-wider text-content-subtle mr-1.5">Claimed</span>
                                 <span class="text-content-muted">@Money(ClaimedTotalFor(section)) (@Pct(PercentTotalFor(section)))</span>
-                            </span>
-                            <span class="text-sm">
-                                <span class="text-[11px] uppercase tracking-wider text-content-subtle mr-1.5">This period</span>
-                                <span class="text-content-muted">@Money(PeriodTotalFor(section))</span>
                             </span>
                         }
                         <span class="text-sm">
@@ -81,27 +64,17 @@ else
                             <table class="w-full text-sm border-collapse">
                                 <thead class="bg-surface-raised border-b border-line">
                                     <tr class="text-left text-[11px] uppercase tracking-wider text-content-subtle font-semibold">
-                                        <th class="@CodeHeadClass">@(editCostCentres ? "Cost centre" : "Code")</th>
-                                        <th class="@DescHeadClass">Description</th>
-                                        @if (section.Type == ValuationElementType.Variation && !editCostCentres)
+                                        <th class="sticky left-0 top-0 z-30 bg-surface-raised px-3 py-3 w-[72px]">Code</th>
+                                        <th class="sticky left-[72px] top-0 z-30 bg-surface-raised px-3 py-3 min-w-[220px]">Description</th>
+                                        @if (section.Type == ValuationElementType.Variation)
                                         {
                                             <th class="sticky top-0 z-20 bg-surface-raised px-3 py-3 whitespace-nowrap min-w-[220px]">Cost centre</th>
                                         }
                                         <th class="sticky top-0 z-20 bg-surface-raised px-3 py-3 text-right whitespace-nowrap">Qty</th>
                                         <th class="sticky top-0 z-20 bg-surface-raised px-3 py-3 text-right whitespace-nowrap">Rate £</th>
                                         <th class="sticky top-0 z-20 bg-surface-raised px-3 py-3 text-right whitespace-nowrap">Amount £</th>
-                                        @if (SelectedClaim is not null)
-                                        {
-                                            <th class="sticky top-0 z-20 bg-surface-raised px-3 py-3 text-right whitespace-nowrap"
-                                                title="@PrevColumnTitle">Prev. %</th>
-                                        }
                                         <th class="sticky top-0 z-20 bg-surface-raised px-3 py-3 text-right whitespace-nowrap">% Complete</th>
                                         <th class="sticky top-0 z-20 bg-surface-raised px-3 py-3 text-right whitespace-nowrap">Claimed £</th>
-                                        @if (SelectedClaim is not null)
-                                        {
-                                            <th class="sticky top-0 z-20 bg-surface-raised px-3 py-3 text-right whitespace-nowrap"
-                                                title="Movement this period — cumulative claimed now less the previous claim's cumulative">Period £</th>
-                                        }
                                         @if (CanEditLines)
                                         {
                                             <th class="sticky top-0 z-20 bg-surface-raised px-3 py-3 text-right w-[80px]"></th>
@@ -112,27 +85,8 @@ else
                                     @foreach (var line in section.Lines)
                                     {
                                         <tr class="@(line.CountsTowardTotals ? "" : "opacity-60")">
-                                            <td class="@CodeCellClass">
-                                                @if (editCostCentres)
-                                                {
-                                                    @* Every section's value can be recoded here; variations also move their
-                                                       mirrored VO's committed budget server-side (SetValuationLineCostCentreHandler). *@
-                                                    <SearchSelect Options="@CostCentreOptionsFor(line)" WidthClass="w-full"
-                                                                  Placeholder="Cost centre…"
-                                                                  Value="@line.CostCode"
-                                                                  Disabled="@(recodingLineId == line.ValuationLineItemId)"
-                                                                  ValueChanged="value => SetCostCentreAsync(line, value)" />
-                                                    @if (costCentreErrorLineId == line.ValuationLineItemId && costCentreError is not null)
-                                                    {
-                                                        <div class="text-[11px] text-negative mt-1">@costCentreError</div>
-                                                    }
-                                                }
-                                                else
-                                                {
-                                                    @CodeFor(line)
-                                                }
-                                            </td>
-                                            <td class="@DescCellClass">
+                                            <td class="sticky left-0 z-10 bg-surface px-3 py-2 font-mono text-[11px] text-content-subtle whitespace-nowrap">@CodeFor(line)</td>
+                                            <td class="sticky left-[72px] z-10 bg-surface px-3 py-2 text-content">
                                                 <div class="font-medium">@TitleFor(line)</div>
                                                 @if (!string.IsNullOrWhiteSpace(line.Comments))
                                                 {
@@ -143,12 +97,11 @@ else
                                                     <span class="inline-block mt-0.5 text-[10px] uppercase tracking-wide text-content-subtle">@line.LineType</span>
                                                 }
                                             </td>
-                                            @if (section.Type == ValuationElementType.Variation && !editCostCentres)
+                                            @if (section.Type == ValuationElementType.Variation)
                                             {
                                                 @* Where this variation's value is allocated in the cost-centre master.
                                                    Editable for Admin/MD/FD/PM (the API enforces the same gate); the
-                                                   value itself stays locked — only the allocation moves. While the
-                                                   "Edit cost centres" mode is on, the first column handles this instead. *@
+                                                   value itself stays locked — only the allocation moves. *@
                                                 <td class="px-3 py-2 whitespace-nowrap">
                                                     @if (CanRecodeCostCentres)
                                                     {
@@ -171,14 +124,6 @@ else
                                             <td class="px-3 py-2 text-right text-content-muted whitespace-nowrap">@Num(line.Quantity)</td>
                                             <td class="px-3 py-2 text-right text-content-muted whitespace-nowrap">@Num(line.Rate)</td>
                                             <td class="px-3 py-2 text-right text-content whitespace-nowrap">@Money(line.LineAmount)</td>
-                                            @if (SelectedClaim is not null)
-                                            {
-                                                @* Cumulative % claimed on the previous claim — the baseline the current
-                                                   claim moves off, so the client can see what changed this period. *@
-                                                <td class="px-3 py-2 text-right text-content-subtle whitespace-nowrap">
-                                                    @(line.CountsTowardTotals && HasPreviousClaim ? Pct(PreviousPercentFor(line)) : "—")
-                                                </td>
-                                            }
                                             <td class="px-3 py-2 text-right whitespace-nowrap">
                                                 @if (CanEditEntries && line.CountsTowardTotals)
                                                 {
@@ -186,11 +131,6 @@ else
                                                     {
                                                         @* Explicit commit only: Enter / tick saves, Esc / cross discards. *@
                                                         <span class="inline-flex items-center gap-1">
-                                                            @if (HasPreviousClaim)
-                                                            {
-                                                                @* Old percentage stays visible while editing so it's clear what's being changed from. *@
-                                                                <span class="text-[11px] text-content-subtle mr-1 whitespace-nowrap">was @Pct(PreviousPercentFor(line))</span>
-                                                            }
                                                             <input @ref="editInput" type="text" inputmode="decimal"
                                                                    value="@editValue"
                                                                    @oninput="@(e => { editValue = e.Value?.ToString() ?? ""; editError = false; })"
@@ -213,39 +153,21 @@ else
                                                     }
                                                     else
                                                     {
-                                                        <span class="inline-flex items-baseline gap-1.5 justify-end">
-                                                            <button type="button" title="Edit % complete"
-                                                                    @onclick="() => StartEdit(line)"
-                                                                    class="underline decoration-dotted underline-offset-2 hover:decoration-solid @(PercentFor(line) == 0m ? "text-content-muted" : "text-content")">
-                                                                @Pct(PercentFor(line))
-                                                            </button>
-                                                            @if (ShowDelta(line))
-                                                            {
-                                                                <span class="text-[11px] text-content-subtle whitespace-nowrap" title="Change from the previous claim">@SignedPct(DeltaFor(line))</span>
-                                                            }
-                                                        </span>
+                                                        <button type="button" title="Edit % complete"
+                                                                @onclick="() => StartEdit(line)"
+                                                                class="underline decoration-dotted underline-offset-2 hover:decoration-solid @(PercentFor(line) == 0m ? "text-content-muted" : "text-content")">
+                                                            @Pct(PercentFor(line))
+                                                        </button>
                                                     }
                                                 }
                                                 else
                                                 {
                                                     <span class="text-content-muted">@(line.CountsTowardTotals ? Pct(PercentFor(line)) : "—")</span>
-                                                    @if (ShowDelta(line))
-                                                    {
-                                                        <span class="ml-1.5 text-[11px] text-content-subtle whitespace-nowrap" title="Change from the previous claim">@SignedPct(DeltaFor(line))</span>
-                                                    }
                                                 }
                                             </td>
                                             <td class="px-3 py-2 text-right text-content-muted whitespace-nowrap">
                                                 @(line.CountsTowardTotals ? Money(ClaimedFor(line)) : "—")
                                             </td>
-                                            @if (SelectedClaim is not null)
-                                            {
-                                                @* What this period moved in money. On Claim 1 (no previous claim)
-                                                   everything claimed is movement, which is exactly right. *@
-                                                <td class="px-3 py-2 text-right whitespace-nowrap @(PeriodFor(line) == 0m ? "text-content-subtle" : "text-content")">
-                                                    @(line.CountsTowardTotals ? Money(PeriodFor(line)) : "—")
-                                                </td>
-                                            }
                                             @if (CanEditLines)
                                             {
                                                 <td class="px-3 py-2 text-right whitespace-nowrap">
@@ -291,10 +213,6 @@ else
             <SummaryRow Label="Net variations" Value="@Money(netVariations)" />
             <SummaryRow Label="Revised contract sum" Value="@Money(revisedContractSum)" Strong="true" />
             <SummaryRow Label="Total works complete" Value="@Money(totalWorksComplete)" />
-            @if (SelectedClaim is not null)
-            {
-                <SummaryRow Label="Works claimed this period" Value="@Money(PeriodClaimedTotal)" />
-            }
             <SummaryRow Label=@($"Retention held ({Pct(retentionPercent)})") Value="@Money(retentionHeld)" />
             <SummaryRow Label=@($"Retention released ({Pct(retentionReleasePercent)})") Value="@Money(retentionReleased)" />
             <SummaryRow Label="Certified to date" Value="@Money(certifiedToDate)" />
@@ -306,9 +224,6 @@ else
 @code {
     [Parameter, EditorRequired] public string ProjectId { get; set; } = "";
     [Parameter] public ValuationClaim? SelectedClaim { get; set; }
-    // The claim immediately before SelectedClaim, so each line can show its previously-claimed
-    // cumulative % next to what's being claimed now. Null for Claim 1 or when no claim is selected.
-    [Parameter] public ValuationClaim? PreviousClaim { get; set; }
     [Parameter] public EventCallback<ValuationLineItem> OnEditLine { get; set; }
     // Rendered between the bill sections and the summary (e.g. the valuation invoices accordion).
     [Parameter] public RenderFragment? ExtraSections { get; set; }
@@ -319,8 +234,6 @@ else
 
     private IReadOnlyList<ValuationLineItem> lines = Array.Empty<ValuationLineItem>();
     private IReadOnlyList<ClaimLine> entries = Array.Empty<ClaimLine>();
-    // Entries from the previous claim, keyed by line — the baseline for each line's "Prev. %".
-    private IReadOnlyList<ClaimLine> previousEntries = Array.Empty<ClaimLine>();
 
     // Sections start collapsed so the four totals read at a glance; state survives re-renders.
     private readonly HashSet<ValuationElementType> expanded = new();
@@ -358,9 +271,6 @@ else
     {
         lines = Store.LinesFor(ProjectId);
         entries = SelectedClaim is null ? Array.Empty<ClaimLine>() : Store.EntriesFor(SelectedClaim.ValuationClaimId);
-        // Fetch-once per claim id (revalidated by the store's Refresh); loads in the background and
-        // re-renders via the parent's OnChange subscription, same as the current claim's entries.
-        previousEntries = PreviousClaim is null ? Array.Empty<ClaimLine>() : Store.EntriesFor(PreviousClaim.ValuationClaimId);
         Recompute();
     }
 
@@ -438,39 +348,6 @@ else
     private decimal ClaimedFor(ValuationLineItem line) =>
         ValuationCalculations.CumulativeClaimed(PercentFor(line), line.LineAmount);
 
-    // ---- Previous claim comparison -----------------------------------------
-    // "Prev. %" is the cumulative % complete this line carried on the claim before the selected
-    // one; the delta beside the current % is how much is being claimed this period.
-    private bool HasPreviousClaim => PreviousClaim is not null;
-
-    private decimal PreviousPercentFor(ValuationLineItem line) =>
-        previousEntries.FirstOrDefault(e => e.ValuationLineItemId == line.ValuationLineItemId)?.PercentComplete ?? 0m;
-
-    private decimal DeltaFor(ValuationLineItem line) => PercentFor(line) - PreviousPercentFor(line);
-
-    // Only worth showing a delta when there's a prior claim to compare against, the line is priced
-    // into totals, and the percentage actually moved.
-    private bool ShowDelta(ValuationLineItem line) =>
-        HasPreviousClaim && line.CountsTowardTotals && DeltaFor(line) != 0m;
-
-    private string PrevColumnTitle => PreviousClaim is null
-        ? "No earlier claim to compare against — this is the first claim"
-        : $"Cumulative % complete claimed on {PreviousClaim.DisplayName}";
-
-    // Movement in money this period: cumulative claimed now less the previous claim's
-    // cumulative (both computed against the CURRENT line amount, so a re-priced line
-    // doesn't produce a phantom movement). No previous claim → everything is movement.
-    private decimal PreviousClaimedFor(ValuationLineItem line) =>
-        ValuationCalculations.CumulativeClaimed(PreviousPercentFor(line), line.LineAmount);
-
-    private decimal PeriodFor(ValuationLineItem line) => ClaimedFor(line) - PreviousClaimedFor(line);
-
-    private decimal PeriodTotalFor(Section section) =>
-        section.Lines.Where(l => l.CountsTowardTotals).Sum(PeriodFor);
-
-    private decimal PeriodClaimedTotal =>
-        lines.Where(l => l.CountsTowardTotals).Sum(PeriodFor);
-
     // ---- % complete click-to-edit -----------------------------------------
     // One cell edits at a time; nothing saves until the user confirms (Enter or
     // the tick). Esc or the cross discards. Clicking elsewhere leaves the editor
@@ -537,23 +414,6 @@ else
     // cost centres; everyone else sees the allocation read-only.
     private bool CanRecodeCostCentres => Session.ActiveRole
         is Role.Admin or Role.ManagingDirector or Role.FinanceDirector or Role.ProjectManager;
-
-    // "Edit cost centres" mode: the first column becomes a searchable cost-centre picker for every
-    // line in every section. Off by default so the report reads as a normal bill.
-    private bool editCostCentres;
-    private void ToggleEditCostCentres() => editCostCentres = !editCostCentres;
-
-    // The first column widens to hold the dropdown in edit mode; the sticky Description column's
-    // left offset must track that width so the two frozen columns stay flush (w-64 == left-64).
-    private string CodeHeadClass =>
-        "sticky left-0 top-0 z-30 bg-surface-raised px-3 py-3 " + (editCostCentres ? "w-64" : "w-[72px]");
-    private string DescHeadClass =>
-        "sticky " + (editCostCentres ? "left-64" : "left-[72px]") + " top-0 z-30 bg-surface-raised px-3 py-3 min-w-[220px]";
-    private string CodeCellClass => editCostCentres
-        ? "sticky left-0 z-10 bg-surface px-3 py-2 align-top w-64"
-        : "sticky left-0 z-10 bg-surface px-3 py-2 font-mono text-[11px] text-content-subtle whitespace-nowrap";
-    private string DescCellClass =>
-        "sticky " + (editCostCentres ? "left-64" : "left-[72px]") + " z-10 bg-surface px-3 py-2 text-content";
 
     private string? recodingLineId;
     private string? costCentreError;
@@ -626,6 +486,65 @@ else
     private static string Money(decimal v) => v.ToString("C2", Gb);
     private static string Num(decimal v) => v.ToString("0.##", Gb);
     private static string Pct(decimal v) => v.ToString("0.##", Gb) + "%";
-    // Signed for the "what changed" delta: "+20%", "-5%" (negatives already carry their sign).
-    private static string SignedPct(decimal v) => (v > 0m ? "+" : "") + v.ToString("0.##", Gb) + "%";
+
+    private static string SectionLabel(ValuationElementType type) => type switch
+    {
+        ValuationElementType.ContractWorks => "Contract works",
+        ValuationElementType.PcSum => "Provisional sums",
+        ValuationElementType.Contingency => "Contingency",
+        ValuationElementType.Variation => "Variations",
+        _ => type.ToString()
+    };
+
+    // One sheet with every line across all four sections (same grouping/order as the
+    // accordion renders), plus a Summary sheet mirroring the totals card below it.
+    private ExcelWorkbook? BuildExportWorkbook(bool _)
+    {
+        if (lines.Count == 0) return null;
+
+        var workbook = new ExcelWorkbook();
+        var linesSheet = workbook.AddSheet("Valuation lines",
+            new ExcelColumn("Section"),
+            new ExcelColumn("Code"),
+            new ExcelColumn("Description"),
+            new ExcelColumn("Cost centre"),
+            new ExcelColumn("Qty", ExcelFormat.Number),
+            new ExcelColumn("Rate £", ExcelFormat.Currency),
+            new ExcelColumn("Amount £", ExcelFormat.Currency),
+            new ExcelColumn("% complete", ExcelFormat.Percent),
+            new ExcelColumn("Claimed £", ExcelFormat.Currency));
+
+        foreach (var section in Sections)
+        {
+            foreach (var line in section.Lines)
+            {
+                linesSheet.AddRow(
+                    SectionLabel(section.Type),
+                    CodeFor(line),
+                    TitleFor(line),
+                    section.Type == ValuationElementType.Variation && !string.IsNullOrWhiteSpace(line.CostCode)
+                        ? CostCentreLabel(line.CostCode)
+                        : null,
+                    line.Quantity,
+                    line.Rate,
+                    line.LineAmount,
+                    line.CountsTowardTotals ? (decimal?)(PercentFor(line) / 100m) : null,
+                    line.CountsTowardTotals ? (decimal?)ClaimedFor(line) : null);
+            }
+        }
+
+        var summarySheet = workbook.AddSheet("Summary",
+            new ExcelColumn("Item"),
+            new ExcelColumn("Amount £", ExcelFormat.Currency));
+        summarySheet.AddRow("Original contract sum", contractSum);
+        summarySheet.AddRow("Net variations", netVariations);
+        summarySheet.AddRow("Revised contract sum", revisedContractSum);
+        summarySheet.AddRow("Total works complete", totalWorksComplete);
+        summarySheet.AddRow($"Retention held ({Pct(retentionPercent)})", retentionHeld);
+        summarySheet.AddRow($"Retention released ({Pct(retentionReleasePercent)})", retentionReleased);
+        summarySheet.AddRow("Certified to date", certifiedToDate);
+        summarySheet.AddRow("Payment due (ex VAT)", paymentDueExVat);
+
+        return workbook;
+    }
 }

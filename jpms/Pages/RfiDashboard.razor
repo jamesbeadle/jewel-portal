@@ -29,13 +29,18 @@ else
             </p>
         </header>
 
-        <div class="flex flex-wrap items-center gap-2 mb-5 text-sm">
-            @foreach (var option in StatusViews)
-            {
-                <button type="button" class="@StatusViewClass(option)" @onclick="() => statusView = option">
-                    @StatusViewLabel(option) · @StatusViewCount(option)
-                </button>
-            }
+        <div class="flex flex-wrap items-center justify-between gap-3 mb-5 text-sm">
+            <div class="flex flex-wrap items-center gap-2">
+                @foreach (var option in StatusViews)
+                {
+                    <button type="button" class="@StatusViewClass(option)" @onclick="() => statusView = option">
+                        @StatusViewLabel(option) · @StatusViewCount(option)
+                    </button>
+                }
+            </div>
+            <ExportToExcelButton FileName="RFI register"
+                                 Disabled="@(FilteredRecords.Count == 0)"
+                                 BuildWorkbook="BuildExportWorkbook" />
         </div>
 
         @if (loadError is not null)
@@ -225,6 +230,45 @@ else
         RequestStatus.Closed           => "bg-surface-raised border border-line text-content-muted",
         _                              => "bg-surface-raised border border-line text-content-muted"
     };
+
+    private ExcelWorkbook? BuildExportWorkbook(bool _)
+    {
+        var records = FilteredRecords;
+        if (records.Count == 0) return null;
+
+        var workbook = new ExcelWorkbook();
+        var sheet = workbook.AddSheet($"RFIs ({StatusViewLabel(statusView)})",
+            new ExcelColumn("Project"),
+            new ExcelColumn("Project ref"),
+            new ExcelColumn("Ref"),
+            new ExcelColumn("Subject"),
+            new ExcelColumn("Raised to"),
+            new ExcelColumn("Drawing / detail"),
+            new ExcelColumn("Issued", ExcelFormat.Date),
+            new ExcelColumn("Response due", ExcelFormat.Date),
+            new ExcelColumn("Days out", ExcelFormat.Integer),
+            new ExcelColumn("Value", ExcelFormat.Currency),
+            new ExcelColumn("Status"),
+            new ExcelColumn("Implies variation"));
+
+        foreach (var record in records)
+        {
+            sheet.AddRow(
+                ProjectName(record.ProjectId),
+                ProjectReference(record.ProjectId),
+                record.Reference,
+                record.Title,
+                record.RaisedTo,
+                record.DrawingRef,
+                (record.IssuedAt ?? record.RaisedAt).LocalDateTime,
+                record.ResponseDue?.LocalDateTime,
+                record.DaysOutstanding,
+                record.Value,
+                StatusLabel(record.Status),
+                record.ImpliesVariation);
+        }
+        return workbook;
+    }
 
     private async Task Reload()
     {

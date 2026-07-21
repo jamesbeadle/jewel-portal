@@ -87,6 +87,12 @@ else
         }
         else
         {
+            <div class="mb-3 flex items-center justify-end">
+                <ExportToExcelButton FileName="Workers"
+                                     Disabled="@(workers.Count == 0)"
+                                     BuildWorkbook="BuildExportWorkbook" />
+            </div>
+
             <table class="data-table">
                 <thead>
                     <tr>
@@ -154,6 +160,36 @@ else
     public void Dispose() => Labour.OnChange -= StateHasChanged;
 
     private decimal HourlyRate() => StandardDayHours == 0m ? 0m : Math.Round(formDayRate / StandardDayHours, 2);
+
+    private ExcelWorkbook? BuildExportWorkbook(bool _)
+    {
+        var workers = Labour.Workers();
+        if (workers.Count == 0) return null;
+
+        var workbook = new ExcelWorkbook();
+        var sheet = workbook.AddSheet("Workers",
+            new ExcelColumn("Name"),
+            new ExcelColumn("Portal email"),
+            new ExcelColumn("Subcontractor"),
+            new ExcelColumn("Hourly £", ExcelFormat.Currency),
+            new ExcelColumn("Day £ 8h", ExcelFormat.Currency),
+            new ExcelColumn("Status"));
+
+        foreach (var worker in workers)
+        {
+            sheet.AddRow(
+                worker.Name,
+                worker.ContactEmail,
+                // SubcontractorName() dashes a missing link for the screen; the export leaves it
+                // as a blank cell instead (nulls stay null — no "—" substitution).
+                worker.SubcontractorId is null ? null
+                    : Subcontractors.All().FirstOrDefault(s => s.SubcontractorId == worker.SubcontractorId)?.CompanyName,
+                worker.HourlyRate,
+                worker.HourlyRate * 8m,
+                worker.IsActive ? "Active" : "Inactive");
+        }
+        return workbook;
+    }
 
     private string SubcontractorName(string? subcontractorId) =>
         subcontractorId is null ? "—"

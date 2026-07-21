@@ -127,9 +127,15 @@ else
                         Ignored (@CountOf(XeroAllocationStatus.Ignored))
                     </button>
                 </div>
-                <input class="text-sm bg-surface border border-line rounded-lg px-3 py-1.5 text-content placeholder:text-content-subtle w-64"
-                       placeholder="Search supplier, description, number…"
-                       value="@search" @oninput="OnSearchChanged" />
+                <div class="flex items-center gap-4">
+                    <ExportToExcelButton FileName="Cost allocation"
+                                         Disabled="@(Visible.Count == 0)"
+                                         ShowIncludeAllRows="@(PageCount > 1)"
+                                         BuildWorkbook="BuildExportWorkbook" />
+                    <input class="text-sm bg-surface border border-line rounded-lg px-3 py-1.5 text-content placeholder:text-content-subtle w-64"
+                           placeholder="Search supplier, description, number…"
+                           value="@search" @oninput="OnSearchChanged" />
+                </div>
             </div>
 
             @if (activeTab == XeroAllocationStatus.Unallocated && selectedIds.Count > 0)
@@ -667,6 +673,98 @@ else
     {
         search = args.Value?.ToString() ?? string.Empty;
         page = 0;
+    }
+
+    // -- Excel export -----------------------------------------------------------
+    // Exports the open tab as filtered: the current page by default, the whole
+    // filtered set when "Include all rows" is ticked.
+
+    private ExcelWorkbook? BuildExportWorkbook(bool includeAllRows)
+    {
+        var lines = (includeAllRows ? Visible : Paged.ToList() as IReadOnlyList<XeroLedgerLine>);
+        if (lines.Count == 0) return null;
+
+        var sheetName = activeTab == XeroAllocationStatus.Unallocated
+            ? (activeProjectId is null ? "Unallocated" : ProjectName(activeProjectId))
+            : activeTab == XeroAllocationStatus.Bucketed ? "Buckets"
+            : activeTab.ToString();
+
+        var columns = new List<ExcelColumn>
+        {
+            new("Date", ExcelFormat.Date),
+            new("Supplier"),
+            new("Description"),
+            new("Invoice no"),
+            new("Xero site"),
+            new("Xero cost code"),
+            new("Net", ExcelFormat.Currency),
+        };
+        if (activeTab == XeroAllocationStatus.Allocated)
+        {
+            columns.Add(new ExcelColumn("Allocated to"));
+            columns.Add(new ExcelColumn("Cost centre"));
+        }
+        else if (activeTab == XeroAllocationStatus.Bucketed)
+        {
+            columns.Add(new ExcelColumn("Bucket"));
+        }
+        else if (activeTab == XeroAllocationStatus.Ignored)
+        {
+            columns.Add(new ExcelColumn("Reason"));
+        }
+        if (activeTab != XeroAllocationStatus.Unallocated)
+        {
+            columns.Add(new ExcelColumn("By"));
+            columns.Add(new ExcelColumn("Allocated on", ExcelFormat.Date));
+        }
+
+        var workbook = new ExcelWorkbook();
+        var sheet = workbook.AddSheet(sheetName, columns.ToArray());
+        foreach (var line in lines)
+        {
+            var cells = new List<object?>
+            {
+                line.Date,
+                line.ContactName,
+                line.Description,
+                line.InvoiceNumber,
+                line.XeroSite,
+                line.XeroCostCode,
+                SignedNet(line),
+            };
+            if (activeTab == XeroAllocationStatus.Allocated)
+            {
+                if (line.Splits is { Count: > 0 })
+                {
+                    var multiProject = line.Splits.Select(split => split.ProjectId ?? line.ProjectId)
+                        .Distinct().Count() > 1;
+                    cells.Add(multiProject ? "Multiple projects" : ProjectName(line.ProjectId ?? line.Splits[0].ProjectId));
+                    cells.Add(string.Join("; ", line.Splits.Select(split =>
+                        (multiProject ? $"{ProjectName(split.ProjectId ?? line.ProjectId)} · " : "")
+                        + $"{CostCenterText(split.CostCenterCode)} {Money(line.Type == "ACCPAYCREDIT" ? -split.Net : split.Net)}")));
+                }
+                else
+                {
+                    cells.Add(ProjectName(line.ProjectId));
+                    cells.Add(CostCenterText(line.CostCenterCode));
+                }
+            }
+            else if (activeTab == XeroAllocationStatus.Bucketed)
+            {
+                cells.Add(line.Bucket);
+            }
+            else if (activeTab == XeroAllocationStatus.Ignored)
+            {
+                cells.Add(line.Note);
+            }
+            if (activeTab != XeroAllocationStatus.Unallocated)
+            {
+                cells.Add(line.AllocatedBy);
+                cells.Add(line.AllocatedAtUtc?.ToLocalTime());
+            }
+            sheet.AddRow(cells.ToArray());
+        }
+        return workbook;
     }
 
     protected override async Task OnInitializedAsync()

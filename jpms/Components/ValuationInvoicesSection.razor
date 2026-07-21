@@ -10,18 +10,20 @@
    Raised → Issued skip path for projects without a formal approval loop. Manual entries
    are backdated historic invoices recorded directly as Issued/Paid. *@
 <div class="rounded-xl border border-line bg-surface overflow-hidden">
-    <button type="button" @onclick="Toggle" aria-expanded="@isOpen"
-            class="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-surface-raised/60 transition">
-        <svg class="@(isOpen ? "w-4 h-4 shrink-0 text-content-subtle rotate-90 transition-transform" : "w-4 h-4 shrink-0 text-content-subtle transition-transform")"
-             viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <path d="M9 6l6 6-6 6" />
-        </svg>
-        <span class="font-semibold text-content whitespace-nowrap">Valuation Invoices</span>
-        <span class="text-xs text-content-subtle whitespace-nowrap">
-            @LiveInvoices.Count @(LiveInvoices.Count == 1 ? "invoice" : "invoices")
-        </span>
-        <span class="ml-auto flex items-baseline gap-6 whitespace-nowrap">
+    <div class="w-full flex items-center gap-3 px-4 py-3 hover:bg-surface-raised/60 transition">
+        <button type="button" @onclick="Toggle" aria-expanded="@isOpen"
+                class="flex items-center gap-3 text-left grow min-w-0">
+            <svg class="@(isOpen ? "w-4 h-4 shrink-0 text-content-subtle rotate-90 transition-transform" : "w-4 h-4 shrink-0 text-content-subtle transition-transform")"
+                 viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                 stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M9 6l6 6-6 6" />
+            </svg>
+            <span class="font-semibold text-content whitespace-nowrap">Valuation Invoices</span>
+            <span class="text-xs text-content-subtle whitespace-nowrap">
+                @LiveInvoices.Count @(LiveInvoices.Count == 1 ? "invoice" : "invoices")
+            </span>
+        </button>
+        <span class="flex items-baseline gap-6 whitespace-nowrap">
             @if (AwaitingApproval > 0)
             {
                 <span class="text-sm">
@@ -38,7 +40,8 @@
                 <span class="text-content font-medium">@Money(InvoicedToDate)</span>
             </span>
         </span>
-    </button>
+        <ExportToExcelButton FileName="Valuation invoices" Disabled="@(invoices.Count == 0)" BuildWorkbook="BuildExportWorkbook" />
+    </div>
 
     @if (isOpen)
     {
@@ -675,4 +678,29 @@
     };
 
     private static string Money(decimal value) => value.ToString("C2", Gb);
+
+    // Same rows and order as the table (cancelled invoices stay listed, greyed out).
+    private ExcelWorkbook? BuildExportWorkbook(bool _)
+    {
+        if (invoices.Count == 0) return null;
+
+        var workbook = new ExcelWorkbook();
+        var sheet = workbook.AddSheet("Valuation invoices",
+            new ExcelColumn("Ref"),
+            new ExcelColumn("Period", ExcelFormat.Date),
+            new ExcelColumn("Amount £", ExcelFormat.Currency),
+            new ExcelColumn("Status"),
+            new ExcelColumn("Paid £", ExcelFormat.Currency));
+
+        foreach (var invoice in invoices)
+        {
+            sheet.AddRow(
+                invoice.DisplayNumber,
+                invoice.PeriodMonth.LocalDateTime,
+                invoice.Amount,
+                StatusLabel(invoice.Status),
+                invoice.AmountPaid);
+        }
+        return workbook;
+    }
 }

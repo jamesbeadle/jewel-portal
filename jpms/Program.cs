@@ -33,6 +33,7 @@ using Jewel.JPMS.Features.Subcontractors;
 using Jewel.JPMS.Features.Todos;
 using Jewel.JPMS.Features.Xero;
 using Jewel.JPMS.Services;
+using Jewel.JPMS.Services.Excel;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
 
@@ -113,6 +114,7 @@ builder.Services.AddScoped<ActiveRoleStorage>();
 builder.Services.AddScoped<AllocationTabStorage>();
 builder.Services.AddScoped<CurrentProjectService>();
 builder.Services.AddScoped<SessionService>();
+builder.Services.AddScoped<ExcelExportService>();
 
 var app = builder.Build();
 

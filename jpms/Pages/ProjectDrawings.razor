@@ -32,6 +32,9 @@ else
                 </p>
             </div>
             <div class="flex items-center gap-2">
+                <ExportToExcelButton FileName="Drawing register"
+                                     Disabled="@(VisibleDrawings.Count == 0)"
+                                     BuildWorkbook="BuildExportWorkbook" />
                 <button type="button" @onclick="() => approvedOnly = !approvedOnly"
                         class="rounded-lg border text-sm px-3 py-2 transition @(approvedOnly ? "bg-emerald-50 border-emerald-200 text-emerald-800" : "border-line-strong text-content-muted hover:bg-surface-raised")">
                     @(approvedOnly ? "Showing approved" : "All drawings")
@@ -83,6 +86,55 @@ else
 
     private bool CanManage =>
         Auth.CurrentRoles.Any(role => role is Role.Admin or Role.ManagingDirector or Role.ProjectManager);
+
+    private ExcelWorkbook? BuildExportWorkbook(bool _)
+    {
+        var drawings = VisibleDrawings;
+        if (drawings.Count == 0) return null;
+
+        var workbook = new ExcelWorkbook();
+        var sheet = workbook.AddSheet("Drawings",
+            new ExcelColumn("Code"),
+            new ExcelColumn("Title"),
+            new ExcelColumn("Latest approved"),
+            new ExcelColumn("Status"),
+            new ExcelColumn("Pipeline"),
+            new ExcelColumn("Added", ExcelFormat.Date));
+
+        foreach (var drawing in drawings)
+        {
+            sheet.AddRow(
+                drawing.DrawingCode,
+                drawing.Title,
+                LatestApprovedText(drawing),
+                StatusText(drawing),
+                PipelineText(drawing),
+                drawing.CreatedAt.LocalDateTime);
+        }
+        return workbook;
+    }
+
+    // Mirrors DrawingsTable's "Latest approved" cell (the em-dash there becomes a blank export cell).
+    private static string? LatestApprovedText(Drawing drawing) =>
+        string.IsNullOrEmpty(drawing.CurrentApprovedRevisionLabel) ? null : $"Rev {drawing.CurrentApprovedRevisionLabel}";
+
+    // Mirrors DrawingsTable's Status badges: pending/archived counts, or "Approved" when neither
+    // applies and a current approval exists — blank when none of those hold.
+    private static string? StatusText(Drawing drawing)
+    {
+        var parts = new List<string>();
+        if (drawing.UnapprovedCount > 0) parts.Add($"{drawing.UnapprovedCount} pending");
+        if (drawing.ArchivedCount > 0) parts.Add($"{drawing.ArchivedCount} archived");
+        if (drawing.UnapprovedCount == 0 && drawing.ArchivedCount == 0 && !string.IsNullOrEmpty(drawing.CurrentApprovedRevisionLabel))
+            parts.Add("Approved");
+        return parts.Count == 0 ? null : string.Join(" · ", parts);
+    }
+
+    // Mirrors DrawingsTable's Pipeline badges: metadata-extraction and change-analysis status of
+    // the latest revision.
+    private static string PipelineText(Drawing drawing) =>
+        $"{(drawing.LatestMetadataExtractedAt is not null ? "Metadata ✓" : "Not extracted")} · "
+        + $"{(drawing.LatestAnalysedAt is not null ? "Analysed ✓" : "Not analysed")}";
 
     protected override async Task OnInitializedAsync()
     {

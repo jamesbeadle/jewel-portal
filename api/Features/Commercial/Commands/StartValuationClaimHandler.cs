@@ -14,6 +14,18 @@ public sealed class StartValuationClaimHandler : ICommandHandler<StartValuationC
 
     public async Task<ValuationClaim> HandleAsync(StartValuationClaim command, CancellationToken cancellationToken)
     {
+        // Retention comes from the project's terms (Setup), stamped here as the claim's
+        // frozen copy so later term changes never rewrite a locked claim. The completion
+        // release % only applies once the claim date has reached practical completion —
+        // the release money itself stays a separately confirmed event on the schedule.
+        var terms = await context.ProjectRetentions
+            .FirstOrDefaultAsync(retention => retention.ProjectId == command.ProjectId, cancellationToken);
+        var retentionPercent = command.RetentionPercent ?? terms?.RetentionPercent ?? 0m;
+        var retentionReleasePercent = command.RetentionReleasePercent
+            ?? (terms?.PracticalCompletionAt is { } practicalCompletion && command.ClaimDate >= practicalCompletion
+                ? terms.CompletionReleasePercent
+                : 0m);
+
         var entity = new ValuationClaimEntity
         {
             ValuationClaimId = CommercialIdentifierFactory.NextValuationClaimId(),
@@ -22,8 +34,8 @@ public sealed class StartValuationClaimHandler : ICommandHandler<StartValuationC
             Name = command.Name?.Trim() ?? "",
             ClaimDate = command.ClaimDate,
             Status = (int)ValuationClaimStatus.Draft,
-            RetentionPercent = command.RetentionPercent,
-            RetentionReleasePercent = command.RetentionReleasePercent,
+            RetentionPercent = retentionPercent,
+            RetentionReleasePercent = retentionReleasePercent,
             PreapprovedAt = null,
             ConfirmedAt = null
             // Summary totals stay zero until the claim is preapproved / confirmed.

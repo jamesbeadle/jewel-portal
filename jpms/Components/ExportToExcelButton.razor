@@ -1,0 +1,59 @@
+@using Jewel.JPMS.Services.Excel
+@inject ExcelExportService ExcelExport
+
+<div class="flex items-center gap-3 shrink-0">
+    @if (ShowIncludeAllRows)
+    {
+        <label class="flex items-center gap-1.5 text-xs text-content-muted select-none cursor-pointer">
+            <input type="checkbox" @bind="includeAllRows" />
+            Include all rows
+        </label>
+    }
+    <button type="button"
+            class="text-sm font-medium text-content-muted hover:text-content underline underline-offset-4 disabled:opacity-50 shrink-0"
+            disabled="@(isExporting || Disabled)"
+            @onclick="ExportAsync">
+        @(isExporting ? "Exporting…" : "Export to Excel")
+    </button>
+</div>
+
+@code {
+    /// <summary>Base filename without extension; the export date and .xlsx are appended.</summary>
+    [Parameter, EditorRequired] public string FileName { get; set; } = "export";
+
+    /// <summary>
+    /// Builds the workbook to download. The bool argument is true when the user has
+    /// ticked "Include all rows" (only shown when <see cref="ShowIncludeAllRows"/> is set);
+    /// otherwise export exactly what the table currently shows. Return null to skip the export.
+    /// </summary>
+    [Parameter, EditorRequired] public Func<bool, ExcelWorkbook?> BuildWorkbook { get; set; } = default!;
+
+    /// <summary>Show the "Include all rows" tickbox — set this on paginated or row-capped tables.</summary>
+    [Parameter] public bool ShowIncludeAllRows { get; set; }
+
+    [Parameter] public bool Disabled { get; set; }
+
+    private bool includeAllRows;
+    private bool isExporting;
+
+    private async Task ExportAsync()
+    {
+        if (isExporting)
+        {
+            return;
+        }
+        isExporting = true;
+        try
+        {
+            var workbook = BuildWorkbook(includeAllRows);
+            if (workbook is not null && workbook.Sheets.Count > 0)
+            {
+                await ExcelExport.DownloadAsync(workbook, FileName);
+            }
+        }
+        finally
+        {
+            isExporting = false;
+        }
+    }
+}

@@ -31,10 +31,15 @@ else
                 <h1 class="text-2xl md:text-3xl font-semibold text-content leading-tight">Directory</h1>
                 <p class="text-sm text-content-muted mt-2">@Filtered().Count of @SubcontractorStore.All().Count companies.</p>
             </div>
-            @if (CanManage)
-            {
-                <button type="button" class="btn-primary" @onclick="OpenAddModal">+ Add company</button>
-            }
+            <div class="flex items-center gap-4 shrink-0">
+                <ExportToExcelButton FileName="Directory"
+                                     Disabled="@(Filtered().Count == 0)"
+                                     BuildWorkbook="BuildExportWorkbook" />
+                @if (CanManage)
+                {
+                    <button type="button" class="btn-primary" @onclick="OpenAddModal">+ Add company</button>
+                }
+            </div>
         </header>
 
         @* Filters: category + free-text search across all types *@
@@ -310,6 +315,35 @@ else
     }
 
     private void Open(string id) => Nav.NavigateTo($"/directory/{id}");
+
+    // The screen's "Primary contact" cell is compound (name + email subtitle) — split
+    // into two columns so the email isn't lost from the export.
+    private ExcelWorkbook? BuildExportWorkbook(bool _)
+    {
+        var subs = Filtered();
+        if (subs.Count == 0) return null;
+
+        var workbook = new ExcelWorkbook();
+        var sheet = workbook.AddSheet("Directory",
+            new ExcelColumn("Company"),
+            new ExcelColumn("Type"),
+            new ExcelColumn("Trade"),
+            new ExcelColumn("Primary contact"),
+            new ExcelColumn("Contact email"),
+            new ExcelColumn("Location"));
+
+        foreach (var sub in subs)
+        {
+            sheet.AddRow(
+                sub.CompanyName,
+                Label(sub.Category),
+                sub.TradesLabel,
+                sub.ContactName,
+                sub.ContactEmail,
+                Location(sub));
+        }
+        return workbook;
+    }
 
     private static string Location(Subcontractor s) =>
         string.Join(", ", new[] { s.Town, s.County }.Where(x => !string.IsNullOrWhiteSpace(x)));

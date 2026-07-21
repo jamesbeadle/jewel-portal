@@ -28,10 +28,15 @@ else
                     Purchase invoices read live from Xero since @FromDateText — with each line's site and cost code, ready for reconciliation.
                 </p>
             </div>
-            <button class="text-sm font-medium text-content-muted hover:text-content underline underline-offset-4 disabled:opacity-50"
-                    disabled="@isRefreshing" @onclick="ForceRefreshAsync">
-                @(isRefreshing ? "Refreshing…" : "Refresh from Xero")
-            </button>
+            <div class="flex items-center gap-4 whitespace-nowrap">
+                <ExportToExcelButton FileName="Xero transactions"
+                                     Disabled="@(Filtered.Count == 0 && Breakdown.Count == 0)"
+                                     BuildWorkbook="BuildExportWorkbook" />
+                <button class="text-sm font-medium text-content-muted hover:text-content underline underline-offset-4 disabled:opacity-50"
+                        disabled="@isRefreshing" @onclick="ForceRefreshAsync">
+                    @(isRefreshing ? "Refreshing…" : "Refresh from Xero")
+                </button>
+            </div>
         </header>
 
         @if (Snapshot is null)
@@ -441,6 +446,70 @@ else
 
     private static string MoneyOrDash(decimal value) =>
         value == 0m ? "—" : Money(value);
+
+    // One workbook, one sheet per view — both exported regardless of which tab is
+    // active, each reusing the page's own computed lists so the export matches the
+    // screen exactly.
+    private ExcelWorkbook? BuildExportWorkbook(bool _)
+    {
+        if (Snapshot is null) return null;
+
+        var transactions = Filtered;
+        var breakdown = Breakdown;
+        if (transactions.Count == 0 && breakdown.Count == 0) return null;
+
+        var workbook = new ExcelWorkbook();
+
+        var transactionsSheet = workbook.AddSheet("Transactions",
+            new ExcelColumn("Date", ExcelFormat.Date),
+            new ExcelColumn("Supplier"),
+            new ExcelColumn("Number"),
+            new ExcelColumn("Site"),
+            new ExcelColumn("Cost code"),
+            new ExcelColumn("Status"),
+            new ExcelColumn("Net", ExcelFormat.Currency),
+            new ExcelColumn("Total", ExcelFormat.Currency));
+        foreach (var transaction in transactions)
+        {
+            transactionsSheet.AddRow(
+                transaction.Date,
+                transaction.ContactName,
+                transaction.Number,
+                DistinctText(transaction.Lines.Select(l => l.Site)),
+                DistinctText(transaction.Lines.Select(l => l.CostCode)),
+                transaction.Status,
+                transaction.SubTotal,
+                transaction.Total);
+        }
+
+        var years = Years;
+        var pivotColumns = new List<ExcelColumn> { new("Site / cost code") };
+        pivotColumns.AddRange(years.Select(year => new ExcelColumn(year.ToString(), ExcelFormat.Currency)));
+        pivotColumns.Add(new ExcelColumn("Total", ExcelFormat.Currency));
+
+        var pivotSheet = workbook.AddSheet("Site × cost code", pivotColumns.ToArray());
+        foreach (var site in breakdown)
+        {
+            var siteCells = new List<object?> { site.Name };
+            siteCells.AddRange(years.Select(year => (object?)site.ForYear(year)));
+            siteCells.Add(site.Total);
+            pivotSheet.AddRow(siteCells.ToArray());
+
+            foreach (var costCode in site.CostCodes)
+            {
+                var codeCells = new List<object?> { "  " + costCode.Name };
+                codeCells.AddRange(years.Select(year => (object?)costCode.ForYear(year)));
+                codeCells.Add(costCode.Total);
+                pivotSheet.AddRow(codeCells.ToArray());
+            }
+        }
+        var totalCells = new List<object?> { "All sites" };
+        totalCells.AddRange(years.Select(year => (object?)breakdown.Sum(site => site.ForYear(year))));
+        totalCells.Add(breakdown.Sum(site => site.Total));
+        pivotSheet.AddRow(totalCells.ToArray());
+
+        return workbook;
+    }
 
     public void Dispose() => Xero.OnChange -= StateHasChanged;
 }

@@ -31,6 +31,9 @@ else
                 <input type="search" placeholder="Search by supplier…"
                        class="bg-surface border border-line rounded-lg px-3 py-1.5 text-sm text-content placeholder:text-content-subtle w-52 focus:outline-none focus:border-accent"
                        @bind="supplierSearch" @bind:event="oninput" />
+                <ExportToExcelButton FileName="Work orders"
+                                     Disabled="@(Orders.Count == 0)"
+                                     BuildWorkbook="BuildExportWorkbook" />
                 <button type="button" class="btn-secondary text-sm"
                         title="Raise a work order directly — no bid package — and optionally package it against the valuation lines that priced its scope"
                         @onclick="OpenAdd">
@@ -380,6 +383,69 @@ else
     }
 
     private static string Reference(WorkOrder order) => $"WO-{order.Number:0000}";
+
+    // One workbook, two sheets: the cost-centre roll-up (matching the tfoot total)
+    // and the flattened per-order lines the expanded groups show — both respecting
+    // the current supplier search, same as the on-screen table.
+    private ExcelWorkbook? BuildExportWorkbook(bool _)
+    {
+        if (Orders.Count == 0) return null;
+
+        var rows = Rows;
+        var workbook = new ExcelWorkbook();
+
+        var centresSheet = workbook.AddSheet("Cost centres",
+            new ExcelColumn("Code"),
+            new ExcelColumn("Cost centre"),
+            new ExcelColumn("Orders", ExcelFormat.Integer),
+            new ExcelColumn("Committed", ExcelFormat.Currency),
+            new ExcelColumn("Paid", ExcelFormat.Currency),
+            new ExcelColumn("Remaining", ExcelFormat.Currency));
+        foreach (var row in rows)
+        {
+            centresSheet.AddRow(
+                row.Code,
+                row.InMaster ? row.Name : null,
+                row.OrderCount,
+                row.Committed,
+                row.Paid,
+                row.Committed - row.Paid);
+        }
+        centresSheet.AddRow(
+            Searching ? "Total (filtered)" : "Total",
+            null,
+            VisibleOrderCount,
+            LineCommitted,
+            LinePaid,
+            LineCommitted - LinePaid);
+
+        var ordersSheet = workbook.AddSheet("Work orders",
+            new ExcelColumn("Code"),
+            new ExcelColumn("Cost centre"),
+            new ExcelColumn("Order"),
+            new ExcelColumn("Supplier"),
+            new ExcelColumn("Line"),
+            new ExcelColumn("Status"),
+            new ExcelColumn("Total", ExcelFormat.Currency),
+            new ExcelColumn("Paid", ExcelFormat.Currency));
+        foreach (var row in rows)
+        {
+            foreach (var line in LinesFor(row.Code))
+            {
+                ordersSheet.AddRow(
+                    row.Code,
+                    row.InMaster ? row.Name : null,
+                    Reference(line.Detail.Order),
+                    line.Detail.SubcontractorName,
+                    line.Line.Title,
+                    line.Detail.Order.Status.ToString(),
+                    line.Line.LineTotal,
+                    line.Line.PaidToDate);
+            }
+        }
+
+        return workbook;
+    }
 
     private static string Money(decimal value) =>
         value.ToString(value == Math.Truncate(value) ? "C0" : "C2",

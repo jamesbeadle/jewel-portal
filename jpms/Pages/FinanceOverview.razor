@@ -55,6 +55,12 @@ else
                 </p>
             }
 
+            <div class="mb-3 flex items-center justify-end">
+                <ExportToExcelButton FileName="Finance overview"
+                                     Disabled="@(ActiveProjects.Count == 0)"
+                                     BuildWorkbook="BuildExportWorkbook" />
+            </div>
+
             <div class="rounded-xl border border-line bg-surface overflow-x-auto">
                 <table class="w-full text-sm border-collapse">
                     <thead class="bg-surface-raised border-b border-line">
@@ -144,6 +150,37 @@ else
     }
 
     private static string Money(decimal value) => $"£{value:N0}";
+
+    // Same rows the table renders, per active project, plus the "All projects" total
+    // row shown in the tfoot when there's more than one project.
+    private ExcelWorkbook? BuildExportWorkbook(bool _)
+    {
+        var projects = ActiveProjects;
+        if (projects.Count == 0) return null;
+
+        var workbook = new ExcelWorkbook();
+        var sheet = workbook.AddSheet("Finance overview",
+            new ExcelColumn("Project"),
+            new ExcelColumn("Contract sales value", ExcelFormat.Currency),
+            new ExcelColumn("Claimed to date", ExcelFormat.Currency),
+            new ExcelColumn("Target cost value", ExcelFormat.Currency),
+            new ExcelColumn("Actual cost of sales", ExcelFormat.Currency),
+            new ExcelColumn("Under / over", ExcelFormat.Currency));
+
+        foreach (var project in projects)
+        {
+            var figures = FiguresFor(project.ProjectId);
+            sheet.AddRow(project.Name, figures.Sales, figures.Claimed, figures.TargetCost, figures.ActualCost, figures.UnderOver);
+        }
+
+        if (projects.Count > 1)
+        {
+            var total = Totals();
+            sheet.AddRow("All projects", total.Sales, total.Claimed, total.TargetCost, total.ActualCost, total.UnderOver);
+        }
+
+        return workbook;
+    }
 
     protected override async Task OnInitializedAsync()
     {

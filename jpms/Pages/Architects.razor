@@ -28,7 +28,12 @@ else
                 <h1 class="text-2xl md:text-3xl font-semibold text-content leading-tight">Architect practices</h1>
                 <p class="text-sm text-content-muted mt-2">@architects.Count architect@(architects.Count == 1 ? "" : "s") · when an architect is a project's party, RFIs and other request documents go to the contact email here.</p>
             </div>
-            <button type="button" class="btn-primary" @onclick="OpenCreate">New architect</button>
+            <div class="flex items-center gap-4 shrink-0">
+                <ExportToExcelButton FileName="Architects"
+                                     Disabled="@(architects.Count == 0)"
+                                     BuildWorkbook="BuildExportWorkbook" />
+                <button type="button" class="btn-primary" @onclick="OpenCreate">New architect</button>
+            </div>
         </header>
 
         @if (loadError is not null)
@@ -202,6 +207,23 @@ else
         }
         catch { formError = "Couldn't save the changes. Please try again."; }
         finally { busy = false; }
+    }
+
+    private ExcelWorkbook? BuildExportWorkbook(bool _)
+    {
+        if (architects.Count == 0) return null;
+
+        var workbook = new ExcelWorkbook();
+        var sheet = workbook.AddSheet("Architects",
+            new ExcelColumn("Practice"),
+            new ExcelColumn("Contact"),
+            new ExcelColumn("Contact email"));
+
+        foreach (var architect in architects)
+        {
+            sheet.AddRow(architect.Name, architect.ContactName, architect.ContactEmail);
+        }
+        return workbook;
     }
 
     private static string Dash(string? value) => string.IsNullOrWhiteSpace(value) ? "—" : value;

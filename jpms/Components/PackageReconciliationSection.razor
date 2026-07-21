@@ -12,17 +12,20 @@
 <section class="mt-8">
     <div class="flex items-center justify-between gap-3 mb-1 flex-wrap">
         <h2 class="text-lg font-semibold text-content">Packages</h2>
-        @if (CanManage)
-        {
-            <div class="flex items-center gap-2">
+        <div class="flex items-center gap-2">
+            <ExportToExcelButton FileName="Reconciliation packages"
+                                 Disabled="@(rows.Count == 0)"
+                                 BuildWorkbook="BuildExportWorkbook" />
+            @if (CanManage)
+            {
                 <button type="button" class="btn-secondary text-sm"
                         title="Raise a work order directly and package it against the valuation lines that priced its scope, in one go"
                         @onclick="() => manualOrderOpen = true">
                     New work order + package
                 </button>
                 <button type="button" class="btn-secondary text-sm" @onclick="OpenCreate">New package</button>
-            </div>
-        }
+            }
+        </div>
     </div>
     <p class="text-sm text-content-subtle mb-3">
         Match a sub's work orders — and any purchase invoices bought directly for the same scope —
@@ -344,6 +347,38 @@
         }
         catch (CommandFailedException ex) { error = ex.Message; }
         finally { busy = false; }
+    }
+
+    // Matches the rendered rows exactly: same package rows, same locked/open figure
+    // per column (Drawdown / Margin blank while locked, Profit / loss shown instead).
+    private ExcelWorkbook? BuildExportWorkbook(bool _)
+    {
+        if (rows.Count == 0) return null;
+
+        var workbook = new ExcelWorkbook();
+        var sheet = workbook.AddSheet("Reconciliation packages",
+            new ExcelColumn("Package"),
+            new ExcelColumn("Sales value", ExcelFormat.Currency),
+            new ExcelColumn("Claimed", ExcelFormat.Currency),
+            new ExcelColumn("Target cost", ExcelFormat.Currency),
+            new ExcelColumn("WO committed", ExcelFormat.Currency),
+            new ExcelColumn("Invoiced", ExcelFormat.Currency),
+            new ExcelColumn("Drawdown", ExcelFormat.Currency),
+            new ExcelColumn("Margin / P&L", ExcelFormat.Currency));
+
+        foreach (var row in rows)
+        {
+            sheet.AddRow(
+                row.Name,
+                row.SalesValue,
+                row.ClaimedToDate,
+                row.TargetCost,
+                row.WoCommitted,
+                row.InvoicedToDate,
+                row.IsLocked ? (decimal?)null : row.Drawdown,
+                row.IsLocked ? (decimal?)row.ProfitLoss : row.Margin);
+        }
+        return workbook;
     }
 
     private static string Truncate(string value, int max) =>

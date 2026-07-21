@@ -106,7 +106,7 @@ else
         {
             <section class="rounded-xl border border-line bg-surface p-5 mb-4">
                 <h3 class="text-sm font-medium text-content-muted mb-3">Start claim @NextClaimNumber</h3>
-                <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     <div>
                         <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Period name</label>
                         <input type="text" @bind="newClaimName" placeholder="e.g. June 2026"
@@ -117,8 +117,24 @@ else
                         <input type="date" @bind="newClaimDate"
                                class="w-full rounded-lg border border-line-strong bg-surface-field px-3 py-2 text-sm text-content focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent" />
                     </div>
-                    <FormField Label="Retention %" InputType="number" Value="@newRetentionPercent" OnChange="@(v => newRetentionPercent = v)" />
-                    <FormField Label="Retention release %" InputType="number" Value="@newRetentionReleasePercent" OnChange="@(v => newRetentionReleasePercent = v)" />
+                    <div>
+                        <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Retention</label>
+                        @* Read-only: the claim stamps its retention from the project's terms when it
+                           starts — the completion date decides whether the release % applies. *@
+                        @if (Retention.RetentionFor(ProjectId) is { } terms)
+                        {
+                            <p class="text-sm text-content-muted py-2">
+                                @PctText(terms.RetentionPercent) held · @PctText(terms.CompletionReleasePercent) releases at
+                                practical completion@(terms.PracticalCompletionAt is { } pc ? $" ({pc:dd MMM yyyy})" : " — date not set")
+                            </p>
+                        }
+                        else
+                        {
+                            <p class="text-sm text-warning py-2">
+                                No retention terms recorded — this claim will hold 0%. Record them in project setup first.
+                            </p>
+                        }
+                    </div>
                 </div>
                 @if (LatestClaim is not null)
                 {
@@ -275,8 +291,6 @@ else
 
     private DateTime newClaimDate = DateTime.Today;
     private string newClaimName = "";
-    private string newRetentionPercent = "5";
-    private string newRetentionReleasePercent = "0";
     // Rollover default: copy the latest claim's percentages into the new one.
     private bool newSeedFromLatest;
 
@@ -288,6 +302,7 @@ else
 
     private static readonly System.Globalization.CultureInfo Gb = System.Globalization.CultureInfo.GetCultureInfo("en-GB");
     private static string Money(decimal v) => v.ToString("C2", Gb);
+    private static string PctText(decimal v) => v.ToString("0.##", Gb) + "%";
 
     private IReadOnlyList<ValuationClaim> Claims => Store.ClaimsFor(ProjectId);
     private ValuationClaim? Selected => Claims.FirstOrDefault(c => c.ValuationClaimId == selectedClaimId);
@@ -317,13 +332,16 @@ else
         await Session.EnsureLoadedAsync();
         if (!Auth.IsSignedIn) { Nav.NavigateTo("/login", forceLoad: true); return; }
         Store.OnChange += OnStoreChanged;
+        // The new-claim form shows the retention terms read-only — re-render when the
+        // background fetch lands so it doesn't sit on the "no terms" warning.
+        Retention.OnChange += OnStoreChanged;
         // Refresh on entry: cached lines/claims render immediately, then update when the
         // background reload lands — so navigating back to this tab never shows stale data.
         Store.Refresh(ProjectId);
-        // Warm the retention terms so the new-claim form can default its percentages.
+        // Warm the retention terms for the new-claim form's read-only summary.
         Retention.Refresh(ProjectId);
         // Revalidate the cost-centre master (stale-while-revalidate) — the report table's
-        // "Edit cost centres" mode and the line form both offer it as a dropdown.
+        // Variations section and the line form both offer it as a dropdown.
         _ = CostCenters.ListAllAsync();
         isLoaded = true;
     }
@@ -341,20 +359,18 @@ else
         if (!showStartClaim) return;
         // Rolling over is the norm once a claim exists — default the seed on.
         newSeedFromLatest = LatestClaim is not null;
-        // Default the percentages from the project's retention terms (Setup tab) when recorded.
-        if (Retention.RetentionFor(ProjectId) is { } terms)
-            newRetentionPercent = terms.RetentionPercent.ToString("0.##", Gb);
     }
 
     private async Task StartClaimAsync()
     {
         busy = true;
         var date = new DateTimeOffset(newClaimDate.Date, TimeSpan.Zero);
+        // Retention percents are omitted deliberately: the server stamps them from the
+        // project's retention terms, with the completion date gating the release %.
         var claim = await Store.StartClaimAsync(new StartValuationClaim(
             ProjectId, NextClaimNumber, date,
-            FormNumber.ParseAmount(newRetentionPercent), FormNumber.ParseAmount(newRetentionReleasePercent),
-            newClaimName.Trim(),
-            newSeedFromLatest ? LatestClaim?.ValuationClaimId : null));
+            Name: newClaimName.Trim(),
+            SeedFromClaimId: newSeedFromLatest ? LatestClaim?.ValuationClaimId : null));
         selectedClaimId = claim.ValuationClaimId;
         showStartClaim = false;
         newClaimName = "";
@@ -486,5 +502,9 @@ else
         if (editingLine is not null) editingLine = null;
     }
 
-    public void Dispose() => Store.OnChange -= OnStoreChanged;
+    public void Dispose()
+    {
+        Store.OnChange -= OnStoreChanged;
+        Retention.OnChange -= OnStoreChanged;
+    }
 }

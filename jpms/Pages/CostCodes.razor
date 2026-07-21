@@ -47,11 +47,14 @@ else
         }
         else
         {
-            <div class="mb-3 flex items-center justify-end">
+            <div class="mb-3 flex items-center justify-end gap-4">
                 <label class="flex items-center gap-2 text-sm text-content-muted cursor-pointer select-none">
                     <input type="checkbox" checked="@showRetired" @onchange="e => showRetired = (bool)e.Value!" />
                     <span>Show retired</span>
                 </label>
+                <ExportToExcelButton FileName="Cost codes"
+                                     Disabled="@(VisibleCostCodes.Count == 0)"
+                                     BuildWorkbook="BuildExportWorkbook" />
             </div>
 
             @if (VisibleCostCodes.Count == 0)
@@ -254,6 +257,29 @@ else
         }
         catch { loadError = "Couldn't update the cost code. Please try again."; }
         finally { busy = false; }
+    }
+
+    private ExcelWorkbook? BuildExportWorkbook(bool _)
+    {
+        var costCodesToExport = VisibleCostCodes;
+        if (costCodesToExport.Count == 0) return null;
+
+        var workbook = new ExcelWorkbook();
+        var sheet = workbook.AddSheet("Cost codes",
+            new ExcelColumn("Code"),
+            new ExcelColumn("Name"),
+            new ExcelColumn("Sort order", ExcelFormat.Integer),
+            new ExcelColumn("Status"));
+
+        foreach (var costCode in costCodesToExport)
+        {
+            sheet.AddRow(
+                costCode.Code,
+                costCode.Name,
+                costCode.SortOrder,
+                costCode.IsActive ? "Active" : "Retired");
+        }
+        return workbook;
     }
 
     private bool TryParseSortOrder(out int sortOrder)

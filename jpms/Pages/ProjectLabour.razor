@@ -46,10 +46,16 @@ else
 
         <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
             <h2 class="text-lg font-semibold text-content">Timesheets</h2>
-            <div class="flex items-center gap-2 text-sm">
-                <button type="button" class="btn-secondary" @onclick="() => MoveWeek(-7)">‹ Prev</button>
-                <span class="text-content-subtle">w/c @weekStart.ToString("dd MMM yyyy")</span>
-                <button type="button" class="btn-secondary" @onclick="() => MoveWeek(7)">Next ›</button>
+            <div class="flex items-center gap-3">
+                <div class="flex items-center gap-2 text-sm">
+                    <button type="button" class="btn-secondary" @onclick="() => MoveWeek(-7)">‹ Prev</button>
+                    <span class="text-content-subtle">w/c @weekStart.ToString("dd MMM yyyy")</span>
+                    <button type="button" class="btn-secondary" @onclick="() => MoveWeek(7)">Next ›</button>
+                </div>
+                <ExportToExcelButton FileName="Labour"
+                                     ShowIncludeAllRows="true"
+                                     Disabled="@(!HasExportableLabourData())"
+                                     BuildWorkbook="BuildExportWorkbook" />
             </div>
         </div>
 
@@ -578,5 +584,86 @@ else
         actionError = null;
         try { await Labour.SetAssignmentAsync(ProjectId, workerId, false); }
         catch (Exception) { actionError = "Could not remove the worker — try again."; }
+    }
+
+    // -- Excel export -----------------------------------------------------------
+    // One workbook, one sheet per table on the page: the current week's timesheets,
+    // the site register (row-capped at 60 on screen — "Include all rows" exports the
+    // full attendance list instead) and the settlement reconciliation, when it has rows.
+
+    private bool HasExportableLabourData() =>
+        WeekTimesheets().Count > 0
+        || Labour.AttendanceFor(ProjectId).Count > 0
+        || Labour.SettlementFor(ProjectId).Count > 0;
+
+    private static string TimesheetStatusLabel(TimesheetStatus status) => status switch
+    {
+        TimesheetStatus.Approved => "Approved",
+        TimesheetStatus.Rejected => "Rejected",
+        _ => "Submitted"
+    };
+
+    private ExcelWorkbook? BuildExportWorkbook(bool includeAllRows)
+    {
+        if (!HasExportableLabourData()) return null;
+
+        var workbook = new ExcelWorkbook();
+
+        var timesheetSheet = workbook.AddSheet("Timesheets",
+            new ExcelColumn("Worker"),
+            new ExcelColumn("Day", ExcelFormat.Date),
+            new ExcelColumn("Cost code"),
+            new ExcelColumn("Hours", ExcelFormat.Number),
+            new ExcelColumn("£", ExcelFormat.Currency),
+            new ExcelColumn("Status"));
+        foreach (var timesheet in WeekTimesheets())
+        {
+            timesheetSheet.AddRow(
+                timesheet.WorkerName,
+                timesheet.WorkedOn.LocalDateTime,
+                timesheet.CostCode,
+                timesheet.Hours,
+                timesheet.Status == TimesheetStatus.Approved ? (decimal?)timesheet.CostAmount : null,
+                TimesheetStatusLabel(timesheet.Status));
+        }
+
+        var registerSheet = workbook.AddSheet("Site register",
+            new ExcelColumn("Date", ExcelFormat.Date),
+            new ExcelColumn("Worker"),
+            new ExcelColumn("In"),
+            new ExcelColumn("Out"));
+        var registerRows = includeAllRows
+            ? Labour.AttendanceFor(ProjectId)
+            : Labour.AttendanceFor(ProjectId).Take(60).ToList();
+        foreach (var row in registerRows)
+        {
+            registerSheet.AddRow(
+                row.WorkDate.LocalDateTime,
+                row.WorkerName,
+                row.SignedInAt.ToLocalTime().ToString("HH:mm"),
+                row.SignedOutAt?.ToLocalTime().ToString("HH:mm"));
+        }
+
+        var settlement = Labour.SettlementFor(ProjectId);
+        if (settlement.Count > 0)
+        {
+            var settlementSheet = workbook.AddSheet("Settlement",
+                new ExcelColumn("Subcontractor"),
+                new ExcelColumn("Approved £", ExcelFormat.Currency),
+                new ExcelColumn("Covered invoices £", ExcelFormat.Currency),
+                new ExcelColumn("Posted variances £", ExcelFormat.Currency),
+                new ExcelColumn("Unresolved £", ExcelFormat.Currency));
+            foreach (var row in settlement)
+            {
+                settlementSheet.AddRow(
+                    row.SubcontractorName,
+                    row.ApprovedCost,
+                    row.CoveredInvoiceTotal,
+                    row.PostedVarianceTotal,
+                    row.UnresolvedVariance);
+            }
+        }
+
+        return workbook;
     }
 }
