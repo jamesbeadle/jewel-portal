@@ -17,6 +17,38 @@
 }
 else
 {
+    @* Bulk % entry on a Draft claim: every counting line's % becomes an input, one Save
+       records the lot. Built for entering an opening position when joining a project
+       mid-way (200+ lines), but just as useful for a heavy-update month. *@
+    @if (CanEditEntries)
+    {
+        <div class="flex items-center justify-end gap-2 mb-2 flex-wrap">
+            @if (bulkError is not null)
+            {
+                <span class="text-xs text-negative">@bulkError</span>
+            }
+            @if (!bulkEditing)
+            {
+                <button type="button" @onclick="StartBulkEdit"
+                        title="Edit every line's % complete at once — for opening positions and heavy months"
+                        class="rounded-lg border border-line bg-surface text-content-muted font-medium text-sm px-3 py-2 hover:border-line-strong transition">
+                    Bulk edit %
+                </button>
+            }
+            else
+            {
+                <span class="text-xs text-content-subtle">@BulkChangedCount changed — totals update on save</span>
+                <button type="button" @onclick="SaveBulkAsync" disabled="@bulkSaving"
+                        class="rounded-lg bg-accent text-accent-ink font-medium text-sm px-3 py-2 hover:bg-accent-hover disabled:bg-surface-field transition">
+                    @(bulkSaving ? "Saving…" : "Save all")
+                </button>
+                <button type="button" @onclick="CancelBulkEdit" disabled="@bulkSaving"
+                        class="rounded-lg border border-line bg-surface text-content-muted font-medium text-sm px-3 py-2 hover:border-line-strong transition">
+                    Cancel
+                </button>
+            }
+        </div>
+    }
     <div class="space-y-3">
         @foreach (var section in Sections)
         {
@@ -39,6 +71,10 @@ else
                             <span class="text-sm">
                                 <span class="text-[11px] uppercase tracking-wider text-content-subtle mr-1.5">Claimed</span>
                                 <span class="text-content-muted">@Money(ClaimedTotalFor(section)) (@Pct(PercentTotalFor(section)))</span>
+                            </span>
+                            <span class="text-sm">
+                                <span class="text-[11px] uppercase tracking-wider text-content-subtle mr-1.5">This period</span>
+                                <span class="text-content-muted">@Money(PeriodTotalFor(section))</span>
                             </span>
                         }
                         <span class="text-sm">
@@ -73,8 +109,18 @@ else
                                         <th class="sticky top-0 z-20 bg-surface-raised px-3 py-3 text-right whitespace-nowrap">Qty</th>
                                         <th class="sticky top-0 z-20 bg-surface-raised px-3 py-3 text-right whitespace-nowrap">Rate £</th>
                                         <th class="sticky top-0 z-20 bg-surface-raised px-3 py-3 text-right whitespace-nowrap">Amount £</th>
+                                        @if (SelectedClaim is not null)
+                                        {
+                                            <th class="sticky top-0 z-20 bg-surface-raised px-3 py-3 text-right whitespace-nowrap"
+                                                title="@PrevColumnTitle">Prev. %</th>
+                                        }
                                         <th class="sticky top-0 z-20 bg-surface-raised px-3 py-3 text-right whitespace-nowrap">% Complete</th>
                                         <th class="sticky top-0 z-20 bg-surface-raised px-3 py-3 text-right whitespace-nowrap">Claimed £</th>
+                                        @if (SelectedClaim is not null)
+                                        {
+                                            <th class="sticky top-0 z-20 bg-surface-raised px-3 py-3 text-right whitespace-nowrap"
+                                                title="Movement this period — cumulative claimed now less the previous claim's cumulative">Period £</th>
+                                        }
                                         @if (CanEditLines)
                                         {
                                             <th class="sticky top-0 z-20 bg-surface-raised px-3 py-3 text-right w-[80px]"></th>
@@ -124,13 +170,34 @@ else
                                             <td class="px-3 py-2 text-right text-content-muted whitespace-nowrap">@Num(line.Quantity)</td>
                                             <td class="px-3 py-2 text-right text-content-muted whitespace-nowrap">@Num(line.Rate)</td>
                                             <td class="px-3 py-2 text-right text-content whitespace-nowrap">@Money(line.LineAmount)</td>
+                                            @if (SelectedClaim is not null)
+                                            {
+                                                @* Cumulative % claimed on the previous claim — the baseline the current
+                                                   claim moves off, so the client can see what changed this period. *@
+                                                <td class="px-3 py-2 text-right text-content-subtle whitespace-nowrap">
+                                                    @(line.CountsTowardTotals && HasPreviousClaim ? Pct(PreviousPercentFor(line)) : "—")
+                                                </td>
+                                            }
                                             <td class="px-3 py-2 text-right whitespace-nowrap">
-                                                @if (CanEditEntries && line.CountsTowardTotals)
+                                                @if (bulkEditing && CanEditEntries && line.CountsTowardTotals)
+                                                {
+                                                    <input type="text" inputmode="decimal"
+                                                           value="@BulkValueFor(line)"
+                                                           @oninput="@(e => SetBulkValue(line, e.Value?.ToString() ?? ""))"
+                                                           aria-label="Percent complete"
+                                                           class="field w-16 text-right px-2 py-1 focus:outline-none focus:ring-2 @(bulkErrorLines.Contains(line.ValuationLineItemId) ? "ring-2 ring-negative border-negative" : "focus:ring-accent focus:border-accent")" />
+                                                }
+                                                else if (CanEditEntries && line.CountsTowardTotals)
                                                 {
                                                     @if (editingLineId == line.ValuationLineItemId)
                                                     {
                                                         @* Explicit commit only: Enter / tick saves, Esc / cross discards. *@
                                                         <span class="inline-flex items-center gap-1">
+                                                            @if (HasPreviousClaim)
+                                                            {
+                                                                @* Old percentage stays visible while editing so it's clear what's being changed from. *@
+                                                                <span class="text-[11px] text-content-subtle mr-1 whitespace-nowrap">was @Pct(PreviousPercentFor(line))</span>
+                                                            }
                                                             <input @ref="editInput" type="text" inputmode="decimal"
                                                                    value="@editValue"
                                                                    @oninput="@(e => { editValue = e.Value?.ToString() ?? ""; editError = false; })"
@@ -153,21 +220,39 @@ else
                                                     }
                                                     else
                                                     {
-                                                        <button type="button" title="Edit % complete"
-                                                                @onclick="() => StartEdit(line)"
-                                                                class="underline decoration-dotted underline-offset-2 hover:decoration-solid @(PercentFor(line) == 0m ? "text-content-muted" : "text-content")">
-                                                            @Pct(PercentFor(line))
-                                                        </button>
+                                                        <span class="inline-flex items-baseline gap-1.5 justify-end">
+                                                            <button type="button" title="Edit % complete"
+                                                                    @onclick="() => StartEdit(line)"
+                                                                    class="underline decoration-dotted underline-offset-2 hover:decoration-solid @(PercentFor(line) == 0m ? "text-content-muted" : "text-content")">
+                                                                @Pct(PercentFor(line))
+                                                            </button>
+                                                            @if (ShowDelta(line))
+                                                            {
+                                                                <span class="text-[11px] text-content-subtle whitespace-nowrap" title="Change from the previous claim">@SignedPct(DeltaFor(line))</span>
+                                                            }
+                                                        </span>
                                                     }
                                                 }
                                                 else
                                                 {
                                                     <span class="text-content-muted">@(line.CountsTowardTotals ? Pct(PercentFor(line)) : "—")</span>
+                                                    @if (ShowDelta(line))
+                                                    {
+                                                        <span class="ml-1.5 text-[11px] text-content-subtle whitespace-nowrap" title="Change from the previous claim">@SignedPct(DeltaFor(line))</span>
+                                                    }
                                                 }
                                             </td>
                                             <td class="px-3 py-2 text-right text-content-muted whitespace-nowrap">
                                                 @(line.CountsTowardTotals ? Money(ClaimedFor(line)) : "—")
                                             </td>
+                                            @if (SelectedClaim is not null)
+                                            {
+                                                @* What this period moved in money. On Claim 1 (no previous claim)
+                                                   everything claimed is movement, which is exactly right. *@
+                                                <td class="px-3 py-2 text-right whitespace-nowrap @(PeriodFor(line) == 0m ? "text-content-subtle" : "text-content")">
+                                                    @(line.CountsTowardTotals ? Money(PeriodFor(line)) : "—")
+                                                </td>
+                                            }
                                             @if (CanEditLines)
                                             {
                                                 <td class="px-3 py-2 text-right whitespace-nowrap">
@@ -213,6 +298,10 @@ else
             <SummaryRow Label="Net variations" Value="@Money(netVariations)" />
             <SummaryRow Label="Revised contract sum" Value="@Money(revisedContractSum)" Strong="true" />
             <SummaryRow Label="Total works complete" Value="@Money(totalWorksComplete)" />
+            @if (SelectedClaim is not null)
+            {
+                <SummaryRow Label="Works claimed this period" Value="@Money(PeriodClaimedTotal)" />
+            }
             <SummaryRow Label=@($"Retention held ({Pct(retentionPercent)})") Value="@Money(retentionHeld)" />
             <SummaryRow Label=@($"Retention released ({Pct(retentionReleasePercent)})") Value="@Money(retentionReleased)" />
             <SummaryRow Label="Certified to date" Value="@Money(certifiedToDate)" />
@@ -224,6 +313,9 @@ else
 @code {
     [Parameter, EditorRequired] public string ProjectId { get; set; } = "";
     [Parameter] public ValuationClaim? SelectedClaim { get; set; }
+    // The claim immediately before SelectedClaim, so each line can show its previously-claimed
+    // cumulative % next to what's being claimed now. Null for Claim 1 or when no claim is selected.
+    [Parameter] public ValuationClaim? PreviousClaim { get; set; }
     [Parameter] public EventCallback<ValuationLineItem> OnEditLine { get; set; }
     // Rendered between the bill sections and the summary (e.g. the valuation invoices accordion).
     [Parameter] public RenderFragment? ExtraSections { get; set; }
@@ -234,6 +326,8 @@ else
 
     private IReadOnlyList<ValuationLineItem> lines = Array.Empty<ValuationLineItem>();
     private IReadOnlyList<ClaimLine> entries = Array.Empty<ClaimLine>();
+    // Entries from the previous claim, keyed by line — the baseline for each line's "Prev. %".
+    private IReadOnlyList<ClaimLine> previousEntries = Array.Empty<ClaimLine>();
 
     // Sections start collapsed so the four totals read at a glance; state survives re-renders.
     private readonly HashSet<ValuationElementType> expanded = new();
@@ -271,6 +365,12 @@ else
     {
         lines = Store.LinesFor(ProjectId);
         entries = SelectedClaim is null ? Array.Empty<ClaimLine>() : Store.EntriesFor(SelectedClaim.ValuationClaimId);
+        // Fetch-once per claim id (revalidated by the store's Refresh); loads in the background and
+        // re-renders via the parent's OnChange subscription, same as the current claim's entries.
+        previousEntries = PreviousClaim is null ? Array.Empty<ClaimLine>() : Store.EntriesFor(PreviousClaim.ValuationClaimId);
+        // Half-typed bulk values belong to the claim they were typed against — switching
+        // claims mid-edit discards them rather than silently writing to the wrong claim.
+        if (bulkEditing && SelectedClaim?.ValuationClaimId != bulkClaimId) CancelBulkEdit();
         Recompute();
     }
 
@@ -347,6 +447,135 @@ else
 
     private decimal ClaimedFor(ValuationLineItem line) =>
         ValuationCalculations.CumulativeClaimed(PercentFor(line), line.LineAmount);
+
+    // ---- Previous claim comparison -----------------------------------------
+    // "Prev. %" is the cumulative % complete this line carried on the claim before the selected
+    // one; the delta beside the current % is how much is being claimed this period.
+    private bool HasPreviousClaim => PreviousClaim is not null;
+
+    private decimal PreviousPercentFor(ValuationLineItem line) =>
+        previousEntries.FirstOrDefault(e => e.ValuationLineItemId == line.ValuationLineItemId)?.PercentComplete ?? 0m;
+
+    private decimal DeltaFor(ValuationLineItem line) => PercentFor(line) - PreviousPercentFor(line);
+
+    // Only worth showing a delta when there's a prior claim to compare against, the line is priced
+    // into totals, and the percentage actually moved.
+    private bool ShowDelta(ValuationLineItem line) =>
+        HasPreviousClaim && line.CountsTowardTotals && DeltaFor(line) != 0m;
+
+    private string PrevColumnTitle => PreviousClaim is null
+        ? "No earlier claim to compare against — this is the first claim"
+        : $"Cumulative % complete claimed on {PreviousClaim.DisplayName}";
+
+    // Movement in money this period: cumulative claimed now less the previous claim's
+    // cumulative (both computed against the CURRENT line amount, so a re-priced line
+    // doesn't produce a phantom movement). No previous claim → everything is movement.
+    private decimal PreviousClaimedFor(ValuationLineItem line) =>
+        ValuationCalculations.CumulativeClaimed(PreviousPercentFor(line), line.LineAmount);
+
+    private decimal PeriodFor(ValuationLineItem line) => ClaimedFor(line) - PreviousClaimedFor(line);
+
+    private decimal PeriodTotalFor(Section section) =>
+        section.Lines.Where(l => l.CountsTowardTotals).Sum(PeriodFor);
+
+    private decimal PeriodClaimedTotal =>
+        lines.Where(l => l.CountsTowardTotals).Sum(PeriodFor);
+
+    // ---- Bulk % entry -------------------------------------------------------
+    // Every counting line's % becomes an input at once; a single Save sends only the
+    // changed lines as one RecordClaimEntries command. Sections auto-expand so the whole
+    // bill can be tabbed through top to bottom.
+    private bool bulkEditing;
+    private bool bulkSaving;
+    private string? bulkError;
+    private readonly Dictionary<string, string> bulkValues = new();
+    private readonly HashSet<string> bulkErrorLines = new();
+
+    private string? bulkClaimId;
+
+    private void StartBulkEdit()
+    {
+        CancelEdit(); // close any single-cell editor first
+        bulkEditing = true;
+        bulkClaimId = SelectedClaim?.ValuationClaimId;
+        bulkError = null;
+        bulkErrorLines.Clear();
+        bulkValues.Clear();
+        foreach (var line in lines.Where(l => l.CountsTowardTotals))
+            bulkValues[line.ValuationLineItemId] = PercentFor(line).ToString("0.##", Gb);
+        foreach (ValuationElementType type in Enum.GetValues<ValuationElementType>())
+            expanded.Add(type);
+    }
+
+    private void CancelBulkEdit()
+    {
+        bulkEditing = false;
+        bulkError = null;
+        bulkErrorLines.Clear();
+        bulkValues.Clear();
+    }
+
+    private string BulkValueFor(ValuationLineItem line) =>
+        bulkValues.TryGetValue(line.ValuationLineItemId, out var value) ? value : "";
+
+    private void SetBulkValue(ValuationLineItem line, string value)
+    {
+        bulkValues[line.ValuationLineItemId] = value;
+        bulkErrorLines.Remove(line.ValuationLineItemId);
+    }
+
+    private int BulkChangedCount => lines.Count(l =>
+        l.CountsTowardTotals
+        && bulkValues.TryGetValue(l.ValuationLineItemId, out var raw)
+        && TryParsePercent(raw, out var percent)
+        && percent != PercentFor(l));
+
+    private static bool TryParsePercent(string raw, out decimal percent) =>
+        decimal.TryParse((raw ?? "").Trim().TrimEnd('%'), System.Globalization.NumberStyles.Number, Gb, out percent)
+        && percent >= 0m && percent <= 100m;
+
+    private async Task SaveBulkAsync()
+    {
+        if (SelectedClaim is null || bulkSaving) return;
+        bulkError = null;
+        bulkErrorLines.Clear();
+
+        var entries = new List<ClaimEntryInput>();
+        foreach (var line in lines.Where(l => l.CountsTowardTotals))
+        {
+            if (!bulkValues.TryGetValue(line.ValuationLineItemId, out var raw)) continue;
+            if (!TryParsePercent(raw, out var percent))
+            {
+                bulkErrorLines.Add(line.ValuationLineItemId);
+                continue;
+            }
+            if (percent != PercentFor(line))
+                entries.Add(new ClaimEntryInput(line.ValuationLineItemId, percent));
+        }
+        if (bulkErrorLines.Count > 0)
+        {
+            bulkError = $"{bulkErrorLines.Count} value(s) aren't valid percentages (0-100) — fix the highlighted cells.";
+            return;
+        }
+        if (entries.Count == 0) { CancelBulkEdit(); return; }
+
+        bulkSaving = true;
+        try
+        {
+            await Store.RecordEntriesAsync(ProjectId, new RecordClaimEntries(SelectedClaim.ValuationClaimId, entries));
+            CancelBulkEdit();
+            OnParametersSet();
+        }
+        catch (CommandFailedException failure)
+        {
+            bulkError = failure.Message;
+        }
+        catch
+        {
+            bulkError = "Couldn't save the percentages. Please try again.";
+        }
+        finally { bulkSaving = false; }
+    }
 
     // ---- % complete click-to-edit -----------------------------------------
     // One cell edits at a time; nothing saves until the user confirms (Enter or
@@ -486,6 +715,8 @@ else
     private static string Money(decimal v) => v.ToString("C2", Gb);
     private static string Num(decimal v) => v.ToString("0.##", Gb);
     private static string Pct(decimal v) => v.ToString("0.##", Gb) + "%";
+    // Signed for the "what changed" delta: "+20%", "-5%" (negatives already carry their sign).
+    private static string SignedPct(decimal v) => (v > 0m ? "+" : "") + v.ToString("0.##", Gb) + "%";
 
     private static string SectionLabel(ValuationElementType type) => type switch
     {

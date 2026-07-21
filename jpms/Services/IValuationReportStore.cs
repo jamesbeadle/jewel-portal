@@ -24,6 +24,9 @@ public interface IValuationReportStore
 
     Task<ValuationClaim> StartClaimAsync(StartValuationClaim command);
     Task<ClaimLine> RecordEntryAsync(string projectId, RecordClaimEntry command);
+    /// <summary>Bulk upsert of % complete across many lines of a Draft claim in one round trip —
+    /// entering an opening position (mid-project join) or a heavy-update month.</summary>
+    Task<IReadOnlyList<ClaimLine>> RecordEntriesAsync(string projectId, RecordClaimEntries command);
     Task<ValuationClaim> PreapproveClaimAsync(string projectId, string claimId);
     /// <summary>Undo an unintended preapproval: Preapproved → Draft, totals compute live again.</summary>
     Task<ValuationClaim> ReopenClaimAsync(string projectId, string claimId);
