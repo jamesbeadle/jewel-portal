@@ -2,6 +2,7 @@
 @using Jewel.JPMS.Contracts.Commercial
 @inject IValuationReportStore Store
 @inject ICostCenterStore CostCenters
+@inject IVariationStore Variations
 @inject SessionService Session
 @implements IDisposable
 
@@ -169,7 +170,51 @@ else
                                             }
                                             <td class="px-3 py-2 text-right text-content-muted whitespace-nowrap">@Num(line.Quantity)</td>
                                             <td class="px-3 py-2 text-right text-content-muted whitespace-nowrap">@Num(line.Rate)</td>
-                                            <td class="px-3 py-2 text-right text-content whitespace-nowrap">@Money(line.LineAmount)</td>
+                                            <td class="px-3 py-2 text-right text-content whitespace-nowrap">
+                                                @if (CanEditLines && line.ElementType == ValuationElementType.Variation
+                                                     && CanReviseVariationValue && RevisableVoFor(line) is { } amountVo)
+                                                {
+                                                    @if (revisingVoLineId == line.ValuationLineItemId)
+                                                    {
+                                                        @* Explicit commit only, mirroring the % editor: Enter / tick saves, Esc / cross discards. *@
+                                                        <span class="inline-flex items-center gap-1">
+                                                            <input @ref="reviseInput" type="text" inputmode="decimal"
+                                                                   value="@reviseValue" disabled="@reviseSaving"
+                                                                   @oninput="@(e => { reviseValue = e.Value?.ToString() ?? ""; reviseError = false; })"
+                                                                   @onkeydown="@(e => OnVoReviseKeyDownAsync(e, line))"
+                                                                   aria-label="Variation value"
+                                                                   class="field w-28 text-right px-2 py-1 focus:outline-none focus:ring-2 @(reviseError ? "ring-2 ring-negative border-negative" : "focus:ring-accent focus:border-accent")" />
+                                                            <button type="button" title="Save (Enter)" aria-label="Save variation value"
+                                                                    disabled="@reviseSaving" @onclick="() => CommitVoReviseAsync(line)"
+                                                                    class="inline-flex items-center justify-center w-6 h-6 rounded-md text-positive hover:bg-surface-raised">
+                                                                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                                                                     stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7" /></svg>
+                                                            </button>
+                                                            <button type="button" title="Cancel (Esc)" aria-label="Cancel revise"
+                                                                    disabled="@reviseSaving" @onclick="CancelVoRevise"
+                                                                    class="inline-flex items-center justify-center w-6 h-6 rounded-md text-content-subtle hover:text-content hover:bg-surface-raised">
+                                                                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                                                                     stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6L6 18" /></svg>
+                                                            </button>
+                                                        </span>
+                                                        @if (reviseFailure is not null)
+                                                        {
+                                                            <div class="text-[11px] text-negative mt-1">@reviseFailure</div>
+                                                        }
+                                                    }
+                                                    else
+                                                    {
+                                                        <button type="button"
+                                                                title="Revise @(amountVo.VariationRef)'s value — re-prices this line and moves the CVR and committed cost-centre budget with it"
+                                                                @onclick="() => StartVoRevise(line, amountVo)"
+                                                                class="underline decoration-dotted underline-offset-2 hover:decoration-solid">@Money(line.LineAmount)</button>
+                                                    }
+                                                }
+                                                else
+                                                {
+                                                    @Money(line.LineAmount)
+                                                }
+                                            </td>
                                             @if (SelectedClaim is not null)
                                             {
                                                 @* Cumulative % claimed on the previous claim — the baseline the current
@@ -258,8 +303,18 @@ else
                                                 <td class="px-3 py-2 text-right whitespace-nowrap">
                                                     @if (line.ElementType == ValuationElementType.Variation)
                                                     {
-                                                        @* Variation lines mirror approved VOs and can only change via the variation itself. *@
-                                                        <span class="text-content-subtle text-xs" title="From an approved variation order — manage it on the Variations tab.">Locked</span>
+                                                        @if (CanReviseVariationValue && RevisableVoFor(line) is { } actionVo)
+                                                        {
+                                                            @* Edits go through the VO revise pipeline so the VO, CVR and budget move together. *@
+                                                            <button @onclick="() => StartVoRevise(line, actionVo)"
+                                                                    title="Revise the variation's value — the VO, CVR and cost-centre budget move with it"
+                                                                    class="text-content-subtle hover:text-content underline underline-offset-2 text-xs">Revise</button>
+                                                        }
+                                                        else
+                                                        {
+                                                            @* Variation lines mirror approved VOs and can only change via the variation itself. *@
+                                                            <span class="text-content-subtle text-xs" title="From an approved variation order — manage it on the Variations tab.">Locked</span>
+                                                        }
                                                     }
                                                     else
                                                     {
@@ -355,6 +410,14 @@ else
         // The cost-centre master loads in the background on first read; re-render when it
         // lands so the Variations section's cost-centre cells fill in.
         CostCenters.OnChange += OnCostCentresChanged;
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        // The project's VOs, so each Variation line can resolve the order it mirrors
+        // (by VariationRef) and offer the admin-only inline revise below. The page is
+        // recreated per project by KeyedPageRouteView, so once per lifetime is fresh enough.
+        variationOrders = await Variations.ListVariationOrdersForProjectAsync(ProjectId);
     }
 
     private void OnCostCentresChanged() => InvokeAsync(StateHasChanged);
@@ -629,12 +692,100 @@ else
             focusPending = false;
             await editInput.FocusAsync();
         }
+        if (reviseFocusPending && revisingVoLineId is not null)
+        {
+            reviseFocusPending = false;
+            await reviseInput.FocusAsync();
+        }
     }
 
     private async Task RemoveLineAsync(ValuationLineItem line)
     {
         await Store.RemoveLineAsync(ProjectId, line.ValuationLineItemId);
         OnParametersSet();
+    }
+
+    // ---- Variation value revise (Admin) ------------------------------------
+    // A variation line's value mirrors its approved VO, so the inline edit goes through
+    // the VO revise pipeline (ReviseVariationOrderValue): it re-prices this line, records
+    // the delta as a QS accrual on the CVR and moves the committed cost-centre budget in
+    // one transaction — the same write-through as "Revise value" on the VOQ page, so every
+    // view of the VO stays in step. UI is Admin-only for now (the API accepts the wider
+    // variation-manager set: Admin, Director, PM, Estimator).
+    private IReadOnlyList<VariationOrder> variationOrders = Array.Empty<VariationOrder>();
+    private bool CanReviseVariationValue => Session.ActiveRole is Role.Admin;
+
+    private string? revisingVoLineId;
+    private string reviseValue = "";
+    private bool reviseError;         // parse failure on the typed value
+    private string? reviseFailure;    // API failure on save
+    private bool reviseSaving;
+    private bool reviseFocusPending;
+    private ElementReference reviseInput;
+
+    // Cancelled VOs are terminal (their reversals have already run), so their lines stay
+    // locked; a line whose ref matches no VO (e.g. a declined placeholder) stays locked too.
+    private VariationOrder? RevisableVoFor(ValuationLineItem line) =>
+        string.IsNullOrWhiteSpace(line.VariationRef)
+            ? null
+            : variationOrders.FirstOrDefault(vo =>
+                vo.Status != VariationOrderStatus.Cancelled
+                && string.Equals(vo.VariationRef, line.VariationRef, StringComparison.OrdinalIgnoreCase));
+
+    private void StartVoRevise(ValuationLineItem line, VariationOrder vo)
+    {
+        CancelEdit(); // one cell editor at a time — close any open % editor first
+        revisingVoLineId = line.ValuationLineItemId;
+        reviseValue = vo.Value.ToString("0.##", Gb);
+        reviseError = false;
+        reviseFailure = null;
+        reviseFocusPending = true;
+    }
+
+    private void CancelVoRevise()
+    {
+        revisingVoLineId = null;
+        reviseError = false;
+        reviseFailure = null;
+    }
+
+    private async Task OnVoReviseKeyDownAsync(KeyboardEventArgs e, ValuationLineItem line)
+    {
+        if (e.Key == "Enter") await CommitVoReviseAsync(line);
+        else if (e.Key == "Escape") CancelVoRevise();
+    }
+
+    private async Task CommitVoReviseAsync(ValuationLineItem line)
+    {
+        if (reviseSaving) return;
+        var vo = RevisableVoFor(line);
+        if (vo is null) { CancelVoRevise(); return; }
+        // Negative values are legitimate — omission variations (e.g. supply credits) carry them.
+        if (!decimal.TryParse(reviseValue.Trim().TrimStart('£'), System.Globalization.NumberStyles.Number, Gb, out var value))
+        {
+            reviseError = true;
+            return;
+        }
+        reviseSaving = true;
+        reviseFailure = null;
+        try
+        {
+            var revised = await Variations.ReviseVariationOrderValueAsync(vo.VariationOrderId, value);
+            variationOrders = variationOrders
+                .Select(existing => existing.VariationOrderId == revised.VariationOrderId ? revised : existing)
+                .ToList();
+            revisingVoLineId = null;
+            // The API re-priced the line server-side; refetch so the row (and totals) catch up.
+            Store.Refresh(ProjectId);
+        }
+        catch
+        {
+            reviseFailure = "Couldn't revise the variation value. Please try again.";
+        }
+        finally
+        {
+            reviseSaving = false;
+        }
     }
 
     // ---- Variation cost-centre recode --------------------------------------
