@@ -40,6 +40,9 @@ public sealed class ValuationReportAuthorisation
     public bool Allows(SignedInUser user, PreapproveValuationClaim command) => Allowed(user);
     public bool Allows(SignedInUser user, ReopenValuationClaim command) => Allowed(user);
     public bool Allows(SignedInUser user, ConfirmValuationClaim command) => Allowed(user);
+    // Naming and deleting claims are claim-lifecycle actions — same gate as starting one.
+    public bool Allows(SignedInUser user, RenameValuationClaim command) => Allowed(user);
+    public bool Allows(SignedInUser user, DeleteValuationClaim command) => Allowed(user);
     public bool Allows(SignedInUser user, SetValuationLineCostCentre command) => RolesThatMayRecodeCostCentres.IncludesAny(user.Roles);
     public bool Allows(SignedInUser user, TakeValuationReportSnapshot command) => RolesThatMayManageSnapshots.IncludesAny(user.Roles);
     public bool Allows(SignedInUser user, DeleteValuationReportSnapshot command) => RolesThatMayManageSnapshots.IncludesAny(user.Roles);

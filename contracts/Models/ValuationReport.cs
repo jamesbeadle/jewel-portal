@@ -73,7 +73,14 @@ public sealed record ValuationClaim(
     decimal RetentionHeld,
     decimal RetentionReleased,
     decimal CertifiedToDate,
-    decimal PaymentDueExVat);
+    decimal PaymentDueExVat,
+    // Free-text period name (e.g. "June 2026"); renameable at any status. Empty for
+    // claims from before names existed — display falls back to "Claim n".
+    string Name = "")
+{
+    // "June 2026" when named, otherwise "Claim 3" — one rule for every claim label.
+    public string DisplayName => string.IsNullOrWhiteSpace(Name) ? $"Claim {ClaimNumber}" : Name;
+}
 
 // Per claim, per line item: the cumulative % complete entered and the resulting amounts.
 public sealed record ClaimLine(

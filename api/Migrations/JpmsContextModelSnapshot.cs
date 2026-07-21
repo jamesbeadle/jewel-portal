@@ -3767,6 +3767,11 @@ namespace Jewel.JPMS.Api.Migrations
                         .HasPrecision(18, 4)
                         .HasColumnType("decimal(18,4)");
 
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
                     b.Property<decimal>("NetVariations")
                         .HasPrecision(18, 4)
                         .HasColumnType("decimal(18,4)");

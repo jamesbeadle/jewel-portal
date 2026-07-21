@@ -39,9 +39,14 @@ public sealed class SignedInUserResolver
     private async Task<IReadOnlyList<Role>> ResolveRolesAsync(string email, CancellationToken cancellationToken)
     {
         if (JpmsAdministrators.Contains(email)) return Enum.GetValues<Role>();
-        return await context.DirectoryUserRoles
+        var roles = await context.DirectoryUserRoles
             .Where(row => row.DirectoryUserEmail == email)
             .Select(row => (Role)row.Role)
             .ToListAsync(cancellationToken);
+        // Finance Directors are granted admin-equivalent access: holding the FinanceDirector
+        // role expands to every role, so an FD passes every gate exactly as a master admin
+        // does. Keep this in sync with UserRoles.ForAsync.
+        if (roles.Contains(Role.FinanceDirector)) return Enum.GetValues<Role>();
+        return roles;
     }
 }

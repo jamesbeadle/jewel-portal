@@ -178,6 +178,14 @@ public static class CommercialRouteRegistration
             new CommandRoute("POST", "/api/valuation-claims/{claimId}/reopen",
                 command => $"/api/valuation-claims/{((ReopenValuationClaim)command).ValuationClaimId}/reopen"));
 
+        commands.Register<RenameValuationClaim, ValuationClaim>(
+            new CommandRoute("POST", "/api/valuation-claims/{claimId}/name",
+                command => $"/api/valuation-claims/{((RenameValuationClaim)command).ValuationClaimId}/name"));
+
+        commands.Register<DeleteValuationClaim, Acknowledgement>(
+            new CommandRoute("DELETE", "/api/valuation-claims/{claimId}",
+                command => $"/api/valuation-claims/{((DeleteValuationClaim)command).ValuationClaimId}"));
+
         // Valuation report snapshots — immutable frozen copies behind invoice submissions
         // and on-demand period-end records.
         queries.Register<ListValuationReportSnapshotsForProject, IReadOnlyList<ValuationReportSnapshot>>(

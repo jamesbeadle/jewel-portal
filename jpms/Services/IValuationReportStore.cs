@@ -26,6 +26,10 @@ public interface IValuationReportStore
     /// <summary>Undo an unintended preapproval: Preapproved → Draft, totals compute live again.</summary>
     Task<ValuationClaim> ReopenClaimAsync(string projectId, string claimId);
     Task<ValuationClaim> ConfirmClaimAsync(string projectId, string claimId);
+    /// <summary>Sets the claim's period name ("June 2026"); allowed at any status. Empty clears it.</summary>
+    Task<ValuationClaim> RenameClaimAsync(string projectId, string claimId, string name);
+    /// <summary>Deletes a claim and its entries; linked invoices/snapshots survive with the link cleared.</summary>
+    Task DeleteClaimAsync(string projectId, string claimId);
 
     // Immutable report snapshots — frozen copies behind invoice submissions plus
     // on-demand period-end records. Headers are cached per project (Refresh

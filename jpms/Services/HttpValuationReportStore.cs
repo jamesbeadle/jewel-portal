@@ -157,6 +157,22 @@ public sealed class HttpValuationReportStore : IValuationReportStore
         return result;
     }
 
+    public async Task<ValuationClaim> RenameClaimAsync(string projectId, string claimId, string name)
+    {
+        var result = await commands.SendAsync(new RenameValuationClaim(claimId, name), CancellationToken.None);
+        await claimsReadModel.RefreshAsync(projectId, CancellationToken.None);
+        return result;
+    }
+
+    public async Task DeleteClaimAsync(string projectId, string claimId)
+    {
+        await commands.SendAsync(new DeleteValuationClaim(claimId), CancellationToken.None);
+        // The claim's entries died with it and any invoice links were cleared server-side —
+        // refetch claims now and mark per-claim entries stale for the next read.
+        claimLinesRequested.Clear();
+        await claimsReadModel.RefreshAsync(projectId, CancellationToken.None);
+    }
+
     public IReadOnlyList<ValuationReportSnapshot> SnapshotsFor(string projectId)
     {
         if (snapshotsRequested.Add(projectId)) _ = LoadSnapshotsAsync(projectId);

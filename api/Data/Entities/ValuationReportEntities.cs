@@ -27,6 +27,8 @@ public sealed class ValuationClaimEntity
     [Key, MaxLength(64)] public string ValuationClaimId { get; set; } = "";
     [MaxLength(64)]      public string ProjectId { get; set; } = "";
     public int ClaimNumber { get; set; }
+    // Free-text period name ("June 2026"); empty for pre-name claims — UI falls back to "Claim n".
+    [MaxLength(128)]     public string Name { get; set; } = "";
     public DateTimeOffset ClaimDate { get; set; }
     public int Status { get; set; }
     public decimal RetentionPercent { get; set; }

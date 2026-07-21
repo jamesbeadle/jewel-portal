@@ -1,8 +1,10 @@
 @page "/projects/{ProjectId}/valuation"
+@using Jewel.JPMS.Commercial
 @using Jewel.JPMS.Contracts.Commercial
 @inject AuthService Auth
 @inject SessionService Session
 @inject IValuationReportStore Store
+@inject IValuationInvoiceStore Invoices
 @inject IProjectRetentionStore Retention
 @inject ICostCenterStore CostCenters
 @inject NavigationManager Nav
@@ -30,9 +32,20 @@ else
                             class="rounded-lg border border-line-strong bg-surface-field px-3 py-2 text-sm text-content focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent">
                         @foreach (var claim in Claims)
                         {
-                            <option value="@claim.ValuationClaimId">Claim @claim.ClaimNumber — @claim.Status (@claim.ClaimDate.ToString("dd MMM yyyy"))</option>
+                            <option value="@claim.ValuationClaimId">@claim.DisplayName — @claim.Status (@claim.ClaimDate.ToString("dd MMM yyyy"))</option>
                         }
                     </select>
+                }
+                @if (Selected is not null)
+                {
+                    <button @onclick="OpenRename" title="Name this claim's period, e.g. June 2026"
+                            class="rounded-lg border border-line bg-surface text-content-muted font-medium text-sm px-3 py-2 hover:border-line-strong transition">
+                        Rename
+                    </button>
+                    <button @onclick="@(() => showDeleteClaim = true)" title="Delete this claim and its entries — invoices and snapshots survive with the link cleared"
+                            class="rounded-lg border border-line bg-surface text-negative/80 font-medium text-sm px-3 py-2 hover:text-negative hover:border-line-strong transition">
+                        Delete
+                    </button>
                 }
                 <button @onclick="ToggleStartClaim"
                         class="rounded-lg border border-line bg-surface text-content-muted font-medium text-sm px-3 py-2 hover:border-line-strong transition">
@@ -52,7 +65,14 @@ else
                             class="rounded-lg border border-line bg-surface text-content-muted font-medium text-sm px-3 py-2 hover:border-line-strong transition">
                         Reopen as draft
                     </button>
-                    <button @onclick="ConfirmAsync" disabled="@busy"
+                    <button @onclick="RaiseInvoiceAsync" disabled="@(busy || PaymentDueNow <= 0m)"
+                            title="@(PaymentDueNow > 0m
+                                      ? "Raise a valuation invoice for the payment due, drawn against this claim. Submit or issue it below to freeze the report snapshot."
+                                      : "Nothing is currently due — issue or amend invoices below")"
+                            class="rounded-lg border border-line bg-surface text-content-muted font-medium text-sm px-3 py-2 hover:border-line-strong disabled:opacity-50 transition">
+                        Raise invoice (@Money(PaymentDueNow))
+                    </button>
+                    <button @onclick="ConfirmClickedAsync" disabled="@busy"
                             class="rounded-lg bg-accent text-accent-ink font-medium text-sm px-3 py-2 hover:bg-accent-hover disabled:bg-surface-field transition">
                         Confirm payment received
                     </button>
@@ -86,7 +106,12 @@ else
         {
             <section class="rounded-xl border border-line bg-surface p-5 mb-4">
                 <h3 class="text-sm font-medium text-content-muted mb-3">Start claim @NextClaimNumber</h3>
-                <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    <div>
+                        <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Period name</label>
+                        <input type="text" @bind="newClaimName" placeholder="e.g. June 2026"
+                               class="w-full rounded-lg border border-line-strong bg-surface-field px-3 py-2 text-sm text-content focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent" />
+                    </div>
                     <div>
                         <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Claim date</label>
                         <input type="date" @bind="newClaimDate"
@@ -95,6 +120,14 @@ else
                     <FormField Label="Retention %" InputType="number" Value="@newRetentionPercent" OnChange="@(v => newRetentionPercent = v)" />
                     <FormField Label="Retention release %" InputType="number" Value="@newRetentionReleasePercent" OnChange="@(v => newRetentionReleasePercent = v)" />
                 </div>
+                @if (LatestClaim is not null)
+                {
+                    <label class="flex items-center gap-2 mt-3 text-sm text-content-muted cursor-pointer select-none"
+                           title="Copies each line's cumulative % complete from @LatestClaim.DisplayName, so this period starts where the last one left off and only movement needs entering.">
+                        <input type="checkbox" class="cursor-pointer align-middle" @bind="newSeedFromLatest" />
+                        Start from @(LatestClaim.DisplayName)'s percentages
+                    </label>
+                }
                 <div class="flex items-center gap-2 mt-3">
                     <button @onclick="StartClaimAsync" disabled="@busy"
                             class="rounded-lg bg-accent text-accent-ink font-medium text-sm px-4 py-2 hover:bg-accent-hover disabled:bg-surface-field transition">
@@ -151,6 +184,58 @@ else
                 <ValuationSnapshotViewer SnapshotId="@viewingSnapshotId" />
             }
         </Modal>
+
+        <Modal IsOpen="@showRename"
+               Title="Rename claim"
+               ConfirmLabel="@(busy ? "Saving…" : "Save name")"
+               OnCancel="@(() => showRename = false)"
+               OnConfirm="SaveRenameAsync"
+               Class="max-w-md">
+            <div class="space-y-3">
+                <p class="text-sm text-content">
+                    Name the period this claim values — it shows everywhere the claim does.
+                    Leave blank to fall back to "Claim @(Selected?.ClaimNumber)".
+                </p>
+                <FormField Label="Period name" Value="@renameValue" OnChange="@(v => renameValue = v)" />
+            </div>
+        </Modal>
+
+        <Modal IsOpen="@showDeleteClaim"
+               Title="Delete claim"
+               ConfirmLabel="@(busy ? "Deleting…" : "Delete claim")"
+               OnCancel="@(() => showDeleteClaim = false)"
+               OnConfirm="DeleteClaimAsync"
+               Class="max-w-md">
+            <div class="space-y-2 text-sm text-content">
+                <p>
+                    Delete <span class="font-medium">@(Selected?.DisplayName)</span> and its per-line
+                    % complete entries? This can't be undone.
+                </p>
+                <p class="text-content-subtle">
+                    Valuation invoices and report snapshots keep their amounts and history — only
+                    their link to this claim is cleared. Certified to date does not move.
+                </p>
+            </div>
+        </Modal>
+
+        <Modal IsOpen="@showConfirmNudge"
+               Title="No invoice issued yet"
+               ConfirmLabel="@(busy ? "Confirming…" : "Confirm anyway")"
+               OnCancel="@(() => showConfirmNudge = false)"
+               OnConfirm="ConfirmAsync"
+               Class="max-w-md">
+            <div class="space-y-2 text-sm text-content">
+                <p>
+                    No valuation invoice drawn against <span class="font-medium">@(Selected?.DisplayName)</span>
+                    has been issued yet, so certified to date won't reflect this claim.
+                </p>
+                <p class="text-content-subtle">
+                    The usual order is: raise the invoice, submit or issue it (freezing the report
+                    snapshot), then confirm the claim once the client pays. You can still confirm
+                    now and sort the invoice out afterwards.
+                </p>
+            </div>
+        </Modal>
     </ProjectPageShell>
 }
 
@@ -189,12 +274,34 @@ else
     }
 
     private DateTime newClaimDate = DateTime.Today;
+    private string newClaimName = "";
     private string newRetentionPercent = "5";
     private string newRetentionReleasePercent = "0";
+    // Rollover default: copy the latest claim's percentages into the new one.
+    private bool newSeedFromLatest;
+
+    private bool showRename;
+    private string renameValue = "";
+    private bool showDeleteClaim;
+    // Nudge (not a gate): confirming a claim with no issued/paid linked invoice asks first.
+    private bool showConfirmNudge;
+
+    private static readonly System.Globalization.CultureInfo Gb = System.Globalization.CultureInfo.GetCultureInfo("en-GB");
+    private static string Money(decimal v) => v.ToString("C2", Gb);
 
     private IReadOnlyList<ValuationClaim> Claims => Store.ClaimsFor(ProjectId);
     private ValuationClaim? Selected => Claims.FirstOrDefault(c => c.ValuationClaimId == selectedClaimId);
     private int NextClaimNumber => Claims.Count == 0 ? 1 : Claims.Max(c => c.ClaimNumber) + 1;
+    private ValuationClaim? LatestClaim => Claims.OrderByDescending(c => c.ClaimNumber).FirstOrDefault();
+
+    // The claim's payment due as the report currently computes it (frozen for a locked claim,
+    // live for a draft) — the figure the "Raise invoice" button offers to bill.
+    private decimal PaymentDueNow => Selected is null
+        ? 0m
+        : ValuationSummaryFigures.For(
+            Store.LinesFor(ProjectId),
+            Store.EntriesFor(Selected.ValuationClaimId),
+            Selected, invoicedToDate).PaymentDueExVat;
 
     // The claim immediately before the selected one (highest ClaimNumber below it), so the
     // report table can show each line's previously-claimed % against what's being claimed now.
@@ -231,10 +338,12 @@ else
     private void ToggleStartClaim()
     {
         showStartClaim = !showStartClaim;
+        if (!showStartClaim) return;
+        // Rolling over is the norm once a claim exists — default the seed on.
+        newSeedFromLatest = LatestClaim is not null;
         // Default the percentages from the project's retention terms (Setup tab) when recorded.
-        if (showStartClaim && Retention.RetentionFor(ProjectId) is { } terms)
-            newRetentionPercent = terms.RetentionPercent.ToString(
-                "0.##", System.Globalization.CultureInfo.GetCultureInfo("en-GB"));
+        if (Retention.RetentionFor(ProjectId) is { } terms)
+            newRetentionPercent = terms.RetentionPercent.ToString("0.##", Gb);
     }
 
     private async Task StartClaimAsync()
@@ -243,10 +352,62 @@ else
         var date = new DateTimeOffset(newClaimDate.Date, TimeSpan.Zero);
         var claim = await Store.StartClaimAsync(new StartValuationClaim(
             ProjectId, NextClaimNumber, date,
-            FormNumber.ParseAmount(newRetentionPercent), FormNumber.ParseAmount(newRetentionReleasePercent)));
+            FormNumber.ParseAmount(newRetentionPercent), FormNumber.ParseAmount(newRetentionReleasePercent),
+            newClaimName.Trim(),
+            newSeedFromLatest ? LatestClaim?.ValuationClaimId : null));
         selectedClaimId = claim.ValuationClaimId;
         showStartClaim = false;
+        newClaimName = "";
         busy = false;
+    }
+
+    // ---- Rename / delete ----------------------------------------------------
+    private void OpenRename()
+    {
+        if (Selected is null) return;
+        renameValue = Selected.Name;
+        showRename = true;
+    }
+
+    private async Task SaveRenameAsync()
+    {
+        if (Selected is null || busy) return;
+        busy = true;
+        await Store.RenameClaimAsync(ProjectId, Selected.ValuationClaimId, renameValue.Trim());
+        showRename = false;
+        busy = false;
+    }
+
+    private async Task DeleteClaimAsync()
+    {
+        if (Selected is null || busy) return;
+        busy = true;
+        await Store.DeleteClaimAsync(ProjectId, Selected.ValuationClaimId);
+        selectedClaimId = "";        // OnStoreChanged re-picks the first remaining claim
+        showDeleteClaim = false;
+        busy = false;
+        // Any invoice that pointed at this claim had its link cleared server-side.
+        if (invoicesSection is not null) await invoicesSection.ReloadAsync();
+    }
+
+    // ---- Raise invoice from the claim --------------------------------------
+    // Creates a Raised invoice for the claim's payment due, drawn against the claim, first
+    // day of the claim date's month as its period. Submitting/issuing it below freezes the
+    // report snapshot — the guaranteed-snapshot path (unlike a manual/historic entry).
+    private async Task RaiseInvoiceAsync()
+    {
+        if (Selected is null || busy) return;
+        var amount = PaymentDueNow;
+        if (amount <= 0m) return;
+        busy = true;
+        try
+        {
+            var period = new DateTimeOffset(
+                new DateTime(Selected.ClaimDate.Year, Selected.ClaimDate.Month, 1), TimeSpan.Zero);
+            await Invoices.CreateAsync(ProjectId, period, amount, Selected.ValuationClaimId);
+            if (invoicesSection is not null) await invoicesSection.ReloadAsync();
+        }
+        finally { busy = false; }
     }
 
     private async Task PreapproveAsync()
@@ -257,12 +418,39 @@ else
         busy = false;
     }
 
+    // Nudge, don't enforce: if nothing drawn against this claim has been issued or paid,
+    // ask before confirming — certified to date won't include this claim otherwise. If
+    // the invoice list can't be checked, don't block the confirm on it.
+    private async Task ConfirmClickedAsync()
+    {
+        if (Selected is null || busy) return;
+        bool hasIssuedInvoice;
+        try
+        {
+            var invoices = await Invoices.ListAsync(ProjectId);
+            hasIssuedInvoice = invoices.Any(invoice =>
+                invoice.ValuationClaimId == Selected.ValuationClaimId
+                && invoice.Status is ValuationInvoiceStatus.Issued or ValuationInvoiceStatus.Paid);
+        }
+        catch { hasIssuedInvoice = true; }
+        if (!hasIssuedInvoice) { showConfirmNudge = true; return; }
+        await ConfirmAsync();
+    }
+
     private async Task ConfirmAsync()
     {
         if (Selected is null) return;
+        showConfirmNudge = false;
         busy = true;
-        await Store.ConfirmClaimAsync(ProjectId, Selected.ValuationClaimId);
+        var confirmed = Selected;
+        await Store.ConfirmClaimAsync(ProjectId, confirmed.ValuationClaimId);
         busy = false;
+        // Roll straight over: offer the next period seeded from the claim just confirmed,
+        // with the following month suggested as its name.
+        newSeedFromLatest = true;
+        newClaimName = confirmed.ClaimDate.AddMonths(1).ToString("MMMM yyyy", Gb);
+        newClaimDate = DateTime.Today;
+        showStartClaim = true;
     }
 
     // Undo an unintended "We're claiming this": Preapproved → Draft.

@@ -36,6 +36,10 @@ else
                                 <span class="text-[11px] uppercase tracking-wider text-content-subtle mr-1.5">Claimed</span>
                                 <span class="text-content-muted">@Money(ClaimedTotalFor(section)) (@Pct(PercentTotalFor(section)))</span>
                             </span>
+                            <span class="text-sm">
+                                <span class="text-[11px] uppercase tracking-wider text-content-subtle mr-1.5">This period</span>
+                                <span class="text-content-muted">@Money(PeriodTotalFor(section))</span>
+                            </span>
                         }
                         <span class="text-sm">
                             <span class="text-[11px] uppercase tracking-wider text-content-subtle mr-1.5">Total</span>
@@ -76,6 +80,11 @@ else
                                         }
                                         <th class="sticky top-0 z-20 bg-surface-raised px-3 py-3 text-right whitespace-nowrap">% Complete</th>
                                         <th class="sticky top-0 z-20 bg-surface-raised px-3 py-3 text-right whitespace-nowrap">Claimed £</th>
+                                        @if (SelectedClaim is not null)
+                                        {
+                                            <th class="sticky top-0 z-20 bg-surface-raised px-3 py-3 text-right whitespace-nowrap"
+                                                title="Movement this period — cumulative claimed now less the previous claim's cumulative">Period £</th>
+                                        }
                                         @if (CanEditLines)
                                         {
                                             <th class="sticky top-0 z-20 bg-surface-raised px-3 py-3 text-right w-[80px]"></th>
@@ -192,6 +201,14 @@ else
                                             <td class="px-3 py-2 text-right text-content-muted whitespace-nowrap">
                                                 @(line.CountsTowardTotals ? Money(ClaimedFor(line)) : "—")
                                             </td>
+                                            @if (SelectedClaim is not null)
+                                            {
+                                                @* What this period moved in money. On Claim 1 (no previous claim)
+                                                   everything claimed is movement, which is exactly right. *@
+                                                <td class="px-3 py-2 text-right whitespace-nowrap @(PeriodFor(line) == 0m ? "text-content-subtle" : "text-content")">
+                                                    @(line.CountsTowardTotals ? Money(PeriodFor(line)) : "—")
+                                                </td>
+                                            }
                                             @if (CanEditLines)
                                             {
                                                 <td class="px-3 py-2 text-right whitespace-nowrap">
@@ -237,6 +254,10 @@ else
             <SummaryRow Label="Net variations" Value="@Money(netVariations)" />
             <SummaryRow Label="Revised contract sum" Value="@Money(revisedContractSum)" Strong="true" />
             <SummaryRow Label="Total works complete" Value="@Money(totalWorksComplete)" />
+            @if (SelectedClaim is not null)
+            {
+                <SummaryRow Label="Works claimed this period" Value="@Money(PeriodClaimedTotal)" />
+            }
             <SummaryRow Label=@($"Retention held ({Pct(retentionPercent)})") Value="@Money(retentionHeld)" />
             <SummaryRow Label=@($"Retention released ({Pct(retentionReleasePercent)})") Value="@Money(retentionReleased)" />
             <SummaryRow Label="Certified to date" Value="@Money(certifiedToDate)" />
@@ -397,7 +418,21 @@ else
 
     private string PrevColumnTitle => PreviousClaim is null
         ? "No earlier claim to compare against — this is the first claim"
-        : $"Cumulative % complete claimed on Claim {PreviousClaim.ClaimNumber}";
+        : $"Cumulative % complete claimed on {PreviousClaim.DisplayName}";
+
+    // Movement in money this period: cumulative claimed now less the previous claim's
+    // cumulative (both computed against the CURRENT line amount, so a re-priced line
+    // doesn't produce a phantom movement). No previous claim → everything is movement.
+    private decimal PreviousClaimedFor(ValuationLineItem line) =>
+        ValuationCalculations.CumulativeClaimed(PreviousPercentFor(line), line.LineAmount);
+
+    private decimal PeriodFor(ValuationLineItem line) => ClaimedFor(line) - PreviousClaimedFor(line);
+
+    private decimal PeriodTotalFor(Section section) =>
+        section.Lines.Where(l => l.CountsTowardTotals).Sum(PeriodFor);
+
+    private decimal PeriodClaimedTotal =>
+        lines.Where(l => l.CountsTowardTotals).Sum(PeriodFor);
 
     // ---- % complete click-to-edit -----------------------------------------
     // One cell edits at a time; nothing saves until the user confirms (Enter or

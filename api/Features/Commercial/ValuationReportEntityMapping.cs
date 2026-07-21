@@ -22,7 +22,7 @@ internal static class ValuationReportEntityMapping
             entity.PreapprovedAt, entity.ConfirmedAt,
             entity.ContractSum, entity.NetVariations, entity.RevisedContractSum,
             entity.TotalWorksComplete, entity.RetentionHeld, entity.RetentionReleased,
-            entity.CertifiedToDate, entity.PaymentDueExVat);
+            entity.CertifiedToDate, entity.PaymentDueExVat, entity.Name);
 
     public static ClaimLine ToModel(this ClaimLineEntity entity) =>
         new(entity.ClaimLineId, entity.ValuationClaimId, entity.ValuationLineItemId,
