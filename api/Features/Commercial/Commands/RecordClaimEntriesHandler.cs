@@ -22,9 +22,10 @@ public sealed class RecordClaimEntriesHandler : ICommandHandler<RecordClaimEntri
         var claim = await context.ValuationClaims.FindAsync(new object?[] { command.ValuationClaimId }, cancellationToken)
             ?? throw new KeyNotFoundException($"Valuation claim {command.ValuationClaimId} was not found.");
 
-        var lineAmountById = await context.ValuationLineItems
+        var linesById = await context.ValuationLineItems
             .Where(line => line.ProjectId == claim.ProjectId)
-            .ToDictionaryAsync(line => line.ValuationLineItemId, line => line.LineAmount, cancellationToken);
+            .ToDictionaryAsync(line => line.ValuationLineItemId,
+                line => (line.LineAmount, line.ElementType), cancellationToken);
 
         // Cumulative claimed per line at the most recent Confirmed claim before this one —
         // the same rule as RecordClaimEntryHandler, fetched once for the whole batch.
@@ -48,10 +49,16 @@ public sealed class RecordClaimEntriesHandler : ICommandHandler<RecordClaimEntri
         var results = new List<ClaimLineEntity>(command.Entries.Count);
         foreach (var input in command.Entries)
         {
-            if (!lineAmountById.TryGetValue(input.ValuationLineItemId, out var lineAmount))
+            if (!linesById.TryGetValue(input.ValuationLineItemId, out var lineInfo))
                 throw new KeyNotFoundException($"Valuation line item {input.ValuationLineItemId} was not found on this project.");
 
-            var cumulativeClaimed = ValuationCalculations.CumulativeClaimed(input.PercentComplete, lineAmount);
+            // Same rule as the single-entry handler: 0-100 for physical-completion lines,
+            // out-of-range allowed on variation lines (weighted % of a net VO).
+            if (lineInfo.ElementType != (int)ValuationElementType.Variation
+                && (input.PercentComplete < 0m || input.PercentComplete > 100m))
+                throw new InvalidOperationException("Percent complete must be 0-100% on non-variation lines.");
+
+            var cumulativeClaimed = ValuationCalculations.CumulativeClaimed(input.PercentComplete, lineInfo.LineAmount);
             var previousCumulative = baselineByLine.TryGetValue(input.ValuationLineItemId, out var confirmed) ? confirmed : 0m;
 
             if (!existingByLine.TryGetValue(input.ValuationLineItemId, out var entity))

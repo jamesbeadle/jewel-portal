@@ -594,8 +594,20 @@ else
         && percent != PercentFor(l));
 
     private static bool TryParsePercent(string raw, out decimal percent) =>
-        decimal.TryParse((raw ?? "").Trim().TrimEnd('%'), System.Globalization.NumberStyles.Number, Gb, out percent)
-        && percent >= 0m && percent <= 100m;
+        decimal.TryParse((raw ?? "").Trim().TrimEnd('%'), System.Globalization.NumberStyles.Number, Gb, out percent);
+
+    // Physical-completion lines stay 0-100. Variation lines may go OUTSIDE that range:
+    // a VO's omits can be fully claimed while its additions aren't, so the weighted %
+    // of the net VO value is legitimately negative or >100 (% x net must reproduce the
+    // claimed value). +/-1000 is just a sanity rail against typos.
+    private static (decimal Min, decimal Max) BoundsFor(ValuationLineItem line) =>
+        line.ElementType == ValuationElementType.Variation ? (-1000m, 1000m) : (0m, 100m);
+
+    private static bool WithinBounds(ValuationLineItem line, decimal percent)
+    {
+        var (min, max) = BoundsFor(line);
+        return percent >= min && percent <= max;
+    }
 
     private async Task SaveBulkAsync()
     {
@@ -607,7 +619,7 @@ else
         foreach (var line in lines.Where(l => l.CountsTowardTotals))
         {
             if (!bulkValues.TryGetValue(line.ValuationLineItemId, out var raw)) continue;
-            if (!TryParsePercent(raw, out var percent))
+            if (!TryParsePercent(raw, out var percent) || !WithinBounds(line, percent))
             {
                 bulkErrorLines.Add(line.ValuationLineItemId);
                 continue;
@@ -617,7 +629,7 @@ else
         }
         if (bulkErrorLines.Count > 0)
         {
-            bulkError = $"{bulkErrorLines.Count} value(s) aren't valid percentages (0-100) — fix the highlighted cells.";
+            bulkError = $"{bulkErrorLines.Count} value(s) aren't valid percentages — fix the highlighted cells (0-100; variation lines may go outside).";
             return;
         }
         if (entries.Count == 0) { CancelBulkEdit(); return; }
@@ -674,7 +686,7 @@ else
     {
         if (SelectedClaim is null) { CancelEdit(); return; }
         if (!decimal.TryParse(editValue.Trim().TrimEnd('%'), System.Globalization.NumberStyles.Number, Gb, out var percent)
-            || percent < 0m || percent > 100m)
+            || !WithinBounds(line, percent))
         {
             editError = true;
             return;
