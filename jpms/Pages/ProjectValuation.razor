@@ -118,8 +118,8 @@ else
             </div>
         }
 
-        <ValuationReportTable ProjectId="@ProjectId" SelectedClaim="@Selected" OnEditLine="StartEditLine"
-                              InvoicedToDate="@invoicedToDate">
+        <ValuationReportTable ProjectId="@ProjectId" SelectedClaim="@Selected" PreviousClaim="@PreviousClaim"
+                              OnEditLine="StartEditLine" InvoicedToDate="@invoicedToDate">
             <ExtraSections>
                 @* The old Cash Calls tab, folded into the report: issued invoices feed
                    "Certified to date" and therefore the payment due. *@
@@ -195,6 +195,15 @@ else
     private IReadOnlyList<ValuationClaim> Claims => Store.ClaimsFor(ProjectId);
     private ValuationClaim? Selected => Claims.FirstOrDefault(c => c.ValuationClaimId == selectedClaimId);
     private int NextClaimNumber => Claims.Count == 0 ? 1 : Claims.Max(c => c.ClaimNumber) + 1;
+
+    // The claim immediately before the selected one (highest ClaimNumber below it), so the
+    // report table can show each line's previously-claimed % against what's being claimed now.
+    // Null for Claim 1 (nothing came before) or when no claim is selected.
+    private ValuationClaim? PreviousClaim => Selected is null
+        ? null
+        : Claims.Where(c => c.ClaimNumber < Selected.ClaimNumber)
+                .OrderByDescending(c => c.ClaimNumber)
+                .FirstOrDefault();
 
     protected override async Task OnInitializedAsync()
     {

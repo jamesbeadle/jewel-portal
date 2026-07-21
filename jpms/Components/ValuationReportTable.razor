@@ -69,6 +69,11 @@ else
                                         <th class="sticky top-0 z-20 bg-surface-raised px-3 py-3 text-right whitespace-nowrap">Qty</th>
                                         <th class="sticky top-0 z-20 bg-surface-raised px-3 py-3 text-right whitespace-nowrap">Rate £</th>
                                         <th class="sticky top-0 z-20 bg-surface-raised px-3 py-3 text-right whitespace-nowrap">Amount £</th>
+                                        @if (SelectedClaim is not null)
+                                        {
+                                            <th class="sticky top-0 z-20 bg-surface-raised px-3 py-3 text-right whitespace-nowrap"
+                                                title="@PrevColumnTitle">Prev. %</th>
+                                        }
                                         <th class="sticky top-0 z-20 bg-surface-raised px-3 py-3 text-right whitespace-nowrap">% Complete</th>
                                         <th class="sticky top-0 z-20 bg-surface-raised px-3 py-3 text-right whitespace-nowrap">Claimed £</th>
                                         @if (CanEditLines)
@@ -120,6 +125,14 @@ else
                                             <td class="px-3 py-2 text-right text-content-muted whitespace-nowrap">@Num(line.Quantity)</td>
                                             <td class="px-3 py-2 text-right text-content-muted whitespace-nowrap">@Num(line.Rate)</td>
                                             <td class="px-3 py-2 text-right text-content whitespace-nowrap">@Money(line.LineAmount)</td>
+                                            @if (SelectedClaim is not null)
+                                            {
+                                                @* Cumulative % claimed on the previous claim — the baseline the current
+                                                   claim moves off, so the client can see what changed this period. *@
+                                                <td class="px-3 py-2 text-right text-content-subtle whitespace-nowrap">
+                                                    @(line.CountsTowardTotals && HasPreviousClaim ? Pct(PreviousPercentFor(line)) : "—")
+                                                </td>
+                                            }
                                             <td class="px-3 py-2 text-right whitespace-nowrap">
                                                 @if (CanEditEntries && line.CountsTowardTotals)
                                                 {
@@ -127,6 +140,11 @@ else
                                                     {
                                                         @* Explicit commit only: Enter / tick saves, Esc / cross discards. *@
                                                         <span class="inline-flex items-center gap-1">
+                                                            @if (HasPreviousClaim)
+                                                            {
+                                                                @* Old percentage stays visible while editing so it's clear what's being changed from. *@
+                                                                <span class="text-[11px] text-content-subtle mr-1 whitespace-nowrap">was @Pct(PreviousPercentFor(line))</span>
+                                                            }
                                                             <input @ref="editInput" type="text" inputmode="decimal"
                                                                    value="@editValue"
                                                                    @oninput="@(e => { editValue = e.Value?.ToString() ?? ""; editError = false; })"
@@ -149,16 +167,26 @@ else
                                                     }
                                                     else
                                                     {
-                                                        <button type="button" title="Edit % complete"
-                                                                @onclick="() => StartEdit(line)"
-                                                                class="underline decoration-dotted underline-offset-2 hover:decoration-solid @(PercentFor(line) == 0m ? "text-content-muted" : "text-content")">
-                                                            @Pct(PercentFor(line))
-                                                        </button>
+                                                        <span class="inline-flex items-baseline gap-1.5 justify-end">
+                                                            <button type="button" title="Edit % complete"
+                                                                    @onclick="() => StartEdit(line)"
+                                                                    class="underline decoration-dotted underline-offset-2 hover:decoration-solid @(PercentFor(line) == 0m ? "text-content-muted" : "text-content")">
+                                                                @Pct(PercentFor(line))
+                                                            </button>
+                                                            @if (ShowDelta(line))
+                                                            {
+                                                                <span class="text-[11px] text-content-subtle whitespace-nowrap" title="Change from the previous claim">@SignedPct(DeltaFor(line))</span>
+                                                            }
+                                                        </span>
                                                     }
                                                 }
                                                 else
                                                 {
                                                     <span class="text-content-muted">@(line.CountsTowardTotals ? Pct(PercentFor(line)) : "—")</span>
+                                                    @if (ShowDelta(line))
+                                                    {
+                                                        <span class="ml-1.5 text-[11px] text-content-subtle whitespace-nowrap" title="Change from the previous claim">@SignedPct(DeltaFor(line))</span>
+                                                    }
                                                 }
                                             </td>
                                             <td class="px-3 py-2 text-right text-content-muted whitespace-nowrap">
@@ -220,6 +248,9 @@ else
 @code {
     [Parameter, EditorRequired] public string ProjectId { get; set; } = "";
     [Parameter] public ValuationClaim? SelectedClaim { get; set; }
+    // The claim immediately before SelectedClaim, so each line can show its previously-claimed
+    // cumulative % next to what's being claimed now. Null for Claim 1 or when no claim is selected.
+    [Parameter] public ValuationClaim? PreviousClaim { get; set; }
     [Parameter] public EventCallback<ValuationLineItem> OnEditLine { get; set; }
     // Rendered between the bill sections and the summary (e.g. the valuation invoices accordion).
     [Parameter] public RenderFragment? ExtraSections { get; set; }
@@ -230,6 +261,8 @@ else
 
     private IReadOnlyList<ValuationLineItem> lines = Array.Empty<ValuationLineItem>();
     private IReadOnlyList<ClaimLine> entries = Array.Empty<ClaimLine>();
+    // Entries from the previous claim, keyed by line — the baseline for each line's "Prev. %".
+    private IReadOnlyList<ClaimLine> previousEntries = Array.Empty<ClaimLine>();
 
     // Sections start collapsed so the four totals read at a glance; state survives re-renders.
     private readonly HashSet<ValuationElementType> expanded = new();
@@ -267,6 +300,9 @@ else
     {
         lines = Store.LinesFor(ProjectId);
         entries = SelectedClaim is null ? Array.Empty<ClaimLine>() : Store.EntriesFor(SelectedClaim.ValuationClaimId);
+        // Fetch-once per claim id (revalidated by the store's Refresh); loads in the background and
+        // re-renders via the parent's OnChange subscription, same as the current claim's entries.
+        previousEntries = PreviousClaim is null ? Array.Empty<ClaimLine>() : Store.EntriesFor(PreviousClaim.ValuationClaimId);
         Recompute();
     }
 
@@ -343,6 +379,25 @@ else
 
     private decimal ClaimedFor(ValuationLineItem line) =>
         ValuationCalculations.CumulativeClaimed(PercentFor(line), line.LineAmount);
+
+    // ---- Previous claim comparison -----------------------------------------
+    // "Prev. %" is the cumulative % complete this line carried on the claim before the selected
+    // one; the delta beside the current % is how much is being claimed this period.
+    private bool HasPreviousClaim => PreviousClaim is not null;
+
+    private decimal PreviousPercentFor(ValuationLineItem line) =>
+        previousEntries.FirstOrDefault(e => e.ValuationLineItemId == line.ValuationLineItemId)?.PercentComplete ?? 0m;
+
+    private decimal DeltaFor(ValuationLineItem line) => PercentFor(line) - PreviousPercentFor(line);
+
+    // Only worth showing a delta when there's a prior claim to compare against, the line is priced
+    // into totals, and the percentage actually moved.
+    private bool ShowDelta(ValuationLineItem line) =>
+        HasPreviousClaim && line.CountsTowardTotals && DeltaFor(line) != 0m;
+
+    private string PrevColumnTitle => PreviousClaim is null
+        ? "No earlier claim to compare against — this is the first claim"
+        : $"Cumulative % complete claimed on Claim {PreviousClaim.ClaimNumber}";
 
     // ---- % complete click-to-edit -----------------------------------------
     // One cell edits at a time; nothing saves until the user confirms (Enter or
@@ -482,4 +537,6 @@ else
     private static string Money(decimal v) => v.ToString("C2", Gb);
     private static string Num(decimal v) => v.ToString("0.##", Gb);
     private static string Pct(decimal v) => v.ToString("0.##", Gb) + "%";
+    // Signed for the "what changed" delta: "+20%", "-5%" (negatives already carry their sign).
+    private static string SignedPct(decimal v) => (v > 0m ? "+" : "") + v.ToString("0.##", Gb) + "%";
 }
