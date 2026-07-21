@@ -5,7 +5,7 @@
 @implements IDisposable
 
 <form @onsubmit="SaveAsync" @onsubmit:preventDefault="true" class="space-y-3">
-        <div class="grid grid-cols-1 sm:grid-cols-4 gap-3">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
                 <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Element</label>
                 <select @bind="elementType"
@@ -28,6 +28,9 @@
                     <option value="@ValuationLineType.Tbc">TBC (excluded)</option>
                 </select>
             </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
             @if (elementType == ValuationElementType.Variation)
             {
                 <FormField Label="Variation ref" Value="@variationRef" OnChange="@(v => variationRef = v)" />
@@ -40,15 +43,16 @@
             }
         </div>
 
-        <div class="grid grid-cols-1 sm:grid-cols-4 gap-3">
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div>
                 <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Cost centre</label>
                 @* Picked from the cost-centre master rather than typed free — a mistyped
                    code would silently drop the line from the Financials roll-ups. *@
                 <SearchSelect Options="@CostCentreOptions" WidthClass="w-full" Placeholder="Cost centre…"
+                              InputClass="bg-surface-field border border-line-strong px-3 py-2 focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent"
                               @bind-Value="costCode" />
             </div>
-            <div class="sm:col-span-3">
+            <div class="sm:col-span-2">
                 <FormField Label="Description" Value="@description" OnChange="@(v => description = v)" />
             </div>
         </div>
@@ -59,13 +63,13 @@
             <FormField Label="Rate £" InputType="number" Value="@rate" OnChange="@(v => rate = v)" />
             <div>
                 <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Amount £</label>
-                <div class="px-3 py-2 text-sm text-content font-mono">@PreviewAmount</div>
+                <div class="w-full rounded-lg border border-line bg-surface px-3 py-2 text-sm text-content font-mono">@PreviewAmount</div>
             </div>
         </div>
 
         <FormField Label="Comments" Value="@comments" OnChange="@(v => comments = v)" />
 
-        <div class="flex items-center gap-2">
+        <div class="flex items-center gap-2 pt-1">
             <button type="submit" disabled="@busy"
                     class="rounded-lg bg-accent text-accent-ink font-medium text-sm px-4 py-2 hover:bg-accent-hover disabled:bg-surface-field transition">
                 @(IsEditing ? "Save changes" : "Add line")

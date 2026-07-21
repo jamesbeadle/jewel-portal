@@ -5,7 +5,7 @@
 window.jpmsSearchSelect = {
     rect: element => {
         const r = element.getBoundingClientRect();
-        return { top: r.top, left: r.left, width: r.width, bottom: r.bottom, viewportHeight: window.innerHeight };
+        return { top: r.top, left: r.left, width: r.width, bottom: r.bottom, viewportHeight: window.innerHeight, viewportWidth: window.innerWidth };
     },
     reveal: id => document.getElementById(id)?.scrollIntoView({ block: "nearest" })
 };

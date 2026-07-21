@@ -11,10 +11,14 @@
    allocation table, the invoice modal, the split editor — scrolls inside an
    overflow container that would clip an absolutely positioned popup. Fixed
    positioning escapes the clipping; the trade-off is the popup doesn't track
-   the container while it scrolls, so it closes on any focus loss. *@
+   the container while it scrolls, so it closes on any focus loss.
+
+   The popup grows to max-content width (never narrower than the control) so
+   full labels — e.g. long cost-centre names — show on one line rather than
+   being truncated; it's capped to the viewport so it can't run off the edge. *@
 <div class="relative @WidthClass" @ref="wrapperRef" @onfocusout="Close">
     <input @ref="inputRef" type="text" disabled="@Disabled" autocomplete="off"
-           class="w-full bg-surface border border-line rounded-lg px-2 py-1 pr-6 text-sm placeholder:text-content-subtle disabled:opacity-40 @(HasValue || isOpen ? "text-content" : "text-content-subtle")"
+           class="w-full rounded-lg pr-6 text-sm placeholder:text-content-subtle disabled:opacity-40 @InputClass @(HasValue || isOpen ? "text-content" : "text-content-subtle")"
            style="text-overflow:ellipsis"
            value="@DisplayText" placeholder="@InputPlaceholder"
            @onclick="OpenAsync" @oninput="OnInput" @onkeydown="OnKeyDown" />
@@ -36,7 +40,7 @@
                 var i = index++;
                 var value = option.Value;
                 <button type="button" id="@ItemId(i)" tabindex="-1"
-                        class="block w-full text-left px-3 py-1.5 text-sm truncate @ItemClass(i, value)"
+                        class="block w-full text-left px-3 py-1.5 text-sm whitespace-nowrap @ItemClass(i, value)"
                         @onmousedown="() => SelectAsync(value)" @onmousedown:preventDefault="true"
                         @onmousedown:stopPropagation="true">
                     @option.Label
@@ -44,7 +48,7 @@
             }
             @if (Filtered.Count == 0)
             {
-                <p class="px-3 py-1.5 text-sm text-content-subtle">No matches for “@filter”</p>
+                <p class="px-3 py-1.5 text-sm text-content-subtle whitespace-nowrap">No matches for “@filter”</p>
             }
         </div>
     }
@@ -60,6 +64,9 @@
     [Parameter] public string Placeholder { get; set; } = "—";
     /// <summary>Width utility class(es) for the control, e.g. "w-44" or "grow".</summary>
     [Parameter] public string WidthClass { get; set; } = "w-52";
+    /// <summary>Look of the input box (bg/border/padding). Override to match the
+    /// surrounding form fields; the default is the compact table styling.</summary>
+    [Parameter] public string InputClass { get; set; } = "bg-surface border border-line px-2 py-1";
     [Parameter] public bool Disabled { get; set; }
 
     private ElementReference wrapperRef;
@@ -104,12 +111,18 @@
         var rect = await Js.InvokeAsync<PopupRect>("jpmsSearchSelect.rect", wrapperRef);
         // Downward unless the popup can't fit below and there's more room above.
         const double popupMax = 236; // max-h-56 plus margin
+        const double edgeMargin = 8; // keep clear of the viewport edge
         var below = rect.ViewportHeight - rect.Bottom;
         var left = Math.Round(rect.Left);
-        var width = Math.Round(rect.Width);
-        popupStyle = below >= popupMax || below >= rect.Top
-            ? FormattableString.Invariant($"position:fixed;left:{left}px;width:{width}px;top:{Math.Round(rect.Bottom + 4)}px;z-index:70;")
-            : FormattableString.Invariant($"position:fixed;left:{left}px;width:{width}px;bottom:{Math.Round(rect.ViewportHeight - rect.Top + 4)}px;z-index:70;");
+        // Never narrower than the control, but free to grow to fit the widest
+        // label (width:max-content) up to whatever room remains to the right.
+        var minWidth = Math.Round(rect.Width);
+        var maxWidth = Math.Max(minWidth, Math.Round(rect.ViewportWidth - rect.Left - edgeMargin));
+        var sizing = FormattableString.Invariant($"min-width:{minWidth}px;width:max-content;max-width:{maxWidth}px;");
+        var vertical = below >= popupMax || below >= rect.Top
+            ? FormattableString.Invariant($"top:{Math.Round(rect.Bottom + 4)}px;")
+            : FormattableString.Invariant($"bottom:{Math.Round(rect.ViewportHeight - rect.Top + 4)}px;");
+        popupStyle = FormattableString.Invariant($"position:fixed;left:{left}px;z-index:70;") + sizing + vertical;
         filter = "";
         isOpen = true;
         // Start on the current selection; otherwise the first real option.
@@ -179,5 +192,5 @@
             ? "bg-content text-surface"
             : (value == Value && value != "" ? "text-content" : "text-content-muted") + " hover:bg-surface hover:text-content";
 
-    private sealed record PopupRect(double Top, double Left, double Width, double Bottom, double ViewportHeight);
+    private sealed record PopupRect(double Top, double Left, double Width, double Bottom, double ViewportHeight, double ViewportWidth);
 }
