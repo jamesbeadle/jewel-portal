@@ -36,66 +36,92 @@ else
                         }
                     </select>
                 }
-                @if (Selected is not null)
-                {
-                    <button @onclick="OpenRename" title="Name this claim's period, e.g. June 2026"
-                            class="rounded-lg border border-line bg-surface text-content-muted font-medium text-sm px-3 py-2 hover:border-line-strong transition">
-                        Rename
-                    </button>
-                    <button @onclick="@(() => showDeleteClaim = true)" title="Delete this claim and its entries — invoices and snapshots survive with the link cleared"
-                            class="rounded-lg border border-line bg-surface text-negative/80 font-medium text-sm px-3 py-2 hover:text-negative hover:border-line-strong transition">
-                        Delete
-                    </button>
-                }
                 <button @onclick="ToggleStartClaim"
                         class="rounded-lg border border-line bg-surface text-content-muted font-medium text-sm px-3 py-2 hover:border-line-strong transition">
                     New claim
                 </button>
-                @if (Selected is { Status: ValuationClaimStatus.Draft })
-                {
-                    <button @onclick="PreapproveAsync" disabled="@busy"
-                            class="rounded-lg bg-accent text-accent-ink font-medium text-sm px-3 py-2 hover:bg-accent-hover disabled:bg-surface-field transition">
-                        We're claiming this
-                    </button>
-                }
-                else if (Selected is { Status: ValuationClaimStatus.Preapproved })
-                {
-                    <button @onclick="ReopenAsync" disabled="@busy"
-                            title="Undo the preapproval — back to Draft, % complete editable again"
-                            class="rounded-lg border border-line bg-surface text-content-muted font-medium text-sm px-3 py-2 hover:border-line-strong transition">
-                        Reopen as draft
-                    </button>
-                    <button @onclick="RaiseInvoiceAsync" disabled="@(busy || PaymentDueNow <= 0m)"
-                            title="@(PaymentDueNow > 0m
-                                      ? "Raise a valuation invoice for the payment due, drawn against this claim. Submit or issue it below to freeze the report snapshot."
-                                      : "Nothing is currently due — issue or amend invoices below")"
-                            class="rounded-lg border border-line bg-surface text-content-muted font-medium text-sm px-3 py-2 hover:border-line-strong disabled:opacity-50 transition">
-                        Raise invoice (@Money(PaymentDueNow))
-                    </button>
-                    <button @onclick="ConfirmClickedAsync" disabled="@busy"
-                            class="rounded-lg bg-accent text-accent-ink font-medium text-sm px-3 py-2 hover:bg-accent-hover disabled:bg-surface-field transition">
-                        Confirm payment received
-                    </button>
-                }
             </div>
         </div>
 
+        @* One card per selected claim: where it is in its life, the ONE next action as the
+           primary button, and everything else demoted to quiet text links. *@
         @if (Selected is { } s)
         {
-            <p class="text-sm text-content-muted mb-4">
-                @switch (s.Status)
-                {
-                    case ValuationClaimStatus.Draft:
-                        <span>Draft — edit % complete per line, then mark <em>We're claiming this</em> to lock the claim.</span>
-                        break;
-                    case ValuationClaimStatus.Preapproved:
-                        <span>Preapproved on @(s.PreapprovedAt?.ToString("dd MMM yyyy")) — awaiting the client. Confirm once payment is received, or reopen as draft if this was preapproved by mistake.</span>
-                        break;
-                    case ValuationClaimStatus.Confirmed:
-                        <span>Confirmed on @(s.ConfirmedAt?.ToString("dd MMM yyyy")) — amounts are final and carried into the next claim.</span>
-                        break;
-                }
-            </p>
+            <section class="rounded-xl border border-line bg-surface p-4 mb-4">
+                <div class="flex items-start justify-between gap-4 flex-wrap">
+                    <div class="min-w-0">
+                        <div class="flex items-center gap-2 flex-wrap">
+                            <span class="font-semibold text-content">@s.DisplayName</span>
+                            <span class="@ClaimBadgeClass(s.Status)"
+                                  title="@(s.Status == ValuationClaimStatus.Preapproved && s.PreapprovedAt is { } pa ? $"Preapproved {pa:dd MMM yyyy}" : "")">@s.Status</span>
+                            <span class="flex items-center gap-3 text-xs ml-1">
+                                <button @onclick="OpenRename" class="text-content-subtle hover:text-content underline underline-offset-2">Rename</button>
+                                @if (s.Status == ValuationClaimStatus.Preapproved)
+                                {
+                                    <button @onclick="ReopenAsync" disabled="@busy"
+                                            title="Undo the preapproval — back to Draft, % complete editable again"
+                                            class="text-content-subtle hover:text-content underline underline-offset-2">Reopen as draft</button>
+                                    @if (StageFor(s) != ClaimStage.ReadyToConfirm)
+                                    {
+                                        <button @onclick="ConfirmClickedAsync" disabled="@busy"
+                                                title="Normally done once the claim's invoice is paid — confirming now will ask first"
+                                                class="text-content-subtle hover:text-content underline underline-offset-2">Confirm payment received</button>
+                                    }
+                                }
+                                <button @onclick="@(() => showDeleteClaim = true)"
+                                        title="Delete this claim and its entries — invoices and snapshots survive with the link cleared"
+                                        class="text-negative/70 hover:text-negative underline underline-offset-2">Delete</button>
+                            </span>
+                        </div>
+                        <p class="text-sm text-content-muted mt-1.5">@StageHint(s)</p>
+                    </div>
+                    @switch (StageFor(s))
+                    {
+                        case ClaimStage.Draft:
+                            <button @onclick="PreapproveAsync" disabled="@busy"
+                                    class="rounded-lg bg-accent text-accent-ink font-medium text-sm px-4 py-2 hover:bg-accent-hover disabled:bg-surface-field transition shrink-0">
+                                We're claiming this
+                            </button>
+                            break;
+                        case ClaimStage.AwaitingInvoice:
+                            <button @onclick="RaiseInvoiceAsync" disabled="@(busy || PaymentDueNow <= 0m)"
+                                    title="@(PaymentDueNow > 0m
+                                              ? "Creates the application to send to the client, drawn against this claim. The amount can still be edited before it's issued."
+                                              : "Nothing is currently due — manage invoices in Valuation Invoices below")"
+                                    class="rounded-lg bg-accent text-accent-ink font-medium text-sm px-4 py-2 hover:bg-accent-hover disabled:bg-surface-field transition shrink-0">
+                                Raise invoice (@Money(PaymentDueNow))
+                            </button>
+                            break;
+                        case ClaimStage.ReadyToConfirm:
+                            <button @onclick="ConfirmClickedAsync" disabled="@busy"
+                                    class="rounded-lg bg-accent text-accent-ink font-medium text-sm px-4 py-2 hover:bg-accent-hover disabled:bg-surface-field transition shrink-0">
+                                Confirm payment received
+                            </button>
+                            break;
+                        case ClaimStage.Confirmed:
+                            <button @onclick="@(() => OpenNextClaimForm(s))"
+                                    class="rounded-lg bg-accent text-accent-ink font-medium text-sm px-4 py-2 hover:bg-accent-hover transition shrink-0">
+                                Start next claim
+                            </button>
+                            break;
+                    }
+                </div>
+                <ol class="mt-3 flex items-center gap-1.5 text-xs flex-wrap">
+                    @foreach (var step in StepsFor(s))
+                    {
+                        <li class="flex items-center gap-1.5">
+                            <span class="w-4 h-4 rounded-full inline-flex items-center justify-center text-[10px] @(step.Done ? "bg-accent text-accent-ink" : step.Current ? "border border-accent text-accent" : "border border-line text-content-subtle")">
+                                @(step.Done ? "✓" : step.Index.ToString())
+                            </span>
+                            <span class="@(step.Current ? "text-content font-medium" : step.Done ? "text-content-muted" : "text-content-subtle")">@step.Label</span>
+                            @if (step.Index < 4)
+                            {
+                                <span class="w-6 h-px bg-line mx-1" aria-hidden="true"></span>
+                            }
+                        </li>
+                    }
+                </ol>
+            </section>
         }
         else
         {
@@ -266,10 +292,92 @@ else
     private ValuationLineItem? editingLine;
     private decimal invoicedToDate;
 
-    private void OnInvoicedToDateChanged(decimal total)
+    // Fired by the invoices section on every reload — keep our copy of the invoice list in
+    // step so the claim card's stage (invoice raised? issued? paid?) tracks reality.
+    private async Task OnInvoicedToDateChanged(decimal total)
     {
         invoicedToDate = total;
+        await RefreshInvoicesAsync();
         StateHasChanged();
+    }
+
+    // ---- Claim stage (drives the card's hint, primary button and stepper) ---
+    private IReadOnlyList<ValuationInvoice> projectInvoices = Array.Empty<ValuationInvoice>();
+
+    private async Task RefreshInvoicesAsync()
+    {
+        try { projectInvoices = await Invoices.ListAsync(ProjectId); }
+        catch { /* stage falls back to claim status alone */ }
+    }
+
+    // The live invoice drawn against this claim (latest wins; cancelled ones don't count).
+    private ValuationInvoice? InvoiceFor(ValuationClaim claim) => projectInvoices
+        .Where(invoice => invoice.ValuationClaimId == claim.ValuationClaimId
+                          && invoice.Status != ValuationInvoiceStatus.Cancelled)
+        .OrderByDescending(invoice => invoice.Number)
+        .FirstOrDefault();
+
+    private enum ClaimStage { Draft, AwaitingInvoice, InvoicePending, AwaitingPayment, ReadyToConfirm, Confirmed }
+
+    private ClaimStage StageFor(ValuationClaim claim)
+    {
+        if (claim.Status == ValuationClaimStatus.Confirmed) return ClaimStage.Confirmed;
+        if (claim.Status == ValuationClaimStatus.Draft) return ClaimStage.Draft;
+        var invoice = InvoiceFor(claim);
+        if (invoice is null) return ClaimStage.AwaitingInvoice;
+        return invoice.Status switch
+        {
+            ValuationInvoiceStatus.Paid => ClaimStage.ReadyToConfirm,
+            ValuationInvoiceStatus.Issued => ClaimStage.AwaitingPayment,
+            _ => ClaimStage.InvoicePending // Raised / Submitted / Approved / Rejected
+        };
+    }
+
+    private string StageHint(ValuationClaim claim)
+    {
+        var invoice = InvoiceFor(claim);
+        return StageFor(claim) switch
+        {
+            ClaimStage.Draft =>
+                "Set each line's cumulative % complete (Bulk edit % handles many at once), then lock the claim.",
+            ClaimStage.AwaitingInvoice =>
+                $"Locked — {Money(claim.TotalWorksComplete)} works complete. Raise the invoice to apply for the amount due; you can edit the figure before it's issued.",
+            ClaimStage.InvoicePending =>
+                $"Invoice {invoice?.DisplayNumber} raised for {Money(invoice?.Amount ?? 0m)} — submit or issue it in Valuation Invoices below. Issuing freezes the report snapshot and moves certified to date.",
+            ClaimStage.AwaitingPayment =>
+                $"Invoice {invoice?.DisplayNumber} issued for {Money(invoice?.Amount ?? 0m)} — when the client pays, use Record payment on it below.",
+            ClaimStage.ReadyToConfirm =>
+                $"Invoice {invoice?.DisplayNumber} is paid — confirm to lock this period as the baseline and roll into the next.",
+            ClaimStage.Confirmed =>
+                $"Confirmed{(claim.ConfirmedAt is { } at ? $" on {at:dd MMM yyyy}" : "")} — this claim is the baseline the next period starts from.",
+            _ => ""
+        };
+    }
+
+    private sealed record ClaimStep(int Index, string Label, bool Done, bool Current);
+
+    private IEnumerable<ClaimStep> StepsFor(ValuationClaim claim)
+    {
+        var locked = claim.Status != ValuationClaimStatus.Draft;
+        var invoice = InvoiceFor(claim);
+        var invoiced = invoice is { Status: ValuationInvoiceStatus.Issued or ValuationInvoiceStatus.Paid };
+        var paid = invoice is { Status: ValuationInvoiceStatus.Paid };
+        var confirmed = claim.Status == ValuationClaimStatus.Confirmed;
+        yield return new(1, "Value & lock", locked, !locked);
+        yield return new(2, "Invoice", invoiced || confirmed, locked && !invoiced && !confirmed);
+        yield return new(3, "Paid", paid || confirmed, invoiced && !paid && !confirmed);
+        yield return new(4, "Confirm & roll over", confirmed, paid && !confirmed);
+    }
+
+    private static string ClaimBadgeClass(ValuationClaimStatus status)
+    {
+        const string baseClass = "inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-medium ";
+        return status switch
+        {
+            ValuationClaimStatus.Preapproved => baseClass + "bg-warning/10 border-warning/30 text-warning",
+            ValuationClaimStatus.Confirmed => baseClass + "bg-positive/10 border-positive/30 text-positive",
+            _ => baseClass + "bg-surface-raised border-line text-content-muted"
+        };
     }
 
     // Certified to date moved (invoice issued / deleted / added as paid): the server has
@@ -343,6 +451,9 @@ else
         // Revalidate the cost-centre master (stale-while-revalidate) — the report table's
         // Variations section and the line form both offer it as a dropdown.
         _ = CostCenters.ListAllAsync();
+        // The claim card's stage needs the invoice list from first render (the invoices
+        // section reports changes later via OnInvoicedToDateChanged).
+        await RefreshInvoicesAsync();
         isLoaded = true;
     }
 
@@ -461,10 +572,17 @@ else
         var confirmed = Selected;
         await Store.ConfirmClaimAsync(ProjectId, confirmed.ValuationClaimId);
         busy = false;
-        // Roll straight over: offer the next period seeded from the claim just confirmed,
-        // with the following month suggested as its name.
+        // Roll straight over: offer the next period seeded from the claim just confirmed.
+        OpenNextClaimForm(confirmed);
+    }
+
+    // Opens the start-claim form seeded from the given claim, with the following month
+    // suggested as the new period's name. Used after Confirm and by the card's
+    // "Start next claim" button on an already-confirmed claim.
+    private void OpenNextClaimForm(ValuationClaim baseline)
+    {
         newSeedFromLatest = true;
-        newClaimName = confirmed.ClaimDate.AddMonths(1).ToString("MMMM yyyy", Gb);
+        newClaimName = baseline.ClaimDate.AddMonths(1).ToString("MMMM yyyy", Gb);
         newClaimDate = DateTime.Today;
         showStartClaim = true;
     }
