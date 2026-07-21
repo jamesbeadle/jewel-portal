@@ -152,7 +152,7 @@
 
                     @if (allLocked)
                     {
-                        <td class="px-4 py-3 text-right text-content-muted" title="Locked — the remaining value now reads as profit / loss">—</td>
+                        <td class="px-4 py-3 text-right text-content-muted" title="Locked — profit / loss now shows sales less forecast cost">—</td>
                     }
                     else
                     {
@@ -183,7 +183,7 @@
                     }
                     else
                     {
-                        <td class="px-4 py-3 text-right text-content-muted" title="Lock the line to realise its remaining drawdown as profit / loss">—</td>
+                        <td class="px-4 py-3 text-right text-content-muted" title="Lock the line to realise sales less forecast cost as profit / loss">—</td>
                     }
 
                     <td class="px-4 py-3 text-right">
@@ -256,7 +256,7 @@
                     @if (package.IsLocked)
                     {
                         <td class="px-4 py-3 text-right text-content-muted" title="Locked — figures frozen at lock">—</td>
-                        <td class="px-4 py-3 text-right text-content-muted" title="Locked — the remainder is realised as profit / loss">—</td>
+                        <td class="px-4 py-3 text-right text-content-muted" title="Locked — profit / loss realised as sales less invoiced cost">—</td>
                     }
                     else
                     {
@@ -275,7 +275,7 @@
                     }
                     else
                     {
-                        <td class="px-4 py-3 text-right text-content-muted" title="Lock the package below to realise its remainder as profit / loss">—</td>
+                        <td class="px-4 py-3 text-right text-content-muted" title="Lock the package below to realise sales less invoiced cost as profit / loss">—</td>
                     }
                     <td class="px-4 py-3 text-right text-content-muted">—</td>
                     <td class="px-4 py-3 text-right whitespace-nowrap">
@@ -380,8 +380,9 @@
     //                          show — here and report in Profit / Loss instead
     //   Work Orders          = committed work-order line totals (click for the line's work orders)
     //   Non-WO Cost of Sales = the share of actual purchase spend not linked to any work order
-    //   Profit / Loss        = the same remainder for locked centres — realised by finalising,
-    //                          so it no longer reads as money available to spend
+    //   Profit / Loss        = Contract Sales Value − Forecasted Cost of Sales for locked
+    //                          centres — the realised profit on the line (what it sold for
+    //                          less what it cost), banked by finalising
     //   Cost % Complete      = cost-side completion, edited inline here
     //   Actual Cost of Sales = reference column, kept last: allocated Xero purchase spend, net
     //                          of credit notes — click through to the invoice modal to allocate
@@ -623,18 +624,27 @@
     private decimal DrawdownFor(IReadOnlyList<string> costCodes) =>
         costCodes.Where(entryCode => !IsCentreFinalised(entryCode)).Sum(RemainderFor);
 
-    // Locked centres' remainders: realised profit / loss.
+    // What one centre's sales value leaves after work orders and unlinked spend (netted of
+    // packaged scope like everything else). Same cost side as RemainderFor, but measured
+    // against Contract Sales Value rather than target cost — profit is what the line sold
+    // for less what it cost, not what was left of its budget.
+    private decimal SalesRemainderFor(string costCode) =>
+        (byCode.TryGetValue(costCode, out var row) ? RowSales(row) - RowNonWo(row) : 0m)
+        - (WorkOrderCommittedByCode.TryGetValue(costCode, out var committed) ? committed : 0m)
+        + PackagedWoFor(costCode);
+
+    // Locked centres: sales value less forecast cost — realised profit / loss.
     private decimal ProfitLossFor(IReadOnlyList<string> costCodes) =>
-        costCodes.Where(IsCentreFinalised).Sum(RemainderFor);
+        costCodes.Where(IsCentreFinalised).Sum(SalesRemainderFor);
 
     private static string LockTitle(ReportLine line, bool allLocked, bool anyLocked) =>
         allLocked
-            ? "Unlock — the remainder returns to drawdown as available funds"
+            ? "Unlock — the target-cost remainder returns to drawdown as available funds"
             : anyLocked
-                ? "Some centres in this roll-up are already locked — lock the rest so the whole remainder reads as profit / loss"
+                ? "Some centres in this roll-up are already locked — lock the rest so the whole line reads as profit / loss"
                 : line.IsGroup
-                    ? "Lock every centre in this roll-up — no more spend expected; the remainder becomes profit / loss"
-                    : "Lock this cost centre — no more spend expected; the remainder becomes profit / loss";
+                    ? "Lock every centre in this roll-up — no more spend expected; sales less forecast cost becomes profit / loss"
+                    : "Lock this cost centre — no more spend expected; sales less forecast cost becomes profit / loss";
 
     private bool IsSaving(string key) => string.Equals(savingKey, key, StringComparison.OrdinalIgnoreCase);
 
@@ -735,7 +745,7 @@
         AllCodes.Where(entryCode => !IsCentreFinalised(entryCode)).Sum(RemainderFor)
         + IncludedPackages.Where(package => !package.IsLocked).Sum(package => package.Drawdown);
     private decimal TotalProfitLoss =>
-        AllCodes.Where(IsCentreFinalised).Sum(RemainderFor)
+        AllCodes.Where(IsCentreFinalised).Sum(SalesRemainderFor)
         + IncludedPackages.Where(package => package.IsLocked).Sum(package => package.ProfitLoss);
 
     // Matching the per-line calculation: claimed £ over contract £ (both netted of

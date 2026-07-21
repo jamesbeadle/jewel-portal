@@ -8,7 +8,7 @@ namespace Jewel.JPMS.Api.Features.Commercial.Commands;
 
 /// <summary>
 /// Locks a package: computes its live figures one last time and freezes them onto the
-/// package, realising profit / loss against ACTUAL invoiced cost (target cost − invoiced
+/// package, realising profit / loss against ACTUAL invoiced cost (sales value − invoiced
 /// to date) rather than committed orders — invoicing past the orders must never flatter
 /// the banked result. Unlocking clears the snapshot; figures go live again.
 /// </summary>
@@ -38,7 +38,7 @@ public sealed class SetReconciliationPackageLockHandler : ICommandHandler<SetRec
             package.LockedTargetCost = row.TargetCost;
             package.LockedWoCommitted = row.WoCommitted;
             package.LockedInvoicedCost = row.InvoicedToDate;
-            package.LockedProfitLoss = row.TargetCost - row.InvoicedToDate;
+            package.LockedProfitLoss = row.SalesValue - row.InvoicedToDate;
         }
         else if (!command.IsLocked && package.IsLocked)
         {

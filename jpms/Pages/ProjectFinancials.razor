@@ -118,7 +118,8 @@ else
                                        Heading="@(selectedSales?.Heading ?? "")"
                                        CostCodes="@(selectedSales?.CostCodes ?? Array.Empty<string>())"
                                        Lines="ValuationLines.Current(ProjectId)"
-                                       OnClose="CloseSalesLinesModal" />
+                                       OnClose="CloseSalesLinesModal"
+                                       OnLineRecoded="HandleSalesLineRecodedAsync" />
 
             <CostCentreWorkOrdersModal IsOpen="@(selectedWo is not null)"
                                        ProjectId="@ProjectId"
@@ -263,6 +264,12 @@ else
     // An invoice's work-order link changed inside the modal: re-pull the summary so the
     // non-WO cost of sales and drawdown columns update behind it. The modal stays open.
     private Task HandleWorkOrderLinkChangedAsync() => Summary.RefreshAsync(ProjectId, CancellationToken.None);
+
+    // A valuation line was recoded to another centre inside the sales-lines modal: the
+    // store already re-pulled the lines, so re-pull the summary too and the Contract
+    // Sales Value figures move with the line. The modal stays open — the recoded row
+    // simply drops out of its list, so several lines can be fixed in one sitting.
+    private Task HandleSalesLineRecodedAsync() => Summary.RefreshAsync(ProjectId, CancellationToken.None);
 
     // A line's lock button was clicked: apply the finalisation state to every cost code
     // behind the line, then re-pull the summary so drawdown / profit-loss move together.

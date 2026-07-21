@@ -1,10 +1,20 @@
 @using Jewel.JPMS.Models
+@using Jewel.JPMS.Contracts.Commercial
+@inject IValuationReportStore Store
+@inject ICostCenterStore CostCenters
+@inject SessionService Session
 
 @* The valuation lines behind one report line's Contract Sales Value figure on the
    Financials tab: every counting line coded to the centre — or to any member centre,
    for a roll-up — (contract works, PC sums, contingency and variations; omits net
    off). Declined / TBC lines are listed separately — recorded but never priced into
-   the total. Data comes from the already-loaded ValuationLinesReadModel — no extra fetch. *@
+   the total. Data comes from the already-loaded ValuationLinesReadModel — no extra fetch.
+
+   Admin/MD/FD/PM may recode a line's cost centre right here (the same
+   SetValuationLineCostCentre command the Valuation Report tab uses, enforced by the
+   same API gate) — finance corrects a misallocation where they spot it, without a
+   trip to the valuation report. A recoded line leaves this centre, so its row simply
+   drops out of the (open) modal when the refreshed lines land. *@
 <Modal IsOpen="IsOpen"
        Title="@($"{Heading} · Contract sales value")"
        ShowFooter="false"
@@ -40,7 +50,24 @@
                                 <td class="px-4 py-2.5 font-mono text-[11px] text-content-subtle whitespace-nowrap" title="@RefTitle(line)">@Ref(line)</td>
                                 @if (ShowCentreColumn)
                                 {
-                                    <td class="px-4 py-2.5 font-mono text-[11px] text-content-subtle whitespace-nowrap">@line.CostCode</td>
+                                    <td class="px-4 py-2.5 whitespace-nowrap">
+                                        @if (CanRecodeCostCentres)
+                                        {
+                                            <SearchSelect Options="@CostCentreOptionsFor(line)" WidthClass="w-52"
+                                                          Placeholder="Cost centre…"
+                                                          Value="@line.CostCode"
+                                                          Disabled="@(recodingLineId == line.ValuationLineItemId)"
+                                                          ValueChanged="value => SetCostCentreAsync(line, value)" />
+                                            @if (costCentreErrorLineId == line.ValuationLineItemId && costCentreError is not null)
+                                            {
+                                                <div class="text-[11px] text-negative mt-1">@costCentreError</div>
+                                            }
+                                        }
+                                        else
+                                        {
+                                            <span class="font-mono text-[11px] text-content-subtle">@line.CostCode</span>
+                                        }
+                                    </td>
                                 }
                                 <td class="px-4 py-2.5 text-content" title="@line.Comments">@DescriptionFor(line)</td>
                                 <td class="px-4 py-2.5 whitespace-nowrap"><span class="inline-block rounded-full border border-line px-2 py-0.5 text-[11px] text-content-subtle">@TypeLabel(line)</span></td>
@@ -71,7 +98,24 @@
                                     <td class="px-4 py-2.5 font-mono text-[11px] whitespace-nowrap" title="@RefTitle(line)">@Ref(line)</td>
                                     @if (ShowCentreColumn)
                                     {
-                                        <td class="px-4 py-2.5 font-mono text-[11px] whitespace-nowrap">@line.CostCode</td>
+                                        <td class="px-4 py-2.5 whitespace-nowrap">
+                                            @if (CanRecodeCostCentres)
+                                            {
+                                                <SearchSelect Options="@CostCentreOptionsFor(line)" WidthClass="w-52"
+                                                              Placeholder="Cost centre…"
+                                                              Value="@line.CostCode"
+                                                              Disabled="@(recodingLineId == line.ValuationLineItemId)"
+                                                              ValueChanged="value => SetCostCentreAsync(line, value)" />
+                                                @if (costCentreErrorLineId == line.ValuationLineItemId && costCentreError is not null)
+                                                {
+                                                    <div class="text-[11px] text-negative mt-1">@costCentreError</div>
+                                                }
+                                            }
+                                            else
+                                            {
+                                                <span class="font-mono text-[11px]">@line.CostCode</span>
+                                            }
+                                        </td>
                                     }
                                     <td class="px-4 py-2.5" title="@line.Comments">@DescriptionFor(line)</td>
                                     <td class="px-4 py-2.5 whitespace-nowrap"><span class="inline-block rounded-full border border-line px-2 py-0.5 text-[11px]">@(line.LineType == ValuationLineType.Tbc ? "TBC" : "Declined")</span></td>
@@ -105,7 +149,15 @@
     [Parameter] public IReadOnlyList<ValuationLineItem> Lines { get; set; } = Array.Empty<ValuationLineItem>();
     [Parameter] public EventCallback OnClose { get; set; }
 
-    private bool ShowCentreColumn => CostCodes.Count > 1;
+    /// <summary>Raised after a line is recoded to another centre. The store has already
+    /// refreshed the valuation lines; the page re-pulls the financial summary so the
+    /// Contract Sales Value figures move with the line. The modal stays open.</summary>
+    [Parameter] public EventCallback OnLineRecoded { get; set; }
+
+    // The centre column earns its place either for a roll-up (several codes to tell
+    // apart) or because the signed-in role may recode lines — a single-centre modal
+    // otherwise has nothing to edit.
+    private bool ShowCentreColumn => CostCodes.Count > 1 || CanRecodeCostCentres;
 
     private List<ValuationLineItem> LinesForCentres =>
         Lines.Where(line => CostCodes.Contains(line.CostCode, StringComparer.OrdinalIgnoreCase))
@@ -127,14 +179,22 @@
             ? line.VariationTitle
             : line.Description;
 
-    // Variations show their V-ref; works/PC lines show their section code.
+    // Mirrors the Valuation Report tab's CodeFor so the two views cross-reference —
+    // finance reads this list against that tab, so a ref only this modal uses is a
+    // dead end. Works/PC/contingency lines show the cost code (NRM2 section ref only
+    // as a fallback); variations show their V-ref. The bill section survives in the
+    // tooltip.
     private static string Ref(ValuationLineItem line) =>
         line.ElementType == ValuationElementType.Variation
-            ? (string.IsNullOrWhiteSpace(line.VariationRef) ? "VAR" : line.VariationRef)
-            : line.SectionCode;
+            ? (string.IsNullOrWhiteSpace(line.VariationRef) ? line.CostCode : line.VariationRef)
+            : (string.IsNullOrWhiteSpace(line.CostCode) ? line.SectionCode : line.CostCode);
 
     private static string RefTitle(ValuationLineItem line) =>
-        line.ElementType == ValuationElementType.Variation ? line.VariationTitle : line.SectionName;
+        line.ElementType == ValuationElementType.Variation
+            ? line.VariationTitle
+            : string.IsNullOrWhiteSpace(line.SectionCode)
+                ? line.SectionName
+                : $"{line.SectionCode} — {line.SectionName}";
 
     private static string TypeLabel(ValuationLineItem line) => line.ElementType switch
     {
@@ -152,4 +212,81 @@
     private static string Money(decimal value) =>
         value.ToString(value == Math.Truncate(value) ? "C0" : "C2",
             System.Globalization.CultureInfo.GetCultureInfo("en-GB"));
+
+    // ---- Cost-centre recode ------------------------------------------------
+    // Mirrors the API gate (ValuationReportAuthorisation.RolesThatMayRecodeCostCentres)
+    // and the Valuation Report tab's editor: admins, the MD, the FD and project
+    // managers may move a line's value between cost centres; everyone else sees the
+    // allocation read-only.
+    private bool CanRecodeCostCentres => Session.ActiveRole
+        is Role.Admin or Role.ManagingDirector or Role.FinanceDirector or Role.ProjectManager;
+
+    private string? recodingLineId;
+    private string? costCentreError;
+    private string? costCentreErrorLineId;
+
+    private async Task SetCostCentreAsync(ValuationLineItem line, string code)
+    {
+        // SearchSelect's leading blank entry clears — a line's value always sits
+        // somewhere, so ignore it rather than send an update the API would reject.
+        if (string.IsNullOrWhiteSpace(code) || code == line.CostCode) return;
+        recodingLineId = line.ValuationLineItemId;
+        costCentreError = null;
+        costCentreErrorLineId = null;
+        try
+        {
+            await Store.SetLineCostCentreAsync(new SetValuationLineCostCentre(line.ValuationLineItemId, code));
+            await OnLineRecoded.InvokeAsync();
+        }
+        catch (CommandFailedException failure)
+        {
+            costCentreError = failure.Message;
+            costCentreErrorLineId = line.ValuationLineItemId;
+        }
+        catch
+        {
+            // Transport/API failure (e.g. the API mid-deploy answering 503) must not kill
+            // the whole app — surface it on the row and let the user simply retry.
+            costCentreError = "The server couldn't be reached — please try again in a moment.";
+            costCentreErrorLineId = line.ValuationLineItemId;
+        }
+        finally
+        {
+            recodingLineId = null;
+        }
+    }
+
+    // The label carries code + name so typing matches either (same as the Valuation
+    // Report tab and XeroAllocation).
+    private IReadOnlyList<SearchSelect.Option>? costCentreOptionsCache;
+    private object? costCentreOptionsCacheKey;
+
+    private IReadOnlyList<SearchSelect.Option> CostCentreOptions
+    {
+        get
+        {
+            var centres = CostCenters.ActiveAlphabetical();
+            if (costCentreOptionsCache is null || !ReferenceEquals(costCentreOptionsCacheKey, centres))
+            {
+                costCentreOptionsCache = centres
+                    .Select(centre => new SearchSelect.Option(centre.Code, $"{centre.Code} {centre.Name}")).ToList();
+                costCentreOptionsCacheKey = centres;
+            }
+            return costCentreOptionsCache;
+        }
+    }
+
+    // A line coded to a retired centre still shows (and can be moved off) it.
+    private IReadOnlyList<SearchSelect.Option> CostCentreOptionsFor(ValuationLineItem line)
+    {
+        var options = CostCentreOptions;
+        if (string.IsNullOrWhiteSpace(line.CostCode) || options.Any(option => option.Value == line.CostCode))
+            return options;
+        var withCurrent = new List<SearchSelect.Option>(options.Count + 1)
+        {
+            new(line.CostCode, $"{line.CostCode} (retired)")
+        };
+        withCurrent.AddRange(options);
+        return withCurrent;
+    }
 }

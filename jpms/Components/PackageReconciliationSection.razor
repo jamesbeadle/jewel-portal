@@ -61,7 +61,7 @@
                         <th class="px-4 py-3 text-right whitespace-nowrap">WO Committed</th>
                         <th class="px-4 py-3 text-right whitespace-nowrap">Invoiced</th>
                         <th class="px-4 py-3 text-right whitespace-nowrap">Drawdown</th>
-                        <th class="px-4 py-3 text-right whitespace-nowrap" title="Open packages: forecast buying gain — target cost less the higher of committed and invoiced. Locked packages: realised profit / loss, banked against actual invoiced cost.">Margin / P&L</th>
+                        <th class="px-4 py-3 text-right whitespace-nowrap" title="Open packages: forecast buying gain — target cost less the higher of committed and invoiced. Locked packages: realised profit / loss — sales value less actual invoiced cost.">Margin / P&L</th>
                         <th class="px-4 py-3 w-[190px]"><span class="sr-only">Actions</span></th>
                     </tr>
                 </thead>
@@ -91,14 +91,14 @@
                             </td>
                             @if (row.IsLocked)
                             {
-                                <td class="px-4 py-3 text-right whitespace-nowrap text-content-muted" title="Locked — the remainder is realised as profit / loss">—</td>
+                                <td class="px-4 py-3 text-right whitespace-nowrap text-content-muted" title="Locked — profit / loss realised as sales less invoiced cost">—</td>
                                 <td class="px-4 py-3 text-right whitespace-nowrap font-medium @(row.ProfitLoss == 0m ? "text-content-muted" : row.ProfitLoss > 0m ? "text-positive" : "text-negative")">@Money(row.ProfitLoss)</td>
                             }
                             else
                             {
                                 <td class="px-4 py-3 text-right whitespace-nowrap @(row.Drawdown < 0m ? "text-negative" : row.Drawdown == 0m ? "text-content-muted" : "text-content")">@Money(row.Drawdown)</td>
                                 <td class="px-4 py-3 text-right whitespace-nowrap @(row.Margin < 0m ? "text-negative" : "text-content")"
-                                    title="Forecast — becomes realised profit / loss when the package is locked">@Money(row.Margin)</td>
+                                    title="Forecast buying gain — on lock, profit / loss is realised as sales value less actual invoiced cost">@Money(row.Margin)</td>
                             }
                             <td class="px-4 py-3 text-right whitespace-nowrap">
                                 @if (CanManage)
@@ -108,7 +108,7 @@
                                         <button type="button" disabled="@busy" @onclick="() => OpenEdit(row.ReconciliationPackageId)"
                                                 class="text-xs font-medium text-content-subtle hover:text-content underline underline-offset-4">Edit</button>
                                         <button type="button" disabled="@busy" @onclick="() => SetLockAsync(row, true)"
-                                                title="Lock — no more buying expected: figures freeze and the remaining margin is banked as profit / loss against actual invoiced cost"
+                                                title="Lock — no more buying expected: figures freeze and sales value less actual invoiced cost is banked as profit / loss"
                                                 class="ml-2 text-xs font-medium text-content-subtle hover:text-content underline underline-offset-4">Lock</button>
                                         @if (pendingDeleteId == row.ReconciliationPackageId)
                                         {
