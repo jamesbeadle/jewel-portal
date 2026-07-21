@@ -103,10 +103,7 @@ else
                                     <tr class="text-left text-[11px] uppercase tracking-wider text-content-subtle font-semibold">
                                         <th class="sticky left-0 top-0 z-30 bg-surface-raised px-3 py-3 w-[72px]">Code</th>
                                         <th class="sticky left-[72px] top-0 z-30 bg-surface-raised px-3 py-3 min-w-[220px]">Description</th>
-                                        @if (section.Type == ValuationElementType.Variation)
-                                        {
-                                            <th class="sticky top-0 z-20 bg-surface-raised px-3 py-3 whitespace-nowrap min-w-[220px]">Cost centre</th>
-                                        }
+                                        <th class="sticky top-0 z-20 bg-surface-raised px-3 py-3 whitespace-nowrap min-w-[220px]">Cost centre</th>
                                         <th class="sticky top-0 z-20 bg-surface-raised px-3 py-3 text-right whitespace-nowrap">Qty</th>
                                         <th class="sticky top-0 z-20 bg-surface-raised px-3 py-3 text-right whitespace-nowrap">Rate £</th>
                                         <th class="sticky top-0 z-20 bg-surface-raised px-3 py-3 text-right whitespace-nowrap">Amount £</th>
@@ -144,12 +141,12 @@ else
                                                     <span class="inline-block mt-0.5 text-[10px] uppercase tracking-wide text-content-subtle">@line.LineType</span>
                                                 }
                                             </td>
-                                            @if (section.Type == ValuationElementType.Variation)
-                                            {
-                                                @* Where this variation's value is allocated in the cost-centre master.
-                                                   Editable for Admin/MD/FD/PM (the API enforces the same gate); the
-                                                   value itself stays locked — only the allocation moves. *@
-                                                <td class="px-3 py-2 whitespace-nowrap">
+                                            @* Where this line's value is allocated in the cost-centre master.
+                                               Editable for Admin/MD/FD/PM at ANY claim status (the API enforces the
+                                               same gate): recoding is a finance allocation, never a value change, so
+                                               it stays open when the bill itself is locked by a preapproved claim.
+                                               Variation recodes move the mirrored VO's committed budget with them. *@
+                                            <td class="px-3 py-2 whitespace-nowrap">
                                                     @if (CanRecodeCostCentres)
                                                     {
                                                         <SearchSelect Options="@CostCentreOptionsFor(line)" WidthClass="w-52"
@@ -167,7 +164,6 @@ else
                                                         <span class="text-content-muted">@CostCentreLabel(line.CostCode)</span>
                                                     }
                                                 </td>
-                                            }
                                             <td class="px-3 py-2 text-right text-content-muted whitespace-nowrap">@Num(line.Quantity)</td>
                                             <td class="px-3 py-2 text-right text-content-muted whitespace-nowrap">@Num(line.Rate)</td>
                                             <td class="px-3 py-2 text-right text-content whitespace-nowrap">
@@ -347,7 +343,7 @@ else
 @if (lines.Count > 0)
 {
     <div class="mt-4 rounded-xl border border-line bg-surface-raised p-5">
-        <h3 class="text-sm font-semibold text-content mb-3">Valuation summary@(SelectedClaim is null ? "" : $" — Claim {SelectedClaim.ClaimNumber}")</h3>
+        <h3 class="text-sm font-semibold text-content mb-3">Valuation summary@(SelectedClaim is null ? "" : $" — {SelectedClaim.DisplayName}")</h3>
         <dl class="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-1.5 text-sm max-w-2xl">
             <SummaryRow Label="Original contract sum" Value="@Money(contractSum)" />
             <SummaryRow Label="Net variations" Value="@Money(netVariations)" />
@@ -916,7 +912,7 @@ else
                     SectionLabel(section.Type),
                     CodeFor(line),
                     TitleFor(line),
-                    section.Type == ValuationElementType.Variation && !string.IsNullOrWhiteSpace(line.CostCode)
+                    !string.IsNullOrWhiteSpace(line.CostCode)
                         ? CostCentreLabel(line.CostCode)
                         : null,
                     line.Quantity,

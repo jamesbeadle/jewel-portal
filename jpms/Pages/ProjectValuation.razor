@@ -92,6 +92,16 @@ else
                                 Raise invoice (@Money(PaymentDueNow))
                             </button>
                             break;
+                        case ClaimStage.AwaitingPayment:
+                            @if (IsLatestClaim(s))
+                            {
+                                <button @onclick="@(() => OpenNextClaimForm(s))"
+                                        title="Payment isn't a gate: the invoice stays tracked below and you confirm whenever the cash lands"
+                                        class="rounded-lg bg-accent text-accent-ink font-medium text-sm px-4 py-2 hover:bg-accent-hover transition shrink-0">
+                                    Start next claim
+                                </button>
+                            }
+                            break;
                         case ClaimStage.ReadyToConfirm:
                             <button @onclick="ConfirmClickedAsync" disabled="@busy"
                                     class="rounded-lg bg-accent text-accent-ink font-medium text-sm px-4 py-2 hover:bg-accent-hover disabled:bg-surface-field transition shrink-0">
@@ -99,10 +109,13 @@ else
                             </button>
                             break;
                         case ClaimStage.Confirmed:
-                            <button @onclick="@(() => OpenNextClaimForm(s))"
-                                    class="rounded-lg bg-accent text-accent-ink font-medium text-sm px-4 py-2 hover:bg-accent-hover transition shrink-0">
-                                Start next claim
-                            </button>
+                            @if (IsLatestClaim(s))
+                            {
+                                <button @onclick="@(() => OpenNextClaimForm(s))"
+                                        class="rounded-lg bg-accent text-accent-ink font-medium text-sm px-4 py-2 hover:bg-accent-hover transition shrink-0">
+                                    Start next claim
+                                </button>
+                            }
                             break;
                     }
                 </div>
@@ -345,7 +358,7 @@ else
             ClaimStage.InvoicePending =>
                 $"Invoice {invoice?.DisplayNumber} raised for {Money(invoice?.Amount ?? 0m)} — submit or issue it in Valuation Invoices below. Issuing freezes the report snapshot and moves certified to date.",
             ClaimStage.AwaitingPayment =>
-                $"Invoice {invoice?.DisplayNumber} issued for {Money(invoice?.Amount ?? 0m)} — when the client pays, use Record payment on it below.",
+                $"Invoice {invoice?.DisplayNumber} issued for {Money(invoice?.Amount ?? 0m)} — payment is tracked below (Record payment when it lands) and is no gate: carry straight on with the next claim.",
             ClaimStage.ReadyToConfirm =>
                 $"Invoice {invoice?.DisplayNumber} is paid — confirm to lock this period as the baseline and roll into the next.",
             ClaimStage.Confirmed =>
@@ -575,6 +588,11 @@ else
         // Roll straight over: offer the next period seeded from the claim just confirmed.
         OpenNextClaimForm(confirmed);
     }
+
+    // Only the newest claim offers "Start next claim" — older ones would create
+    // out-of-sequence duplicates of periods that already exist.
+    private bool IsLatestClaim(ValuationClaim claim) =>
+        LatestClaim?.ValuationClaimId == claim.ValuationClaimId;
 
     // Opens the start-claim form seeded from the given claim, with the following month
     // suggested as the new period's name. Used after Confirm and by the card's

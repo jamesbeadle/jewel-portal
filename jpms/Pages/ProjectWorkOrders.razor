@@ -8,6 +8,7 @@
 @inject SessionService Session
 @inject CostCentersReadModel CostCenters
 @inject ProjectWorkOrdersReadModel WorkOrders
+@inject WorkOrderGroupingStorage GroupingStorage
 @inject IQueryClient Queries
 @inject NavigationManager Nav
 @implements IDisposable
@@ -26,8 +27,19 @@ else
 {
     <ProjectPageShell ProjectId="@ProjectId" ActiveTab="work-orders">
         <div class="flex items-center justify-between gap-3 mb-3 flex-wrap">
-            <h2 class="text-lg font-semibold text-content">Work orders by cost centre</h2>
+            <h2 class="text-lg font-semibold text-content">Work orders by @(groupBySupplier ? "supplier" : "cost centre")</h2>
             <div class="flex items-center gap-2">
+                <div class="inline-flex rounded-lg border border-line-strong p-0.5 gap-0.5"
+                     title="Group the table by cost centre or by supplier — your choice is remembered">
+                    <button type="button" @onclick="() => SetGroupingAsync(bySupplier: false)"
+                            class="rounded-md text-xs px-2.5 py-1.5 transition @(!groupBySupplier ? "bg-accent text-accent-ink font-medium" : "text-content-muted hover:bg-surface-raised")">
+                        Cost centre
+                    </button>
+                    <button type="button" @onclick="() => SetGroupingAsync(bySupplier: true)"
+                            class="rounded-md text-xs px-2.5 py-1.5 transition @(groupBySupplier ? "bg-accent text-accent-ink font-medium" : "text-content-muted hover:bg-surface-raised")">
+                        Supplier
+                    </button>
+                </div>
                 <input type="search" placeholder="Search by supplier…"
                        class="bg-surface border border-line rounded-lg px-3 py-1.5 text-sm text-content placeholder:text-content-subtle w-52 focus:outline-none focus:border-accent"
                        @bind="supplierSearch" @bind:event="oninput" />
@@ -68,8 +80,15 @@ else
                 <table class="w-full text-sm border-collapse">
                     <thead class="bg-surface-raised border-b border-line">
                         <tr class="text-left text-[11px] uppercase tracking-wider text-content-subtle font-semibold">
-                            <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 w-[110px]">Code</th>
-                            <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 min-w-[200px]">Cost Centre</th>
+                            @if (groupBySupplier)
+                            {
+                                <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 min-w-[240px]">Supplier</th>
+                            }
+                            else
+                            {
+                                <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 w-[110px]">Code</th>
+                                <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 min-w-[200px]">Cost Centre</th>
+                            }
                             <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 text-right whitespace-nowrap">Orders</th>
                             <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 text-right whitespace-nowrap">Committed</th>
                             <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 text-right whitespace-nowrap">Paid</th>
@@ -79,32 +98,41 @@ else
                     <tbody class="divide-y divide-line">
                         @foreach (var row in Rows)
                         {
-                            <tr class="cursor-pointer hover:bg-surface-raised" @onclick="() => Toggle(row.Code)">
-                                <td class="px-4 py-3 font-mono text-[11px] text-content-subtle whitespace-nowrap">
-                                    <span class="inline-block w-4 text-content-subtle">@(IsExpanded(row.Code) ? "▾" : "▸")</span>@row.Code
-                                </td>
-                                @if (row.InMaster)
+                            <tr class="cursor-pointer hover:bg-surface-raised" @onclick="() => Toggle(row.Key)">
+                                @if (groupBySupplier)
                                 {
-                                    <td class="px-4 py-3 text-content font-medium whitespace-nowrap">@row.Name</td>
+                                    <td class="px-4 py-3 text-content font-medium whitespace-nowrap">
+                                        <span class="inline-block w-4 text-content-subtle font-normal">@(IsExpanded(row.Key) ? "▾" : "▸")</span>@row.Name
+                                    </td>
                                 }
                                 else
                                 {
-                                    <td class="px-4 py-3 text-content-subtle italic whitespace-nowrap">(not in cost-code master)</td>
+                                    <td class="px-4 py-3 font-mono text-[11px] text-content-subtle whitespace-nowrap">
+                                        <span class="inline-block w-4 text-content-subtle">@(IsExpanded(row.Key) ? "▾" : "▸")</span>@row.Code
+                                    </td>
+                                    @if (row.InMaster)
+                                    {
+                                        <td class="px-4 py-3 text-content font-medium whitespace-nowrap">@row.Name</td>
+                                    }
+                                    else
+                                    {
+                                        <td class="px-4 py-3 text-content-subtle italic whitespace-nowrap">(not in cost-code master)</td>
+                                    }
                                 }
                                 <td class="px-4 py-3 text-right">@row.OrderCount</td>
                                 <td class="px-4 py-3 text-right">@Money(row.Committed)</td>
                                 <td class="px-4 py-3 text-right">@Money(row.Paid)</td>
                                 <td class="px-4 py-3 text-right @(row.Committed - row.Paid > 0 ? "text-content" : "text-content-subtle")">@Money(row.Committed - row.Paid)</td>
                             </tr>
-                            @if (IsExpanded(row.Code))
+                            @if (IsExpanded(row.Key))
                             {
                                 <tr>
-                                    <td colspan="6" class="px-4 pb-4 pt-1 bg-surface-raised/50">
+                                    <td colspan="@GroupColspan" class="px-4 pb-4 pt-1 bg-surface-raised/50">
                                         <table class="w-full text-sm border-collapse">
                                             <thead>
                                                 <tr class="text-left text-[11px] uppercase tracking-wider text-content-subtle font-semibold border-b border-line">
                                                     <th class="px-3 py-2 w-[90px]">Order</th>
-                                                    <th class="px-3 py-2 min-w-[180px]">Supplier</th>
+                                                    <th class="px-3 py-2 min-w-[180px]">@(groupBySupplier ? "Cost centre" : "Supplier")</th>
                                                     <th class="px-3 py-2">Line</th>
                                                     <th class="px-3 py-2 whitespace-nowrap">Status</th>
                                                     <th class="px-3 py-2 text-right whitespace-nowrap">Total</th>
@@ -113,11 +141,20 @@ else
                                                 </tr>
                                             </thead>
                                             <tbody class="divide-y divide-line">
-                                                @foreach (var line in LinesFor(row.Code))
+                                                @foreach (var line in LinesFor(row.Key))
                                                 {
                                                     <tr>
                                                         <td class="px-3 py-2 font-mono text-[11px] text-content-subtle whitespace-nowrap" title="@line.Detail.Order.Title">@Reference(line.Detail.Order)</td>
-                                                        <td class="px-3 py-2 whitespace-nowrap">@line.Detail.SubcontractorName</td>
+                                                        @if (groupBySupplier)
+                                                        {
+                                                            <td class="px-3 py-2 whitespace-nowrap">
+                                                                <span class="font-mono text-[11px] text-content-subtle mr-1.5">@CodeOf(line)</span>@CostCentreNameFor(CodeOf(line))
+                                                            </td>
+                                                        }
+                                                        else
+                                                        {
+                                                            <td class="px-3 py-2 whitespace-nowrap">@line.Detail.SubcontractorName</td>
+                                                        }
                                                         <td class="px-3 py-2" title="@line.Line.Description">@line.Line.Title</td>
                                                         <td class="px-3 py-2 whitespace-nowrap">
                                                             <span class="inline-block rounded-full border border-line px-2 py-0.5 text-[11px] text-content-subtle">@line.Detail.Order.Status</span>
@@ -159,7 +196,7 @@ else
                     </tbody>
                     <tfoot class="border-t-2 border-line-strong bg-surface-raised">
                         <tr class="font-semibold text-content">
-                            <td class="px-4 py-3" colspan="2">@(Searching ? "Total (filtered)" : "Total")</td>
+                            <td class="px-4 py-3" colspan="@(groupBySupplier ? 1 : 2)">@(Searching ? "Total (filtered)" : "Total")</td>
                             <td class="px-4 py-3 text-right">@VisibleOrderCount</td>
                             <td class="px-4 py-3 text-right">@Money(LineCommitted)</td>
                             <td class="px-4 py-3 text-right">@Money(LinePaid)</td>
@@ -174,8 +211,8 @@ else
             {
                 <h3 class="text-sm font-semibold text-content mt-6 mb-2">Orders without a cost-centre breakdown</h3>
                 <p class="text-xs text-content-subtle mb-2">
-                    These orders have no priced lines yet, so their value isn't included in the cost-centre
-                    table above.
+                    These orders have no priced lines yet, so their value isn't included in the
+                    @(groupBySupplier ? "supplier" : "cost-centre") table above.
                 </p>
                 <ul class="text-sm divide-y divide-line rounded-xl border border-line bg-surface">
                     @foreach (var detail in OrdersWithoutLines)
@@ -200,8 +237,10 @@ else
             }
 
             <p class="text-xs text-content-subtle mt-3">
-                Committed is the sum of work-order line totals per cost centre; one order can span several
-                cost centres, so its value may appear split across rows. Paid is what has been paid against
+                @(groupBySupplier
+                    ? "Committed is the sum of work-order line totals per supplier."
+                    : "Committed is the sum of work-order line totals per cost centre; one order can span several cost centres, so its value may appear split across rows.")
+                Paid is what has been paid against
                 each line so far. Click a row to see the orders behind it. Re-code a line to move it to
                 another cost centre, or to split its amount across several — for orders priced wholesale
                 under one code whose lines belong to different centres. The parts must total the line
@@ -232,11 +271,13 @@ else
     [Parameter] public string ProjectId { get; set; } = "";
 
     private bool isLoaded;
-    private readonly HashSet<string> expandedCodes = new(StringComparer.OrdinalIgnoreCase);
+    // Expanded group rows — cost codes in the cost-centre view, supplier names in the
+    // supplier view; cleared when the grouping switches so the keys never mix.
+    private readonly HashSet<string> expandedKeys = new(StringComparer.OrdinalIgnoreCase);
 
     private const string UnassignedCode = "(unassigned)";
 
-    private sealed record CostCentreRow(string Code, string Name, bool InMaster, int OrderCount, decimal Committed, decimal Paid);
+    private sealed record GroupRow(string Key, string Code, string Name, bool InMaster, int OrderCount, decimal Committed, decimal Paid);
     private sealed record OrderLine(ProjectWorkOrderDetail Detail, WorkOrderLine Line);
 
     private IReadOnlyList<ProjectWorkOrderDetail> Orders => WorkOrders.Current(ProjectId);
@@ -244,8 +285,25 @@ else
     private List<OrderLine> AllLines =>
         Orders.SelectMany(detail => detail.Lines.Select(line => new OrderLine(detail, line))).ToList();
 
+    // Grouping toggle: by cost centre (the QS view, default) or by supplier (how the
+    // accountant records costs). The choice is remembered per user, per browser.
+    private bool groupBySupplier;
+
+    private int GroupColspan => groupBySupplier ? 5 : 6;
+
+    private async Task SetGroupingAsync(bool bySupplier)
+    {
+        if (groupBySupplier == bySupplier) return;
+        groupBySupplier = bySupplier;
+        expandedKeys.Clear();
+        if (Auth.CurrentUser is not null)
+        {
+            await GroupingStorage.WriteAsync(Auth.CurrentUser.Email, bySupplier);
+        }
+    }
+
     // Supplier search: typing narrows the table (and the no-breakdown list) to orders
-    // whose supplier matches, auto-expanding the cost-centre groups that remain.
+    // whose supplier matches, auto-expanding the groups that remain.
     private string supplierSearch = "";
 
     private bool Searching => !string.IsNullOrWhiteSpace(supplierSearch);
@@ -292,9 +350,11 @@ else
     private decimal LineCommitted => VisibleLines.Sum(entry => entry.Line.LineTotal);
     private decimal LinePaid => VisibleLines.Sum(entry => entry.Line.PaidToDate);
 
+    private List<GroupRow> Rows => groupBySupplier ? SupplierRows : CostCentreRows;
+
     // Master cost centres in master order first, then codes not in the active master (legacy /
     // retired), then lines with no code at all — shown rather than silently swallowed.
-    private List<CostCentreRow> Rows
+    private List<GroupRow> CostCentreRows
     {
         get
         {
@@ -304,9 +364,9 @@ else
             var namesByCode = CostCenters.Current.ToDictionary(centre => centre.Code, centre => centre.Name, StringComparer.OrdinalIgnoreCase);
 
             return VisibleLines
-                .GroupBy(entry => string.IsNullOrWhiteSpace(entry.Line.CostCode) ? UnassignedCode : entry.Line.CostCode,
-                         StringComparer.OrdinalIgnoreCase)
-                .Select(group => new CostCentreRow(
+                .GroupBy(entry => CodeOf(entry), StringComparer.OrdinalIgnoreCase)
+                .Select(group => new GroupRow(
+                    group.Key,
                     group.Key,
                     namesByCode.TryGetValue(group.Key, out var name) ? name : "",
                     namesByCode.ContainsKey(group.Key),
@@ -320,18 +380,41 @@ else
         }
     }
 
-    private List<OrderLine> LinesFor(string costCode) =>
+    // Supplier roll-up: the same lines and totals, grouped by who the order is with
+    // rather than where the cost sits — how the accountant records them.
+    private List<GroupRow> SupplierRows =>
         VisibleLines
-            .Where(entry => string.Equals(
-                string.IsNullOrWhiteSpace(entry.Line.CostCode) ? UnassignedCode : entry.Line.CostCode,
-                costCode, StringComparison.OrdinalIgnoreCase))
+            .GroupBy(entry => entry.Detail.SubcontractorName, StringComparer.OrdinalIgnoreCase)
+            .Select(group => new GroupRow(
+                group.Key,
+                "",
+                group.Key,
+                true,
+                group.Select(entry => entry.Detail.Order.WorkOrderId).Distinct().Count(),
+                group.Sum(entry => entry.Line.LineTotal),
+                group.Sum(entry => entry.Line.PaidToDate)))
+            .OrderBy(row => row.Name, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+    private static string CodeOf(OrderLine entry) =>
+        string.IsNullOrWhiteSpace(entry.Line.CostCode) ? UnassignedCode : entry.Line.CostCode;
+
+    private string CostCentreNameFor(string code) =>
+        CostCenters.Current.FirstOrDefault(centre =>
+            string.Equals(centre.Code, code, StringComparison.OrdinalIgnoreCase))?.Name ?? "";
+
+    private List<OrderLine> LinesFor(string key) =>
+        VisibleLines
+            .Where(entry => groupBySupplier
+                ? string.Equals(entry.Detail.SubcontractorName, key, StringComparison.OrdinalIgnoreCase)
+                : string.Equals(CodeOf(entry), key, StringComparison.OrdinalIgnoreCase))
             .OrderBy(entry => entry.Detail.Order.Number)
             .ThenBy(entry => entry.Line.SortOrder)
             .ToList();
 
     // While a supplier search is active every remaining group stays open — the point of
     // the search is to see the matching orders, not to click each group open.
-    private bool IsExpanded(string costCode) => Searching || expandedCodes.Contains(costCode);
+    private bool IsExpanded(string key) => Searching || expandedKeys.Contains(key);
 
     // The line being re-coded across cost centres, if the modal is open.
     private OrderLine? recoding;
@@ -377,16 +460,16 @@ else
         await WorkOrders.RefreshAsync(ProjectId, CancellationToken.None);
     }
 
-    private void Toggle(string costCode)
+    private void Toggle(string key)
     {
-        if (!expandedCodes.Remove(costCode)) expandedCodes.Add(costCode);
+        if (!expandedKeys.Remove(key)) expandedKeys.Add(key);
     }
 
     private static string Reference(WorkOrder order) => $"WO-{order.Number:0000}";
 
-    // One workbook, two sheets: the cost-centre roll-up (matching the tfoot total)
-    // and the flattened per-order lines the expanded groups show — both respecting
-    // the current supplier search, same as the on-screen table.
+    // One workbook, two sheets: a roll-up matching the on-screen grouping (and the
+    // tfoot total) and the flattened per-order lines the expanded groups show — both
+    // respecting the current supplier search, same as the on-screen table.
     private ExcelWorkbook? BuildExportWorkbook(bool _)
     {
         if (Orders.Count == 0) return null;
@@ -394,30 +477,57 @@ else
         var rows = Rows;
         var workbook = new ExcelWorkbook();
 
-        var centresSheet = workbook.AddSheet("Cost centres",
-            new ExcelColumn("Code"),
-            new ExcelColumn("Cost centre"),
-            new ExcelColumn("Orders", ExcelFormat.Integer),
-            new ExcelColumn("Committed", ExcelFormat.Currency),
-            new ExcelColumn("Paid", ExcelFormat.Currency),
-            new ExcelColumn("Remaining", ExcelFormat.Currency));
-        foreach (var row in rows)
+        if (groupBySupplier)
         {
-            centresSheet.AddRow(
-                row.Code,
-                row.InMaster ? row.Name : null,
-                row.OrderCount,
-                row.Committed,
-                row.Paid,
-                row.Committed - row.Paid);
+            var suppliersSheet = workbook.AddSheet("Suppliers",
+                new ExcelColumn("Supplier"),
+                new ExcelColumn("Orders", ExcelFormat.Integer),
+                new ExcelColumn("Committed", ExcelFormat.Currency),
+                new ExcelColumn("Paid", ExcelFormat.Currency),
+                new ExcelColumn("Remaining", ExcelFormat.Currency));
+            foreach (var row in rows)
+            {
+                suppliersSheet.AddRow(
+                    row.Name,
+                    row.OrderCount,
+                    row.Committed,
+                    row.Paid,
+                    row.Committed - row.Paid);
+            }
+            suppliersSheet.AddRow(
+                Searching ? "Total (filtered)" : "Total",
+                VisibleOrderCount,
+                LineCommitted,
+                LinePaid,
+                LineCommitted - LinePaid);
         }
-        centresSheet.AddRow(
-            Searching ? "Total (filtered)" : "Total",
-            null,
-            VisibleOrderCount,
-            LineCommitted,
-            LinePaid,
-            LineCommitted - LinePaid);
+        else
+        {
+            var centresSheet = workbook.AddSheet("Cost centres",
+                new ExcelColumn("Code"),
+                new ExcelColumn("Cost centre"),
+                new ExcelColumn("Orders", ExcelFormat.Integer),
+                new ExcelColumn("Committed", ExcelFormat.Currency),
+                new ExcelColumn("Paid", ExcelFormat.Currency),
+                new ExcelColumn("Remaining", ExcelFormat.Currency));
+            foreach (var row in rows)
+            {
+                centresSheet.AddRow(
+                    row.Code,
+                    row.InMaster ? row.Name : null,
+                    row.OrderCount,
+                    row.Committed,
+                    row.Paid,
+                    row.Committed - row.Paid);
+            }
+            centresSheet.AddRow(
+                Searching ? "Total (filtered)" : "Total",
+                null,
+                VisibleOrderCount,
+                LineCommitted,
+                LinePaid,
+                LineCommitted - LinePaid);
+        }
 
         var ordersSheet = workbook.AddSheet("Work orders",
             new ExcelColumn("Code"),
@@ -430,11 +540,13 @@ else
             new ExcelColumn("Paid", ExcelFormat.Currency));
         foreach (var row in rows)
         {
-            foreach (var line in LinesFor(row.Code))
+            foreach (var line in LinesFor(row.Key))
             {
+                var code = CodeOf(line);
+                var centreName = CostCentreNameFor(code);
                 ordersSheet.AddRow(
-                    row.Code,
-                    row.InMaster ? row.Name : null,
+                    code,
+                    centreName.Length > 0 ? centreName : null,
                     Reference(line.Detail.Order),
                     line.Detail.SubcontractorName,
                     line.Line.Title,
@@ -455,6 +567,8 @@ else
     {
         await Session.EnsureLoadedAsync();
         if (!Auth.IsSignedIn) { Nav.NavigateTo("/login", forceLoad: true); return; }
+        // Reopen in whichever grouping this user last used (cost centre by default).
+        groupBySupplier = await GroupingStorage.ReadGroupBySupplierAsync(Auth.CurrentUser!.Email);
         CostCenters.OnChanged += StateHasChanged;
         WorkOrders.OnChanged += StateHasChanged;
         // Refresh once per tab entry (stale-while-revalidate, per the front-end
