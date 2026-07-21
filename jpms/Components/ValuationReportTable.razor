@@ -687,10 +687,19 @@ else
             editError = true;
             return;
         }
-        await Store.RecordEntryAsync(ProjectId, new RecordClaimEntry(SelectedClaim.ValuationClaimId, line.ValuationLineItemId, percent));
-        editingLineId = null;
-        editError = false;
-        OnParametersSet();
+        try
+        {
+            await Store.RecordEntryAsync(ProjectId, new RecordClaimEntry(SelectedClaim.ValuationClaimId, line.ValuationLineItemId, percent));
+            editingLineId = null;
+            editError = false;
+            OnParametersSet();
+        }
+        catch
+        {
+            // Save failed (validation or the API being unreachable): keep the editor open
+            // with the typed value and flag it, instead of crashing the circuit.
+            editError = true;
+        }
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -823,6 +832,13 @@ else
         catch (CommandFailedException failure)
         {
             costCentreError = failure.Message;
+            costCentreErrorLineId = line.ValuationLineItemId;
+        }
+        catch
+        {
+            // Transport/API failure (e.g. the API mid-deploy answering 503) must not kill
+            // the whole app — surface it on the row and let the user simply retry.
+            costCentreError = "The server couldn't be reached — please try again in a moment.";
             costCentreErrorLineId = line.ValuationLineItemId;
         }
         finally

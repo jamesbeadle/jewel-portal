@@ -43,6 +43,14 @@ else
             </div>
         </div>
 
+        @if (actionError is not null)
+        {
+            <p class="mb-2 rounded-lg border border-negative/30 bg-negative/10 px-3 py-2 text-sm text-negative">
+                @actionError
+                <button @onclick="@(() => actionError = null)" class="ml-2 underline underline-offset-2">Dismiss</button>
+            </p>
+        }
+
         @* One card per selected claim: where it is in its life, the ONE next action as the
            primary button, and everything else demoted to quiet text links. *@
         @if (Selected is { } s)
@@ -485,9 +493,8 @@ else
         newSeedFromLatest = LatestClaim is not null;
     }
 
-    private async Task StartClaimAsync()
+    private Task StartClaimAsync() => GuardAsync(async () =>
     {
-        busy = true;
         var date = new DateTimeOffset(newClaimDate.Date, TimeSpan.Zero);
         // Retention percents are omitted deliberately: the server stamps them from the
         // project's retention terms, with the completion date gating the release %.
@@ -498,8 +505,7 @@ else
         selectedClaimId = claim.ValuationClaimId;
         showStartClaim = false;
         newClaimName = "";
-        busy = false;
-    }
+    }, "Couldn't start the claim — the server may be restarting. Please try again.");
 
     // ---- Rename / delete ----------------------------------------------------
     private void OpenRename()
@@ -509,54 +515,57 @@ else
         showRename = true;
     }
 
-    private async Task SaveRenameAsync()
+    private Task SaveRenameAsync() => Selected is null || busy ? Task.CompletedTask : GuardAsync(async () =>
     {
-        if (Selected is null || busy) return;
-        busy = true;
-        await Store.RenameClaimAsync(ProjectId, Selected.ValuationClaimId, renameValue.Trim());
+        await Store.RenameClaimAsync(ProjectId, Selected!.ValuationClaimId, renameValue.Trim());
         showRename = false;
-        busy = false;
-    }
+    }, "Couldn't rename the claim — the server may be restarting. Please try again.");
 
-    private async Task DeleteClaimAsync()
+    private Task DeleteClaimAsync() => Selected is null || busy ? Task.CompletedTask : GuardAsync(async () =>
     {
-        if (Selected is null || busy) return;
-        busy = true;
-        await Store.DeleteClaimAsync(ProjectId, Selected.ValuationClaimId);
+        await Store.DeleteClaimAsync(ProjectId, Selected!.ValuationClaimId);
         selectedClaimId = "";        // OnStoreChanged re-picks the first remaining claim
         showDeleteClaim = false;
-        busy = false;
         // Any invoice that pointed at this claim had its link cleared server-side.
         if (invoicesSection is not null) await invoicesSection.ReloadAsync();
-    }
+    }, "Couldn't delete the claim — the server may be restarting. Please try again.");
 
     // ---- Raise invoice from the claim --------------------------------------
     // Creates a Raised invoice for the claim's payment due, drawn against the claim, first
     // day of the claim date's month as its period. Submitting/issuing it below freezes the
     // report snapshot — the guaranteed-snapshot path (unlike a manual/historic entry).
-    private async Task RaiseInvoiceAsync()
+    private Task RaiseInvoiceAsync()
     {
-        if (Selected is null || busy) return;
+        if (Selected is null || busy) return Task.CompletedTask;
         var amount = PaymentDueNow;
-        if (amount <= 0m) return;
-        busy = true;
-        try
+        if (amount <= 0m) return Task.CompletedTask;
+        var claim = Selected;
+        return GuardAsync(async () =>
         {
             var period = new DateTimeOffset(
-                new DateTime(Selected.ClaimDate.Year, Selected.ClaimDate.Month, 1), TimeSpan.Zero);
-            await Invoices.CreateAsync(ProjectId, period, amount, Selected.ValuationClaimId);
+                new DateTime(claim.ClaimDate.Year, claim.ClaimDate.Month, 1), TimeSpan.Zero);
+            await Invoices.CreateAsync(ProjectId, period, amount, claim.ValuationClaimId);
             if (invoicesSection is not null) await invoicesSection.ReloadAsync();
-        }
+        }, "Couldn't raise the invoice — the server may be restarting. Please try again.");
+    }
+
+    // A failed API call (validation, or the server mid-deploy answering 503) surfaces in
+    // the banner instead of tearing the whole app down with an unhandled exception.
+    private string? actionError;
+
+    private async Task GuardAsync(Func<Task> action, string failureMessage)
+    {
+        actionError = null;
+        busy = true;
+        try { await action(); }
+        catch (CommandFailedException failure) { actionError = failure.Message; }
+        catch { actionError = failureMessage; }
         finally { busy = false; }
     }
 
-    private async Task PreapproveAsync()
-    {
-        if (Selected is null) return;
-        busy = true;
-        await Store.PreapproveClaimAsync(ProjectId, Selected.ValuationClaimId);
-        busy = false;
-    }
+    private Task PreapproveAsync() => Selected is null ? Task.CompletedTask : GuardAsync(
+        () => Store.PreapproveClaimAsync(ProjectId, Selected.ValuationClaimId),
+        "Couldn't lock the claim — the server may be restarting. Please try again.");
 
     // Nudge, don't enforce: if nothing drawn against this claim has been issued or paid,
     // ask before confirming — certified to date won't include this claim otherwise. If
@@ -577,16 +586,17 @@ else
         await ConfirmAsync();
     }
 
-    private async Task ConfirmAsync()
+    private Task ConfirmAsync()
     {
-        if (Selected is null) return;
+        if (Selected is null) return Task.CompletedTask;
         showConfirmNudge = false;
-        busy = true;
         var confirmed = Selected;
-        await Store.ConfirmClaimAsync(ProjectId, confirmed.ValuationClaimId);
-        busy = false;
-        // Roll straight over: offer the next period seeded from the claim just confirmed.
-        OpenNextClaimForm(confirmed);
+        return GuardAsync(async () =>
+        {
+            await Store.ConfirmClaimAsync(ProjectId, confirmed.ValuationClaimId);
+            // Roll straight over: offer the next period seeded from the claim just confirmed.
+            OpenNextClaimForm(confirmed);
+        }, "Couldn't confirm the claim — the server may be restarting. Please try again.");
     }
 
     // Only the newest claim offers "Start next claim" — older ones would create
@@ -606,13 +616,9 @@ else
     }
 
     // Undo an unintended "We're claiming this": Preapproved → Draft.
-    private async Task ReopenAsync()
-    {
-        if (Selected is null) return;
-        busy = true;
-        await Store.ReopenClaimAsync(ProjectId, Selected.ValuationClaimId);
-        busy = false;
-    }
+    private Task ReopenAsync() => Selected is null ? Task.CompletedTask : GuardAsync(
+        () => Store.ReopenClaimAsync(ProjectId, Selected.ValuationClaimId),
+        "Couldn't reopen the claim — the server may be restarting. Please try again.");
 
     private void OpenAddLine()
     {
