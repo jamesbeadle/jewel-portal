@@ -650,13 +650,20 @@
         await OnCostCompletionChanged.InvokeAsync((line.CostCodes, percent));
     }
 
+    // "Zero" means every figure the row *displays* is zero — so this tests the same
+    // netted accessors the cells render, not the raw summary fields. With "Hide scope
+    // in packages" on, a centre whose money sits entirely inside packages nets to zero
+    // and hides here; its position still shows on the package rows. Locked centres and
+    // centres carrying a cost-completion percent stay visible (both are shown on the
+    // row even when the money columns read £0).
     private bool HasAnyValue(IReadOnlyList<string> costCodes) =>
         costCodes.Any(entryCode =>
             (byCode.TryGetValue(entryCode, out var row) &&
-             (row.BudgetedSales != 0m || row.CompletionPercent != 0m || row.ClaimedToDate != 0m ||
-              row.BudgetedCost != 0m || row.CostCompletionPercent != 0m || row.ActualCost != 0m ||
-              row.IsFinalised)) ||
-            (WorkOrderCommittedByCode.TryGetValue(entryCode, out var committed) && committed != 0m));
+             (RowSales(row) != 0m || RowClaimed(row) != 0m || RowTarget(row) != 0m ||
+              RowActual(row) != 0m || RowNonWo(row) != 0m ||
+              row.CostCompletionPercent != 0m || row.IsFinalised)) ||
+            (WorkOrderCommittedByCode.TryGetValue(entryCode, out var committed) ? committed : 0m)
+                - PackagedWoFor(entryCode) != 0m);
 
     private IEnumerable<ReportLine> VisibleLines
     {

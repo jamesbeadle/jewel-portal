@@ -132,8 +132,17 @@ else
                                          Disabled="@(Visible.Count == 0)"
                                          ShowIncludeAllRows="@(PageCount > 1)"
                                          BuildWorkbook="BuildExportWorkbook" />
+                    @if (activeTab == XeroAllocationStatus.Allocated)
+                    {
+                        @* Narrow to one project first, then search within it — the
+                           recode workflow: isolate what's coded where, select, resend. *@
+                        <SearchSelect Options="@AllocatedProjectFilterOptions" WidthClass="w-44" Placeholder="All projects"
+                                      Value="@allocatedProjectFilter" ValueChanged="OnAllocatedProjectFilterChanged" />
+                    }
                     <input class="text-sm bg-surface border border-line rounded-lg px-3 py-1.5 text-content placeholder:text-content-subtle w-64"
-                           placeholder="Search supplier, description, number…"
+                           placeholder="@(activeTab == XeroAllocationStatus.Allocated
+                                          ? "Search supplier, cost centre, number…"
+                                          : "Search supplier, description, number…")"
                            value="@search" @oninput="OnSearchChanged" />
                 </div>
             </div>
@@ -169,6 +178,19 @@ else
                 </div>
             }
 
+            @if (activeTab == XeroAllocationStatus.Allocated && selectedIds.Count > 0)
+            {
+                <div class="mb-4 rounded-xl border border-line bg-surface-raised px-4 py-3 flex items-center gap-3 flex-wrap text-sm">
+                    <span class="text-content font-medium">@selectedIds.Count selected</span>
+                    <button class="text-sm font-medium rounded-lg px-3 py-1.5 bg-content text-surface disabled:opacity-50"
+                            disabled="@isBusy" @onclick="OpenSendToCostCentre">Send to cost centre…</button>
+                    <button class="text-sm font-medium rounded-lg px-3 py-1.5 border border-line text-content-muted hover:text-content disabled:opacity-50"
+                            title="Return the selected lines to the unallocated queue"
+                            disabled="@isBusy" @onclick="BulkUndoAsync">Undo selected</button>
+                    <button class="text-xs text-content-subtle underline underline-offset-4" @onclick="() => selectedIds.Clear()">Clear</button>
+                </div>
+            }
+
             @if (activeTab == XeroAllocationStatus.Bucketed)
             {
                 <div class="mb-4 flex flex-wrap gap-2">
@@ -185,7 +207,7 @@ else
                 <table class="w-full min-w-[82rem] text-sm">
                     <thead class="bg-surface-raised border-b border-line">
                         <tr class="text-left text-[11px] uppercase tracking-wider text-content-subtle font-semibold">
-                            @if (activeTab == XeroAllocationStatus.Unallocated)
+                            @if (activeTab is XeroAllocationStatus.Unallocated or XeroAllocationStatus.Allocated)
                             {
                                 <th class="sticky top-0 z-20 bg-surface-raised px-3 py-3 w-8">
                                     <input type="checkbox" checked="@AllVisibleSelected" @onchange="ToggleSelectAll" />
@@ -217,7 +239,7 @@ else
                         @foreach (var line in Paged)
                         {
                             <tr>
-                                @if (activeTab == XeroAllocationStatus.Unallocated)
+                                @if (activeTab is XeroAllocationStatus.Unallocated or XeroAllocationStatus.Allocated)
                                 {
                                     <td class="px-3 py-2.5">
                                         <input type="checkbox" checked="@selectedIds.Contains(line.XeroLedgerLineId)"
@@ -428,6 +450,45 @@ else
             }
         </Modal>
 
+        @* Bulk recode from the Allocated tab: every selected line moves to the
+           chosen cost centre, each keeping the project it's already allocated
+           to. Re-allocating replaces any previous split (the API clears the
+           split rows), so a line once shared across centres moves whole. *@
+        <Modal IsOpen="@sendToCostCentreOpen" Title="Send to cost centre"
+               ConfirmLabel="@(isApplying ? "Sending…" : $"Send {SendableSelected.Count} {(SendableSelected.Count == 1 ? "line" : "lines")}")" CancelLabel="Cancel"
+               ConfirmDisabled="@(isBusy || string.IsNullOrEmpty(sendCostCenterCode) || SendableSelected.Count == 0)"
+               OnConfirm="SendToCostCentreAsync" OnCancel="CloseSendToCostCentre" Class="max-w-lg">
+            @if (sendToCostCentreOpen)
+            {
+                <div class="space-y-4">
+                    @if (sendError is not null)
+                    {
+                        <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@sendError</p>
+                    }
+                    <p class="text-sm text-content-muted">
+                        <span class="text-content font-medium">@SendableSelected.Count @(SendableSelected.Count == 1 ? "line" : "lines")</span>
+                        · @Money(SendableSelected.Sum(SignedNet)) net move to the chosen cost centre.
+                        Each line keeps its project — only the cost centre changes; a line previously
+                        split across centres moves whole.
+                    </p>
+                    @if (SelectedAllocated.Count > SendableSelected.Count)
+                    {
+                        <p class="text-xs text-content-subtle">
+                            @(SelectedAllocated.Count - SendableSelected.Count) of the selected lines are split across
+                            more than one project, so there's no single project to keep — they'll be left unchanged.
+                            Undo and re-split those lines individually.
+                        </p>
+                    }
+                    <SearchSelect Options="@CostCenterOptions" WidthClass="w-full" Placeholder="Cost centre…"
+                                  @bind-Value="sendCostCenterCode" />
+                    <p class="text-xs text-content-subtle">
+                        Bills still awaiting approval have their new coding confirmed back to Xero;
+                        bills already approved in Xero are re-coded in JPMS only.
+                    </p>
+                </div>
+            }
+        </Modal>
+
         <Modal IsOpen="@(viewLine is not null)" Title="Invoice document" ShowFooter="false"
                OnCancel="CloseInvoiceView" Class="max-w-4xl">
             @if (viewLine is not null)
@@ -577,6 +638,14 @@ else
     private string? bucketFilter;
     private bool confirmAllocateMatched;
 
+    // -- Allocated-tab recode state --------------------------------------------
+    // "" = all projects. The filter narrows the Allocated tab to one project so
+    // its coding can be reviewed, selected and re-sent in bulk.
+    private string allocatedProjectFilter = "";
+    private bool sendToCostCentreOpen;
+    private string sendCostCenterCode = "";
+    private string? sendError;
+
     private bool isBusy => isSyncing || isRechecking || isApplying;
 
     private IReadOnlyList<XeroLedgerLine>? Lines => Ledger.Lines();
@@ -593,14 +662,14 @@ else
     private int page;
     private IReadOnlyList<XeroLedgerLine>? visibleCache;
     private (IReadOnlyList<XeroLedgerLine>? Lines, object Projects, string Search, XeroAllocationStatus Tab,
-             string? ProjectTab, string? Bucket) visibleCacheKey;
+             string? ProjectTab, string? Bucket, string AllocatedProject) visibleCacheKey;
 
     private IReadOnlyList<XeroLedgerLine> Visible
     {
         get
         {
             // Projects is in the key because GroupProjectFor validates against it.
-            var key = (Lines, (object)Projects, search, activeTab, activeProjectId, bucketFilter);
+            var key = (Lines, (object)Projects, search, activeTab, activeProjectId, bucketFilter, allocatedProjectFilter);
             if (visibleCache is null || key != visibleCacheKey)
             {
                 visibleCache = Lines is null
@@ -610,6 +679,9 @@ else
                                           || GroupProjectFor(line) == (activeProjectId ?? ""))
                            .Where(line => activeTab != XeroAllocationStatus.Bucketed
                                           || bucketFilter is null || line.Bucket == bucketFilter)
+                           .Where(line => activeTab != XeroAllocationStatus.Allocated
+                                          || allocatedProjectFilter == ""
+                                          || MatchesAllocatedProjectFilter(line))
                            .Where(MatchesSearch)
                            .ToList();
                 visibleCacheKey = key;
@@ -867,6 +939,114 @@ else
 
     private async Task BulkIgnoreAsync() =>
         await ApplyAsync(new SetXeroAllocation(selectedIds.ToList(), XeroAllocationAction.Ignore));
+
+    // -- Allocated-tab bulk recode ---------------------------------------------
+    // Undoing and re-coding one line at a time doesn't scale when a whole run of
+    // costs went to the wrong centre. The Allocated tab therefore multi-selects
+    // like the queue does, and "Send to cost centre" re-allocates the selection
+    // to one centre — each line keeping the project it's already on. The API
+    // allocates a batch to a single project + centre, so the selection is sent
+    // as one command per project. Re-allocating replaces any stored split, so a
+    // previously split line moves whole; the rare split spanning MULTIPLE
+    // projects has no line-level project to keep and is left unchanged (called
+    // out in the modal) rather than silently guessed at.
+
+    private IReadOnlyList<XeroLedgerLine> SelectedAllocated =>
+        selectedIds.Count == 0
+            ? Array.Empty<XeroLedgerLine>()
+            : Lines?.Where(line => line.AllocationStatus == XeroAllocationStatus.Allocated
+                                   && selectedIds.Contains(line.XeroLedgerLineId)).ToList()
+              ?? (IReadOnlyList<XeroLedgerLine>)Array.Empty<XeroLedgerLine>();
+
+    // A multi-project split's ProjectId is null (see XeroLedgerLine.Splits).
+    private IReadOnlyList<XeroLedgerLine> SendableSelected =>
+        SelectedAllocated.Where(line => line.ProjectId is not null).ToList();
+
+    private void OpenSendToCostCentre()
+    {
+        sendToCostCentreOpen = true;
+        sendCostCenterCode = "";
+        sendError = null;
+    }
+
+    private void CloseSendToCostCentre()
+    {
+        sendToCostCentreOpen = false;
+        sendError = null;
+    }
+
+    private async Task SendToCostCentreAsync()
+    {
+        if (isBusy || string.IsNullOrEmpty(sendCostCenterCode)) return;
+        var sendable = SendableSelected;
+        var skipped = SelectedAllocated.Count - sendable.Count;
+        if (sendable.Count == 0) return;
+
+        isApplying = true; sendError = null;
+        try
+        {
+            foreach (var group in sendable.GroupBy(line => line.ProjectId!))
+            {
+                var ids = group.Select(line => line.XeroLedgerLineId).ToList();
+                await Ledger.ApplyAsync(new SetXeroAllocation(
+                    ids, XeroAllocationAction.Allocate, group.Key, sendCostCenterCode));
+                // Cleared per group, not at the end: a failure part-way leaves
+                // exactly the unapplied lines selected for a retry.
+                foreach (var id in ids)
+                {
+                    selectedIds.Remove(id);
+                    chosenProject.Remove(id);
+                    chosenCostCenter.Remove(id);
+                    chosenBucket.Remove(id);
+                }
+            }
+            sendToCostCentreOpen = false;
+            syncMessage = $"{sendable.Count} {(sendable.Count == 1 ? "line" : "lines")} sent to {CostCenterText(sendCostCenterCode)}."
+                + (skipped > 0
+                    ? $" {skipped} selected lines span multiple projects and were left unchanged — undo and re-split those individually."
+                    : "");
+        }
+        catch (CommandFailedException failure) { sendError = failure.Message; }
+        finally { isApplying = false; }
+    }
+
+    private async Task BulkUndoAsync() =>
+        await ApplyAsync(new SetXeroAllocation(selectedIds.ToList(), XeroAllocationAction.Reset));
+
+    // The line-level project catches whole-line allocations and single-project
+    // splits (the API keeps the common project on the line); per-split projects
+    // catch a multi-project split any time one share belongs to the filter.
+    private bool MatchesAllocatedProjectFilter(XeroLedgerLine line) =>
+        line.ProjectId == allocatedProjectFilter
+        || (line.Splits?.Any(split => (split.ProjectId ?? line.ProjectId) == allocatedProjectFilter) ?? false);
+
+    private void OnAllocatedProjectFilterChanged(string? projectId)
+    {
+        allocatedProjectFilter = projectId ?? "";
+        page = 0;
+    }
+
+    private IReadOnlyList<SearchSelect.Option>? allocatedProjectFilterOptionsCache;
+    private object? allocatedProjectFilterOptionsCacheKey;
+
+    // ProjectOptions plus an explicit "All projects" entry so the filter can be
+    // cleared from inside the dropdown. Memoized on ProjectOptions' reference,
+    // same as the option lists it derives from.
+    private IReadOnlyList<SearchSelect.Option> AllocatedProjectFilterOptions
+    {
+        get
+        {
+            var options = ProjectOptions;
+            if (allocatedProjectFilterOptionsCache is null
+                || !ReferenceEquals(allocatedProjectFilterOptionsCacheKey, options))
+            {
+                allocatedProjectFilterOptionsCache =
+                    new[] { new SearchSelect.Option("", "All projects") }.Concat(options).ToList();
+                allocatedProjectFilterOptionsCacheKey = options;
+            }
+            return allocatedProjectFilterOptionsCache;
+        }
+    }
 
     private async Task BucketAsync(XeroLedgerLine line, string bucket) =>
         await ApplyAsync(new SetXeroAllocation(new[] { line.XeroLedgerLineId }, XeroAllocationAction.AllocateToBucket, Bucket: bucket));
@@ -1365,6 +1545,8 @@ else
         activeProjectId = tab == XeroAllocationStatus.Unallocated ? projectId : null;
         selectedIds.Clear();
         bucketFilter = null;
+        allocatedProjectFilter = "";
+        CloseSendToCostCentre();
         page = 0;
         // On a project tab every line is already pointed at that project, so
         // pre-arm the bulk bar's project with it.
@@ -1410,7 +1592,12 @@ else
         if (string.IsNullOrWhiteSpace(search)) return true;
         var term = search.Trim();
         return Contains(line.ContactName) || Contains(line.Description) || Contains(line.InvoiceNumber)
-            || Contains(line.Reference) || Contains(line.XeroSite) || Contains(line.XeroCostCode);
+            || Contains(line.Reference) || Contains(line.XeroSite) || Contains(line.XeroCostCode)
+            // Allocated lines also match on the centre(s) they were coded to —
+            // code or name (CostCenterText carries both) — so a mis-coded run
+            // can be found by where it landed, then re-sent in bulk.
+            || (line.CostCenterCode is not null && Contains(CostCenterText(line.CostCenterCode)))
+            || (line.Splits?.Any(split => Contains(CostCenterText(split.CostCenterCode))) ?? false);
 
         bool Contains(string? value) =>
             value is not null && value.Contains(term, StringComparison.OrdinalIgnoreCase);
