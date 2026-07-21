@@ -23,13 +23,20 @@ public sealed class ValuationReportAuthorisation
     private static readonly RoleSet RolesThatMayRecodeCostCentres =
         RoleSet.Of(JpmsRoles.Director, JpmsRoles.FinanceDirector, JpmsRoles.ProjectManager);
 
+    // Recording a claim entry sets a line's completion percentage — the commercial input
+    // that drives what is claimed this period. The Finance Director joins the valuation
+    // maintainers here (they own the financial output side of valuations) without gaining
+    // the wider bill-building / claim-lifecycle rights in RolesThatMayMaintainValuations.
+    private static readonly RoleSet RolesThatMayRecordClaimEntries =
+        RoleSet.Of(JpmsRoles.Director, JpmsRoles.ProjectManager, JpmsRoles.Estimator, JpmsRoles.FinanceDirector);
+
     private bool Allowed(SignedInUser user) => RolesThatMayMaintainValuations.IncludesAny(user.Roles);
 
     public bool Allows(SignedInUser user, AddValuationLineItem command) => Allowed(user);
     public bool Allows(SignedInUser user, UpdateValuationLineItem command) => Allowed(user);
     public bool Allows(SignedInUser user, RemoveValuationLineItem command) => Allowed(user);
     public bool Allows(SignedInUser user, StartValuationClaim command) => Allowed(user);
-    public bool Allows(SignedInUser user, RecordClaimEntry command) => Allowed(user);
+    public bool Allows(SignedInUser user, RecordClaimEntry command) => RolesThatMayRecordClaimEntries.IncludesAny(user.Roles);
     public bool Allows(SignedInUser user, PreapproveValuationClaim command) => Allowed(user);
     public bool Allows(SignedInUser user, ReopenValuationClaim command) => Allowed(user);
     public bool Allows(SignedInUser user, ConfirmValuationClaim command) => Allowed(user);

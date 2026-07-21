@@ -61,7 +61,8 @@ public sealed class ValuationSummaryFiguresTests
             PaymentDueExVat: paymentDueExVat);
 
     // Mirrors the By France Claim 18 shape: retention held at 5% of works complete, release
-    // at 2.5% of the revised contract sum, certified tracking the issued/paid invoices.
+    // held at £- until a release is separately confirmed (the By France report shows £- here),
+    // certified tracking the issued/paid invoices.
     [Fact]
     public void DraftClaim_computesLive_fromPercentCompleteAndInvoicedToDate()
     {
@@ -87,7 +88,9 @@ public sealed class ValuationSummaryFiguresTests
         var worksComplete = 0.92m * 1_780_455m + 215_737.58m;
         Assert.Equal(worksComplete, figures.TotalWorksComplete);
         Assert.Equal(worksComplete * 0.05m, figures.RetentionHeld);
-        Assert.Equal(1_996_192.58m * 0.025m, figures.RetentionReleased);
+        // Release is a separate confirmed event, never part of a live claim's payment due:
+        // 0 until confirmed, matching the frozen total on lock (ValuationClaimSummary).
+        Assert.Equal(0m, figures.RetentionReleased);
         Assert.Equal(figures.RetentionHeld - figures.RetentionReleased, figures.RetentionOutstanding);
         Assert.Equal(1_513_295.82m, figures.CertifiedToDate);
         Assert.Equal(

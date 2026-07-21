@@ -45,7 +45,13 @@ public sealed record ValuationSummaryFigures(
                 .Where(line => line.CountsTowardTotals)
                 .Sum(line => ValuationCalculations.CumulativeClaimed(PercentFor(entries, line), line.LineAmount));
             var retentionHeld = ValuationCalculations.RetentionHeld(totalWorksComplete, retentionPercent);
-            var retentionReleased = ValuationCalculations.RetentionReleased(revisedContractSum, retentionReleasePercent);
+            // Retention release is a separate, confirmed event (the Retention tab's "Confirm
+            // release"), never part of a claim's payment due: the server freezes RetentionReleased
+            // to 0 when the claim locks (ValuationClaimSummary) and the By France report shows
+            // £- here. Keep the live draft preview consistent with that so the footer can't add
+            // back a forecast release that hasn't happened yet — its forecast lives on the
+            // Retention & valuation tab (RetentionSchedule), which counts confirmed releases only.
+            const decimal retentionReleased = 0m;
             return new(
                 contractSum, netVariations, revisedContractSum, totalWorksComplete,
                 retentionPercent, retentionHeld, retentionReleasePercent, retentionReleased,
