@@ -51,6 +51,10 @@ public static class VariationsFeatureRegistration
         services.AddScoped<CancelVariationOrderAuthorisation>();
         services.AddScoped<CancelVariationOrderValidation>();
 
+        services.AddScoped<ICommandHandler<ReturnVoqToTendering, VariationOrderQuote>, ReturnVoqToTenderingHandler>();
+        services.AddScoped<ReturnVoqToTenderingAuthorisation>();
+        services.AddScoped<ReturnVoqToTenderingValidation>();
+
         services.AddScoped<ICommandHandler<ReviseVariationOrderValue, VariationOrder>, ReviseVariationOrderValueHandler>();
         services.AddScoped<ReviseVariationOrderValueAuthorisation>();
         services.AddScoped<ReviseVariationOrderValueValidation>();

@@ -260,6 +260,34 @@ else
                                 </div>
                             }
                         }
+                        @if (CanManage && vo.Status != VariationOrderStatus.Cancelled)
+                        {
+                            <div class="pt-3 border-t border-line space-y-2">
+                                @if (!returningToTendering)
+                                {
+                                    <button type="button" class="w-full text-xs text-content-subtle hover:text-negative underline underline-offset-2"
+                                            disabled="@busy" @onclick="() => returningToTendering = true">
+                                        Approved in error? Return to tendering…
+                                    </button>
+                                }
+                                else
+                                {
+                                    <p class="text-xs text-content-subtle">
+                                        Un-approves this variation: <span class="font-mono">@vo.VariationRef</span> is removed
+                                        (its number is freed for a future approval), its value comes off the Valuation Report,
+                                        CVR and cost-centre budget, and @voq.Reference returns to <span class="font-medium text-content">Tendering</span>.
+                                        For approvals that shouldn't have happened — a real cancellation should use Cancel so
+                                        the VO stays on the record. Blocked once work orders instruct it or value has been claimed.
+                                    </p>
+                                    <div class="flex gap-2">
+                                        <button type="button" class="btn-secondary w-full text-negative" disabled="@busy" @onclick="ReturnToTendering">
+                                            @(busy ? "Returning…" : "Confirm — return to tendering")
+                                        </button>
+                                        <button type="button" class="btn-secondary" disabled="@busy" @onclick="() => returningToTendering = false">Keep</button>
+                                    </div>
+                                }
+                            </div>
+                        }
                     </div>
                 }
                 else if (CanManage && voq.Status is not (VariationOrderQuoteStatus.Rejected or VariationOrderQuoteStatus.Approved))
@@ -289,6 +317,21 @@ else
                         <p class="text-xs text-content-subtle">Use a negative value for an omit — work removed from the contract scope.</p>
                         <button type="button" class="btn-primary w-full" disabled="@busy" @onclick="ApproveVoq">
                             @(isManualApproval ? "Approve manually & raise VO" : "Approve & raise VO")
+                        </button>
+                    </div>
+                }
+                else if (CanManage && voq.Status == VariationOrderQuoteStatus.Approved)
+                {
+                    @* Data anomaly: a VOQ marked Approved with no live VO behind it (e.g. partially
+                       seeded history, or its VO was cancelled). Offer the same repair route. *@
+                    <div class="panel p-5 space-y-3">
+                        <h3 class="eyebrow">Approved — no variation order</h3>
+                        <p class="text-xs text-content-subtle">
+                            This quote is marked Approved but no live variation order exists for it.
+                            Return it to Tendering to re-run the approval properly.
+                        </p>
+                        <button type="button" class="btn-secondary w-full" disabled="@busy" @onclick="ReturnToTendering">
+                            @(busy ? "Returning…" : "Return to tendering")
                         </button>
                     </div>
                 }
@@ -343,6 +386,8 @@ else
 
     private bool revisingValue;
     private string reviseValue = "";
+
+    private bool returningToTendering;
 
     private bool addingPackage;
     private string newTitle = "";
@@ -557,6 +602,23 @@ else
             await ReloadAsync();
         }
         catch { error = "Couldn't issue the variation order. Please try again."; }
+        finally { busy = false; }
+    }
+
+    private async Task ReturnToTendering()
+    {
+        if (busy) return;
+        error = null;
+        try
+        {
+            busy = true;
+            voq = await Variations.ReturnToTenderingAsync(VoqId);
+            vo = null;
+            returningToTendering = false;
+            await ReloadAsync(); // lineage bar drops the VO chip; the approve panel reappears
+        }
+        catch (CommandFailedException ex) { error = ex.Message; }
+        catch { error = "Couldn't return the VOQ to tendering. Please try again."; }
         finally { busy = false; }
     }
 

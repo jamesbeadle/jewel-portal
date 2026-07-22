@@ -32,6 +32,10 @@ public interface IVariationStore
 
     Task<VariationOrder?> GetVariationOrderByVoqAsync(string voqId, CancellationToken cancellationToken = default);
     Task<VariationOrder> ApproveVoqAsync(string voqId, string costCode, decimal? value, CancellationToken cancellationToken = default);
+
+    /// <summary>Un-approves a VOQ back to Tendering: deletes the live VO (freeing its V-ref) and
+    /// reverses what the approval wrote — for records approved in error (chiefly seeded history).</summary>
+    Task<VariationOrderQuote> ReturnToTenderingAsync(string voqId, CancellationToken cancellationToken = default);
     Task<VariationOrder> IssueVariationOrderAsync(string voId, CancellationToken cancellationToken = default);
     Task<VariationOrder> CancelVariationOrderAsync(string voId, CancellationToken cancellationToken = default);
 

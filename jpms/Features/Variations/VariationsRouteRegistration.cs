@@ -75,6 +75,11 @@ public static class VariationsRouteRegistration
             new CommandRoute("POST", "/api/voqs/{voqId}/approve",
                 command => $"/api/voqs/{((ApproveVariationOrderQuote)command).VariationOrderQuoteId}/approve"));
 
+        // Un-approves a VOQ back to Tendering — repairs seeded records approved in error.
+        commands.Register<ReturnVoqToTendering, VariationOrderQuote>(
+            new CommandRoute("POST", "/api/voqs/{voqId}/return-to-tendering",
+                command => $"/api/voqs/{((ReturnVoqToTendering)command).VariationOrderQuoteId}/return-to-tendering"));
+
         commands.Register<IssueVariationOrder, VariationOrder>(
             new CommandRoute("POST", "/api/variation-orders/{voId}/issue",
                 command => $"/api/variation-orders/{((IssueVariationOrder)command).VariationOrderId}/issue"));
