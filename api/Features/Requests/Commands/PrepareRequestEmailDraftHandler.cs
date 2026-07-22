@@ -65,12 +65,20 @@ public sealed class PrepareRequestEmailDraftHandler : ICommandHandler<PrepareReq
         if (model is null) throw new InvalidOperationException($"Request '{command.RequestId}' not found.");
 
         var pdf = RequestDocumentRenderer.Render(model);
+
+        // The workflow tag rides on the draft and survives the send, so the Sent Items copy self-
+        // associates with the record — and because this document opens a brand-new conversation,
+        // replies to it inherit the tag through the thread sweep instead of waiting in triage.
+        // Mirrors the worker's outbound send (MailboxActionWorker.SendRequestDocumentAsync).
+        var recordTag = TriageCategories.ForRecord(await RequestTags.StemAsync(context, request, cancellationToken));
+
         var draft = new MailboxDraftMessage(
             recipients.To.Select(ToDraftRecipient).ToList(),
             model.EmailSubject,
             BuildCoverNote(model),
             new[] { new MailboxDraftAttachment(model.FileName, "application/pdf", pdf) },
             Bcc: recipients.Bcc.Select(ToDraftRecipient).ToList(),
+            Categories: new[] { TriageCategories.Marker, recordTag },
             Cc: recipients.Cc.Select(ToDraftRecipient).ToList());
 
         var created = await graph.CreateDraftAsync(draft, cancellationToken);
