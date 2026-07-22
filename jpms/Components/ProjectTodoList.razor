@@ -1,6 +1,11 @@
 @using Jewel.JPMS.Contracts.Todos
 @inject ITodoStore Todos
+@inject IRequestRegister Requests
+@inject IVariationStore Variations
+@inject IDrawingStore Drawings
 @inject SessionService Session
+@inject NavigationManager Nav
+@implements IDisposable
 
 @*
     The project's to-do list, shown on the To-do tab. Items are added here directly or created
@@ -10,6 +15,14 @@
     detail including those notes, the item's linked emails read live by tag,
     and the actions: completing there moves the item to the Done section below, and delete lives
     there too. Full manage: add, complete/reopen, delete.
+
+    Keyword search: the search box filters the to-do items AND surfaces this project's related
+    records that match the keywords — requests (ref / kind / title / description), variations
+    (VOQs and VOs) and drawings — each row navigating to the record. Every whitespace-separated
+    keyword must match somewhere on a record (AND across keywords, case-insensitive), so
+    "canopy rfi" narrows rather than widens. Requests and drawings come from their cached
+    registers (refreshed on entry, stale-while-revalidate per the store convention); VOQs / VOs
+    are fetched once in the background when the tab loads.
 *@
 
 <div class="panel p-5">
@@ -42,16 +55,32 @@
     }
     else
     {
+        <div class="relative mb-4">
+            <input type="search" class="field w-full text-sm pr-8" placeholder="Search keywords — filters the list and finds related requests, variations and drawings"
+                   value="@search" @oninput="OnSearchInput" />
+            @if (HasQuery)
+            {
+                <button type="button" title="Clear search"
+                        class="absolute right-2 top-1/2 -translate-y-1/2 text-content-faint hover:text-content-muted text-sm leading-none"
+                        @onclick="ClearSearch">✕</button>
+            }
+        </div>
+
         @if (items.Count == 0)
         {
             <p class="text-sm text-content-subtle italic mb-4">No to-do items on this project yet.</p>
         }
         else
         {
-            var open = items.Where(i => !i.IsComplete).ToList();
-            var done = items.Where(i => i.IsComplete).ToList();
+            var visible = HasQuery ? items.Where(MatchesTodo).ToList() : items;
+            var open = visible.Where(i => !i.IsComplete).ToList();
+            var done = visible.Where(i => i.IsComplete).ToList();
 
-            @if (open.Count == 0)
+            @if (HasQuery && visible.Count == 0)
+            {
+                <p class="text-sm text-content-subtle italic mb-4">No to-do items match "@search".</p>
+            }
+            else if (open.Count == 0 && !HasQuery)
             {
                 <p class="text-sm text-content-subtle italic mb-4">Nothing open — every item is done.</p>
             }
@@ -117,6 +146,121 @@
             }
         }
 
+        @if (HasQuery)
+        {
+            var matchedRequests = MatchedRequests;
+            var matchedVoqs = MatchedVoqs;
+            var matchedVos = MatchedVos;
+            var matchedDrawings = MatchedDrawings;
+            var anyRelated = matchedRequests.Count + matchedVoqs.Count + matchedVos.Count + matchedDrawings.Count > 0;
+
+            <div class="border-t border-line pt-4 mt-2">
+                <h3 class="text-[11px] uppercase tracking-wider text-content-subtle font-semibold mb-2">Related records</h3>
+
+                @if (!anyRelated)
+                {
+                    <p class="text-sm text-content-subtle italic">
+                        @(relatedLoading ? "Looking for related records…" : $"No requests, variations or drawings on this project match \"{search}\".")
+                    </p>
+                }
+                else
+                {
+                    @if (matchedRequests.Count > 0)
+                    {
+                        <p class="text-xs text-content-subtle mb-2">Requests (@matchedRequests.Count)</p>
+                        <div class="space-y-2 mb-4">
+                            @foreach (var record in matchedRequests.Take(MaxRelated))
+                            {
+                                <button type="button" @key="record.RequestId" title="Open this request"
+                                        class="w-full rounded-lg border border-line px-3 py-2 text-left hover:border-line-strong hover:bg-surface-raised"
+                                        @onclick="() => OpenRequest(record)">
+                                    <p class="truncate text-sm text-content">
+                                        <span class="font-mono text-xs text-content-muted mr-2">@record.Reference</span>@record.Title
+                                    </p>
+                                    <div class="mt-1 flex items-center gap-x-3 overflow-hidden text-[11px] text-content-subtle">
+                                        <span class="whitespace-nowrap" title="@record.Kind.LongName()">@record.Kind.DisplayName()</span>
+                                        <span class="whitespace-nowrap">@RequestStatusLabel(record.Status)</span>
+                                        @if (!string.IsNullOrWhiteSpace(record.RaisedTo))
+                                        {
+                                            <span class="truncate">Raised to @record.RaisedTo</span>
+                                        }
+                                    </div>
+                                </button>
+                            }
+                        </div>
+                        @if (matchedRequests.Count > MaxRelated)
+                        {
+                            <p class="text-[11px] text-content-subtle mb-4">
+                                Showing @MaxRelated of @matchedRequests.Count — refine the keywords, or search from the
+                                <a class="underline underline-offset-2 hover:text-content-muted" href="@($"/projects/{ProjectId}/requests")">Requests tab</a>.
+                            </p>
+                        }
+                    }
+
+                    @if (matchedVoqs.Count > 0 || matchedVos.Count > 0)
+                    {
+                        <p class="text-xs text-content-subtle mb-2">Variations (@(matchedVoqs.Count + matchedVos.Count))</p>
+                        <div class="space-y-2 mb-4">
+                            @foreach (var voq in matchedVoqs.Take(MaxRelated))
+                            {
+                                <button type="button" @key="voq.VariationOrderQuoteId" title="Open this variation order quote"
+                                        class="w-full rounded-lg border border-line px-3 py-2 text-left hover:border-line-strong hover:bg-surface-raised"
+                                        @onclick="() => OpenVoq(voq.VariationOrderQuoteId)">
+                                    <p class="truncate text-sm text-content">
+                                        <span class="font-mono text-xs text-content-muted mr-2">@voq.Reference</span>@voq.Title
+                                    </p>
+                                    <div class="mt-1 flex items-center gap-x-3 overflow-hidden text-[11px] text-content-subtle">
+                                        <span class="whitespace-nowrap">VOQ · @voq.Status</span>
+                                    </div>
+                                </button>
+                            }
+                            @foreach (var vo in matchedVos.Take(MaxRelated))
+                            {
+                                <button type="button" @key="vo.VariationOrderId" title="Open the VOQ this variation order was approved from"
+                                        class="w-full rounded-lg border border-line px-3 py-2 text-left hover:border-line-strong hover:bg-surface-raised"
+                                        @onclick="() => OpenVoq(vo.VariationOrderQuoteId)">
+                                    <p class="truncate text-sm text-content">
+                                        <span class="font-mono text-xs text-content-muted mr-2">@vo.VariationRef</span>@vo.Title
+                                    </p>
+                                    <div class="mt-1 flex items-center gap-x-3 overflow-hidden text-[11px] text-content-subtle">
+                                        <span class="whitespace-nowrap">VO · @vo.Status</span>
+                                    </div>
+                                </button>
+                            }
+                        </div>
+                    }
+
+                    @if (matchedDrawings.Count > 0)
+                    {
+                        <p class="text-xs text-content-subtle mb-2">Drawings (@matchedDrawings.Count)</p>
+                        <div class="space-y-2 mb-4">
+                            @foreach (var drawing in matchedDrawings.Take(MaxRelated))
+                            {
+                                <button type="button" @key="drawing.DrawingId" title="Open this drawing"
+                                        class="w-full rounded-lg border border-line px-3 py-2 text-left hover:border-line-strong hover:bg-surface-raised"
+                                        @onclick="() => OpenDrawing(drawing)">
+                                    <p class="truncate text-sm text-content">
+                                        <span class="font-mono text-xs text-content-muted mr-2">@drawing.DrawingCode</span>@drawing.Title
+                                    </p>
+                                    <div class="mt-1 flex items-center gap-x-3 overflow-hidden text-[11px] text-content-subtle">
+                                        <span class="whitespace-nowrap">
+                                            @(string.IsNullOrEmpty(drawing.CurrentApprovedRevisionLabel) ? "No approved revision" : $"Rev {drawing.CurrentApprovedRevisionLabel} approved")
+                                        </span>
+                                    </div>
+                                </button>
+                            }
+                        </div>
+                        @if (matchedDrawings.Count > MaxRelated)
+                        {
+                            <p class="text-[11px] text-content-subtle mb-4">
+                                Showing @MaxRelated of @matchedDrawings.Count — refine the keywords, or use the
+                                <a class="underline underline-offset-2 hover:text-content-muted" href="@($"/projects/{ProjectId}/drawings")">Drawings tab</a>.
+                            </p>
+                        }
+                    }
+                }
+            </div>
+        }
     }
 </div>
 
@@ -169,6 +313,16 @@
     // a successful action closes it, and the refreshed list re-groups the item into Open/Done.
     private TodoItem? selected;
 
+    // Keyword search state. The query filters the to-do list and drives the "Related records"
+    // sections. Requests and drawings read synchronously from their cached stores; VOQs / VOs have
+    // no cached register, so they are fetched once in the background when the tab loads and held
+    // here for the session's stay on the tab.
+    private const int MaxRelated = 8;
+    private string search = "";
+    private IReadOnlyList<VariationOrderQuote> voqs = Array.Empty<VariationOrderQuote>();
+    private IReadOnlyList<VariationOrder> vos = Array.Empty<VariationOrder>();
+    private bool relatedLoading = true;
+
     // "Add a to-do item" modal state. The form lives in the modal; opening it starts from a clean
     // slate, and a successful add closes it.
     private bool addOpen;
@@ -185,8 +339,42 @@
 
     protected override async Task OnInitializedAsync()
     {
+        // Related-record sources for the keyword search. Refresh on entry per the store
+        // convention: cached requests/drawings serve matches immediately, then update when the
+        // background reload lands. VOQs / VOs load once alongside (no cached register to lean on).
+        Requests.OnChange += HandleRegisterChange;
+        Drawings.OnChange += HandleRegisterChange;
+        Requests.Refresh(ProjectId);
+        Drawings.Refresh(ProjectId);
+        _ = LoadVariationsAsync();
+
         await LoadAsync();
         if (CanManage) await LoadAssignableRolesAsync();
+    }
+
+    public void Dispose()
+    {
+        Requests.OnChange -= HandleRegisterChange;
+        Drawings.OnChange -= HandleRegisterChange;
+    }
+
+    private void HandleRegisterChange() => _ = InvokeAsync(StateHasChanged);
+
+    private async Task LoadVariationsAsync()
+    {
+        // A failed load simply leaves variations out of the search results rather than blocking
+        // the tab — requests and drawings still match.
+        try
+        {
+            voqs = await Variations.ListForProjectAsync(ProjectId);
+            vos = await Variations.ListVariationOrdersForProjectAsync(ProjectId);
+        }
+        catch { }
+        finally
+        {
+            relatedLoading = false;
+            await InvokeAsync(StateHasChanged);
+        }
     }
 
     private async Task LoadAssignableRolesAsync()
@@ -282,6 +470,56 @@
         catch { error = "That action didn't complete. Please try again."; }
         finally { busy = false; }
     }
+
+    // ---- Keyword search ------------------------------------------------------------------------
+
+    private bool HasQuery => !string.IsNullOrWhiteSpace(search);
+
+    private void OnSearchInput(ChangeEventArgs e) => search = e.Value?.ToString() ?? "";
+
+    private void ClearSearch() => search = "";
+
+    // Every whitespace-separated keyword must appear in at least one of the record's fields
+    // (case-insensitive) — AND across keywords so extra words narrow the results.
+    private bool MatchesKeywords(params string?[] fields)
+    {
+        var tokens = search.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        return tokens.All(token =>
+            fields.Any(field => field is not null && field.Contains(token, StringComparison.OrdinalIgnoreCase)));
+    }
+
+    private bool MatchesTodo(TodoItem item) => MatchesKeywords(item.Reference, item.Title, item.Notes);
+
+    private IReadOnlyList<Request> MatchedRequests =>
+        Requests.ForProject(ProjectId)
+            .Where(r => MatchesKeywords(r.Reference, r.DisplayNumber, r.Kind.DisplayName(), r.Kind.LongName(), r.Title, r.Description))
+            .ToList();
+
+    private IReadOnlyList<VariationOrderQuote> MatchedVoqs =>
+        voqs.Where(v => MatchesKeywords(v.Reference, v.DisplayNumber, v.Title, v.Description)).ToList();
+
+    private IReadOnlyList<VariationOrder> MatchedVos =>
+        vos.Where(v => MatchesKeywords(v.VariationRef, v.Title, v.Description)).ToList();
+
+    private IReadOnlyList<Drawing> MatchedDrawings =>
+        Drawings.DrawingsFor(ProjectId).Where(d => MatchesKeywords(d.DrawingCode, d.Title)).ToList();
+
+    private void OpenRequest(Request record) =>
+        Nav.NavigateTo($"/projects/{ProjectId}/requests/view/{record.RequestId}");
+
+    private void OpenVoq(string voqId) =>
+        Nav.NavigateTo($"/projects/{ProjectId}/voq/{voqId}");
+
+    private void OpenDrawing(Drawing drawing) =>
+        Nav.NavigateTo($"/projects/{ProjectId}/drawings/{drawing.DrawingId}");
+
+    private static string RequestStatusLabel(RequestStatus status) => status switch
+    {
+        RequestStatus.AwaitingResponse => "Awaiting response",
+        _ => status.ToString()
+    };
+
+    // --------------------------------------------------------------------------------------------
 
     private static bool IsOverdue(TodoItem item) =>
         !item.IsComplete && item.DueAt is not null && item.DueAt.Value < DateTimeOffset.Now.Date;
