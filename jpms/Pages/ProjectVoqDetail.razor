@@ -262,14 +262,34 @@ else
                         }
                     </div>
                 }
-                else if (CanManage && voq.Status == VariationOrderQuoteStatus.Selected)
+                else if (CanManage && voq.Status is not (VariationOrderQuoteStatus.Rejected or VariationOrderQuoteStatus.Approved))
                 {
+                    @* Approval runs from any pre-approved status. With a selected tender this is
+                       the normal end of the pipeline; without one it is a MANUAL approval — the
+                       route for historic (seeded) and client-instructed variations that never
+                       tendered through the app. The write-through (Valuation Report, CVR,
+                       cost-centre budget) is identical either way. *@
+                    var isManualApproval = voq.Status != VariationOrderQuoteStatus.Selected;
                     <div class="panel p-5 space-y-3">
-                        <h3 class="eyebrow">Approve &amp; raise Variation Order</h3>
-                        <p class="text-xs text-content-subtle">Approving writes the value into the Valuation Report, the CVR and the cost-centre budget.</p>
+                        <h3 class="eyebrow">@(isManualApproval ? "Approve manually & raise Variation Order" : "Approve & raise Variation Order")</h3>
+                        @if (isManualApproval)
+                        {
+                            <p class="text-xs text-content-subtle">
+                                No winning tender has been selected — approving here raises the VO without a
+                                subcontractor attached. The value still writes through to the Valuation Report,
+                                the CVR and the cost-centre budget, exactly like a tendered approval.
+                            </p>
+                        }
+                        else
+                        {
+                            <p class="text-xs text-content-subtle">Approving writes the value into the Valuation Report, the CVR and the cost-centre budget.</p>
+                        }
                         <FormField Label="Cost code" Value="@approveCostCode" OnChange="v => approveCostCode = v" Required="true" />
                         <FormField Label="Value (£)" Value="@approveValue" OnChange="v => approveValue = v" InputType="number" />
-                        <button type="button" class="btn-primary w-full" disabled="@busy" @onclick="ApproveVoq">Approve &amp; raise VO</button>
+                        <p class="text-xs text-content-subtle">Use a negative value for an omit — work removed from the contract scope.</p>
+                        <button type="button" class="btn-primary w-full" disabled="@busy" @onclick="ApproveVoq">
+                            @(isManualApproval ? "Approve manually & raise VO" : "Approve & raise VO")
+                        </button>
                     </div>
                 }
 
@@ -511,6 +531,11 @@ else
         error = null;
         if (string.IsNullOrWhiteSpace(approveCostCode)) { error = "A cost code is required to approve."; return; }
         decimal? value = decimal.TryParse(approveValue, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var parsed) ? parsed : null;
+        if (value is 0m || (value is null && voq?.EstimatedValue is null or 0m))
+        {
+            error = "Enter the agreed value — negative for an omit. A zero value cannot be approved.";
+            return;
+        }
         try
         {
             busy = true;

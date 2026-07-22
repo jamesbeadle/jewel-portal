@@ -9,4 +9,10 @@ internal static class VariationRoles
 {
     public static readonly RoleSet AllowedToManageVariations =
         RoleSet.Of(Role.Admin, JpmsRoles.Director, JpmsRoles.ProjectManager, JpmsRoles.Estimator);
+
+    // Approving a VOQ (raising the VO onto the contract figures) additionally belongs to the
+    // client — variations are ultimately the client's instruction to spend. Internal roles stay
+    // PM-and-above (plus QS, who prepares the commercial records the approval writes to).
+    public static readonly RoleSet AllowedToApproveVariations =
+        RoleSet.Of(Role.Admin, JpmsRoles.Director, JpmsRoles.ProjectManager, JpmsRoles.Estimator, JpmsRoles.Client);
 }

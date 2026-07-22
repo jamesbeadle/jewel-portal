@@ -26,7 +26,12 @@ public sealed class CreateVoqFromRfqHandler : ICommandHandler<CreateVoqFromRfq, 
             .AnyAsync(voq => voq.RequestId == command.RequestId, cancellationToken);
         if (existing) throw new InvalidOperationException("A VOQ already exists for this request.");
 
-        var nextNumber = (await context.VariationOrderQuotes.MaxAsync(voq => (int?)voq.Number, cancellationToken) ?? 0) + 1;
+        // Per-project numbering: every project runs its own VOQ sequence (references like
+        // "VOQ-0072" are only unique within a project — By France's seeded register already
+        // runs to VOQ-0076, and other projects must not continue that sequence).
+        var nextNumber = (await context.VariationOrderQuotes
+            .Where(other => other.ProjectId == request.ProjectId)
+            .MaxAsync(other => (int?)other.Number, cancellationToken) ?? 0) + 1;
 
         // Clamp to the entity's storage limits — the AI draft-review flow lets the user paste or
         // accept text the model was only asked (not guaranteed) to keep within bounds.
