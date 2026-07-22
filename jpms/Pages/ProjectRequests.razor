@@ -108,10 +108,10 @@ else
                     </p>
                     @if (UnlinkedRows.Count > 0)
                     {
-                        <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mt-2">
-                            @UnlinkedRows.Count variation@(UnlinkedRows.Count == 1 ? " isn't" : "s aren't") linked back to a
-                            request, so @(UnlinkedRows.Count == 1 ? "its" : "their") history can't be traced to an RFI —
-                            use <span class="font-semibold">Link…</span> on the row to attach the right one.
+                        <p class="rounded-lg bg-surface-raised border border-line px-3 py-2 text-sm text-content-muted mt-2">
+                            @UnlinkedRows.Count historic variation@(UnlinkedRows.Count == 1 ? " isn't" : "s aren't") linked back
+                            to a request yet — open a variation and attach the RFI it was raised from in its
+                            <span class="font-medium text-content">Originating request</span> panel.
                         </p>
                     }
                     break;
@@ -419,40 +419,14 @@ else
                                                title="@sourceRequest.Title"
                                                href="@($"/projects/{ProjectId}/requests/view/{sourceRequest.RequestId}")">@RefLabel(sourceRequest)</a>
                                         }
-                                        else if (linkingVoqId == row.Voq.VariationOrderQuoteId)
-                                        {
-                                            <div class="flex items-center gap-2" @onclick:stopPropagation="true">
-                                                <select class="field w-56 text-xs" @bind="linkTargetRequestId">
-                                                    <option value="">Choose a request…</option>
-                                                    @foreach (var candidate in LinkCandidates)
-                                                    {
-                                                        <option value="@candidate.RequestId">@RefLabel(candidate) — @candidate.Title</option>
-                                                    }
-                                                </select>
-                                                <button type="button" class="btn-primary text-xs px-2 py-1"
-                                                        disabled="@(linkBusy || string.IsNullOrWhiteSpace(linkTargetRequestId))"
-                                                        @onclick="() => ConfirmLink(row.Voq.VariationOrderQuoteId)">
-                                                    @(linkBusy ? "Linking…" : "Link")
-                                                </button>
-                                                <button type="button" class="text-xs text-content-subtle underline underline-offset-2"
-                                                        @onclick="CancelLink">Cancel</button>
-                                            </div>
-                                            @if (linkError is not null)
-                                            {
-                                                <p class="text-xs text-negative mt-1">@linkError</p>
-                                            }
-                                        }
                                         else
                                         {
-                                            @* Seeded rows predate the VOQ→request link — flag in red; fixing it is one click. *@
-                                            <span class="inline-flex items-center rounded bg-negative/10 border border-negative/30 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-negative"
-                                                  title="This variation has no request behind it — its history can't be traced to an RFI.">Not linked</span>
-                                            @if (CanManageVariations)
-                                            {
-                                                <button type="button" class="ml-2 text-xs text-accent underline underline-offset-2"
-                                                        title="Attach this variation to the request (RFI) it was raised from"
-                                                        @onclick="() => StartLink(row.Voq.VariationOrderQuoteId)">Link…</button>
-                                            }
+                                            @* Seeded rows predate the VOQ→request link. Kept quiet here — repairing
+                                               the link is done deliberately on the variation itself, so the badge
+                                               links through to the VOQ page's Originating-request panel. *@
+                                            <a class="inline-flex items-center rounded border border-line bg-surface-raised px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-content-subtle hover:text-content hover:border-content-subtle transition-colors"
+                                               title="No request behind this variation yet — open it to link the RFI it was raised from"
+                                               href="@($"/projects/{ProjectId}/voq/{row.Voq.VariationOrderQuoteId}")">No request</a>
                                         }
                                     </td>
                                     <td class="px-4 py-3 whitespace-nowrap">
@@ -814,62 +788,9 @@ else
                 group => new RequestTable.LinkedVoq(group.First().Voq.VariationOrderQuoteId, group.First().Reference),
                 StringComparer.OrdinalIgnoreCase);
 
-    // ---- Manual VOQ → request linking (repairs seeded rows) ------------------------------------
-
-    private string? linkingVoqId;
-    private string linkTargetRequestId = "";
-    private bool linkBusy;
-    private string? linkError;
-
-    // A request can carry at most one VOQ, so requests already linked are out; RFIs first — the
-    // stage a VOQ is normally raised from — then the rest of the register.
-    private List<Request> LinkCandidates
-    {
-        get
-        {
-            var taken = Rows
-                .Where(row => RequestFor(row.Voq) is not null)
-                .Select(row => row.Voq.RequestId)
-                .ToHashSet(StringComparer.OrdinalIgnoreCase);
-            return AllRecords
-                .Where(r => !taken.Contains(r.RequestId))
-                .OrderBy(r => r.Kind == RequestType.Rfi ? 0 : 1)
-                .ThenBy(r => ReferenceKey(r.Reference).Prefix, StringComparer.OrdinalIgnoreCase)
-                .ThenBy(r => ReferenceKey(r.Reference).Number)
-                .ToList();
-        }
-    }
-
-    private void StartLink(string voqId)
-    {
-        linkingVoqId = voqId;
-        linkTargetRequestId = "";
-        linkError = null;
-    }
-
-    private void CancelLink()
-    {
-        linkingVoqId = null;
-        linkTargetRequestId = "";
-        linkError = null;
-    }
-
-    private async Task ConfirmLink(string voqId)
-    {
-        if (linkBusy || string.IsNullOrWhiteSpace(linkTargetRequestId)) return;
-        linkError = null;
-        try
-        {
-            linkBusy = true;
-            await Variations.LinkToRequestAsync(voqId, linkTargetRequestId);
-            linkingVoqId = null;
-            linkTargetRequestId = "";
-            await LoadVariationsAsync(); // The row re-renders with its request chip in place.
-        }
-        catch (CommandFailedException ex) { linkError = ex.Message; }
-        catch { linkError = "Couldn't link the variation. Please try again."; }
-        finally { linkBusy = false; }
-    }
+    // VOQ → request linking now lives on the VOQ page's "Originating request" panel — the
+    // register only signposts it (the quiet "No request" badge links through), keeping the
+    // dashboard view clean.
 
     // ---- Subcontractor variation requests ----
 

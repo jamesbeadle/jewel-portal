@@ -34,6 +34,7 @@ public static class RecordLinksFeatureRegistration
 
         services.AddScoped<IQueryHandler<ListLinkableRecords, IReadOnlyList<LinkableRecord>>, ListLinkableRecordsHandler>();
         services.AddScoped<IQueryHandler<ListSchedulingEmails, IReadOnlyList<MailboxMessage>>, ListSchedulingEmailsHandler>();
+        services.AddScoped<IQueryHandler<ListRecordEmails, IReadOnlyList<MailboxMessage>>, ListRecordEmailsHandler>();
         services.AddScoped<IQueryHandler<ListProjectCommunications, ProjectCommunicationsPage>, ListProjectCommunicationsHandler>();
         services.AddScoped<ICommandHandler<LinkMessageToRecord, Acknowledgement>, LinkMessageToRecordHandler>();
         services.AddScoped<ICommandHandler<SyncRecordThreadTags, Acknowledgement>, SyncRecordThreadTagsHandler>();

@@ -24,6 +24,14 @@ public static class RecordLinksRouteRegistration
             new QueryRoute("/api/projects/{projectId}/scheduling/emails",
                 query => $"/api/projects/{((ListSchedulingEmails)query).ProjectId}/scheduling/emails"));
 
+        queries.Register<ListRecordEmails, IReadOnlyList<MailboxMessage>>(
+            new QueryRoute("/api/records/{type}/{recordId}/emails",
+                query =>
+                {
+                    var q = (ListRecordEmails)query;
+                    return $"/api/records/{q.Type}/{Uri.EscapeDataString(q.RecordId)}/emails";
+                }));
+
         queries.Register<ListProjectCommunications, ProjectCommunicationsPage>(
             new QueryRoute("/api/projects/{projectId}/communications",
                 query =>

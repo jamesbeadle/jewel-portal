@@ -139,3 +139,17 @@
 .loading-progress, .loading-progress-text {
     display: none;
 }
+
+/* "You are here" feedback: jpmsFocusElement (wwwroot/js/focus-element.js) scrolls a
+   panel into view and pulses its border/glow — used by the lineage bar's VO chip,
+   whose target lives on the same page. */
+@keyframes jpms-flash {
+    0%   { box-shadow: 0 0 0 0 rgb(87 224 138 / 0);    border-color: theme('colors.line.DEFAULT'); }
+    20%  { box-shadow: 0 0 0 4px rgb(87 224 138 / 0.35); border-color: rgb(87 224 138 / 0.7); }
+    60%  { box-shadow: 0 0 0 4px rgb(87 224 138 / 0.2);  border-color: rgb(87 224 138 / 0.5); }
+    100% { box-shadow: 0 0 0 0 rgb(87 224 138 / 0);    border-color: theme('colors.line.DEFAULT'); }
+}
+
+.jpms-flash {
+    animation: jpms-flash 1.5s ease-out 1;
+}

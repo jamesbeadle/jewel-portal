@@ -1,10 +1,13 @@
 @page "/projects/{ProjectId}/voq/{VoqId}"
+@using Jewel.JPMS.Contracts.RecordLinks
 @inject AuthService Auth
 @inject SessionService Session
 @inject IVariationStore Variations
 @inject ISubcontractorStore Subcontractors
 @inject IRequestRegister RequestRegister
+@inject IQueryClient Queries
 @inject NavigationManager Nav
+@inject IJSRuntime Js
 @implements IDisposable
 
 <PageTitle>Variation Order Quote · JPMS</PageTitle>
@@ -47,7 +50,8 @@ else
         <h2 class="text-xl font-semibold text-content mb-5">@voq.Title</h2>
 
         <RecordLineage ProjectId="@ProjectId" ActiveId="voq"
-                       Request="request" Voq="voq" Vo="vo" BidPackages="packages" />
+                       Request="request" Voq="voq" Vo="vo" BidPackages="packages"
+                       OnVoClick="FocusVariationOrderPanel" />
 
         @if (error is not null)
         {
@@ -103,6 +107,111 @@ else
                         </div>
                     }
                 </div>
+
+                @* ---- Originating request: repair the missing link on the record itself ----
+                       Seeded (historic) variations predate the VOQ→request link, so the lineage
+                       bar shows "No request". This is where the missing RFI/request gets attached
+                       — one deliberate pick on the record, not squeezed into the register. *@
+                @if (voq is not null && string.IsNullOrWhiteSpace(voq.RequestId))
+                {
+                    <div class="panel p-5">
+                        <h3 class="eyebrow mb-2">Originating request</h3>
+                        @if (CanManage)
+                        {
+                            <p class="text-sm text-content-muted mb-3">
+                                This variation isn't linked to the request (RFI) it was raised from — its history
+                                can't be traced yet. Pick the right one to complete the chain; the lineage bar
+                                above fills in as soon as it's linked.
+                            </p>
+                            <div class="flex flex-wrap items-center gap-2">
+                                <SearchSelect Options="@LinkCandidateOptions"
+                                              Value="@linkTargetRequestId"
+                                              ValueChanged="v => linkTargetRequestId = v"
+                                              Placeholder="Choose a request…"
+                                              WidthClass="w-full sm:w-96"
+                                              InputClass="bg-surface border border-line px-3 py-2"
+                                              Disabled="@linkBusy" />
+                                <button type="button" class="btn-primary"
+                                        disabled="@(linkBusy || string.IsNullOrWhiteSpace(linkTargetRequestId))"
+                                        @onclick="LinkToRequest">
+                                    @(linkBusy ? "Linking…" : "Link request")
+                                </button>
+                            </div>
+                            @if (linkError is not null)
+                            {
+                                <p class="text-xs text-negative mt-2">@linkError</p>
+                            }
+                            <p class="text-xs text-content-subtle mt-3">
+                                RFIs are listed first — the stage a VOQ is normally raised from. Requests already
+                                carrying a VOQ aren't offered (a request has at most one).
+                            </p>
+                        }
+                        else
+                        {
+                            <p class="text-sm text-content-subtle italic">
+                                This variation isn't linked to an originating request. A project manager or QS can
+                                attach the right RFI here.
+                            </p>
+                        }
+                    </div>
+                }
+
+                @* ---- Communications: the mail behind this record, read live by tag ----
+                       Emails tagged to the VOQ or its VO in mailbox triage appear here, so the
+                       correspondence behind the quote and the order is visible where the record
+                       lives — not only on the project's Communications tab. *@
+                <div class="panel p-5">
+                    <div class="flex items-center justify-between mb-3">
+                        <h3 class="eyebrow">Communications</h3>
+                        @if (emailsLoaded && emails.Count > 0)
+                        {
+                            <span class="inline-flex items-center rounded-full bg-accent/10 px-2 py-0.5 text-[11px] font-medium text-accent">@emails.Count</span>
+                        }
+                    </div>
+
+                    @if (emailsError is not null)
+                    {
+                        <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-3">@emailsError</p>
+                    }
+
+                    @if (!emailsLoaded)
+                    {
+                        <p class="text-sm text-content-subtle">Loading…</p>
+                    }
+                    else if (emails.Count == 0)
+                    {
+                        <p class="text-sm text-content-subtle italic">
+                            No emails are tagged to this variation yet. Tag an email to
+                            <span class="font-medium not-italic text-content">@voq?.Reference</span>@(vo is { } order ? $" or {order.VariationRef}" : "")
+                            in mailbox triage and it appears here.
+                        </p>
+                    }
+                    else
+                    {
+                        <ul class="space-y-2">
+                            @foreach (var email in emails)
+                            {
+                                <li class="rounded-lg border border-line bg-surface px-4 py-3">
+                                    <div class="flex flex-wrap items-center justify-between gap-2">
+                                        <span class="text-sm font-medium text-content">@(string.IsNullOrWhiteSpace(email.FromName) ? email.FromEmail : email.FromName)</span>
+                                        <span class="text-xs text-content-subtle">@email.ReceivedAt.LocalDateTime.ToString("d MMM yyyy, HH:mm")</span>
+                                    </div>
+                                    <p class="text-sm text-content mt-0.5">
+                                        @email.Subject
+                                        @if (email.HasAttachments)
+                                        {
+                                            <span class="ml-2 inline-flex items-center rounded bg-surface-raised border border-line px-1.5 py-0.5 text-[10px] text-content-subtle">attachment</span>
+                                        }
+                                    </p>
+                                    @if (!string.IsNullOrWhiteSpace(email.BodyPreview))
+                                    {
+                                        <p class="text-xs text-content-subtle mt-1 line-clamp-2">@email.BodyPreview</p>
+                                    }
+                                </li>
+                            }
+                        </ul>
+                    }
+                </div>
             </div>
 
             <div class="space-y-5">
@@ -115,7 +224,9 @@ else
 
                 @if (vo is not null)
                 {
-                    <div class="panel p-5 space-y-3">
+                    @* id anchors the lineage bar's VO chip: clicking it scrolls here and flashes
+                       the panel (jpmsFocusElement), so the click lands visibly. *@
+                    <div id="variation-order" class="panel p-5 space-y-3">
                         <h3 class="eyebrow">Variation Order</h3>
                         <p class="text-sm text-content">
                             <span class="font-mono font-semibold">@vo.VariationRef</span>
@@ -221,6 +332,17 @@ else
     private string selSubId = "";
     private string selValue = "";
 
+    // ---- Originating-request repair (the register's old inline Link… UI now lives here) ----
+    private string linkTargetRequestId = "";
+    private bool linkBusy;
+    private string? linkError;
+    private IReadOnlyList<VariationOrderQuote> projectQuotes = Array.Empty<VariationOrderQuote>();
+
+    // ---- Communications: emails tagged to the VOQ and (once raised) its VO ----
+    private bool emailsLoaded;
+    private string? emailsError;
+    private IReadOnlyList<MailboxMessage> emails = Array.Empty<MailboxMessage>();
+
     private string RequestHref => voq is null ? $"/projects/{ProjectId}/requests" : $"/projects/{ProjectId}/requests/view/{voq.RequestId}";
     private string PackageHref(string bidPackageId) => $"/projects/{ProjectId}/bid-package-invites/{bidPackageId}";
 
@@ -235,11 +357,40 @@ else
         if (!Auth.IsSignedIn) { Nav.NavigateTo("/login", forceLoad: true); return; }
         Subcontractors.OnChange += StateHasChanged;
         _ = Subcontractors.All(); // warm the directory cache for the tender dropdown
+        // Revalidate the request register in the background (stale-while-revalidate) — it feeds
+        // the originating-request picker for unlinked (seeded) VOQs.
+        RequestRegister.Refresh(ProjectId);
+        RequestRegister.OnChange += StateHasChanged;
         await ReloadAsync();
         isLoaded = true;
     }
 
-    public void Dispose() => Subcontractors.OnChange -= StateHasChanged;
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        // Arriving via a VO chip elsewhere in the app ("…/voq/{id}?focus=vo"): land focused on
+        // the Variation Order panel so the navigation visibly reaches the VO, not just the page.
+        if (firstRender && vo is not null && WantsVoFocus())
+            await FocusVariationOrderPanel();
+    }
+
+    private bool WantsVoFocus()
+    {
+        var query = new Uri(Nav.Uri).Query;
+        return query.Contains("focus=vo", StringComparison.OrdinalIgnoreCase);
+    }
+
+    // The lineage bar's VO chip on this page: the VO lives here, so scroll to and flash its panel.
+    private async Task FocusVariationOrderPanel()
+    {
+        try { await Js.InvokeVoidAsync("jpmsFocusElement", "variation-order"); }
+        catch { /* purely cosmetic — never let a scroll failure break the page */ }
+    }
+
+    public void Dispose()
+    {
+        Subcontractors.OnChange -= StateHasChanged;
+        RequestRegister.OnChange -= StateHasChanged;
+    }
 
     private async Task ReloadAsync()
     {
@@ -257,9 +408,81 @@ else
             }
             if (string.IsNullOrEmpty(approveValue) && voq?.EstimatedValue is { } est)
                 approveValue = est.ToString(System.Globalization.CultureInfo.InvariantCulture);
+            // The originating-request picker must not offer requests already carrying a VOQ
+            // (a request has at most one), so it needs the project's other quotes to exclude.
+            if (voq is not null && string.IsNullOrWhiteSpace(voq.RequestId))
+                projectQuotes = await Variations.ListForProjectAsync(ProjectId);
             error = null;
         }
         catch { error = "Couldn't load the variation order quote. Please try again."; }
+
+        await LoadEmailsAsync();
+    }
+
+    // The mail behind this record: everything tagged to the VOQ plus, once the VO is raised,
+    // everything tagged to the VO — one merged, newest-first list (an email tagged to both, e.g.
+    // a whole thread synced across the approval, appears once).
+    private async Task LoadEmailsAsync()
+    {
+        emailsError = null;
+        try
+        {
+            var tagged = new List<MailboxMessage>(
+                await Queries.AskAsync(new ListRecordEmails(RecordType.VariationQuote, VoqId), CancellationToken.None));
+            if (vo is not null)
+                tagged.AddRange(await Queries.AskAsync(new ListRecordEmails(RecordType.Variation, vo.VariationOrderId), CancellationToken.None));
+            emails = tagged
+                .GroupBy(email => string.IsNullOrEmpty(email.InternetMessageId) ? email.Id : email.InternetMessageId)
+                .Select(group => group.First())
+                .OrderByDescending(email => email.ReceivedAt)
+                .ToList();
+        }
+        catch
+        {
+            emails = Array.Empty<MailboxMessage>();
+            emailsError = "Couldn't load this variation's emails. Please try again.";
+        }
+        finally { emailsLoaded = true; }
+    }
+
+    // ---- Originating-request repair --------------------------------------------------------
+
+    // RFIs first — the stage a VOQ is normally raised from — then the rest of the register;
+    // requests already carrying a VOQ are out (a request has at most one).
+    private IReadOnlyList<SearchSelect.Option> LinkCandidateOptions
+    {
+        get
+        {
+            var taken = projectQuotes
+                .Where(quote => !string.IsNullOrWhiteSpace(quote.RequestId) && quote.VariationOrderQuoteId != VoqId)
+                .Select(quote => quote.RequestId)
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+            return RequestRegister.ForProject(ProjectId)
+                .Where(r => !taken.Contains(r.RequestId))
+                .OrderBy(r => r.Kind == RequestType.Rfi ? 0 : 1)
+                .ThenBy(r => r.Reference, StringComparer.OrdinalIgnoreCase)
+                .Select(r => new SearchSelect.Option(r.RequestId, $"{RefLabel(r)} — {r.Title}"))
+                .ToList();
+        }
+    }
+
+    private static string RefLabel(Request record) =>
+        string.IsNullOrWhiteSpace(record.Reference) ? record.DisplayNumber : record.Reference;
+
+    private async Task LinkToRequest()
+    {
+        if (linkBusy || string.IsNullOrWhiteSpace(linkTargetRequestId)) return;
+        linkError = null;
+        try
+        {
+            linkBusy = true;
+            await Variations.LinkToRequestAsync(VoqId, linkTargetRequestId);
+            linkTargetRequestId = "";
+            await ReloadAsync(); // the lineage bar re-renders with the request chip in place
+        }
+        catch (CommandFailedException ex) { linkError = ex.Message; }
+        catch { linkError = "Couldn't link the request. Please try again."; }
+        finally { linkBusy = false; }
     }
 
     private async Task AddPackage()

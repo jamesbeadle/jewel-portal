@@ -70,15 +70,20 @@
 
         <span class="text-content-subtle select-none" aria-hidden="true">→</span>
 
-        @* ---- VO (raised when the VOQ is approved; managed on the VOQ page) ---- *@
+        @* ---- VO (raised when the VOQ is approved; lives on the VOQ page — the quote and the
+               order are two stages of the same document). From other pages the chip navigates to
+               the VOQ page focused on the VO panel; on the VOQ page itself the host passes
+               OnVoClick so the click scrolls to and flashes the panel instead of re-navigating
+               to the URL you are already on. ---- *@
         @if (Vo is not null)
         {
-            <LineageChip Href="@VoqHref"
+            <LineageChip Href="@($"{VoqHref}?focus=vo")"
+                         OnClick="OnVoClick"
                          IsActive="@(ActiveId == "vo")"
                          Eyebrow="VO"
                          Label="@Vo.VariationRef"
                          Status="@Vo.Status.ToString()"
-                         Title="@($"{Vo.Title} — managed on the VOQ page")" />
+                         Title="@($"{Vo.Title} — the approved order raised from this quote")" />
         }
         else
         {
@@ -120,6 +125,10 @@
     [Parameter] public VariationOrderQuote? Voq { get; set; }
     [Parameter] public VariationOrder? Vo { get; set; }
     [Parameter] public IReadOnlyList<BidPackage>? BidPackages { get; set; }
+
+    /// <summary>Set by the VOQ page (where the VO panel lives): clicking the VO chip then scrolls
+    /// to and flashes the panel rather than navigating to the page you are already on.</summary>
+    [Parameter] public EventCallback OnVoClick { get; set; }
 
     private string RequestHref => Request is null ? "" : $"/projects/{ProjectId}/requests/view/{Request.RequestId}";
     private string VoqHref => Voq is null ? "" : $"/projects/{ProjectId}/voq/{Voq.VariationOrderQuoteId}";
