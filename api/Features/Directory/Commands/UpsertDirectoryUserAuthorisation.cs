@@ -7,5 +7,5 @@ namespace Jewel.JPMS.Api.Features.Directory.Commands;
 public sealed class UpsertDirectoryUserAuthorisation
 {
     public bool Allows(SignedInUser user, UpsertDirectoryUser command) =>
-        user.Roles.Contains(Role.Admin);
+        AdminGate.Allows(user);
 }

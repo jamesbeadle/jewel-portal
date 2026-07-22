@@ -7,5 +7,5 @@ namespace Jewel.JPMS.Api.Features.AccessRequests.Commands;
 public sealed class ResolveAccessRequestAuthorisation
 {
     public bool Allows(SignedInUser user, ResolveAccessRequest command) =>
-        user.Roles.Contains(Role.Admin);
+        AdminGate.Allows(user);
 }

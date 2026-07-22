@@ -7,5 +7,5 @@ namespace Jewel.JPMS.Api.Features.Directory.Commands;
 public sealed class RemoveDirectoryUserAuthorisation
 {
     public bool Allows(SignedInUser user, RemoveDirectoryUser command) =>
-        user.Roles.Contains(Role.Admin);
+        AdminGate.Allows(user);
 }

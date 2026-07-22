@@ -4,9 +4,9 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Jewel.JPMS.Api.Gates;
 
-/// <summary>Shared role resolution: master admins get every role, everyone else gets their directory roles.
-/// Finance Directors are also granted admin-equivalent access — holding the FinanceDirector role expands to
-/// every role (kept in sync with SignedInUserResolver.ResolveRolesAsync).</summary>
+/// <summary>Shared role resolution: master admins get every role, everyone else gets their directory
+/// roles. Finance Directors get admin-equivalent permissions via AdminGate, not role expansion
+/// (kept in sync with SignedInUserResolver.ResolveRolesAsync).</summary>
 public static class UserRoles
 {
     public static async Task<IReadOnlyList<Role>> ForAsync(JpmsContext context, string email, CancellationToken cancellationToken)
@@ -16,9 +16,10 @@ public static class UserRoles
             .Where(row => row.DirectoryUserEmail == email)
             .Select(row => (Role)row.Role)
             .ToListAsync(cancellationToken);
-        // Finance Directors are granted admin-equivalent access: holding the FinanceDirector
-        // role expands to every role, so an FD passes every gate exactly as a master admin does.
-        if (roles.Contains(Role.FinanceDirector)) return Enum.GetValues<Role>();
+        // Finance Directors keep their own identity: their role list stays exactly what the
+        // directory assigns. Admin-equivalent permissions are granted where they matter via
+        // AdminGate, not by rewriting the role list (which made the client treat FDs as
+        // admins and land them on the admin dashboard). Keep in sync with the other resolver.
         return roles;
     }
 }

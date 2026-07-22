@@ -35,7 +35,7 @@ public sealed class InviteUserEndpoint
 
         var signedInUser = await users.ResolveAsync(request, cancellationToken);
         if (signedInUser is null) return new UnauthorizedResult();
-        if (!signedInUser.Roles.Contains(Role.Admin)) return new StatusCodeResult(403);
+        if (!AdminGate.Allows(signedInUser)) return new StatusCodeResult(403);
 
         InviteUserRequest? body;
         try { body = await request.ReadFromJsonAsync<InviteUserRequest>(cancellationToken); }
