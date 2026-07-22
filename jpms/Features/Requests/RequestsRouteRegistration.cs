@@ -64,7 +64,7 @@ public static class RequestsRouteRegistration
                 query =>
                 {
                     var q = (ListInboxMessages)query;
-                    return $"/api/mailbox/inbox?cursor={Uri.EscapeDataString(q.Cursor ?? string.Empty)}&take={q.Take}";
+                    return $"/api/mailbox/inbox?cursor={Uri.EscapeDataString(q.Cursor ?? string.Empty)}&take={q.Take}&newestFirst={(q.NewestFirst ? "true" : "false")}";
                 }));
 
         queries.Register<ListDiscardedMessages, MailboxPage>(
@@ -72,7 +72,7 @@ public static class RequestsRouteRegistration
                 query =>
                 {
                     var q = (ListDiscardedMessages)query;
-                    return $"/api/mailbox/discarded?cursor={Uri.EscapeDataString(q.Cursor ?? string.Empty)}&take={q.Take}";
+                    return $"/api/mailbox/discarded?cursor={Uri.EscapeDataString(q.Cursor ?? string.Empty)}&take={q.Take}&newestFirst={(q.NewestFirst ? "true" : "false")}";
                 }));
 
         queries.Register<ListTaggedMessages, MailboxPage>(
@@ -81,7 +81,7 @@ public static class RequestsRouteRegistration
                 {
                     var q = (ListTaggedMessages)query;
                     var tags = q.Tags is null ? string.Empty : string.Join(",", q.Tags);
-                    return $"/api/mailbox/tagged?cursor={Uri.EscapeDataString(q.Cursor ?? string.Empty)}&take={q.Take}&tags={Uri.EscapeDataString(tags)}";
+                    return $"/api/mailbox/tagged?cursor={Uri.EscapeDataString(q.Cursor ?? string.Empty)}&take={q.Take}&tags={Uri.EscapeDataString(tags)}&newestFirst={(q.NewestFirst ? "true" : "false")}";
                 }));
 
         // An email's whole thread (every Inbox message sharing its Graph conversation id), for the

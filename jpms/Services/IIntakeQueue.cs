@@ -12,9 +12,11 @@ namespace Jewel.JPMS.Services;
 // a single mailbox move (discard, restore, link to a record, or create a record).
 public interface IIntakeQueue
 {
-    Task<MailboxPage> ListInboxLiveAsync(string? cursor = null, int take = 25, CancellationToken cancellationToken = default);
-    Task<MailboxPage> ListDiscardedLiveAsync(string? cursor = null, int take = 25, CancellationToken cancellationToken = default);
-    Task<MailboxPage> ListTaggedLiveAsync(string? cursor = null, int take = 25, IReadOnlyList<string>? tags = null, CancellationToken cancellationToken = default);
+    // newestFirst flips each list's read order; the default (false) reads oldest-first so the
+    // backlog clears from page one. The triage page persists the user's last choice.
+    Task<MailboxPage> ListInboxLiveAsync(string? cursor = null, int take = 25, bool newestFirst = false, CancellationToken cancellationToken = default);
+    Task<MailboxPage> ListDiscardedLiveAsync(string? cursor = null, int take = 25, bool newestFirst = false, CancellationToken cancellationToken = default);
+    Task<MailboxPage> ListTaggedLiveAsync(string? cursor = null, int take = 25, IReadOnlyList<string>? tags = null, bool newestFirst = false, CancellationToken cancellationToken = default);
 
     // An email's whole thread: every Inbox message sharing its Graph conversation id, oldest first,
     // regardless of tags. Backs the triage detail pane's thread panel — later replies often say how

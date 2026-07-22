@@ -17,12 +17,14 @@ namespace Jewel.JPMS.Api.Features.MailboxIntake.Graph;
 /// </summary>
 public interface IMailboxGraphClient
 {
-    /// <summary>One page of the triage queue: Inbox messages NOT tagged triaged, oldest first (so
-    /// the backlog is cleared from page one).</summary>
-    Task<MailboxPage> ListInboxAsync(string? cursor, int take, CancellationToken ct);
+    /// <summary>One page of the triage queue: Inbox messages NOT tagged triaged, oldest first by
+    /// default (so the backlog is cleared from page one); newestFirst flips the read for triagers
+    /// who want to see what's just arrived.</summary>
+    Task<MailboxPage> ListInboxAsync(string? cursor, int take, bool newestFirst, CancellationToken ct);
 
-    /// <summary>One page of the discarded pile: Inbox messages tagged discarded, oldest first.</summary>
-    Task<MailboxPage> ListDiscardedAsync(string? cursor, int take, CancellationToken ct);
+    /// <summary>One page of the discarded pile: Inbox messages tagged discarded, oldest first by
+    /// default; newestFirst flips the read.</summary>
+    Task<MailboxPage> ListDiscardedAsync(string? cursor, int take, bool newestFirst, CancellationToken ct);
 
     /// <summary>One page of the emails tagged to a specific record (its workflow tag), oldest first.
     /// This is how a record reads its associated emails live — no copies are stored. Spans the whole
@@ -30,9 +32,10 @@ public interface IMailboxGraphClient
     /// drafts never surface.</summary>
     Task<MailboxPage> ListByTagAsync(string tag, string? cursor, int take, CancellationToken ct);
 
-    /// <summary>One page of every tagged email (anything carrying the JPMS marker), oldest first —
-    /// the management surface for the Tagged tab. Mailbox-wide, drafts excluded.</summary>
-    Task<MailboxPage> ListTaggedAsync(string? cursor, int take, CancellationToken ct);
+    /// <summary>One page of every tagged email (anything carrying the JPMS marker), oldest first by
+    /// default (newestFirst flips it) — the management surface for the Tagged tab. Mailbox-wide,
+    /// drafts excluded.</summary>
+    Task<MailboxPage> ListTaggedAsync(string? cursor, int take, bool newestFirst, CancellationToken ct);
 
     /// <summary>Every message in one Graph conversation (the email + its replies/forwards), oldest
     /// first and regardless of tags — so a triage view can show an email's whole thread. Mailbox-wide:
@@ -42,8 +45,8 @@ public interface IMailboxGraphClient
     Task<MailboxPage> ListConversationAsync(string conversationId, CancellationToken ct);
 
     /// <summary>One page of emails carrying ANY of the given workflow tags (an OR filter), oldest
-    /// first — backs the Tagged tab's multi-select filter.</summary>
-    Task<MailboxPage> ListByTagsAsync(IReadOnlyList<string> tags, string? cursor, int take, CancellationToken ct);
+    /// first by default (newestFirst flips it) — backs the Tagged tab's multi-select filter.</summary>
+    Task<MailboxPage> ListByTagsAsync(IReadOnlyList<string> tags, string? cursor, int take, bool newestFirst, CancellationToken ct);
 
     /// <summary>Remove a single workflow tag from an email; if it was the last one, the email returns
     /// to the triage queue (the marker is dropped too). Verified by read-back.</summary>
@@ -168,15 +171,15 @@ public sealed record MailboxSnapshot(
 /// operations report failure (so the UI shows an error rather than a false success).</summary>
 public sealed class NullMailboxGraphClient : IMailboxGraphClient
 {
-    public Task<MailboxPage> ListInboxAsync(string? cursor, int take, CancellationToken ct) =>
+    public Task<MailboxPage> ListInboxAsync(string? cursor, int take, bool newestFirst, CancellationToken ct) =>
         Task.FromResult(new MailboxPage(Array.Empty<MailboxMessage>(), null, 0));
-    public Task<MailboxPage> ListDiscardedAsync(string? cursor, int take, CancellationToken ct) =>
+    public Task<MailboxPage> ListDiscardedAsync(string? cursor, int take, bool newestFirst, CancellationToken ct) =>
         Task.FromResult(new MailboxPage(Array.Empty<MailboxMessage>(), null, 0));
     public Task<MailboxPage> ListByTagAsync(string tag, string? cursor, int take, CancellationToken ct) =>
         Task.FromResult(new MailboxPage(Array.Empty<MailboxMessage>(), null, 0));
-    public Task<MailboxPage> ListTaggedAsync(string? cursor, int take, CancellationToken ct) =>
+    public Task<MailboxPage> ListTaggedAsync(string? cursor, int take, bool newestFirst, CancellationToken ct) =>
         Task.FromResult(new MailboxPage(Array.Empty<MailboxMessage>(), null, 0));
-    public Task<MailboxPage> ListByTagsAsync(IReadOnlyList<string> tags, string? cursor, int take, CancellationToken ct) =>
+    public Task<MailboxPage> ListByTagsAsync(IReadOnlyList<string> tags, string? cursor, int take, bool newestFirst, CancellationToken ct) =>
         Task.FromResult(new MailboxPage(Array.Empty<MailboxMessage>(), null, 0));
     public Task<MailboxPage> ListConversationAsync(string conversationId, CancellationToken ct) =>
         Task.FromResult(new MailboxPage(Array.Empty<MailboxMessage>(), null, 0));
@@ -229,27 +232,27 @@ public sealed class MailboxGraphClient : IMailboxGraphClient
     // correspondence: a sent message never arrives back in the Inbox, so an inbox-scoped read would
     // silently drop the outbound leg of every thread. Unsent drafts are excluded client-side.
 
-    public Task<MailboxPage> ListInboxAsync(string? cursor, int take, CancellationToken ct) =>
-        ListFilteredAsync($"not categories/any(c:c eq '{TriageCategories.Marker}')", cursor, take, inboxOnly: true, ct);
+    public Task<MailboxPage> ListInboxAsync(string? cursor, int take, bool newestFirst, CancellationToken ct) =>
+        ListFilteredAsync($"not categories/any(c:c eq '{TriageCategories.Marker}')", cursor, take, inboxOnly: true, newestFirst, ct);
 
-    public Task<MailboxPage> ListDiscardedAsync(string? cursor, int take, CancellationToken ct) =>
-        ListFilteredAsync($"categories/any(c:c eq '{TriageCategories.Discarded}')", cursor, take, inboxOnly: true, ct);
+    public Task<MailboxPage> ListDiscardedAsync(string? cursor, int take, bool newestFirst, CancellationToken ct) =>
+        ListFilteredAsync($"categories/any(c:c eq '{TriageCategories.Discarded}')", cursor, take, inboxOnly: true, newestFirst, ct);
 
     public Task<MailboxPage> ListByTagAsync(string tag, string? cursor, int take, CancellationToken ct) =>
-        ListFilteredAsync($"categories/any(c:c eq '{tag}')", cursor, take, inboxOnly: false, ct);
+        ListFilteredAsync($"categories/any(c:c eq '{tag}')", cursor, take, inboxOnly: false, newestFirst: false, ct);
 
-    public Task<MailboxPage> ListTaggedAsync(string? cursor, int take, CancellationToken ct) =>
-        ListFilteredAsync($"categories/any(c:c eq '{TriageCategories.Marker}')", cursor, take, inboxOnly: false, ct);
+    public Task<MailboxPage> ListTaggedAsync(string? cursor, int take, bool newestFirst, CancellationToken ct) =>
+        ListFilteredAsync($"categories/any(c:c eq '{TriageCategories.Marker}')", cursor, take, inboxOnly: false, newestFirst, ct);
 
-    public Task<MailboxPage> ListByTagsAsync(IReadOnlyList<string> tags, string? cursor, int take, CancellationToken ct)
+    public Task<MailboxPage> ListByTagsAsync(IReadOnlyList<string> tags, string? cursor, int take, bool newestFirst, CancellationToken ct)
     {
         if (tags.Count == 0)
-            return ListTaggedAsync(cursor, take, ct);
+            return ListTaggedAsync(cursor, take, newestFirst, ct);
         // OR the per-tag category filters: an email matching any selected tag is included. Single-quotes
         // in a category are escaped by doubling, per OData.
         var filter = string.Join(" or ",
             tags.Select(t => $"categories/any(c:c eq '{t.Replace("'", "''")}')"));
-        return ListFilteredAsync(filter, cursor, take, inboxOnly: false, ct);
+        return ListFilteredAsync(filter, cursor, take, inboxOnly: false, newestFirst, ct);
     }
 
     public async Task<MailboxPage> ListConversationAsync(string conversationId, CancellationToken ct)
@@ -286,7 +289,7 @@ public sealed class MailboxGraphClient : IMailboxGraphClient
         return new MailboxPage(items, null, items.Count);
     }
 
-    private async Task<MailboxPage> ListFilteredAsync(string filter, string? cursor, int take, bool inboxOnly, CancellationToken ct)
+    private async Task<MailboxPage> ListFilteredAsync(string filter, string? cursor, int take, bool inboxOnly, bool newestFirst, CancellationToken ct)
     {
         take = Math.Clamp(take, 1, 100);
 
@@ -301,9 +304,10 @@ public sealed class MailboxGraphClient : IMailboxGraphClient
         var collection = inboxOnly ? "mailFolders/inbox/messages" : "messages";
         var url = $"{GraphBase}/users/{Mailbox}/{collection}"
             + $"?$filter={Uri.EscapeDataString(filter)}"
-            // Oldest-first so triage users clear the backlog from page one instead of paging to the
-            // end. RecordEmailReader is unaffected: it re-sorts oldest-first after collecting pages.
-            + "&$orderby=receivedDateTime%20asc"
+            // Oldest-first by default so triage users clear the backlog from page one instead of
+            // paging to the end; the triage sort toggle flips this to newest-first. RecordEmailReader
+            // is unaffected: it re-sorts oldest-first after collecting pages.
+            + $"&$orderby=receivedDateTime%20{(newestFirst ? "desc" : "asc")}"
             + $"&$select={Summary}"
             + $"&$top={take}&$skip={skip}&$count=true";
 

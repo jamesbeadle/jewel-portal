@@ -19,14 +19,14 @@ public sealed class HttpIntakeQueue : IIntakeQueue
         this.commands = commands;
     }
 
-    public Task<MailboxPage> ListInboxLiveAsync(string? cursor = null, int take = 25, CancellationToken cancellationToken = default) =>
-        queries.AskAsync(new ListInboxMessages(cursor, take), cancellationToken);
+    public Task<MailboxPage> ListInboxLiveAsync(string? cursor = null, int take = 25, bool newestFirst = false, CancellationToken cancellationToken = default) =>
+        queries.AskAsync(new ListInboxMessages(cursor, take, newestFirst), cancellationToken);
 
-    public Task<MailboxPage> ListDiscardedLiveAsync(string? cursor = null, int take = 25, CancellationToken cancellationToken = default) =>
-        queries.AskAsync(new ListDiscardedMessages(cursor, take), cancellationToken);
+    public Task<MailboxPage> ListDiscardedLiveAsync(string? cursor = null, int take = 25, bool newestFirst = false, CancellationToken cancellationToken = default) =>
+        queries.AskAsync(new ListDiscardedMessages(cursor, take, newestFirst), cancellationToken);
 
-    public Task<MailboxPage> ListTaggedLiveAsync(string? cursor = null, int take = 25, IReadOnlyList<string>? tags = null, CancellationToken cancellationToken = default) =>
-        queries.AskAsync(new ListTaggedMessages(cursor, take, tags), cancellationToken);
+    public Task<MailboxPage> ListTaggedLiveAsync(string? cursor = null, int take = 25, IReadOnlyList<string>? tags = null, bool newestFirst = false, CancellationToken cancellationToken = default) =>
+        queries.AskAsync(new ListTaggedMessages(cursor, take, tags, newestFirst), cancellationToken);
 
     public Task<MailboxPage> ListConversationLiveAsync(string conversationId, CancellationToken cancellationToken = default) =>
         queries.AskAsync(new ListConversationMessages(conversationId), cancellationToken);

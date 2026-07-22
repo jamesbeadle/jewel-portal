@@ -65,7 +65,7 @@ public sealed class ListProjectCommunicationsHandler
         // read behind triage's Tagged tab — one simple clause) and intersect with the project's
         // tags here. The scan returns Total = 0, which the UI treats as "count unknown".
         var page = queryTags.Count <= MaxOrFilterTags
-            ? await graph.ListByTagsAsync(queryTags.ToList(), query.Cursor, query.Take, cancellationToken)
+            ? await graph.ListByTagsAsync(queryTags.ToList(), query.Cursor, query.Take, newestFirst: false, cancellationToken)
             : await ScanTaggedForAsync(queryTags, query.Cursor, query.Take, cancellationToken);
 
         var items = page.Items
@@ -104,7 +104,7 @@ public sealed class ListProjectCommunicationsHandler
         var next = cursor;
         for (var pages = 0; pages < MaxScanPages; pages++)
         {
-            var page = await graph.ListTaggedAsync(next, 100, cancellationToken);
+            var page = await graph.ListTaggedAsync(next, 100, newestFirst: false, cancellationToken);
             collected.AddRange(page.Items.Where(message => message.Categories.Any(projectTags.Contains)));
             next = page.NextCursor;
             if (next is null || collected.Count >= take) break;

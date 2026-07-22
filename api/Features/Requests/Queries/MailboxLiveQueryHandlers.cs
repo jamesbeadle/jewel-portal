@@ -22,7 +22,7 @@ public sealed class ListInboxMessagesHandler : IQueryHandler<ListInboxMessages, 
 
     public async Task<MailboxPage> HandleAsync(ListInboxMessages query, CancellationToken cancellationToken)
     {
-        var page = await graph.ListInboxAsync(query.Cursor, query.Take, cancellationToken);
+        var page = await graph.ListInboxAsync(query.Cursor, query.Take, query.NewestFirst, cancellationToken);
 
         var swept = await threadTagger.SweepQueuePageAsync(page.Items, cancellationToken);
         if (swept.Count == 0)
@@ -43,7 +43,7 @@ public sealed class ListDiscardedMessagesHandler : IQueryHandler<ListDiscardedMe
     public ListDiscardedMessagesHandler(IMailboxGraphClient graph) { this.graph = graph; }
 
     public Task<MailboxPage> HandleAsync(ListDiscardedMessages query, CancellationToken cancellationToken) =>
-        graph.ListDiscardedAsync(query.Cursor, query.Take, cancellationToken);
+        graph.ListDiscardedAsync(query.Cursor, query.Take, query.NewestFirst, cancellationToken);
 }
 
 /// <summary>Every tagged email (JPMS marker), or — when a Tag is given — just that one workflow.</summary>
@@ -54,8 +54,8 @@ public sealed class ListTaggedMessagesHandler : IQueryHandler<ListTaggedMessages
 
     public Task<MailboxPage> HandleAsync(ListTaggedMessages query, CancellationToken cancellationToken) =>
         query.Tags is { Count: > 0 } tags
-            ? graph.ListByTagsAsync(tags, query.Cursor, query.Take, cancellationToken)
-            : graph.ListTaggedAsync(query.Cursor, query.Take, cancellationToken);
+            ? graph.ListByTagsAsync(tags, query.Cursor, query.Take, query.NewestFirst, cancellationToken)
+            : graph.ListTaggedAsync(query.Cursor, query.Take, query.NewestFirst, cancellationToken);
 }
 
 /// <summary>An email's whole thread (every mailbox message sharing its Graph conversation id — the

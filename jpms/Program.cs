@@ -114,6 +114,7 @@ builder.Services.AddScoped<UserInviteService>();
 builder.Services.AddScoped<ActiveRoleStorage>();
 builder.Services.AddScoped<AllocationTabStorage>();
 builder.Services.AddScoped<WorkOrderGroupingStorage>();
+builder.Services.AddScoped<TriageSortStorage>();
 builder.Services.AddScoped<CurrentProjectService>();
 builder.Services.AddScoped<SessionService>();
 builder.Services.AddScoped<ExcelExportService>();

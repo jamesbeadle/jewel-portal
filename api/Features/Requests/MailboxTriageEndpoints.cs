@@ -66,8 +66,8 @@ public sealed class MailboxTriageEndpoints
         [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "mailbox/inbox")] HttpRequest request)
     {
         if (await Gate(request) is { } deny) return deny;
-        var (cursor, take) = Paging(request);
-        return new OkObjectResult(await listInbox.HandleAsync(new ListInboxMessages(cursor, take), request.HttpContext.RequestAborted));
+        var (cursor, take, newestFirst) = Paging(request);
+        return new OkObjectResult(await listInbox.HandleAsync(new ListInboxMessages(cursor, take, newestFirst), request.HttpContext.RequestAborted));
     }
 
     [Function(nameof(ListDiscardedMessages))]
@@ -75,8 +75,8 @@ public sealed class MailboxTriageEndpoints
         [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "mailbox/discarded")] HttpRequest request)
     {
         if (await Gate(request) is { } deny) return deny;
-        var (cursor, take) = Paging(request);
-        return new OkObjectResult(await listDiscarded.HandleAsync(new ListDiscardedMessages(cursor, take), request.HttpContext.RequestAborted));
+        var (cursor, take, newestFirst) = Paging(request);
+        return new OkObjectResult(await listDiscarded.HandleAsync(new ListDiscardedMessages(cursor, take, newestFirst), request.HttpContext.RequestAborted));
     }
 
     [Function(nameof(ListTaggedMessages))]
@@ -84,11 +84,11 @@ public sealed class MailboxTriageEndpoints
         [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "mailbox/tagged")] HttpRequest request)
     {
         if (await Gate(request) is { } deny) return deny;
-        var (cursor, take) = Paging(request);
+        var (cursor, take, newestFirst) = Paging(request);
         // Filter tags arrive comma-separated in the "tags" query param (e.g. "JPMS/RFI-001,JPMS/Discarded").
         var tags = request.Query["tags"].ToString()
             .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-        var query = new ListTaggedMessages(cursor, take, tags.Length == 0 ? null : tags);
+        var query = new ListTaggedMessages(cursor, take, tags.Length == 0 ? null : tags, newestFirst);
         return new OkObjectResult(await listTagged.HandleAsync(query, request.HttpContext.RequestAborted));
     }
 
@@ -222,11 +222,14 @@ public sealed class MailboxTriageEndpoints
         return null;
     }
 
-    private static (string? Cursor, int Take) Paging(HttpRequest request)
+    private static (string? Cursor, int Take, bool NewestFirst) Paging(HttpRequest request)
     {
         var cursor = request.Query["cursor"].ToString();
         var take = int.TryParse(request.Query["take"], out var t) ? t : 25;
-        return (string.IsNullOrWhiteSpace(cursor) ? null : cursor, take);
+        // Sort order travels as "newestFirst=true|false"; anything else (or absent) means the
+        // default oldest-first read.
+        var newestFirst = bool.TryParse(request.Query["newestFirst"], out var n) && n;
+        return (string.IsNullOrWhiteSpace(cursor) ? null : cursor, take, newestFirst);
     }
 
     private static async Task<T?> ReadBody<T>(HttpRequest request) where T : class

@@ -7,6 +7,7 @@
 @inject SessionService Session
 @inject NavigationManager Nav
 @inject IIntakeQueue Intake
+@inject TriageSortStorage SortStorage
 @inject ITodoStore Todos
 @inject IRequestRegister RequestRegister
 @inject IDrawingStore DrawingStore
@@ -321,9 +322,20 @@ else
             }
         </header>
 
-        <div class="flex gap-2 mb-6 border-b border-line">
+        <div class="flex items-center gap-2 mb-6 border-b border-line">
             <button type="button" class="@ViewTabClass(QueueView.Active)" @onclick="() => SwitchView(QueueView.Active)">Queue</button>
             <button type="button" class="@ViewTabClass(QueueView.Tagged)" @onclick="() => SwitchView(QueueView.Tagged)">Tagged</button>
+            <div class="ml-auto mb-1.5 inline-flex rounded-lg border border-line-strong p-0.5 gap-0.5"
+                 title="Show the oldest or the newest emails first — your choice is remembered">
+                <button type="button" @onclick="() => SetSortAsync(newest: false)"
+                        class="rounded-md text-xs px-2.5 py-1.5 transition @(!newestFirst ? "bg-accent text-accent-ink font-medium" : "text-content-muted hover:bg-surface-raised")">
+                    Oldest first
+                </button>
+                <button type="button" @onclick="() => SetSortAsync(newest: true)"
+                        class="rounded-md text-xs px-2.5 py-1.5 transition @(newestFirst ? "bg-accent text-accent-ink font-medium" : "text-content-muted hover:bg-surface-raised")">
+                    Newest first
+                </button>
+            </div>
         </div>
 
         @if (loadError is not null)
@@ -1319,6 +1331,10 @@ else
     private bool filterOpen;
     private readonly SortedSet<string> knownTags = new(StringComparer.OrdinalIgnoreCase) { "JPMS/Discarded" };
 
+    // Sort order for all three lists: oldest-first (the default — clear the backlog from page one)
+    // or newest-first. The last choice is remembered per user, like the work-order grouping toggle.
+    private bool newestFirst;
+
     private MailboxMessage? selected;
     private MailboxMessageDetail? detail;
     private bool detailLoading;
@@ -1462,6 +1478,7 @@ else
         if (!Auth.IsSignedIn) { Nav.NavigateTo("/login", forceLoad: true); return; }
         RequestRegister.OnChange += StateHasChanged;
         DrawingStore.OnChange += StateHasChanged;
+        newestFirst = await SortStorage.ReadNewestFirstAsync(Auth.CurrentUser!.Email);
         await Projects.RefreshAsync(CancellationToken.None);
         await LoadAsync();
         await LoadUnassignedAsync();
@@ -1484,6 +1501,26 @@ else
         else { ResetQueuePaging(); await LoadAsync(); }
     }
 
+    // Flip the sort order, remember the choice, and re-read the visible list from page one (an
+    // offset cursor from one order is meaningless in the other). Selection is cleared like a view
+    // switch: the previously open email may not even be on the new first page.
+    private async Task SetSortAsync(bool newest)
+    {
+        if (newestFirst == newest) return;
+        newestFirst = newest;
+        if (Auth.CurrentUser is not null)
+            await SortStorage.WriteAsync(Auth.CurrentUser.Email, newest);
+        selected = null;
+        detail = null;
+        detailLoading = false;
+        mode = TriageMode.None;
+        actionError = null;
+        replyOutcome = null;
+        if (view == QueueView.Discarded) { ResetDiscardedPaging(); await LoadDiscardedAsync(); }
+        else if (view == QueueView.Tagged) { ResetTaggedPaging(); await LoadTaggedAsync(); }
+        else { ResetQueuePaging(); await LoadAsync(); }
+    }
+
     private void ResetQueuePaging() { queueCursors = new() { null }; queueIndex = 0; queueNext = null; }
     private void ResetDiscardedPaging() { discardedCursors = new() { null }; discardedIndex = 0; discardedNext = null; }
     private void ResetTaggedPaging() { taggedCursors = new() { null }; taggedIndex = 0; taggedNext = null; }
@@ -1494,7 +1531,7 @@ else
         listLoading = true;
         try
         {
-            var result = await Intake.ListInboxLiveAsync(queueCursors[queueIndex], PageSize);
+            var result = await Intake.ListInboxLiveAsync(queueCursors[queueIndex], PageSize, newestFirst);
             items = result.Items;
             total = result.Total;
             queueNext = result.NextCursor;
@@ -1521,7 +1558,7 @@ else
         listLoading = true;
         try
         {
-            var result = await Intake.ListDiscardedLiveAsync(discardedCursors[discardedIndex], PageSize);
+            var result = await Intake.ListDiscardedLiveAsync(discardedCursors[discardedIndex], PageSize, newestFirst);
             discardedItems = result.Items;
             discardedTotal = result.Total;
             discardedNext = result.NextCursor;
@@ -1576,7 +1613,7 @@ else
         try
         {
             var filter = selectedTags.Count == 0 ? null : selectedTags.ToList();
-            var result = await Intake.ListTaggedLiveAsync(taggedCursors[taggedIndex], PageSize, filter);
+            var result = await Intake.ListTaggedLiveAsync(taggedCursors[taggedIndex], PageSize, filter, newestFirst);
             taggedItems = result.Items;
             taggedTotal = result.Total;
             taggedNext = result.NextCursor;
