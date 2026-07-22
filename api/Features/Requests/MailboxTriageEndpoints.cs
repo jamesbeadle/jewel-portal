@@ -23,7 +23,6 @@ public sealed class MailboxTriageEndpoints
     private readonly IQueryHandler<ListTaggedMessages, MailboxPage> listTagged;
     private readonly IQueryHandler<ListConversationMessages, MailboxPage> listConversation;
     private readonly IQueryHandler<GetMailboxMessageDetail, MailboxMessageDetail> detail;
-    private readonly IQueryHandler<RecommendTriageAction, TriageRecommendation> recommend;
     private readonly ICommandHandler<DiscardMessage, Acknowledgement> discard;
     private readonly ICommandHandler<RestoreMessage, Acknowledgement> restore;
     private readonly ICommandHandler<RemoveTagFromMessage, Acknowledgement> removeTag;
@@ -38,7 +37,6 @@ public sealed class MailboxTriageEndpoints
         IQueryHandler<ListTaggedMessages, MailboxPage> listTagged,
         IQueryHandler<ListConversationMessages, MailboxPage> listConversation,
         IQueryHandler<GetMailboxMessageDetail, MailboxMessageDetail> detail,
-        IQueryHandler<RecommendTriageAction, TriageRecommendation> recommend,
         ICommandHandler<DiscardMessage, Acknowledgement> discard,
         ICommandHandler<RestoreMessage, Acknowledgement> restore,
         ICommandHandler<RemoveTagFromMessage, Acknowledgement> removeTag,
@@ -52,7 +50,6 @@ public sealed class MailboxTriageEndpoints
         this.listTagged = listTagged;
         this.listConversation = listConversation;
         this.detail = detail;
-        this.recommend = recommend;
         this.discard = discard;
         this.restore = restore;
         this.removeTag = removeTag;
@@ -114,20 +111,6 @@ public sealed class MailboxTriageEndpoints
         var imid = request.Query["imid"].ToString();
         var query = new GetMailboxMessageDetail(id, string.IsNullOrWhiteSpace(imid) ? null : imid);
         return new OkObjectResult(await detail.HandleAsync(query, request.HttpContext.RequestAborted));
-    }
-
-    // Ask Claude to read the email's thread and recommend the next triage action. Advisory read
-    // only; returns { available: false } when the AI feature is unconfigured or the call fails.
-    [Function(nameof(RecommendTriageAction))]
-    public async Task<IActionResult> Recommend(
-        [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "mailbox/message/recommend")] HttpRequest request)
-    {
-        if (await Gate(request) is { } deny) return deny;
-        var id = request.Query["id"].ToString();
-        if (string.IsNullOrWhiteSpace(id)) return new BadRequestObjectResult("id is required.");
-        string? Opt(string name) { var v = request.Query[name].ToString(); return string.IsNullOrWhiteSpace(v) ? null : v; }
-        var query = new RecommendTriageAction(id, Opt("imid"), Opt("cid"), Opt("subject"), Opt("from"), Opt("fromName"));
-        return new OkObjectResult(await recommend.HandleAsync(query, request.HttpContext.RequestAborted));
     }
 
     [Function(nameof(DiscardMessage))]

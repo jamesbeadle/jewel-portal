@@ -1,7 +1,8 @@
 # Pathway split — Client / Subcontractor / Internal: platform flow analysis
 
-Status: **Proposed — extends and partially supersedes `docs/Communication-Buckets-Plan.md`.**
-Date: 2026-07-22.
+Status: **Agreed — extends and partially supersedes `docs/Communication-Buckets-Plan.md`.**
+Date: 2026-07-22 (v2 — review decisions folded in; the five open questions are resolved and the
+"Recommend action" AI feature has been removed from the build).
 
 `Communication-Buckets-Plan.md` designed the *tag mechanics* (bucket categories, stamping,
 backfill). This document takes the wider brief: triage becomes a **first-stage router** that
@@ -145,14 +146,25 @@ The triage detail pane gains a **pathway selector as the first control** — thr
 options (Client / Subcontractor / Internal). Selecting one:
 
 1. filters the action list to that pathway's actions (Client → create/link request, link VO/VOQ,
-   link valuation-side cost centre, reply-in-thread; Subcontractor → create/link bid package,
-   link work order, link subcontract cost centre; Internal → create to-do(s), link scheduling/
-   programme, link LAD prep material);
+   link programme/LAD, link valuation-side cost centre, reply-in-thread; Subcontractor →
+   create/link bid package, link work order, link subcontract cost centre; Internal → create
+   to-do(s));
 2. shows the consequence line from the buckets plan ("This thread will be filed under
-   **Client**");
-3. pre-seeds the AI recommendation: `RecommendTriageActionHandler` already classifies sender
-   role (client/architect/subcontractor/internal) — its output should now lead with a suggested
-   pathway, and the accept/override becomes an audit-visible pair (recommended vs chosen).
+   **Client**").
+
+The **triager's selection is authoritative** — the pathway stamped is always the one selected,
+never a silent record-type default. Record types constrain which pathways they can appear under
+(a request or VO can only be reached through Client; a BPI only through Subcontractor), and two
+record types pre-select a pathway when linked from the Tagged view: Programme (`SCH-`) and LAD
+(`LAD-`) pre-select **Client**. Cost-centre (`CC-`) mail pre-selects nothing — the triager's
+choice decides valuation-side (Client) vs subcontract-side (Subcontractor) per email.
+
+**The "Recommend action" AI feature is retired** (decision 2026-07-22): the "Suggest an action"
+button and its entire implementation (`RecommendTriageActionHandler`, the
+`RecommendTriageAction`/`TriageRecommendation` contracts, the `/api/mailbox/message/recommend`
+endpoint, the jpms service seam and the suggestion UI) have been removed from the codebase. The
+spec survives in `docs/triage-recommend-action-prompt.md` (marked retired) so it can be revived
+later — if it returns, its natural first output under this model is a suggested pathway.
 
 The pathway tag itself is still **derived, not free-standing**: it is stamped when the first
 record link/create happens (per the buckets plan mechanics), so an email can never carry a
@@ -175,8 +187,9 @@ the place to flip any of these one-liners.
     filed under Client; BPI-0004 would file it under Subcontractor. Start a new thread or
     forward the relevant content."), no override parameter exists on the wall.
   - **Subcontractor ↔ Internal conflict → reject by default; accept with an explicit
-    `AllowCrossPathway` flag** the UI sets only after a warning dialog. Both tags then coexist
-    and the override is an audit event with the actor recorded.
+    `AllowCrossPathway` flag** the UI sets only after a warning dialog. Both tags then coexist.
+    (A `CrossPathwayOverride` audit event is reserved for when the audit scope widens beyond
+    client-facing interactions — see §4.)
 - The Tagged view's "add another tag" picker shows each candidate record's pathway and visually
   separates the wall (client records simply not offered on a non-client thread, and vice versa)
   from the lane (offered with a warning glyph).
@@ -218,8 +231,13 @@ Two distinct needs from the brief, one mechanism:
 
 1. **Findability** — "all communications drafted by the portal should be recorded … so emails
    can be quickly found in Outlook."
-2. **Traceability** — "all pathways will record the triage event … this audit trail should be
-   all audit events."
+2. **Traceability** — the triage event onto a pathway is recorded so actions can be tracked.
+
+**Scope decision (2026-07-22): the audit trail records client-facing interactions only** —
+client requests, variation orders/quotes, and client-facing events (snapshots, drafted client
+correspondence, and any action that touches or is refused by the client wall). Subcontractor-
+and Internal-pathway events are out of scope for now; because every writer sits at a shared
+choke point, widening the scope later is a filter change, not a redesign.
 
 ### 4.2 Design: one append-only `AuditEvents` table
 
@@ -245,30 +263,28 @@ AuditEventEntity
   RecommendedAction  (nullable — what the AI suggested, for the recommend-vs-did loop)
 ```
 
-Event vocabulary (initial): `EmailTriaged` (pathway chosen via first link/create),
-`RecordLinked`, `RecordCreatedFromEmail`, `TagRemoved`, `Discarded`, `Restored`,
-`CrossPathwayOverride` (Sub↔Internal, actor + both pathways), `WallRejected` (attempted
-Client↔non-Client link — recording refusals is cheap and makes the conflict report largely a
-query), `DraftCreated` (every `CreateDraftAsync`/`CreateReplyDraftAsync` call: request
-documents, request replies, bid package invites, work-order emails), `ThreadSwept` (optional,
-low-value — see trade-offs), `BackfillStamped`.
+Event vocabulary (initial, client-facing scope): `EmailTriaged` (thread filed under Client via
+first link/create), `RecordLinked` / `RecordCreatedFromEmail` (client records: Request family,
+VO, VOQ), `TagRemoved` / `Discarded` / `Restored` (when the thread is Client-pathway),
+`WallRejected` (attempted Client↔non-Client link — recording refusals is cheap and makes the
+conflict report largely a query), `DraftCreated` (client-facing drafts: request documents
+RFI/NOD/EOT, request replies), `SnapshotTaken` (valuation report snapshot frozen when a
+valuation invoice is raised — see §5), `BackfillStamped` (client-pathway stamps only).
+Reserved for a later scope-widening, not written now: subcontractor/internal triage events,
+`CrossPathwayOverride`, bid-package/work-order `DraftCreated`, `ThreadSwept`.
 
 Writers — the choke points are already narrow, which is what makes this cheap:
 
-- `LinkMessageToRecordHandler` — `EmailTriaged`/`RecordLinked`/`CrossPathwayOverride`/`WallRejected`.
-- `CreateRequestFromMessageHandler`, `CreateBidPackageFromMessage`,
-  `CreateTodoItemsFromMessageHandler`, `ReplyInThreadFromMessageHandler` — `RecordCreatedFromEmail`.
-- `DiscardMessageHandler` / `RestoreMessageHandler` / `RemoveTagFromMessageHandler` —
-  `Discarded`/`Restored`/`TagRemoved`.
-- `MailboxActionWorker.SendRequestDocumentAsync`, `PrepareBidPackageInviteDraftHandler`,
-  `PrepareWorkOrderEmailDraftHandler`, `PrepareRequestReplyDraftHandler` — `DraftCreated`,
-  capturing the draft's Graph id + webLink at creation time. This is the findability half: the
-  audit register becomes the index into Outlook for everything the portal ever drafted.
-- The backfill endpoint — `BackfillStamped` per conversation.
-
-Non-writers, deliberately: the queue sweep's tag inheritance (`SweepQueuePageAsync`) fires on
-every queue listing and would flood the log with machine events; it stays out unless a real
-investigation need appears (`ThreadSwept` is reserved in the vocabulary but off by default).
+- `LinkMessageToRecordHandler` — `EmailTriaged`/`RecordLinked`/`WallRejected` (client-pathway).
+- `CreateRequestFromMessageHandler`, `ReplyInThreadFromMessageHandler` — `RecordCreatedFromEmail`.
+- `DiscardMessageHandler` / `RestoreMessageHandler` / `RemoveTagFromMessageHandler` — on
+  Client-pathway threads.
+- `MailboxActionWorker.SendRequestDocumentAsync`, `PrepareRequestReplyDraftHandler` —
+  `DraftCreated`, capturing the draft's Graph id + webLink at creation time. This is the
+  findability half: the audit register becomes the index into Outlook for everything the portal
+  drafts to the client side.
+- The snapshot capture on invoice raise — `SnapshotTaken`.
+- The backfill endpoint — `BackfillStamped` per client-pathway conversation.
 
 ### 4.3 Surfacing
 
@@ -292,10 +308,10 @@ client-facing correspondence trail, a different animal). The audit register is a
 |---|---|---|
 | **Triage queue** (`TriageQueue.razor`, mailbox handlers) | Router (nav: Internal folder) | Pathway-first action panel (§2.2); wall/lane guards (§2.3); every action writes audit events (§4). Queue view itself unchanged — untagged mail has no pathway by definition. |
 | **Requests + RFI/NOD/EOT + VOQ/VO** (`ProjectRequests.razor`, `ProjectRequestDetail.razor`, `ProjectVoqDetail.razor`, Requests feature) | **Client** | Becomes the Client folder's flagship register ("Requests"). General request = the default client container; promotion ladder untouched. VOs/VOQs remain inside the register (one lifecycle, as the current code comment says) — no separate nav entry. Reply/draft handlers gain the belt-and-braces Client-thread assertion. |
-| **Valuation report snapshots** (`ValuationReportSnapshotCapture`, `TakeValuationReportSnapshot`, list/get/delete) | **Client** | Gets its own page for the first time (today snapshots are reachable only through the valuation flow): a read-only register of frozen client-facing statements, `/projects/{id}/valuation-snapshots`. The Valuation Report working tab itself stays in Financials — the working document is internal; the snapshot is what the client sees. |
+| **Valuation report snapshots** (`ValuationReportSnapshotCapture`, `TakeValuationReportSnapshot`, list/get/delete) | **Client** | Confirmed direction (2026-07-22): **the live valuation report is never client-facing; only snapshots are.** A snapshot is frozen at the moment a valuation invoice is **raised** — the as-at-a-point-in-time statement — and attached to that invoice. (Today capture happens at invoice *submit*; the trigger moves to raise, keeping the supersede-on-amend behaviour.) New read-only register page `/projects/{id}/valuation-snapshots` lists each snapshot with its invoice; this is the page a client could one day be shown. The Valuation Report working tab stays in Financials — the working document is internal. |
 | **Bid package invites** (`ProjectBidPackageInvites.razor` + detail, Procurement feature) | **Subcontractor** | Nav home moves from Operations to the Subcontractor folder. Invite drafts stamp `JPMS/Subcontractor` alongside `JPMS/BPI-####` (worker parity via the linked `TriageCategories` include). Response mail inherits both via the sweep. |
 | **Work orders / WO allocation** (`ProjectWorkOrders.razor`, `ProjectWorkOrderAllocation.razor`, Commercial feature) | **Subcontractor** | Nav move only; award flow, Xero line linking and `WorkOrderCostApportionment` untouched. WO Allocation keeps its finance-flavoured role gate (see §6 gating). |
-| **Todos** (`ProjectTodos.razor`, flat `/todos`, Todos feature) | **Internal** | The Internal folder's "Todo" entry. Project todos + company-wide (`ProjectId == ""`) in one place — propose the entry routes to the project todos tab with a "Company-wide" toggle that surfaces the general list (the retired flat `/todos` page's query already exists: `ListAllTodoItems`). Todo links stay pathway-neutral (§2.1). |
+| **Todos** (`ProjectTodos.razor`, flat `/todos`, Todos feature) | **Internal** | Confirmed (2026-07-22): to-dos are always internal work, sometimes project-specific — so there are **two ways to see them**. Internal → Todo is the master list: every to-do (company-wide and project) with a **project filter** (the retired flat `/todos` browser revives as this page; `ListAllTodoItems` already exists). Project folder additionally keeps a To-do tab scoped to the selected project (today's `ProjectTodos.razor`, unchanged). Todo links stay pathway-neutral (§2.1). |
 | **Labour / Workers / My Day** (Labour feature) | **Internal** | Nav move only (Labour from Operations; Workers from Company). No mail interaction; no wall exposure (workers see hours, never £). |
 | **Drawings** (Drawings feature) | Project | Stays project-plumbing. Note for later: architect-issued drawings arrive by email through triage — those threads are Client-pathway (architect ≈ client side per the correspondence model), but the drawing register itself is pathway-agnostic. |
 | **Programme + LADs** (`ProjectProgramme.razor`, Scheduling/Lad records) | Project (mail → Client) | Tab stays in Project folder; `SCH-`/`LAD-` mail maps Client per the buckets plan ⚠ defaults (confirm at slice 1 as planned). |
@@ -305,7 +321,7 @@ client-facing correspondence trail, a different animal). The audit register is a
 | **Financials / Cashflow / Valuation Report / CVR** (Commercial, Cashflow features) | Financials | Nav regroup only. Valuation *invoices* keep their own audit trail. |
 | **Financial Summary / Cash Summary / Xero / Cost codes & Rates** (`FinanceOverview`, `CashSummary`, Xero feature, cost codes + rates) | Financials | Company-scoped entries join the Financials folder (§6). `WorkspaceSections` in-page sub-tabs (Xero: Allocation/Transactions; Setup: Cost codes/Rates) survive unchanged. Note: cost-centre *mail* splits by side — valuation-side → Client, subcontract-side → Subcontractor (the buckets plan's ⚠ on `CC-` becomes: the triager's pathway choice decides, rather than one global default; the mapping table's CC row changes from a fixed bucket to "ask the pathway selector"). |
 | **Directory (subs) / Clients / Architects / staff** (`Subcontractors.razor`, `Clients.razor`, `Architects.razor`, Directory feature) | Directory | Unified: one Directory page with filter chips — Clients, Architects, Subcontractors, Internal staff — replacing three nav entries and folding in the RBAC user list as the "Internal staff" filter. The underlying entities already converged (unified company directory with `DirectoryCategory`; Clients/Architects as first-class party entities; `DirectoryUser` for staff) — this is a presentation-layer merge, not an entity migration. Per-category detail panes keep their existing components (contacts/correspondence profile on Clients & Architects, compliance docs on Subcontractors). |
-| **Agents / AI** (`RecommendTriageActionHandler`, agent system) | Cross-cutting | Recommendation output gains a `SuggestedPathway`; recommended-vs-chosen lands in the audit trail — which incidentally builds the feedback corpus `triage-recommend-action-prompt.md` §7 wanted. |
+| **Agents / AI** (agent system, `IClaudeClient`) | Cross-cutting | The triage "Recommend action" feature is **removed** (see §2.2); `IClaudeClient` itself stays — it still powers VOQ drafting (`PrepareVoqDraftHandler`) and bid-quote extraction (`ExtractQuoteFromMessageHandler`). If recommendation returns later, it leads with a suggested pathway. |
 | **Retired routes** (`/agents`, `/rfis`, `/nurture`, `/sales-analytics`, `/estimating-queue`, `/my-day`) | — | Unchanged; still reachable by URL, still out of nav. `/my-day` remains the site-operative home. |
 
 ---
@@ -330,11 +346,13 @@ Home
     WO Allocation            → /projects/{p}/work-order-allocation
 ▸ Internal                   (mixed scope)
     Triage                   → /requests/triage                      (company)
-    Todo                     → /projects/{p}/todos                   (+ company-wide toggle)
+    Todo                     → /todos          (master list, all projects + company-wide,
+                                                with a project filter — revived page)
     Labour                   → /projects/{p}/labour
     Workers                  → /labour/workers                       (company)
     Audit Trail              → /audit                                (new page, company)
 ▸ Project                    (project-scoped)
+    To-do                    → /projects/{p}/todos    (project-specific view — 2nd way in)
     Drawings                 → /projects/{p}/drawings
     Programme                → /projects/{p}/programme
     Progress                 → /projects/{p}/progress
@@ -380,12 +398,19 @@ entries.
   company rows), and picking a project activates them. `ProjectDetail`'s redirect target
   (`ProjectSections.All[0].FirstTab`) follows the new first folder → first tab = Client →
   Requests, which is a sensible new default landing.
-- **Role gating per row, folder visible if any row is:** existing gates carry over exactly
-  (Triage: PM/FD; Cash Summary: MD/FD; Workers: MD/FD/PM; Directory: MD — widen to MD/PM if
-  the merged page should keep Clients/Architects reachable by PMs, since today PMs see those
-  two pages but not `/directory`; Financials rows: FinanceRoles; everything project-scoped:
-  ProjectRoles). The Client folder is staff-facing nav vocabulary — `Role.Client` still sees no
-  workspace at all.
+- **Role gating per row, folder visible if any row is:** existing gates carry over (Triage:
+  PM/FD; Cash Summary: MD/FD; Workers: MD/FD/PM; Financials rows: FinanceRoles; everything
+  project-scoped: ProjectRoles). **Directory: Admin, MD, FD, PM** (decision 2026-07-22 —
+  widened from MD-only so the merged page keeps Clients/Architects reachable by PMs and adds FD).
+- **The side panel is role-specific, and folders flatten for external roles** (decision
+  2026-07-22): a role sees only the folders it has any rows in, and a role whose whole world is
+  one folder sees that folder's *contents without the folder header* — a future client login
+  gets Requests and Valuation Report Snapshots as top-level items, never a folder labelled
+  "Client", and never any Subcontractor or Internal item; the subcontractor portal role likewise
+  sees only its own surfaces (today `/portal`). Internal staff see the folder headers because
+  they work across them. Mechanically: each folder and row carries `VisibleTo` as today, plus a
+  render rule — one visible folder → render rows flat. This is nav visibility; the API remains
+  the enforcement (and the wall makes the data behind it safe, §3).
 - `PageHeading`, `WorkspaceSectionNav`, breadcrumbs: unchanged mechanics, retargeted at the new
   catalog.
 
@@ -446,52 +471,57 @@ audited — and the buckets plan's ⚠ flag said exactly this needed a human cal
 
 ## 8. Build slices (extending the buckets plan's slices; each verified against the live mailbox)
 
+0. **Remove "Recommend action"** — ✅ done (2026-07-22): button, handler, contracts, endpoint
+   and service seam deleted; spec doc marked retired.
 1. **Tag plumbing + mapping** — unchanged from buckets plan slice 1 (`TriageCategories` bucket
    constants, `BucketFor`, `IsBucketTag`, queue-membership exclusions), plus: `BucketFor`
    returns "ask" for `CostCentre` (no auto-stamp; pathway comes from the triage choice), and
    the wall/lane distinction lands in the conflict rules.
-2. **Audit trail foundation** — `AuditEventEntity` + migration, `AuditTrail.Append`, writers in
-   the three discard/restore/remove handlers and `LinkMessageToRecordHandler` (they exist and
-   are narrow); `ListAuditEvents`; minimal `/audit` register page. Shipping this second means
-   every later slice's behaviour is observable from day one.
+2. **Audit trail foundation (client-facing scope)** — `AuditEventEntity` + migration,
+   `AuditTrail.Append`, writers in `LinkMessageToRecordHandler` and the discard/restore/remove
+   handlers for Client-pathway threads; `ListAuditEvents`; minimal `/audit` register page.
+   Shipping this second means every later slice's client-side behaviour is observable from day
+   one.
 3. **Stamp on link/create + wall & lane guards** — buckets plan slice 2 with the two-tier rule
-   (§2.3), `AllowCrossPathway` flag, `WallRejected`/`CrossPathwayOverride` events, worker
-   parity for outbound drafts (`DraftCreated` events + pathway category on invites, request
-   docs, replies, WO emails).
+   (§2.3), `AllowCrossPathway` flag (Sub↔Internal only), `WallRejected` events, worker parity
+   for outbound drafts (pathway category on invites, request docs, replies, WO emails;
+   `DraftCreated` audit events for the client-facing ones).
 4. **Backfill** — buckets plan slice 3 unchanged (dry-run first; conversations mapping to both
    sides of the wall go to the conflict report, never guessed), plus `BackfillStamped` events
    and mailbox master-category colours for the three pathway tags.
-5. **Triage UI: the router** — pathway selector + filtered action panel + consequence line +
-   AI `SuggestedPathway`; bucket chips/badges and guarded "add another tag" on the Tagged view.
-6. **Side panel folders** — catalog generalisation, collapsible headers, no-project disabled
-   state, `RoleHome` cards follow, `ProjectDetail` redirect retarget. Pure front-end; slugs
-   unchanged.
-7. **New pages + regrouped surfaces** — Valuation Report Snapshots register page; Todo
-   company-wide toggle; Communications pathway segmented control (server `Bucket` param);
-   unified Directory page with the four filter chips (fold `/clients` + `/architects` +
+5. **Triage UI: the router** — pathway selector first (Client / Subcontractor / Internal),
+   filtered action panel, consequence line, Programme/LAD pre-selecting Client; bucket
+   chips/badges and guarded "add another tag" on the Tagged view.
+6. **Side panel folders** — catalog generalisation, collapsible headers, role-specific
+   visibility with folder-flattening for external roles, no-project disabled state, `RoleHome`
+   cards follow, `ProjectDetail` redirect retarget. Pure front-end; slugs unchanged.
+7. **New pages + regrouped surfaces** — snapshot-on-invoice-raise + Valuation Report Snapshots
+   register page (with `SnapshotTaken` audit events); revived `/todos` master list with project
+   filter; Communications pathway segmented control (server `Bucket` param); unified Directory
+   page (Admin/MD/FD/PM) with the four filter chips (fold `/clients` + `/architects` +
    `/directory` + staff list; old routes redirect).
-8. **Copy pass + role-gate review** — "Client Requests" naming decisions (the buckets plan
-   proposed renaming the register; with a whole Client folder in the nav, the shorter "Requests"
-   inside it may now be enough — decide with the folder UI in front of us), Directory gate
-   widening (MD/PM), triage header copy.
+8. **Copy pass** — "Client Requests" naming decisions (with a whole Client folder in the nav,
+   the shorter "Requests" inside it may now be enough — decide with the folder UI in front of
+   us), triage header copy.
 
 Each slice is independently shippable; 1–4 are invisible-to-harmful-never (tags + log only),
 5–7 are the visible change, 8 is polish.
 
 ---
 
-## 9. Open questions
+## 9. Resolved questions (review of 2026-07-22)
 
-1. **Directory gate:** unified Directory folds in Clients/Architects, which PMs can see today,
-   but `/directory` is MD-only. Widen the merged page to MD/PM (with subcontractor compliance
-   detail possibly still MD-only), or keep MD-only and lose PM access to client/architect
-   contact books?
-2. **Valuation-snapshots page scope:** read-only register (list + open PDF/detail), or should
-   capture/supersede actions live there too (they currently sit in the invoice submit flow)?
-3. **Todo company-wide toggle vs restored flat page:** one toggle on the project tab, or bring
-   the retired `/todos` browser back as the Internal folder's Todo entry when no project is
-   selected?
-4. **`ThreadSwept` audit events:** off by default per §4.2 — confirm, or is sweep-level
-   traceability wanted for the wall's sake (a swept-in reply inherits the pathway silently)?
-5. **Buckets plan ⚠ defaults:** SCH-→Client and LAD-→Client still stand; CC- moves from a
-   global default to per-email choice (§5). Confirm all three at slice 1 as originally planned.
+1. **Directory gate:** widened to **Admin, MD, FD, PM** for the unified Directory page.
+2. **Valuation snapshots:** snapshot frozen when a valuation invoice is **raised**, attached to
+   that invoice; the live valuation report is never client-facing — only snapshots are. The new
+   page is the read-only register of those statements.
+3. **Todos:** two ways in — Internal → Todo is the master list of all to-dos with a project
+   filter (revived `/todos`); the Project folder keeps a project-scoped To-do tab.
+4. **Audit scope:** client-facing interactions only (client requests, VOs/VOQs, client-facing
+   events, wall refusals). Subcontractor/internal events reserved for a later widening.
+5. **Auto-file defaults:** the triager's pathway selection is always authoritative; Programme
+   and LAD links pre-select Client, cost-centre links pre-select nothing.
+
+Also decided in the same review: the side panel is role-specific with folder-flattening for
+external roles (§6.2), and the triage "Recommend action" AI feature is removed from the build
+(§2.2) until the pathway-first UX has bedded in.

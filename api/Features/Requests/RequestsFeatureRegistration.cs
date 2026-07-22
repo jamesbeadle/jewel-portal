@@ -36,8 +36,6 @@ public static class RequestsFeatureRegistration
         services.AddScoped<IQueryHandler<ListTaggedMessages, MailboxPage>, ListTaggedMessagesHandler>();
         services.AddScoped<IQueryHandler<ListConversationMessages, MailboxPage>, ListConversationMessagesHandler>();
         services.AddScoped<IQueryHandler<GetMailboxMessageDetail, MailboxMessageDetail>, GetMailboxMessageDetailHandler>();
-        // AI-assisted triage: Claude reads the thread and recommends the next action (advisory only).
-        services.AddScoped<IQueryHandler<RecommendTriageAction, TriageRecommendation>, RecommendTriageActionHandler>();
         services.AddScoped<ICommandHandler<DiscardMessage, Acknowledgement>, DiscardMessageHandler>();
         services.AddScoped<ICommandHandler<RestoreMessage, Acknowledgement>, RestoreMessageHandler>();
         services.AddScoped<ICommandHandler<RemoveTagFromMessage, Acknowledgement>, RemoveTagFromMessageHandler>();

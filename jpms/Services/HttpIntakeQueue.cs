@@ -34,11 +34,6 @@ public sealed class HttpIntakeQueue : IIntakeQueue
     public Task<MailboxMessageDetail> GetMessageDetailAsync(string messageId, string? internetMessageId, CancellationToken cancellationToken = default) =>
         queries.AskAsync(new GetMailboxMessageDetail(messageId, internetMessageId), cancellationToken);
 
-    public Task<TriageRecommendation> RecommendActionAsync(MailboxMessage message, CancellationToken cancellationToken = default) =>
-        queries.AskAsync(new RecommendTriageAction(
-            message.Id, message.InternetMessageId, message.ConversationId,
-            message.Subject, message.FromEmail, message.FromName), cancellationToken);
-
     public Task<Acknowledgement> DiscardMessageAsync(string messageId, string? internetMessageId, CancellationToken cancellationToken = default) =>
         commands.SendAsync(new DiscardMessage(messageId, internetMessageId), cancellationToken);
 

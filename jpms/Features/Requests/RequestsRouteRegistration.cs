@@ -98,21 +98,6 @@ public static class RequestsRouteRegistration
                     return $"/api/mailbox/message/detail?id={Uri.EscapeDataString(q.MessageId)}&imid={Uri.EscapeDataString(q.InternetMessageId ?? string.Empty)}";
                 }));
 
-        // AI-assisted triage: Claude reads the email's thread and recommends the next action. The
-        // subject/from travel along so the server can describe the email when it has no thread.
-        queries.Register<RecommendTriageAction, TriageRecommendation>(
-            new QueryRoute("/api/mailbox/message/recommend",
-                query =>
-                {
-                    var q = (RecommendTriageAction)query;
-                    return "/api/mailbox/message/recommend"
-                        + $"?id={Uri.EscapeDataString(q.MessageId)}"
-                        + $"&imid={Uri.EscapeDataString(q.InternetMessageId ?? string.Empty)}"
-                        + $"&cid={Uri.EscapeDataString(q.ConversationId ?? string.Empty)}"
-                        + $"&subject={Uri.EscapeDataString(q.Subject ?? string.Empty)}"
-                        + $"&from={Uri.EscapeDataString(q.FromEmail ?? string.Empty)}"
-                        + $"&fromName={Uri.EscapeDataString(q.FromName ?? string.Empty)}";
-                }));
 
         commands.Register<RaiseRequest, Request>(
             new CommandRoute("POST", "/api/projects/{projectId}/requests",

@@ -1,5 +1,9 @@
 # Triage "Recommend action" — rough Claude prompt
 
+Status: **Retired 2026-07-22.** The button and its full implementation (handler, contract,
+endpoint, UI) were removed pending the pathway-first triage redesign
+(`docs/Pathway-Split-Platform-Flow-Plan.md`). This doc is kept as the spec to revive from.
+
 Feature: a button on the triage screen that sends the selected email + full thread to Claude
 (via the existing `IClaudeClient.CompleteAsync(system, user, ct)` in `api/Features/Ai/ClaudeClient.cs`)
 and renders a summary box recommending what to do next.
