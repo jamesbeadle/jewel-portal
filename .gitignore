@@ -59,3 +59,6 @@ jpms/wwwroot/css/app.built.css
 
 # Subcontractor / company directory seed (third-party contact data — load via sqlcmd, never commit)
 scripts/seed-subcontractors.sql
+
+# Local scratch area for files the Claude bridge cannot delete
+_to_delete/
