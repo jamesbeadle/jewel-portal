@@ -49,7 +49,9 @@ else
                 <span>Show completed</span>
             </label>
             <ExportToExcelButton FileName="Projects"
-                                 Disabled="@(VisibleProjects.Count == 0)"
+                                 Disabled="@(ActiveProjects.Count == 0)"
+                                 ShowIncludeAllRows="@(!showCompleted)"
+                                 IncludeAllLabel="Include completed"
                                  BuildWorkbook="BuildExportWorkbook" />
         </div>
 
@@ -83,9 +85,11 @@ else
 
     private void CloseForm() => showForm = false;
 
-    private ExcelWorkbook? BuildExportWorkbook(bool _)
+    private ExcelWorkbook? BuildExportWorkbook(bool includeCompleted)
     {
-        var projects = VisibleProjects;
+        // "Include completed" exports the whole portfolio even while the table hides
+        // completed projects — the Stage column tells them apart.
+        var projects = includeCompleted ? ActiveProjects : VisibleProjects;
         if (projects.Count == 0) return null;
 
         var workbook = new ExcelWorkbook();

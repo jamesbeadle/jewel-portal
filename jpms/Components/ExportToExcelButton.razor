@@ -6,7 +6,7 @@
     {
         <label class="flex items-center gap-1.5 text-xs text-content-muted select-none cursor-pointer">
             <input type="checkbox" @bind="includeAllRows" />
-            Include all rows
+            @IncludeAllLabel
         </label>
     }
     <button type="button"
@@ -28,8 +28,17 @@
     /// </summary>
     [Parameter, EditorRequired] public Func<bool, ExcelWorkbook?> BuildWorkbook { get; set; } = default!;
 
-    /// <summary>Show the "Include all rows" tickbox — set this on paginated or row-capped tables.</summary>
+    /// <summary>
+    /// Show the include-all tickbox — set this on paginated or row-capped tables, and on tables
+    /// whose export follows an on-screen filter (status tabs, search, hide-completed toggles).
+    /// </summary>
     [Parameter] public bool ShowIncludeAllRows { get; set; }
+
+    /// <summary>
+    /// Label for the include-all tickbox. Override to say what "all" means on this table —
+    /// e.g. "Include closed", "Include retired", "Include all statuses".
+    /// </summary>
+    [Parameter] public string IncludeAllLabel { get; set; } = "Include all rows";
 
     [Parameter] public bool Disabled { get; set; }
 

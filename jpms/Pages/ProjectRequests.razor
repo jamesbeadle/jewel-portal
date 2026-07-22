@@ -41,6 +41,8 @@ else
             <div class="flex items-center gap-3">
                 <ExportToExcelButton FileName="Requests register"
                                      Disabled="@(!HasExportableRows)"
+                                     ShowIncludeAllRows="@(statusView != StatusView.All || ActiveSlug != "all")"
+                                     IncludeAllLabel="Include entire register"
                                      BuildWorkbook="BuildExportWorkbook" />
                 <button type="button" class="btn-primary" @onclick="OpenRaiseDialog">Raise request</button>
             </div>
@@ -693,17 +695,20 @@ else
                 StatusView.Closed => KindRecords.Where(r => r.Status is RequestStatus.Closed),
                 _                 => KindRecords
             };
-            // Register reads in reference order, ascending (RFI-001 at the top). The number is
-            // parsed rather than string-compared so unpadded or suffixed references (RFI-49,
-            // RFI-049A, RFI-1000) still land in numeric order; free-text or blank references
-            // sort after the numbered run within their prefix.
-            return records
-                .OrderBy(r => ReferenceKey(r.Reference).Prefix, StringComparer.OrdinalIgnoreCase)
-                .ThenBy(r => ReferenceKey(r.Reference).Number)
-                .ThenBy(r => r.Reference, StringComparer.OrdinalIgnoreCase)
-                .ToList();
+            return InRegisterOrder(records);
         }
     }
+
+    // Register reads in reference order, ascending (RFI-001 at the top). The number is
+    // parsed rather than string-compared so unpadded or suffixed references (RFI-49,
+    // RFI-049A, RFI-1000) still land in numeric order; free-text or blank references
+    // sort after the numbered run within their prefix.
+    private static IReadOnlyList<Request> InRegisterOrder(IEnumerable<Request> records) =>
+        records
+            .OrderBy(r => ReferenceKey(r.Reference).Prefix, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(r => ReferenceKey(r.Reference).Number)
+            .ThenBy(r => r.Reference, StringComparer.OrdinalIgnoreCase)
+            .ToList();
 
     private static (string Prefix, int Number) ReferenceKey(string? reference)
     {
@@ -927,15 +932,18 @@ else
     // ---- Excel export ----------------------------------------------------------------------
     // One workbook, one sheet per register currently shown — following the active document-type
     // filter (ShowsRequestRows / ShowsVariationRows), same as the register's on-screen sections.
+    // Ticking "Include entire register" overrides both the document-type and status filters:
+    // every request (all kinds, open and closed) plus the full Variations sheet — the Kind and
+    // Status columns carry the distinctions the on-screen filters make.
 
-    private bool HasExportableRows =>
-        (ShowsRequestRows && FilteredRecords.Count > 0) || (ShowsVariationRows && Rows.Count > 0);
+    private bool HasExportableRows => AllRecords.Count > 0 || Rows.Count > 0;
 
-    private ExcelWorkbook? BuildExportWorkbook(bool _)
+    private ExcelWorkbook? BuildExportWorkbook(bool includeEntireRegister)
     {
         var workbook = new ExcelWorkbook();
 
-        if (ShowsRequestRows && FilteredRecords.Count > 0)
+        var requestRecords = includeEntireRegister ? InRegisterOrder(AllRecords) : FilteredRecords;
+        if ((includeEntireRegister || ShowsRequestRows) && requestRecords.Count > 0)
         {
             var sheet = workbook.AddSheet("Requests & RFIs",
                 new ExcelColumn("Ref"),
@@ -949,7 +957,7 @@ else
                 new ExcelColumn("Value", ExcelFormat.Currency),
                 new ExcelColumn("Status"));
 
-            foreach (var record in FilteredRecords)
+            foreach (var record in requestRecords)
             {
                 sheet.AddRow(
                     record.Reference,
@@ -965,7 +973,7 @@ else
             }
         }
 
-        if (ShowsVariationRows && Rows.Count > 0)
+        if ((includeEntireRegister || ShowsVariationRows) && Rows.Count > 0)
         {
             var sheet = workbook.AddSheet("Variations",
                 new ExcelColumn("Ref"),

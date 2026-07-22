@@ -45,6 +45,8 @@ else
                        @bind="supplierSearch" @bind:event="oninput" />
                 <ExportToExcelButton FileName="Work orders"
                                      Disabled="@(Orders.Count == 0)"
+                                     ShowIncludeAllRows="@Searching"
+                                     IncludeAllLabel="Ignore search"
                                      BuildWorkbook="BuildExportWorkbook" />
                 <button type="button" class="btn-secondary text-sm"
                         title="Raise a work order directly — no bid package — and optionally package it against the valuation lines that priced its scope"
@@ -350,40 +352,42 @@ else
     private decimal LineCommitted => VisibleLines.Sum(entry => entry.Line.LineTotal);
     private decimal LinePaid => VisibleLines.Sum(entry => entry.Line.PaidToDate);
 
-    private List<GroupRow> Rows => groupBySupplier ? SupplierRows : CostCentreRows;
+    private List<GroupRow> Rows => RowsFrom(VisibleLines);
+
+    // The export can be asked to ignore the supplier search — the same grouping pipeline
+    // runs over either the search-narrowed lines (the table's view) or every line.
+    private List<GroupRow> RowsFrom(List<OrderLine> lines) =>
+        groupBySupplier ? SupplierRowsFrom(lines) : CostCentreRowsFrom(lines);
 
     // Master cost centres in master order first, then codes not in the active master (legacy /
     // retired), then lines with no code at all — shown rather than silently swallowed.
-    private List<GroupRow> CostCentreRows
+    private List<GroupRow> CostCentreRowsFrom(List<OrderLine> lines)
     {
-        get
-        {
-            var masterOrder = CostCenters.Current
-                .Select((centre, index) => (centre.Code, index))
-                .ToDictionary(entry => entry.Code, entry => entry.index, StringComparer.OrdinalIgnoreCase);
-            var namesByCode = CostCenters.Current.ToDictionary(centre => centre.Code, centre => centre.Name, StringComparer.OrdinalIgnoreCase);
+        var masterOrder = CostCenters.Current
+            .Select((centre, index) => (centre.Code, index))
+            .ToDictionary(entry => entry.Code, entry => entry.index, StringComparer.OrdinalIgnoreCase);
+        var namesByCode = CostCenters.Current.ToDictionary(centre => centre.Code, centre => centre.Name, StringComparer.OrdinalIgnoreCase);
 
-            return VisibleLines
-                .GroupBy(entry => CodeOf(entry), StringComparer.OrdinalIgnoreCase)
-                .Select(group => new GroupRow(
-                    group.Key,
-                    group.Key,
-                    namesByCode.TryGetValue(group.Key, out var name) ? name : "",
-                    namesByCode.ContainsKey(group.Key),
-                    group.Select(entry => entry.Detail.Order.WorkOrderId).Distinct().Count(),
-                    group.Sum(entry => entry.Line.LineTotal),
-                    group.Sum(entry => entry.Line.PaidToDate)))
-                .OrderBy(row => row.Code == UnassignedCode ? 2 : row.InMaster ? 0 : 1)
-                .ThenBy(row => masterOrder.TryGetValue(row.Code, out var index) ? index : int.MaxValue)
-                .ThenBy(row => row.Code, StringComparer.OrdinalIgnoreCase)
-                .ToList();
-        }
+        return lines
+            .GroupBy(entry => CodeOf(entry), StringComparer.OrdinalIgnoreCase)
+            .Select(group => new GroupRow(
+                group.Key,
+                group.Key,
+                namesByCode.TryGetValue(group.Key, out var name) ? name : "",
+                namesByCode.ContainsKey(group.Key),
+                group.Select(entry => entry.Detail.Order.WorkOrderId).Distinct().Count(),
+                group.Sum(entry => entry.Line.LineTotal),
+                group.Sum(entry => entry.Line.PaidToDate)))
+            .OrderBy(row => row.Code == UnassignedCode ? 2 : row.InMaster ? 0 : 1)
+            .ThenBy(row => masterOrder.TryGetValue(row.Code, out var index) ? index : int.MaxValue)
+            .ThenBy(row => row.Code, StringComparer.OrdinalIgnoreCase)
+            .ToList();
     }
 
     // Supplier roll-up: the same lines and totals, grouped by who the order is with
     // rather than where the cost sits — how the accountant records them.
-    private List<GroupRow> SupplierRows =>
-        VisibleLines
+    private List<GroupRow> SupplierRowsFrom(List<OrderLine> lines) =>
+        lines
             .GroupBy(entry => entry.Detail.SubcontractorName, StringComparer.OrdinalIgnoreCase)
             .Select(group => new GroupRow(
                 group.Key,
@@ -403,8 +407,10 @@ else
         CostCenters.Current.FirstOrDefault(centre =>
             string.Equals(centre.Code, code, StringComparison.OrdinalIgnoreCase))?.Name ?? "";
 
-    private List<OrderLine> LinesFor(string key) =>
-        VisibleLines
+    private List<OrderLine> LinesFor(string key) => LinesFrom(VisibleLines, key);
+
+    private List<OrderLine> LinesFrom(List<OrderLine> lines, string key) =>
+        lines
             .Where(entry => groupBySupplier
                 ? string.Equals(entry.Detail.SubcontractorName, key, StringComparison.OrdinalIgnoreCase)
                 : string.Equals(CodeOf(entry), key, StringComparison.OrdinalIgnoreCase))
@@ -469,12 +475,19 @@ else
 
     // One workbook, two sheets: a roll-up matching the on-screen grouping (and the
     // tfoot total) and the flattened per-order lines the expanded groups show — both
-    // respecting the current supplier search, same as the on-screen table.
-    private ExcelWorkbook? BuildExportWorkbook(bool _)
+    // respecting the current supplier search, same as the on-screen table. "Ignore
+    // search" (offered while a search narrows the table) exports every line instead.
+    private ExcelWorkbook? BuildExportWorkbook(bool ignoreSearch)
     {
         if (Orders.Count == 0) return null;
 
-        var rows = Rows;
+        var exportLines = ignoreSearch ? AllLines : VisibleLines;
+        var exportOrderCount = ignoreSearch ? Orders.Count : VisibleOrderCount;
+        var exportCommitted = exportLines.Sum(entry => entry.Line.LineTotal);
+        var exportPaid = exportLines.Sum(entry => entry.Line.PaidToDate);
+        var filteredTotal = !ignoreSearch && Searching;
+
+        var rows = RowsFrom(exportLines);
         var workbook = new ExcelWorkbook();
 
         if (groupBySupplier)
@@ -495,11 +508,11 @@ else
                     row.Committed - row.Paid);
             }
             suppliersSheet.AddRow(
-                Searching ? "Total (filtered)" : "Total",
-                VisibleOrderCount,
-                LineCommitted,
-                LinePaid,
-                LineCommitted - LinePaid);
+                filteredTotal ? "Total (filtered)" : "Total",
+                exportOrderCount,
+                exportCommitted,
+                exportPaid,
+                exportCommitted - exportPaid);
         }
         else
         {
@@ -521,12 +534,12 @@ else
                     row.Committed - row.Paid);
             }
             centresSheet.AddRow(
-                Searching ? "Total (filtered)" : "Total",
+                filteredTotal ? "Total (filtered)" : "Total",
                 null,
-                VisibleOrderCount,
-                LineCommitted,
-                LinePaid,
-                LineCommitted - LinePaid);
+                exportOrderCount,
+                exportCommitted,
+                exportPaid,
+                exportCommitted - exportPaid);
         }
 
         var ordersSheet = workbook.AddSheet("Work orders",
@@ -540,7 +553,7 @@ else
             new ExcelColumn("Paid", ExcelFormat.Currency));
         foreach (var row in rows)
         {
-            foreach (var line in LinesFor(row.Key))
+            foreach (var line in LinesFrom(exportLines, row.Key))
             {
                 var code = CodeOf(line);
                 var centreName = CostCentreNameFor(code);

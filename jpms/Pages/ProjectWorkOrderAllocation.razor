@@ -54,6 +54,8 @@ else
         <div class="mb-3 flex items-center justify-end">
             <ExportToExcelButton FileName="Work order allocation"
                                  Disabled="@(summaries.Count == 0 && AllLines.Count == 0)"
+                                 ShowIncludeAllRows="@(queueFilter != QueueFilter.All || !string.IsNullOrWhiteSpace(orderSearch))"
+                                 IncludeAllLabel="Include all lines"
                                  BuildWorkbook="BuildExportWorkbook" />
         </div>
 
@@ -562,8 +564,10 @@ else
 
     // One workbook, two sheets: the work-order table (respecting the supplier/title
     // search) and the invoice-line queue (respecting that same search plus the
-    // Unlinked/Linked/All chip) — both with their tfoot total row.
-    private ExcelWorkbook? BuildExportWorkbook(bool _)
+    // Unlinked/Linked/All chip) — both with their tfoot total row. "Include all lines"
+    // (offered while the chip or search narrows the tables — note the chip defaults to
+    // Unlinked) exports every work order and every invoice line instead.
+    private ExcelWorkbook? BuildExportWorkbook(bool includeAllLines)
     {
         if (summaries.Count == 0 && AllLines.Count == 0) return null;
 
@@ -577,7 +581,7 @@ else
             new ExcelColumn("Value", ExcelFormat.Currency),
             new ExcelColumn("Invoiced", ExcelFormat.Currency),
             new ExcelColumn("Left to invoice", ExcelFormat.Currency));
-        var filteredSummaries = FilteredSummaries;
+        var filteredSummaries = includeAllLines ? summaries : FilteredSummaries;
         foreach (var summary in filteredSummaries)
         {
             ordersSheet.AddRow(
@@ -590,7 +594,7 @@ else
                 summary.RemainingToInvoice);
         }
         ordersSheet.AddRow(
-            "Total shown", null, null, null,
+            includeAllLines ? "Total" : "Total shown", null, null, null,
             filteredSummaries.Sum(summary => summary.Value),
             filteredSummaries.Sum(summary => summary.InvoicedToDate),
             filteredSummaries.Sum(summary => summary.RemainingToInvoice));
@@ -603,7 +607,7 @@ else
             new ExcelColumn("Centre"),
             new ExcelColumn("Net £", ExcelFormat.Currency),
             new ExcelColumn("Work order"));
-        var queueLines = QueueLines;
+        var queueLines = includeAllLines ? AllLines : QueueLines;
         foreach (var line in queueLines)
         {
             linesSheet.AddRow(
@@ -615,7 +619,7 @@ else
                 line.Net,
                 WorkOrderText(line));
         }
-        linesSheet.AddRow("Total shown", null, null, null, null, queueLines.Sum(line => line.Net), null);
+        linesSheet.AddRow(includeAllLines ? "Total" : "Total shown", null, null, null, null, queueLines.Sum(line => line.Net), null);
 
         return workbook;
     }

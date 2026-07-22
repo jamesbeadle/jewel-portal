@@ -53,7 +53,9 @@ else
                     <span>Show retired</span>
                 </label>
                 <ExportToExcelButton FileName="Cost codes"
-                                     Disabled="@(VisibleCostCodes.Count == 0)"
+                                     Disabled="@(costCodes.Count == 0)"
+                                     ShowIncludeAllRows="@(!showRetired)"
+                                     IncludeAllLabel="Include retired"
                                      BuildWorkbook="BuildExportWorkbook" />
             </div>
 
@@ -259,9 +261,11 @@ else
         finally { busy = false; }
     }
 
-    private ExcelWorkbook? BuildExportWorkbook(bool _)
+    private ExcelWorkbook? BuildExportWorkbook(bool includeRetired)
     {
-        var costCodesToExport = VisibleCostCodes;
+        // "Include retired" exports the whole master list even while the table hides
+        // retired codes — the Status column tells them apart.
+        var costCodesToExport = includeRetired ? costCodes : VisibleCostCodes;
         if (costCodesToExport.Count == 0) return null;
 
         var workbook = new ExcelWorkbook();

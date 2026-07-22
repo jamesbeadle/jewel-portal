@@ -20,7 +20,8 @@
     </div>
     <div class="flex items-center gap-3">
         <ExportToExcelButton FileName="Financial report"
-                             Disabled="@(!VisibleLines.Any() && !VisiblePackages.Any())"
+                             Disabled="@(!AllReportLines.Any() && !IncludedPackages.Any())"
+                             ShowIncludeAllRows="@(hideZeroRows || !string.IsNullOrWhiteSpace(search))"
                              BuildWorkbook="BuildExportWorkbook" />
         @if (SelectionCount > 0)
         {
@@ -675,7 +676,9 @@
             (WorkOrderCommittedByCode.TryGetValue(entryCode, out var committed) ? committed : 0m)
                 - PackagedWoFor(entryCode) != 0m);
 
-    private IEnumerable<ReportLine> VisibleLines
+    // Every report line, before the hide-zero-rows and search narrowing — what the
+    // export's "Include all rows" tickbox asks for.
+    private IEnumerable<ReportLine> AllReportLines
     {
         get
         {
@@ -691,11 +694,14 @@
             var rollUps = Groups.Select(group => new ReportLine(
                 group.CostCentreGroupId, "", group.Name, InMaster: true, IsGroup: true, group.CostCodes));
 
-            return ApplySort(individuals.Concat(rollUps))
-                .Where(line => line.IsGroup || !hideZeroRows || HasAnyValue(line.CostCodes) || selectedCodes.Contains(line.Key))
-                .Where(MatchesSearch);
+            return ApplySort(individuals.Concat(rollUps));
         }
     }
+
+    private IEnumerable<ReportLine> VisibleLines =>
+        AllReportLines
+            .Where(line => line.IsGroup || !hideZeroRows || HasAnyValue(line.CostCodes) || selectedCodes.Contains(line.Key))
+            .Where(MatchesSearch);
 
     // Packages count in the table (rows + totals) only while the netting toggle is on —
     // with gross figures on the centres, package rows would double-count their scope.
@@ -788,10 +794,13 @@
     // and sort) plus VisiblePackages (respecting "hide scope in packages" and search),
     // then a total row matching the tfoot. Percentages are stored here as 0–100 — the
     // sheet wants fractions, so every percentage is divided by 100.
-    private ExcelWorkbook? BuildExportWorkbook(bool _)
+    // "Include all rows" lifts the search and hide-zero narrowing (the packaged-scope
+    // netting toggle still applies — overriding it would double-count package scope);
+    // the total row is project-wide either way, so it then ties to the exported rows.
+    private ExcelWorkbook? BuildExportWorkbook(bool includeAllRows)
     {
-        var lines = VisibleLines.ToList();
-        var packages = VisiblePackages.ToList();
+        var lines = (includeAllRows ? AllReportLines : VisibleLines).ToList();
+        var packages = (includeAllRows ? IncludedPackages : VisiblePackages).ToList();
         if (lines.Count == 0 && packages.Count == 0) return null;
 
         var workbook = new ExcelWorkbook();

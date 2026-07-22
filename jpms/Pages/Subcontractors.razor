@@ -33,7 +33,9 @@ else
             </div>
             <div class="flex items-center gap-4 shrink-0">
                 <ExportToExcelButton FileName="Directory"
-                                     Disabled="@(Filtered().Count == 0)"
+                                     Disabled="@(SubcontractorStore.All().Count == 0)"
+                                     ShowIncludeAllRows="@(!string.IsNullOrWhiteSpace(search) || !string.IsNullOrWhiteSpace(categoryFilter))"
+                                     IncludeAllLabel="Ignore search & filter"
                                      BuildWorkbook="BuildExportWorkbook" />
                 @if (CanManage)
                 {
@@ -318,9 +320,13 @@ else
 
     // The screen's "Primary contact" cell is compound (name + email subtitle) — split
     // into two columns so the email isn't lost from the export.
-    private ExcelWorkbook? BuildExportWorkbook(bool _)
+    private ExcelWorkbook? BuildExportWorkbook(bool ignoreFilters)
     {
-        var subs = Filtered();
+        // "Ignore search & filter" (offered while either is narrowing the table) exports the
+        // complete directory in the same company-name order.
+        var subs = ignoreFilters
+            ? SubcontractorStore.All().OrderBy(s => s.CompanyName).ToList()
+            : Filtered();
         if (subs.Count == 0) return null;
 
         var workbook = new ExcelWorkbook();

@@ -39,7 +39,9 @@ else
                 }
             </div>
             <ExportToExcelButton FileName="RFI register"
-                                 Disabled="@(FilteredRecords.Count == 0)"
+                                 Disabled="@(AllRecords.Count == 0)"
+                                 ShowIncludeAllRows="@(statusView != StatusView.All)"
+                                 IncludeAllLabel="Include all statuses"
                                  BuildWorkbook="BuildExportWorkbook" />
         </div>
 
@@ -154,14 +156,17 @@ else
                 StatusView.Closed => AllRecords.Where(r => r.Status is RequestStatus.Closed),
                 _                 => AllRecords
             };
-            return records
-                .OrderBy(r => ProjectReference(r.ProjectId), StringComparer.OrdinalIgnoreCase)
-                .ThenBy(r => ReferenceKey(r.Reference).Prefix, StringComparer.OrdinalIgnoreCase)
-                .ThenBy(r => ReferenceKey(r.Reference).Number)
-                .ThenBy(r => r.Reference, StringComparer.OrdinalIgnoreCase)
-                .ToList();
+            return InRegisterOrder(records);
         }
     }
+
+    private IReadOnlyList<Request> InRegisterOrder(IEnumerable<Request> records) =>
+        records
+            .OrderBy(r => ProjectReference(r.ProjectId), StringComparer.OrdinalIgnoreCase)
+            .ThenBy(r => ReferenceKey(r.Reference).Prefix, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(r => ReferenceKey(r.Reference).Number)
+            .ThenBy(r => r.Reference, StringComparer.OrdinalIgnoreCase)
+            .ToList();
 
     private static (string Prefix, int Number) ReferenceKey(string? reference)
     {
@@ -231,13 +236,15 @@ else
         _                              => "bg-surface-raised border border-line text-content-muted"
     };
 
-    private ExcelWorkbook? BuildExportWorkbook(bool _)
+    private ExcelWorkbook? BuildExportWorkbook(bool includeAllStatuses)
     {
-        var records = FilteredRecords;
+        // Ticked "Include all statuses" exports the whole register regardless of the
+        // on-screen Open/Closed view — the Status column carries the distinction.
+        var records = includeAllStatuses ? InRegisterOrder(AllRecords) : FilteredRecords;
         if (records.Count == 0) return null;
 
         var workbook = new ExcelWorkbook();
-        var sheet = workbook.AddSheet($"RFIs ({StatusViewLabel(statusView)})",
+        var sheet = workbook.AddSheet($"RFIs ({(includeAllStatuses ? "All" : StatusViewLabel(statusView))})",
             new ExcelColumn("Project"),
             new ExcelColumn("Project ref"),
             new ExcelColumn("Ref"),

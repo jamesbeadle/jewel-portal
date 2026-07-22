@@ -33,7 +33,9 @@ else
             </div>
             <div class="flex items-center gap-2">
                 <ExportToExcelButton FileName="Drawing register"
-                                     Disabled="@(VisibleDrawings.Count == 0)"
+                                     Disabled="@(Drawings.Count == 0)"
+                                     ShowIncludeAllRows="@approvedOnly"
+                                     IncludeAllLabel="Include unapproved"
                                      BuildWorkbook="BuildExportWorkbook" />
                 <button type="button" @onclick="() => approvedOnly = !approvedOnly"
                         class="rounded-lg border text-sm px-3 py-2 transition @(approvedOnly ? "bg-emerald-50 border-emerald-200 text-emerald-800" : "border-line-strong text-content-muted hover:bg-surface-raised")">
@@ -87,9 +89,11 @@ else
     private bool CanManage =>
         Auth.CurrentRoles.Any(role => role is Role.Admin or Role.ManagingDirector or Role.ProjectManager);
 
-    private ExcelWorkbook? BuildExportWorkbook(bool _)
+    private ExcelWorkbook? BuildExportWorkbook(bool includeUnapproved)
     {
-        var drawings = VisibleDrawings;
+        // "Include unapproved" (offered while the approved-only toggle is on) exports the whole
+        // register — the Status column separates approved from pending.
+        var drawings = includeUnapproved ? Drawings : VisibleDrawings;
         if (drawings.Count == 0) return null;
 
         var workbook = new ExcelWorkbook();

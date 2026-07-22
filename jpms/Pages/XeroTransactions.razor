@@ -30,7 +30,9 @@ else
             </div>
             <div class="flex items-center gap-4 whitespace-nowrap">
                 <ExportToExcelButton FileName="Xero transactions"
-                                     Disabled="@(Filtered.Count == 0 && Breakdown.Count == 0)"
+                                     Disabled="@(VisibleTransactions.Count == 0 && Breakdown.Count == 0)"
+                                     ShowIncludeAllRows="@(statusFilter is not null || !string.IsNullOrWhiteSpace(search))"
+                                     IncludeAllLabel="Ignore search & status"
                                      BuildWorkbook="BuildExportWorkbook" />
                 <button class="text-sm font-medium text-content-muted hover:text-content underline underline-offset-4 disabled:opacity-50"
                         disabled="@isRefreshing" @onclick="ForceRefreshAsync">
@@ -449,12 +451,15 @@ else
 
     // One workbook, one sheet per view — both exported regardless of which tab is
     // active, each reusing the page's own computed lists so the export matches the
-    // screen exactly.
-    private ExcelWorkbook? BuildExportWorkbook(bool _)
+    // screen exactly. "Ignore search & status" (offered while either narrows the table)
+    // exports every visible transaction instead; the breakdown pivot is always full.
+    private ExcelWorkbook? BuildExportWorkbook(bool ignoreFilters)
     {
         if (Snapshot is null) return null;
 
-        var transactions = Filtered;
+        var transactions = ignoreFilters
+            ? VisibleTransactions.OrderByDescending(transaction => transaction.Date ?? DateTime.MinValue).ToList()
+            : Filtered;
         var breakdown = Breakdown;
         if (transactions.Count == 0 && breakdown.Count == 0) return null;
 
