@@ -7,9 +7,10 @@ using Microsoft.EntityFrameworkCore;
 namespace Jewel.JPMS.Api.Features.ValuationInvoices.Commands;
 
 /// <summary>
-/// Amends a valuation invoice. Allowed while Raised or Rejected — an amendment of a Rejected
-/// invoice returns it to Raised, flags its snapshot superseded (a fresh one is frozen on
-/// resubmit), and bumps the amendment count. Manual invoices are editable at any status
+/// Amends a valuation invoice. Allowed while Raised or Rejected — any amendment flags the
+/// invoice's snapshot superseded (a fresh one is frozen on the next submit/issue), and amending a
+/// Rejected invoice additionally returns it to Raised and bumps the amendment count. Manual
+/// invoices are editable at any status
 /// (correcting history is the point): amount/paid/date changes adjust the project paid total and
 /// re-freeze any Preapproved claim, since "Certified to date" may have moved.
 /// </summary>
@@ -63,8 +64,11 @@ public sealed class UpdateValuationInvoiceHandler : ICommandHandler<UpdateValuat
 
         if (wasRejected || hadBeenSubmitted) entity.AmendmentCount += 1;
 
-        // A superseded submission's snapshot no longer describes the live ask.
-        if (!entity.IsManual && hadBeenSubmitted)
+        // The attached snapshot froze the ask as it stood at raise (or last resubmission) — an
+        // amendment changes the ask, so it no longer describes it. Flag it superseded; the next
+        // submit/issue freezes a fresh one (the raise-time capture guarantees every non-manual
+        // invoice has a snapshot to supersede).
+        if (!entity.IsManual)
         {
             var snapshots = await context.ValuationReportSnapshots
                 .Where(snapshot => snapshot.ValuationInvoiceId == entity.ValuationInvoiceId && !snapshot.IsSuperseded)

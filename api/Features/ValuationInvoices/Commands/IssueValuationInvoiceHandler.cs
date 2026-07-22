@@ -3,13 +3,15 @@ using Jewel.JPMS.Api.Data;
 using Jewel.JPMS.Api.Features.Commercial;
 using Jewel.JPMS.Contracts.ValuationInvoices;
 using Jewel.JPMS.Models;
+using Microsoft.EntityFrameworkCore;
 
 namespace Jewel.JPMS.Api.Features.ValuationInvoices.Commands;
 
 /// <summary>
 /// Approved -> Issued (or Raised -> Issued for projects that skip the formal approval loop). From
-/// here the amount counts toward "Certified to date". The skip path freezes a report snapshot if
-/// none is linked yet, so even two-click invoices keep the report behind them.
+/// here the amount counts toward "Certified to date". A report snapshot is normally frozen at
+/// raise; issuing re-freezes only when no live one backs the invoice (amended since raise, or
+/// pre-dating raise-time capture), so even two-click invoices keep the report behind them.
 /// </summary>
 public sealed class IssueValuationInvoiceHandler : ICommandHandler<IssueValuationInvoice, ValuationInvoice>
 {
@@ -38,8 +40,13 @@ public sealed class IssueValuationInvoiceHandler : ICommandHandler<IssueValuatio
                 throw new InvalidOperationException("A paid valuation invoice cannot be re-issued.");
         }
 
-        // Skip-approval path: make sure a report snapshot backs the invoice anyway.
-        if (entity.ValuationReportSnapshotId is null)
+        // Make sure a LIVE report snapshot backs the invoice: raise-time capture normally
+        // guarantees one, but an invoice amended since (snapshot flagged superseded) or raised
+        // before raise-time capture existed needs a fresh freeze of the current ask.
+        var hasLiveSnapshot = await context.ValuationReportSnapshots
+            .AnyAsync(snapshot => snapshot.ValuationInvoiceId == entity.ValuationInvoiceId
+                                  && !snapshot.IsSuperseded, cancellationToken);
+        if (!hasLiveSnapshot)
         {
             var snapshot = await ValuationReportSnapshotCapture.CaptureAsync(
                 context, entity.ProjectId, $"{entity.Reference} issue", entity.ValuationInvoiceId, cancellationToken);

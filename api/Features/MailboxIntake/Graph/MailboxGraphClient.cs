@@ -165,7 +165,10 @@ public sealed record MailboxSnapshot(
     string FromName,
     string Subject,
     string BodyPreview,
-    DateTimeOffset ReceivedAt);
+    DateTimeOffset ReceivedAt,
+    // The message's current raw categories (marker, record tags, pathway tags, user categories).
+    // Read so the pathway guards can see which bucket a thread already carries before tagging.
+    IReadOnlyList<string>? Categories = null);
 
 /// <summary>No-op client used when Graph credentials aren't configured: triage shows empty and tag
 /// operations report failure (so the UI shows an error rather than a false success).</summary>
@@ -486,9 +489,14 @@ public sealed class MailboxGraphClient : IMailboxGraphClient
         var remaining = current
             .Where(c => !c.Equals(tag, StringComparison.OrdinalIgnoreCase))
             .ToList();
-        // No workflow tags left → drop the marker too (back to triage).
-        if (!remaining.Any(TriageCategories.IsWorkflowTag))
+        // No record/workflow tags left → drop any pathway tags and the marker too (back to triage).
+        // Bucket tags are not triage decisions, so an email can never sit outside the queue carrying
+        // only a pathway: removing the last record tag removes the pathway with it.
+        if (!remaining.Any(c => TriageCategories.IsWorkflowTag(c) && !TriageCategories.IsBucketTag(c)))
+        {
+            remaining.RemoveAll(TriageCategories.IsBucketTag);
             remaining.RemoveAll(c => c.Equals(TriageCategories.Marker, StringComparison.OrdinalIgnoreCase));
+        }
 
         if (!await PatchCategoriesAsync(id, remaining.ToArray(), ct))
             return false;
@@ -571,10 +579,14 @@ public sealed class MailboxGraphClient : IMailboxGraphClient
         }
     }
 
-    // Outlook category colour presets: marker grey, discarded red, workflow tags blue.
+    // Outlook category colour presets: marker grey, discarded red, pathways distinct (Client green,
+    // Subcontractor orange, Internal purple), record tags blue.
     private static string ColourFor(string name) =>
         name.Equals(TriageCategories.Marker, StringComparison.OrdinalIgnoreCase) ? "preset8"
         : name.Equals(TriageCategories.Discarded, StringComparison.OrdinalIgnoreCase) ? "preset0"
+        : name.Equals(TriageCategories.Client, StringComparison.OrdinalIgnoreCase) ? "preset4"
+        : name.Equals(TriageCategories.Subcontractor, StringComparison.OrdinalIgnoreCase) ? "preset1"
+        : name.Equals(TriageCategories.Internal, StringComparison.OrdinalIgnoreCase) ? "preset9"
         : "preset5";
 
     // Resolve the live id + current categories, re-finding by internetMessageId if the id is stale.
@@ -740,7 +752,7 @@ public sealed class MailboxGraphClient : IMailboxGraphClient
             return null;
 
         var url = $"{GraphBase}/users/{Mailbox}/messages/{Uri.EscapeDataString(id)}"
-            + "?$select=internetMessageId,conversationId,subject,bodyPreview,from,receivedDateTime,internetMessageHeaders";
+            + "?$select=internetMessageId,conversationId,subject,bodyPreview,from,receivedDateTime,internetMessageHeaders,categories";
         using var response = await SendAsync(HttpMethod.Get, url, content: null, ct, allowNotFound: true);
         if (!response.IsSuccessStatusCode)
             return null;
@@ -774,7 +786,13 @@ public sealed class MailboxGraphClient : IMailboxGraphClient
                     inReplyTo = h.TryGetProperty("value", out var hv) ? hv.GetString() : null;
             }
 
-        return new MailboxSnapshot(imid, conversationId, inReplyTo, fromEmail, fromName, subject, preview, receivedAt);
+        var snapshotCategories = new List<string>();
+        if (root.TryGetProperty("categories", out var snapCats) && snapCats.ValueKind == JsonValueKind.Array)
+            foreach (var c in snapCats.EnumerateArray())
+                if (c.GetString() is { Length: > 0 } cat)
+                    snapshotCategories.Add(cat);
+
+        return new MailboxSnapshot(imid, conversationId, inReplyTo, fromEmail, fromName, subject, preview, receivedAt, snapshotCategories);
     }
 
     private static MailboxMessage? Parse(JsonElement item)
@@ -800,17 +818,22 @@ public sealed class MailboxGraphClient : IMailboxGraphClient
             fromName = addr.TryGetProperty("name", out var nm) ? nm.GetString() ?? "" : "";
         }
 
-        // Only the JPMS workflow tags become chips (e.g. "JPMS/Discarded", "JPMS/RFI-001"); the bare
-        // "JPMS" marker and any of the user's own Outlook categories are left out.
+        // Only the JPMS record tags become chips (e.g. "JPMS/Discarded", "JPMS/RFI-001"); the bare
+        // "JPMS" marker, the pathway tags and any of the user's own Outlook categories are left out.
+        // The pathway travels separately as Bucket so clients never parse tag strings for it.
         var categories = new List<string>();
+        string? bucket = null;
         if (item.TryGetProperty("categories", out var cats) && cats.ValueKind == JsonValueKind.Array)
             foreach (var c in cats.EnumerateArray())
                 if (c.GetString() is { Length: > 0 } cat && TriageCategories.IsWorkflowTag(cat))
-                    categories.Add(cat);
+                {
+                    if (TriageCategories.IsBucketTag(cat)) bucket ??= cat;
+                    else categories.Add(cat);
+                }
 
         var conversationId = item.TryGetProperty("conversationId", out var conv) ? conv.GetString() ?? "" : "";
 
-        return new MailboxMessage(id, imid, fromEmail, fromName, subject, preview, hasAttachments, receivedAt, categories, conversationId);
+        return new MailboxMessage(id, imid, fromEmail, fromName, subject, preview, hasAttachments, receivedAt, categories, conversationId, bucket);
     }
 
     // Graph only accepts attachments up to ~3 MB inline; larger files stream through an upload session.

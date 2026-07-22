@@ -1,16 +1,25 @@
 @page "/projects/{ProjectId}"
 @using Jewel.JPMS.Services.Navigation
 @inject NavigationManager Nav
+@inject SessionService Session
 
 @*
     The bare project URL has no page of its own — the Overview landing was retired (Home is the
-    landing; the sidebar's workspace blocks are the map). Redirect to the workspace's first page;
-    replace:true keeps Back working naturally.
+    landing; the sidebar's folders are the map). Redirect to the role's first project-scoped tab
+    — first folder, first row: Client → Requests for full-access roles; replace:true keeps Back
+    working naturally.
 *@
 
 @code {
     [Parameter] public string ProjectId { get; set; } = "";
 
-    protected override void OnInitialized() =>
-        Nav.NavigateTo(ProjectSections.FirstTabHref(ProjectId, ProjectSections.All[0]), replace: true);
+    protected override void OnInitialized()
+    {
+        // Session should always be resolved by the time a routed page runs; if it somehow
+        // isn't, the Requests default matches what every project-capable role lands on anyway.
+        var target = Session.ActiveRole is { } role
+            ? DesktopNavigation.FirstProjectTabHref(role, ProjectId)
+            : $"/projects/{ProjectId}/requests";
+        Nav.NavigateTo(target, replace: true);
+    }
 }

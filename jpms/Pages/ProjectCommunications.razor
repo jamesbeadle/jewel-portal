@@ -12,9 +12,10 @@
     live from the mailbox in one place. Triage stamps "JPMS/<TagReference>" categories on emails
     (cost centres, requests, bid package invites, programme, to-dos, LADs, VOs, VOQs); the per-record
     views read their own tag, and this tab is the cross-cutting roll-up: all of it, newest paged
-    first, filterable by the type of thing tagged. Each row shows WHICH record(s) the email is
-    tagged to — an email can feed several records at once (e.g. a request AND a cost centre).
-    Informational only: tagging itself stays in mailbox triage.
+    first, filterable by pathway (the Client / Subcontractor / Internal bucket the thread is filed
+    under) and by the type of thing tagged. Each row shows the thread's pathway chip plus WHICH
+    record(s) the email is tagged to — an email can feed several records at once (e.g. a request
+    AND a cost centre). Informational only: tagging itself stays in mailbox triage.
 *@
 
 @if (!isLoaded)
@@ -28,6 +29,16 @@ else if (!Session.IsApproved)
 else
 {
     <ProjectPageShell ProjectId="@ProjectId" ActiveTab="communications">
+        @* Pathway first, then type: the segmented control narrows to one side of the client wall
+           (the thread's bucket category), the type filter to one kind of record within it. *@
+        <div class="flex flex-wrap items-center gap-2 mb-3">
+            <button type="button" class="@BucketTabClass(null)" @onclick="() => OnBucketChanged(null)">All</button>
+            @foreach (var bucket in BucketLabels)
+            {
+                var value = bucket;
+                <button type="button" class="@BucketTabClass(value)" @onclick="() => OnBucketChanged(value)">@value</button>
+            }
+        </div>
         <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
             <div class="flex items-center gap-2">
                 <label for="comms-type" class="text-sm text-content-subtle">Tagged to</label>
@@ -39,6 +50,8 @@ else
                     }
                 </select>
             </div>
+            @* Total == 0 means "count unknown", not "none": both the >10-tags marker-scan path and
+               any bucket-filtered read count per page only — hide the tally rather than lie. *@
             @if (loaded && total > 0)
             {
                 <p class="text-xs text-content-subtle">Showing @items.Count of @total</p>
@@ -70,7 +83,14 @@ else
                 {
                     <li @key="item.Message.Id" class="rounded-lg border border-line bg-surface px-4 py-3">
                         <div class="flex flex-wrap items-center justify-between gap-2">
-                            <span class="text-sm font-medium text-content">@DisplayFrom(item.Message)</span>
+                            <span class="flex items-center gap-2 min-w-0">
+                                <span class="text-sm font-medium text-content truncate">@DisplayFrom(item.Message)</span>
+                                @* The thread's pathway (bucket category), when triage has filed it. *@
+                                @if (BucketLabel(item.Message.Bucket) is { } pathway)
+                                {
+                                    <span class="@BucketChipClass(pathway)">@pathway</span>
+                                }
+                            </span>
                             <span class="text-xs text-content-subtle">@item.Message.ReceivedAt.LocalDateTime.ToString("d MMM yyyy, HH:mm")</span>
                         </div>
                         <p class="text-sm text-content mt-0.5">
@@ -135,6 +155,10 @@ else
     private RecordType? TypeFilter =>
         Enum.TryParse<RecordType>(typeFilterRaw, out var parsed) ? parsed : null;
 
+    // The pathway segmented control's selection: a short bucket label ("Client"), or null for all.
+    private string? bucketFilter;
+    private static readonly string[] BucketLabels = { "Client", "Subcontractor", "Internal" };
+
     private readonly List<ProjectCommunication> items = new();
     private string? nextCursor;
     private int total;
@@ -167,6 +191,18 @@ else
         await LoadAsync(reset: true);
     }
 
+    private async Task OnBucketChanged(string? bucket)
+    {
+        if (bucketFilter == bucket) return;
+        bucketFilter = bucket;
+        await LoadAsync(reset: true);
+    }
+
+    private string BucketTabClass(string? bucket) =>
+        bucketFilter == bucket
+            ? "btn-primary text-xs px-2.5 py-1.5"
+            : "btn-secondary text-xs px-2.5 py-1.5";
+
     private Task LoadMoreAsync() => LoadAsync(reset: false);
 
     private async Task LoadAsync(bool reset)
@@ -183,7 +219,7 @@ else
         try
         {
             var page = await Queries.AskAsync(
-                new ListProjectCommunications(ProjectId, TypeFilter, nextCursor, PageSize),
+                new ListProjectCommunications(ProjectId, TypeFilter, nextCursor, PageSize, bucketFilter),
                 CancellationToken.None);
             items.AddRange(page.Items);
             nextCursor = page.NextCursor;
@@ -203,7 +239,28 @@ else
     private string EmptyHeadline =>
         TypeFilter is { } type
             ? $"No emails tagged to {TypeOptions.First(o => o.Type == type).Label} yet."
-            : "No tagged emails yet.";
+            : bucketFilter is { } bucket
+                ? $"No tagged emails on the {bucket} pathway yet."
+                : "No tagged emails yet.";
+
+    // Short pathway label from the thread's bucket category ("JPMS/Client" → "Client"); null when
+    // the thread has no pathway yet. Clients read Message.Bucket, never parse tag strings — this
+    // only strips the mailbox prefix for display.
+    private static string? BucketLabel(string? bucket) =>
+        string.IsNullOrEmpty(bucket) ? null
+        : bucket.StartsWith("JPMS/", StringComparison.OrdinalIgnoreCase) ? bucket["JPMS/".Length..]
+        : bucket;
+
+    private static string BucketChipClass(string pathway)
+    {
+        const string baseClass = "inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium shrink-0 ";
+        return pathway switch
+        {
+            "Client"        => baseClass + "bg-accent/10 text-accent",
+            "Subcontractor" => baseClass + "bg-positive/10 text-positive",
+            _               => baseClass + "bg-surface-raised border border-line text-content-muted"
+        };
+    }
 
     // Chip label per record type — singular, canonical UI terms.
     private static string TypeLabel(RecordType type) => type switch

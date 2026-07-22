@@ -32,7 +32,8 @@ public sealed class PrepareWorkOrderEmailDraftHandler : ICommandHandler<PrepareW
                 "The supplier has no email address in the directory — add one before drafting the work order email.");
 
         // Tag with the source package's reference so the email (and replies) group under the package.
-        var categories = new List<string> { TriageCategories.Marker };
+        // Work-order mail is subcontractor correspondence, so the thread is born on that pathway.
+        var categories = new List<string> { TriageCategories.Marker, TriageCategories.Subcontractor };
         if (!string.IsNullOrWhiteSpace(order.BidPackageId))
         {
             var package = await context.BidPackages.FindAsync(new object[] { order.BidPackageId! }, cancellationToken);

@@ -23,11 +23,13 @@ public sealed class PrepareRequestReplyDraftHandler : ICommandHandler<PrepareReq
 {
     private readonly JpmsContext context;
     private readonly IMailboxGraphClient graph;
+    private readonly Audit.AuditTrail audit;
 
-    public PrepareRequestReplyDraftHandler(JpmsContext context, IMailboxGraphClient graph)
+    public PrepareRequestReplyDraftHandler(JpmsContext context, IMailboxGraphClient graph, Audit.AuditTrail audit)
     {
         this.context = context;
         this.graph = graph;
+        this.audit = audit;
     }
 
     public async Task<RequestEmailDraft> HandleAsync(PrepareRequestReplyDraft command, CancellationToken cancellationToken)
@@ -57,12 +59,24 @@ public sealed class PrepareRequestReplyDraftHandler : ICommandHandler<PrepareReq
                 command.MailboxMessageId,
                 PrepareRequestEmailDraftHandler.BuildCoverNote(model),
                 new[] { new MailboxDraftAttachment(model.FileName, "application/pdf", pdf) },
-                new[] { TriageCategories.Marker, tag }),
+                new[] { TriageCategories.Marker, tag, TriageCategories.Client }),
             cancellationToken);
         if (created is null)
             throw new InvalidOperationException(
                 "The reply draft couldn't be created in the projects mailbox. The original email may " +
                 "no longer be there, or the mailbox connection failed — check and try again.");
+
+        // Audit (client-facing): the drafted reply, with its webLink, so it can be found in Outlook.
+        await audit.WriteAsync(
+            AuditEventType.DraftCreated,
+            $"{model.TypeShort} {model.DisplayNumber} reply document drafted — awaiting review and send.",
+            pathway: "Client",
+            projectId: request.ProjectId,
+            recordType: RecordType.Request,
+            recordId: request.RequestId,
+            recordReference: model.DisplayNumber,
+            webLink: created.WebLink,
+            cancellationToken: cancellationToken);
 
         // Same rule as the fresh-email draft: drafted means it's going out, so an Open request
         // moves to Awaiting Response now (manually set back to Open if the send is cancelled).

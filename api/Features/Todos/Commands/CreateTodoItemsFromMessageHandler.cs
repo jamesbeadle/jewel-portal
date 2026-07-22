@@ -112,6 +112,24 @@ public sealed class CreateTodoItemsFromMessageHandler : ICommandHandler<CreateTo
         context.TodoItems.AddRange(entities);
         await context.SaveChangesAsync(cancellationToken);
 
+        // Pathway (docs/Pathway-Split-Platform-Flow-Plan.md §2.1): a to-do link is NEUTRAL — it never
+        // sets or changes a pathway on a thread that already has one (a to-do raised from a client
+        // email leaves the thread Client). Only when the triager worked down the Internal pathway AND
+        // the thread has no pathway yet is it filed under Internal. Best-effort: the to-do tags are
+        // the primary association; a missed stamp is healed by the backfill.
+        var wantsInternal = string.Equals(command.Pathway?.Trim(), "Internal", StringComparison.OrdinalIgnoreCase);
+        var hasBucket = (snapshot.Categories ?? Array.Empty<string>()).Any(TriageCategories.IsBucketTag);
+        if (wantsInternal && !hasBucket)
+        {
+            try
+            {
+                await threadTagger.TagThreadAsync(
+                    command.MessageId, snapshot.InternetMessageId, snapshot.ConversationId,
+                    TriageCategories.Internal, cancellationToken);
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException) { /* best-effort */ }
+        }
+
         return entities.Select(e => e.ToModel()).ToList().AsReadOnly();
     }
 

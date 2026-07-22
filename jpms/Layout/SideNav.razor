@@ -7,11 +7,14 @@
 @implements IDisposable
 
 @*
-    The app's single navigation plane, in two explicit scopes: the PROJECT WORKSPACE — a project
-    picker with the workspace's pages beneath it, every link targeting the picked project — and
-    the COMPANY area below the divider for cross-project tools. The picker doubles as the project
-    switcher (the portfolio lives in its footer); picking a project while on a project page jumps
-    to the same page of the new project.
+    The app's single navigation plane: Home, the project picker, then ONE list of collapsible
+    folders (docs/Pathway-Split-Platform-Flow-Plan.md §6) — Client, Subcontractor, Internal,
+    Project, Financials, Directory. Folders mix scopes deliberately: project-scoped rows target
+    the picked project, company rows sit beside them where the work mixes. The picker doubles as
+    the project switcher (the portfolio lives in its footer); picking a project while on a
+    project page jumps to the same page of the new project. A role whose whole world is one
+    folder sees that folder's rows flat, with no header (decision 2026-07-22) — folder chrome is
+    for people who work across folders.
 *@
 
 <div class="h-full flex flex-col bg-surface">
@@ -42,111 +45,138 @@
                 </a>
             </li>
 
-            @if (ShowsProjectWorkspace)
+            @if (ShowsProjectPicker && IsExpanded)
             {
-                @* ---- Project workspace: everything below the picker targets this project. ---- *@
-                @if (IsExpanded)
-                {
-                    <li class="hidden md:block pt-2 pb-1">
-                        <div class="relative">
-                            <button type="button" @onclick="() => pickerOpen = !pickerOpen"
-                                    class="w-full flex items-center gap-2 rounded-lg border border-line bg-surface-raised px-3 py-2 text-left hover:border-line-strong transition"
-                                    aria-haspopup="listbox" aria-expanded="@pickerOpen" title="Switch project">
-                                @if (PickedProject is { } picked)
-                                {
-                                    <span class="min-w-0 flex-1">
-                                        <span class="block font-mono text-[10px] uppercase tracking-wider text-content-subtle truncate">@picked.Reference</span>
-                                        <span class="block text-sm font-semibold text-content truncate">@picked.Name</span>
-                                    </span>
-                                }
-                                else
-                                {
-                                    <span class="min-w-0 flex-1 text-sm text-content-subtle">Pick a project…</span>
-                                }
-                                <svg class="w-4 h-4 text-content-subtle shrink-0 transition-transform @(pickerOpen ? "rotate-180" : "")"
-                                     viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                                     stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
-                            </button>
-
-                            @if (pickerOpen)
+                @* ---- Project picker: every {project}-templated row below targets this project. ---- *@
+                <li class="hidden md:block pt-2 pb-1">
+                    <div class="relative">
+                        <button type="button" @onclick="() => pickerOpen = !pickerOpen"
+                                class="w-full flex items-center gap-2 rounded-lg border border-line bg-surface-raised px-3 py-2 text-left hover:border-line-strong transition"
+                                aria-haspopup="listbox" aria-expanded="@pickerOpen" title="Switch project">
+                            @if (PickedProject is { } picked)
                             {
-                                <button type="button" class="fixed inset-0 z-30 cursor-default" aria-hidden="true"
-                                        @onclick="() => pickerOpen = false" tabindex="-1"></button>
-                                <div class="absolute left-0 right-0 top-full z-40 mt-1 max-h-80 overflow-y-auto rounded-xl border border-line bg-surface shadow-lg py-1"
-                                     role="listbox">
-                                    @foreach (var candidate in ActiveProjects)
-                                    {
-                                        var isCurrent = string.Equals(candidate.ProjectId, EffectiveProjectId, StringComparison.OrdinalIgnoreCase);
-                                        <button type="button" role="option" aria-selected="@isCurrent"
-                                                class="w-full text-left px-3 py-2 text-sm transition @(isCurrent ? "bg-surface-raised text-content font-semibold" : "text-content-muted hover:text-content hover:bg-surface-raised")"
-                                                @onclick="() => PickProject(candidate)">
-                                            <span class="font-mono text-xs text-content-subtle mr-2">@candidate.Reference</span>@candidate.Name
-                                        </button>
-                                    }
-                                    <div class="border-t border-line mt-1 pt-1">
-                                        <a href="/projects" class="block px-3 py-2 text-xs text-content-subtle hover:text-content hover:bg-surface-raised transition"
-                                           @onclick="ClosePickerAndNavigate" @onclick:preventDefault="false">
-                                            Project portfolio · New project →
-                                        </a>
-                                    </div>
-                                </div>
+                                <span class="min-w-0 flex-1">
+                                    <span class="block font-mono text-[10px] uppercase tracking-wider text-content-subtle truncate">@picked.Reference</span>
+                                    <span class="block text-sm font-semibold text-content truncate">@picked.Name</span>
+                                </span>
                             }
-                        </div>
+                            else
+                            {
+                                <span class="min-w-0 flex-1 text-sm text-content-subtle">Pick a project…</span>
+                            }
+                            <svg class="w-4 h-4 text-content-subtle shrink-0 transition-transform @(pickerOpen ? "rotate-180" : "")"
+                                 viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                 stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
+                        </button>
+
+                        @if (pickerOpen)
+                        {
+                            <button type="button" class="fixed inset-0 z-30 cursor-default" aria-hidden="true"
+                                    @onclick="() => pickerOpen = false" tabindex="-1"></button>
+                            <div class="absolute left-0 right-0 top-full z-40 mt-1 max-h-80 overflow-y-auto rounded-xl border border-line bg-surface shadow-lg py-1"
+                                 role="listbox">
+                                @foreach (var candidate in ActiveProjects)
+                                {
+                                    var isCurrent = string.Equals(candidate.ProjectId, EffectiveProjectId, StringComparison.OrdinalIgnoreCase);
+                                    <button type="button" role="option" aria-selected="@isCurrent"
+                                            class="w-full text-left px-3 py-2 text-sm transition @(isCurrent ? "bg-surface-raised text-content font-semibold" : "text-content-muted hover:text-content hover:bg-surface-raised")"
+                                            @onclick="() => PickProject(candidate)">
+                                        <span class="font-mono text-xs text-content-subtle mr-2">@candidate.Reference</span>@candidate.Name
+                                    </button>
+                                }
+                                <div class="border-t border-line mt-1 pt-1">
+                                    <a href="/projects" class="block px-3 py-2 text-xs text-content-subtle hover:text-content hover:bg-surface-raised transition"
+                                       @onclick="ClosePickerAndNavigate" @onclick:preventDefault="false">
+                                        Project portfolio · New project →
+                                    </a>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </li>
+            }
+
+            @if (RendersFlat)
+            {
+                @* A single visible folder reads as a flat list of top-level items — no header
+                   (decision 2026-07-22): e.g. a future client login sees "Requests" as a
+                   top-level item, never a folder labelled "Client". *@
+                @foreach (var item in Folders[0].Items)
+                {
+                    <li>
+                        @if (IsUnresolvable(item))
+                        {
+                            <span class="@DisabledLinkClass" title="Pick a project first">
+                                <NavIcon Route="@item.Href" Class="w-5 h-5 shrink-0" />
+                                <span class="@LabelClass">@item.Label</span>
+                            </span>
+                        }
+                        else
+                        {
+                            <a href="@item.ResolveHref(EffectiveProjectId)" @onclick="HandleNavigate" @onclick:preventDefault="false"
+                               class="@LinkClass(item.IsActiveFor(CurrentPath))" title="@item.Label">
+                                <NavIcon Route="@item.Href" Class="w-5 h-5 shrink-0" />
+                                <span class="@LabelClass">@item.Label</span>
+                            </a>
+                        }
                     </li>
                 }
-
-                @foreach (var block in ProjectBlocks)
+            }
+            else
+            {
+                @foreach (var folder in Folders)
                 {
                     @if (IsExpanded)
                     {
-                        <li class="hidden md:block px-3 pt-3 pb-1">
-                            <p class="eyebrow">@block.Heading</p>
+                        @* Mobile stays an icon rail even while the desktop panel is expanded —
+                           one icon per folder, straight to its first page. *@
+                        <li class="md:hidden">
+                            <a href="@folder.Items[0].ResolveHref(EffectiveProjectId)" @onclick="HandleNavigate" @onclick:preventDefault="false"
+                               class="@LinkClass(IsFolderActive(folder))" title="@folder.Label">
+                                <NavIcon Route="@folder.IconKey" Class="w-5 h-5 shrink-0" />
+                            </a>
                         </li>
-                        @foreach (var item in block.Items)
+                        <li class="hidden md:block pt-2">
+                            <button type="button" @onclick="() => ToggleFolder(folder)"
+                                    class="w-full flex items-center gap-1.5 px-3 py-1 rounded-lg text-left hover:bg-surface-raised transition"
+                                    aria-expanded="@IsFolderOpen(folder)" title="@folder.Label">
+                                <svg class="w-3 h-3 text-content-subtle shrink-0 transition-transform @(IsFolderOpen(folder) ? "rotate-90" : "")"
+                                     viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                     stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6" /></svg>
+                                <span class="eyebrow">@folder.Label</span>
+                            </button>
+                        </li>
+                        @if (IsFolderOpen(folder))
                         {
-                            <li class="hidden md:block">
-                                <a href="@item.ResolveHref(EffectiveProjectId)" @onclick="HandleNavigate" @onclick:preventDefault="false"
-                                   class="@BlockItemClass(item.IsActiveFor(CurrentPath))" title="@item.Label">@item.Label</a>
-                            </li>
+                            @foreach (var item in folder.Items)
+                            {
+                                <li class="hidden md:block">
+                                    @if (IsUnresolvable(item))
+                                    {
+                                        @* Project-scoped rows need a picked project; until one
+                                           resolves they sit muted rather than dead-linking.
+                                           Company rows in the same folder keep working. *@
+                                        <span class="@DisabledRowClass" title="Pick a project first">@item.Label</span>
+                                    }
+                                    else
+                                    {
+                                        <a href="@item.ResolveHref(EffectiveProjectId)" @onclick="HandleNavigate" @onclick:preventDefault="false"
+                                           class="@FolderItemClass(item.IsActiveFor(CurrentPath))" title="@item.Label">@item.Label</a>
+                                    }
+                                </li>
+                            }
                         }
                     }
                     else
                     {
-                        @* Collapsed rail: one icon per block, straight to its first page. *@
+                        @* Collapsed rail: one icon per folder, straight to its first page. *@
                         <li>
-                            <a href="@block.Items[0].ResolveHref(EffectiveProjectId)" @onclick="HandleNavigate" @onclick:preventDefault="false"
-                               class="@LinkClass(block.Items.Any(item => item.IsActiveFor(CurrentPath)))" title="@block.Heading">
-                                <NavIcon Route="@block.IconKey" Class="w-5 h-5 shrink-0" />
+                            <a href="@folder.Items[0].ResolveHref(EffectiveProjectId)" @onclick="HandleNavigate" @onclick:preventDefault="false"
+                               class="@LinkClass(IsFolderActive(folder))" title="@folder.Label">
+                                <NavIcon Route="@folder.IconKey" Class="w-5 h-5 shrink-0" />
                             </a>
                         </li>
                     }
-                }
-
-                <li class="@(IsExpanded ? "md:pt-1" : "")">
-                    <a href="@DesktopNavigation.ProjectSettings.ResolveHref(EffectiveProjectId)" @onclick="HandleNavigate" @onclick:preventDefault="false"
-                       class="@LinkClass(DesktopNavigation.ProjectSettings.IsActiveFor(CurrentPath))" title="@DesktopNavigation.ProjectSettings.Label">
-                        <NavIcon Route="@DesktopNavigation.ProjectSettings.Href" Class="w-5 h-5 shrink-0" />
-                        <span class="@LabelClass">@DesktopNavigation.ProjectSettings.Label</span>
-                    </a>
-                </li>
-            }
-
-            @if (CompanyItems.Count > 0)
-            {
-                @* ---- Company: cross-project tools, deliberately separated from the workspace. ---- *@
-                <li class="pt-3 pb-1">
-                    <div class="border-t border-line mx-1 mb-2"></div>
-                    <p class="eyebrow px-3 @(IsExpanded ? "hidden md:block" : "hidden")">Company</p>
-                </li>
-                @foreach (var item in CompanyItems)
-                {
-                    <li>
-                        <a href="@item.Href" @onclick="HandleNavigate" @onclick:preventDefault="false"
-                           class="@LinkClass(item.IsActiveFor(CurrentPath))" title="@item.Label">
-                            <NavIcon Route="@item.Href" Class="w-5 h-5 shrink-0" />
-                            <span class="@LabelClass">@item.Label</span>
-                        </a>
-                    </li>
                 }
             }
         </ul>
@@ -177,6 +207,12 @@
     private bool pickerOpen;
     private bool projectsRequested;
 
+    // Explicit folder toggles, remembered for the browser session. Static on purpose: it
+    // survives layout re-creation and navigation without any new storage plumbing, and losing
+    // it on a full reload is fine for a per-session preference. Folders the user has never
+    // toggled follow the route instead — see IsFolderOpen.
+    private static readonly Dictionary<SidebarFolder, bool> folderToggles = new();
+
     private string LabelClass => IsExpanded ? "hidden md:inline truncate" : "hidden";
 
     private string HeaderLayout => IsExpanded
@@ -185,14 +221,18 @@
 
     private string CurrentPath => new Uri(Nav.Uri).AbsolutePath;
 
-    private bool ShowsProjectWorkspace =>
+    // The picker only earns its space for roles that can open projects; every role holding a
+    // project-scoped row is inside ProjectRoles (finance/triage/directory sets are subsets).
+    private bool ShowsProjectPicker =>
         Session.ActiveRole is { } role && DesktopNavigation.CanSeeProjects(role);
 
-    private IReadOnlyList<DesktopNavigation.SidebarBlock> ProjectBlocks =>
-        Session.ActiveRole is { } role ? DesktopNavigation.ProjectBlocksFor(role) : Array.Empty<DesktopNavigation.SidebarBlock>();
+    private IReadOnlyList<DesktopNavigation.VisibleFolder> Folders =>
+        Session.ActiveRole is { } role ? DesktopNavigation.FoldersFor(role) : Array.Empty<DesktopNavigation.VisibleFolder>();
 
-    private IReadOnlyList<NavigationItem> CompanyItems =>
-        Session.ActiveRole is { } role ? DesktopNavigation.CompanyItemsFor(role) : Array.Empty<NavigationItem>();
+    // The flatten rule (decision 2026-07-22): one visible folder → its rows render as top-level
+    // items with no folder header. Internal staff always span several folders, so they see
+    // headers as normal.
+    private bool RendersFlat => Folders.Count == 1;
 
     private List<Project> ActiveProjects =>
         (Projects.Current ?? (IReadOnlyList<Project>)Array.Empty<Project>())
@@ -205,6 +245,22 @@
 
     private Project? PickedProject =>
         EffectiveProjectId is { } id ? Projects.Find(id) : null;
+
+    // A project-scoped row with no project to resolve against renders muted, not dead-linked.
+    private bool IsUnresolvable(NavigationItem item) =>
+        item.IsProjectScoped && EffectiveProjectId is null;
+
+    private bool IsFolderActive(DesktopNavigation.VisibleFolder folder) =>
+        folder.Items.Any(item => item.IsActiveFor(CurrentPath));
+
+    // Never-toggled folders track the route: the folder owning the current page starts (and
+    // stays) expanded as the user navigates, the rest stay collapsed. An explicit toggle wins
+    // over that default for the rest of the session.
+    private bool IsFolderOpen(DesktopNavigation.VisibleFolder folder) =>
+        folderToggles.TryGetValue(folder.Folder, out var open) ? open : IsFolderActive(folder);
+
+    private void ToggleFolder(DesktopNavigation.VisibleFolder folder) =>
+        folderToggles[folder.Folder] = !IsFolderOpen(folder);
 
     private async Task PickProject(Project project)
     {
@@ -255,7 +311,7 @@
     private void EnsureProjectsLoaded()
     {
         if (projectsRequested || !Session.IsApproved || Projects.Current is not null) return;
-        if (!ShowsProjectWorkspace) return;
+        if (!ShowsProjectPicker) return;
         projectsRequested = true;
         _ = RefreshProjectsAsync();
     }
@@ -280,13 +336,26 @@
         return $"{baseClass} text-content-subtle font-medium hover:text-content hover:bg-surface-raised";
     }
 
-    // Workspace pages indent under their block heading; no icons — the heading carries the group.
-    private string BlockItemClass(bool isActive)
+    // Muted twin of LinkClass for unresolvable top-level rows (flat rendering only).
+    private string DisabledLinkClass
     {
-        var baseClass = "block pl-6 pr-3 py-1.5 rounded-lg text-sm transition truncate";
+        get
+        {
+            var layout = IsExpanded ? "md:justify-start" : "";
+            return $"flex items-center gap-3 justify-center {layout} px-3 py-2 rounded-lg text-sm text-content-subtle font-medium opacity-50 cursor-default";
+        }
+    }
+
+    // Folder rows indent under their header; no icons — the header carries the group.
+    private string FolderItemClass(bool isActive)
+    {
+        var baseClass = "block pl-7 pr-3 py-1.5 rounded-lg text-sm transition truncate";
         if (isActive) return $"{baseClass} text-content font-semibold";
         return $"{baseClass} text-content-subtle hover:text-content hover:bg-surface-raised";
     }
+
+    private string DisabledRowClass =>
+        "block pl-7 pr-3 py-1.5 rounded-lg text-sm text-content-subtle opacity-50 cursor-default truncate";
 
     private Task HandleNavigate() => OnNavigate.InvokeAsync();
 

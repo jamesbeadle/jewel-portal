@@ -79,12 +79,17 @@ public sealed class RecordThreadTagger
             try
             {
                 // The whole thread (Inbox + the mailbox's own sent copies; unsent drafts excluded —
-                // a staged draft is provisional, not a triage decision). Any workflow tag on any
-                // member is a decision the queued members should inherit.
+                // a staged draft is provisional, not a triage decision). Any RECORD tag on any
+                // member is a decision the queued members should inherit. A pathway (bucket) tag
+                // alone is NOT a decision — a bucket-only thread stays queued — but when a record
+                // tag is present the thread's pathway rides along to the siblings with it.
+                // (MailboxMessage.Categories excludes bucket tags, so the record-tag test is on
+                // Categories and the pathway comes from the Bucket field.)
                 var thread = await graph.ListConversationAsync(conversationId, ct);
                 var tags = thread.Items
                     .SelectMany(m => m.Categories)
                     .Where(c => TriageCategories.IsWorkflowTag(c)
+                        && !TriageCategories.IsBucketTag(c)
                         && !string.Equals(c, TriageCategories.Discarded, StringComparison.OrdinalIgnoreCase))
                     .Distinct(StringComparer.OrdinalIgnoreCase)
                     .ToList();
@@ -94,6 +99,14 @@ public sealed class RecordThreadTagger
                     recentlyCheckedClean[conversationId] = DateTimeOffset.UtcNow;
                     continue;
                 }
+
+                // The thread has a triage decision — propagate its pathway too, so late replies
+                // join the same bucket view as the rest of the conversation.
+                foreach (var bucket in thread.Items
+                    .Select(m => m.Bucket)
+                    .Where(b => !string.IsNullOrEmpty(b))
+                    .Distinct(StringComparer.OrdinalIgnoreCase))
+                    tags.Add(bucket!);
 
                 var tagged = 0;
                 foreach (var tag in tags)

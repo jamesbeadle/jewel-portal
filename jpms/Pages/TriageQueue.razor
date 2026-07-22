@@ -258,6 +258,10 @@
                                         {
                                             <span class="inline-flex items-center rounded-full border border-line text-content-subtle text-[10px] font-medium px-2 py-0.5">In queue</span>
                                         }
+                                        @if (PathwayFromBucket(member.Bucket) is { } memberPathway)
+                                        {
+                                            <span class="inline-flex items-center rounded-full @PathwayChipColour(memberPathway) text-[10px] font-medium px-2 py-0.5">@PathwayLabel(memberPathway)</span>
+                                        }
                                         @foreach (var tag in member.Categories)
                                         {
                                             <span class="inline-flex items-center rounded-full bg-accent/10 text-accent text-[10px] font-medium px-2 py-0.5">@TagLabel(tag)</span>
@@ -499,12 +503,54 @@ else
                             @MessageBody
 
                             <div class="pt-3 border-t border-line">
+                                @*
+                                    PATHWAY FIRST (docs/Pathway-Split-Platform-Flow-Plan.md §2.2): the first triage
+                                    decision is who the correspondence is with — the chosen pathway then decides which
+                                    action tabs (and record types) are offered. A thread that already carries a pathway
+                                    shows it as a fixed badge: its routing was decided when it was first filed, so the
+                                    triager acts within it rather than re-choosing. Discard is offered regardless —
+                                    discarding is pathway-less.
+                                *@
+                                <div class="mb-4">
+                                    <p class="text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1.5">Who is this correspondence with?</p>
+                                    @if (FixedPathway is { } filedPathway)
+                                    {
+                                        <span class="inline-flex items-center rounded-full @PathwayChipColour(filedPathway) text-xs font-medium px-2.5 py-1">Filed under @PathwayLabel(filedPathway)</span>
+                                        <p class="text-xs text-content-subtle mt-2">This thread is already filed — the actions below work within its pathway.</p>
+                                    }
+                                    else
+                                    {
+                                        <div class="inline-flex rounded-lg border border-line-strong p-0.5 gap-0.5">
+                                            @foreach (var option in PathwayOptions)
+                                            {
+                                                <button type="button" @onclick="() => SetPathway(option)" class="@PathwaySegmentClass(option)">@PathwayLabel(option)</button>
+                                            }
+                                        </div>
+                                        @if (pathway is null)
+                                        {
+                                            <p class="text-xs text-content-subtle mt-2">Choose who this correspondence is with to see the actions.</p>
+                                        }
+                                        else if (mode != TriageMode.Discard)
+                                        {
+                                            @* The quiet consequence line: what the pending action does to the thread's
+                                               filing. A to-do LINK is the one neutral case — it never files a thread. *@
+                                            @if (pathway == TriagePathway.Internal && mode == TriageMode.Link)
+                                            {
+                                                <p class="text-xs text-content-subtle mt-2">To-do links are neutral — this won't file the thread under a pathway.</p>
+                                            }
+                                            else
+                                            {
+                                                <p class="text-xs text-content-subtle mt-2">This thread will be filed under <span class="font-semibold text-content">@PathwayLabel(pathway.Value)</span>.</p>
+                                            }
+                                        }
+                                    }
+                                </div>
+
                                 <div class="flex flex-wrap gap-2 mb-4">
-                                    <button type="button" class="@ModeTabClass(TriageMode.Link)" @onclick="() => SetMode(TriageMode.Link)">Link to existing</button>
-                                    <button type="button" class="@ModeTabClass(TriageMode.Create)" @onclick="() => SetMode(TriageMode.Create)">Create new</button>
-                                    <button type="button" class="@ModeTabClass(TriageMode.GeneralTodo)" @onclick="() => SetMode(TriageMode.GeneralTodo)">General to-do</button>
-                                    <button type="button" class="@ModeTabClass(TriageMode.Reply)" @onclick="() => SetMode(TriageMode.Reply)">Reply in thread</button>
-                                    <button type="button" class="@ModeTabClass(TriageMode.Discard)" @onclick="() => SetMode(TriageMode.Discard)">Discard</button>
+                                    @foreach (var tab in AvailableModes)
+                                    {
+                                        <button type="button" @key="tab" class="@ModeTabClass(tab)" @onclick="() => SetMode(tab)">@ModeLabel(tab)</button>
+                                    }
                                 </div>
 
                                 @if (mode == TriageMode.Link)
@@ -512,8 +558,11 @@ else
                                     <div class="space-y-3">
                                         <div>
                                             <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Record type</label>
+                                            @* Only the chosen pathway's record types are offered — the pathway filters
+                                               the actions, so a client record can't be reached from Subcontractor and
+                                               vice versa. Internal narrows to existing to-do items. *@
                                             <select class="field" value="@((int)linkRecordType)" @onchange="OnLinkRecordTypeChanged">
-                                                @foreach (var recordType in RecordTypeOptions)
+                                                @foreach (var recordType in QueueLinkTypeOptions)
                                                 {
                                                     <option value="@((int)recordType)">@RecordTypeLabel(recordType)</option>
                                                 }
@@ -607,34 +656,37 @@ else
                                         <button type="button" class="btn-primary" disabled="@(busy || linkRecordIds.Count == 0)" @onclick="DoLink">
                                             @(linkRecordIds.Count <= 1 ? "Link email to selected record" : $"Link email to {linkRecordIds.Count} selected records")
                                         </button>
+
+                                        @* The lane confirm: the server asked for explicit consent to a Subcontractor↔
+                                           Internal dual filing. Wall rejections never reach here — they surface as a
+                                           plain error above, with no retry. *@
+                                        @if (crossFileMessage is not null)
+                                        {
+                                            <div class="rounded-lg bg-amber-500/10 border border-amber-500/40 px-3 py-2 space-y-2">
+                                                <p class="text-sm text-content">@crossFileMessage</p>
+                                                <button type="button" class="btn-secondary text-xs" disabled="@busy" @onclick="DoLinkConfirmCross">File under both anyway</button>
+                                            </div>
+                                        }
                                     </div>
                                 }
                                 else if (mode == TriageMode.Create)
                                 {
+                                    @* The pathway decides WHAT is created — Client → a General request (the client
+                                       pathway's default container), Subcontractor → a bid package — so the old
+                                       record-type picker is gone: the pathway already made that choice. *@
                                     <div class="space-y-4">
-                                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                            <div>
-                                                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Record type *</label>
-                                                <select class="field" value="@((int)createRecordType)" @onchange="OnCreateRecordTypeChanged">
-                                                    @foreach (var recordType in CreateRecordTypeOptions)
-                                                    {
-                                                        <option value="@((int)recordType)">@RecordTypeLabel(recordType)</option>
-                                                    }
-                                                </select>
-                                            </div>
-                                            <div>
-                                                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Project *</label>
-                                                <select class="field" value="@createProjectId" @onchange="OnCreateProjectChanged">
-                                                    <option value="">Select a project…</option>
-                                                    @foreach (var project in ProjectOptions)
-                                                    {
-                                                        <option value="@project.ProjectId">@project.Reference — @project.Name</option>
-                                                    }
-                                                </select>
-                                            </div>
+                                        <div>
+                                            <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Project *</label>
+                                            <select class="field" value="@createProjectId" @onchange="OnCreateProjectChanged">
+                                                <option value="">Select a project…</option>
+                                                @foreach (var project in ProjectOptions)
+                                                {
+                                                    <option value="@project.ProjectId">@project.Reference — @project.Name</option>
+                                                }
+                                            </select>
                                         </div>
 
-                                        @if (createRecordType == RecordType.Request)
+                                        @if (pathway == TriagePathway.Client)
                                         {
                                             <p class="rounded-lg bg-surface-raised border border-line px-3 py-2 text-xs text-content-subtle">
                                                 Created as a <span class="font-medium text-content">General</span> request and auto-numbered REQ-####. Promote it to an official RFI from the request page.
@@ -664,7 +716,7 @@ else
 
                                             <button type="button" class="btn-primary" disabled="@(busy || string.IsNullOrWhiteSpace(createProjectId))" @onclick="DoCreate">Create request from email</button>
                                         }
-                                        else if (createRecordType == RecordType.BidPackageInvite)
+                                        else
                                         {
                                             <FormField Label="Title" Value="@createTitle" OnChange="v => createTitle = v" Required="true" />
                                             <FormField Label="Trade" Value="@createTrade" OnChange="v => createTrade = v" />
@@ -673,27 +725,36 @@ else
 
                                             <button type="button" class="btn-primary" disabled="@(busy || string.IsNullOrWhiteSpace(createProjectId) || string.IsNullOrWhiteSpace(createTitle))" @onclick="DoCreateBidPackage">Create bid package from email</button>
                                         }
-                                        else if (createRecordType == RecordType.Scheduling)
-                                        {
-                                            <p class="rounded-lg bg-surface-raised border border-line px-3 py-2 text-xs text-content-subtle">
-                                                This email (and its whole thread) is tagged to the project's <span class="font-medium text-content">programme communications</span> and appears under the project's Programme tab. You can add further tags later from the Tagged view — the same email can also feed a request or bid package.
-                                            </p>
+                                    </div>
+                                }
+                                else if (mode == TriageMode.GeneralTodo)
+                                {
+                                    @* Internal → To-dos: capture the email as one or more to-do items. The project is
+                                       OPTIONAL — chosen, the items land on that project's To-do tab (and the email can
+                                       also feed one of its open requests); left blank they are GENERAL (company-wide)
+                                       items that live on the To-dos browser page and the dashboards of everyone
+                                       holding the assigned role. One row editor serves both. *@
+                                    <div class="space-y-4">
+                                        <p class="rounded-lg bg-surface-raised border border-line px-3 py-2 text-xs text-content-subtle">
+                                            Each item is numbered TODO-#### and this email is tagged to <span class="font-medium text-content">every item</span> you add here, so one email can feed several to-dos. Choose a project to put the items on its To-do tab, or leave it blank for <span class="font-medium text-content">company-wide</span> items that appear on the To-dos page and the dashboard of everyone holding the assigned role.
+                                        </p>
 
-                                            <button type="button" class="btn-primary" disabled="@(busy || string.IsNullOrWhiteSpace(createProjectId))" @onclick="DoTagScheduling">Tag email to programme</button>
-                                        }
-                                        else if (createRecordType == RecordType.Todo)
-                                        {
-                                            <p class="rounded-lg bg-surface-raised border border-line px-3 py-2 text-xs text-content-subtle">
-                                                Each item is numbered TODO-#### and this email is tagged to <span class="font-medium text-content">every item</span> you add here, so one email can feed several to-dos. The items appear on the project's To-do tab.
-                                            </p>
+                                        <div>
+                                            <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Project (optional)</label>
+                                            <select class="field" value="@createProjectId" @onchange="OnCreateProjectChanged">
+                                                <option value="">No project — company-wide</option>
+                                                @foreach (var project in ProjectOptions)
+                                                {
+                                                    <option value="@project.ProjectId">@project.Reference — @project.Name</option>
+                                                }
+                                            </select>
+                                        </div>
 
+                                        @if (!string.IsNullOrWhiteSpace(createProjectId))
+                                        {
                                             <div>
                                                 <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Link to an open request (optional)</label>
-                                                @if (string.IsNullOrWhiteSpace(createProjectId))
-                                                {
-                                                    <p class="text-xs text-content-subtle italic">Choose a project to see its open requests.</p>
-                                                }
-                                                else if (createTodoLinkRequestsLoading)
+                                                @if (createTodoLinkRequestsLoading)
                                                 {
                                                     <p class="text-sm text-content-subtle italic">Loading requests…</p>
                                                 }
@@ -713,61 +774,12 @@ else
                                                     @if (!string.IsNullOrWhiteSpace(createTodoLinkRequestId))
                                                     {
                                                         <p class="text-xs text-content-subtle mt-1">
-                                                            This email is tagged to the request as well as to every item below, so it appears in the request's conversation too — exactly as if you'd also used "Link to existing".
+                                                            This email is tagged to the request as well as to every item below, so it appears in the request's conversation too — and because a request is a client record, the thread's filing follows the request rather than Internal.
                                                         </p>
                                                     }
                                                 }
                                             </div>
-
-                                            @for (var i = 0; i < createTodoRows.Count; i++)
-                                            {
-                                                var row = createTodoRows[i];
-                                                var rowNumber = i + 1;
-                                                <div @key="row" class="rounded-lg border border-line p-3 space-y-3">
-                                                    <div class="flex items-center justify-between">
-                                                        <p class="text-xs uppercase tracking-wider text-content-subtle font-semibold">Item @rowNumber</p>
-                                                        @if (createTodoRows.Count > 1)
-                                                        {
-                                                            <button type="button" class="text-xs text-content-subtle hover:text-negative" @onclick="() => RemoveTodoRow(row)">Remove</button>
-                                                        }
-                                                    </div>
-
-                                                    <FormField Label="Title" Value="@row.Title" OnChange="v => row.Title = v" Required="true" />
-
-                                                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                                        <div>
-                                                            <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Assigned role</label>
-                                                            <SearchSelect Options="@todoAssigneeOptions" Value="@row.AssigneeRole" ValueChanged="v => row.AssigneeRole = v"
-                                                                          Placeholder="Unassigned" WidthClass="w-full" />
-                                                        </div>
-                                                        <FormField Label="Due" Value="@row.Due" OnChange="v => row.Due = v" InputType="date" />
-                                                    </div>
-
-                                                    <div>
-                                                        <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Detail</label>
-                                                        <textarea class="field" rows="6" value="@row.Notes" @oninput="e => OnTodoNotesInput(row, e)"></textarea>
-                                                    </div>
-                                                </div>
-                                            }
-
-                                            <button type="button" class="btn-secondary text-xs" @onclick="AddTodoRow">+ Add another item</button>
-
-                                            <button type="button" class="btn-primary" disabled="@(busy || string.IsNullOrWhiteSpace(createProjectId) || !createTodoRows.Any(r => !string.IsNullOrWhiteSpace(r.Title)))" @onclick="DoCreateTodos">
-                                                Create @(TodoRowCountLabel) from email
-                                            </button>
                                         }
-                                    </div>
-                                }
-                                else if (mode == TriageMode.GeneralTodo)
-                                {
-                                    @* Company-wide emails that don't belong to any project: capture them straight onto
-                                       the GENERAL to-do list. Same row editor as "Create new → To-do item", but no
-                                       project is chosen — items are created with no project and live on the To-dos
-                                       browser page (and the dashboards of everyone holding the assigned role). *@
-                                    <div class="space-y-4">
-                                        <p class="rounded-lg bg-surface-raised border border-line px-3 py-2 text-xs text-content-subtle">
-                                            For <span class="font-medium text-content">company-wide</span> emails that don't belong to a project. Each item is numbered TODO-#### and this email is tagged to <span class="font-medium text-content">every item</span> you add here. The items appear on the To-dos page and on the dashboard of everyone holding the assigned role — not on any project.
-                                        </p>
 
                                         @for (var i = 0; i < createTodoRows.Count; i++)
                                         {
@@ -802,7 +814,7 @@ else
 
                                         <button type="button" class="btn-secondary text-xs" @onclick="AddTodoRow">+ Add another item</button>
 
-                                        <button type="button" class="btn-primary" disabled="@(busy || !createTodoRows.Any(r => !string.IsNullOrWhiteSpace(r.Title)))" @onclick="DoCreateGeneralTodos">
+                                        <button type="button" class="btn-primary" disabled="@(busy || !createTodoRows.Any(r => !string.IsNullOrWhiteSpace(r.Title)))" @onclick="DoCreateInternalTodos">
                                             Create @(TodoRowCountLabel) from email
                                         </button>
                                     </div>
@@ -954,6 +966,18 @@ else
         }
         else
         {
+            @* Pathway filter: one chip per pathway, read server-side as an exact bucket-category
+               filter. Kept separate from (and mutually exclusive with) the tag filter below — Graph
+               composes category filters with OR only, so combining them would show a union, not the
+               intersection the combination looks like. *@
+            <div class="flex flex-wrap items-center gap-2 mb-3">
+                <span class="text-xs uppercase tracking-wider text-content-subtle font-semibold mr-1">Pathway</span>
+                <button type="button" class="@PathwayFilterChipClass(null)" @onclick="() => SetPathwayFilter(null)">All</button>
+                <button type="button" class="@PathwayFilterChipClass(ClientBucket)" @onclick="() => SetPathwayFilter(ClientBucket)">Client</button>
+                <button type="button" class="@PathwayFilterChipClass(SubcontractorBucket)" @onclick="() => SetPathwayFilter(SubcontractorBucket)">Subcontractor</button>
+                <button type="button" class="@PathwayFilterChipClass(InternalBucket)" @onclick="() => SetPathwayFilter(InternalBucket)">Internal</button>
+            </div>
+
             <div class="flex flex-wrap items-center gap-2 mb-5">
                 <span class="text-xs uppercase tracking-wider text-content-subtle font-semibold mr-1">Filter</span>
                 <div class="relative">
@@ -1017,9 +1041,15 @@ else
                                     <span class="text-sm font-medium text-content truncate">@DisplayFrom(item)</span>
                                 </div>
                                 <p class="text-sm text-content-muted truncate mt-0.5">@Dash(item.Subject)</p>
-                                @if (item.Categories.Count > 0)
+                                @if (item.Bucket is not null || item.Categories.Count > 0)
                                 {
                                     <div class="flex flex-wrap items-center gap-1 mt-1">
+                                        @* The pathway badge leads the chip row: the thread's filing is the first thing
+                                           to know about a tagged email, before which records it feeds. *@
+                                        @if (PathwayFromBucket(item.Bucket) is { } rowPathway)
+                                        {
+                                            <span class="inline-flex items-center rounded-full @PathwayChipColour(rowPathway) text-[10px] font-medium px-2 py-0.5">@PathwayLabel(rowPathway)</span>
+                                        }
                                         @foreach (var tag in item.Categories)
                                         {
                                             <span class="inline-flex items-center rounded-full bg-accent/10 text-accent text-[10px] font-medium px-2 py-0.5">@TagLabel(tag)</span>
@@ -1091,6 +1121,14 @@ else
                                 <div class="pt-3 border-t border-line space-y-4">
                                     <div>
                                         <p class="text-xs uppercase tracking-wider text-content-subtle font-semibold mb-2">Tags on this email</p>
+                                        @* The pathway badge is shown apart from the tag chips: it isn't removable here —
+                                           the server drops the bucket itself when the last record tag goes. *@
+                                        @if (FixedPathway is { } taggedPathway)
+                                        {
+                                            <div class="mb-2">
+                                                <span class="inline-flex items-center rounded-full @PathwayChipColour(taggedPathway) text-xs font-medium px-2.5 py-1">Filed under @PathwayLabel(taggedPathway)</span>
+                                            </div>
+                                        }
                                         @if (selected.Categories.Count == 0)
                                         {
                                             <p class="text-sm text-content-subtle italic">No workflow tags. (Refresh if you just changed them.)</p>
@@ -1112,10 +1150,14 @@ else
                                     <div>
                                         <p class="text-xs uppercase tracking-wider text-content-subtle font-semibold mb-2">Link to another record</p>
                                         <div class="space-y-3">
+                                            @* Each type shows the pathway it files under, and the pool is cut by the
+                                               thread's own pathway so the client wall can't even be expressed here: a
+                                               Client thread is never offered subcontract-side types and vice versa.
+                                               Todo is always offered — to-do links are neutral. *@
                                             <select class="field" value="@((int)linkRecordType)" @onchange="OnLinkRecordTypeChanged">
-                                                @foreach (var recordType in RecordTypeOptions)
+                                                @foreach (var recordType in TaggedLinkTypeOptions)
                                                 {
-                                                    <option value="@((int)recordType)">@RecordTypeLabel(recordType)</option>
+                                                    <option value="@((int)recordType)">@RecordTypeLabel(recordType) — @RecordTypePathwayLabel(recordType)</option>
                                                 }
                                             </select>
 
@@ -1145,9 +1187,25 @@ else
                                                 }
                                             }
 
+                                            @* The lane heads-up: a bid package on an Internal thread would file it under
+                                               both non-client pathways, which the server asks to confirm. (No client-side
+                                               type can appear here on a non-client thread, so this is the only case.) *@
+                                            @if (FixedPathway == TriagePathway.Internal && linkRecordType == RecordType.BidPackageInvite)
+                                            {
+                                                <p class="text-xs text-amber-600">This would file the thread under Subcontractor as well as Internal — you'll be asked to confirm.</p>
+                                            }
+
                                             <button type="button" class="btn-primary" disabled="@(busy || string.IsNullOrWhiteSpace(linkRecordId))" @onclick="DoAddTagLink">
                                                 Link to selected record
                                             </button>
+
+                                            @if (crossFileMessage is not null)
+                                            {
+                                                <div class="rounded-lg bg-amber-500/10 border border-amber-500/40 px-3 py-2 space-y-2">
+                                                    <p class="text-sm text-content">@crossFileMessage</p>
+                                                    <button type="button" class="btn-secondary text-xs" disabled="@busy" @onclick="DoAddTagLinkConfirmCross">File under both anyway</button>
+                                                </div>
+                                            }
                                         </div>
                                     </div>
                                 </div>
@@ -1163,25 +1221,143 @@ else
 @code {
     private enum TriageMode { None, Link, Create, GeneralTodo, Reply, Discard }
 
+    // The communication pathway — WHO the correspondence is with (docs/Pathway-Split-Platform-Flow-
+    // Plan.md §2). Triage is pathway-FIRST: the pathway is chosen (or already fixed on the thread)
+    // before any action, and it decides which action tabs and record types are offered.
+    private enum TriagePathway { Client, Subcontractor, Internal }
+    private static readonly TriagePathway[] PathwayOptions =
+    {
+        TriagePathway.Client, TriagePathway.Subcontractor, TriagePathway.Internal
+    };
+
+    // The triager's pathway choice for the SELECTED email. Pre-set from the thread's own bucket when
+    // it already carries one (then shown as a fixed badge — the routing decision was made when the
+    // thread was first filed); otherwise null until chosen, and only Discard is offered until it is
+    // (discarding is pathway-less).
+    private TriagePathway? pathway;
+
+    // The pathway bucket categories exactly as the server stamps them — MailboxMessage.Bucket carries
+    // one of these verbatim. Literals here because the WASM app references contracts only; the API's
+    // TriageCategories constants aren't visible to it.
+    private const string ClientBucket = "JPMS/Client";
+    private const string SubcontractorBucket = "JPMS/Subcontractor";
+    private const string InternalBucket = "JPMS/Internal";
+
+    private static TriagePathway? PathwayFromBucket(string? bucket)
+    {
+        if (string.IsNullOrEmpty(bucket)) return null;
+        if (bucket.Equals(ClientBucket, StringComparison.OrdinalIgnoreCase)) return TriagePathway.Client;
+        if (bucket.Equals(SubcontractorBucket, StringComparison.OrdinalIgnoreCase)) return TriagePathway.Subcontractor;
+        if (bucket.Equals(InternalBucket, StringComparison.OrdinalIgnoreCase)) return TriagePathway.Internal;
+        return null;
+    }
+
+    // The selected thread's already-decided pathway (null = not filed yet). When set, the selector
+    // renders as a fixed "Filed under …" badge and the pathway can't be switched — the triager still
+    // acts within it.
+    private TriagePathway? FixedPathway => PathwayFromBucket(selected?.Bucket);
+
+    // Enum names double as the user-facing labels AND the short pathway strings the server's
+    // commands accept ("Client" / "Subcontractor" / "Internal") — keep them in sync with MapPathway.
+    private static string PathwayLabel(TriagePathway p) => p.ToString();
+
+    // Pathway chip colours: green-ish Client, orange-ish Subcontractor, purple-ish Internal — the
+    // same rounded-pill shape as the tag chips, but distinct hues so rows can be scanned by pathway.
+    private static string PathwayChipColour(TriagePathway p) => p switch
+    {
+        TriagePathway.Client        => "bg-emerald-500/10 text-emerald-600",
+        TriagePathway.Subcontractor => "bg-orange-500/10 text-orange-600",
+        TriagePathway.Internal      => "bg-purple-500/10 text-purple-600",
+        _                           => "bg-accent/10 text-accent"
+    };
+
     // The page shows the live queue (untagged Inbox), the discarded pile, or every tagged email (the
     // management surface for adding/removing workflow tags). The detail pane is shared.
     private enum QueueView { Active, Discarded, Tagged }
     private QueueView view = QueueView.Active;
 
-    // The record types an email can be LINKED to, in the order shown in the category picker. Driven by
-    // the providers registered server-side; adding a type here surfaces it once its provider exists.
+    // Every record type an email can be LINKED to. Driven by the providers registered server-side;
+    // adding a type here surfaces it once its provider exists. Under the pathway-first UI this full
+    // list is only the fallback for a tagged thread that has no pathway yet — the pathway-filtered
+    // subsets below are what the pickers normally offer.
     private static readonly RecordType[] RecordTypeOptions =
     {
-        RecordType.Request, RecordType.BidPackageInvite, RecordType.CostCentre, RecordType.Scheduling, RecordType.VariationQuote, RecordType.Variation, RecordType.Todo
+        RecordType.Request, RecordType.BidPackageInvite, RecordType.CostCentre, RecordType.Scheduling, RecordType.Lad, RecordType.VariationQuote, RecordType.Variation, RecordType.Todo
     };
 
-    // The subset offered by the "Create new" picker. Cost centres come from the global master, so an
-    // email can be linked to one but never creates one — it's excluded. Scheduling is included even
-    // though nothing is created: every project already has its (implicit) scheduling bucket, so
-    // "creating" a scheduling item is simply tagging the email to the chosen project's bucket.
-    private static readonly RecordType[] CreateRecordTypeOptions =
+    // What each pathway's "Link to existing" offers (the pathway filters the actions — the plan's
+    // §2.2): client-side records only under Client, subcontract-side only under Subcontractor, and
+    // Internal links to existing to-do items. CostCentre appears on BOTH sides of the wall because
+    // cost-centre mail can be valuation-side or subcontract-side — the pathway choice decides, and
+    // travels with the link command.
+    private static readonly RecordType[] ClientLinkTypes =
     {
-        RecordType.Request, RecordType.BidPackageInvite, RecordType.Scheduling, RecordType.Todo
+        RecordType.Request, RecordType.Variation, RecordType.VariationQuote, RecordType.Scheduling, RecordType.Lad, RecordType.CostCentre
+    };
+    private static readonly RecordType[] SubcontractorLinkTypes = { RecordType.BidPackageInvite, RecordType.CostCentre };
+    private static readonly RecordType[] InternalLinkTypes = { RecordType.Todo };
+
+    // The Tagged tab's "link to another record" pool per THREAD pathway. The client wall is
+    // structural here: a Client thread is never offered subcontract-side types and vice versa, so
+    // the picker can't even express a wall crossing (the server guard remains the enforcement).
+    // Todo is always offered — to-do links are pathway-neutral. A non-client thread still sees the
+    // other non-client side's types (the lane): linking one triggers the cross-filing confirm.
+    private static readonly RecordType[] ClientTaggedLinkTypes =
+    {
+        RecordType.Request, RecordType.Variation, RecordType.VariationQuote, RecordType.Scheduling, RecordType.Lad, RecordType.CostCentre, RecordType.Todo
+    };
+    private static readonly RecordType[] NonClientTaggedLinkTypes = { RecordType.BidPackageInvite, RecordType.CostCentre, RecordType.Todo };
+
+    private IReadOnlyList<RecordType> QueueLinkTypeOptions => pathway switch
+    {
+        TriagePathway.Client        => ClientLinkTypes,
+        TriagePathway.Subcontractor => SubcontractorLinkTypes,
+        TriagePathway.Internal      => InternalLinkTypes,
+        _                           => Array.Empty<RecordType>()
+    };
+
+    private IReadOnlyList<RecordType> TaggedLinkTypeOptions => FixedPathway switch
+    {
+        TriagePathway.Client => ClientTaggedLinkTypes,
+        TriagePathway.Subcontractor or TriagePathway.Internal => NonClientTaggedLinkTypes,
+        _ => RecordTypeOptions
+    };
+
+    // The pathway a record type files a thread under, for the Tagged picker's labels — mirrors the
+    // server's TriageCategories.BucketFor so the triager sees where a link would put the thread.
+    private static string RecordTypePathwayLabel(RecordType type) => type switch
+    {
+        RecordType.Request or RecordType.Variation or RecordType.VariationQuote
+            or RecordType.Scheduling or RecordType.Lad => "Client",
+        RecordType.BidPackageInvite => "Subcontractor",
+        RecordType.CostCentre       => "Client or Subcontractor",
+        RecordType.Todo             => "Neutral",
+        _ => ""
+    };
+
+    // The action tabs each pathway offers — the router's whole point (plan §2.2). Discard is in
+    // every set: discarding is pathway-less, and it is ALL that's offered before a pathway is chosen.
+    private static readonly TriageMode[] ClientModes = { TriageMode.Link, TriageMode.Create, TriageMode.Reply, TriageMode.Discard };
+    private static readonly TriageMode[] SubcontractorModes = { TriageMode.Link, TriageMode.Create, TriageMode.Discard };
+    private static readonly TriageMode[] InternalModes = { TriageMode.GeneralTodo, TriageMode.Link, TriageMode.Discard };
+    private static readonly TriageMode[] NoPathwayModes = { TriageMode.Discard };
+
+    private IReadOnlyList<TriageMode> AvailableModes => pathway switch
+    {
+        TriagePathway.Client        => ClientModes,
+        TriagePathway.Subcontractor => SubcontractorModes,
+        TriagePathway.Internal      => InternalModes,
+        _                           => NoPathwayModes
+    };
+
+    private static string ModeLabel(TriageMode m) => m switch
+    {
+        TriageMode.Link        => "Link to existing",
+        TriageMode.Create      => "Create new",
+        TriageMode.GeneralTodo => "To-dos",
+        TriageMode.Reply       => "Reply in thread",
+        TriageMode.Discard     => "Discard",
+        _ => m.ToString()
     };
 
     private static string RecordTypeLabel(RecordType type) => type switch
@@ -1255,6 +1431,24 @@ else
     private bool filterOpen;
     private readonly SortedSet<string> knownTags = new(StringComparer.OrdinalIgnoreCase) { "JPMS/Discarded" };
 
+    // The Tagged tab's pathway filter: one of the three bucket tags, or null = all pathways. Sent to
+    // the server through the same tags parameter as the record-tag filter (the bucket IS a category,
+    // and ListByTagsAsync filters by exact category). Mutually exclusive with the record-tag
+    // multi-select: Graph only composes category filters with OR, so combining the two would read as
+    // a union rather than the intersection a user would expect — picking one clears the other.
+    private string? pathwayBucketFilter;
+
+    // Cross-filing confirm (the LANE — Subcontractor↔Internal, plan §2.3): when the server answers a
+    // link with its "Confirm the cross-filing" rejection, the message is shown with a "File under
+    // both anyway" button that retries the same link(s) with AllowCrossPathway. The client-wall
+    // rejection carries no such marker and surfaces as a plain error — the wall has no override, so
+    // no retry is ever offered for it.
+    private string? crossFileMessage;
+    private readonly List<LinkableRecord> crossFilePicks = new();
+
+    private static bool IsCrossFilePrompt(string message) =>
+        message.Contains("Confirm the cross-filing", StringComparison.OrdinalIgnoreCase);
+
     // Sort order for all three lists: oldest-first (the default — clear the backlog from page one)
     // or newest-first. The last choice is remembered per user, like the work-order grouping toggle.
     private bool newestFirst;
@@ -1311,9 +1505,10 @@ else
     private IReadOnlyList<LinkableRecord> linkRecords = Array.Empty<LinkableRecord>();
     private bool linkRecordsLoading;
 
-    // Create-new state. A request created from an email always starts as a General container
-    // (auto-numbered REQ-#### server-side); it's promoted to an RFI later from the request page.
-    private RecordType createRecordType = RecordType.Request;
+    // Create-new state. The pathway decides WHAT is created (Client → General request, Subcontractor
+    // → bid package), so no record-type picker remains. A request created from an email always starts
+    // as a General container (auto-numbered REQ-#### server-side); it's promoted to an RFI later
+    // from the request page. createProjectId is shared with the Internal to-dos form.
     private string createProjectId = "";
     private const RequestType createKind = RequestType.General;
     private string createTitle = "";
@@ -1354,8 +1549,8 @@ else
     // batch — the email gets the request's tag as well as one tag per created item, so a single
     // triage action can feed a request's conversation and capture its follow-up to-dos. The pool is
     // the chosen project's open requests (same ListLinkableRecords call as the Link panel; closed
-    // requests are filtered server-side), reloaded whenever the To-do form gains a project. Project
-    // to-dos only — the General to-do mode has no project, so no request link.
+    // requests are filtered server-side), reloaded whenever the to-dos form gains a project. Project
+    // to-dos only — a company-wide batch (no project) can't link to a request.
     private string createTodoLinkRequestId = "";
     private IReadOnlyList<LinkableRecord> createTodoLinkRequests = Array.Empty<LinkableRecord>();
     private bool createTodoLinkRequestsLoading;
@@ -1422,8 +1617,10 @@ else
         mode = TriageMode.None;
         actionError = null;
         replyOutcome = null;
+        crossFileMessage = null;
+        crossFilePicks.Clear();
         if (next == QueueView.Discarded) { ResetDiscardedPaging(); await LoadDiscardedAsync(); }
-        else if (next == QueueView.Tagged) { selectedTags.Clear(); filterOpen = false; ResetTaggedPaging(); await LoadTaggedAsync(); }
+        else if (next == QueueView.Tagged) { selectedTags.Clear(); pathwayBucketFilter = null; filterOpen = false; ResetTaggedPaging(); await LoadTaggedAsync(); }
         else { ResetQueuePaging(); await LoadAsync(); }
     }
 
@@ -1442,6 +1639,8 @@ else
         mode = TriageMode.None;
         actionError = null;
         replyOutcome = null;
+        crossFileMessage = null;
+        crossFilePicks.Clear();
         if (view == QueueView.Discarded) { ResetDiscardedPaging(); await LoadDiscardedAsync(); }
         else if (view == QueueView.Tagged) { ResetTaggedPaging(); await LoadTaggedAsync(); }
         else { ResetQueuePaging(); await LoadAsync(); }
@@ -1545,7 +1744,11 @@ else
         StateHasChanged(); // paint the spinner before the fetch — see LoadAsync
         try
         {
-            var filter = selectedTags.Count == 0 ? null : selectedTags.ToList();
+            // The pathway chip and the record-tag multi-select are mutually exclusive (see the
+            // pathwayBucketFilter note), so exactly one of them feeds the server's tags filter.
+            var filter = pathwayBucketFilter is not null
+                ? new List<string> { pathwayBucketFilter }
+                : selectedTags.Count == 0 ? null : selectedTags.ToList();
             var result = await Intake.ListTaggedLiveAsync(taggedCursors[taggedIndex], PageSize, filter, newestFirst);
             taggedItems = result.Items;
             taggedTotal = result.Total;
@@ -1575,9 +1778,11 @@ else
     private string FilterButtonLabel => selectedTags.Count == 0 ? "All tags" : $"{selectedTags.Count} selected";
 
     // Tick/untick a tag in the multi-select filter, then re-read the (OR-filtered) list from page one.
+    // Using the tag filter drops any active pathway chip — the two can't be intersected server-side.
     private async Task ToggleTag(string tag)
     {
         if (!selectedTags.Add(tag)) selectedTags.Remove(tag);
+        pathwayBucketFilter = null;
         selected = null;
         detail = null;
         detailLoading = false;
@@ -1594,6 +1799,29 @@ else
         detailLoading = false;
         ResetTaggedPaging();
         await LoadTaggedAsync();
+    }
+
+    // Pick a pathway chip (null = All). Clears the record-tag filter for the same OR-vs-AND reason —
+    // the chips and the tag dropdown are two lenses on the same server-side category filter.
+    private async Task SetPathwayFilter(string? bucket)
+    {
+        if (pathwayBucketFilter == bucket) return;
+        pathwayBucketFilter = bucket;
+        selectedTags.Clear();
+        filterOpen = false;
+        selected = null;
+        detail = null;
+        detailLoading = false;
+        ResetTaggedPaging();
+        await LoadTaggedAsync();
+    }
+
+    private string PathwayFilterChipClass(string? bucket)
+    {
+        var baseClass = "rounded-full border px-3 py-1 text-xs font-medium transition";
+        return pathwayBucketFilter == bucket
+            ? $"{baseClass} border-accent bg-surface-raised text-content"
+            : $"{baseClass} border-line text-content-muted hover:text-content hover:border-line-strong";
     }
 
     private async Task PreviousTagged()
@@ -1641,8 +1869,13 @@ else
     private void ApplySelection(MailboxMessage item)
     {
         selected = item;
+        // Pathway-first: pre-select the thread's own pathway when it already carries one (rendered as
+        // a fixed badge); otherwise the triager chooses before any action beyond Discard is offered.
+        pathway = PathwayFromBucket(item.Bucket);
         mode = TriageMode.None;
         actionError = null;
+        crossFileMessage = null;
+        crossFilePicks.Clear();
         previewAttachment = null;
         threadNote = null;
         ResetLinkState();
@@ -1650,7 +1883,6 @@ else
         linkNote = null;
         replyProjectId = "";
         replyBody = "";
-        createRecordType = RecordType.Request;
         createProjectId = "";
         // Deliberately blank rather than copied from the email — the subject/body of the email is
         // rarely the right subject/detail for the record, so the triager writes their own.
@@ -1760,11 +1992,36 @@ else
         return $"{bytes} B";
     }
 
-    private void SetMode(TriageMode next)
+    private async Task SetMode(TriageMode next)
     {
         mode = next;
         actionError = null;
+        crossFileMessage = null;
+        crossFilePicks.Clear();
+        // Entering the to-do form with a project already chosen loads its open requests for the
+        // optional request link; leaving it clears the pick (the loader guards on the mode).
+        await LoadCreateTodoLinkRequestsAsync();
     }
+
+    // Choose the pathway for a not-yet-filed thread. Resets the action state so nothing chosen under
+    // one pathway (a record type, picked records) can leak into another; a thread that already
+    // carries a pathway ignores this — its routing decision is fixed at first filing.
+    private void SetPathway(TriagePathway next)
+    {
+        if (FixedPathway is not null || pathway == next) return;
+        pathway = next;
+        mode = TriageMode.None;
+        actionError = null;
+        crossFileMessage = null;
+        crossFilePicks.Clear();
+        ResetLinkState();
+    }
+
+    // Segmented-selector styling, mirroring the sort toggle's active/inactive treatment.
+    private string PathwaySegmentClass(TriagePathway p) =>
+        pathway == p
+            ? "rounded-md text-xs px-2.5 py-1.5 transition bg-accent text-accent-ink font-medium"
+            : "rounded-md text-xs px-2.5 py-1.5 transition text-content-muted hover:bg-surface-raised";
 
     private async Task OnLinkRecordTypeChanged(ChangeEventArgs e)
     {
@@ -1809,11 +2066,18 @@ else
         }
     }
 
-    // Clear the link picker back to its defaults (type resets to Request) after a selection changes or
-    // a link action completes.
+    // The first record type the current context offers (the chosen pathway on the queue, the thread's
+    // bucket on the Tagged tab) — what the link picker resets to, so a type from another pathway can
+    // never survive a pathway or selection change.
+    private RecordType DefaultLinkRecordType => view == QueueView.Tagged
+        ? TaggedLinkTypeOptions[0]
+        : (QueueLinkTypeOptions.Count > 0 ? QueueLinkTypeOptions[0] : RecordType.Request);
+
+    // Clear the link picker back to the current context's defaults after a selection or pathway
+    // changes, or a link action completes.
     private void ResetLinkState()
     {
-        linkRecordType = RecordType.Request;
+        linkRecordType = DefaultLinkRecordType;
         linkProjectId = "";
         linkRecordId = "";
         linkRecordIds.Clear();
@@ -1835,7 +2099,7 @@ else
     private async Task LoadCreateTodoLinkRequestsAsync()
     {
         createTodoLinkRequestId = "";
-        if (createRecordType != RecordType.Todo || string.IsNullOrWhiteSpace(createProjectId))
+        if (mode != TriageMode.GeneralTodo || string.IsNullOrWhiteSpace(createProjectId))
         {
             createTodoLinkRequests = Array.Empty<LinkableRecord>();
             return;
@@ -1870,18 +2134,29 @@ else
     // because partial failure needs its own handling: once the first tag sticks the email has left
     // the queue, so the queue must refresh regardless, and any picks that didn't take are reported
     // via linkNote with a pointer to the Tagged view, where "add another tag" finishes the job.
-    private async Task DoLink()
+    private async Task DoLink() => await DoLinkCore(allowCrossPathway: false);
+
+    // "File under both anyway": retry just the picks the server asked to confirm, consenting to the
+    // Subcontractor↔Internal dual filing (the lane, never the wall — see crossFileMessage).
+    private async Task DoLinkConfirmCross() => await DoLinkCore(allowCrossPathway: true);
+
+    private async Task DoLinkCore(bool allowCrossPathway)
     {
-        if (selected is null || busy || linkRecordIds.Count == 0) return;
-        var picks = linkRecords.Where(r => linkRecordIds.Contains(r.RecordId)).ToList();
+        if (selected is null || busy) return;
+        var picks = allowCrossPathway
+            ? crossFilePicks.ToList()
+            : linkRecords.Where(r => linkRecordIds.Contains(r.RecordId)).ToList();
         if (picks.Count == 0) return;
 
         actionError = null;
         linkNote = null;
+        crossFileMessage = null;
         busyLabel = "Linking";
         busy = true;
         var succeeded = new List<LinkableRecord>();
         var failed = new List<LinkableRecord>();
+        var needsConfirm = new List<LinkableRecord>();
+        string? confirmMessage = null;
         string? firstFailure = null;
         try
         {
@@ -1892,9 +2167,21 @@ else
                     // The type to link as is the picked RECORD's own type, not the dropdown's: the
                     // Scheduling picker lists the bucket alongside the programme's claims documents
                     // (NOD/EOT requests, LADs claims), and each of those must link through its owning
-                    // provider so the tag stem resolves correctly.
-                    await Intake.LinkMessageToRecordAsync(selected.Id, selected.InternetMessageId, record.Type, record.RecordId);
+                    // provider so the tag stem resolves correctly. Cost-centre links carry the
+                    // triager's pathway choice — the record type alone can't say which side of the
+                    // wall a cost centre's mail belongs to.
+                    await Intake.LinkMessageToRecordAsync(
+                        selected.Id, selected.InternetMessageId, record.Type, record.RecordId,
+                        pathway: CostCentrePathwayFor(record),
+                        allowCrossPathway: allowCrossPathway);
                     succeeded.Add(record);
+                }
+                catch (CommandFailedException ex) when (!allowCrossPathway && IsCrossFilePrompt(ex.Message))
+                {
+                    // The lane, not the wall: the server wants explicit consent to file the thread
+                    // under both non-client pathways. Held back for the inline confirm button.
+                    needsConfirm.Add(record);
+                    confirmMessage ??= ex.Message;
                 }
                 catch (CommandFailedException ex)
                 {
@@ -1911,14 +2198,22 @@ else
             if (succeeded.Count == 0)
             {
                 // Nothing stuck — the email is still in the queue, so keep the selection and the
-                // picks and surface the first error in place, exactly like a single-link failure.
+                // picks. Confirmable rejections surface as the inline confirm; anything else shows
+                // the first error in place, exactly like a single-link failure.
+                if (needsConfirm.Count > 0)
+                {
+                    crossFilePicks.Clear();
+                    crossFilePicks.AddRange(needsConfirm);
+                    crossFileMessage = confirmMessage;
+                }
                 actionError = firstFailure;
                 return;
             }
 
-            if (failed.Count > 0)
+            var unfinished = failed.Concat(needsConfirm).ToList();
+            if (unfinished.Count > 0)
             {
-                linkNote = $"The email was linked to {References(succeeded)}, but couldn't be linked to {References(failed)}. "
+                linkNote = $"The email was linked to {References(succeeded)}, but couldn't be linked to {References(unfinished)}. "
                     + "It has left the queue — open it on the Tagged tab and use “add another tag” to finish.";
             }
 
@@ -1937,10 +2232,17 @@ else
     private static string References(IReadOnlyList<LinkableRecord> records) =>
         string.Join(", ", records.Select(r => r.Reference));
 
-    // The type to link as is the picked RECORD's own type, not the dropdown's (see the note inside
-    // DoLink). Used by the Tagged tab's single-pick "add another tag" control.
-    private RecordType SelectedLinkRecordType() =>
-        linkRecords.FirstOrDefault(r => r.RecordId == linkRecordId)?.Type ?? linkRecordType;
+    // The pathway label sent with a link command. Only pathway-neutral COST-CENTRE links carry one —
+    // the record type implies the pathway everywhere else, and a Todo link must stay neutral (sending
+    // a pathway with it would file the thread, which a to-do never does). On the queue it is the
+    // triager's selection; on the Tagged tab it is the thread's own side. Internal never applies —
+    // cost-centre mail is valuation-side (Client) or subcontract-side (Subcontractor) only.
+    private string? CostCentrePathwayFor(LinkableRecord record)
+    {
+        if (record.Type != RecordType.CostCentre) return null;
+        var side = view == QueueView.Tagged ? FixedPathway : pathway;
+        return side is TriagePathway.Client or TriagePathway.Subcontractor ? PathwayLabel(side.Value) : null;
+    }
 
     private async Task DoCreate()
     {
@@ -1965,14 +2267,6 @@ else
         await RunAction("Creating request", async () => await Intake.CreateRequestFromMessageAsync(command));
     }
 
-    private async Task OnCreateRecordTypeChanged(ChangeEventArgs e)
-    {
-        if (Enum.TryParse<RecordType>(e.Value?.ToString(), out var type)) createRecordType = type;
-        // Entering the To-do form with a project already chosen loads its open requests for the
-        // optional request link; leaving it clears the pick (the loader handles both).
-        await LoadCreateTodoLinkRequestsAsync();
-    }
-
     private async Task DoCreateBidPackage()
     {
         if (selected is null || busy) return;
@@ -1989,40 +2283,18 @@ else
         await RunAction("Creating bid package", async () => await Intake.CreateBidPackageFromMessageAsync(command));
     }
 
-    // "Create new → To-do item(s)": create every row with a title on the chosen project in one
-    // command. The email is tagged "JPMS/TODO-####" once per created item, so each item reads this
-    // email back live by its own tag — the reason one email can feed several to-dos. If an open
-    // request was picked, the same command also tags the email to that request (server-verified
-    // before anything is created), so one action links the email to the request AND its to-dos.
-    private async Task DoCreateTodos()
-    {
-        if (selected is null || busy) return;
-        if (string.IsNullOrWhiteSpace(createProjectId)) { actionError = "Choose a project."; return; }
-
-        var drafts = createTodoRows
-            .Where(row => !string.IsNullOrWhiteSpace(row.Title))
-            .Select(row => new TodoItemDraft(
-                row.Title.Trim(),
-                NullIfBlank(row.Notes),
-                ParseTodoRole(row.AssigneeRole),
-                ParseDate(row.Due)))
-            .ToList();
-        if (drafts.Count == 0) { actionError = "At least one to-do item needs a title."; return; }
-
-        var command = new CreateTodoItemsFromMessage(
-            selected.Id,
-            createProjectId,
-            drafts,
-            LinkRequestId: NullIfBlank(createTodoLinkRequestId),
-            InternetMessageId: selected.InternetMessageId);
-
-        await RunAction("Creating to-dos", async () => await Intake.CreateTodoItemsFromMessageAsync(command));
-    }
-
-    // "General to-do": same as DoCreateTodos but with NO project — the items are created as general
-    // (company-wide) entries for emails that don't belong to any project. They surface on the /todos
-    // browser page and the assigned roles' dashboards instead of a project's To-do tab.
-    private async Task DoCreateGeneralTodos()
+    // Internal → "To-dos": create every row with a title in one command. With a project chosen the
+    // items land on that project's To-do tab — and an open request on it can optionally be tagged too
+    // (server-verified before anything is created), so one action feeds the request's conversation
+    // AND captures its follow-up to-dos. With no project the items are GENERAL (company-wide)
+    // entries for mail that belongs to no project, surfacing on the /todos browser and the assigned
+    // roles' dashboards. Either way the email is tagged "JPMS/TODO-####" once per created item, so
+    // each item reads this email back live by its own tag — one email can feed several to-dos.
+    //
+    // Pathway: "Internal" rides along so the server files a not-yet-filed thread under Internal —
+    // EXCEPT when a request link is picked: the request tag makes the thread feed a client-side
+    // record, so the pathway is withheld and the thread's filing follows the request instead.
+    private async Task DoCreateInternalTodos()
     {
         if (selected is null || busy) return;
 
@@ -2036,11 +2308,14 @@ else
             .ToList();
         if (drafts.Count == 0) { actionError = "At least one to-do item needs a title."; return; }
 
+        var linkRequestId = string.IsNullOrWhiteSpace(createProjectId) ? null : NullIfBlank(createTodoLinkRequestId);
         var command = new CreateTodoItemsFromMessage(
             selected.Id,
-            ProjectId: null,
+            NullIfBlank(createProjectId),
             drafts,
-            InternetMessageId: selected.InternetMessageId);
+            LinkRequestId: linkRequestId,
+            InternetMessageId: selected.InternetMessageId,
+            Pathway: linkRequestId is null ? "Internal" : null);
 
         await RunAction("Creating to-dos", async () => await Intake.CreateTodoItemsFromMessageAsync(command));
     }
@@ -2068,15 +2343,6 @@ else
     private void OnReplyProjectChanged(ChangeEventArgs e) => replyProjectId = e.Value?.ToString() ?? "";
 
     private void OnReplyBodyInput(ChangeEventArgs e) => replyBody = e.Value?.ToString() ?? "";
-
-    // "Create new → Scheduling": nothing is created — every project already has its scheduling
-    // bucket, whose RecordId is the project id — so this is a straight link to the chosen project.
-    private async Task DoTagScheduling()
-    {
-        if (selected is null || busy) return;
-        if (string.IsNullOrWhiteSpace(createProjectId)) { actionError = "Choose a project."; return; }
-        await RunAction("Tagging", async () => await Intake.LinkMessageToRecordAsync(selected.Id, selected.InternetMessageId, RecordType.Scheduling, createProjectId));
-    }
 
     private async Task DoDiscard()
     {
@@ -2287,13 +2553,54 @@ else
         finally { busy = false; }
     }
 
-    // Add another workflow tag by linking this already-tagged email to a second record of any type (so
-    // it feeds more than one record). Reuses the same generic link command as the queue's "Link to existing".
-    private async Task DoAddTagLink()
+    // Add another workflow tag by linking this already-tagged email to a second record (so it feeds
+    // more than one record). Reuses the same generic link command as the queue's "Link to existing",
+    // but NOT RunTaggedAction — the pathway guards need their own error handling: the server's
+    // cross-filing prompt becomes an inline confirm (retry with consent), while a client-wall
+    // rejection is shown verbatim with no retry (the wall has no override).
+    private async Task DoAddTagLink() => await DoAddTagLinkCore(allowCrossPathway: false);
+
+    private async Task DoAddTagLinkConfirmCross() => await DoAddTagLinkCore(allowCrossPathway: true);
+
+    private async Task DoAddTagLinkCore(bool allowCrossPathway)
     {
         if (selected is null || busy || string.IsNullOrWhiteSpace(linkRecordId)) return;
-        var recordType = SelectedLinkRecordType();
-        await RunTaggedAction("Linking", async () => await Intake.LinkMessageToRecordAsync(selected.Id, selected.InternetMessageId, recordType, linkRecordId));
+        // The type to link as is the picked RECORD's own type, not the dropdown's (the Scheduling
+        // picker lists NOD/EOT/LAD claims documents alongside the bucket — see DoLinkCore).
+        var record = linkRecords.FirstOrDefault(r => r.RecordId == linkRecordId);
+        var recordType = record?.Type ?? linkRecordType;
+        actionError = null;
+        try
+        {
+            busyLabel = "Linking";
+            busy = true;
+            await Intake.LinkMessageToRecordAsync(
+                selected.Id, selected.InternetMessageId, recordType, linkRecordId,
+                pathway: record is null ? null : CostCentrePathwayFor(record),
+                allowCrossPathway: allowCrossPathway);
+            crossFileMessage = null;
+            ResetTaggedPaging();
+            await LoadTaggedAsync();
+            selected = null;
+            detail = null;
+            detailLoading = false;
+            ResetLinkState();
+        }
+        catch (CommandFailedException ex) when (!allowCrossPathway && IsCrossFilePrompt(ex.Message))
+        {
+            crossFileMessage = ex.Message;
+        }
+        catch (CommandFailedException ex)
+        {
+            crossFileMessage = null;
+            actionError = ex.Message;
+        }
+        catch
+        {
+            crossFileMessage = null;
+            actionError = "That action didn't complete. Please try again.";
+        }
+        finally { busy = false; }
     }
 
     private async Task DoRemoveTag(string tag)

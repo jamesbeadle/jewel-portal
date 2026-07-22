@@ -41,7 +41,11 @@ public interface IIntakeQueue
     // and link a message to one. The link tags "JPMS/<ref>" identically for every record type, and the
     // record reads its mail back live by that tag. AssignMessageAsync is the Request-only special case.
     Task<IReadOnlyList<LinkableRecord>> ListLinkableRecordsAsync(string projectId, RecordType type, CancellationToken cancellationToken = default);
-    Task<Acknowledgement> LinkMessageToRecordAsync(string messageId, string? internetMessageId, RecordType type, string recordId, CancellationToken cancellationToken = default);
+    // Pathway (docs/Pathway-Split-Platform-Flow-Plan.md §2.3): pathway names the triager's explicit
+    // choice ("Client"/"Subcontractor"/"Internal") for pathway-neutral record types (cost centres);
+    // allowCrossPathway is the explicit consent to a Subcontractor↔Internal dual filing after the
+    // UI's warning. The client wall (Client never shares a thread with the others) has no override.
+    Task<Acknowledgement> LinkMessageToRecordAsync(string messageId, string? internetMessageId, RecordType type, string recordId, string? pathway = null, bool allowCrossPathway = false, CancellationToken cancellationToken = default);
 
     // Catch-up: re-tag any Inbox replies that joined a record's threads after it was linked, so the
     // record's tag keeps spanning the whole conversation. Safe to call when a record is opened.

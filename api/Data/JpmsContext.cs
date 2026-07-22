@@ -134,4 +134,8 @@ public sealed class JpmsContext : DbContext
     public DbSet<SettlementRecordEntity> SettlementRecords => Set<SettlementRecordEntity>();
     public DbSet<VatAnalysisEntity> VatAnalyses => Set<VatAnalysisEntity>();
     public DbSet<RetentionReleaseEntity> RetentionReleases => Set<RetentionReleaseEntity>();
+
+    // Append-only audit trail of client-facing interactions (pathway split — see
+    // docs/Pathway-Split-Platform-Flow-Plan.md §4).
+    public DbSet<AuditEventEntity> AuditEvents => Set<AuditEventEntity>();
 }

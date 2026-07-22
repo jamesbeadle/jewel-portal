@@ -51,8 +51,20 @@ public sealed class ListProjectCommunicationsEndpoint
         var cursor = request.Query["cursor"].ToString();
         var take = int.TryParse(request.Query["take"].ToString(), out var t) ? t : 25;
 
+        // Bucket is optional (absent = every pathway) but must be one of the three when present.
+        var bucketRaw = request.Query["bucket"].ToString();
+        string? bucket = null;
+        if (!string.IsNullOrWhiteSpace(bucketRaw))
+        {
+            if (!bucketRaw.Equals("Client", StringComparison.OrdinalIgnoreCase)
+                && !bucketRaw.Equals("Subcontractor", StringComparison.OrdinalIgnoreCase)
+                && !bucketRaw.Equals("Internal", StringComparison.OrdinalIgnoreCase))
+                return new BadRequestObjectResult("bucket must be Client, Subcontractor or Internal when given.");
+            bucket = char.ToUpperInvariant(bucketRaw[0]) + bucketRaw[1..].ToLowerInvariant();
+        }
+
         var result = await handler.HandleAsync(
-            new ListProjectCommunications(projectId, type, string.IsNullOrWhiteSpace(cursor) ? null : cursor, take),
+            new ListProjectCommunications(projectId, type, string.IsNullOrWhiteSpace(cursor) ? null : cursor, take, bucket),
             request.HttpContext.RequestAborted);
         return new OkObjectResult(result);
     }

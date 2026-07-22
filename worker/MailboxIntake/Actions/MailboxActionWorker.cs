@@ -118,7 +118,9 @@ public sealed class MailboxActionWorker
 
         // The workflow tag rides on the draft and survives the send, so the Sent Items copy self-
         // associates with the record — and because this document opens a brand-new conversation,
-        // replies to it inherit the tag through the thread sweep instead of waiting in triage.
+        // replies to it inherit the tag through the thread sweep instead of waiting in triage. The
+        // Client pathway tag rides along too (a request document is client correspondence by
+        // definition), so the new thread is born filed under Client.
         var recordTag = TriageCategories.ForRecord(await RequestTags.StemAsync(_context, request, ct));
         var outbound = new GraphOutboundMessage(
             recipientSet.To.Select(AsGraph).ToArray(),
@@ -127,7 +129,7 @@ public sealed class MailboxActionWorker
             new[] { attachment },
             Cc: recipientSet.Cc.Select(AsGraph).ToArray(),
             Bcc: recipientSet.Bcc.Select(AsGraph).ToArray(),
-            Categories: new[] { TriageCategories.Marker, recordTag });
+            Categories: new[] { TriageCategories.Marker, recordTag, TriageCategories.Client });
 
         // HUMAN IN THE LOOP: the email is only ever placed in the mailbox's Drafts folder. A person
         // reviews it in Outlook and presses Send themselves — nothing is sent from code.
@@ -159,6 +161,26 @@ public sealed class MailboxActionWorker
             PostedAt = DateTimeOffset.UtcNow,
             Direction = (int)MessageDirection.Outbound,
             SentStatus = (int)MessageSentStatus.Pending
+        });
+
+        // Audit trail (client-facing scope): every portal-drafted client communication is recorded
+        // with the draft's Graph id + webLink, so the audit register doubles as the index for
+        // finding portal-drafted mail in Outlook. Joins the save below — event and activity row
+        // land in one transaction.
+        _context.AuditEvents.Add(new AuditEventEntity
+        {
+            AuditEventId = Guid.NewGuid().ToString("N"),
+            OccurredAt = DateTimeOffset.UtcNow,
+            ActorEmail = _options.Mailbox,
+            EventType = (int)AuditEventType.DraftCreated,
+            Pathway = "Client",
+            ProjectId = request.ProjectId,
+            RecordType = (int)Jewel.JPMS.Models.RecordType.Request,
+            RecordId = model.RequestId,
+            RecordReference = model.DisplayNumber,
+            EmailMessageId = draft.Id,
+            WebLink = draft.WebLink,
+            Detail = $"{model.TypeShort} {model.DisplayNumber} document drafted to {recipientList} — awaiting review and send."
         });
 
         // Drafted means it's going out: an Open request moves to Awaiting Response as soon as the

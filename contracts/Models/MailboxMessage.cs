@@ -20,7 +20,12 @@ public sealed record MailboxMessage(
     // Graph's thread grouping id: the email plus every reply/forward of it share one ConversationId.
     // Used to read the whole thread when a message is opened in triage, so later replies (which often
     // say how the older messages should be triaged) are visible alongside. Empty when Graph omits it.
-    string ConversationId = "");
+    string ConversationId = "",
+    // The communication pathway this thread is filed under — the exact bucket category
+    // ("JPMS/Client", "JPMS/Subcontractor" or "JPMS/Internal"), or null when the thread has no
+    // pathway yet. Derived server-side from the message's categories (which exclude it, so bucket
+    // tags never render as ordinary chips) — clients read this field, never parse tag strings.
+    string? Bucket = null);
 
 // The full, on-demand content of one mailbox message (sanitised HTML body + non-inline attachment
 // metadata), fetched live when a triager opens it. Keyed by the live message id.

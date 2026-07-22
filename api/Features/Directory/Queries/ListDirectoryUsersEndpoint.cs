@@ -21,13 +21,20 @@ public sealed class ListDirectoryUsersEndpoint
         this.handler = handler;
     }
 
+    // Reading the staff list is a directory concern, not an admin one: the unified Directory page
+    // (decision 2026-07-22) shows internal staff to Admin/MD/FD/PM. Managing users (upsert/remove)
+    // stays behind AdminGate.
+    private static readonly RoleSet AllowedToReadStaffList =
+        RoleSet.Of(Role.Admin, JpmsRoles.Director, JpmsRoles.FinanceDirector, JpmsRoles.ProjectManager);
+
     [Function(nameof(ListDirectoryUsers))]
     public async Task<IActionResult> Run(
         [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "directory")] HttpRequest request)
     {
         var signedInUser = await users.ResolveAsync(request, request.HttpContext.RequestAborted);
         if (signedInUser is null) return new UnauthorizedResult();
-        if (!AdminGate.Allows(signedInUser)) return new StatusCodeResult(403);
+        if (!AdminGate.Allows(signedInUser) && !AllowedToReadStaffList.IncludesAny(signedInUser.Roles))
+            return new StatusCodeResult(403);
 
         var directoryUsers = await handler.HandleAsync(new ListDirectoryUsers(), request.HttpContext.RequestAborted);
         return new OkObjectResult(directoryUsers);

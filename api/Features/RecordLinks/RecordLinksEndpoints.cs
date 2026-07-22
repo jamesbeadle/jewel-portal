@@ -16,17 +16,20 @@ namespace Jewel.JPMS.Api.Features.RecordLinks;
 public sealed class RecordLinksEndpoints
 {
     private readonly SignedInUserResolver users;
+    private readonly Audit.AuditActor auditActor;
     private readonly IQueryHandler<ListLinkableRecords, IReadOnlyList<LinkableRecord>> list;
     private readonly ICommandHandler<LinkMessageToRecord, Acknowledgement> link;
     private readonly ICommandHandler<SyncRecordThreadTags, Acknowledgement> syncThreadTags;
 
     public RecordLinksEndpoints(
         SignedInUserResolver users,
+        Audit.AuditActor auditActor,
         IQueryHandler<ListLinkableRecords, IReadOnlyList<LinkableRecord>> list,
         ICommandHandler<LinkMessageToRecord, Acknowledgement> link,
         ICommandHandler<SyncRecordThreadTags, Acknowledgement> syncThreadTags)
     {
         this.users = users;
+        this.auditActor = auditActor;
         this.list = list;
         this.link = link;
         this.syncThreadTags = syncThreadTags;
@@ -80,6 +83,7 @@ public sealed class RecordLinksEndpoints
         var signedInUser = await users.ResolveAsync(request, request.HttpContext.RequestAborted);
         if (signedInUser is null) return new UnauthorizedResult();
         if (!TriageRoles.AllowedToTriage.IncludesAny(signedInUser.Roles)) return new StatusCodeResult(403);
+        auditActor.Email = signedInUser.Email; // audit rows record who acted
         return null;
     }
 

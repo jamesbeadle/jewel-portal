@@ -14,8 +14,9 @@ namespace Jewel.JPMS.Api.Features.Commercial;
 /// edits or deletions of live lines must not disturb what was submitted to the client.
 ///
 /// Adds the snapshot and its lines to the change tracker but does NOT save; callers (invoice
-/// submission/issue, on-demand capture) save in their own transaction. When the snapshot backs an
-/// invoice, any earlier snapshots for the same invoice are flagged superseded in the same save.
+/// raise, submission/issue re-freezes after an amendment, on-demand capture) save in their own
+/// transaction. When the snapshot backs an invoice, any earlier snapshots for the same invoice
+/// are flagged superseded in the same save.
 /// </summary>
 internal static class ValuationReportSnapshotCapture
 {

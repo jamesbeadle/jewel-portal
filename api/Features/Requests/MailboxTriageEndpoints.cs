@@ -18,6 +18,7 @@ namespace Jewel.JPMS.Api.Features.Requests;
 public sealed class MailboxTriageEndpoints
 {
     private readonly SignedInUserResolver users;
+    private readonly Audit.AuditActor auditActor;
     private readonly IQueryHandler<ListInboxMessages, MailboxPage> listInbox;
     private readonly IQueryHandler<ListDiscardedMessages, MailboxPage> listDiscarded;
     private readonly IQueryHandler<ListTaggedMessages, MailboxPage> listTagged;
@@ -32,6 +33,7 @@ public sealed class MailboxTriageEndpoints
 
     public MailboxTriageEndpoints(
         SignedInUserResolver users,
+        Audit.AuditActor auditActor,
         IQueryHandler<ListInboxMessages, MailboxPage> listInbox,
         IQueryHandler<ListDiscardedMessages, MailboxPage> listDiscarded,
         IQueryHandler<ListTaggedMessages, MailboxPage> listTagged,
@@ -45,6 +47,7 @@ public sealed class MailboxTriageEndpoints
         ICommandHandler<ReplyInThreadFromMessage, ReplyInThreadOutcome> replyInThread)
     {
         this.users = users;
+        this.auditActor = auditActor;
         this.listInbox = listInbox;
         this.listDiscarded = listDiscarded;
         this.listTagged = listTagged;
@@ -202,6 +205,7 @@ public sealed class MailboxTriageEndpoints
         var signedInUser = await users.ResolveAsync(request, request.HttpContext.RequestAborted);
         if (signedInUser is null) return new UnauthorizedResult();
         if (!TriageRoles.AllowedToTriage.IncludesAny(signedInUser.Roles)) return new StatusCodeResult(403);
+        auditActor.Email = signedInUser.Email; // audit rows record who acted
         return null;
     }
 

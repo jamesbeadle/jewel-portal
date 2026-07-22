@@ -1,8 +1,8 @@
 namespace Jewel.JPMS.Models;
 
 // Lifecycle of a valuation invoice (formerly "cash call"). The happy path is
-// Raised (drafted against the current valuation) → Submitted (with the architect/client for
-// approval; a report snapshot is frozen) → Approved → Issued (client invoice sent — counts toward
+// Raised (drafted against the current valuation; a report snapshot is frozen and attached) →
+// Submitted (with the architect/client for approval) → Approved → Issued (client invoice sent — counts toward
 // certified/invoiced to date) → Paid (client has paid — rolls into the project-level paid total).
 // Submitted can come back Rejected, returning the invoice for amendment (→ Raised) or cancellation.
 // Raised → Issued directly remains permitted for projects that skip the formal approval loop.

@@ -12,4 +12,9 @@ public sealed record ListProjectCommunications(
     string ProjectId,
     RecordType? Type = null,
     string? Cursor = null,
-    int Take = 25) : IQuery<ProjectCommunicationsPage>;
+    int Take = 25,
+    // Narrow to one communication pathway: "Client", "Subcontractor" or "Internal" (short labels).
+    // Applied server-side against each message's bucket category; null reads every pathway. When
+    // set, Total is 0 ("count unknown") — the filter is applied per page, so the full count isn't
+    // known without walking the stream.
+    string? Bucket = null) : IQuery<ProjectCommunicationsPage>;

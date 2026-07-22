@@ -57,7 +57,9 @@ public sealed class PrepareBidPackageInviteDraftHandler : ICommandHandler<Prepar
             HtmlBody: command.HtmlBody,
             Attachments: await LoadDrawingAttachmentsAsync(command.BidPackageId, cancellationToken),
             Bcc: recipients,
-            Categories: new[] { TriageCategories.Marker, TriageCategories.ForRecord(package.Reference) });
+            // Record tag + Subcontractor pathway: the invite thread is born filed on the
+            // subcontractor side, and replies inherit both through the thread sweep.
+            Categories: new[] { TriageCategories.Marker, TriageCategories.ForRecord(package.Reference), TriageCategories.Subcontractor });
 
         var draft = await mailbox.CreateDraftAsync(message, cancellationToken);
         if (draft is null)

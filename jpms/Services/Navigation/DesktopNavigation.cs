@@ -3,19 +3,22 @@ using Jewel.JPMS.Models;
 namespace Jewel.JPMS.Services.Navigation;
 
 /// <summary>
-/// The sidebar catalog — the app's single navigation plane. Two scopes, made visually explicit:
-/// the PROJECT WORKSPACE (everything under the project picker targets the picked project, via
-/// {project} templates resolved against CurrentProjectService) and the COMPANY area below the
-/// divider (cross-project tools). No page appears in both. There is deliberately no Projects
-/// list entry — the portfolio (/projects, with New project) is reachable from the picker's
-/// footer and the project breadcrumb. Role gates reproduce what each page had before; grouping
-/// widens nothing, and administrators see everything.
+/// The sidebar catalog — the app's single navigation plane. One list of six collapsible folders
+/// (SidebarFolders, docs/Pathway-Split-Platform-Flow-Plan.md §6) under the project picker, with
+/// Home above everything. Folders mix project-scoped rows ({project} templates resolved against
+/// CurrentProjectService) with company rows where the work mixes. This class is the RBAC home:
+/// the role sets, the per-role folder filtering, and the flatten rule — a role whose whole world
+/// is one folder sees rows, never a folder header. Role gates reproduce what each page had
+/// before the regrouping; grouping widens nothing, and administrators see everything.
 /// </summary>
 public static class DesktopNavigation
 {
-    /// <summary>A headed block of project pages (heading is an eyebrow, not a link).</summary>
-    public sealed record SidebarBlock(string Heading, string IconKey, IReadOnlyList<NavigationItem> Items);
+    /// <summary>A folder after role-filtering: only the rows the role can see, only rendered at
+    /// all when at least one row survived.</summary>
+    public sealed record VisibleFolder(
+        SidebarFolder Folder, string Label, string IconKey, IReadOnlyList<NavigationItem> Items);
 
+    // Mirrored by the API's JpmsRoleSets.AllInternal — keep the two lists in step.
     private static readonly Role[] AllInternalRoles =
     {
         Role.ManagingDirector,
@@ -35,8 +38,9 @@ public static class DesktopNavigation
             .Append(Role.Subcontractor)
             .ToArray();
 
-    // The internal office/management roles that can open projects.
-    private static readonly Role[] ProjectRoles =
+    // The internal office/management roles that can open projects. Internal (not public):
+    // SidebarFolders is the only outside consumer, and it lives in this assembly.
+    internal static readonly Role[] ProjectRoles =
     {
         Role.ManagingDirector,
         Role.FinanceDirector,
@@ -47,7 +51,7 @@ public static class DesktopNavigation
         Role.OfficeComplianceCoordinator
     };
 
-    private static readonly Role[] FinanceRoles =
+    internal static readonly Role[] FinanceRoles =
     {
         Role.ManagingDirector,
         Role.FinanceDirector,
@@ -55,70 +59,78 @@ public static class DesktopNavigation
         Role.QuantitySurveyor
     };
 
-    public static readonly NavigationItem Home = new("Home", "/dashboard");
+    // The people who make routing decisions — mirrors the API's TriageRoles gate. Gates both
+    // the Triage queue and the Audit Trail (reviewing routing decisions is the same duty).
+    internal static readonly Role[] TriageRoles =
+    {
+        Role.ProjectManager,
+        Role.FinanceDirector
+    };
 
-    public static readonly NavigationItem ProjectSettings = new("Project settings", "/projects/{project}/settings");
+    // Mirrors the API's labour registry authorisation (LabourRoleSets.ManageWorkers).
+    internal static readonly Role[] WorkerRegistryRoles =
+    {
+        Role.ManagingDirector,
+        Role.FinanceDirector,
+        Role.ProjectManager
+    };
+
+    // Directors only — reserved for the company's most sensitive figures (Cash Summary).
+    internal static readonly Role[] DirectorRoles =
+    {
+        Role.ManagingDirector,
+        Role.FinanceDirector
+    };
+
+    // Decision 2026-07-22: widened from MD-only so the merged Directory page keeps the old
+    // Clients/Architects reach for PMs and adds the FD (Admin included via the CanSee bypass).
+    internal static readonly Role[] DirectoryRoles =
+    {
+        Role.ManagingDirector,
+        Role.FinanceDirector,
+        Role.ProjectManager
+    };
+
+    public static readonly NavigationItem Home = new("Home", "/dashboard");
 
     public static bool CanSee(Role role, IReadOnlyList<Role> visibleTo) =>
         role == Role.Admin || visibleTo.Contains(role);
 
     public static bool CanSeeProjects(Role role) => CanSee(role, ProjectRoles);
 
-    /// <summary>The project workspace's headed blocks, role-filtered. Built from ProjectSections
-    /// so the sidebar and the landing-page cards can never drift apart.</summary>
-    public static IReadOnlyList<SidebarBlock> ProjectBlocksFor(Role role)
+    /// <summary>The sidebar's folders for a role: each folder keeps only the rows the role can
+    /// see, and a folder with no surviving rows disappears entirely. Built from SidebarFolders
+    /// so the sidebar, the landing-page cards and the page-heading matcher can never drift.</summary>
+    public static IReadOnlyList<VisibleFolder> FoldersFor(Role role) =>
+        SidebarFolders.All
+            .Select(folder => new VisibleFolder(
+                folder.Folder,
+                folder.Label,
+                folder.IconKey,
+                folder.Rows.Where(row => CanSee(role, row.VisibleTo)).Select(row => row.Item).ToList()))
+            .Where(folder => folder.Items.Count > 0)
+            .ToList();
+
+    /// <summary>Where the bare project URL (/projects/{id}) lands: the first project-scoped row
+    /// of the first visible folder — Client → Requests for full-access roles. The Requests
+    /// fallback keeps the redirect deterministic if a role somehow reaches a project URL with no
+    /// project rows; the page's own RBAC remains the enforcement.</summary>
+    public static string FirstProjectTabHref(Role role, string projectId)
     {
-        var blocks = new List<SidebarBlock>();
-        foreach (var section in ProjectSections.All)
-        {
-            var visibleTo = section.Section == ProjectSection.Financials ? FinanceRoles : ProjectRoles;
-            if (!CanSee(role, visibleTo)) continue;
-            blocks.Add(new SidebarBlock(
-                section.Label,
-                section.IconKey,
-                section.Tabs.Select(tab => new NavigationItem(tab.Label, $"/projects/{{project}}/{tab.Slug}")).ToList()));
-        }
-        return blocks;
+        var first = FoldersFor(role)
+            .SelectMany(folder => folder.Items)
+            .FirstOrDefault(item => item.IsProjectScoped);
+        return (first ?? new NavigationItem("Requests", "/projects/{project}/requests"))
+            .ResolveHref(projectId);
     }
 
-    private static readonly (NavigationItem Item, Role[] VisibleTo)[] CompanyEntries =
-    {
-        // The mailbox intake queue — daily work for those who triage; mirrors the API's TriageRoles gate.
-        (new NavigationItem("Triage", "/requests/triage"),
-            new[] { Role.ProjectManager, Role.FinanceDirector }),
-        // One row per active project plus the total. Exact-only: /finance/* belongs to Xero.
-        (new NavigationItem("Financial Summary", "/finance", ExactMatch: true), FinanceRoles),
-        // Live cash position from Xero. Bank balances are the company's most sensitive figures —
-        // directors only, deliberately tighter than FinanceRoles; mirrors the API's authorisation
-        // (GetXeroCashSummaryEndpoint).
-        (new NavigationItem("Cash Summary", "/finance/cash-summary"),
-            new[] { Role.ManagingDirector, Role.FinanceDirector }),
-        // Allocation + Transactions as tabs of one page — Allocation leads (the working screen).
-        (new NavigationItem("Xero", "/finance/allocation", new[] { "/finance/xero" }), FinanceRoles),
-        (new NavigationItem("Cost codes & Rates", "/cost-codes", new[] { "/rate-library" }), FinanceRoles),
-        // Mirrors the API's labour registry authorisation (LabourRoleSets.ManageWorkers).
-        (new NavigationItem("Workers", "/labour/workers"),
-            new[] { Role.ManagingDirector, Role.FinanceDirector, Role.ProjectManager }),
-        (new NavigationItem("Directory", "/directory"), new[] { Role.ManagingDirector }),
-        (new NavigationItem("Clients", "/clients"), new[] { Role.ManagingDirector, Role.ProjectManager }),
-        (new NavigationItem("Architects", "/architects"), new[] { Role.ManagingDirector, Role.ProjectManager })
-        // Agents and the flat To-dos/RFIs pages are retired from the nav; their routes remain.
-    };
-
-    public static IReadOnlyList<NavigationItem> CompanyItemsFor(Role role) =>
-        CompanyEntries.Where(entry => CanSee(role, entry.VisibleTo)).Select(entry => entry.Item).ToList();
-
     /// <summary>Every navigable item in sidebar order — for flat consumers like the page-heading
-    /// matcher. Company items come after project items, so the more specific project routes win.</summary>
+    /// matcher. Catalog order puts project templates before most company routes, so the more
+    /// specific project routes win where it matters.</summary>
     public static IReadOnlyList<NavigationItem> ItemsVisibleTo(Role role)
     {
         var items = new List<NavigationItem> { Home };
-        if (CanSeeProjects(role))
-        {
-            items.AddRange(ProjectBlocksFor(role).SelectMany(block => block.Items));
-            items.Add(ProjectSettings);
-        }
-        items.AddRange(CompanyItemsFor(role));
+        items.AddRange(FoldersFor(role).SelectMany(folder => folder.Items));
         return items;
     }
 }

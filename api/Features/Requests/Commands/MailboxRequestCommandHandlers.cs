@@ -1,6 +1,7 @@
 using Jewel.JPMS.Api.Cqrs;
 using Jewel.JPMS.Api.Data;
 using Jewel.JPMS.Api.Data.Entities;
+using Jewel.JPMS.Api.Features.Audit;
 using Jewel.JPMS.Api.Features.MailboxIntake.Graph;
 using Jewel.JPMS.Api.Features.RecordLinks;
 using Jewel.JPMS.Contracts.Cqrs;
@@ -44,10 +45,11 @@ public sealed class CreateRequestFromMessageHandler : ICommandHandler<CreateRequ
     private readonly IMailboxGraphClient graph;
     private readonly RecordThreadTagger threadTagger;
     private readonly ICommandHandler<LinkMessageToRecord, Acknowledgement> linkToRecord;
+    private readonly AuditTrail audit;
     public CreateRequestFromMessageHandler(
         JpmsContext context, IMailboxGraphClient graph, RecordThreadTagger threadTagger,
-        ICommandHandler<LinkMessageToRecord, Acknowledgement> linkToRecord)
-    { this.context = context; this.graph = graph; this.threadTagger = threadTagger; this.linkToRecord = linkToRecord; }
+        ICommandHandler<LinkMessageToRecord, Acknowledgement> linkToRecord, AuditTrail audit)
+    { this.context = context; this.graph = graph; this.threadTagger = threadTagger; this.linkToRecord = linkToRecord; this.audit = audit; }
 
     public async Task<Request> HandleAsync(CreateRequestFromMessage command, CancellationToken cancellationToken)
     {
@@ -58,6 +60,29 @@ public sealed class CreateRequestFromMessageHandler : ICommandHandler<CreateRequ
 
         var snapshot = await graph.GetSnapshotAsync(command.MessageId, command.InternetMessageId, cancellationToken)
             ?? throw new InvalidOperationException("The email could not be read from the mailbox.");
+
+        // THE CLIENT WALL (docs/Pathway-Split-Platform-Flow-Plan.md §2.3): a request files its
+        // thread under Client, so a thread already filed under Subcontractor or Internal can never
+        // become a request — refused before anything is tagged or created, with no override.
+        var existingBucket = (snapshot.Categories ?? Array.Empty<string>())
+            .FirstOrDefault(TriageCategories.IsBucketTag);
+        if (existingBucket is not null
+            && !existingBucket.Equals(TriageCategories.Client, StringComparison.OrdinalIgnoreCase))
+        {
+            await audit.WriteAsync(
+                AuditEventType.WallRejected,
+                $"Refused: creating a request would file this thread under Client but it is filed under {AuditTrail.PathwayLabel(existingBucket)}.",
+                pathway: AuditTrail.PathwayLabel(existingBucket),
+                projectId: command.ProjectId,
+                recordType: RecordType.Request,
+                conversationId: snapshot.ConversationId,
+                emailMessageId: command.MessageId,
+                internetMessageId: snapshot.InternetMessageId,
+                cancellationToken: cancellationToken);
+            throw new InvalidOperationException(
+                $"This thread is filed under {AuditTrail.PathwayLabel(existingBucket)}; a request would file it under Client. "
+                + "Client correspondence is never mixed with subcontractor or internal correspondence — start a new thread, or forward the relevant content.");
+        }
 
         var nextNumber = (await context.Requests.MaxAsync(r => (int?)r.Number, cancellationToken) ?? 0) + 1;
 
@@ -130,6 +155,36 @@ public sealed class CreateRequestFromMessageHandler : ICommandHandler<CreateRequ
             try { await graph.ClearRequestTagsAsync(tag, cancellationToken); } catch { /* best-effort */ }
             throw RequestReferenceConflict.AsFriendlyError(reference);
         }
+
+        // File the thread under the Client pathway (thread-wide, best-effort — the record tag is the
+        // primary association; a missed stamp is healed by the backfill). Stamped after the save so
+        // a reference-clash rollback can never leave a pathway-only thread behind.
+        var stampedClient = false;
+        if (existingBucket is null)
+        {
+            try
+            {
+                stampedClient = await threadTagger.TagThreadAsync(
+                    command.MessageId, snapshot.InternetMessageId, snapshot.ConversationId,
+                    TriageCategories.Client, cancellationToken);
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException) { /* best-effort */ }
+        }
+
+        await audit.WriteAsync(
+            stampedClient ? AuditEventType.EmailTriaged : AuditEventType.RecordCreatedFromEmail,
+            stampedClient
+                ? $"Email filed under Client; {reference} created from it."
+                : $"{reference} created from email.",
+            pathway: "Client",
+            projectId: command.ProjectId,
+            recordType: RecordType.Request,
+            recordId: request.RequestId,
+            recordReference: reference,
+            conversationId: snapshot.ConversationId,
+            emailMessageId: command.MessageId,
+            internetMessageId: snapshot.InternetMessageId,
+            cancellationToken: cancellationToken);
 
         // "Also add to Programme": tag the same thread to the project's Scheduling bucket as well,
         // by delegating to the record-agnostic link path — the exact action the standalone

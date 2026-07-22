@@ -9,12 +9,17 @@
 <PageTitle>To-dos · JPMS</PageTitle>
 
 @*
-    The To-dos browser. The managing director and administrators see EVERY item — general
-    (company-wide, no-project) items and every project's items — and can add general items, tick
-    anything off, or delete. Everyone else sees only the items assigned to a ROLE THEY HOLD
-    (general and project alike, read through ListMyTodoItems) and can tick those off. Items are
-    assigned to a role, not a person, so they survive staff changes. General items are captured
-    from a company-wide email at triage ("General to-do") or added here directly.
+    The master to-do list — revived from nav retirement as the Internal folder's Todo entry
+    (decision 2026-07-22: to-dos are always internal work, sometimes project-specific, so there
+    are TWO ways to see them: this page is every to-do — company-wide and project — with a project
+    filter; the project folder keeps its own To-do tab scoped to one project).
+
+    The managing director and administrators see EVERY item — general (company-wide, no-project)
+    items and every project's items — and can add general items, tick anything off, or delete.
+    Everyone else sees only the items assigned to a ROLE THEY HOLD (general and project alike,
+    read through ListMyTodoItems) and can tick those off. Items are assigned to a role, not a
+    person, so they survive staff changes. General items are captured from a company-wide email
+    at triage ("General to-do") or added here directly.
 
     Each row is a fixed-height line of title + key facts (never the multiline notes); clicking one
     opens the detail modal (TodoDetailModal) with the full detail including those notes, the item's
@@ -47,8 +52,8 @@ else
                 <h1 class="text-2xl md:text-3xl font-semibold text-content leading-tight">To-dos</h1>
                 <p class="text-sm text-content-muted mt-1">
                     @(CanSeeAll
-                        ? "Every to-do item — general (company-wide) and project items alike."
-                        : "The items assigned to your role — general (company-wide) and project items alike.")
+                        ? "The master list: every to-do item — company-wide and project items alike. Each project's To-do tab shows just its own."
+                        : "The items assigned to your role — company-wide and project items alike.")
                 </p>
             </div>
             @if (CanSeeAll)
@@ -67,9 +72,10 @@ else
             <button type="button" class="@StatusTabClass(StatusFilter.Done)" @onclick="() => statusFilter = StatusFilter.Done">Done</button>
             <button type="button" class="@StatusTabClass(StatusFilter.All)" @onclick="() => statusFilter = StatusFilter.All">All</button>
 
+            @* The project filter: every project with items, plus company-wide (no-project) only. *@
             <select class="field !w-auto text-xs" value="@scopeFilter" @onchange="e => scopeFilter = e.Value?.ToString() ?? ScopeAll">
-                <option value="@ScopeAll">All scopes</option>
-                <option value="@ScopeGeneral">General only</option>
+                <option value="@ScopeAll">All</option>
+                <option value="@ScopeGeneral">Company-wide</option>
                 @foreach (var project in ProjectsWithItems)
                 {
                     <option value="@project.ProjectId">@project.Reference — @project.Name</option>
@@ -307,7 +313,7 @@ else
 
     private string ScopeLabel(TodoItem item)
     {
-        if (IsGeneral(item)) return "General";
+        if (IsGeneral(item)) return "Company-wide";
         var project = (Projects.Current ?? (IReadOnlyList<Project>)Array.Empty<Project>())
             .FirstOrDefault(p => p.ProjectId == item.ProjectId);
         return project is null ? "Project" : $"{project.Reference} — {project.Name}";

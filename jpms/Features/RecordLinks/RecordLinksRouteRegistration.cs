@@ -39,6 +39,7 @@ public static class RecordLinksRouteRegistration
                     var q = (ListProjectCommunications)query;
                     var url = $"/api/projects/{q.ProjectId}/communications?take={q.Take}";
                     if (q.Type is { } type) url += $"&type={type}";
+                    if (!string.IsNullOrWhiteSpace(q.Bucket)) url += $"&bucket={Uri.EscapeDataString(q.Bucket)}";
                     if (!string.IsNullOrWhiteSpace(q.Cursor)) url += $"&cursor={Uri.EscapeDataString(q.Cursor)}";
                     return url;
                 }));

@@ -20,10 +20,12 @@
 
     private string? MatchedLabel(string path)
     {
-        // Group children first (they're the precise pages); then plain top-level entries.
-        // Template items match any project id, so no project context is needed here.
-        // Sidebar order: project items first, then company — the more specific project routes win.
-        // Template items match any project id, so no project context is needed here.
+        // Sidebar labels that are deliberately terser than the page deserves: the master to-do
+        // list's row reads "Todo" in the Internal folder, but the header spells it out.
+        if (path == "/todos") return "To-dos";
+        // Catalog items in sidebar order — folder rows put project templates before most
+        // company routes, so the more specific project routes win. Template items match any
+        // project id, so no project context is needed here.
         foreach (var item in NavigationCatalog.ItemsFor(Session.ActiveRole!.Value))
         {
             if (item.IsActiveFor(path)) return item.Label;

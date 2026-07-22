@@ -55,8 +55,8 @@ public sealed class HttpIntakeQueue : IIntakeQueue
     public Task<IReadOnlyList<LinkableRecord>> ListLinkableRecordsAsync(string projectId, RecordType type, CancellationToken cancellationToken = default) =>
         queries.AskAsync(new ListLinkableRecords(projectId, type), cancellationToken);
 
-    public Task<Acknowledgement> LinkMessageToRecordAsync(string messageId, string? internetMessageId, RecordType type, string recordId, CancellationToken cancellationToken = default) =>
-        commands.SendAsync(new LinkMessageToRecord(messageId, type, recordId, internetMessageId), cancellationToken);
+    public Task<Acknowledgement> LinkMessageToRecordAsync(string messageId, string? internetMessageId, RecordType type, string recordId, string? pathway = null, bool allowCrossPathway = false, CancellationToken cancellationToken = default) =>
+        commands.SendAsync(new LinkMessageToRecord(messageId, type, recordId, internetMessageId, pathway, allowCrossPathway), cancellationToken);
 
     public Task<Acknowledgement> SyncRecordThreadTagsAsync(RecordType type, string recordId, CancellationToken cancellationToken = default) =>
         commands.SendAsync(new SyncRecordThreadTags(type, recordId), cancellationToken);

@@ -68,7 +68,22 @@ public sealed class ListProjectCommunicationsHandler
             ? await graph.ListByTagsAsync(queryTags.ToList(), query.Cursor, query.Take, newestFirst: false, cancellationToken)
             : await ScanTaggedForAsync(queryTags, query.Cursor, query.Take, cancellationToken);
 
-        var items = page.Items
+        // Pathway filter (the Communications tab's Client/Subcontractor/Internal segmented control):
+        // applied per page against each message's bucket category. Total becomes 0 ("count
+        // unknown") because the full count would need the whole stream. A page can filter down to
+        // fewer than Take items while NextCursor still advances — the UI keeps paging as usual.
+        var messages = page.Items;
+        var total = page.Total;
+        if (!string.IsNullOrWhiteSpace(query.Bucket))
+        {
+            var bucketTag = TriageCategories.WorkflowPrefix + query.Bucket.Trim();
+            messages = messages
+                .Where(message => string.Equals(message.Bucket, bucketTag, StringComparison.OrdinalIgnoreCase))
+                .ToList();
+            total = 0;
+        }
+
+        var items = messages
             .Select(message => new ProjectCommunication(
                 message,
                 message.Categories
@@ -79,7 +94,7 @@ public sealed class ListProjectCommunicationsHandler
                     .ToList()))
             .ToList();
 
-        return new ProjectCommunicationsPage(items, page.NextCursor, page.Total);
+        return new ProjectCommunicationsPage(items, page.NextCursor, total);
     }
 
     // Conservatively below Exchange's "restriction or sort order is too complex" threshold for

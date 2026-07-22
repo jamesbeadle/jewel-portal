@@ -2,10 +2,24 @@
 @inject AuthService Auth
 @inject SessionService Session
 @inject ISubcontractorStore SubcontractorStore
+@inject IClientStore ClientStore
+@inject IArchitectStore ArchitectStore
+@inject Jewel.JPMS.Features.Directory.DirectoryReadModel Staff
 @inject NavigationManager Nav
 @implements IDisposable
 
 <PageTitle>Directory · JPMS</PageTitle>
+
+@*
+    THE unified directory (pathway-split plan §5/§9): one page, filter chips — Clients, Architects,
+    Subcontractors (the company directory), Internal staff — replacing the three separate nav
+    entries. A presentation-layer merge only: the company directory keeps its DirectoryCategory
+    rows and detail pages; first-class Client accounts and Architect practices render read-only
+    here with links to their own pages, where creating/editing and the contacts / correspondence
+    profile editors stay; Internal staff folds in the RBAC user list. Gate widened (2026-07-22) to
+    Admin / MD / FD / PM — though each group's API keeps its own gate, so a group a role can't
+    read shows a quiet restriction note instead of rows.
+*@
 
 @if (!isLoaded)
 {
@@ -19,7 +33,7 @@ else if (!CanAccess)
 {
     <section class="px-6 md:px-8 py-12">
         <h1 class="text-2xl font-semibold text-content mb-2">Not available</h1>
-        <p class="text-content-muted">The company directory is restricted to administrators and the managing director.</p>
+        <p class="text-content-muted">The directory is restricted to administrators, directors and project managers.</p>
     </section>
 }
 else
@@ -27,23 +41,158 @@ else
     <section class="px-6 md:px-8 py-8 md:py-12">
         <header class="mb-6 flex flex-wrap items-start justify-between gap-3">
             <div>
-                <p class="text-xs uppercase tracking-wider text-content-subtle font-medium mb-1">JPMS · Company directory</p>
+                <p class="text-xs uppercase tracking-wider text-content-subtle font-medium mb-1">JPMS · Directory</p>
                 <h1 class="text-2xl md:text-3xl font-semibold text-content leading-tight">Directory</h1>
-                <p class="text-sm text-content-muted mt-2">@Filtered().Count of @SubcontractorStore.All().Count companies.</p>
+                <p class="text-sm text-content-muted mt-2">@GroupSummary</p>
             </div>
-            <div class="flex items-center gap-4 shrink-0">
-                <ExportToExcelButton FileName="Directory"
-                                     Disabled="@(SubcontractorStore.All().Count == 0)"
-                                     ShowIncludeAllRows="@(!string.IsNullOrWhiteSpace(search) || !string.IsNullOrWhiteSpace(categoryFilter))"
-                                     IncludeAllLabel="Ignore search & filter"
-                                     BuildWorkbook="BuildExportWorkbook" />
-                @if (CanManage)
-                {
-                    <button type="button" class="btn-primary" @onclick="OpenAddModal">+ Add company</button>
-                }
-            </div>
+            @if (group == DirectoryGroup.Subcontractors)
+            {
+                <div class="flex items-center gap-4 shrink-0">
+                    <ExportToExcelButton FileName="Directory"
+                                         Disabled="@(SubcontractorStore.All().Count == 0)"
+                                         ShowIncludeAllRows="@(!string.IsNullOrWhiteSpace(search) || !string.IsNullOrWhiteSpace(categoryFilter))"
+                                         IncludeAllLabel="Ignore search & filter"
+                                         BuildWorkbook="BuildExportWorkbook" />
+                    @if (CanManage)
+                    {
+                        <button type="button" class="btn-primary" @onclick="OpenAddModal">+ Add company</button>
+                    }
+                </div>
+            }
         </header>
 
+        @* The group chips: who you're looking for. Subcontractors is the company directory
+           (the page's original body, unchanged); the other groups fold in alongside. *@
+        <div class="flex flex-wrap items-center gap-2 mb-5">
+            @foreach (var option in GroupChips)
+            {
+                var value = option.Group;
+                <button type="button" class="@GroupChipClass(value)" @onclick="() => SelectGroup(value)">@option.Label</button>
+            }
+        </div>
+
+        @if (group == DirectoryGroup.Clients)
+        {
+            @if (clientsError is not null)
+            {
+                <p class="text-sm text-content-subtle italic">@clientsError</p>
+            }
+            else if (clients.Count == 0)
+            {
+                <p class="text-sm text-content-subtle italic">@(clientsLoaded ? "No client accounts yet." : "Loading…")</p>
+            }
+            else
+            {
+                <div class="panel overflow-x-auto overflow-y-auto max-h-[85vh]">
+                    <table class="w-full text-sm">
+                        <thead>
+                            <tr class="text-left text-content-subtle border-b border-line">
+                                <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 font-medium">Client</th>
+                                <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 font-medium">Primary contact</th>
+                                <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 font-medium">Contact email</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var client in clients)
+                            {
+                                <tr class="border-b border-line last:border-0">
+                                    <td class="px-4 py-3 font-medium text-content">@client.Name</td>
+                                    <td class="px-4 py-3 text-content-muted">@Dash(client.PrimaryContactName)</td>
+                                    <td class="px-4 py-3 text-content-muted">@Dash(client.PrimaryContactEmail)</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+            <p class="text-xs text-content-subtle mt-3">
+                Create, edit and manage contacts on the
+                <a class="underline hover:text-content" href="/clients">Client accounts</a> page.
+            </p>
+        }
+        else if (group == DirectoryGroup.Architects)
+        {
+            @if (architectsError is not null)
+            {
+                <p class="text-sm text-content-subtle italic">@architectsError</p>
+            }
+            else if (architects.Count == 0)
+            {
+                <p class="text-sm text-content-subtle italic">@(architectsLoaded ? "No architect practices yet." : "Loading…")</p>
+            }
+            else
+            {
+                <div class="panel overflow-x-auto overflow-y-auto max-h-[85vh]">
+                    <table class="w-full text-sm">
+                        <thead>
+                            <tr class="text-left text-content-subtle border-b border-line">
+                                <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 font-medium">Practice</th>
+                                <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 font-medium">Contact</th>
+                                <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 font-medium">Contact email</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var architect in architects)
+                            {
+                                <tr class="border-b border-line last:border-0">
+                                    <td class="px-4 py-3 font-medium text-content">@architect.Name</td>
+                                    <td class="px-4 py-3 text-content-muted">@Dash(architect.ContactName)</td>
+                                    <td class="px-4 py-3 text-content-muted">@Dash(architect.ContactEmail)</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+            <p class="text-xs text-content-subtle mt-3">
+                Create, edit and manage contacts on the
+                <a class="underline hover:text-content" href="/architects">Architects</a> page.
+            </p>
+        }
+        else if (group == DirectoryGroup.Staff)
+        {
+            @if (staffError is not null)
+            {
+                <p class="text-sm text-content-subtle italic">@staffError</p>
+            }
+            else if (StaffUsers.Count == 0)
+            {
+                <p class="text-sm text-content-subtle italic">@(staffLoaded ? "No internal staff recorded." : "Loading…")</p>
+            }
+            else
+            {
+                <div class="panel overflow-x-auto overflow-y-auto max-h-[85vh]">
+                    <table class="w-full text-sm">
+                        <thead>
+                            <tr class="text-left text-content-subtle border-b border-line">
+                                <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 font-medium">Name</th>
+                                <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 font-medium">Email</th>
+                                <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 font-medium">Roles</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var user in StaffUsers)
+                            {
+                                <tr class="border-b border-line last:border-0">
+                                    <td class="px-4 py-3 font-medium text-content">@user.DisplayName</td>
+                                    <td class="px-4 py-3 text-content-muted">@user.Email</td>
+                                    <td class="px-4 py-3">
+                                        <span class="flex flex-wrap gap-1">
+                                            @foreach (var role in user.Roles)
+                                            {
+                                                <RoleBadge Role="role" />
+                                            }
+                                        </span>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        }
+        else
+        {
         @* Filters: category + free-text search across all types *@
         <div class="flex flex-wrap items-end gap-3 mb-5">
             <div class="grow min-w-[14rem]">
@@ -108,6 +257,7 @@ else
                     </tbody>
                 </table>
             </div>
+        }
         }
     </section>
 
@@ -211,10 +361,113 @@ else
     private static readonly DirectoryCategory[] AllCategories =
         (DirectoryCategory[])Enum.GetValues(typeof(DirectoryCategory));
 
-    // The directory is restricted to administrators and the managing director / CEO.
-    private bool CanAccess => Session.AvailableRoles.Any(r => r is Role.Admin or Role.ManagingDirector);
+    // Widened for the unified directory (2026-07-22): Admin, MD, FD and PM may browse.
+    private bool CanAccess => Session.AvailableRoles.Any(r =>
+        r is Role.Admin or Role.ManagingDirector or Role.FinanceDirector or Role.ProjectManager);
 
-    private bool CanManage => CanAccess;
+    // Adding companies keeps the original narrower gate (mirrors the API's add authorisation).
+    private bool CanManage => Session.AvailableRoles.Any(r => r is Role.Admin or Role.ManagingDirector);
+
+    // ---- Group chips -------------------------------------------------------
+    private enum DirectoryGroup { Clients, Architects, Subcontractors, Staff }
+
+    // Subcontractors default: the company directory is what /directory has always shown.
+    private DirectoryGroup group = DirectoryGroup.Subcontractors;
+
+    private static readonly (DirectoryGroup Group, string Label)[] GroupChips =
+    {
+        (DirectoryGroup.Clients,        "Clients"),
+        (DirectoryGroup.Architects,     "Architects"),
+        (DirectoryGroup.Subcontractors, "Subcontractors"),
+        (DirectoryGroup.Staff,          "Internal staff")
+    };
+
+    private string GroupChipClass(DirectoryGroup value) =>
+        group == value
+            ? "btn-primary text-xs px-2.5 py-1.5"
+            : "btn-secondary text-xs px-2.5 py-1.5";
+
+    private string GroupSummary => group switch
+    {
+        DirectoryGroup.Clients => clientsLoaded
+            ? $"{clients.Count} client account{(clients.Count == 1 ? "" : "s")}."
+            : "Client accounts.",
+        DirectoryGroup.Architects => architectsLoaded
+            ? $"{architects.Count} architect practice{(architects.Count == 1 ? "" : "s")}."
+            : "Architect practices.",
+        DirectoryGroup.Staff => staffLoaded
+            ? $"{StaffUsers.Count} internal staff."
+            : "Internal staff.",
+        _ => $"{Filtered().Count} of {SubcontractorStore.All().Count} companies."
+    };
+
+    // Each group loads on first selection, best-effort: the groups keep their own API gates
+    // (clients: Admin/MD/PM; staff: Admin/FD), so a 403 for this user's roles shows a quiet
+    // restriction note rather than failing the page.
+    private void SelectGroup(DirectoryGroup value)
+    {
+        group = value;
+        _ = value switch
+        {
+            DirectoryGroup.Clients => LoadClientsAsync(),
+            DirectoryGroup.Architects => LoadArchitectsAsync(),
+            DirectoryGroup.Staff => LoadStaffAsync(),
+            _ => Task.CompletedTask
+        };
+    }
+
+    private IReadOnlyList<Client> clients = Array.Empty<Client>();
+    private bool clientsLoaded;
+    private string? clientsError;
+
+    private async Task LoadClientsAsync()
+    {
+        if (clientsLoaded) return;
+        try
+        {
+            clients = await ClientStore.ListAsync();
+            clientsLoaded = true;
+            clientsError = null;
+        }
+        catch { clientsError = "Client accounts couldn't be loaded — they're restricted to administrators, the managing director and project managers."; }
+        StateHasChanged();
+    }
+
+    private IReadOnlyList<Architect> architects = Array.Empty<Architect>();
+    private bool architectsLoaded;
+    private string? architectsError;
+
+    private async Task LoadArchitectsAsync()
+    {
+        if (architectsLoaded) return;
+        try
+        {
+            architects = await ArchitectStore.ListAsync();
+            architectsLoaded = true;
+            architectsError = null;
+        }
+        catch { architectsError = "Architect practices couldn't be loaded — they're restricted to administrators, the managing director and project managers."; }
+        StateHasChanged();
+    }
+
+    private bool staffLoaded;
+    private string? staffError;
+
+    private IReadOnlyList<DirectoryUser> StaffUsers =>
+        Staff.Current ?? (IReadOnlyList<DirectoryUser>)Array.Empty<DirectoryUser>();
+
+    private async Task LoadStaffAsync()
+    {
+        if (staffLoaded) return;
+        try
+        {
+            await Staff.RefreshAsync(CancellationToken.None);
+            staffLoaded = true;
+            staffError = null;
+        }
+        catch { staffError = "The internal staff list couldn't be loaded — it's restricted to administrators and the finance director."; }
+        StateHasChanged();
+    }
 
     // Add-company form state
     private bool showAddModal;
@@ -353,6 +606,8 @@ else
 
     private static string Location(Subcontractor s) =>
         string.Join(", ", new[] { s.Town, s.County }.Where(x => !string.IsNullOrWhiteSpace(x)));
+
+    private static string Dash(string? value) => string.IsNullOrWhiteSpace(value) ? "—" : value;
 
     private static string Label(DirectoryCategory c) => c switch
     {

@@ -91,11 +91,12 @@ public sealed record ClaimLine(
     decimal CumulativeClaimed,  // PercentComplete% x LineAmount
     decimal PeriodIncrement);   // CumulativeClaimed - previous confirmed cumulative for this line
 
-// An immutable, line-level copy of the valuation report frozen at a moment in time — what the
-// client was shown when a valuation invoice was submitted (or a period-end record when taken on
-// demand). Unlike a claim (whose Preapproved totals are re-frozen when certified moves), a
-// snapshot never changes after capture; re-submitting an amended invoice takes a NEW snapshot
-// and flags the old one superseded.
+// An immutable, line-level copy of the valuation report frozen at a moment in time — the report
+// behind a valuation invoice, captured when the invoice is raised (or a period-end record when
+// taken on demand). Snapshots are the only client-facing form of the report; the live report tab
+// is internal. Unlike a claim (whose Preapproved totals are re-frozen when certified moves), a
+// snapshot never changes after capture; amending an invoice flags its snapshot superseded and
+// the next submit/issue freezes a NEW one.
 public sealed record ValuationReportSnapshot(
     string ValuationReportSnapshotId,
     string ProjectId,

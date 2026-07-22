@@ -1,0 +1,336 @@
+@page "/audit"
+@using Jewel.JPMS.Contracts.Audit
+@inject AuthService Auth
+@inject SessionService Session
+@inject IQueryClient Queries
+@inject Jewel.JPMS.Features.Projects.ProjectListReadModel Projects
+@inject NavigationManager Nav
+
+<PageTitle>Audit trail · JPMS</PageTitle>
+
+@*
+    The audit register (pathway-split plan §4): every recorded client-facing interaction, newest
+    first — triage decisions on client-pathway threads, records created/linked from email, drafted
+    client correspondence, wall refusals, valuation report snapshots. Two jobs in one table:
+    traceability (who did what, when, on which record) and findability (the WebLink column opens
+    the drafted email straight in Outlook — the register is the index over the mailbox). It is an
+    internal oversight tool, gated like triage (Admin/PM/FD, mirroring the API's
+    TriageRoles.AllowedToTriage); rows about the client pathway are ABOUT the wall, never inside it.
+*@
+
+@if (!isLoaded)
+{
+    <section class="px-6 md:px-8 py-12 text-content-subtle text-sm">Loading…</section>
+}
+else if (!Session.IsApproved)
+{
+    <RequestAccessView Email="@Auth.CurrentUser!.Email" DisplayName="@Auth.CurrentUser.DisplayName" />
+}
+else if (!CanAccess)
+{
+    <section class="px-6 md:px-8 py-12">
+        <h1 class="text-2xl font-semibold text-content mb-2">Not available</h1>
+        <p class="text-content-muted">The audit trail is restricted to administrators, the finance director and project managers.</p>
+    </section>
+}
+else
+{
+    <section class="px-6 py-6 md:px-8">
+        <header class="mb-6">
+            <p class="eyebrow mb-1">JPMS</p>
+            <h1 class="text-2xl md:text-3xl font-semibold text-content leading-tight">Audit trail</h1>
+            <p class="text-sm text-content-muted mt-1">Client-facing interactions recorded by the portal.</p>
+        </header>
+
+        <div class="flex flex-wrap items-center gap-2 mb-4">
+            <button type="button" class="@PathwayTabClass(null)" @onclick="() => OnPathwayChanged(null)">All</button>
+            @foreach (var pathway in PathwayLabels)
+            {
+                var value = pathway;
+                <button type="button" class="@PathwayTabClass(value)" @onclick="() => OnPathwayChanged(value)">@value</button>
+            }
+
+            <select class="field !w-auto text-xs" value="@eventTypeRaw" @onchange="OnEventTypeChanged">
+                <option value="">All events</option>
+                @foreach (var option in EventTypeOptions)
+                {
+                    <option value="@((int)option.Type)">@option.Label</option>
+                }
+            </select>
+
+            <select class="field !w-auto text-xs" value="@projectFilter" @onchange="OnProjectChanged">
+                <option value="">All projects</option>
+                @foreach (var project in ProjectOptions)
+                {
+                    <option value="@project.ProjectId">@project.Reference — @project.Name</option>
+                }
+            </select>
+
+            @if (loaded && total > 0)
+            {
+                <span class="text-xs text-content-subtle ml-auto">Showing @items.Count of @total</span>
+            }
+        </div>
+
+        @if (loadError is not null)
+        {
+            <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-4">@loadError</p>
+        }
+
+        @if (!loaded)
+        {
+            <JewelSpinner Class="py-16" Label="Loading" />
+        }
+        else if (items.Count == 0)
+        {
+            <div class="panel p-8 text-center">
+                <p class="text-sm text-content">Nothing recorded@(HasFilter ? " for these filters" : "") yet.</p>
+                <p class="text-xs text-content-subtle mt-1">
+                    Client-pathway triage decisions, drafted documents and snapshots appear here as they happen.
+                </p>
+            </div>
+        }
+        else
+        {
+            <div class="rounded-xl border border-line bg-surface overflow-x-auto">
+                <table class="w-full text-sm">
+                    <thead class="bg-surface-raised border-b border-line">
+                        <tr class="text-left text-[11px] uppercase tracking-wider text-content-subtle font-semibold">
+                            <th class="px-4 py-3 whitespace-nowrap">When</th>
+                            <th class="px-4 py-3 whitespace-nowrap">Actor</th>
+                            <th class="px-4 py-3 whitespace-nowrap">Event</th>
+                            <th class="px-4 py-3 whitespace-nowrap">Pathway</th>
+                            <th class="px-4 py-3 whitespace-nowrap">Record</th>
+                            <th class="px-4 py-3 min-w-[240px]">Detail</th>
+                            <th class="px-4 py-3 whitespace-nowrap">Email</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-line">
+                        @foreach (var item in items)
+                        {
+                            <tr @key="item.AuditEventId">
+                                <td class="px-4 py-3 text-content-muted whitespace-nowrap"
+                                    title="@item.OccurredAt.LocalDateTime.ToString("d MMM yyyy, HH:mm:ss")">@Ago(item.OccurredAt)</td>
+                                <td class="px-4 py-3 text-content-muted whitespace-nowrap">@Dash(item.ActorEmail)</td>
+                                <td class="px-4 py-3 text-content whitespace-nowrap">@EventLabel(item.EventType)</td>
+                                <td class="px-4 py-3 whitespace-nowrap">
+                                    @if (!string.IsNullOrEmpty(item.Pathway))
+                                    {
+                                        <span class="@PathwayChipClass(item.Pathway)">@item.Pathway</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-content-subtle">—</span>
+                                    }
+                                </td>
+                                <td class="px-4 py-3 whitespace-nowrap">
+                                    @* Requests are the only record family with a detail page today;
+                                       other references read as plain text. *@
+                                    @if (RecordHref(item) is { } href)
+                                    {
+                                        <a class="font-mono text-xs text-content underline underline-offset-2 hover:text-accent" href="@href">@item.RecordReference</a>
+                                    }
+                                    else
+                                    {
+                                        <span class="font-mono text-xs text-content-muted">@Dash(item.RecordReference)</span>
+                                    }
+                                </td>
+                                <td class="px-4 py-3 text-content-muted">@item.Detail</td>
+                                <td class="px-4 py-3 whitespace-nowrap">
+                                    @if (!string.IsNullOrWhiteSpace(item.WebLink))
+                                    {
+                                        <a class="text-xs text-content-muted underline underline-offset-2 hover:text-content"
+                                           href="@item.WebLink" target="_blank" rel="noopener">Open in Outlook</a>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+
+            @if (nextCursor is not null)
+            {
+                <div class="mt-4 text-center">
+                    <button type="button" class="btn-secondary text-sm" disabled="@loadingMore" @onclick="LoadMoreAsync">
+                        @(loadingMore ? "Loading…" : "Load more")
+                    </button>
+                </div>
+            }
+        }
+    </section>
+}
+
+@code {
+    private const int PageSize = 50;
+
+    private bool isLoaded;
+    private bool loaded;
+    private bool loadingMore;
+    private string? loadError;
+
+    private readonly List<AuditEvent> items = new();
+    private string? nextCursor;
+    private int total;
+
+    private string? pathwayFilter;
+    private string eventTypeRaw = "";
+    private string projectFilter = "";
+
+    private static readonly string[] PathwayLabels = { "Client", "Subcontractor", "Internal" };
+
+    // The written (client-facing) vocabulary only — the reserved wider-scope values are declared
+    // in the enum but never recorded, so offering them would only produce empty results.
+    private static readonly (AuditEventType Type, string Label)[] EventTypeOptions =
+    {
+        (AuditEventType.EmailTriaged,           "Email triaged"),
+        (AuditEventType.RecordLinked,           "Record linked"),
+        (AuditEventType.RecordCreatedFromEmail, "Record created from email"),
+        (AuditEventType.TagRemoved,             "Tag removed"),
+        (AuditEventType.Discarded,              "Discarded"),
+        (AuditEventType.Restored,               "Restored"),
+        (AuditEventType.WallRejected,           "Wall refused"),
+        (AuditEventType.DraftCreated,           "Draft created"),
+        (AuditEventType.SnapshotTaken,          "Snapshot taken"),
+        (AuditEventType.BackfillStamped,        "Backfill stamped")
+    };
+
+    // Mirrors the API's TriageRoles.AllowedToTriage — the audit trail is a triage-side tool.
+    private bool CanAccess => Session.AvailableRoles.Any(role =>
+        role is Role.Admin or Role.FinanceDirector or Role.ProjectManager);
+
+    private AuditEventType? EventTypeFilter =>
+        int.TryParse(eventTypeRaw, out var parsed) ? (AuditEventType)parsed : null;
+
+    private bool HasFilter =>
+        pathwayFilter is not null || EventTypeFilter is not null || !string.IsNullOrEmpty(projectFilter);
+
+    private IReadOnlyList<Project> ProjectOptions =>
+        (Projects.Current ?? (IReadOnlyList<Project>)Array.Empty<Project>())
+            .OrderBy(project => project.Reference, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Session.EnsureLoadedAsync();
+        if (!Auth.IsSignedIn) { Nav.NavigateTo("/login", forceLoad: true); return; }
+        isLoaded = true;
+        if (!Session.IsApproved || !CanAccess) { loaded = true; return; }
+
+        // Project labels for the filter dropdown; failing only degrades the filter, never the list.
+        try { if (Projects.Current is null) await Projects.RefreshAsync(CancellationToken.None); } catch { }
+        await LoadAsync(reset: true);
+    }
+
+    private async Task OnPathwayChanged(string? pathway)
+    {
+        if (pathwayFilter == pathway) return;
+        pathwayFilter = pathway;
+        await LoadAsync(reset: true);
+    }
+
+    private async Task OnEventTypeChanged(ChangeEventArgs e)
+    {
+        eventTypeRaw = e.Value?.ToString() ?? "";
+        await LoadAsync(reset: true);
+    }
+
+    private async Task OnProjectChanged(ChangeEventArgs e)
+    {
+        projectFilter = e.Value?.ToString() ?? "";
+        await LoadAsync(reset: true);
+    }
+
+    private Task LoadMoreAsync() => LoadAsync(reset: false);
+
+    private async Task LoadAsync(bool reset)
+    {
+        if (reset)
+        {
+            loaded = false;
+            items.Clear();
+            nextCursor = null;
+            total = 0;
+        }
+        loadError = null;
+        loadingMore = !reset;
+        try
+        {
+            var page = await Queries.AskAsync(
+                new ListAuditEvents(
+                    string.IsNullOrEmpty(projectFilter) ? null : projectFilter,
+                    pathwayFilter,
+                    EventTypeFilter,
+                    null,
+                    nextCursor,
+                    PageSize),
+                CancellationToken.None);
+            items.AddRange(page.Items);
+            nextCursor = page.NextCursor;
+            total = page.Total;
+        }
+        catch
+        {
+            loadError = "Couldn't load the audit trail. Please try again.";
+        }
+        finally
+        {
+            loaded = true;
+            loadingMore = false;
+        }
+    }
+
+    private string PathwayTabClass(string? pathway) =>
+        pathwayFilter == pathway
+            ? "btn-primary text-xs px-2.5 py-1.5"
+            : "btn-secondary text-xs px-2.5 py-1.5";
+
+    private static string PathwayChipClass(string pathway)
+    {
+        const string baseClass = "inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium ";
+        return pathway switch
+        {
+            "Client"        => baseClass + "bg-accent/10 text-accent",
+            "Subcontractor" => baseClass + "bg-positive/10 text-positive",
+            _               => baseClass + "bg-surface-raised border border-line text-content-muted"
+        };
+    }
+
+    private static string EventLabel(AuditEventType type) => type switch
+    {
+        AuditEventType.EmailTriaged           => "Email triaged",
+        AuditEventType.RecordLinked           => "Record linked",
+        AuditEventType.RecordCreatedFromEmail => "Record created from email",
+        AuditEventType.TagRemoved             => "Tag removed",
+        AuditEventType.Discarded              => "Discarded",
+        AuditEventType.Restored               => "Restored",
+        AuditEventType.WallRejected           => "Wall refused",
+        AuditEventType.DraftCreated           => "Draft created",
+        AuditEventType.SnapshotTaken          => "Snapshot taken",
+        AuditEventType.BackfillStamped        => "Backfill stamped",
+        AuditEventType.CrossPathwayOverride   => "Cross-pathway override",
+        AuditEventType.ThreadSwept            => "Thread swept",
+        _                                     => type.ToString()
+    };
+
+    // Requests have a detail page; every other record type reads as plain reference text.
+    private static string? RecordHref(AuditEvent item) =>
+        item.RecordType == RecordType.Request
+        && !string.IsNullOrEmpty(item.ProjectId)
+        && !string.IsNullOrEmpty(item.RecordId)
+            ? $"/projects/{item.ProjectId}/requests/view/{item.RecordId}"
+            : null;
+
+    // Compact relative stamp for scanning; the exact moment sits in the cell's hover title.
+    private static string Ago(DateTimeOffset at)
+    {
+        var span = DateTimeOffset.UtcNow - at;
+        if (span < TimeSpan.FromMinutes(1)) return "just now";
+        if (span < TimeSpan.FromHours(1)) return $"{(int)span.TotalMinutes}m ago";
+        if (span < TimeSpan.FromHours(24)) return $"{(int)span.TotalHours}h ago";
+        if (span < TimeSpan.FromDays(30)) return $"{(int)span.TotalDays}d ago";
+        return at.LocalDateTime.ToString("d MMM yyyy");
+    }
+
+    private static string Dash(string? value) => string.IsNullOrWhiteSpace(value) ? "—" : value;
+}

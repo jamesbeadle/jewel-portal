@@ -90,7 +90,7 @@ public sealed class ReplyInThreadFromMessageHandler : ICommandHandler<ReplyInThr
                 command.MessageId,
                 HtmlCoverNote: ToHtml(reply),
                 Attachments: Array.Empty<MailboxDraftAttachment>(),
-                Categories: new[] { TriageCategories.Marker, tag }),
+                Categories: new[] { TriageCategories.Marker, tag, TriageCategories.Client }),
             cancellationToken);
 
         if (created is null)

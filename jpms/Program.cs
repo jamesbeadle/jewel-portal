@@ -2,6 +2,7 @@ using Jewel.JPMS;
 using Jewel.JPMS.Cqrs;
 using Jewel.JPMS.Features.Agents;
 using Jewel.JPMS.Features.Architects;
+using Jewel.JPMS.Features.Audit;
 using Jewel.JPMS.Features.Boq;
 using Jewel.JPMS.Features.ValuationInvoices;
 using Jewel.JPMS.Features.Cashflow;
@@ -152,6 +153,7 @@ using (var routeScope = app.Services.CreateScope())
     VariationsRouteRegistration.RegisterVariationsRoutes(queryRoutes, commandRoutes);
     ValuationInvoicesRouteRegistration.RegisterValuationInvoicesRoutes(queryRoutes, commandRoutes);
     RecordLinksRouteRegistration.RegisterRecordLinksRoutes(queryRoutes, commandRoutes);
+    AuditRouteRegistration.RegisterAuditRoutes(queryRoutes, commandRoutes);
     TodosRouteRegistration.RegisterTodosRoutes(queryRoutes, commandRoutes);
     LadsRouteRegistration.RegisterLadsRoutes(queryRoutes, commandRoutes);
     CostCentersRouteRegistration.RegisterCostCentersRoutes(queryRoutes, commandRoutes);
