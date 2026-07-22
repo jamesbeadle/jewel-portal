@@ -30,7 +30,7 @@ public sealed class SendAgentMessageEndpoint
         // The author is always the signed-in user — never trusted from the client body.
         var command = posted with { AuthorEmail = signedInUser.Email, AuthorName = signedInUser.DisplayName };
 
-        if (!authorisation.Allows(signedInUser, command)) return new ForbidResult();
+        if (!authorisation.Allows(signedInUser, command)) return new StatusCodeResult(403);
         var validationOutcome = validation.Check(command);
         if (validationOutcome.HasFailed) return new BadRequestObjectResult(validationOutcome.Errors);
         return new OkObjectResult(await handler.HandleAsync(command, request.HttpContext.RequestAborted));

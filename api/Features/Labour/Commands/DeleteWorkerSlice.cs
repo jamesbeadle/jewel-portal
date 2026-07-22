@@ -26,7 +26,7 @@ public sealed class DeleteWorkerEndpoint
     {
         var signedInUser = await users.ResolveAsync(request, request.HttpContext.RequestAborted);
         if (signedInUser is null) return new UnauthorizedResult();
-        if (!LabourRoleSets.ManageWorkers.IncludesAny(signedInUser.Roles)) return new ForbidResult();
+        if (!LabourRoleSets.ManageWorkers.IncludesAny(signedInUser.Roles)) return new StatusCodeResult(403);
         try
         {
             return new OkObjectResult(await handler.HandleAsync(new DeleteWorker(workerId), request.HttpContext.RequestAborted));

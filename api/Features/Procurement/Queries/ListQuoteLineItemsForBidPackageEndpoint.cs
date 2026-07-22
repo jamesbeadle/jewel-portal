@@ -29,7 +29,7 @@ public sealed class ListQuoteLineItemsForBidPackageEndpoint
     {
         var signedInUser = await users.ResolveAsync(request, request.HttpContext.RequestAborted);
         if (signedInUser is null) return new UnauthorizedResult();
-        if (!RolesThatMayReadProcurement.IncludesAny(signedInUser.Roles)) return new ForbidResult();
+        if (!RolesThatMayReadProcurement.IncludesAny(signedInUser.Roles)) return new StatusCodeResult(403);
 
         var result = await handler.HandleAsync(new ListQuoteLineItemsForBidPackage(bidPackageId), request.HttpContext.RequestAborted);
         return new OkObjectResult(result);

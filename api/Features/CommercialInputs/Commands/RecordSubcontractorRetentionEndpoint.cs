@@ -39,7 +39,7 @@ public sealed class RecordSubcontractorRetentionEndpoint
         if (command is null) return new BadRequestResult();
         if (command.ProjectId != projectId) return new BadRequestObjectResult("Route projectId does not match body.");
 
-        if (!authorisation.Allows(signedInUser, command)) return new ForbidResult();
+        if (!authorisation.Allows(signedInUser, command)) return new StatusCodeResult(403);
 
         var validationOutcome = validation.Check(command);
         if (validationOutcome.HasFailed) return new BadRequestObjectResult(validationOutcome.Errors);

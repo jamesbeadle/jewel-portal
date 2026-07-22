@@ -25,7 +25,7 @@ public sealed class UpdateProgrammeTaskEndpoint
         var command = await request.ReadFromJsonAsync<UpdateProgrammeTask>();
         if (command is null) return new BadRequestResult();
         if (command.ProgrammeTaskId != programmeTaskId) return new BadRequestObjectResult("Route programmeTaskId does not match body.");
-        if (!authorisation.Allows(signedInUser, command)) return new ForbidResult();
+        if (!authorisation.Allows(signedInUser, command)) return new StatusCodeResult(403);
         var validationOutcome = validation.Check(command);
         if (validationOutcome.HasFailed) return new BadRequestObjectResult(validationOutcome.Errors);
         return new OkObjectResult(await handler.HandleAsync(command, request.HttpContext.RequestAborted));

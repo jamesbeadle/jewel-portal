@@ -31,7 +31,7 @@ public sealed class ListDrawingsForProjectEndpoint
     {
         var signedInUser = await users.ResolveAsync(request, request.HttpContext.RequestAborted);
         if (signedInUser is null) return new UnauthorizedResult();
-        if (!RolesThatMayReadDrawings.IncludesAny(signedInUser.Roles)) return new ForbidResult();
+        if (!RolesThatMayReadDrawings.IncludesAny(signedInUser.Roles)) return new StatusCodeResult(403);
 
         var approvedOnly = string.Equals(request.Query["approvedOnly"], "true", StringComparison.OrdinalIgnoreCase);
 

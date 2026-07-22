@@ -27,7 +27,7 @@ public sealed class ListPendingAccessRequestsEndpoint
     {
         var signedInUser = await users.ResolveAsync(request, request.HttpContext.RequestAborted);
         if (signedInUser is null) return new UnauthorizedResult();
-        if (!JpmsAdministrators.Contains(signedInUser.Email)) return new ForbidResult();
+        if (!signedInUser.Roles.Contains(Role.Admin)) return new StatusCodeResult(403);
 
         var requests = await handler.HandleAsync(new ListPendingAccessRequests(), request.HttpContext.RequestAborted);
         return new OkObjectResult(requests);

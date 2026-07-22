@@ -31,7 +31,7 @@ public sealed class GetRequestDocumentEndpoint
     {
         var signedInUser = await users.ResolveAsync(request, request.HttpContext.RequestAborted);
         if (signedInUser is null) return new UnauthorizedResult();
-        if (!RolesThatMayReadRequests.IncludesAny(signedInUser.Roles)) return new ForbidResult();
+        if (!RolesThatMayReadRequests.IncludesAny(signedInUser.Roles)) return new StatusCodeResult(403);
 
         var file = await handler.HandleAsync(new GetRequestDocument(requestId), request.HttpContext.RequestAborted);
         if (file is null) return new NotFoundResult();

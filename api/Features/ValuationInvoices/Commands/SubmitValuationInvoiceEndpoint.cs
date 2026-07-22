@@ -25,7 +25,7 @@ public sealed class SubmitValuationInvoiceEndpoint
         var signedInUser = await users.ResolveAsync(request, request.HttpContext.RequestAborted);
         if (signedInUser is null) return new UnauthorizedResult();
         var command = new SubmitValuationInvoice(valuationInvoiceId);
-        if (!authorisation.Allows(signedInUser, command)) return new ForbidResult();
+        if (!authorisation.Allows(signedInUser, command)) return new StatusCodeResult(403);
         return new OkObjectResult(await handler.HandleAsync(command, request.HttpContext.RequestAborted));
     }
 }

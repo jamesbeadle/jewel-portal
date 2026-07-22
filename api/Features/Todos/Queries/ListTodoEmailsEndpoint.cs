@@ -32,7 +32,7 @@ public sealed class ListTodoEmailsEndpoint
     {
         var signedInUser = await users.ResolveAsync(request, request.HttpContext.RequestAborted);
         if (signedInUser is null) return new UnauthorizedResult();
-        if (!RolesThatMayReadTodoEmails.IncludesAny(signedInUser.Roles)) return new ForbidResult();
+        if (!RolesThatMayReadTodoEmails.IncludesAny(signedInUser.Roles)) return new StatusCodeResult(403);
         return new OkObjectResult(await handler.HandleAsync(new ListTodoEmails(todoItemId), request.HttpContext.RequestAborted));
     }
 }

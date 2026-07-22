@@ -25,7 +25,7 @@ public sealed class UpdateRequestDetailsEndpoint
         var command = await request.ReadFromJsonAsync<UpdateRequestDetails>();
         if (command is null) return new BadRequestResult();
         if (command.RequestId != requestId) return new BadRequestObjectResult("Route requestId does not match body.");
-        if (!authorisation.Allows(signedInUser, command)) return new ForbidResult();
+        if (!authorisation.Allows(signedInUser, command)) return new StatusCodeResult(403);
         var validationOutcome = validation.Check(command);
         if (validationOutcome.HasFailed) return new BadRequestObjectResult(validationOutcome.Errors);
         try

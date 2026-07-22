@@ -25,7 +25,7 @@ public sealed class RetagRequestWorkflowTagsEndpoint
     {
         var signedInUser = await users.ResolveAsync(request, request.HttpContext.RequestAborted);
         if (signedInUser is null) return new UnauthorizedResult();
-        if (!TriageRoles.AllowedToTriage.IncludesAny(signedInUser.Roles)) return new ForbidResult();
+        if (!TriageRoles.AllowedToTriage.IncludesAny(signedInUser.Roles)) return new StatusCodeResult(403);
 
         return new OkObjectResult(await handler.HandleAsync(new RetagRequestWorkflowTags(), request.HttpContext.RequestAborted));
     }

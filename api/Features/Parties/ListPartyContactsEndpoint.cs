@@ -33,7 +33,7 @@ public sealed class ListPartyContactsEndpoint
     {
         var signedInUser = await users.ResolveAsync(request, request.HttpContext.RequestAborted);
         if (signedInUser is null) return new UnauthorizedResult();
-        if (!RolesThatMayReadPartyContacts.IncludesAny(signedInUser.Roles)) return new ForbidResult();
+        if (!RolesThatMayReadPartyContacts.IncludesAny(signedInUser.Roles)) return new StatusCodeResult(403);
 
         var kind = PartyContactMapping.ParsePartyKind(partyKind);
         if (kind is null) return new BadRequestObjectResult("partyKind must be 'client' or 'architect'.");

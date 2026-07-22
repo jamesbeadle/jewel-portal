@@ -30,7 +30,7 @@ public sealed class UpdateTodoItemEndpoint
         // (ticking their own item off from the dashboard / To-dos browser).
         if (!authorisation.Allows(signedInUser, command)
             && !await authorisation.AllowsAsAssigneeAsync(signedInUser, command, request.HttpContext.RequestAborted))
-            return new ForbidResult();
+            return new StatusCodeResult(403);
         var validationOutcome = validation.Check(command);
         if (validationOutcome.HasFailed) return new BadRequestObjectResult(validationOutcome.Errors);
         return new OkObjectResult(await handler.HandleAsync(command, request.HttpContext.RequestAborted));

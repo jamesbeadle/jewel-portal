@@ -31,7 +31,7 @@ public sealed class GetRequestByIdEndpoint
     {
         var signedInUser = await users.ResolveAsync(request, request.HttpContext.RequestAborted);
         if (signedInUser is null) return new UnauthorizedResult();
-        if (!RolesThatMayReadRequests.IncludesAny(signedInUser.Roles)) return new ForbidResult();
+        if (!RolesThatMayReadRequests.IncludesAny(signedInUser.Roles)) return new StatusCodeResult(403);
 
         var change = await handler.HandleAsync(new GetRequestById(requestId), request.HttpContext.RequestAborted);
         return new OkObjectResult(change);

@@ -38,7 +38,7 @@ public sealed class DownloadMyComplianceDocumentEndpoint
         if (signedInUser is null) return new UnauthorizedResult();
 
         var subcontractorId = SubcontractorScope.OwnSubcontractorId(signedInUser);
-        if (subcontractorId is null) return new ForbidResult();
+        if (subcontractorId is null) return new StatusCodeResult(403);
 
         var document = await context.ComplianceDocuments
             .FirstOrDefaultAsync(row => row.ComplianceDocumentId == documentId, cancellationToken);

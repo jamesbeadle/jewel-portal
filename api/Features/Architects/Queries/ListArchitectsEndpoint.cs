@@ -31,7 +31,7 @@ public sealed class ListArchitectsEndpoint
     {
         var signedInUser = await users.ResolveAsync(request, request.HttpContext.RequestAborted);
         if (signedInUser is null) return new UnauthorizedResult();
-        if (!RolesThatMayReadArchitects.IncludesAny(signedInUser.Roles)) return new ForbidResult();
+        if (!RolesThatMayReadArchitects.IncludesAny(signedInUser.Roles)) return new StatusCodeResult(403);
 
         var architects = await handler.HandleAsync(new ListArchitects(), request.HttpContext.RequestAborted);
         return new OkObjectResult(architects);

@@ -26,7 +26,7 @@ public sealed class CancelValuationInvoiceEndpoint
         if (signedInUser is null) return new UnauthorizedResult();
         var body = await request.ReadFromJsonAsync<CancelValuationInvoice>();
         var command = new CancelValuationInvoice(valuationInvoiceId, body?.Note);
-        if (!authorisation.Allows(signedInUser, command)) return new ForbidResult();
+        if (!authorisation.Allows(signedInUser, command)) return new StatusCodeResult(403);
         return new OkObjectResult(await handler.HandleAsync(command, request.HttpContext.RequestAborted));
     }
 }

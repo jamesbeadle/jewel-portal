@@ -30,7 +30,7 @@ public sealed class SearchLocalSubcontractorsEndpoint
     {
         var signedInUser = await users.ResolveAsync(request, request.HttpContext.RequestAborted);
         if (signedInUser is null) return new UnauthorizedResult();
-        if (!RolesThatMayReadProcurement.IncludesAny(signedInUser.Roles)) return new ForbidResult();
+        if (!RolesThatMayReadProcurement.IncludesAny(signedInUser.Roles)) return new StatusCodeResult(403);
 
         var trade = request.Query["trade"].ToString();
         var pageToken = request.Query["pageToken"].ToString();

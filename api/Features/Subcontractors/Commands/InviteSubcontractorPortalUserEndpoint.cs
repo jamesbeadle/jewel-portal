@@ -35,7 +35,7 @@ public sealed class InviteSubcontractorPortalUserEndpoint
 
         var signedInUser = await users.ResolveAsync(request, cancellationToken);
         if (signedInUser is null) return new UnauthorizedResult();
-        if (!authorisation.Allows(signedInUser)) return new ForbidResult();
+        if (!authorisation.Allows(signedInUser)) return new StatusCodeResult(403);
 
         InviteSubcontractorPortalUserRequest? body;
         try { body = await request.ReadFromJsonAsync<InviteSubcontractorPortalUserRequest>(cancellationToken); }

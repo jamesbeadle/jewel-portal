@@ -27,7 +27,7 @@ public sealed class SetXeroLineTimesheetCoverEndpoint
     {
         var signedInUser = await users.ResolveAsync(request, request.HttpContext.RequestAborted);
         if (signedInUser is null) return new UnauthorizedResult();
-        if (!LabourRoleSets.ManageSettlement.IncludesAny(signedInUser.Roles)) return new ForbidResult();
+        if (!LabourRoleSets.ManageSettlement.IncludesAny(signedInUser.Roles)) return new StatusCodeResult(403);
         var command = await request.ReadFromJsonAsync<SetXeroLineTimesheetCover>();
         if (command is null || string.IsNullOrWhiteSpace(command.XeroLedgerLineId)) return new BadRequestResult();
         try

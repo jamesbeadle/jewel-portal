@@ -37,7 +37,7 @@ public sealed class IssueWorkOrderForVariationOrderEndpoint
 
         var signedInUser = await users.ResolveAsync(request, cancellationToken);
         if (signedInUser is null) return new UnauthorizedResult();
-        if (!RolesThatMayIssue.IncludesAny(signedInUser.Roles)) return new ForbidResult();
+        if (!RolesThatMayIssue.IncludesAny(signedInUser.Roles)) return new StatusCodeResult(403);
 
         try
         {

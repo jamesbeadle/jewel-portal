@@ -44,7 +44,7 @@ public sealed class UpsertPartyContactEndpoint
         if (command.PartyId != partyId || command.PartyKind != kind.Value)
             return new BadRequestObjectResult("Route party does not match body.");
 
-        if (!authorisation.Allows(signedInUser)) return new ForbidResult();
+        if (!authorisation.Allows(signedInUser)) return new StatusCodeResult(403);
 
         var validationOutcome = validation.Check(command);
         if (validationOutcome.HasFailed) return new BadRequestObjectResult(validationOutcome.Errors);

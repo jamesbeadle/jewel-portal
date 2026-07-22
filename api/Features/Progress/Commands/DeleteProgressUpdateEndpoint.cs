@@ -33,7 +33,7 @@ public sealed class DeleteProgressUpdateEndpoint
         if (signedInUser is null) return new UnauthorizedResult();
 
         var command = new DeleteProgressUpdate(progressUpdateId);
-        if (!authorisation.Allows(signedInUser, command)) return new ForbidResult();
+        if (!authorisation.Allows(signedInUser, command)) return new StatusCodeResult(403);
 
         var acknowledgement = await handler.HandleAsync(command, request.HttpContext.RequestAborted);
         return new OkObjectResult(acknowledgement);

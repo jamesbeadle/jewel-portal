@@ -50,7 +50,7 @@ public sealed class UploadDrawingRevisionEndpoint
 
         var signedInUser = await users.ResolveAsync(request, cancellationToken);
         if (signedInUser is null) return new UnauthorizedResult();
-        if (!authorisation.Allows(signedInUser)) return new ForbidResult();
+        if (!authorisation.Allows(signedInUser)) return new StatusCodeResult(403);
 
         if (!request.HasFormContentType) return new BadRequestObjectResult("Expected multipart/form-data.");
         var form = await request.ReadFormAsync(cancellationToken);

@@ -42,7 +42,7 @@ public sealed class PrepareVoqDraftEndpoint
 
         var command = new PrepareVoqDraft(requestId);
 
-        if (!authorisation.Allows(signedInUser, command)) return new ForbidResult();
+        if (!authorisation.Allows(signedInUser, command)) return new StatusCodeResult(403);
 
         var validationOutcome = validation.Check(command);
         if (validationOutcome.HasFailed) return new BadRequestObjectResult(validationOutcome.Errors);

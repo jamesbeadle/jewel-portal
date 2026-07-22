@@ -43,7 +43,7 @@ public sealed class UpdateArchitectEndpoint
 
         var command = body with { ArchitectId = architectId };
 
-        if (!authorisation.Allows(signedInUser, command)) return new ForbidResult();
+        if (!authorisation.Allows(signedInUser, command)) return new StatusCodeResult(403);
 
         var validationOutcome = validation.Check(command);
         if (validationOutcome.HasFailed) return new BadRequestObjectResult(validationOutcome.Errors);

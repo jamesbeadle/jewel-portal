@@ -6,6 +6,16 @@
     "rewrite": "/index.html",
     "exclude": ["/_framework/*", "/css/*", "/*.{png,svg,webmanifest,js}"]
   },
+  "routes": [
+    {
+      "route": "/index.html",
+      "headers": { "Cache-Control": "no-cache, must-revalidate" }
+    },
+    {
+      "route": "/_framework/*",
+      "headers": { "Cache-Control": "no-cache, must-revalidate" }
+    }
+  ],
   "mimeTypes": {
     ".dll": "application/octet-stream",
     ".dat": "application/octet-stream",

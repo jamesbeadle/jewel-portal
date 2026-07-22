@@ -48,8 +48,18 @@ else if (Session.ActiveRole is not null)
         // and back. (Other roles' home views load their own data.)
         if (Session.ActiveRole == Role.Admin)
         {
-            if (Directory.Current is null) await Directory.RefreshAsync(CancellationToken.None);
-            if (AccessRequests.Current is null) await AccessRequests.RefreshAsync(CancellationToken.None);
+            // A failed panel load must never take down the whole page: catch and render the
+            // home with empty panels instead of tripping the global error UI (the admin home
+            // re-fetches on navigation anyway).
+            try
+            {
+                if (Directory.Current is null) await Directory.RefreshAsync(CancellationToken.None);
+                if (AccessRequests.Current is null) await AccessRequests.RefreshAsync(CancellationToken.None);
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"Dashboard: admin panels failed to load: {ex.Message}");
+            }
         }
 
         isLoaded = true;

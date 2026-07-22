@@ -23,7 +23,7 @@ public sealed class ListTodoItemsForProjectEndpoint
     {
         var signedInUser = await users.ResolveAsync(request, request.HttpContext.RequestAborted);
         if (signedInUser is null) return new UnauthorizedResult();
-        if (!RolesThatMayReadTodos.IncludesAny(signedInUser.Roles)) return new ForbidResult();
+        if (!RolesThatMayReadTodos.IncludesAny(signedInUser.Roles)) return new StatusCodeResult(403);
         return new OkObjectResult(await handler.HandleAsync(new ListTodoItemsForProject(projectId), request.HttpContext.RequestAborted));
     }
 }

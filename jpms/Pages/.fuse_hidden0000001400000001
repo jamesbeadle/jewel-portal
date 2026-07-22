@@ -1,0 +1,59 @@
+@page "/dashboard"
+@using Jewel.JPMS.Features.Directory
+@inject AuthService Auth
+@inject SessionService Session
+@inject DirectoryReadModel Directory
+@inject AccessRequestsReadModel AccessRequests
+@inject NavigationManager Nav
+@implements IDisposable
+
+<PageTitle>Home · JPMS</PageTitle>
+
+@if (!isLoaded)
+{
+    <LoadingScreen />
+}
+else if (!Session.IsApproved)
+{
+    <RequestAccessView Email="@Auth.CurrentUser!.Email" DisplayName="@Auth.CurrentUser.DisplayName" />
+}
+else if (Session.ActiveRole == Role.Admin)
+{
+    <AdminHome CurrentUser="Auth.CurrentUser!" />
+}
+else if (Session.ActiveRole is not null)
+{
+    <RoleHome
+        Role="Session.ActiveRole.Value"
+        DisplayName="@Auth.CurrentUser!.DisplayName"
+        Email="@Auth.CurrentUser.Email" />
+}
+
+@code {
+    private bool isLoaded;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Session.EnsureLoadedAsync();
+        if (!Auth.IsSignedIn)
+        {
+            Nav.NavigateTo("/login", forceLoad: true);
+            return;
+        }
+        Session.OnChange += StateHasChanged;
+
+        // The admin home reads the user directory and pending access requests.
+        // Load them before we drop the spinner so the panels are populated on the
+        // first paint instead of rendering empty until the user navigates away
+        // and back. (Other roles' home views load their own data.)
+        if (Session.ActiveRole == Role.Admin)
+        {
+            if (Directory.Current is null) await Directory.RefreshAsync(CancellationToken.None);
+            if (AccessRequests.Current is null) await AccessRequests.RefreshAsync(CancellationToken.None);
+        }
+
+        isLoaded = true;
+    }
+
+    public void Dispose() => Session.OnChange -= StateHasChanged;
+}

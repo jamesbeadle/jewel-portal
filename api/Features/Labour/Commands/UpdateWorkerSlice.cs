@@ -22,7 +22,7 @@ public sealed class UpdateWorkerEndpoint
     {
         var signedInUser = await users.ResolveAsync(request, request.HttpContext.RequestAborted);
         if (signedInUser is null) return new UnauthorizedResult();
-        if (!LabourRoleSets.ManageWorkers.IncludesAny(signedInUser.Roles)) return new ForbidResult();
+        if (!LabourRoleSets.ManageWorkers.IncludesAny(signedInUser.Roles)) return new StatusCodeResult(403);
         var body = await request.ReadFromJsonAsync<UpdateWorker>();
         if (body is null) return new BadRequestResult();
         var command = body with { WorkerId = workerId };

@@ -33,7 +33,7 @@ public sealed class DownloadMailboxAttachmentEndpoint
 
         var signedInUser = await users.ResolveAsync(request, cancellationToken);
         if (signedInUser is null) return new UnauthorizedResult();
-        if (!TriageRoles.AllowedToTriage.IncludesAny(signedInUser.Roles)) return new ForbidResult();
+        if (!TriageRoles.AllowedToTriage.IncludesAny(signedInUser.Roles)) return new StatusCodeResult(403);
 
         var messageId = request.Query["id"].ToString();
         var attachmentId = request.Query["aid"].ToString();

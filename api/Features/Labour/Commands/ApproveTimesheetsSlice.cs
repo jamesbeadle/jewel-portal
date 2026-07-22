@@ -27,7 +27,7 @@ public sealed class ApproveTimesheetsEndpoint
     {
         var signedInUser = await users.ResolveAsync(request, request.HttpContext.RequestAborted);
         if (signedInUser is null) return new UnauthorizedResult();
-        if (!LabourRoleSets.ApproveTimesheets.IncludesAny(signedInUser.Roles)) return new ForbidResult();
+        if (!LabourRoleSets.ApproveTimesheets.IncludesAny(signedInUser.Roles)) return new StatusCodeResult(403);
         var body = await request.ReadFromJsonAsync<ApproveTimesheets>();
         if (body is null || body.TimesheetIds is null || body.TimesheetIds.Count == 0)
             return new BadRequestObjectResult(new[] { "At least one timesheet is required." });

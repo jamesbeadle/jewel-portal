@@ -35,7 +35,7 @@ public sealed class RaiseMyVariationRequestEndpoint
         if (signedInUser is null) return new UnauthorizedResult();
 
         var subcontractorId = SubcontractorScope.OwnSubcontractorId(signedInUser);
-        if (subcontractorId is null) return new ForbidResult();
+        if (subcontractorId is null) return new StatusCodeResult(403);
 
         RaiseMyVariationRequest? command;
         try { command = await request.ReadFromJsonAsync<RaiseMyVariationRequest>(cancellationToken); }

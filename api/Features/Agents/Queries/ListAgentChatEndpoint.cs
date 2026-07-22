@@ -22,7 +22,7 @@ public sealed class ListAgentChatEndpoint
     {
         var signedInUser = await users.ResolveAsync(request, request.HttpContext.RequestAborted);
         if (signedInUser is null) return new UnauthorizedResult();
-        if (!RolesThatMayReadAgents.IncludesAny(signedInUser.Roles)) return new ForbidResult();
+        if (!RolesThatMayReadAgents.IncludesAny(signedInUser.Roles)) return new StatusCodeResult(403);
         return new OkObjectResult(await handler.HandleAsync(new ListAgentChat(requestId, agentKey), request.HttpContext.RequestAborted));
     }
 }

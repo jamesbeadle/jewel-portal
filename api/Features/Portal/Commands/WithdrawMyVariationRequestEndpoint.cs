@@ -36,7 +36,7 @@ public sealed class WithdrawMyVariationRequestEndpoint
         if (signedInUser is null) return new UnauthorizedResult();
 
         var subcontractorId = SubcontractorScope.OwnSubcontractorId(signedInUser);
-        if (subcontractorId is null) return new ForbidResult();
+        if (subcontractorId is null) return new StatusCodeResult(403);
 
         var entity = await context.SubcontractorVariationRequests
             .FirstOrDefaultAsync(row => row.VariationRequestId == variationRequestId, cancellationToken);

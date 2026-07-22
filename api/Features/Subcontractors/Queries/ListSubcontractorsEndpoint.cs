@@ -33,7 +33,7 @@ public sealed class ListSubcontractorsEndpoint
     {
         var signedInUser = await users.ResolveAsync(request, request.HttpContext.RequestAborted);
         if (signedInUser is null) return new UnauthorizedResult();
-        if (!InternalRolesThatMayListDirectory.IncludesAny(signedInUser.Roles)) return new ForbidResult();
+        if (!InternalRolesThatMayListDirectory.IncludesAny(signedInUser.Roles)) return new StatusCodeResult(403);
         return new OkObjectResult(await handler.HandleAsync(new ListSubcontractors(), request.HttpContext.RequestAborted));
     }
 }

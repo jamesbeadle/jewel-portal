@@ -30,7 +30,7 @@ public sealed class ListRatesInLibraryEndpoint
     {
         var signedInUser = await users.ResolveAsync(request, request.HttpContext.RequestAborted);
         if (signedInUser is null) return new UnauthorizedResult();
-        if (!RolesThatMayReadRates.IncludesAny(signedInUser.Roles)) return new ForbidResult();
+        if (!RolesThatMayReadRates.IncludesAny(signedInUser.Roles)) return new StatusCodeResult(403);
 
         var rates = await handler.HandleAsync(new ListRatesInLibrary(), request.HttpContext.RequestAborted);
         return new OkObjectResult(rates);

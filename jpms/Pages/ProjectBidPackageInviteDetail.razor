@@ -329,6 +329,39 @@ else
                     <p class="rounded-lg bg-accent/10 border border-accent/30 px-3 py-2 text-sm text-content mb-3">@awardNote</p>
                 }
 
+                @* Persistent award summary — who won, for how much, and the purchase-order it raised. *@
+                @if (package.Status == BidPackageStatus.Awarded && AwardedOrder is { } awarded)
+                {
+                    <div class="rounded-xl border border-positive/30 bg-positive/10 px-4 py-3 mb-3 flex flex-wrap items-center justify-between gap-3">
+                        <p class="text-sm text-content">
+                            <span class="font-semibold">Awarded</span> to
+                            <span class="font-medium">@awarded.SubcontractorName</span>
+                            at @awarded.Order.Value.ToString("£#,##0.00")
+                            on @awarded.Order.AwardedAt.LocalDateTime.ToString("d MMM yyyy") —
+                            <a class="text-accent hover:underline" href="@($"/projects/{ProjectId}/work-orders")"
+                               title="Open the project's Work Orders tab, where this order's cost-coded lines feed the cost-centre totals.">
+                                work order WO-@awarded.Order.Number.ToString("0000")</a>
+                            raised as the purchase order.
+                        </p>
+                        @if (CanManage)
+                        {
+                            <button type="button" class="text-xs text-accent hover:underline" disabled="@busy"
+                                    title="Draft the work-order email to the winning subcontractor in the shared mailbox — reviewed and sent from Outlook, nothing sends from here."
+                                    @onclick="OpenWorkOrderEmailModal">Email work order to winner</button>
+                        }
+                    </div>
+                    @if (woEmailNote is not null)
+                    {
+                        <p class="rounded-lg bg-accent/10 border border-accent/30 px-3 py-2 text-sm text-content mb-3">
+                            @woEmailNote
+                            @if (woEmailLink is not null)
+                            {
+                                <a class="text-accent underline ml-1" href="@woEmailLink" target="_blank" rel="noopener">Open the draft in Outlook</a>
+                            }
+                        </p>
+                    }
+                }
+
                 @if (quotes.Count == 0)
                 {
                     <p class="text-sm text-content-subtle italic">
@@ -347,7 +380,16 @@ else
                                     @foreach (var quote in quotes)
                                     {
                                         var sub = Subs.Find(quote.SubcontractorId);
-                                        <th class="sticky top-0 z-20 bg-surface-raised px-4 py-2 text-right">@(sub?.CompanyName ?? quote.SubcontractorId)</th>
+                                        var won = recipients.Any(r =>
+                                            string.Equals(r.SubcontractorId, quote.SubcontractorId, StringComparison.OrdinalIgnoreCase)
+                                            && r.Status == BidPackageRecipientStatus.Won);
+                                        <th class="sticky top-0 z-20 bg-surface-raised px-4 py-2 text-right">
+                                            @(sub?.CompanyName ?? quote.SubcontractorId)
+                                            @if (won)
+                                            {
+                                                <span class="ml-1.5 inline-flex items-center rounded-full bg-positive/10 border border-positive/30 px-1.5 py-0.5 text-[10px] font-medium text-positive normal-case tracking-normal">Won</span>
+                                            }
+                                        </th>
                                     }
                                 </tr>
                             </thead>
@@ -879,6 +921,22 @@ else
         }
     </Modal>
 
+    @* ---- Work-order email to the winning subcontractor (drafted, sent from Outlook) ---- *@
+    <Modal IsOpen="showWoEmailModal" Title="Email work order to winner" ShowFooter="true"
+           ConfirmLabel="@(busy ? "Drafting…" : "Create draft in mailbox")" ConfirmDisabled="@busy" CancelLabel="Cancel"
+           OnCancel="CloseWorkOrderEmailModal" OnConfirm="ConfirmWorkOrderEmailDraft" Class="max-w-3xl w-full">
+        <p class="rounded-lg bg-surface-raised border border-line px-3 py-2 text-xs text-content-muted mb-3">
+            Nothing sends from here — this creates a draft in the shared mailbox, addressed to the winning
+            subcontractor and tagged @package?.Reference, for you to review and send from Outlook.
+        </p>
+
+        <label class="block text-xs font-semibold uppercase tracking-wide text-content-subtle mb-1">Subject</label>
+        <input class="field mb-3" @bind="woEmailSubject" />
+
+        <label class="block text-xs font-semibold uppercase tracking-wide text-content-subtle mb-1">Body (HTML)</label>
+        <textarea class="field font-mono text-xs" rows="14" @bind="woEmailBody"></textarea>
+    </Modal>
+
     @* ---- Generate using AI: confirm before anything runs ---- *@
     <Modal IsOpen="showAiConfirmModal" Title="Generate using AI" ShowFooter="true"
            ConfirmLabel="@(aiBusy ? "Generating…" : "Generate draft")" ConfirmDisabled="@aiBusy" CancelLabel="Cancel"
@@ -996,6 +1054,7 @@ else
     private IReadOnlyList<Quote> quotes = Array.Empty<Quote>();
     private IReadOnlyList<QuoteLineItem> quoteLines = Array.Empty<QuoteLineItem>();
     private IReadOnlyList<Drawing> packageDrawings = Array.Empty<Drawing>();
+    private IReadOnlyList<ProjectWorkOrderDetail> projectOrders = Array.Empty<ProjectWorkOrderDetail>();
     private IReadOnlyList<BoqLineItem> boqLines = Array.Empty<BoqLineItem>();
     private IReadOnlyList<VariationOrderQuote> voqs = Array.Empty<VariationOrderQuote>();
 
@@ -1060,6 +1119,11 @@ else
 
         try { packageDrawings = await Queries.AskAsync(new ListBidPackageDrawings(BidPackageId), CancellationToken.None); }
         catch { /* documents section simply shows none */ }
+
+        // The order this package's award raised — drives the persistent award summary. Best-effort:
+        // without it the summary simply doesn't render (statuses still show Awarded/Won).
+        try { projectOrders = await Queries.AskAsync(new ListProjectWorkOrders(ProjectId), CancellationToken.None); }
+        catch { /* award summary simply hidden */ }
 
         // Coverage targets — best-effort so the picker can offer contract BoQ lines and variations.
         try { boqLines = await Queries.AskAsync(new ListBoqLinesForProject(ProjectId), CancellationToken.None); }
@@ -1802,6 +1866,80 @@ else
             await LoadAsync();
         }
         catch { error = "Couldn't save that submission. Make sure a subcontractor is selected and every line has a description."; }
+        finally { busy = false; }
+    }
+
+    // ---- Award summary & work-order email to the winner ----
+
+    // The order this package's award raised (latest, if re-awarded). Null until orders load or
+    // when the package has never been awarded.
+    private ProjectWorkOrderDetail? AwardedOrder => projectOrders
+        .Where(detail => string.Equals(detail.Order.BidPackageId, BidPackageId, StringComparison.OrdinalIgnoreCase))
+        .OrderByDescending(detail => detail.Order.AwardedAt)
+        .FirstOrDefault();
+
+    private bool showWoEmailModal;
+    private string woEmailSubject = "";
+    private string woEmailBody = "";
+    private string? woEmailNote;
+    private string? woEmailLink;
+
+    private void OpenWorkOrderEmailModal()
+    {
+        if (busy || package is null || AwardedOrder is not { } awarded) return;
+        woEmailSubject = $"Work order WO-{awarded.Order.Number:0000} — {awarded.Order.Title} ({package.Reference})";
+        woEmailBody = DefaultWorkOrderEmailBody(awarded);
+        woEmailNote = null;
+        showWoEmailModal = true;
+    }
+
+    private void CloseWorkOrderEmailModal() => showWoEmailModal = false;
+
+    // The pre-filled order email: award confirmation, the priced lines (or the order total and scope
+    // for legacy orders without lines), and the pre-start paperwork the tender invite asked about.
+    private string DefaultWorkOrderEmailBody(ProjectWorkOrderDetail awarded)
+    {
+        var order = awarded.Order;
+        var sb = new System.Text.StringBuilder();
+        sb.AppendLine($"<p>Hello {awarded.SubcontractorName},</p>");
+        sb.AppendLine($"<p>Following your tender for the <strong>{package!.Title}</strong> package (ref {package.Reference}), we are pleased to confirm the award and attach our work order <strong>WO-{order.Number:0000}</strong> below.</p>");
+        if (awarded.Lines.Count > 0)
+        {
+            sb.AppendLine("<table border=\"1\" cellpadding=\"6\" cellspacing=\"0\" style=\"border-collapse:collapse\">");
+            sb.AppendLine("<tr><th align=\"left\">Item</th><th align=\"left\">Qty</th><th align=\"left\">Unit</th><th align=\"right\">Total</th></tr>");
+            foreach (var line in awarded.Lines.OrderBy(l => l.SortOrder))
+                sb.AppendLine($"<tr><td>{line.Title}</td><td>{line.Quantity}</td><td>{line.Unit}</td><td align=\"right\">{line.LineTotal:£#,##0.00}</td></tr>");
+            sb.AppendLine($"<tr><td colspan=\"3\"><strong>Order total</strong></td><td align=\"right\"><strong>{order.Value:£#,##0.00}</strong></td></tr>");
+            sb.AppendLine("</table>");
+        }
+        else
+        {
+            sb.AppendLine($"<p><strong>Order value:</strong> {order.Value:£#,##0.00}</p>");
+            if (!string.IsNullOrWhiteSpace(order.Scope))
+                sb.AppendLine($"<p><strong>Scope:</strong> {order.Scope}</p>");
+        }
+        if (order.ScheduledCompletion is { } completion)
+            sb.AppendLine($"<p><strong>Scheduled completion:</strong> {completion.LocalDateTime:d MMM yyyy}</p>");
+        sb.AppendLine("<p>Please reply to confirm receipt and acceptance of this order, quoting the reference. Before starting on site, please provide your RAMS documentation and current insurance certificates as set out in the tender invitation.</p>");
+        sb.AppendLine("<p>Kind regards,<br/>Jewel Bespoke Build</p>");
+        return sb.ToString();
+    }
+
+    private async Task ConfirmWorkOrderEmailDraft()
+    {
+        if (busy || !CanManage || AwardedOrder is not { } awarded) return;
+        error = null;
+        try
+        {
+            busy = true;
+            var draft = await Commands.SendAsync(
+                new PrepareWorkOrderEmailDraft(awarded.Order.WorkOrderId, woEmailSubject.Trim(), woEmailBody), CancellationToken.None);
+            showWoEmailModal = false;
+            woEmailLink = draft.WebLink;
+            woEmailNote = $"Draft created in the shared mailbox to {draft.RecipientEmail}, tagged {package?.Reference}. Review and send it from the mailbox's Drafts folder.";
+        }
+        catch (CommandFailedException ex) { error = $"Couldn't create the draft: {ex.Message}"; }
+        catch { error = "Couldn't create the draft. Check the supplier has an email address in the directory and the mailbox connection, then try again."; }
         finally { busy = false; }
     }
 

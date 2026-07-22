@@ -33,7 +33,7 @@ public sealed class GetMyPortalRecordEndpoint
         if (signedInUser is null) return new UnauthorizedResult();
 
         var subcontractorId = SubcontractorScope.OwnSubcontractorId(signedInUser);
-        if (subcontractorId is null) return new ForbidResult();
+        if (subcontractorId is null) return new StatusCodeResult(403);
 
         // Null body (not 404) when the linked record has been deleted, matching GetClientById —
         // the client store then shows its "no record linked" state rather than treating it as an error.

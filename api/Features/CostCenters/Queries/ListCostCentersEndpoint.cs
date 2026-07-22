@@ -23,7 +23,7 @@ public sealed class ListCostCentersEndpoint
     {
         var signedInUser = await users.ResolveAsync(request, request.HttpContext.RequestAborted);
         if (signedInUser is null) return new UnauthorizedResult();
-        if (!RolesThatMayReadCostCenters.IncludesAny(signedInUser.Roles)) return new ForbidResult();
+        if (!RolesThatMayReadCostCenters.IncludesAny(signedInUser.Roles)) return new StatusCodeResult(403);
         var includeInactive = string.Equals(request.Query["includeInactive"], "true", StringComparison.OrdinalIgnoreCase);
         return new OkObjectResult(await handler.HandleAsync(new ListCostCenters(includeInactive), request.HttpContext.RequestAborted));
     }

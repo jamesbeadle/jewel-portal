@@ -31,7 +31,7 @@ public sealed class ListCostCentreActualCostsEndpoint
     {
         var signedInUser = await users.ResolveAsync(request, request.HttpContext.RequestAborted);
         if (signedInUser is null) return new UnauthorizedResult();
-        if (!InternalReadRoles.IncludesAny(signedInUser.Roles)) return new ForbidResult();
+        if (!InternalReadRoles.IncludesAny(signedInUser.Roles)) return new StatusCodeResult(403);
 
         var lines = await handler.HandleAsync(new ListCostCentreActualCosts(projectId, costCode), request.HttpContext.RequestAborted);
         return new OkObjectResult(lines);

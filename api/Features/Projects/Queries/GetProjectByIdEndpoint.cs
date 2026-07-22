@@ -31,7 +31,7 @@ public sealed class GetProjectByIdEndpoint
     {
         var signedInUser = await users.ResolveAsync(request, request.HttpContext.RequestAborted);
         if (signedInUser is null) return new UnauthorizedResult();
-        if (!RolesThatMayReadProjects.IncludesAny(signedInUser.Roles)) return new ForbidResult();
+        if (!RolesThatMayReadProjects.IncludesAny(signedInUser.Roles)) return new StatusCodeResult(403);
 
         var project = await handler.HandleAsync(new GetProjectById(projectId), request.HttpContext.RequestAborted);
         return new OkObjectResult(project);

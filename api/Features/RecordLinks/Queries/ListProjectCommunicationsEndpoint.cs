@@ -35,7 +35,7 @@ public sealed class ListProjectCommunicationsEndpoint
     {
         var signedInUser = await users.ResolveAsync(request, request.HttpContext.RequestAborted);
         if (signedInUser is null) return new UnauthorizedResult();
-        if (!RolesThatMayReadCommunications.IncludesAny(signedInUser.Roles)) return new ForbidResult();
+        if (!RolesThatMayReadCommunications.IncludesAny(signedInUser.Roles)) return new StatusCodeResult(403);
 
         // Type is optional (absent = every linkable type) but must parse when present — a typo'd
         // type should fail loudly rather than silently widening to everything.

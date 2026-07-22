@@ -25,7 +25,7 @@ public sealed class ListTimesheetDetailsForProjectEndpoint
     {
         var signedInUser = await users.ResolveAsync(request, request.HttpContext.RequestAborted);
         if (signedInUser is null) return new UnauthorizedResult();
-        if (!JpmsRoleSets.AllInternal.IncludesAny(signedInUser.Roles)) return new ForbidResult();
+        if (!JpmsRoleSets.AllInternal.IncludesAny(signedInUser.Roles)) return new StatusCodeResult(403);
         var includeMoney = JpmsRoleSets.CommercialTeam.IncludesAny(signedInUser.Roles);
         return new OkObjectResult(await handler.HandleAsync(new ListTimesheetDetailsForProject(projectId), includeMoney, request.HttpContext.RequestAborted));
     }

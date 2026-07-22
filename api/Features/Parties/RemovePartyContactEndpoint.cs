@@ -33,7 +33,7 @@ public sealed class RemovePartyContactEndpoint
     {
         var signedInUser = await users.ResolveAsync(request, request.HttpContext.RequestAborted);
         if (signedInUser is null) return new UnauthorizedResult();
-        if (!authorisation.Allows(signedInUser)) return new ForbidResult();
+        if (!authorisation.Allows(signedInUser)) return new StatusCodeResult(403);
 
         var kind = PartyContactMapping.ParsePartyKind(partyKind);
         if (kind is null) return new BadRequestObjectResult("partyKind must be 'client' or 'architect'.");

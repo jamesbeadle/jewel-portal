@@ -25,7 +25,7 @@ public sealed class AdjustTimesheetEndpoint
     {
         var signedInUser = await users.ResolveAsync(request, request.HttpContext.RequestAborted);
         if (signedInUser is null) return new UnauthorizedResult();
-        if (!LabourRoleSets.ApproveTimesheets.IncludesAny(signedInUser.Roles)) return new ForbidResult();
+        if (!LabourRoleSets.ApproveTimesheets.IncludesAny(signedInUser.Roles)) return new StatusCodeResult(403);
         var body = await request.ReadFromJsonAsync<AdjustTimesheet>();
         if (body is null) return new BadRequestResult();
         var command = body with { TimesheetId = timesheetId };

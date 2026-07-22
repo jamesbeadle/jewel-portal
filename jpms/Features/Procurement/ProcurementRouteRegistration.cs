@@ -118,6 +118,10 @@ public static class ProcurementRouteRegistration
             new CommandRoute("POST", "/api/bid-packages/{bidPackageId}/draft-invite",
                 command => $"/api/bid-packages/{((PrepareBidPackageInviteDraft)command).BidPackageId}/draft-invite"));
 
+        commands.Register<PrepareWorkOrderEmailDraft, WorkOrderEmailDraft>(
+            new CommandRoute("POST", "/api/work-orders/{workOrderId}/draft-email",
+                command => $"/api/work-orders/{((PrepareWorkOrderEmailDraft)command).WorkOrderId}/draft-email"));
+
         commands.Register<ExtractQuoteFromMessage, QuoteExtractionProposal>(
             new CommandRoute("POST", "/api/bid-packages/{bidPackageId}/extract-quote",
                 command => $"/api/bid-packages/{((ExtractQuoteFromMessage)command).BidPackageId}/extract-quote"));

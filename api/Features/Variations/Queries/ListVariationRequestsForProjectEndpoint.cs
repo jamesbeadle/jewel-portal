@@ -33,7 +33,7 @@ public sealed class ListVariationRequestsForProjectEndpoint
 
         var signedInUser = await users.ResolveAsync(request, cancellationToken);
         if (signedInUser is null) return new UnauthorizedResult();
-        if (!RolesThatMayReadVariations.IncludesAny(signedInUser.Roles)) return new ForbidResult();
+        if (!RolesThatMayReadVariations.IncludesAny(signedInUser.Roles)) return new StatusCodeResult(403);
 
         var entities = await context.SubcontractorVariationRequests
             .Where(row => row.ProjectId == projectId)

@@ -22,7 +22,7 @@ public sealed class ListHsRecordsEndpoint
     {
         var signedInUser = await users.ResolveAsync(request, request.HttpContext.RequestAborted);
         if (signedInUser is null) return new UnauthorizedResult();
-        if (!RolesThatMayReadHsRecords.IncludesAny(signedInUser.Roles)) return new ForbidResult();
+        if (!RolesThatMayReadHsRecords.IncludesAny(signedInUser.Roles)) return new StatusCodeResult(403);
         return new OkObjectResult(await handler.HandleAsync(new ListHsRecords(), request.HttpContext.RequestAborted));
     }
 }

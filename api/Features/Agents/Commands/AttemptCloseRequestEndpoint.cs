@@ -29,7 +29,7 @@ public sealed class AttemptCloseRequestEndpoint
         AttemptCloseRequest? body = null;
         try { body = await request.ReadFromJsonAsync<AttemptCloseRequest>(); } catch { /* no or malformed body */ }
         var command = new AttemptCloseRequest(requestId, signedInUser.Email, body?.ClosedAt);
-        if (!authorisation.Allows(signedInUser, command)) return new ForbidResult();
+        if (!authorisation.Allows(signedInUser, command)) return new StatusCodeResult(403);
         var validationOutcome = validation.Check(command);
         if (validationOutcome.HasFailed) return new BadRequestObjectResult(validationOutcome.Errors);
         return new OkObjectResult(await handler.HandleAsync(command, request.HttpContext.RequestAborted));

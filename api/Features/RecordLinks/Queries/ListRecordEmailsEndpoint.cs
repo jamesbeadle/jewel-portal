@@ -34,7 +34,7 @@ public sealed class ListRecordEmailsEndpoint
     {
         var signedInUser = await users.ResolveAsync(request, request.HttpContext.RequestAborted);
         if (signedInUser is null) return new UnauthorizedResult();
-        if (!RolesThatMayReadRecordEmails.IncludesAny(signedInUser.Roles)) return new ForbidResult();
+        if (!RolesThatMayReadRecordEmails.IncludesAny(signedInUser.Roles)) return new StatusCodeResult(403);
 
         // Accept the record type either by name ("VariationQuote") or numeric value ("7").
         if (!Enum.TryParse<RecordType>(type, ignoreCase: true, out var recordType) || !Enum.IsDefined(recordType))

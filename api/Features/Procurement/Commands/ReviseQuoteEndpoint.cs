@@ -32,7 +32,7 @@ public sealed class ReviseQuoteEndpoint
         if (command is null) return new BadRequestResult();
         if (command.QuoteId != quoteId) return new BadRequestObjectResult("Route quoteId does not match body.");
 
-        if (!authorisation.Allows(signedInUser, command)) return new ForbidResult();
+        if (!authorisation.Allows(signedInUser, command)) return new StatusCodeResult(403);
         var validationOutcome = validation.Check(command);
         if (validationOutcome.HasFailed) return new BadRequestObjectResult(validationOutcome.Errors);
 

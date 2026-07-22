@@ -25,7 +25,7 @@ public sealed class RejectTimesheetEndpoint
     {
         var signedInUser = await users.ResolveAsync(request, request.HttpContext.RequestAborted);
         if (signedInUser is null) return new UnauthorizedResult();
-        if (!LabourRoleSets.ApproveTimesheets.IncludesAny(signedInUser.Roles)) return new ForbidResult();
+        if (!LabourRoleSets.ApproveTimesheets.IncludesAny(signedInUser.Roles)) return new StatusCodeResult(403);
         var body = await request.ReadFromJsonAsync<RejectTimesheet>();
         if (body is null || string.IsNullOrWhiteSpace(body.Reason))
             return new BadRequestObjectResult(new[] { "A rejection reason is required." });

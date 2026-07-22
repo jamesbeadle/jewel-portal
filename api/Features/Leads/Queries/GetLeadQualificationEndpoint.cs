@@ -31,7 +31,7 @@ public sealed class GetLeadQualificationEndpoint
     {
         var signedInUser = await users.ResolveAsync(request, request.HttpContext.RequestAborted);
         if (signedInUser is null) return new UnauthorizedResult();
-        if (!RolesThatMayReadLeads.IncludesAny(signedInUser.Roles)) return new ForbidResult();
+        if (!RolesThatMayReadLeads.IncludesAny(signedInUser.Roles)) return new StatusCodeResult(403);
 
         var qualification = await handler.HandleAsync(new GetLeadQualification(leadId), request.HttpContext.RequestAborted);
         return new OkObjectResult(qualification);

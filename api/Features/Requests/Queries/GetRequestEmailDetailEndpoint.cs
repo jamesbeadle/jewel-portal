@@ -25,7 +25,7 @@ public sealed class GetRequestEmailDetailEndpoint
     {
         var signedInUser = await users.ResolveAsync(request, request.HttpContext.RequestAborted);
         if (signedInUser is null) return new UnauthorizedResult();
-        if (!RolesThatMayReadRequests.IncludesAny(signedInUser.Roles)) return new ForbidResult();
+        if (!RolesThatMayReadRequests.IncludesAny(signedInUser.Roles)) return new StatusCodeResult(403);
         var id = request.Query["id"].ToString();
         if (string.IsNullOrWhiteSpace(id)) return new BadRequestObjectResult("id is required.");
         var imid = request.Query["imid"].ToString();

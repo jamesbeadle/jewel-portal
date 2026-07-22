@@ -22,7 +22,7 @@ public sealed class ListCostCodeBudgetsForProjectEndpoint
     {
         var signedInUser = await users.ResolveAsync(request, request.HttpContext.RequestAborted);
         if (signedInUser is null) return new UnauthorizedResult();
-        if (!InternalReadRoles.IncludesAny(signedInUser.Roles)) return new ForbidResult();
+        if (!InternalReadRoles.IncludesAny(signedInUser.Roles)) return new StatusCodeResult(403);
         return new OkObjectResult(await handler.HandleAsync(new ListCostCodeBudgetsForProject(projectId), request.HttpContext.RequestAborted));
     }
 }

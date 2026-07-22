@@ -23,7 +23,7 @@ public sealed class GetMobilisationChecklistForProjectEndpoint
     {
         var signedInUser = await users.ResolveAsync(request, request.HttpContext.RequestAborted);
         if (signedInUser is null) return new UnauthorizedResult();
-        if (!RolesThatMayReadMobilisation.IncludesAny(signedInUser.Roles)) return new ForbidResult();
+        if (!RolesThatMayReadMobilisation.IncludesAny(signedInUser.Roles)) return new StatusCodeResult(403);
         return new OkObjectResult(await handler.HandleAsync(new GetMobilisationChecklistForProject(projectId), request.HttpContext.RequestAborted));
     }
 }

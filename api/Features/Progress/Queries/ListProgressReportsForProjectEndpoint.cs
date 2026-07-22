@@ -28,7 +28,7 @@ public sealed class ListProgressReportsForProjectEndpoint
     {
         var signedInUser = await users.ResolveAsync(request, request.HttpContext.RequestAborted);
         if (signedInUser is null) return new UnauthorizedResult();
-        if (!ProgressRoles.Readers.IncludesAny(signedInUser.Roles)) return new ForbidResult();
+        if (!ProgressRoles.Readers.IncludesAny(signedInUser.Roles)) return new StatusCodeResult(403);
 
         var reports = await handler.HandleAsync(
             new ListProgressReportsForProject(projectId), request.HttpContext.RequestAborted);

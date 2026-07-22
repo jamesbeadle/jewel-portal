@@ -29,7 +29,7 @@ public sealed class GetVoqByRequestEndpoint
     {
         var signedInUser = await users.ResolveAsync(request, request.HttpContext.RequestAborted);
         if (signedInUser is null) return new UnauthorizedResult();
-        if (!RolesThatMayReadVariations.IncludesAny(signedInUser.Roles)) return new ForbidResult();
+        if (!RolesThatMayReadVariations.IncludesAny(signedInUser.Roles)) return new StatusCodeResult(403);
 
         var voq = await handler.HandleAsync(new GetVoqByRequest(requestId), request.HttpContext.RequestAborted);
         return new OkObjectResult(voq);

@@ -32,7 +32,7 @@ public sealed class AcceptVariationRequestEndpoint
 
         var signedInUser = await users.ResolveAsync(request, cancellationToken);
         if (signedInUser is null) return new UnauthorizedResult();
-        if (!VariationRoles.AllowedToManageVariations.IncludesAny(signedInUser.Roles)) return new ForbidResult();
+        if (!VariationRoles.AllowedToManageVariations.IncludesAny(signedInUser.Roles)) return new StatusCodeResult(403);
 
         try
         {

@@ -46,7 +46,7 @@ public sealed class ReviseVariationOrderValueEndpoint
 
         var command = body with { VariationOrderId = voId, RevisedByEmail = signedInUser.Email };
 
-        if (!authorisation.Allows(signedInUser, command)) return new ForbidResult();
+        if (!authorisation.Allows(signedInUser, command)) return new StatusCodeResult(403);
 
         var validationOutcome = validation.Check(command);
         if (validationOutcome.HasFailed) return new BadRequestObjectResult(validationOutcome.Errors);

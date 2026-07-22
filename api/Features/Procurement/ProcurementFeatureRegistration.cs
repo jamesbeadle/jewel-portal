@@ -69,6 +69,11 @@ public static class ProcurementFeatureRegistration
         services.AddScoped<PrepareBidPackageInviteDraftAuthorisation>();
         services.AddScoped<PrepareBidPackageInviteDraftValidation>();
 
+        // Same review-then-send-from-Outlook convention as the invite draft above.
+        services.AddScoped<ICommandHandler<PrepareWorkOrderEmailDraft, WorkOrderEmailDraft>, PrepareWorkOrderEmailDraftHandler>();
+        services.AddScoped<PrepareWorkOrderEmailDraftAuthorisation>();
+        services.AddScoped<PrepareWorkOrderEmailDraftValidation>();
+
         services.AddScoped<ICommandHandler<ExtractQuoteFromMessage, QuoteExtractionProposal>, ExtractQuoteFromMessageHandler>();
         services.AddScoped<ExtractQuoteFromMessageAuthorisation>();
         services.AddScoped<ExtractQuoteFromMessageValidation>();

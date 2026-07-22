@@ -33,7 +33,7 @@ public sealed class DeclineBidPackageRecipientEndpoint
         if (command.BidPackageId != bidPackageId) return new BadRequestObjectResult("Route bidPackageId does not match body.");
         if (command.RecipientId != recipientId) return new BadRequestObjectResult("Route recipientId does not match body.");
 
-        if (!authorisation.Allows(signedInUser, command)) return new ForbidResult();
+        if (!authorisation.Allows(signedInUser, command)) return new StatusCodeResult(403);
         var validationOutcome = validation.Check(command);
         if (validationOutcome.HasFailed) return new BadRequestObjectResult(validationOutcome.Errors);
 

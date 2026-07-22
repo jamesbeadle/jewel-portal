@@ -24,7 +24,7 @@ public sealed class RunAgentAnalysisEndpoint
         if (signedInUser is null) return new UnauthorizedResult();
 
         var command = new RunAgentAnalysis(requestId, agentKey);
-        if (!authorisation.Allows(signedInUser, command)) return new ForbidResult();
+        if (!authorisation.Allows(signedInUser, command)) return new StatusCodeResult(403);
         var validationOutcome = validation.Check(command);
         if (validationOutcome.HasFailed) return new BadRequestObjectResult(validationOutcome.Errors);
         return new OkObjectResult(await handler.HandleAsync(command, request.HttpContext.RequestAborted));

@@ -50,7 +50,7 @@ public sealed class UploadMyComplianceDocumentEndpoint
         if (signedInUser is null) return new UnauthorizedResult();
 
         var subcontractorId = SubcontractorScope.OwnSubcontractorId(signedInUser);
-        if (subcontractorId is null) return new ForbidResult();
+        if (subcontractorId is null) return new StatusCodeResult(403);
 
         var subcontractorExists = await context.Subcontractors
             .AnyAsync(row => row.SubcontractorId == subcontractorId, cancellationToken);

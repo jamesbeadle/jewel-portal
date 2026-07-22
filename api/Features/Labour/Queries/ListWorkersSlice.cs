@@ -23,7 +23,7 @@ public sealed class ListWorkersEndpoint
         var signedInUser = await users.ResolveAsync(request, request.HttpContext.RequestAborted);
         if (signedInUser is null) return new UnauthorizedResult();
         // Rates ride on this response, so the whole registry is gated to the managing roles.
-        if (!LabourRoleSets.ManageWorkers.IncludesAny(signedInUser.Roles)) return new ForbidResult();
+        if (!LabourRoleSets.ManageWorkers.IncludesAny(signedInUser.Roles)) return new StatusCodeResult(403);
         return new OkObjectResult(await handler.HandleAsync(new ListWorkers(), request.HttpContext.RequestAborted));
     }
 }

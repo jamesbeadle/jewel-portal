@@ -39,7 +39,7 @@ public sealed class DownloadProgressPhotoEndpoint
 
         var signedInUser = await users.ResolveAsync(request, cancellationToken);
         if (signedInUser is null) return new UnauthorizedResult();
-        if (!ProgressRoles.Readers.IncludesAny(signedInUser.Roles)) return new ForbidResult();
+        if (!ProgressRoles.Readers.IncludesAny(signedInUser.Roles)) return new StatusCodeResult(403);
 
         var photo = await context.ProgressPhotos
             .FirstOrDefaultAsync(row => row.ProgressPhotoId == progressPhotoId, cancellationToken);

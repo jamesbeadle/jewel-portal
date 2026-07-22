@@ -32,7 +32,7 @@ public sealed class GetArchitectByIdEndpoint
     {
         var signedInUser = await users.ResolveAsync(request, request.HttpContext.RequestAborted);
         if (signedInUser is null) return new UnauthorizedResult();
-        if (!RolesThatMayReadArchitects.IncludesAny(signedInUser.Roles)) return new ForbidResult();
+        if (!RolesThatMayReadArchitects.IncludesAny(signedInUser.Roles)) return new StatusCodeResult(403);
 
         var architect = await handler.HandleAsync(new GetArchitectById(architectId), request.HttpContext.RequestAborted);
         return new OkObjectResult(architect);

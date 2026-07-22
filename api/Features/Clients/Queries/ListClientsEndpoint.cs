@@ -30,7 +30,7 @@ public sealed class ListClientsEndpoint
     {
         var signedInUser = await users.ResolveAsync(request, request.HttpContext.RequestAborted);
         if (signedInUser is null) return new UnauthorizedResult();
-        if (!RolesThatMayReadClients.IncludesAny(signedInUser.Roles)) return new ForbidResult();
+        if (!RolesThatMayReadClients.IncludesAny(signedInUser.Roles)) return new StatusCodeResult(403);
 
         var clients = await handler.HandleAsync(new ListClients(), request.HttpContext.RequestAborted);
         return new OkObjectResult(clients);

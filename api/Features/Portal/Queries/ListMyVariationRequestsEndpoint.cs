@@ -32,7 +32,7 @@ public sealed class ListMyVariationRequestsEndpoint
         if (signedInUser is null) return new UnauthorizedResult();
 
         var subcontractorId = SubcontractorScope.OwnSubcontractorId(signedInUser);
-        if (subcontractorId is null) return new ForbidResult();
+        if (subcontractorId is null) return new StatusCodeResult(403);
 
         var entities = await context.SubcontractorVariationRequests
             .Where(row => row.SubcontractorId == subcontractorId)

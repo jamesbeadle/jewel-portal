@@ -39,7 +39,7 @@ public sealed class MarkLeadAsLostEndpoint
         if (command is null) return new BadRequestResult();
         if (command.LeadId != leadId) return new BadRequestObjectResult("Route leadId does not match body.");
 
-        if (!authorisation.Allows(signedInUser, command)) return new ForbidResult();
+        if (!authorisation.Allows(signedInUser, command)) return new StatusCodeResult(403);
 
         var validationOutcome = validation.Check(command);
         if (validationOutcome.HasFailed) return new BadRequestObjectResult(validationOutcome.Errors);

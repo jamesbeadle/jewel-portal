@@ -31,7 +31,7 @@ public sealed class ListInformationChaseItemsForLeadEndpoint
     {
         var signedInUser = await users.ResolveAsync(request, request.HttpContext.RequestAborted);
         if (signedInUser is null) return new UnauthorizedResult();
-        if (!RolesThatMayReadLeads.IncludesAny(signedInUser.Roles)) return new ForbidResult();
+        if (!RolesThatMayReadLeads.IncludesAny(signedInUser.Roles)) return new StatusCodeResult(403);
 
         var items = await handler.HandleAsync(new ListInformationChaseItemsForLead(leadId), request.HttpContext.RequestAborted);
         return new OkObjectResult(items);

@@ -32,7 +32,7 @@ public sealed class GetBidPackageByIdEndpoint
     {
         var signedInUser = await users.ResolveAsync(request, request.HttpContext.RequestAborted);
         if (signedInUser is null) return new UnauthorizedResult();
-        if (!RolesThatMayReadProcurement.IncludesAny(signedInUser.Roles)) return new ForbidResult();
+        if (!RolesThatMayReadProcurement.IncludesAny(signedInUser.Roles)) return new StatusCodeResult(403);
 
         var package = await handler.HandleAsync(new GetBidPackageById(bidPackageId), request.HttpContext.RequestAborted);
         return new OkObjectResult(package);

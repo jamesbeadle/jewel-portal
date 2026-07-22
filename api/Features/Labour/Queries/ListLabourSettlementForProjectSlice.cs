@@ -27,7 +27,7 @@ public sealed class ListLabourSettlementForProjectEndpoint
     {
         var signedInUser = await users.ResolveAsync(request, request.HttpContext.RequestAborted);
         if (signedInUser is null) return new UnauthorizedResult();
-        if (!LabourRoleSets.ManageSettlement.IncludesAny(signedInUser.Roles)) return new ForbidResult();
+        if (!LabourRoleSets.ManageSettlement.IncludesAny(signedInUser.Roles)) return new StatusCodeResult(403);
         return new OkObjectResult(await handler.HandleAsync(new ListLabourSettlementForProject(projectId), request.HttpContext.RequestAborted));
     }
 }

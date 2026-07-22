@@ -31,7 +31,7 @@ public sealed class ListSiteVisitsForLeadEndpoint
     {
         var signedInUser = await users.ResolveAsync(request, request.HttpContext.RequestAborted);
         if (signedInUser is null) return new UnauthorizedResult();
-        if (!RolesThatMayReadLeads.IncludesAny(signedInUser.Roles)) return new ForbidResult();
+        if (!RolesThatMayReadLeads.IncludesAny(signedInUser.Roles)) return new StatusCodeResult(403);
 
         var visits = await handler.HandleAsync(new ListSiteVisitsForLead(leadId), request.HttpContext.RequestAborted);
         return new OkObjectResult(visits);

@@ -40,7 +40,7 @@ public sealed class ReturnVoqToTenderingEndpoint
 
         var command = new ReturnVoqToTendering(voqId);
 
-        if (!authorisation.Allows(signedInUser, command)) return new ForbidResult();
+        if (!authorisation.Allows(signedInUser, command)) return new StatusCodeResult(403);
 
         var validationOutcome = validation.Check(command);
         if (validationOutcome.HasFailed) return new BadRequestObjectResult(validationOutcome.Errors);

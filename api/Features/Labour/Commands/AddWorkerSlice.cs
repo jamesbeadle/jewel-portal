@@ -22,7 +22,7 @@ public sealed class AddWorkerEndpoint
     {
         var signedInUser = await users.ResolveAsync(request, request.HttpContext.RequestAborted);
         if (signedInUser is null) return new UnauthorizedResult();
-        if (!LabourRoleSets.ManageWorkers.IncludesAny(signedInUser.Roles)) return new ForbidResult();
+        if (!LabourRoleSets.ManageWorkers.IncludesAny(signedInUser.Roles)) return new StatusCodeResult(403);
         var command = await request.ReadFromJsonAsync<AddWorker>();
         if (command is null) return new BadRequestResult();
         if (string.IsNullOrWhiteSpace(command.Name)) return new BadRequestObjectResult(new[] { "Worker name is required." });

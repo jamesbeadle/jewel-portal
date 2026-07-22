@@ -30,7 +30,7 @@ public sealed class ListProjectsVisibleToUserEndpoint
     {
         var signedInUser = await users.ResolveAsync(request, request.HttpContext.RequestAborted);
         if (signedInUser is null) return new UnauthorizedResult();
-        if (!RolesThatMayListProjects.IncludesAny(signedInUser.Roles)) return new ForbidResult();
+        if (!RolesThatMayListProjects.IncludesAny(signedInUser.Roles)) return new StatusCodeResult(403);
 
         var projects = await handler.HandleAsync(new ListProjectsVisibleToUser(), request.HttpContext.RequestAborted);
         return new OkObjectResult(projects);

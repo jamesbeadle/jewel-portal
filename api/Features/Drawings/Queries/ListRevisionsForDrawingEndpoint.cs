@@ -31,7 +31,7 @@ public sealed class ListRevisionsForDrawingEndpoint
     {
         var signedInUser = await users.ResolveAsync(request, request.HttpContext.RequestAborted);
         if (signedInUser is null) return new UnauthorizedResult();
-        if (!RolesThatMayReadDrawings.IncludesAny(signedInUser.Roles)) return new ForbidResult();
+        if (!RolesThatMayReadDrawings.IncludesAny(signedInUser.Roles)) return new StatusCodeResult(403);
 
         var status = Enum.TryParse<DrawingRevisionStatusFilter>(request.Query["status"], ignoreCase: true, out var parsed)
             ? parsed

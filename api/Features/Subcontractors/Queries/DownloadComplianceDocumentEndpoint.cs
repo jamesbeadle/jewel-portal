@@ -47,7 +47,7 @@ public sealed class DownloadComplianceDocumentEndpoint
             var ownSubcontractorId = SubcontractorScope.OwnSubcontractorId(signedInUser);
             if (ownSubcontractorId is null
                 || !string.Equals(ownSubcontractorId, subcontractorId, StringComparison.OrdinalIgnoreCase))
-                return new ForbidResult();
+                return new StatusCodeResult(403);
         }
 
         var document = await context.ComplianceDocuments

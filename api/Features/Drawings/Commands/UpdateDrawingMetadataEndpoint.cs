@@ -39,7 +39,7 @@ public sealed class UpdateDrawingMetadataEndpoint
         if (command is null) return new BadRequestResult();
         if (command.DrawingId != drawingId) return new BadRequestObjectResult("Route drawingId does not match body.");
 
-        if (!authorisation.Allows(signedInUser, command)) return new ForbidResult();
+        if (!authorisation.Allows(signedInUser, command)) return new StatusCodeResult(403);
 
         var validationOutcome = validation.Check(command);
         if (validationOutcome.HasFailed) return new BadRequestObjectResult(validationOutcome.Errors);

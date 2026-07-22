@@ -21,7 +21,7 @@ public sealed class ListAllTodoItemsEndpoint
         if (signedInUser is null) return new UnauthorizedResult();
         // Seeing EVERYONE's items is the MD's / administrators' browser view only; other roles
         // read their own list through ListMyTodoItems.
-        if (!TodoRoles.AllowedToSeeAllTodos.IncludesAny(signedInUser.Roles)) return new ForbidResult();
+        if (!TodoRoles.AllowedToSeeAllTodos.IncludesAny(signedInUser.Roles)) return new StatusCodeResult(403);
         return new OkObjectResult(await handler.HandleAsync(new ListAllTodoItems(), request.HttpContext.RequestAborted));
     }
 }

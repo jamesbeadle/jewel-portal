@@ -28,7 +28,7 @@ public sealed class MySiteSignOutEndpoint
     {
         var signedInUser = await users.ResolveAsync(request, request.HttpContext.RequestAborted);
         if (signedInUser is null) return new UnauthorizedResult();
-        if (!LabourRoleSets.LogOwnTime.IncludesAny(signedInUser.Roles)) return new ForbidResult();
+        if (!LabourRoleSets.LogOwnTime.IncludesAny(signedInUser.Roles)) return new StatusCodeResult(403);
         var command = await request.ReadFromJsonAsync<MySiteSignOut>();
         if (command is null || string.IsNullOrWhiteSpace(command.ProjectId) || command.Entries is null) return new BadRequestResult();
         try

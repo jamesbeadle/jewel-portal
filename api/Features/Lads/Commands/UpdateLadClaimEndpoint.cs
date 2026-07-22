@@ -28,7 +28,7 @@ public sealed class UpdateLadClaimEndpoint
         if (posted is null) return new BadRequestResult();
         if (posted.LadClaimId != ladClaimId) return new BadRequestObjectResult("Route ladClaimId does not match body.");
 
-        if (!authorisation.Allows(signedInUser, posted)) return new ForbidResult();
+        if (!authorisation.Allows(signedInUser, posted)) return new StatusCodeResult(403);
         var validationOutcome = validation.Check(posted);
         if (validationOutcome.HasFailed) return new BadRequestObjectResult(validationOutcome.Errors);
 

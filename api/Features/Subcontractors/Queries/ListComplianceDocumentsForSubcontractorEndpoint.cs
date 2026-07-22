@@ -38,7 +38,7 @@ public sealed class ListComplianceDocumentsForSubcontractorEndpoint
             var ownSubcontractorId = SubcontractorScope.OwnSubcontractorId(signedInUser);
             if (ownSubcontractorId is null
                 || !string.Equals(ownSubcontractorId, subcontractorId, StringComparison.OrdinalIgnoreCase))
-                return new ForbidResult();
+                return new StatusCodeResult(403);
         }
 
         return new OkObjectResult(await handler.HandleAsync(new ListComplianceDocumentsForSubcontractor(subcontractorId), request.HttpContext.RequestAborted));

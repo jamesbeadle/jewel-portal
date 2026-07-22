@@ -30,7 +30,7 @@ public sealed class GetDirectoryUserEndpoint
         if (signedInUser is null) return new UnauthorizedResult();
 
         var isOwnEntry = string.Equals(signedInUser.Email, email, StringComparison.OrdinalIgnoreCase);
-        if (!isOwnEntry && !JpmsAdministrators.Contains(signedInUser.Email)) return new ForbidResult();
+        if (!isOwnEntry && !signedInUser.Roles.Contains(Role.Admin)) return new StatusCodeResult(403);
 
         var directoryUser = await handler.HandleAsync(new GetDirectoryUser(email), request.HttpContext.RequestAborted);
         return new OkObjectResult(directoryUser);

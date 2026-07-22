@@ -52,7 +52,7 @@ public sealed class CreateVoqFromRfqEndpoint
         var command = new CreateVoqFromRfq(
             requestId, signedInUser.Email, body?.Title, body?.Description, body?.EstimatedValue);
 
-        if (!authorisation.Allows(signedInUser, command)) return new ForbidResult();
+        if (!authorisation.Allows(signedInUser, command)) return new StatusCodeResult(403);
 
         var validationOutcome = validation.Check(command);
         if (validationOutcome.HasFailed) return new BadRequestObjectResult(validationOutcome.Errors);

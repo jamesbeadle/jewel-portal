@@ -23,7 +23,7 @@ public sealed class SetProjectWorkerAssignmentEndpoint
     {
         var signedInUser = await users.ResolveAsync(request, request.HttpContext.RequestAborted);
         if (signedInUser is null) return new UnauthorizedResult();
-        if (!LabourRoleSets.ManageWorkers.IncludesAny(signedInUser.Roles)) return new ForbidResult();
+        if (!LabourRoleSets.ManageWorkers.IncludesAny(signedInUser.Roles)) return new StatusCodeResult(403);
         var body = await request.ReadFromJsonAsync<SetProjectWorkerAssignment>();
         if (body is null || string.IsNullOrWhiteSpace(body.WorkerId)) return new BadRequestResult();
         return new OkObjectResult(await handler.HandleAsync(body with { ProjectId = projectId }, request.HttpContext.RequestAborted));

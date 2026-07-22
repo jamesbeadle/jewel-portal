@@ -31,7 +31,7 @@ public sealed class GetLatestCashflowSnapshotEndpoint
     {
         var signedInUser = await users.ResolveAsync(request, request.HttpContext.RequestAborted);
         if (signedInUser is null) return new UnauthorizedResult();
-        if (!CashflowReadRoles.IncludesAny(signedInUser.Roles)) return new ForbidResult();
+        if (!CashflowReadRoles.IncludesAny(signedInUser.Roles)) return new StatusCodeResult(403);
 
         var snapshot = await handler.HandleAsync(new GetLatestCashflowSnapshot(), request.HttpContext.RequestAborted);
         return new OkObjectResult(snapshot);

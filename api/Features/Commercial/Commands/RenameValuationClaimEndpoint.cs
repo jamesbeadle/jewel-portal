@@ -25,7 +25,7 @@ public sealed class RenameValuationClaimEndpoint
         var command = await request.ReadFromJsonAsync<RenameValuationClaim>();
         if (command is null) return new BadRequestResult();
         if (command.ValuationClaimId != claimId) return new BadRequestObjectResult("Route claimId does not match body.");
-        if (!authorisation.Allows(signedInUser, command)) return new ForbidResult();
+        if (!authorisation.Allows(signedInUser, command)) return new StatusCodeResult(403);
         return new OkObjectResult(await handler.HandleAsync(command, request.HttpContext.RequestAborted));
     }
 }

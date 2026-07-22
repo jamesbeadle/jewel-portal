@@ -31,7 +31,7 @@ public sealed class AddLadClaimEndpoint
         // The creator is always the signed-in user — never trusted from the client body.
         var command = posted with { CreatedByEmail = signedInUser.Email };
 
-        if (!authorisation.Allows(signedInUser, command)) return new ForbidResult();
+        if (!authorisation.Allows(signedInUser, command)) return new StatusCodeResult(403);
         var validationOutcome = validation.Check(command);
         if (validationOutcome.HasFailed) return new BadRequestObjectResult(validationOutcome.Errors);
 

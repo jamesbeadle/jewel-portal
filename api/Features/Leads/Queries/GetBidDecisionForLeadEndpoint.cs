@@ -31,7 +31,7 @@ public sealed class GetBidDecisionForLeadEndpoint
     {
         var signedInUser = await users.ResolveAsync(request, request.HttpContext.RequestAborted);
         if (signedInUser is null) return new UnauthorizedResult();
-        if (!RolesThatMayReadLeads.IncludesAny(signedInUser.Roles)) return new ForbidResult();
+        if (!RolesThatMayReadLeads.IncludesAny(signedInUser.Roles)) return new StatusCodeResult(403);
 
         var bidDecision = await handler.HandleAsync(new GetBidDecisionForLead(leadId), request.HttpContext.RequestAborted);
         return new OkObjectResult(bidDecision);

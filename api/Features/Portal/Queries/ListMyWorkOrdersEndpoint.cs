@@ -32,7 +32,7 @@ public sealed class ListMyWorkOrdersEndpoint
         if (signedInUser is null) return new UnauthorizedResult();
 
         var subcontractorId = SubcontractorScope.OwnSubcontractorId(signedInUser);
-        if (subcontractorId is null) return new ForbidResult();
+        if (subcontractorId is null) return new StatusCodeResult(403);
 
         return new OkObjectResult(await handler.HandleAsync(new ListMyWorkOrders(subcontractorId), cancellationToken));
     }

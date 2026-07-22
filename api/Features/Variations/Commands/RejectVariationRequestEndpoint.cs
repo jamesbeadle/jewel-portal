@@ -32,7 +32,7 @@ public sealed class RejectVariationRequestEndpoint
 
         var signedInUser = await users.ResolveAsync(request, cancellationToken);
         if (signedInUser is null) return new UnauthorizedResult();
-        if (!VariationRoles.AllowedToManageVariations.IncludesAny(signedInUser.Roles)) return new ForbidResult();
+        if (!VariationRoles.AllowedToManageVariations.IncludesAny(signedInUser.Roles)) return new StatusCodeResult(403);
 
         RejectVariationRequest? command;
         try { command = await request.ReadFromJsonAsync<RejectVariationRequest>(cancellationToken); }

@@ -31,7 +31,7 @@ public sealed class ResolveRequestRecipientsEndpoint
     {
         var signedInUser = await users.ResolveAsync(request, request.HttpContext.RequestAborted);
         if (signedInUser is null) return new UnauthorizedResult();
-        if (!RolesThatMayReadRequests.IncludesAny(signedInUser.Roles)) return new ForbidResult();
+        if (!RolesThatMayReadRequests.IncludesAny(signedInUser.Roles)) return new StatusCodeResult(403);
 
         var recipients = await handler.HandleAsync(new ResolveRequestRecipients(requestId), request.HttpContext.RequestAborted);
         return new OkObjectResult(recipients);

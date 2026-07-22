@@ -31,7 +31,7 @@ public sealed class ListDayworksForProjectEndpoint
     {
         var signedInUser = await users.ResolveAsync(request, request.HttpContext.RequestAborted);
         if (signedInUser is null) return new UnauthorizedResult();
-        if (!InternalReadRoles.IncludesAny(signedInUser.Roles)) return new ForbidResult();
+        if (!InternalReadRoles.IncludesAny(signedInUser.Roles)) return new StatusCodeResult(403);
 
         var dayworks = await handler.HandleAsync(new ListDayworksForProject(projectId), request.HttpContext.RequestAborted);
         return new OkObjectResult(dayworks);
