@@ -1,7 +1,9 @@
 @page "/projects/{ProjectId}/bid-package-invites"
+@using Jewel.JPMS.Contracts.Procurement
 @inject AuthService Auth
 @inject SessionService Session
 @inject IProcurementStore ProcurementStore
+@inject ICommandSender Commands
 @inject NavigationManager Nav
 @implements IDisposable
 
@@ -25,15 +27,29 @@ else
                     Bid packages issued to subcontractors to tender. @Packages.Count package@(Packages.Count == 1 ? "" : "s") on this project.
                 </p>
             </div>
-            <ExportToExcelButton FileName="Bid package invites"
-                                 Disabled="@(Packages.Count == 0)"
-                                 BuildWorkbook="BuildExportWorkbook" />
+            <div class="flex items-center gap-3">
+                <ExportToExcelButton FileName="Bid package invites"
+                                     Disabled="@(Packages.Count == 0)"
+                                     BuildWorkbook="BuildExportWorkbook" />
+                @if (CanManage)
+                {
+                    <button type="button" class="btn-primary" @onclick="OpenCreateModal">New bid package</button>
+                }
+            </div>
         </div>
+
+        @if (error is not null)
+        {
+            <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-4">@error</p>
+        }
 
         @if (Packages.Count == 0)
         {
             <p class="text-sm text-content-subtle italic">
-                No bid package invites yet. They'll appear here once a bid package is created for this project.
+                No bid package invites yet.
+                @(CanManage
+                    ? "Start one with “New bid package”, or create one from a tagged email in Triage."
+                    : "They'll appear here once a bid package is created for this project.")
             </p>
         }
         else
@@ -68,13 +84,77 @@ else
             </div>
         }
     </ProjectPageShell>
+
+    @* ---- New bid package: title + trade now, everything else on the detail page ---- *@
+    <Modal IsOpen="showCreateModal" Title="New bid package" ShowFooter="true"
+           ConfirmLabel="@(busy ? "Creating…" : "Create package")"
+           ConfirmDisabled="@(busy || string.IsNullOrWhiteSpace(createTitle))" CancelLabel="Cancel"
+           OnCancel="CloseCreateModal" OnConfirm="ConfirmCreate" Class="max-w-lg w-full">
+        <label class="block text-xs font-semibold uppercase tracking-wide text-content-subtle mb-1">Title</label>
+        <input class="field mb-3" placeholder="e.g. Ground-floor electrical works" @bind="createTitle" @bind:event="oninput" />
+
+        <label class="block text-xs font-semibold uppercase tracking-wide text-content-subtle mb-1">Trade</label>
+        <input class="field mb-3" placeholder="e.g. Electrician" @bind="createTrade" />
+
+        <label class="flex items-center gap-2 text-sm text-content-muted cursor-pointer mb-1"
+               title="When ticked, the tender-invite email asks each subcontractor to state whether they will supply their own materials or price labour-only.">
+            <input type="checkbox" @bind="createMaterials" />
+            Materials apply — ask tenderers whether they supply their own
+        </label>
+
+        <p class="text-xs text-content-subtle mt-3">
+            The package starts as a Draft. You'll add line items, link drawings and invite
+            subcontractors on the package's page — nothing is emailed until you draft the invite there.
+        </p>
+    </Modal>
 }
 
 @code {
     [Parameter] public string ProjectId { get; set; } = "";
 
     private bool isLoaded;
+    private bool busy;
+    private string? error;
+    private bool showCreateModal;
+    private string createTitle = "";
+    private string createTrade = "";
+    private bool createMaterials;
+
     private IReadOnlyList<BidPackage> Packages => ProcurementStore.PackagesFor(ProjectId);
+
+    private bool CanManage => Session.AvailableRoles.Any(r =>
+        r is Role.Admin or Role.ManagingDirector or Role.ProjectManager);
+
+    private void OpenCreateModal()
+    {
+        createTitle = "";
+        createTrade = "";
+        createMaterials = false;
+        error = null;
+        showCreateModal = true;
+    }
+
+    private void CloseCreateModal() => showCreateModal = false;
+
+    // Creates the Draft package then goes straight to its detail page, where line items,
+    // drawings and recipients are managed.
+    private async Task ConfirmCreate()
+    {
+        if (busy || !CanManage || string.IsNullOrWhiteSpace(createTitle)) return;
+        error = null;
+        try
+        {
+            busy = true;
+            var package = await Commands.SendAsync(
+                new CreateBidPackage(ProjectId, createTitle.Trim(), createTrade.Trim(),
+                    Auth.CurrentUser?.Email ?? "", createMaterials), CancellationToken.None);
+            showCreateModal = false;
+            ProcurementStore.Refresh(ProjectId);
+            Nav.NavigateTo($"/projects/{ProjectId}/bid-package-invites/{package.BidPackageId}");
+        }
+        catch { error = "Couldn't create the bid package. Please try again."; }
+        finally { busy = false; }
+    }
 
     private ExcelWorkbook? BuildExportWorkbook(bool _)
     {

@@ -39,6 +39,10 @@ public static class ProcurementFeatureRegistration
         services.AddScoped<RemoveBidPackageRecipientAuthorisation>();
         services.AddScoped<RemoveBidPackageRecipientValidation>();
 
+        services.AddScoped<ICommandHandler<DeclineBidPackageRecipient, IReadOnlyList<BidPackageRecipient>>, DeclineBidPackageRecipientHandler>();
+        services.AddScoped<DeclineBidPackageRecipientAuthorisation>();
+        services.AddScoped<DeclineBidPackageRecipientValidation>();
+
         services.AddScoped<ICommandHandler<SetBidPackageLineItems, IReadOnlyList<BidPackageLineItem>>, SetBidPackageLineItemsHandler>();
         services.AddScoped<SetBidPackageLineItemsAuthorisation>();
         services.AddScoped<SetBidPackageLineItemsValidation>();

@@ -1,12 +1,14 @@
 namespace Jewel.JPMS.Models;
 
+// Persisted as ints, so values are explicit. Comparing (3) was removed 2026-07-22: nothing ever
+// set it — comparing tenders is a view over a QuotesReceived package, not a state of its own —
+// and Awarded keeps its stored value of 4.
 public enum BidPackageStatus
 {
-    Draft,
-    Inviting,
-    QuotesReceived,
-    Comparing,
-    Awarded
+    Draft = 0,
+    Inviting = 1,
+    QuotesReceived = 2,
+    Awarded = 4
 }
 
 // Where a single invited subcontractor sits on a bid package. Invited is the default once an invite

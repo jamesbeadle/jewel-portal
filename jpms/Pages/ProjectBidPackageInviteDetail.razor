@@ -153,11 +153,25 @@ else
                                         </td>
                                         <td class="px-4 py-3 text-content-muted hidden sm:table-cell">@(sub?.TradesLabel ?? "")</td>
                                         <td class="px-4 py-3 text-content-subtle">@recipient.InvitedAt.LocalDateTime.ToString("d MMM yyyy, HH:mm")</td>
-                                        <td class="px-4 py-3 text-content-muted">@recipient.Status</td>
+                                        <td class="px-4 py-3 @(recipient.Status == BidPackageRecipientStatus.Declined ? "text-content-subtle" : "text-content-muted")">@recipient.Status</td>
                                         <td class="px-4 py-3 text-right">
                                             @if (CanManage)
                                             {
-                                                <button type="button" class="text-xs text-content-muted hover:text-negative" disabled="@busy" @onclick="() => RemoveRecipient(recipient)">Remove</button>
+                                                <span class="inline-flex items-center gap-3">
+                                                    @if (recipient.Status == BidPackageRecipientStatus.Declined)
+                                                    {
+                                                        <button type="button" class="text-xs text-content-muted hover:text-content" disabled="@busy"
+                                                                title="Put them back in the running — restores Responded if they have a tender in, otherwise Invited."
+                                                                @onclick="() => SetDeclined(recipient, false)">Undo decline</button>
+                                                    }
+                                                    else if (recipient.Status != BidPackageRecipientStatus.Won)
+                                                    {
+                                                        <button type="button" class="text-xs text-content-muted hover:text-content" disabled="@busy"
+                                                                title="Record that they've declined to tender (e.g. told you by phone). Keeps them on the list for the record."
+                                                                @onclick="() => SetDeclined(recipient, true)">Mark declined</button>
+                                                    }
+                                                    <button type="button" class="text-xs text-content-muted hover:text-negative" disabled="@busy" @onclick="() => RemoveRecipient(recipient)">Remove</button>
+                                                </span>
                                             }
                                         </td>
                                     </tr>
@@ -299,16 +313,31 @@ else
             </section>
 
             @* ---- Tender submissions: quotes compared line by line ---- *@
-            @if (quotes.Count > 0)
-            {
-                <section class="mb-8">
-                    <h3 class="eyebrow mb-3">Tender submissions</h3>
-
-                    @if (awardNote is not null)
+            <section class="mb-8">
+                <div class="flex items-center justify-between mb-3">
+                    <h3 class="eyebrow">Tender submissions</h3>
+                    @if (CanManage && recipients.Count > 0)
                     {
-                        <p class="rounded-lg bg-accent/10 border border-accent/30 px-3 py-2 text-sm text-content mb-3">@awardNote</p>
+                        <button type="button" class="text-xs text-accent hover:underline" disabled="@busy"
+                                title="Key in a tender received outside email — phoned through, posted, or from a message that wasn't tagged."
+                                @onclick="OpenManualTenderModal">Record tender manually</button>
                     }
+                </div>
 
+                @if (awardNote is not null)
+                {
+                    <p class="rounded-lg bg-accent/10 border border-accent/30 px-3 py-2 text-sm text-content mb-3">@awardNote</p>
+                }
+
+                @if (quotes.Count == 0)
+                {
+                    <p class="text-sm text-content-subtle italic">
+                        No tender submissions yet. Extract one from a tagged email below, or use
+                        “Record tender manually” for prices that arrived by phone or outside the mailbox.
+                    </p>
+                }
+                else
+                {
                     <div class="rounded-xl border border-line bg-surface overflow-x-auto overflow-y-auto max-h-[85vh]">
                         <table class="w-full text-sm">
                             <thead class="bg-surface-raised border-b border-line">
@@ -383,8 +412,8 @@ else
                         var sub = Subs.Find(quote.SubcontractorId);
                         <p class="text-xs text-content-subtle mt-2"><span class="font-medium text-content-muted">@(sub?.CompanyName ?? quote.SubcontractorId):</span> @quote.Notes</p>
                     }
-                </section>
-            }
+                }
+            </section>
 
             @* ---- Documents: project drawings linked to this package ---- *@
             <section class="mb-8">
@@ -785,6 +814,13 @@ else
             {
                 <p class="rounded-lg bg-accent/10 border border-accent/30 px-3 py-2 text-xs text-content mb-3">
                     Extracted by Claude from the email — check every figure against the message before saving.
+                </p>
+            }
+            else if (manualExtract)
+            {
+                <p class="rounded-lg bg-surface-raised border border-line px-3 py-2 text-xs text-content-muted mb-3">
+                    Recording a tender received outside the mailbox — the package's line items are pre-filled;
+                    enter the rates as the subcontractor gave them.
                 </p>
             }
             else
@@ -1501,6 +1537,22 @@ else
         finally { busy = false; }
     }
 
+    // ---- Decline: record "not tendering" without losing them from the invite list ----
+
+    private async Task SetDeclined(BidPackageRecipient recipient, bool declined)
+    {
+        if (busy || !CanManage) return;
+        error = null;
+        try
+        {
+            busy = true;
+            recipients = await Commands.SendAsync(
+                new DeclineBidPackageRecipient(BidPackageId, recipient.RecipientId, declined), CancellationToken.None);
+        }
+        catch { error = "Couldn't update that subcontractor's status. Please try again."; }
+        finally { busy = false; }
+    }
+
     // ---- Link project drawings to the package ----
 
     private bool showDrawingsModal;
@@ -1649,10 +1701,29 @@ else
     private bool showExtractModal;
     private bool extractBusy;
     private bool extractProposed;
+    private bool manualExtract;
     private string extractSubcontractorId = "";
     private string extractNotes = "";
     private List<ExtractDraft> extractDrafts = new();
     private string? awardNote;
+
+    // Opens the same review modal with no source email — for tenders phoned through, posted, or
+    // sat in an email that never got tagged. Saving goes through SaveExtractedQuote exactly as the
+    // email path does, so recipient/package statuses and supersede-on-resubmit behave identically.
+    private void OpenManualTenderModal()
+    {
+        if (busy || !CanManage) return;
+        showExtractModal = true;
+        extractBusy = false;
+        extractProposed = false;
+        manualExtract = true;
+        extractSubcontractorId = "";
+        extractNotes = "";
+        extractDrafts = lineItems
+            .Select(item => new ExtractDraft { BidPackageLineItemId = item.LineItemId, Description = item.Description, Unit = item.Unit, Quantity = item.Quantity })
+            .ToList();
+        if (extractDrafts.Count == 0) extractDrafts.Add(new ExtractDraft { Quantity = 1 });
+    }
 
     private async Task OpenExtractModal(MailboxMessage email)
     {
@@ -1660,6 +1731,7 @@ else
         showExtractModal = true;
         extractBusy = true;
         extractProposed = false;
+        manualExtract = false;
         extractSubcontractorId = "";
         extractNotes = "";
         extractDrafts = new();

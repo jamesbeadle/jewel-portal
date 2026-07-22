@@ -86,6 +86,14 @@ public static class ProcurementRouteRegistration
                     return $"/api/bid-packages/{c.BidPackageId}/recipients/{c.RecipientId}";
                 }));
 
+        commands.Register<DeclineBidPackageRecipient, IReadOnlyList<BidPackageRecipient>>(
+            new CommandRoute("POST", "/api/bid-packages/{bidPackageId}/recipients/{recipientId}/decline",
+                command =>
+                {
+                    var c = (DeclineBidPackageRecipient)command;
+                    return $"/api/bid-packages/{c.BidPackageId}/recipients/{c.RecipientId}/decline";
+                }));
+
         commands.Register<SetBidPackageLineItems, IReadOnlyList<BidPackageLineItem>>(
             new CommandRoute("PUT", "/api/bid-packages/{bidPackageId}/line-items",
                 command => $"/api/bid-packages/{((SetBidPackageLineItems)command).BidPackageId}/line-items"));
