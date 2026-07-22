@@ -34,6 +34,14 @@
 -- a single V48 at the -60,175.00 net. The retired single line bf-vo-v48 (and
 -- its Claim 18 line) is deleted below before the MERGE.
 --
+-- EXCEPTION -- V10 (2026-07-22): seeded as TWO trade lines (bf-vo-v10a..b)
+-- instead of one net line: Groundworks 10,010.00 (SUB-GWK -- ground gas /
+-- drainage omits -15,150.00 plus surface water & foul drainage new items
+-- 25,160.00) and Plumber -4,894.00 (MEC-PLM -- stub stack, soil vent &
+-- wastes omits). The VOQ/VO records remain a single V10 at the 5,116.00
+-- net. The retired single line bf-vo-v10 (and its Claim 18 line) is deleted
+-- below before the MERGE.
+--
 -- EXCEPTION -- V42 (2026-07-21): seeded as TWO detail lines (bf-vo-v42a..b)
 -- instead of one net line: the Tile Supply Only line 14,435.00 (SUP-TIL,
 -- revised in V69 with omit and add back) and the remaining tiling /
@@ -76,6 +84,11 @@ DELETE FROM [dbo].[ClaimLines]         WHERE ValuationLineItemId = N'bf-vo-v06';
 DELETE FROM [dbo].[ValuationLineItems] WHERE ValuationLineItemId = N'bf-vo-v06';
 GO
 
+-- Retire the original single-net V10 line (replaced by bf-vo-v10a..b below).
+DELETE FROM [dbo].[ClaimLines]         WHERE ValuationLineItemId = N'bf-vo-v10';
+DELETE FROM [dbo].[ValuationLineItems] WHERE ValuationLineItemId = N'bf-vo-v10';
+GO
+
 -- Retire the original single-net V42 line (replaced by bf-vo-v42a..b below).
 DELETE FROM [dbo].[ClaimLines]         WHERE ValuationLineItemId = N'bf-vo-v42';
 DELETE FROM [dbo].[ValuationLineItems] WHERE ValuationLineItemId = N'bf-vo-v42';
@@ -92,75 +105,76 @@ USING (VALUES
     (N'bf-vo-v07', N'3490f944b29545c4b8d5a04130f42ab8', 3, N'', N'', N'V07', N'Site Supervision 3 days - Sept 24', 0, N'PRELIMS-SMG', N'', N'item', 1.0000, 1360.0000, 1360.0000, N'', 7),
     (N'bf-vo-v08', N'3490f944b29545c4b8d5a04130f42ab8', 3, N'', N'', N'V08', N'Site Supervision 2 days - Oct 24', 0, N'PRELIMS-SMG', N'', N'item', 1.0000, 1360.0000, 1360.0000, N'', 8),
     (N'bf-vo-v09', N'3490f944b29545c4b8d5a04130f42ab8', 3, N'', N'', N'V09', N'Site Supervision 2 days - Nov 24', 0, N'PRELIMS-SMG', N'', N'item', 1.0000, 1360.0000, 1360.0000, N'', 9),
-    (N'bf-vo-v10', N'3490f944b29545c4b8d5a04130f42ab8', 3, N'', N'', N'V10', N'Ground gas collection & ventilated systems - Provisional sum', 0, N'SUB-GWK', N'', N'item', 1.0000, 5116.0000, 5116.0000, N'', 10),
-    (N'bf-vo-v11', N'3490f944b29545c4b8d5a04130f42ab8', 3, N'', N'', N'V11', N'Connection Details - Steel Fabrication', 0, N'STR-STL', N'', N'item', 1.0000, 4125.0000, 4125.0000, N'', 11),
-    (N'bf-vo-v12', N'3490f944b29545c4b8d5a04130f42ab8', 3, N'', N'', N'V12', N'Tree Protection - STEM Arb Report', 0, N'PRELIMS-SET', N'', N'item', 1.0000, 2100.0000, 2100.0000, N'', 12),
-    (N'bf-vo-v13', N'3490f944b29545c4b8d5a04130f42ab8', 3, N'', N'', N'V13', N'Thames Sewer Connections - MC0476 Model1-CIV10', 0, N'SUB-DRN', N'', N'item', 1.0000, 6396.0000, 6396.0000, N'', 13),
-    (N'bf-vo-v14', N'3490f944b29545c4b8d5a04130f42ab8', 3, N'', N'', N'V14', N'Driveway Porous Stone - MC0476 Model1-CIV10', 0, N'EXTW-PAV', N'', N'item', 1.0000, 42936.0000, 42936.0000, N'', 14),
-    (N'bf-vo-v15', N'3490f944b29545c4b8d5a04130f42ab8', 3, N'', N'', N'V15', N'Site Supervision - EOT-01', 0, N'PRELIMS-SMG', N'', N'item', 1.0000, 5860.0000, 5860.0000, N'', 15),
-    (N'bf-vo-v16', N'3490f944b29545c4b8d5a04130f42ab8', 3, N'', N'', N'V16', N'Pond', 0, N'EXTW-LND', N'', N'item', 1.0000, 26351.0000, 26351.0000, N'', 16),
-    (N'bf-vo-v17', N'3490f944b29545c4b8d5a04130f42ab8', 3, N'', N'', N'V17', N'100mm Ducting to the entrance gates', 0, N'EXTW-FEN', N'', N'item', 1.0000, 1720.0000, 1720.0000, N'', 17),
-    (N'bf-vo-v18', N'3490f944b29545c4b8d5a04130f42ab8', 3, N'', N'', N'V18', N'Aluminium windows - throughout', 0, N'WDR-ALU', N'', N'item', 1.0000, 11474.1000, 11474.1000, N'', 18),
-    (N'bf-vo-v19', N'3490f944b29545c4b8d5a04130f42ab8', 3, N'', N'', N'V19', N'Additional Drainage TBC', 4, N'MEC-DRN', N'', N'item', 1.0000, 0.0000, 0.0000, N'', 19),
-    (N'bf-vo-v20', N'3490f944b29545c4b8d5a04130f42ab8', 3, N'', N'', N'V20', N'4 No Canopies', 2, N'SPEC-GAZ', N'', N'item', 1.0000, -22200.0000, -22200.0000, N'', 20),
-    (N'bf-vo-v21', N'3490f944b29545c4b8d5a04130f42ab8', 3, N'', N'', N'V21', N'W-07 Rebuild Opening - PRO-064-(WD)-P-004 Rev G', 0, N'MASON-BRK', N'', N'item', 1.0000, 400.0000, 400.0000, N'', 21),
-    (N'bf-vo-v22', N'3490f944b29545c4b8d5a04130f42ab8', 3, N'', N'', N'V22', N'SW.1 - G11 - SITE WORKS - Rev B', 0, N'EXTW-LND', N'', N'item', 1.0000, 7600.0000, 7600.0000, N'', 22),
-    (N'bf-vo-v23', N'3490f944b29545c4b8d5a04130f42ab8', 3, N'', N'', N'V23', N'Chandelier', 0, N'ELE-STD', N'', N'item', 1.0000, 29533.0000, 29533.0000, N'', 23),
-    (N'bf-vo-v24', N'3490f944b29545c4b8d5a04130f42ab8', 3, N'', N'', N'V24', N'Wet underfloor heating to ground floor (carers only)', 0, N'MEC-UFH', N'', N'item', 1.0000, 4093.0000, 4093.0000, N'', 24),
-    (N'bf-vo-v25', N'3490f944b29545c4b8d5a04130f42ab8', 3, N'', N'', N'V25', N'Site Supervision - EOT-02', 0, N'PRELIMS-SMG', N'', N'item', 1.0000, 3516.0000, 3516.0000, N'', 25),
-    (N'bf-vo-v26', N'3490f944b29545c4b8d5a04130f42ab8', 3, N'', N'', N'V26', N'Air conditioning', 0, N'MEC-AC', N'', N'item', 1.0000, 8925.0000, 8925.0000, N'', 26),
-    (N'bf-vo-v27', N'3490f944b29545c4b8d5a04130f42ab8', 3, N'', N'', N'V27', N'Intruder Alarm', 2, N'ELE-ALM', N'', N'item', 1.0000, -6640.0000, -6640.0000, N'', 27),
-    (N'bf-vo-v28', N'3490f944b29545c4b8d5a04130f42ab8', 3, N'', N'', N'V28', N'Fire and smoke alarm', 2, N'ELE-FIR', N'', N'item', 1.0000, -1310.0000, -1310.0000, N'', 28),
-    (N'bf-vo-v29', N'3490f944b29545c4b8d5a04130f42ab8', 3, N'', N'', N'V29', N'Invoice 6764 - Croft Structural Engineers', 0, N'HAND-SPE', N'', N'item', 1.0000, 330.0000, 330.0000, N'', 29),
-    (N'bf-vo-v30', N'3490f944b29545c4b8d5a04130f42ab8', 3, N'', N'', N'V30', N'10 mm render to internal blockwork walls', 0, N'INT-RDR', N'', N'item', 1.0000, 29185.0000, 29185.0000, N'', 30),
-    (N'bf-vo-v31', N'3490f944b29545c4b8d5a04130f42ab8', 3, N'', N'', N'V31', N'Sanitary ware for Cloakroom', 2, N'SUP-SAN', N'', N'item', 1.0000, -12240.0000, -12240.0000, N'', 31),
-    (N'bf-vo-v32', N'3490f944b29545c4b8d5a04130f42ab8', 3, N'', N'', N'V32', N'Supply of feature staircase', 2, N'STAIR-TIM', N'', N'item', 1.0000, -1665.0000, -1665.0000, N'', 32),
-    (N'bf-vo-v33', N'3490f944b29545c4b8d5a04130f42ab8', 3, N'', N'', N'V33', N'Structural Steel Works - SL30 Rev 9 & SL40 Rev 8', 0, N'STR-STL', N'', N'item', 1.0000, 1870.0000, 1870.0000, N'', 33),
-    (N'bf-vo-v34', N'3490f944b29545c4b8d5a04130f42ab8', 3, N'', N'', N'V34', N'Fix only - WC', 0, N'SUP-SAN', N'', N'item', 1.0000, 11965.0000, 11965.0000, N'', 34),
-    (N'bf-vo-v35', N'3490f944b29545c4b8d5a04130f42ab8', 3, N'', N'', N'V35', N'Site Supervision - EOT-03', 0, N'PRELIMS-SMG', N'', N'item', 1.0000, 8790.0000, 8790.0000, N'', 35),
-    (N'bf-vo-v36', N'3490f944b29545c4b8d5a04130f42ab8', 3, N'', N'', N'V36', N'Annex kitchen/Utility room', 0, N'SUP-KIT', N'', N'item', 1.0000, 17935.0000, 17935.0000, N'', 36),
-    (N'bf-vo-v37', N'3490f944b29545c4b8d5a04130f42ab8', 3, N'', N'', N'V37', N'GF - ZZ Bathroom - On the Level Shower Former', 0, N'SUP-SAN', N'', N'item', 1.0000, 4245.0000, 4245.0000, N'', 37),
-    (N'bf-vo-v38', N'3490f944b29545c4b8d5a04130f42ab8', 3, N'', N'', N'V38', N'New 6ft timber fencing', 0, N'EXTW-FEN', N'', N'item', 1.0000, 23650.0000, 23650.0000, N'', 38),
-    (N'bf-vo-v39', N'3490f944b29545c4b8d5a04130f42ab8', 3, N'', N'', N'V39', N'Demolition - Removal of Fencing & Existing trees', 3, N'ENABLE-DEM', N'', N'item', 1.0000, 0.0000, 0.0000, N'', 39),
-    (N'bf-vo-v40', N'3490f944b29545c4b8d5a04130f42ab8', 3, N'', N'', N'V40', N'Electrics - P-151 Rev P Electrical Plan FF', 0, N'ELE-STD', N'', N'item', 1.0000, 790.0000, 790.0000, N'', 40),
-    (N'bf-vo-v41', N'3490f944b29545c4b8d5a04130f42ab8', 3, N'', N'', N'V41', N'Karndean flooring (£50/m supply)', 0, N'FLR-LVT', N'', N'item', 1.0000, 19067.0000, 19067.0000, N'', 41),
-    (N'bf-vo-v42a', N'3490f944b29545c4b8d5a04130f42ab8', 3, N'', N'', N'V42', N'Tile Supply Only - As per Thompson & Leigh Quote 27/11/25 - NOW REVISED IN V69 WITH OMIT AND ADD BACK', 0, N'SUP-TIL', N'', N'item', 1.0000, 14435.0000, 14435.0000, N'', 42),
-    (N'bf-vo-v42b', N'3490f944b29545c4b8d5a04130f42ab8', 3, N'', N'', N'V42', N'Wall & floor tiling, splashbacks & shower room omits (Install now V76 / Omit V66)', 2, N'TIL-STD', N'', N'item', 1.0000, -29012.0000, -29012.0000, N'', 43),
-    (N'bf-vo-v43', N'3490f944b29545c4b8d5a04130f42ab8', 3, N'', N'', N'V43', N'Ceiling track hoists', 2, N'SPEC-LFT', N'', N'item', 1.0000, -19800.0000, -19800.0000, N'', 44),
-    (N'bf-vo-v44', N'3490f944b29545c4b8d5a04130f42ab8', 3, N'', N'', N'V44', N'Radiators with TRVs', 0, N'MEC-PLM', N'', N'item', 1.0000, 2435.0000, 2435.0000, N'', 45),
-    (N'bf-vo-v45', N'3490f944b29545c4b8d5a04130f42ab8', 3, N'', N'', N'V45', N'Contingency Budget', 2, N'HAND-MSC', N'', N'item', 1.0000, -50000.0000, -50000.0000, N'', 46),
-    (N'bf-vo-v46', N'3490f944b29545c4b8d5a04130f42ab8', 3, N'', N'', N'V46', N'Eve Access Hatches P-009 Rev H', 0, N'CARP-1FX', N'', N'item', 1.0000, 4950.0000, 4950.0000, N'', 47),
-    (N'bf-vo-v47', N'3490f944b29545c4b8d5a04130f42ab8', 3, N'', N'', N'V47', N'Double Socket Outlets - P-151 Rev Q / P-152 Rev H', 0, N'ELE-STD', N'', N'item', 1.0000, 575.0000, 575.0000, N'', 48),
-    (N'bf-vo-v48a', N'3490f944b29545c4b8d5a04130f42ab8', 3, N'', N'', N'V48', N'Fix only - Bespoke joinery', 2, N'CARP-JNR', N'', N'nr', 1.0000, -9000.0000, -9000.0000, N'', 49),
-    (N'bf-vo-v48b', N'3490f944b29545c4b8d5a04130f42ab8', 3, N'', N'', N'V48', N'Fix only - Decorative fire place', 2, N'DEC-STD', N'', N'item', 1.0000, -1575.0000, -1575.0000, N'', 50),
-    (N'bf-vo-v48c', N'3490f944b29545c4b8d5a04130f42ab8', 3, N'', N'', N'V48', N'Decorative Fireplaces for media walls', 2, N'DEC-FIR', N'', N'item', 1.0000, -7600.0000, -7600.0000, N'', 51),
-    (N'bf-vo-v48d', N'3490f944b29545c4b8d5a04130f42ab8', 3, N'', N'', N'V48', N'Dressing rooms, Wardrobes and fitted storage', 2, N'CARP-JNR', N'', N'item', 1.0000, -42000.0000, -42000.0000, N'', 52),
-    (N'bf-vo-v49', N'3490f944b29545c4b8d5a04130f42ab8', 3, N'', N'', N'V49', N'Gazebo', 2, N'SPEC-GAZ', N'', N'item', 1.0000, -5000.0000, -5000.0000, N'', 53),
-    (N'bf-vo-v50', N'3490f944b29545c4b8d5a04130f42ab8', 3, N'', N'', N'V50', N'Window coverings', 2, N'WDR-TIM', N'', N'item', 1.0000, -16500.0000, -16500.0000, N'', 54),
-    (N'bf-vo-v51', N'3490f944b29545c4b8d5a04130f42ab8', 3, N'', N'', N'V51', N'Internal Door ironmongery', 2, N'SUP-IRO', N'', N'item', 1.0000, -2560.0000, -2560.0000, N'', 55),
-    (N'bf-vo-v52', N'3490f944b29545c4b8d5a04130f42ab8', 3, N'', N'', N'V52', N'Mineral insulation to loft space', 0, N'INT-INC', N'', N'item', 1.0000, 8393.0000, 8393.0000, N'', 56),
-    (N'bf-vo-v53', N'3490f944b29545c4b8d5a04130f42ab8', 3, N'', N'', N'V53', N'12.5mm plasterboard', 0, N'INT-PLB', N'', N'item', 1.0000, 6210.0000, 6210.0000, N'', 57),
-    (N'bf-vo-v54', N'3490f944b29545c4b8d5a04130f42ab8', 3, N'', N'', N'V54', N'FFL/FCL TBC', 3, N'HAND-MSC', N'', N'item', 1.0000, 0.0000, 0.0000, N'', 58),
-    (N'bf-vo-v55', N'3490f944b29545c4b8d5a04130f42ab8', 3, N'', N'', N'V55', N'Double Sockets - P-152 Rev J, Electrical Plan SF', 0, N'ELE-STD', N'', N'item', 1.0000, 230.0000, 230.0000, N'', 59),
-    (N'bf-vo-v56', N'3490f944b29545c4b8d5a04130f42ab8', 3, N'', N'', N'V56', N'P-205 Rev H Ensuite 1 & P-206 Rev H Ensuite 2', 0, N'SUP-SAN', N'', N'item', 1.0000, 750.0000, 750.0000, N'', 60),
-    (N'bf-vo-v57', N'3490f944b29545c4b8d5a04130f42ab8', 3, N'', N'', N'V57', N'Site Supervision - EOT-04', 0, N'PRELIMS-SMG', N'', N'item', 1.0000, 29300.0000, 29300.0000, N'', 61),
-    (N'bf-vo-v58', N'3490f944b29545c4b8d5a04130f42ab8', 3, N'', N'', N'V58', N'Manifold - Carers', 0, N'MEC-UFH', N'', N'item', 1.0000, 3907.0000, 3907.0000, N'', 62),
-    (N'bf-vo-v59', N'3490f944b29545c4b8d5a04130f42ab8', 3, N'', N'', N'V59', N'PRO-064-(WD)-P-703  Rev —  Rear Canopies', 3, N'SPEC-GAZ', N'', N'item', 1.0000, 0.0000, 0.0000, N'', 63),
-    (N'bf-vo-v60', N'3490f944b29545c4b8d5a04130f42ab8', 3, N'', N'', N'V60', N'Croft SL-20 rev 11', 0, N'HAND-SPE', N'', N'item', 1.0000, 2940.0000, 2940.0000, N'', 64),
-    (N'bf-vo-v61', N'3490f944b29545c4b8d5a04130f42ab8', 3, N'', N'', N'V61', N'Acoustic boxing to SVP pipe through eaves space', 0, N'CARP-1FX', N'', N'item', 1.0000, 438.0000, 438.0000, N'', 65),
-    (N'bf-vo-v62', N'3490f944b29545c4b8d5a04130f42ab8', 3, N'', N'', N'V62', N'PRO-064-(WD)-P-706 Rev F — Ground Floor RCP', 0, N'ELE-STD', N'', N'item', 1.0000, 5771.5000, 5771.5000, N'', 66),
-    (N'bf-vo-v63', N'3490f944b29545c4b8d5a04130f42ab8', 3, N'', N'', N'V63', N'PRO-064-(WD)-P-150 Rev Q — Electrical Plan GF', 0, N'ELE-STD', N'', N'item', 1.0000, 3565.0000, 3565.0000, N'', 67),
-    (N'bf-vo-v64', N'3490f944b29545c4b8d5a04130f42ab8', 3, N'', N'', N'V64', N'926 mm Internal door lining & single door ( £200 supply )', 0, N'SUP-DOR', N'', N'item', 1.0000, 25351.3700, 25351.3700, N'', 68),
-    (N'bf-vo-v65', N'3490f944b29545c4b8d5a04130f42ab8', 3, N'', N'', N'V65', N'Staircase Omit Item', 3, N'STAIR-TIM', N'', N'item', 1.0000, 0.0000, 0.0000, N'', 69),
-    (N'bf-vo-v66', N'3490f944b29545c4b8d5a04130f42ab8', 3, N'', N'', N'V66', N'Supply - Howdens Utility', 2, N'SUP-KIT', N'', N'item', 1.0000, -23845.0000, -23845.0000, N'', 70),
-    (N'bf-vo-v67', N'3490f944b29545c4b8d5a04130f42ab8', 3, N'', N'', N'V67', N'2nd Fix Carpentry Omit', 3, N'CARP-2FX', N'', N'item', 1.0000, 0.0000, 0.0000, N'', 71),
-    (N'bf-vo-v68', N'3490f944b29545c4b8d5a04130f42ab8', 3, N'', N'', N'V68', N'Mist & 2 coats of Dulux emulsion to ceilings', 3, N'DEC-STD', N'', N'item', 1.0000, 0.0000, 0.0000, N'', 72),
-    (N'bf-vo-v69', N'3490f944b29545c4b8d5a04130f42ab8', 3, N'', N'', N'V69', N'Tile Supply - REVISED WITH V42 OMIT', 0, N'SUP-TIL', N'', N'item', 1.0000, 1548.1200, 1548.1200, N'', 73),
-    (N'bf-vo-v70', N'3490f944b29545c4b8d5a04130f42ab8', 3, N'', N'', N'V70', N'External Taps - Declined', 4, N'MEC-PLM', N'', N'item', 1.0000, 0.0000, 0.0000, N'', 74),
-    (N'bf-vo-v71', N'3490f944b29545c4b8d5a04130f42ab8', 3, N'', N'', N'V71', N'Generation - Entrance Door', 4, N'WDR-TIM', N'', N'item', 1.0000, 0.0000, 0.0000, N'', 75),
-    (N'bf-vo-v72', N'3490f944b29545c4b8d5a04130f42ab8', 3, N'', N'', N'V72', N'Coffer Details and Insulation ZZ bedroom - Works Completed', 0, N'INT-INC', N'', N'item', 1.0000, 2285.0000, 2285.0000, N'', 76),
-    (N'bf-vo-v73', N'3490f944b29545c4b8d5a04130f42ab8', 3, N'', N'', N'V73', N'Revised Coving and LED lighting Details', 0, N'INT-COV', N'', N'item', 1.0000, 4781.4900, 4781.4900, N'', 77),
-    (N'bf-vo-v76', N'3490f944b29545c4b8d5a04130f42ab8', 3, N'', N'', N'V76', N'Tile Installation & Enabling Works', 0, N'TIL-STD', N'', N'item', 1.0000, 38865.0000, 38865.0000, N'', 78)
+    (N'bf-vo-v10a', N'3490f944b29545c4b8d5a04130f42ab8', 3, N'', N'', N'V10', N'Groundworks - Ground gas, drainage & surface water works (omits + new items)', 0, N'SUB-GWK', N'', N'item', 1.0000, 10010.0000, 10010.0000, N'', 10),
+    (N'bf-vo-v10b', N'3490f944b29545c4b8d5a04130f42ab8', 3, N'', N'', N'V10', N'Plumber - Stub stack, soil vent pipework & wastes connections omits', 2, N'MEC-PLM', N'', N'item', 1.0000, -4894.0000, -4894.0000, N'', 11),
+    (N'bf-vo-v11', N'3490f944b29545c4b8d5a04130f42ab8', 3, N'', N'', N'V11', N'Connection Details - Steel Fabrication', 0, N'STR-STL', N'', N'item', 1.0000, 4125.0000, 4125.0000, N'', 12),
+    (N'bf-vo-v12', N'3490f944b29545c4b8d5a04130f42ab8', 3, N'', N'', N'V12', N'Tree Protection - STEM Arb Report', 0, N'PRELIMS-SET', N'', N'item', 1.0000, 2100.0000, 2100.0000, N'', 13),
+    (N'bf-vo-v13', N'3490f944b29545c4b8d5a04130f42ab8', 3, N'', N'', N'V13', N'Thames Sewer Connections - MC0476 Model1-CIV10', 0, N'SUB-DRN', N'', N'item', 1.0000, 6396.0000, 6396.0000, N'', 14),
+    (N'bf-vo-v14', N'3490f944b29545c4b8d5a04130f42ab8', 3, N'', N'', N'V14', N'Driveway Porous Stone - MC0476 Model1-CIV10', 0, N'EXTW-PAV', N'', N'item', 1.0000, 42936.0000, 42936.0000, N'', 15),
+    (N'bf-vo-v15', N'3490f944b29545c4b8d5a04130f42ab8', 3, N'', N'', N'V15', N'Site Supervision - EOT-01', 0, N'PRELIMS-SMG', N'', N'item', 1.0000, 5860.0000, 5860.0000, N'', 16),
+    (N'bf-vo-v16', N'3490f944b29545c4b8d5a04130f42ab8', 3, N'', N'', N'V16', N'Pond', 0, N'EXTW-LND', N'', N'item', 1.0000, 26351.0000, 26351.0000, N'', 17),
+    (N'bf-vo-v17', N'3490f944b29545c4b8d5a04130f42ab8', 3, N'', N'', N'V17', N'100mm Ducting to the entrance gates', 0, N'EXTW-FEN', N'', N'item', 1.0000, 1720.0000, 1720.0000, N'', 18),
+    (N'bf-vo-v18', N'3490f944b29545c4b8d5a04130f42ab8', 3, N'', N'', N'V18', N'Aluminium windows - throughout', 0, N'WDR-ALU', N'', N'item', 1.0000, 11474.1000, 11474.1000, N'', 19),
+    (N'bf-vo-v19', N'3490f944b29545c4b8d5a04130f42ab8', 3, N'', N'', N'V19', N'Additional Drainage TBC', 4, N'MEC-DRN', N'', N'item', 1.0000, 0.0000, 0.0000, N'', 20),
+    (N'bf-vo-v20', N'3490f944b29545c4b8d5a04130f42ab8', 3, N'', N'', N'V20', N'4 No Canopies', 2, N'SPEC-GAZ', N'', N'item', 1.0000, -22200.0000, -22200.0000, N'', 21),
+    (N'bf-vo-v21', N'3490f944b29545c4b8d5a04130f42ab8', 3, N'', N'', N'V21', N'W-07 Rebuild Opening - PRO-064-(WD)-P-004 Rev G', 0, N'MASON-BRK', N'', N'item', 1.0000, 400.0000, 400.0000, N'', 22),
+    (N'bf-vo-v22', N'3490f944b29545c4b8d5a04130f42ab8', 3, N'', N'', N'V22', N'SW.1 - G11 - SITE WORKS - Rev B', 0, N'EXTW-LND', N'', N'item', 1.0000, 7600.0000, 7600.0000, N'', 23),
+    (N'bf-vo-v23', N'3490f944b29545c4b8d5a04130f42ab8', 3, N'', N'', N'V23', N'Chandelier', 0, N'ELE-STD', N'', N'item', 1.0000, 29533.0000, 29533.0000, N'', 24),
+    (N'bf-vo-v24', N'3490f944b29545c4b8d5a04130f42ab8', 3, N'', N'', N'V24', N'Wet underfloor heating to ground floor (carers only)', 0, N'MEC-UFH', N'', N'item', 1.0000, 4093.0000, 4093.0000, N'', 25),
+    (N'bf-vo-v25', N'3490f944b29545c4b8d5a04130f42ab8', 3, N'', N'', N'V25', N'Site Supervision - EOT-02', 0, N'PRELIMS-SMG', N'', N'item', 1.0000, 3516.0000, 3516.0000, N'', 26),
+    (N'bf-vo-v26', N'3490f944b29545c4b8d5a04130f42ab8', 3, N'', N'', N'V26', N'Air conditioning', 0, N'MEC-AC', N'', N'item', 1.0000, 8925.0000, 8925.0000, N'', 27),
+    (N'bf-vo-v27', N'3490f944b29545c4b8d5a04130f42ab8', 3, N'', N'', N'V27', N'Intruder Alarm', 2, N'ELE-ALM', N'', N'item', 1.0000, -6640.0000, -6640.0000, N'', 28),
+    (N'bf-vo-v28', N'3490f944b29545c4b8d5a04130f42ab8', 3, N'', N'', N'V28', N'Fire and smoke alarm', 2, N'ELE-FIR', N'', N'item', 1.0000, -1310.0000, -1310.0000, N'', 29),
+    (N'bf-vo-v29', N'3490f944b29545c4b8d5a04130f42ab8', 3, N'', N'', N'V29', N'Invoice 6764 - Croft Structural Engineers', 0, N'HAND-SPE', N'', N'item', 1.0000, 330.0000, 330.0000, N'', 30),
+    (N'bf-vo-v30', N'3490f944b29545c4b8d5a04130f42ab8', 3, N'', N'', N'V30', N'10 mm render to internal blockwork walls', 0, N'INT-RDR', N'', N'item', 1.0000, 29185.0000, 29185.0000, N'', 31),
+    (N'bf-vo-v31', N'3490f944b29545c4b8d5a04130f42ab8', 3, N'', N'', N'V31', N'Sanitary ware for Cloakroom', 2, N'SUP-SAN', N'', N'item', 1.0000, -12240.0000, -12240.0000, N'', 32),
+    (N'bf-vo-v32', N'3490f944b29545c4b8d5a04130f42ab8', 3, N'', N'', N'V32', N'Supply of feature staircase', 2, N'STAIR-TIM', N'', N'item', 1.0000, -1665.0000, -1665.0000, N'', 33),
+    (N'bf-vo-v33', N'3490f944b29545c4b8d5a04130f42ab8', 3, N'', N'', N'V33', N'Structural Steel Works - SL30 Rev 9 & SL40 Rev 8', 0, N'STR-STL', N'', N'item', 1.0000, 1870.0000, 1870.0000, N'', 34),
+    (N'bf-vo-v34', N'3490f944b29545c4b8d5a04130f42ab8', 3, N'', N'', N'V34', N'Fix only - WC', 0, N'SUP-SAN', N'', N'item', 1.0000, 11965.0000, 11965.0000, N'', 35),
+    (N'bf-vo-v35', N'3490f944b29545c4b8d5a04130f42ab8', 3, N'', N'', N'V35', N'Site Supervision - EOT-03', 0, N'PRELIMS-SMG', N'', N'item', 1.0000, 8790.0000, 8790.0000, N'', 36),
+    (N'bf-vo-v36', N'3490f944b29545c4b8d5a04130f42ab8', 3, N'', N'', N'V36', N'Annex kitchen/Utility room', 0, N'SUP-KIT', N'', N'item', 1.0000, 17935.0000, 17935.0000, N'', 37),
+    (N'bf-vo-v37', N'3490f944b29545c4b8d5a04130f42ab8', 3, N'', N'', N'V37', N'GF - ZZ Bathroom - On the Level Shower Former', 0, N'SUP-SAN', N'', N'item', 1.0000, 4245.0000, 4245.0000, N'', 38),
+    (N'bf-vo-v38', N'3490f944b29545c4b8d5a04130f42ab8', 3, N'', N'', N'V38', N'New 6ft timber fencing', 0, N'EXTW-FEN', N'', N'item', 1.0000, 23650.0000, 23650.0000, N'', 39),
+    (N'bf-vo-v39', N'3490f944b29545c4b8d5a04130f42ab8', 3, N'', N'', N'V39', N'Demolition - Removal of Fencing & Existing trees', 3, N'ENABLE-DEM', N'', N'item', 1.0000, 0.0000, 0.0000, N'', 40),
+    (N'bf-vo-v40', N'3490f944b29545c4b8d5a04130f42ab8', 3, N'', N'', N'V40', N'Electrics - P-151 Rev P Electrical Plan FF', 0, N'ELE-STD', N'', N'item', 1.0000, 790.0000, 790.0000, N'', 41),
+    (N'bf-vo-v41', N'3490f944b29545c4b8d5a04130f42ab8', 3, N'', N'', N'V41', N'Karndean flooring (£50/m supply)', 0, N'FLR-LVT', N'', N'item', 1.0000, 19067.0000, 19067.0000, N'', 42),
+    (N'bf-vo-v42a', N'3490f944b29545c4b8d5a04130f42ab8', 3, N'', N'', N'V42', N'Tile Supply Only - As per Thompson & Leigh Quote 27/11/25 - NOW REVISED IN V69 WITH OMIT AND ADD BACK', 0, N'SUP-TIL', N'', N'item', 1.0000, 14435.0000, 14435.0000, N'', 43),
+    (N'bf-vo-v42b', N'3490f944b29545c4b8d5a04130f42ab8', 3, N'', N'', N'V42', N'Wall & floor tiling, splashbacks & shower room omits (Install now V76 / Omit V66)', 2, N'TIL-STD', N'', N'item', 1.0000, -29012.0000, -29012.0000, N'', 44),
+    (N'bf-vo-v43', N'3490f944b29545c4b8d5a04130f42ab8', 3, N'', N'', N'V43', N'Ceiling track hoists', 2, N'SPEC-LFT', N'', N'item', 1.0000, -19800.0000, -19800.0000, N'', 45),
+    (N'bf-vo-v44', N'3490f944b29545c4b8d5a04130f42ab8', 3, N'', N'', N'V44', N'Radiators with TRVs', 0, N'MEC-PLM', N'', N'item', 1.0000, 2435.0000, 2435.0000, N'', 46),
+    (N'bf-vo-v45', N'3490f944b29545c4b8d5a04130f42ab8', 3, N'', N'', N'V45', N'Contingency Budget', 2, N'HAND-MSC', N'', N'item', 1.0000, -50000.0000, -50000.0000, N'', 47),
+    (N'bf-vo-v46', N'3490f944b29545c4b8d5a04130f42ab8', 3, N'', N'', N'V46', N'Eve Access Hatches P-009 Rev H', 0, N'CARP-1FX', N'', N'item', 1.0000, 4950.0000, 4950.0000, N'', 48),
+    (N'bf-vo-v47', N'3490f944b29545c4b8d5a04130f42ab8', 3, N'', N'', N'V47', N'Double Socket Outlets - P-151 Rev Q / P-152 Rev H', 0, N'ELE-STD', N'', N'item', 1.0000, 575.0000, 575.0000, N'', 49),
+    (N'bf-vo-v48a', N'3490f944b29545c4b8d5a04130f42ab8', 3, N'', N'', N'V48', N'Fix only - Bespoke joinery', 2, N'CARP-JNR', N'', N'nr', 1.0000, -9000.0000, -9000.0000, N'', 50),
+    (N'bf-vo-v48b', N'3490f944b29545c4b8d5a04130f42ab8', 3, N'', N'', N'V48', N'Fix only - Decorative fire place', 2, N'DEC-STD', N'', N'item', 1.0000, -1575.0000, -1575.0000, N'', 51),
+    (N'bf-vo-v48c', N'3490f944b29545c4b8d5a04130f42ab8', 3, N'', N'', N'V48', N'Decorative Fireplaces for media walls', 2, N'DEC-FIR', N'', N'item', 1.0000, -7600.0000, -7600.0000, N'', 52),
+    (N'bf-vo-v48d', N'3490f944b29545c4b8d5a04130f42ab8', 3, N'', N'', N'V48', N'Dressing rooms, Wardrobes and fitted storage', 2, N'CARP-JNR', N'', N'item', 1.0000, -42000.0000, -42000.0000, N'', 53),
+    (N'bf-vo-v49', N'3490f944b29545c4b8d5a04130f42ab8', 3, N'', N'', N'V49', N'Gazebo', 2, N'SPEC-GAZ', N'', N'item', 1.0000, -5000.0000, -5000.0000, N'', 54),
+    (N'bf-vo-v50', N'3490f944b29545c4b8d5a04130f42ab8', 3, N'', N'', N'V50', N'Window coverings', 2, N'WDR-TIM', N'', N'item', 1.0000, -16500.0000, -16500.0000, N'', 55),
+    (N'bf-vo-v51', N'3490f944b29545c4b8d5a04130f42ab8', 3, N'', N'', N'V51', N'Internal Door ironmongery', 2, N'SUP-IRO', N'', N'item', 1.0000, -2560.0000, -2560.0000, N'', 56),
+    (N'bf-vo-v52', N'3490f944b29545c4b8d5a04130f42ab8', 3, N'', N'', N'V52', N'Mineral insulation to loft space', 0, N'INT-INC', N'', N'item', 1.0000, 8393.0000, 8393.0000, N'', 57),
+    (N'bf-vo-v53', N'3490f944b29545c4b8d5a04130f42ab8', 3, N'', N'', N'V53', N'12.5mm plasterboard', 0, N'INT-PLB', N'', N'item', 1.0000, 6210.0000, 6210.0000, N'', 58),
+    (N'bf-vo-v54', N'3490f944b29545c4b8d5a04130f42ab8', 3, N'', N'', N'V54', N'FFL/FCL TBC', 3, N'HAND-MSC', N'', N'item', 1.0000, 0.0000, 0.0000, N'', 59),
+    (N'bf-vo-v55', N'3490f944b29545c4b8d5a04130f42ab8', 3, N'', N'', N'V55', N'Double Sockets - P-152 Rev J, Electrical Plan SF', 0, N'ELE-STD', N'', N'item', 1.0000, 230.0000, 230.0000, N'', 60),
+    (N'bf-vo-v56', N'3490f944b29545c4b8d5a04130f42ab8', 3, N'', N'', N'V56', N'P-205 Rev H Ensuite 1 & P-206 Rev H Ensuite 2', 0, N'SUP-SAN', N'', N'item', 1.0000, 750.0000, 750.0000, N'', 61),
+    (N'bf-vo-v57', N'3490f944b29545c4b8d5a04130f42ab8', 3, N'', N'', N'V57', N'Site Supervision - EOT-04', 0, N'PRELIMS-SMG', N'', N'item', 1.0000, 29300.0000, 29300.0000, N'', 62),
+    (N'bf-vo-v58', N'3490f944b29545c4b8d5a04130f42ab8', 3, N'', N'', N'V58', N'Manifold - Carers', 0, N'MEC-UFH', N'', N'item', 1.0000, 3907.0000, 3907.0000, N'', 63),
+    (N'bf-vo-v59', N'3490f944b29545c4b8d5a04130f42ab8', 3, N'', N'', N'V59', N'PRO-064-(WD)-P-703  Rev —  Rear Canopies', 3, N'SPEC-GAZ', N'', N'item', 1.0000, 0.0000, 0.0000, N'', 64),
+    (N'bf-vo-v60', N'3490f944b29545c4b8d5a04130f42ab8', 3, N'', N'', N'V60', N'Croft SL-20 rev 11', 0, N'HAND-SPE', N'', N'item', 1.0000, 2940.0000, 2940.0000, N'', 65),
+    (N'bf-vo-v61', N'3490f944b29545c4b8d5a04130f42ab8', 3, N'', N'', N'V61', N'Acoustic boxing to SVP pipe through eaves space', 0, N'CARP-1FX', N'', N'item', 1.0000, 438.0000, 438.0000, N'', 66),
+    (N'bf-vo-v62', N'3490f944b29545c4b8d5a04130f42ab8', 3, N'', N'', N'V62', N'PRO-064-(WD)-P-706 Rev F — Ground Floor RCP', 0, N'ELE-STD', N'', N'item', 1.0000, 5771.5000, 5771.5000, N'', 67),
+    (N'bf-vo-v63', N'3490f944b29545c4b8d5a04130f42ab8', 3, N'', N'', N'V63', N'PRO-064-(WD)-P-150 Rev Q — Electrical Plan GF', 0, N'ELE-STD', N'', N'item', 1.0000, 3565.0000, 3565.0000, N'', 68),
+    (N'bf-vo-v64', N'3490f944b29545c4b8d5a04130f42ab8', 3, N'', N'', N'V64', N'926 mm Internal door lining & single door ( £200 supply )', 0, N'SUP-DOR', N'', N'item', 1.0000, 25351.3700, 25351.3700, N'', 69),
+    (N'bf-vo-v65', N'3490f944b29545c4b8d5a04130f42ab8', 3, N'', N'', N'V65', N'Staircase Omit Item', 3, N'STAIR-TIM', N'', N'item', 1.0000, 0.0000, 0.0000, N'', 70),
+    (N'bf-vo-v66', N'3490f944b29545c4b8d5a04130f42ab8', 3, N'', N'', N'V66', N'Supply - Howdens Utility', 2, N'SUP-KIT', N'', N'item', 1.0000, -23845.0000, -23845.0000, N'', 71),
+    (N'bf-vo-v67', N'3490f944b29545c4b8d5a04130f42ab8', 3, N'', N'', N'V67', N'2nd Fix Carpentry Omit', 3, N'CARP-2FX', N'', N'item', 1.0000, 0.0000, 0.0000, N'', 72),
+    (N'bf-vo-v68', N'3490f944b29545c4b8d5a04130f42ab8', 3, N'', N'', N'V68', N'Mist & 2 coats of Dulux emulsion to ceilings', 3, N'DEC-STD', N'', N'item', 1.0000, 0.0000, 0.0000, N'', 73),
+    (N'bf-vo-v69', N'3490f944b29545c4b8d5a04130f42ab8', 3, N'', N'', N'V69', N'Tile Supply - REVISED WITH V42 OMIT', 0, N'SUP-TIL', N'', N'item', 1.0000, 1548.1200, 1548.1200, N'', 74),
+    (N'bf-vo-v70', N'3490f944b29545c4b8d5a04130f42ab8', 3, N'', N'', N'V70', N'External Taps - Declined', 4, N'MEC-PLM', N'', N'item', 1.0000, 0.0000, 0.0000, N'', 75),
+    (N'bf-vo-v71', N'3490f944b29545c4b8d5a04130f42ab8', 3, N'', N'', N'V71', N'Generation - Entrance Door', 4, N'WDR-TIM', N'', N'item', 1.0000, 0.0000, 0.0000, N'', 76),
+    (N'bf-vo-v72', N'3490f944b29545c4b8d5a04130f42ab8', 3, N'', N'', N'V72', N'Coffer Details and Insulation ZZ bedroom - Works Completed', 0, N'INT-INC', N'', N'item', 1.0000, 2285.0000, 2285.0000, N'', 77),
+    (N'bf-vo-v73', N'3490f944b29545c4b8d5a04130f42ab8', 3, N'', N'', N'V73', N'Revised Coving and LED lighting Details', 0, N'INT-COV', N'', N'item', 1.0000, 4781.4900, 4781.4900, N'', 78),
+    (N'bf-vo-v76', N'3490f944b29545c4b8d5a04130f42ab8', 3, N'', N'', N'V76', N'Tile Installation & Enabling Works', 0, N'TIL-STD', N'', N'item', 1.0000, 38865.0000, 38865.0000, N'', 79)
 ) AS source (ValuationLineItemId, ProjectId, ElementType, SectionCode, SectionName,
              VariationRef, VariationTitle, LineType, CostCode, Description, Unit,
              Quantity, Rate, LineAmount, Comments, DisplayOrder)
@@ -194,7 +208,7 @@ GO
 
 -- Sanity check: variation lines should reconcile to the workbook register.
 SELECT
-    COUNT(*) AS VariationLines,                                                       -- 78 (73 VOs; V48 split into 4, V06 and V42 into 2 detail lines each)
+    COUNT(*) AS VariationLines,                                                       -- 79 (73 VOs; V48 split into 4, V06/V10/V42 into 2 detail lines each)
     SUM(CASE WHEN LineType NOT IN (3,4) THEN LineAmount ELSE 0 END) AS NetVariations, -- 215737.58
     SUM(LineAmount) AS GrossOfAllVoLines                                             -- 215737.58
 FROM [dbo].[ValuationLineItems]
