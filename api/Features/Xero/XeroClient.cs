@@ -25,6 +25,14 @@ public interface IXeroClient
     Task<XeroTransactionsSnapshot> GetPurchaseInvoicesAsync(bool force, CancellationToken ct);
 
     /// <summary>
+    /// Reads the company's cash position: every bank account's closing balance today (Xero's
+    /// bank summary report — needs the accounting.reports.read scope) plus the authorised
+    /// sales invoices (ACCREC) with money still due. Serves the cached snapshot when fresh
+    /// enough unless <paramref name="force"/> is set.
+    /// </summary>
+    Task<XeroCashSummarySnapshot> GetCashSummaryAsync(bool force, CancellationToken ct);
+
+    /// <summary>
     /// Confirms an allocated draft (or submitted) bill / credit note back into Xero and
     /// approves it: re-reads the invoice fresh, stamps Sites + Cost Code tracking on each
     /// instructed line — physically splitting a line into one Xero line per cost centre
@@ -76,6 +84,9 @@ public sealed class NullXeroClient : IXeroClient
     public Task<XeroTransactionsSnapshot> GetPurchaseInvoicesAsync(bool force, CancellationToken ct) =>
         Task.FromResult(XeroTransactionsSnapshot.NotConfigured());
 
+    public Task<XeroCashSummarySnapshot> GetCashSummaryAsync(bool force, CancellationToken ct) =>
+        Task.FromResult(XeroCashSummarySnapshot.NotConfigured());
+
     public Task<XeroApprovalResult> ApproveInvoiceAsync(XeroApprovalRequest request, CancellationToken ct) =>
         Task.FromResult(XeroApprovalResult.Failed(
             "Xero isn't connected — add the Xero__ClientId / Xero__ClientSecret app settings."));
@@ -100,6 +111,7 @@ public sealed class XeroClient : IXeroClient
     private const string InvoicesUrl = "https://api.xero.com/api.xro/2.0/Invoices";
     private const string CreditNotesUrl = "https://api.xero.com/api.xro/2.0/CreditNotes";
     private const string AccountsUrl = "https://api.xero.com/api.xro/2.0/Accounts";
+    private const string BankSummaryReportUrl = "https://api.xero.com/api.xro/2.0/Reports/BankSummary";
     private const string TrackingCategoriesUrl = "https://api.xero.com/api.xro/2.0/TrackingCategories";
     private const int PageSize = 100; // Xero's page size for the Invoices endpoint.
 
@@ -117,6 +129,12 @@ public sealed class XeroClient : IXeroClient
     private readonly SemaphoreSlim _snapshotLock = new(1, 1);
     private XeroTransactionsSnapshot? _cachedSnapshot;
     private DateTimeOffset _cachedSnapshotAt = DateTimeOffset.MinValue;
+
+    // Cash summary cache — separate from the transactions snapshot (different data, same
+    // rationale: one fetch serves every user for CacheMinutes).
+    private readonly SemaphoreSlim _cashSummaryLock = new(1, 1);
+    private XeroCashSummarySnapshot? _cachedCashSummary;
+    private DateTimeOffset _cachedCashSummaryAt = DateTimeOffset.MinValue;
 
     // Chart of accounts changes rarely; refresh it hourly at most.
     private IReadOnlyDictionary<string, string>? _accountNamesByCode;
@@ -162,6 +180,213 @@ public sealed class XeroClient : IXeroClient
     private bool CachedSnapshotIsFresh =>
         _cachedSnapshot is not null
         && DateTimeOffset.UtcNow < _cachedSnapshotAt.AddMinutes(_options.CacheMinutes);
+
+    // -- cash summary: bank balances + outstanding sales invoices ----------------------
+
+    public async Task<XeroCashSummarySnapshot> GetCashSummaryAsync(bool force, CancellationToken ct)
+    {
+        if (!_options.IsConfigured)
+            return XeroCashSummarySnapshot.NotConfigured();
+
+        await _cashSummaryLock.WaitAsync(ct);
+        try
+        {
+            if (!force && CachedCashSummaryIsFresh)
+                return _cachedCashSummary!;
+
+            var snapshot = await FetchCashSummaryAsync(ct);
+
+            // Only successful reads replace the cache — a transient failure shouldn't evict
+            // good data, but it is still returned so the user sees what went wrong.
+            if (snapshot.Error is null)
+            {
+                _cachedCashSummary = snapshot;
+                _cachedCashSummaryAt = DateTimeOffset.UtcNow;
+            }
+            return snapshot;
+        }
+        finally
+        {
+            _cashSummaryLock.Release();
+        }
+    }
+
+    private bool CachedCashSummaryIsFresh =>
+        _cachedCashSummary is not null
+        && DateTimeOffset.UtcNow < _cachedCashSummaryAt.AddMinutes(_options.CacheMinutes);
+
+    private async Task<XeroCashSummarySnapshot> FetchCashSummaryAsync(CancellationToken ct)
+    {
+        string token;
+        try
+        {
+            token = await GetAccessTokenAsync(ct);
+        }
+        catch (XeroCallFailedException tokenFailure)
+        {
+            return XeroCashSummarySnapshot.Failed(tokenFailure.Message);
+        }
+
+        try
+        {
+            var bankAccounts = await FetchBankBalancesAsync(token, ct);
+            var outstanding = await FetchOutstandingSalesInvoicesAsync(token, ct);
+            return new XeroCashSummarySnapshot(true, null, DateTimeOffset.UtcNow, bankAccounts, outstanding);
+        }
+        catch (XeroCallFailedException callFailure)
+        {
+            return XeroCashSummarySnapshot.Failed(callFailure.Message);
+        }
+    }
+
+    /// <summary>
+    /// Each bank account's closing balance as of today, from Xero's bank summary report
+    /// (the report is in the organisation's base currency). The report's rows carry the
+    /// account name + accountID in the first cell and the closing balance in the column the
+    /// header names "Closing Balance" (last column as a fallback, so a report-layout tweak
+    /// degrades gracefully rather than dropping balances).
+    /// </summary>
+    private async Task<IReadOnlyList<XeroBankAccountBalance>> FetchBankBalancesAsync(string token, CancellationToken ct)
+    {
+        var today = DateTime.UtcNow.Date;
+        var url = $"{BankSummaryReportUrl}?fromDate={today:yyyy-MM-dd}&toDate={today:yyyy-MM-dd}";
+
+        JsonDocument doc;
+        try
+        {
+            doc = await GetJsonAsync(token, url, "bank summary report", ct);
+        }
+        catch (XeroCallFailedException failure) when (failure.Message.Contains("HTTP 403"))
+        {
+            throw new XeroCallFailedException(
+                "Couldn't read Xero's bank summary report — the Xero custom connection needs the "
+                + "accounting.reports.read scope ticked in the Xero developer portal. " + failure.Message);
+        }
+
+        using (doc)
+        {
+            var balances = new List<XeroBankAccountBalance>();
+            if (!doc.RootElement.TryGetProperty("Reports", out var reports)
+                || reports.ValueKind != JsonValueKind.Array || reports.GetArrayLength() == 0)
+                return balances;
+
+            var closingColumn = -1;
+            foreach (var row in RowsOf(reports[0]))
+            {
+                var rowType = StringOf(row, "RowType");
+                if (rowType == "Header")
+                {
+                    closingColumn = FindColumn(row, "Closing Balance");
+                    continue;
+                }
+                if (rowType != "Section") continue;
+
+                foreach (var accountRow in RowsOf(row))
+                {
+                    if (StringOf(accountRow, "RowType") != "Row") continue;
+                    if (!accountRow.TryGetProperty("Cells", out var cells)
+                        || cells.ValueKind != JsonValueKind.Array || cells.GetArrayLength() == 0)
+                        continue;
+
+                    var nameCell = cells[0];
+                    var name = StringOf(nameCell, "Value");
+                    if (string.IsNullOrWhiteSpace(name)) continue;
+
+                    var balanceIndex = closingColumn >= 0 && closingColumn < cells.GetArrayLength()
+                        ? closingColumn
+                        : cells.GetArrayLength() - 1;
+                    balances.Add(new XeroBankAccountBalance(
+                        AccountId: CellAttribute(nameCell, "accountID") ?? name,
+                        Name: name,
+                        Balance: CellDecimal(cells[balanceIndex])));
+                }
+            }
+            return balances;
+        }
+    }
+
+    /// <summary>Rows of a report or section — both nest them under "Rows".</summary>
+    private static IEnumerable<JsonElement> RowsOf(JsonElement reportOrSection)
+    {
+        if (reportOrSection.TryGetProperty("Rows", out var rows) && rows.ValueKind == JsonValueKind.Array)
+            foreach (var row in rows.EnumerateArray())
+                yield return row;
+    }
+
+    private static int FindColumn(JsonElement headerRow, string title)
+    {
+        if (!headerRow.TryGetProperty("Cells", out var cells) || cells.ValueKind != JsonValueKind.Array)
+            return -1;
+        var index = 0;
+        foreach (var cell in cells.EnumerateArray())
+        {
+            if (string.Equals(StringOf(cell, "Value"), title, StringComparison.OrdinalIgnoreCase))
+                return index;
+            index++;
+        }
+        return -1;
+    }
+
+    /// <summary>Report cell values arrive as strings ("12345.67"); attributes as [{ Id, Value }].</summary>
+    private static decimal CellDecimal(JsonElement cell) =>
+        decimal.TryParse(StringOf(cell, "Value"), System.Globalization.NumberStyles.Number,
+            System.Globalization.CultureInfo.InvariantCulture, out var value)
+            ? value
+            : 0m;
+
+    private static string? CellAttribute(JsonElement cell, string id)
+    {
+        if (!cell.TryGetProperty("Attributes", out var attributes) || attributes.ValueKind != JsonValueKind.Array)
+            return null;
+        foreach (var attribute in attributes.EnumerateArray())
+            if (string.Equals(StringOf(attribute, "Id"), id, StringComparison.OrdinalIgnoreCase))
+                return StringOf(attribute, "Value");
+        return null;
+    }
+
+    /// <summary>
+    /// Authorised sales invoices (ACCREC) with money still due, ordered soonest-due first.
+    /// summaryOnly skips line items (not needed here) which keeps the read cheap against
+    /// Xero's rate limit; AmountDue is filtered portal-side because it's a calculated field
+    /// Xero's where clause doesn't index (part-paid invoices stay AUTHORISED, fully paid
+    /// ones become PAID, so the filter rarely removes anything).
+    /// </summary>
+    private async Task<IReadOnlyList<XeroOutstandingSalesInvoice>> FetchOutstandingSalesInvoicesAsync(
+        string token, CancellationToken ct)
+    {
+        var invoices = new List<XeroOutstandingSalesInvoice>();
+        var where = "Type==\"ACCREC\" AND Status==\"AUTHORISED\"";
+
+        for (var page = 1; page <= _options.MaxPages; page++)
+        {
+            var url = $"{InvoicesUrl}?page={page}&summaryOnly=true"
+                      + $"&where={Uri.EscapeDataString(where)}&order={Uri.EscapeDataString("DueDate ASC")}";
+            using var doc = await GetJsonAsync(token, url, "sales invoices", ct);
+
+            if (!doc.RootElement.TryGetProperty("Invoices", out var items) || items.ValueKind != JsonValueKind.Array)
+                break;
+
+            foreach (var item in items.EnumerateArray())
+            {
+                var amountDue = DecimalOf(item, "AmountDue");
+                if (amountDue == 0m) continue;
+                invoices.Add(new XeroOutstandingSalesInvoice(
+                    InvoiceId: StringOf(item, "InvoiceID") ?? Guid.NewGuid().ToString(),
+                    Number: StringOf(item, "InvoiceNumber"),
+                    Reference: StringOf(item, "Reference"),
+                    ContactName: item.TryGetProperty("Contact", out var contact) ? StringOf(contact, "Name") : null,
+                    Date: DateOf(item, "DateString", "Date"),
+                    DueDate: DateOf(item, "DueDateString", "DueDate"),
+                    Total: DecimalOf(item, "Total"),
+                    AmountDue: amountDue,
+                    CurrencyCode: StringOf(item, "CurrencyCode")));
+            }
+
+            if (items.GetArrayLength() < PageSize) break; // Short page — no more to fetch.
+        }
+
+        return invoices;
+    }
 
     // -- write-back: tracking confirmation + approval ---------------------------------
 

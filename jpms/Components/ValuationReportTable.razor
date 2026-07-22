@@ -232,7 +232,9 @@ else
                                                 {
                                                     @if (editingLineId == line.ValuationLineItemId)
                                                     {
-                                                        @* Explicit commit only: Enter / tick saves, Esc / cross discards. *@
+                                                        @* Explicit commit only: Enter / tick saves, Esc / cross discards. Enter also hops to
+                                                           the next line's % editor (see AdvanceToNextEditable) so a whole claim can be keyed
+                                                           top-to-bottom without the mouse; the plain onfocus selects the value ready to overtype. *@
                                                         <span class="inline-flex items-center gap-1">
                                                             @if (HasPreviousClaim)
                                                             {
@@ -241,6 +243,7 @@ else
                                                             }
                                                             <input @ref="editInput" type="text" inputmode="decimal"
                                                                    value="@editValue"
+                                                                   onfocus="this.select()"
                                                                    @oninput="@(e => { editValue = e.Value?.ToString() ?? ""; editError = false; })"
                                                                    @onkeydown="@(e => OnEditKeyDownAsync(e, line))"
                                                                    aria-label="Percent complete"
@@ -652,9 +655,12 @@ else
     // One cell edits at a time; nothing saves until the user confirms (Enter or
     // the tick). Esc or the cross discards. Clicking elsewhere leaves the editor
     // open rather than silently committing or discarding.
+    // Enter additionally advances to the next line's % editor (the tick keeps
+    // save-and-close), so a claim can be keyed top-to-bottom: type, Enter, type, Enter…
     private string? editingLineId;
     private string editValue = "";
     private bool editError;
+    private bool editSaving;
     private bool focusPending;
     private ElementReference editInput;
 
@@ -674,12 +680,13 @@ else
 
     private async Task OnEditKeyDownAsync(KeyboardEventArgs e, ValuationLineItem line)
     {
-        if (e.Key == "Enter") await CommitEditAsync(line);
+        if (e.Key == "Enter") await CommitEditAsync(line, advanceToNext: true);
         else if (e.Key == "Escape") CancelEdit();
     }
 
-    private async Task CommitEditAsync(ValuationLineItem line)
+    private async Task CommitEditAsync(ValuationLineItem line, bool advanceToNext = false)
     {
+        if (editSaving) return; // a second Enter while the save is in flight must not double-post
         if (SelectedClaim is null) { CancelEdit(); return; }
         if (!decimal.TryParse(editValue.Trim().TrimEnd('%'), System.Globalization.NumberStyles.Number, Gb, out var percent)
             || !WithinBounds(line, percent))
@@ -687,12 +694,22 @@ else
             editError = true;
             return;
         }
+        // Unchanged value: nothing to record, so Enter just moves on — lines that are
+        // already right can be skimmed past without a round-trip per row.
+        if (percent == PercentFor(line))
+        {
+            if (advanceToNext) AdvanceToNextEditable(line);
+            else CancelEdit();
+            return;
+        }
+        editSaving = true;
         try
         {
             await Store.RecordEntryAsync(ProjectId, new RecordClaimEntry(SelectedClaim.ValuationClaimId, line.ValuationLineItemId, percent));
             editingLineId = null;
             editError = false;
             OnParametersSet();
+            if (advanceToNext) AdvanceToNextEditable(line);
         }
         catch
         {
@@ -700,6 +717,25 @@ else
             // with the typed value and flag it, instead of crashing the circuit.
             editError = true;
         }
+        finally { editSaving = false; }
+    }
+
+    // Enter-to-advance: open the % editor on the next counting line below, in rendered
+    // order (sections in their fixed order, lines by DisplayOrder), rolling over into the
+    // following section — auto-expanding it if collapsed — so the whole bill can be keyed
+    // in one pass. On the last line there is nothing to advance to: the save above stands
+    // and the editor simply closes.
+    private void AdvanceToNextEditable(ValuationLineItem current)
+    {
+        var ordered = Sections.SelectMany(section => section.Lines)
+                              .Where(l => l.CountsTowardTotals)
+                              .ToList();
+        var index = ordered.FindIndex(l => l.ValuationLineItemId == current.ValuationLineItemId);
+        if (index < 0 || index + 1 >= ordered.Count) { CancelEdit(); return; }
+
+        var next = ordered[index + 1];
+        expanded.Add(next.ElementType);
+        StartEdit(next);
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)

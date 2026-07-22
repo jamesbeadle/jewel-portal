@@ -9,6 +9,7 @@ public static class XeroRouteRegistration
     public static IServiceCollection AddXeroReadModels(this IServiceCollection services)
     {
         services.AddScoped<XeroTransactionsReadModel>();
+        services.AddScoped<XeroCashSummaryReadModel>();
         services.AddScoped<XeroLedgerReadModel>();
         return services;
     }
@@ -18,6 +19,10 @@ public static class XeroRouteRegistration
         queries.Register<ListXeroTransactions, XeroTransactionsSnapshot>(
             new QueryRoute("/api/xero/transactions",
                 query => ((ListXeroTransactions)query).Force ? "/api/xero/transactions?force=true" : "/api/xero/transactions"));
+
+        queries.Register<GetXeroCashSummary, XeroCashSummarySnapshot>(
+            new QueryRoute("/api/xero/cash-summary",
+                query => ((GetXeroCashSummary)query).Force ? "/api/xero/cash-summary?force=true" : "/api/xero/cash-summary"));
 
         queries.Register<ListXeroLedgerLines, IReadOnlyList<XeroLedgerLine>>(QueryRoute.Static("/api/xero/ledger"));
 

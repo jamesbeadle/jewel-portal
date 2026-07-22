@@ -88,6 +88,11 @@ public static class DesktopNavigation
             new[] { Role.ProjectManager, Role.FinanceDirector }),
         // One row per active project plus the total. Exact-only: /finance/* belongs to Xero.
         (new NavigationItem("Financial Summary", "/finance", ExactMatch: true), FinanceRoles),
+        // Live cash position from Xero. Bank balances are the company's most sensitive figures —
+        // directors only, deliberately tighter than FinanceRoles; mirrors the API's authorisation
+        // (GetXeroCashSummaryEndpoint).
+        (new NavigationItem("Cash Summary", "/finance/cash-summary"),
+            new[] { Role.ManagingDirector, Role.FinanceDirector }),
         // Allocation + Transactions as tabs of one page — Allocation leads (the working screen).
         (new NavigationItem("Xero", "/finance/allocation", new[] { "/finance/xero" }), FinanceRoles),
         (new NavigationItem("Cost codes & Rates", "/cost-codes", new[] { "/rate-library" }), FinanceRoles),

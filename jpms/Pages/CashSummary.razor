@@ -1,0 +1,273 @@
+@page "/finance/cash-summary"
+@using Jewel.JPMS.Contracts.Xero
+@inject AuthService Auth
+@inject SessionService Session
+@inject IXeroCashSummaryStore Cash
+@inject NavigationManager Nav
+@implements IDisposable
+
+<PageTitle>Cash Summary · JPMS</PageTitle>
+
+@*
+    The company Cash Summary (the sidebar's Company area, directors only): the cash actually in
+    the bank plus the sales invoices issued but not yet paid — both read live from Xero. More
+    cash-position information will join this page over time.
+*@
+
+@if (!isLoaded)
+{
+    <section class="px-6 md:px-8 py-12 text-content-subtle text-sm">Loading…</section>
+}
+else if (!Session.IsApproved)
+{
+    <RequestAccessView Email="@Auth.CurrentUser!.Email" DisplayName="@Auth.CurrentUser.DisplayName" />
+}
+else
+{
+    <section class="px-6 md:px-8 py-8 md:py-12">
+        <header class="mb-6 md:mb-8 flex items-end justify-between gap-4">
+            <div>
+                <p class="text-xs uppercase tracking-wider text-content-subtle font-medium mb-1">JPMS · Company</p>
+                <h1 class="text-2xl md:text-3xl font-semibold text-content leading-tight">Cash Summary</h1>
+                <p class="text-sm text-content-muted mt-1">
+                    Cash in the bank and outstanding sales invoices, read live from Xero.
+                </p>
+            </div>
+            <div class="flex items-center gap-4 whitespace-nowrap">
+                <ExportToExcelButton FileName="Cash summary"
+                                     Disabled="@(Snapshot?.Error is not null || (BankAccounts.Count == 0 && Outstanding.Count == 0))"
+                                     BuildWorkbook="BuildExportWorkbook" />
+                <button class="text-sm font-medium text-content-muted hover:text-content underline underline-offset-4 disabled:opacity-50"
+                        disabled="@isRefreshing" @onclick="ForceRefreshAsync">
+                    @(isRefreshing ? "Refreshing…" : "Refresh from Xero")
+                </button>
+            </div>
+        </header>
+
+        @if (Snapshot is null)
+        {
+            <p class="text-sm text-content-subtle py-8">Fetching the cash position from Xero…</p>
+        }
+        else if (!Snapshot.IsConfigured)
+        {
+            <div class="rounded-xl border border-line bg-surface-raised px-5 py-4 text-sm text-content-muted">
+                Xero isn't connected yet. Add the custom connection's credentials as the
+                <span class="font-mono text-content">Xero__ClientId</span> and
+                <span class="font-mono text-content">Xero__ClientSecret</span> app settings on the API, then reload.
+            </div>
+        }
+        else if (Snapshot.Error is not null)
+        {
+            <div class="rounded-xl border border-line bg-surface-raised px-5 py-4 text-sm text-content-muted">
+                <p class="text-content font-medium mb-1">Xero returned an error</p>
+                <p>@Snapshot.Error</p>
+            </div>
+        }
+        else
+        {
+            <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 mb-8">
+                <div class="rounded-xl border border-line bg-surface px-5 py-4">
+                    <p class="text-[11px] uppercase tracking-wider text-content-subtle font-semibold mb-1">Cash in bank</p>
+                    <p class="text-2xl font-semibold text-content">@Money(Snapshot.TotalCash)</p>
+                    <p class="text-xs text-content-subtle mt-1">@BankAccounts.Count @(BankAccounts.Count == 1 ? "account" : "accounts") · fetched @FetchedText</p>
+                </div>
+                <div class="rounded-xl border border-line bg-surface px-5 py-4">
+                    <p class="text-[11px] uppercase tracking-wider text-content-subtle font-semibold mb-1">Outstanding sales invoices</p>
+                    <p class="text-2xl font-semibold text-content">@Money(Snapshot.TotalOutstanding)</p>
+                    <p class="text-xs text-content-subtle mt-1">@Outstanding.Count @(Outstanding.Count == 1 ? "invoice" : "invoices") awaiting payment</p>
+                </div>
+                <div class="rounded-xl border border-line bg-surface px-5 py-4">
+                    <p class="text-[11px] uppercase tracking-wider text-content-subtle font-semibold mb-1">Of which overdue</p>
+                    <p class="text-2xl font-semibold @(OverdueTotal > 0 ? "text-negative" : "text-content")">@Money(OverdueTotal)</p>
+                    <p class="text-xs text-content-subtle mt-1">@OverdueCount past due date</p>
+                </div>
+            </div>
+
+            <h2 class="text-sm font-semibold text-content mb-3">Bank accounts</h2>
+            @if (BankAccounts.Count == 0)
+            {
+                <p class="text-sm text-content-subtle mb-8">Xero returned no bank accounts.</p>
+            }
+            else
+            {
+                <div class="rounded-xl border border-line bg-surface overflow-x-auto mb-8 max-w-2xl">
+                    <table class="w-full text-sm">
+                        <thead class="bg-surface-raised border-b border-line">
+                            <tr class="text-left text-[11px] uppercase tracking-wider text-content-subtle font-semibold">
+                                <th class="px-4 py-3">Account</th>
+                                <th class="px-4 py-3 text-right">Balance</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-line">
+                            @foreach (var account in BankAccounts)
+                            {
+                                <tr>
+                                    <td class="px-4 py-3 text-content font-medium">@account.Name</td>
+                                    <td class="px-4 py-3 text-right @(account.Balance < 0 ? "text-negative" : "text-content")">@Money(account.Balance)</td>
+                                </tr>
+                            }
+                        </tbody>
+                        <tfoot class="bg-surface-raised border-t border-line">
+                            <tr class="font-semibold">
+                                <td class="px-4 py-3 text-content">Total</td>
+                                <td class="px-4 py-3 text-right text-content">@Money(Snapshot.TotalCash)</td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            }
+
+            <h2 class="text-sm font-semibold text-content mb-3">Outstanding sales invoices</h2>
+            @if (Outstanding.Count == 0)
+            {
+                <p class="text-sm text-content-subtle">No sales invoices are awaiting payment — everything issued has been paid.</p>
+            }
+            else
+            {
+                <div class="rounded-xl border border-line bg-surface overflow-x-auto overflow-y-auto max-h-[70vh]">
+                    <table class="w-full text-sm">
+                        <thead class="bg-surface-raised border-b border-line">
+                            <tr class="text-left text-[11px] uppercase tracking-wider text-content-subtle font-semibold">
+                                <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3">Client</th>
+                                <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 hidden md:table-cell">Number</th>
+                                <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 hidden lg:table-cell">Reference</th>
+                                <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3">Issued</th>
+                                <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3">Due</th>
+                                <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 text-right hidden md:table-cell">Total</th>
+                                <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 text-right">Amount due</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-line">
+                            @foreach (var invoice in Outstanding)
+                            {
+                                <tr>
+                                    <td class="px-4 py-3 text-content font-medium">@(invoice.ContactName ?? "—")</td>
+                                    <td class="px-4 py-3 text-content-muted hidden md:table-cell">@(invoice.Number ?? "—")</td>
+                                    <td class="px-4 py-3 text-content-muted hidden lg:table-cell">@(invoice.Reference ?? "—")</td>
+                                    <td class="px-4 py-3 text-content-muted whitespace-nowrap">@DateText(invoice.Date)</td>
+                                    <td class="px-4 py-3 whitespace-nowrap @(IsOverdue(invoice) ? "text-negative font-medium" : "text-content-muted")">
+                                        @DateText(invoice.DueDate)
+                                        @if (IsOverdue(invoice))
+                                        {
+                                            <span class="ml-1.5 text-[10px] uppercase tracking-wider font-semibold border border-negative/40 text-negative rounded px-1 py-0.5">Overdue</span>
+                                        }
+                                    </td>
+                                    <td class="px-4 py-3 text-right text-content-muted hidden md:table-cell">@Money(invoice.Total)</td>
+                                    <td class="px-4 py-3 text-right text-content font-medium">@Money(invoice.AmountDue)</td>
+                                </tr>
+                            }
+                        </tbody>
+                        <tfoot class="bg-surface-raised border-t border-line">
+                            @* Cells mirror the header's responsive hiding so totals stay under their columns at every breakpoint. *@
+                            <tr class="font-semibold">
+                                <td class="px-4 py-3 text-content">All outstanding</td>
+                                <td class="hidden md:table-cell"></td>
+                                <td class="hidden lg:table-cell"></td>
+                                <td></td>
+                                <td></td>
+                                <td class="px-4 py-3 text-right text-content hidden md:table-cell">@Money(Outstanding.Sum(invoice => invoice.Total))</td>
+                                <td class="px-4 py-3 text-right text-content">@Money(Snapshot.TotalOutstanding)</td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            }
+        }
+    </section>
+}
+
+@code {
+    private bool isLoaded;
+    private bool isRefreshing;
+
+    private XeroCashSummarySnapshot? Snapshot => Cash.Snapshot();
+
+    private IReadOnlyList<XeroBankAccountBalance> BankAccounts =>
+        Snapshot?.BankAccounts.OrderByDescending(account => account.Balance).ToList()
+        ?? (IReadOnlyList<XeroBankAccountBalance>)Array.Empty<XeroBankAccountBalance>();
+
+    // Soonest-due first, so the invoices to chase lead the table (overdue ones on top).
+    private IReadOnlyList<XeroOutstandingSalesInvoice> Outstanding =>
+        Snapshot?.OutstandingInvoices.OrderBy(invoice => invoice.DueDate ?? DateTime.MaxValue).ToList()
+        ?? (IReadOnlyList<XeroOutstandingSalesInvoice>)Array.Empty<XeroOutstandingSalesInvoice>();
+
+    private static bool IsOverdue(XeroOutstandingSalesInvoice invoice) =>
+        invoice.DueDate is { } due && due.Date < DateTime.Today;
+
+    private decimal OverdueTotal => Outstanding.Where(IsOverdue).Sum(invoice => invoice.AmountDue);
+
+    private int OverdueCount => Outstanding.Count(IsOverdue);
+
+    private string FetchedText =>
+        Snapshot?.FetchedAtUtc is { } fetched ? fetched.ToLocalTime().ToString("HH:mm") : "—";
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Session.EnsureLoadedAsync();
+        if (!Auth.IsSignedIn) { Nav.NavigateTo("/login", forceLoad: true); return; }
+        Cash.OnChange += StateHasChanged;
+        isLoaded = true;
+
+        // Revalidate cached data in the background on tab entry (stale-while-revalidate) —
+        // the store's fetch-once guard handles the very first load.
+        _ = Cash.RefreshAsync();
+    }
+
+    private async Task ForceRefreshAsync()
+    {
+        isRefreshing = true;
+        try { await Cash.RefreshAsync(force: true); }
+        finally { isRefreshing = false; }
+    }
+
+    private static string DateText(DateTime? date) =>
+        date?.ToString("d MMM yyyy") ?? "—";
+
+    private static string Money(decimal value) =>
+        value.ToString("C0", System.Globalization.CultureInfo.GetCultureInfo("en-GB"));
+
+    // One workbook, one sheet per block, mirroring the page's own computed lists.
+    private ExcelWorkbook? BuildExportWorkbook(bool _)
+    {
+        if (Snapshot is null || Snapshot.Error is not null) return null;
+
+        var accounts = BankAccounts;
+        var outstanding = Outstanding;
+        if (accounts.Count == 0 && outstanding.Count == 0) return null;
+
+        var workbook = new ExcelWorkbook();
+
+        var banksSheet = workbook.AddSheet("Bank accounts",
+            new ExcelColumn("Account"),
+            new ExcelColumn("Balance", ExcelFormat.Currency));
+        foreach (var account in accounts)
+            banksSheet.AddRow(account.Name, account.Balance);
+        banksSheet.AddRow("Total", Snapshot.TotalCash);
+
+        var invoicesSheet = workbook.AddSheet("Outstanding sales invoices",
+            new ExcelColumn("Client"),
+            new ExcelColumn("Number"),
+            new ExcelColumn("Reference"),
+            new ExcelColumn("Issued", ExcelFormat.Date),
+            new ExcelColumn("Due", ExcelFormat.Date),
+            new ExcelColumn("Overdue"),
+            new ExcelColumn("Total", ExcelFormat.Currency),
+            new ExcelColumn("Amount due", ExcelFormat.Currency));
+        foreach (var invoice in outstanding)
+        {
+            invoicesSheet.AddRow(
+                invoice.ContactName,
+                invoice.Number,
+                invoice.Reference,
+                invoice.Date,
+                invoice.DueDate,
+                IsOverdue(invoice) ? "Overdue" : "",
+                invoice.Total,
+                invoice.AmountDue);
+        }
+
+        return workbook;
+    }
+
+    public void Dispose() => Cash.OnChange -= StateHasChanged;
+}
