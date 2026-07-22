@@ -462,6 +462,17 @@ else
                                 }
                             </div>
                         }
+                        @if (linkNote is not null)
+                        {
+                            <div class="panel p-5 mb-4 border-amber-500/40 space-y-2">
+                                <div class="flex items-center justify-between gap-2">
+                                    <p class="text-xs uppercase tracking-wider text-amber-600 font-semibold">Partially linked</p>
+                                    <button type="button" class="text-content-subtle hover:text-content text-xs" title="Dismiss"
+                                            @onclick="() => linkNote = null">✕</button>
+                                </div>
+                                <p class="text-sm text-content">@linkNote</p>
+                            </div>
+                        }
                         <div class="panel p-8 text-center text-sm text-content-subtle">
                             Select an email to triage it.
                         </div>
@@ -628,7 +639,7 @@ else
                                                         <div class="space-y-1">
                                                             @foreach (var record in candidates)
                                                             {
-                                                                <button type="button" @onclick="() => linkRecordId = record.RecordId" class="@RecordPickClass(record, true)">
+                                                                <button type="button" @onclick="() => ToggleLinkRecord(record.RecordId)" class="@RecordPickClass(record, true)">
                                                                     <span class="flex items-center gap-2">
                                                                         <span class="font-mono text-xs text-content-muted">@record.Reference</span>
                                                                         @if (!string.IsNullOrWhiteSpace(record.StatusLabel))
@@ -654,7 +665,7 @@ else
                                                         <div class="space-y-1 max-h-56 overflow-y-auto">
                                                             @foreach (var record in others)
                                                             {
-                                                                <button type="button" @onclick="() => linkRecordId = record.RecordId" class="@RecordPickClass(record, false)">
+                                                                <button type="button" @onclick="() => ToggleLinkRecord(record.RecordId)" class="@RecordPickClass(record, false)">
                                                                     <span class="flex items-center gap-2">
                                                                         <span class="font-mono text-xs text-content-muted">@record.Reference</span>
                                                                         @if (!string.IsNullOrWhiteSpace(record.StatusLabel))
@@ -680,8 +691,11 @@ else
                                             }
                                         }
 
-                                        <button type="button" class="btn-primary" disabled="@(busy || string.IsNullOrWhiteSpace(linkRecordId))" @onclick="DoLink">
-                                            Link email to selected record
+                                        <p class="text-xs text-content-subtle">
+                                            Pick one or more records — the email is tagged to each of them, so it feeds every record it belongs to. Click a record again to unpick it.
+                                        </p>
+                                        <button type="button" class="btn-primary" disabled="@(busy || linkRecordIds.Count == 0)" @onclick="DoLink">
+                                            @(linkRecordIds.Count <= 1 ? "Link email to selected record" : $"Link email to {linkRecordIds.Count} selected records")
                                         </button>
                                     </div>
                                 }
@@ -1378,10 +1392,20 @@ else
     private TriageMode mode = TriageMode.None;
 
     // Link-to-existing state. The record type is chosen first (Request, Bid Package Invite, …), then a
-    // project, then a record of that type — linking is record-agnostic (tags "JPMS/<ref>" either way).
+    // project, then records of that type — linking is record-agnostic (tags "JPMS/<ref>" either way).
+    // The QUEUE panel is a multi-pick (linkRecordIds): one email can feed several records at once
+    // (one tag per record), so the triager toggles every record the email belongs to and links them
+    // in one go. The picks live in one list (same project + type — they're facets of the same
+    // problem), so changing project or type clears them. The TAGGED tab's "add another tag" dropdown
+    // stays single-pick (linkRecordId): tags are added one at a time there.
     private RecordType linkRecordType = RecordType.Request;
     private string linkProjectId = "";
     private string linkRecordId = "";
+    private readonly HashSet<string> linkRecordIds = new();
+    // Set when a multi-pick link partially failed: the email left the queue (first tag stuck) but
+    // some picks didn't take, so the notice — shown in place of the cleared selection — says which
+    // and points at the Tagged view to finish. Dismissable; cleared on the next selection/link.
+    private string? linkNote;
     private IReadOnlyList<LinkableRecord> linkRecords = Array.Empty<LinkableRecord>();
     private bool linkRecordsLoading;
 
@@ -1725,6 +1749,7 @@ else
         recommendLoading = false;
         ResetLinkState();
         replyOutcome = null;
+        linkNote = null;
         replyProjectId = "";
         replyBody = "";
         createRecordType = RecordType.Request;
@@ -1969,6 +1994,7 @@ else
     {
         if (Enum.TryParse<RecordType>(e.Value?.ToString(), out var type)) linkRecordType = type;
         linkRecordId = "";
+        linkRecordIds.Clear();
         await LoadLinkRecordsAsync();
     }
 
@@ -1976,6 +2002,7 @@ else
     {
         linkProjectId = e.Value?.ToString() ?? "";
         linkRecordId = "";
+        linkRecordIds.Clear();
         await LoadLinkRecordsAsync();
     }
 
@@ -1992,6 +2019,7 @@ else
         {
             linkRecordsLoading = true;
             linkRecordId = "";
+            linkRecordIds.Clear();
             StateHasChanged(); // show the loading state while the fetch is in flight
             linkRecords = await Intake.ListLinkableRecordsAsync(linkProjectId, linkRecordType);
         }
@@ -2012,6 +2040,7 @@ else
         linkRecordType = RecordType.Request;
         linkProjectId = "";
         linkRecordId = "";
+        linkRecordIds.Clear();
         linkRecords = Array.Empty<LinkableRecord>();
     }
 
@@ -2053,16 +2082,87 @@ else
 
     private void OnCreateDescriptionInput(ChangeEventArgs e) => createDescription = e.Value?.ToString() ?? "";
 
-    private async Task DoLink()
+    // Toggle a record in the queue panel's multi-pick — clicking a picked record unpicks it.
+    private void ToggleLinkRecord(string recordId)
     {
-        if (selected is null || busy || string.IsNullOrWhiteSpace(linkRecordId)) return;
-        var recordType = SelectedLinkRecordType();
-        await RunAction("Linking", async () => await Intake.LinkMessageToRecordAsync(selected.Id, selected.InternetMessageId, recordType, linkRecordId));
+        if (!linkRecordIds.Add(recordId)) linkRecordIds.Remove(recordId);
     }
 
-    // The type to link as is the picked RECORD's own type, not the dropdown's: the Scheduling picker
-    // lists the bucket alongside the programme's claims documents (NOD/EOT requests, LADs claims), and
-    // each of those must link through its owning provider so the tag stem resolves correctly.
+    // Link the email to EVERY picked record — one LinkMessageToRecord per pick, applied sequentially
+    // (each tags the whole conversation, verified server-side; the mailbox message never moves, so
+    // the same message id keeps working for the second and later tags). Not routed through RunAction
+    // because partial failure needs its own handling: once the first tag sticks the email has left
+    // the queue, so the queue must refresh regardless, and any picks that didn't take are reported
+    // via linkNote with a pointer to the Tagged view, where "add another tag" finishes the job.
+    private async Task DoLink()
+    {
+        if (selected is null || busy || linkRecordIds.Count == 0) return;
+        var picks = linkRecords.Where(r => linkRecordIds.Contains(r.RecordId)).ToList();
+        if (picks.Count == 0) return;
+
+        actionError = null;
+        linkNote = null;
+        busyLabel = "Linking";
+        busy = true;
+        var succeeded = new List<LinkableRecord>();
+        var failed = new List<LinkableRecord>();
+        string? firstFailure = null;
+        try
+        {
+            foreach (var record in picks)
+            {
+                try
+                {
+                    // The type to link as is the picked RECORD's own type, not the dropdown's: the
+                    // Scheduling picker lists the bucket alongside the programme's claims documents
+                    // (NOD/EOT requests, LADs claims), and each of those must link through its owning
+                    // provider so the tag stem resolves correctly.
+                    await Intake.LinkMessageToRecordAsync(selected.Id, selected.InternetMessageId, record.Type, record.RecordId);
+                    succeeded.Add(record);
+                }
+                catch (CommandFailedException ex)
+                {
+                    failed.Add(record);
+                    firstFailure ??= ex.Message;
+                }
+                catch
+                {
+                    failed.Add(record);
+                    firstFailure ??= "That action didn't complete. Please try again.";
+                }
+            }
+
+            if (succeeded.Count == 0)
+            {
+                // Nothing stuck — the email is still in the queue, so keep the selection and the
+                // picks and surface the first error in place, exactly like a single-link failure.
+                actionError = firstFailure;
+                return;
+            }
+
+            if (failed.Count > 0)
+            {
+                linkNote = $"The email was linked to {References(succeeded)}, but couldn't be linked to {References(failed)}. "
+                    + "It has left the queue — open it on the Tagged tab and use “add another tag” to finish.";
+            }
+
+            // At least one tag stuck, so the email (thread) has left the Inbox queue: refresh and
+            // clear the selection, mirroring RunAction's success path.
+            ResetQueuePaging();
+            await LoadAsync();
+            selected = null;
+            detail = null;
+            detailLoading = false;
+            mode = TriageMode.None;
+        }
+        finally { busy = false; }
+    }
+
+    private static string References(IReadOnlyList<LinkableRecord> records) =>
+        string.Join(", ", records.Select(r => r.Reference));
+
+    // The type to link as is the picked RECORD's own type, not the dropdown's (see the note inside
+    // DoLink). Used by the Tagged tab's single-pick "add another tag" control.
     private RecordType SelectedLinkRecordType() =>
         linkRecords.FirstOrDefault(r => r.RecordId == linkRecordId)?.Type ?? linkRecordType;
 
@@ -2497,7 +2597,7 @@ else
     private string RecordPickClass(LinkableRecord record, bool candidate)
     {
         var baseClass = "w-full text-left rounded-lg border px-3 py-2 flex flex-col gap-0.5 transition";
-        if (linkRecordId == record.RecordId) return $"{baseClass} border-accent bg-surface-raised";
+        if (linkRecordIds.Contains(record.RecordId)) return $"{baseClass} border-accent bg-surface-raised";
         return candidate
             ? $"{baseClass} border-amber-500/40 hover:border-amber-500"
             : $"{baseClass} border-line hover:border-line-strong";
