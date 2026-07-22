@@ -327,11 +327,11 @@ else
             <button type="button" class="@ViewTabClass(QueueView.Tagged)" @onclick="() => SwitchView(QueueView.Tagged)">Tagged</button>
             <div class="ml-auto mb-1.5 inline-flex rounded-lg border border-line-strong p-0.5 gap-0.5"
                  title="Show the oldest or the newest emails first — your choice is remembered">
-                <button type="button" @onclick="() => SetSortAsync(newest: false)"
+                <button type="button" disabled="@listLoading" @onclick="() => SetSortAsync(newest: false)"
                         class="rounded-md text-xs px-2.5 py-1.5 transition @(!newestFirst ? "bg-accent text-accent-ink font-medium" : "text-content-muted hover:bg-surface-raised")">
                     Oldest first
                 </button>
-                <button type="button" @onclick="() => SetSortAsync(newest: true)"
+                <button type="button" disabled="@listLoading" @onclick="() => SetSortAsync(newest: true)"
                         class="rounded-md text-xs px-2.5 py-1.5 transition @(newestFirst ? "bg-accent text-accent-ink font-medium" : "text-content-muted hover:bg-surface-raised")">
                     Newest first
                 </button>
@@ -1529,6 +1529,11 @@ else
     {
         loadError = null;
         listLoading = true;
+        // Paint the spinner before the fetch: Blazor only re-renders an event handler at its FIRST
+        // await, so when a caller awaited something else first (SetSortAsync persists the choice to
+        // localStorage before reloading), setting listLoading here would otherwise never render and
+        // the list sits still until the new page lands.
+        StateHasChanged();
         try
         {
             var result = await Intake.ListInboxLiveAsync(queueCursors[queueIndex], PageSize, newestFirst);
@@ -1556,6 +1561,7 @@ else
     {
         loadError = null;
         listLoading = true;
+        StateHasChanged(); // paint the spinner before the fetch — see LoadAsync
         try
         {
             var result = await Intake.ListDiscardedLiveAsync(discardedCursors[discardedIndex], PageSize, newestFirst);
@@ -1610,6 +1616,7 @@ else
     {
         loadError = null;
         listLoading = true;
+        StateHasChanged(); // paint the spinner before the fetch — see LoadAsync
         try
         {
             var filter = selectedTags.Count == 0 ? null : selectedTags.ToList();
