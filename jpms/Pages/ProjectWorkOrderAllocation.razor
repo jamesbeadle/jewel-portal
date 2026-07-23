@@ -371,12 +371,38 @@ else
                || line.CostCode.Contains(term, StringComparison.OrdinalIgnoreCase);
     }
 
-    private List<ProjectCostOfSalesLine> QueueLines => (queueFilter switch
+    // Supplier names that have at least one work order on this project, matched exactly
+    // (case-insensitive, trimmed). A line whose supplier is in here can actually be
+    // allocated to an order; anything else has no matching supplier to link against.
+    private HashSet<string> WorkOrderSupplierNames =>
+        summaries
+            .Where(summary => !string.IsNullOrWhiteSpace(summary.SubcontractorName))
+            .Select(summary => summary.SubcontractorName!.Trim())
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+    private List<ProjectCostOfSalesLine> QueueLines
     {
-        QueueFilter.Unlinked => AllLines.Where(line => line.UnlinkedRemainder != 0m),
-        QueueFilter.Linked => AllLines.Where(line => line.Links.Count > 0),
-        _ => AllLines.AsEnumerable()
-    }).Where(MatchesSearch).ToList();
+        get
+        {
+            var workOrderSuppliers = WorkOrderSupplierNames;
+            bool SupplierHasWorkOrder(ProjectCostOfSalesLine line) =>
+                !string.IsNullOrWhiteSpace(line.Supplier)
+                && workOrderSuppliers.Contains(line.Supplier.Trim());
+
+            return (queueFilter switch
+                {
+                    QueueFilter.Unlinked => AllLines.Where(line => line.UnlinkedRemainder != 0m),
+                    QueueFilter.Linked => AllLines.Where(line => line.Links.Count > 0),
+                    _ => AllLines.AsEnumerable()
+                })
+                .Where(MatchesSearch)
+                // Lines from suppliers that have a work order come first (the ones you can
+                // match); suppliers with no matching work order fall below (the ones to
+                // ignore). OrderBy is stable, so each group keeps its existing order.
+                .OrderBy(line => SupplierHasWorkOrder(line) ? 0 : 1)
+                .ToList();
+        }
+    }
 
     // The lines paying this order, each with its slice amount (a bill split across
     // several orders contributes only its slice here).

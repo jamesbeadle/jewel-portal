@@ -1,5 +1,6 @@
 @using Jewel.JPMS.Models
 @using Jewel.JPMS.Contracts.Commercial
+@using Jewel.JPMS.Commercial
 @inject IJSRuntime Js
 @implements IAsyncDisposable
 
@@ -747,9 +748,12 @@
     private IEnumerable<string> AllCodes =>
         byCode.Keys.Union(WorkOrderCommittedByCode.Keys, StringComparer.OrdinalIgnoreCase);
 
+    // Delegated to the shared calculator so the Cashflow tab shows the same number. The
+    // gross (packaged-scope-off) view keeps its per-row sum — no package rows in play then.
     private decimal TotalDrawdown =>
-        AllCodes.Where(entryCode => !IsCentreFinalised(entryCode)).Sum(RemainderFor)
-        + IncludedPackages.Where(package => !package.IsLocked).Sum(package => package.Drawdown);
+        hidePackagedScope
+            ? ProjectDrawdown.ForProject(SummaryRows, WorkOrderCommittedByCode, Packages)
+            : AllCodes.Where(entryCode => !IsCentreFinalised(entryCode)).Sum(RemainderFor);
     private decimal TotalProfitLoss =>
         AllCodes.Where(IsCentreFinalised).Sum(SalesRemainderFor)
         + IncludedPackages.Where(package => package.IsLocked).Sum(package => package.ProfitLoss);

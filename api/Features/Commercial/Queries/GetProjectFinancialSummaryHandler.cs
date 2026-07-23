@@ -62,15 +62,16 @@ public sealed class GetProjectFinancialSummaryHandler : IQueryHandler<GetProject
         // own project), so both populations sum into the same per-centre totals.
         // Lines marked covered-by-timesheets are settlement of approved labour, not fresh
         // cost — excluded here so labour never double-counts (Labour-Time-Tracking-Scope §6).
-        var coveredLineIds = (await context.XeroLineTimesheetCovers
-            .Select(cover => cover.XeroLedgerLineId)
-            .ToListAsync(cancellationToken)).ToHashSet();
+        // Excluded below with a correlated NOT EXISTS so the filter stays in SQL and scales
+        // with row count — rather than pulling every cover id (across all projects) into an
+        // ever-growing NOT IN (...) parameter list that eventually hits SQL's ~2100-param cap.
 
         var actuals = await context.XeroLedgerLines
             .Where(line => line.ProjectId == query.ProjectId
                            && line.AllocationStatus == (int)XeroAllocationStatus.Allocated
                            && line.CostCenterCode != null
-                           && !coveredLineIds.Contains(line.XeroLedgerLineId))
+                           && !context.XeroLineTimesheetCovers
+                               .Any(cover => cover.XeroLedgerLineId == line.XeroLedgerLineId))
             .GroupBy(line => line.CostCenterCode!)
             .Select(group => new
             {
@@ -86,7 +87,8 @@ public sealed class GetProjectFinancialSummaryHandler : IQueryHandler<GetProject
                 (split, line) => new { split.CostCenterCode, split.Net, split.ProjectId, line.AllocationStatus, line.Type, line.XeroLedgerLineId })
             .Where(joined => joined.ProjectId == query.ProjectId
                              && joined.AllocationStatus == (int)XeroAllocationStatus.Allocated
-                             && !coveredLineIds.Contains(joined.XeroLedgerLineId))
+                             && !context.XeroLineTimesheetCovers
+                                 .Any(cover => cover.XeroLedgerLineId == joined.XeroLedgerLineId))
             .GroupBy(joined => joined.CostCenterCode)
             .Select(group => new
             {
@@ -189,7 +191,8 @@ public sealed class GetProjectFinancialSummaryHandler : IQueryHandler<GetProject
             // would push a centre's netted figures below zero.
             .Where(joined => joined.InvoiceCode != null
                              && joined.AllocationStatus == (int)XeroAllocationStatus.Allocated
-                             && !coveredLineIds.Contains(joined.XeroLedgerLineId))
+                             && !context.XeroLineTimesheetCovers
+                                 .Any(cover => cover.XeroLedgerLineId == joined.XeroLedgerLineId))
             .ToListAsync(cancellationToken);
         foreach (var direct in packagedDirectCosts)
             Accumulate(packagedNonWoByCode, direct.InvoiceCode!, direct.Amount);

@@ -3,6 +3,7 @@
 @using Jewel.JPMS.Features.Commercial
 @using Jewel.JPMS.Features.Procurement
 @using Jewel.JPMS.Contracts.Commercial
+@using Jewel.JPMS.Commercial
 @inject AuthService Auth
 @inject SessionService Session
 @inject CostCentersReadModel CostCenters
@@ -203,13 +204,7 @@ else
     // Work Orders tab renders. Lines without a cost code can't land on a Financials row, so
     // they're excluded here (they surface on the Work Orders tab instead).
     private IReadOnlyDictionary<string, decimal> WoCommittedByCode =>
-        WorkOrders.Current(ProjectId)
-            .SelectMany(detail => detail.Lines)
-            .Where(line => !string.IsNullOrWhiteSpace(line.CostCode))
-            .GroupBy(line => line.CostCode, StringComparer.OrdinalIgnoreCase)
-            .ToDictionary(group => group.Key,
-                          group => group.Sum(line => line.LineTotal),
-                          StringComparer.OrdinalIgnoreCase);
+        ProjectDrawdown.CommittedByCostCode(WorkOrders.Current(ProjectId));
 
     private Task RetrySummaryAsync() => Summary.RefreshAsync(ProjectId, CancellationToken.None);
 

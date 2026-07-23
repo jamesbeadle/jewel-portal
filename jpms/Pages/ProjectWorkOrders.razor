@@ -95,6 +95,8 @@ else
                             <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 text-right whitespace-nowrap">Committed</th>
                             <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 text-right whitespace-nowrap">Paid</th>
                             <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 text-right whitespace-nowrap">Remaining</th>
+                            <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 text-right whitespace-nowrap"
+                                title="Committed value not yet invoiced (a whole-order figure spread across its cost-centre lines by value) — see the WO Allocation tab">Left to invoice</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-line">
@@ -125,6 +127,8 @@ else
                                 <td class="px-4 py-3 text-right">@Money(row.Committed)</td>
                                 <td class="px-4 py-3 text-right">@Money(row.Paid)</td>
                                 <td class="px-4 py-3 text-right @(row.Committed - row.Paid > 0 ? "text-content" : "text-content-subtle")">@Money(row.Committed - row.Paid)</td>
+                                <td class="px-4 py-3 text-right @(row.Committed - row.Invoiced < 0m ? "text-negative font-medium" : row.Committed - row.Invoiced > 0m ? "text-content" : "text-content-subtle")"
+                                    title="@($"{MoneyExact(row.Invoiced)} invoiced of {MoneyExact(row.Committed)} committed")">@Money(row.Committed - row.Invoiced)</td>
                             </tr>
                             @if (IsExpanded(row.Key))
                             {
@@ -209,6 +213,7 @@ else
                             <td class="px-4 py-3 text-right">@Money(LineCommitted)</td>
                             <td class="px-4 py-3 text-right">@Money(LinePaid)</td>
                             <td class="px-4 py-3 text-right">@Money(LineCommitted - LinePaid)</td>
+                            <td class="px-4 py-3 text-right">@Money(LineCommitted - LineInvoiced)</td>
                         </tr>
                     </tfoot>
                 </table>
@@ -290,7 +295,7 @@ else
 
     private const string UnassignedCode = "(unassigned)";
 
-    private sealed record GroupRow(string Key, string Code, string Name, bool InMaster, int OrderCount, decimal Committed, decimal Paid);
+    private sealed record GroupRow(string Key, string Code, string Name, bool InMaster, int OrderCount, decimal Committed, decimal Paid, decimal Invoiced);
     private sealed record OrderLine(ProjectWorkOrderDetail Detail, WorkOrderLine Line);
 
     private IReadOnlyList<ProjectWorkOrderDetail> Orders => WorkOrders.Current(ProjectId);
@@ -302,7 +307,7 @@ else
     // accountant records costs). The choice is remembered per user, per browser.
     private bool groupBySupplier;
 
-    private int GroupColspan => groupBySupplier ? 5 : 6;
+    private int GroupColspan => groupBySupplier ? 6 : 7;
 
     private async Task SetGroupingAsync(bool bySupplier)
     {
@@ -362,6 +367,7 @@ else
     // search reads as that supplier's committed / paid position.
     private decimal LineCommitted => VisibleLines.Sum(entry => entry.Line.LineTotal);
     private decimal LinePaid => VisibleLines.Sum(entry => entry.Line.PaidToDate);
+    private decimal LineInvoiced => VisibleLines.Sum(entry => InvoicedShare(entry));
 
     private List<GroupRow> Rows => RowsFrom(VisibleLines);
 
@@ -388,7 +394,8 @@ else
                 namesByCode.ContainsKey(group.Key),
                 group.Select(entry => entry.Detail.Order.WorkOrderId).Distinct().Count(),
                 group.Sum(entry => entry.Line.LineTotal),
-                group.Sum(entry => entry.Line.PaidToDate)))
+                group.Sum(entry => entry.Line.PaidToDate),
+                group.Sum(entry => InvoicedShare(entry))))
             .OrderBy(row => row.Code == UnassignedCode ? 2 : row.InMaster ? 0 : 1)
             .ThenBy(row => masterOrder.TryGetValue(row.Code, out var index) ? index : int.MaxValue)
             .ThenBy(row => row.Code, StringComparer.OrdinalIgnoreCase)
@@ -407,12 +414,30 @@ else
                 true,
                 group.Select(entry => entry.Detail.Order.WorkOrderId).Distinct().Count(),
                 group.Sum(entry => entry.Line.LineTotal),
-                group.Sum(entry => entry.Line.PaidToDate)))
+                group.Sum(entry => entry.Line.PaidToDate),
+                group.Sum(entry => InvoicedShare(entry))))
             .OrderBy(row => row.Name, StringComparer.OrdinalIgnoreCase)
             .ToList();
 
     private static string CodeOf(OrderLine entry) =>
         string.IsNullOrWhiteSpace(entry.Line.CostCode) ? UnassignedCode : entry.Line.CostCode;
+
+    // "Left to invoice" is a whole-order figure (its value less what's been invoiced), but
+    // this table rolls up by cost centre / supplier and one order can span several centres.
+    // So we spread each order's invoiced-to-date across its own lines in proportion to line
+    // value, giving each line its share. Summed per group this never double-counts, and
+    // summed over a whole order it collapses back to the order's invoiced total — so the
+    // footer's committed-less-invoiced matches the "left to invoice" figure in the summary
+    // line above and on the WO Allocation tab.
+    private decimal InvoicedShare(OrderLine entry)
+    {
+        if (!summariesByOrder.TryGetValue(entry.Detail.Order.WorkOrderId, out var summary))
+            return 0m;
+        var orderLineTotal = entry.Detail.Lines.Sum(line => line.LineTotal);
+        return orderLineTotal == 0m
+            ? 0m
+            : summary.InvoicedToDate * (entry.Line.LineTotal / orderLineTotal);
+    }
 
     private string CostCentreNameFor(string code) =>
         CostCenters.Current.FirstOrDefault(centre =>
@@ -496,6 +521,7 @@ else
         var exportOrderCount = ignoreSearch ? Orders.Count : VisibleOrderCount;
         var exportCommitted = exportLines.Sum(entry => entry.Line.LineTotal);
         var exportPaid = exportLines.Sum(entry => entry.Line.PaidToDate);
+        var exportInvoiced = exportLines.Sum(entry => InvoicedShare(entry));
         var filteredTotal = !ignoreSearch && Searching;
 
         var rows = RowsFrom(exportLines);
@@ -508,7 +534,8 @@ else
                 new ExcelColumn("Orders", ExcelFormat.Integer),
                 new ExcelColumn("Committed", ExcelFormat.Currency),
                 new ExcelColumn("Paid", ExcelFormat.Currency),
-                new ExcelColumn("Remaining", ExcelFormat.Currency));
+                new ExcelColumn("Remaining", ExcelFormat.Currency),
+                new ExcelColumn("Left to invoice", ExcelFormat.Currency));
             foreach (var row in rows)
             {
                 suppliersSheet.AddRow(
@@ -516,14 +543,16 @@ else
                     row.OrderCount,
                     row.Committed,
                     row.Paid,
-                    row.Committed - row.Paid);
+                    row.Committed - row.Paid,
+                    row.Committed - row.Invoiced);
             }
             suppliersSheet.AddRow(
                 filteredTotal ? "Total (filtered)" : "Total",
                 exportOrderCount,
                 exportCommitted,
                 exportPaid,
-                exportCommitted - exportPaid);
+                exportCommitted - exportPaid,
+                exportCommitted - exportInvoiced);
         }
         else
         {
@@ -533,7 +562,8 @@ else
                 new ExcelColumn("Orders", ExcelFormat.Integer),
                 new ExcelColumn("Committed", ExcelFormat.Currency),
                 new ExcelColumn("Paid", ExcelFormat.Currency),
-                new ExcelColumn("Remaining", ExcelFormat.Currency));
+                new ExcelColumn("Remaining", ExcelFormat.Currency),
+                new ExcelColumn("Left to invoice", ExcelFormat.Currency));
             foreach (var row in rows)
             {
                 centresSheet.AddRow(
@@ -542,7 +572,8 @@ else
                     row.OrderCount,
                     row.Committed,
                     row.Paid,
-                    row.Committed - row.Paid);
+                    row.Committed - row.Paid,
+                    row.Committed - row.Invoiced);
             }
             centresSheet.AddRow(
                 filteredTotal ? "Total (filtered)" : "Total",
@@ -550,7 +581,8 @@ else
                 exportOrderCount,
                 exportCommitted,
                 exportPaid,
-                exportCommitted - exportPaid);
+                exportCommitted - exportPaid,
+                exportCommitted - exportInvoiced);
         }
 
         var ordersSheet = workbook.AddSheet("Work orders",

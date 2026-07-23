@@ -55,7 +55,14 @@ var host = new HostBuilder()
             ?? throw new InvalidOperationException("SqlConnectionString application setting missing.");
 
         services.AddDbContext<JpmsContext>(options =>
-            options.UseSqlServer(connectionString, sqlServer => sqlServer.EnableRetryOnFailure()));
+            options.UseSqlServer(connectionString, sqlServer =>
+            {
+                sqlServer.EnableRetryOnFailure();
+                // Cap any single command under the Static Web Apps managed-functions gateway
+                // timeout (~45s) so a slow query fails fast with a catchable error instead of
+                // hanging the whole request toward a platform 504.
+                sqlServer.CommandTimeout(25);
+            }));
 
         services.AddScoped<SessionManager>();
         services.AddScoped<SignedInUserResolver>();

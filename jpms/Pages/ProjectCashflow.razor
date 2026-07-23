@@ -121,7 +121,7 @@ else
             </div>
             <div class="rounded-xl border border-line bg-surface px-4 py-3">
                 <p class="text-[11px] uppercase tracking-wider text-content-subtle font-semibold"
-                   title="Target cost less work orders and non-work-order cost of sales — the funds still available; negative means overspent. Matches the Financials tab's drawdown, project-wide">Drawdown available</p>
+                   title="The funds still available across the project — the Financials tab's drawdown to the penny: each cost centre's unspent target cost, with finalised lines realised to profit / loss and reconciliation packages accounted for. Negative means overspent.">Drawdown available</p>
                 <p class="text-lg font-semibold @(Drawdown < 0m ? "text-negative" : "text-content")">@Money(Drawdown)</p>
             </div>
         </div>
@@ -174,8 +174,10 @@ else
             purchase line's payment status, so it moves when bills are paid in Xero and re-synced.
             Due to be paid out is the sum of those unpaid bills and the work-order value suppliers
             haven't billed yet — spend on top of work orders (non-WO cost of sales) appears here
-            only once billed. Drawdown matches the Financials tab: target cost less work orders and
-            non-WO cost of sales. Retention shows only once the project's retention terms are
+            only once billed. Drawdown is the Financials tab's figure, reused here so the two always
+            agree: each cost centre's unspent target cost, with finalised lines realised to
+            profit / loss and reconciliation packages accounted for. Retention shows only once
+            the project's retention terms are
             recorded on the Setup tab: held to date is the retention % of works complete, the two
             releases are forecast against the revised contract sum with due dates anchored to
             practical completion, and released counts confirmed releases only. Valuation invoices
@@ -193,11 +195,10 @@ else
     private ProjectValuationInvoiceSummary? invoiceSummary;
     private IReadOnlyList<WorkOrderInvoiceSummary> woSummaries = Array.Empty<WorkOrderInvoiceSummary>();
     private IReadOnlyList<ProjectCostOfSalesLine> costLines = Array.Empty<ProjectCostOfSalesLine>();
+    private IReadOnlyList<PackageReconciliationRow> packageRows = Array.Empty<PackageReconciliationRow>();
 
     // ── Funds in — from valuation invoices and the valuation's counting lines ──
     private decimal ContractSales => Summary.Current(ProjectId).Sum(row => row.BudgetedSales);
-    private decimal TargetCost => Summary.Current(ProjectId).Sum(row => row.BudgetedCost);
-    private decimal NonWoCostOfSales => Summary.Current(ProjectId).Sum(row => row.NonWorkOrderActualCost);
 
     private decimal LeftToComeIn => ContractSales - (invoiceSummary?.TotalPaid ?? 0m);
     private decimal NotYetInvoicedIncome => ContractSales - (invoiceSummary?.TotalInvoiced ?? 0m);
@@ -240,7 +241,14 @@ else
     private decimal BillsPaid => costLines.Where(line => line.IsPaid).Sum(line => line.Net);
     private decimal BillsUnpaid => costLines.Where(line => !line.IsPaid).Sum(line => line.Net);
 
-    private decimal Drawdown => TargetCost - WoCommitted - NonWoCostOfSales;
+    // The Financials tab's project drawdown, to the penny — computed by the shared
+    // calculator from the same inputs (finalised centres realised to profit / loss and
+    // reconciliation packages accounted for there, not a flat target − orders − spend).
+    private IReadOnlyDictionary<string, decimal> WoCommittedByCode =>
+        ProjectDrawdown.CommittedByCostCode(WorkOrders.Current(ProjectId));
+
+    private decimal Drawdown =>
+        ProjectDrawdown.ForProject(Summary.Current(ProjectId), WoCommittedByCode, packageRows);
 
     // ── Position ──
     private decimal DueOut => BillsUnpaid + WoLeftToInvoice;
@@ -272,9 +280,11 @@ else
         var invoiceSummaryTask = Queries.AskAsync(new GetProjectValuationInvoiceSummary(ProjectId), CancellationToken.None);
         var woSummariesTask = Queries.AskAsync(new ListWorkOrderInvoiceSummaries(ProjectId), CancellationToken.None);
         var costLinesTask = Queries.AskAsync(new ListProjectCostOfSalesLines(ProjectId), CancellationToken.None);
+        var packageRowsTask = Queries.AskAsync(new ListPackageReconciliation(ProjectId), CancellationToken.None);
         invoiceSummary = await invoiceSummaryTask;
         woSummaries = await woSummariesTask;
         costLines = await costLinesTask;
+        packageRows = await packageRowsTask;
     }
 
     public void Dispose()
