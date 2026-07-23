@@ -261,7 +261,6 @@ else
                                   SelectedIds="selectedIds"
                                   OnToggleSelect="ToggleSelect"
                                   OnToggleSelectAll="ToggleSelectAll"
-                                  LinkedVoqs="LinkedVoqsByRequestId"
                                   CanChangeStatus="CanChangeStatus"
                                   OnStatusChange="ChangeRequestStatus"
                                   StatusBusyRequestId="@statusBusyRequestId" />
@@ -908,25 +907,6 @@ else
     // picker and the RFI page's Link-variation picker) use, so the banner never counts a record
     // neither of them can fix (a dangling RequestId whose request was deleted).
     private List<VariationRow> UnlinkedRows => Rows.Where(row => string.IsNullOrWhiteSpace(row.Voq.RequestId)).ToList();
-
-    // RFI rows' Variation badge clicks through to their VOQ/VO — the same trace, walked downwards.
-    // A cancelled VO doesn't carry the badge's ref (or the ?focus=vo landing): the record falls
-    // back to presenting as its VOQ, matching the detail page's badge.
-    private IReadOnlyDictionary<string, RequestTable.LinkedVoq> LinkedVoqsByRequestId =>
-        Rows.Where(row => !string.IsNullOrWhiteSpace(row.Voq.RequestId))
-            .GroupBy(row => row.Voq.RequestId, StringComparer.OrdinalIgnoreCase)
-            .ToDictionary(
-                group => group.Key,
-                group =>
-                {
-                    var row = group.First();
-                    var hasLiveVo = row.Order is not null && !row.IsCancelled;
-                    return new RequestTable.LinkedVoq(
-                        row.Voq.VariationOrderQuoteId,
-                        hasLiveVo ? row.Reference : row.Voq.Reference,
-                        hasLiveVo);
-                },
-                StringComparer.OrdinalIgnoreCase);
 
     // VOQ → request linking now lives on the VOQ page's "Originating request" panel — the
     // register only signposts it (the quiet "No request" badge links through), keeping the
