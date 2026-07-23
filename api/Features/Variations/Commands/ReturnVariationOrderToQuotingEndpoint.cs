@@ -8,22 +8,20 @@ using Microsoft.Azure.Functions.Worker;
 
 namespace Jewel.JPMS.Api.Features.Variations.Commands;
 
-/// <summary>
-/// POST /api/voqs/{voqId}/status — move a VOQ between the side-effect-free stages. Body: { status }.
-/// Approval/un-approval are refused here (they carry commercial writes and have their own routes).
-/// </summary>
-public sealed class SetVoqStatusEndpoint
+/// <summary>POST /api/variation-orders/{voId}/return-to-quoting — un-approve back to Quoting
+/// (repairs records approved in error).</summary>
+public sealed class ReturnVariationOrderToQuotingEndpoint
 {
     private readonly SignedInUserResolver users;
-    private readonly SetVoqStatusAuthorisation authorisation;
-    private readonly SetVoqStatusValidation validation;
-    private readonly ICommandHandler<SetVoqStatus, VariationOrderQuote> handler;
+    private readonly ReturnVariationOrderToQuotingAuthorisation authorisation;
+    private readonly ReturnVariationOrderToQuotingValidation validation;
+    private readonly ICommandHandler<ReturnVariationOrderToQuoting, VariationOrder> handler;
 
-    public SetVoqStatusEndpoint(
+    public ReturnVariationOrderToQuotingEndpoint(
         SignedInUserResolver users,
-        SetVoqStatusAuthorisation authorisation,
-        SetVoqStatusValidation validation,
-        ICommandHandler<SetVoqStatus, VariationOrderQuote> handler)
+        ReturnVariationOrderToQuotingAuthorisation authorisation,
+        ReturnVariationOrderToQuotingValidation validation,
+        ICommandHandler<ReturnVariationOrderToQuoting, VariationOrder> handler)
     {
         this.users = users;
         this.authorisation = authorisation;
@@ -31,20 +29,17 @@ public sealed class SetVoqStatusEndpoint
         this.handler = handler;
     }
 
-    [Function(nameof(SetVoqStatus))]
+    [Function(nameof(ReturnVariationOrderToQuoting))]
     public async Task<IActionResult> Run(
-        [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "voqs/{voqId}/status")] HttpRequest request,
-        string voqId)
+        [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "variation-orders/{voId}/return-to-quoting")] HttpRequest request,
+        string voId)
     {
         var cancellationToken = request.HttpContext.RequestAborted;
 
         var signedInUser = await users.ResolveAsync(request, cancellationToken);
         if (signedInUser is null) return new UnauthorizedResult();
 
-        var body = await request.ReadFromJsonAsync<SetVoqStatus>();
-        if (body is null) return new BadRequestResult();
-
-        var command = body with { VariationOrderQuoteId = voqId };
+        var command = new ReturnVariationOrderToQuoting(voId);
 
         if (!authorisation.Allows(signedInUser, command)) return new StatusCodeResult(403);
 

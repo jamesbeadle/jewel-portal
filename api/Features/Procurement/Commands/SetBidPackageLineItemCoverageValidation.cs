@@ -15,14 +15,14 @@ public sealed class SetBidPackageLineItemCoverageValidation
         {
             case BidPackageLineCoverage.ContractLine:
                 if (string.IsNullOrWhiteSpace(command.BoqLineItemId)) errors.Add("BoqLineItemId is required for contract-line coverage.");
-                if (!string.IsNullOrWhiteSpace(command.VariationOrderQuoteId)) errors.Add("VariationOrderQuoteId must be empty for contract-line coverage.");
+                if (!string.IsNullOrWhiteSpace(command.VariationOrderId)) errors.Add("VariationOrderId must be empty for contract-line coverage.");
                 break;
             case BidPackageLineCoverage.Variation:
-                if (string.IsNullOrWhiteSpace(command.VariationOrderQuoteId)) errors.Add("VariationOrderQuoteId is required for variation coverage.");
+                if (string.IsNullOrWhiteSpace(command.VariationOrderId)) errors.Add("VariationOrderId is required for variation coverage.");
                 if (!string.IsNullOrWhiteSpace(command.BoqLineItemId)) errors.Add("BoqLineItemId must be empty for variation coverage.");
                 break;
             case BidPackageLineCoverage.Unassigned:
-                if (!string.IsNullOrWhiteSpace(command.BoqLineItemId) || !string.IsNullOrWhiteSpace(command.VariationOrderQuoteId))
+                if (!string.IsNullOrWhiteSpace(command.BoqLineItemId) || !string.IsNullOrWhiteSpace(command.VariationOrderId))
                     errors.Add("Clearing coverage cannot supply a BoQ line or variation id.");
                 break;
             default:

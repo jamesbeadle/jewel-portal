@@ -6,16 +6,16 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Jewel.JPMS.Api.Features.Variations.Queries;
 
-public sealed class GetVoqByRequestHandler : IQueryHandler<GetVoqByRequest, VariationOrderQuote?>
+public sealed class GetVoqByRequestHandler : IQueryHandler<GetVoqByRequest, VariationOrder?>
 {
     private readonly JpmsContext context;
     public GetVoqByRequestHandler(JpmsContext context) { this.context = context; }
 
-    public async Task<VariationOrderQuote?> HandleAsync(GetVoqByRequest query, CancellationToken cancellationToken)
+    public async Task<VariationOrder?> HandleAsync(GetVoqByRequest query, CancellationToken cancellationToken)
     {
-        var entity = await context.VariationOrderQuotes
-            .Where(voq => voq.RequestId == query.RequestId)
-            .OrderByDescending(voq => voq.CreatedAt)
+        var entity = await context.VariationOrders
+            .Where(vo => vo.RequestId == query.RequestId)
+            .OrderByDescending(vo => vo.CreatedAt)
             .FirstOrDefaultAsync(cancellationToken);
         return entity?.ToModel();
     }

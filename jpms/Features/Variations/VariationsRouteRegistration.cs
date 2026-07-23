@@ -4,55 +4,46 @@ using Jewel.JPMS.Models;
 
 namespace Jewel.JPMS.Features.Variations;
 
+// Routes for the unified Variation Order. Quoting-stage endpoints keep their historic /voqs/…
+// paths (the record's quoting identity); lifecycle endpoints sit under /variation-orders/…. Both
+// address the same record by its id — the path is just a stable string the API matches.
 public static class VariationsRouteRegistration
 {
     public static void RegisterVariationsRoutes(QueryRouteTable queries, CommandRouteTable commands)
     {
-        queries.Register<GetVoqById, VariationOrderQuote?>(
-            new QueryRoute("/api/voqs/{voqId}",
-                query => $"/api/voqs/{((GetVoqById)query).VariationOrderQuoteId}"));
-
-        queries.Register<GetVoqByRequest, VariationOrderQuote?>(
+        queries.Register<GetVoqByRequest, VariationOrder?>(
             new QueryRoute("/api/requests/{requestId}/voq",
                 query => $"/api/requests/{((GetVoqByRequest)query).RequestId}/voq"));
 
-        queries.Register<ListVoqsForProject, IReadOnlyList<VariationOrderQuote>>(
-            new QueryRoute("/api/projects/{projectId}/voqs",
-                query => $"/api/projects/{((ListVoqsForProject)query).ProjectId}/voqs"));
-
         queries.Register<ListBidPackagesForVoq, IReadOnlyList<BidPackage>>(
             new QueryRoute("/api/voqs/{voqId}/bid-packages",
-                query => $"/api/voqs/{((ListBidPackagesForVoq)query).VariationOrderQuoteId}/bid-packages"));
+                query => $"/api/voqs/{((ListBidPackagesForVoq)query).VariationOrderId}/bid-packages"));
 
         commands.Register<PrepareVoqDraft, VoqDraftProposal>(
             new CommandRoute("POST", "/api/requests/{requestId}/voq/draft",
                 command => $"/api/requests/{((PrepareVoqDraft)command).RequestId}/voq/draft"));
 
-        commands.Register<CreateVoqFromRfq, VariationOrderQuote>(
+        commands.Register<CreateVoqFromRfq, VariationOrder>(
             new CommandRoute("POST", "/api/requests/{requestId}/voq",
                 command => $"/api/requests/{((CreateVoqFromRfq)command).RequestId}/voq"));
 
         commands.Register<AddBidPackageToVoq, BidPackage>(
             new CommandRoute("POST", "/api/voqs/{voqId}/bid-packages",
-                command => $"/api/voqs/{((AddBidPackageToVoq)command).VariationOrderQuoteId}/bid-packages"));
+                command => $"/api/voqs/{((AddBidPackageToVoq)command).VariationOrderId}/bid-packages"));
 
-        commands.Register<SelectVoqTender, VariationOrderQuote>(
+        commands.Register<SelectVoqTender, VariationOrder>(
             new CommandRoute("POST", "/api/voqs/{voqId}/select-tender",
-                command => $"/api/voqs/{((SelectVoqTender)command).VariationOrderQuoteId}/select-tender"));
+                command => $"/api/voqs/{((SelectVoqTender)command).VariationOrderId}/select-tender"));
 
-        // Repairs a VOQ's link to its request (RFI) — for pre-link (seeded) variation records.
-        commands.Register<LinkVoqToRequest, VariationOrderQuote>(
+        // Repairs a variation order's link to its request (RFI) — for pre-link (seeded) records.
+        commands.Register<LinkVoqToRequest, VariationOrder>(
             new CommandRoute("POST", "/api/voqs/{voqId}/link-request",
-                command => $"/api/voqs/{((LinkVoqToRequest)command).VariationOrderQuoteId}/link-request"));
+                command => $"/api/voqs/{((LinkVoqToRequest)command).VariationOrderId}/link-request"));
 
-        // Variation Orders (Phase 3).
+        // Variation Orders — the unified record, addressed by id.
         queries.Register<GetVariationOrderById, VariationOrder?>(
             new QueryRoute("/api/variation-orders/{voId}",
                 query => $"/api/variation-orders/{((GetVariationOrderById)query).VariationOrderId}"));
-
-        queries.Register<GetVariationOrderByVoq, VariationOrder?>(
-            new QueryRoute("/api/voqs/{voqId}/variation-order",
-                query => $"/api/voqs/{((GetVariationOrderByVoq)query).VariationOrderQuoteId}/variation-order"));
 
         queries.Register<ListVariationOrdersForProject, IReadOnlyList<VariationOrder>>(
             new QueryRoute("/api/projects/{projectId}/variation-orders",
@@ -63,7 +54,7 @@ public static class VariationsRouteRegistration
             new QueryRoute("/api/projects/{projectId}/variation-requests",
                 query => $"/api/projects/{((ListVariationRequestsForProject)query).ProjectId}/variation-requests"));
 
-        commands.Register<AcceptVariationRequest, VariationOrderQuote>(
+        commands.Register<AcceptVariationRequest, VariationOrder>(
             new CommandRoute("POST", "/api/variation-requests/{variationRequestId}/accept",
                 command => $"/api/variation-requests/{((AcceptVariationRequest)command).VariationRequestId}/accept"));
 
@@ -71,36 +62,26 @@ public static class VariationsRouteRegistration
             new CommandRoute("POST", "/api/variation-requests/{variationRequestId}/reject",
                 command => $"/api/variation-requests/{((RejectVariationRequest)command).VariationRequestId}/reject"));
 
-        commands.Register<ApproveVariationOrderQuote, VariationOrder>(
-            new CommandRoute("POST", "/api/voqs/{voqId}/approve",
-                command => $"/api/voqs/{((ApproveVariationOrderQuote)command).VariationOrderQuoteId}/approve"));
+        commands.Register<ApproveVariationOrder, VariationOrder>(
+            new CommandRoute("POST", "/api/variation-orders/{voId}/approve",
+                command => $"/api/variation-orders/{((ApproveVariationOrder)command).VariationOrderId}/approve"));
 
-        // Un-approves a VOQ back to Tendering — repairs seeded records approved in error.
-        commands.Register<ReturnVoqToTendering, VariationOrderQuote>(
-            new CommandRoute("POST", "/api/voqs/{voqId}/return-to-tendering",
-                command => $"/api/voqs/{((ReturnVoqToTendering)command).VariationOrderQuoteId}/return-to-tendering"));
+        // Un-approves a variation order back to Quoting — repairs records approved in error.
+        commands.Register<ReturnVariationOrderToQuoting, VariationOrder>(
+            new CommandRoute("POST", "/api/variation-orders/{voId}/return-to-quoting",
+                command => $"/api/variation-orders/{((ReturnVariationOrderToQuoting)command).VariationOrderId}/return-to-quoting"));
 
-        commands.Register<IssueVariationOrder, VariationOrder>(
-            new CommandRoute("POST", "/api/variation-orders/{voId}/issue",
-                command => $"/api/variation-orders/{((IssueVariationOrder)command).VariationOrderId}/issue"));
-
-        commands.Register<CancelVariationOrder, VariationOrder>(
-            new CommandRoute("POST", "/api/variation-orders/{voId}/cancel",
-                command => $"/api/variation-orders/{((CancelVariationOrder)command).VariationOrderId}/cancel"));
+        commands.Register<RejectVariationOrder, VariationOrder>(
+            new CommandRoute("POST", "/api/variation-orders/{voId}/reject",
+                command => $"/api/variation-orders/{((RejectVariationOrder)command).VariationOrderId}/reject"));
 
         commands.Register<ReviseVariationOrderValue, VariationOrder>(
             new CommandRoute("POST", "/api/variation-orders/{voId}/revise-value",
                 command => $"/api/variation-orders/{((ReviseVariationOrderValue)command).VariationOrderId}/revise-value"));
 
-        // Direct moves between the side-effect-free VOQ stages (the status pill's dropdown).
-        // Approval / un-approval keep their own routes above — they carry commercial writes.
-        commands.Register<SetVoqStatus, VariationOrderQuote>(
-            new CommandRoute("POST", "/api/voqs/{voqId}/status",
-                command => $"/api/voqs/{((SetVoqStatus)command).VariationOrderQuoteId}/status"));
-
-        // Un-issues a VO (Issued → Approved) — a record correction, no commercial writes.
-        commands.Register<RevertVariationOrderToApproved, VariationOrder>(
-            new CommandRoute("POST", "/api/variation-orders/{voId}/revert-to-approved",
-                command => $"/api/variation-orders/{((RevertVariationOrderToApproved)command).VariationOrderId}/revert-to-approved"));
+        // Direct moves between the side-effect-free stages (Quoting, Issued) — the status pill.
+        commands.Register<SetVariationOrderStatus, VariationOrder>(
+            new CommandRoute("POST", "/api/variation-orders/{voId}/status",
+                command => $"/api/variation-orders/{((SetVariationOrderStatus)command).VariationOrderId}/status"));
     }
 }

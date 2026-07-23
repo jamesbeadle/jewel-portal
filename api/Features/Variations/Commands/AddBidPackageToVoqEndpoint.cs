@@ -44,7 +44,7 @@ public sealed class AddBidPackageToVoqEndpoint
         var body = await request.ReadFromJsonAsync<AddBidPackageToVoq>();
         if (body is null) return new BadRequestResult();
 
-        var command = body with { VariationOrderQuoteId = voqId, OwnerEmail = signedInUser.Email };
+        var command = body with { VariationOrderId = voqId, OwnerEmail = signedInUser.Email };
 
         if (!authorisation.Allows(signedInUser, command)) return new StatusCodeResult(403);
 

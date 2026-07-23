@@ -15,10 +15,10 @@ namespace Jewel.JPMS.Api.Features.Variations.Commands;
 public sealed class AcceptVariationRequestEndpoint
 {
     private readonly SignedInUserResolver users;
-    private readonly ICommandHandler<AcceptVariationRequest, VariationOrderQuote> handler;
+    private readonly ICommandHandler<AcceptVariationRequest, VariationOrder> handler;
 
     public AcceptVariationRequestEndpoint(
-        SignedInUserResolver users, ICommandHandler<AcceptVariationRequest, VariationOrderQuote> handler)
+        SignedInUserResolver users, ICommandHandler<AcceptVariationRequest, VariationOrder> handler)
     {
         this.users = users; this.handler = handler;
     }

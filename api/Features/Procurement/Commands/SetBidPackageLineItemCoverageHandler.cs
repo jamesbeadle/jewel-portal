@@ -34,7 +34,7 @@ public sealed class SetBidPackageLineItemCoverageHandler
             {
                 if (string.IsNullOrWhiteSpace(command.BoqLineItemId))
                     throw new InvalidOperationException("A contract-line coverage needs a BoqLineItemId.");
-                if (!string.IsNullOrWhiteSpace(command.VariationOrderQuoteId))
+                if (!string.IsNullOrWhiteSpace(command.VariationOrderId))
                     throw new InvalidOperationException("A line item is covered by a BoQ line OR a variation, not both.");
 
                 var boqExists = await context.BoqLineItems.AnyAsync(
@@ -44,35 +44,35 @@ public sealed class SetBidPackageLineItemCoverageHandler
 
                 lineItem.Coverage = (int)BidPackageLineCoverage.ContractLine;
                 lineItem.BoqLineItemId = command.BoqLineItemId;
-                lineItem.VariationOrderQuoteId = null;
+                lineItem.VariationOrderId = null;
                 break;
             }
             case BidPackageLineCoverage.Variation:
             {
-                if (string.IsNullOrWhiteSpace(command.VariationOrderQuoteId))
-                    throw new InvalidOperationException("A variation coverage needs a VariationOrderQuoteId.");
+                if (string.IsNullOrWhiteSpace(command.VariationOrderId))
+                    throw new InvalidOperationException("A variation coverage needs a VariationOrderId.");
                 if (!string.IsNullOrWhiteSpace(command.BoqLineItemId))
                     throw new InvalidOperationException("A line item is covered by a BoQ line OR a variation, not both.");
 
-                var voqExists = await context.VariationOrderQuotes.AnyAsync(
-                    v => v.VariationOrderQuoteId == command.VariationOrderQuoteId && v.ProjectId == package.ProjectId, cancellationToken);
+                var voqExists = await context.VariationOrders.AnyAsync(
+                    v => v.VariationOrderId == command.VariationOrderId && v.ProjectId == package.ProjectId, cancellationToken);
                 if (!voqExists)
-                    throw new InvalidOperationException($"Variation Order Quote '{command.VariationOrderQuoteId}' not found on project '{package.ProjectId}'.");
+                    throw new InvalidOperationException($"Variation Order '{command.VariationOrderId}' not found on project '{package.ProjectId}'.");
 
                 lineItem.Coverage = (int)BidPackageLineCoverage.Variation;
-                lineItem.VariationOrderQuoteId = command.VariationOrderQuoteId;
+                lineItem.VariationOrderId = command.VariationOrderId;
                 lineItem.BoqLineItemId = null;
                 break;
             }
             case BidPackageLineCoverage.Unassigned:
             {
                 // Clearing the link — both ids must be empty.
-                if (!string.IsNullOrWhiteSpace(command.BoqLineItemId) || !string.IsNullOrWhiteSpace(command.VariationOrderQuoteId))
+                if (!string.IsNullOrWhiteSpace(command.BoqLineItemId) || !string.IsNullOrWhiteSpace(command.VariationOrderId))
                     throw new InvalidOperationException("Clearing coverage cannot supply a BoQ line or variation id.");
 
                 lineItem.Coverage = (int)BidPackageLineCoverage.Unassigned;
                 lineItem.BoqLineItemId = null;
-                lineItem.VariationOrderQuoteId = null;
+                lineItem.VariationOrderId = null;
                 break;
             }
             default:

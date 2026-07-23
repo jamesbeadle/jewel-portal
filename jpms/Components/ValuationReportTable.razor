@@ -416,7 +416,7 @@ else
         // The project's VOs, so each Variation line can resolve the order it mirrors
         // (by VariationRef) and offer the admin-only inline revise below. The page is
         // recreated per project by KeyedPageRouteView, so once per lifetime is fresh enough.
-        variationOrders = await Variations.ListVariationOrdersForProjectAsync(ProjectId);
+        variationOrders = await Variations.ListForProjectAsync(ProjectId);
     }
 
     private void OnCostCentresChanged() => InvokeAsync(StateHasChanged);
@@ -776,13 +776,13 @@ else
     private bool reviseFocusPending;
     private ElementReference reviseInput;
 
-    // Cancelled VOs are terminal (their reversals have already run), so their lines stay
-    // locked; a line whose ref matches no VO (e.g. a declined placeholder) stays locked too.
+    // Only an approved variation carries live figures, so only its line is revisable; a line whose
+    // ref matches no approved VO (e.g. a declined placeholder) stays locked.
     private VariationOrder? RevisableVoFor(ValuationLineItem line) =>
         string.IsNullOrWhiteSpace(line.VariationRef)
             ? null
             : variationOrders.FirstOrDefault(vo =>
-                vo.Status != VariationOrderStatus.Cancelled
+                vo.Status == VariationOrderStatus.Approved
                 && string.Equals(vo.VariationRef, line.VariationRef, StringComparison.OrdinalIgnoreCase));
 
     private void StartVoRevise(ValuationLineItem line, VariationOrder vo)

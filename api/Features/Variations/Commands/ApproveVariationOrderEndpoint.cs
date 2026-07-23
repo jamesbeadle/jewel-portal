@@ -8,19 +8,22 @@ using Microsoft.Azure.Functions.Worker;
 
 namespace Jewel.JPMS.Api.Features.Variations.Commands;
 
-/// <summary>POST /api/variation-orders/{voId}/revert-to-approved — un-issue a VO back to Approved.</summary>
-public sealed class RevertVariationOrderToApprovedEndpoint
+/// <summary>
+/// POST /api/variation-orders/{voId}/approve — approve the variation order and write the contract
+/// figures. Body: { costCode, value? }. The approver is the signed-in user.
+/// </summary>
+public sealed class ApproveVariationOrderEndpoint
 {
     private readonly SignedInUserResolver users;
-    private readonly RevertVariationOrderToApprovedAuthorisation authorisation;
-    private readonly RevertVariationOrderToApprovedValidation validation;
-    private readonly ICommandHandler<RevertVariationOrderToApproved, VariationOrder> handler;
+    private readonly ApproveVariationOrderAuthorisation authorisation;
+    private readonly ApproveVariationOrderValidation validation;
+    private readonly ICommandHandler<ApproveVariationOrder, VariationOrder> handler;
 
-    public RevertVariationOrderToApprovedEndpoint(
+    public ApproveVariationOrderEndpoint(
         SignedInUserResolver users,
-        RevertVariationOrderToApprovedAuthorisation authorisation,
-        RevertVariationOrderToApprovedValidation validation,
-        ICommandHandler<RevertVariationOrderToApproved, VariationOrder> handler)
+        ApproveVariationOrderAuthorisation authorisation,
+        ApproveVariationOrderValidation validation,
+        ICommandHandler<ApproveVariationOrder, VariationOrder> handler)
     {
         this.users = users;
         this.authorisation = authorisation;
@@ -28,9 +31,9 @@ public sealed class RevertVariationOrderToApprovedEndpoint
         this.handler = handler;
     }
 
-    [Function(nameof(RevertVariationOrderToApproved))]
+    [Function(nameof(ApproveVariationOrder))]
     public async Task<IActionResult> Run(
-        [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "variation-orders/{voId}/revert-to-approved")] HttpRequest request,
+        [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "variation-orders/{voId}/approve")] HttpRequest request,
         string voId)
     {
         var cancellationToken = request.HttpContext.RequestAborted;
@@ -38,7 +41,10 @@ public sealed class RevertVariationOrderToApprovedEndpoint
         var signedInUser = await users.ResolveAsync(request, cancellationToken);
         if (signedInUser is null) return new UnauthorizedResult();
 
-        var command = new RevertVariationOrderToApproved(voId);
+        var body = await request.ReadFromJsonAsync<ApproveVariationOrder>();
+        if (body is null) return new BadRequestResult();
+
+        var command = body with { VariationOrderId = voId, ApprovedByEmail = signedInUser.Email };
 
         if (!authorisation.Allows(signedInUser, command)) return new StatusCodeResult(403);
 

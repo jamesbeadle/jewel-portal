@@ -5,11 +5,13 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Jewel.JPMS.Api.Features.RecordLinks.Providers;
 
-// Linkable-record provider for Variation Order Quotes — the pre-approval stage of a variation, where
-// most of the correspondence actually happens (the client's request, subcontractor pricing, the
-// architect's comments). Wraps the VariationOrderQuotes table so a triage email can be linked to the
-// VOQ it concerns; once the VOQ is approved into a VO, later instruction-stage mail can be linked to
-// the VO record instead — the two are separate records with separate tag stems.
+// Linkable-record provider surfacing a variation order by its quoting-stage "VOQ-0004" reference —
+// the stage where most correspondence happens (the client's request, subcontractor pricing, the
+// architect's comments). Since the 2026-07-23 unification a variation is ONE document, so this and
+// the VO provider wrap the same VariationOrderQuotes table and offer two references onto the same
+// record; keeping both means historic VOQ- and VO- mail tags both keep resolving. The RecordType
+// (VariationQuote) is retained so those existing tags stay valid — see CLAUDE.md on persisted
+// identifiers surviving renames.
 //
 // VOQ references ("VOQ-0004") are only unique per project, while JPMS tags share one flat
 // mailbox-category space — so the tag stem is project-qualified the same way VO tags are, using the
@@ -23,14 +25,14 @@ public sealed class VariationOrderQuoteLinkProvider : ILinkableRecordProvider
 
     public RecordType Type => RecordType.VariationQuote;
 
-    // VOQs own the "VOQ" reference namespace (tags are "VOQ-<projectRef>-<number>"). Distinct from
-    // the Variation Orders' "VO" prefix, so the flat tag space stays collision-free.
+    // The "VOQ" reference namespace (tags are "VOQ-<projectRef>-<number>"). Distinct from the "VO"
+    // prefix, so the flat tag space stays collision-free.
     public IReadOnlyCollection<string> ReferencePrefixes { get; } = new[] { "VOQ" };
 
     public async Task<IReadOnlyList<LinkableRecord>> ForProjectAsync(string projectId, CancellationToken ct)
     {
         var projectRef = await ProjectRefAsync(projectId, ct);
-        var entities = await context.VariationOrderQuotes.AsNoTracking()
+        var entities = await context.VariationOrders.AsNoTracking()
             .Where(v => v.ProjectId == projectId)
             .OrderByDescending(v => v.Number)
             .ToListAsync(ct);
@@ -39,8 +41,8 @@ public sealed class VariationOrderQuoteLinkProvider : ILinkableRecordProvider
 
     public async Task<LinkableRecord?> FindAsync(string recordId, CancellationToken ct)
     {
-        var entity = await context.VariationOrderQuotes.AsNoTracking()
-            .FirstOrDefaultAsync(v => v.VariationOrderQuoteId == recordId, ct);
+        var entity = await context.VariationOrders.AsNoTracking()
+            .FirstOrDefaultAsync(v => v.VariationOrderId == recordId, ct);
         if (entity is null) return null;
 
         var projectRef = await ProjectRefAsync(entity.ProjectId, ct);
@@ -58,19 +60,19 @@ public sealed class VariationOrderQuoteLinkProvider : ILinkableRecordProvider
         return string.IsNullOrWhiteSpace(reference) ? projectId : reference.Trim();
     }
 
-    private static LinkableRecord ToLinkable(VariationOrderQuoteEntity entity, string projectRef)
+    private static LinkableRecord ToLinkable(VariationOrderEntity entity, string projectRef)
     {
         // Show the per-project "VOQ-0004" reference in the picker; qualify the tag stem with the
         // project and the bare number so the stem doesn't stutter ("VOQ-…-VOQ-0004").
         var reference = string.IsNullOrWhiteSpace(entity.Reference) ? $"VOQ-{entity.Number:0000}" : entity.Reference.Trim();
         return new LinkableRecord(
             Type:         RecordType.VariationQuote,
-            RecordId:     entity.VariationOrderQuoteId,
+            RecordId:     entity.VariationOrderId,
             ProjectId:    entity.ProjectId,
             Reference:    reference,
             TagReference: $"VOQ-{projectRef}-{entity.Number:0000}",
             Title:        entity.Title,
-            StatusLabel:  ((VariationOrderQuoteStatus)entity.Status).ToString(),
+            StatusLabel:  ((VariationOrderStatus)entity.Status).ToString(),
             Summary:      RecordSummaries.Clip(entity.Description));
     }
 }

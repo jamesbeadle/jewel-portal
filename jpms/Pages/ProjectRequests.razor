@@ -37,7 +37,7 @@ else
                 <h2 class="text-lg font-semibold text-content">Document register</h2>
                 <p class="text-sm text-content-subtle mt-0.5">
                     @AllRecords.Count request@(AllRecords.Count == 1 ? "" : "s") · @OpenCount active · @OverdueCount overdue
-                    · @quotes.Count variation@(quotes.Count == 1 ? "" : "s")
+                    · @Rows.Count variation@(Rows.Count == 1 ? "" : "s")
                 </p>
             </div>
             <div class="flex items-center gap-3">
@@ -67,7 +67,7 @@ else
                 <p class="eyebrow">Document type</p>
                 <span class="text-xs text-content-subtle">·</span>
                 <p class="text-xs text-content-subtle">
-                    Request @GeneralCount · RFI @RfiCount · VOQ @OpenVoqCount · VO @LiveOrders.Count
+                    Request @GeneralCount · RFI @RfiCount · Variations @OpenVariationsCount open / @ApprovedVariationsCount approved
                 </p>
             </div>
             @switch (ActiveSlug)
@@ -280,18 +280,14 @@ else
                 <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-4">@variationsError</p>
             }
 
-            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
                 <div class="panel p-4">
-                    <p class="eyebrow mb-1">Open quotes (VOQ)</p>
-                    <p class="text-xl font-semibold text-content">@OpenVoqCount</p>
-                </div>
-                <div class="panel p-4">
-                    <p class="eyebrow mb-1">Approved orders (VO)</p>
-                    <p class="text-xl font-semibold text-content">@LiveOrders.Count</p>
+                    <p class="eyebrow mb-1">Variations</p>
+                    <p class="text-xl font-semibold text-content">@OpenVariationsCount open · @ApprovedVariationsCount approved</p>
                 </div>
                 <div class="panel p-4">
                     <p class="eyebrow mb-1">Approved value</p>
-                    <p class="text-xl font-semibold text-content">@Money(LiveOrders.Sum(vo => vo.Value))</p>
+                    <p class="text-xl font-semibold text-content">@Money(ApprovedOrders.Sum(vo => vo.Value))</p>
                 </div>
             </div>
 
@@ -414,52 +410,52 @@ else
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-line">
-                            @foreach (var row in Rows)
+                            @foreach (var order in Rows)
                             {
                                 <tr class="hover:bg-surface-raised">
                                     <td class="px-4 py-3 font-mono text-[12px] whitespace-nowrap">
                                         <a class="text-content hover:underline underline-offset-4"
-                                           href="@($"/projects/{ProjectId}/voq/{row.Voq.VariationOrderQuoteId}")">@row.Reference</a>
+                                           href="@($"/projects/{ProjectId}/voq/{order.VariationOrderId}")">@RowReference(order)</a>
                                     </td>
                                     <td class="px-4 py-3">
                                         <a class="text-content font-medium hover:underline underline-offset-4"
-                                           href="@($"/projects/{ProjectId}/voq/{row.Voq.VariationOrderQuoteId}")">@row.Voq.Title</a>
+                                           href="@($"/projects/{ProjectId}/voq/{order.VariationOrderId}")">@order.Title</a>
                                     </td>
                                     <td class="px-4 py-3 whitespace-nowrap">
-                                        @{ var sourceRequest = RequestFor(row.Voq); }
+                                        @{ var sourceRequest = RequestFor(order); }
                                         @if (sourceRequest is not null)
                                         {
-                                            @* The trace back up the lifecycle: VOQ → the RFI/request it prices. *@
+                                            @* The trace back up the lifecycle: the variation → the RFI/request it prices. *@
                                             <a class="font-mono text-xs text-content-muted hover:text-content hover:underline underline-offset-4"
                                                title="@sourceRequest.Title"
                                                href="@($"/projects/{ProjectId}/requests/view/{sourceRequest.RequestId}")">@RefLabel(sourceRequest)</a>
                                         }
                                         else
                                         {
-                                            @* Seeded rows predate the VOQ→request link. Kept quiet here — repairing
+                                            @* Seeded rows predate the variation→request link. Kept quiet here — repairing
                                                the link is done deliberately on the variation itself, so the badge
-                                               links through to the VOQ page's Originating-request panel. *@
+                                               links through to the variation page's Originating-request panel. *@
                                             <a class="inline-flex items-center rounded border border-line bg-surface-raised px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-content-subtle hover:text-content hover:border-content-subtle transition-colors"
                                                title="No request behind this variation yet — open it to link the RFI it was raised from"
-                                               href="@($"/projects/{ProjectId}/voq/{row.Voq.VariationOrderQuoteId}")">No request</a>
+                                               href="@($"/projects/{ProjectId}/voq/{order.VariationOrderId}")">No request</a>
                                         }
                                     </td>
                                     <td class="px-4 py-3 whitespace-nowrap">
-                                        @{ var statusChoices = CanManageVariations ? VariationStatusChoices(row) : new List<VariationStatusChoice>(); }
+                                        @{ var statusChoices = CanManageVariations ? VariationStatusChoices(order) : new List<VariationStatusChoice>(); }
                                         @if (statusChoices.Count > 0)
                                         {
                                             @* The chip doubles as the status control. Direct moves cover the
                                                side-effect-free stages; the commercial transitions (approve,
-                                               un-approve, cancel) link through to the variation, where their
+                                               un-approve, reject) link through to the variation, where their
                                                real flows — cost code, confirms, reversals — live. *@
                                             <div class="relative">
-                                                <button type="button" class="@BadgeClass(row) gap-1"
+                                                <button type="button" class="@BadgeClass(order) gap-1"
                                                         title="Change status"
-                                                        disabled="@(variationStatusBusyId == row.Voq.VariationOrderQuoteId)"
-                                                        @onclick="() => ToggleVariationStatusMenu(row.Voq.VariationOrderQuoteId)">
-                                                    @VariationStatusLabel(row) <span class="text-[9px]" aria-hidden="true">▾</span>
+                                                        disabled="@(variationStatusBusyId == order.VariationOrderId)"
+                                                        @onclick="() => ToggleVariationStatusMenu(order.VariationOrderId)">
+                                                    @VariationStatusLabel(order) <span class="text-[9px]" aria-hidden="true">▾</span>
                                                 </button>
-                                                @if (variationStatusMenuId == row.Voq.VariationOrderQuoteId)
+                                                @if (variationStatusMenuId == order.VariationOrderId)
                                                 {
                                                     <div class="absolute left-0 mt-2 w-64 rounded-lg border border-line bg-surface shadow-lg z-30 overflow-hidden">
                                                         <ul class="divide-y divide-line">
@@ -483,27 +479,27 @@ else
                                         }
                                         else
                                         {
-                                            <span class="@BadgeClass(row)">@VariationStatusLabel(row)</span>
+                                            <span class="@BadgeClass(order)">@VariationStatusLabel(order)</span>
                                         }
                                     </td>
-                                    <td class="px-4 py-3 text-right whitespace-nowrap @(row.IsCancelled ? "text-content-subtle line-through" : "text-content")">
-                                        @(row.Value is { } v ? Money(v) : "—")
+                                    <td class="px-4 py-3 text-right whitespace-nowrap @(order.Status == VariationOrderStatus.Rejected ? "text-content-subtle line-through" : "text-content")">
+                                        @(RowValue(order) is { } v ? Money(v) : "—")
                                     </td>
-                                    <td class="px-4 py-3 text-content-subtle hidden lg:table-cell whitespace-nowrap">@row.Voq.CreatedAt.LocalDateTime.ToString("d MMM yyyy")</td>
+                                    <td class="px-4 py-3 text-content-subtle hidden lg:table-cell whitespace-nowrap">@order.CreatedAt.LocalDateTime.ToString("d MMM yyyy")</td>
                                     <td class="px-4 py-3 text-content-subtle hidden lg:table-cell whitespace-nowrap">
-                                        @(row.Order?.ApprovedAt.LocalDateTime.ToString("d MMM yyyy") ?? "—")
+                                        @(order.Status == VariationOrderStatus.Approved ? order.ApprovedAt?.LocalDateTime.ToString("d MMM yyyy") ?? "—" : "—")
                                     </td>
                                     <td class="px-4 py-3 whitespace-nowrap">
-                                        @{ var issued = IssuedWorkOrdersFor(row.Order); }
+                                        @{ var issued = IssuedWorkOrdersFor(order); }
                                         @if (issued.Count > 0)
                                         {
-                                            <span class="text-xs text-content-muted">@string.Join(", ", issued.Select(order => $"WO-{order.Number:0000}"))</span>
+                                            <span class="text-xs text-content-muted">@string.Join(", ", issued.Select(wo => $"WO-{wo.Number:0000}"))</span>
                                         }
-                                        @if (CanIssueWorkOrder(row.Order))
+                                        @if (CanIssueWorkOrder(order))
                                         {
                                             <button type="button" class="@(issued.Count > 0 ? "block " : "")text-xs text-accent underline underline-offset-2 disabled:opacity-60"
                                                     title="@(issued.Count > 0 ? "Issue a further work order for this variation" : "Issue the work order instructing this variation")"
-                                                    disabled="@requestBusy" @onclick="() => IssueWorkOrder(row.Order!.VariationOrderId)">
+                                                    disabled="@requestBusy" @onclick="() => IssueWorkOrder(order.VariationOrderId)">
                                                 @(issued.Count > 0 ? "Issue another" : "Issue WO")
                                             </button>
                                         }
@@ -877,38 +873,40 @@ else
     // ---- Variations (VOQ & VO) — folded in from the retired Variations tab ---------------------
 
     private string? variationsError;
-    private IReadOnlyList<VariationOrderQuote> quotes = Array.Empty<VariationOrderQuote>();
     private IReadOnlyList<VariationOrder> orders = Array.Empty<VariationOrder>();
 
-    // One row per VOQ; once approved, the VO carries the ref, value and status.
-    private sealed record VariationRow(VariationOrderQuote Voq, VariationOrder? Order)
-    {
-        public string Reference => Order?.VariationRef ?? Voq.Reference;
-        public decimal? Value => Order?.Value ?? Voq.EstimatedValue;
-        public bool IsCancelled => Order?.Status == VariationOrderStatus.Cancelled;
-    }
+    // One row per variation order — the unified document from first pricing to client decision.
+    private List<VariationOrder> Rows { get; set; } = new();
 
-    private List<VariationRow> Rows { get; set; } = new();
+    private int OpenVariationsCount => orders.Count(o =>
+        o.Status is VariationOrderStatus.Quoting or VariationOrderStatus.Issued);
 
-    private List<VariationOrder> LiveOrders =>
-        orders.Where(vo => vo.Status != VariationOrderStatus.Cancelled).ToList();
+    private int ApprovedVariationsCount => orders.Count(o => o.Status == VariationOrderStatus.Approved);
 
-    private int OpenVoqCount => quotes.Count(q =>
-        q.Status is not (VariationOrderQuoteStatus.Approved or VariationOrderQuoteStatus.Rejected));
+    private List<VariationOrder> ApprovedOrders =>
+        orders.Where(o => o.Status == VariationOrderStatus.Approved).ToList();
 
-    // The trace back up the lifecycle: the register's request this VOQ prices, if its RequestId
-    // resolves. Seeded variations predate the link, so a null here renders the red "Not linked".
-    private Request? RequestFor(VariationOrderQuote voq) =>
-        string.IsNullOrWhiteSpace(voq.RequestId)
+    // The record's identifier: the "V18" VariationRef once approved, else the quoting reference "VOQ-0001".
+    private static string RowReference(VariationOrder order) =>
+        !string.IsNullOrWhiteSpace(order.VariationRef) ? order.VariationRef! : order.Reference;
+
+    // The quoting estimate until approval, then the agreed (contract) value.
+    private static decimal? RowValue(VariationOrder order) =>
+        order.Status == VariationOrderStatus.Approved ? order.Value : order.EstimatedValue;
+
+    // The trace back up the lifecycle: the register's request this variation prices, if its
+    // RequestId resolves. Seeded variations predate the link, so a null here renders the red "Not linked".
+    private Request? RequestFor(VariationOrder order) =>
+        string.IsNullOrWhiteSpace(order.RequestId)
             ? null
-            : AllRecords.FirstOrDefault(r => string.Equals(r.RequestId, voq.RequestId, StringComparison.OrdinalIgnoreCase));
+            : AllRecords.FirstOrDefault(r => string.Equals(r.RequestId, order.RequestId, StringComparison.OrdinalIgnoreCase));
 
-    // Blank RequestId only — the definition both repair panels (the VOQ page's Originating-request
-    // picker and the RFI page's Link-variation picker) use, so the banner never counts a record
-    // neither of them can fix (a dangling RequestId whose request was deleted).
-    private List<VariationRow> UnlinkedRows => Rows.Where(row => string.IsNullOrWhiteSpace(row.Voq.RequestId)).ToList();
+    // Blank RequestId only — the definition both repair panels (the variation page's
+    // Originating-request picker and the RFI page's Link-variation picker) use, so the banner
+    // never counts a record neither of them can fix (a dangling RequestId whose request was deleted).
+    private List<VariationOrder> UnlinkedRows => Rows.Where(order => string.IsNullOrWhiteSpace(order.RequestId)).ToList();
 
-    // VOQ → request linking now lives on the VOQ page's "Originating request" panel — the
+    // Request linking now lives on the variation page's "Originating request" panel — the
     // register only signposts it (the quiet "No request" badge links through), keeping the
     // dashboard view clean.
 
@@ -972,19 +970,18 @@ else
         finally { requestBusy = false; }
     }
 
-    // ---- Issue work order for a VO ----
+    // ---- Issue work order for an approved variation order ----
 
-    private IReadOnlyList<WorkOrder> IssuedWorkOrdersFor(VariationOrder? order) =>
-        order is null
-            ? Array.Empty<WorkOrder>()
-            : Procurement.WorkOrdersFor(ProjectId)
-                .Where(wo => string.Equals(wo.VariationOrderId, order.VariationOrderId, StringComparison.OrdinalIgnoreCase))
-                .ToList();
+    private IReadOnlyList<WorkOrder> IssuedWorkOrdersFor(VariationOrder order) =>
+        Procurement.WorkOrdersFor(ProjectId)
+            .Where(wo => string.Equals(wo.VariationOrderId, order.VariationOrderId, StringComparison.OrdinalIgnoreCase))
+            .ToList();
 
-    private bool CanIssueWorkOrder(VariationOrder? order) =>
+    // A work order is only instructed after approval — the client's instruction to proceed.
+    private bool CanIssueWorkOrder(VariationOrder order) =>
         CanIssueWorkOrders
-        && order is { Status: VariationOrderStatus.Approved or VariationOrderStatus.Issued }
-        && !string.IsNullOrWhiteSpace(order.SubcontractorId);
+        && order.Status == VariationOrderStatus.Approved
+        && !string.IsNullOrWhiteSpace(order.SelectedSubcontractorId);
 
     private async Task IssueWorkOrder(string variationOrderId)
     {
@@ -1008,67 +1005,50 @@ else
     private string? variationStatusBusyId;
     private string? variationStatusError;
 
-    private void ToggleVariationStatusMenu(string voqId) =>
-        variationStatusMenuId = variationStatusMenuId == voqId ? null : voqId;
+    private void ToggleVariationStatusMenu(string variationOrderId) =>
+        variationStatusMenuId = variationStatusMenuId == variationOrderId ? null : variationOrderId;
 
     // One dropdown entry: a direct move (Action) or a link through to the variation (Href) for the
     // transitions whose real flows — cost code, confirms, reversals — live on the record itself.
     private sealed record VariationStatusChoice(string Label, string? Hint, bool IsCurrent, Func<Task>? Action = null, string? Href = null);
 
-    private List<VariationStatusChoice> VariationStatusChoices(VariationRow row)
+    private List<VariationStatusChoice> VariationStatusChoices(VariationOrder order)
     {
         var choices = new List<VariationStatusChoice>();
-        var voqHref = $"/projects/{ProjectId}/voq/{row.Voq.VariationOrderQuoteId}";
+        var voqHref = $"/projects/{ProjectId}/voq/{order.VariationOrderId}";
 
-        if (row.Order is { } vo)
+        // Rejected is a terminal audit record — the pill doesn't offer reactivation.
+        if (order.Status == VariationOrderStatus.Rejected) return choices;
+
+        if (order.Status == VariationOrderStatus.Approved)
         {
-            // A cancelled VO stays put — cancellation reversed the approval's commercial writes,
-            // and re-applying them belongs to a fresh approval, not a status flip.
-            if (vo.Status == VariationOrderStatus.Cancelled) return choices;
-
-            choices.Add(new("VO — Approved",
-                vo.Status == VariationOrderStatus.Issued ? "Un-issues the VO, clearing the issued date — a record correction" : null,
-                vo.Status == VariationOrderStatus.Approved,
-                Action: () => ChangeVoStatusInline(row, VariationOrderStatus.Approved)));
-            choices.Add(new("VO — Issued",
-                "Marks the VO as formally instructed",
-                vo.Status == VariationOrderStatus.Issued,
-                Action: () => ChangeVoStatusInline(row, VariationOrderStatus.Issued)));
-            choices.Add(new("VO — Cancelled…",
-                "A real commercial event — reverses the approval's valuation / CVR / budget writes; confirmed on the variation itself",
+            // An approved order can only move back to Quoting (data repair, un-approve) or to
+            // Rejected (a real commercial event) — never straight across to Issued.
+            choices.Add(new("Approved", null, true));
+            choices.Add(new("Quoting (return to quoting)…",
+                "Un-approves — reverses the approval's writes and frees the V-ref; a record correction",
                 false,
-                Href: voqHref + "?focus=vo"));
+                Action: () => ChangeVariationStatusInline(order, VariationOrderStatus.Quoting)));
+            choices.Add(new("Rejected…",
+                "A real commercial event — reverses the approval's valuation / CVR / budget writes",
+                false,
+                Action: () => ChangeVariationStatusInline(order, VariationOrderStatus.Rejected)));
             return choices;
         }
 
-        if (row.Voq.Status == VariationOrderQuoteStatus.Approved)
-        {
-            // Approved with no live VO — the data anomaly the VOQ page's repair panel handles.
-            choices.Add(new("VOQ — Tendering (un-approve)…",
-                "Un-approval reverses the approval's writes — runs on the variation itself",
-                false, Href: voqHref));
-            return choices;
-        }
-
-        foreach (var status in new[]
-        {
-            VariationOrderQuoteStatus.Draft, VariationOrderQuoteStatus.Inviting,
-            VariationOrderQuoteStatus.Tendering, VariationOrderQuoteStatus.Selected,
-            VariationOrderQuoteStatus.Rejected
-        })
-        {
-            // Selected needs a recorded winning tender; without one the entry is simply not offered.
-            if (status == VariationOrderQuoteStatus.Selected
-                && string.IsNullOrEmpty(row.Voq.SelectedBidPackageId)
-                && row.Voq.Status != VariationOrderQuoteStatus.Selected)
-                continue;
-            var target = status;
-            choices.Add(new($"VOQ — {target}", null, row.Voq.Status == target,
-                Action: () => ChangeVoqStatusInline(row, target)));
-        }
-        choices.Add(new("VOQ — Approve…",
-            "Approving raises the VO and writes the contract figures — runs on the variation itself",
+        // Quoting / Issued: move directly between the two side-effect-free stages, approve
+        // (through the variation, where the cost code and value are collected) or reject.
+        choices.Add(new("Quoting", null, order.Status == VariationOrderStatus.Quoting,
+            Action: () => ChangeVariationStatusInline(order, VariationOrderStatus.Quoting)));
+        choices.Add(new("Issued",
+            "Marks the variation as sent to the client, awaiting their decision",
+            order.Status == VariationOrderStatus.Issued,
+            Action: () => ChangeVariationStatusInline(order, VariationOrderStatus.Issued)));
+        choices.Add(new("Approved…",
+            "Approving mints the V-ref and writes the contract figures — runs on the variation itself",
             false, Href: voqHref));
+        choices.Add(new("Rejected…", null, false,
+            Action: () => ChangeVariationStatusInline(order, VariationOrderStatus.Rejected)));
         return choices;
     }
 
@@ -1080,75 +1060,44 @@ else
         if (choice.Action is not null) await choice.Action();
     }
 
-    private async Task ChangeVoqStatusInline(VariationRow row, VariationOrderQuoteStatus status)
+    private async Task ChangeVariationStatusInline(VariationOrder order, VariationOrderStatus status)
     {
         if (variationStatusBusyId is not null) return;
         variationStatusError = null;
         try
         {
-            variationStatusBusyId = row.Voq.VariationOrderQuoteId;
-            await Variations.SetVoqStatusAsync(row.Voq.VariationOrderQuoteId, status);
+            variationStatusBusyId = order.VariationOrderId;
+            if (status == VariationOrderStatus.Rejected)
+                await Variations.RejectAsync(order.VariationOrderId);
+            else if (status == VariationOrderStatus.Quoting && order.Status == VariationOrderStatus.Approved)
+                await Variations.ReturnToQuotingAsync(order.VariationOrderId);
+            else
+                await Variations.SetStatusAsync(order.VariationOrderId, status);
             await LoadVariationsAsync();
         }
-        catch (CommandFailedException ex) { variationStatusError = $"{row.Reference}: {ex.Message}"; }
-        catch { variationStatusError = $"Couldn't change the status of {row.Reference}. Please try again."; }
+        catch (CommandFailedException ex) { variationStatusError = $"{RowReference(order)}: {ex.Message}"; }
+        catch { variationStatusError = $"Couldn't change the status of {RowReference(order)}. Please try again."; }
         finally { variationStatusBusyId = null; }
     }
 
-    private async Task ChangeVoStatusInline(VariationRow row, VariationOrderStatus status)
+    private static string VariationStatusLabel(VariationOrder order) => order.Status switch
     {
-        if (variationStatusBusyId is not null || row.Order is null) return;
-        variationStatusError = null;
-        try
-        {
-            variationStatusBusyId = row.Voq.VariationOrderQuoteId;
-            _ = status == VariationOrderStatus.Issued
-                ? await Variations.IssueVariationOrderAsync(row.Order.VariationOrderId)
-                : await Variations.RevertVariationOrderToApprovedAsync(row.Order.VariationOrderId);
-            await LoadVariationsAsync();
-        }
-        catch (CommandFailedException ex) { variationStatusError = $"{row.Reference}: {ex.Message}"; }
-        catch { variationStatusError = $"Couldn't change the status of {row.Reference}. Please try again."; }
-        finally { variationStatusBusyId = null; }
-    }
+        VariationOrderStatus.Quoting => "Quoting",
+        VariationOrderStatus.Issued => "Issued",
+        VariationOrderStatus.Approved => "Approved",
+        VariationOrderStatus.Rejected => "Rejected",
+        _ => "Variation"
+    };
 
-    private static string VariationStatusLabel(VariationRow row)
-    {
-        if (row.Order is { } vo)
-        {
-            return vo.Status switch
-            {
-                VariationOrderStatus.Approved => "VO — Approved",
-                VariationOrderStatus.Issued => "VO — Issued",
-                VariationOrderStatus.Cancelled => "VO — Cancelled",
-                _ => "VO"
-            };
-        }
-        return row.Voq.Status switch
-        {
-            VariationOrderQuoteStatus.Draft => "VOQ — Draft",
-            VariationOrderQuoteStatus.Inviting => "VOQ — Inviting",
-            VariationOrderQuoteStatus.Tendering => "VOQ — Tendering",
-            VariationOrderQuoteStatus.Selected => "VOQ — Selected",
-            VariationOrderQuoteStatus.Rejected => "VOQ — Rejected",
-            _ => "VOQ"
-        };
-    }
-
-    private static string BadgeClass(VariationRow row)
+    private static string BadgeClass(VariationOrder order)
     {
         const string baseClass = "inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-medium ";
-        if (row.Order is { } vo)
+        return order.Status switch
         {
-            return vo.Status switch
-            {
-                VariationOrderStatus.Cancelled => baseClass + "bg-negative/10 border-negative/30 text-negative",
-                _ => baseClass + "bg-accent/10 border-accent/30 text-accent"
-            };
-        }
-        return row.Voq.Status == VariationOrderQuoteStatus.Rejected
-            ? baseClass + "bg-negative/10 border-negative/30 text-negative"
-            : baseClass + "bg-surface-raised border-line text-content-muted";
+            VariationOrderStatus.Approved => baseClass + "bg-accent/10 border-accent/30 text-accent",
+            VariationOrderStatus.Rejected => baseClass + "bg-negative/10 border-negative/30 text-negative",
+            _ => baseClass + "bg-surface-raised border-line text-content-muted"
+        };
     }
 
     private static string Money(decimal value) =>
@@ -1210,19 +1159,19 @@ else
                 new ExcelColumn("Approved", ExcelFormat.Date),
                 new ExcelColumn("Work order"));
 
-            foreach (var row in Rows)
+            foreach (var order in Rows)
             {
-                var sourceRequest = RequestFor(row.Voq);
-                var issued = IssuedWorkOrdersFor(row.Order);
+                var sourceRequest = RequestFor(order);
+                var issued = IssuedWorkOrdersFor(order);
                 sheet.AddRow(
-                    row.Reference,
-                    row.Voq.Title,
+                    RowReference(order),
+                    order.Title,
                     sourceRequest is null ? null : RefLabel(sourceRequest),
-                    VariationStatusLabel(row),
-                    row.Value,
-                    row.Voq.CreatedAt.LocalDateTime,
-                    row.Order?.ApprovedAt.LocalDateTime,
-                    issued.Count == 0 ? null : string.Join(", ", issued.Select(order => $"WO-{order.Number:0000}")));
+                    VariationStatusLabel(order),
+                    RowValue(order),
+                    order.CreatedAt.LocalDateTime,
+                    order.Status == VariationOrderStatus.Approved ? order.ApprovedAt?.LocalDateTime : null,
+                    issued.Count == 0 ? null : string.Join(", ", issued.Select(wo => $"WO-{wo.Number:0000}")));
             }
         }
 
@@ -1236,14 +1185,9 @@ else
     {
         try
         {
-            quotes = await Variations.ListForProjectAsync(ProjectId);
-            orders = await Variations.ListVariationOrdersForProjectAsync(ProjectId);
+            orders = await Variations.ListForProjectAsync(ProjectId);
             variationRequests = await Variations.ListVariationRequestsForProjectAsync(ProjectId);
-            var byVoq = orders.ToDictionary(vo => vo.VariationOrderQuoteId);
-            Rows = quotes
-                .Select(q => new VariationRow(q, byVoq.GetValueOrDefault(q.VariationOrderQuoteId)))
-                .OrderByDescending(r => r.Voq.Number)
-                .ToList();
+            Rows = orders.OrderByDescending(order => order.Number).ToList();
             variationsError = null;
         }
         catch { variationsError = "Couldn't load variations. Please try again."; }

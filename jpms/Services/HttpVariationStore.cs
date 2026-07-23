@@ -17,26 +17,23 @@ public sealed class HttpVariationStore : IVariationStore
 
     public event Action? OnChange;
 
-    public Task<VariationOrderQuote?> GetByIdAsync(string voqId, CancellationToken cancellationToken = default) =>
-        queries.AskAsync(new GetVoqById(voqId), cancellationToken);
+    public Task<VariationOrder?> GetByIdAsync(string variationOrderId, CancellationToken cancellationToken = default) =>
+        queries.AskAsync(new GetVariationOrderById(variationOrderId), cancellationToken);
 
-    public Task<VariationOrderQuote?> GetByRequestAsync(string requestId, CancellationToken cancellationToken = default) =>
+    public Task<VariationOrder?> GetByRequestAsync(string requestId, CancellationToken cancellationToken = default) =>
         queries.AskAsync(new GetVoqByRequest(requestId), cancellationToken);
 
-    public Task<IReadOnlyList<VariationOrderQuote>> ListForProjectAsync(string projectId, CancellationToken cancellationToken = default) =>
-        queries.AskAsync(new ListVoqsForProject(projectId), cancellationToken);
-
-    public Task<IReadOnlyList<VariationOrder>> ListVariationOrdersForProjectAsync(string projectId, CancellationToken cancellationToken = default) =>
+    public Task<IReadOnlyList<VariationOrder>> ListForProjectAsync(string projectId, CancellationToken cancellationToken = default) =>
         queries.AskAsync(new ListVariationOrdersForProject(projectId), cancellationToken);
 
-    public Task<IReadOnlyList<BidPackage>> ListBidPackagesAsync(string voqId, CancellationToken cancellationToken = default) =>
-        queries.AskAsync(new ListBidPackagesForVoq(voqId), cancellationToken);
+    public Task<IReadOnlyList<BidPackage>> ListBidPackagesAsync(string variationOrderId, CancellationToken cancellationToken = default) =>
+        queries.AskAsync(new ListBidPackagesForVoq(variationOrderId), cancellationToken);
 
     public Task<VoqDraftProposal> PrepareVoqDraftAsync(string requestId, CancellationToken cancellationToken = default) =>
         // A command (POST) rather than a query: it spends an LLM call server-side. Nothing is saved.
         commands.SendAsync(new PrepareVoqDraft(requestId), cancellationToken);
 
-    public async Task<VariationOrderQuote> CreateFromRfqAsync(string requestId, string? title = null, string? description = null, decimal? estimatedValue = null, CancellationToken cancellationToken = default)
+    public async Task<VariationOrder> CreateFromRfqAsync(string requestId, string? title = null, string? description = null, decimal? estimatedValue = null, CancellationToken cancellationToken = default)
     {
         // The API resolves the creator from the signed-in user, so the email here is a placeholder.
         var created = await commands.SendAsync(new CreateVoqFromRfq(requestId, string.Empty, title, description, estimatedValue), cancellationToken);
@@ -44,91 +41,74 @@ public sealed class HttpVariationStore : IVariationStore
         return created;
     }
 
-    public async Task<BidPackage> AddBidPackageAsync(string voqId, string title, string trade, CancellationToken cancellationToken = default)
+    public async Task<BidPackage> AddBidPackageAsync(string variationOrderId, string title, string trade, CancellationToken cancellationToken = default)
     {
         // OwnerEmail is set from the signed-in user server-side.
-        var package = await commands.SendAsync(new AddBidPackageToVoq(voqId, title, trade, string.Empty), cancellationToken);
+        var package = await commands.SendAsync(new AddBidPackageToVoq(variationOrderId, title, trade, string.Empty), cancellationToken);
         OnChange?.Invoke();
         return package;
     }
 
-    public async Task<VariationOrderQuote> SelectTenderAsync(string voqId, string bidPackageId, string subcontractorId, decimal? estimatedValue, CancellationToken cancellationToken = default)
+    public async Task<VariationOrder> SelectTenderAsync(string variationOrderId, string bidPackageId, string subcontractorId, decimal? estimatedValue, CancellationToken cancellationToken = default)
     {
-        var voq = await commands.SendAsync(new SelectVoqTender(voqId, bidPackageId, subcontractorId, estimatedValue), cancellationToken);
+        var order = await commands.SendAsync(new SelectVoqTender(variationOrderId, bidPackageId, subcontractorId, estimatedValue), cancellationToken);
         OnChange?.Invoke();
-        return voq;
+        return order;
     }
 
-    public async Task<VariationOrderQuote> LinkToRequestAsync(string voqId, string requestId, CancellationToken cancellationToken = default)
+    public async Task<VariationOrder> LinkToRequestAsync(string variationOrderId, string requestId, CancellationToken cancellationToken = default)
     {
-        var voq = await commands.SendAsync(new LinkVoqToRequest(voqId, requestId), cancellationToken);
+        var order = await commands.SendAsync(new LinkVoqToRequest(variationOrderId, requestId), cancellationToken);
         OnChange?.Invoke();
-        return voq;
+        return order;
     }
 
-    public Task<VariationOrder?> GetVariationOrderByVoqAsync(string voqId, CancellationToken cancellationToken = default) =>
-        queries.AskAsync(new GetVariationOrderByVoq(voqId), cancellationToken);
-
-    public async Task<VariationOrder> ApproveVoqAsync(string voqId, string costCode, decimal? value, CancellationToken cancellationToken = default)
+    public async Task<VariationOrder> ApproveAsync(string variationOrderId, string costCode, decimal? value, CancellationToken cancellationToken = default)
     {
         // ApprovedByEmail is set from the signed-in user server-side.
-        var vo = await commands.SendAsync(new ApproveVariationOrderQuote(voqId, costCode, string.Empty, value), cancellationToken);
+        var order = await commands.SendAsync(new ApproveVariationOrder(variationOrderId, costCode, string.Empty, value), cancellationToken);
         OnChange?.Invoke();
-        return vo;
+        return order;
     }
 
-    public async Task<VariationOrderQuote> ReturnToTenderingAsync(string voqId, CancellationToken cancellationToken = default)
+    public async Task<VariationOrder> ReturnToQuotingAsync(string variationOrderId, CancellationToken cancellationToken = default)
     {
-        var voq = await commands.SendAsync(new ReturnVoqToTendering(voqId), cancellationToken);
+        var order = await commands.SendAsync(new ReturnVariationOrderToQuoting(variationOrderId), cancellationToken);
         OnChange?.Invoke();
-        return voq;
+        return order;
     }
 
-    public async Task<VariationOrder> IssueVariationOrderAsync(string voId, CancellationToken cancellationToken = default)
+    public async Task<VariationOrder> RejectAsync(string variationOrderId, CancellationToken cancellationToken = default)
     {
-        var vo = await commands.SendAsync(new IssueVariationOrder(voId), cancellationToken);
+        var order = await commands.SendAsync(new RejectVariationOrder(variationOrderId), cancellationToken);
         OnChange?.Invoke();
-        return vo;
+        return order;
     }
 
-    public async Task<VariationOrder> CancelVariationOrderAsync(string voId, CancellationToken cancellationToken = default)
+    public async Task<VariationOrder> SetStatusAsync(string variationOrderId, VariationOrderStatus status, CancellationToken cancellationToken = default)
     {
-        var vo = await commands.SendAsync(new CancelVariationOrder(voId), cancellationToken);
+        var order = await commands.SendAsync(new SetVariationOrderStatus(variationOrderId, status), cancellationToken);
         OnChange?.Invoke();
-        return vo;
+        return order;
     }
 
-    public async Task<VariationOrderQuote> SetVoqStatusAsync(string voqId, VariationOrderQuoteStatus status, CancellationToken cancellationToken = default)
-    {
-        var voq = await commands.SendAsync(new SetVoqStatus(voqId, status), cancellationToken);
-        OnChange?.Invoke();
-        return voq;
-    }
-
-    public async Task<VariationOrder> RevertVariationOrderToApprovedAsync(string voId, CancellationToken cancellationToken = default)
-    {
-        var vo = await commands.SendAsync(new RevertVariationOrderToApproved(voId), cancellationToken);
-        OnChange?.Invoke();
-        return vo;
-    }
-
-    public async Task<VariationOrder> ReviseVariationOrderValueAsync(string voId, decimal value, CancellationToken cancellationToken = default)
+    public async Task<VariationOrder> ReviseVariationOrderValueAsync(string variationOrderId, decimal value, CancellationToken cancellationToken = default)
     {
         // RevisedByEmail is stamped from the signed-in user server-side.
-        var vo = await commands.SendAsync(new ReviseVariationOrderValue(voId, value), cancellationToken);
+        var order = await commands.SendAsync(new ReviseVariationOrderValue(variationOrderId, value), cancellationToken);
         OnChange?.Invoke();
-        return vo;
+        return order;
     }
 
     public Task<IReadOnlyList<SubcontractorVariationRequest>> ListVariationRequestsForProjectAsync(string projectId, CancellationToken cancellationToken = default) =>
         queries.AskAsync(new ListVariationRequestsForProject(projectId), cancellationToken);
 
-    public async Task<VariationOrderQuote> AcceptVariationRequestAsync(string variationRequestId, CancellationToken cancellationToken = default)
+    public async Task<VariationOrder> AcceptVariationRequestAsync(string variationRequestId, CancellationToken cancellationToken = default)
     {
         // AcceptedByEmail is stamped from the signed-in user server-side.
-        var voq = await commands.SendAsync(new AcceptVariationRequest(variationRequestId), cancellationToken);
+        var order = await commands.SendAsync(new AcceptVariationRequest(variationRequestId), cancellationToken);
         OnChange?.Invoke();
-        return voq;
+        return order;
     }
 
     public async Task<SubcontractorVariationRequest> RejectVariationRequestAsync(string variationRequestId, string reason, CancellationToken cancellationToken = default)

@@ -33,13 +33,13 @@ public sealed record BidPackageRecipient(
 
 // What a bid package line item is covered by — the commercial home the tendered scope maps to. A line
 // is either backed by a contract BoQ line (so it flows into the Programme Valuation Report against the
-// original tender) OR by a Variation Order Quote (extra-over scope priced outside the contract sum) —
+// original tender) OR by a Variation Order (extra-over scope priced outside the contract sum) —
 // never both. Unassigned until the QS links it.
 public enum BidPackageLineCoverage
 {
     Unassigned = 0,  // not yet linked to a commercial home
     ContractLine = 1, // backed by a contract BoQ line (BoqLineItemId set) — shows in the Valuation Report
-    Variation = 2    // backed by a Variation Order Quote (VariationOrderQuoteId set)
+    Variation = 2    // backed by a Variation Order (VariationOrderId set)
 }
 
 // A priced line on a bid package — the scope items a subcontractor tenders against. Grouped in the UI
@@ -48,7 +48,7 @@ public enum BidPackageLineCoverage
 // committed value lands on — required for every line put out to tender, so the cost-centre home is
 // known before a work order is ever raised (empty only on legacy rows that predate the rule).
 // Coverage links the line to exactly one commercial home: a contract BoQ line (ContractLine +
-// BoqLineItemId) or a Variation Order Quote (Variation + VariationOrderQuoteId).
+// BoqLineItemId) or a Variation Order (Variation + VariationOrderId).
 public sealed record BidPackageLineItem(
     string LineItemId,
     string BidPackageId,
@@ -60,7 +60,7 @@ public sealed record BidPackageLineItem(
     int SortOrder,
     BidPackageLineCoverage Coverage = BidPackageLineCoverage.Unassigned,
     string? BoqLineItemId = null,
-    string? VariationOrderQuoteId = null);
+    string? VariationOrderId = null);
 
 public sealed record BidPackage(
     string BidPackageId,
@@ -70,7 +70,7 @@ public sealed record BidPackage(
     BidPackageStatus Status,
     DateTimeOffset CreatedAt,
     string OwnerEmail,
-    string? VariationOrderQuoteId = null,   // parent VOQ, when this package belongs to one
+    string? VariationOrderId = null,        // parent variation order, when this package belongs to one
     int Number = 0,                          // sequential; rendered BPI-0001 via Reference
     bool MaterialsApplicable = false)        // materials matter to this scope — the tender invite asks
                                              // whether the subcontractor will supply their own

@@ -7,31 +7,32 @@ using Microsoft.EntityFrameworkCore;
 namespace Jewel.JPMS.Api.Features.Variations.Commands;
 
 /// <summary>
-/// Records the winning bid package + subcontractor (and agreed value) on a VOQ and moves it to
-/// Selected. The bid package must belong to the VOQ.
+/// Records the winning bid package + subcontractor (and agreed value) on a quoting variation
+/// order. The bid package must belong to the order. Quoting-stage data only — the status does
+/// not change.
 /// </summary>
-public sealed class SelectVoqTenderHandler : ICommandHandler<SelectVoqTender, VariationOrderQuote>
+public sealed class SelectVoqTenderHandler : ICommandHandler<SelectVoqTender, VariationOrder>
 {
     private readonly JpmsContext context;
     public SelectVoqTenderHandler(JpmsContext context) { this.context = context; }
 
-    public async Task<VariationOrderQuote> HandleAsync(SelectVoqTender command, CancellationToken cancellationToken)
+    public async Task<VariationOrder> HandleAsync(SelectVoqTender command, CancellationToken cancellationToken)
     {
-        var voq = await context.VariationOrderQuotes.FindAsync(new object[] { command.VariationOrderQuoteId }, cancellationToken);
-        if (voq is null) throw new InvalidOperationException($"VOQ {command.VariationOrderQuoteId} not found.");
+        var order = await context.VariationOrders.FindAsync(new object[] { command.VariationOrderId }, cancellationToken);
+        if (order is null) throw new InvalidOperationException($"Variation order {command.VariationOrderId} not found.");
 
         var belongs = await context.BidPackages.AnyAsync(
             package => package.BidPackageId == command.BidPackageId
-                && package.VariationOrderQuoteId == command.VariationOrderQuoteId,
+                && package.VariationOrderId == command.VariationOrderId,
             cancellationToken);
-        if (!belongs) throw new InvalidOperationException("That bid package does not belong to this VOQ.");
+        if (!belongs) throw new InvalidOperationException("That bid package does not belong to this variation order.");
 
-        voq.SelectedBidPackageId = command.BidPackageId;
-        voq.SelectedSubcontractorId = command.SubcontractorId;
-        voq.EstimatedValue = command.EstimatedValue;
-        voq.Status = (int)VariationOrderQuoteStatus.Selected;
+        order.SelectedBidPackageId = command.BidPackageId;
+        order.SelectedSubcontractorId = command.SubcontractorId;
+        order.EstimatedValue = command.EstimatedValue;
+        // The recorded tender is quoting-stage data — the order stays Quoting until it is issued.
 
         await context.SaveChangesAsync(cancellationToken);
-        return voq.ToModel();
+        return order.ToModel();
     }
 }

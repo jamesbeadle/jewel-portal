@@ -7,48 +7,38 @@ using Microsoft.EntityFrameworkCore;
 namespace Jewel.JPMS.Api.Features.Variations.Commands;
 
 /// <summary>
-/// Repairs a VOQ's link to the request (RFI) it was raised from — for records that predate the
-/// link (e.g. seeded variations). The request must exist, belong to the VOQ's project, and not
-/// already carry a different VOQ (a request has at most one).
+/// Repairs a variation order's link to the request (RFI) it was raised from — for records that
+/// predate the link (e.g. seeded variations). The request must exist, belong to the order's
+/// project, and not already carry a different order (a request has at most one).
 /// </summary>
-public sealed class LinkVoqToRequestHandler : ICommandHandler<LinkVoqToRequest, VariationOrderQuote>
+public sealed class LinkVoqToRequestHandler : ICommandHandler<LinkVoqToRequest, VariationOrder>
 {
     private readonly JpmsContext context;
     public LinkVoqToRequestHandler(JpmsContext context) { this.context = context; }
 
-    public async Task<VariationOrderQuote> HandleAsync(LinkVoqToRequest command, CancellationToken cancellationToken)
+    public async Task<VariationOrder> HandleAsync(LinkVoqToRequest command, CancellationToken cancellationToken)
     {
-        var voq = await context.VariationOrderQuotes.FindAsync(new object[] { command.VariationOrderQuoteId }, cancellationToken);
-        if (voq is null) throw new InvalidOperationException($"VOQ {command.VariationOrderQuoteId} not found.");
+        var order = await context.VariationOrders.FindAsync(new object[] { command.VariationOrderId }, cancellationToken);
+        if (order is null) throw new InvalidOperationException($"Variation order {command.VariationOrderId} not found.");
 
         var request = await context.Requests.FindAsync(new object[] { command.RequestId }, cancellationToken);
         if (request is null) throw new InvalidOperationException($"Request {command.RequestId} not found.");
-        if (!string.Equals(request.ProjectId, voq.ProjectId, StringComparison.OrdinalIgnoreCase))
+        if (!string.Equals(request.ProjectId, order.ProjectId, StringComparison.OrdinalIgnoreCase))
             throw new InvalidOperationException("That request belongs to a different project.");
 
-        var alreadyTaken = await context.VariationOrderQuotes.AnyAsync(
+        var alreadyTaken = await context.VariationOrders.AnyAsync(
             other => other.RequestId == command.RequestId
-                && other.VariationOrderQuoteId != command.VariationOrderQuoteId,
+                && other.VariationOrderId != command.VariationOrderId,
             cancellationToken);
-        if (alreadyTaken) throw new InvalidOperationException("That request already has a VOQ linked to it.");
+        if (alreadyTaken) throw new InvalidOperationException("That request already has a variation order linked to it.");
 
-        voq.RequestId = command.RequestId;
-        // A VOQ only exists past the RFQ stage, so the linked request has implicitly climbed that
-        // ladder — set the flag so flag-driven UI (the RFQ/VOQ sections, the lineage strip) shows
-        // the link without a separate "enable RFQ" step.
+        order.RequestId = command.RequestId;
+        // A variation order only exists past the RFQ stage, so the linked request has implicitly
+        // climbed that ladder — set the flag so flag-driven UI (the RFQ/variation sections, the
+        // lineage strip) shows the link without a separate "enable RFQ" step.
         request.HasRfq = true;
 
-        // A VO copies the VOQ's RequestId at approval time, so a VO approved before this repair
-        // (seeded history) is carrying an empty one — write the provenance through to it too.
-        // Unconditionally, mirroring the VOQ assignment above, so a re-link never leaves the VO
-        // pointing at a different request than its VOQ.
-        var variationOrder = await context.VariationOrders.FirstOrDefaultAsync(
-            vo => vo.VariationOrderQuoteId == command.VariationOrderQuoteId && vo.CancelledAt == null,
-            cancellationToken);
-        if (variationOrder is not null)
-            variationOrder.RequestId = command.RequestId;
-
         await context.SaveChangesAsync(cancellationToken);
-        return voq.ToModel();
+        return order.ToModel();
     }
 }

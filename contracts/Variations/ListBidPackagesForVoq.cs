@@ -3,4 +3,4 @@ using Jewel.JPMS.Models;
 
 namespace Jewel.JPMS.Contracts.Variations;
 
-public sealed record ListBidPackagesForVoq(string VariationOrderQuoteId) : IQuery<IReadOnlyList<BidPackage>>;
+public sealed record ListBidPackagesForVoq(string VariationOrderId) : IQuery<IReadOnlyList<BidPackage>>;

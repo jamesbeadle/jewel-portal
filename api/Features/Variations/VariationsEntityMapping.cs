@@ -5,26 +5,31 @@ namespace Jewel.JPMS.Api.Features.Variations;
 
 internal static class VariationsEntityMapping
 {
-    public static VariationOrderQuote ToModel(this VariationOrderQuoteEntity entity) => new(
-        VariationOrderQuoteId: entity.VariationOrderQuoteId,
+    public static VariationOrder ToModel(this VariationOrderEntity entity) => new(
+        VariationOrderId: entity.VariationOrderId,
         ProjectId: entity.ProjectId,
         RequestId: entity.RequestId,
         Number: entity.Number,
         Reference: entity.Reference,
         Title: entity.Title,
         Description: entity.Description,
-        Status: (VariationOrderQuoteStatus)entity.Status,
+        Status: (VariationOrderStatus)entity.Status,
         SelectedBidPackageId: entity.SelectedBidPackageId,
         SelectedSubcontractorId: entity.SelectedSubcontractorId,
         EstimatedValue: entity.EstimatedValue,
+        VariationRef: entity.VariationRef,
+        Value: entity.Value,
+        CostCode: entity.CostCode,
         CreatedAt: entity.CreatedAt,
         CreatedByEmail: entity.CreatedByEmail,
+        IssuedAt: entity.IssuedAt,
         ApprovedAt: entity.ApprovedAt,
-        ApprovedByEmail: entity.ApprovedByEmail);
+        ApprovedByEmail: entity.ApprovedByEmail,
+        RejectedAt: entity.RejectedAt);
 
     public static BidPackage ToModel(this BidPackageEntity entity) => new(
         entity.BidPackageId, entity.ProjectId, entity.Title, entity.Trade,
-        (BidPackageStatus)entity.Status, entity.CreatedAt, entity.OwnerEmail, entity.VariationOrderQuoteId, entity.Number);
+        (BidPackageStatus)entity.Status, entity.CreatedAt, entity.OwnerEmail, entity.VariationOrderId, entity.Number);
 
     public static SubcontractorVariationRequest ToModel(
         this SubcontractorVariationRequestEntity entity,
@@ -41,26 +46,8 @@ internal static class VariationsEntityMapping
         entity.ReviewedAt,
         entity.ReviewedByEmail,
         entity.RejectionReason,
-        entity.VariationOrderQuoteId,
+        entity.VariationOrderId,
         projectName,
         workOrderNumber,
         subcontractorName);
-
-    public static VariationOrder ToModel(this VariationOrderEntity entity) => new(
-        VariationOrderId: entity.VariationOrderId,
-        ProjectId: entity.ProjectId,
-        VariationOrderQuoteId: entity.VariationOrderQuoteId,
-        RequestId: entity.RequestId,
-        Number: entity.Number,
-        VariationRef: entity.VariationRef,
-        Title: entity.Title,
-        Description: entity.Description,
-        Status: (VariationOrderStatus)entity.Status,
-        Value: entity.Value,
-        SubcontractorId: entity.SubcontractorId,
-        CostCode: entity.CostCode,
-        ApprovedAt: entity.ApprovedAt,
-        ApprovedByEmail: entity.ApprovedByEmail,
-        IssuedAt: entity.IssuedAt,
-        CancelledAt: entity.CancelledAt);
 }

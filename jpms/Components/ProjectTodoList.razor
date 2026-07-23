@@ -149,10 +149,9 @@
         @if (HasQuery)
         {
             var matchedRequests = MatchedRequests;
-            var matchedVoqs = MatchedVoqs;
-            var matchedVos = MatchedVos;
+            var matchedVariations = MatchedVariations;
             var matchedDrawings = MatchedDrawings;
-            var anyRelated = matchedRequests.Count + matchedVoqs.Count + matchedVos.Count + matchedDrawings.Count > 0;
+            var anyRelated = matchedRequests.Count + matchedVariations.Count + matchedDrawings.Count > 0;
 
             <div class="border-t border-line pt-4 mt-2">
                 <h3 class="text-[11px] uppercase tracking-wider text-content-subtle font-semibold mb-2">Related records</h3>
@@ -197,33 +196,20 @@
                         }
                     }
 
-                    @if (matchedVoqs.Count > 0 || matchedVos.Count > 0)
+                    @if (matchedVariations.Count > 0)
                     {
-                        <p class="text-xs text-content-subtle mb-2">Variations (@(matchedVoqs.Count + matchedVos.Count))</p>
+                        <p class="text-xs text-content-subtle mb-2">Variations (@matchedVariations.Count)</p>
                         <div class="space-y-2 mb-4">
-                            @foreach (var voq in matchedVoqs.Take(MaxRelated))
+                            @foreach (var order in matchedVariations.Take(MaxRelated))
                             {
-                                <button type="button" @key="voq.VariationOrderQuoteId" title="Open this variation order quote"
+                                <button type="button" @key="order.VariationOrderId" title="Open this variation order"
                                         class="w-full rounded-lg border border-line px-3 py-2 text-left hover:border-line-strong hover:bg-surface-raised"
-                                        @onclick="() => OpenVoq(voq.VariationOrderQuoteId)">
+                                        @onclick="() => OpenVoq(order.VariationOrderId)">
                                     <p class="truncate text-sm text-content">
-                                        <span class="font-mono text-xs text-content-muted mr-2">@voq.Reference</span>@voq.Title
+                                        <span class="font-mono text-xs text-content-muted mr-2">@(order.VariationRef ?? order.Reference)</span>@order.Title
                                     </p>
                                     <div class="mt-1 flex items-center gap-x-3 overflow-hidden text-[11px] text-content-subtle">
-                                        <span class="whitespace-nowrap">VOQ · @voq.Status</span>
-                                    </div>
-                                </button>
-                            }
-                            @foreach (var vo in matchedVos.Take(MaxRelated))
-                            {
-                                <button type="button" @key="vo.VariationOrderId" title="Open the VOQ this variation order was approved from"
-                                        class="w-full rounded-lg border border-line px-3 py-2 text-left hover:border-line-strong hover:bg-surface-raised"
-                                        @onclick="() => OpenVoq(vo.VariationOrderQuoteId)">
-                                    <p class="truncate text-sm text-content">
-                                        <span class="font-mono text-xs text-content-muted mr-2">@vo.VariationRef</span>@vo.Title
-                                    </p>
-                                    <div class="mt-1 flex items-center gap-x-3 overflow-hidden text-[11px] text-content-subtle">
-                                        <span class="whitespace-nowrap">VO · @vo.Status</span>
+                                        <span class="whitespace-nowrap">Variation · @order.Status</span>
                                     </div>
                                 </button>
                             }
@@ -314,13 +300,12 @@
     private TodoItem? selected;
 
     // Keyword search state. The query filters the to-do list and drives the "Related records"
-    // sections. Requests and drawings read synchronously from their cached stores; VOQs / VOs have
-    // no cached register, so they are fetched once in the background when the tab loads and held
+    // sections. Requests and drawings read synchronously from their cached stores; variation orders
+    // have no cached register, so they are fetched once in the background when the tab loads and held
     // here for the session's stay on the tab.
     private const int MaxRelated = 8;
     private string search = "";
-    private IReadOnlyList<VariationOrderQuote> voqs = Array.Empty<VariationOrderQuote>();
-    private IReadOnlyList<VariationOrder> vos = Array.Empty<VariationOrder>();
+    private IReadOnlyList<VariationOrder> variations = Array.Empty<VariationOrder>();
     private bool relatedLoading = true;
 
     // "Add a to-do item" modal state. The form lives in the modal; opening it starts from a clean
@@ -341,7 +326,7 @@
     {
         // Related-record sources for the keyword search. Refresh on entry per the store
         // convention: cached requests/drawings serve matches immediately, then update when the
-        // background reload lands. VOQs / VOs load once alongside (no cached register to lean on).
+        // background reload lands. Variation orders load once alongside (no cached register to lean on).
         Requests.OnChange += HandleRegisterChange;
         Drawings.OnChange += HandleRegisterChange;
         Requests.Refresh(ProjectId);
@@ -366,8 +351,7 @@
         // the tab — requests and drawings still match.
         try
         {
-            voqs = await Variations.ListForProjectAsync(ProjectId);
-            vos = await Variations.ListVariationOrdersForProjectAsync(ProjectId);
+            variations = await Variations.ListForProjectAsync(ProjectId);
         }
         catch { }
         finally
@@ -495,11 +479,8 @@
             .Where(r => MatchesKeywords(r.Reference, r.DisplayNumber, r.Kind.DisplayName(), r.Kind.LongName(), r.Title, r.Description))
             .ToList();
 
-    private IReadOnlyList<VariationOrderQuote> MatchedVoqs =>
-        voqs.Where(v => MatchesKeywords(v.Reference, v.DisplayNumber, v.Title, v.Description)).ToList();
-
-    private IReadOnlyList<VariationOrder> MatchedVos =>
-        vos.Where(v => MatchesKeywords(v.VariationRef, v.Title, v.Description)).ToList();
+    private IReadOnlyList<VariationOrder> MatchedVariations =>
+        variations.Where(v => MatchesKeywords(v.Reference, v.DisplayNumber, v.VariationRef ?? "", v.Title, v.Description)).ToList();
 
     private IReadOnlyList<Drawing> MatchedDrawings =>
         Drawings.DrawingsFor(ProjectId).Where(d => MatchesKeywords(d.DrawingCode, d.Title)).ToList();

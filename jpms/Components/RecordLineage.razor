@@ -81,7 +81,7 @@
                          OnClick="OnVoClick"
                          IsActive="@(ActiveId == "vo")"
                          Eyebrow="VO"
-                         Label="@Vo.VariationRef"
+                         Label="@(Vo.VariationRef ?? Vo.DisplayNumber)"
                          Status="@Vo.Status.ToString()"
                          Title="@($"{Vo.Title} — the approved order raised from this quote")" />
         }
@@ -122,7 +122,7 @@
     [Parameter, EditorRequired] public string ActiveId { get; set; } = "";
 
     [Parameter] public Request? Request { get; set; }
-    [Parameter] public VariationOrderQuote? Voq { get; set; }
+    [Parameter] public VariationOrder? Voq { get; set; }
     [Parameter] public VariationOrder? Vo { get; set; }
     [Parameter] public IReadOnlyList<BidPackage>? BidPackages { get; set; }
 
@@ -131,7 +131,7 @@
     [Parameter] public EventCallback OnVoClick { get; set; }
 
     private string RequestHref => Request is null ? "" : $"/projects/{ProjectId}/requests/view/{Request.RequestId}";
-    private string VoqHref => Voq is null ? "" : $"/projects/{ProjectId}/voq/{Voq.VariationOrderQuoteId}";
+    private string VoqHref => Voq is null ? "" : $"/projects/{ProjectId}/voq/{Voq.VariationOrderId}";
     private string PackageHref(string bidPackageId) => $"/projects/{ProjectId}/bid-package-invites/{bidPackageId}";
 
     // The container chip always shows the REQ-#### number (the official reference lives on the

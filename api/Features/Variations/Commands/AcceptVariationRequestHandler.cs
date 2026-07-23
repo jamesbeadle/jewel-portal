@@ -8,19 +8,20 @@ using Microsoft.EntityFrameworkCore;
 namespace Jewel.JPMS.Api.Features.Variations.Commands;
 
 /// <summary>
-/// Accepts a subcontractor's variation request by creating its VOQ directly in Selected state:
-/// there is no tender round because the price arrived with the request — the sub's proposed value
-/// becomes EstimatedValue and the sub SelectedSubcontractorId. Approval then runs the unchanged
-/// ApproveVariationOrderQuote pipeline (VO + valuation + CVR + committed budget). RequestId stays
-/// empty: this VOQ originates from a portal request, not an RFI.
+/// Accepts a subcontractor's variation request by creating its variation order directly in
+/// Quoting with the tender already recorded: there is no tender round because the price arrived
+/// with the request — the sub's proposed value becomes EstimatedValue and the sub the
+/// SelectedSubcontractorId. The order then runs the normal lifecycle (Issued → Approved via
+/// ApproveVariationOrder, valuation + CVR + committed budget). RequestId stays empty: this order
+/// originates from a portal request, not an RFI.
 /// </summary>
-public sealed class AcceptVariationRequestHandler : ICommandHandler<AcceptVariationRequest, VariationOrderQuote>
+public sealed class AcceptVariationRequestHandler : ICommandHandler<AcceptVariationRequest, VariationOrder>
 {
     private readonly JpmsContext context;
 
     public AcceptVariationRequestHandler(JpmsContext context) { this.context = context; }
 
-    public async Task<VariationOrderQuote> HandleAsync(AcceptVariationRequest command, CancellationToken cancellationToken)
+    public async Task<VariationOrder> HandleAsync(AcceptVariationRequest command, CancellationToken cancellationToken)
     {
         var variationRequest = await context.SubcontractorVariationRequests
             .FirstOrDefaultAsync(row => row.VariationRequestId == command.VariationRequestId, cancellationToken);
@@ -30,31 +31,33 @@ public sealed class AcceptVariationRequestHandler : ICommandHandler<AcceptVariat
             throw new InvalidOperationException("Only an open variation request can be accepted.");
 
         var now = DateTimeOffset.UtcNow;
-        var nextNumber = (await context.VariationOrderQuotes.MaxAsync(voq => (int?)voq.Number, cancellationToken) ?? 0) + 1;
+        var nextNumber = (await context.VariationOrders
+            .Where(o => o.ProjectId == variationRequest.ProjectId)
+            .MaxAsync(o => (int?)o.Number, cancellationToken) ?? 0) + 1;
 
-        var voq = new VariationOrderQuoteEntity
+        var order = new VariationOrderEntity
         {
-            VariationOrderQuoteId = VariationsIdentifierFactory.NextVoqId(),
+            VariationOrderId = VariationsIdentifierFactory.NextVariationOrderId(),
             ProjectId = variationRequest.ProjectId,
             RequestId = "",
             Number = nextNumber,
             Reference = VariationsIdentifierFactory.Reference(nextNumber),
             Title = variationRequest.Title,
             Description = variationRequest.Description,
-            Status = (int)VariationOrderQuoteStatus.Selected,
+            Status = (int)VariationOrderStatus.Quoting,
             SelectedSubcontractorId = variationRequest.SubcontractorId,
             EstimatedValue = variationRequest.ProposedValue,
             CreatedAt = now,
             CreatedByEmail = command.AcceptedByEmail
         };
-        context.VariationOrderQuotes.Add(voq);
+        context.VariationOrders.Add(order);
 
         variationRequest.Status = (int)VariationRequestStatus.Accepted;
         variationRequest.ReviewedAt = now;
         variationRequest.ReviewedByEmail = command.AcceptedByEmail;
-        variationRequest.VariationOrderQuoteId = voq.VariationOrderQuoteId;
+        variationRequest.VariationOrderId = order.VariationOrderId;
 
         await context.SaveChangesAsync(cancellationToken);
-        return voq.ToModel();
+        return order.ToModel();
     }
 }

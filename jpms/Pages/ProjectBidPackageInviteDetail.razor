@@ -728,7 +728,7 @@ else
                 <label class="block text-xs font-semibold uppercase tracking-wide text-content-subtle mt-3 mb-1">Variation Order Quote</label>
                 @if (voqs.Count == 0)
                 {
-                    <p class="text-sm text-content-subtle italic">No variation order quotes on this project yet.</p>
+                    <p class="text-sm text-content-subtle italic">No variation orders on this project yet.</p>
                 }
                 else
                 {
@@ -736,7 +736,7 @@ else
                         <option value="">Select a variation…</option>
                         @foreach (var v in voqs)
                         {
-                            <option value="@v.VariationOrderQuoteId">@v.Reference — @v.Title</option>
+                            <option value="@v.VariationOrderId">@v.Reference — @v.Title</option>
                         }
                     </select>
                 }
@@ -1056,7 +1056,7 @@ else
     private IReadOnlyList<Drawing> packageDrawings = Array.Empty<Drawing>();
     private IReadOnlyList<ProjectWorkOrderDetail> projectOrders = Array.Empty<ProjectWorkOrderDetail>();
     private IReadOnlyList<BoqLineItem> boqLines = Array.Empty<BoqLineItem>();
-    private IReadOnlyList<VariationOrderQuote> voqs = Array.Empty<VariationOrderQuote>();
+    private IReadOnlyList<VariationOrder> voqs = Array.Empty<VariationOrder>();
 
     private bool showInviteModal;
     private string subSearch = "";
@@ -1129,7 +1129,7 @@ else
         try { boqLines = await Queries.AskAsync(new ListBoqLinesForProject(ProjectId), CancellationToken.None); }
         catch { /* picker simply shows no BoQ lines */ }
 
-        try { voqs = await Queries.AskAsync(new ListVoqsForProject(ProjectId), CancellationToken.None); }
+        try { voqs = await Queries.AskAsync(new ListVariationOrdersForProject(ProjectId), CancellationToken.None); }
         catch { /* picker simply shows no variations */ }
 
         await LoadLineageAsync();
@@ -1140,28 +1140,28 @@ else
     // read is best-effort: a missing piece renders as a placeholder chip, never an error.
 
     private Request? lineageRequest;
-    private VariationOrderQuote? lineageVoq;
+    private VariationOrder? lineageVoq;
     private VariationOrder? lineageVo;
     private IReadOnlyList<BidPackage> siblingPackages = Array.Empty<BidPackage>();
 
     private async Task LoadLineageAsync()
     {
-        if (string.IsNullOrEmpty(package?.VariationOrderQuoteId))
+        if (string.IsNullOrEmpty(package?.VariationOrderId))
         {
             lineageRequest = null; lineageVoq = null; lineageVo = null;
             siblingPackages = Array.Empty<BidPackage>();
             return;
         }
 
-        var voqId = package.VariationOrderQuoteId;
-        try { lineageVoq = await Queries.AskAsync(new GetVoqById(voqId), CancellationToken.None); }
+        var voqId = package.VariationOrderId;
+        try { lineageVoq = await Queries.AskAsync(new GetVariationOrderById(voqId), CancellationToken.None); }
         catch { lineageVoq = null; }
         if (lineageVoq is null) return;
 
         try { lineageRequest = await RequestRegister.GetAsync(lineageVoq.RequestId); }
         catch { lineageRequest = null; }
-        try { lineageVo = await Queries.AskAsync(new GetVariationOrderByVoq(voqId), CancellationToken.None); }
-        catch { lineageVo = null; }
+        // One document: the "VO" lineage chip is this same record, shown once it is approved.
+        lineageVo = lineageVoq.Status == VariationOrderStatus.Approved ? lineageVoq : null;
         try { siblingPackages = await Queries.AskAsync(new ListBidPackagesForVoq(voqId), CancellationToken.None); }
         catch { siblingPackages = Array.Empty<BidPackage>(); }
     }
@@ -1182,7 +1182,7 @@ else
                 var boq = boqLines.FirstOrDefault(b => b.BoqLineItemId == item.BoqLineItemId);
                 return boq is null ? "Contract line" : $"BoQ · {boq.Description}";
             case BidPackageLineCoverage.Variation:
-                var voq = voqs.FirstOrDefault(v => v.VariationOrderQuoteId == item.VariationOrderQuoteId);
+                var voq = voqs.FirstOrDefault(v => v.VariationOrderId == item.VariationOrderId);
                 return voq is null ? "Variation" : $"{voq.Reference} · {voq.Title}";
             default:
                 return "";
@@ -1194,7 +1194,7 @@ else
         linkingLine = item;
         coverageChoice = item.Coverage;
         coverageBoqId = item.BoqLineItemId;
-        coverageVoqId = item.VariationOrderQuoteId;
+        coverageVoqId = item.VariationOrderId;
         showCoverageModal = true;
     }
 

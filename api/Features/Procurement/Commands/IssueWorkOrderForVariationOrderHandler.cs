@@ -28,9 +28,9 @@ public sealed class IssueWorkOrderForVariationOrderHandler
             .FirstOrDefaultAsync(vo => vo.VariationOrderId == command.VariationOrderId, cancellationToken);
         if (variationOrder is null)
             throw new InvalidOperationException($"Variation order {command.VariationOrderId} not found.");
-        if (variationOrder.Status == (int)VariationOrderStatus.Cancelled)
-            throw new InvalidOperationException("A cancelled variation order cannot be instructed.");
-        if (string.IsNullOrWhiteSpace(variationOrder.SubcontractorId))
+        if (variationOrder.Status == (int)VariationOrderStatus.Rejected)
+            throw new InvalidOperationException("A rejected variation order cannot be instructed.");
+        if (string.IsNullOrWhiteSpace(variationOrder.SelectedSubcontractorId))
             throw new InvalidOperationException("The variation order has no subcontractor to issue a work order to.");
 
         var nextNumber = (await context.WorkOrders
@@ -46,7 +46,7 @@ public sealed class IssueWorkOrderForVariationOrderHandler
             WorkOrderId = ProcurementIdentifierFactory.NextWorkOrderId(),
             ProjectId = variationOrder.ProjectId,
             BidPackageId = null,
-            SubcontractorId = variationOrder.SubcontractorId,
+            SubcontractorId = variationOrder.SelectedSubcontractorId,
             Value = variationOrder.Value,
             Scope = scope,
             AwardedAt = now,
@@ -78,12 +78,9 @@ public sealed class IssueWorkOrderForVariationOrderHandler
             SortOrder = 0
         });
 
-        if (variationOrder.Status == (int)VariationOrderStatus.Approved)
-        {
-            variationOrder.Status = (int)VariationOrderStatus.Issued;
-            variationOrder.IssuedAt = now;
-        }
-
+        // Instructing a subcontractor happens after the client has approved — issuing a work order
+        // does not move the variation's own status (Issued now means "sent to the client", which is
+        // an earlier stage). The instruction is recorded by the work order itself.
         await context.SaveChangesAsync(cancellationToken);
         return entity.ToModel();
     }

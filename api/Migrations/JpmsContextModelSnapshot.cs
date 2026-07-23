@@ -68,11 +68,12 @@ namespace Jewel.JPMS.Api.Migrations
                     b.ToTable("BidDecisions");
                 });
 
-            modelBuilder.Entity("Jewel.JPMS.Api.Data.Entities.VariationOrderQuoteEntity", b =>
+            modelBuilder.Entity("Jewel.JPMS.Api.Data.Entities.VariationOrderEntity", b =>
                 {
-                    b.Property<string>("VariationOrderQuoteId")
+                    b.Property<string>("VariationOrderId")
                         .HasMaxLength(64)
-                        .HasColumnType("nvarchar(64)");
+                        .HasColumnType("nvarchar(64)")
+                        .HasColumnName("VariationOrderQuoteId");
 
                     b.Property<DateTimeOffset?>("ApprovedAt")
                         .HasColumnType("datetimeoffset");
@@ -80,6 +81,10 @@ namespace Jewel.JPMS.Api.Migrations
                     b.Property<string>("ApprovedByEmail")
                         .HasMaxLength(256)
                         .HasColumnType("nvarchar(256)");
+
+                    b.Property<string>("CostCode")
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)");
 
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("datetimeoffset");
@@ -98,6 +103,9 @@ namespace Jewel.JPMS.Api.Migrations
                         .HasPrecision(18, 4)
                         .HasColumnType("decimal(18,4)");
 
+                    b.Property<DateTimeOffset?>("IssuedAt")
+                        .HasColumnType("datetimeoffset");
+
                     b.Property<int>("Number")
                         .HasColumnType("int");
 
@@ -110,6 +118,9 @@ namespace Jewel.JPMS.Api.Migrations
                         .IsRequired()
                         .HasMaxLength(64)
                         .HasColumnType("nvarchar(64)");
+
+                    b.Property<DateTimeOffset?>("RejectedAt")
+                        .HasColumnType("datetimeoffset");
 
                     b.Property<string>("RequestId")
                         .IsRequired()
@@ -132,83 +143,17 @@ namespace Jewel.JPMS.Api.Migrations
                         .HasMaxLength(256)
                         .HasColumnType("nvarchar(256)");
 
-                    b.HasKey("VariationOrderQuoteId");
-
-                    b.ToTable("VariationOrderQuotes");
-                });
-
-            modelBuilder.Entity("Jewel.JPMS.Api.Data.Entities.VariationOrderEntity", b =>
-                {
-                    b.Property<string>("VariationOrderId")
-                        .HasMaxLength(64)
-                        .HasColumnType("nvarchar(64)");
-
-                    b.Property<DateTimeOffset>("ApprovedAt")
-                        .HasColumnType("datetimeoffset");
-
-                    b.Property<string>("ApprovedByEmail")
-                        .IsRequired()
-                        .HasMaxLength(256)
-                        .HasColumnType("nvarchar(256)");
-
-                    b.Property<DateTimeOffset?>("CancelledAt")
-                        .HasColumnType("datetimeoffset");
-
-                    b.Property<string>("CostCode")
-                        .IsRequired()
-                        .HasMaxLength(32)
-                        .HasColumnType("nvarchar(32)");
-
-                    b.Property<string>("Description")
-                        .IsRequired()
-                        .HasMaxLength(2048)
-                        .HasColumnType("nvarchar(2048)");
-
-                    b.Property<DateTimeOffset?>("IssuedAt")
-                        .HasColumnType("datetimeoffset");
-
-                    b.Property<int>("Number")
-                        .HasColumnType("int");
-
-                    b.Property<string>("ProjectId")
-                        .IsRequired()
-                        .HasMaxLength(64)
-                        .HasColumnType("nvarchar(64)");
-
-                    b.Property<string>("RequestId")
-                        .IsRequired()
-                        .HasMaxLength(64)
-                        .HasColumnType("nvarchar(64)");
-
-                    b.Property<int>("Status")
-                        .HasColumnType("int");
-
-                    b.Property<string>("SubcontractorId")
-                        .HasMaxLength(64)
-                        .HasColumnType("nvarchar(64)");
-
-                    b.Property<string>("Title")
-                        .IsRequired()
-                        .HasMaxLength(256)
-                        .HasColumnType("nvarchar(256)");
-
                     b.Property<decimal>("Value")
                         .HasPrecision(18, 4)
                         .HasColumnType("decimal(18,4)");
 
-                    b.Property<string>("VariationOrderQuoteId")
-                        .IsRequired()
-                        .HasMaxLength(64)
-                        .HasColumnType("nvarchar(64)");
-
                     b.Property<string>("VariationRef")
-                        .IsRequired()
                         .HasMaxLength(16)
                         .HasColumnType("nvarchar(16)");
 
                     b.HasKey("VariationOrderId");
 
-                    b.ToTable("VariationOrders");
+                    b.ToTable("VariationOrderQuotes");
                 });
 
             modelBuilder.Entity("Jewel.JPMS.Api.Data.Entities.BidPackageEntity", b =>
@@ -243,9 +188,10 @@ namespace Jewel.JPMS.Api.Migrations
                         .HasMaxLength(64)
                         .HasColumnType("nvarchar(64)");
 
-                    b.Property<string>("VariationOrderQuoteId")
+                    b.Property<string>("VariationOrderId")
                         .HasMaxLength(64)
-                        .HasColumnType("nvarchar(64)");
+                        .HasColumnType("nvarchar(64)")
+                        .HasColumnName("VariationOrderQuoteId");
 
                     b.HasKey("BidPackageId");
 
@@ -3014,9 +2960,10 @@ namespace Jewel.JPMS.Api.Migrations
                         .HasMaxLength(256)
                         .HasColumnType("nvarchar(256)");
 
-                    b.Property<string>("VariationOrderQuoteId")
+                    b.Property<string>("VariationOrderId")
                         .HasMaxLength(64)
-                        .HasColumnType("nvarchar(64)");
+                        .HasColumnType("nvarchar(64)")
+                        .HasColumnName("VariationOrderQuoteId");
 
                     b.Property<string>("WorkOrderId")
                         .IsRequired()

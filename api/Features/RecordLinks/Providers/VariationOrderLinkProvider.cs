@@ -5,10 +5,12 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Jewel.JPMS.Api.Features.RecordLinks.Providers;
 
-// Linkable-record provider for Variation Orders — the approved changes whose values make up the
-// valuation report's Variations element. Wraps the VariationOrders table so a triage email (the
-// client's instruction, pricing correspondence, the architect's confirmation) can be linked to the
-// VO it concerns and the VO reads its mail back live by tag, identically to every other record type.
+// Linkable-record provider surfacing a variation order by its contract-stage "V18" reference — the
+// instruction-stage identity, used once the variation is approved. It wraps the same unified
+// VariationOrderQuotes table as the VOQ provider (a variation is ONE document since the 2026-07-23
+// unification); the two providers just offer two references onto it, so both the historic VO- and
+// VOQ- mail tags keep resolving to the record. Only approved orders carry a V-ref, so this provider
+// lists just those; a still-quoting order is reachable by its VOQ- reference instead.
 //
 // Variation references ("V18") are only unique per project, while JPMS tags share one flat
 // mailbox-category space — so the tag stem is project-qualified the same way cost-centre tags are:
@@ -28,7 +30,7 @@ public sealed class VariationOrderLinkProvider : ILinkableRecordProvider
     {
         var projectRef = await ProjectRefAsync(projectId, ct);
         var entities = await context.VariationOrders.AsNoTracking()
-            .Where(v => v.ProjectId == projectId)
+            .Where(v => v.ProjectId == projectId && v.VariationRef != null)
             .OrderByDescending(v => v.Number)
             .ToListAsync(ct);
         return entities.Select(v => ToLinkable(v, projectRef)).ToList().AsReadOnly();
@@ -38,7 +40,7 @@ public sealed class VariationOrderLinkProvider : ILinkableRecordProvider
     {
         var entity = await context.VariationOrders.AsNoTracking()
             .FirstOrDefaultAsync(v => v.VariationOrderId == recordId, ct);
-        if (entity is null) return null;
+        if (entity is null || entity.VariationRef is null) return null;
 
         var projectRef = await ProjectRefAsync(entity.ProjectId, ct);
         return ToLinkable(entity, projectRef);

@@ -17,13 +17,13 @@ public sealed class SelectVoqTenderEndpoint
     private readonly SignedInUserResolver users;
     private readonly SelectVoqTenderAuthorisation authorisation;
     private readonly SelectVoqTenderValidation validation;
-    private readonly ICommandHandler<SelectVoqTender, VariationOrderQuote> handler;
+    private readonly ICommandHandler<SelectVoqTender, VariationOrder> handler;
 
     public SelectVoqTenderEndpoint(
         SignedInUserResolver users,
         SelectVoqTenderAuthorisation authorisation,
         SelectVoqTenderValidation validation,
-        ICommandHandler<SelectVoqTender, VariationOrderQuote> handler)
+        ICommandHandler<SelectVoqTender, VariationOrder> handler)
     {
         this.users = users;
         this.authorisation = authorisation;
@@ -44,7 +44,7 @@ public sealed class SelectVoqTenderEndpoint
         var body = await request.ReadFromJsonAsync<SelectVoqTender>();
         if (body is null) return new BadRequestResult();
 
-        var command = body with { VariationOrderQuoteId = voqId };
+        var command = body with { VariationOrderId = voqId };
 
         if (!authorisation.Allows(signedInUser, command)) return new StatusCodeResult(403);
 

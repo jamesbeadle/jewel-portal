@@ -9,21 +9,22 @@ using Microsoft.Azure.Functions.Worker;
 namespace Jewel.JPMS.Api.Features.Variations.Commands;
 
 /// <summary>
-/// POST /api/voqs/{voqId}/approve — approve the VOQ and raise a Variation Order. Body: { costCode,
-/// value? }. The approver is the signed-in user.
+/// POST /api/variation-orders/{voId}/status — move a variation order between the side-effect-free
+/// stages (Quoting, Issued). Body: { status }. Approve / reject / un-approve are refused here (they
+/// carry commercial writes and have their own routes).
 /// </summary>
-public sealed class ApproveVariationOrderQuoteEndpoint
+public sealed class SetVariationOrderStatusEndpoint
 {
     private readonly SignedInUserResolver users;
-    private readonly ApproveVariationOrderQuoteAuthorisation authorisation;
-    private readonly ApproveVariationOrderQuoteValidation validation;
-    private readonly ICommandHandler<ApproveVariationOrderQuote, VariationOrder> handler;
+    private readonly SetVariationOrderStatusAuthorisation authorisation;
+    private readonly SetVariationOrderStatusValidation validation;
+    private readonly ICommandHandler<SetVariationOrderStatus, VariationOrder> handler;
 
-    public ApproveVariationOrderQuoteEndpoint(
+    public SetVariationOrderStatusEndpoint(
         SignedInUserResolver users,
-        ApproveVariationOrderQuoteAuthorisation authorisation,
-        ApproveVariationOrderQuoteValidation validation,
-        ICommandHandler<ApproveVariationOrderQuote, VariationOrder> handler)
+        SetVariationOrderStatusAuthorisation authorisation,
+        SetVariationOrderStatusValidation validation,
+        ICommandHandler<SetVariationOrderStatus, VariationOrder> handler)
     {
         this.users = users;
         this.authorisation = authorisation;
@@ -31,20 +32,20 @@ public sealed class ApproveVariationOrderQuoteEndpoint
         this.handler = handler;
     }
 
-    [Function(nameof(ApproveVariationOrderQuote))]
+    [Function(nameof(SetVariationOrderStatus))]
     public async Task<IActionResult> Run(
-        [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "voqs/{voqId}/approve")] HttpRequest request,
-        string voqId)
+        [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "variation-orders/{voId}/status")] HttpRequest request,
+        string voId)
     {
         var cancellationToken = request.HttpContext.RequestAborted;
 
         var signedInUser = await users.ResolveAsync(request, cancellationToken);
         if (signedInUser is null) return new UnauthorizedResult();
 
-        var body = await request.ReadFromJsonAsync<ApproveVariationOrderQuote>();
+        var body = await request.ReadFromJsonAsync<SetVariationOrderStatus>();
         if (body is null) return new BadRequestResult();
 
-        var command = body with { VariationOrderQuoteId = voqId, ApprovedByEmail = signedInUser.Email };
+        var command = body with { VariationOrderId = voId };
 
         if (!authorisation.Allows(signedInUser, command)) return new StatusCodeResult(403);
 

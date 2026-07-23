@@ -8,7 +8,7 @@ public sealed class AddBidPackageToVoqValidation
     public ValidationOutcome Check(AddBidPackageToVoq command)
     {
         var errors = new List<string>();
-        if (string.IsNullOrWhiteSpace(command.VariationOrderQuoteId)) errors.Add("VariationOrderQuoteId is required.");
+        if (string.IsNullOrWhiteSpace(command.VariationOrderId)) errors.Add("VariationOrderId is required.");
         if (string.IsNullOrWhiteSpace(command.Title)) errors.Add("A package title is required.");
         if (string.IsNullOrWhiteSpace(command.Trade)) errors.Add("A trade is required.");
         if (string.IsNullOrWhiteSpace(command.OwnerEmail)) errors.Add("Owner email is required.");

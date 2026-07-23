@@ -925,9 +925,10 @@ else
             ? ""
             : (record.PartyKind == PartyKind.Architect ? ArchitectPrefix : ClientPrefix) + record.PartyId;
     private string? ladderError;
-    private VariationOrderQuote? voq;
+    private VariationOrder? voq;
     private string? voqError;
-    // Downstream lineage (VO + bid packages hang off the VOQ) for the RecordLineage bar.
+    // The same variation order, surfaced as the "VO" lineage chip once it is approved (it carries
+    // a V-ref then). Bid packages hang off it for the RecordLineage bar.
     private VariationOrder? vo;
     private IReadOnlyList<BidPackage> bidPackages = Array.Empty<BidPackage>();
 
@@ -953,7 +954,7 @@ else
     private bool taggedEmailsLoading;
     private string selectedChainMailboxId = "";
 
-    private string VoqHref => voq is null ? "" : $"/projects/{ProjectId}/voq/{voq.VariationOrderQuoteId}";
+    private string VoqHref => voq is null ? "" : $"/projects/{ProjectId}/voq/{voq.VariationOrderId}";
 
     // The reference the page leads with: once promoted, the official instrument number (RFI-014) —
     // the number correspondents know it by — with the REQ container number as secondary context.
@@ -1104,9 +1105,10 @@ else
         // packages. Best-effort — the bar simply shows placeholders when these can't be read.
         if (voq is not null)
         {
-            try { vo = await Variations.GetVariationOrderByVoqAsync(voq.VariationOrderQuoteId); }
-            catch { vo = null; }
-            try { bidPackages = await Variations.ListBidPackagesAsync(voq.VariationOrderQuoteId); }
+            // One document: the "VO" lineage chip is this same record, shown once it is approved
+            // (it carries a V-ref then).
+            vo = voq.Status == VariationOrderStatus.Approved ? voq : null;
+            try { bidPackages = await Variations.ListBidPackagesAsync(voq.VariationOrderId); }
             catch { bidPackages = Array.Empty<BidPackage>(); }
         }
         else
@@ -1390,7 +1392,7 @@ else
 
             if (acceptedRows.Count > 0)
             {
-                var package = await Variations.AddBidPackageAsync(voq.VariationOrderQuoteId, voq.Title, DraftPackageTrade);
+                var package = await Variations.AddBidPackageAsync(voq.VariationOrderId, voq.Title, DraftPackageTrade);
                 var inputs = acceptedRows
                     .Select(row => new BidPackageLineItemInput(
                         row.Line.Description, row.Line.Unit, row.Line.Quantity,
@@ -1401,7 +1403,7 @@ else
             }
 
             voqDraftOpen = false;
-            Nav.NavigateTo($"/projects/{ProjectId}/voq/{voq.VariationOrderQuoteId}");
+            Nav.NavigateTo($"/projects/{ProjectId}/voq/{voq.VariationOrderId}");
         }
         catch
         {

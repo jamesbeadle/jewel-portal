@@ -9,14 +9,15 @@ public sealed record ListVariationRequestsForProject(string ProjectId) : IQuery<
 
 /// <summary>
 /// POST /api/variation-requests/{variationRequestId}/accept — accepts a subcontractor's variation
-/// request and creates the VOQ from it, already in Selected state: the sub's proposed value is the
-/// tender (EstimatedValue) and the sub the SelectedSubcontractorId. The QS then approves it via
-/// the normal ApproveVariationOrderQuote pipeline (valuation + CVR writes unchanged).
-/// AcceptedByEmail is stamped server-side from the session.
+/// request and creates the variation order from it, in Quoting with the tender already recorded:
+/// the sub's proposed value is the estimate (EstimatedValue) and the sub the
+/// SelectedSubcontractorId. The order then runs the normal lifecycle — issued to the client,
+/// approved via ApproveVariationOrder (valuation + CVR writes unchanged). AcceptedByEmail is
+/// stamped server-side from the session.
 /// </summary>
 public sealed record AcceptVariationRequest(
     string VariationRequestId,
-    string AcceptedByEmail = "") : ICommand<VariationOrderQuote>;
+    string AcceptedByEmail = "") : ICommand<VariationOrder>;
 
 /// <summary>POST /api/variation-requests/{variationRequestId}/reject — rejects with a reason the
 /// subcontractor sees in the portal. RejectedByEmail is stamped server-side.</summary>

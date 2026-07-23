@@ -17,13 +17,13 @@ public sealed class LinkVoqToRequestEndpoint
     private readonly SignedInUserResolver users;
     private readonly LinkVoqToRequestAuthorisation authorisation;
     private readonly LinkVoqToRequestValidation validation;
-    private readonly ICommandHandler<LinkVoqToRequest, VariationOrderQuote> handler;
+    private readonly ICommandHandler<LinkVoqToRequest, VariationOrder> handler;
 
     public LinkVoqToRequestEndpoint(
         SignedInUserResolver users,
         LinkVoqToRequestAuthorisation authorisation,
         LinkVoqToRequestValidation validation,
-        ICommandHandler<LinkVoqToRequest, VariationOrderQuote> handler)
+        ICommandHandler<LinkVoqToRequest, VariationOrder> handler)
     {
         this.users = users;
         this.authorisation = authorisation;
@@ -44,7 +44,7 @@ public sealed class LinkVoqToRequestEndpoint
         var body = await request.ReadFromJsonAsync<LinkVoqToRequest>();
         if (body is null) return new BadRequestResult();
 
-        var command = body with { VariationOrderQuoteId = voqId };
+        var command = body with { VariationOrderId = voqId };
 
         if (!authorisation.Allows(signedInUser, command)) return new StatusCodeResult(403);
 

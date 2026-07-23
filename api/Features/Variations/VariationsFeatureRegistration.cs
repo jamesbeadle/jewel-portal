@@ -11,15 +11,12 @@ public static class VariationsFeatureRegistration
 {
     public static IServiceCollection AddVariationsFeature(this IServiceCollection services)
     {
-        services.AddScoped<IQueryHandler<GetVoqById, VariationOrderQuote?>, GetVoqByIdHandler>();
-        services.AddScoped<IQueryHandler<GetVoqByRequest, VariationOrderQuote?>, GetVoqByRequestHandler>();
-        services.AddScoped<IQueryHandler<ListVoqsForProject, IReadOnlyList<VariationOrderQuote>>, ListVoqsForProjectHandler>();
+        services.AddScoped<IQueryHandler<GetVoqByRequest, VariationOrder?>, GetVoqByRequestHandler>();
         services.AddScoped<IQueryHandler<ListBidPackagesForVoq, IReadOnlyList<BidPackage>>, ListBidPackagesForVoqHandler>();
         services.AddScoped<IQueryHandler<GetVariationOrderById, VariationOrder?>, GetVariationOrderByIdHandler>();
-        services.AddScoped<IQueryHandler<GetVariationOrderByVoq, VariationOrder?>, GetVariationOrderByVoqHandler>();
         services.AddScoped<IQueryHandler<ListVariationOrdersForProject, IReadOnlyList<VariationOrder>>, ListVariationOrdersForProjectHandler>();
 
-        services.AddScoped<ICommandHandler<CreateVoqFromRfq, VariationOrderQuote>, CreateVoqFromRfqHandler>();
+        services.AddScoped<ICommandHandler<CreateVoqFromRfq, VariationOrder>, CreateVoqFromRfqHandler>();
         services.AddScoped<CreateVoqFromRfqAuthorisation>();
         services.AddScoped<CreateVoqFromRfqValidation>();
 
@@ -31,44 +28,36 @@ public static class VariationsFeatureRegistration
         services.AddScoped<AddBidPackageToVoqAuthorisation>();
         services.AddScoped<AddBidPackageToVoqValidation>();
 
-        services.AddScoped<ICommandHandler<SelectVoqTender, VariationOrderQuote>, SelectVoqTenderHandler>();
+        services.AddScoped<ICommandHandler<SelectVoqTender, VariationOrder>, SelectVoqTenderHandler>();
         services.AddScoped<SelectVoqTenderAuthorisation>();
         services.AddScoped<SelectVoqTenderValidation>();
 
-        services.AddScoped<ICommandHandler<LinkVoqToRequest, VariationOrderQuote>, LinkVoqToRequestHandler>();
+        services.AddScoped<ICommandHandler<LinkVoqToRequest, VariationOrder>, LinkVoqToRequestHandler>();
         services.AddScoped<LinkVoqToRequestAuthorisation>();
         services.AddScoped<LinkVoqToRequestValidation>();
 
-        services.AddScoped<ICommandHandler<ApproveVariationOrderQuote, VariationOrder>, ApproveVariationOrderQuoteHandler>();
-        services.AddScoped<ApproveVariationOrderQuoteAuthorisation>();
-        services.AddScoped<ApproveVariationOrderQuoteValidation>();
+        services.AddScoped<ICommandHandler<ApproveVariationOrder, VariationOrder>, ApproveVariationOrderHandler>();
+        services.AddScoped<ApproveVariationOrderAuthorisation>();
+        services.AddScoped<ApproveVariationOrderValidation>();
 
-        services.AddScoped<ICommandHandler<IssueVariationOrder, VariationOrder>, IssueVariationOrderHandler>();
-        services.AddScoped<IssueVariationOrderAuthorisation>();
-        services.AddScoped<IssueVariationOrderValidation>();
+        services.AddScoped<ICommandHandler<RejectVariationOrder, VariationOrder>, RejectVariationOrderHandler>();
+        services.AddScoped<RejectVariationOrderAuthorisation>();
+        services.AddScoped<RejectVariationOrderValidation>();
 
-        services.AddScoped<ICommandHandler<CancelVariationOrder, VariationOrder>, CancelVariationOrderHandler>();
-        services.AddScoped<CancelVariationOrderAuthorisation>();
-        services.AddScoped<CancelVariationOrderValidation>();
-
-        services.AddScoped<ICommandHandler<ReturnVoqToTendering, VariationOrderQuote>, ReturnVoqToTenderingHandler>();
-        services.AddScoped<ReturnVoqToTenderingAuthorisation>();
-        services.AddScoped<ReturnVoqToTenderingValidation>();
+        services.AddScoped<ICommandHandler<ReturnVariationOrderToQuoting, VariationOrder>, ReturnVariationOrderToQuotingHandler>();
+        services.AddScoped<ReturnVariationOrderToQuotingAuthorisation>();
+        services.AddScoped<ReturnVariationOrderToQuotingValidation>();
 
         services.AddScoped<ICommandHandler<ReviseVariationOrderValue, VariationOrder>, ReviseVariationOrderValueHandler>();
         services.AddScoped<ReviseVariationOrderValueAuthorisation>();
         services.AddScoped<ReviseVariationOrderValueValidation>();
 
-        services.AddScoped<ICommandHandler<SetVoqStatus, VariationOrderQuote>, SetVoqStatusHandler>();
-        services.AddScoped<SetVoqStatusAuthorisation>();
-        services.AddScoped<SetVoqStatusValidation>();
-
-        services.AddScoped<ICommandHandler<RevertVariationOrderToApproved, VariationOrder>, RevertVariationOrderToApprovedHandler>();
-        services.AddScoped<RevertVariationOrderToApprovedAuthorisation>();
-        services.AddScoped<RevertVariationOrderToApprovedValidation>();
+        services.AddScoped<ICommandHandler<SetVariationOrderStatus, VariationOrder>, SetVariationOrderStatusHandler>();
+        services.AddScoped<SetVariationOrderStatusAuthorisation>();
+        services.AddScoped<SetVariationOrderStatusValidation>();
 
         // Subcontractor variation requests (portal-raised; see subcontractor-crm-scope §6).
-        services.AddScoped<ICommandHandler<AcceptVariationRequest, VariationOrderQuote>, AcceptVariationRequestHandler>();
+        services.AddScoped<ICommandHandler<AcceptVariationRequest, VariationOrder>, AcceptVariationRequestHandler>();
 
         return services;
     }

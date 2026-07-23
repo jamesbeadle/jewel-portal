@@ -9,13 +9,13 @@ using Microsoft.EntityFrameworkCore;
 namespace Jewel.JPMS.Api.Features.Variations.Commands;
 
 /// <summary>
-/// Revises the value of a live (Approved or Issued) Variation Order and moves the commercial
-/// records that mirrored the original approval by the same delta, in one transaction:
+/// Revises the value of an APPROVED variation order and moves the commercial records that the
+/// approval wrote by the same delta, in one transaction:
 ///   1. re-prices the Variation line on the Valuation Report (rate + line amount),
 ///   2. records a delta QS accrual on the CVR (add for an increase, omit for a decrease),
 ///   3. moves the committed value on the cost-centre budget,
 ///   4. updates the VariationOrder record itself.
-/// Cancelled VOs cannot be revised — cancelling is terminal and its reversals have already run.
+/// Only an approved order has figures to move; before approval, edit the estimate instead.
 /// </summary>
 public sealed class ReviseVariationOrderValueHandler : ICommandHandler<ReviseVariationOrderValue, VariationOrder>
 {
@@ -26,8 +26,8 @@ public sealed class ReviseVariationOrderValueHandler : ICommandHandler<ReviseVar
     {
         var entity = await context.VariationOrders.FindAsync(new object[] { command.VariationOrderId }, cancellationToken);
         if (entity is null) throw new InvalidOperationException($"Variation order {command.VariationOrderId} not found.");
-        if (entity.Status == (int)VariationOrderStatus.Cancelled)
-            throw new InvalidOperationException("A cancelled variation order cannot be revised.");
+        if (entity.Status != (int)VariationOrderStatus.Approved)
+            throw new InvalidOperationException("Only an approved variation order can be revised — before approval, edit the estimate.");
 
         var previousValue = entity.Value;
         var delta = command.Value - previousValue;
@@ -73,7 +73,7 @@ public sealed class ReviseVariationOrderValueHandler : ICommandHandler<ReviseVar
             {
                 CostCodeBudgetId = VariationsIdentifierFactory.NextCostCodeBudgetId(),
                 ProjectId = entity.ProjectId,
-                CostCode = entity.CostCode,
+                CostCode = entity.CostCode ?? "",
                 AllocatedAmount = 0m,
                 SpentAmount = 0m,
                 CommittedAmount = 0m

@@ -8,28 +8,28 @@ using Microsoft.EntityFrameworkCore;
 namespace Jewel.JPMS.Api.Features.Variations.Commands;
 
 /// <summary>
-/// Creates a VOQ from a request that has an RFQ enabled. Enforces one VOQ per request. The VOQ
+/// Creates a VOQ from a request that has an RFQ enabled. Enforces one variation order per request. The VOQ
 /// inherits the request's project and (by default) its title.
 /// </summary>
-public sealed class CreateVoqFromRfqHandler : ICommandHandler<CreateVoqFromRfq, VariationOrderQuote>
+public sealed class CreateVoqFromRfqHandler : ICommandHandler<CreateVoqFromRfq, VariationOrder>
 {
     private readonly JpmsContext context;
     public CreateVoqFromRfqHandler(JpmsContext context) { this.context = context; }
 
-    public async Task<VariationOrderQuote> HandleAsync(CreateVoqFromRfq command, CancellationToken cancellationToken)
+    public async Task<VariationOrder> HandleAsync(CreateVoqFromRfq command, CancellationToken cancellationToken)
     {
         var request = await context.Requests.FindAsync(new object[] { command.RequestId }, cancellationToken);
         if (request is null) throw new InvalidOperationException($"Request {command.RequestId} not found.");
-        if (!request.HasRfq) throw new InvalidOperationException("A VOQ can only be created once an RFQ is enabled on the request.");
+        if (!request.HasRfq) throw new InvalidOperationException("A variation order can only be created once an RFQ is enabled on the request.");
 
-        var existing = await context.VariationOrderQuotes
-            .AnyAsync(voq => voq.RequestId == command.RequestId, cancellationToken);
-        if (existing) throw new InvalidOperationException("A VOQ already exists for this request.");
+        var existing = await context.VariationOrders
+            .AnyAsync(vo => vo.RequestId == command.RequestId, cancellationToken);
+        if (existing) throw new InvalidOperationException("A variation order already exists for this request.");
 
         // Per-project numbering: every project runs its own VOQ sequence (references like
         // "VOQ-0072" are only unique within a project — By France's seeded register already
         // runs to VOQ-0076, and other projects must not continue that sequence).
-        var nextNumber = (await context.VariationOrderQuotes
+        var nextNumber = (await context.VariationOrders
             .Where(other => other.ProjectId == request.ProjectId)
             .MaxAsync(other => (int?)other.Number, cancellationToken) ?? 0) + 1;
 
@@ -40,22 +40,22 @@ public sealed class CreateVoqFromRfqHandler : ICommandHandler<CreateVoqFromRfq, 
         if (title.Length > 256) title = title[..256];
         if (description.Length > 2048) description = description[..2048];
 
-        var entity = new VariationOrderQuoteEntity
+        var entity = new VariationOrderEntity
         {
-            VariationOrderQuoteId = VariationsIdentifierFactory.NextVoqId(),
+            VariationOrderId = VariationsIdentifierFactory.NextVariationOrderId(),
             ProjectId = request.ProjectId,
             RequestId = request.RequestId,
             Number = nextNumber,
             Reference = VariationsIdentifierFactory.Reference(nextNumber),
             Title = title,
             Description = description,
-            Status = (int)VariationOrderQuoteStatus.Draft,
+            Status = (int)VariationOrderStatus.Quoting,
             EstimatedValue = command.EstimatedValue,
             CreatedAt = DateTimeOffset.UtcNow,
             CreatedByEmail = command.CreatedByEmail
         };
 
-        context.VariationOrderQuotes.Add(entity);
+        context.VariationOrders.Add(entity);
         await context.SaveChangesAsync(cancellationToken);
         return entity.ToModel();
     }

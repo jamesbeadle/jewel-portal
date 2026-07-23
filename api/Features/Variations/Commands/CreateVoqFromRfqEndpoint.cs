@@ -19,13 +19,13 @@ public sealed class CreateVoqFromRfqEndpoint
     private readonly SignedInUserResolver users;
     private readonly CreateVoqFromRfqAuthorisation authorisation;
     private readonly CreateVoqFromRfqValidation validation;
-    private readonly ICommandHandler<CreateVoqFromRfq, VariationOrderQuote> handler;
+    private readonly ICommandHandler<CreateVoqFromRfq, VariationOrder> handler;
 
     public CreateVoqFromRfqEndpoint(
         SignedInUserResolver users,
         CreateVoqFromRfqAuthorisation authorisation,
         CreateVoqFromRfqValidation validation,
-        ICommandHandler<CreateVoqFromRfq, VariationOrderQuote> handler)
+        ICommandHandler<CreateVoqFromRfq, VariationOrder> handler)
     {
         this.users = users;
         this.authorisation = authorisation;

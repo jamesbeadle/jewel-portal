@@ -12,8 +12,11 @@ public sealed class BidPackageEntity
     public DateTimeOffset CreatedAt { get; set; }
     [MaxLength(256)]     public string OwnerEmail { get; set; } = "";
 
-    // Parent Variation Order Quote, when this package belongs to one. Null for standalone packages.
-    [MaxLength(64)]      public string? VariationOrderQuoteId { get; set; }
+    // Parent Variation Order, when this package belongs to one. Null for standalone packages.
+    // (Column keeps its historic VariationOrderQuoteId spelling — see VariationEntities.cs.)
+    [MaxLength(64)]
+    [System.ComponentModel.DataAnnotations.Schema.Column("VariationOrderQuoteId")]
+    public string? VariationOrderId { get; set; }
 
     // Sequential, human-readable package number (rendered BPI-0001). The BPI reference is the stem
     // tagged on the package's emails so RFT responses group under it in the Bid Package Invites section.
@@ -59,10 +62,12 @@ public sealed class BidPackageLineItemEntity
     public int SortOrder { get; set; }
 
     // Commercial home of this line — 0 Unassigned, 1 ContractLine, 2 Variation (BidPackageLineCoverage).
-    // Exactly one of BoqLineItemId / VariationOrderQuoteId is set to match, enforced by the handler.
+    // Exactly one of BoqLineItemId / VariationOrderId is set to match, enforced by the handler.
     public int Coverage { get; set; }
     [MaxLength(64)]      public string? BoqLineItemId { get; set; }
-    [MaxLength(64)]      public string? VariationOrderQuoteId { get; set; }
+    [MaxLength(64)]
+    [System.ComponentModel.DataAnnotations.Schema.Column("VariationOrderQuoteId")]
+    public string? VariationOrderId { get; set; }
 }
 
 public sealed class QuoteEntity

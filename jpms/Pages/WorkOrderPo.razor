@@ -1,4 +1,5 @@
 @page "/projects/{ProjectId}/work-orders/{WorkOrderId}/po"
+@using Jewel.JPMS.Contracts.Procurement
 @using Jewel.JPMS.Features.Procurement
 @using Jewel.JPMS.Features.Projects
 @using Jewel.JPMS.Features.Subcontractors
@@ -9,6 +10,7 @@
 @inject ProjectListReadModel Projects
 @inject SubcontractorsReadModel Subcontractors
 @inject IUserDirectory Users
+@inject ICommandSender Commands
 @inject NavigationManager Nav
 @inject IJSRuntime JS
 @implements IDisposable
@@ -57,12 +59,31 @@ else
                         Awaiting supplier acceptance
                     </span>
                 }
+                <button type="button" class="btn-secondary text-sm" @onclick="OpenEmailModal"
+                        title="Draft the covering email to the supplier in the shared mailbox — nothing sends until you review it in Outlook">
+                    Draft email to supplier…
+                </button>
                 <button type="button" class="btn-secondary text-sm" @onclick="PrintAsync"
                         title="Print the purchase order, or save it as a PDF from the print dialog">
                     Print / save PDF
                 </button>
             </div>
         </div>
+
+        @if (emailNote is not null)
+        {
+            <p class="po-toolbar rounded-lg bg-accent/10 border border-accent/30 px-3 py-2 text-sm text-content mb-4 max-w-[820px] mx-auto">
+                @emailNote
+                @if (emailLink is not null)
+                {
+                    <a class="text-accent underline ml-1" href="@emailLink" target="_blank" rel="noopener">Open the draft in Outlook</a>
+                }
+            </p>
+        }
+        @if (emailError is not null)
+        {
+            <p class="po-toolbar rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-4 max-w-[820px] mx-auto">@emailError</p>
+        }
 
         <PurchaseOrderSheet Order="Detail.Order"
                             Lines="Detail.Lines"
@@ -72,6 +93,22 @@ else
                             ProjectName="@(Project?.Name ?? "")"
                             SiteAddress="@SiteAddress"
                             ApprovedByName="@ApprovedByName" />
+
+        <Modal IsOpen="showEmailModal" Title="@($"Email work order {Title2} to {Detail.SubcontractorName}")" ShowFooter="true"
+               ConfirmLabel="@(emailBusy ? "Drafting…" : "Create draft in mailbox")" ConfirmDisabled="@emailBusy" CancelLabel="Cancel"
+               OnCancel="CloseEmailModal" OnConfirm="ConfirmEmailDraftAsync" Class="max-w-3xl w-full">
+            <p class="rounded-lg bg-surface-raised border border-line px-3 py-2 text-xs text-content-muted mb-3">
+                Nothing sends from here — this creates a draft in the shared mailbox, addressed to the supplier's
+                directory email, for you to review and send from Outlook. Print the purchase order to PDF first if
+                you want to attach it before sending.
+            </p>
+
+            <label class="block text-xs font-semibold uppercase tracking-wide text-content-subtle mb-1">Subject</label>
+            <input class="field mb-3" @bind="emailSubject" />
+
+            <label class="block text-xs font-semibold uppercase tracking-wide text-content-subtle mb-1">Body (HTML)</label>
+            <textarea class="field font-mono text-xs" rows="14" @bind="emailBody"></textarea>
+        </Modal>
     </section>
 }
 
@@ -117,6 +154,82 @@ else
     private string Title => Detail is null ? "Purchase order" : $"WO-{Detail.Order.Number:0000} purchase order";
 
     private async Task PrintAsync() => await JS.InvokeVoidAsync("window.print");
+
+    // ---- Draft the covering email in the shared mailbox (review + send from Outlook) ----
+
+    private bool showEmailModal;
+    private bool emailBusy;
+    private string emailSubject = "";
+    private string emailBody = "";
+    private string? emailNote;
+    private string? emailError;
+    private string? emailLink;
+
+    private string Title2 => Detail is null ? "" : $"WO-{Detail.Order.Number:0000}";
+
+    private void OpenEmailModal()
+    {
+        if (Detail is null) return;
+        emailSubject = $"Work order WO-{Detail.Order.Number:0000} — {Detail.Order.Title} — {Project?.Name ?? ProjectId}";
+        emailBody = DefaultEmailBody(Detail);
+        emailNote = null;
+        emailError = null;
+        showEmailModal = true;
+    }
+
+    private void CloseEmailModal() => showEmailModal = false;
+
+    // The pre-filled covering email: the order summary (priced lines, or value + scope for orders
+    // without a breakdown), programme dates when set, the portal link for electronic acceptance,
+    // and the standard pre-start paperwork line (RAMS/insurances to projects@ — never a named person).
+    private string DefaultEmailBody(ProjectWorkOrderDetail detail)
+    {
+        var order = detail.Order;
+        var sb = new System.Text.StringBuilder();
+        sb.AppendLine($"<p>Hello {detail.SubcontractorName},</p>");
+        sb.AppendLine($"<p>Please find below the details of our work order <strong>WO-{order.Number:0000}</strong> for <strong>{Project?.Name ?? "the project"}</strong>.</p>");
+        if (detail.Lines.Count > 0)
+        {
+            sb.AppendLine("<table border=\"1\" cellpadding=\"6\" cellspacing=\"0\" style=\"border-collapse:collapse\">");
+            sb.AppendLine("<tr><th align=\"left\">Item</th><th align=\"left\">Qty</th><th align=\"left\">Unit</th><th align=\"right\">Total</th></tr>");
+            foreach (var line in detail.Lines.OrderBy(l => l.SortOrder))
+                sb.AppendLine($"<tr><td>{line.Title}</td><td>{line.Quantity}</td><td>{line.Unit}</td><td align=\"right\">{line.LineTotal:£#,##0.00}</td></tr>");
+            sb.AppendLine($"<tr><td colspan=\"3\"><strong>Order total</strong></td><td align=\"right\"><strong>{order.Value:£#,##0.00}</strong></td></tr>");
+            sb.AppendLine("</table>");
+        }
+        else
+        {
+            sb.AppendLine($"<p><strong>Order value:</strong> {order.Value:£#,##0.00}</p>");
+            if (!string.IsNullOrWhiteSpace(order.Scope))
+                sb.AppendLine($"<p><strong>Scope:</strong> {order.Scope}</p>");
+        }
+        if (order.ProgrammeStart is { } start)
+            sb.AppendLine($"<p><strong>Programme start:</strong> {start.LocalDateTime:d MMM yyyy}</p>");
+        if (order.ScheduledCompletion is { } completion)
+            sb.AppendLine($"<p><strong>Scheduled completion:</strong> {completion.LocalDateTime:d MMM yyyy}</p>");
+        sb.AppendLine($"<p>You can view and electronically accept this work order in our portal: <a href=\"{Nav.BaseUri}portal/work-orders/{order.WorkOrderId}\">{Nav.BaseUri}portal/work-orders/{order.WorkOrderId}</a></p>");
+        sb.AppendLine("<p>Before starting on site, please send your RAMS documentation and current insurance certificates to projects@jewelbb.co.uk.</p>");
+        sb.AppendLine("<p>Kind regards,<br/>Jewel Bespoke Build</p>");
+        return sb.ToString();
+    }
+
+    private async Task ConfirmEmailDraftAsync()
+    {
+        if (emailBusy || Detail is null) return;
+        emailError = null;
+        try
+        {
+            emailBusy = true;
+            var draft = await Commands.SendAsync(
+                new PrepareWorkOrderEmailDraft(Detail.Order.WorkOrderId, emailSubject.Trim(), emailBody), CancellationToken.None);
+            showEmailModal = false;
+            emailNote = $"Draft created in the shared mailbox to {draft.RecipientEmail}. Review it (attach the printed PDF if you like) and send from the mailbox's Drafts folder.";
+            emailLink = draft.WebLink;
+        }
+        catch (CommandFailedException ex) { emailError = $"Couldn't create the draft: {ex.Message}"; }
+        catch { emailError = "Couldn't create the draft. Check the supplier has an email address in the directory and the mailbox connection, then try again."; }
+        finally { emailBusy = false; }
+    }
 
     protected override async Task OnInitializedAsync()
     {

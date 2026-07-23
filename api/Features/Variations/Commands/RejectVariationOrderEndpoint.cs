@@ -8,19 +8,20 @@ using Microsoft.Azure.Functions.Worker;
 
 namespace Jewel.JPMS.Api.Features.Variations.Commands;
 
-/// <summary>POST /api/variation-orders/{voId}/cancel — cancel a variation order.</summary>
-public sealed class CancelVariationOrderEndpoint
+/// <summary>POST /api/variation-orders/{voId}/reject — reject a variation order (reverses the
+/// approval's commercial writes when it was approved).</summary>
+public sealed class RejectVariationOrderEndpoint
 {
     private readonly SignedInUserResolver users;
-    private readonly CancelVariationOrderAuthorisation authorisation;
-    private readonly CancelVariationOrderValidation validation;
-    private readonly ICommandHandler<CancelVariationOrder, VariationOrder> handler;
+    private readonly RejectVariationOrderAuthorisation authorisation;
+    private readonly RejectVariationOrderValidation validation;
+    private readonly ICommandHandler<RejectVariationOrder, VariationOrder> handler;
 
-    public CancelVariationOrderEndpoint(
+    public RejectVariationOrderEndpoint(
         SignedInUserResolver users,
-        CancelVariationOrderAuthorisation authorisation,
-        CancelVariationOrderValidation validation,
-        ICommandHandler<CancelVariationOrder, VariationOrder> handler)
+        RejectVariationOrderAuthorisation authorisation,
+        RejectVariationOrderValidation validation,
+        ICommandHandler<RejectVariationOrder, VariationOrder> handler)
     {
         this.users = users;
         this.authorisation = authorisation;
@@ -28,9 +29,9 @@ public sealed class CancelVariationOrderEndpoint
         this.handler = handler;
     }
 
-    [Function(nameof(CancelVariationOrder))]
+    [Function(nameof(RejectVariationOrder))]
     public async Task<IActionResult> Run(
-        [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "variation-orders/{voId}/cancel")] HttpRequest request,
+        [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "variation-orders/{voId}/reject")] HttpRequest request,
         string voId)
     {
         var cancellationToken = request.HttpContext.RequestAborted;
@@ -38,7 +39,7 @@ public sealed class CancelVariationOrderEndpoint
         var signedInUser = await users.ResolveAsync(request, cancellationToken);
         if (signedInUser is null) return new UnauthorizedResult();
 
-        var command = new CancelVariationOrder(voId);
+        var command = new RejectVariationOrder(voId);
 
         if (!authorisation.Allows(signedInUser, command)) return new StatusCodeResult(403);
 

@@ -12,7 +12,7 @@ namespace Jewel.JPMS.Api.Features.Commercial.Commands;
 /// recoded — this moves where the value sits in the cost-centre master (a finance allocation),
 /// never the value itself. Contract works, provisional sum and contingency lines simply carry the
 /// new code. A Variation line's value is locked (it mirrors an approved Variation Order), so to keep
-/// the commercial records written at approval consistent (see ApproveVariationOrderQuoteHandler) the
+/// the commercial records written at approval consistent (see ApproveVariationOrderHandler) the
 /// matching Variation Order is recoded too and its committed value is moved between the cost-centre
 /// budgets.
 /// </summary>
@@ -35,15 +35,15 @@ public sealed class SetValuationLineCostCentreHandler : ICommandHandler<SetValua
         if (entity.CostCode == newCode) return entity.ToModel();
 
         // Variation lines mirror an approved VO: keep the VO and its committed budget in step with the
-        // recode. Approval committed the VO's value against the old centre's budget (and cancellation
-        // would release it from vo.CostCode), so the commitment moves with the recode. Other element
-        // types carry no committed VO budget, so they just take the new code below.
+        // recode. Approval committed the VO's value against the old centre's budget, so the
+        // commitment moves with the recode. Only an approved VO carries committed budget; other
+        // element types (and unapproved variations) just take the new code below.
         if (entity.ElementType == (int)ValuationElementType.Variation)
         {
             var variationOrder = await context.VariationOrders.FirstOrDefaultAsync(
                 vo => vo.ProjectId == entity.ProjectId
                       && vo.VariationRef == entity.VariationRef
-                      && vo.Status != (int)VariationOrderStatus.Cancelled,
+                      && vo.Status == (int)VariationOrderStatus.Approved,
                 cancellationToken);
             if (variationOrder is not null && variationOrder.CostCode != newCode)
             {

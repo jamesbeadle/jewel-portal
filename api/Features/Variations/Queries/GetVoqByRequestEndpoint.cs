@@ -11,9 +11,9 @@ namespace Jewel.JPMS.Api.Features.Variations.Queries;
 public sealed class GetVoqByRequestEndpoint
 {
     private readonly SignedInUserResolver users;
-    private readonly IQueryHandler<GetVoqByRequest, VariationOrderQuote?> handler;
+    private readonly IQueryHandler<GetVoqByRequest, VariationOrder?> handler;
 
-    public GetVoqByRequestEndpoint(SignedInUserResolver users, IQueryHandler<GetVoqByRequest, VariationOrderQuote?> handler)
+    public GetVoqByRequestEndpoint(SignedInUserResolver users, IQueryHandler<GetVoqByRequest, VariationOrder?> handler)
     {
         this.users = users;
         this.handler = handler;

@@ -20,7 +20,7 @@ public sealed class PrepareVoqDraftHandler : ICommandHandler<PrepareVoqDraft, Vo
     // Generous for any real RFI thread; guards the prompt against pathological conversations.
     private const int MaxConversationChars = 40_000;
 
-    // Storage limits on VariationOrderQuoteEntity.
+    // Storage limits on VariationOrderEntity.
     private const int MaxTitleChars = 256;
     private const int MaxDescriptionChars = 2048;
 

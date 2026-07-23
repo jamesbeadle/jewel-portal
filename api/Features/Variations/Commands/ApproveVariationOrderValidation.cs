@@ -3,12 +3,12 @@ using Jewel.JPMS.Contracts.Variations;
 
 namespace Jewel.JPMS.Api.Features.Variations.Commands;
 
-public sealed class ApproveVariationOrderQuoteValidation
+public sealed class ApproveVariationOrderValidation
 {
-    public ValidationOutcome Check(ApproveVariationOrderQuote command)
+    public ValidationOutcome Check(ApproveVariationOrder command)
     {
         var errors = new List<string>();
-        if (string.IsNullOrWhiteSpace(command.VariationOrderQuoteId)) errors.Add("VariationOrderQuoteId is required.");
+        if (string.IsNullOrWhiteSpace(command.VariationOrderId)) errors.Add("VariationOrderId is required.");
         if (string.IsNullOrWhiteSpace(command.CostCode)) errors.Add("A cost code is required to commit the variation value.");
         if (string.IsNullOrWhiteSpace(command.ApprovedByEmail)) errors.Add("Approving email is required.");
         // Negative values are legitimate — an omit variation reduces the contract sum — but a

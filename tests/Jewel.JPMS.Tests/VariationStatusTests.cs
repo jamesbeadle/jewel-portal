@@ -3,29 +3,22 @@ using Xunit;
 
 namespace Jewel.JPMS.Tests;
 
-// Contract-level guarantees behind the status-pill controls on the request and VOQ pages.
-// Statuses are persisted as ints (and now settable directly via SetVoqStatus /
-// RevertVariationOrderToApproved / UpdateRequestDetails), so renumbering any of these enums
-// would corrupt stored rows. The handler-side transition rules live in the API.
+// Contract-level guarantees behind the status-pill control on the request and variation pages.
+// The variation order is one document (Quoting → Issued → Approved → Rejected) since the
+// 2026-07-23 unification. Its status is persisted as an int (and settable directly via
+// SetVariationOrderStatus), so renumbering the enum would corrupt stored rows. The
+// handler-side transition rules live in the API.
 public sealed class VariationStatusTests
 {
     [Fact]
-    public void VoqStatusEnum_intValuesAreStable()
+    public void VariationOrderStatusEnum_intValuesAreStable()
     {
-        Assert.Equal(0, (int)VariationOrderQuoteStatus.Draft);
-        Assert.Equal(1, (int)VariationOrderQuoteStatus.Inviting);
-        Assert.Equal(2, (int)VariationOrderQuoteStatus.Tendering);
-        Assert.Equal(3, (int)VariationOrderQuoteStatus.Selected);
-        Assert.Equal(4, (int)VariationOrderQuoteStatus.Approved);
-        Assert.Equal(5, (int)VariationOrderQuoteStatus.Rejected);
-    }
-
-    [Fact]
-    public void VoStatusEnum_intValuesAreStable()
-    {
-        Assert.Equal(0, (int)VariationOrderStatus.Approved);
+        // These four values are what the 20260723120000_UnifyVariationOrders migration remapped
+        // the old VOQ/VO status pair onto — the migration's data lands on exactly these ints.
+        Assert.Equal(0, (int)VariationOrderStatus.Quoting);
         Assert.Equal(1, (int)VariationOrderStatus.Issued);
-        Assert.Equal(2, (int)VariationOrderStatus.Cancelled);
+        Assert.Equal(2, (int)VariationOrderStatus.Approved);
+        Assert.Equal(3, (int)VariationOrderStatus.Rejected);
     }
 
     [Fact]
