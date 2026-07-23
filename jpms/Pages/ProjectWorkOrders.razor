@@ -130,19 +130,6 @@ else
                             {
                                 <tr>
                                     <td colspan="@GroupColspan" class="px-4 pb-4 pt-1 bg-surface-raised/50">
-                                        @if (groupBySupplier && SubcontractorIdFor(row.Key) is { } statementSubId)
-                                        {
-                                            @* The statement covers this supplier's whole account — every project,
-                                               not just this one — matching what would be sent to them. *@
-                                            <div class="flex justify-end pt-2">
-                                                <button type="button"
-                                                        class="text-xs font-medium text-content-subtle hover:text-content underline underline-offset-4"
-                                                        title="Their statement of account across all projects — work orders and the invoices claimed against them — to download or email"
-                                                        @onclick="() => OpenStatement(statementSubId, row.Name)" @onclick:stopPropagation>
-                                                    Statement of account…
-                                                </button>
-                                            </div>
-                                        }
                                         <table class="w-full text-sm border-collapse">
                                             <thead>
                                                 <tr class="text-left text-[11px] uppercase tracking-wider text-content-subtle font-semibold border-b border-line">
@@ -152,7 +139,7 @@ else
                                                     <th class="px-3 py-2 whitespace-nowrap">Status</th>
                                                     <th class="px-3 py-2 text-right whitespace-nowrap">Total</th>
                                                     <th class="px-3 py-2 text-right whitespace-nowrap">Paid</th>
-                                                    <th class="px-3 py-2 w-[140px]"><span class="sr-only">Actions</span></th>
+                                                    <th class="px-3 py-2 w-[170px]"><span class="sr-only">Actions</span></th>
                                                 </tr>
                                             </thead>
                                             <tbody class="divide-y divide-line">
@@ -184,6 +171,12 @@ else
                                                         <td class="px-3 py-2 text-right">@Money(line.Line.LineTotal)</td>
                                                         <td class="px-3 py-2 text-right">@Money(line.Line.PaidToDate)</td>
                                                         <td class="px-3 py-2 text-right whitespace-nowrap">
+                                                            <a class="mr-3 text-xs font-medium text-content-subtle hover:text-content underline underline-offset-4"
+                                                               title="View / print the purchase order sent to the supplier"
+                                                               href="@($"/projects/{ProjectId}/work-orders/{line.Detail.Order.WorkOrderId}/po")"
+                                                               @onclick:stopPropagation>
+                                                                PO
+                                                            </a>
                                                             @if (line.Detail.Order.IsManual)
                                                             {
                                                                 <button type="button"
@@ -237,6 +230,11 @@ else
                             <span class="text-content font-medium">@detail.Order.Title</span>
                             <span class="text-content-subtle">@detail.SubcontractorName</span>
                             <span class="ml-auto">@Money(detail.Order.Value)</span>
+                            <a class="text-xs font-medium text-content-subtle hover:text-content underline underline-offset-4"
+                               title="View / print the purchase order sent to the supplier"
+                               href="@($"/projects/{ProjectId}/work-orders/{detail.Order.WorkOrderId}/po")">
+                                PO
+                            </a>
                             @if (detail.Order.IsManual)
                             {
                                 <button type="button"
@@ -279,11 +277,6 @@ else
                               Editing="@editingOrder"
                               OnClose="CloseManualOrder"
                               OnSaved="HandleManualOrderSavedAsync" />
-
-        <SubcontractorStatementModal IsOpen="@(statementSubcontractorId is not null)"
-                                     SubcontractorId="@(statementSubcontractorId ?? "")"
-                                     SubcontractorName="@statementSubcontractorName"
-                                     OnClose="CloseStatement" />
     </ProjectPageShell>
 }
 
@@ -488,26 +481,6 @@ else
     {
         if (!expandedKeys.Remove(key)) expandedKeys.Add(key);
     }
-
-    // ---- Supplier statement of account (whole account, all projects — what would be sent) ----
-
-    private string? statementSubcontractorId;
-    private string statementSubcontractorName = "";
-
-    // Supplier group rows key on the display name; the statement needs the directory id, so
-    // resolve it through any of the supplier's orders on this project.
-    private string? SubcontractorIdFor(string supplierName) =>
-        Orders.FirstOrDefault(detail =>
-                string.Equals(detail.SubcontractorName, supplierName, StringComparison.OrdinalIgnoreCase))
-            ?.Order.SubcontractorId;
-
-    private void OpenStatement(string subcontractorId, string supplierName)
-    {
-        statementSubcontractorId = subcontractorId;
-        statementSubcontractorName = supplierName;
-    }
-
-    private void CloseStatement() => statementSubcontractorId = null;
 
     private static string Reference(WorkOrder order) => $"WO-{order.Number:0000}";
 
