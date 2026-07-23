@@ -25,7 +25,7 @@ else
             <p class="eyebrow mb-1">JPMS · RFIs</p>
             <h1 class="text-2xl md:text-3xl font-semibold text-content leading-tight">RFI register</h1>
             <p class="text-sm text-content-muted mt-2">
-                @AllRecords.Count total · @OpenCount open · @OverdueCount overdue · across @ProjectCount project@(ProjectCount == 1 ? "" : "s")
+                @AllRecords.Count total · @OpenCount active · @OverdueCount overdue · across @ProjectCount project@(ProjectCount == 1 ? "" : "s")
             </p>
         </header>
 
@@ -192,7 +192,7 @@ else
 
     private static string StatusViewLabel(StatusView view) => view switch
     {
-        StatusView.Open   => "Open",
+        StatusView.Open   => "Active",
         StatusView.Closed => "Closed",
         _                 => "All"
     };
@@ -219,21 +219,15 @@ else
     private static string Money(decimal value) =>
         value.ToString("C0", System.Globalization.CultureInfo.GetCultureInfo("en-GB"));
 
-    private static string StatusLabel(RequestStatus status) => status switch
-    {
-        RequestStatus.AwaitingResponse => "Awaiting response",
-        _ => status.ToString()
-    };
+    private static string StatusLabel(RequestStatus status) => status.DisplayName();
 
     private static string StatusClass(RequestStatus status) => status switch
     {
-        RequestStatus.Open             => "bg-blue-500/10 text-blue-600",
-        RequestStatus.AwaitingResponse => "bg-amber-500/10 text-amber-600",
-        RequestStatus.Approved         => "bg-emerald-500/10 text-emerald-600",
-        RequestStatus.Responded        => "bg-emerald-500/10 text-emerald-600",
-        RequestStatus.Rejected         => "bg-red-500/10 text-red-600",
-        RequestStatus.Closed           => "bg-surface-raised border border-line text-content-muted",
-        _                              => "bg-surface-raised border border-line text-content-muted"
+        RequestStatus.NeedsAction    => "bg-amber-500/10 text-amber-600",
+        RequestStatus.Open           => "bg-blue-500/10 text-blue-600",
+        RequestStatus.NeedsVariation => "bg-violet-500/10 text-violet-600",
+        RequestStatus.Closed         => "bg-surface-raised border border-line text-content-muted",
+        _                            => "bg-surface-raised border border-line text-content-muted"
     };
 
     private ExcelWorkbook? BuildExportWorkbook(bool includeAllStatuses)

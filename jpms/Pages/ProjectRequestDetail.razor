@@ -52,8 +52,8 @@ else
                 @if (CanEditDetails)
                 {
                     @* The status pill doubles as the status control: click it, pick the new status.
-                       Closed and Responded route through their existing flows (close confirm with
-                       date + agent gate; the response modal) — everything else applies directly. *@
+                       Closed routes through its existing flow (close confirm with date + agent
+                       gate) — everything else applies directly. *@
                     <div class="relative">
                         <button type="button"
                                 class="inline-flex items-center gap-1 whitespace-nowrap rounded-full px-2 py-0.5 text-[11px] font-medium @StatusClass(record.Status)"
@@ -73,6 +73,7 @@ else
                                             <button type="button"
                                                     class="w-full text-left px-3 py-2 text-sm transition @(status == record.Status ? "text-content-subtle cursor-default" : "text-content hover:bg-surface-raised")"
                                                     disabled="@(busy || status == record.Status)"
+                                                    title="@status.Hint()"
                                                     @onclick="() => ChangeStatusFromPill(status)">
                                                 @StatusLabel(status)@(status == record.Status ? " ✓" : "")
                                             </button>
@@ -705,8 +706,8 @@ else
         <div class="space-y-3">
             <p class="text-sm text-content-subtle">
                 The formal answer or decision recorded on the request itself — it appears in the
-                Response panel, prints on the official document, and marks the request as Responded.
-                (Use the conversation for ordinary discussion.)
+                Response panel, prints on the official document, and moves the request to Needs
+                action (the ball is back with us). (Use the conversation for ordinary discussion.)
             </p>
             <textarea class="field" rows="4" value="@responseDraft" @oninput="OnResponseDraftInput"
                       placeholder="The answer or decision…"></textarea>
@@ -988,10 +989,12 @@ else
     // managers and administrators. Admins carry every role server-side, so they always qualify.
     private bool CanEditDetails => Session.AvailableRoles.Any(role => role is Role.Admin or Role.ProjectManager);
 
+    // Lifecycle order: the ball starts with us (Needs action), goes to the correspondent (Open),
+    // may come back needing a variation order quote (Needs variation), then closes.
     private static readonly RequestStatus[] StatusOptions =
     {
-        RequestStatus.Open, RequestStatus.AwaitingResponse, RequestStatus.Responded,
-        RequestStatus.Approved, RequestStatus.Rejected, RequestStatus.Closed
+        RequestStatus.NeedsAction, RequestStatus.Open,
+        RequestStatus.NeedsVariation, RequestStatus.Closed
     };
 
     // Close confirm modal: the close date defaults to today but is editable, so a request that
@@ -1017,7 +1020,7 @@ else
     private string editDrawingRef = "";
     private string editRelatedSpec = "";
     private string editValue = "";
-    private RequestStatus editStatus = RequestStatus.Open;
+    private RequestStatus editStatus = RequestStatus.NeedsAction;
     private bool editCriticalPath;
     private string? editError;
 
@@ -1144,7 +1147,9 @@ else
 
     private async Task SaveResponseFromModal()
     {
-        await Apply(RequestStatus.Responded, responseDraft);
+        // A recorded response puts the ball back in our court: review it, then close it, raise the
+        // variation order quote it calls for, or re-issue.
+        await Apply(RequestStatus.NeedsAction, responseDraft);
         if (actionError is null) respondingOpen = false;
     }
 
@@ -1154,10 +1159,9 @@ else
         await ReopenRequest();
     }
 
-    // The status pill's dropdown: statuses with their own flows route through them (Closed → the
-    // close confirm with its date and the agent gate; Responded → the response modal) so a pill
-    // change can never skip their safeguards; the rest apply directly, keeping the recorded
-    // response text.
+    // The status pill's dropdown: Closed has its own flow (the close confirm with its date and
+    // the agent gate) so a pill change can never skip its safeguards; the rest apply directly,
+    // keeping the recorded response text.
     private async Task ChangeStatusFromPill(RequestStatus status)
     {
         statusMenuOpen = false;
@@ -1166,9 +1170,6 @@ else
         {
             case RequestStatus.Closed:
                 OpenCloseConfirm();
-                break;
-            case RequestStatus.Responded:
-                OpenResponseModal();
                 break;
             default:
                 await Apply(status, record.ResponseText);
@@ -1215,7 +1216,7 @@ else
         blockingAgents = Array.Empty<AgentCompletionState>();
 
         if (!string.IsNullOrWhiteSpace(responseDraft) && responseDraft.Trim() != (record.ResponseText ?? "").Trim())
-            await Apply(RequestStatus.Responded, responseDraft);
+            await Apply(RequestStatus.NeedsAction, responseDraft);
         if (record is null) return;
 
         try
@@ -1242,7 +1243,8 @@ else
         }
     }
 
-    private async Task ReopenRequest() => await Apply(RequestStatus.Open, record?.ResponseText);
+    // Reopening puts the ball back in our court — the reopened request needs someone to act.
+    private async Task ReopenRequest() => await Apply(RequestStatus.NeedsAction, record?.ResponseText);
 
     private async Task PromoteToRfi()
     {
@@ -1976,20 +1978,14 @@ else
     private static string Money(decimal value) =>
         value.ToString("C0", System.Globalization.CultureInfo.GetCultureInfo("en-GB"));
 
-    private static string StatusLabel(RequestStatus status) => status switch
-    {
-        RequestStatus.AwaitingResponse => "Awaiting response",
-        _ => status.ToString()
-    };
+    private static string StatusLabel(RequestStatus status) => status.DisplayName();
 
     private static string StatusClass(RequestStatus status) => status switch
     {
-        RequestStatus.Open             => "bg-blue-500/10 text-blue-600",
-        RequestStatus.AwaitingResponse => "bg-amber-500/10 text-amber-600",
-        RequestStatus.Approved         => "bg-emerald-500/10 text-emerald-600",
-        RequestStatus.Responded        => "bg-emerald-500/10 text-emerald-600",
-        RequestStatus.Rejected         => "bg-red-500/10 text-red-600",
-        RequestStatus.Closed           => "bg-surface-raised border border-line text-content-muted",
-        _                              => "bg-surface-raised border border-line text-content-muted"
+        RequestStatus.NeedsAction    => "bg-amber-500/10 text-amber-600",
+        RequestStatus.Open           => "bg-blue-500/10 text-blue-600",
+        RequestStatus.NeedsVariation => "bg-violet-500/10 text-violet-600",
+        RequestStatus.Closed         => "bg-surface-raised border border-line text-content-muted",
+        _                            => "bg-surface-raised border border-line text-content-muted"
     };
 }

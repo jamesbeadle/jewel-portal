@@ -1211,21 +1211,15 @@ else
 
     // Status chip helpers for the Critical Path RFIs view — mirrors the request detail page's
     // colouring so an RFI reads the same on both sides.
-    private static string RfiStatusLabel(RequestStatus status) => status switch
-    {
-        RequestStatus.AwaitingResponse => "Awaiting response",
-        _ => status.ToString()
-    };
+    private static string RfiStatusLabel(RequestStatus status) => status.DisplayName();
 
     private static string RfiStatusClass(RequestStatus status) => status switch
     {
-        RequestStatus.Open             => "bg-blue-500/10 text-blue-600",
-        RequestStatus.AwaitingResponse => "bg-amber-500/10 text-amber-600",
-        RequestStatus.Approved         => "bg-emerald-500/10 text-emerald-600",
-        RequestStatus.Responded        => "bg-emerald-500/10 text-emerald-600",
-        RequestStatus.Rejected         => "bg-red-500/10 text-red-600",
-        RequestStatus.Closed           => "bg-surface-raised border border-line text-content-muted",
-        _                              => "bg-surface-raised border border-line text-content-muted"
+        RequestStatus.NeedsAction    => "bg-amber-500/10 text-amber-600",
+        RequestStatus.Open           => "bg-blue-500/10 text-blue-600",
+        RequestStatus.NeedsVariation => "bg-violet-500/10 text-violet-600",
+        RequestStatus.Closed         => "bg-surface-raised border border-line text-content-muted",
+        _                            => "bg-surface-raised border border-line text-content-muted"
     };
 
     private string SubTabClass(SubView tab)

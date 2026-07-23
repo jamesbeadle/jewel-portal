@@ -513,11 +513,7 @@
     private void OpenDrawing(Drawing drawing) =>
         Nav.NavigateTo($"/projects/{ProjectId}/drawings/{drawing.DrawingId}");
 
-    private static string RequestStatusLabel(RequestStatus status) => status switch
-    {
-        RequestStatus.AwaitingResponse => "Awaiting response",
-        _ => status.ToString()
-    };
+    private static string RequestStatusLabel(RequestStatus status) => status.DisplayName();
 
     // --------------------------------------------------------------------------------------------
 

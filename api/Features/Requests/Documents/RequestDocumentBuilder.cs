@@ -83,14 +83,5 @@ public static class RequestDocumentBuilder
             Items: items);
     }
 
-    private static string StatusLabel(RequestStatus status) => status switch
-    {
-        RequestStatus.Open             => "Open",
-        RequestStatus.AwaitingResponse => "Awaiting response",
-        RequestStatus.Approved         => "Approved",
-        RequestStatus.Rejected         => "Rejected",
-        RequestStatus.Closed           => "Closed",
-        RequestStatus.Responded        => "Responded",
-        _ => status.ToString()
-    };
+    private static string StatusLabel(RequestStatus status) => status.DisplayName();
 }

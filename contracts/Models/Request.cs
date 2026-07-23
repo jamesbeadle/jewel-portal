@@ -15,14 +15,22 @@ public enum RequestType
     General = 7         // Default state: project-tagged & cost centre known, not yet promoted
 }
 
+// The request status model is deliberately small — it answers "whose court is the ball in?":
+//   NeedsAction    — the ball is with us: issue the document, act on the response, re-file the record.
+//   Open           — with the correspondent (architect); we are awaiting their response.
+//   NeedsVariation — the response requires a variation order quote to be raised.
+//   Closed         — done.
+// Explicit integer values are pinned because statuses persist as ints. The 0/1 values deliberately
+// keep their stored rows' new meaning: rows saved as legacy Open(0) now read NeedsAction, and rows
+// saved as legacy AwaitingResponse(1) now read Open. Legacy Approved(2)/Rejected(3)/Responded(5)
+// were retired and their rows migrated to Closed(4) (ConsolidateRequestStatuses migration) — never
+// reuse those values.
 public enum RequestStatus
 {
-    Open = 0,
-    AwaitingResponse = 1,
-    Approved = 2,
-    Rejected = 3,
+    NeedsAction = 0,
+    Open = 1,
     Closed = 4,
-    Responded = 5
+    NeedsVariation = 6
 }
 
 public sealed record Request(
@@ -93,6 +101,29 @@ public sealed record RequestItem(
     string MemberArea,
     string Query,
     string? Response = null);
+
+public static class RequestStatusExtensions
+{
+    // The one shared status wording — every pill, picker, export and document label goes through
+    // here so the register, detail page, dashboards and PDFs can never drift apart.
+    public static string DisplayName(this RequestStatus status) => status switch
+    {
+        RequestStatus.NeedsAction    => "Needs action",
+        RequestStatus.Open           => "Open",
+        RequestStatus.NeedsVariation => "Needs variation",
+        RequestStatus.Closed         => "Closed",
+        _ => status.ToString()
+    };
+
+    // The tooltip/hint wording that accompanies the label wherever a surface shows one.
+    public static string? Hint(this RequestStatus status) => status switch
+    {
+        RequestStatus.NeedsAction    => "The ball is with us — something needs doing (issue the document, act on the response).",
+        RequestStatus.Open           => "With the correspondent — awaiting their response.",
+        RequestStatus.NeedsVariation => "The response requires a variation order quote to be raised.",
+        _ => null
+    };
+}
 
 public static class RequestTypeExtensions
 {

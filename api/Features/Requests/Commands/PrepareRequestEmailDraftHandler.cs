@@ -86,12 +86,13 @@ public sealed class PrepareRequestEmailDraftHandler : ICommandHandler<PrepareReq
             throw new InvalidOperationException(
                 "The draft couldn't be created in the projects mailbox. Check the mailbox connection and try again.");
 
-        // Drafted means it's going out: an Open request moves to Awaiting Response now, and the
-        // team manually returns it to Open if the send is cancelled. Only Open moves — a request
-        // that has already been responded to, approved or closed is never rewound by a re-draft.
-        if ((RequestStatus)request.Status == RequestStatus.Open)
+        // Drafted means it's going out: a Needs-action request moves to Open (with the
+        // correspondent, awaiting their response) now, and the team manually returns it to Needs
+        // action if the send is cancelled. Only Needs action moves — a request already Open,
+        // needing a variation or closed is never rewound by a re-draft.
+        if ((RequestStatus)request.Status == RequestStatus.NeedsAction)
         {
-            request.Status = (int)RequestStatus.AwaitingResponse;
+            request.Status = (int)RequestStatus.Open;
             await context.SaveChangesAsync(cancellationToken);
         }
 

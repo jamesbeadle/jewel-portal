@@ -117,7 +117,7 @@ public sealed class CreateRequestFromMessageHandler : ICommandHandler<CreateRequ
             Reference = reference,
             Title = Clamp(command.Title, 256),
             Description = Clamp(command.Description, 2048),
-            Status = (int)RequestStatus.Open,
+            Status = (int)RequestStatus.NeedsAction,
             Value = command.Value,
             RaisedByEmail = command.RaisedByEmail,
             RaisedAt = snapshot.ReceivedAt,

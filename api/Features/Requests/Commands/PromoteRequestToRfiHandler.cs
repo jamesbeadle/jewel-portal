@@ -47,7 +47,7 @@ public sealed class PromoteRequestToRfiHandler : ICommandHandler<PromoteRequestT
         // save, so re-mint from the fresh register and retry a couple of times before giving up.
         var mintReference = !entity.Reference.StartsWith("RFI-", StringComparison.OrdinalIgnoreCase);
         entity.Kind = (int)RequestType.Rfi;
-        if (entity.Status == (int)RequestStatus.Closed) entity.Status = (int)RequestStatus.Open;
+        if (entity.Status == (int)RequestStatus.Closed) entity.Status = (int)RequestStatus.NeedsAction;
 
         for (var attempt = 1; ; attempt++)
         {

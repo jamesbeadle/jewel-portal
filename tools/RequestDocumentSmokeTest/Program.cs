@@ -12,7 +12,7 @@ var model = new RequestDocumentModel(
         "The structural drawings (S-204 rev C) show a moment connection at grid B/4, but the architectural "
         + "details (A-330) indicate a pinned connection. Please confirm which is correct so fabrication can "
         + "proceed. This is on the critical path for the steel package.",
-    StatusLabel: "Awaiting response",
+    StatusLabel: "Open",
     ProjectName: "Coombe Hill House",
     ProjectReference: "JBB-2026-014",
     ClientName: "Mr & Mrs Harrington",

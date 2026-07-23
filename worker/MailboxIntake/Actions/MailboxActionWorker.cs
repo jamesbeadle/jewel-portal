@@ -183,12 +183,13 @@ public sealed class MailboxActionWorker
             Detail = $"{model.TypeShort} {model.DisplayNumber} document drafted to {recipientList} — awaiting review and send."
         });
 
-        // Drafted means it's going out: an Open request moves to Awaiting Response as soon as the
-        // draft lands in the mailbox (matching the API's on-demand draft path). The team manually
-        // sets it back to Open if the send is cancelled. Only Open moves — a request already
-        // responded to, approved or closed keeps its status through a re-draft.
-        if ((RequestStatus)request.Status == RequestStatus.Open)
-            request.Status = (int)RequestStatus.AwaitingResponse;
+        // Drafted means it's going out: a Needs-action request moves to Open (with the
+        // correspondent, awaiting their response) as soon as the draft lands in the mailbox
+        // (matching the API's on-demand draft path). The team manually sets it back to Needs
+        // action if the send is cancelled. Only Needs action moves — a request already Open,
+        // needing a variation or closed keeps its status through a re-draft.
+        if ((RequestStatus)request.Status == RequestStatus.NeedsAction)
+            request.Status = (int)RequestStatus.Open;
 
         await _context.SaveChangesAsync(ct);
         _logger.LogInformation(

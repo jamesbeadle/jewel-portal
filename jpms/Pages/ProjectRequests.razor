@@ -36,7 +36,7 @@ else
             <div>
                 <h2 class="text-lg font-semibold text-content">Document register</h2>
                 <p class="text-sm text-content-subtle mt-0.5">
-                    @AllRecords.Count request@(AllRecords.Count == 1 ? "" : "s") · @OpenCount open · @OverdueCount overdue
+                    @AllRecords.Count request@(AllRecords.Count == 1 ? "" : "s") · @OpenCount active · @OverdueCount overdue
                     · @quotes.Count variation@(quotes.Count == 1 ? "" : "s")
                 </p>
             </div>
@@ -856,7 +856,7 @@ else
 
     private static string StatusViewLabel(StatusView view) => view switch
     {
-        StatusView.Open   => "Open",
+        StatusView.Open   => "Active",
         StatusView.Closed => "Closed",
         _                 => "All"
     };
@@ -1250,11 +1250,7 @@ else
     }
 
     // Matches RequestTable's Status cell text.
-    private static string RequestStatusLabel(RequestStatus status) => status switch
-    {
-        RequestStatus.AwaitingResponse => "Awaiting response",
-        _ => status.ToString()
-    };
+    private static string RequestStatusLabel(RequestStatus status) => status.DisplayName();
 
     private async Task LoadVariationsAsync()
     {

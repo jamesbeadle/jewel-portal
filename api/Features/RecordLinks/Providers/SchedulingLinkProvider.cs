@@ -64,7 +64,7 @@ public sealed class SchedulingLinkProvider : ILinkableRecordProvider
             Reference:    string.IsNullOrWhiteSpace(r.Reference) ? r.TagReference : r.Reference.Trim(),
             TagReference: RequestTags.Stem(projectRef, r.ProjectId, r.TagReference),
             Title:        r.Title,
-            StatusLabel:  ((RequestStatus)r.Status).ToString(),
+            StatusLabel:  ((RequestStatus)r.Status).DisplayName(),
             Summary:      RecordSummaries.Clip(r.Description))));
 
         // … and the client's LADs claims against Jewel.

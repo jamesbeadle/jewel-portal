@@ -111,10 +111,12 @@
     private string reference = "";
     private string suggestedReference = "";
 
+    // Lifecycle order: the ball starts with us (Needs action), goes to the correspondent (Open),
+    // may come back needing a variation order quote (Needs variation), then closes.
     private static readonly RequestStatus[] StatusOptions =
     {
-        RequestStatus.Open, RequestStatus.AwaitingResponse, RequestStatus.Responded,
-        RequestStatus.Approved, RequestStatus.Rejected, RequestStatus.Closed
+        RequestStatus.NeedsAction, RequestStatus.Open,
+        RequestStatus.NeedsVariation, RequestStatus.Closed
     };
 
     private string title = "";
@@ -134,7 +136,7 @@
     private string raisedAt = "";
     private string respondedAt = "";
     private string responseText = "";
-    private RequestStatus status = RequestStatus.Open;
+    private RequestStatus status = RequestStatus.NeedsAction;
 
     private bool saving;
     private string? error;
@@ -173,7 +175,7 @@
         title = description = raisedToContactId = drawingRef = responseDue = valueText = "";
         backfill = false;
         raisedAt = respondedAt = responseText = "";
-        status = RequestStatus.Open;
+        status = RequestStatus.NeedsAction;
         kind = RequestType.General;
         reference = suggestedReference = "";
         saving = false;
@@ -284,9 +286,5 @@
     private static DateTimeOffset? ParseDate(string value) =>
         DateTimeOffset.TryParse(value, out var parsed) ? parsed : null;
 
-    private static string StatusLabel(RequestStatus status) => status switch
-    {
-        RequestStatus.AwaitingResponse => "Awaiting response",
-        _ => status.ToString()
-    };
+    private static string StatusLabel(RequestStatus status) => status.DisplayName();
 }

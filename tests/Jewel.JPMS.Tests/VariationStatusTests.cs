@@ -31,11 +31,13 @@ public sealed class VariationStatusTests
     [Fact]
     public void RequestStatusEnum_intValuesAreStable()
     {
-        Assert.Equal(0, (int)RequestStatus.Open);
-        Assert.Equal(1, (int)RequestStatus.AwaitingResponse);
-        Assert.Equal(2, (int)RequestStatus.Approved);
-        Assert.Equal(3, (int)RequestStatus.Rejected);
+        // 0 and 1 deliberately kept their stored rows across the status consolidation:
+        // legacy Open(0) rows now read Needs action, legacy AwaitingResponse(1) rows now read
+        // Open. 2/3/5 (Approved/Rejected/Responded) are retired — migrated to Closed — and must
+        // never be reused.
+        Assert.Equal(0, (int)RequestStatus.NeedsAction);
+        Assert.Equal(1, (int)RequestStatus.Open);
         Assert.Equal(4, (int)RequestStatus.Closed);
-        Assert.Equal(5, (int)RequestStatus.Responded);
+        Assert.Equal(6, (int)RequestStatus.NeedsVariation);
     }
 }

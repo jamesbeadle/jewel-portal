@@ -173,10 +173,12 @@
     // every pick closes it, the toggle is the dismiss).
     private string? statusMenuRequestId;
 
+    // Lifecycle order: the ball starts with us (Needs action), goes to the correspondent (Open),
+    // may come back needing a variation order quote (Needs variation), then closes.
     private static readonly RequestStatus[] StatusOptions =
     {
-        RequestStatus.Open, RequestStatus.AwaitingResponse, RequestStatus.Responded,
-        RequestStatus.Approved, RequestStatus.Rejected, RequestStatus.Closed
+        RequestStatus.NeedsAction, RequestStatus.Open,
+        RequestStatus.NeedsVariation, RequestStatus.Closed
     };
 
     private void ToggleStatusMenu(string requestId) =>
@@ -191,9 +193,8 @@
 
     private static string? StatusHint(RequestStatus status) => status switch
     {
-        RequestStatus.Closed    => "Closes with today's date — the agent gate still applies. Open the record to close against an earlier date.",
-        RequestStatus.Responded => "Marks as responded, keeping any recorded response text. Open the record to write the formal response.",
-        _ => null
+        RequestStatus.Closed => "Closes with today's date — the agent gate still applies. Open the record to close against an earlier date.",
+        _ => status.Hint()
     };
 
     private bool IsSelectable(Request record) => RowSelectable?.Invoke(record) ?? true;
@@ -219,20 +220,14 @@
     private static string Money(decimal value) =>
         value.ToString("C0", System.Globalization.CultureInfo.GetCultureInfo("en-GB"));
 
-    private static string StatusLabel(RequestStatus status) => status switch
-    {
-        RequestStatus.AwaitingResponse => "Awaiting response",
-        _ => status.ToString()
-    };
+    private static string StatusLabel(RequestStatus status) => status.DisplayName();
 
     private static string StatusClass(RequestStatus status) => status switch
     {
-        RequestStatus.Open             => "bg-blue-500/10 text-blue-600",
-        RequestStatus.AwaitingResponse => "bg-amber-500/10 text-amber-600",
-        RequestStatus.Approved         => "bg-emerald-500/10 text-emerald-600",
-        RequestStatus.Responded        => "bg-emerald-500/10 text-emerald-600",
-        RequestStatus.Rejected         => "bg-red-500/10 text-red-600",
-        RequestStatus.Closed           => "bg-surface-raised border border-line text-content-muted",
-        _                              => "bg-surface-raised border border-line text-content-muted"
+        RequestStatus.NeedsAction    => "bg-amber-500/10 text-amber-600",
+        RequestStatus.Open           => "bg-blue-500/10 text-blue-600",
+        RequestStatus.NeedsVariation => "bg-violet-500/10 text-violet-600",
+        RequestStatus.Closed         => "bg-surface-raised border border-line text-content-muted",
+        _                            => "bg-surface-raised border border-line text-content-muted"
     };
 }

@@ -145,14 +145,5 @@
         : !Request.HasRfq ? "Enable RFQ on the RFI to unlock a VOQ."
         : "Create the VOQ from the request page.";
 
-    private static string RequestStatusLabel(RequestStatus status) => status switch
-    {
-        RequestStatus.Open             => "Open",
-        RequestStatus.AwaitingResponse => "Awaiting response",
-        RequestStatus.Responded        => "Responded",
-        RequestStatus.Approved         => "Approved",
-        RequestStatus.Rejected         => "Rejected",
-        RequestStatus.Closed           => "Closed",
-        _ => status.ToString()
-    };
+    private static string RequestStatusLabel(RequestStatus status) => status.DisplayName();
 }

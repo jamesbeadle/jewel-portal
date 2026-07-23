@@ -78,12 +78,13 @@ public sealed class PrepareRequestReplyDraftHandler : ICommandHandler<PrepareReq
             webLink: created.WebLink,
             cancellationToken: cancellationToken);
 
-        // Same rule as the fresh-email draft: drafted means it's going out, so an Open request
-        // moves to Awaiting Response now (manually set back to Open if the send is cancelled).
-        // Requests already past Open keep their status — a re-draft never rewinds a lifecycle.
-        if ((RequestStatus)request.Status == RequestStatus.Open)
+        // Same rule as the fresh-email draft: drafted means it's going out, so a Needs-action
+        // request moves to Open (awaiting the correspondent's response) now (manually set back to
+        // Needs action if the send is cancelled). Requests already past Needs action keep their
+        // status — a re-draft never rewinds a lifecycle.
+        if ((RequestStatus)request.Status == RequestStatus.NeedsAction)
         {
-            request.Status = (int)RequestStatus.AwaitingResponse;
+            request.Status = (int)RequestStatus.Open;
             await context.SaveChangesAsync(cancellationToken);
         }
 
