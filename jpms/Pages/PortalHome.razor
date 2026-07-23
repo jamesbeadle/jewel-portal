@@ -219,8 +219,18 @@ else
                                     <span class="inline-block mt-1 rounded-full border px-2 py-0.5 text-xs font-medium @StatusPillClass(workOrder.Order.Status)">
                                         @StatusLabel(workOrder.Order.Status)
                                     </span>
+                                    @if (workOrder.Order.IsAccepted)
+                                    {
+                                        <p class="text-[11px] text-content-subtle mt-1">Accepted @workOrder.Order.AcceptedAt!.Value.LocalDateTime.ToString("d MMM yyyy")</p>
+                                    }
                                 </div>
                             </div>
+                            <p class="mt-2 text-xs">
+                                <a class="underline underline-offset-2 @(NeedsAcceptance(workOrder) ? "text-amber-400 font-medium" : "text-content-subtle") hover:text-content"
+                                   href="@($"/portal/work-orders/{workOrder.Order.WorkOrderId}")">
+                                    @(NeedsAcceptance(workOrder) ? "View & accept purchase order →" : "View purchase order →")
+                                </a>
+                            </p>
                             @if (workOrder.Lines.Count > 0)
                             {
                                 <details class="mt-2">
@@ -379,6 +389,10 @@ else
 
     private IReadOnlyList<PortalWorkOrder> WorkOrders =>
         (CanAccess ? PortalStore.MyWorkOrders() : null) ?? Array.Empty<PortalWorkOrder>();
+
+    // An issued order the supplier hasn't electronically accepted yet — the list nudges them in.
+    private static bool NeedsAcceptance(PortalWorkOrder workOrder) =>
+        workOrder.Order.Status == WorkOrderStatus.Released && !workOrder.Order.IsAccepted;
 
     private static string StatusLabel(WorkOrderStatus status) => status switch
     {

@@ -26,6 +26,14 @@ public static class SubcontractorsRouteRegistration
             new QueryRoute("/api/subcontractors/{subcontractorId}/compliance",
                 query => $"/api/subcontractors/{((ListComplianceDocumentsForSubcontractor)query).SubcontractorId}/compliance"));
 
+        queries.Register<GetSubcontractorStatement, SubcontractorStatement>(
+            new QueryRoute("/api/subcontractors/{subcontractorId}/statement",
+                query => $"/api/subcontractors/{((GetSubcontractorStatement)query).SubcontractorId}/statement"));
+
+        commands.Register<PrepareSubcontractorStatementEmailDraft, SubcontractorStatementEmailDraft>(
+            new CommandRoute("POST", "/api/subcontractors/{subcontractorId}/statement/draft-email",
+                command => $"/api/subcontractors/{((PrepareSubcontractorStatementEmailDraft)command).SubcontractorId}/statement/draft-email"));
+
         commands.Register<AddSubcontractorToDirectory, Subcontractor>(CommandRoute.Post("/api/subcontractors"));
 
         commands.Register<UpdateSubcontractor, Subcontractor>(

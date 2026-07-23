@@ -137,6 +137,18 @@ public sealed class WorkOrderEntity
     // produce a NEW work order — existing orders are never uplifted (subcontractor-crm-scope §6).
     [MaxLength(64)]      public string? VariationOrderId { get; set; }
 
+    // Programme information printed on the purchase order. ScheduledCompletion above is the
+    // target completion date; these add the programme start and free-text notes (e.g. phasing).
+    // All optional — the PO's Programme section renders only when at least one is set.
+    public DateTimeOffset? ProgrammeStart { get; set; }
+    [MaxLength(2000)]    public string ProgrammeNotes { get; set; } = "";
+
+    // Electronic acceptance from the subcontractor portal: stamped once when the supplier's
+    // signed-in contact clicks Accept (name/email from their login, never typed by hand).
+    public DateTimeOffset? AcceptedAt { get; set; }
+    [MaxLength(256)]     public string AcceptedByEmail { get; set; } = "";
+    [MaxLength(256)]     public string AcceptedByName { get; set; } = "";
+
     // Human reference, falling back to an id-derived stem for legacy rows that predate numbering.
     // Computed, not stored — mirrors BidPackageEntity.Reference.
     [System.ComponentModel.DataAnnotations.Schema.NotMapped]

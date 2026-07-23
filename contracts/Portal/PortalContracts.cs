@@ -17,11 +17,15 @@ public sealed record SubcontractorPortalRecord(
 public sealed record GetMyPortalRecord(string SubcontractorId = "") : IQuery<SubcontractorPortalRecord?>;
 
 /// <summary>A work order as the subcontractor sees it: the order, the project's display name
-/// (resolved server-side — portal sessions can't read the projects list) and the priced lines.</summary>
+/// (resolved server-side — portal sessions can't read the projects list) and the priced lines.
+/// ApprovedByName / SiteAddress are display fields for the printed purchase order, resolved
+/// server-side for the same reason (portal sessions can't read the user directory or projects).</summary>
 public sealed record PortalWorkOrder(
     WorkOrder Order,
     string ProjectName,
-    IReadOnlyList<WorkOrderLine> Lines);
+    IReadOnlyList<WorkOrderLine> Lines,
+    string ApprovedByName = "",
+    string SiteAddress = "");
 
 /// <summary>
 /// GET /api/portal/my/work-orders — the caller's issued work orders (Released and later; Drafts
@@ -47,6 +51,18 @@ public sealed record RaiseMyVariationRequest(
 public sealed record WithdrawMyVariationRequest(
     string VariationRequestId,
     string SubcontractorId = "") : ICommand<SubcontractorVariationRequest>;
+
+/// <summary>
+/// POST /api/portal/my/work-orders/{workOrderId}/accept — one-click electronic acceptance of an
+/// issued work order by the supplier's signed-in portal contact. SubcontractorId and the
+/// AcceptedBy* fields are resolved SERVER-SIDE from the session; anything the client sends in
+/// them is ignored. Idempotent: accepting an already-accepted order returns it unchanged.
+/// </summary>
+public sealed record AcceptMyWorkOrder(
+    string WorkOrderId,
+    string SubcontractorId = "",
+    string AcceptedByEmail = "",
+    string AcceptedByName = "") : ICommand<WorkOrder>;
 
 /// <summary>GET /api/portal/my/variation-requests — the caller's requests, newest first, with
 /// project/work-order display fields resolved server-side.</summary>

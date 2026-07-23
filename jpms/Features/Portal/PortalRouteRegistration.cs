@@ -27,6 +27,10 @@ public static class PortalRouteRegistration
             new CommandRoute("POST", "/api/portal/my/work-orders/{workOrderId}/variation-requests",
                 command => $"/api/portal/my/work-orders/{((RaiseMyVariationRequest)command).WorkOrderId}/variation-requests"));
 
+        commands.Register<AcceptMyWorkOrder, WorkOrder>(
+            new CommandRoute("POST", "/api/portal/my/work-orders/{workOrderId}/accept",
+                command => $"/api/portal/my/work-orders/{((AcceptMyWorkOrder)command).WorkOrderId}/accept"));
+
         commands.Register<WithdrawMyVariationRequest, SubcontractorVariationRequest>(
             new CommandRoute("POST", "/api/portal/my/variation-requests/{variationRequestId}/withdraw",
                 command => $"/api/portal/my/variation-requests/{((WithdrawMyVariationRequest)command).VariationRequestId}/withdraw"));

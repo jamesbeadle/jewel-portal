@@ -51,6 +51,32 @@
                       disabled="@busy" @bind="scope" @bind:event="oninput"></textarea>
         </div>
 
+        @* ── Programme: printed in the purchase order's Programme section ──── *@
+        <div class="rounded-lg border border-line bg-surface p-3">
+            <p class="text-[11px] uppercase tracking-wider text-content-subtle font-semibold mb-2"
+               title="Printed in the purchase order's Programme section — leave everything empty to omit it">Programme</p>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div>
+                    <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Start date</label>
+                    <input type="date"
+                           class="w-full rounded-lg border border-line-strong bg-surface-field px-3 py-2 text-sm text-content focus:outline-none focus:border-accent"
+                           disabled="@busy" @bind="programmeStart" />
+                </div>
+                <div>
+                    <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Target completion</label>
+                    <input type="date"
+                           class="w-full rounded-lg border border-line-strong bg-surface-field px-3 py-2 text-sm text-content focus:outline-none focus:border-accent"
+                           disabled="@busy" @bind="targetCompletion" />
+                </div>
+            </div>
+            <div class="mt-3">
+                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Programme notes</label>
+                <textarea rows="2" maxlength="2000" placeholder="e.g. Weekly programme duration 1st &amp; 2nd fix phases (optional)"
+                          class="w-full rounded-lg border border-line-strong bg-surface-field px-3 py-2 text-sm text-content focus:outline-none focus:border-accent"
+                          disabled="@busy" @bind="programmeNotes" @bind:event="oninput"></textarea>
+            </div>
+        </div>
+
         @* ── Priced lines: each carries its own cost centre ────────────────── *@
         <div class="rounded-lg border border-line bg-surface p-3">
             <p class="text-[11px] uppercase tracking-wider text-content-subtle font-semibold mb-2"
@@ -137,8 +163,8 @@
                                    title="@(exhausted ? "Fully assigned to other packages" : "")"
                                    checked="@picked"
                                    @onchange="() => ToggleSalesLine(entry)" />
-                            <span class="font-mono text-[11px] text-content-subtle whitespace-nowrap">@salesLine.CostCode</span>
-                            <span class="text-content-muted truncate" title="@salesLine.Description">@salesLine.Description</span>
+                            <span class="font-mono text-[11px] text-content-subtle whitespace-nowrap" title="@RefTitle(salesLine)">@Ref(salesLine)</span>
+                            <span class="text-content-muted truncate" title="@DescriptionFor(salesLine)">@DescriptionFor(salesLine)</span>
                             <span class="ml-auto flex items-center gap-1.5 whitespace-nowrap">
                                 @if (picked)
                                 {
@@ -211,6 +237,10 @@
     private string subcontractorId = "";
     private string title = "";
     private string scope = "";
+    // Programme (all optional): date-only inputs, sent as UTC dates like other date pickers.
+    private DateTime? programmeStart;
+    private DateTime? targetCompletion;
+    private string programmeNotes = "";
     private List<LineRow> lines = new() { new LineRow() };
     private bool createPackage = true;
     private string packageName = "";
@@ -240,6 +270,9 @@
             subcontractorId = Editing.Order.SubcontractorId;
             title = Editing.Order.Title;
             scope = Editing.Order.Scope;
+            programmeStart = Editing.Order.ProgrammeStart?.LocalDateTime.Date;
+            targetCompletion = Editing.Order.ScheduledCompletion?.LocalDateTime.Date;
+            programmeNotes = Editing.Order.ProgrammeNotes;
             lines = Editing.Lines
                 .OrderBy(line => line.SortOrder)
                 .Select(line => new LineRow
@@ -259,6 +292,9 @@
             subcontractorId = "";
             title = "";
             scope = "";
+            programmeStart = null;
+            targetCompletion = null;
+            programmeNotes = "";
             lines = new List<LineRow> { new LineRow() };
             createPackage = true;
         }
@@ -310,7 +346,9 @@
                 .Where(line => string.IsNullOrWhiteSpace(lineSearch)
                                || line.Description.Contains(lineSearch.Trim(), StringComparison.OrdinalIgnoreCase)
                                || line.CostCode.Contains(lineSearch.Trim(), StringComparison.OrdinalIgnoreCase)
-                               || line.SectionName.Contains(lineSearch.Trim(), StringComparison.OrdinalIgnoreCase))
+                               || line.SectionName.Contains(lineSearch.Trim(), StringComparison.OrdinalIgnoreCase)
+                               || line.VariationRef.Contains(lineSearch.Trim(), StringComparison.OrdinalIgnoreCase)
+                               || line.VariationTitle.Contains(lineSearch.Trim(), StringComparison.OrdinalIgnoreCase))
                 .Select(line => (Line: line,
                     Available: line.LineAmount - (taken.TryGetValue(line.ValuationLineItemId, out var amount) ? amount : 0m)))
                 .OrderBy(entry => entry.Line.CostCode, StringComparer.OrdinalIgnoreCase)
@@ -368,13 +406,13 @@
                     if (!linesById.TryGetValue(picked.Key, out var salesLine)) continue;
                     var amount = Parse(picked.Value)!.Value;
                     if (Math.Sign(amount) != Math.Sign(salesLine.LineAmount))
-                        return $"\"{Truncate(salesLine.Description, 40)}\" — the share must carry the line's sign ({Money(salesLine.LineAmount)}).";
+                        return $"\"{Truncate(DescriptionFor(salesLine), 40)}\" — the share must carry the line's sign ({Money(salesLine.LineAmount)}).";
                     var available = salesLine.LineAmount - allPackages
                         .SelectMany(package => package.SalesLines)
                         .Where(slice => string.Equals(slice.ValuationLineItemId, picked.Key, StringComparison.OrdinalIgnoreCase))
                         .Sum(slice => slice.Amount);
                     if (Math.Abs(amount) > Math.Abs(available))
-                        return $"\"{Truncate(salesLine.Description, 40)}\" — only {Money(available)} of the line is still available.";
+                        return $"\"{Truncate(DescriptionFor(salesLine), 40)}\" — only {Money(available)} of the line is still available.";
                 }
             }
             return null;
@@ -404,7 +442,8 @@
                     .ToList();
                 await Commands.SendAsync(new UpdateManualWorkOrder(
                     ProjectId, Editing.Order.WorkOrderId, subcontractorId,
-                    title.Trim(), scope.Trim(), editedLines), CancellationToken.None);
+                    title.Trim(), scope.Trim(), editedLines,
+                    AsUtcDate(programmeStart), AsUtcDate(targetCompletion), programmeNotes.Trim()), CancellationToken.None);
                 seeded = false; // reseed fresh on next open
                 await OnSaved.InvokeAsync();
                 return;
@@ -420,7 +459,8 @@
                     .ToList();
                 createdOrder = await Commands.SendAsync(new CreateManualWorkOrder(
                     ProjectId, subcontractorId, title.Trim(), scope.Trim(),
-                    Auth.CurrentUser?.Email ?? "", orderLines), CancellationToken.None);
+                    Auth.CurrentUser?.Email ?? "", orderLines,
+                    AsUtcDate(programmeStart), AsUtcDate(targetCompletion), programmeNotes.Trim()), CancellationToken.None);
             }
 
             // Step 2 — the package, with the fresh order already assigned.
@@ -454,6 +494,33 @@
             busy = false;
         }
     }
+
+    // Mirrors the Valuation Report tab's CodeFor (and the cost-centre sales-lines modal's Ref)
+    // so the picker cross-references against that tab: works/PC/contingency lines show the cost
+    // code (NRM2 section ref as a fallback); variation lines show their V-ref from the contract's
+    // variations register. The bill section / variation title survive in the tooltip.
+    private static string Ref(ValuationLineItem line) =>
+        line.ElementType == ValuationElementType.Variation
+            ? (string.IsNullOrWhiteSpace(line.VariationRef) ? line.CostCode : line.VariationRef)
+            : (string.IsNullOrWhiteSpace(line.CostCode) ? line.SectionCode : line.CostCode);
+
+    private static string RefTitle(ValuationLineItem line) =>
+        line.ElementType == ValuationElementType.Variation
+            ? line.VariationTitle
+            : string.IsNullOrWhiteSpace(line.SectionCode)
+                ? line.SectionName
+                : $"{line.SectionCode} — {line.SectionName}";
+
+    // Variation lines mirror an approved VO whose descriptive text lives in VariationTitle;
+    // older lines have an empty Description, so fall back to the title instead of a blank row.
+    private static string DescriptionFor(ValuationLineItem line) =>
+        line.ElementType == ValuationElementType.Variation && string.IsNullOrWhiteSpace(line.Description)
+            ? line.VariationTitle
+            : line.Description;
+
+    // Date-only picker value → a UTC date, matching how other date inputs are sent.
+    private static DateTimeOffset? AsUtcDate(DateTime? date) =>
+        date is null ? null : new DateTimeOffset(DateTime.SpecifyKind(date.Value.Date, DateTimeKind.Utc));
 
     private static string Truncate(string value, int max) =>
         value.Length <= max ? value : value[..max] + "…";

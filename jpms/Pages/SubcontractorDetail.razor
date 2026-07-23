@@ -123,7 +123,35 @@ else
             </div>
         </div>
 
+        @* Statement of account: this record's work orders across every project with the invoices
+           claimed against each — downloadable as the branded PDF, or drafted to the contact by
+           email (shared-mailbox convention: a human reviews and sends from Outlook). *@
+        <div class="rounded-xl border border-line bg-surface p-4 mb-6">
+            <div class="flex items-center justify-between mb-2">
+                <h2 class="text-sm font-semibold text-content">Statement of account</h2>
+            </div>
+            <p class="text-xs text-content-subtle mb-3">
+                Every work order this company holds, grouped by project, with the invoices claimed
+                against each order and the remaining balances — generated from the register, so it's
+                always current.
+            </p>
+            <div class="flex flex-wrap items-center gap-3">
+                <a class="btn-secondary" href="@($"/api/subcontractors/{subcontractor.SubcontractorId}/statement/pdf")"
+                   target="_blank" rel="noopener">
+                    Download PDF
+                </a>
+                <button type="button" class="btn-secondary" @onclick="() => statementOpen = true">
+                    Email statement…
+                </button>
+            </div>
+        </div>
+
         <SubcontractorComplianceList SubcontractorId="@subcontractor.SubcontractorId" />
+
+        <SubcontractorStatementModal IsOpen="@statementOpen"
+                                     SubcontractorId="@subcontractor.SubcontractorId"
+                                     SubcontractorName="@subcontractor.CompanyName"
+                                     OnClose="() => statementOpen = false" />
     </section>
 }
 
@@ -132,6 +160,9 @@ else
 
     private bool isLoaded;
     private Subcontractor? subcontractor;
+
+    // Statement-of-account email modal (the download link needs no state).
+    private bool statementOpen;
 
     // Restricted to administrators and the managing director / CEO.
     private bool CanAccess => Session.AvailableRoles.Any(r => r is Role.Admin or Role.ManagingDirector);

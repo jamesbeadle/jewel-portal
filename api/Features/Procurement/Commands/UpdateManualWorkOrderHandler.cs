@@ -117,6 +117,9 @@ public sealed class UpdateManualWorkOrderHandler
         entity.Title = command.Title.Length > 256 ? command.Title[..256] : command.Title;
         entity.Scope = command.Scope.Length > 4000 ? command.Scope[..4000] : command.Scope;
         entity.Value = command.Lines.Sum(line => line.Amount);
+        entity.ProgrammeStart = command.ProgrammeStart;
+        entity.ScheduledCompletion = command.TargetCompletion;
+        entity.ProgrammeNotes = command.ProgrammeNotes.Length > 2000 ? command.ProgrammeNotes[..2000] : command.ProgrammeNotes;
 
         await context.SaveChangesAsync(cancellationToken);
         return entity.ToModel();

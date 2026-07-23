@@ -57,7 +57,10 @@ public sealed class CreateManualWorkOrderHandler
             Number = nextNumber,
             Title = command.Title.Length > 256 ? command.Title[..256] : command.Title,
             Status = (int)WorkOrderStatus.Released,
-            CreatedAt = now
+            CreatedAt = now,
+            ProgrammeStart = command.ProgrammeStart,
+            ScheduledCompletion = command.TargetCompletion,
+            ProgrammeNotes = command.ProgrammeNotes.Length > 2000 ? command.ProgrammeNotes[..2000] : command.ProgrammeNotes
         };
         context.WorkOrders.Add(entity);
 

@@ -66,6 +66,15 @@ public sealed class HttpPortalStore : IPortalStore
         return raised;
     }
 
+    public async Task<WorkOrder> AcceptWorkOrderAsync(string workOrderId)
+    {
+        // Who accepted (and for which company) is resolved from the session server-side;
+        // the command's defaulted fields are ignored there.
+        var accepted = await commands.SendAsync(new AcceptMyWorkOrder(workOrderId), CancellationToken.None);
+        await workOrdersReadModel.RefreshAsync(CancellationToken.None);
+        return accepted;
+    }
+
     public async Task WithdrawVariationRequestAsync(string variationRequestId)
     {
         await commands.SendAsync(new WithdrawMyVariationRequest(variationRequestId), CancellationToken.None);

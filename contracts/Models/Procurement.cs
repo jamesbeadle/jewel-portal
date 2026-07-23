@@ -138,8 +138,19 @@ public sealed record WorkOrder(
     string? VariationOrderId = null,
     // External id of the record this order was seeded from (e.g. the Buildertrend PO id).
     // Null for orders raised in JPMS.
-    string? SourceReference = null)
+    string? SourceReference = null,
+    // ---- Programme (printed on the purchase order's Programme section when any is set;
+    //      ScheduledCompletion above is the target completion date) ----
+    DateTimeOffset? ProgrammeStart = null,
+    string ProgrammeNotes = "",
+    // ---- Electronic acceptance from the subcontractor portal (one click under their login) ----
+    DateTimeOffset? AcceptedAt = null,
+    string AcceptedByEmail = "",
+    string AcceptedByName = "")
 {
+    /// <summary>The supplier has electronically accepted this order from the portal.</summary>
+    public bool IsAccepted => AcceptedAt is not null;
+
     /// <summary>Raised directly in JPMS — no tender, no variation, no seed — so its supplier,
     /// title, scope and priced lines can be edited wholesale via UpdateManualWorkOrder.</summary>
     public bool IsManual => BidPackageId is null && VariationOrderId is null && SourceReference is null;

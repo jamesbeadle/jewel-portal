@@ -38,5 +38,10 @@ public interface IPortalStore
     /// <summary>Withdraws one of the caller's own open variation requests.</summary>
     Task WithdrawVariationRequestAsync(string variationRequestId);
 
+    /// <summary>One-click electronic acceptance of one of the caller's own issued work orders.
+    /// The acceptance is stamped server-side with the signed-in contact's name and email.
+    /// Throws CommandFailedException with a user-showable message on rejection.</summary>
+    Task<WorkOrder> AcceptWorkOrderAsync(string workOrderId);
+
     event Action? OnChange;
 }

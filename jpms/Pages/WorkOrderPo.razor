@@ -1,0 +1,141 @@
+@page "/projects/{ProjectId}/work-orders/{WorkOrderId}/po"
+@using Jewel.JPMS.Features.Procurement
+@using Jewel.JPMS.Features.Projects
+@using Jewel.JPMS.Features.Subcontractors
+@using Jewel.JPMS.Models
+@inject AuthService Auth
+@inject SessionService Session
+@inject ProjectWorkOrdersReadModel WorkOrders
+@inject ProjectListReadModel Projects
+@inject SubcontractorsReadModel Subcontractors
+@inject IUserDirectory Users
+@inject NavigationManager Nav
+@inject IJSRuntime JS
+@implements IDisposable
+
+@* The printable purchase order for one work order — opened from the Work Orders tab. The sheet
+   itself is the shared PurchaseOrderSheet; this page resolves the internal-side data (supplier
+   record, project, approver display name) and offers Print (browser print → paper or PDF). *@
+
+<PageTitle>@Title · JPMS</PageTitle>
+
+@if (!isLoaded)
+{
+    <section class="px-4 md:px-8 py-12 text-content-subtle text-sm">Loading…</section>
+}
+else if (!Session.IsApproved)
+{
+    <RequestAccessView Email="@Auth.CurrentUser!.Email" DisplayName="@Auth.CurrentUser.DisplayName" />
+}
+else if (Detail is null)
+{
+    <section class="px-4 md:px-8 py-12">
+        <h1 class="text-2xl font-semibold text-content mb-2">Work order not found</h1>
+        <p class="text-content-muted">
+            This work order doesn't exist on this project.
+            <a class="underline underline-offset-4" href="@($"/projects/{ProjectId}/work-orders")">Back to the Work Orders tab</a>
+        </p>
+    </section>
+}
+else
+{
+    <section class="px-4 md:px-8 py-6">
+        <div class="po-toolbar flex items-center justify-between gap-3 mb-5 max-w-[820px] mx-auto">
+            <a class="text-sm text-content-subtle hover:text-content underline underline-offset-4"
+               href="@($"/projects/{ProjectId}/work-orders")">← Work orders</a>
+            <div class="flex items-center gap-3">
+                @if (Detail.Order.IsAccepted)
+                {
+                    <span class="rounded-full border border-emerald-200 bg-emerald-50 text-emerald-800 px-2.5 py-0.5 text-xs font-medium"
+                          title="@($"Electronically accepted by {Detail.Order.AcceptedByName} on {Detail.Order.AcceptedAt!.Value.LocalDateTime:d MMM yyyy, HH:mm}")">
+                        Accepted by supplier
+                    </span>
+                }
+                else if (Detail.Order.Status == WorkOrderStatus.Released)
+                {
+                    <span class="rounded-full border border-amber-200 bg-amber-50 text-amber-800 px-2.5 py-0.5 text-xs font-medium">
+                        Awaiting supplier acceptance
+                    </span>
+                }
+                <button type="button" class="btn-secondary text-sm" @onclick="PrintAsync"
+                        title="Print the purchase order, or save it as a PDF from the print dialog">
+                    Print / save PDF
+                </button>
+            </div>
+        </div>
+
+        <PurchaseOrderSheet Order="Detail.Order"
+                            Lines="Detail.Lines"
+                            SupplierName="@Detail.SubcontractorName"
+                            SupplierContactName="@(Supplier?.ContactName ?? "")"
+                            SupplierAddress="@SupplierAddress"
+                            ProjectName="@(Project?.Name ?? "")"
+                            SiteAddress="@SiteAddress"
+                            ApprovedByName="@ApprovedByName" />
+    </section>
+}
+
+<style>
+    @@media print {
+        .po-toolbar { display: none; }
+    }
+</style>
+
+@code {
+    [Parameter] public string ProjectId { get; set; } = "";
+    [Parameter] public string WorkOrderId { get; set; } = "";
+
+    private bool isLoaded;
+
+    private ProjectWorkOrderDetail? Detail =>
+        WorkOrders.Current(ProjectId).FirstOrDefault(detail =>
+            string.Equals(detail.Order.WorkOrderId, WorkOrderId, StringComparison.OrdinalIgnoreCase));
+
+    private Project? Project => Projects.Find(ProjectId);
+
+    private Subcontractor? Supplier =>
+        Detail is null
+            ? null
+            : (Subcontractors.Current ?? Array.Empty<Subcontractor>()).FirstOrDefault(sub =>
+                string.Equals(sub.SubcontractorId, Detail.Order.SubcontractorId, StringComparison.OrdinalIgnoreCase));
+
+    private string SupplierAddress =>
+        Supplier is null
+            ? ""
+            : string.Join(", ", new[] { Supplier.Town, Supplier.County }.Where(part => !string.IsNullOrWhiteSpace(part)));
+
+    private string SiteAddress =>
+        Project is null
+            ? ""
+            : string.Join(", ", new[] { Project.AddressLine, Project.Town, Project.Postcode }.Where(part => !string.IsNullOrWhiteSpace(part)));
+
+    // Whoever raised/approved the order in the system, by display name (falls back to the email
+    // inside the sheet when the directory has no entry).
+    private string ApprovedByName =>
+        Detail is null ? "" : Users.Find(Detail.Order.AwardedByEmail)?.DisplayName ?? "";
+
+    private string Title => Detail is null ? "Purchase order" : $"WO-{Detail.Order.Number:0000} purchase order";
+
+    private async Task PrintAsync() => await JS.InvokeVoidAsync("window.print");
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Session.EnsureLoadedAsync();
+        if (!Auth.IsSignedIn) { Nav.NavigateTo("/login", forceLoad: true); return; }
+        WorkOrders.OnChanged += StateHasChanged;
+        Projects.OnChanged += StateHasChanged;
+        Subcontractors.OnChanged += StateHasChanged;
+        // Refresh once per entry (stale-while-revalidate, per the front-end data-loading convention).
+        _ = WorkOrders.RefreshAsync(ProjectId, CancellationToken.None);
+        _ = Projects.RefreshAsync(CancellationToken.None);
+        await Subcontractors.RefreshAsync(CancellationToken.None);
+        isLoaded = true;
+    }
+
+    public void Dispose()
+    {
+        WorkOrders.OnChanged -= StateHasChanged;
+        Projects.OnChanged -= StateHasChanged;
+        Subcontractors.OnChanged -= StateHasChanged;
+    }
+}

@@ -1,0 +1,228 @@
+@using Jewel.JPMS.Contracts.Subcontractors
+@using Jewel.JPMS.Models
+@inject IQueryClient Queries
+@inject ICommandSender Commands
+
+@* The subcontractor's statement of account — their work orders across every project with the
+   invoices claimed against each — previewed here, downloadable as the branded PDF, and emailed
+   via the shared-mailbox convention: confirming creates a DRAFT (statement PDF attached, figures
+   rendered server-side from the live register) for a human to review and send from Outlook.
+   Nothing sends from here. Used from the directory record and the project Work Orders tab. *@
+<Modal IsOpen="IsOpen"
+       Title="@($"Statement of account · {statement?.CompanyName ?? SubcontractorName}")"
+       ConfirmLabel="@ConfirmLabelText"
+       ConfirmDisabled="@(busy || drafted || statement is null)"
+       CancelLabel="Close"
+       OnConfirm="CreateDraftAsync"
+       OnCancel="Close"
+       Class="max-w-3xl w-full">
+    @if (loadError is not null)
+    {
+        <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@loadError</p>
+    }
+    else if (statement is null)
+    {
+        <p class="text-sm text-content-subtle">Loading statement…</p>
+    }
+    else
+    {
+        <p class="rounded-lg bg-surface-raised border border-line px-3 py-2 text-xs text-content-muted mb-3">
+            Nothing sends from here — this creates a draft in the shared mailbox with the statement PDF
+            attached, addressed to @(string.IsNullOrWhiteSpace(statement.ContactEmail) ? "the subcontractor (no directory email yet)" : statement.ContactEmail),
+            for you to review and send from Outlook. The PDF is rendered from the register when the
+            draft is created, so its figures are always current.
+        </p>
+
+        <div class="rounded-xl border border-line bg-surface mb-3 overflow-x-auto">
+            <table class="w-full text-sm">
+                <thead class="bg-surface-raised border-b border-line">
+                    <tr class="text-left text-[11px] uppercase tracking-wider text-content-subtle font-semibold">
+                        <th class="px-3 py-2">Project</th>
+                        <th class="px-3 py-2 text-right">Orders</th>
+                        <th class="px-3 py-2 text-right">Ordered</th>
+                        <th class="px-3 py-2 text-right">Invoiced</th>
+                        <th class="px-3 py-2 text-right">Remaining</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-line">
+                    @if (statement.Projects.Count == 0)
+                    {
+                        <tr>
+                            <td colspan="5" class="px-3 py-3 text-content-subtle italic">
+                                No work orders are recorded on this account yet.
+                            </td>
+                        </tr>
+                    }
+                    @foreach (var project in statement.Projects)
+                    {
+                        <tr>
+                            <td class="px-3 py-2 text-content whitespace-nowrap">
+                                <span class="font-mono text-[11px] text-content-subtle mr-1.5">@project.ProjectReference</span>@project.ProjectName
+                            </td>
+                            <td class="px-3 py-2 text-right">@project.Orders.Count</td>
+                            <td class="px-3 py-2 text-right">@MoneyExact(project.Ordered)</td>
+                            <td class="px-3 py-2 text-right">@MoneyExact(project.Invoiced)</td>
+                            <td class="px-3 py-2 text-right @(project.Remaining < 0 ? "text-negative" : "")">@MoneyExact(project.Remaining)</td>
+                        </tr>
+                    }
+                </tbody>
+                @if (statement.Projects.Count > 0)
+                {
+                    <tfoot class="border-t border-line-strong bg-surface-raised">
+                        <tr class="font-semibold text-content">
+                            <td class="px-3 py-2">Account total</td>
+                            <td class="px-3 py-2 text-right">@statement.OrderCount</td>
+                            <td class="px-3 py-2 text-right">@MoneyExact(statement.TotalOrdered)</td>
+                            <td class="px-3 py-2 text-right">@MoneyExact(statement.TotalInvoiced)</td>
+                            <td class="px-3 py-2 text-right @(statement.TotalRemaining < 0 ? "text-negative" : "")">@MoneyExact(statement.TotalRemaining)</td>
+                        </tr>
+                    </tfoot>
+                }
+            </table>
+        </div>
+
+        <div class="flex items-center justify-between gap-3 mb-3">
+            <a class="text-xs font-medium text-content-subtle hover:text-content underline underline-offset-4"
+               href="@($"/api/subcontractors/{SubcontractorId}/statement/pdf")" target="_blank" rel="noopener">
+                Download the statement PDF (what gets attached)
+            </a>
+            <span class="text-xs text-content-subtle">All figures net of VAT · credit notes deduct</span>
+        </div>
+
+        @if (drafted)
+        {
+            <div class="rounded-lg bg-emerald-50 border border-emerald-200 px-3 py-2 text-sm text-emerald-900">
+                <p class="mb-1">
+                    Draft created in the shared mailbox to <span class="font-medium">@draftRecipient</span>,
+                    with the statement PDF attached. Review and send it from the mailbox's Drafts folder.
+                </p>
+                @if (draftLink is not null)
+                {
+                    <a class="underline underline-offset-4 font-medium" href="@draftLink" target="_blank" rel="noopener">Open the draft in Outlook on the web</a>
+                }
+            </div>
+        }
+        else
+        {
+            <label class="block text-xs font-semibold uppercase tracking-wide text-content-subtle mb-1">Subject</label>
+            <input class="field mb-3" @bind="subject" />
+
+            <label class="block text-xs font-semibold uppercase tracking-wide text-content-subtle mb-1">Cover note (HTML) — the statement itself travels as the attached PDF</label>
+            <textarea class="field font-mono text-xs" rows="10" @bind="htmlBody"></textarea>
+        }
+
+        @if (error is not null)
+        {
+            <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mt-3">@error</p>
+        }
+    }
+</Modal>
+
+@code {
+    [Parameter] public bool IsOpen { get; set; }
+
+    /// <summary>The directory record whose account the statement covers.</summary>
+    [Parameter] public string SubcontractorId { get; set; } = "";
+
+    /// <summary>Display name shown while the statement loads.</summary>
+    [Parameter] public string SubcontractorName { get; set; } = "";
+
+    [Parameter] public EventCallback OnClose { get; set; }
+
+    private SubcontractorStatement? statement;
+    private string? loadedForId;
+    private string? loadError;
+
+    private bool busy;
+    private bool drafted;
+    private string? error;
+    private string? draftLink;
+    private string draftRecipient = "";
+
+    private string subject = "";
+    private string htmlBody = "";
+
+    private string ConfirmLabelText =>
+        busy ? "Drafting…" : drafted ? "Draft created" : "Create draft in mailbox";
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (!IsOpen)
+        {
+            // Reset the per-open outcome so reopening starts clean; the statement itself reloads
+            // per open below, so figures never go stale between visits.
+            drafted = false;
+            error = null;
+            draftLink = null;
+            loadedForId = null;
+            return;
+        }
+
+        if (loadedForId == SubcontractorId) return;
+        loadedForId = SubcontractorId;
+        statement = null;
+        loadError = null;
+        try
+        {
+            statement = await Queries.AskAsync(new GetSubcontractorStatement(SubcontractorId), CancellationToken.None);
+            subject = $"Statement of account — Jewel Bespoke Build — {statement.GeneratedAt.LocalDateTime:d MMM yyyy}";
+            htmlBody = BuildDefaultBody(statement);
+        }
+        catch
+        {
+            loadError = "Couldn't load the statement. Please try again.";
+        }
+    }
+
+    private async Task CreateDraftAsync()
+    {
+        if (busy || drafted || statement is null) return;
+        error = null;
+        try
+        {
+            busy = true;
+            var draft = await Commands.SendAsync(
+                new PrepareSubcontractorStatementEmailDraft(SubcontractorId, subject.Trim(), htmlBody),
+                CancellationToken.None);
+            drafted = true;
+            draftRecipient = draft.RecipientEmail;
+            draftLink = draft.WebLink;
+        }
+        catch (CommandFailedException ex) { error = $"Couldn't create the draft: {ex.Message}"; }
+        catch { error = "Couldn't create the draft. Check the subcontractor has an email address in the directory and the mailbox connection, then try again."; }
+        finally { busy = false; }
+    }
+
+    private Task Close() => OnClose.InvokeAsync();
+
+    private static string MoneyExact(decimal value) =>
+        value.ToString("C2", System.Globalization.CultureInfo.GetCultureInfo("en-GB"));
+
+    // The cover note travels as HTML in the draft; the statement detail itself is the attached
+    // PDF, so the note only summarises the account and invites reconciliation.
+    private static string BuildDefaultBody(SubcontractorStatement statement)
+    {
+        var sb = new System.Text.StringBuilder();
+        var contact = string.IsNullOrWhiteSpace(statement.ContactName) ? statement.CompanyName : statement.ContactName;
+        sb.AppendLine($"<p>Dear {contact},</p>");
+        sb.AppendLine("<p>Please find attached your current statement of account with Jewel Bespoke Build — the work orders we hold with you and the invoices claimed against each of them.</p>");
+        if (statement.Projects.Count > 0)
+        {
+            sb.AppendLine("<table border=\"1\" cellpadding=\"6\" cellspacing=\"0\" style=\"border-collapse:collapse\">");
+            sb.AppendLine("<tr><th align=\"left\">Project</th><th align=\"right\">Orders</th><th align=\"right\">Ordered</th><th align=\"right\">Invoiced</th><th align=\"right\">Remaining</th></tr>");
+            foreach (var project in statement.Projects)
+            {
+                var name = string.IsNullOrWhiteSpace(project.ProjectReference)
+                    ? project.ProjectName
+                    : $"{project.ProjectReference} — {project.ProjectName}";
+                sb.AppendLine($"<tr><td>{name}</td><td align=\"right\">{project.Orders.Count}</td><td align=\"right\">{project.Ordered:£#,##0.00}</td><td align=\"right\">{project.Invoiced:£#,##0.00}</td><td align=\"right\">{project.Remaining:£#,##0.00}</td></tr>");
+            }
+            sb.AppendLine($"<tr><td><strong>Account total</strong></td><td align=\"right\"><strong>{statement.OrderCount}</strong></td><td align=\"right\"><strong>{statement.TotalOrdered:£#,##0.00}</strong></td><td align=\"right\"><strong>{statement.TotalInvoiced:£#,##0.00}</strong></td><td align=\"right\"><strong>{statement.TotalRemaining:£#,##0.00}</strong></td></tr>");
+            sb.AppendLine("</table>");
+        }
+        sb.AppendLine("<p>All figures are net of VAT; credit notes are shown as deductions. The attached PDF breaks each work order down to the individual invoices claimed against it.</p>");
+        sb.AppendLine("<p>If anything on the statement doesn't match your records, please reply to this email and we'll reconcile it together.</p>");
+        sb.AppendLine("<p>Kind regards,<br/>Jewel Bespoke Build</p>");
+        return sb.ToString();
+    }
+}

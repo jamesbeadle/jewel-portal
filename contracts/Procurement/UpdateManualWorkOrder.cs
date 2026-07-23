@@ -17,7 +17,12 @@ public sealed record UpdateManualWorkOrder(
     string SubcontractorId,
     string Title,
     string Scope,
-    IReadOnlyList<UpdatedManualWorkOrderLine> Lines) : ICommand<WorkOrder>;
+    IReadOnlyList<UpdatedManualWorkOrderLine> Lines,
+    // Programme information for the printed purchase order — all optional, edited wholesale
+    // with the rest. TargetCompletion lands on WorkOrder.ScheduledCompletion.
+    DateTimeOffset? ProgrammeStart = null,
+    DateTimeOffset? TargetCompletion = null,
+    string ProgrammeNotes = "") : ICommand<WorkOrder>;
 
 /// <summary>
 /// One priced line as edited. WorkOrderLineId ties it to an existing line — preserving

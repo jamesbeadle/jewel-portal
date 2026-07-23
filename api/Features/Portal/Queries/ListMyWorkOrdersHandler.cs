@@ -35,17 +35,35 @@ public sealed class ListMyWorkOrdersHandler : IQueryHandler<ListMyWorkOrders, IR
             .ToDictionary(group => group.Key, group => group.ToList(), StringComparer.OrdinalIgnoreCase);
 
         var projectIds = orders.Select(order => order.ProjectId).Distinct().ToList();
-        var projectNamesById = (await context.Projects
+        var projectsById = (await context.Projects
                 .Where(project => projectIds.Contains(project.ProjectId))
                 .ToListAsync(cancellationToken))
-            .ToDictionary(project => project.ProjectId, project => project.Name, StringComparer.OrdinalIgnoreCase);
+            .ToDictionary(project => project.ProjectId, StringComparer.OrdinalIgnoreCase);
 
-        return orders.Select(order => new PortalWorkOrder(
-                order.ToModel(),
-                projectNamesById.TryGetValue(order.ProjectId, out var name) ? name : "(project)",
-                linesByOrder.TryGetValue(order.WorkOrderId, out var lines)
-                    ? lines.OrderBy(line => line.SortOrder).Select(line => line.ToModel()).ToList()
-                    : new List<WorkOrderLine>()))
+        // Approver display names for the printed PO's signature block — the portal can't read the
+        // user directory, so the join happens here. Falls back to the raw email client-side.
+        var approverEmails = orders.Select(order => order.AwardedByEmail)
+            .Where(email => !string.IsNullOrWhiteSpace(email)).Distinct().ToList();
+        var approverNamesByEmail = (await context.DirectoryUsers
+                .Where(user => approverEmails.Contains(user.Email))
+                .ToListAsync(cancellationToken))
+            .ToDictionary(user => user.Email, user => user.DisplayName, StringComparer.OrdinalIgnoreCase);
+
+        return orders.Select(order =>
+            {
+                var project = projectsById.TryGetValue(order.ProjectId, out var found) ? found : null;
+                return new PortalWorkOrder(
+                    order.ToModel(),
+                    project?.Name ?? "(project)",
+                    linesByOrder.TryGetValue(order.WorkOrderId, out var lines)
+                        ? lines.OrderBy(line => line.SortOrder).Select(line => line.ToModel()).ToList()
+                        : new List<WorkOrderLine>(),
+                    approverNamesByEmail.TryGetValue(order.AwardedByEmail, out var approver) ? approver : "",
+                    project is null
+                        ? ""
+                        : string.Join(", ", new[] { project.AddressLine, project.Town, project.Postcode }
+                            .Where(part => !string.IsNullOrWhiteSpace(part))));
+            })
             .ToList()
             .AsReadOnly();
     }

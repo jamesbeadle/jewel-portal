@@ -17,7 +17,12 @@ public sealed record CreateManualWorkOrder(
     string Title,
     string Scope,
     string RaisedByEmail,
-    IReadOnlyList<ManualWorkOrderLine> Lines) : ICommand<WorkOrder>;
+    IReadOnlyList<ManualWorkOrderLine> Lines,
+    // Programme information for the printed purchase order — all optional. TargetCompletion
+    // lands on WorkOrder.ScheduledCompletion; the PO's Programme section renders when any is set.
+    DateTimeOffset? ProgrammeStart = null,
+    DateTimeOffset? TargetCompletion = null,
+    string ProgrammeNotes = "") : ICommand<WorkOrder>;
 
 /// <summary>One priced line: its cost centre, what it covers, and its £ amount.</summary>
 public sealed record ManualWorkOrderLine(string CostCode, string Title, decimal Amount);
