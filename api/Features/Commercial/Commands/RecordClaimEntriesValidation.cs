@@ -20,9 +20,9 @@ public sealed class RecordClaimEntriesValidation
             if (command.Entries.Any(entry => string.IsNullOrWhiteSpace(entry.ValuationLineItemId)))
                 errors.Add("Every entry needs a ValuationLineItemId.");
             // Variation lines may claim outside 0-100 (weighted % of a net VO); the handler
-            // enforces 0-100 per line for physical-completion lines. +/-1000 is a typo rail.
-            if (command.Entries.Any(entry => entry.PercentComplete < -1000 || entry.PercentComplete > 1000))
-                errors.Add("Percent complete must be between -1000% and 1000% on every entry.");
+            // enforces 0-100 per line for physical-completion lines. +/-100000 is a typo rail.
+            if (command.Entries.Any(entry => entry.PercentComplete < -100000 || entry.PercentComplete > 100000))
+                errors.Add("Percent complete must be between -100000% and 100000% on every entry.");
             if (command.Entries.GroupBy(entry => entry.ValuationLineItemId).Any(group => group.Count() > 1))
                 errors.Add("Each line may appear only once per request.");
         }

@@ -598,9 +598,9 @@ else
     // Physical-completion lines stay 0-100. Variation lines may go OUTSIDE that range:
     // a VO's omits can be fully claimed while its additions aren't, so the weighted %
     // of the net VO value is legitimately negative or >100 (% x net must reproduce the
-    // claimed value). +/-1000 is just a sanity rail against typos.
+    // claimed value). +/-100000 is just a sanity rail against typos.
     private static (decimal Min, decimal Max) BoundsFor(ValuationLineItem line) =>
-        line.ElementType == ValuationElementType.Variation ? (-1000m, 1000m) : (0m, 100m);
+        line.ElementType == ValuationElementType.Variation ? (-100000m, 100000m) : (0m, 100m);
 
     private static bool WithinBounds(ValuationLineItem line, decimal percent)
     {
