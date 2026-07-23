@@ -6,8 +6,10 @@
 
 @*
     Stat panel showing when the next valuation is expected, with a "Set date" button (directors,
-    the finance director and project managers) that opens a small date-maths modal: pick a base date, add an exact
-    number of days/weeks/months, and the resulting date is previewed live before saving. Sends
+    the finance director and project managers) that opens a small date-maths modal. Pick a base date,
+    then either save it as-is or flip "Calculate date" on to adjust it: roll forward by an exact number
+    of days/weeks/months and/or snap to the Nth weekday of that month (e.g. the last Thursday — the
+    common monthly-valuation cadence). The resulting date is previewed live before saving. Sends
     SetNextValuationDate and refreshes the project list read model so the stat updates in place.
 *@
 
@@ -33,23 +35,73 @@
         <div>
             <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Base date</label>
             <input type="date" class="field" @bind="baseDate" />
-            <p class="text-xs text-content-subtle mt-1">Usually the current or last valuation date — or just pick the date itself and add nothing.</p>
+            <p class="text-xs text-content-subtle mt-1">
+                @(calculate
+                    ? "The starting point the calculation adjusts from — usually the current or last valuation date."
+                    : "Used exactly as the next valuation date. Turn on “Calculate date” to roll it forward or snap to a weekday.")
+            </p>
         </div>
 
-        <div class="grid grid-cols-2 gap-4">
-            <div>
-                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Add</label>
-                <input type="number" class="field" @bind="amount" />
+        <label class="flex items-start gap-2 cursor-pointer select-none rounded-lg border border-line bg-surface-raised px-3 py-2">
+            <input type="checkbox" class="mt-0.5" @bind="calculate" />
+            <span>
+                <span class="block text-sm font-medium text-content">Calculate date</span>
+                <span class="block text-xs text-content-subtle">Adjust the base date instead of using it as-is.</span>
+            </span>
+        </label>
+
+        @if (calculate)
+        {
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Add</label>
+                    <input type="number" class="field" @bind="amount" />
+                </div>
+                <div>
+                    <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Unit</label>
+                    <select class="field" @bind="unit">
+                        <option value="@Unit.Days">Days</option>
+                        <option value="@Unit.Weeks">Weeks</option>
+                        <option value="@Unit.Months">Months</option>
+                    </select>
+                </div>
             </div>
-            <div>
-                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Unit</label>
-                <select class="field" @bind="unit">
-                    <option value="@Unit.Days">Days</option>
-                    <option value="@Unit.Weeks">Weeks</option>
-                    <option value="@Unit.Months">Months</option>
-                </select>
+
+            <div class="rounded-lg border border-line bg-surface-raised px-3 py-2 space-y-2">
+                <label class="flex items-center gap-2 cursor-pointer select-none">
+                    <input type="checkbox" @bind="snapToWeekday" />
+                    <span class="text-sm text-content">Snap to a weekday of the month</span>
+                </label>
+                @if (snapToWeekday)
+                {
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Occurrence</label>
+                            <select class="field" @bind="occurrence">
+                                <option value="1">First</option>
+                                <option value="2">Second</option>
+                                <option value="3">Third</option>
+                                <option value="4">Fourth</option>
+                                <option value="5">Last</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Weekday</label>
+                            <select class="field" @bind="weekday">
+                                <option value="@DayOfWeek.Monday">Monday</option>
+                                <option value="@DayOfWeek.Tuesday">Tuesday</option>
+                                <option value="@DayOfWeek.Wednesday">Wednesday</option>
+                                <option value="@DayOfWeek.Thursday">Thursday</option>
+                                <option value="@DayOfWeek.Friday">Friday</option>
+                                <option value="@DayOfWeek.Saturday">Saturday</option>
+                                <option value="@DayOfWeek.Sunday">Sunday</option>
+                            </select>
+                        </div>
+                    </div>
+                    <p class="text-xs text-content-subtle">Takes the chosen weekday within the month the date lands in — e.g. Last / Thursday gives the last Thursday of that month.</p>
+                }
             </div>
-        </div>
+        }
 
         <div class="rounded-lg border border-line bg-surface-raised px-3 py-2">
             <p class="text-xs uppercase tracking-wider text-content-subtle font-semibold mb-0.5">Next valuation date</p>
@@ -76,8 +128,13 @@
     private string? error;
 
     private DateTime? baseDate;
+    private bool calculate;
     private int amount;
     private Unit unit = Unit.Weeks;
+
+    private bool snapToWeekday = true;
+    private int occurrence = 5; // 1..4 = first..fourth, 5 = last
+    private DayOfWeek weekday = DayOfWeek.Thursday;
 
     private DateTimeOffset? CurrentDate => Projects.Find(ProjectId)?.NextExpectedValuationDate;
 
@@ -86,23 +143,57 @@
     private bool CanEdit =>
         Session.AvailableRoles.Any(role => role is Role.Admin or Role.ManagingDirector or Role.FinanceDirector or Role.ProjectManager);
 
-    // The date maths: base date plus an exact number of days / weeks / months.
-    private DateTime? Result => baseDate is { } start
-        ? unit switch
+    // The date maths: with calculation off the base date is used as-is; with it on, roll forward by an
+    // exact number of days / weeks / months, then optionally snap to the Nth weekday of that month.
+    private DateTime? Result
+    {
+        get
         {
-            Unit.Days => start.AddDays(amount),
-            Unit.Weeks => start.AddDays(amount * 7),
-            Unit.Months => start.AddMonths(amount),
-            _ => start,
+            if (baseDate is not { } start) return null;
+            if (!calculate) return start;
+
+            var rolled = unit switch
+            {
+                Unit.Days => start.AddDays(amount),
+                Unit.Weeks => start.AddDays(amount * 7),
+                Unit.Months => start.AddMonths(amount),
+                _ => start,
+            };
+
+            return snapToWeekday
+                ? NthWeekdayOfMonth(rolled.Year, rolled.Month, weekday, occurrence)
+                : rolled;
         }
-        : null;
+    }
+
+    // Returns the date of the given weekday in a month. occurrence 1..4 counts from the start
+    // (first..fourth); 5 (or more) means the last such weekday in the month.
+    private static DateTime NthWeekdayOfMonth(int year, int month, DayOfWeek weekday, int occurrence)
+    {
+        if (occurrence >= 5)
+        {
+            var last = new DateTime(year, month, DateTime.DaysInMonth(year, month));
+            var back = ((int)last.DayOfWeek - (int)weekday + 7) % 7;
+            return last.AddDays(-back);
+        }
+
+        var first = new DateTime(year, month, 1);
+        var forward = ((int)weekday - (int)first.DayOfWeek + 7) % 7;
+        return first.AddDays(forward + (occurrence - 1) * 7);
+    }
 
     private void Open()
     {
         // Start from the currently set date (rolling it forward is the common case), else today.
+        // Defaults are primed for the common "last Thursday of the month" cadence: flip Calculate on
+        // and the preview is already the last Thursday of the base date's month.
         baseDate = CurrentDate?.Date ?? DateTime.Today;
+        calculate = false;
         amount = 0;
         unit = Unit.Weeks;
+        snapToWeekday = true;
+        occurrence = 5;
+        weekday = DayOfWeek.Thursday;
         error = null;
         open = true;
     }

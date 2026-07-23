@@ -20,6 +20,12 @@ public interface ISubcontractorStore
 
     /// <summary>Replaces a directory record's trades with exactly the given set.</summary>
     Task SetTradesAsync(string subcontractorId, IReadOnlyList<string> tradeIds);
+
+    /// <summary>Updates a directory record's company name and contact details, preserving its
+    /// trades and every other field. Server-side this goes through UpdateSubcontractor, which
+    /// is restricted to Admin, MD, FD and PM.</summary>
+    Task UpdateDetailsAsync(string subcontractorId, string companyName,
+        string contactName, string contactEmail, string contactPhone);
     IReadOnlyList<ComplianceDocument> ComplianceFor(string subcontractorId);
     void SaveCompliance(ComplianceDocument document);
     event Action? OnChange;

@@ -63,6 +63,20 @@ public sealed class HttpSubcontractorStore : ISubcontractorStore
         await readModel.RefreshAsync(CancellationToken.None);
     }
 
+    // Company name + contact details, preserving the record's trades, CIS status and every
+    // other field. Renaming to match the Xero supplier name is what lines invoices up on the
+    // WO Allocation tab.
+    public async Task UpdateDetailsAsync(string subcontractorId, string companyName,
+        string contactName, string contactEmail, string contactPhone)
+    {
+        var sub = Find(subcontractorId)
+            ?? throw new InvalidOperationException($"Subcontractor {subcontractorId} not found.");
+        await commands.SendAsync(new UpdateSubcontractor(
+            sub.SubcontractorId, companyName.Trim(), TradeIds(sub), contactName.Trim(),
+            contactEmail.Trim(), contactPhone.Trim(), sub.CisStatus), CancellationToken.None);
+        await readModel.RefreshAsync(CancellationToken.None);
+    }
+
     public Subcontractor Upsert(Subcontractor subcontractor)
     {
         if (string.IsNullOrEmpty(subcontractor.SubcontractorId))

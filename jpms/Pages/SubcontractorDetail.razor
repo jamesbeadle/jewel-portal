@@ -20,7 +20,7 @@ else if (!CanAccess)
 {
     <section class="px-6 md:px-8 py-12">
         <h1 class="text-2xl font-semibold text-content mb-2">Not available</h1>
-        <p class="text-content-muted">The company directory is restricted to administrators and the managing director.</p>
+        <p class="text-content-muted">The company directory is restricted to administrators, the managing and finance directors, and project managers.</p>
     </section>
 }
 else if (!SubcontractorStore.IsLoaded)
@@ -46,9 +46,14 @@ else
             <span class="text-content-muted font-medium">@subcontractor.CompanyName</span>
         </nav>
 
-        <header class="mb-6">
-            <h1 class="text-2xl md:text-3xl font-semibold text-content">@subcontractor.CompanyName</h1>
-            <p class="text-sm text-content-muted mt-1">@ContactLine(subcontractor)</p>
+        <header class="mb-6 flex items-start justify-between gap-4">
+            <div>
+                <h1 class="text-2xl md:text-3xl font-semibold text-content">@subcontractor.CompanyName</h1>
+                <p class="text-sm text-content-muted mt-1">@ContactLine(subcontractor)</p>
+            </div>
+            <button type="button" class="btn-secondary shrink-0"
+                    title="Edit the company name and contact details — rename to match Xero so invoices line up on WO Allocation"
+                    @onclick="OpenEdit">Edit details…</button>
         </header>
 
         @* Trades are managed here: each is a chip from the curated list, so when a company changes
@@ -152,6 +157,39 @@ else
                                      SubcontractorId="@subcontractor.SubcontractorId"
                                      SubcontractorName="@subcontractor.CompanyName"
                                      OnClose="() => statementOpen = false" />
+
+        <Modal IsOpen="editOpen" Title="Edit company details" ShowFooter="true"
+               ConfirmLabel="@(editBusy ? "Saving…" : "Save changes")" CancelLabel="Cancel"
+               OnCancel="CloseEdit" OnConfirm="SaveEdit" Class="max-w-lg w-full">
+            @if (editError is not null)
+            {
+                <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-3">@editError</p>
+            }
+            <div class="space-y-3">
+                <div>
+                    <label class="eyebrow block mb-1">Company name</label>
+                    <input class="field" @bind="eCompany" />
+                    <p class="text-xs text-content-subtle mt-1">
+                        Set this to the supplier's exact name in Xero so their purchase invoices match
+                        this company's work orders on the WO Allocation tab.
+                    </p>
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="eyebrow block mb-1">Contact name</label>
+                        <input class="field" @bind="eContact" />
+                    </div>
+                    <div>
+                        <label class="eyebrow block mb-1">Email</label>
+                        <input class="field" @bind="eEmail" />
+                    </div>
+                </div>
+                <div>
+                    <label class="eyebrow block mb-1">Phone</label>
+                    <input class="field" @bind="ePhone" />
+                </div>
+            </div>
+        </Modal>
     </section>
 }
 
@@ -164,8 +202,49 @@ else
     // Statement-of-account email modal (the download link needs no state).
     private bool statementOpen;
 
-    // Restricted to administrators and the managing director / CEO.
-    private bool CanAccess => Session.AvailableRoles.Any(r => r is Role.Admin or Role.ManagingDirector);
+    // ---- Edit company details ----
+    private bool editOpen;
+    private bool editBusy;
+    private string? editError;
+    private string eCompany = "";
+    private string eContact = "";
+    private string eEmail = "";
+    private string ePhone = "";
+
+    private void OpenEdit()
+    {
+        if (subcontractor is null) return;
+        eCompany = subcontractor.CompanyName;
+        eContact = subcontractor.ContactName;
+        eEmail = subcontractor.ContactEmail;
+        ePhone = subcontractor.ContactPhone;
+        editError = null;
+        editOpen = true;
+    }
+
+    private void CloseEdit() => editOpen = false;
+
+    private async Task SaveEdit()
+    {
+        if (editBusy || subcontractor is null) return;
+        if (string.IsNullOrWhiteSpace(eCompany)) { editError = "Company name can't be empty."; return; }
+        editError = null;
+        try
+        {
+            editBusy = true;
+            await SubcontractorStore.UpdateDetailsAsync(
+                subcontractor.SubcontractorId, eCompany, eContact, eEmail, ePhone);
+            editOpen = false;
+        }
+        catch (CommandFailedException ex) { editError = $"Couldn't save: {ex.Message}"; }
+        catch { editError = "Couldn't save. Please try again."; }
+        finally { editBusy = false; }
+    }
+
+    // Restricted to administrators, the managing and finance directors, and project managers —
+    // the roles allowed to edit directory records (mirrors the API's UpdateSubcontractor gate).
+    private bool CanAccess => Session.AvailableRoles.Any(r =>
+        r is Role.Admin or Role.ManagingDirector or Role.FinanceDirector or Role.ProjectManager);
 
     private string PageTitleText => subcontractor?.CompanyName ?? "Subcontractor";
 
