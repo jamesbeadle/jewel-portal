@@ -183,14 +183,14 @@
 
     <div class="po-signatures">
         <div class="po-signature">
-            <p class="po-sign-name">@(string.IsNullOrWhiteSpace(ApprovedByName) ? Order.AwardedByEmail : ApprovedByName)</p>
+            <p class="po-sign-name">@SignatureName(ApprovedByName, Order.AwardedByEmail)</p>
             <p class="po-sign-line">Approved by</p>
             <p class="po-sign-date">@Order.AwardedAt.LocalDateTime.ToString("d MMM yyyy, HH:mm")</p>
         </div>
         <div class="po-signature">
             @if (Order.IsAccepted)
             {
-                <p class="po-sign-name">@(string.IsNullOrWhiteSpace(Order.AcceptedByName) ? Order.AcceptedByEmail : Order.AcceptedByName)</p>
+                <p class="po-sign-name">@SignatureName(Order.AcceptedByName, Order.AcceptedByEmail)</p>
                 <p class="po-sign-line">Electronically accepted by</p>
                 <p class="po-sign-date">@Order.AcceptedAt!.Value.LocalDateTime.ToString("d MMM yyyy, HH:mm")</p>
             }
@@ -285,6 +285,24 @@
         || !string.IsNullOrWhiteSpace(Order.ProgrammeNotes);
 
     private decimal TotalPaid => Lines.Sum(line => line.PaidToDate);
+
+    // The signature always shows a person's NAME, never an email address — internal staff
+    // sometimes sign in with addresses that don't read as names. Prefer the resolved display
+    // name; otherwise humanise the email's local part ("nigel.reilly@…" → "Nigel Reilly").
+    // A display name that is itself an email (the auth fallback) gets the same treatment.
+    private static string SignatureName(string displayName, string email)
+    {
+        var name = string.IsNullOrWhiteSpace(displayName) ? email : displayName;
+        if (string.IsNullOrWhiteSpace(name)) return "";
+        var atIndex = name.IndexOf('@');
+        if (atIndex < 0) return name.Trim();
+        var words = name[..atIndex]
+            .Split(new[] { '.', '_', '-', '+' }, StringSplitOptions.RemoveEmptyEntries)
+            .Where(word => word.Any(char.IsLetter))
+            .Select(word => char.ToUpperInvariant(word[0]) + word[1..].ToLowerInvariant());
+        var humanised = string.Join(" ", words);
+        return string.IsNullOrWhiteSpace(humanised) ? "Jewel Bespoke Build" : humanised;
+    }
 
     private static string Money(decimal value) =>
         value.ToString("C2", System.Globalization.CultureInfo.GetCultureInfo("en-GB"));
