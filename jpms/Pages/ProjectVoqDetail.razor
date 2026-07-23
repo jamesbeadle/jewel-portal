@@ -45,7 +45,65 @@ else
 
         <div class="flex flex-wrap items-center gap-3 mb-1">
             <span class="font-mono text-sm font-semibold text-content">@voq.DisplayNumber</span>
-            <span class="inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium bg-surface-raised text-content-muted">@StatusLabel(voq.Status)</span>
+            @if (CanManage)
+            {
+                @* The status pill doubles as the status control. Direct moves cover the
+                   side-effect-free stages; the commercial transitions route to their real flows —
+                   Approved opens the approve panel (cost code + value), and leaving Approved goes
+                   through Return to tendering, which reverses the approval's writes. *@
+                <div class="relative">
+                    <button type="button"
+                            class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium bg-surface-raised text-content-muted"
+                            title="Change status"
+                            disabled="@busy"
+                            @onclick="() => voqStatusMenuOpen = !voqStatusMenuOpen">
+                        @StatusLabel(voq.Status) <span class="text-[9px]" aria-hidden="true">▾</span>
+                    </button>
+                    @if (voqStatusMenuOpen)
+                    {
+                        <div class="absolute left-0 mt-2 w-60 rounded-lg border border-line bg-surface shadow-lg z-20 overflow-hidden">
+                            <ul class="divide-y divide-line">
+                                @if (voq.Status == VariationOrderQuoteStatus.Approved)
+                                {
+                                    <li>
+                                        <button type="button" class="w-full text-left px-3 py-2 text-sm text-content hover:bg-surface-raised transition"
+                                                @onclick="ReturnToTenderingFromPill"
+                                                title="Un-approves the VOQ — reverses the approval's valuation / CVR / budget writes">
+                                            Tendering — un-approve…
+                                        </button>
+                                    </li>
+                                }
+                                else
+                                {
+                                    @foreach (var option in VoqStatusOptions)
+                                    {
+                                        var status = option;
+                                        // Approving needs the approve panel (cost code + value), which only
+                                        // renders while no live VO exists; Selected needs a recorded tender.
+                                        if (status == VariationOrderQuoteStatus.Approved && vo is not null) { continue; }
+                                        var isCurrent = status == voq.Status;
+                                        var selectable = !isCurrent
+                                            && (status != VariationOrderQuoteStatus.Selected || !string.IsNullOrEmpty(voq.SelectedBidPackageId));
+                                        <li>
+                                            <button type="button"
+                                                    class="w-full text-left px-3 py-2 text-sm transition @(selectable ? "text-content hover:bg-surface-raised" : "text-content-subtle cursor-default")"
+                                                    disabled="@(busy || !selectable)"
+                                                    title="@(status == VariationOrderQuoteStatus.Approved ? "Approving raises the VO and writes the contract figures — opens the approve panel" : !selectable && !isCurrent ? "Record a winning tender first — use the Select winning tender panel" : null)"
+                                                    @onclick="() => ChangeVoqStatus(status)">
+                                                @StatusLabel(status)@(status == VariationOrderQuoteStatus.Approved ? "…" : "")@(isCurrent ? " ✓" : "")
+                                            </button>
+                                        </li>
+                                    }
+                                }
+                            </ul>
+                        </div>
+                    }
+                </div>
+            }
+            else
+            {
+                <span class="inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium bg-surface-raised text-content-muted">@StatusLabel(voq.Status)</span>
+            }
         </div>
         <h2 class="text-xl font-semibold text-content mb-5">@voq.Title</h2>
 
@@ -228,10 +286,49 @@ else
                        the panel (jpmsFocusElement), so the click lands visibly. *@
                     <div id="variation-order" class="panel p-5 space-y-3">
                         <h3 class="eyebrow">Variation Order</h3>
-                        <p class="text-sm text-content">
+                        <div class="text-sm text-content flex items-center">
                             <span class="font-mono font-semibold">@vo.VariationRef</span>
-                            <span class="inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium bg-surface-raised text-content-muted ml-2">@vo.Status</span>
-                        </p>
+                            @if (CanManage && vo.Status != VariationOrderStatus.Cancelled)
+                            {
+                                @* The VO pill is the status control: Issued / back to Approved are
+                                   record corrections; Cancelled is a real commercial event and opens
+                                   a confirm spelling out the reversal before anything happens. *@
+                                <div class="relative ml-2">
+                                    <button type="button"
+                                            class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium bg-surface-raised text-content-muted"
+                                            title="Change status"
+                                            disabled="@busy"
+                                            @onclick="() => voStatusMenuOpen = !voStatusMenuOpen">
+                                        @vo.Status <span class="text-[9px]" aria-hidden="true">▾</span>
+                                    </button>
+                                    @if (voStatusMenuOpen)
+                                    {
+                                        <div class="absolute left-0 mt-2 w-44 rounded-lg border border-line bg-surface shadow-lg z-20 overflow-hidden">
+                                            <ul class="divide-y divide-line">
+                                                @foreach (var option in VoStatusOptions)
+                                                {
+                                                    var status = option;
+                                                    var isCurrent = status == vo.Status;
+                                                    <li>
+                                                        <button type="button"
+                                                                class="w-full text-left px-3 py-2 text-sm transition @(isCurrent ? "text-content-subtle cursor-default" : status == VariationOrderStatus.Cancelled ? "text-negative hover:bg-surface-raised" : "text-content hover:bg-surface-raised")"
+                                                                disabled="@(busy || isCurrent)"
+                                                                title="@(status == VariationOrderStatus.Cancelled ? "A real commercial event — reverses the approval's valuation / CVR / budget writes" : null)"
+                                                                @onclick="() => ChangeVoStatus(status)">
+                                                            @(status == VariationOrderStatus.Cancelled ? "Cancelled…" : status.ToString())@(isCurrent ? " ✓" : "")
+                                                        </button>
+                                                    </li>
+                                                }
+                                            </ul>
+                                        </div>
+                                    }
+                                </div>
+                            }
+                            else
+                            {
+                                <span class="inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium bg-surface-raised text-content-muted ml-2">@vo.Status</span>
+                            }
+                        </div>
                         <div class="flex justify-between text-sm"><span class="text-content-subtle">Value</span><span>@Money(vo.Value)</span></div>
                         <div class="flex justify-between text-sm"><span class="text-content-subtle">Cost code</span><span class="font-mono">@vo.CostCode</span></div>
                         <p class="text-xs text-content-subtle">Added to the Valuation Report and committed to the cost centre.</p>
@@ -288,6 +385,24 @@ else
                                 }
                             </div>
                         }
+                        @if (CanManage && cancellingVo && vo.Status != VariationOrderStatus.Cancelled)
+                        {
+                            <div class="pt-3 border-t border-line space-y-2">
+                                <p class="text-xs text-content-subtle">
+                                    Cancelling <span class="font-mono">@vo.VariationRef</span> is a real commercial
+                                    event: the VO stays on the register as Cancelled, its line comes off the
+                                    Valuation Report, an offsetting omit is recorded on the CVR and the committed
+                                    cost-centre budget is released. If the approval itself was a data error, use
+                                    Return to tendering instead so the V-ref is freed.
+                                </p>
+                                <div class="flex gap-2">
+                                    <button type="button" class="btn-secondary w-full text-negative" disabled="@busy" @onclick="CancelVo">
+                                        @(busy ? "Cancelling…" : "Confirm — cancel variation order")
+                                    </button>
+                                    <button type="button" class="btn-secondary" disabled="@busy" @onclick="() => cancellingVo = false">Keep</button>
+                                </div>
+                            </div>
+                        }
                     </div>
                 }
                 else if (CanManage && voq.Status is not (VariationOrderQuoteStatus.Rejected or VariationOrderQuoteStatus.Approved))
@@ -298,7 +413,9 @@ else
                        tendered through the app. The write-through (Valuation Report, CVR,
                        cost-centre budget) is identical either way. *@
                     var isManualApproval = voq.Status != VariationOrderQuoteStatus.Selected;
-                    <div class="panel p-5 space-y-3">
+                    @* id anchors the status pill's "Approved…" pick: it scrolls here and flashes
+                       the panel, because approval always needs the cost code + value below. *@
+                    <div id="approve-voq" class="panel p-5 space-y-3">
                         <h3 class="eyebrow">@(isManualApproval ? "Approve manually & raise Variation Order" : "Approve & raise Variation Order")</h3>
                         @if (isManualApproval)
                         {
@@ -388,6 +505,26 @@ else
     private string reviseValue = "";
 
     private bool returningToTendering;
+
+    // Status pill dropdowns (VOQ header and VO panel) — same dismiss pattern as the request
+    // page's Actions dropdown: every item closes it before running, the toggle is the dismiss.
+    private bool voqStatusMenuOpen;
+    private bool voStatusMenuOpen;
+    // Cancelling a VO reverses the approval's commercial writes, so the pill routes through an
+    // inline confirm rather than acting on the click.
+    private bool cancellingVo;
+
+    private static readonly VariationOrderQuoteStatus[] VoqStatusOptions =
+    {
+        VariationOrderQuoteStatus.Draft, VariationOrderQuoteStatus.Inviting,
+        VariationOrderQuoteStatus.Tendering, VariationOrderQuoteStatus.Selected,
+        VariationOrderQuoteStatus.Approved, VariationOrderQuoteStatus.Rejected
+    };
+
+    private static readonly VariationOrderStatus[] VoStatusOptions =
+    {
+        VariationOrderStatus.Approved, VariationOrderStatus.Issued, VariationOrderStatus.Cancelled
+    };
 
     private bool addingPackage;
     private string newTitle = "";
@@ -603,6 +740,102 @@ else
         }
         catch { error = "Couldn't issue the variation order. Please try again."; }
         finally { busy = false; }
+    }
+
+    // ---- Status pill dropdowns ------------------------------------------------------------------
+
+    // Direct moves between the side-effect-free VOQ stages. The two commercial transitions route
+    // to their real flows instead: Approved scrolls to the approve panel (it needs a cost code and
+    // value, and writes the contract figures), and leaving Approved goes through Return to
+    // tendering so the approval's writes are reversed, never skipped.
+    private async Task ChangeVoqStatus(VariationOrderQuoteStatus status)
+    {
+        voqStatusMenuOpen = false;
+        if (busy || voq is null || status == voq.Status) return;
+        error = null;
+
+        if (status == VariationOrderQuoteStatus.Approved)
+        {
+            await FocusApprovePanel();
+            return;
+        }
+
+        try
+        {
+            busy = true;
+            voq = await Variations.SetVoqStatusAsync(VoqId, status);
+            await ReloadAsync();
+        }
+        catch (CommandFailedException ex) { error = ex.Message; }
+        catch { error = "Couldn't change the status. Please try again."; }
+        finally { busy = false; }
+    }
+
+    // Leaving Approved from the pill: with a live VO the existing confirm (in the VO panel) takes
+    // over so the reversal is spelled out; with no VO behind the approval (the data-anomaly case)
+    // the return runs directly, mirroring the "Approved — no variation order" panel's button.
+    private async Task ReturnToTenderingFromPill()
+    {
+        voqStatusMenuOpen = false;
+        if (busy) return;
+        if (vo is not null)
+        {
+            returningToTendering = true;
+            await FocusVariationOrderPanel();
+        }
+        else
+        {
+            await ReturnToTendering();
+        }
+    }
+
+    // The VO pill: Issued and back-to-Approved are record corrections and run directly; Cancelled
+    // is a real commercial event, so the pick opens the inline confirm instead of acting.
+    private async Task ChangeVoStatus(VariationOrderStatus status)
+    {
+        voStatusMenuOpen = false;
+        if (busy || vo is null || status == vo.Status) return;
+        error = null;
+
+        if (status == VariationOrderStatus.Cancelled)
+        {
+            cancellingVo = true;
+            return;
+        }
+
+        try
+        {
+            busy = true;
+            vo = status == VariationOrderStatus.Issued
+                ? await Variations.IssueVariationOrderAsync(vo.VariationOrderId)
+                : await Variations.RevertVariationOrderToApprovedAsync(vo.VariationOrderId);
+            await ReloadAsync();
+        }
+        catch (CommandFailedException ex) { error = ex.Message; }
+        catch { error = "Couldn't change the variation order status. Please try again."; }
+        finally { busy = false; }
+    }
+
+    private async Task CancelVo()
+    {
+        if (busy || vo is null) return;
+        error = null;
+        try
+        {
+            busy = true;
+            vo = await Variations.CancelVariationOrderAsync(vo.VariationOrderId);
+            cancellingVo = false;
+            await ReloadAsync();
+        }
+        catch (CommandFailedException ex) { error = ex.Message; }
+        catch { error = "Couldn't cancel the variation order. Please try again."; }
+        finally { busy = false; }
+    }
+
+    private async Task FocusApprovePanel()
+    {
+        try { await Js.InvokeVoidAsync("jpmsFocusElement", "approve-voq"); }
+        catch { /* purely cosmetic — never let a scroll failure break the page */ }
     }
 
     private async Task ReturnToTendering()

@@ -59,6 +59,14 @@ public static class VariationsFeatureRegistration
         services.AddScoped<ReviseVariationOrderValueAuthorisation>();
         services.AddScoped<ReviseVariationOrderValueValidation>();
 
+        services.AddScoped<ICommandHandler<SetVoqStatus, VariationOrderQuote>, SetVoqStatusHandler>();
+        services.AddScoped<SetVoqStatusAuthorisation>();
+        services.AddScoped<SetVoqStatusValidation>();
+
+        services.AddScoped<ICommandHandler<RevertVariationOrderToApproved, VariationOrder>, RevertVariationOrderToApprovedHandler>();
+        services.AddScoped<RevertVariationOrderToApprovedAuthorisation>();
+        services.AddScoped<RevertVariationOrderToApprovedValidation>();
+
         // Subcontractor variation requests (portal-raised; see subcontractor-crm-scope §6).
         services.AddScoped<ICommandHandler<AcceptVariationRequest, VariationOrderQuote>, AcceptVariationRequestHandler>();
 

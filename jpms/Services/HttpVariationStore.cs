@@ -98,6 +98,20 @@ public sealed class HttpVariationStore : IVariationStore
         return vo;
     }
 
+    public async Task<VariationOrderQuote> SetVoqStatusAsync(string voqId, VariationOrderQuoteStatus status, CancellationToken cancellationToken = default)
+    {
+        var voq = await commands.SendAsync(new SetVoqStatus(voqId, status), cancellationToken);
+        OnChange?.Invoke();
+        return voq;
+    }
+
+    public async Task<VariationOrder> RevertVariationOrderToApprovedAsync(string voId, CancellationToken cancellationToken = default)
+    {
+        var vo = await commands.SendAsync(new RevertVariationOrderToApproved(voId), cancellationToken);
+        OnChange?.Invoke();
+        return vo;
+    }
+
     public async Task<VariationOrder> ReviseVariationOrderValueAsync(string voId, decimal value, CancellationToken cancellationToken = default)
     {
         // RevisedByEmail is stamped from the signed-in user server-side.

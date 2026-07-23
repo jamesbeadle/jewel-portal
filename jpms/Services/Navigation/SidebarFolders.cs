@@ -3,12 +3,12 @@ using Jewel.JPMS.Models;
 namespace Jewel.JPMS.Services.Navigation;
 
 /// <summary>
-/// The sidebar's six folders (docs/Pathway-Split-Platform-Flow-Plan.md §6) — the successor to
+/// The sidebar's five folders (docs/Pathway-Split-Platform-Flow-Plan.md §6) — the successor to
 /// the old three workspace blocks + flat Company list. Grouping follows how the business thinks:
 /// who the correspondence is with (Client, Subcontractor, Internal), then the job (Project),
-/// then the money (Financials), then the people (Directory). Folders mix scopes deliberately —
-/// project-scoped rows ("/projects/{project}/…" templates) and company rows sit side by side
-/// where the work does (e.g. Triage and Workers live with Labour under Internal).
+/// then the money (Financials); the people directory lives under Internal. Folders mix scopes
+/// deliberately — project-scoped rows ("/projects/{project}/…" templates) and company rows sit
+/// side by side where the work does (e.g. Triage and Workers live with Labour under Internal).
 /// </summary>
 public enum SidebarFolder
 {
@@ -16,8 +16,7 @@ public enum SidebarFolder
     Subcontractor,
     Internal,
     Project,
-    Financials,
-    Directory
+    Financials
 }
 
 /// <summary>One sidebar row: a destination plus the roles that may see it. Per-row gates
@@ -76,7 +75,8 @@ public static class SidebarFolders
             }),
 
         // ---- Internal: the company's own machinery — the triage router, the master to-do
-        // list, labour on site and the worker registry, and the audit register. ----
+        // list, labour on site and the worker registry, the audit register, and the people
+        // directory. ----
         new SidebarFolderInfo(
             SidebarFolder.Internal,
             "Internal",
@@ -100,7 +100,12 @@ public static class SidebarFolders
                 // The append-only audit register (new page) — who routed, linked and filed what.
                 // Same gate as Triage: the people who make routing decisions review them.
                 new SidebarRow(new NavigationItem("Audit Trail", "/audit"),
-                    DesktopNavigation.TriageRoles)
+                    DesktopNavigation.TriageRoles),
+                // Everyone the company deals with — the unified page replaces the old separate
+                // Clients and Architects entries (their routes survive; the page filters by
+                // Clients · Architects · Subcontractors · Internal staff).
+                new SidebarRow(new NavigationItem("Directory", "/directory"),
+                    DesktopNavigation.DirectoryRoles)
             }),
 
         // ---- Project: the day-to-day running of the picked job. ----
@@ -153,19 +158,6 @@ public static class SidebarFolders
                     DesktopNavigation.FinanceRoles),
                 new SidebarRow(new NavigationItem("Cost Codes & Rates", "/cost-codes", new[] { "/rate-library" }),
                     DesktopNavigation.FinanceRoles)
-            }),
-
-        // ---- Directory: everyone the company deals with — the unified page replaces the old
-        // separate Clients and Architects entries (their routes survive; the page filters by
-        // Clients · Architects · Subcontractors · Internal staff). ----
-        new SidebarFolderInfo(
-            SidebarFolder.Directory,
-            "Directory",
-            "#directory",
-            new[]
-            {
-                new SidebarRow(new NavigationItem("Directory", "/directory"),
-                    DesktopNavigation.DirectoryRoles)
             })
     };
 }

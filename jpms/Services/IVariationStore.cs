@@ -39,6 +39,14 @@ public interface IVariationStore
     Task<VariationOrder> IssueVariationOrderAsync(string voId, CancellationToken cancellationToken = default);
     Task<VariationOrder> CancelVariationOrderAsync(string voId, CancellationToken cancellationToken = default);
 
+    /// <summary>Moves a VOQ between the side-effect-free stages (Draft, Inviting, Tendering,
+    /// Selected, Rejected). Approval / un-approval keep their own flows — they carry the
+    /// commercial writes.</summary>
+    Task<VariationOrderQuote> SetVoqStatusAsync(string voqId, VariationOrderQuoteStatus status, CancellationToken cancellationToken = default);
+
+    /// <summary>Un-issues a VO (Issued → Approved), clearing the issued date — a record correction.</summary>
+    Task<VariationOrder> RevertVariationOrderToApprovedAsync(string voId, CancellationToken cancellationToken = default);
+
     /// <summary>Revises the value of a live VO; the delta writes through to the valuation report, CVR and budget.</summary>
     Task<VariationOrder> ReviseVariationOrderValueAsync(string voId, decimal value, CancellationToken cancellationToken = default);
 }

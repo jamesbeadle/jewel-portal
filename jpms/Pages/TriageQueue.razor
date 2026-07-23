@@ -410,6 +410,20 @@ else
                                 <span class="text-sm font-medium text-content truncate">@DisplayFrom(item)</span>
                             </div>
                             <p class="text-sm text-content-muted truncate mt-0.5">@Dash(item.Subject)</p>
+                            @* Thread hint: this email is untriaged, but other messages in its
+                               conversation already carry record tags. Surfacing them here tells the
+                               triager it's a reply to an already-linked thread, so re-linking is one
+                               step — outline chips, so they don't read as this email's own tags. *@
+                            @if (item.ThreadTags is { Count: > 0 } threadTags)
+                            {
+                                <div class="flex flex-wrap items-center gap-1 mt-1">
+                                    <span class="text-[10px] text-content-subtle">Thread:</span>
+                                    @foreach (var tag in threadTags)
+                                    {
+                                        <span class="inline-flex items-center rounded-full border border-accent/40 text-accent/90 text-[10px] font-medium px-2 py-0.5">@TagLabel(tag)</span>
+                                    }
+                                </div>
+                            }
                             <div class="flex items-center gap-2 mt-1 text-[11px] text-content-subtle">
                                 <span>@Date(item.ReceivedAt)</span>
                                 @if (item.HasAttachments)

@@ -38,6 +38,16 @@ public sealed class LinkVoqToRequestHandler : ICommandHandler<LinkVoqToRequest, 
         // the link without a separate "enable RFQ" step.
         request.HasRfq = true;
 
+        // A VO copies the VOQ's RequestId at approval time, so a VO approved before this repair
+        // (seeded history) is carrying an empty one — write the provenance through to it too.
+        // Unconditionally, mirroring the VOQ assignment above, so a re-link never leaves the VO
+        // pointing at a different request than its VOQ.
+        var variationOrder = await context.VariationOrders.FirstOrDefaultAsync(
+            vo => vo.VariationOrderQuoteId == command.VariationOrderQuoteId && vo.CancelledAt == null,
+            cancellationToken);
+        if (variationOrder is not null)
+            variationOrder.RequestId = command.RequestId;
+
         await context.SaveChangesAsync(cancellationToken);
         return voq.ToModel();
     }

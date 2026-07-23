@@ -49,7 +49,44 @@ else
                     <span class="font-mono text-sm text-content-muted" title="Container number — the request's folder in the projects mailbox">@record.DisplayNumber</span>
                 }
                 <span class="text-content-subtle text-xs uppercase tracking-wide" title="@record.Kind.LongName()">@record.Kind.DisplayName()</span>
-                <span class="inline-flex items-center whitespace-nowrap rounded-full px-2 py-0.5 text-[11px] font-medium @StatusClass(record.Status)">@StatusLabel(record.Status)</span>
+                @if (CanEditDetails)
+                {
+                    @* The status pill doubles as the status control: click it, pick the new status.
+                       Closed and Responded route through their existing flows (close confirm with
+                       date + agent gate; the response modal) — everything else applies directly. *@
+                    <div class="relative">
+                        <button type="button"
+                                class="inline-flex items-center gap-1 whitespace-nowrap rounded-full px-2 py-0.5 text-[11px] font-medium @StatusClass(record.Status)"
+                                title="Change status"
+                                disabled="@busy"
+                                @onclick="() => statusMenuOpen = !statusMenuOpen">
+                            @StatusLabel(record.Status) <span class="text-[9px]" aria-hidden="true">▾</span>
+                        </button>
+                        @if (statusMenuOpen)
+                        {
+                            <div class="absolute left-0 mt-2 w-48 rounded-lg border border-line bg-surface shadow-lg z-20 overflow-hidden">
+                                <ul class="divide-y divide-line">
+                                    @foreach (var option in StatusOptions)
+                                    {
+                                        var status = option;
+                                        <li>
+                                            <button type="button"
+                                                    class="w-full text-left px-3 py-2 text-sm transition @(status == record.Status ? "text-content-subtle cursor-default" : "text-content hover:bg-surface-raised")"
+                                                    disabled="@(busy || status == record.Status)"
+                                                    @onclick="() => ChangeStatusFromPill(status)">
+                                                @StatusLabel(status)@(status == record.Status ? " ✓" : "")
+                                            </button>
+                                        </li>
+                                    }
+                                </ul>
+                            </div>
+                        }
+                    </div>
+                }
+                else
+                {
+                    <span class="inline-flex items-center whitespace-nowrap rounded-full px-2 py-0.5 text-[11px] font-medium @StatusClass(record.Status)">@StatusLabel(record.Status)</span>
+                }
                 @if (record.ImpliesVariation)
                 {
                     <span class="inline-flex items-center rounded bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-600">Variation</span>
@@ -871,6 +908,8 @@ else
     // The header's Actions dropdown; every item closes it before running (same pattern as
     // RoleSwitcher — no outside-click handling, the toggle is the dismiss).
     private bool actionsOpen;
+    // The status pill's dropdown (same dismiss pattern as the Actions dropdown above).
+    private bool statusMenuOpen;
     private bool respondingOpen;
     private IReadOnlyList<AgentCompletionState> blockingAgents = Array.Empty<AgentCompletionState>();
     private IReadOnlyList<Client> clients = Array.Empty<Client>();
@@ -1113,6 +1152,28 @@ else
     {
         actionsOpen = false;
         await ReopenRequest();
+    }
+
+    // The status pill's dropdown: statuses with their own flows route through them (Closed → the
+    // close confirm with its date and the agent gate; Responded → the response modal) so a pill
+    // change can never skip their safeguards; the rest apply directly, keeping the recorded
+    // response text.
+    private async Task ChangeStatusFromPill(RequestStatus status)
+    {
+        statusMenuOpen = false;
+        if (record is null || busy || status == record.Status) return;
+        switch (status)
+        {
+            case RequestStatus.Closed:
+                OpenCloseConfirm();
+                break;
+            case RequestStatus.Responded:
+                OpenResponseModal();
+                break;
+            default:
+                await Apply(status, record.ResponseText);
+                break;
+        }
     }
 
     // "Create bid packages": marks the RFI as carrying an RFQ, which unlocks the Variation Order

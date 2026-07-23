@@ -1,10 +1,12 @@
 @page "/projects/{ProjectId}/requests"
 @page "/projects/{ProjectId}/requests/{Kind}"
+@using Jewel.JPMS.Contracts.Requests
 @inject AuthService Auth
 @inject SessionService Session
 @inject IRequestRegister RequestRegister
 @inject IVariationStore Variations
 @inject IProcurementStore Procurement
+@inject IAgentDesk Agents
 @inject NavigationManager Nav
 @implements IDisposable
 
@@ -113,7 +115,8 @@ else
                         <p class="rounded-lg bg-surface-raised border border-line px-3 py-2 text-sm text-content-muted mt-2">
                             @UnlinkedRows.Count historic variation@(UnlinkedRows.Count == 1 ? " isn't" : "s aren't") linked back
                             to a request yet — open a variation and attach the RFI it was raised from in its
-                            <span class="font-medium text-content">Originating request</span> panel.
+                            <span class="font-medium text-content">Originating request</span> panel, or open the RFI
+                            and link the variation from its <span class="font-medium text-content">Variation Order Quote</span> panel.
                         </p>
                     }
                     break;
@@ -247,6 +250,10 @@ else
             }
             else
             {
+                @if (statusError is not null)
+                {
+                    <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-3">@statusError</p>
+                }
                 <div class="mb-6">
                     <RequestTable Records="FilteredRecords" ProjectId="@ProjectId"
                                   SelectionEnabled="@(CanDraftEmail || CanMerge)"
@@ -254,7 +261,10 @@ else
                                   SelectedIds="selectedIds"
                                   OnToggleSelect="ToggleSelect"
                                   OnToggleSelectAll="ToggleSelectAll"
-                                  LinkedVoqs="LinkedVoqsByRequestId" />
+                                  LinkedVoqs="LinkedVoqsByRequestId"
+                                  CanChangeStatus="CanChangeStatus"
+                                  OnStatusChange="ChangeRequestStatus"
+                                  StatusBusyRequestId="@statusBusyRequestId" />
                 </div>
             }
         }
@@ -386,6 +396,10 @@ else
             }
             else
             {
+                @if (variationStatusError is not null)
+                {
+                    <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-3">@variationStatusError</p>
+                }
                 <div class="rounded-xl border border-line bg-surface overflow-x-auto overflow-y-auto max-h-[85vh]">
                     <table class="w-full text-sm">
                         <thead class="bg-surface-raised border-b border-line">
@@ -432,7 +446,46 @@ else
                                         }
                                     </td>
                                     <td class="px-4 py-3 whitespace-nowrap">
-                                        <span class="@BadgeClass(row)">@VariationStatusLabel(row)</span>
+                                        @{ var statusChoices = CanManageVariations ? VariationStatusChoices(row) : new List<VariationStatusChoice>(); }
+                                        @if (statusChoices.Count > 0)
+                                        {
+                                            @* The chip doubles as the status control. Direct moves cover the
+                                               side-effect-free stages; the commercial transitions (approve,
+                                               un-approve, cancel) link through to the variation, where their
+                                               real flows — cost code, confirms, reversals — live. *@
+                                            <div class="relative">
+                                                <button type="button" class="@BadgeClass(row) gap-1"
+                                                        title="Change status"
+                                                        disabled="@(variationStatusBusyId == row.Voq.VariationOrderQuoteId)"
+                                                        @onclick="() => ToggleVariationStatusMenu(row.Voq.VariationOrderQuoteId)">
+                                                    @VariationStatusLabel(row) <span class="text-[9px]" aria-hidden="true">▾</span>
+                                                </button>
+                                                @if (variationStatusMenuId == row.Voq.VariationOrderQuoteId)
+                                                {
+                                                    <div class="absolute left-0 mt-2 w-64 rounded-lg border border-line bg-surface shadow-lg z-30 overflow-hidden">
+                                                        <ul class="divide-y divide-line">
+                                                            @foreach (var choice in statusChoices)
+                                                            {
+                                                                var pick = choice;
+                                                                <li>
+                                                                    <button type="button"
+                                                                            class="w-full text-left px-3 py-2 text-sm transition @(pick.IsCurrent ? "text-content-subtle cursor-default" : "text-content hover:bg-surface-raised")"
+                                                                            disabled="@pick.IsCurrent"
+                                                                            title="@pick.Hint"
+                                                                            @onclick="() => PickVariationStatus(pick)">
+                                                                        @pick.Label@(pick.IsCurrent ? " ✓" : "")
+                                                                    </button>
+                                                                </li>
+                                                            }
+                                                        </ul>
+                                                    </div>
+                                                }
+                                            </div>
+                                        }
+                                        else
+                                        {
+                                            <span class="@BadgeClass(row)">@VariationStatusLabel(row)</span>
+                                        }
                                     </td>
                                     <td class="px-4 py-3 text-right whitespace-nowrap @(row.IsCancelled ? "text-content-subtle line-through" : "text-content")">
                                         @(row.Value is { } v ? Money(v) : "—")
@@ -513,6 +566,75 @@ else
     // Mirrors MergeRequestsAuthorisation server-side (admins, directors and project managers).
     private bool CanMerge => Session.AvailableRoles.Any(role =>
         role is Role.Admin or Role.ManagingDirector or Role.ProjectManager);
+
+    // ---- In-row status changes (the chip's dropdown) --------------------------------------------
+
+    // Mirrors the detail page's CanEditDetails (and UpdateRequestDetailsAuthorisation server-side):
+    // project managers and administrators.
+    private bool CanChangeStatus => Session.AvailableRoles.Any(role => role is Role.Admin or Role.ProjectManager);
+
+    private string? statusBusyRequestId;
+    private string? statusError;
+
+    // Same routing as the detail page's status pill, adapted for one-click register use: Closed
+    // goes through the agent gate (with today's date — the record's own close flow remains the
+    // place to backdate); everything else applies directly, keeping the recorded response text.
+    private async Task ChangeRequestStatus((Request Record, RequestStatus Status) change)
+    {
+        var (record, status) = change;
+        if (statusBusyRequestId is not null || status == record.Status) return;
+        statusError = null;
+        try
+        {
+            statusBusyRequestId = record.RequestId;
+
+            if (status == RequestStatus.Closed)
+            {
+                var outcome = await Agents.AttemptCloseAsync(record.RequestId, DateTimeOffset.Now);
+                if (!outcome.Closed)
+                {
+                    var blocking = string.Join(", ", outcome.BlockingAgents.Select(agent => agent.DisplayName));
+                    statusError = $"{RowRef(record)} can't close yet — {(string.IsNullOrEmpty(blocking) ? "its agents still report work outstanding" : $"still being worked by: {blocking}")}.";
+                }
+                return;
+            }
+
+            var hasResponse = !string.IsNullOrWhiteSpace(record.ResponseText);
+            await RequestRegister.UpdateAsync(new UpdateRequestDetails(
+                record.RequestId,
+                record.Reference,
+                record.Title,
+                record.Description,
+                status,
+                record.Value,
+                record.ResponseText,
+                hasResponse ? (record.RespondedByEmail ?? Auth.CurrentUser?.Email) : record.RespondedByEmail,
+                record.ImpliesVariation,
+                record.RaisedTo,
+                record.DrawingRef,
+                record.ResponseDue,
+                record.RelatedDrawingSpec,
+                record.InternalNotes,
+                record.ClientNotes,
+                // A status change must not shed the structured Raised-to link.
+                RaisedToContactId: record.RaisedToContactId));
+        }
+        catch (CommandFailedException ex)
+        {
+            statusError = $"{RowRef(record)}: {ex.Message}";
+        }
+        catch
+        {
+            statusError = $"Couldn't change the status of {RowRef(record)}. Please try again.";
+        }
+        finally
+        {
+            statusBusyRequestId = null;
+        }
+    }
+
+    private static string RowRef(Request record) =>
+        string.IsNullOrWhiteSpace(record.Reference) ? record.DisplayNumber : record.Reference;
 
     private static bool IsRfi(Request record) => record.Kind == RequestType.Rfi;
 
@@ -782,15 +904,28 @@ else
             ? null
             : AllRecords.FirstOrDefault(r => string.Equals(r.RequestId, voq.RequestId, StringComparison.OrdinalIgnoreCase));
 
-    private List<VariationRow> UnlinkedRows => Rows.Where(row => RequestFor(row.Voq) is null).ToList();
+    // Blank RequestId only — the definition both repair panels (the VOQ page's Originating-request
+    // picker and the RFI page's Link-variation picker) use, so the banner never counts a record
+    // neither of them can fix (a dangling RequestId whose request was deleted).
+    private List<VariationRow> UnlinkedRows => Rows.Where(row => string.IsNullOrWhiteSpace(row.Voq.RequestId)).ToList();
 
-    // RFI rows get a chip through to their VOQ/VO — the same trace, walked downwards.
+    // RFI rows' Variation badge clicks through to their VOQ/VO — the same trace, walked downwards.
+    // A cancelled VO doesn't carry the badge's ref (or the ?focus=vo landing): the record falls
+    // back to presenting as its VOQ, matching the detail page's badge.
     private IReadOnlyDictionary<string, RequestTable.LinkedVoq> LinkedVoqsByRequestId =>
         Rows.Where(row => !string.IsNullOrWhiteSpace(row.Voq.RequestId))
             .GroupBy(row => row.Voq.RequestId, StringComparer.OrdinalIgnoreCase)
             .ToDictionary(
                 group => group.Key,
-                group => new RequestTable.LinkedVoq(group.First().Voq.VariationOrderQuoteId, group.First().Reference),
+                group =>
+                {
+                    var row = group.First();
+                    var hasLiveVo = row.Order is not null && !row.IsCancelled;
+                    return new RequestTable.LinkedVoq(
+                        row.Voq.VariationOrderQuoteId,
+                        hasLiveVo ? row.Reference : row.Voq.Reference,
+                        hasLiveVo);
+                },
                 StringComparer.OrdinalIgnoreCase);
 
     // VOQ → request linking now lives on the VOQ page's "Originating request" panel — the
@@ -885,6 +1020,116 @@ else
         catch (CommandFailedException ex) { requestError = ex.Message; }
         catch { requestError = "Couldn't issue the work order. Please try again."; }
         finally { requestBusy = false; }
+    }
+
+    // ---- In-row variation status changes (the chip's dropdown) ----------------------------------
+
+    private string? variationStatusMenuId;
+    private string? variationStatusBusyId;
+    private string? variationStatusError;
+
+    private void ToggleVariationStatusMenu(string voqId) =>
+        variationStatusMenuId = variationStatusMenuId == voqId ? null : voqId;
+
+    // One dropdown entry: a direct move (Action) or a link through to the variation (Href) for the
+    // transitions whose real flows — cost code, confirms, reversals — live on the record itself.
+    private sealed record VariationStatusChoice(string Label, string? Hint, bool IsCurrent, Func<Task>? Action = null, string? Href = null);
+
+    private List<VariationStatusChoice> VariationStatusChoices(VariationRow row)
+    {
+        var choices = new List<VariationStatusChoice>();
+        var voqHref = $"/projects/{ProjectId}/voq/{row.Voq.VariationOrderQuoteId}";
+
+        if (row.Order is { } vo)
+        {
+            // A cancelled VO stays put — cancellation reversed the approval's commercial writes,
+            // and re-applying them belongs to a fresh approval, not a status flip.
+            if (vo.Status == VariationOrderStatus.Cancelled) return choices;
+
+            choices.Add(new("VO — Approved",
+                vo.Status == VariationOrderStatus.Issued ? "Un-issues the VO, clearing the issued date — a record correction" : null,
+                vo.Status == VariationOrderStatus.Approved,
+                Action: () => ChangeVoStatusInline(row, VariationOrderStatus.Approved)));
+            choices.Add(new("VO — Issued",
+                "Marks the VO as formally instructed",
+                vo.Status == VariationOrderStatus.Issued,
+                Action: () => ChangeVoStatusInline(row, VariationOrderStatus.Issued)));
+            choices.Add(new("VO — Cancelled…",
+                "A real commercial event — reverses the approval's valuation / CVR / budget writes; confirmed on the variation itself",
+                false,
+                Href: voqHref + "?focus=vo"));
+            return choices;
+        }
+
+        if (row.Voq.Status == VariationOrderQuoteStatus.Approved)
+        {
+            // Approved with no live VO — the data anomaly the VOQ page's repair panel handles.
+            choices.Add(new("VOQ — Tendering (un-approve)…",
+                "Un-approval reverses the approval's writes — runs on the variation itself",
+                false, Href: voqHref));
+            return choices;
+        }
+
+        foreach (var status in new[]
+        {
+            VariationOrderQuoteStatus.Draft, VariationOrderQuoteStatus.Inviting,
+            VariationOrderQuoteStatus.Tendering, VariationOrderQuoteStatus.Selected,
+            VariationOrderQuoteStatus.Rejected
+        })
+        {
+            // Selected needs a recorded winning tender; without one the entry is simply not offered.
+            if (status == VariationOrderQuoteStatus.Selected
+                && string.IsNullOrEmpty(row.Voq.SelectedBidPackageId)
+                && row.Voq.Status != VariationOrderQuoteStatus.Selected)
+                continue;
+            var target = status;
+            choices.Add(new($"VOQ — {target}", null, row.Voq.Status == target,
+                Action: () => ChangeVoqStatusInline(row, target)));
+        }
+        choices.Add(new("VOQ — Approve…",
+            "Approving raises the VO and writes the contract figures — runs on the variation itself",
+            false, Href: voqHref));
+        return choices;
+    }
+
+    private async Task PickVariationStatus(VariationStatusChoice choice)
+    {
+        variationStatusMenuId = null;
+        if (choice.IsCurrent) return;
+        if (choice.Href is not null) { Nav.NavigateTo(choice.Href); return; }
+        if (choice.Action is not null) await choice.Action();
+    }
+
+    private async Task ChangeVoqStatusInline(VariationRow row, VariationOrderQuoteStatus status)
+    {
+        if (variationStatusBusyId is not null) return;
+        variationStatusError = null;
+        try
+        {
+            variationStatusBusyId = row.Voq.VariationOrderQuoteId;
+            await Variations.SetVoqStatusAsync(row.Voq.VariationOrderQuoteId, status);
+            await LoadVariationsAsync();
+        }
+        catch (CommandFailedException ex) { variationStatusError = $"{row.Reference}: {ex.Message}"; }
+        catch { variationStatusError = $"Couldn't change the status of {row.Reference}. Please try again."; }
+        finally { variationStatusBusyId = null; }
+    }
+
+    private async Task ChangeVoStatusInline(VariationRow row, VariationOrderStatus status)
+    {
+        if (variationStatusBusyId is not null || row.Order is null) return;
+        variationStatusError = null;
+        try
+        {
+            variationStatusBusyId = row.Voq.VariationOrderQuoteId;
+            _ = status == VariationOrderStatus.Issued
+                ? await Variations.IssueVariationOrderAsync(row.Order.VariationOrderId)
+                : await Variations.RevertVariationOrderToApprovedAsync(row.Order.VariationOrderId);
+            await LoadVariationsAsync();
+        }
+        catch (CommandFailedException ex) { variationStatusError = $"{row.Reference}: {ex.Message}"; }
+        catch { variationStatusError = $"Couldn't change the status of {row.Reference}. Please try again."; }
+        finally { variationStatusBusyId = null; }
     }
 
     private static string VariationStatusLabel(VariationRow row)

@@ -25,7 +25,12 @@ public sealed record MailboxMessage(
     // ("JPMS/Client", "JPMS/Subcontractor" or "JPMS/Internal"), or null when the thread has no
     // pathway yet. Derived server-side from the message's categories (which exclude it, so bucket
     // tags never render as ordinary chips) — clients read this field, never parse tag strings.
-    string? Bucket = null);
+    string? Bucket = null,
+    // Record tags carried by OTHER messages in this email's conversation (e.g. "JPMS/REQ-0007") —
+    // set only on triage-queue reads, and only when the thread was already triaged. This message
+    // itself is still untagged and still needs its own triage decision; the UI shows these as a
+    // "reply to an already-linked thread" hint so re-linking is one step. Null elsewhere.
+    IReadOnlyList<string>? ThreadTags = null);
 
 // The full, on-demand content of one mailbox message (sanitised HTML body + non-inline attachment
 // metadata), fetched live when a triager opens it. Keyed by the live message id.

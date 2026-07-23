@@ -28,8 +28,9 @@ public static class RecordLinksFeatureRegistration
 
         services.AddScoped<RecordProviderRegistry>();
         services.AddScoped<RecordEmailReader>();
-        // Tags an email's whole conversation (not just the clicked message) to a record, and re-tags
-        // replies that arrive later (catch-up).
+        // Tags an email's whole conversation (not just the clicked message) to a record at triage
+        // time, and answers the queue's "thread already linked?" hint lookup. Later arrivals are
+        // never auto-tagged — they queue for their own triage decision.
         services.AddScoped<RecordThreadTagger>();
 
         services.AddScoped<IQueryHandler<ListLinkableRecords, IReadOnlyList<LinkableRecord>>, ListLinkableRecordsHandler>();
@@ -37,7 +38,6 @@ public static class RecordLinksFeatureRegistration
         services.AddScoped<IQueryHandler<ListRecordEmails, IReadOnlyList<MailboxMessage>>, ListRecordEmailsHandler>();
         services.AddScoped<IQueryHandler<ListProjectCommunications, ProjectCommunicationsPage>, ListProjectCommunicationsHandler>();
         services.AddScoped<ICommandHandler<LinkMessageToRecord, Acknowledgement>, LinkMessageToRecordHandler>();
-        services.AddScoped<ICommandHandler<SyncRecordThreadTags, Acknowledgement>, SyncRecordThreadTagsHandler>();
 
         return services;
     }

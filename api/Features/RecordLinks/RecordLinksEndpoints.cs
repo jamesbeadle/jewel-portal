@@ -19,20 +19,17 @@ public sealed class RecordLinksEndpoints
     private readonly Audit.AuditActor auditActor;
     private readonly IQueryHandler<ListLinkableRecords, IReadOnlyList<LinkableRecord>> list;
     private readonly ICommandHandler<LinkMessageToRecord, Acknowledgement> link;
-    private readonly ICommandHandler<SyncRecordThreadTags, Acknowledgement> syncThreadTags;
 
     public RecordLinksEndpoints(
         SignedInUserResolver users,
         Audit.AuditActor auditActor,
         IQueryHandler<ListLinkableRecords, IReadOnlyList<LinkableRecord>> list,
-        ICommandHandler<LinkMessageToRecord, Acknowledgement> link,
-        ICommandHandler<SyncRecordThreadTags, Acknowledgement> syncThreadTags)
+        ICommandHandler<LinkMessageToRecord, Acknowledgement> link)
     {
         this.users = users;
         this.auditActor = auditActor;
         this.list = list;
         this.link = link;
-        this.syncThreadTags = syncThreadTags;
     }
 
     [Function(nameof(ListLinkableRecords))]
@@ -56,17 +53,6 @@ public sealed class RecordLinksEndpoints
         if (command is null || string.IsNullOrWhiteSpace(command.MessageId) || string.IsNullOrWhiteSpace(command.RecordId))
             return new BadRequestObjectResult("messageId and recordId are required.");
         return new OkObjectResult(await link.HandleAsync(command, request.HttpContext.RequestAborted));
-    }
-
-    [Function(nameof(SyncRecordThreadTags))]
-    public async Task<IActionResult> SyncThreadTags(
-        [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "mailbox/record/sync-thread-tags")] HttpRequest request)
-    {
-        if (await Gate(request) is { } deny) return deny;
-        var command = await ReadBody<SyncRecordThreadTags>(request);
-        if (command is null || string.IsNullOrWhiteSpace(command.RecordId))
-            return new BadRequestObjectResult("recordId is required.");
-        return new OkObjectResult(await syncThreadTags.HandleAsync(command, request.HttpContext.RequestAborted));
     }
 
     // Accept the record type either by name ("Request") or numeric value ("0").

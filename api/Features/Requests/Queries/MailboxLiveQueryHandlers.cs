@@ -9,10 +9,12 @@ using Jewel.JPMS.Models;
 namespace Jewel.JPMS.Api.Features.Requests.Queries;
 
 /// <summary>The triage queue, read live from the Inbox (messages not tagged triaged). No database.
-/// Before the page is returned it is swept: a queued email whose conversation already carries a
-/// record's tag (a reply to an already-triaged thread, or a thread whose sent copy was tagged)
-/// inherits that tag and is dropped from the page — replies to triaged threads never sit in triage
-/// waiting for a manual sync. The sweep is best-effort and cached, so a clean queue costs little.</summary>
+/// Every untagged Inbox message queues — including a new reply to a thread that was already triaged:
+/// each new arrival is its own triage decision (only triaging spreads a tag, and only across the
+/// thread as it exists at that moment). Before the page is returned it is annotated: a queued email
+/// whose conversation already carries record tags gets those tags as ThreadTags, so the UI can hint
+/// "reply to an already-linked thread" without deciding anything on the triager's behalf. The
+/// lookup is read-only, best-effort and cached, so a clean queue costs little.</summary>
 public sealed class ListInboxMessagesHandler : IQueryHandler<ListInboxMessages, MailboxPage>
 {
     private readonly IMailboxGraphClient graph;
@@ -24,15 +26,14 @@ public sealed class ListInboxMessagesHandler : IQueryHandler<ListInboxMessages, 
     {
         var page = await graph.ListInboxAsync(query.Cursor, query.Take, query.NewestFirst, cancellationToken);
 
-        var swept = await threadTagger.SweepQueuePageAsync(page.Items, cancellationToken);
-        if (swept.Count == 0)
+        var threadTags = await threadTagger.LookupThreadTagsAsync(page.Items, cancellationToken);
+        if (threadTags.Count == 0)
             return page;
 
-        // Drop the swept conversations' messages locally rather than re-reading: the writes are
-        // verified, but the category-filtered list is eventually consistent and could briefly
-        // return them again. Total shrinks by the number dropped.
-        var remaining = page.Items.Where(m => !swept.Contains(m.ConversationId)).ToList();
-        return new MailboxPage(remaining, page.NextCursor, Math.Max(0, page.Total - (page.Items.Count - remaining.Count)));
+        var annotated = page.Items
+            .Select(m => threadTags.TryGetValue(m.ConversationId, out var tags) ? m with { ThreadTags = tags } : m)
+            .ToList();
+        return new MailboxPage(annotated, page.NextCursor, page.Total);
     }
 }
 

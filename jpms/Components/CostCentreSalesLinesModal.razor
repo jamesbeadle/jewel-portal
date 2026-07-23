@@ -29,6 +29,10 @@
     else
     {
         <div class="space-y-4">
+            <div class="flex justify-end">
+                <ExportToExcelButton FileName="@($"{Heading} · Contract sales value")"
+                                     BuildWorkbook="BuildExportWorkbook" />
+            </div>
             <div class="rounded-lg border border-line overflow-x-auto overflow-y-auto max-h-[60vh]">
                 <table class="w-full text-sm border-collapse">
                     <thead class="bg-surface-raised border-b border-line">
@@ -212,6 +216,61 @@
     private static string Money(decimal value) =>
         value.ToString(value == Math.Truncate(value) ? "C0" : "C2",
             System.Globalization.CultureInfo.GetCultureInfo("en-GB"));
+
+    // ---- Export to Excel ---------------------------------------------------
+    // Exports exactly what the modal shows, in the modal's order: the counting
+    // lines, the total row, then (when present) the recorded-but-not-priced lines
+    // under the same section label. The Centre column travels only when it's on
+    // screen, so the sheet reads against the modal one-for-one. The modal has no
+    // filters, so the include-all tickbox isn't shown and the flag is ignored.
+    private ExcelWorkbook? BuildExportWorkbook(bool includeAllRows)
+    {
+        var counting = CountingLines;
+        var nonCounting = NonCountingLines;
+        if (counting.Count == 0 && nonCounting.Count == 0) return null;
+
+        var workbook = new ExcelWorkbook();
+        var sheet = ShowCentreColumn
+            ? workbook.AddSheet("Contract sales value",
+                new ExcelColumn("Ref"),
+                new ExcelColumn("Centre"),
+                new ExcelColumn("Description"),
+                new ExcelColumn("Type"),
+                new ExcelColumn("Amount", ExcelFormat.Currency))
+            : workbook.AddSheet("Contract sales value",
+                new ExcelColumn("Ref"),
+                new ExcelColumn("Description"),
+                new ExcelColumn("Type"),
+                new ExcelColumn("Amount", ExcelFormat.Currency));
+
+        foreach (var line in counting)
+        {
+            sheet.AddRow(ExportRow(line, TypeLabel(line)));
+        }
+
+        var total = new object?[sheet.Columns.Count];
+        total[ShowCentreColumn ? 2 : 1] = "Total — contract sales value";
+        total[^1] = counting.Sum(line => line.LineAmount);
+        sheet.AddRow(total);
+
+        if (nonCounting.Count > 0)
+        {
+            sheet.AddRow();
+            sheet.AddRow("Recorded but not priced into the total");
+            foreach (var line in nonCounting)
+            {
+                sheet.AddRow(ExportRow(line,
+                    line.LineType == ValuationLineType.Tbc ? "TBC" : "Declined"));
+            }
+        }
+
+        return workbook;
+    }
+
+    private object?[] ExportRow(ValuationLineItem line, string typeLabel) =>
+        ShowCentreColumn
+            ? new object?[] { Ref(line), line.CostCode, DescriptionFor(line), typeLabel, line.LineAmount }
+            : new object?[] { Ref(line), DescriptionFor(line), typeLabel, line.LineAmount };
 
     // ---- Cost-centre recode ------------------------------------------------
     // Mirrors the API gate (ValuationReportAuthorisation.RolesThatMayRecodeCostCentres)

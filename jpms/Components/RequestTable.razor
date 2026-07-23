@@ -45,9 +45,20 @@
                     <td class="px-4 py-3 text-content-muted hidden sm:table-cell whitespace-nowrap" title="@record.Kind.LongName()">@record.Kind.DisplayName()</td>
                     <td class="px-4 py-3 text-content font-medium">
                         @record.Title
-                        @if (record.ImpliesVariation)
+                        @* One variation badge, two states: linked (clickable, carries the VOQ/VO ref
+                           and jumps to the variation) or flagged-only (plain amber — the RFI implies
+                           a variation but no VOQ/VO is attached yet). *@
+                        @if (CanOpen && LinkedVoqs is not null && LinkedVoqs.TryGetValue(record.RequestId, out var linkedVoq))
                         {
-                            <span class="ml-1.5 inline-flex items-center rounded bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-600">Variation</span>
+                            <a class="ml-1.5 inline-flex items-center rounded bg-amber-500/10 border border-amber-500/30 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-600 hover:underline underline-offset-2"
+                               title="Costed into @linkedVoq.Reference — open the variation"
+                               href="@VoqHref(linkedVoq)"
+                               @onclick:stopPropagation="true">Variation · @linkedVoq.Reference</a>
+                        }
+                        else if (record.ImpliesVariation)
+                        {
+                            <span class="ml-1.5 inline-flex items-center rounded bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-600"
+                                  title="Implies a variation — no VOQ/VO linked yet. Open the record to link one.">Variation</span>
                         }
                         @if (record.CriticalPath)
                         {
@@ -58,14 +69,6 @@
                         {
                             <span class="ml-1.5 inline-flex items-center rounded bg-surface-raised border border-line px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-content-muted"
                                   title="Merged into another request — its conversation, queries and emails live there now">Merged</span>
-                        }
-                        @if (CanOpen && LinkedVoqs is not null && LinkedVoqs.TryGetValue(record.RequestId, out var linkedVoq))
-                        {
-                            @* The trace down the lifecycle: this request has been costed into a VOQ/VO. *@
-                            <a class="ml-1.5 inline-flex items-center rounded bg-accent/10 border border-accent/30 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-accent hover:underline underline-offset-2"
-                               title="This request has been costed into a variation — open it"
-                               href="@($"/projects/{ProjectId}/voq/{linkedVoq.VariationOrderQuoteId}")"
-                               @onclick:stopPropagation="true">@linkedVoq.Reference</a>
                         }
                     </td>
                     <td class="px-4 py-3 text-content-muted hidden lg:table-cell whitespace-nowrap">@Dash(record.RaisedTo)</td>
@@ -86,10 +89,49 @@
                     <td class="px-4 py-3 text-right text-content-muted hidden md:table-cell whitespace-nowrap">
                         @(record.Value is null ? "—" : Money(record.Value.Value))
                     </td>
-                    <td class="px-4 py-3">
-                        <span class="inline-flex items-center whitespace-nowrap rounded-full px-2 py-0.5 text-[11px] font-medium @StatusClass(record.Status)">
-                            @StatusLabel(record.Status)
-                        </span>
+                    <td class="px-4 py-3" @onclick:stopPropagation="true">
+                        @if (CanChangeStatus)
+                        {
+                            @* The chip doubles as the status control (same as the detail page's pill):
+                               click it, pick the new status. The cell swallows the click so changing
+                               a status never also navigates into the row. *@
+                            <div class="relative">
+                                <button type="button"
+                                        class="inline-flex items-center gap-1 whitespace-nowrap rounded-full px-2 py-0.5 text-[11px] font-medium @StatusClass(record.Status)"
+                                        title="Change status"
+                                        disabled="@(StatusBusyRequestId == record.RequestId)"
+                                        @onclick="() => ToggleStatusMenu(record.RequestId)">
+                                    @StatusLabel(record.Status) <span class="text-[9px]" aria-hidden="true">▾</span>
+                                </button>
+                                @if (statusMenuRequestId == record.RequestId)
+                                {
+                                    <div class="absolute right-0 mt-2 w-48 rounded-lg border border-line bg-surface shadow-lg z-30 overflow-hidden">
+                                        <ul class="divide-y divide-line">
+                                            @foreach (var option in StatusOptions)
+                                            {
+                                                var status = option;
+                                                var isCurrent = status == record.Status;
+                                                <li>
+                                                    <button type="button"
+                                                            class="w-full text-left px-3 py-2 text-sm transition @(isCurrent ? "text-content-subtle cursor-default" : "text-content hover:bg-surface-raised")"
+                                                            disabled="@isCurrent"
+                                                            title="@StatusHint(status)"
+                                                            @onclick="() => PickStatus(record, status)">
+                                                        @StatusLabel(status)@(isCurrent ? " ✓" : "")
+                                                    </button>
+                                                </li>
+                                            }
+                                        </ul>
+                                    </div>
+                                }
+                            </div>
+                        }
+                        else
+                        {
+                            <span class="inline-flex items-center whitespace-nowrap rounded-full px-2 py-0.5 text-[11px] font-medium @StatusClass(record.Status)">
+                                @StatusLabel(record.Status)
+                            </span>
+                        }
                     </td>
                 </tr>
             }
@@ -106,15 +148,53 @@
     // a row doesn't also navigate into it.
     [Parameter] public bool SelectionEnabled { get; set; }
 
-    /// <summary>A linked VOQ/VO chip per request id — the register passes these so RFI rows can
-    /// jump straight to the variation that prices them (and back, via the variation's Request
-    /// column). Null when the caller has no variation context.</summary>
-    public sealed record LinkedVoq(string VariationOrderQuoteId, string Reference);
+    /// <summary>A linked VOQ/VO per request id — the register passes these so an RFI row's
+    /// Variation badge can jump straight to the variation that prices it (and back, via the
+    /// variation's Request column). Null when the caller has no variation context.</summary>
+    public sealed record LinkedVoq(string VariationOrderQuoteId, string Reference, bool HasVariationOrder);
     [Parameter] public IReadOnlyDictionary<string, LinkedVoq>? LinkedVoqs { get; set; }
+
+    // Land on the VO panel when one has been raised — the money lives there, not on the quote.
+    private string VoqHref(LinkedVoq linked) =>
+        $"/projects/{ProjectId}/voq/{linked.VariationOrderQuoteId}{(linked.HasVariationOrder ? "?focus=vo" : "")}";
     [Parameter] public Func<Request, bool>? RowSelectable { get; set; }
     [Parameter] public IReadOnlyCollection<string> SelectedIds { get; set; } = Array.Empty<string>();
     [Parameter] public EventCallback<Request> OnToggleSelect { get; set; }
     [Parameter] public EventCallback<bool> OnToggleSelectAll { get; set; }
+
+    // Optional in-row status changes: the parent owns the actual command (and its safeguards —
+    // closing still goes through the agent gate there); this component only renders the picker.
+    [Parameter] public bool CanChangeStatus { get; set; }
+    [Parameter] public EventCallback<(Request Record, RequestStatus Status)> OnStatusChange { get; set; }
+    /// <summary>The request whose status change is in flight — its chip is disabled meanwhile.</summary>
+    [Parameter] public string? StatusBusyRequestId { get; set; }
+
+    // The row whose status dropdown is open (same dismiss pattern as the app's other menus:
+    // every pick closes it, the toggle is the dismiss).
+    private string? statusMenuRequestId;
+
+    private static readonly RequestStatus[] StatusOptions =
+    {
+        RequestStatus.Open, RequestStatus.AwaitingResponse, RequestStatus.Responded,
+        RequestStatus.Approved, RequestStatus.Rejected, RequestStatus.Closed
+    };
+
+    private void ToggleStatusMenu(string requestId) =>
+        statusMenuRequestId = statusMenuRequestId == requestId ? null : requestId;
+
+    private async Task PickStatus(Request record, RequestStatus status)
+    {
+        statusMenuRequestId = null;
+        if (status == record.Status) return;
+        await OnStatusChange.InvokeAsync((record, status));
+    }
+
+    private static string? StatusHint(RequestStatus status) => status switch
+    {
+        RequestStatus.Closed    => "Closes with today's date — the agent gate still applies. Open the record to close against an earlier date.",
+        RequestStatus.Responded => "Marks as responded, keeping any recorded response text. Open the record to write the formal response.",
+        _ => null
+    };
 
     private bool IsSelectable(Request record) => RowSelectable?.Invoke(record) ?? true;
 

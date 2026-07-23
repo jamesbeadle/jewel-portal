@@ -91,5 +91,16 @@ public static class VariationsRouteRegistration
         commands.Register<ReviseVariationOrderValue, VariationOrder>(
             new CommandRoute("POST", "/api/variation-orders/{voId}/revise-value",
                 command => $"/api/variation-orders/{((ReviseVariationOrderValue)command).VariationOrderId}/revise-value"));
+
+        // Direct moves between the side-effect-free VOQ stages (the status pill's dropdown).
+        // Approval / un-approval keep their own routes above — they carry commercial writes.
+        commands.Register<SetVoqStatus, VariationOrderQuote>(
+            new CommandRoute("POST", "/api/voqs/{voqId}/status",
+                command => $"/api/voqs/{((SetVoqStatus)command).VariationOrderQuoteId}/status"));
+
+        // Un-issues a VO (Issued → Approved) — a record correction, no commercial writes.
+        commands.Register<RevertVariationOrderToApproved, VariationOrder>(
+            new CommandRoute("POST", "/api/variation-orders/{voId}/revert-to-approved",
+                command => $"/api/variation-orders/{((RevertVariationOrderToApproved)command).VariationOrderId}/revert-to-approved"));
     }
 }

@@ -32,6 +32,23 @@ mailbox's master list so they render as tidy coloured labels.
 - Workflow tag = the record's **project-qualified** reference: **`JPMS/JBB-2026-001-RFI-001`**, `JPMS/JBB-2026-001-RFQ-014`, etc. Stable + unique. Request references are only unique per project (every project runs its own RFI-001…), and tags share one flat category space, so the stem carries the project reference (see `RequestTags`; `POST mailbox/retag-requests` migrates legacy flat tags).
 - Discarded is just a tag: `JPMS/Discarded`.
 
+## Threads (revised 2026-07-23)
+
+Tags spread across an email's conversation **only at triage time**, and only across the thread as it
+exists at that moment. When a triager links one message, `RecordThreadTagger.TagThreadAsync` tags its
+conversation siblings too — Inbox members and the mailbox's own sent copies — so one deliberate
+decision covers the past and nobody re-triages older messages of the same thread.
+
+**Nothing auto-tags messages that arrive after that decision.** A new reply is a fresh piece of
+correspondence: it lands in the triage queue untagged, even when the rest of its thread is already
+linked, and it joins the record's conversation view only once a human triages it. (Earlier builds
+swept the queue and ran a per-record catch-up sync that auto-inherited tags onto late replies — both
+were removed once real use showed each new arrival deserves its own triage decision.)
+
+To keep that decision quick, the queue annotates each email with the record tags its thread already
+carries (`MailboxMessage.ThreadTags`, a read-only, cached lookup) and the UI shows them as
+"Thread: …" hint chips — the triager sees it's a reply to e.g. RFI-014 and re-links in one step.
+
 ## The two screens
 
 **Triage queue** (existing) — untagged Inbox mail. Select an email and add its *first* tag by:

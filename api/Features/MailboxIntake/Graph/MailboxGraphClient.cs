@@ -80,11 +80,6 @@ public interface IMailboxGraphClient
     /// <summary>Read the fields needed to record an email against a request, or null if it's gone.</summary>
     Task<MailboxSnapshot?> GetSnapshotAsync(string messageId, string? internetMessageId, CancellationToken ct);
 
-    /// <summary>The distinct conversation ids of the mailbox messages currently carrying a record's tag
-    /// (sent copies included). These are the email threads the record already touches — used to find
-    /// new replies to pull in.</summary>
-    Task<IReadOnlyList<string>> ListConversationIdsByCategoryAsync(string category, CancellationToken ct);
-
     /// <summary>Message ids in the given conversation that do NOT yet carry the category — i.e. the
     /// thread members still to be tagged (e.g. replies that arrived after the original link).
     /// Mailbox-wide; unsent drafts are skipped. The category test is applied client-side: the
@@ -194,8 +189,6 @@ public sealed class NullMailboxGraphClient : IMailboxGraphClient
     public Task<int> RetagAsync(string oldCategory, string newCategory, CancellationToken ct) => Task.FromResult(0);
     public Task<int> AddAliasTagAsync(string existingCategory, string aliasCategory, CancellationToken ct) => Task.FromResult(0);
     public Task<MailboxSnapshot?> GetSnapshotAsync(string messageId, string? internetMessageId, CancellationToken ct) => Task.FromResult<MailboxSnapshot?>(null);
-    public Task<IReadOnlyList<string>> ListConversationIdsByCategoryAsync(string category, CancellationToken ct) =>
-        Task.FromResult<IReadOnlyList<string>>(Array.Empty<string>());
     public Task<IReadOnlyList<string>> ListUntaggedIdsInConversationAsync(string conversationId, string category, CancellationToken ct) =>
         Task.FromResult<IReadOnlyList<string>>(Array.Empty<string>());
     public Task<IReadOnlyList<string>> ListTaggedIdsInConversationAsync(string conversationId, string category, CancellationToken ct) =>
@@ -265,8 +258,8 @@ public sealed class MailboxGraphClient : IMailboxGraphClient
         // WHOLE mailbox, not just the Inbox, so the mailbox's own sent replies (Sent Items) take
         // their place in the thread; unsent drafts are skipped. Unlike the category lists this must
         // NOT use $orderby: Graph rejects a conversationId filter combined with $orderby as an
-        // inefficient filter (the same reason CollectFieldAsync omits it). A thread is small, so
-        // one max-size page covers it and we sort oldest-first here instead.
+        // inefficient filter. A thread is small, so one max-size page covers it and we sort
+        // oldest-first here instead.
         var filter = $"conversationId eq '{conversationId.Replace("'", "''")}'";
         var url = $"{GraphBase}/users/{Mailbox}/messages"
             + $"?$filter={Uri.EscapeDataString(filter)}"
@@ -644,16 +637,6 @@ public sealed class MailboxGraphClient : IMailboxGraphClient
         return ids;
     }
 
-    public async Task<IReadOnlyList<string>> ListConversationIdsByCategoryAsync(string category, CancellationToken ct)
-    {
-        var filter = $"categories/any(c:c eq '{category.Replace("'", "''")}')";
-        // Mailbox-wide (drafts skipped): a tagged SENT copy — e.g. a document draft the mailbox
-        // sent to open a brand-new thread — seeds its conversation for the sweep, so replies to an
-        // outbound-initiated thread auto-link even though no inbox member was ever hand-tagged.
-        var conversationIds = await CollectFieldAsync(filter, "conversationId", ct);
-        return conversationIds.Distinct(StringComparer.Ordinal).ToList();
-    }
-
     // The two per-conversation sibling queries read the thread with the PLAIN conversationId filter
     // (via ListConversationAsync — the one filter shape the mailbox-wide view reliably supports) and
     // apply the category test CLIENT-SIDE. They previously pushed a combined server-side filter
@@ -683,47 +666,6 @@ public sealed class MailboxGraphClient : IMailboxGraphClient
             .Where(m => m.Categories.Contains(category, StringComparer.OrdinalIgnoreCase))
             .Select(m => m.Id)
             .ToList();
-    }
-
-    // Page through the mailbox's messages matching a SIMPLE filter (a single categories/any clause —
-    // nothing combined; the all-mailbox view rejects complex filters) and collect one string field
-    // from each, skipping unsent drafts. Mirrors ListFilteredAsync's $skip paging; eventual
-    // consistency for $count. Guard-bounded so a pathological result can't loop forever. Failures
-    // are logged loudly (status + body): callers treat an empty result as "nothing to do", so a
-    // silent break here is invisible at the call site.
-    private async Task<IReadOnlyList<string>> CollectFieldAsync(string filter, string field, CancellationToken ct)
-    {
-        var results = new List<string>();
-        var skip = 0;
-        for (var guard = 0; guard < 20; guard++)
-        {
-            var url = $"{GraphBase}/users/{Mailbox}/messages"
-                + $"?$filter={Uri.EscapeDataString(filter)}"
-                + $"&$select={field},isDraft&$top=100&$skip={skip}&$count=true";
-            using var response = await SendAsync(HttpMethod.Get, url, content: null, ct, allowNotFound: true, consistencyEventual: true);
-            if (!response.IsSuccessStatusCode)
-            {
-                _logger.LogWarning("Mailbox field collect ({Field}) failed: {Status}. {Detail}",
-                    field, (int)response.StatusCode, await SafeBodyAsync(response, ct));
-                break;
-            }
-
-            await using var stream = await response.Content.ReadAsStreamAsync(ct);
-            using var doc = await JsonDocument.ParseAsync(stream, cancellationToken: ct);
-            var pageCount = 0;
-            if (doc.RootElement.TryGetProperty("value", out var arr) && arr.ValueKind == JsonValueKind.Array)
-                foreach (var item in arr.EnumerateArray())
-                {
-                    pageCount++;
-                    if (IsDraft(item))
-                        continue;
-                    if (item.TryGetProperty(field, out var el) && el.GetString() is { Length: > 0 } value)
-                        results.Add(value);
-                }
-            if (pageCount < 100) break;
-            skip += 100;
-        }
-        return results;
     }
 
     private async Task<string?> FindByInternetMessageIdAsync(string internetMessageId, CancellationToken ct)

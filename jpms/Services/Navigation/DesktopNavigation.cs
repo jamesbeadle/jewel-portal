@@ -3,7 +3,7 @@ using Jewel.JPMS.Models;
 namespace Jewel.JPMS.Services.Navigation;
 
 /// <summary>
-/// The sidebar catalog — the app's single navigation plane. One list of six collapsible folders
+/// The sidebar catalog — the app's single navigation plane. One list of five collapsible folders
 /// (SidebarFolders, docs/Pathway-Split-Platform-Flow-Plan.md §6) under the project picker, with
 /// Home above everything. Folders mix project-scoped rows ({project} templates resolved against
 /// CurrentProjectService) with company rows where the work mixes. This class is the RBAC home:
