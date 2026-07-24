@@ -280,6 +280,15 @@ else
                 <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-4">@variationsError</p>
             }
 
+            @if (CanManageVariations)
+            {
+                @* Manual entry — a standalone variation with no RFI behind it, for reconciling
+                   historic / client-instructed variations against a valuation report already issued. *@
+                <div class="flex items-center justify-end mb-4">
+                    <button type="button" class="btn-secondary" @onclick="OpenAddVariationDialog">Add variation manually</button>
+                </div>
+            }
+
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
                 <div class="panel p-4">
                     <p class="eyebrow mb-1">Variations</p>
@@ -524,6 +533,13 @@ else
                         IsOpen="raiseDialogOpen"
                         OnClose="CloseRaiseDialog"
                         OnRaised="OnRaised" />
+
+    <AddManualVariationDialog ProjectId="@ProjectId"
+                              IsOpen="addVariationOpen"
+                              SuggestedNumber="@NextVariationNumber"
+                              UsedNumbers="@UsedVariationNumbers"
+                              OnClose="CloseAddVariationDialog"
+                              OnCreated="OnManualVariationCreated" />
 }
 
 @code {
@@ -542,6 +558,22 @@ else
 
     private void OpenRaiseDialog() => raiseDialogOpen = true;
     private void CloseRaiseDialog() => raiseDialogOpen = false;
+
+    // Manual variation entry (standalone VOQ, no request). The number field pre-fills with the
+    // project's next number but the user can set it to match a client-issued reference.
+    private bool addVariationOpen;
+    private int NextVariationNumber => (orders.Count == 0 ? 0 : orders.Max(o => o.Number)) + 1;
+    private IReadOnlyCollection<int> UsedVariationNumbers => orders.Select(o => o.Number).ToHashSet();
+    private void OpenAddVariationDialog() => addVariationOpen = true;
+    private void CloseAddVariationDialog() => addVariationOpen = false;
+
+    private async Task OnManualVariationCreated(VariationOrder created)
+    {
+        addVariationOpen = false;
+        // The new draft appears as a "No request" row in the register; approve it there (or open it)
+        // to write it onto the valuation report.
+        await LoadVariationsAsync();
+    }
 
     // ---- Bulk selection ----------------------------------------------------------------------
     // One selection set serves two bulk actions: email drafts (RFIs — a General request has no
@@ -879,7 +911,8 @@ else
     private List<VariationOrder> Rows { get; set; } = new();
 
     private int OpenVariationsCount => orders.Count(o =>
-        o.Status is VariationOrderStatus.Quoting or VariationOrderStatus.Issued);
+        o.Status is VariationOrderStatus.Quoting or VariationOrderStatus.Issued
+            or VariationOrderStatus.AwaitingArchitectInstruction);
 
     private int ApprovedVariationsCount => orders.Count(o => o.Status == VariationOrderStatus.Approved);
 
@@ -1036,7 +1069,7 @@ else
             return choices;
         }
 
-        // Quoting / Issued: move directly between the two side-effect-free stages, approve
+        // Quoting / Issued / Awaiting AI: move directly between the side-effect-free stages, approve
         // (through the variation, where the cost code and value are collected) or reject.
         choices.Add(new("Quoting", null, order.Status == VariationOrderStatus.Quoting,
             Action: () => ChangeVariationStatusInline(order, VariationOrderStatus.Quoting)));
@@ -1044,6 +1077,10 @@ else
             "Marks the variation as sent to the client, awaiting their decision",
             order.Status == VariationOrderStatus.Issued,
             Action: () => ChangeVariationStatusInline(order, VariationOrderStatus.Issued)));
+        choices.Add(new("Awaiting AI",
+            "Issued and waiting on a formal Architect's Instruction — no commercial effect yet",
+            order.Status == VariationOrderStatus.AwaitingArchitectInstruction,
+            Action: () => ChangeVariationStatusInline(order, VariationOrderStatus.AwaitingArchitectInstruction)));
         choices.Add(new("Approved…",
             "Approving mints the V-ref and writes the contract figures — runs on the variation itself",
             false, Href: voqHref));
@@ -1084,6 +1121,7 @@ else
     {
         VariationOrderStatus.Quoting => "Quoting",
         VariationOrderStatus.Issued => "Issued",
+        VariationOrderStatus.AwaitingArchitectInstruction => "Awaiting AI",
         VariationOrderStatus.Approved => "Approved",
         VariationOrderStatus.Rejected => "Rejected",
         _ => "Variation"

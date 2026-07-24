@@ -1,0 +1,148 @@
+@using Jewel.JPMS.Models
+@inject IVariationStore Variations
+
+@*
+    Manual variation entry — creates a standalone variation order (in Quoting) with no request/RFI
+    behind it, for reconciling historic or client-instructed variations. It deliberately stops at a
+    draft: nothing reaches the valuation report until the variation is approved (open it and use
+    "Approve manually & raise VO"). The number field lets the user match the reference already shown
+    on a valuation report issued to the client.
+*@
+<Modal IsOpen="IsOpen"
+       Title="Add variation manually"
+       ConfirmLabel="@(saving ? "Adding…" : "Add variation")"
+       OnCancel="Cancel"
+       OnConfirm="Submit"
+       Class="max-w-xl">
+    <div class="space-y-4">
+        @if (error is not null)
+        {
+            <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@error</p>
+        }
+
+        <p class="rounded-lg bg-surface-raised border border-line px-3 py-2 text-xs text-content-subtle">
+            Adds a standalone variation in <span class="font-medium text-content">Quoting</span> — no RFI needed. It won't
+            appear on the valuation report until you approve it: open it and use
+            <span class="font-medium text-content">Approve manually &amp; raise VO</span> (cost code + value).
+        </p>
+
+        <div>
+            <FormField Label="Variation no." Value="@numberText" OnChange="v => numberText = v" InputType="number" />
+            <p class="mt-1 text-xs text-content-subtle">
+                Becomes <span class="font-mono text-content">@Preview</span> now, and
+                <span class="font-mono text-content">@VPreview</span> when approved — set it to match the client's report.
+            </p>
+        </div>
+
+        <FormField Label="Title" Value="@title" OnChange="v => title = v" Required="true" />
+
+        <div>
+            <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Description</label>
+            <textarea class="field" rows="3" value="@description" @oninput="OnDescriptionInput"
+                      placeholder="What the variation covers…"></textarea>
+        </div>
+
+        <div>
+            <FormField Label="Estimated value (£)" Value="@valueText" OnChange="v => valueText = v" InputType="number" />
+            <p class="mt-1 text-xs text-content-subtle">Optional — pre-fills the value on the approve panel. Use a negative figure for an omit.</p>
+        </div>
+    </div>
+</Modal>
+
+@code {
+    [Parameter] public string ProjectId { get; set; } = "";
+    [Parameter] public bool IsOpen { get; set; }
+    [Parameter] public int SuggestedNumber { get; set; }
+    [Parameter] public IReadOnlyCollection<int> UsedNumbers { get; set; } = System.Array.Empty<int>();
+    [Parameter] public EventCallback OnClose { get; set; }
+    [Parameter] public EventCallback<VariationOrder> OnCreated { get; set; }
+
+    private string numberText = "";
+    private string title = "";
+    private string description = "";
+    private string valueText = "";
+    private bool saving;
+    private string? error;
+    private bool seeded;
+
+    protected override void OnParametersSet()
+    {
+        // Seed the number field with the project's next number when the dialog opens; clear the flag
+        // when it closes so a re-open re-seeds.
+        if (IsOpen && !seeded)
+        {
+            if (string.IsNullOrWhiteSpace(numberText))
+                numberText = SuggestedNumber > 0 ? SuggestedNumber.ToString() : "";
+            seeded = true;
+        }
+        else if (!IsOpen)
+        {
+            seeded = false;
+        }
+    }
+
+    private int? ParsedNumber => int.TryParse(numberText, out var n) && n > 0 ? n : null;
+    private string Preview => ParsedNumber is { } n ? $"VOQ-{n:0000}" : "VOQ-…";
+    private string VPreview => ParsedNumber is { } n ? $"V{n}" : "V…";
+
+    private void OnDescriptionInput(ChangeEventArgs e) => description = e.Value?.ToString() ?? "";
+
+    private async Task Cancel()
+    {
+        Reset();
+        await OnClose.InvokeAsync();
+    }
+
+    private async Task Submit()
+    {
+        if (saving) return;
+        if (string.IsNullOrWhiteSpace(title)) { error = "A title is required."; return; }
+        if (!string.IsNullOrWhiteSpace(numberText) && ParsedNumber is null)
+        {
+            error = "The variation number must be a positive whole number.";
+            return;
+        }
+        if (ParsedNumber is { } requested && UsedNumbers.Contains(requested))
+        {
+            error = $"VOQ-{requested:0000} already exists on this project — choose a different number.";
+            return;
+        }
+        decimal? estimate = null;
+        if (!string.IsNullOrWhiteSpace(valueText))
+        {
+            if (!decimal.TryParse(valueText, out var parsed)) { error = "The estimated value must be a number."; return; }
+            estimate = parsed;
+        }
+
+        saving = true;
+        error = null;
+        try
+        {
+            var created = await Variations.CreateManualAsync(
+                ProjectId,
+                title.Trim(),
+                string.IsNullOrWhiteSpace(description) ? null : description.Trim(),
+                estimate,
+                ParsedNumber);
+            Reset();
+            await OnCreated.InvokeAsync(created);
+        }
+        catch (System.Exception ex)
+        {
+            // The command sender surfaces the endpoint's own message (e.g. a duplicate-number
+            // rejection) verbatim, so show it when we have one.
+            error = string.IsNullOrWhiteSpace(ex.Message) ? "Couldn't add the variation. Please try again." : ex.Message;
+        }
+        finally { saving = false; }
+    }
+
+    private void Reset()
+    {
+        numberText = "";
+        title = "";
+        description = "";
+        valueText = "";
+        error = null;
+        seeded = false;
+    }
+}

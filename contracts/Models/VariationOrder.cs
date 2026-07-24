@@ -8,6 +8,8 @@ namespace Jewel.JPMS.Models;
 //              correspondence). No commercial effect.
 //   Issued   — sent to the client for a decision; not yet approved or rejected. Still no
 //              commercial effect.
+//   Awaiting AI — issued, and now waiting on a formal Architect's Instruction before the client
+//              decides; still a pre-approval, side-effect-free stage (UI label "Awaiting AI").
 //   Approved — the client's instruction to proceed. Approval mints the V-ref and writes the
 //              value through to the Valuation Report, the CVR and the cost-centre budget.
 //   Rejected — declined by the client, or withdrawn. Rejecting an APPROVED variation is a real
@@ -17,7 +19,11 @@ public enum VariationOrderStatus
     Quoting = 0,
     Issued = 1,
     Approved = 2,
-    Rejected = 3
+    Rejected = 3,
+    // Client has been issued the variation and now awaits a formal Architect's Instruction before
+    // deciding — a side-effect-free waiting stage between Issued and Approved. Appended as 4;
+    // never renumber (persisted as an int on the row — see VariationStatusTests). UI: "Awaiting AI".
+    AwaitingArchitectInstruction = 4
 }
 
 // The unified Variation Order. Exists from the moment an RFQ is priced up; carries its quoting

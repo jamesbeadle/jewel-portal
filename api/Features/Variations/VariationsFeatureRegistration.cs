@@ -20,6 +20,10 @@ public static class VariationsFeatureRegistration
         services.AddScoped<CreateVoqFromRfqAuthorisation>();
         services.AddScoped<CreateVoqFromRfqValidation>();
 
+        services.AddScoped<ICommandHandler<CreateManualVariationOrder, VariationOrder>, CreateManualVariationOrderHandler>();
+        services.AddScoped<CreateManualVariationOrderAuthorisation>();
+        services.AddScoped<CreateManualVariationOrderValidation>();
+
         services.AddScoped<ICommandHandler<PrepareVoqDraft, VoqDraftProposal>, PrepareVoqDraftHandler>();
         services.AddScoped<PrepareVoqDraftAuthorisation>();
         services.AddScoped<PrepareVoqDraftValidation>();

@@ -27,6 +27,11 @@ public static class VariationsRouteRegistration
             new CommandRoute("POST", "/api/requests/{requestId}/voq",
                 command => $"/api/requests/{((CreateVoqFromRfq)command).RequestId}/voq"));
 
+        // Standalone manual variation — no request behind it (POST at the project).
+        commands.Register<CreateManualVariationOrder, VariationOrder>(
+            new CommandRoute("POST", "/api/projects/{projectId}/manual-variation",
+                command => $"/api/projects/{((CreateManualVariationOrder)command).ProjectId}/manual-variation"));
+
         commands.Register<AddBidPackageToVoq, BidPackage>(
             new CommandRoute("POST", "/api/voqs/{voqId}/bid-packages",
                 command => $"/api/voqs/{((AddBidPackageToVoq)command).VariationOrderId}/bid-packages"));

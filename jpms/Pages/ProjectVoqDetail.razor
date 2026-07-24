@@ -48,7 +48,7 @@ else
             @if (CanManage && order.Status != VariationOrderStatus.Rejected)
             {
                 @* The status pill doubles as the status control. Direct moves cover the
-                   side-effect-free stages (Quoting <-> Issued); the commercial transitions route to
+                   side-effect-free stages (Quoting, Issued, Awaiting AI); the commercial transitions route to
                    their real flows — Approved opens the approve panel (cost code + value), Rejected
                    from Approved reverses the approval's writes, and leaving Approved for Quoting is
                    the "return to quoting" repair. Rejected is terminal — no menu once reached. *@
@@ -353,7 +353,7 @@ else
                         }
                     </div>
                 }
-                else if (CanManage && order.Status is VariationOrderStatus.Quoting or VariationOrderStatus.Issued)
+                else if (CanManage && order.Status is VariationOrderStatus.Quoting or VariationOrderStatus.Issued or VariationOrderStatus.AwaitingArchitectInstruction)
                 {
                     @* Approval runs from either pre-approved status. With a selected tender this is
                        the normal end of the pipeline; without one it is a MANUAL approval — the
@@ -446,6 +446,7 @@ else
     private static readonly VariationOrderStatus[] OrderStatusOptions =
     {
         VariationOrderStatus.Quoting, VariationOrderStatus.Issued,
+        VariationOrderStatus.AwaitingArchitectInstruction,
         VariationOrderStatus.Approved, VariationOrderStatus.Rejected
     };
 
@@ -692,6 +693,8 @@ else
             return "Rejecting an approved order reverses the valuation / CVR / budget writes";
         if (order?.Status == VariationOrderStatus.Approved && status == VariationOrderStatus.Issued)
             return "Not allowed directly from Approved — return to quoting first";
+        if (status == VariationOrderStatus.AwaitingArchitectInstruction)
+            return "Issued and waiting on a formal Architect's Instruction — no commercial effect yet";
         return null;
     }
 
@@ -700,7 +703,7 @@ else
     // reverses the approval's writes when leaving Approved (routed through the inline confirm) and
     // is a plain move otherwise; leaving Approved for Quoting is the "return to quoting" repair
     // (also routed through an inline confirm); Approved -> Issued is never allowed; everything else
-    // between Quoting and Issued moves directly.
+    // between Quoting, Issued and Awaiting AI moves directly.
     private async Task ChangeStatus(VariationOrderStatus target)
     {
         orderStatusMenuOpen = false;
@@ -737,7 +740,7 @@ else
             return;
         }
 
-        // Quoting <-> Issued, from Quoting or Issued only.
+        // Direct moves between the side-effect-free stages (Quoting, Issued, Awaiting AI).
         try
         {
             busy = true;
@@ -840,6 +843,7 @@ else
     {
         VariationOrderStatus.Quoting  => "Quoting",
         VariationOrderStatus.Issued   => "Issued",
+        VariationOrderStatus.AwaitingArchitectInstruction => "Awaiting AI",
         VariationOrderStatus.Approved => "Approved",
         VariationOrderStatus.Rejected => "Rejected",
         _ => status.ToString()

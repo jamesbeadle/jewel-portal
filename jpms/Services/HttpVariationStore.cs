@@ -41,6 +41,14 @@ public sealed class HttpVariationStore : IVariationStore
         return created;
     }
 
+    public async Task<VariationOrder> CreateManualAsync(string projectId, string title, string? description, decimal? estimatedValue, int? number, CancellationToken cancellationToken = default)
+    {
+        // CreatedByEmail is resolved from the signed-in user server-side, so it is a placeholder here.
+        var created = await commands.SendAsync(new CreateManualVariationOrder(projectId, string.Empty, title, description, estimatedValue, number), cancellationToken);
+        OnChange?.Invoke();
+        return created;
+    }
+
     public async Task<BidPackage> AddBidPackageAsync(string variationOrderId, string title, string trade, CancellationToken cancellationToken = default)
     {
         // OwnerEmail is set from the signed-in user server-side.

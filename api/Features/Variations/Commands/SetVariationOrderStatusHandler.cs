@@ -6,7 +6,7 @@ using Jewel.JPMS.Models;
 namespace Jewel.JPMS.Api.Features.Variations.Commands;
 
 /// <summary>
-/// Moves a variation order between the side-effect-free stages — Quoting and Issued. Entering
+/// Moves a variation order between the side-effect-free stages — Quoting, Issued and Awaiting AI. Entering
 /// Issued stamps IssuedAt ("sent to the client"); moving back to Quoting clears it. The two
 /// commercial transitions keep their own commands: Approved is only reached through
 /// ApproveVariationOrder (which writes the figures), Rejected through RejectVariationOrder (which
@@ -36,9 +36,14 @@ public sealed class SetVariationOrderStatusHandler : ICommandHandler<SetVariatio
         if (order.Status == (int)VariationOrderStatus.Rejected)
             throw new InvalidOperationException("A rejected variation order cannot be moved back to quoting or issued directly — re-approve or leave it as the audit record.");
 
-        // Quoting <-> Issued: stamp / clear the client-issue date.
+        // Move between the side-effect-free stages (Quoting, Issued, Awaiting AI). Entering Issued
+        // stamps the client-issue date; returning to Quoting clears it; entering Awaiting AI leaves
+        // it untouched (a post-issue waiting stage, so the issued date still stands).
         order.Status = (int)command.Status;
-        order.IssuedAt = command.Status == VariationOrderStatus.Issued ? DateTimeOffset.UtcNow : null;
+        if (command.Status == VariationOrderStatus.Issued)
+            order.IssuedAt = DateTimeOffset.UtcNow;
+        else if (command.Status == VariationOrderStatus.Quoting)
+            order.IssuedAt = null;
 
         await context.SaveChangesAsync(cancellationToken);
         return order.ToModel();

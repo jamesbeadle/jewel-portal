@@ -19,6 +19,9 @@ public sealed class VariationStatusTests
         Assert.Equal(1, (int)VariationOrderStatus.Issued);
         Assert.Equal(2, (int)VariationOrderStatus.Approved);
         Assert.Equal(3, (int)VariationOrderStatus.Rejected);
+        // Awaiting AI (Architect's Instruction) was appended as 4 — a new pre-approval stage that,
+        // like the others, is persisted as an int on the row, so this value must never move.
+        Assert.Equal(4, (int)VariationOrderStatus.AwaitingArchitectInstruction);
     }
 
     [Fact]
