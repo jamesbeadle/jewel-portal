@@ -10,7 +10,10 @@
 *@
 
 <div class="space-y-3">
-    <h3 class="eyebrow">@(IsManual ? "Approve manually & raise Variation Order" : "Approve & raise Variation Order")</h3>
+    @if (ShowHeading)
+    {
+        <h3 class="eyebrow">@(IsManual ? "Approve manually & raise Variation Order" : "Approve & raise Variation Order")</h3>
+    }
 
     @if (IsManual)
     {
@@ -77,6 +80,7 @@
 
 @code {
     [Parameter] public bool IsManual { get; set; }
+    [Parameter] public bool ShowHeading { get; set; } = true;
     [Parameter] public decimal? EstimatedValue { get; set; }
     [Parameter] public string DefaultDescription { get; set; } = "";
     [Parameter] public bool Busy { get; set; }

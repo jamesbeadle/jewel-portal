@@ -8,6 +8,7 @@
 @inject IQueryClient Queries
 @inject NavigationManager Nav
 @inject IJSRuntime Js
+@inject IValuationReportStore Valuation
 @implements IDisposable
 
 <PageTitle>Variation Order · JPMS</PageTitle>
@@ -103,6 +104,47 @@ else
 
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
             <div class="lg:col-span-2 space-y-5">
+                @if (ApprovedOrder is not null && VariationLines.Count > 0)
+                {
+                    <div class="panel p-5">
+                        <div class="flex items-center justify-between mb-3">
+                            <h3 class="eyebrow">Variation lines</h3>
+                            <span class="text-xs text-content-subtle">On the Valuation Report as <span class="font-mono">@ApprovedOrder!.VariationRef</span></span>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-sm">
+                                <thead>
+                                    <tr class="text-left text-content-subtle border-b border-line">
+                                        <th class="py-2 pr-3 font-medium">Cost centre</th>
+                                        <th class="py-2 pr-3 font-medium">Description</th>
+                                        <th class="py-2 pr-3 font-medium text-right">Qty</th>
+                                        <th class="py-2 pr-3 font-medium text-right">Rate £</th>
+                                        <th class="py-2 font-medium text-right">Amount £</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-line">
+                                    @foreach (var vline in VariationLines)
+                                    {
+                                        <tr>
+                                            <td class="py-2 pr-3 font-mono text-xs whitespace-nowrap">@vline.CostCode</td>
+                                            <td class="py-2 pr-3">@vline.Description</td>
+                                            <td class="py-2 pr-3 text-right font-mono">@vline.Quantity.ToString("0.##", Gb)</td>
+                                            <td class="py-2 pr-3 text-right font-mono">@vline.Rate.ToString("N2", Gb)</td>
+                                            <td class="py-2 text-right font-mono @(vline.LineAmount < 0m ? "text-negative" : "")">@vline.LineAmount.ToString("N2", Gb)</td>
+                                        </tr>
+                                    }
+                                </tbody>
+                                <tfoot>
+                                    <tr class="border-t border-line-strong font-semibold text-content">
+                                        <td class="py-2 pr-3" colspan="4">Total</td>
+                                        <td class="py-2 text-right font-mono">@MoneyPennies(VariationLines.Sum(vline => vline.LineAmount))</td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
+                    </div>
+                }
+
                 <div class="panel p-5">
                     <div class="flex items-center justify-between mb-3">
                         <h3 class="eyebrow">Bid packages</h3>
@@ -278,8 +320,19 @@ else
                             <span class="font-mono font-semibold">@(approved.VariationRef ?? approved.DisplayNumber)</span>
                         </div>
                         <div class="flex justify-between text-sm"><span class="text-content-subtle">Value</span><span>@Money(approved.Value)</span></div>
-                        <div class="flex justify-between text-sm"><span class="text-content-subtle">Cost code</span><span class="font-mono">@(approved.CostCode ?? "—")</span></div>
-                        <p class="text-xs text-content-subtle">Added to the Valuation Report and committed to the cost centre.</p>
+                        @{ var centres = ApprovedCostCentres; }
+                        <div class="flex justify-between text-sm gap-3">
+                            <span class="text-content-subtle whitespace-nowrap">Cost @(centres.Count > 1 ? "centres" : "centre")</span>
+                            <span class="font-mono text-right">@(centres.Count == 0 ? "—" : string.Join(", ", centres))</span>
+                        </div>
+                        @if (VariationLines.Count > 1)
+                        {
+                            <p class="text-xs text-content-subtle">@VariationLines.Count lines across @centres.Count cost centres — the full build-up is under “Variation lines” on the left.</p>
+                        }
+                        else
+                        {
+                            <p class="text-xs text-content-subtle">Added to the Valuation Report and committed to the cost centre.</p>
+                        }
                         @if (CanManage)
                         {
                             <button type="button" class="btn-secondary w-full" disabled="@busy" @onclick="IssueWorkOrder">Issue work order</button>
@@ -359,17 +412,32 @@ else
                        the normal end of the pipeline; without one it is a MANUAL approval — the
                        route for historic (seeded) and client-instructed variations that never
                        tendered through the app. The write-through (Valuation Report, CVR,
-                       cost-centre budget) is identical either way. *@
+                       cost-centre budgets) is identical either way. The build-up itself is captured
+                       in a modal (VariationApprovePanel) — the sidebar is too narrow for the line table. *@
                     var isManualApproval = string.IsNullOrEmpty(order.SelectedBidPackageId);
-                    @* id anchors the status pill's "Approved…" pick: it scrolls here and flashes
-                       the panel, because approval always needs the cost code + value below. *@
-                    <div id="approve-voq" class="panel p-5">
+                    <div class="panel p-5 space-y-3">
+                        <h3 class="eyebrow">@(isManualApproval ? "Approve manually & raise Variation Order" : "Approve & raise Variation Order")</h3>
+                        <p class="text-xs text-content-subtle">
+                            Build the variation up from priced lines — one per cost centre — then approve. Each line writes onto
+                            the Valuation Report and commits its own cost centre's budget.
+                        </p>
+                        <button type="button" class="btn-primary w-full" disabled="@busy" @onclick="() => approveModalOpen = true">
+                            @(isManualApproval ? "Approve manually & raise VO…" : "Approve & raise VO…")
+                        </button>
+                    </div>
+
+                    <Modal IsOpen="approveModalOpen"
+                           Title="@($"Approve {order.Reference} — {order.Title}")"
+                           ShowFooter="false"
+                           OnCancel="@(() => approveModalOpen = false)"
+                           Class="max-w-3xl">
                         <VariationApprovePanel IsManual="@isManualApproval"
+                                               ShowHeading="false"
                                                EstimatedValue="order.EstimatedValue"
                                                DefaultDescription="@order.Title"
                                                Busy="@busy"
                                                OnApprove="ApproveWithLines" />
-                    </div>
+                    </Modal>
                 }
 
                 @if (CanManage && packages.Count > 0 && ApprovedOrder is null)
@@ -457,6 +525,29 @@ else
     // the "VO" the old two-record model kept separately; here it's just the current record, or null.
     private VariationOrder? ApprovedOrder => order is { Status: VariationOrderStatus.Approved } ? order : null;
 
+    // The approve build-up is captured in a modal (the sidebar is too narrow for the line table).
+    private bool approveModalOpen;
+
+    private static readonly System.Globalization.CultureInfo Gb = System.Globalization.CultureInfo.GetCultureInfo("en-GB");
+    private static string MoneyPennies(decimal value) => value.ToString("C2", Gb);
+
+    // The approved variation's lines on the valuation report — its priced build-up, newest cost
+    // centre split included. Empty until approved (no V-ref) or until the store's lines land.
+    private IReadOnlyList<ValuationLineItem> VariationLines =>
+        order?.VariationRef is { Length: > 0 } vref
+            ? Valuation.LinesFor(ProjectId)
+                .Where(line => line.ElementType == ValuationElementType.Variation && line.VariationRef == vref)
+                .OrderBy(line => line.DisplayOrder)
+                .ToList()
+            : Array.Empty<ValuationLineItem>();
+
+    // Distinct cost centres the approved variation touches — from its report lines, falling back to
+    // the order's primary code before the lines have loaded.
+    private IReadOnlyList<string> ApprovedCostCentres =>
+        VariationLines.Count > 0
+            ? VariationLines.Select(line => line.CostCode).Where(code => !string.IsNullOrWhiteSpace(code)).Distinct().ToList()
+            : (string.IsNullOrWhiteSpace(order?.CostCode) ? Array.Empty<string>() : new[] { order!.CostCode! });
+
     private string RequestHref => order is null ? $"/projects/{ProjectId}/requests" : $"/projects/{ProjectId}/requests/view/{order.RequestId}";
     private string PackageHref(string bidPackageId) => $"/projects/{ProjectId}/bid-package-invites/{bidPackageId}";
 
@@ -475,6 +566,10 @@ else
         // the originating-request picker for unlinked (seeded) variation orders.
         RequestRegister.Refresh(ProjectId);
         RequestRegister.OnChange += StateHasChanged;
+        // The approved variation's line breakdown reads from the valuation report store — warm it
+        // and re-render when the lines land (stale-while-revalidate).
+        Valuation.OnChange += StateHasChanged;
+        Valuation.Refresh(ProjectId);
         await ReloadAsync();
         isLoaded = true;
     }
@@ -507,6 +602,7 @@ else
     {
         Subcontractors.OnChange -= StateHasChanged;
         RequestRegister.OnChange -= StateHasChanged;
+        Valuation.OnChange -= StateHasChanged;
     }
 
     private async Task ReloadAsync()
@@ -629,6 +725,8 @@ else
             // The panel supplies the priced build-up; the value and primary cost code are derived
             // from it. The server writes one report line per entry under this variation's V-ref.
             order = await Variations.ApproveAsync(VoqId, request.PrimaryCostCode, request.Total, request.Lines);
+            approveModalOpen = false;
+            Valuation.Refresh(ProjectId); // pull the freshly written variation lines for the breakdown
             await ReloadAsync();
         }
         catch (System.Exception ex)
@@ -748,10 +846,12 @@ else
         finally { busy = false; }
     }
 
-    private async Task FocusApprovePanel()
+    // The status pill's "Approved…" pick opens the approve modal — the build-up (cost centres, lines)
+    // needs the room a modal gives, not the narrow sidebar.
+    private Task FocusApprovePanel()
     {
-        try { await Js.InvokeVoidAsync("jpmsFocusElement", "approve-voq"); }
-        catch { /* purely cosmetic — never let a scroll failure break the page */ }
+        approveModalOpen = true;
+        return Task.CompletedTask;
     }
 
     private async Task ReturnToQuoting()
