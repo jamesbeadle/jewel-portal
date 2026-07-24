@@ -55,6 +55,10 @@ public interface IVariationStore
     /// freeing its V-ref — for records approved in error (chiefly seeded history).</summary>
     Task<VariationOrder> ReturnToQuotingAsync(string variationOrderId, CancellationToken cancellationToken = default);
 
+    /// <summary>Deletes a non-approved variation order and its bid-package tender data — a VOQ raised
+    /// in error. Refused for an approved order (reject / return to quoting first).</summary>
+    Task DeleteAsync(string variationOrderId, CancellationToken cancellationToken = default);
+
     /// <summary>Revises the value of an approved variation order; the delta writes through to the valuation report, CVR and budget.</summary>
     Task<VariationOrder> ReviseVariationOrderValueAsync(string variationOrderId, decimal value, CancellationToken cancellationToken = default);
 }

@@ -468,6 +468,32 @@ else
                         <button type="button" class="btn-primary w-full" disabled="@busy" @onclick="SelectTender">Record selection</button>
                     </div>
                 }
+
+                @if (CanManage && ApprovedOrder is null)
+                {
+                    <div class="panel p-5">
+                        @if (!deletingOrder)
+                        {
+                            <button type="button" class="w-full text-xs text-content-subtle hover:text-negative underline underline-offset-2"
+                                    disabled="@busy" @onclick="() => deletingOrder = true">
+                                Wrong variation? Delete it…
+                            </button>
+                        }
+                        else
+                        {
+                            <p class="text-xs text-content-subtle mb-2">
+                                Permanently deletes <span class="font-mono">@order.Reference</span> and any bid packages raised under it.
+                                Nothing is on the Valuation Report yet, so no commercial records change — but this can't be undone.
+                            </p>
+                            <div class="flex gap-2">
+                                <button type="button" class="btn-secondary w-full text-negative" disabled="@busy" @onclick="DeleteOrder">
+                                    @(busy ? "Deleting…" : "Confirm — delete variation")
+                                </button>
+                                <button type="button" class="btn-secondary" disabled="@busy" @onclick="() => deletingOrder = false">Keep</button>
+                            </div>
+                        }
+                    </div>
+                }
             </div>
         </div>
     </ProjectPageShell>
@@ -490,6 +516,7 @@ else
 
     private bool returningToQuoting;
     private bool rejectingOrder;
+    private bool deletingOrder;
 
     // Status pill dropdown — same dismiss pattern as the request page's Actions dropdown: every
     // item closes it before running, the toggle is the dismiss.
@@ -844,6 +871,21 @@ else
         catch (CommandFailedException ex) { error = ex.Message; }
         catch { error = "Couldn't reject the variation order. Please try again."; }
         finally { busy = false; }
+    }
+
+    private async Task DeleteOrder()
+    {
+        if (busy || order is null) return;
+        error = null;
+        try
+        {
+            busy = true;
+            await Variations.DeleteAsync(VoqId);
+            // The record is gone — return to the variations register rather than a dead page.
+            Nav.NavigateTo($"/projects/{ProjectId}/requests/variations");
+        }
+        catch (CommandFailedException ex) { error = ex.Message; busy = false; }
+        catch { error = "Couldn't delete the variation order. Please try again."; busy = false; }
     }
 
     // The status pill's "Approved…" pick opens the approve modal — the build-up (cost centres, lines)

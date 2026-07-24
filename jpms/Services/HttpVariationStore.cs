@@ -1,4 +1,5 @@
 using Jewel.JPMS.Contracts.Variations;
+using Jewel.JPMS.Contracts.Cqrs;
 using Jewel.JPMS.Cqrs;
 using Jewel.JPMS.Models;
 
@@ -84,6 +85,12 @@ public sealed class HttpVariationStore : IVariationStore
         var order = await commands.SendAsync(new ReturnVariationOrderToQuoting(variationOrderId), cancellationToken);
         OnChange?.Invoke();
         return order;
+    }
+
+    public async Task DeleteAsync(string variationOrderId, CancellationToken cancellationToken = default)
+    {
+        await commands.SendAsync(new DeleteVariationOrder(variationOrderId), cancellationToken);
+        OnChange?.Invoke();
     }
 
     public async Task<VariationOrder> RejectAsync(string variationOrderId, CancellationToken cancellationToken = default)

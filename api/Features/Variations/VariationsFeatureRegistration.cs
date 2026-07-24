@@ -1,6 +1,7 @@
 using Jewel.JPMS.Api.Cqrs;
 using Jewel.JPMS.Api.Features.Variations.Commands;
 using Jewel.JPMS.Api.Features.Variations.Queries;
+using Jewel.JPMS.Contracts.Cqrs;
 using Jewel.JPMS.Contracts.Variations;
 using Jewel.JPMS.Models;
 using Microsoft.Extensions.DependencyInjection;
@@ -59,6 +60,10 @@ public static class VariationsFeatureRegistration
         services.AddScoped<ICommandHandler<SetVariationOrderStatus, VariationOrder>, SetVariationOrderStatusHandler>();
         services.AddScoped<SetVariationOrderStatusAuthorisation>();
         services.AddScoped<SetVariationOrderStatusValidation>();
+
+        services.AddScoped<ICommandHandler<DeleteVariationOrder, Acknowledgement>, DeleteVariationOrderHandler>();
+        services.AddScoped<DeleteVariationOrderAuthorisation>();
+        services.AddScoped<DeleteVariationOrderValidation>();
 
         // Subcontractor variation requests (portal-raised; see subcontractor-crm-scope §6).
         services.AddScoped<ICommandHandler<AcceptVariationRequest, VariationOrder>, AcceptVariationRequestHandler>();

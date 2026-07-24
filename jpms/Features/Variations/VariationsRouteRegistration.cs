@@ -1,3 +1,4 @@
+using Jewel.JPMS.Contracts.Cqrs;
 using Jewel.JPMS.Contracts.Variations;
 using Jewel.JPMS.Cqrs;
 using Jewel.JPMS.Models;
@@ -88,5 +89,10 @@ public static class VariationsRouteRegistration
         commands.Register<SetVariationOrderStatus, VariationOrder>(
             new CommandRoute("POST", "/api/variation-orders/{voId}/status",
                 command => $"/api/variation-orders/{((SetVariationOrderStatus)command).VariationOrderId}/status"));
+
+        // Delete a non-approved variation order (cascades its bid-package tender data).
+        commands.Register<DeleteVariationOrder, Acknowledgement>(
+            new CommandRoute("DELETE", "/api/variation-orders/{voId}",
+                command => $"/api/variation-orders/{((DeleteVariationOrder)command).VariationOrderId}"));
     }
 }
