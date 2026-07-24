@@ -39,6 +39,11 @@ public sealed class RejectVariationOrderHandler : ICommandHandler<RejectVariatio
                                && line.ElementType == (int)ValuationElementType.Variation
                                && line.VariationRef == entity.VariationRef)
                 .ToListAsync(cancellationToken);
+            // A build-up approval committed each cost centre its own share; read those off the line
+            // amounts now, before the lines are removed, so step 3 can release the same per centre.
+            var releaseByCentre = lines
+                .GroupBy(line => line.CostCode)
+                .ToDictionary(group => group.Key, group => group.Sum(line => line.LineAmount));
             if (lines.Count > 0)
             {
                 var lineIds = lines.Select(line => line.ValuationLineItemId).ToList();
@@ -63,10 +68,24 @@ public sealed class RejectVariationOrderHandler : ICommandHandler<RejectVariatio
                 SignedOffAt = now
             });
 
-            // 3) Release the committed budget.
-            var budget = await context.CostCodeBudgets.FirstOrDefaultAsync(
-                b => b.ProjectId == entity.ProjectId && b.CostCode == entity.CostCode, cancellationToken);
-            if (budget is not null) budget.CommittedAmount -= entity.Value;
+            // 3) Release the committed budget. A build-up committed each centre its own share, so
+            //    release the same per centre; with no report lines (legacy/seeded) fall back to the
+            //    whole value against the primary code.
+            if (releaseByCentre.Count > 0)
+            {
+                foreach (var centre in releaseByCentre)
+                {
+                    var centreBudget = await context.CostCodeBudgets.FirstOrDefaultAsync(
+                        b => b.ProjectId == entity.ProjectId && b.CostCode == centre.Key, cancellationToken);
+                    if (centreBudget is not null) centreBudget.CommittedAmount -= centre.Value;
+                }
+            }
+            else
+            {
+                var budget = await context.CostCodeBudgets.FirstOrDefaultAsync(
+                    b => b.ProjectId == entity.ProjectId && b.CostCode == entity.CostCode, cancellationToken);
+                if (budget is not null) budget.CommittedAmount -= entity.Value;
+            }
         }
 
         entity.Status = (int)VariationOrderStatus.Rejected;

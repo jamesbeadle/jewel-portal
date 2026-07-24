@@ -1,0 +1,178 @@
+@using Jewel.JPMS.Contracts.Variations
+@inject ICostCenterStore CostCenters
+@implements IDisposable
+
+@*
+    The manual/tendered approval panel — builds a variation's value up from priced lines. Each line
+    is coded to a cost centre (picked from the master, never typed free) and becomes a Variation line
+    on the valuation report under the minted V-ref; the total is the agreed value. Nothing is written
+    until "Approve … & raise VO" is pressed — that runs the commercial write-through server-side.
+*@
+
+<div class="space-y-3">
+    <h3 class="eyebrow">@(IsManual ? "Approve manually & raise Variation Order" : "Approve & raise Variation Order")</h3>
+
+    @if (IsManual)
+    {
+        <p class="text-xs text-content-subtle">
+            No winning tender has been selected — approving here raises the order without a
+            subcontractor attached. The lines still write through to the Valuation Report, the CVR and
+            the cost-centre budgets, exactly like a tendered approval.
+        </p>
+    }
+    else
+    {
+        <p class="text-xs text-content-subtle">Approving writes these lines into the Valuation Report, the CVR and the cost-centre budgets.</p>
+    }
+
+    @if (error is not null)
+    {
+        <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@error</p>
+    }
+
+    <div class="space-y-2">
+        <div class="hidden sm:grid grid-cols-[1.3fr_1.7fr_4.5rem_6rem_6rem_1.5rem] gap-2 px-1">
+            <span class="eyebrow">Cost centre</span>
+            <span class="eyebrow">Description</span>
+            <span class="eyebrow text-right">Qty</span>
+            <span class="eyebrow text-right">Rate £</span>
+            <span class="eyebrow text-right">Amount £</span>
+            <span></span>
+        </div>
+
+        @foreach (var line in lines)
+        {
+            var row = line;
+            <div class="grid grid-cols-1 sm:grid-cols-[1.3fr_1.7fr_4.5rem_6rem_6rem_1.5rem] gap-2 items-center">
+                <SearchSelect Options="@CostCentreOptions" WidthClass="w-full" Placeholder="Cost centre…"
+                              InputClass="bg-surface-field border border-line-strong px-3 py-2 focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent"
+                              Value="@row.CostCode" ValueChanged="@(v => row.CostCode = v)" />
+                <input class="field" placeholder="Description"
+                       value="@row.Description" @oninput="e => row.Description = e.Value?.ToString() ?? string.Empty" />
+                <input class="field text-right" type="number" step="any"
+                       value="@row.Qty" @oninput="e => row.Qty = e.Value?.ToString() ?? string.Empty" />
+                <input class="field text-right" type="number" step="any"
+                       value="@row.Rate" @oninput="e => row.Rate = e.Value?.ToString() ?? string.Empty" />
+                <div class="text-right text-sm font-mono text-content whitespace-nowrap">@Money(LineAmount(row))</div>
+                <button type="button" class="text-content-subtle hover:text-negative disabled:opacity-30"
+                        title="Remove line" disabled="@(lines.Count == 1)" @onclick="() => RemoveLine(row)">✕</button>
+            </div>
+        }
+
+        <div class="flex items-center justify-between pt-1">
+            <button type="button" class="text-sm text-accent underline underline-offset-2" @onclick="AddLine">+ Add line</button>
+            <p class="text-sm text-content-muted">Total <span class="ml-1 font-mono font-semibold text-content">@Money(Total)</span></p>
+        </div>
+    </div>
+
+    <p class="text-xs text-content-subtle">
+        Each line writes to the valuation report under this variation's V-ref, coded to its own cost
+        centre. Use a negative rate for an omit — work removed from the contract scope.
+    </p>
+
+    <button type="button" class="btn-primary w-full" disabled="@Busy" @onclick="Submit">
+        @(IsManual ? "Approve manually & raise VO" : "Approve & raise VO")
+    </button>
+</div>
+
+@code {
+    [Parameter] public bool IsManual { get; set; }
+    [Parameter] public decimal? EstimatedValue { get; set; }
+    [Parameter] public string DefaultDescription { get; set; } = "";
+    [Parameter] public bool Busy { get; set; }
+    [Parameter] public EventCallback<ApproveRequest> OnApprove { get; set; }
+
+    public sealed record ApproveRequest(string PrimaryCostCode, decimal Total, IReadOnlyList<VariationLineInput> Lines);
+
+    private sealed class LineRow
+    {
+        public string CostCode { get; set; } = "";
+        public string Description { get; set; } = "";
+        public string Qty { get; set; } = "1";
+        public string Rate { get; set; } = "0";
+    }
+
+    private static readonly System.Globalization.CultureInfo Gb = System.Globalization.CultureInfo.GetCultureInfo("en-GB");
+
+    private readonly List<LineRow> lines = new();
+    private string? error;
+
+    protected override void OnInitialized()
+    {
+        CostCenters.OnChange += OnCostCentresChanged;
+        // Seed a first line from the estimate so a simple one-line variation just needs a cost centre.
+        lines.Add(new LineRow
+        {
+            Description = DefaultDescription,
+            Qty = "1",
+            Rate = EstimatedValue is { } est ? est.ToString(System.Globalization.CultureInfo.InvariantCulture) : "0"
+        });
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Fill the cost-centre master if it hasn't loaded yet, so the dropdowns have options.
+        try { await CostCenters.ListAllAsync(); } catch { /* dropdown falls back to whatever is cached */ }
+    }
+
+    private void OnCostCentresChanged() => InvokeAsync(StateHasChanged);
+    public void Dispose() => CostCenters.OnChange -= OnCostCentresChanged;
+
+    private IReadOnlyList<SearchSelect.Option> CostCentreOptions =>
+        CostCenters.ActiveAlphabetical()
+            .Select(centre => new SearchSelect.Option(centre.Code, $"{centre.Code} {centre.Name}"))
+            .ToList();
+
+    private void AddLine() => lines.Add(new LineRow());
+
+    private void RemoveLine(LineRow row)
+    {
+        if (lines.Count > 1) lines.Remove(row);
+    }
+
+    private static decimal LineAmount(LineRow row) =>
+        FormNumber.ParseAmount(row.Qty) * FormNumber.ParseAmount(row.Rate);
+
+    private decimal Total => lines.Sum(LineAmount);
+
+    private static string Money(decimal value) => value.ToString("C2", Gb);
+
+    private async Task Submit()
+    {
+        if (Busy) return;
+        error = null;
+
+        var built = new List<VariationLineInput>();
+        foreach (var row in lines)
+        {
+            var costCode = row.CostCode?.Trim() ?? "";
+            var qty = FormNumber.ParseAmount(row.Qty);
+            var rate = FormNumber.ParseAmount(row.Rate);
+            var blank = string.IsNullOrWhiteSpace(costCode)
+                        && string.IsNullOrWhiteSpace(row.Description)
+                        && qty == 0m && rate == 0m;
+            if (blank) continue; // an untouched extra row is ignored
+            if (string.IsNullOrWhiteSpace(costCode))
+            {
+                error = "Every line needs a cost centre — pick one or clear the line.";
+                return;
+            }
+            built.Add(new VariationLineInput(costCode, row.Description?.Trim() ?? "", qty, rate));
+        }
+
+        if (built.Count == 0)
+        {
+            error = "Add at least one line with a cost centre and value.";
+            return;
+        }
+
+        var total = built.Sum(line => line.Quantity * line.Rate);
+        if (total == 0m)
+        {
+            error = "The total can't be zero — enter the agreed values (negative rate for an omit).";
+            return;
+        }
+
+        await OnApprove.InvokeAsync(new ApproveRequest(built[0].CostCode, total, built));
+    }
+}

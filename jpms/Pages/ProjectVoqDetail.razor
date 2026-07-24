@@ -363,26 +363,12 @@ else
                     var isManualApproval = string.IsNullOrEmpty(order.SelectedBidPackageId);
                     @* id anchors the status pill's "Approved…" pick: it scrolls here and flashes
                        the panel, because approval always needs the cost code + value below. *@
-                    <div id="approve-voq" class="panel p-5 space-y-3">
-                        <h3 class="eyebrow">@(isManualApproval ? "Approve manually & raise Variation Order" : "Approve & raise Variation Order")</h3>
-                        @if (isManualApproval)
-                        {
-                            <p class="text-xs text-content-subtle">
-                                No winning tender has been selected — approving here raises the order without a
-                                subcontractor attached. The value still writes through to the Valuation Report,
-                                the CVR and the cost-centre budget, exactly like a tendered approval.
-                            </p>
-                        }
-                        else
-                        {
-                            <p class="text-xs text-content-subtle">Approving writes the value into the Valuation Report, the CVR and the cost-centre budget.</p>
-                        }
-                        <FormField Label="Cost code" Value="@approveCostCode" OnChange="v => approveCostCode = v" Required="true" />
-                        <FormField Label="Value (£)" Value="@approveValue" OnChange="v => approveValue = v" InputType="number" />
-                        <p class="text-xs text-content-subtle">Use a negative value for an omit — work removed from the contract scope.</p>
-                        <button type="button" class="btn-primary w-full" disabled="@busy" @onclick="Approve">
-                            @(isManualApproval ? "Approve manually & raise VO" : "Approve & raise VO")
-                        </button>
+                    <div id="approve-voq" class="panel p-5">
+                        <VariationApprovePanel IsManual="@isManualApproval"
+                                               EstimatedValue="order.EstimatedValue"
+                                               DefaultDescription="@order.Title"
+                                               Busy="@busy"
+                                               OnApprove="ApproveWithLines" />
                     </div>
                 }
 
@@ -430,8 +416,6 @@ else
     private IReadOnlyList<BidPackage> packages = Array.Empty<BidPackage>();
     private Request? request; // originating request, for the lineage bar
 
-    private string approveCostCode = "";
-    private string approveValue = "";
 
     private bool revisingValue;
     private string reviseValue = "";
@@ -538,8 +522,6 @@ else
                 try { request = await RequestRegister.GetAsync(order.RequestId); }
                 catch { request = null; }
             }
-            if (string.IsNullOrEmpty(approveValue) && order?.EstimatedValue is { } est)
-                approveValue = est.ToString(System.Globalization.CultureInfo.InvariantCulture);
             // The originating-request picker must not offer requests already carrying a variation
             // order (a request has at most one), so it needs the project's other orders to exclude.
             if (order is not null && string.IsNullOrWhiteSpace(order.RequestId))
@@ -637,24 +619,22 @@ else
     private void OnBidPackageChanged(ChangeEventArgs e) => selBidPackageId = e.Value?.ToString() ?? "";
     private void OnSubChanged(ChangeEventArgs e) => selSubId = e.Value?.ToString() ?? "";
 
-    private async Task Approve()
+    private async Task ApproveWithLines(VariationApprovePanel.ApproveRequest request)
     {
         if (busy) return;
         error = null;
-        if (string.IsNullOrWhiteSpace(approveCostCode)) { error = "A cost code is required to approve."; return; }
-        decimal? value = decimal.TryParse(approveValue, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var parsed) ? parsed : null;
-        if (value is 0m || (value is null && order?.EstimatedValue is null or 0m))
-        {
-            error = "Enter the agreed value — negative for an omit. A zero value cannot be approved.";
-            return;
-        }
         try
         {
             busy = true;
-            order = await Variations.ApproveAsync(VoqId, approveCostCode.Trim(), value);
+            // The panel supplies the priced build-up; the value and primary cost code are derived
+            // from it. The server writes one report line per entry under this variation's V-ref.
+            order = await Variations.ApproveAsync(VoqId, request.PrimaryCostCode, request.Total, request.Lines);
             await ReloadAsync();
         }
-        catch { error = "Couldn't approve the variation order. Please try again."; }
+        catch (System.Exception ex)
+        {
+            error = string.IsNullOrWhiteSpace(ex.Message) ? "Couldn't approve the variation order. Please try again." : ex.Message;
+        }
         finally { busy = false; }
     }
 

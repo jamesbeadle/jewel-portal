@@ -43,6 +43,11 @@ public sealed class ReviseVariationOrderValueHandler : ICommandHandler<ReviseVar
                            && line.ElementType == (int)ValuationElementType.Variation
                            && line.VariationRef == entity.VariationRef)
             .ToListAsync(cancellationToken);
+        // A single new value can't be spread across a priced build-up (multiple lines/cost centres)
+        // without losing the breakdown, so a multi-line variation is revised by reject + re-approve
+        // with the new lines, not here.
+        if (lines.Count > 1)
+            throw new InvalidOperationException("This variation is priced as multiple lines — reject it and re-approve with the revised breakdown to change its value.");
         foreach (var line in lines)
         {
             line.Rate = command.Value;

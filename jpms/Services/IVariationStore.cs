@@ -37,8 +37,10 @@ public interface IVariationStore
     Task<WorkOrder> IssueWorkOrderForVariationOrderAsync(string variationOrderId, CancellationToken cancellationToken = default);
 
     /// <summary>Approves a variation order — mints the V-ref and writes the value through to the
-    /// valuation report, CVR and cost-centre budget.</summary>
-    Task<VariationOrder> ApproveAsync(string variationOrderId, string costCode, decimal? value, CancellationToken cancellationToken = default);
+    /// valuation report, CVR and cost-centre budget. A priced build-up (lines) writes one report
+    /// line per entry under its own cost centre; costCode is then the primary centre and value the
+    /// sum. With no lines the single-value behaviour applies.</summary>
+    Task<VariationOrder> ApproveAsync(string variationOrderId, string costCode, decimal? value, IReadOnlyList<VariationLineInput>? lines = null, CancellationToken cancellationToken = default);
 
     /// <summary>Moves a variation order between the side-effect-free stages (Quoting, Issued).
     /// Entering Issued stamps the client-issue date. Approve / reject keep their own flows — they

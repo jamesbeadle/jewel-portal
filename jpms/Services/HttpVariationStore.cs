@@ -71,10 +71,10 @@ public sealed class HttpVariationStore : IVariationStore
         return order;
     }
 
-    public async Task<VariationOrder> ApproveAsync(string variationOrderId, string costCode, decimal? value, CancellationToken cancellationToken = default)
+    public async Task<VariationOrder> ApproveAsync(string variationOrderId, string costCode, decimal? value, IReadOnlyList<VariationLineInput>? lines = null, CancellationToken cancellationToken = default)
     {
         // ApprovedByEmail is set from the signed-in user server-side.
-        var order = await commands.SendAsync(new ApproveVariationOrder(variationOrderId, costCode, string.Empty, value), cancellationToken);
+        var order = await commands.SendAsync(new ApproveVariationOrder(variationOrderId, costCode, string.Empty, value, lines), cancellationToken);
         OnChange?.Invoke();
         return order;
     }
