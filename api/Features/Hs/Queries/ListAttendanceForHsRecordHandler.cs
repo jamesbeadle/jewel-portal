@@ -13,7 +13,7 @@ public sealed class ListAttendanceForHsRecordHandler : IQueryHandler<ListAttenda
 
     public async Task<IReadOnlyList<HsRecordAttendance>> HandleAsync(ListAttendanceForHsRecord query, CancellationToken cancellationToken)
     {
-        var entities = await context.HsRecordAttendance.Where(attendance => attendance.HsRecordId == query.HsRecordId).ToListAsync(cancellationToken);
+        var entities = await context.HsRecordAttendance.AsNoTracking().Where(attendance => attendance.HsRecordId == query.HsRecordId).ToListAsync(cancellationToken);
         return entities.Select(entity => entity.ToModel()).ToList().AsReadOnly();
     }
 }

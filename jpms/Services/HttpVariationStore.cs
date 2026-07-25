@@ -115,6 +115,14 @@ public sealed class HttpVariationStore : IVariationStore
         return order;
     }
 
+    public async Task<VariationOrder> ReviseVariationOrderLinesAsync(string variationOrderId, IReadOnlyList<VariationLineInput> lines, CancellationToken cancellationToken = default)
+    {
+        // RevisedByEmail is stamped from the signed-in user server-side.
+        var order = await commands.SendAsync(new ReviseVariationOrderLines(variationOrderId, lines), cancellationToken);
+        OnChange?.Invoke();
+        return order;
+    }
+
     public Task<IReadOnlyList<SubcontractorVariationRequest>> ListVariationRequestsForProjectAsync(string projectId, CancellationToken cancellationToken = default) =>
         queries.AskAsync(new ListVariationRequestsForProject(projectId), cancellationToken);
 

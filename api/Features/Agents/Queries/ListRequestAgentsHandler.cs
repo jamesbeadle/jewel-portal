@@ -20,12 +20,12 @@ public sealed class ListRequestAgentsHandler : IQueryHandler<ListRequestAgents, 
     public async Task<IReadOnlyList<RequestAgent>> HandleAsync(ListRequestAgents query, CancellationToken cancellationToken)
     {
         // Don't conjure agent rows for a record that doesn't exist.
-        var exists = await context.Requests.AnyAsync(r => r.RequestId == query.RequestId, cancellationToken);
+        var exists = await context.Requests.AsNoTracking().AnyAsync(r => r.RequestId == query.RequestId, cancellationToken);
         if (!exists) return Array.Empty<RequestAgent>();
 
         await provisioning.EnsureProvisionedAsync(query.RequestId, RecordType.Request, cancellationToken);
 
-        var entities = await context.RequestAgents
+        var entities = await context.RequestAgents.AsNoTracking()
             .Where(a => a.RequestId == query.RequestId)
             .OrderBy(a => a.AssignedAt)
             .ToListAsync(cancellationToken);

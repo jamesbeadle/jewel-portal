@@ -13,7 +13,7 @@ public sealed class ListBidPackagesForVoqHandler : IQueryHandler<ListBidPackages
 
     public async Task<IReadOnlyList<BidPackage>> HandleAsync(ListBidPackagesForVoq query, CancellationToken cancellationToken)
     {
-        var entities = await context.BidPackages
+        var entities = await context.BidPackages.AsNoTracking()
             .Where(package => package.VariationOrderId == query.VariationOrderId)
             .OrderByDescending(package => package.CreatedAt)
             .ToListAsync(cancellationToken);

@@ -16,7 +16,7 @@ public sealed class ListContraChargesForProjectHandler
     public async Task<IReadOnlyList<ContraCharge>> HandleAsync(
         ListContraChargesForProject query, CancellationToken cancellationToken)
     {
-        var entities = await context.ContraCharges
+        var entities = await context.ContraCharges.AsNoTracking()
             .Where(contra => contra.ProjectId == query.ProjectId)
             .OrderByDescending(contra => contra.RaisedOn)
             .ToListAsync(cancellationToken);

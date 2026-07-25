@@ -16,7 +16,7 @@ public sealed class ListCvrPackagesForProjectHandler
     public async Task<IReadOnlyList<CvrPackageRow>> HandleAsync(
         ListCvrPackagesForProject query, CancellationToken cancellationToken)
     {
-        var entities = await context.CvrPackageRows
+        var entities = await context.CvrPackageRows.AsNoTracking()
             .Where(row => row.ProjectId == query.ProjectId)
             .OrderBy(row => row.PackageName)
             .ToListAsync(cancellationToken);

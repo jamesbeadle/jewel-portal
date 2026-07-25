@@ -1,4 +1,15 @@
 /*
+  SUPERSEDED — 25 July 2026. These three indexes are now declared in JpmsContext.OnModelCreating
+  and created by the 20260725100000_AddPerformanceIndexes migration, under these exact names and
+  with these exact INCLUDE lists, so a database rebuilt from migrations gets them automatically
+  and can no longer silently lose them. The migration guards every CREATE with an existence check,
+  so production — where these already exist from this script — adopts them rather than duplicating.
+
+  Kept only as the record of why they were needed. Do not run it by hand any more: add new indexes
+  to OnModelCreating and a migration instead.
+
+  ---
+
   Performance indexes for the project Financials tab (GetProjectFinancialSummary).
   Safe to run repeatedly against Azure SQL (each CREATE is guarded by an existence check).
 

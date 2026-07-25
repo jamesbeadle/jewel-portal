@@ -14,7 +14,7 @@ public sealed class GetDrawingByIdHandler : IQueryHandler<GetDrawingById, Drawin
 
     public async Task<Drawing?> HandleAsync(GetDrawingById query, CancellationToken cancellationToken)
     {
-        var entity = await context.Drawings
+        var entity = await context.Drawings.AsNoTracking()
             .FirstOrDefaultAsync(drawing => drawing.DrawingId == query.DrawingId, cancellationToken);
         return entity?.ToModel();
     }

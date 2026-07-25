@@ -18,7 +18,7 @@ public sealed class GetValuationReportSnapshotHandler : IQueryHandler<GetValuati
         if (snapshot is null)
             throw new InvalidOperationException($"Valuation report snapshot {query.ValuationReportSnapshotId} not found.");
 
-        var lines = await context.ValuationReportSnapshotLines
+        var lines = await context.ValuationReportSnapshotLines.AsNoTracking()
             .Where(line => line.ValuationReportSnapshotId == snapshot.ValuationReportSnapshotId)
             .OrderBy(line => line.DisplayOrder)
             .ToListAsync(cancellationToken);

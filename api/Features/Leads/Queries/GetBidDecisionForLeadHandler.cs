@@ -14,7 +14,7 @@ public sealed class GetBidDecisionForLeadHandler : IQueryHandler<GetBidDecisionF
 
     public async Task<BidDecision?> HandleAsync(GetBidDecisionForLead query, CancellationToken cancellationToken)
     {
-        var entity = await context.BidDecisions
+        var entity = await context.BidDecisions.AsNoTracking()
             .FirstOrDefaultAsync(decision => decision.LeadId == query.LeadId, cancellationToken);
         return entity?.ToModel();
     }

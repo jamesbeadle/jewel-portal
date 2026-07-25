@@ -13,7 +13,7 @@ public sealed class ListHsRecordsHandler : IQueryHandler<ListHsRecords, IReadOnl
 
     public async Task<IReadOnlyList<HsRecord>> HandleAsync(ListHsRecords query, CancellationToken cancellationToken)
     {
-        var entities = await context.HsRecords.OrderByDescending(record => record.RaisedAt).ToListAsync(cancellationToken);
+        var entities = await context.HsRecords.AsNoTracking().OrderByDescending(record => record.RaisedAt).ToListAsync(cancellationToken);
         return entities.Select(entity => entity.ToModel()).ToList().AsReadOnly();
     }
 }

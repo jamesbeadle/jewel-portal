@@ -13,7 +13,7 @@ public sealed class ListEotsForProjectHandler : IQueryHandler<ListEotsForProject
 
     public async Task<IReadOnlyList<Eot>> HandleAsync(ListEotsForProject query, CancellationToken cancellationToken)
     {
-        var entities = await context.Eots.Where(e => e.ProjectId == query.ProjectId).OrderByDescending(e => e.GrantedAt).ToListAsync(cancellationToken);
+        var entities = await context.Eots.AsNoTracking().Where(e => e.ProjectId == query.ProjectId).OrderByDescending(e => e.GrantedAt).ToListAsync(cancellationToken);
         return entities.Select(entity => entity.ToModel()).ToList().AsReadOnly();
     }
 }

@@ -16,7 +16,7 @@ public sealed class ListDayworksForProjectHandler
     public async Task<IReadOnlyList<Daywork>> HandleAsync(
         ListDayworksForProject query, CancellationToken cancellationToken)
     {
-        var entities = await context.Dayworks
+        var entities = await context.Dayworks.AsNoTracking()
             .Where(daywork => daywork.ProjectId == query.ProjectId)
             .OrderByDescending(daywork => daywork.WorkedOn)
             .ToListAsync(cancellationToken);

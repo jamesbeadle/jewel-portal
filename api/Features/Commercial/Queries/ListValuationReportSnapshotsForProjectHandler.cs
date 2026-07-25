@@ -13,7 +13,7 @@ public sealed class ListValuationReportSnapshotsForProjectHandler : IQueryHandle
 
     public async Task<IReadOnlyList<ValuationReportSnapshot>> HandleAsync(ListValuationReportSnapshotsForProject query, CancellationToken cancellationToken)
     {
-        var snapshots = await context.ValuationReportSnapshots
+        var snapshots = await context.ValuationReportSnapshots.AsNoTracking()
             .Where(snapshot => snapshot.ProjectId == query.ProjectId)
             .OrderByDescending(snapshot => snapshot.TakenAt)
             .ToListAsync(cancellationToken);

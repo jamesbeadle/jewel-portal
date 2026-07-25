@@ -1,0 +1,108 @@
+@using Jewel.JPMS.Features.Requests
+@inject RfiRegisterReadModel Register
+@implements IDisposable
+
+@*
+    "RFIs waiting on someone" — the dashboard's request queue, across every live project.
+
+    Reads the same cross-project register that backs /rfis, so no new query was needed: the list
+    already carries DaysOutstanding and IsOverdue (open for more than seven days since issue). The
+    panel shows the ones that need chasing first — overdue, longest-waiting at the top — because
+    that is the question a PM actually opens the app with. Everything else is one click away on the
+    full register.
+*@
+
+<div class="panel p-5">
+    <div class="flex items-center justify-between gap-2 mb-1">
+        <div class="flex items-center gap-3">
+            <h2 class="text-sm font-semibold text-content">@Title</h2>
+            @if (Register.Current is not null && Outstanding.Count > 0)
+            {
+                <span class="text-[11px] text-content-subtle">@Outstanding.Count open</span>
+                @if (OverdueCount > 0)
+                {
+                    <span class="text-[11px] font-medium text-negative">@OverdueCount overdue</span>
+                }
+            }
+        </div>
+        <a href="/rfis" class="text-xs font-medium text-accent hover:underline">View all</a>
+    </div>
+    <p class="text-xs text-content-subtle mb-4">
+        Open RFIs across every live project, the longest-waiting first. Anything past seven days
+        since issue counts as overdue.
+    </p>
+
+    @if (Register.Current is null)
+    {
+        <JewelSpinner Class="py-6" Label="Loading" />
+    }
+    else if (Outstanding.Count == 0)
+    {
+        <p class="text-sm text-content-subtle italic">Nothing outstanding — every RFI has been closed.</p>
+    }
+    else
+    {
+        <ul class="divide-y divide-line -mx-5">
+            @foreach (var request in Top)
+            {
+                <li>
+                    <a href="@Href(request)"
+                       class="flex items-center justify-between gap-4 px-5 py-2.5 hover:bg-surface-raised transition">
+                        <span class="min-w-0">
+                            <span class="flex items-center gap-2">
+                                <span class="font-mono text-xs font-semibold text-content shrink-0">@request.Reference</span>
+                                <span class="text-sm text-content truncate">@request.Title</span>
+                            </span>
+                            <span class="block text-[11px] text-content-subtle truncate mt-0.5">
+                                @(string.IsNullOrWhiteSpace(request.RaisedTo) ? "No one assigned" : $"With {request.RaisedTo}")
+                            </span>
+                        </span>
+                        <span class="text-right shrink-0">
+                            <span class="block text-sm font-semibold @(request.IsOverdue ? "text-negative" : "text-content")">
+                                @(request.DaysOutstanding is int days ? $"{days}d" : "—")
+                            </span>
+                            <span class="block text-[11px] text-content-subtle">@request.Status.DisplayName()</span>
+                        </span>
+                    </a>
+                </li>
+            }
+        </ul>
+        @if (Outstanding.Count > Top.Count)
+        {
+            <p class="text-xs text-content-subtle mt-3">
+                Showing the @Top.Count longest-waiting of @Outstanding.Count.
+                <a href="/rfis" class="text-accent hover:underline">See the rest</a>.
+            </p>
+        }
+    }
+</div>
+
+@code {
+    [Parameter] public string Title { get; set; } = "RFIs waiting on someone";
+
+    /// <summary>How many rows to show before deferring to the full register.</summary>
+    [Parameter] public int Take { get; set; } = 6;
+
+    private IReadOnlyList<Request> Outstanding =>
+        (Register.Current ?? Array.Empty<Request>())
+            .Where(request => request.Status is not RequestStatus.Closed)
+            .OrderByDescending(request => request.DaysOutstanding ?? 0)
+            .ToList();
+
+    private IReadOnlyList<Request> Top => Outstanding.Take(Take).ToList();
+
+    private int OverdueCount => Outstanding.Count(request => request.IsOverdue);
+
+    private static string Href(Request request) =>
+        $"/projects/{request.ProjectId}/requests/view/{request.RequestId}";
+
+    protected override async Task OnInitializedAsync()
+    {
+        Register.OnChanged += StateHasChanged;
+        // Refresh on entry, never from render (the front-end data-loading convention): cached rows
+        // paint immediately on a revisit, then update when the reload lands.
+        try { await Register.RefreshAsync(CancellationToken.None); } catch { /* panel shows its empty state */ }
+    }
+
+    public void Dispose() => Register.OnChanged -= StateHasChanged;
+}

@@ -16,7 +16,7 @@ public sealed class GetLatestCashflowSnapshotHandler
     public async Task<CashflowSnapshot?> HandleAsync(
         GetLatestCashflowSnapshot query, CancellationToken cancellationToken)
     {
-        var entity = await context.CashflowSnapshots
+        var entity = await context.CashflowSnapshots.AsNoTracking()
             .OrderByDescending(snapshot => snapshot.GeneratedAt)
             .FirstOrDefaultAsync(cancellationToken);
         return entity?.ToModel();

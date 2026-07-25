@@ -26,7 +26,7 @@ public sealed class ListRequestMessagesHandler : IQueryHandler<ListRequestMessag
         // The email legs — inbound AND the mailbox's own sent replies (read from Sent Items) — are
         // no longer stored; they're read live by tag, so exclude any stored Inbound rows (legacy
         // snapshots) and merge the live emails in their place, ordered by time.
-        var stored = await context.RequestMessages
+        var stored = await context.RequestMessages.AsNoTracking()
             .Where(m => m.RequestId == query.RequestId && m.Direction != (int)MessageDirection.Inbound)
             .ToListAsync(cancellationToken);
 

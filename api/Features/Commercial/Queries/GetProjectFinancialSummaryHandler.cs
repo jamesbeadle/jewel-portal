@@ -18,7 +18,7 @@ public sealed class GetProjectFinancialSummaryHandler : IQueryHandler<GetProject
         // Budgeted sales: every counting valuation line (declined / TBC excluded —
         // mirrors ValuationLineItem.CountsTowardTotals). Omit lines carry negative
         // amounts and net off naturally; variation lines carry cost codes and count too.
-        var sales = await context.ValuationLineItems
+        var sales = await context.ValuationLineItems.AsNoTracking()
             .Where(line => line.ProjectId == query.ProjectId
                            && line.LineType != (int)ValuationLineType.Declined
                            && line.LineType != (int)ValuationLineType.Tbc
@@ -31,7 +31,7 @@ public sealed class GetProjectFinancialSummaryHandler : IQueryHandler<GetProject
         // (any status — reflects current site progress even while a claim is in
         // draft). Completion % = claimed / budgeted sales, i.e. amount-weighted
         // across the centre's lines; lines not yet claimed against count as 0%.
-        var latestClaimId = await context.ValuationClaims
+        var latestClaimId = await context.ValuationClaims.AsNoTracking()
             .Where(claim => claim.ProjectId == query.ProjectId)
             .OrderByDescending(claim => claim.ClaimNumber)
             .Select(claim => (string?)claim.ValuationClaimId)
@@ -40,7 +40,7 @@ public sealed class GetProjectFinancialSummaryHandler : IQueryHandler<GetProject
         var claimedByCode = new Dictionary<string, decimal>(StringComparer.OrdinalIgnoreCase);
         if (latestClaimId is not null)
         {
-            var claimed = await context.ClaimLines
+            var claimed = await context.ClaimLines.AsNoTracking()
                 .Where(claimLine => claimLine.ValuationClaimId == latestClaimId)
                 .Join(context.ValuationLineItems,
                     claimLine => claimLine.ValuationLineItemId,
@@ -66,11 +66,11 @@ public sealed class GetProjectFinancialSummaryHandler : IQueryHandler<GetProject
         // with row count — rather than pulling every cover id (across all projects) into an
         // ever-growing NOT IN (...) parameter list that eventually hits SQL's ~2100-param cap.
 
-        var actuals = await context.XeroLedgerLines
+        var actuals = await context.XeroLedgerLines.AsNoTracking()
             .Where(line => line.ProjectId == query.ProjectId
                            && line.AllocationStatus == (int)XeroAllocationStatus.Allocated
                            && line.CostCenterCode != null
-                           && !context.XeroLineTimesheetCovers
+                           && !context.XeroLineTimesheetCovers.AsNoTracking()
                                .Any(cover => cover.XeroLedgerLineId == line.XeroLedgerLineId))
             .GroupBy(line => line.CostCenterCode!)
             .Select(group => new
@@ -80,14 +80,14 @@ public sealed class GetProjectFinancialSummaryHandler : IQueryHandler<GetProject
             })
             .ToListAsync(cancellationToken);
 
-        var splitActuals = await context.XeroCostSplits
+        var splitActuals = await context.XeroCostSplits.AsNoTracking()
             .Join(context.XeroLedgerLines,
                 split => split.XeroLedgerLineId,
                 line => line.XeroLedgerLineId,
                 (split, line) => new { split.CostCenterCode, split.Net, split.ProjectId, line.AllocationStatus, line.Type, line.XeroLedgerLineId })
             .Where(joined => joined.ProjectId == query.ProjectId
                              && joined.AllocationStatus == (int)XeroAllocationStatus.Allocated
-                             && !context.XeroLineTimesheetCovers
+                             && !context.XeroLineTimesheetCovers.AsNoTracking()
                                  .Any(cover => cover.XeroLedgerLineId == joined.XeroLedgerLineId))
             .GroupBy(joined => joined.CostCenterCode)
             .Select(group => new
@@ -103,7 +103,7 @@ public sealed class GetProjectFinancialSummaryHandler : IQueryHandler<GetProject
         // a partially split bill only counts its unallocated remainder. The linked slices
         // themselves are then re-attributed to the order's cost centres pro-rata, so the
         // Actual Cost of Sales column lines up with the Work Orders column.
-        var linkSlices = await context.XeroLineWorkOrderLinks
+        var linkSlices = await context.XeroLineWorkOrderLinks.AsNoTracking()
             .Where(link => link.ProjectId == query.ProjectId)
             .Join(context.XeroLedgerLines,
                 link => link.XeroLedgerLineId,
@@ -122,13 +122,13 @@ public sealed class GetProjectFinancialSummaryHandler : IQueryHandler<GetProject
         static void Accumulate(Dictionary<string, decimal> map, string code, decimal amount) =>
             map[code] = map.TryGetValue(code, out var current) ? current + amount : amount;
 
-        var packagedOrderIds = await context.ReconciliationPackageOrders
+        var packagedOrderIds = await context.ReconciliationPackageOrders.AsNoTracking()
             .Where(member => member.ProjectId == query.ProjectId)
             .Select(member => member.WorkOrderId)
             .ToListAsync(cancellationToken);
         var packagedOrderIdSet = packagedOrderIds.ToHashSet(StringComparer.OrdinalIgnoreCase);
 
-        var packagedSlices = await context.ReconciliationPackageSalesLines
+        var packagedSlices = await context.ReconciliationPackageSalesLines.AsNoTracking()
             .Where(slice => slice.ProjectId == query.ProjectId)
             .Join(context.ValuationLineItems,
                 slice => slice.ValuationLineItemId,
@@ -141,7 +141,7 @@ public sealed class GetProjectFinancialSummaryHandler : IQueryHandler<GetProject
         var claimedByPackagedLine = new Dictionary<string, decimal>(StringComparer.OrdinalIgnoreCase);
         if (latestClaimId is not null && packagedLineIds.Count > 0)
         {
-            var claimedLines = await context.ClaimLines
+            var claimedLines = await context.ClaimLines.AsNoTracking()
                 .Where(claimLine => claimLine.ValuationClaimId == latestClaimId
                                     && packagedLineIds.Contains(claimLine.ValuationLineItemId))
                 .Select(claimLine => new { claimLine.ValuationLineItemId, claimLine.CumulativeClaimed })
@@ -161,7 +161,7 @@ public sealed class GetProjectFinancialSummaryHandler : IQueryHandler<GetProject
         var packagedWoByCode = new Dictionary<string, decimal>(StringComparer.OrdinalIgnoreCase);
         if (packagedOrderIds.Count > 0)
         {
-            var packagedWoRows = await context.WorkOrderLines
+            var packagedWoRows = await context.WorkOrderLines.AsNoTracking()
                 .Where(line => packagedOrderIds.Contains(line.WorkOrderId) && line.CostCode != "")
                 .GroupBy(line => line.CostCode)
                 .Select(group => new { CostCode = group.Key, Total = group.Sum(line => line.LineTotal) })
@@ -174,7 +174,7 @@ public sealed class GetProjectFinancialSummaryHandler : IQueryHandler<GetProject
         // on the invoice's own centre, inside both ActualCost and Non-WO cost of sales,
         // so they net out of both when the table hides packaged scope.
         var packagedNonWoByCode = new Dictionary<string, decimal>(StringComparer.OrdinalIgnoreCase);
-        var packagedDirectCosts = await context.ReconciliationPackageCostLines
+        var packagedDirectCosts = await context.ReconciliationPackageCostLines.AsNoTracking()
             .Where(slice => slice.ProjectId == query.ProjectId)
             .Join(context.XeroLedgerLines,
                 slice => slice.XeroLedgerLineId,
@@ -191,7 +191,7 @@ public sealed class GetProjectFinancialSummaryHandler : IQueryHandler<GetProject
             // would push a centre's netted figures below zero.
             .Where(joined => joined.InvoiceCode != null
                              && joined.AllocationStatus == (int)XeroAllocationStatus.Allocated
-                             && !context.XeroLineTimesheetCovers
+                             && !context.XeroLineTimesheetCovers.AsNoTracking()
                                  .Any(cover => cover.XeroLedgerLineId == joined.XeroLedgerLineId))
             .ToListAsync(cancellationToken);
         foreach (var direct in packagedDirectCosts)
@@ -199,7 +199,7 @@ public sealed class GetProjectFinancialSummaryHandler : IQueryHandler<GetProject
 
         // Cost-side state: completion % and the finalisation lock, set inline on the
         // Financials tab, one row per cost centre. Centres never edited default to 0% / unlocked.
-        var costProgress = await context.CostCentreCostProgress
+        var costProgress = await context.CostCentreCostProgress.AsNoTracking()
             .Where(progress => progress.ProjectId == query.ProjectId)
             .Select(progress => new { progress.CostCode, progress.CostCompletionPercent, progress.IsFinalised })
             .ToListAsync(cancellationToken);
@@ -209,20 +209,20 @@ public sealed class GetProjectFinancialSummaryHandler : IQueryHandler<GetProject
         // Labour (Labour-Time-Tracking-Scope §6): approved timesheet cost posts as direct
         // (non-WO) actual cost of sales, settlement variances alongside it; submitted hours
         // surface as pending labour only — visible, never posted.
-        var approvedLabour = await context.Timesheets
+        var approvedLabour = await context.Timesheets.AsNoTracking()
             .Where(timesheet => timesheet.ProjectId == query.ProjectId
                                 && timesheet.Status == (int)TimesheetStatus.Approved)
             .GroupBy(timesheet => timesheet.CostCode)
             .Select(group => new { CostCode = group.Key, Amount = group.Sum(timesheet => timesheet.CostAmount) })
             .ToListAsync(cancellationToken);
 
-        var labourVariances = await context.LabourSettlementVariances
+        var labourVariances = await context.LabourSettlementVariances.AsNoTracking()
             .Where(variance => variance.ProjectId == query.ProjectId)
             .GroupBy(variance => variance.CostCode)
             .Select(group => new { CostCode = group.Key, Amount = group.Sum(variance => variance.Amount) })
             .ToListAsync(cancellationToken);
 
-        var pendingLabour = await context.Timesheets
+        var pendingLabour = await context.Timesheets.AsNoTracking()
             .Where(timesheet => timesheet.ProjectId == query.ProjectId
                                 && timesheet.Status == (int)TimesheetStatus.Submitted
                                 && timesheet.WorkerId != "")

@@ -13,7 +13,7 @@ public sealed class GetSettlementForProjectHandler : IQueryHandler<GetSettlement
 
     public async Task<SettlementRecord?> HandleAsync(GetSettlementForProject query, CancellationToken cancellationToken)
     {
-        var entity = await context.SettlementRecords.FirstOrDefaultAsync(s => s.ProjectId == query.ProjectId, cancellationToken);
+        var entity = await context.SettlementRecords.AsNoTracking().FirstOrDefaultAsync(s => s.ProjectId == query.ProjectId, cancellationToken);
         return entity?.ToModel();
     }
 }

@@ -16,14 +16,14 @@ public sealed class ListAgentQueueHandler : IQueryHandler<ListAgentQueue, IReadO
 
     public async Task<IReadOnlyList<AgentQueueItem>> HandleAsync(ListAgentQueue query, CancellationToken cancellationToken)
     {
-        var watches = await context.RequestAgents
+        var watches = await context.RequestAgents.AsNoTracking()
             .OrderByDescending(a => a.AssignedAt)
             .ToListAsync(cancellationToken);
 
         if (watches.Count == 0) return Array.Empty<AgentQueueItem>();
 
         var requestIds = watches.Select(w => w.RequestId).Distinct().ToList();
-        var requests = await context.Requests
+        var requests = await context.Requests.AsNoTracking()
             .Where(r => requestIds.Contains(r.RequestId))
             .ToDictionaryAsync(r => r.RequestId, cancellationToken);
 

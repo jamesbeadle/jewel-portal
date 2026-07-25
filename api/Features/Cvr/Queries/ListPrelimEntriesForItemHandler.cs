@@ -13,7 +13,7 @@ public sealed class ListPrelimEntriesForItemHandler : IQueryHandler<ListPrelimEn
 
     public async Task<IReadOnlyList<PrelimForecastEntry>> HandleAsync(ListPrelimEntriesForItem query, CancellationToken cancellationToken)
     {
-        var entities = await context.PrelimForecastEntries.Where(p => p.PrelimItemId == query.PrelimItemId).OrderBy(p => p.WeekNumber).ToListAsync(cancellationToken);
+        var entities = await context.PrelimForecastEntries.AsNoTracking().Where(p => p.PrelimItemId == query.PrelimItemId).OrderBy(p => p.WeekNumber).ToListAsync(cancellationToken);
         return entities.Select(entity => entity.ToModel()).ToList().AsReadOnly();
     }
 }

@@ -18,10 +18,10 @@
 
     Keyword search: the search box filters the to-do items AND surfaces this project's related
     records that match the keywords — requests (ref / kind / title / description), variations
-    (VOQs and VOs) and drawings — each row navigating to the record. Every whitespace-separated
+    (at any stage) and drawings — each row navigating to the record. Every whitespace-separated
     keyword must match somewhere on a record (AND across keywords, case-insensitive), so
     "canopy rfi" narrows rather than widens. Requests and drawings come from their cached
-    registers (refreshed on entry, stale-while-revalidate per the store convention); VOQs / VOs
+    registers (refreshed on entry, stale-while-revalidate per the store convention); variations
     are fetched once in the background when the tab loads.
 *@
 
@@ -204,7 +204,7 @@
                             {
                                 <button type="button" @key="order.VariationOrderId" title="Open this variation order"
                                         class="w-full rounded-lg border border-line px-3 py-2 text-left hover:border-line-strong hover:bg-surface-raised"
-                                        @onclick="() => OpenVoq(order.VariationOrderId)">
+                                        @onclick="() => OpenVariation(order.VariationOrderId)">
                                     <p class="truncate text-sm text-content">
                                         <span class="font-mono text-xs text-content-muted mr-2">@(order.VariationRef ?? order.Reference)</span>@order.Title
                                     </p>
@@ -488,8 +488,8 @@
     private void OpenRequest(Request record) =>
         Nav.NavigateTo($"/projects/{ProjectId}/requests/view/{record.RequestId}");
 
-    private void OpenVoq(string voqId) =>
-        Nav.NavigateTo($"/projects/{ProjectId}/voq/{voqId}");
+    private void OpenVariation(string variationId) =>
+        Nav.NavigateTo($"/projects/{ProjectId}/variations/{variationId}");
 
     private void OpenDrawing(Drawing drawing) =>
         Nav.NavigateTo($"/projects/{ProjectId}/drawings/{drawing.DrawingId}");

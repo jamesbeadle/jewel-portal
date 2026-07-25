@@ -15,7 +15,7 @@ public sealed class GetProposalForLeadHandler
 
     public async Task<Proposal?> HandleAsync(GetProposalForLead query, CancellationToken cancellationToken)
     {
-        var entity = await context.Proposals.FirstOrDefaultAsync(proposal => proposal.LeadId == query.LeadId, cancellationToken);
+        var entity = await context.Proposals.AsNoTracking().FirstOrDefaultAsync(proposal => proposal.LeadId == query.LeadId, cancellationToken);
         return entity?.ToModel();
     }
 }

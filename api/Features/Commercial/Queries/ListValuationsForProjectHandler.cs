@@ -13,7 +13,7 @@ public sealed class ListValuationsForProjectHandler : IQueryHandler<ListValuatio
 
     public async Task<IReadOnlyList<Valuation>> HandleAsync(ListValuationsForProject query, CancellationToken cancellationToken)
     {
-        var entities = await context.Valuations.Where(v => v.ProjectId == query.ProjectId).OrderByDescending(v => v.IssuedAt ?? DateTimeOffset.MinValue).ToListAsync(cancellationToken);
+        var entities = await context.Valuations.AsNoTracking().Where(v => v.ProjectId == query.ProjectId).OrderByDescending(v => v.IssuedAt ?? DateTimeOffset.MinValue).ToListAsync(cancellationToken);
         return entities.Select(entity => entity.ToModel()).ToList().AsReadOnly();
     }
 }

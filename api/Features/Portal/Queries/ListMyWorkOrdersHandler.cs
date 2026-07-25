@@ -20,7 +20,7 @@ public sealed class ListMyWorkOrdersHandler : IQueryHandler<ListMyWorkOrders, IR
 
     public async Task<IReadOnlyList<PortalWorkOrder>> HandleAsync(ListMyWorkOrders query, CancellationToken cancellationToken)
     {
-        var orders = await context.WorkOrders
+        var orders = await context.WorkOrders.AsNoTracking()
             .Where(order => order.SubcontractorId == query.SubcontractorId
                 && order.Status != (int)WorkOrderStatus.Draft)
             .OrderByDescending(order => order.AwardedAt)
@@ -28,14 +28,14 @@ public sealed class ListMyWorkOrdersHandler : IQueryHandler<ListMyWorkOrders, IR
         if (orders.Count == 0) return Array.Empty<PortalWorkOrder>();
 
         var orderIds = orders.Select(order => order.WorkOrderId).ToList();
-        var linesByOrder = (await context.WorkOrderLines
+        var linesByOrder = (await context.WorkOrderLines.AsNoTracking()
                 .Where(line => orderIds.Contains(line.WorkOrderId))
                 .ToListAsync(cancellationToken))
             .GroupBy(line => line.WorkOrderId)
             .ToDictionary(group => group.Key, group => group.ToList(), StringComparer.OrdinalIgnoreCase);
 
         var projectIds = orders.Select(order => order.ProjectId).Distinct().ToList();
-        var projectsById = (await context.Projects
+        var projectsById = (await context.Projects.AsNoTracking()
                 .Where(project => projectIds.Contains(project.ProjectId))
                 .ToListAsync(cancellationToken))
             .ToDictionary(project => project.ProjectId, StringComparer.OrdinalIgnoreCase);
@@ -44,7 +44,7 @@ public sealed class ListMyWorkOrdersHandler : IQueryHandler<ListMyWorkOrders, IR
         // user directory, so the join happens here. Falls back to the raw email client-side.
         var approverEmails = orders.Select(order => order.AwardedByEmail)
             .Where(email => !string.IsNullOrWhiteSpace(email)).Distinct().ToList();
-        var approverNamesByEmail = (await context.DirectoryUsers
+        var approverNamesByEmail = (await context.DirectoryUsers.AsNoTracking()
                 .Where(user => approverEmails.Contains(user.Email))
                 .ToListAsync(cancellationToken))
             .ToDictionary(user => user.Email, user => user.DisplayName, StringComparer.OrdinalIgnoreCase);

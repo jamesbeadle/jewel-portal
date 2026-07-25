@@ -85,6 +85,10 @@ public static class VariationsRouteRegistration
             new CommandRoute("POST", "/api/variation-orders/{voId}/revise-value",
                 command => $"/api/variation-orders/{((ReviseVariationOrderValue)command).VariationOrderId}/revise-value"));
 
+        commands.Register<ReviseVariationOrderLines, VariationOrder>(
+            new CommandRoute("POST", "/api/variation-orders/{voId}/revise-lines",
+                command => $"/api/variation-orders/{((ReviseVariationOrderLines)command).VariationOrderId}/revise-lines"));
+
         // Direct moves between the side-effect-free stages (Quoting, Issued) — the status pill.
         commands.Register<SetVariationOrderStatus, VariationOrder>(
             new CommandRoute("POST", "/api/variation-orders/{voId}/status",

@@ -14,7 +14,7 @@ public sealed class GetBidPackageByIdHandler : IQueryHandler<GetBidPackageById, 
 
     public async Task<BidPackage?> HandleAsync(GetBidPackageById query, CancellationToken cancellationToken)
     {
-        var entity = await context.BidPackages
+        var entity = await context.BidPackages.AsNoTracking()
             .FirstOrDefaultAsync(package => package.BidPackageId == query.BidPackageId, cancellationToken);
         return entity?.ToModel();
     }

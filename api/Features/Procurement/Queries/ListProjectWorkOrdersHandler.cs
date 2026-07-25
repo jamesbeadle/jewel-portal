@@ -15,21 +15,21 @@ public sealed class ListProjectWorkOrdersHandler
 
     public async Task<IReadOnlyList<ProjectWorkOrderDetail>> HandleAsync(ListProjectWorkOrders query, CancellationToken cancellationToken)
     {
-        var orders = await context.WorkOrders
+        var orders = await context.WorkOrders.AsNoTracking()
             .Where(order => order.ProjectId == query.ProjectId)
             .OrderBy(order => order.Number)
             .ToListAsync(cancellationToken);
         if (orders.Count == 0) return Array.Empty<ProjectWorkOrderDetail>();
 
         var orderIds = orders.Select(order => order.WorkOrderId).ToList();
-        var linesByOrder = (await context.WorkOrderLines
+        var linesByOrder = (await context.WorkOrderLines.AsNoTracking()
                 .Where(line => orderIds.Contains(line.WorkOrderId))
                 .ToListAsync(cancellationToken))
             .GroupBy(line => line.WorkOrderId)
             .ToDictionary(group => group.Key, group => group.ToList(), StringComparer.OrdinalIgnoreCase);
 
         var subcontractorIds = orders.Select(order => order.SubcontractorId).Distinct().ToList();
-        var namesById = await context.Subcontractors
+        var namesById = await context.Subcontractors.AsNoTracking()
             .Where(sub => subcontractorIds.Contains(sub.SubcontractorId))
             .ToDictionaryAsync(sub => sub.SubcontractorId, sub => sub.CompanyName, cancellationToken);
 

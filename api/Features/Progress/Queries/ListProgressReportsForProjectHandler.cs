@@ -16,13 +16,13 @@ public sealed class ListProgressReportsForProjectHandler
     public async Task<IReadOnlyList<ProgressReport>> HandleAsync(
         ListProgressReportsForProject query, CancellationToken cancellationToken)
     {
-        var reports = await context.ProgressReports
+        var reports = await context.ProgressReports.AsNoTracking()
             .Where(row => row.ProjectId == query.ProjectId)
             .OrderByDescending(row => row.CreatedAt)
             .ToListAsync(cancellationToken);
 
         var reportIds = reports.Select(report => report.ProgressReportId).ToList();
-        var selectionsByReport = (await context.ProgressReportSelections
+        var selectionsByReport = (await context.ProgressReportSelections.AsNoTracking()
                 .Where(row => reportIds.Contains(row.ProgressReportId))
                 .OrderBy(row => row.SortOrder)
                 .ToListAsync(cancellationToken))

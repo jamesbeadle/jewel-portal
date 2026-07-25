@@ -23,24 +23,14 @@ public sealed class BidPackagesReadModel
     }
 }
 
-public sealed class WorkOrdersReadModel : IReadModelStore<IReadOnlyList<WorkOrder>>
-{
-    private readonly IQueryClient queries;
-    public IReadOnlyList<WorkOrder>? Current { get; private set; }
-    public event Action? OnChanged;
-
-    public WorkOrdersReadModel(IQueryClient queries) { this.queries = queries; }
-
-    public async Task RefreshAsync(CancellationToken cancellationToken)
-    {
-        Current = await queries.AskAsync(new ListWorkOrders(), cancellationToken);
-        OnChanged?.Invoke();
-    }
-}
-
 // The Work Orders tab's store: every order on the project with lines and supplier names, keyed
 // per project so navigating between projects keeps each one's cached view (stale-while-revalidate,
 // per the front-end data-loading convention).
+//
+// This is also what backs IProcurementStore.WorkOrdersFor. There used to be a second, company-wide
+// WorkOrdersReadModel over an unfiltered /api/work-orders; it was retired because its only consumer
+// filtered the result down to one project in the browser, which meant opening any project's
+// Requests tab downloaded every work order in the business and table-scanned the server side of it.
 public sealed class ProjectWorkOrdersReadModel
 {
     private readonly IQueryClient queries;

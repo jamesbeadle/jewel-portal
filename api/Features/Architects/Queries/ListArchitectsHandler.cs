@@ -13,7 +13,7 @@ public sealed class ListArchitectsHandler : IQueryHandler<ListArchitects, IReadO
 
     public async Task<IReadOnlyList<Architect>> HandleAsync(ListArchitects query, CancellationToken cancellationToken)
     {
-        var architects = await context.Architects
+        var architects = await context.Architects.AsNoTracking()
             .OrderBy(architect => architect.Name)
             .ToListAsync(cancellationToken);
 

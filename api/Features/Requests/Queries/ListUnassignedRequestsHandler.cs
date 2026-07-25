@@ -16,8 +16,8 @@ public sealed class ListUnassignedRequestsHandler : IQueryHandler<ListUnassigned
 
     public async Task<IReadOnlyList<Request>> HandleAsync(ListUnassignedRequests query, CancellationToken cancellationToken)
     {
-        var projectIds = context.Projects.Select(p => p.ProjectId);
-        var entities = await context.Requests
+        var projectIds = context.Projects.AsNoTracking().Select(p => p.ProjectId);
+        var entities = await context.Requests.AsNoTracking()
             .Where(r => r.ProjectId == null || r.ProjectId == "" || !projectIds.Contains(r.ProjectId))
             .OrderByDescending(r => r.RaisedAt)
             .ToListAsync(cancellationToken);

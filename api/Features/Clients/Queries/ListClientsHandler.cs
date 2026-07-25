@@ -13,7 +13,7 @@ public sealed class ListClientsHandler : IQueryHandler<ListClients, IReadOnlyLis
 
     public async Task<IReadOnlyList<Client>> HandleAsync(ListClients query, CancellationToken cancellationToken)
     {
-        var clients = await context.Clients
+        var clients = await context.Clients.AsNoTracking()
             .OrderBy(client => client.Name)
             .ToListAsync(cancellationToken);
 

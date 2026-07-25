@@ -13,7 +13,7 @@ public sealed class ListValuationInvoiceEventsHandler : IQueryHandler<ListValuat
 
     public async Task<IReadOnlyList<ValuationInvoiceEvent>> HandleAsync(ListValuationInvoiceEvents query, CancellationToken cancellationToken)
     {
-        var events = await context.ValuationInvoiceEvents
+        var events = await context.ValuationInvoiceEvents.AsNoTracking()
             .Where(entry => entry.ValuationInvoiceId == query.ValuationInvoiceId)
             .OrderBy(entry => entry.OccurredAt)
             .ToListAsync(cancellationToken);

@@ -13,7 +13,7 @@ public sealed class ListCvrSnapshotsForProjectHandler : IQueryHandler<ListCvrSna
 
     public async Task<IReadOnlyList<CvrSnapshot>> HandleAsync(ListCvrSnapshotsForProject query, CancellationToken cancellationToken)
     {
-        var entities = await context.CvrSnapshots.Where(s => s.ProjectId == query.ProjectId).OrderByDescending(s => s.SnapshotAt).ToListAsync(cancellationToken);
+        var entities = await context.CvrSnapshots.AsNoTracking().Where(s => s.ProjectId == query.ProjectId).OrderByDescending(s => s.SnapshotAt).ToListAsync(cancellationToken);
         return entities.Select(entity => entity.ToModel()).ToList().AsReadOnly();
     }
 }

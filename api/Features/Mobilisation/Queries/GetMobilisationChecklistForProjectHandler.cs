@@ -14,7 +14,7 @@ public sealed class GetMobilisationChecklistForProjectHandler
 
     public async Task<MobilisationChecklist> HandleAsync(GetMobilisationChecklistForProject query, CancellationToken cancellationToken)
     {
-        var entities = await context.MobilisationItems.Where(item => item.ProjectId == query.ProjectId).ToListAsync(cancellationToken);
+        var entities = await context.MobilisationItems.AsNoTracking().Where(item => item.ProjectId == query.ProjectId).ToListAsync(cancellationToken);
         var items = entities.Select(entity => entity.ToModel()).ToList().AsReadOnly();
         return new MobilisationChecklist(query.ProjectId, items);
     }

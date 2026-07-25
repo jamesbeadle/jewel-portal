@@ -13,7 +13,7 @@ public sealed class ListSiteReportsForProjectHandler : IQueryHandler<ListSiteRep
 
     public async Task<IReadOnlyList<SiteReport>> HandleAsync(ListSiteReportsForProject query, CancellationToken cancellationToken)
     {
-        var entities = await context.SiteReports.Where(report => report.ProjectId == query.ProjectId).OrderByDescending(report => report.PeriodEnd).ToListAsync(cancellationToken);
+        var entities = await context.SiteReports.AsNoTracking().Where(report => report.ProjectId == query.ProjectId).OrderByDescending(report => report.PeriodEnd).ToListAsync(cancellationToken);
         return entities.Select(entity => entity.ToModel()).ToList().AsReadOnly();
     }
 }

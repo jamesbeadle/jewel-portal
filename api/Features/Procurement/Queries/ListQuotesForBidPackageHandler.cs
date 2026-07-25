@@ -15,7 +15,7 @@ public sealed class ListQuotesForBidPackageHandler
 
     public async Task<IReadOnlyList<Quote>> HandleAsync(ListQuotesForBidPackage query, CancellationToken cancellationToken)
     {
-        var entities = await context.Quotes.Where(quote => quote.BidPackageId == query.BidPackageId).ToListAsync(cancellationToken);
+        var entities = await context.Quotes.AsNoTracking().Where(quote => quote.BidPackageId == query.BidPackageId).ToListAsync(cancellationToken);
         return entities.Select(entity => entity.ToModel()).ToList().AsReadOnly();
     }
 }

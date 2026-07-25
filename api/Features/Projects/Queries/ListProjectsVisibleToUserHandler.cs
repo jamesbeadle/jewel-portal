@@ -16,7 +16,7 @@ public sealed class ListProjectsVisibleToUserHandler
     public async Task<IReadOnlyList<Project>> HandleAsync(
         ListProjectsVisibleToUser query, CancellationToken cancellationToken)
     {
-        var entities = await context.Projects
+        var entities = await context.Projects.AsNoTracking()
             .OrderByDescending(project => project.CreatedAt)
             .ToListAsync(cancellationToken);
         return entities.Select(entity => entity.ToModel()).ToList().AsReadOnly();

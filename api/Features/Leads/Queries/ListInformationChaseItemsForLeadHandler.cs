@@ -16,7 +16,7 @@ public sealed class ListInformationChaseItemsForLeadHandler
     public async Task<IReadOnlyList<InfoChaseItem>> HandleAsync(
         ListInformationChaseItemsForLead query, CancellationToken cancellationToken)
     {
-        var entities = await context.InfoChaseItems.Where(item => item.LeadId == query.LeadId).ToListAsync(cancellationToken);
+        var entities = await context.InfoChaseItems.AsNoTracking().Where(item => item.LeadId == query.LeadId).ToListAsync(cancellationToken);
         return entities.Select(entity => entity.ToModel()).ToList().AsReadOnly();
     }
 }

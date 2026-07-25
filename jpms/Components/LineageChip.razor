@@ -1,11 +1,12 @@
 @*
     One node in the RecordLineage bar. The active chip (the record whose page you are on) is
-    highlighted and inert; every other chip is a link. Eyebrow = record type (RFI / VOQ / VO / BPI
-    reference), Label = the human reference or title, Status = small status tag on the right.
+    highlighted and inert; every other chip is a link. Eyebrow = record type (Request / RFI /
+    Variation / BPI reference), Label = the human reference or title, Status = small status tag on
+    the right.
 
-    A chip whose target lives on the CURRENT page (e.g. the VO chip while on its VOQ page) is given
-    OnClick instead of a route: it renders as a button that scrolls/flashes the target panel, so the
-    click visibly lands somewhere instead of re-navigating to the URL you are already on.
+    A chip whose target lives on the CURRENT page can be given OnClick instead of a route: it then
+    renders as a button that scrolls/flashes the target panel, so the click visibly lands somewhere
+    instead of re-navigating to the URL you are already on.
 *@
 
 @if (IsActive)

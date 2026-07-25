@@ -16,7 +16,7 @@ public sealed class ListLeadsInPipelineHandler
     public async Task<IReadOnlyList<Lead>> HandleAsync(
         ListLeadsInPipeline query, CancellationToken cancellationToken)
     {
-        var entities = await context.Leads.OrderByDescending(lead => lead.CapturedAt).ToListAsync(cancellationToken);
+        var entities = await context.Leads.AsNoTracking().OrderByDescending(lead => lead.CapturedAt).ToListAsync(cancellationToken);
         return entities.Select(entity => entity.ToModel()).ToList().AsReadOnly();
     }
 }

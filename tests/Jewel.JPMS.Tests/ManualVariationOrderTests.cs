@@ -31,10 +31,12 @@ public sealed class ManualVariationOrderTests
     }
 
     [Fact]
-    public void StandaloneVariation_hasNoRequest_andRendersItsVoqReference()
+    public void StandaloneVariation_hasNoRequest_andRendersItsNumber()
     {
         // The shape the manual handler persists: empty RequestId (the register's "No request" badge)
-        // and a Number that renders VOQ-0050 — the reference the user lines up with the client report.
+        // and a Number that renders "V50" — one number for one document, shown the same way at every
+        // stage. The stored Reference keeps its historic "VOQ-0050" spelling because it is a
+        // persisted identifier, never UI copy (see CLAUDE.md), so the two deliberately differ.
         var order = new VariationOrder(
             VariationOrderId: "vo-1",
             ProjectId: "proj-1",
@@ -54,7 +56,8 @@ public sealed class ManualVariationOrderTests
             CreatedByEmail: "qs@jewelbb.co.uk");
 
         Assert.True(string.IsNullOrWhiteSpace(order.RequestId));   // unlinked → "No request" in the register
-        Assert.Equal("VOQ-0050", order.DisplayNumber);            // matches the caller-set number
+        Assert.Equal("VOQ-0050", order.Reference);                 // persisted identifier, unchanged
+        Assert.Equal("V50", order.DisplayNumber);                  // what a user actually reads
         Assert.Equal(VariationOrderStatus.Quoting, order.Status); // a draft until approved
     }
 }

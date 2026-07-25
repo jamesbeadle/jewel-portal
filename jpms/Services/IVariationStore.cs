@@ -61,4 +61,8 @@ public interface IVariationStore
 
     /// <summary>Revises the value of an approved variation order; the delta writes through to the valuation report, CVR and budget.</summary>
     Task<VariationOrder> ReviseVariationOrderValueAsync(string variationOrderId, decimal value, CancellationToken cancellationToken = default);
+
+    /// <summary>Re-states an approved variation's priced lines (add / edit / remove) without
+    /// un-approving it; the report lines, CVR and per-centre budgets move by the difference.</summary>
+    Task<VariationOrder> ReviseVariationOrderLinesAsync(string variationOrderId, IReadOnlyList<VariationLineInput> lines, CancellationToken cancellationToken = default);
 }

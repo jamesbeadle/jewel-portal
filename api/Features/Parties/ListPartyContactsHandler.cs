@@ -13,7 +13,7 @@ public sealed class ListPartyContactsHandler : IQueryHandler<ListPartyContacts, 
 
     public async Task<IReadOnlyList<PartyContact>> HandleAsync(ListPartyContacts query, CancellationToken cancellationToken)
     {
-        var entities = await context.PartyContacts
+        var entities = await context.PartyContacts.AsNoTracking()
             .Where(c => c.PartyKind == (int)query.PartyKind && c.PartyId == query.PartyId)
             .OrderByDescending(c => c.IsPrimary)
             .ThenBy(c => c.Name)

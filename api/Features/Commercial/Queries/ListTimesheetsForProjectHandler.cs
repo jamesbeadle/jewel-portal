@@ -13,7 +13,7 @@ public sealed class ListTimesheetsForProjectHandler : IQueryHandler<ListTimeshee
 
     public async Task<IReadOnlyList<Timesheet>> HandleAsync(ListTimesheetsForProject query, CancellationToken cancellationToken)
     {
-        var entities = await context.Timesheets.Where(t => t.ProjectId == query.ProjectId).OrderByDescending(t => t.WorkedOn).ToListAsync(cancellationToken);
+        var entities = await context.Timesheets.AsNoTracking().Where(t => t.ProjectId == query.ProjectId).OrderByDescending(t => t.WorkedOn).ToListAsync(cancellationToken);
         return entities.Select(entity => entity.ToModel()).ToList().AsReadOnly();
     }
 }

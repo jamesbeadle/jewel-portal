@@ -15,13 +15,13 @@ public sealed class ListDrawingsForProjectHandler
 
     public async Task<IReadOnlyList<Drawing>> HandleAsync(ListDrawingsForProject query, CancellationToken cancellationToken)
     {
-        var drawings = await context.Drawings
+        var drawings = await context.Drawings.AsNoTracking()
             .Where(drawing => drawing.ProjectId == query.ProjectId)
             .OrderBy(drawing => drawing.DrawingCode)
             .ToListAsync(cancellationToken);
 
         var drawingIds = drawings.Select(drawing => drawing.DrawingId).ToList();
-        var revisionStatuses = await context.DrawingRevisions
+        var revisionStatuses = await context.DrawingRevisions.AsNoTracking()
             .Where(revision => drawingIds.Contains(revision.DrawingId))
             .Select(revision => new
             {

@@ -13,9 +13,9 @@
 <PageTitle>Requests · JPMS</PageTitle>
 
 @*
-    The project's document register — Requests, RFIs and Variations (VOQ & VO) in one place,
+    The project's document register — Requests, RFIs and Variations in one place,
     because they are one lifecycle: a Request captured at mailbox triage, promoted to an RFI when
-    information is formally sought, costed into a VOQ once the scope is identified, approved as a
+    information is formally sought, costed into a variation once the scope is identified, approved by
     VO whose value is written onto the valuation report. The old separate Variations tab is folded
     in here so selecting an RFI from a variation (or a variation from an RFI) never jumps tabs.
     Each document type gets an explainer panel — with its red warnings — that follows the filter.
@@ -61,7 +61,7 @@ else
 
         @* ---- Document-type explainer — follows the active filter ------------------------------
            Each type says what it is; red is reserved for things that can genuinely hurt:
-           unanswered RFIs (programme impact) and VOQ money treated as approved. *@
+           unanswered RFIs (programme impact) and quoting-stage money treated as approved. *@
         <div class="rounded-xl border border-line bg-surface px-4 py-3 mb-4">
             <div class="flex flex-wrap items-center gap-x-2 gap-y-1 mb-1.5">
                 <p class="eyebrow">Document type</p>
@@ -99,16 +99,20 @@ else
                     </p>
                     break;
                 case "variations":
-                    <p class="text-sm font-medium text-content mb-1">Variation — VOQ, then VO</p>
+                    <p class="text-sm font-medium text-content mb-1">Variation — one document, four stages</p>
                     <p class="text-sm text-content-muted">
                         When every requirement of a specific group has been identified and costed, the request becomes a
-                        <span class="text-content font-medium">Variation Order Quote (VOQ)</span> — the priced scope put to
-                        the client for approval. Approval raises a <span class="text-content font-medium">Variation Order
-                        (VO)</span>: the monetary amount of the work, which is added to the project valuation report.
+                        <span class="text-content font-medium">variation</span> — the priced scope put to the client for
+                        approval. It is one record throughout, and its status says where it has got to:
+                        <span class="text-content font-medium">Quoting</span> while it is being priced,
+                        <span class="text-content font-medium">Issued</span> once it is with the client, then
+                        <span class="text-content font-medium">Approved</span> or
+                        <span class="text-content font-medium">Rejected</span>. Approval is what writes its value onto
+                        the project valuation report.
                     </p>
                     <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mt-2">
-                        A VOQ is not approved money — nothing on it appears on the valuation report or can be billed
-                        until the client approves it as a VO.
+                        A variation is not approved money until it is Approved — nothing on it appears on the valuation
+                        report or can be billed before then.
                     </p>
                     @if (UnlinkedRows.Count > 0)
                     {
@@ -116,7 +120,7 @@ else
                             @UnlinkedRows.Count historic variation@(UnlinkedRows.Count == 1 ? " isn't" : "s aren't") linked back
                             to a request yet — open a variation and attach the RFI it was raised from in its
                             <span class="font-medium text-content">Originating request</span> panel, or open the RFI
-                            and link the variation from its <span class="font-medium text-content">Variation Order Quote</span> panel.
+                            and link the variation from its <span class="font-medium text-content">Variation</span> panel.
                         </p>
                     }
                     break;
@@ -126,8 +130,8 @@ else
                         Everything the project is asking of someone lives here and moves through one lifecycle:
                         a <span class="text-content font-medium">Request</span> captured at mailbox triage, promoted to an
                         <span class="text-content font-medium">RFI</span> when information is formally sought, costed into a
-                        <span class="text-content font-medium">VOQ</span> once the scope is fully identified, and approved as a
-                        <span class="text-content font-medium">VO</span> whose value is written onto the valuation report.
+                        <span class="text-content font-medium">variation</span> once the scope is fully identified, and
+                        approved by the client — which is what writes its value onto the valuation report.
                         Pick a type above for its detail and warnings.
                     </p>
                     break;
@@ -272,7 +276,7 @@ else
         {
             @if (ActiveSlug == "all")
             {
-                <h3 class="text-sm font-medium text-content-muted mb-2">Variations (VOQ &amp; VO)</h3>
+                <h3 class="text-sm font-medium text-content-muted mb-2">Variations</h3>
             }
 
             @if (variationsError is not null)
@@ -301,7 +305,7 @@ else
             </div>
 
             @* Subcontractor-raised variation requests: the portal-side entry to this register. Accepting
-               creates a Selected VOQ carrying the sub's price (it appears in the table below); the
+               creates a Selected variation carrying the sub's price (it appears in the table below); the
                normal approve step then writes the VO to the valuation and CVR. *@
             @if (OpenRequests.Count > 0 || ReviewedRequests.Count > 0)
             {
@@ -339,7 +343,7 @@ else
                                                 <div class="flex gap-2 mt-2 justify-end">
                                                     <button type="button" class="rounded-lg bg-accent text-accent-ink text-xs font-medium px-2.5 py-1 hover:bg-accent-hover transition disabled:opacity-60"
                                                             disabled="@requestBusy" @onclick="() => AcceptRequest(variationRequest.VariationRequestId)">
-                                                        Accept → VOQ
+                                                        Accept → variation
                                                     </button>
                                                     <button type="button" class="rounded-lg border border-line text-xs font-medium px-2.5 py-1 text-content-muted hover:text-content transition disabled:opacity-60"
                                                             disabled="@requestBusy" @onclick="() => StartReject(variationRequest.VariationRequestId)">
@@ -394,7 +398,7 @@ else
             @if (Rows.Count == 0)
             {
                 <p class="text-sm text-content-subtle italic">
-                    No variations yet. Raise a VOQ from an RFQ on one of the requests above, or accept a
+                    No variations yet. Raise one from an RFQ on one of the requests above, or accept a
                     subcontractor's variation request.
                 </p>
             }
@@ -424,11 +428,11 @@ else
                                 <tr class="hover:bg-surface-raised">
                                     <td class="px-4 py-3 font-mono text-[12px] whitespace-nowrap">
                                         <a class="text-content hover:underline underline-offset-4"
-                                           href="@($"/projects/{ProjectId}/voq/{order.VariationOrderId}")">@RowReference(order)</a>
+                                           href="@($"/projects/{ProjectId}/variations/{order.VariationOrderId}")">@RowReference(order)</a>
                                     </td>
                                     <td class="px-4 py-3">
                                         <a class="text-content font-medium hover:underline underline-offset-4"
-                                           href="@($"/projects/{ProjectId}/voq/{order.VariationOrderId}")">@order.Title</a>
+                                           href="@($"/projects/{ProjectId}/variations/{order.VariationOrderId}")">@order.Title</a>
                                     </td>
                                     <td class="px-4 py-3 whitespace-nowrap">
                                         @{ var sourceRequest = RequestFor(order); }
@@ -446,7 +450,7 @@ else
                                                links through to the variation page's Originating-request panel. *@
                                             <a class="inline-flex items-center rounded border border-line bg-surface-raised px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-content-subtle hover:text-content hover:border-content-subtle transition-colors"
                                                title="No request behind this variation yet — open it to link the RFI it was raised from"
-                                               href="@($"/projects/{ProjectId}/voq/{order.VariationOrderId}")">No request</a>
+                                               href="@($"/projects/{ProjectId}/variations/{order.VariationOrderId}")">No request</a>
                                         }
                                     </td>
                                     <td class="px-4 py-3 whitespace-nowrap">
@@ -523,7 +527,7 @@ else
                     </table>
                 </div>
                 <p class="text-xs text-content-subtle mt-3">
-                    Only approved VOs are included on the valuation report; VOQs stay here until they're approved.
+                    Only approved variations are included on the valuation report; the rest stay here until they are.
                 </p>
             }
         }
@@ -559,7 +563,7 @@ else
     private void OpenRaiseDialog() => raiseDialogOpen = true;
     private void CloseRaiseDialog() => raiseDialogOpen = false;
 
-    // Manual variation entry (standalone VOQ, no request). The number field pre-fills with the
+    // Manual variation entry (a standalone variation with no request). The number field pre-fills with the
     // project's next number but the user can set it to match a client-issued reference.
     private bool addVariationOpen;
     private int NextVariationNumber => (orders.Count == 0 ? 0 : orders.Max(o => o.Number)) + 1;
@@ -800,7 +804,7 @@ else
 
     // The register's document types, in lifecycle order: a Request is the general container from
     // mailbox triage; an RFI is a request promoted to an official ask for information; Variations
-    // (VOQ → VO) are the costed-and-approved end of the same lifecycle, folded in from the retired
+    // Variations are the costed-and-approved end of the same lifecycle, folded in from the retired
     // Variations tab. RFQs and the other instruments happen *inside* a request, so they aren't
     // top-level filters. "All" shows the whole register.
     private static readonly Filter[] Filters =
@@ -902,7 +906,7 @@ else
         return "px-3 py-1.5 rounded-md text-content-muted hover:text-content hover:bg-surface-raised";
     }
 
-    // ---- Variations (VOQ & VO) — folded in from the retired Variations tab ---------------------
+    // ---- Variations — folded in from the retired Variations tab --------------------------------
 
     private string? variationsError;
     private IReadOnlyList<VariationOrder> orders = Array.Empty<VariationOrder>();
@@ -919,9 +923,11 @@ else
     private List<VariationOrder> ApprovedOrders =>
         orders.Where(o => o.Status == VariationOrderStatus.Approved).ToList();
 
-    // The record's identifier: the "V18" VariationRef once approved, else the quoting reference "VOQ-0001".
+    // The record's identifier: the "V18" VariationRef once approved, else the same number rendered
+    // the same way ("V18"). One document, one number, at every stage — Reference keeps the historic
+    // "VOQ-0001" spelling because it is a persisted identifier, not something a user should read.
     private static string RowReference(VariationOrder order) =>
-        !string.IsNullOrWhiteSpace(order.VariationRef) ? order.VariationRef! : order.Reference;
+        !string.IsNullOrWhiteSpace(order.VariationRef) ? order.VariationRef! : order.DisplayNumber;
 
     // The quoting estimate until approval, then the agreed (contract) value.
     private static decimal? RowValue(VariationOrder order) =>
@@ -973,7 +979,7 @@ else
         {
             requestBusy = true;
             await Variations.AcceptVariationRequestAsync(variationRequestId);
-            await LoadVariationsAsync(); // The new Selected VOQ appears in the register below.
+            await LoadVariationsAsync(); // The new Selected variation appears in the register below.
         }
         catch (CommandFailedException ex) { requestError = ex.Message; }
         catch { requestError = "Couldn't accept the request. Please try again."; }
@@ -1048,7 +1054,7 @@ else
     private List<VariationStatusChoice> VariationStatusChoices(VariationOrder order)
     {
         var choices = new List<VariationStatusChoice>();
-        var voqHref = $"/projects/{ProjectId}/voq/{order.VariationOrderId}";
+        var variationHref = $"/projects/{ProjectId}/variations/{order.VariationOrderId}";
 
         // Rejected is a terminal audit record — the pill doesn't offer reactivation.
         if (order.Status == VariationOrderStatus.Rejected) return choices;
@@ -1083,7 +1089,7 @@ else
             Action: () => ChangeVariationStatusInline(order, VariationOrderStatus.AwaitingArchitectInstruction)));
         choices.Add(new("Approved…",
             "Approving mints the V-ref and writes the contract figures — runs on the variation itself",
-            false, Href: voqHref));
+            false, Href: variationHref));
         choices.Add(new("Rejected…", null, false,
             Action: () => ChangeVariationStatusInline(order, VariationOrderStatus.Rejected)));
         return choices;

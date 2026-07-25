@@ -16,7 +16,7 @@ public sealed class ListSubcontractorRetentionsForProjectHandler
     public async Task<IReadOnlyList<SubcontractorRetention>> HandleAsync(
         ListSubcontractorRetentionsForProject query, CancellationToken cancellationToken)
     {
-        var entities = await context.SubcontractorRetentions
+        var entities = await context.SubcontractorRetentions.AsNoTracking()
             .Where(retention => retention.ProjectId == query.ProjectId)
             .ToListAsync(cancellationToken);
         return entities.Select(entity => entity.ToModel()).ToList().AsReadOnly();

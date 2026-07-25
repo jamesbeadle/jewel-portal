@@ -1,0 +1,130 @@
+@*
+    The house dropdown: a toggle button and a panel of items beneath it.
+
+    This markup was hand-rolled in four places (the role switcher, the request page's status pill
+    and Actions menu, the variation page's status pill) before it was pulled out here. Same
+    behaviour as those had: the toggle is also the dismiss — there is no outside-click handler, and
+    each item closes the menu before running, so a click can never leave it hanging open.
+
+    Two ways to use it:
+      • Pass Items and let it render them — the common case, and the one that keeps every menu
+        looking the same.
+      • Pass ChildContent for a menu that needs its own markup (a checkmark, a nested control).
+        Call Close() from an @onclick if you do.
+*@
+
+<div class="relative @Class">
+    <button type="button"
+            class="@ToggleClass"
+            title="@ToggleTitle"
+            disabled="@Disabled"
+            aria-haspopup="menu"
+            aria-expanded="@(open ? "true" : "false")"
+            @onclick="Toggle">
+        @if (ToggleContent is not null)
+        {
+            @ToggleContent
+        }
+        else
+        {
+            <span>@Label</span>
+        }
+        <span class="text-[9px]" aria-hidden="true">@(open ? "▲" : "▼")</span>
+    </button>
+
+    @if (open)
+    {
+        <div class="absolute @AlignClass mt-2 @WidthClass rounded-lg border border-line bg-surface shadow-lg z-20 overflow-hidden"
+             role="menu">
+            @if (ChildContent is not null)
+            {
+                @ChildContent
+            }
+            else
+            {
+                <ul class="divide-y divide-line">
+                    @foreach (var group in Items.GroupBy(item => item.Group))
+                    {
+                        @foreach (var item in group)
+                        {
+                            var entry = item;
+                            <li>
+                                @if (entry.Href is not null)
+                                {
+                                    <a href="@entry.Href"
+                                       download="@(entry.Download ? "" : null)"
+                                       role="menuitem"
+                                       title="@entry.Hint"
+                                       class="block px-3 py-2 text-sm text-content hover:bg-surface-raised transition"
+                                       @onclick="Close">@entry.Label</a>
+                                }
+                                else
+                                {
+                                    <button type="button"
+                                            role="menuitem"
+                                            title="@entry.Hint"
+                                            disabled="@entry.Disabled"
+                                            class="w-full text-left px-3 py-2 text-sm transition @(entry.Disabled ? "text-content-subtle cursor-default" : entry.Destructive ? "text-negative hover:bg-surface-raised" : "text-content hover:bg-surface-raised")"
+                                            @onclick="() => Run(entry)">
+                                        @entry.Label@(entry.Selected ? " ✓" : "")
+                                    </button>
+                                }
+                            </li>
+                        }
+                    }
+                </ul>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    /// <summary>One row in the menu. Either Href (renders a link) or OnSelect (renders a button) —
+    /// not both. Group only affects ordering: items sharing a group render adjacent, and the
+    /// divider between every row is the same either way.</summary>
+    public sealed record Item(
+        string Label,
+        EventCallback? OnSelect = null,
+        string? Href = null,
+        string? Hint = null,
+        bool Disabled = false,
+        bool Destructive = false,
+        bool Selected = false,
+        bool Download = false,
+        int Group = 0);
+
+    [Parameter] public string Label { get; set; } = "Actions";
+
+    /// <summary>Custom toggle content, when a plain label isn't enough (a status pill, an avatar).</summary>
+    [Parameter] public RenderFragment? ToggleContent { get; set; }
+
+    [Parameter] public IReadOnlyList<Item> Items { get; set; } = Array.Empty<Item>();
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    [Parameter] public string ToggleClass { get; set; } = "btn-secondary";
+    [Parameter] public string ToggleTitle { get; set; } = "";
+    [Parameter] public string Class { get; set; } = "";
+    [Parameter] public string WidthClass { get; set; } = "w-60";
+
+    /// <summary>Which edge the panel hangs from. Right by default so a menu at the end of a title
+    /// bar doesn't run off the page.</summary>
+    [Parameter] public bool AlignLeft { get; set; }
+
+    [Parameter] public bool Disabled { get; set; }
+
+    private bool open;
+
+    private string AlignClass => AlignLeft ? "left-0" : "right-0";
+
+    private void Toggle() => open = !open;
+
+    /// <summary>Closes the menu. Public so a ChildContent menu can dismiss itself.</summary>
+    public void Close() => open = false;
+
+    private async Task Run(Item item)
+    {
+        if (item.Disabled) return;
+        open = false;
+        if (item.OnSelect is { } callback) await callback.InvokeAsync();
+    }
+}

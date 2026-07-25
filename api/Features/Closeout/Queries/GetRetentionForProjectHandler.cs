@@ -14,7 +14,7 @@ public sealed class GetRetentionForProjectHandler : IQueryHandler<GetRetentionFo
 
     public async Task<RetentionRelease?> HandleAsync(GetRetentionForProject query, CancellationToken cancellationToken)
     {
-        var entity = await context.RetentionReleases
+        var entity = await context.RetentionReleases.AsNoTracking()
             .FirstOrDefaultAsync(retention => retention.ProjectId == query.ProjectId, cancellationToken);
         return entity?.ToModel();
     }

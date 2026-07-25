@@ -1,52 +1,103 @@
 @using Jewel.JPMS.Features.Projects
+@using Jewel.JPMS.Features.Requests
 @inject ProjectListReadModel Projects
 @inject CurrentProjectService CurrentProject
+@inject RfiRegisterReadModel Rfis
+@inject IRateLibrary Rates
 @implements IDisposable
+
+@*
+    The landing page for every internal role.
+
+    It used to be the sidebar redrawn as tiles, plus a "you are signed in as…" line and two stat
+    tiles that never changed. A PM, QS, H&S officer or director landed on nothing they could act
+    on. This version leads with work: a count strip of the things that are actually late or
+    waiting, then the queues themselves, and only then the navigation cards — which are still
+    useful, just not the point of the page.
+
+    Everything here reads from stores that already existed (the cross-project RFI register, the
+    to-do list, the project list's valuation dates, the rate library's staleness check). No new
+    backend query was needed, so nothing here can drift from the registers it summarises.
+*@
 
 <section class="px-6 py-6 md:px-8">
 
-    <div class="mb-8 md:mb-10">
-        <p class="eyebrow mb-2">JPMS</p>
-        <h1 class="text-3xl md:text-4xl font-semibold text-content leading-tight mb-3">
-            Welcome, @FirstName.
+    <header class="mb-6">
+        <p class="eyebrow mb-1.5">@Role.DisplayName()</p>
+        <h1 class="text-2xl md:text-3xl font-semibold text-content leading-tight">
+            @Greeting, @FirstName.
         </h1>
-        <p class="text-base md:text-lg text-content-muted leading-relaxed">
-            You're signed in as <span class="font-medium text-content">@Email</span>.
-            You're viewing as <RoleBadge Role="Role" />.
-        </p>
-    </div>
+        <p class="text-sm text-content-muted mt-1">@RoleBrief</p>
+    </header>
 
-    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-4 mb-8">
-        <Stat Label="Active role" Value="@Role.DisplayName()" />
-        <Stat Label="Status"      Value="Approved" />
-    </div>
-
-    @if (Role == Role.FinanceDirector)
+    @if (Tiles.Count > 0)
     {
-        @* The FD's at-a-glance view of which valuations are coming up (or overdue) across
-           every project — the dates themselves are set on each project's Setup tab. *@
-        <div class="mb-8">
-            <NextValuationsPanel />
+        @* The count strip: only the things that are late, waiting or need a decision. A zero is
+           worth showing — "nothing overdue" is information — but a metric that doesn't apply to
+           this role is left out entirely rather than rendered as a dash. *@
+        <div class="grid grid-cols-2 @(Tiles.Count >= 4 ? "lg:grid-cols-4" : "lg:grid-cols-3") gap-3 md:gap-4 mb-8">
+            @foreach (var tile in Tiles)
+            {
+                <a href="@tile.Href" class="panel p-5 hover:border-line-strong hover:bg-surface-raised transition">
+                    <MetricStat Label="@tile.Label" Value="@tile.Value"
+                                DeltaLabel="@tile.Note" IsDeltaPositive="@(!tile.IsBad)" />
+                </a>
+            }
         </div>
     }
 
-    @if (ShowMyDay)
-    {
-        <div class="mb-8">
+    <div class="space-y-6 mb-10">
+        @if (ShowMyDay)
+        {
+            @* Site-floor roles do their day here: sign in, hours against cost codes, and any
+               timesheet sent back for correction. *@
             <MyDayWorkspace />
-        </div>
-    }
+        }
 
-    @if (ShowMyTodos)
-    {
-        @* Open to-do items assigned to any role this user holds — general (company-wide) and
-           project items alike. Shown only for the internal office/management roles a to-do can be
-           assigned to (mirrors TodoRoles.AssignableAsTodoAssignee); site-floor and external roles
-           never carry items. *@
-        <div class="mb-8">
+        @if (ShowMyTodos)
+        {
+            @* Open to-dos assigned to any role this user holds — general and project alike.
+               (Mirrors TodoRoles.AssignableAsTodoAssignee; site-floor and external roles carry
+               none, so they never see an empty panel.) *@
             <MyTodosPanel />
-        </div>
-    }
+        }
+
+        @if (ShowRequests)
+        {
+            <OpenRequestsPanel />
+        }
+
+        @if (ShowValuations)
+        {
+            @* Which valuations are coming up or overdue across every project — the dates
+               themselves are set on each project's Setup tab. *@
+            <NextValuationsPanel />
+        }
+
+        @if (ShowStaleRates)
+        {
+            <div class="panel p-5">
+                <div class="flex items-center justify-between gap-2 mb-1">
+                    <div class="flex items-center gap-3">
+                        <h2 class="text-sm font-semibold text-content">Rates needing a review</h2>
+                        @if (StaleRateCount > 0)
+                        {
+                            <span class="text-[11px] font-medium text-negative">@StaleRateCount stale</span>
+                        }
+                    </div>
+                    <a href="/rate-library/stale" class="text-xs font-medium text-accent hover:underline">View all</a>
+                </div>
+                <p class="text-xs text-content-subtle">
+                    Library rates not re-checked in @StaleRateThresholdDays days. Pricing a tender or a
+                    variation off a stale rate is how margin quietly disappears.
+                </p>
+                @if (StaleRateCount == 0)
+                {
+                    <p class="text-sm text-content-subtle italic mt-3">Every rate has been reviewed recently.</p>
+                }
+            </div>
+        }
+    </div>
 
     <h2 class="text-sm font-medium text-content-muted mb-3">Where to next</h2>
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
@@ -67,8 +118,82 @@
     [Parameter, EditorRequired] public string DisplayName { get; set; } = "";
     [Parameter, EditorRequired] public string Email { get; set; } = "";
 
-    // One card per visible folder, landing on the folder's first visible row (project-scoped
-    // rows resolve against the last-viewed project). Reads the same catalog as the sidebar
+    /// <summary>How old a library rate may be before the QS is asked to look at it. Matches the
+    /// threshold the /rate-library/stale page uses.</summary>
+    private const int StaleRateThresholdDays = 60;
+
+    private sealed record Tile(string Label, string Value, string Href, string? Note = null, bool IsBad = false);
+
+    // ---- Which panels this role gets -------------------------------------------------------------
+    // Deliberately explicit rather than clever: a landing page that guesses wrong wastes the one
+    // screen someone looks at every morning.
+
+    // Site-floor roles do their day (sign in, hours, rejected timesheets) straight from the
+    // dashboard — MyDayWorkspace renders nothing for accounts without a worker record.
+    private bool ShowMyDay => Role is Role.SiteOperative or Role.Foreman or Role.SiteManager;
+
+    // Mirrors the API's TodoRoles.AssignableAsTodoAssignee: the internal office/management roles a
+    // to-do can be assigned to. Everyone else has no list to show.
+    private bool ShowMyTodos =>
+        Role is Role.ManagingDirector or Role.FinanceDirector or Role.ProjectManager
+            or Role.QuantitySurveyor or Role.SiteManager or Role.HealthSafetyOfficer
+            or Role.OfficeComplianceCoordinator;
+
+    // Whoever chases or answers RFIs: the PM owns the change layer, the director watches it, the
+    // QS prices what comes out of it, and the architect is usually the one being waited on.
+    private bool ShowRequests =>
+        Role is Role.ProjectManager or Role.ManagingDirector or Role.QuantitySurveyor
+            or Role.Architect or Role.SiteManager;
+
+    private bool ShowValuations =>
+        Role is Role.FinanceDirector or Role.ManagingDirector or Role.QuantitySurveyor;
+
+    private bool ShowStaleRates => Role is Role.QuantitySurveyor;
+
+    // ---- The count strip --------------------------------------------------------------------------
+
+    private List<Tile> Tiles
+    {
+        get
+        {
+            var tiles = new List<Tile>();
+
+            if (ShowRequests && Rfis.Current is not null)
+            {
+                var open = Rfis.Current.Where(r => r.Status is not RequestStatus.Closed).ToList();
+                var overdue = open.Count(r => r.IsOverdue);
+                tiles.Add(new("Open RFIs", open.Count.ToString(), "/rfis"));
+                tiles.Add(new("Overdue RFIs", overdue.ToString(), "/rfis",
+                    Note: overdue > 0 ? "past 7 days" : "all on time", IsBad: overdue > 0));
+            }
+
+            if (ShowValuations && Projects.Current is not null)
+            {
+                var live = Projects.Current.Where(p => p.Stage != ProjectStage.Completed).ToList();
+                var overdue = live.Count(p => p.NextExpectedValuationDate is { } due && due.Date < DateTimeOffset.UtcNow.Date);
+                tiles.Add(new("Live projects", live.Count.ToString(), "/projects"));
+                tiles.Add(new("Valuations overdue", overdue.ToString(), "/projects",
+                    Note: overdue > 0 ? "needs chasing" : "up to date", IsBad: overdue > 0));
+            }
+
+            if (ShowStaleRates)
+                tiles.Add(new("Stale rates", StaleRateCount.ToString(), "/rate-library/stale",
+                    Note: StaleRateCount > 0 ? $"over {StaleRateThresholdDays} days" : "all reviewed",
+                    IsBad: StaleRateCount > 0));
+
+            return tiles;
+        }
+    }
+
+    private int StaleRateCount
+    {
+        get { try { return Rates.Stale(StaleRateThresholdDays).Count; } catch { return 0; } }
+    }
+
+    // ---- Navigation cards -------------------------------------------------------------------------
+
+    // One card per visible folder, landing on the folder's first visible row (project-scoped rows
+    // resolve against the last-viewed project). Reads the same catalog as the sidebar
     // (DesktopNavigation.FoldersFor) so the two can never drift apart.
     private IEnumerable<(string Label, string IconKey, string Href)> Destinations
     {
@@ -78,9 +203,9 @@
             var folders = DesktopNavigation.FoldersFor(Role);
             if (folders.Count == 1)
             {
-                // The flatten rule (decision 2026-07-22), mirrored from the sidebar: a role
-                // whose whole world is one folder gets a card per row — never a card labelled
-                // after a folder it doesn't know it lives in.
+                // The flatten rule (decision 2026-07-22), mirrored from the sidebar: a role whose
+                // whole world is one folder gets a card per row — never a card labelled after a
+                // folder it doesn't know it lives in.
                 foreach (var item in folders[0].Items)
                 {
                     yield return (item.Label, item.Href, item.ResolveHref(projectId));
@@ -94,33 +219,56 @@
         }
     }
 
-    // Site-floor roles do their day (sign in, hours, rejected timesheets) straight from the
-    // dashboard — MyDayWorkspace renders nothing for accounts without a worker record.
-    private bool ShowMyDay =>
-        Role is Role.SiteOperative or Role.Foreman or Role.SiteManager;
-
-    // Mirrors the API's TodoRoles.AssignableAsTodoAssignee: the internal office/management roles
-    // a to-do can be assigned to. Everyone else (external + site-floor roles) has no list to show.
-    private bool ShowMyTodos =>
-        Role is Role.ManagingDirector or Role.FinanceDirector or Role.ProjectManager
-            or Role.QuantitySurveyor or Role.SiteManager or Role.HealthSafetyOfficer
-            or Role.OfficeComplianceCoordinator;
+    // ---- Chrome -----------------------------------------------------------------------------------
 
     private string FirstName => FirstWordOf(DisplayName) ?? Role.DisplayName();
 
-    protected override void OnInitialized()
+    private static string Greeting => DateTimeOffset.Now.Hour switch
+    {
+        < 12 => "Morning",
+        < 18 => "Afternoon",
+        _    => "Evening"
+    };
+
+    // One line saying what this page is for, in the terms of the job — not a description of the
+    // software.
+    private string RoleBrief => Role switch
+    {
+        Role.ManagingDirector => "Where the portfolio stands, and what is slipping.",
+        Role.FinanceDirector => "What is due to be claimed, and what is late.",
+        Role.ProjectManager => "What is waiting on you, and who you are waiting on.",
+        Role.QuantitySurveyor => "What needs pricing, and what needs re-checking before it is.",
+        Role.SiteManager => "Today on site, and anything holding the work up.",
+        Role.HealthSafetyOfficer => "Open actions and anything due for inspection.",
+        Role.OfficeComplianceCoordinator => "Paperwork that is about to lapse.",
+        Role.Architect => "The requests waiting on your response.",
+        Role.Client => "Where your project has got to.",
+        Role.Foreman or Role.SiteOperative => "Sign in, log your hours, flag anything wrong.",
+        _ => "Everything assigned to you, in one place."
+    };
+
+    protected override async Task OnInitializedAsync()
     {
         // Group cards resolve against the last-viewed project — re-render when either the
         // remembered project or the project list arrives after first paint.
         Projects.OnChanged += StateHasChanged;
         CurrentProject.OnChange += StateHasChanged;
+        Rfis.OnChanged += StateHasChanged;
         _ = CurrentProject.EnsureLoadedAsync();
+
+        // Refresh on entry, never from render (the front-end data-loading convention). The RFI
+        // register is deliberately NOT refreshed here: OpenRequestsPanel already does it, and both
+        // read the same scoped read model — refreshing in both places would fetch it twice. The
+        // count tiles guard on Current being present and re-render off OnChanged when it lands.
+        try { await Projects.RefreshAsync(CancellationToken.None); }
+        catch { /* each panel renders its own empty state */ }
     }
 
     public void Dispose()
     {
         Projects.OnChanged -= StateHasChanged;
         CurrentProject.OnChange -= StateHasChanged;
+        Rfis.OnChanged -= StateHasChanged;
     }
 
     private static string? FirstWordOf(string fullName)

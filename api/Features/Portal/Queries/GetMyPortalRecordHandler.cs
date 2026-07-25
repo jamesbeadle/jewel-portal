@@ -15,7 +15,7 @@ public sealed class GetMyPortalRecordHandler : IQueryHandler<GetMyPortalRecord, 
 
     public async Task<SubcontractorPortalRecord?> HandleAsync(GetMyPortalRecord query, CancellationToken cancellationToken)
     {
-        var entity = await context.Subcontractors
+        var entity = await context.Subcontractors.AsNoTracking()
             .FirstOrDefaultAsync(row => row.SubcontractorId == query.SubcontractorId, cancellationToken);
         if (entity is null) return null;
 
@@ -23,7 +23,7 @@ public sealed class GetMyPortalRecordHandler : IQueryHandler<GetMyPortalRecord, 
         var trades = tradesBySubcontractor.TryGetValue(entity.SubcontractorId, out var found)
             ? found : Array.Empty<Trade>();
 
-        var documents = await context.ComplianceDocuments
+        var documents = await context.ComplianceDocuments.AsNoTracking()
             .Where(row => row.SubcontractorId == query.SubcontractorId)
             .OrderByDescending(row => row.UploadedAt)
             .ToListAsync(cancellationToken);

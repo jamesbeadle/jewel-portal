@@ -15,7 +15,11 @@
         <h3 class="eyebrow">@(IsManual ? "Approve manually & raise Variation Order" : "Approve & raise Variation Order")</h3>
     }
 
-    @if (IsManual)
+    @if (!string.IsNullOrWhiteSpace(HelpOverride))
+    {
+        <p class="text-xs text-content-subtle">@HelpOverride</p>
+    }
+    else if (IsManual)
     {
         <p class="text-xs text-content-subtle">
             No winning tender has been selected — approving here raises the order without a
@@ -74,7 +78,7 @@
     </p>
 
     <button type="button" class="btn-primary w-full" disabled="@Busy" @onclick="Submit">
-        @(IsManual ? "Approve manually & raise VO" : "Approve & raise VO")
+        @(SubmitLabel ?? (IsManual ? "Approve manually & raise VO" : "Approve & raise VO"))
     </button>
 </div>
 
@@ -85,6 +89,11 @@
     [Parameter] public string DefaultDescription { get; set; } = "";
     [Parameter] public bool Busy { get; set; }
     [Parameter] public EventCallback<ApproveRequest> OnApprove { get; set; }
+    // Editing an existing (approved) variation: seed the rows from its current lines instead of a
+    // single estimate line, and relabel the button / help for an edit rather than an approval.
+    [Parameter] public IReadOnlyList<VariationLineInput>? InitialLines { get; set; }
+    [Parameter] public string? SubmitLabel { get; set; }
+    [Parameter] public string? HelpOverride { get; set; }
 
     public sealed record ApproveRequest(string PrimaryCostCode, decimal Total, IReadOnlyList<VariationLineInput> Lines);
 
@@ -104,13 +113,28 @@
     protected override void OnInitialized()
     {
         CostCenters.OnChange += OnCostCentresChanged;
-        // Seed a first line from the estimate so a simple one-line variation just needs a cost centre.
-        lines.Add(new LineRow
+        if (InitialLines is { Count: > 0 })
         {
-            Description = DefaultDescription,
-            Qty = "1",
-            Rate = EstimatedValue is { } est ? est.ToString(System.Globalization.CultureInfo.InvariantCulture) : "0"
-        });
+            // Editing: seed one row per existing line so the user adds to / edits the current build-up.
+            foreach (var line in InitialLines)
+                lines.Add(new LineRow
+                {
+                    CostCode = line.CostCode,
+                    Description = line.Description,
+                    Qty = line.Quantity.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                    Rate = line.Rate.ToString(System.Globalization.CultureInfo.InvariantCulture)
+                });
+        }
+        else
+        {
+            // Approving: seed a first line from the estimate so a simple one-line variation just needs a cost centre.
+            lines.Add(new LineRow
+            {
+                Description = DefaultDescription,
+                Qty = "1",
+                Rate = EstimatedValue is { } est ? est.ToString(System.Globalization.CultureInfo.InvariantCulture) : "0"
+            });
+        }
     }
 
     protected override async Task OnInitializedAsync()

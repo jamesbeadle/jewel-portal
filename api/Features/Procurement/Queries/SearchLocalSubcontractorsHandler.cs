@@ -58,7 +58,7 @@ public sealed class SearchLocalSubcontractorsHandler
 
         // Directory matching (by company name or website domain) so known companies aren't duplicated,
         // and their directory email is reused when present.
-        var directory = await context.Subcontractors
+        var directory = await context.Subcontractors.AsNoTracking()
             .Select(sub => new { sub.SubcontractorId, sub.CompanyName, sub.ContactEmail, sub.Website })
             .ToListAsync(cancellationToken);
         var byName = directory

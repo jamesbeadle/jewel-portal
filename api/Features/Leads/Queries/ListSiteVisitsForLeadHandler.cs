@@ -16,7 +16,7 @@ public sealed class ListSiteVisitsForLeadHandler
     public async Task<IReadOnlyList<SiteVisit>> HandleAsync(
         ListSiteVisitsForLead query, CancellationToken cancellationToken)
     {
-        var entities = await context.SiteVisits.Where(visit => visit.LeadId == query.LeadId).ToListAsync(cancellationToken);
+        var entities = await context.SiteVisits.AsNoTracking().Where(visit => visit.LeadId == query.LeadId).ToListAsync(cancellationToken);
         return entities.Select(entity => entity.ToModel()).ToList().AsReadOnly();
     }
 }

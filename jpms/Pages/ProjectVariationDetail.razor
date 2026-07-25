@@ -1,5 +1,9 @@
-@page "/projects/{ProjectId}/voq/{VoqId}"
+@page "/projects/{ProjectId}/variations/{VariationOrderId}"
+@* The old /voq/ route is kept so links already sent out — in mail, to-dos and bookmarks —
+   still land here. Blazor matches both to this page; nothing else needs a redirect. *@
+@page "/projects/{ProjectId}/voq/{VariationOrderId}"
 @using Jewel.JPMS.Contracts.RecordLinks
+@using Jewel.JPMS.Contracts.Variations
 @inject AuthService Auth
 @inject SessionService Session
 @inject IVariationStore Variations
@@ -11,7 +15,7 @@
 @inject IValuationReportStore Valuation
 @implements IDisposable
 
-<PageTitle>Variation Order · JPMS</PageTitle>
+<PageTitle>Variation · JPMS</PageTitle>
 
 @if (!isLoaded)
 {
@@ -59,7 +63,7 @@ else
                             title="Change status"
                             disabled="@busy"
                             @onclick="() => orderStatusMenuOpen = !orderStatusMenuOpen">
-                        @StatusLabel(order.Status) <span class="text-[9px]" aria-hidden="true">▾</span>
+                        @order.Status.DisplayName() <span class="text-[9px]" aria-hidden="true">▾</span>
                     </button>
                     @if (orderStatusMenuOpen)
                     {
@@ -88,14 +92,13 @@ else
             }
             else
             {
-                <span class="inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium bg-surface-raised text-content-muted">@StatusLabel(order.Status)</span>
+                <span class="inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium bg-surface-raised text-content-muted">@order.Status.DisplayName()</span>
             }
         </div>
         <h2 class="text-xl font-semibold text-content mb-5">@order.Title</h2>
 
-        <RecordLineage ProjectId="@ProjectId" ActiveId="voq"
-                       Request="request" Voq="order" Vo="@(order?.Status == VariationOrderStatus.Approved ? order : null)" BidPackages="packages"
-                       OnVoClick="FocusVariationOrderPanel" />
+        <RecordLineage ProjectId="@ProjectId" ActiveId="variation"
+                       Request="request" Variation="order" BidPackages="packages" />
 
         @if (error is not null)
         {
@@ -302,7 +305,7 @@ else
             <div class="space-y-5">
                 <div class="panel p-5 space-y-3 text-sm">
                     <div class="flex justify-between"><span class="text-content-subtle">Reference</span><span class="font-mono">@order.Reference</span></div>
-                    <div class="flex justify-between"><span class="text-content-subtle">Status</span><span>@StatusLabel(order.Status)</span></div>
+                    <div class="flex justify-between"><span class="text-content-subtle">Status</span><span>@order.Status.DisplayName()</span></div>
                     <div class="flex justify-between"><span class="text-content-subtle">Estimated value</span><span>@(order.EstimatedValue is null ? "—" : Money(order.EstimatedValue.Value))</span></div>
                     <div class="flex justify-between"><span class="text-content-subtle">Selected sub</span><span>@SelectedSubName()</span></div>
                 </div>
@@ -310,12 +313,11 @@ else
                 @if (ApprovedOrder is not null)
                 {
                     var approved = ApprovedOrder!;
-                    @* id anchors the lineage bar's VO chip (and the pill's Reject / Return-to-quoting
-                       routes): clicking it scrolls here and flashes the panel (jpmsFocusElement), so
-                       the click lands visibly. This is simply the approved-state section of the one
-                       record — there is no separate VO document any more. *@
+                    @* The approved-state section of this one record — not a second document.
+                       The id anchors the pill's Reject / Return-to-quoting routes, which scroll here
+                       and flash the panel (jpmsFocusElement) so the click lands visibly. *@
                     <div id="variation-order" class="panel p-5 space-y-3">
-                        <h3 class="eyebrow">Variation Order</h3>
+                        <h3 class="eyebrow">Approved figures</h3>
                         <div class="text-sm text-content flex items-center">
                             <span class="font-mono font-semibold">@(approved.VariationRef ?? approved.DisplayNumber)</span>
                         </div>
@@ -338,6 +340,12 @@ else
                             <button type="button" class="btn-secondary w-full" disabled="@busy" @onclick="IssueWorkOrder">Issue work order</button>
                         }
                         @if (CanManage)
+                        {
+                            @* Add / edit / remove the priced lines without un-approving — the report,
+                               CVR and per-centre budgets move by the difference. *@
+                            <button type="button" class="btn-secondary w-full" disabled="@busy" @onclick="() => editLinesModalOpen = true">Edit lines</button>
+                        }
+                        @if (CanManage && VariationLines.Count <= 1)
                         {
                             @if (!revisingValue)
                             {
@@ -405,6 +413,19 @@ else
                             </div>
                         }
                     </div>
+
+                    <Modal IsOpen="editLinesModalOpen"
+                           Title="@($"Edit lines — {order.Reference}")"
+                           ShowFooter="false"
+                           OnCancel="@(() => editLinesModalOpen = false)"
+                           Class="max-w-3xl">
+                        <VariationApprovePanel ShowHeading="false"
+                                               InitialLines="@CurrentLineInputs"
+                                               SubmitLabel="Save lines"
+                                               HelpOverride="Editing re-prices these lines on the Valuation Report and moves the CVR and cost-centre budgets by the difference. Nothing else changes."
+                                               Busy="@busy"
+                                               OnApprove="SaveLinesEdit" />
+                    </Modal>
                 }
                 else if (CanManage && order.Status is VariationOrderStatus.Quoting or VariationOrderStatus.Issued or VariationOrderStatus.AwaitingArchitectInstruction)
                 {
@@ -501,7 +522,7 @@ else
 
 @code {
     [Parameter] public string ProjectId { get; set; } = "";
-    [Parameter] public string VoqId { get; set; } = "";
+    [Parameter] public string VariationOrderId { get; set; } = "";
 
     private bool isLoaded;
     private bool busy;
@@ -517,6 +538,11 @@ else
     private bool returningToQuoting;
     private bool rejectingOrder;
     private bool deletingOrder;
+    private bool editLinesModalOpen;
+
+    // The approved variation's current lines, shaped for the edit panel to seed its rows.
+    private IReadOnlyList<VariationLineInput> CurrentLineInputs =>
+        VariationLines.Select(line => new VariationLineInput(line.CostCode, line.Description, line.Quantity, line.Rate)).ToList();
 
     // Status pill dropdown — same dismiss pattern as the request page's Actions dropdown: every
     // item closes it before running, the toggle is the dismiss.
@@ -601,24 +627,11 @@ else
         isLoaded = true;
     }
 
-    protected override async Task OnAfterRenderAsync(bool firstRender)
-    {
-        // Arriving via a VO chip elsewhere in the app ("…/voq/{id}?focus=vo"): land focused on
-        // the Variation Order panel so the navigation visibly reaches the approved section, not
-        // just the page.
-        if (firstRender && ApprovedOrder is not null && WantsVoFocus())
-            await FocusVariationOrderPanel();
-    }
-
-    private bool WantsVoFocus()
-    {
-        var query = new Uri(Nav.Uri).Query;
-        return query.Contains("focus=vo", StringComparison.OrdinalIgnoreCase);
-    }
-
-    // The lineage bar's VO chip on this page: the approved section lives here, so scroll to and
-    // flash its panel. Also reused by the status pill when routing Reject / Return-to-quoting from
-    // Approved, so the confirm the user needs lands visibly instead of acting silently.
+    // Scrolls to and flashes the approved-figures panel. The lineage bar no longer needs this —
+    // there is one variation chip now, rather than a quote chip pointing at an order chip on the
+    // same page — but the status pill still uses it when routing Reject / Return-to-quoting from
+    // Approved, so the confirmation the user has to give lands visibly instead of the click
+    // appearing to do nothing.
     private async Task FocusVariationOrderPanel()
     {
         try { await Js.InvokeVoidAsync("jpmsFocusElement", "variation-order"); }
@@ -636,8 +649,8 @@ else
     {
         try
         {
-            order = await Variations.GetByIdAsync(VoqId);
-            packages = await Variations.ListBidPackagesAsync(VoqId);
+            order = await Variations.GetByIdAsync(VariationOrderId);
+            packages = await Variations.ListBidPackagesAsync(VariationOrderId);
             // Originating request for the lineage bar — best-effort, the bar shows a placeholder
             // without it. Portal-accepted variation orders have no request at all (RequestId is empty).
             if (order is not null && !string.IsNullOrWhiteSpace(order.RequestId))
@@ -665,7 +678,7 @@ else
         try
         {
             var tagged = new List<MailboxMessage>(
-                await Queries.AskAsync(new ListRecordEmails(RecordType.VariationQuote, VoqId), CancellationToken.None));
+                await Queries.AskAsync(new ListRecordEmails(RecordType.VariationQuote, VariationOrderId), CancellationToken.None));
             if (ApprovedOrder is { } approved)
                 tagged.AddRange(await Queries.AskAsync(new ListRecordEmails(RecordType.Variation, approved.VariationOrderId), CancellationToken.None));
             emails = tagged
@@ -691,7 +704,7 @@ else
         get
         {
             var taken = projectQuotes
-                .Where(quote => !string.IsNullOrWhiteSpace(quote.RequestId) && quote.VariationOrderId != VoqId)
+                .Where(quote => !string.IsNullOrWhiteSpace(quote.RequestId) && quote.VariationOrderId != VariationOrderId)
                 .Select(quote => quote.RequestId)
                 .ToHashSet(StringComparer.OrdinalIgnoreCase);
             return RequestRegister.ForProject(ProjectId)
@@ -713,7 +726,7 @@ else
         try
         {
             linkBusy = true;
-            await Variations.LinkToRequestAsync(VoqId, linkTargetRequestId);
+            await Variations.LinkToRequestAsync(VariationOrderId, linkTargetRequestId);
             linkTargetRequestId = "";
             await ReloadAsync(); // the lineage bar re-renders with the request chip in place
         }
@@ -730,7 +743,7 @@ else
         try
         {
             busy = true;
-            await Variations.AddBidPackageAsync(VoqId, newTitle.Trim(), newTrade.Trim());
+            await Variations.AddBidPackageAsync(VariationOrderId, newTitle.Trim(), newTrade.Trim());
             newTitle = newTrade = "";
             addingPackage = false;
             await ReloadAsync();
@@ -751,7 +764,7 @@ else
             busy = true;
             // The panel supplies the priced build-up; the value and primary cost code are derived
             // from it. The server writes one report line per entry under this variation's V-ref.
-            order = await Variations.ApproveAsync(VoqId, request.PrimaryCostCode, request.Total, request.Lines);
+            order = await Variations.ApproveAsync(VariationOrderId, request.PrimaryCostCode, request.Total, request.Lines);
             approveModalOpen = false;
             Valuation.Refresh(ProjectId); // pull the freshly written variation lines for the breakdown
             await ReloadAsync();
@@ -785,7 +798,7 @@ else
         var needsConfirm = status == VariationOrderStatus.Approved
             || status == VariationOrderStatus.Rejected
             || (order?.Status == VariationOrderStatus.Approved && status == VariationOrderStatus.Quoting);
-        return needsConfirm ? $"{StatusLabel(status)}…" : StatusLabel(status);
+        return needsConfirm ? $"{status.DisplayName()}…" : status.DisplayName();
     }
 
     private string? PillOptionTitle(VariationOrderStatus status)
@@ -849,7 +862,7 @@ else
         try
         {
             busy = true;
-            order = await Variations.SetStatusAsync(VoqId, target);
+            order = await Variations.SetStatusAsync(VariationOrderId, target);
             await ReloadAsync();
         }
         catch (CommandFailedException ex) { error = ex.Message; }
@@ -864,7 +877,7 @@ else
         try
         {
             busy = true;
-            order = await Variations.RejectAsync(VoqId);
+            order = await Variations.RejectAsync(VariationOrderId);
             rejectingOrder = false;
             await ReloadAsync();
         }
@@ -880,12 +893,29 @@ else
         try
         {
             busy = true;
-            await Variations.DeleteAsync(VoqId);
+            await Variations.DeleteAsync(VariationOrderId);
             // The record is gone — return to the variations register rather than a dead page.
             Nav.NavigateTo($"/projects/{ProjectId}/requests/variations");
         }
         catch (CommandFailedException ex) { error = ex.Message; busy = false; }
         catch { error = "Couldn't delete the variation order. Please try again."; busy = false; }
+    }
+
+    private async Task SaveLinesEdit(VariationApprovePanel.ApproveRequest request)
+    {
+        if (busy || order is null) return;
+        error = null;
+        try
+        {
+            busy = true;
+            order = await Variations.ReviseVariationOrderLinesAsync(VariationOrderId, request.Lines);
+            editLinesModalOpen = false;
+            Valuation.Refresh(ProjectId); // pull the re-priced lines for the breakdown
+            await ReloadAsync();
+        }
+        catch (CommandFailedException ex) { error = ex.Message; }
+        catch { error = "Couldn't save the variation lines. Please try again."; }
+        finally { busy = false; }
     }
 
     // The status pill's "Approved…" pick opens the approve modal — the build-up (cost centres, lines)
@@ -903,7 +933,7 @@ else
         try
         {
             busy = true;
-            order = await Variations.ReturnToQuotingAsync(VoqId);
+            order = await Variations.ReturnToQuotingAsync(VariationOrderId);
             returningToQuoting = false;
             await ReloadAsync(); // the approved section drops away; the approve panel reappears
         }
@@ -931,7 +961,7 @@ else
         try
         {
             busy = true;
-            order = await Variations.ReviseVariationOrderValueAsync(VoqId, value);
+            order = await Variations.ReviseVariationOrderValueAsync(VariationOrderId, value);
             revisingValue = false;
             await ReloadAsync();
         }
@@ -948,7 +978,7 @@ else
         try
         {
             busy = true;
-            order = await Variations.SelectTenderAsync(VoqId, selBidPackageId, selSubId, value);
+            order = await Variations.SelectTenderAsync(VariationOrderId, selBidPackageId, selSubId, value);
             await ReloadAsync();
         }
         catch { error = "Couldn't record the selection. Please try again."; }
@@ -961,15 +991,6 @@ else
         return Subcontractors.Find(order.SelectedSubcontractorId)?.CompanyName ?? order.SelectedSubcontractorId;
     }
 
-    private static string StatusLabel(VariationOrderStatus status) => status switch
-    {
-        VariationOrderStatus.Quoting  => "Quoting",
-        VariationOrderStatus.Issued   => "Issued",
-        VariationOrderStatus.AwaitingArchitectInstruction => "Awaiting AI",
-        VariationOrderStatus.Approved => "Approved",
-        VariationOrderStatus.Rejected => "Rejected",
-        _ => status.ToString()
-    };
 
     private static string Money(decimal value) => value.ToString("C0", System.Globalization.CultureInfo.GetCultureInfo("en-GB"));
 }

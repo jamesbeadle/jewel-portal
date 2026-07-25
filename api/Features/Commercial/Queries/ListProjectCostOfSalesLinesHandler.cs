@@ -18,13 +18,13 @@ public sealed class ListProjectCostOfSalesLinesHandler
     {
         // Same population as the financial summary's actual-cost figure, project-wide:
         // whole-line allocations plus split shares from XeroCostSplits.
-        var lines = await context.XeroLedgerLines
+        var lines = await context.XeroLedgerLines.AsNoTracking()
             .Where(line => line.ProjectId == query.ProjectId
                            && line.AllocationStatus == (int)XeroAllocationStatus.Allocated
                            && line.CostCenterCode != null)
             .ToListAsync(cancellationToken);
 
-        var splitShares = await context.XeroCostSplits
+        var splitShares = await context.XeroCostSplits.AsNoTracking()
             .Join(context.XeroLedgerLines,
                 split => split.XeroLedgerLineId,
                 line => line.XeroLedgerLineId,
@@ -34,7 +34,7 @@ public sealed class ListProjectCostOfSalesLinesHandler
             .ToListAsync(cancellationToken);
 
         // Each line's work-order slices, so the queue can show and edit the split.
-        var linksByLine = (await context.XeroLineWorkOrderLinks
+        var linksByLine = (await context.XeroLineWorkOrderLinks.AsNoTracking()
                 .Where(link => link.ProjectId == query.ProjectId)
                 .ToListAsync(cancellationToken))
             .GroupBy(link => link.XeroLedgerLineId, StringComparer.OrdinalIgnoreCase)

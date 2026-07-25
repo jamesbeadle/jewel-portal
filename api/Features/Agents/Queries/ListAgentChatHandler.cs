@@ -13,7 +13,7 @@ public sealed class ListAgentChatHandler : IQueryHandler<ListAgentChat, IReadOnl
 
     public async Task<IReadOnlyList<AgentChatMessage>> HandleAsync(ListAgentChat query, CancellationToken cancellationToken)
     {
-        var entities = await context.AgentChatMessages
+        var entities = await context.AgentChatMessages.AsNoTracking()
             .Where(m => m.RequestId == query.RequestId && m.AgentKey == query.AgentKey)
             .OrderBy(m => m.PostedAt)
             .ToListAsync(cancellationToken);

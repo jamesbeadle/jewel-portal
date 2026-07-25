@@ -245,21 +245,29 @@ else
         isLoaded = true;
         if (!Session.IsApproved || !HasInternalRole) { loading = false; return; }
 
-        await LoadAsync();
+        // The list, the project labels and the assignable-role pool are independent, so they go
+        // out together rather than one after another.
+        var loads = new List<Task> { LoadAsync(), LoadProjectLabelsAsync() };
+        if (CanSeeAll) loads.Add(LoadAssigneeOptionsAsync());
+        await Task.WhenAll(loads);
+    }
 
-        // Project labels for the scope chips/filter, and the assignable-role pool for the
-        // picker/filter. Either failing degrades the labels, never the list itself.
+    // Project labels for the scope chips/filter, and the assignable-role pool for the
+    // picker/filter. Either failing degrades the labels, never the list itself.
+    private async Task LoadProjectLabelsAsync()
+    {
         try { if (Projects.Current is null) await Projects.RefreshAsync(CancellationToken.None); } catch { }
-        if (CanSeeAll)
+    }
+
+    private async Task LoadAssigneeOptionsAsync()
+    {
+        try
         {
-            try
-            {
-                assigneeOptions = (await TodoStore.ListAssignableRolesAsync())
-                    .Select(role => new SearchSelect.Option(RoleValue(role), role.DisplayName()))
-                    .ToList();
-            }
-            catch { }
+            assigneeOptions = (await TodoStore.ListAssignableRolesAsync())
+                .Select(role => new SearchSelect.Option(RoleValue(role), role.DisplayName()))
+                .ToList();
         }
+        catch { }
     }
 
     private async Task LoadAsync()

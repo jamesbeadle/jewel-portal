@@ -13,7 +13,7 @@ public sealed class GetVatAnalysisForProjectHandler : IQueryHandler<GetVatAnalys
 
     public async Task<VatAnalysis?> HandleAsync(GetVatAnalysisForProject query, CancellationToken cancellationToken)
     {
-        var entity = await context.VatAnalyses.FirstOrDefaultAsync(v => v.ProjectId == query.ProjectId, cancellationToken);
+        var entity = await context.VatAnalyses.AsNoTracking().FirstOrDefaultAsync(v => v.ProjectId == query.ProjectId, cancellationToken);
         return entity?.ToModel();
     }
 }

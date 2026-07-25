@@ -14,12 +14,12 @@ public sealed class ListCostCentreGroupsForProjectHandler : IQueryHandler<ListCo
 
     public async Task<IReadOnlyList<CostCentreGroup>> HandleAsync(ListCostCentreGroupsForProject query, CancellationToken cancellationToken)
     {
-        var groups = await context.CostCentreGroups
+        var groups = await context.CostCentreGroups.AsNoTracking()
             .Where(group => group.ProjectId == query.ProjectId)
             .OrderBy(group => group.Name)
             .ToListAsync(cancellationToken);
 
-        var members = await context.CostCentreGroupMembers
+        var members = await context.CostCentreGroupMembers.AsNoTracking()
             .Where(member => member.ProjectId == query.ProjectId)
             .ToListAsync(cancellationToken);
 

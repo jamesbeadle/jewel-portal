@@ -19,13 +19,13 @@ public sealed class ListCostCentreActualCostsHandler : IQueryHandler<ListCostCen
         // Xero purchase lines for this project — whole-line allocations plus split
         // shares from XeroCostSplits. Cost-code match is case-insensitive in memory
         // to mirror the summary's OrdinalIgnoreCase grouping.
-        var lines = await context.XeroLedgerLines
+        var lines = await context.XeroLedgerLines.AsNoTracking()
             .Where(line => line.ProjectId == query.ProjectId
                            && line.AllocationStatus == (int)XeroAllocationStatus.Allocated
                            && line.CostCenterCode != null)
             .ToListAsync(cancellationToken);
 
-        var splitShares = await context.XeroCostSplits
+        var splitShares = await context.XeroCostSplits.AsNoTracking()
             .Join(context.XeroLedgerLines,
                 split => split.XeroLedgerLineId,
                 line => line.XeroLedgerLineId,
@@ -35,7 +35,7 @@ public sealed class ListCostCentreActualCostsHandler : IQueryHandler<ListCostCen
             .ToListAsync(cancellationToken);
 
         // Each line's work-order slices, so the modal can show and edit the split.
-        var linksByLine = (await context.XeroLineWorkOrderLinks
+        var linksByLine = (await context.XeroLineWorkOrderLinks.AsNoTracking()
                 .Where(link => link.ProjectId == query.ProjectId)
                 .ToListAsync(cancellationToken))
             .GroupBy(link => link.XeroLedgerLineId, StringComparer.OrdinalIgnoreCase)
@@ -74,7 +74,7 @@ public sealed class ListCostCentreActualCostsHandler : IQueryHandler<ListCostCen
         // order's centres pro-rata (positive rows), using the exact same apportionment the
         // financial summary applies — so this centre's rows total to its column figure.
         var codeTotalsByOrder = await WorkOrderCostApportionment.CodeTotalsByOrderAsync(context, query.ProjectId, cancellationToken);
-        var orderNumbers = (await context.WorkOrders
+        var orderNumbers = (await context.WorkOrders.AsNoTracking()
                 .Where(order => order.ProjectId == query.ProjectId)
                 .Select(order => new { order.WorkOrderId, order.Number })
                 .ToListAsync(cancellationToken))

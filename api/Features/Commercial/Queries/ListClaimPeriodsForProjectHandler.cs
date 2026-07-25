@@ -16,7 +16,7 @@ public sealed class ListClaimPeriodsForProjectHandler
     public async Task<IReadOnlyList<ClaimPeriod>> HandleAsync(
         ListClaimPeriodsForProject query, CancellationToken cancellationToken)
     {
-        var entities = await context.ClaimPeriods
+        var entities = await context.ClaimPeriods.AsNoTracking()
             .Where(period => period.ProjectId == query.ProjectId)
             .OrderBy(period => period.PeriodNumber)
             .ToListAsync(cancellationToken);

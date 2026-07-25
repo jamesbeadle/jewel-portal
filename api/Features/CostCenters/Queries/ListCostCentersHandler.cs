@@ -13,7 +13,7 @@ public sealed class ListCostCentersHandler : IQueryHandler<ListCostCenters, IRea
 
     public async Task<IReadOnlyList<CostCenter>> HandleAsync(ListCostCenters query, CancellationToken cancellationToken)
     {
-        var rows = context.CostCenters.AsQueryable();
+        var rows = context.CostCenters.AsNoTracking().AsQueryable();
         if (!query.IncludeInactive) rows = rows.Where(c => c.IsActive);
         var entities = await rows
             .OrderBy(c => c.SortOrder)

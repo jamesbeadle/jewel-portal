@@ -64,6 +64,9 @@ var host = new HostBuilder()
                 sqlServer.CommandTimeout(25);
             }));
 
+        // Singleton on purpose: the resolved-caller cache has to outlive the request scope or it
+        // caches nothing. Short TTL plus explicit invalidation on permission change — see the type.
+        services.AddSingleton<SignedInUserCache>();
         services.AddScoped<SessionManager>();
         services.AddScoped<SignedInUserResolver>();
         services.AddScoped<InviteDirectoryWriter>();

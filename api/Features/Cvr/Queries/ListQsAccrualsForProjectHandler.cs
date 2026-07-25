@@ -13,7 +13,7 @@ public sealed class ListQsAccrualsForProjectHandler : IQueryHandler<ListQsAccrua
 
     public async Task<IReadOnlyList<QsAccrual>> HandleAsync(ListQsAccrualsForProject query, CancellationToken cancellationToken)
     {
-        var entities = await context.QsAccruals.Where(a => a.ProjectId == query.ProjectId).OrderByDescending(a => a.SignedOffAt).ToListAsync(cancellationToken);
+        var entities = await context.QsAccruals.AsNoTracking().Where(a => a.ProjectId == query.ProjectId).OrderByDescending(a => a.SignedOffAt).ToListAsync(cancellationToken);
         return entities.Select(entity => entity.ToModel()).ToList().AsReadOnly();
     }
 }

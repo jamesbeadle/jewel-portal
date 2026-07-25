@@ -13,7 +13,7 @@ public sealed class ListForecastComponentsForProjectHandler : IQueryHandler<List
 
     public async Task<IReadOnlyList<ForecastComponent>> HandleAsync(ListForecastComponentsForProject query, CancellationToken cancellationToken)
     {
-        var entities = await context.ForecastComponents.Where(f => f.ProjectId == query.ProjectId).ToListAsync(cancellationToken);
+        var entities = await context.ForecastComponents.AsNoTracking().Where(f => f.ProjectId == query.ProjectId).ToListAsync(cancellationToken);
         return entities.Select(entity => entity.ToModel()).ToList().AsReadOnly();
     }
 }

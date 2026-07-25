@@ -15,7 +15,7 @@ public sealed class ListComplianceDocumentsForSubcontractorHandler
 
     public async Task<IReadOnlyList<ComplianceDocument>> HandleAsync(ListComplianceDocumentsForSubcontractor query, CancellationToken cancellationToken)
     {
-        var entities = await context.ComplianceDocuments.Where(document => document.SubcontractorId == query.SubcontractorId).ToListAsync(cancellationToken);
+        var entities = await context.ComplianceDocuments.AsNoTracking().Where(document => document.SubcontractorId == query.SubcontractorId).ToListAsync(cancellationToken);
         return entities.Select(entity => entity.ToModel()).ToList().AsReadOnly();
     }
 }

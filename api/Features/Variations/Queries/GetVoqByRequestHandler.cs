@@ -13,7 +13,7 @@ public sealed class GetVoqByRequestHandler : IQueryHandler<GetVoqByRequest, Vari
 
     public async Task<VariationOrder?> HandleAsync(GetVoqByRequest query, CancellationToken cancellationToken)
     {
-        var entity = await context.VariationOrders
+        var entity = await context.VariationOrders.AsNoTracking()
             .Where(vo => vo.RequestId == query.RequestId)
             .OrderByDescending(vo => vo.CreatedAt)
             .FirstOrDefaultAsync(cancellationToken);

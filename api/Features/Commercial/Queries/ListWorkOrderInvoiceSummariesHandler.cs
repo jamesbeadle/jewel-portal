@@ -16,7 +16,7 @@ public sealed class ListWorkOrderInvoiceSummariesHandler
     public async Task<IReadOnlyList<WorkOrderInvoiceSummary>> HandleAsync(
         ListWorkOrderInvoiceSummaries query, CancellationToken cancellationToken)
     {
-        var orders = await context.WorkOrders
+        var orders = await context.WorkOrders.AsNoTracking()
             .Where(order => order.ProjectId == query.ProjectId)
             .OrderBy(order => order.Number)
             .ToListAsync(cancellationToken);
@@ -26,7 +26,7 @@ public sealed class ListWorkOrderInvoiceSummariesHandler
         // orders contributes each slice to its own order. Slices only exist on whole-line
         // allocations to this project by construction: the link command enforces it, and
         // re-allocating a line off the project clears its links.
-        var linkedTotals = await context.XeroLineWorkOrderLinks
+        var linkedTotals = await context.XeroLineWorkOrderLinks.AsNoTracking()
             .Where(link => link.ProjectId == query.ProjectId)
             .GroupBy(link => link.WorkOrderId)
             .Select(group => new
@@ -39,7 +39,7 @@ public sealed class ListWorkOrderInvoiceSummariesHandler
         var totalsByOrder = linkedTotals.ToDictionary(total => total.WorkOrderId, StringComparer.OrdinalIgnoreCase);
 
         var subcontractorIds = orders.Select(order => order.SubcontractorId).Distinct().ToList();
-        var namesById = await context.Subcontractors
+        var namesById = await context.Subcontractors.AsNoTracking()
             .Where(sub => subcontractorIds.Contains(sub.SubcontractorId))
             .ToDictionaryAsync(sub => sub.SubcontractorId, sub => sub.CompanyName, cancellationToken);
 

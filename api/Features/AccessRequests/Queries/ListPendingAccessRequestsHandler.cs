@@ -16,7 +16,7 @@ public sealed class ListPendingAccessRequestsHandler
     public async Task<IReadOnlyList<AccessRequest>> HandleAsync(
         ListPendingAccessRequests query, CancellationToken cancellationToken)
     {
-        var entities = await context.AccessRequests
+        var entities = await context.AccessRequests.AsNoTracking()
             .OrderByDescending(request => request.RequestedAt)
             .ToListAsync(cancellationToken);
         return entities.Select(entity => entity.ToModel()).ToList().AsReadOnly();

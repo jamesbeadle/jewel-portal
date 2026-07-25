@@ -13,7 +13,7 @@ public sealed class GetProgrammeForProjectHandler : IQueryHandler<GetProgrammeFo
 
     public async Task<IReadOnlyList<ProgrammeTask>> HandleAsync(GetProgrammeForProject query, CancellationToken cancellationToken)
     {
-        var entities = await context.ProgrammeTasks.Where(task => task.ProjectId == query.ProjectId).OrderBy(task => task.PlannedStart).ToListAsync(cancellationToken);
+        var entities = await context.ProgrammeTasks.AsNoTracking().Where(task => task.ProjectId == query.ProjectId).OrderBy(task => task.PlannedStart).ToListAsync(cancellationToken);
         return entities.Select(entity => entity.ToModel()).ToList().AsReadOnly();
     }
 }

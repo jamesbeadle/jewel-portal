@@ -52,5 +52,48 @@ public sealed record VariationOrder(
     string? ApprovedByEmail = null,
     DateTimeOffset? RejectedAt = null)
 {
-    public string DisplayNumber => Number > 0 ? $"VOQ-{Number:0000}" : "";
+    /// <summary>What a user sees this variation called, at every stage: "V72".
+    ///
+    /// There is one number for one document. Approval mints <see cref="VariationRef"/> from this
+    /// same number (VOQ-0072 → V72), so showing "VOQ-0072" while quoting and "V72" once approved
+    /// only ever made one record look like two. <see cref="Reference"/> keeps its historic
+    /// "VOQ-0072" spelling because it is a persisted identifier; the mail-tag stem is built
+    /// separately from <see cref="Number"/> (see VariationOrderQuoteLinkProvider), so what is shown
+    /// here is free to differ from either without touching mailbox triage.</summary>
+    public string DisplayNumber => Number > 0 ? $"V{Number}" : "";
+}
+
+public static class VariationOrderStatusExtensions
+{
+    // The one shared status wording. Because a variation is a single document, its status is the
+    // only thing telling a reader which stage it has reached — so every pill, lineage chip, picker
+    // and export goes through here and they can never drift apart. (Same arrangement as
+    // RequestStatusExtensions.)
+    public static string DisplayName(this VariationOrderStatus status) => status switch
+    {
+        VariationOrderStatus.Quoting  => "Quoting",
+        VariationOrderStatus.Issued   => "Issued",
+        VariationOrderStatus.AwaitingArchitectInstruction => "Awaiting AI",
+        VariationOrderStatus.Approved => "Approved",
+        VariationOrderStatus.Rejected => "Rejected",
+        _ => status.ToString()
+    };
+
+    /// <summary>The tooltip/hint wording that accompanies the label wherever a surface shows one.</summary>
+    public static string Hint(this VariationOrderStatus status) => status switch
+    {
+        VariationOrderStatus.Quoting  => "being priced — bid packages out, no commercial effect yet",
+        VariationOrderStatus.Issued   => "with the client for a decision — no commercial effect yet",
+        VariationOrderStatus.AwaitingArchitectInstruction => "issued, awaiting a formal Architect's Instruction",
+        VariationOrderStatus.Approved => "instructed by the client — the value is in the valuation, CVR and budget",
+        VariationOrderStatus.Rejected => "declined or withdrawn",
+        _ => status.ToString()
+    };
+
+    /// <summary>True while the variation is still pre-approval, so it carries no commercial effect
+    /// and can move freely between stages.</summary>
+    public static bool IsPreApproval(this VariationOrderStatus status) =>
+        status is VariationOrderStatus.Quoting
+               or VariationOrderStatus.Issued
+               or VariationOrderStatus.AwaitingArchitectInstruction;
 }

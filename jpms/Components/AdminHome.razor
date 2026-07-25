@@ -11,14 +11,19 @@
 
     <AdminStatsRow />
 
-    @* Open to-do items assigned to this administrator — general and project items alike. *@
-    <div class="mb-6">
+    @* An admin carries every role server-side, so this page shows both halves of the job: the real
+       project work first, then the user-administration panels. It used to end on WhatsNextPanel —
+       a hard-coded engineering backlog with no data behind it, which is not something anybody
+       administering the system can act on. *@
+    <div class="space-y-6 mb-6">
+        @* Open to-do items assigned to this administrator — general and project items alike. *@
         <MyTodosPanel />
+        <OpenRequestsPanel />
+        <NextValuationsPanel />
     </div>
 
     <PendingRequestsPanel />
     <ApprovedUsersPanel CurrentUserEmail="@CurrentUser.Email" />
-    <WhatsNextPanel />
 
 </section>
 

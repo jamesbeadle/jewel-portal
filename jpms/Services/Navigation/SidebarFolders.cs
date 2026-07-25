@@ -49,7 +49,7 @@ public static class SidebarFolders
             new[]
             {
                 // Requests is the client-side document register: Requests, RFIs and Variations
-                // (VOQ & VO) are one lifecycle in one place.
+                // and variations are one lifecycle in one place.
                 new SidebarRow(new NavigationItem("Requests", "/projects/{project}/requests"),
                     DesktopNavigation.ProjectRoles),
                 // Point-in-time captures of issued valuation reports — what the client was

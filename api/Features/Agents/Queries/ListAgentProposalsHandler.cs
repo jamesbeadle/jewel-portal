@@ -14,7 +14,7 @@ public sealed class ListAgentProposalsHandler : IQueryHandler<ListAgentProposals
 
     public async Task<IReadOnlyList<AgentProposal>> HandleAsync(ListAgentProposals query, CancellationToken cancellationToken)
     {
-        var entities = await context.AgentProposals
+        var entities = await context.AgentProposals.AsNoTracking()
             .Where(p => p.RequestId == query.RequestId)
             .OrderByDescending(p => p.CreatedAt)
             .ToListAsync(cancellationToken);

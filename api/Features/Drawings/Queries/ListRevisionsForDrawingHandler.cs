@@ -15,7 +15,7 @@ public sealed class ListRevisionsForDrawingHandler
 
     public async Task<IReadOnlyList<DrawingRevision>> HandleAsync(ListRevisionsForDrawing query, CancellationToken cancellationToken)
     {
-        var revisions = context.DrawingRevisions
+        var revisions = context.DrawingRevisions.AsNoTracking()
             .Where(revision => revision.DrawingId == query.DrawingId);
 
         revisions = query.Status switch

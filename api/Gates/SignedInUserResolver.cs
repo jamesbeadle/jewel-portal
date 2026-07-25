@@ -14,11 +14,13 @@ public sealed class SignedInUserResolver
 {
     private readonly JpmsContext context;
     private readonly SessionManager sessions;
+    private readonly SignedInUserCache cache;
 
-    public SignedInUserResolver(JpmsContext context, SessionManager sessions)
+    public SignedInUserResolver(JpmsContext context, SessionManager sessions, SignedInUserCache cache)
     {
         this.context = context;
         this.sessions = sessions;
+        this.cache = cache;
     }
 
     public async Task<SignedInUser?> ResolveAsync(HttpRequest request, CancellationToken cancellationToken)
@@ -26,20 +28,32 @@ public sealed class SignedInUserResolver
         var secret = SessionCookie.Read(request);
         if (secret is null) return null;
 
-        var email = await sessions.ResolveEmailAsync(secret, cancellationToken);
-        if (string.IsNullOrWhiteSpace(email)) return null;
+        // One round-trip to validate the session (a primary-key seek), then — on a cache hit — none
+        // at all for the directory user and the role list. Those two used to run on every
+        // authenticated call across ~340 endpoints, before any business data was touched.
+        var session = await sessions.ResolveAsync(secret, cancellationToken);
+        if (session is null || string.IsNullOrWhiteSpace(session.Email)) return null;
 
+        var now = DateTimeOffset.UtcNow;
+        if (cache.Get(session.SessionId, now) is { } cached) return cached;
+
+        var email = session.Email;
         var directoryUser = await context.DirectoryUsers
+            .AsNoTracking()
             .FirstOrDefaultAsync(row => row.Email == email, cancellationToken);
         var displayName = string.IsNullOrWhiteSpace(directoryUser?.DisplayName) ? email : directoryUser!.DisplayName;
         var roles = await ResolveRolesAsync(email, cancellationToken);
-        return new SignedInUser(email, displayName, roles, directoryUser?.SubcontractorId);
+
+        var user = new SignedInUser(email, displayName, roles, directoryUser?.SubcontractorId);
+        cache.Set(session.SessionId, user, session.ExpiresAt, now);
+        return user;
     }
 
     private async Task<IReadOnlyList<Role>> ResolveRolesAsync(string email, CancellationToken cancellationToken)
     {
         if (JpmsAdministrators.Contains(email)) return Enum.GetValues<Role>();
         var roles = await context.DirectoryUserRoles
+            .AsNoTracking()
             .Where(row => row.DirectoryUserEmail == email)
             .Select(row => (Role)row.Role)
             .ToListAsync(cancellationToken);

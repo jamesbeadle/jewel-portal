@@ -16,16 +16,16 @@ public sealed class GetProgrammeDetailHandler : IQueryHandler<GetProgrammeDetail
 
     public async Task<ProgrammeDetail> HandleAsync(GetProgrammeDetail query, CancellationToken cancellationToken)
     {
-        var tasks = await context.ProgrammeTasks
+        var tasks = await context.ProgrammeTasks.AsNoTracking()
             .Where(task => task.ProjectId == query.ProjectId)
             .OrderBy(task => task.PlannedStart)
             .ToListAsync(cancellationToken);
 
-        var links = await context.ProgrammeTaskLinks
+        var links = await context.ProgrammeTaskLinks.AsNoTracking()
             .Where(link => link.ProjectId == query.ProjectId)
             .ToListAsync(cancellationToken);
 
-        var baselines = await context.ProgrammeBaselines
+        var baselines = await context.ProgrammeBaselines.AsNoTracking()
             .Where(b => b.ProjectId == query.ProjectId)
             .OrderByDescending(b => b.TakenAt)
             .ToListAsync(cancellationToken);
@@ -34,7 +34,7 @@ public sealed class GetProgrammeDetailHandler : IQueryHandler<GetProgrammeDetail
 
         var baselineTasks = baseline is null
             ? new List<Data.Entities.ProgrammeBaselineTaskEntity>()
-            : await context.ProgrammeBaselineTasks
+            : await context.ProgrammeBaselineTasks.AsNoTracking()
                 .Where(t => t.ProgrammeBaselineId == baseline.ProgrammeBaselineId)
                 .ToListAsync(cancellationToken);
 

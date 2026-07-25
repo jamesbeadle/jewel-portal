@@ -762,7 +762,7 @@ else
     // A variation line's value mirrors its approved VO, so the inline edit goes through
     // the VO revise pipeline (ReviseVariationOrderValue): it re-prices this line, records
     // the delta as a QS accrual on the CVR and moves the committed cost-centre budget in
-    // one transaction — the same write-through as "Revise value" on the VOQ page, so every
+    // one transaction — the same write-through as "Revise value" on the variation page, so every
     // view of the VO stays in step. UI is Admin-only for now (the API accepts the wider
     // variation-manager set: Admin, Director, PM, Estimator).
     private IReadOnlyList<VariationOrder> variationOrders = Array.Empty<VariationOrder>();

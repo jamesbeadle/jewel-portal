@@ -10,7 +10,6 @@ public static class ProcurementRouteRegistration
     public static IServiceCollection AddProcurementReadModels(this IServiceCollection services)
     {
         services.AddScoped<BidPackagesReadModel>();
-        services.AddScoped<WorkOrdersReadModel>();
         services.AddScoped<ProjectWorkOrdersReadModel>();
         return services;
     }
@@ -28,8 +27,6 @@ public static class ProcurementRouteRegistration
         queries.Register<ListQuotesForBidPackage, IReadOnlyList<Quote>>(
             new QueryRoute("/api/bid-packages/{bidPackageId}/quotes",
                 query => $"/api/bid-packages/{((ListQuotesForBidPackage)query).BidPackageId}/quotes"));
-
-        queries.Register<ListWorkOrders, IReadOnlyList<WorkOrder>>(QueryRoute.Static("/api/work-orders"));
 
         queries.Register<ListProjectWorkOrders, IReadOnlyList<ProjectWorkOrderDetail>>(
             new QueryRoute("/api/projects/{projectId}/work-orders",

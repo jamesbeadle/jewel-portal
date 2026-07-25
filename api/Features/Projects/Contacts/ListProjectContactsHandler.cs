@@ -13,7 +13,7 @@ public sealed class ListProjectContactsHandler : IQueryHandler<ListProjectContac
 
     public async Task<IReadOnlyList<ProjectContact>> HandleAsync(ListProjectContacts query, CancellationToken cancellationToken)
     {
-        var entities = await context.ProjectContacts
+        var entities = await context.ProjectContacts.AsNoTracking()
             .Where(contact => contact.ProjectId == query.ProjectId)
             .OrderBy(contact => contact.Role)
             .ThenBy(contact => contact.Name)
@@ -28,7 +28,7 @@ public sealed class ListProjectContactsHandler : IQueryHandler<ListProjectContac
             .ToList();
         var sources = linkedIds.Count == 0
             ? new Dictionary<string, Data.Entities.PartyContactEntity>()
-            : await context.PartyContacts
+            : await context.PartyContacts.AsNoTracking()
                 .Where(p => linkedIds.Contains(p.PartyContactId))
                 .ToDictionaryAsync(p => p.PartyContactId, cancellationToken);
 

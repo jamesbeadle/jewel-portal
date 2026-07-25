@@ -8,7 +8,7 @@ namespace Jewel.JPMS.Services;
 public sealed class HttpProcurementStore : IProcurementStore
 {
     private readonly BidPackagesReadModel packagesReadModel;
-    private readonly WorkOrdersReadModel workOrdersReadModel;
+    private readonly ProjectWorkOrdersReadModel workOrdersReadModel;
     private readonly IQueryClient queries;
     private readonly ICommandSender commands;
 
@@ -16,11 +16,14 @@ public sealed class HttpProcurementStore : IProcurementStore
     // from re-triggering a fetch on every re-render (see HttpDrawingStore).
     private readonly HashSet<string> packagesRequested = new();
 
+    // Same guard for work orders, which are now fetched per project rather than company-wide.
+    private readonly HashSet<string> workOrdersRequested = new();
+
     // Quotes per bid package, cached so render-time reads never block on async
     // (which deadlocks on WebAssembly). Saving a quote invalidates its package.
     private readonly AsyncQueryCache<string, IReadOnlyList<Quote>> quotes;
 
-    public HttpProcurementStore(BidPackagesReadModel packagesReadModel, WorkOrdersReadModel workOrdersReadModel, IQueryClient queries, ICommandSender commands)
+    public HttpProcurementStore(BidPackagesReadModel packagesReadModel, ProjectWorkOrdersReadModel workOrdersReadModel, IQueryClient queries, ICommandSender commands)
     {
         this.packagesReadModel = packagesReadModel;
         this.workOrdersReadModel = workOrdersReadModel;
@@ -51,6 +54,8 @@ public sealed class HttpProcurementStore : IProcurementStore
     {
         packagesRequested.Add(projectId);
         _ = LoadPackagesAsync(projectId);
+        workOrdersRequested.Add(projectId);
+        _ = LoadWorkOrdersAsync(projectId);
     }
 
     public Task<BidPackage?> FindPackageAsync(string bidPackageId) =>
@@ -82,17 +87,21 @@ public sealed class HttpProcurementStore : IProcurementStore
         quotes.Invalidate(quote.BidPackageId);
     }
 
-    public IReadOnlyList<WorkOrder> AllWorkOrders()
+    // Work orders are read per project, sharing the Work Orders tab's cache. This used to call a
+    // company-wide /api/work-orders and filter the result down in the browser, so opening one
+    // project's Requests tab pulled every work order in the business over the wire (and scanned
+    // the whole table server-side).
+    public IReadOnlyList<WorkOrder> WorkOrdersFor(string projectId)
     {
-        if (workOrdersReadModel.Current is null) _ = workOrdersReadModel.RefreshAsync(CancellationToken.None);
-        return workOrdersReadModel.Current ?? Array.Empty<WorkOrder>();
+        if (workOrdersRequested.Add(projectId)) _ = LoadWorkOrdersAsync(projectId);
+        return workOrdersReadModel.Current(projectId).Select(detail => detail.Order).ToList().AsReadOnly();
     }
 
-    public IReadOnlyList<WorkOrder> WorkOrdersFor(string projectId) =>
-        AllWorkOrders().Where(workOrder => string.Equals(workOrder.ProjectId, projectId, StringComparison.OrdinalIgnoreCase)).ToList().AsReadOnly();
-
-    public WorkOrder? FindWorkOrder(string workOrderId) =>
-        AllWorkOrders().FirstOrDefault(workOrder => string.Equals(workOrder.WorkOrderId, workOrderId, StringComparison.OrdinalIgnoreCase));
+    private async Task LoadWorkOrdersAsync(string projectId)
+    {
+        try { await workOrdersReadModel.RefreshAsync(projectId, CancellationToken.None); }
+        catch { workOrdersRequested.Remove(projectId); }
+    }
 
     public WorkOrder Award(WorkOrder workOrder)
     {
@@ -115,6 +124,7 @@ public sealed class HttpProcurementStore : IProcurementStore
     private async Task AwardAsync(WorkOrder workOrder)
     {
         await commands.SendAsync(new AwardBidPackage(workOrder.BidPackageId, workOrder.ProjectId, workOrder.SubcontractorId, workOrder.Value, workOrder.Scope, workOrder.AwardedByEmail), CancellationToken.None);
-        await workOrdersReadModel.RefreshAsync(CancellationToken.None);
+        workOrdersRequested.Add(workOrder.ProjectId);
+        await workOrdersReadModel.RefreshAsync(workOrder.ProjectId, CancellationToken.None);
     }
 }

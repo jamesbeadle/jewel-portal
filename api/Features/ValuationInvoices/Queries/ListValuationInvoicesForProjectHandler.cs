@@ -13,7 +13,7 @@ public sealed class ListValuationInvoicesForProjectHandler : IQueryHandler<ListV
 
     public async Task<IReadOnlyList<ValuationInvoice>> HandleAsync(ListValuationInvoicesForProject query, CancellationToken cancellationToken)
     {
-        var entities = await context.ValuationInvoices
+        var entities = await context.ValuationInvoices.AsNoTracking()
             .Where(call => call.ProjectId == query.ProjectId)
             .OrderByDescending(call => call.Number)
             .ToListAsync(cancellationToken);

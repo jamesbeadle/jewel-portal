@@ -1613,11 +1613,18 @@ else
         if (!Auth.IsSignedIn) { Nav.NavigateTo("/login", forceLoad: true); return; }
         RequestRegister.OnChange += StateHasChanged;
         DrawingStore.OnChange += StateHasChanged;
+        // The sort preference has to land first — LoadAsync pages the mailbox in this order, so
+        // reading it late would fetch the first page the wrong way round. It is a local-storage
+        // read, so it costs almost nothing.
         newestFirst = await SortStorage.ReadNewestFirstAsync(Auth.CurrentUser!.Email);
-        await Projects.RefreshAsync(CancellationToken.None);
-        await LoadAsync();
-        await LoadUnassignedAsync();
-        await LoadTodoAssignableRolesAsync();
+
+        // The remaining four are independent of each other; issued together the page waits once
+        // for the slowest instead of for the sum. Triage is the heaviest page in the app to open.
+        await Task.WhenAll(
+            Projects.RefreshAsync(CancellationToken.None),
+            LoadAsync(),
+            LoadUnassignedAsync(),
+            LoadTodoAssignableRolesAsync());
         isLoaded = true;
     }
 

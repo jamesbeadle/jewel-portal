@@ -15,7 +15,7 @@ public sealed class ListSubcontractorsHandler
 
     public async Task<IReadOnlyList<Subcontractor>> HandleAsync(ListSubcontractors query, CancellationToken cancellationToken)
     {
-        var entities = await context.Subcontractors.OrderBy(sub => sub.CompanyName).ToListAsync(cancellationToken);
+        var entities = await context.Subcontractors.AsNoTracking().OrderBy(sub => sub.CompanyName).ToListAsync(cancellationToken);
         var tradesBySubcontractor = await context.TradesBySubcontractorAsync(cancellationToken);
         return entities
             .Select(entity => entity.ToModel(

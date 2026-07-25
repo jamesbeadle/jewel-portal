@@ -13,7 +13,7 @@ public sealed class ListValuationLinesForProjectHandler : IQueryHandler<ListValu
 
     public async Task<IReadOnlyList<ValuationLineItem>> HandleAsync(ListValuationLinesForProject query, CancellationToken cancellationToken)
     {
-        var entities = await context.ValuationLineItems
+        var entities = await context.ValuationLineItems.AsNoTracking()
             .Where(line => line.ProjectId == query.ProjectId)
             .OrderBy(line => line.ElementType)
             .ThenBy(line => line.DisplayOrder)

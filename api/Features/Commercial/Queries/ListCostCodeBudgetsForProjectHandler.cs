@@ -13,7 +13,7 @@ public sealed class ListCostCodeBudgetsForProjectHandler : IQueryHandler<ListCos
 
     public async Task<IReadOnlyList<CostCodeBudget>> HandleAsync(ListCostCodeBudgetsForProject query, CancellationToken cancellationToken)
     {
-        var entities = await context.CostCodeBudgets.Where(b => b.ProjectId == query.ProjectId).ToListAsync(cancellationToken);
+        var entities = await context.CostCodeBudgets.AsNoTracking().Where(b => b.ProjectId == query.ProjectId).ToListAsync(cancellationToken);
         return entities.Select(entity => entity.ToModel()).ToList().AsReadOnly();
     }
 }

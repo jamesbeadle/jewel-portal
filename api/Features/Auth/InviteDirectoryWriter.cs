@@ -2,6 +2,7 @@ using Jewel.JPMS.Api.Auth;
 using Jewel.JPMS.Api.Data;
 using Jewel.JPMS.Api.Data.Entities;
 using Jewel.JPMS.Api.Features.Directory;
+using Jewel.JPMS.Api.Gates;
 using Jewel.JPMS.Models;
 using Microsoft.EntityFrameworkCore;
 
@@ -12,10 +13,12 @@ namespace Jewel.JPMS.Api.Features.Auth;
 public sealed class InviteDirectoryWriter
 {
     private readonly JpmsContext context;
+    private readonly SignedInUserCache userCache;
 
-    public InviteDirectoryWriter(JpmsContext context)
+    public InviteDirectoryWriter(JpmsContext context, SignedInUserCache userCache)
     {
         this.context = context;
+        this.userCache = userCache;
     }
 
     public async Task PrepareAsync(
@@ -24,6 +27,9 @@ public sealed class InviteDirectoryWriter
         await UpsertDirectoryUserAsync(email, displayName, roles, cancellationToken);
         await EnsureCredentialAsync(email, now, cancellationToken);
         await InvalidatePreviousInvitesAsync(email, now, cancellationToken);
+        // Re-inviting an existing user rewrites their role list, so any cached copy of them is now
+        // wrong. (The caller still has to SaveChanges — this only drops the cache entry.)
+        userCache.InvalidateEmail(email);
     }
 
     private async Task UpsertDirectoryUserAsync(string email, string displayName, IReadOnlyList<Role> roles, CancellationToken cancellationToken)

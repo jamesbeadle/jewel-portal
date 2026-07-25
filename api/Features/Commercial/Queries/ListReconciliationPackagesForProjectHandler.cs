@@ -16,18 +16,18 @@ public sealed class ListReconciliationPackagesForProjectHandler
     public async Task<IReadOnlyList<ReconciliationPackage>> HandleAsync(
         ListReconciliationPackagesForProject query, CancellationToken cancellationToken)
     {
-        var packages = await context.ReconciliationPackages
+        var packages = await context.ReconciliationPackages.AsNoTracking()
             .Where(package => package.ProjectId == query.ProjectId)
             .OrderBy(package => package.Name)
             .ToListAsync(cancellationToken);
 
-        var orders = await context.ReconciliationPackageOrders
+        var orders = await context.ReconciliationPackageOrders.AsNoTracking()
             .Where(member => member.ProjectId == query.ProjectId)
             .ToListAsync(cancellationToken);
-        var slices = await context.ReconciliationPackageSalesLines
+        var slices = await context.ReconciliationPackageSalesLines.AsNoTracking()
             .Where(slice => slice.ProjectId == query.ProjectId)
             .ToListAsync(cancellationToken);
-        var costSlices = await context.ReconciliationPackageCostLines
+        var costSlices = await context.ReconciliationPackageCostLines.AsNoTracking()
             .Where(slice => slice.ProjectId == query.ProjectId)
             .ToListAsync(cancellationToken);
 

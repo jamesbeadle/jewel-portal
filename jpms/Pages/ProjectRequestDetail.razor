@@ -39,170 +39,82 @@ else
             &larr; Request register
         </a>
 
-        <div class="flex flex-wrap items-start justify-between gap-3 mb-1">
-            <div class="flex items-center gap-3">
-                @* Lead with the official instrument number (RFI-014) once promoted; the REQ container
-                   number is secondary context (it names the request's folder in the projects mailbox). *@
-                <span class="font-mono text-base font-semibold text-content" title="@record.Kind.LongName()">@PrimaryReference</span>
-                @if (ShowContainerNumber)
-                {
-                    <span class="font-mono text-sm text-content-muted" title="Container number — the request's folder in the projects mailbox">@record.DisplayNumber</span>
-                }
-                <span class="text-content-subtle text-xs uppercase tracking-wide" title="@record.Kind.LongName()">@record.Kind.DisplayName()</span>
-                @if (CanEditDetails)
-                {
-                    @* The status pill doubles as the status control: click it, pick the new status.
-                       Closed routes through its existing flow (close confirm with date + agent
-                       gate) — everything else applies directly. *@
-                    <div class="relative">
-                        <button type="button"
-                                class="inline-flex items-center gap-1 whitespace-nowrap rounded-full px-2 py-0.5 text-[11px] font-medium @StatusClass(record.Status)"
-                                title="Change status"
-                                disabled="@busy"
-                                @onclick="() => statusMenuOpen = !statusMenuOpen">
-                            @StatusLabel(record.Status) <span class="text-[9px]" aria-hidden="true">▾</span>
-                        </button>
-                        @if (statusMenuOpen)
+        @* Title bar. Everything that acts on this request is up here with the record it acts on:
+           the identity and status on the left, one primary action plus a single Actions menu on the
+           right. No panel below carries an action on the request any more — the page used to
+           scatter them down the column (four separate "Edit" links, the promote button), so finding
+           one meant scanning the whole page. The only buttons left in the body belong to a
+           different record (the variation card) or to an open editor (the form's Save / Cancel). *@
+        <header class="panel px-5 py-4 mb-5">
+            <div class="flex flex-wrap items-start justify-between gap-4">
+                <div class="min-w-0">
+                    <div class="flex flex-wrap items-center gap-2.5 mb-1.5">
+                        @* Lead with the official instrument number (RFI-014) once promoted; the REQ
+                           container number is secondary context (it names the request's folder in
+                           the projects mailbox). *@
+                        <span class="font-mono text-base font-semibold text-content" title="@record.Kind.LongName()">@PrimaryReference</span>
+                        @if (ShowContainerNumber)
                         {
-                            <div class="absolute left-0 mt-2 w-48 rounded-lg border border-line bg-surface shadow-lg z-20 overflow-hidden">
-                                <ul class="divide-y divide-line">
-                                    @foreach (var option in StatusOptions)
-                                    {
-                                        var status = option;
-                                        <li>
-                                            <button type="button"
-                                                    class="w-full text-left px-3 py-2 text-sm transition @(status == record.Status ? "text-content-subtle cursor-default" : "text-content hover:bg-surface-raised")"
-                                                    disabled="@(busy || status == record.Status)"
-                                                    title="@status.Hint()"
-                                                    @onclick="() => ChangeStatusFromPill(status)">
-                                                @StatusLabel(status)@(status == record.Status ? " ✓" : "")
-                                            </button>
-                                        </li>
-                                    }
-                                </ul>
-                            </div>
+                            <span class="font-mono text-sm text-content-muted" title="Container number — the request's folder in the projects mailbox">@record.DisplayNumber</span>
+                        }
+                        <span class="text-content-subtle text-xs uppercase tracking-wide" title="@record.Kind.LongName()">@record.Kind.DisplayName()</span>
+
+                        <span class="h-4 w-px bg-line" aria-hidden="true"></span>
+
+                        @if (CanEditDetails)
+                        {
+                            @* The status pill doubles as the status control: click it, pick the new
+                               status. Closed routes through its existing flow (close confirm with
+                               date + agent gate) — everything else applies directly. *@
+                            <DropdownMenu AlignLeft="true" WidthClass="w-48" Disabled="@busy"
+                                          ToggleTitle="Change status"
+                                          ToggleClass="@($"inline-flex items-center gap-1 whitespace-nowrap rounded-full px-2 py-0.5 text-[11px] font-medium {StatusClass(record.Status)}")"
+                                          Items="StatusMenuItems">
+                                <ToggleContent><span>@record.Status.DisplayName()</span></ToggleContent>
+                            </DropdownMenu>
+                        }
+                        else
+                        {
+                            <span class="inline-flex items-center whitespace-nowrap rounded-full px-2 py-0.5 text-[11px] font-medium @StatusClass(record.Status)">@record.Status.DisplayName()</span>
+                        }
+                        @if (record.ImpliesVariation)
+                        {
+                            <span class="inline-flex items-center rounded bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-600">Variation</span>
+                        }
+                        @if (record.CriticalPath)
+                        {
+                            <span class="inline-flex items-center rounded bg-negative/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-negative"
+                                  title="Programme-related — the answer gates work on the programme's critical path">Critical path</span>
                         }
                     </div>
-                }
-                else
-                {
-                    <span class="inline-flex items-center whitespace-nowrap rounded-full px-2 py-0.5 text-[11px] font-medium @StatusClass(record.Status)">@StatusLabel(record.Status)</span>
-                }
-                @if (record.ImpliesVariation)
-                {
-                    <span class="inline-flex items-center rounded bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-600">Variation</span>
-                }
-                @if (record.CriticalPath)
-                {
-                    <span class="inline-flex items-center rounded bg-rose-500/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-rose-600"
-                          title="Programme-related — the answer gates work on the programme's critical path">Critical path</span>
-                }
-            </div>
+                    <h2 class="text-xl font-semibold text-content leading-snug">@record.Title</h2>
+                </div>
 
-            @* The page's actions live up here with the record they act on: emailing (the most-used
-               action) as its own button, everything else behind one Actions dropdown — no rail of
-               scattered buttons. *@
-            <div class="flex flex-wrap items-center gap-2">
-                @if (record.Kind.IsEmailable() && CanDraftEmail)
-                {
-                    <button type="button" class="btn-primary" disabled="@(busy || preparingDraft)" @onclick="OpenEmailModal">
-                        Email @record.Kind.DisplayName()
-                    </button>
-                }
-                <div class="relative">
-                    <button type="button" class="btn-secondary inline-flex items-center gap-1.5" @onclick="() => actionsOpen = !actionsOpen">
-                        Actions <span class="text-content-faint text-xs" aria-hidden="true">@(actionsOpen ? "▲" : "▼")</span>
-                    </button>
-                    @if (actionsOpen)
+                <div class="flex flex-wrap items-center gap-2 shrink-0">
+                    @if (record.Kind.IsEmailable() && CanDraftEmail)
                     {
-                        <div class="absolute right-0 mt-2 w-64 rounded-lg border border-line bg-surface shadow-lg z-20 overflow-hidden">
-                            <ul class="divide-y divide-line">
-                                @if (record.Kind.IsEmailable())
-                                {
-                                    <li>
-                                        <a href="@DocumentHref" target="_blank" rel="noopener"
-                                           class="block w-full text-left px-3 py-2 text-sm text-content hover:bg-surface-raised transition"
-                                           @onclick="() => actionsOpen = false"
-                                           title="Regenerated from the register on every download, so it always reflects the request as it stands">Download @record.Kind.DisplayName() PDF</a>
-                                    </li>
-                                }
-                                @if (record.Status is not RequestStatus.Closed)
-                                {
-                                    <li>
-                                        <button type="button" class="w-full text-left px-3 py-2 text-sm text-content hover:bg-surface-raised transition"
-                                                @onclick="OpenResponseModal"
-                                                title="The formal answer recorded on the request — it prints on the official document">Record response…</button>
-                                    </li>
-                                    <li>
-                                        <button type="button" class="w-full text-left px-3 py-2 text-sm text-content hover:bg-surface-raised transition"
-                                                @onclick="() => { actionsOpen = false; OpenCloseConfirm(); }">Close request…</button>
-                                    </li>
-                                }
-                                else
-                                {
-                                    <li>
-                                        <button type="button" class="w-full text-left px-3 py-2 text-sm text-content hover:bg-surface-raised transition"
-                                                @onclick="ReopenFromMenu">Reopen request</button>
-                                    </li>
-                                }
-                                @if (CanEditDetails && record.Kind is RequestType.Rfi)
-                                {
-                                    <li>
-                                        <button type="button" class="w-full text-left px-3 py-2 text-sm text-content hover:bg-surface-raised transition"
-                                                @onclick="ToggleCriticalPathFromMenu"
-                                                title="The Critical Path tag marks this RFI as programme-related; tagged RFIs show under Critical Path RFIs on the Programme tab">
-                                            @(record.CriticalPath ? "Remove critical path tag" : "Mark as critical path")
-                                        </button>
-                                    </li>
-                                }
-                                @* Hidden once a VOQ exists (including one attached via the register's
-                                   Link… repair) — the RFQ ladder has already been climbed. *@
-                                @if (CanEditDetails && record.Kind is RequestType.Rfi && !record.HasRfq && voq is null)
-                                {
-                                    <li>
-                                        <button type="button" class="w-full text-left px-3 py-2 text-sm text-content hover:bg-surface-raised transition"
-                                                @onclick="CreateBidPackagesFromMenu"
-                                                title="Marks this RFI as carrying an RFQ, unlocking a Variation Order Quote and its bid packages">Create bid packages</button>
-                                    </li>
-                                }
-                                @if (CanTriage)
-                                {
-                                    <li>
-                                        <button type="button" class="w-full text-left px-3 py-2 text-sm text-content hover:bg-surface-raised transition"
-                                                @onclick="() => { actionsOpen = false; confirmingReturn = true; }"
-                                                title="Sends every email linked to this request back to the triage queue">Return to triage…</button>
-                                    </li>
-                                }
-                                @if (IsAdmin)
-                                {
-                                    <li>
-                                        <button type="button" class="w-full text-left px-3 py-2 text-sm text-negative hover:bg-negative/10 transition"
-                                                @onclick="() => { actionsOpen = false; confirmingDelete = true; }">Delete request…</button>
-                                    </li>
-                                }
-                            </ul>
-                        </div>
+                        <button type="button" class="btn-primary" disabled="@(busy || preparingDraft)" @onclick="OpenEmailModal">
+                            Email @record.Kind.DisplayName()
+                        </button>
                     }
+                    else if (CanEditDetails && record.Kind is not RequestType.Rfi)
+                    {
+                        @* Nothing to email yet — promoting is the action that unblocks everything
+                           else, so it takes the primary slot until it has been done. *@
+                        <button type="button" class="btn-primary" disabled="@busy" @onclick="PromoteToRfi">Promote to RFI</button>
+                    }
+                    <DropdownMenu Label="Actions" WidthClass="w-72" Items="ActionMenuItems" />
                 </div>
             </div>
-        </div>
-        <div class="flex items-baseline gap-3 mb-5">
-            <h2 class="text-xl font-semibold text-content">@record.Title</h2>
-            @if (CanEditDetails)
-            {
-                <button type="button" class="text-xs font-medium text-content-muted hover:text-content underline underline-offset-2"
-                        title="Edit the reference, status and subject" @onclick="OpenHeaderEdit">Edit</button>
-            }
-        </div>
+        </header>
 
         <RecordLineage ProjectId="@ProjectId" ActiveId="request"
-                       Request="record" Voq="voq" Vo="vo" BidPackages="bidPackages" />
+                       Request="record" Variation="variation" BidPackages="bidPackages" />
 
         @* At-a-glance facts run across the top rather than down a rail, so the columns below are
            left for the substance: the request itself on the left, actions on the right. *@
         <div class="panel px-5 py-4 mb-5">
-            <div class="flex items-start justify-between gap-6">
-            <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-x-6 gap-y-3 text-sm flex-1">
+            <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-x-6 gap-y-3 text-sm">
                 <MetaCell Label="Raised by" Value="@record.RaisedByEmail" />
                 @* The one visible date. Rows predating the IssuedAt backfill fall back to the
                    internal created-on stamp rather than showing a dash. *@
@@ -223,12 +135,6 @@ else
                 {
                     <MetaCell Label="Value" Value="@(record.Value is null ? "—" : Money(record.Value.Value))" />
                 }
-            </div>
-            @if (CanEditDetails)
-            {
-                <button type="button" class="text-xs font-medium text-content-muted hover:text-content underline underline-offset-2"
-                        title="Edit the dates, raised to and drawing references" @onclick="OpenFactsEdit">Edit</button>
-            }
             </div>
         </div>
 
@@ -254,16 +160,9 @@ else
 
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
             <div class="lg:col-span-2 space-y-5">
-                <div class="panel p-5">
-                    <div class="flex items-start justify-between gap-3 mb-2">
-                        <h3 class="eyebrow">Detail</h3>
-                        @if (CanEditDetails)
-                        {
-                            <button type="button" class="text-xs font-medium text-content-muted hover:text-content underline underline-offset-2" @onclick="OpenDetailEdit">Edit</button>
-                        }
-                    </div>
-                    <p class="text-sm text-content whitespace-pre-wrap">@(string.IsNullOrWhiteSpace(record.Description) ? "—" : record.Description)</p>
-                </div>
+                <Panel Title="Detail">
+                    <p class="text-sm text-content-muted whitespace-pre-wrap leading-relaxed">@(string.IsNullOrWhiteSpace(record.Description) ? "—" : record.Description)</p>
+                </Panel>
 
                 <div class="panel p-5">
                     <div class="flex items-start justify-between gap-3 mb-3">
@@ -273,10 +172,6 @@ else
                                 ? "The itemised queries and sections rendered on the issued document."
                                 : "Prepared ahead: these sections are carried onto the official document when the request is promoted to an RFI.")</p>
                         </div>
-                        @if (CanEditDetails && !editingForm)
-                        {
-                            <button type="button" class="text-xs font-medium text-content-muted hover:text-content underline underline-offset-2" @onclick="OpenFormEditor">Edit form</button>
-                        }
                     </div>
 
                     @if (formError is not null)
@@ -472,10 +367,9 @@ else
 
                         @if (record.Kind is not RequestType.Rfi)
                         {
-                            <div>
-                                <button type="button" class="btn-primary w-full" disabled="@busy" @onclick="PromoteToRfi">Promote to RFI</button>
-                                <p class="text-xs text-content-subtle mt-1">Mints the RFI reference and creates the official document. No email is drafted by promotion — when you're ready to issue, use the Email button at the top of the page.</p>
-                            </div>
+                            @* The button itself is in the title bar (primary slot until there is
+                               something to email); this just explains what it will do. *@
+                            <p class="text-xs text-content-subtle">Promoting mints the RFI reference and creates the official document — use <span class="text-content font-medium">Promote to RFI</span> at the top of the page. No email is drafted by promotion; when you are ready to issue, the Email button appears in its place.</p>
                         }
                         <div>
                             <label class="eyebrow block mb-1">Issued to</label>
@@ -546,28 +440,28 @@ else
                 </div>
                 }
 
-                @if (record.HasRfq || voq is not null)
+                @if (record.HasRfq || variation is not null)
                 {
                     <div class="panel p-5 space-y-3">
-                        <h3 class="eyebrow">Variation Order Quote</h3>
-                        @if (voq is not null)
+                        <h3 class="eyebrow">Variation</h3>
+                        @if (variation is not null)
                         {
                             <p class="text-sm text-content">
-                                <span class="font-mono font-semibold">@voq.DisplayNumber</span>
-                                <span class="text-content-subtle ml-2">@voq.Status</span>
+                                <span class="font-mono font-semibold">@variation.DisplayNumber</span>
+                                <span class="text-content-subtle ml-2">@variation.Status.DisplayName()</span>
                             </p>
-                            <a href="@VoqHref" class="btn-secondary w-full inline-flex justify-center">Open VOQ</a>
+                            <a href="@VariationHref" class="btn-secondary w-full inline-flex justify-center">Open variation</a>
                         }
                         else
                         {
-                            @if (voqError is not null)
+                            @if (variationError is not null)
                             {
-                                <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@voqError</p>
+                                <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@variationError</p>
                             }
-                            <p class="text-xs text-content-subtle">This RFI carries an RFQ. Create a Variation Order Quote to send bid packages to subcontractors — the draft is prepared from this RFI and its tagged emails for you to review.</p>
+                            <p class="text-xs text-content-subtle">This RFI carries an RFQ. Raise the variation to send bid packages to subcontractors — the draft is prepared from this RFI and its tagged emails for you to review. It stays in Quoting until the client approves it.</p>
                             @if (CanEditDetails)
                             {
-                                <button type="button" class="btn-primary w-full" disabled="@busy" @onclick="OpenVoqDraft">Create VOQ</button>
+                                <button type="button" class="btn-primary w-full" disabled="@busy" @onclick="OpenVariationDraft">Raise variation</button>
                             }
                         }
                     </div>
@@ -740,7 +634,7 @@ else
                     <select class="field" value="@((int)editStatus)" @onchange="OnEditStatusChanged">
                         @foreach (var option in StatusOptions)
                         {
-                            <option value="@((int)option)">@StatusLabel(option)</option>
+                            <option value="@((int)option)">@option.DisplayName()</option>
                         }
                     </select>
                 </div>
@@ -820,64 +714,64 @@ else
         </div>
     </Modal>
 
-    <Modal IsOpen="voqDraftOpen"
+    <Modal IsOpen="variationDraftOpen"
            Title="Create Variation Order Quote"
-           ConfirmLabel="@(busy ? "Creating…" : "Create VOQ")"
-           ConfirmDisabled="@(busy || voqDraftLoading)"
-           OnCancel="CancelVoqDraft"
-           OnConfirm="ConfirmVoqDraft"
+           ConfirmLabel="@(busy ? "Raising…" : "Raise variation")"
+           ConfirmDisabled="@(busy || variationDraftLoading)"
+           OnCancel="CancelVariationDraft"
+           OnConfirm="ConfirmVariationDraft"
            Class="max-w-2xl">
         <div class="space-y-4">
-            @if (voqDraftError is not null)
+            @if (variationDraftError is not null)
             {
-                <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@voqDraftError</p>
+                <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@variationDraftError</p>
             }
 
-            @if (voqDraftLoading)
+            @if (variationDraftLoading)
             {
-                <p class="text-sm text-content-subtle">Drafting the VOQ from this RFI and its tagged emails…</p>
+                <p class="text-sm text-content-subtle">Drafting the variation from this RFI and its tagged emails…</p>
             }
             else
             {
-                @if (voqDraft?.Proposed == true)
+                @if (variationDraft?.Proposed == true)
                 {
                     <p class="rounded-lg bg-accent/10 border border-accent/30 px-3 py-2 text-xs text-content">
                         Drafted by AI from this RFI and its tagged emails. Review and edit everything below — nothing is created until you confirm.
                     </p>
                 }
-                else if (voqDraft is not null)
+                else if (variationDraft is not null)
                 {
                     <p class="text-xs text-content-subtle">AI drafting isn't available right now, so this starts from the RFI's own details.</p>
                 }
 
-                <FormField Label="Title" Value="@draftVoqTitle" OnChange="v => draftVoqTitle = v" Required="true" />
+                <FormField Label="Title" Value="@draftVariationTitle" OnChange="v => draftVariationTitle = v" Required="true" />
 
                 <div>
                     <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Scope description</label>
-                    <textarea class="field" rows="6" value="@draftVoqDescription" @oninput="e => draftVoqDescription = e.Value?.ToString() ?? string.Empty"></textarea>
+                    <textarea class="field" rows="6" value="@draftVariationDescription" @oninput="e => draftVariationDescription = e.Value?.ToString() ?? string.Empty"></textarea>
                 </div>
 
-                <FormField Label="Estimated value (£, optional)" Value="@draftVoqValue" OnChange="v => draftVoqValue = v" />
+                <FormField Label="Estimated value (£, optional)" Value="@draftVariationValue" OnChange="v => draftVariationValue = v" />
 
-                @if (draftVoqLines.Count > 0)
+                @if (draftVariationLines.Count > 0)
                 {
                     <div>
                         <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Suggested scope lines</label>
-                        <p class="text-xs text-content-subtle mb-2">Ticked lines are added to a draft bid package (@DraftPackageTrade) under the VOQ, ready to send to subcontractors. Every ticked line needs a cost centre — that's the cost code its committed value lands on.</p>
+                        <p class="text-xs text-content-subtle mb-2">Ticked lines are added to a draft bid package (@DraftPackageTrade) under the variation, ready to send to subcontractors. Every ticked line needs a cost centre — that's the cost code its committed value lands on.</p>
                         <ul class="space-y-1.5">
-                            @foreach (var (row, index) in draftVoqLines.Select((r, i) => (r, i)))
+                            @foreach (var (row, index) in draftVariationLines.Select((r, i) => (r, i)))
                             {
                                 var i = index;
                                 <li>
                                     <label class="flex items-start gap-2 text-sm text-content">
                                         <input type="checkbox" class="mt-0.5" checked="@row.Accepted"
-                                               @onchange="e => draftVoqLines[i] = draftVoqLines[i] with { Accepted = e.Value is true }" />
+                                               @onchange="e => draftVariationLines[i] = draftVariationLines[i] with { Accepted = e.Value is true }" />
                                         <span>@row.Line.Description <span class="text-content-subtle">— @row.Line.Quantity @row.Line.Unit · @row.Line.Trade</span></span>
                                     </label>
                                     @if (row.Accepted)
                                     {
                                         <select class="field mt-1 ml-6 min-w-[14rem] text-sm" value="@row.CostCode"
-                                                @onchange="e => draftVoqLines[i] = draftVoqLines[i] with { CostCode = e.Value?.ToString() ?? string.Empty }">
+                                                @onchange="e => draftVariationLines[i] = draftVariationLines[i] with { CostCode = e.Value?.ToString() ?? string.Empty }">
                                             <option value="">Cost centre…</option>
                                             @foreach (var centre in CostCenters.Alphabetical)
                                             {
@@ -906,11 +800,6 @@ else
     private string? actionError;
     private bool confirmingDelete;
     private bool confirmingReturn;
-    // The header's Actions dropdown; every item closes it before running (same pattern as
-    // RoleSwitcher — no outside-click handling, the toggle is the dismiss).
-    private bool actionsOpen;
-    // The status pill's dropdown (same dismiss pattern as the Actions dropdown above).
-    private bool statusMenuOpen;
     private bool respondingOpen;
     private IReadOnlyList<AgentCompletionState> blockingAgents = Array.Empty<AgentCompletionState>();
     private IReadOnlyList<Client> clients = Array.Empty<Client>();
@@ -925,11 +814,9 @@ else
             ? ""
             : (record.PartyKind == PartyKind.Architect ? ArchitectPrefix : ClientPrefix) + record.PartyId;
     private string? ladderError;
-    private VariationOrder? voq;
-    private string? voqError;
-    // The same variation order, surfaced as the "VO" lineage chip once it is approved (it carries
-    // a V-ref then). Bid packages hang off it for the RecordLineage bar.
-    private VariationOrder? vo;
+    private VariationOrder? variation;
+    private string? variationError;
+    // Bid packages hang off the variation; the RecordLineage bar branches them off its chip.
     private IReadOnlyList<BidPackage> bidPackages = Array.Empty<BidPackage>();
 
     // Official document form editor (the itemised queries + narrative sections).
@@ -954,7 +841,7 @@ else
     private bool taggedEmailsLoading;
     private string selectedChainMailboxId = "";
 
-    private string VoqHref => voq is null ? "" : $"/projects/{ProjectId}/voq/{voq.VariationOrderId}";
+    private string VariationHref => variation is null ? "" : $"/projects/{ProjectId}/variations/{variation.VariationOrderId}";
 
     // The reference the page leads with: once promoted, the official instrument number (RFI-014) —
     // the number correspondents know it by — with the REQ container number as secondary context.
@@ -1033,24 +920,47 @@ else
     {
         await Session.EnsureLoadedAsync();
         if (!Auth.IsSignedIn) { Nav.NavigateTo("/login", forceLoad: true); return; }
-        await LoadAsync();
+        // Two waves instead of six sequential round-trips. Everything in the first wave is
+        // independent — the record, the pickers and the variation all key off the route values,
+        // not off each other — so they go out together and the page waits once for the slowest
+        // rather than for the sum. Only the recipient preview genuinely needs the loaded record,
+        // so it follows.
+        var firstWave = new List<Task> { LoadAsync(), LoadVariationAsync() };
         if (CanEditDetails)
         {
-            try { clients = await ClientStore.ListAsync(); } catch { clients = Array.Empty<Client>(); }
-            try { architects = await ArchitectStore.ListAsync(); } catch { architects = Array.Empty<Architect>(); }
-            try
-            {
-                // Ad-hoc rows only: the contacts added on the Setup tab's Project contacts list
-                // (party-linked rows are routing overrides, not list entries).
-                projectContacts = (await Correspondence.ListProjectContactsAsync(ProjectId))
-                    .Where(row => row.PartyContactId is null)
-                    .ToList();
-            }
-            catch { projectContacts = Array.Empty<ProjectContact>(); }
+            firstWave.Add(LoadClientsAsync());
+            firstWave.Add(LoadArchitectsAsync());
+            firstWave.Add(LoadProjectContactsAsync());
         }
-        await LoadVoqAsync();
+        await Task.WhenAll(firstWave);
+
         await LoadRecipientPreviewAsync();
         isLoaded = true;
+    }
+
+    // Each of these swallows its own failure so one unavailable picker can never stop the page
+    // rendering — the same behaviour as when these ran one after another, just concurrently.
+    private async Task LoadClientsAsync()
+    {
+        try { clients = await ClientStore.ListAsync(); } catch { clients = Array.Empty<Client>(); }
+    }
+
+    private async Task LoadArchitectsAsync()
+    {
+        try { architects = await ArchitectStore.ListAsync(); } catch { architects = Array.Empty<Architect>(); }
+    }
+
+    private async Task LoadProjectContactsAsync()
+    {
+        try
+        {
+            // Ad-hoc rows only: the contacts added on the Setup tab's Project contacts list
+            // (party-linked rows are routing overrides, not list entries).
+            projectContacts = (await Correspondence.ListProjectContactsAsync(ProjectId))
+                .Where(row => row.PartyContactId is null)
+                .ToList();
+        }
+        catch { projectContacts = Array.Empty<ProjectContact>(); }
     }
 
     // The tagged emails offered as reply targets in the email modal, fetched fresh each time the
@@ -1093,27 +1003,23 @@ else
     private static string RecipientLine(IReadOnlyList<CorrespondenceRecipient> recipients) =>
         string.Join(", ", recipients.Select(r => string.IsNullOrWhiteSpace(r.Name) ? r.Email : $"{r.Name} <{r.Email}>"));
 
-    private async Task LoadVoqAsync()
+    private async Task LoadVariationAsync()
     {
-        // A VOQ normally appears only after the RFQ step (HasRfq), but a VOQ can also be attached
+        // A variation normally appears only after the RFQ step (HasRfq), but one can also be attached
         // to this request through the register's "Link…" repair — those links can predate the
         // flag, so always look for one rather than gating on HasRfq. Returns null when none.
-        try { voq = await Variations.GetByRequestAsync(RequestId); }
-        catch { voq = null; }
+        try { variation = await Variations.GetByRequestAsync(RequestId); }
+        catch { variation = null; }
 
-        // Downstream of the VOQ, for the lineage bar: the VO it produced (if approved) and its bid
-        // packages. Best-effort — the bar simply shows placeholders when these can't be read.
-        if (voq is not null)
+        // Its bid packages, for the lineage bar. Best-effort — the bar simply shows placeholders
+        // when they can't be read.
+        if (variation is not null)
         {
-            // One document: the "VO" lineage chip is this same record, shown once it is approved
-            // (it carries a V-ref then).
-            vo = voq.Status == VariationOrderStatus.Approved ? voq : null;
-            try { bidPackages = await Variations.ListBidPackagesAsync(voq.VariationOrderId); }
+            try { bidPackages = await Variations.ListBidPackagesAsync(variation.VariationOrderId); }
             catch { bidPackages = Array.Empty<BidPackage>(); }
         }
         else
         {
-            vo = null;
             bidPackages = Array.Empty<BidPackage>();
         }
     }
@@ -1131,11 +1037,90 @@ else
 
     private void OnResponseDraftInput(ChangeEventArgs e) => responseDraft = e.Value?.ToString() ?? "";
 
-    // ---- Actions dropdown items -----------------------------------------------------------------
+    // ---- Title-bar menus --------------------------------------------------------------------------
+    // Both menus are built here rather than inline in markup, so the whole set of things you can do
+    // to a request — and exactly what gates each one — reads as a single list in one place.
+
+    private List<DropdownMenu.Item> StatusMenuItems => StatusOptions
+        .Select(option => new DropdownMenu.Item(
+            Label: option.DisplayName(),
+            OnSelect: EventCallback.Factory.Create(this, () => ChangeStatusFromPill(option)),
+            Hint: option.Hint(),
+            Disabled: busy || option == record?.Status,
+            Selected: option == record?.Status))
+        .ToList();
+
+    private List<DropdownMenu.Item> ActionMenuItems
+    {
+        get
+        {
+            var items = new List<DropdownMenu.Item>();
+            if (record is null) return items;
+
+            // Group 0 — the document itself.
+            if (record.Kind.IsEmailable())
+                items.Add(new(Label: $"Download {record.Kind.DisplayName()} PDF", Href: DocumentHref,
+                    Hint: "Regenerated from the register on every download, so it always reflects the request as it stands"));
+
+            // Group 1 — moving the request along.
+            if (record.Status is not RequestStatus.Closed)
+            {
+                items.Add(new(Label: "Record response…", OnSelect: EventCallback.Factory.Create(this, OpenResponseModal),
+                    Hint: "The formal answer recorded on the request — it prints on the official document", Group: 1));
+                items.Add(new(Label: "Close request…", OnSelect: EventCallback.Factory.Create(this, OpenCloseConfirm), Group: 1));
+            }
+            else
+            {
+                items.Add(new(Label: "Reopen request", OnSelect: EventCallback.Factory.Create(this, ReopenFromMenu), Group: 1));
+            }
+
+            // Promotion also has the primary slot when there is nothing to email yet; it stays here
+            // so the menu is a complete list of what can be done, not a list of leftovers.
+            if (CanEditDetails && record.Kind is not RequestType.Rfi)
+                items.Add(new(Label: "Promote to RFI", OnSelect: EventCallback.Factory.Create(this, PromoteToRfi),
+                    Disabled: busy, Group: 1));
+
+            // Group 2 — editing, gathering up the four inline "Edit" links the panels used to carry.
+            if (CanEditDetails)
+            {
+                items.Add(new(Label: "Edit subject & reference…", OnSelect: EventCallback.Factory.Create(this, OpenHeaderEdit), Group: 2));
+                items.Add(new(Label: "Edit dates & references…", OnSelect: EventCallback.Factory.Create(this, OpenFactsEdit),
+                    Hint: "Date issued, response due, raised to, drawing references", Group: 2));
+                items.Add(new(Label: "Edit description…", OnSelect: EventCallback.Factory.Create(this, OpenDetailEdit), Group: 2));
+                items.Add(new(Label: "Edit official form", OnSelect: EventCallback.Factory.Create(this, OpenFormEditor),
+                    Hint: "The itemised queries and the basis / response / impact sections",
+                    Disabled: editingForm, Group: 2));
+
+                if (record.Kind is RequestType.Rfi)
+                    items.Add(new(Label: record.CriticalPath ? "Remove critical path tag" : "Mark as critical path",
+                        OnSelect: EventCallback.Factory.Create(this, ToggleCriticalPathFromMenu),
+                        Hint: "Tagged RFIs show under Critical Path RFIs on the Programme tab", Group: 2));
+
+                // Hidden once a variation exists (including one attached via the register's Link…
+                // repair) — that step has already been taken.
+                if (record.Kind is RequestType.Rfi && !record.HasRfq && variation is null)
+                    items.Add(new(Label: "Create bid packages",
+                        OnSelect: EventCallback.Factory.Create(this, CreateBidPackagesFromMenu),
+                        Hint: "Marks this RFI as carrying an RFQ, unlocking the variation and its bid packages", Group: 2));
+            }
+
+            // Group 3 — the destructive tail, kept last and marked.
+            if (CanTriage)
+                items.Add(new(Label: "Return to triage…",
+                    OnSelect: EventCallback.Factory.Create(this, () => { confirmingReturn = true; }),
+                    Hint: "Sends every email linked to this request back to the triage queue",
+                    Destructive: true, Group: 3));
+            if (IsAdmin)
+                items.Add(new(Label: "Delete request…",
+                    OnSelect: EventCallback.Factory.Create(this, () => { confirmingDelete = true; }),
+                    Destructive: true, Group: 3));
+
+            return items;
+        }
+    }
 
     private void OpenResponseModal()
     {
-        actionsOpen = false;
         actionError = null;
         responseDraft = record?.ResponseText ?? "";
         respondingOpen = true;
@@ -1157,7 +1142,6 @@ else
 
     private async Task ReopenFromMenu()
     {
-        actionsOpen = false;
         await ReopenRequest();
     }
 
@@ -1166,7 +1150,6 @@ else
     // keeping the recorded response text.
     private async Task ChangeStatusFromPill(RequestStatus status)
     {
-        statusMenuOpen = false;
         if (record is null || busy || status == record.Status) return;
         switch (status)
         {
@@ -1183,7 +1166,6 @@ else
     // Quote (and its bid packages) in the rail.
     private async Task CreateBidPackagesFromMenu()
     {
-        actionsOpen = false;
         await EnableRfq();
     }
 
@@ -1276,7 +1258,7 @@ else
         {
             busy = true;
             record = await RequestRegister.EnableRfqAsync(record.RequestId, ProjectId);
-            await LoadVoqAsync();
+            await LoadVariationAsync();
         }
         catch
         {
@@ -1288,15 +1270,16 @@ else
         }
     }
 
-    // AI-drafted VOQ review: PrepareVoqDraft proposes, the user edits, CreateVoqFromRfq commits.
-    private bool voqDraftOpen;
-    private bool voqDraftLoading;
-    private VoqDraftProposal? voqDraft;
-    private string? voqDraftError;
-    private string draftVoqTitle = "";
-    private string draftVoqDescription = "";
-    private string draftVoqValue = "";
-    private List<DraftLineRow> draftVoqLines = new();
+    // AI-drafted variation review: PrepareVoqDraft proposes, the user edits, CreateVoqFromRfq
+    // commits. (Those command names are API identifiers and keep their historic spelling.)
+    private bool variationDraftOpen;
+    private bool variationDraftLoading;
+    private VoqDraftProposal? variationDraft;
+    private string? variationDraftError;
+    private string draftVariationTitle = "";
+    private string draftVariationDescription = "";
+    private string draftVariationValue = "";
+    private List<DraftLineRow> draftVariationLines = new();
 
     private sealed record DraftLineRow(VoqDraftLine Line, bool Accepted, string CostCode = "");
 
@@ -1305,94 +1288,94 @@ else
     {
         get
         {
-            var accepted = draftVoqLines.FirstOrDefault(row => row.Accepted && !string.IsNullOrWhiteSpace(row.Line.Trade));
+            var accepted = draftVariationLines.FirstOrDefault(row => row.Accepted && !string.IsNullOrWhiteSpace(row.Line.Trade));
             if (accepted is not null) return accepted.Line.Trade;
-            return string.IsNullOrWhiteSpace(voqDraft?.SuggestedTrade) ? "General" : voqDraft!.SuggestedTrade;
+            return string.IsNullOrWhiteSpace(variationDraft?.SuggestedTrade) ? "General" : variationDraft!.SuggestedTrade;
         }
     }
 
-    private async Task OpenVoqDraft()
+    private async Task OpenVariationDraft()
     {
         if (record is null || busy) return;
-        voqError = null;
-        voqDraftError = null;
-        voqDraft = null;
-        voqDraftOpen = true;
-        voqDraftLoading = true;
-        draftVoqTitle = record.Title;
-        draftVoqDescription = record.Description;
-        draftVoqValue = "";
-        draftVoqLines = new();
+        variationError = null;
+        variationDraftError = null;
+        variationDraft = null;
+        variationDraftOpen = true;
+        variationDraftLoading = true;
+        draftVariationTitle = record.Title;
+        draftVariationDescription = record.Description;
+        draftVariationValue = "";
+        draftVariationLines = new();
 
         // Cost centres feed the scope lines' cost-code selects — best-effort background refresh.
         try { _ = CostCenters.RefreshAsync(CancellationToken.None); } catch { }
 
         try
         {
-            voqDraft = await Variations.PrepareVoqDraftAsync(record.RequestId);
-            draftVoqTitle = voqDraft.Title;
-            draftVoqDescription = voqDraft.Description;
-            draftVoqValue = voqDraft.EstimatedValue?.ToString("0.##") ?? "";
-            draftVoqLines = voqDraft.Lines.Select(line => new DraftLineRow(line, true)).ToList();
+            variationDraft = await Variations.PrepareVoqDraftAsync(record.RequestId);
+            draftVariationTitle = variationDraft.Title;
+            draftVariationDescription = variationDraft.Description;
+            draftVariationValue = variationDraft.EstimatedValue?.ToString("0.##") ?? "";
+            draftVariationLines = variationDraft.Lines.Select(line => new DraftLineRow(line, true)).ToList();
         }
         catch
         {
-            // A failed draft never blocks raising the VOQ — fall back to the RFI's own details.
-            voqDraftError = "Couldn't draft from the tagged emails; starting from the RFI's details instead.";
+            // A failed draft never blocks raising the variation — fall back to the RFI's own details.
+            variationDraftError = "Couldn't draft from the tagged emails; starting from the RFI's details instead.";
         }
         finally
         {
-            voqDraftLoading = false;
+            variationDraftLoading = false;
         }
     }
 
-    private void CancelVoqDraft()
+    private void CancelVariationDraft()
     {
         if (busy) return;
-        voqDraftOpen = false;
+        variationDraftOpen = false;
     }
 
-    private async Task ConfirmVoqDraft()
+    private async Task ConfirmVariationDraft()
     {
-        if (record is null || busy || voqDraftLoading) return;
-        voqDraftError = null;
+        if (record is null || busy || variationDraftLoading) return;
+        variationDraftError = null;
 
-        if (string.IsNullOrWhiteSpace(draftVoqTitle))
+        if (string.IsNullOrWhiteSpace(draftVariationTitle))
         {
-            voqDraftError = "A title is required.";
+            variationDraftError = "A title is required.";
             return;
         }
 
         decimal? estimatedValue = null;
-        if (!string.IsNullOrWhiteSpace(draftVoqValue))
+        if (!string.IsNullOrWhiteSpace(draftVariationValue))
         {
-            var raw = draftVoqValue.Replace("£", "").Replace(",", "").Trim();
+            var raw = draftVariationValue.Replace("£", "").Replace(",", "").Trim();
             if (!decimal.TryParse(raw, out var parsedValue) || parsedValue < 0)
             {
-                voqDraftError = "Estimated value must be a number.";
+                variationDraftError = "Estimated value must be a number.";
                 return;
             }
             estimatedValue = parsedValue;
         }
 
-        // Accepted scope lines become the VOQ's first (draft) bid package — every line put out to
+        // Accepted scope lines become the variation's first (draft) bid package — every line put out to
         // tender must know its cost-centre home, so a ticked line without a code blocks the create.
-        var acceptedRows = draftVoqLines.Where(row => row.Accepted).ToList();
+        var acceptedRows = draftVariationLines.Where(row => row.Accepted).ToList();
         if (acceptedRows.Any(row => string.IsNullOrWhiteSpace(row.CostCode)))
         {
-            voqDraftError = "Every ticked scope line needs a cost code — pick a cost centre for each, or untick it.";
+            variationDraftError = "Every ticked scope line needs a cost code — pick a cost centre for each, or untick it.";
             return;
         }
 
         try
         {
             busy = true;
-            voq = await Variations.CreateFromRfqAsync(
-                record.RequestId, draftVoqTitle.Trim(), draftVoqDescription.Trim(), estimatedValue);
+            variation = await Variations.CreateFromRfqAsync(
+                record.RequestId, draftVariationTitle.Trim(), draftVariationDescription.Trim(), estimatedValue);
 
             if (acceptedRows.Count > 0)
             {
-                var package = await Variations.AddBidPackageAsync(voq.VariationOrderId, voq.Title, DraftPackageTrade);
+                var package = await Variations.AddBidPackageAsync(variation.VariationOrderId, variation.Title, DraftPackageTrade);
                 var inputs = acceptedRows
                     .Select(row => new BidPackageLineItemInput(
                         row.Line.Description, row.Line.Unit, row.Line.Quantity,
@@ -1402,14 +1385,14 @@ else
                 await Commands.SendAsync(new AddBidPackageLineItems(package.BidPackageId, inputs), CancellationToken.None);
             }
 
-            voqDraftOpen = false;
-            Nav.NavigateTo($"/projects/{ProjectId}/voq/{voq.VariationOrderId}");
+            variationDraftOpen = false;
+            Nav.NavigateTo($"/projects/{ProjectId}/variations/{variation.VariationOrderId}");
         }
         catch
         {
-            voqDraftError = voq is null
-                ? "Couldn't create the VOQ. Please try again."
-                : "The VOQ was created, but adding the scope lines failed. Open it from the panel to add them manually.";
+            variationDraftError = variation is null
+                ? "Couldn't raise the variation. Please try again."
+                : "The variation was raised, but adding the scope lines failed. Open it from the panel to add them manually.";
         }
         finally
         {
@@ -1529,7 +1512,6 @@ else
     private async Task ToggleCriticalPathFromMenu()
     {
         if (record is null || busy) return;
-        actionsOpen = false;
         actionError = null;
 
         var command = new UpdateRequestDetails(
@@ -1980,7 +1962,6 @@ else
     private static string Money(decimal value) =>
         value.ToString("C0", System.Globalization.CultureInfo.GetCultureInfo("en-GB"));
 
-    private static string StatusLabel(RequestStatus status) => status.DisplayName();
 
     private static string StatusClass(RequestStatus status) => status switch
     {

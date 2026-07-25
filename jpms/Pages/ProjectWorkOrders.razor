@@ -623,17 +623,22 @@ else
     {
         await Session.EnsureLoadedAsync();
         if (!Auth.IsSignedIn) { Nav.NavigateTo("/login", forceLoad: true); return; }
-        // Reopen in whichever grouping this user last used (cost centre by default).
-        groupBySupplier = await GroupingStorage.ReadGroupBySupplierAsync(Auth.CurrentUser!.Email);
         CostCenters.OnChanged += StateHasChanged;
         WorkOrders.OnChanged += StateHasChanged;
         // Refresh once per tab entry (stale-while-revalidate, per the front-end
         // data-loading convention) — cached figures render immediately, then update.
         _ = WorkOrders.RefreshAsync(ProjectId, CancellationToken.None);
-        await CostCenters.RefreshAsync(CancellationToken.None);
+
+        // The saved grouping, the cost centres and the invoice summaries are independent of each
+        // other, so they go out together instead of in series.
+        var groupingTask = GroupingStorage.ReadGroupBySupplierAsync(Auth.CurrentUser!.Email);
+        var summariesTask = Queries.AskAsync(new ListWorkOrderInvoiceSummaries(ProjectId), CancellationToken.None);
+        await Task.WhenAll(CostCenters.RefreshAsync(CancellationToken.None), groupingTask, summariesTask);
+
+        // Reopen in whichever grouping this user last used (cost centre by default).
+        groupBySupplier = await groupingTask;
         isLoaded = true;
-        var summaries = await Queries.AskAsync(new ListWorkOrderInvoiceSummaries(ProjectId), CancellationToken.None);
-        summariesByOrder = summaries.ToDictionary(summary => summary.WorkOrderId, StringComparer.OrdinalIgnoreCase);
+        summariesByOrder = (await summariesTask).ToDictionary(summary => summary.WorkOrderId, StringComparer.OrdinalIgnoreCase);
     }
 
     public void Dispose()

@@ -15,7 +15,7 @@ public sealed class GetBoqSignOffForProjectHandler
 
     public async Task<BoqSignOff?> HandleAsync(GetBoqSignOffForProject query, CancellationToken cancellationToken)
     {
-        var entity = await context.BoqSignOffs.FirstOrDefaultAsync(signOff => signOff.ProjectId == query.ProjectId, cancellationToken);
+        var entity = await context.BoqSignOffs.AsNoTracking().FirstOrDefaultAsync(signOff => signOff.ProjectId == query.ProjectId, cancellationToken);
         return entity?.ToModel();
     }
 }

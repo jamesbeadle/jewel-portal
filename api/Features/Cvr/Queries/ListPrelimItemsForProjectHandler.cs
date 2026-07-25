@@ -13,7 +13,7 @@ public sealed class ListPrelimItemsForProjectHandler : IQueryHandler<ListPrelimI
 
     public async Task<IReadOnlyList<PrelimItem>> HandleAsync(ListPrelimItemsForProject query, CancellationToken cancellationToken)
     {
-        var entities = await context.PrelimItems.Where(p => p.ProjectId == query.ProjectId).ToListAsync(cancellationToken);
+        var entities = await context.PrelimItems.AsNoTracking().Where(p => p.ProjectId == query.ProjectId).ToListAsync(cancellationToken);
         return entities.Select(entity => entity.ToModel()).ToList().AsReadOnly();
     }
 }

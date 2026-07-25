@@ -18,7 +18,7 @@ public sealed class ResolveRequestRecipientsHandler : IQueryHandler<ResolveReque
 
     public async Task<RequestRecipientSet> HandleAsync(ResolveRequestRecipients query, CancellationToken cancellationToken)
     {
-        var request = await context.Requests
+        var request = await context.Requests.AsNoTracking()
             .FirstOrDefaultAsync(r => r.RequestId == query.RequestId, cancellationToken);
         if (request is null) throw new InvalidOperationException($"Request '{query.RequestId}' not found.");
 

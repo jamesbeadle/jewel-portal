@@ -13,7 +13,7 @@ public sealed class ListClaimLinesHandler : IQueryHandler<ListClaimLines, IReadO
 
     public async Task<IReadOnlyList<ClaimLine>> HandleAsync(ListClaimLines query, CancellationToken cancellationToken)
     {
-        var entities = await context.ClaimLines
+        var entities = await context.ClaimLines.AsNoTracking()
             .Where(line => line.ValuationClaimId == query.ValuationClaimId)
             .ToListAsync(cancellationToken);
         return entities.Select(entity => entity.ToModel()).ToList().AsReadOnly();

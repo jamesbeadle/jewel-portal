@@ -16,8 +16,8 @@ public sealed class ListRfisAcrossProjectsHandler : IQueryHandler<ListRfisAcross
 
     public async Task<IReadOnlyList<Request>> HandleAsync(ListRfisAcrossProjects query, CancellationToken cancellationToken)
     {
-        var projectIds = context.Projects.Select(p => p.ProjectId);
-        var entities = await context.Requests
+        var projectIds = context.Projects.AsNoTracking().Select(p => p.ProjectId);
+        var entities = await context.Requests.AsNoTracking()
             .Where(r => r.Kind == (int)RequestType.Rfi && projectIds.Contains(r.ProjectId))
             .OrderByDescending(r => r.RaisedAt)
             .ToListAsync(cancellationToken);

@@ -1,6 +1,7 @@
 using Jewel.JPMS.Api.Cqrs;
 using Jewel.JPMS.Api.Data;
 using Jewel.JPMS.Api.Data.Entities;
+using Jewel.JPMS.Api.Gates;
 using Jewel.JPMS.Contracts.Directory;
 using Jewel.JPMS.Models;
 using Microsoft.EntityFrameworkCore;
@@ -11,8 +12,13 @@ public sealed class UpsertDirectoryUserHandler
     : ICommandHandler<UpsertDirectoryUser, DirectoryUser>
 {
     private readonly JpmsContext context;
+    private readonly SignedInUserCache userCache;
 
-    public UpsertDirectoryUserHandler(JpmsContext context) { this.context = context; }
+    public UpsertDirectoryUserHandler(JpmsContext context, SignedInUserCache userCache)
+    {
+        this.context = context;
+        this.userCache = userCache;
+    }
 
     public async Task<DirectoryUser> HandleAsync(UpsertDirectoryUser command, CancellationToken cancellationToken)
     {
@@ -27,6 +33,9 @@ public sealed class UpsertDirectoryUserHandler
 
         await ReplaceRolesAsync(command, cancellationToken);
         await context.SaveChangesAsync(cancellationToken);
+        // Their permissions just changed — drop any cached copy so the next request re-reads them
+        // rather than waiting out the cache TTL.
+        userCache.InvalidateEmail(command.Email);
         return entity.ToModel(command.Roles);
     }
 

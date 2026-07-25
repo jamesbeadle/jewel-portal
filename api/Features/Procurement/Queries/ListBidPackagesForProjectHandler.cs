@@ -15,7 +15,7 @@ public sealed class ListBidPackagesForProjectHandler
 
     public async Task<IReadOnlyList<BidPackage>> HandleAsync(ListBidPackagesForProject query, CancellationToken cancellationToken)
     {
-        var entities = await context.BidPackages
+        var entities = await context.BidPackages.AsNoTracking()
             .Where(package => package.ProjectId == query.ProjectId)
             .OrderByDescending(package => package.CreatedAt)
             .ToListAsync(cancellationToken);

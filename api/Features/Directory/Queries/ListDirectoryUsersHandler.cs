@@ -17,8 +17,8 @@ public sealed class ListDirectoryUsersHandler
     public async Task<IReadOnlyList<DirectoryUser>> HandleAsync(
         ListDirectoryUsers query, CancellationToken cancellationToken)
     {
-        var users = await context.DirectoryUsers.ToListAsync(cancellationToken);
-        var roleRows = await context.DirectoryUserRoles.ToListAsync(cancellationToken);
+        var users = await context.DirectoryUsers.AsNoTracking().ToListAsync(cancellationToken);
+        var roleRows = await context.DirectoryUserRoles.AsNoTracking().ToListAsync(cancellationToken);
         return users
             .Select(user => user.ToModel(RolesFor(user.Email, roleRows)))
             .ToList()

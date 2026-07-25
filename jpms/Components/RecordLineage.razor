@@ -4,15 +4,19 @@
     The record-lineage bar: a compact, always-visible map of the process chain a request moves
     through, rendered on every page in the chain so related records are one click away:
 
-        Request (REQ-####) → RFI (RFI-### · official stage) → VOQ (VOQ-####) → VO (V##)
-                                                               └ bid packages (BPI chips)
+        Request (REQ-####) → RFI (official stage) → Variation (V##)
+                                                    └ bid packages (BPI chips)
 
-    The request is the PRE-OFFICIAL stage: promotion turns the same record into its official
-    instrument (RFI / NOD / EOT), so the second node shows that stage — or a "No RFI" placeholder
-    until promoted, exactly like the unreached VOQ / VO steps. Each node is a chip: the record you
-    are ON is highlighted (not a link); records that exist are links; steps not yet reached render
-    as muted placeholders explaining how they come about. Purely navigational — no actions live
-    here, so it stays safe on every page.
+    THREE stages, not four. The request is the PRE-OFFICIAL stage: promotion turns the same record
+    into its official instrument (RFI / NOD / EOT), so the second node shows that stage — or a
+    "No RFI" placeholder until promoted. The third node is the variation, which is ONE document from
+    first pricing to client decision: what used to render as a "VOQ" chip followed by a "VO" chip
+    was always a single row drawn twice, so it is now a single chip whose status tag says which
+    stage it has reached (Quoting → Issued → Approved / Rejected).
+
+    Each node is a chip: the record you are ON is highlighted (not a link); records that exist are
+    links; steps not yet reached render as muted placeholders explaining how they come about.
+    Purely navigational — no actions live here, so it stays safe on every page.
 *@
 
 <nav class="panel px-4 py-3 mb-5 overflow-x-auto" aria-label="Related records">
@@ -53,45 +57,23 @@
 
         <span class="text-content-subtle select-none" aria-hidden="true">→</span>
 
-        @* ---- VOQ (created from an RFI carrying an RFQ) ---- *@
-        @if (Voq is not null)
+        @* ---- Variation: one document, whose status tag carries the stage ---- *@
+        @if (Variation is not null)
         {
-            <LineageChip Href="@VoqHref"
-                         IsActive="@(ActiveId == "voq")"
-                         Eyebrow="VOQ"
-                         Label="@Voq.DisplayNumber"
-                         Status="@Voq.Status.ToString()"
-                         Title="@Voq.Title" />
+            <LineageChip Href="@VariationHref"
+                         IsActive="@(ActiveId == "variation")"
+                         Eyebrow="Variation"
+                         Label="@VariationLabel(Variation)"
+                         Status="@Variation.Status.DisplayName()"
+                         Title="@($"{Variation.Title} — {Variation.Status.Hint()}")" />
         }
         else
         {
-            <span class="inline-flex items-center rounded-lg border border-dashed border-line px-2.5 py-1.5 text-xs text-content-subtle italic select-none" title="@VoqPlaceholderHint">No VOQ</span>
+            <span class="inline-flex items-center rounded-lg border border-dashed border-line px-2.5 py-1.5 text-xs text-content-subtle italic select-none" title="@VariationPlaceholderHint">No variation</span>
         }
 
-        <span class="text-content-subtle select-none" aria-hidden="true">→</span>
-
-        @* ---- VO (raised when the VOQ is approved; lives on the VOQ page — the quote and the
-               order are two stages of the same document). From other pages the chip navigates to
-               the VOQ page focused on the VO panel; on the VOQ page itself the host passes
-               OnVoClick so the click scrolls to and flashes the panel instead of re-navigating
-               to the URL you are already on. ---- *@
-        @if (Vo is not null)
-        {
-            <LineageChip Href="@($"{VoqHref}?focus=vo")"
-                         OnClick="OnVoClick"
-                         IsActive="@(ActiveId == "vo")"
-                         Eyebrow="VO"
-                         Label="@(Vo.VariationRef ?? Vo.DisplayNumber)"
-                         Status="@Vo.Status.ToString()"
-                         Title="@($"{Vo.Title} — the approved order raised from this quote")" />
-        }
-        else
-        {
-            <span class="inline-flex items-center rounded-lg border border-dashed border-line px-2.5 py-1.5 text-xs text-content-subtle italic select-none" title="A Variation Order is raised when the VOQ is approved.">No VO</span>
-        }
-
-        @* ---- Bid packages branch off the VOQ ---- *@
-        @if (Voq is not null)
+        @* ---- Bid packages branch off the variation ---- *@
+        @if (Variation is not null)
         {
             <span class="mx-1 h-5 w-px bg-line select-none" aria-hidden="true"></span>
             <span class="text-[10px] uppercase tracking-wide font-semibold text-content-subtle select-none">Bid packages</span>
@@ -109,7 +91,7 @@
             }
             else
             {
-                <span class="inline-flex items-center rounded-lg border border-dashed border-line px-2.5 py-1.5 text-xs text-content-subtle italic select-none" title="Add bid packages on the VOQ page to invite subcontractors to tender.">None yet</span>
+                <span class="inline-flex items-center rounded-lg border border-dashed border-line px-2.5 py-1.5 text-xs text-content-subtle italic select-none" title="Add bid packages on the variation page to invite subcontractors to tender.">None yet</span>
             }
         }
     </div>
@@ -118,20 +100,19 @@
 @code {
     [Parameter, EditorRequired] public string ProjectId { get; set; } = "";
 
-    /// <summary>Which chip is the current page: "request", "voq", "vo", or a bid package id.</summary>
+    /// <summary>Which chip is the current page: "request", "variation", or a bid package id.</summary>
     [Parameter, EditorRequired] public string ActiveId { get; set; } = "";
 
     [Parameter] public Request? Request { get; set; }
-    [Parameter] public VariationOrder? Voq { get; set; }
-    [Parameter] public VariationOrder? Vo { get; set; }
+
+    /// <summary>The variation this chain produced, at whatever stage it has reached. One record —
+    /// there is no separate quote and order to pass in any more.</summary>
+    [Parameter] public VariationOrder? Variation { get; set; }
+
     [Parameter] public IReadOnlyList<BidPackage>? BidPackages { get; set; }
 
-    /// <summary>Set by the VOQ page (where the VO panel lives): clicking the VO chip then scrolls
-    /// to and flashes the panel rather than navigating to the page you are already on.</summary>
-    [Parameter] public EventCallback OnVoClick { get; set; }
-
     private string RequestHref => Request is null ? "" : $"/projects/{ProjectId}/requests/view/{Request.RequestId}";
-    private string VoqHref => Voq is null ? "" : $"/projects/{ProjectId}/voq/{Voq.VariationOrderId}";
+    private string VariationHref => Variation is null ? "" : $"/projects/{ProjectId}/variations/{Variation.VariationOrderId}";
     private string PackageHref(string bidPackageId) => $"/projects/{ProjectId}/bid-package-invites/{bidPackageId}";
 
     // The container chip always shows the REQ-#### number (the official reference lives on the
@@ -139,11 +120,16 @@
     private static string ContainerReference(Request request) =>
         string.IsNullOrEmpty(request.DisplayNumber) ? request.Reference : request.DisplayNumber;
 
-    private string VoqPlaceholderHint =>
-        Request is null ? "A VOQ is created from an RFI that carries an RFQ."
-        : Request.Kind != RequestType.Rfi ? "Promote the request to an RFI and enable RFQ to unlock a VOQ."
-        : !Request.HasRfq ? "Enable RFQ on the RFI to unlock a VOQ."
-        : "Create the VOQ from the request page.";
+    // An approved variation carries the V-ref minted at approval; before that DisplayNumber renders
+    // the same number the same way, so the chip's label never changes shape as it moves stages.
+    private static string VariationLabel(VariationOrder variation) =>
+        string.IsNullOrWhiteSpace(variation.VariationRef) ? variation.DisplayNumber : variation.VariationRef!;
+
+    private string VariationPlaceholderHint =>
+        Request is null ? "A variation is raised from an RFI that carries an RFQ."
+        : Request.Kind != RequestType.Rfi ? "Promote the request to an RFI and enable RFQ to raise a variation."
+        : !Request.HasRfq ? "Enable RFQ on the RFI to raise a variation."
+        : "Raise the variation from the request page.";
 
     private static string RequestStatusLabel(RequestStatus status) => status.DisplayName();
 }

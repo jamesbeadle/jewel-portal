@@ -10,7 +10,7 @@
 @*
     The project's Communications tab — every email tagged to one of this project's records, read
     live from the mailbox in one place. Triage stamps "JPMS/<TagReference>" categories on emails
-    (cost centres, requests, bid package invites, programme, to-dos, LADs, VOs, VOQs); the per-record
+    (cost centres, requests, bid package invites, programme, to-dos, LADs, variations); the per-record
     views read their own tag, and this tab is the cross-cutting roll-up: all of it, newest paged
     first, filterable by pathway (the Client / Subcontractor / Internal bucket the thread is filed
     under) and by the type of thing tagged. Each row shows the thread's pathway chip plus WHICH
@@ -272,7 +272,7 @@ else
         RecordType.Todo             => "To-do",
         RecordType.Lad              => "LADs",
         RecordType.Variation        => "VO",
-        RecordType.VariationQuote   => "VOQ",
+        RecordType.VariationQuote   => "Variation",
         _                           => type.ToString()
     };
 

@@ -16,7 +16,7 @@ public sealed class ListBoqLinesForProjectHandler
     public async Task<IReadOnlyList<BoqLineItem>> HandleAsync(
         ListBoqLinesForProject query, CancellationToken cancellationToken)
     {
-        var entities = await context.BoqLineItems.Where(line => line.ProjectId == query.ProjectId).ToListAsync(cancellationToken);
+        var entities = await context.BoqLineItems.AsNoTracking().Where(line => line.ProjectId == query.ProjectId).ToListAsync(cancellationToken);
         return entities.Select(entity => entity.ToModel()).ToList().AsReadOnly();
     }
 }

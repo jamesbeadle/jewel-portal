@@ -137,4 +137,99 @@ public sealed class JpmsContext : DbContext
     // Append-only audit trail of client-facing interactions (pathway split — see
     // docs/Pathway-Split-Platform-Flow-Plan.md §4).
     public DbSet<AuditEventEntity> AuditEvents => Set<AuditEventEntity>();
+
+    /// <summary>
+    /// Read-path indexes. JPMS deliberately declares no FK relationships (records link by loose
+    /// string id), so EF's automatic FK-index convention never fires — every ProjectId / RequestId
+    /// / WorkOrderId lookup was a table scan that grows with the data. These are the columns the
+    /// hot queries actually filter and join on; each is declared here so the model, the snapshot
+    /// and the database agree, and created by the AddPerformanceIndexes migration.
+    ///
+    /// Index names are pinned explicitly because three of them (WorkOrderLines, Timesheets,
+    /// XeroLineTimesheetCovers) already exist in production — hand-run from
+    /// infra/perf-financials-indexes.sql after the financials query started returning 504s — so
+    /// the migration must not collide with them. Those three carry INCLUDE columns in the database
+    /// that are not modelled here; INCLUDE is a storage detail EF never validates at runtime.
+    /// </summary>
+    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    {
+        base.OnModelCreating(modelBuilder);
+
+        // ---- Auth: read on every single authenticated request ---------------------------------
+        // (UserSessions.SessionId and DirectoryUsers.Email are primary keys, so those two lookups
+        // already seek; the role list was the one that scanned.)
+        modelBuilder.Entity<DirectoryUserRoleEntity>()
+            .HasIndex(row => row.DirectoryUserEmail)
+            .HasDatabaseName("IX_DirectoryUserRoles_DirectoryUserEmail");
+
+        // ---- Requests / RFIs -------------------------------------------------------------------
+        modelBuilder.Entity<RequestEntity>()
+            .HasIndex(row => new { row.ProjectId, row.Status })
+            .HasDatabaseName("IX_Requests_ProjectId_Status");
+        modelBuilder.Entity<RequestEntity>()
+            .HasIndex(row => new { row.Kind, row.Status })
+            .HasDatabaseName("IX_Requests_Kind_Status");
+        modelBuilder.Entity<RequestMessageEntity>()
+            .HasIndex(row => row.RequestId)
+            .HasDatabaseName("IX_RequestMessages_RequestId");
+
+        // ---- Variations ------------------------------------------------------------------------
+        modelBuilder.Entity<VariationOrderEntity>()
+            .HasIndex(row => row.ProjectId)
+            .HasDatabaseName("IX_VariationOrderQuotes_ProjectId");
+        modelBuilder.Entity<VariationOrderEntity>()
+            .HasIndex(row => row.RequestId)
+            .HasDatabaseName("IX_VariationOrderQuotes_RequestId");
+
+        // ---- Procurement -----------------------------------------------------------------------
+        modelBuilder.Entity<WorkOrderEntity>()
+            .HasIndex(row => row.ProjectId)
+            .HasDatabaseName("IX_WorkOrders_ProjectId");
+        modelBuilder.Entity<WorkOrderEntity>()
+            .HasIndex(row => row.VariationOrderId)
+            .HasDatabaseName("IX_WorkOrders_VariationOrderId");
+        modelBuilder.Entity<WorkOrderLineEntity>()
+            .HasIndex(row => row.WorkOrderId)
+            .HasDatabaseName("IX_WorkOrderLines_WorkOrderId");
+        modelBuilder.Entity<BidPackageEntity>()
+            .HasIndex(row => row.ProjectId)
+            .HasDatabaseName("IX_BidPackages_ProjectId");
+        modelBuilder.Entity<BidPackageEntity>()
+            .HasIndex(row => row.VariationOrderId)
+            .HasDatabaseName("IX_BidPackages_VariationOrderQuoteId");
+        modelBuilder.Entity<QuoteEntity>()
+            .HasIndex(row => row.BidPackageId)
+            .HasDatabaseName("IX_Quotes_BidPackageId");
+
+        // ---- Labour / financials (the first two already live in production) ---------------------
+        modelBuilder.Entity<TimesheetEntity>()
+            .HasIndex(row => new { row.ProjectId, row.Status })
+            .HasDatabaseName("IX_Timesheets_ProjectId_Status");
+        modelBuilder.Entity<XeroLineTimesheetCoverEntity>()
+            .HasIndex(row => row.XeroLedgerLineId)
+            .HasDatabaseName("IX_XeroLineTimesheetCovers_XeroLedgerLineId");
+        modelBuilder.Entity<SiteAttendanceEntity>()
+            .HasIndex(row => new { row.ProjectId, row.WorkDate })
+            .HasDatabaseName("IX_SiteAttendances_ProjectId_WorkDate");
+
+        // ---- Project-scoped registers -----------------------------------------------------------
+        modelBuilder.Entity<DrawingEntity>()
+            .HasIndex(row => row.ProjectId)
+            .HasDatabaseName("IX_Drawings_ProjectId");
+        modelBuilder.Entity<DrawingRevisionEntity>()
+            .HasIndex(row => row.DrawingId)
+            .HasDatabaseName("IX_DrawingRevisions_DrawingId");
+        modelBuilder.Entity<HsRecordEntity>()
+            .HasIndex(row => row.ProjectId)
+            .HasDatabaseName("IX_HsRecords_ProjectId");
+        modelBuilder.Entity<TodoItemEntity>()
+            .HasIndex(row => row.ProjectId)
+            .HasDatabaseName("IX_TodoItems_ProjectId");
+        modelBuilder.Entity<DefectEntity>()
+            .HasIndex(row => row.ProjectId)
+            .HasDatabaseName("IX_Defects_ProjectId");
+        modelBuilder.Entity<ComplianceDocumentEntity>()
+            .HasIndex(row => row.SubcontractorId)
+            .HasDatabaseName("IX_ComplianceDocuments_SubcontractorId");
+    }
 }

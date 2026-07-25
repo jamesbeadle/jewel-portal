@@ -79,10 +79,10 @@ else
                 }
             </header>
 
-            @if (lineageVoq is not null)
+            @if (lineageVariation is not null)
             {
                 <RecordLineage ProjectId="@ProjectId" ActiveId="@BidPackageId"
-                               Request="lineageRequest" Voq="lineageVoq" Vo="lineageVo" BidPackages="siblingPackages" />
+                               Request="lineageRequest" Variation="lineageVariation" BidPackages="siblingPackages" />
             }
 
             @if (aiNote is not null)
@@ -726,17 +726,17 @@ else
             else if (coverageChoice == BidPackageLineCoverage.Variation)
             {
                 <label class="block text-xs font-semibold uppercase tracking-wide text-content-subtle mt-3 mb-1">Variation Order Quote</label>
-                @if (voqs.Count == 0)
+                @if (variations.Count == 0)
                 {
                     <p class="text-sm text-content-subtle italic">No variation orders on this project yet.</p>
                 }
                 else
                 {
-                    <select class="field" @bind="coverageVoqId">
+                    <select class="field" @bind="coverageVariationId">
                         <option value="">Select a variation…</option>
-                        @foreach (var v in voqs)
+                        @foreach (var v in variations)
                         {
-                            <option value="@v.VariationOrderId">@v.Reference — @v.Title</option>
+                            <option value="@v.VariationOrderId">@v.DisplayNumber — @v.Title</option>
                         }
                     </select>
                 }
@@ -1056,7 +1056,7 @@ else
     private IReadOnlyList<Drawing> packageDrawings = Array.Empty<Drawing>();
     private IReadOnlyList<ProjectWorkOrderDetail> projectOrders = Array.Empty<ProjectWorkOrderDetail>();
     private IReadOnlyList<BoqLineItem> boqLines = Array.Empty<BoqLineItem>();
-    private IReadOnlyList<VariationOrder> voqs = Array.Empty<VariationOrder>();
+    private IReadOnlyList<VariationOrder> variations = Array.Empty<VariationOrder>();
 
     private bool showInviteModal;
     private string subSearch = "";
@@ -1129,40 +1129,37 @@ else
         try { boqLines = await Queries.AskAsync(new ListBoqLinesForProject(ProjectId), CancellationToken.None); }
         catch { /* picker simply shows no BoQ lines */ }
 
-        try { voqs = await Queries.AskAsync(new ListVariationOrdersForProject(ProjectId), CancellationToken.None); }
+        try { variations = await Queries.AskAsync(new ListVariationOrdersForProject(ProjectId), CancellationToken.None); }
         catch { /* picker simply shows no variations */ }
 
         await LoadLineageAsync();
     }
 
-    // ---- Record lineage (Request → VOQ → VO, plus sibling packages) for the navigation bar ----
-    // Only packages that belong to a VOQ have a lineage; BoQ-covered packages show no bar. Every
-    // read is best-effort: a missing piece renders as a placeholder chip, never an error.
+    // ---- Record lineage (Request → RFI → Variation, plus sibling packages) for the nav bar ----
+    // Only packages that belong to a variation have a lineage; BoQ-covered packages show no bar.
+    // Every read is best-effort: a missing piece renders as a placeholder chip, never an error.
 
     private Request? lineageRequest;
-    private VariationOrder? lineageVoq;
-    private VariationOrder? lineageVo;
+    private VariationOrder? lineageVariation;
     private IReadOnlyList<BidPackage> siblingPackages = Array.Empty<BidPackage>();
 
     private async Task LoadLineageAsync()
     {
         if (string.IsNullOrEmpty(package?.VariationOrderId))
         {
-            lineageRequest = null; lineageVoq = null; lineageVo = null;
+            lineageRequest = null; lineageVariation = null;
             siblingPackages = Array.Empty<BidPackage>();
             return;
         }
 
-        var voqId = package.VariationOrderId;
-        try { lineageVoq = await Queries.AskAsync(new GetVariationOrderById(voqId), CancellationToken.None); }
-        catch { lineageVoq = null; }
-        if (lineageVoq is null) return;
+        var variationId = package.VariationOrderId;
+        try { lineageVariation = await Queries.AskAsync(new GetVariationOrderById(variationId), CancellationToken.None); }
+        catch { lineageVariation = null; }
+        if (lineageVariation is null) return;
 
-        try { lineageRequest = await RequestRegister.GetAsync(lineageVoq.RequestId); }
+        try { lineageRequest = await RequestRegister.GetAsync(lineageVariation.RequestId); }
         catch { lineageRequest = null; }
-        // One document: the "VO" lineage chip is this same record, shown once it is approved.
-        lineageVo = lineageVoq.Status == VariationOrderStatus.Approved ? lineageVoq : null;
-        try { siblingPackages = await Queries.AskAsync(new ListBidPackagesForVoq(voqId), CancellationToken.None); }
+        try { siblingPackages = await Queries.AskAsync(new ListBidPackagesForVoq(variationId), CancellationToken.None); }
         catch { siblingPackages = Array.Empty<BidPackage>(); }
     }
 
@@ -1172,7 +1169,7 @@ else
     private BidPackageLineItem? linkingLine;
     private BidPackageLineCoverage coverageChoice = BidPackageLineCoverage.Unassigned;
     private string? coverageBoqId;
-    private string? coverageVoqId;
+    private string? coverageVariationId;
 
     private string CoverageLabel(BidPackageLineItem item)
     {
@@ -1182,8 +1179,8 @@ else
                 var boq = boqLines.FirstOrDefault(b => b.BoqLineItemId == item.BoqLineItemId);
                 return boq is null ? "Contract line" : $"BoQ · {boq.Description}";
             case BidPackageLineCoverage.Variation:
-                var voq = voqs.FirstOrDefault(v => v.VariationOrderId == item.VariationOrderId);
-                return voq is null ? "Variation" : $"{voq.Reference} · {voq.Title}";
+                var variation = variations.FirstOrDefault(v => v.VariationOrderId == item.VariationOrderId);
+                return variation is null ? "Variation" : $"{variation.DisplayNumber} · {variation.Title}";
             default:
                 return "";
         }
@@ -1194,7 +1191,7 @@ else
         linkingLine = item;
         coverageChoice = item.Coverage;
         coverageBoqId = item.BoqLineItemId;
-        coverageVoqId = item.VariationOrderId;
+        coverageVariationId = item.VariationOrderId;
         showCoverageModal = true;
     }
 
@@ -1212,9 +1209,9 @@ else
         {
             busy = true;
             var boqId = coverageChoice == BidPackageLineCoverage.ContractLine && !string.IsNullOrWhiteSpace(coverageBoqId) ? coverageBoqId : null;
-            var voqId = coverageChoice == BidPackageLineCoverage.Variation && !string.IsNullOrWhiteSpace(coverageVoqId) ? coverageVoqId : null;
+            var variationId = coverageChoice == BidPackageLineCoverage.Variation && !string.IsNullOrWhiteSpace(coverageVariationId) ? coverageVariationId : null;
             lineItems = await Commands.SendAsync(
-                new SetBidPackageLineItemCoverage(linkingLine.LineItemId, coverageChoice, boqId, voqId), CancellationToken.None);
+                new SetBidPackageLineItemCoverage(linkingLine.LineItemId, coverageChoice, boqId, variationId), CancellationToken.None);
             showCoverageModal = false;
             linkingLine = null;
         }

@@ -82,7 +82,9 @@
     }
 
     private int? ParsedNumber => int.TryParse(numberText, out var n) && n > 0 ? n : null;
-    private string Preview => ParsedNumber is { } n ? $"VOQ-{n:0000}" : "VOQ-…";
+    // Shows the number the way the rest of the app shows it ("V50"). The row it creates still
+    // stores the historic "VOQ-0050" Reference — a persisted identifier, not UI copy.
+    private string Preview => ParsedNumber is { } n ? $"V{n}" : "V…";
     private string VPreview => ParsedNumber is { } n ? $"V{n}" : "V…";
 
     private void OnDescriptionInput(ChangeEventArgs e) => description = e.Value?.ToString() ?? "";
@@ -104,7 +106,7 @@
         }
         if (ParsedNumber is { } requested && UsedNumbers.Contains(requested))
         {
-            error = $"VOQ-{requested:0000} already exists on this project — choose a different number.";
+            error = $"V{requested} already exists on this project — choose a different number.";
             return;
         }
         decimal? estimate = null;

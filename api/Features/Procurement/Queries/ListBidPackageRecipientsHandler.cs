@@ -15,7 +15,7 @@ public sealed class ListBidPackageRecipientsHandler
 
     public async Task<IReadOnlyList<BidPackageRecipient>> HandleAsync(ListBidPackageRecipients query, CancellationToken cancellationToken)
     {
-        var entities = await context.BidPackageRecipients
+        var entities = await context.BidPackageRecipients.AsNoTracking()
             .Where(recipient => recipient.BidPackageId == query.BidPackageId)
             .OrderBy(recipient => recipient.InvitedAt)
             .ToListAsync(cancellationToken);

@@ -153,6 +153,12 @@ namespace Jewel.JPMS.Api.Migrations
 
                     b.HasKey("VariationOrderId");
 
+                    b.HasIndex("ProjectId")
+                        .HasDatabaseName("IX_VariationOrderQuotes_ProjectId");
+
+                    b.HasIndex("RequestId")
+                        .HasDatabaseName("IX_VariationOrderQuotes_RequestId");
+
                     b.ToTable("VariationOrderQuotes");
                 });
 
@@ -194,6 +200,12 @@ namespace Jewel.JPMS.Api.Migrations
                         .HasColumnName("VariationOrderQuoteId");
 
                     b.HasKey("BidPackageId");
+
+                    b.HasIndex("ProjectId")
+                        .HasDatabaseName("IX_BidPackages_ProjectId");
+
+                    b.HasIndex("VariationOrderId")
+                        .HasDatabaseName("IX_BidPackages_VariationOrderQuoteId");
 
                     b.ToTable("BidPackages");
                 });
@@ -555,6 +567,12 @@ namespace Jewel.JPMS.Api.Migrations
 
                     b.HasKey("RequestId");
 
+                    b.HasIndex("ProjectId", "Status")
+                        .HasDatabaseName("IX_Requests_ProjectId_Status");
+
+                    b.HasIndex("Kind", "Status")
+                        .HasDatabaseName("IX_Requests_Kind_Status");
+
                     b.ToTable("Requests");
                 });
 
@@ -649,6 +667,9 @@ namespace Jewel.JPMS.Api.Migrations
                         .HasColumnType("int");
 
                     b.HasKey("MessageId");
+
+                    b.HasIndex("RequestId")
+                        .HasDatabaseName("IX_RequestMessages_RequestId");
 
                     b.ToTable("RequestMessages");
                 });
@@ -803,6 +824,9 @@ namespace Jewel.JPMS.Api.Migrations
                         .HasColumnType("int");
 
                     b.HasKey("ComplianceDocumentId");
+
+                    b.HasIndex("SubcontractorId")
+                        .HasDatabaseName("IX_ComplianceDocuments_SubcontractorId");
 
                     b.ToTable("ComplianceDocuments");
                 });
@@ -1122,6 +1146,9 @@ namespace Jewel.JPMS.Api.Migrations
 
                     b.HasKey("DefectId");
 
+                    b.HasIndex("ProjectId")
+                        .HasDatabaseName("IX_Defects_ProjectId");
+
                     b.ToTable("Defects");
                 });
 
@@ -1161,6 +1188,9 @@ namespace Jewel.JPMS.Api.Migrations
 
                     b.HasKey("DirectoryUserRoleId");
 
+                    b.HasIndex("DirectoryUserEmail")
+                        .HasDatabaseName("IX_DirectoryUserRoles_DirectoryUserEmail");
+
                     b.ToTable("DirectoryUserRoles");
                 });
 
@@ -1193,6 +1223,9 @@ namespace Jewel.JPMS.Api.Migrations
                         .HasColumnType("nvarchar(256)");
 
                     b.HasKey("DrawingId");
+
+                    b.HasIndex("ProjectId")
+                        .HasDatabaseName("IX_Drawings_ProjectId");
 
                     b.ToTable("Drawings");
                 });
@@ -1297,6 +1330,9 @@ namespace Jewel.JPMS.Api.Migrations
                         .HasColumnType("int");
 
                     b.HasKey("DrawingRevisionId");
+
+                    b.HasIndex("DrawingId")
+                        .HasDatabaseName("IX_DrawingRevisions_DrawingId");
 
                     b.ToTable("DrawingRevisions");
                 });
@@ -1475,6 +1511,9 @@ namespace Jewel.JPMS.Api.Migrations
                         .HasColumnType("nvarchar(512)");
 
                     b.HasKey("HsRecordId");
+
+                    b.HasIndex("ProjectId")
+                        .HasDatabaseName("IX_HsRecords_ProjectId");
 
                     b.ToTable("HsRecords");
                 });
@@ -2543,6 +2582,9 @@ namespace Jewel.JPMS.Api.Migrations
 
                     b.HasKey("QuoteId");
 
+                    b.HasIndex("BidPackageId")
+                        .HasDatabaseName("IX_Quotes_BidPackageId");
+
                     b.ToTable("Quotes");
                 });
 
@@ -3064,6 +3106,9 @@ namespace Jewel.JPMS.Api.Migrations
 
                     b.HasKey("TimesheetId");
 
+                    b.HasIndex("ProjectId", "Status")
+                        .HasDatabaseName("IX_Timesheets_ProjectId_Status");
+
                     b.ToTable("Timesheets");
                 });
 
@@ -3165,6 +3210,9 @@ namespace Jewel.JPMS.Api.Migrations
 
                     b.HasKey("SiteAttendanceId");
 
+                    b.HasIndex("ProjectId", "WorkDate")
+                        .HasDatabaseName("IX_SiteAttendances_ProjectId_WorkDate");
+
                     b.ToTable("SiteAttendances");
                 });
 
@@ -3265,6 +3313,9 @@ namespace Jewel.JPMS.Api.Migrations
 
                     b.HasKey("XeroLineTimesheetCoverId");
 
+                    b.HasIndex("XeroLedgerLineId")
+                        .HasDatabaseName("IX_XeroLineTimesheetCovers_XeroLedgerLineId");
+
                     b.ToTable("XeroLineTimesheetCovers");
                 });
 
@@ -3315,6 +3366,9 @@ namespace Jewel.JPMS.Api.Migrations
                         .HasColumnType("nvarchar(256)");
 
                     b.HasKey("TodoItemId");
+
+                    b.HasIndex("ProjectId")
+                        .HasDatabaseName("IX_TodoItems_ProjectId");
 
                     b.ToTable("TodoItems");
                 });
@@ -3544,6 +3598,12 @@ namespace Jewel.JPMS.Api.Migrations
 
                     b.HasKey("WorkOrderId");
 
+                    b.HasIndex("ProjectId")
+                        .HasDatabaseName("IX_WorkOrders_ProjectId");
+
+                    b.HasIndex("VariationOrderId")
+                        .HasDatabaseName("IX_WorkOrders_VariationOrderId");
+
                     b.ToTable("WorkOrders");
                 });
 
@@ -3608,6 +3668,9 @@ namespace Jewel.JPMS.Api.Migrations
                         .HasColumnType("nvarchar(64)");
 
                     b.HasKey("WorkOrderLineId");
+
+                    b.HasIndex("WorkOrderId")
+                        .HasDatabaseName("IX_WorkOrderLines_WorkOrderId");
 
                     b.ToTable("WorkOrderLines");
                 });

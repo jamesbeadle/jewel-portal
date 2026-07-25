@@ -14,12 +14,12 @@ public sealed class GetRequestByIdHandler : IQueryHandler<GetRequestById, Reques
 
     public async Task<Request?> HandleAsync(GetRequestById query, CancellationToken cancellationToken)
     {
-        var entity = await context.Requests
+        var entity = await context.Requests.AsNoTracking()
             .FirstOrDefaultAsync(change => change.RequestId == query.RequestId, cancellationToken);
         if (entity is null) return null;
 
         // The detail view carries the official document's itemised queries too.
-        var items = await context.RequestItems
+        var items = await context.RequestItems.AsNoTracking()
             .Where(item => item.RequestId == query.RequestId)
             .ToListAsync(cancellationToken);
         return entity.ToModel(items);

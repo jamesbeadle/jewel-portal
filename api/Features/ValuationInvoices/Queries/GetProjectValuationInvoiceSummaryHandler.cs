@@ -14,7 +14,7 @@ public sealed class GetProjectValuationInvoiceSummaryHandler : IQueryHandler<Get
     public async Task<ProjectValuationInvoiceSummary> HandleAsync(GetProjectValuationInvoiceSummary query, CancellationToken cancellationToken)
     {
         // Cancelled invoices are audit-trail residents only — they never count anywhere.
-        var invoices = await context.ValuationInvoices
+        var invoices = await context.ValuationInvoices.AsNoTracking()
             .Where(invoice => invoice.ProjectId == query.ProjectId
                               && invoice.Status != (int)ValuationInvoiceStatus.Cancelled)
             .ToListAsync(cancellationToken);

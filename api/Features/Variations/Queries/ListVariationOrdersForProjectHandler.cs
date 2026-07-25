@@ -13,7 +13,7 @@ public sealed class ListVariationOrdersForProjectHandler : IQueryHandler<ListVar
 
     public async Task<IReadOnlyList<VariationOrder>> HandleAsync(ListVariationOrdersForProject query, CancellationToken cancellationToken)
     {
-        var entities = await context.VariationOrders
+        var entities = await context.VariationOrders.AsNoTracking()
             .Where(vo => vo.ProjectId == query.ProjectId)
             .OrderByDescending(vo => vo.Number)
             .ToListAsync(cancellationToken);

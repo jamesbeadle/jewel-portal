@@ -15,7 +15,7 @@ public sealed class ListRatesInLibraryHandler
 
     public async Task<IReadOnlyList<Rate>> HandleAsync(ListRatesInLibrary query, CancellationToken cancellationToken)
     {
-        var entities = await context.Rates.OrderBy(rate => rate.Trade).ThenBy(rate => rate.Description).ToListAsync(cancellationToken);
+        var entities = await context.Rates.AsNoTracking().OrderBy(rate => rate.Trade).ThenBy(rate => rate.Description).ToListAsync(cancellationToken);
         return entities.Select(entity => entity.ToModel()).ToList().AsReadOnly();
     }
 }

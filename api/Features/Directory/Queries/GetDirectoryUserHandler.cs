@@ -16,11 +16,11 @@ public sealed class GetDirectoryUserHandler
     public async Task<DirectoryUser?> HandleAsync(
         GetDirectoryUser query, CancellationToken cancellationToken)
     {
-        var entity = await context.DirectoryUsers
+        var entity = await context.DirectoryUsers.AsNoTracking()
             .FirstOrDefaultAsync(user => user.Email == query.Email, cancellationToken);
         if (entity is null) return null;
 
-        var roles = await context.DirectoryUserRoles
+        var roles = await context.DirectoryUserRoles.AsNoTracking()
             .Where(row => row.DirectoryUserEmail == query.Email)
             .Select(row => (Role)row.Role)
             .ToListAsync(cancellationToken);

@@ -30,14 +30,14 @@ public sealed class GetSubcontractorStatementHandler
         if (subcontractor is null)
             throw new InvalidOperationException($"Subcontractor {query.SubcontractorId} not found.");
 
-        var orders = await context.WorkOrders
+        var orders = await context.WorkOrders.AsNoTracking()
             .Where(order => order.SubcontractorId == query.SubcontractorId)
             .ToListAsync(cancellationToken);
 
         var orderIds = orders.Select(order => order.WorkOrderId).ToList();
         var links = orderIds.Count == 0
             ? new List<XeroLineWorkOrderLinkEntity>()
-            : await context.XeroLineWorkOrderLinks
+            : await context.XeroLineWorkOrderLinks.AsNoTracking()
                 .Where(link => orderIds.Contains(link.WorkOrderId))
                 .ToListAsync(cancellationToken);
         var linksByOrder = links
@@ -47,7 +47,7 @@ public sealed class GetSubcontractorStatementHandler
         var lineIds = links.Select(link => link.XeroLedgerLineId).Distinct().ToList();
         var ledgerLinesById = lineIds.Count == 0
             ? new Dictionary<string, XeroLedgerLineEntity>(StringComparer.OrdinalIgnoreCase)
-            : await context.XeroLedgerLines
+            : await context.XeroLedgerLines.AsNoTracking()
                 .Where(line => lineIds.Contains(line.XeroLedgerLineId))
                 .ToDictionaryAsync(line => line.XeroLedgerLineId,
                     StringComparer.OrdinalIgnoreCase, cancellationToken);
@@ -62,7 +62,7 @@ public sealed class GetSubcontractorStatementHandler
         var projectIds = statementOrders.Select(order => order.ProjectId).Distinct().ToList();
         var projectsById = projectIds.Count == 0
             ? new Dictionary<string, ProjectEntity>(StringComparer.OrdinalIgnoreCase)
-            : await context.Projects
+            : await context.Projects.AsNoTracking()
                 .Where(project => projectIds.Contains(project.ProjectId))
                 .ToDictionaryAsync(project => project.ProjectId,
                     StringComparer.OrdinalIgnoreCase, cancellationToken);

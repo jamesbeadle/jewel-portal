@@ -15,7 +15,7 @@ public sealed class ListTradesHandler
 
     public async Task<IReadOnlyList<Trade>> HandleAsync(ListTrades query, CancellationToken cancellationToken)
     {
-        var entities = await context.Trades.OrderBy(trade => trade.Name).ToListAsync(cancellationToken);
+        var entities = await context.Trades.AsNoTracking().OrderBy(trade => trade.Name).ToListAsync(cancellationToken);
         return entities.Select(entity => entity.ToModel()).ToList().AsReadOnly();
     }
 }
