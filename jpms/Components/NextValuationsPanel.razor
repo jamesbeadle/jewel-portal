@@ -22,7 +22,7 @@
 
     @if (Projects.Current is null)
     {
-        <p class="px-5 py-4 text-sm text-content-subtle">Loading…</p>
+        <LoadGate IsLoading="true" Prominent="true" Label="Loading valuations" />
     }
     else if (Ordered.Count == 0)
     {

@@ -99,6 +99,37 @@
         @apply px-4 py-3 text-content-muted;
     }
 
+    /* The assistant panel's slide, and the shell's matching squeeze
+       (Components/Chat/ChatPanel.razor + Layout/MainLayout.razor). The transforms live here rather
+       than as inline utilities for two reasons: the movement is part of the look, and Phase 5's
+       colour lint greps for a substring that Tailwind's own translate-x utility happens to
+       contain, so keeping that utility out of the markup keeps the check free of false hits. */
+    .chat-panel {
+        transition: transform 300ms ease-out;
+        will-change: transform;
+    }
+
+    .chat-panel-open {
+        transform: translateX(0);
+    }
+
+    .chat-panel-closed {
+        transform: translateX(100%);
+        pointer-events: none;
+    }
+
+    /* Applied to the app shell so the active page reflows in step with the panel rather than
+       snapping to its new width. */
+    .chat-push {
+        transition: padding-right 300ms ease-out;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .chat-panel, .chat-push {
+            transition: none;
+        }
+    }
+
     .modal-overlay {
         @apply fixed inset-0 z-50 flex items-center justify-center bg-canvas/70 p-4;
     }
@@ -108,18 +139,28 @@
     }
 }
 
+/* Blazor's last-resort strip. Everything the app can catch is reported in ErrorToast at the top
+   of the screen instead; this only ever appears when the renderer itself has stopped, where the
+   honest answer is "reload". Styled to match the app so it does not read as a browser error. */
 #blazor-error-ui {
     display: none;
     position: fixed;
     bottom: 0;
     left: 0;
     right: 0;
-    background: theme('colors.surface.DEFAULT');
-    color: theme('colors.negative');
-    border-top: 1px solid theme('colors.line.strong');
-    padding: 0.75rem 1rem;
-    font-size: 0.875rem;
-    z-index: 50;
+    background: theme('colors.negative.strong');
+    color: theme('colors.negative.ink');
+    padding: 0.75rem 2.5rem 0.75rem 1rem;
+    font-size: 0.8125rem;
+    z-index: 70;
+}
+
+#blazor-error-ui .reload {
+    color: theme('colors.negative.ink');
+    font-weight: 600;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    margin-left: 0.5rem;
 }
 
 #blazor-error-ui .dismiss {
@@ -131,7 +172,7 @@
 
 .blazor-error-boundary {
     background: theme('colors.surface.DEFAULT');
-    color: theme('colors.negative');
+    color: theme('colors.negative.DEFAULT');
     padding: 1rem;
     border-radius: 0.5rem;
 }
@@ -152,4 +193,31 @@
 
 .jpms-flash {
     animation: jpms-flash 1.5s ease-out 1;
+}
+
+/* Assistant panel "drafting" indicator (Components/Chat/ChatPanel.razor): three dots lifting in
+   sequence. The stagger is two extra classes rather than :nth-child so the markup stays readable
+   and Tailwind never has to see a generated selector. */
+@keyframes jpms-typing {
+    0%, 60%, 100% { opacity: 0.3; transform: translateY(0); }
+    30%           { opacity: 1;   transform: translateY(-2px); }
+}
+
+.jpms-typing-dot {
+    animation: jpms-typing 1.3s ease-in-out infinite;
+}
+
+.jpms-typing-dot-2 {
+    animation-delay: 0.16s;
+}
+
+.jpms-typing-dot-3 {
+    animation-delay: 0.32s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .jpms-typing-dot {
+        animation: none;
+        opacity: 0.6;
+    }
 }

@@ -71,6 +71,7 @@ var host = new HostBuilder()
         services.AddScoped<SignedInUserResolver>();
         services.AddScoped<InviteDirectoryWriter>();
         services.AddScoped<UserInviter>();
+        services.AddScoped<PasswordResetSender>();
         RegisterInviteNotifier(services, context.Configuration);
         services.AddDirectoryFeature();
         services.AddAccessRequestsFeature();

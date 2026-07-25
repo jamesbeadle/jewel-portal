@@ -1,0 +1,118 @@
+@inject ErrorReporter Reporter
+@inject IJSRuntime Js
+@implements IDisposable
+
+@*
+    The app's one error surface: full width, along the top, impossible to miss.
+
+    It shows the user a sentence they can act on, and hides everything else behind "Show details" —
+    but the detail is one click and one Copy away, because the person who can fix the problem is
+    not the person looking at the screen. What gets copied is the whole report: reference, time,
+    who, which page, which endpoint, status, the server's own message and the stack. That is the
+    difference between "the valuations page is broken" and a fix.
+
+    Blazor's own #blazor-error-ui strip still sits at the bottom of index.html for the one case this
+    cannot cover — a failure that takes the renderer itself down, where the only honest option left
+    is Reload.
+*@
+
+@if (Reporter.Current is { } report)
+{
+    <div class="fixed top-0 left-0 right-0 z-[60] bg-negative-strong text-negative-ink shadow-lg shadow-black/40"
+         role="alert" aria-live="assertive">
+        <div class="px-4 py-3 flex items-start gap-3">
+
+            <svg class="w-5 h-5 shrink-0 mt-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                 stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z" />
+                <path d="M12 9v4" /><path d="M12 17h.01" />
+            </svg>
+
+            <div class="min-w-0 flex-1">
+                <p class="text-sm font-medium leading-snug">@report.Summary</p>
+
+                <div class="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-negative-ink/75">
+                    <span class="font-mono font-semibold tracking-wide">@report.Reference</span>
+                    <span>@report.OccurredAt.ToLocalTime().ToString("HH:mm:ss")</span>
+                    @if (report.Endpoint is { } endpoint)
+                    {
+                        <span class="font-mono truncate max-w-[22rem]">@endpoint</span>
+                    }
+                    @if (report.HasDetail)
+                    {
+                        <button type="button" @onclick="() => expanded = !expanded"
+                                class="underline underline-offset-2 hover:text-negative-ink font-medium">
+                            @(expanded ? "Hide details" : "Show details")
+                        </button>
+                    }
+                </div>
+
+                @if (expanded)
+                {
+                    <pre class="mt-2 max-h-56 overflow-auto rounded-lg bg-black/25 p-3 text-[11px] leading-relaxed font-mono whitespace-pre-wrap break-words">@report.ToPlainText()</pre>
+                }
+            </div>
+
+            <div class="flex items-center gap-2 shrink-0">
+                <button type="button" @onclick="Copy"
+                        title="Copy the full report so you can send it on"
+                        class="rounded-lg bg-black/20 hover:bg-black/30 px-3 py-1.5 text-xs font-medium transition">
+                    @(copied ? "Copied" : "Copy report")
+                </button>
+                <button type="button" @onclick="Dismiss" aria-label="Dismiss this error"
+                        class="grid place-items-center w-7 h-7 rounded-lg hover:bg-black/25 transition">
+                    <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                         stroke-width="2.5" stroke-linecap="round" aria-hidden="true">
+                        <path d="M6 6l12 12M18 6L6 18" />
+                    </svg>
+                </button>
+            </div>
+
+        </div>
+    </div>
+}
+
+@code {
+    private bool expanded;
+    private bool copied;
+    private string? shownReference;
+
+    protected override void OnInitialized() => Reporter.OnChange += Refresh;
+
+    private void Refresh()
+    {
+        // A new error collapses the panel and re-arms Copy — the previous report's expanded state
+        // says nothing about this one.
+        if (Reporter.Current?.Reference != shownReference)
+        {
+            shownReference = Reporter.Current?.Reference;
+            expanded = false;
+            copied = false;
+        }
+        InvokeAsync(StateHasChanged);
+    }
+
+    private async Task Copy()
+    {
+        if (Reporter.Current is null) return;
+        try
+        {
+            await Js.InvokeVoidAsync("navigator.clipboard.writeText", Reporter.Current.ToPlainText());
+            copied = true;
+        }
+        catch
+        {
+            // Clipboard access can be refused; expanding the panel at least puts the text on screen
+            // where it can be selected by hand.
+            expanded = true;
+        }
+    }
+
+    private void Dismiss()
+    {
+        expanded = false;
+        Reporter.Dismiss();
+    }
+
+    public void Dispose() => Reporter.OnChange -= Refresh;
+}

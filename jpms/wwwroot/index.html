@@ -24,14 +24,38 @@
 </head>
 
 <body>
+    <!--
+        The boot screen: what fills the window between the first byte of HTML and Blazor taking
+        over. It deliberately mirrors LoadingScreen.razor exactly — same jewel, same ring, same
+        pulse — so the handover from static HTML to the app is invisible rather than a flicker
+        between two different "loading" designs.
+    -->
     <div id="app">
-        <div class="min-h-dvh flex items-center justify-center bg-canvas text-content-subtle text-sm">
-            Loading JPMS…
+        <div class="min-h-dvh flex flex-col items-center justify-center gap-5 bg-canvas">
+            <div class="relative w-16 h-16 grid place-items-center">
+                <div class="absolute inset-0 rounded-full border-2 border-surface-field border-t-content/70 animate-spin"></div>
+                <svg class="w-6 h-6 animate-jewel-pulse" viewBox="0 0 530 460" fill="none" stroke="currentColor"
+                     stroke-width="34" stroke-linejoin="miter" stroke-linecap="butt"
+                     xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                    <path d="M 140 30 L 390 30 L 510 175 L 265 430 L 20 175 Z" />
+                    <path d="M 55 175 L 475 175" />
+                    <path d="M 185 30 L 185 175" />
+                    <path d="M 345 30 L 345 175" />
+                    <path d="M 185 175 L 265 430" />
+                    <path d="M 345 175 L 265 430" />
+                </svg>
+            </div>
+            <p class="text-sm text-content-subtle">Loading JPMS</p>
         </div>
     </div>
 
+    <!--
+        Last resort only. Anything the app can catch is reported in the full-width toast at the top
+        of the screen (ErrorToast.razor), with a copyable reference. This strip appears when the
+        renderer itself has stopped, and the only remaining option is a reload.
+    -->
     <div id="blazor-error-ui">
-        An unhandled error has occurred.
+        JPMS has stopped responding and needs to be reloaded. Anything already saved is safe.
         <a href="" class="reload">Reload</a>
         <a class="dismiss">🗙</a>
     </div>

@@ -1,3 +1,4 @@
+using Jewel.JPMS.Api.Auth;
 using Jewel.JPMS.Api.Gates;
 using Jewel.JPMS.Contracts.Auth;
 using Jewel.JPMS.Models;
@@ -48,19 +49,10 @@ public sealed class InviteUserEndpoint
 
         var displayName = string.IsNullOrWhiteSpace(body.DisplayName) ? email : body.DisplayName.Trim();
         var roles = (body.Roles ?? Array.Empty<Role>()).Distinct().ToList();
-        var baseUrl = ResolveSiteBaseUrl(request);
+        var baseUrl = SiteBaseUrl.Resolve(configuration, request);
 
         var result = await inviter.InviteAsync(email, displayName, roles, baseUrl, cancellationToken);
         return new OkObjectResult(result);
-    }
-
-    /// <summary>The public site the set-password link should point at. Prefers the configured
-    /// PublicSiteUrl so links survive being served from the raw Function App host.</summary>
-    private string ResolveSiteBaseUrl(HttpRequest request)
-    {
-        var configured = configuration["PublicSiteUrl"];
-        if (!string.IsNullOrWhiteSpace(configured)) return configured.TrimEnd('/');
-        return $"{request.Scheme}://{request.Host.Value}";
     }
 
     private static bool LooksLikeEmail(string value) =>

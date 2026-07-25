@@ -3,7 +3,7 @@ using Azure.Communication.Email;
 
 namespace Jewel.JPMS.Api.Auth;
 
-/// <summary>Sends invite links through Azure Communication Services Email.</summary>
+/// <summary>Sends invite and password-reset links through Azure Communication Services Email.</summary>
 public sealed class AzureEmailInviteNotifier : IInviteNotifier
 {
     private readonly EmailClient client;
@@ -24,6 +24,18 @@ public sealed class AzureEmailInviteNotifier : IInviteNotifier
             InviteEmailBody.Subject,
             InviteEmailBody.Html(displayName, inviteLink),
             InviteEmailBody.PlainText(displayName, inviteLink),
+            cancellationToken);
+    }
+
+    public async Task SendPasswordResetAsync(string email, string displayName, string resetLink, CancellationToken cancellationToken)
+    {
+        await client.SendAsync(
+            WaitUntil.Started,
+            senderAddress,
+            email,
+            PasswordResetEmailBody.Subject,
+            PasswordResetEmailBody.Html(displayName, resetLink),
+            PasswordResetEmailBody.PlainText(displayName, resetLink),
             cancellationToken);
     }
 }

@@ -9,8 +9,9 @@ using Microsoft.EntityFrameworkCore;
 namespace Jewel.JPMS.Api.Features.Auth;
 
 /// <summary>
-/// GET /api/auth/invite/{token} — lets the set-password page check a link is still valid and
-/// greet the user by name before they choose a password. Never reveals anything for a bad token.
+/// GET /api/auth/invite/{token} — lets the set-password page check a link is still valid, greet the
+/// user by name, and tell an invite apart from a password reset before they choose a password.
+/// Never reveals anything for a bad token.
 /// </summary>
 public sealed class ValidateInviteEndpoint
 {
@@ -41,6 +42,7 @@ public sealed class ValidateInviteEndpoint
             ? record.Email
             : directoryUser!.DisplayName;
 
-        return new OkObjectResult(new InviteValidation(true, record.Email, displayName));
+        return new OkObjectResult(new InviteValidation(
+            true, record.Email, displayName, record.Purpose == (int)TokenPurpose.Reset));
     }
 }

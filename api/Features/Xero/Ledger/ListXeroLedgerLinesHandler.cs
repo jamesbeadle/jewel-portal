@@ -1,6 +1,5 @@
 using Jewel.JPMS.Api.Cqrs;
 using Jewel.JPMS.Api.Data;
-using Jewel.JPMS.Api.Data.Entities;
 using Jewel.JPMS.Contracts.Xero;
 using Microsoft.EntityFrameworkCore;
 
@@ -14,65 +13,24 @@ public sealed class ListXeroLedgerLinesHandler : IQueryHandler<ListXeroLedgerLin
 
     public async Task<IReadOnlyList<XeroLedgerLine>> HandleAsync(ListXeroLedgerLines query, CancellationToken cancellationToken)
     {
-        var entities = await context.XeroLedgerLines.AsNoTracking()
+        // Filter in SQL. The allocation page asks for one status at a time — it is a tab per
+        // status — so this is the difference between reading the tab someone is looking at and
+        // reading every line the business has ever received. (XeroLedgerLines already carries an
+        // index on AllocationStatus.)
+        var lines = context.XeroLedgerLines.AsNoTracking();
+        if (query.Status is { } status)
+            lines = lines.Where(line => line.AllocationStatus == (int)status);
+
+        var entities = await lines
             .OrderByDescending(line => line.Date)
             .ToListAsync(cancellationToken);
 
-        var splitsByLine = (await context.XeroCostSplits.AsNoTracking().ToListAsync(cancellationToken))
-            .GroupBy(split => split.XeroLedgerLineId)
-            .ToDictionary(group => group.Key, group => (IReadOnlyList<XeroCostSplit>)group
-                .Select(split => new XeroCostSplit(split.CostCenterCode, split.Net, split.ProjectId))
-                .ToList());
+        var splitsByLine = await XeroLedgerReads.SplitsForAsync(context, entities, cancellationToken);
+        var suggester = await XeroLedgerReads.SuggesterForAsync(context, entities, cancellationToken);
 
-        var projects = await context.Projects.AsNoTracking().ToListAsync(cancellationToken);
-        var costCenters = await context.CostCenters.AsNoTracking()
-            .Where(centre => centre.IsActive)
-            .ToListAsync(cancellationToken);
-        var suggester = new XeroAllocationSuggester(projects, costCenters);
-
-        return entities.Select(entity => ToModel(
+        return entities.Select(entity => XeroLedgerReads.ToModel(
             entity,
             splitsByLine.TryGetValue(entity.XeroLedgerLineId, out var splits) ? splits : null,
             suggester)).ToList();
-    }
-
-    private static XeroLedgerLine ToModel(
-        XeroLedgerLineEntity entity, IReadOnlyList<XeroCostSplit>? splits, XeroAllocationSuggester suggester)
-    {
-        // Suggestions only matter while a line still needs a decision.
-        var unallocated = entity.AllocationStatus == (int)XeroAllocationStatus.Unallocated;
-        return new XeroLedgerLine(
-            entity.XeroLedgerLineId,
-            entity.XeroInvoiceId,
-            entity.Type,
-            entity.InvoiceNumber,
-            entity.Reference,
-            entity.ContactName,
-            entity.Date,
-            entity.InvoiceStatus,
-            entity.Description,
-            entity.Net,
-            entity.Tax,
-            entity.AccountCode,
-            entity.AccountName,
-            entity.XeroSite,
-            entity.XeroCostCode,
-            (XeroAllocationStatus)entity.AllocationStatus,
-            entity.ProjectId,
-            entity.CostCenterCode,
-            entity.Bucket,
-            entity.AllocatedBy,
-            entity.AllocatedAtUtc,
-            entity.Note,
-            unallocated ? suggester.SuggestProject(entity.XeroSite) : null,
-            unallocated ? suggester.SuggestCostCenter(entity.XeroCostCode) : null,
-            unallocated ? suggester.SuggestBucket(entity.ContactName, entity.Description) : null,
-            entity.FirstSeenAtUtc,
-            entity.LastSyncedAtUtc,
-            splits,
-            (XeroWriteBackStatus)entity.WriteBackStatus,
-            entity.WriteBackError,
-            entity.WriteBackAtUtc,
-            entity.HasAttachments);
     }
 }

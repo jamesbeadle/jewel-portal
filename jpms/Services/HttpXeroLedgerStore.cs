@@ -9,9 +9,10 @@ public sealed class HttpXeroLedgerStore : IXeroLedgerStore
     private readonly XeroLedgerReadModel readModel;
     private readonly ICommandSender commands;
 
-    // Whether a load has been started — prevents an empty result from
-    // re-triggering a fetch on every re-render (see HttpDrawingStore).
-    private bool requested;
+    // Which statuses have had a load started — prevents an empty result from re-triggering a fetch
+    // on every re-render (see HttpDrawingStore). Keyed per status now that reads are per status.
+    private readonly HashSet<XeroAllocationStatus> requested = new();
+    private bool countsRequested;
 
     public HttpXeroLedgerStore(XeroLedgerReadModel readModel, ICommandSender commands)
     {
@@ -22,54 +23,92 @@ public sealed class HttpXeroLedgerStore : IXeroLedgerStore
 
     public event Action? OnChange;
 
-    public IReadOnlyList<XeroLedgerLine>? Lines()
+    public IReadOnlyList<XeroLedgerLine>? Lines(XeroAllocationStatus status)
     {
-        EnsureRequested();
-        return readModel.Current;
+        EnsureRequested(status);
+        return readModel.Current(status);
     }
 
-    public async Task RefreshAsync(CancellationToken cancellationToken = default)
+    public XeroLedgerCounts? Counts()
     {
-        requested = true;
-        await readModel.RefreshAsync(cancellationToken);
+        EnsureCountsRequested();
+        return readModel.Counts;
+    }
+
+    public async Task RefreshAsync(XeroAllocationStatus status, CancellationToken cancellationToken = default)
+    {
+        requested.Add(status);
+        countsRequested = true;
+        await Task.WhenAll(
+            readModel.RefreshAsync(status, cancellationToken),
+            readModel.RefreshCountsAsync(cancellationToken));
     }
 
     public async Task<XeroLedgerSyncResult> SyncAsync(CancellationToken cancellationToken = default)
     {
         var result = await commands.SendAsync(new SyncXeroLedger(), cancellationToken);
-        await RefreshAsync(cancellationToken);
+        await ReloadAfterWriteAsync(cancellationToken);
         return result;
     }
 
     public async Task<int> ApplyAsync(SetXeroAllocation command, CancellationToken cancellationToken = default)
     {
         var affected = await commands.SendAsync(command, cancellationToken);
-        await RefreshAsync(cancellationToken);
+        await ReloadAfterWriteAsync(cancellationToken);
         return affected;
     }
 
     public async Task<int> AllocateSuggestedAsync(CancellationToken cancellationToken = default)
     {
         var allocated = await commands.SendAsync(new AllocateSuggestedXeroLines(), cancellationToken);
-        await RefreshAsync(cancellationToken);
+        await ReloadAfterWriteAsync(cancellationToken);
         return allocated;
     }
 
     public async Task<XeroWriteBackOutcome> RetryWriteBackAsync(string xeroInvoiceId, CancellationToken cancellationToken = default)
     {
         var outcome = await commands.SendAsync(new RetryXeroWriteBack(xeroInvoiceId), cancellationToken);
-        await RefreshAsync(cancellationToken);
+        await ReloadAfterWriteAsync(cancellationToken);
         return outcome;
     }
 
-    private void EnsureRequested()
+    /// <summary>
+    /// A write can move a line from any status to any other — allocating takes a row out of
+    /// Unallocated and puts it in Allocated — so every status already in hand is reloaded, along
+    /// with the counts. That is at most the two or three tabs this session has actually opened,
+    /// never the whole ledger.
+    /// </summary>
+    private async Task ReloadAfterWriteAsync(CancellationToken cancellationToken)
     {
-        if (!requested) { requested = true; _ = LoadAsync(); }
+        countsRequested = true;
+        var reloads = readModel.LoadedStatuses
+            .Select(status => readModel.RefreshAsync(status, cancellationToken))
+            .ToList();
+        reloads.Add(readModel.RefreshCountsAsync(cancellationToken));
+        await Task.WhenAll(reloads);
     }
 
-    private async Task LoadAsync()
+    private void EnsureRequested(XeroAllocationStatus status)
     {
-        try { await readModel.RefreshAsync(CancellationToken.None); }
-        catch { requested = false; }
+        if (requested.Add(status)) _ = LoadAsync(status);
+    }
+
+    private async Task LoadAsync(XeroAllocationStatus status)
+    {
+        try { await readModel.RefreshAsync(status, CancellationToken.None); }
+        catch { requested.Remove(status); }
+    }
+
+    private void EnsureCountsRequested()
+    {
+        if (countsRequested) return;
+        countsRequested = true;
+        _ = LoadCountsAsync();
+    }
+
+    private async Task LoadCountsAsync()
+    {
+        try { await readModel.RefreshCountsAsync(CancellationToken.None); }
+        catch { countsRequested = false; }
     }
 }

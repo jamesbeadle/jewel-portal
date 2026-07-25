@@ -4,10 +4,19 @@ namespace Jewel.JPMS.Services;
 
 public interface IXeroLedgerStore
 {
-    /// <summary>Stored ledger lines, or null while the first load is in flight.</summary>
-    IReadOnlyList<XeroLedgerLine>? Lines();
+    /// <summary>
+    /// Stored ledger lines for one allocation status, or null while that status' first load is in
+    /// flight. Reads are per status because the allocation page is a tab per status — asking for
+    /// one no longer drags the whole ledger into the browser. Calling this starts the load if it
+    /// hasn't happened yet, so it is safe to read from render.
+    /// </summary>
+    IReadOnlyList<XeroLedgerLine>? Lines(XeroAllocationStatus status);
 
-    Task RefreshAsync(CancellationToken cancellationToken = default);
+    /// <summary>How many lines sit in each status, for the tab bar. Null before the first load.</summary>
+    XeroLedgerCounts? Counts();
+
+    /// <summary>Reloads one status and the counts. Call on entry and on tab switch.</summary>
+    Task RefreshAsync(XeroAllocationStatus status, CancellationToken cancellationToken = default);
 
     /// <summary>Pulls the latest from Xero into the stored ledger, then refreshes the view.</summary>
     Task<XeroLedgerSyncResult> SyncAsync(CancellationToken cancellationToken = default);

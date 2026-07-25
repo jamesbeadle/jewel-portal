@@ -1,7 +1,13 @@
+@*
+    The large headline figure. As with Stat, pass IsLoading rather than letting a zero (or a dash)
+    stand in for a figure that has not arrived — the delta and caption are held back with it, since
+    a delta against an unknown number means nothing.
+*@
+
 <article class="@Class">
     <div class="flex items-baseline justify-between gap-3">
         <p class="text-sm text-content-subtle">@Label</p>
-        @if (DeltaLabel is not null)
+        @if (DeltaLabel is not null && !IsLoading)
         {
             <div class="text-right leading-tight">
                 <p class="text-xs font-medium @DeltaClass">@DeltaLabel</p>
@@ -12,7 +18,18 @@
             </div>
         }
     </div>
-    <p class="mt-1 text-2xl md:text-3xl font-semibold text-content tracking-tight">@Value</p>
+    @if (IsLoading)
+    {
+        <p class="mt-1 text-2xl md:text-3xl font-semibold text-content tracking-tight flex items-center h-9 md:h-10"
+           role="status" aria-live="polite" aria-busy="true">
+            <JewelIcon Class="w-6 h-6 md:w-7 md:h-7 animate-jewel-pulse" />
+            <span class="sr-only">Loading @Label</span>
+        </p>
+    }
+    else
+    {
+        <p class="mt-1 text-2xl md:text-3xl font-semibold text-content tracking-tight">@Value</p>
+    }
 </article>
 
 @code {
@@ -22,6 +39,9 @@
     [Parameter] public bool IsDeltaPositive { get; set; } = true;
     [Parameter] public string? Caption { get; set; }
     [Parameter] public string Class { get; set; } = "";
+
+    /// <summary>True until the store behind Value has produced its first result.</summary>
+    [Parameter] public bool IsLoading { get; set; }
 
     private string DeltaClass => IsDeltaPositive ? "text-positive" : "text-negative";
 }

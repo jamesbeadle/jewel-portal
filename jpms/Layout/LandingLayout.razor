@@ -1,5 +1,8 @@
 @inherits LayoutComponentBase
 
 <div class="min-h-dvh bg-canvas text-content antialiased">
+    @* Sign-in, set-password and forgot-password get the same error surface as the rest of the app:
+       a failure here is exactly the kind a user needs to be able to forward. *@
+    <ErrorToast />
     @Body
 </div>

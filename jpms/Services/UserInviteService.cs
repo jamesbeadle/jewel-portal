@@ -9,6 +9,7 @@ namespace Jewel.JPMS.Services;
 public sealed class UserInviteService
 {
     private const string InviteEndpoint = "/api/auth/invite";
+    private const string SendResetEndpoint = "/api/auth/send-reset";
 
     private readonly HttpClient httpClient;
 
@@ -35,6 +36,34 @@ public sealed class UserInviteService
 
             var error = await TryReadErrorAsync(response);
             return new InviteOutcome(false, null, error ?? "Couldn't create the invite. Please try again.");
+        }
+        catch
+        {
+            return new InviteOutcome(false, null, "Couldn't reach the server. Check your connection and try again.");
+        }
+    }
+
+    /// <summary>
+    /// Admin action: emails an existing user a single-use password-reset link, and hands the link
+    /// back so it can be relayed by hand if the email does not arrive. Unlike the public
+    /// "forgot password" flow this reports real failures — the caller is already an administrator,
+    /// so "they've never set a password, re-invite them" is useful rather than a leak.
+    /// </summary>
+    public async Task<InviteOutcome> SendPasswordResetAsync(string email)
+    {
+        try
+        {
+            var response = await httpClient.PostAsJsonAsync(SendResetEndpoint, new SendPasswordResetRequest(email));
+            if (response.IsSuccessStatusCode)
+            {
+                var result = await response.Content.ReadFromJsonAsync<InviteResult>();
+                return result is null
+                    ? new InviteOutcome(false, null, "The server returned an unexpected response.")
+                    : new InviteOutcome(true, result, null);
+            }
+
+            var error = await TryReadErrorAsync(response);
+            return new InviteOutcome(false, null, error ?? "Couldn't send a reset link. Please try again.");
         }
         catch
         {

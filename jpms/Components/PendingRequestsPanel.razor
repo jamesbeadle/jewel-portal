@@ -1,30 +1,41 @@
 @inject IAccessRequestStore Requests
+@implements IDisposable
 
 <section class="panel overflow-hidden mb-6">
     <header class="panel-header flex items-center justify-between">
         <h2 class="text-sm font-medium text-content">Pending access requests</h2>
-        <span class="text-xs text-content-subtle">@PendingRequests.Count</span>
+        @if (Requests.IsLoaded)
+        {
+            <span class="text-xs text-content-subtle">@PendingRequests.Count</span>
+        }
     </header>
 
-    @if (PendingRequests.Count == 0)
-    {
-        <div class="p-5">
-            <p class="text-content-subtle italic text-sm">
-                No pending requests. New requests appear here when a signed-in user clicks <em>Request access</em>.
-            </p>
-        </div>
-    }
-    else
-    {
-        <ul class="divide-y divide-line">
-            @foreach (var request in PendingRequests)
-            {
-                <PendingRequestRow Request="request" />
-            }
-        </ul>
-    }
+    @* The count in the header is held back with the list: "0" next to a spinner is a contradiction. *@
+    <LoadGate IsLoading="@(!Requests.IsLoaded)" Prominent="true" Label="Loading access requests">
+        @if (PendingRequests.Count == 0)
+        {
+            <div class="p-5">
+                <p class="text-content-subtle italic text-sm">
+                    No pending requests. New requests appear here when a signed-in user clicks <em>Request access</em>.
+                </p>
+            </div>
+        }
+        else
+        {
+            <ul class="divide-y divide-line">
+                @foreach (var request in PendingRequests)
+                {
+                    <PendingRequestRow Request="request" />
+                }
+            </ul>
+        }
+    </LoadGate>
 </section>
 
 @code {
     private IReadOnlyList<AccessRequest> PendingRequests => Requests.Pending();
+
+    protected override void OnInitialized() => Requests.OnChange += StateHasChanged;
+
+    public void Dispose() => Requests.OnChange -= StateHasChanged;
 }

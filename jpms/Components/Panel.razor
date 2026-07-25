@@ -1,3 +1,10 @@
+@*
+    The standard panel. Pass IsLoading and the panel holds its whole body behind one pulsing jewel
+    until every store it reads has landed — see LoadGate for the reasoning. The header (title and
+    actions) stays visible throughout, so the page keeps its shape and the user can see what is
+    arriving rather than watching a blank rectangle.
+*@
+
 <section class="panel @Class overflow-hidden">
     @if (Title is not null || HeaderActions is not null)
     {
@@ -10,7 +17,9 @@
         </header>
     }
     <div class="@BodyClass">
-        @ChildContent
+        <LoadGate IsLoading="IsLoading" Prominent="Prominent" Label="@LoadingLabel" Height="@LoadingHeight">
+            @ChildContent
+        </LoadGate>
     </div>
 </section>
 
@@ -20,4 +29,15 @@
     [Parameter] public RenderFragment? ChildContent { get; set; }
     [Parameter] public string Class { get; set; } = "";
     [Parameter] public string BodyClass { get; set; } = "p-5";
+
+    /// <summary>True until every store this panel reads has landed. Compose several with
+    /// LoadState.UntilAll(...) so the panel reveals itself in one piece.</summary>
+    [Parameter] public bool IsLoading { get; set; }
+
+    /// <summary>Main panel (roughly a third of the screen or more): larger jewel, taller space.</summary>
+    [Parameter] public bool Prominent { get; set; } = true;
+
+    [Parameter] public string LoadingLabel { get; set; } = "Loading";
+
+    [Parameter] public string? LoadingHeight { get; set; }
 }

@@ -19,7 +19,9 @@
 
 @if (!isLoaded)
 {
-    <section class="px-6 md:px-8 py-12 text-content-subtle text-sm">Loading…</section>
+    <section class="px-6 md:px-8 py-12">
+        <LoadGate IsLoading="true" Prominent="true" Label="Loading" />
+    </section>
 }
 else if (!Session.IsApproved)
 {
@@ -515,20 +517,26 @@ else
     private IReadOnlyList<Jewel.JPMS.Contracts.Xero.XeroLedgerLine>? ledgerLines;
     private readonly Dictionary<string, string> coverSubcontractorByLine = new();
 
+    // The hundred most recent allocated lines on THIS project. This used to ask for the whole
+    // company ledger and then filter it down here — every line the business had ever received,
+    // fetched to render at most a hundred rows for one project.
+    private const int CoverableLedgerLines = 100;
+
     private async Task LoadLedgerAsync()
     {
         showCoverPanel = true;
-        try { ledgerLines = await Queries.AskAsync(new Jewel.JPMS.Contracts.Xero.ListXeroLedgerLines(), CancellationToken.None); }
+        try
+        {
+            ledgerLines = await Queries.AskAsync(
+                new Jewel.JPMS.Contracts.Xero.ListXeroLedgerLinesForProject(ProjectId, CoverableLedgerLines),
+                CancellationToken.None);
+        }
         catch (Exception) { actionError = "Could not load the Xero ledger — try again."; showCoverPanel = false; }
     }
 
+    // Already filtered, ordered and capped by the server — this just unwraps the nullable.
     private List<Jewel.JPMS.Contracts.Xero.XeroLedgerLine> ProjectLedgerLines() =>
-        (ledgerLines ?? Array.Empty<Jewel.JPMS.Contracts.Xero.XeroLedgerLine>())
-            .Where(line => line.ProjectId == ProjectId
-                           && line.AllocationStatus == Jewel.JPMS.Contracts.Xero.XeroAllocationStatus.Allocated)
-            .OrderByDescending(line => line.Date)
-            .Take(100)
-            .ToList();
+        (ledgerLines ?? Array.Empty<Jewel.JPMS.Contracts.Xero.XeroLedgerLine>()).ToList();
 
     private List<(string Id, string Name)> WorkerSubcontractors() =>
         Labour.SettlementFor(ProjectId)

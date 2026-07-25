@@ -98,6 +98,13 @@ public static class DesktopNavigation
 
     public static bool CanSeeProjects(Role role) => CanSee(role, ProjectRoles);
 
+    /// <summary>Who may open the assistant chat panel: the directors, plus administrators via the
+    /// CanSee bypass. Deliberately the narrowest gate in the app — every message spends money on
+    /// the Claude API, so the panel is not offered to anyone who cannot authorise that spend. It
+    /// reuses DirectorRoles rather than declaring its own set: if the definition of "director"
+    /// changes, the assistant's reach should change with it.</summary>
+    public static bool CanUseAssistant(Role role) => CanSee(role, DirectorRoles);
+
     /// <summary>The sidebar's folders for a role: each folder keeps only the rows the role can
     /// see, and a folder with no surviving rows disappears entirely. Built from SidebarFolders
     /// so the sidebar, the landing-page cards and the page-heading matcher can never drift.</summary>

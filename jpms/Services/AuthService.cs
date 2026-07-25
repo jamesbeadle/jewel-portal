@@ -17,6 +17,7 @@ public sealed class AuthService
     private const string LogoutEndpoint = "/api/auth/logout";
     private const string SetPasswordEndpoint = "/api/auth/set-password";
     private const string ValidateInviteEndpoint = "/api/auth/invite/";
+    private const string ForgotPasswordEndpoint = "/api/auth/forgot-password";
 
     private readonly HttpClient httpClient;
     private bool isInitialised;
@@ -109,6 +110,31 @@ public sealed class AuthService
         }
         catch
         {
+            return "Couldn't reach the server. Check your connection and try again.";
+        }
+    }
+
+    /// <summary>
+    /// Asks the API to email a password-reset link. Deliberately never reports whether the address
+    /// exists — the server answers identically either way, and so do we, so the sign-in page cannot
+    /// be used to find out who has an account. Returns the message to show the user.
+    /// </summary>
+    public async Task<string> RequestPasswordResetAsync(string email)
+    {
+        const string neutral =
+            "If that email address has a JPMS account, a reset link is on its way. " +
+            "Check your inbox — and your spam folder — then follow the link to choose a new password.";
+        try
+        {
+            var response = await httpClient.PostAsJsonAsync(ForgotPasswordEndpoint, new ForgotPasswordRequest(email));
+            if (!response.IsSuccessStatusCode) return neutral;
+            var acknowledgement = await response.Content.ReadFromJsonAsync<PasswordResetAcknowledgement>();
+            return string.IsNullOrWhiteSpace(acknowledgement?.Message) ? neutral : acknowledgement!.Message;
+        }
+        catch
+        {
+            // Even a transport failure stays neutral: telling the user "we couldn't reach the
+            // server" is fine, but it must not depend on whether the address was recognised.
             return "Couldn't reach the server. Check your connection and try again.";
         }
     }

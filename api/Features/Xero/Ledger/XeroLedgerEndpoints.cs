@@ -41,7 +41,72 @@ public sealed class ListXeroLedgerLinesEndpoint
         if (!XeroLedgerRoles.AllowedToAllocate.IncludesAny(signedInUser.Roles))
             return new StatusCodeResult(StatusCodes.Status403Forbidden);
 
-        var lines = await handler.HandleAsync(new ListXeroLedgerLines(), request.HttpContext.RequestAborted);
+        // ?status=Unallocated narrows the read to one tab. Omitted, the whole ledger comes back —
+        // which is what this endpoint always did, kept so an older client keeps working. An
+        // unrecognised value falls back to "no filter" rather than erroring, for the same reason.
+        var status = ParseStatus(request.Query["status"]);
+
+        var lines = await handler.HandleAsync(new ListXeroLedgerLines(status), request.HttpContext.RequestAborted);
+        return new OkObjectResult(lines);
+    }
+
+    private static XeroAllocationStatus? ParseStatus(string? raw) =>
+        Enum.TryParse<XeroAllocationStatus>(raw, ignoreCase: true, out var parsed) ? parsed : null;
+}
+
+public sealed class GetXeroLedgerCountsEndpoint
+{
+    private readonly SignedInUserResolver users;
+    private readonly IQueryHandler<GetXeroLedgerCounts, XeroLedgerCounts> handler;
+
+    public GetXeroLedgerCountsEndpoint(
+        SignedInUserResolver users,
+        IQueryHandler<GetXeroLedgerCounts, XeroLedgerCounts> handler)
+    {
+        this.users = users;
+        this.handler = handler;
+    }
+
+    [Function(nameof(GetXeroLedgerCounts))]
+    public async Task<IActionResult> Run(
+        [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "xero/ledger/counts")] HttpRequest request)
+    {
+        var signedInUser = await users.ResolveAsync(request, request.HttpContext.RequestAborted);
+        if (signedInUser is null) return new UnauthorizedResult();
+        if (!XeroLedgerRoles.AllowedToAllocate.IncludesAny(signedInUser.Roles))
+            return new StatusCodeResult(StatusCodes.Status403Forbidden);
+
+        var counts = await handler.HandleAsync(new GetXeroLedgerCounts(), request.HttpContext.RequestAborted);
+        return new OkObjectResult(counts);
+    }
+}
+
+public sealed class ListXeroLedgerLinesForProjectEndpoint
+{
+    private readonly SignedInUserResolver users;
+    private readonly IQueryHandler<ListXeroLedgerLinesForProject, IReadOnlyList<XeroLedgerLine>> handler;
+
+    public ListXeroLedgerLinesForProjectEndpoint(
+        SignedInUserResolver users,
+        IQueryHandler<ListXeroLedgerLinesForProject, IReadOnlyList<XeroLedgerLine>> handler)
+    {
+        this.users = users;
+        this.handler = handler;
+    }
+
+    [Function(nameof(ListXeroLedgerLinesForProject))]
+    public async Task<IActionResult> Run(
+        [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "projects/{projectId}/xero/ledger")] HttpRequest request,
+        string projectId)
+    {
+        var signedInUser = await users.ResolveAsync(request, request.HttpContext.RequestAborted);
+        if (signedInUser is null) return new UnauthorizedResult();
+        if (!XeroLedgerRoles.AllowedToAllocate.IncludesAny(signedInUser.Roles))
+            return new StatusCodeResult(StatusCodes.Status403Forbidden);
+
+        var take = int.TryParse(request.Query["take"], out var parsed) ? parsed : 100;
+        var lines = await handler.HandleAsync(
+            new ListXeroLedgerLinesForProject(projectId, take), request.HttpContext.RequestAborted);
         return new OkObjectResult(lines);
     }
 }
