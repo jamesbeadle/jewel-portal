@@ -1,47 +1,258 @@
 @inject IUserDirectory UserDirectory
+@inject UserInviteService Invites
+@inject IJSRuntime Js
 
-<li class="px-5 py-3 flex items-center justify-between gap-4">
-    <div class="min-w-0">
-        <p class="text-content font-medium leading-snug truncate">@User.DisplayName</p>
-        <p class="text-sm text-content-muted break-all">@User.Email</p>
-    </div>
-    <div class="flex items-center gap-2 shrink-0">
-        <div class="flex flex-wrap items-center gap-1 justify-end">
-            @foreach (var role in DisplayedRoles)
+@*
+    One row of the admin Users panel, and the place roles are actually administered.
+
+    Role edits save the moment they are made — there is no Save button — because a role list is a
+    set of independent facts, not a form: adding "Site Manager" should not be held hostage by a
+    half-finished thought about another role. Each change sends the whole role list through
+    UpsertDirectoryUser (the command replaces roles wholesale), so the row optimistically shows the
+    new set, then reconciles with whatever the server confirms.
+
+    Two edits are deliberately impossible here:
+      · your own roles — the same reason you cannot revoke yourself, one misclick from locking
+        yourself out of the only screen that could undo it;
+      · the Admin badge of a master administrator — that comes from JpmsAdministrators in code, not
+        the directory, so removing it here would silently do nothing.
+*@
+
+<li class="px-5 py-3">
+    <div class="flex items-start justify-between gap-4">
+        <div class="min-w-0">
+            <p class="text-content font-medium leading-snug truncate">@User.DisplayName</p>
+            <p class="text-sm text-content-muted break-all">@User.Email</p>
+        </div>
+        <div class="flex items-center gap-3 shrink-0">
+            @if (IsCurrentUser)
             {
-                <RoleBadge Role="role" />
+                <span class="text-[11px] text-content-faint" title="You can't change your own roles or access here.">You</span>
+            }
+            else
+            {
+                <button type="button" @onclick="SendReset" disabled="@busy"
+                        title="Email this user a single-use link to choose a new password"
+                        class="text-xs font-medium text-content-subtle hover:text-content underline underline-offset-4 disabled:opacity-50">
+                    @(sendingReset ? "Sending…" : "Send reset")
+                </button>
+                <button type="button" @onclick="Revoke" disabled="@busy"
+                        class="text-xs font-medium text-content-subtle hover:text-negative underline underline-offset-4 disabled:opacity-50">
+                    Revoke
+                </button>
             }
         </div>
-        @if (IsCurrentUser)
+    </div>
+
+    <div class="mt-2 flex flex-wrap items-center gap-1.5">
+        @if (IsMasterAdministrator)
         {
-            <span class="text-[11px] text-content-faint" title="You can't revoke your own access here.">You</span>
+            <span title="Permanent administrator — set in code, not here."
+                  class="inline-flex items-center gap-1 rounded-full border border-line-strong bg-surface-field px-2 py-0.5 text-[11px] text-content-muted">
+                <span class="w-1.5 h-1.5 rounded-full bg-slate-300"></span>
+                Administrator
+                <span class="text-content-faint">· permanent</span>
+            </span>
         }
-        else
+
+        @foreach (var role in EditableRoles)
         {
-            <button type="button" @onclick="Revoke"
-                    class="text-xs font-medium text-content-subtle hover:text-negative underline underline-offset-4">
-                Revoke
-            </button>
+            <span class="inline-flex items-center gap-1 rounded-full border border-line-strong bg-surface-field pl-2 pr-1 py-0.5 text-[11px] text-content-muted">
+                <span class="w-1.5 h-1.5 rounded-full @role.AccentDotClass()"></span>
+                @role.DisplayName()
+                @if (CanEdit)
+                {
+                    <button type="button" @onclick="() => RemoveRole(role)" disabled="@busy"
+                            aria-label="@($"Remove the {role.DisplayName()} role from {User.DisplayName}")"
+                            title="@($"Remove {role.DisplayName()}")"
+                            class="ml-0.5 grid place-items-center w-4 h-4 rounded-full text-content-subtle hover:text-negative hover:bg-negative/10 disabled:opacity-40">
+                        <svg class="w-2.5 h-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"
+                             stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg>
+                    </button>
+                }
+            </span>
+        }
+
+        @if (!IsMasterAdministrator && EditableRoles.Count == 0)
+        {
+            <span class="text-[11px] text-content-faint italic">No roles — they can sign in but will see nothing.</span>
+        }
+
+        @if (CanEdit && AddableRoles.Count > 0)
+        {
+            <select value="" @onchange="AddRole" disabled="@busy"
+                    aria-label="@($"Add a role to {User.DisplayName}")"
+                    class="rounded-full border border-dashed border-line-strong bg-transparent px-2 py-0.5 text-[11px] text-content-subtle hover:text-content hover:border-content-subtle focus:outline-none focus:ring-1 focus:ring-accent disabled:opacity-50">
+                <option value="">+ Add role</option>
+                @foreach (var role in AddableRoles)
+                {
+                    <option value="@role">@role.DisplayName()</option>
+                }
+            </select>
+        }
+
+        @if (busy)
+        {
+            <span class="inline-flex items-center gap-1.5 text-[11px] text-content-subtle">
+                <JewelIcon Class="w-3 h-3 animate-jewel-pulse" />
+                Saving
+            </span>
         }
     </div>
+
+    @if (error is not null)
+    {
+        <p class="mt-2 text-xs text-negative">@error</p>
+    }
+
+    @if (resetLink is not null)
+    {
+        <div class="mt-2 rounded-lg border border-line bg-surface-raised p-3">
+            <p class="text-xs text-content-muted leading-relaxed mb-2">
+                Reset link emailed to <span class="text-content font-medium">@User.Email</span>.
+                It can be used once and expires @resetExpiry.
+                Copy it below if you'd rather send it yourself.
+            </p>
+            <div class="flex items-stretch gap-2">
+                <input readonly value="@resetLink"
+                       class="flex-1 min-w-0 rounded-lg border border-line-strong bg-surface px-2 py-1.5 text-[11px] text-content-muted" />
+                <button type="button" @onclick="CopyResetLink"
+                        class="rounded-lg bg-accent text-accent-ink font-medium text-xs px-3 py-1.5 hover:bg-accent-hover transition">
+                    @(copied ? "Copied" : "Copy")
+                </button>
+                <button type="button" @onclick="() => resetLink = null"
+                        class="rounded-lg border border-line bg-surface text-content-muted font-medium text-xs px-3 py-1.5 hover:border-line-strong transition">
+                    Done
+                </button>
+            </div>
+        </div>
+    }
 </li>
 
 @code {
     [Parameter, EditorRequired] public DirectoryUser User { get; set; } = default!;
     [Parameter] public bool IsCurrentUser { get; set; }
 
-    private IEnumerable<Role> DisplayedRoles
+    /// <summary>The role list this row is showing. Held locally rather than read straight off the
+    /// parameter so an edit can paint immediately and still be reconciled: the parameter wins again
+    /// as soon as the parent re-renders from the refreshed directory.</summary>
+    private List<Role> roles = new();
+    private string rolesSourceEmail = "";
+
+    private bool busy;
+    private bool sendingReset;
+    private string? error;
+    private string? resetLink;
+    private string resetExpiry = "";
+    private bool copied;
+
+    protected override void OnParametersSet()
     {
-        get
+        // Adopt the server's list whenever it changes underneath us — but never mid-save, or the
+        // in-flight edit would be painted away and then back again.
+        if (busy) return;
+        var incoming = User.Roles.Distinct().ToList();
+        if (rolesSourceEmail != User.Email || !incoming.SequenceEqual(roles))
         {
-            if (JpmsAdministrators.Contains(User.Email)) yield return Role.Admin;
-            foreach (var role in User.Roles)
-            {
-                if (role == Role.Admin && JpmsAdministrators.Contains(User.Email)) continue;
-                yield return role;
-            }
+            roles = incoming;
+            rolesSourceEmail = User.Email;
         }
     }
 
-    private void Revoke() => UserDirectory.Remove(User.Email);
+    private bool IsMasterAdministrator => JpmsAdministrators.Contains(User.Email);
+
+    private bool CanEdit => !IsCurrentUser;
+
+    /// <summary>The roles that actually live in the directory. A master administrator's Admin badge
+    /// is rendered separately and never appears here, so it cannot be "removed" into a no-op.</summary>
+    private IReadOnlyList<Role> EditableRoles =>
+        roles.Where(role => !(role == Role.Admin && IsMasterAdministrator)).ToList();
+
+    private IReadOnlyList<Role> AddableRoles =>
+        Enum.GetValues<Role>()
+            .Where(role => !roles.Contains(role))
+            .Where(role => !(role == Role.Admin && IsMasterAdministrator))
+            .ToList();
+
+    private Task AddRole(ChangeEventArgs args)
+    {
+        if (!Enum.TryParse<Role>(args.Value?.ToString(), out var role)) return Task.CompletedTask;
+        if (roles.Contains(role)) return Task.CompletedTask;
+        return SaveRolesAsync(roles.Append(role).Distinct().ToList());
+    }
+
+    private Task RemoveRole(Role role) =>
+        SaveRolesAsync(roles.Where(existing => existing != role).ToList());
+
+    private async Task SaveRolesAsync(List<Role> updated)
+    {
+        if (busy || !CanEdit) return;
+        var previous = roles;
+        busy = true;
+        error = null;
+        // Paint the new set straight away — a role chip that lingers for a round trip reads as a
+        // click that did not register. The catch below puts it back if the server disagrees.
+        roles = updated;
+        try
+        {
+            await UserDirectory.SaveAsync(User with { Roles = updated }, CancellationToken.None);
+        }
+        catch (CommandFailedException failure)
+        {
+            roles = previous;
+            error = failure.Message;
+        }
+        catch
+        {
+            roles = previous;
+            error = "Couldn't save that role change. Please try again.";
+        }
+        finally
+        {
+            busy = false;
+        }
+    }
+
+    private async Task SendReset()
+    {
+        if (busy) return;
+        busy = true;
+        sendingReset = true;
+        error = null;
+        resetLink = null;
+        copied = false;
+        var outcome = await Invites.SendPasswordResetAsync(User.Email);
+        if (outcome.Success && outcome.Result is not null)
+        {
+            resetLink = outcome.Result.InviteLink;
+            resetExpiry = outcome.Result.ExpiresAt.ToLocalTime().ToString("d MMM yyyy, HH:mm");
+        }
+        else
+        {
+            error = outcome.Error;
+        }
+        sendingReset = false;
+        busy = false;
+    }
+
+    private async Task CopyResetLink()
+    {
+        if (resetLink is null) return;
+        try
+        {
+            await Js.InvokeVoidAsync("navigator.clipboard.writeText", resetLink);
+            copied = true;
+        }
+        catch { /* clipboard may be unavailable; the link is still shown for manual copy */ }
+    }
+
+    private async Task Revoke()
+    {
+        if (busy) return;
+        busy = true;
+        error = null;
+        try { await UserDirectory.RemoveAsync(User.Email, CancellationToken.None); }
+        catch { error = "Couldn't revoke that user. Please try again."; }
+        finally { busy = false; }
+    }
 }

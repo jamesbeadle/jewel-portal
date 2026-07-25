@@ -7,33 +7,10 @@
 @code {
     protected override void OnInitialized() => Nav.LocationChanged += HandleLocationChanged;
 
-    private string CurrentTitle
-    {
-        get
-        {
-            var path = new Uri(Nav.Uri).AbsolutePath.TrimEnd('/');
-            if (path is "" or "/dashboard") return "Home";
-            if (Session.ActiveRole is null) return "";
-            return MatchedLabel(path) ?? "";
-        }
-    }
-
-    private string? MatchedLabel(string path)
-    {
-        // Sidebar labels that are deliberately terser than the page deserves: the master to-do
-        // list's row reads "Todo" in the Internal folder, but the header spells it out.
-        if (path == "/todos") return "To-dos";
-        // Catalog items in sidebar order — folder rows put project templates before most
-        // company routes, so the more specific project routes win. Template items match any
-        // project id, so no project context is needed here.
-        foreach (var item in NavigationCatalog.ItemsFor(Session.ActiveRole!.Value))
-        {
-            if (item.IsActiveFor(path)) return item.Label;
-        }
-        // The portfolio has no sidebar entry (deliberately) — keep the header titled all the same.
-        if (path == "/projects") return "Projects";
-        return null;
-    }
+    // The matcher itself lives in PageContext so the assistant panel's context line names the
+    // middle column exactly as this heading does.
+    private string CurrentTitle =>
+        PageContext.LabelFor(new Uri(Nav.Uri).AbsolutePath, Session.ActiveRole) ?? "";
 
     private void HandleLocationChanged(object? sender, EventArgs args) => StateHasChanged();
 

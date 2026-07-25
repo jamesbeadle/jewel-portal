@@ -1,0 +1,315 @@
+@namespace Jewel.JPMS.Components.Chat
+@using Jewel.JPMS.Features.Projects
+@inject SessionService Session
+@inject ChatPanelState Chat
+@inject NavigationManager Nav
+@inject ProjectListReadModel Projects
+@implements IDisposable
+
+@*
+    The assistant panel. Desktop: a fixed column pinned to the right edge, the width of which
+    MainLayout also reserves as shell padding — so the page in the middle narrows rather than being
+    covered, and nav | page | chat read as three columns. Mobile: the same element goes full-bleed
+    and overlays everything, dismissable by the backdrop or the header's close button.
+
+    It stays mounted while closed (translated off-screen) so it can slide both ways; `inert` and
+    aria-hidden keep a closed panel out of the tab order and out of the accessibility tree.
+
+    UI only for now — no API call, no persistence. Two things here are deliberately load-bearing
+    rather than decorative, and should survive being wired up:
+      · the cost gate, which withholds the composer until the user accepts that sending spends money
+      · the cost strip, which keeps that fact on screen afterwards instead of letting it scroll away
+*@
+
+@if (CanUseAssistant)
+{
+    @if (Chat.IsOpen)
+    {
+        @* Mobile only: tapping beside a full-screen panel closes it. Desktop pushes rather than
+           overlays, so the page behind stays live and must not be covered by a backdrop. *@
+        <button type="button" @onclick="CloseChat" tabindex="-1" aria-hidden="true"
+                class="md:hidden fixed inset-0 z-30 bg-canvas/70 cursor-default"></button>
+    }
+
+    <aside id="@DomId" class="@PanelClass" aria-label="Jewel Assistant"
+           aria-hidden="@AriaHidden" inert="@(!Chat.IsOpen)">
+        <div class="h-full flex flex-col bg-surface">
+
+            <header class="shrink-0 border-b border-line">
+                <div class="h-14 px-4 flex items-center justify-between gap-3">
+                    <div class="min-w-0 flex items-center gap-2.5">
+                        <span class="shrink-0 w-8 h-8 rounded-lg border border-line bg-surface-raised flex items-center justify-center text-accent">
+                            <ChatIcon Class="w-4 h-4" />
+                        </span>
+                        <span class="min-w-0">
+                            <span class="block text-sm font-semibold text-content truncate">Jewel Assistant</span>
+                            <span class="block text-[11px] text-content-subtle truncate" title="@ContextLabel">@ContextLabel</span>
+                        </span>
+                    </div>
+                    <div class="shrink-0 flex items-center gap-1">
+                        @if (Chat.HasAcknowledgedCost && messages.Count > 0)
+                        {
+                            <button type="button" @onclick="StartNewChat" title="New chat" aria-label="New chat"
+                                    class="inline-flex items-center justify-center w-8 h-8 rounded-md text-content-subtle hover:text-content hover:bg-surface-raised">
+                                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+                                     stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>
+                            </button>
+                        }
+                        <button type="button" @onclick="CloseChat" title="Close" aria-label="Close assistant"
+                                class="inline-flex items-center justify-center w-8 h-8 rounded-md text-content-subtle hover:text-content hover:bg-surface-raised">
+                            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                 stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg>
+                        </button>
+                    </div>
+                </div>
+            </header>
+
+            @if (!Chat.HasAcknowledgedCost)
+            {
+                @* ---- Cost gate: shown once per user, per browser. No composer behind it. ---- *@
+                <div class="grow overflow-y-auto px-5 py-5">
+                    <div class="rounded-xl border border-negative/40 bg-negative/5 p-4">
+                        <div class="flex items-start gap-3">
+                            <svg class="w-5 h-5 shrink-0 mt-0.5 text-negative" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                 stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                <path d="M10.3 3.9a2 2 0 0 1 3.4 0l7.3 12.6A2 2 0 0 1 19.3 19.5H4.7a2 2 0 0 1-1.7-3z" />
+                                <path d="M12 9v4.2M12 16.4h.01" />
+                            </svg>
+                            <div class="min-w-0">
+                                <p class="eyebrow text-negative mb-1">Billed feature</p>
+                                <h2 class="text-sm font-semibold text-content mb-2">Using this assistant costs money</h2>
+                                <p class="text-xs leading-relaxed text-content-muted mb-3">
+                                    Every message you send calls the Claude API and is charged to Jewel's account.
+                                    Long conversations cost more than short ones, because the whole thread is sent
+                                    again with each reply.
+                                </p>
+                                <ul class="text-xs leading-relaxed text-content-muted space-y-1.5 mb-3">
+                                    <li class="flex gap-2"><span class="text-content-faint" aria-hidden="true">&mdash;</span>
+                                        Charges land on the company account, not a personal one.</li>
+                                    <li class="flex gap-2"><span class="text-content-faint" aria-hidden="true">&mdash;</span>
+                                        Usage is recorded against your name and visible to the finance director.</li>
+                                    <li class="flex gap-2"><span class="text-content-faint" aria-hidden="true">&mdash;</span>
+                                        Having the panel open is free. Each message you send is not.</li>
+                                </ul>
+                                <p class="text-[11px] leading-relaxed text-content-subtle">
+                                    Access is limited to administrators, the managing director and the finance
+                                    director for this reason.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <footer class="shrink-0 border-t border-line px-4 py-3 flex items-center justify-end gap-2">
+                    <button type="button" class="btn-secondary" @onclick="CloseChat">Not now</button>
+                    <button type="button" class="btn-primary" @onclick="AcknowledgeCost">I understand the cost</button>
+                </footer>
+            }
+            else
+            {
+                @* ---- Persistent reminder: the gate is accepted once, this never goes away. ---- *@
+                <div class="shrink-0 flex items-start gap-2 px-4 py-2 border-b border-line bg-surface-raised">
+                    <svg class="w-3.5 h-3.5 shrink-0 mt-px text-negative" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                         stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M10.3 3.9a2 2 0 0 1 3.4 0l7.3 12.6A2 2 0 0 1 19.3 19.5H4.7a2 2 0 0 1-1.7-3z" />
+                        <path d="M12 9v4.2M12 16.4h.01" />
+                    </svg>
+                    <p class="text-[11px] leading-snug text-content-subtle">
+                        <span class="text-content-muted font-medium">Billed usage.</span>
+                        Each message calls the Claude API and adds to Jewel's bill.
+                    </p>
+                </div>
+
+                @if (messages.Count == 0)
+                {
+                    <div class="grow overflow-y-auto px-5 py-6 flex flex-col items-center text-center">
+                        <span class="w-11 h-11 rounded-xl border border-line bg-surface-raised flex items-center justify-center text-accent mb-3">
+                            <ChatIcon Class="w-5 h-5" />
+                        </span>
+                        <p class="text-sm font-semibold text-content mb-1">Ask about @ContextLabel</p>
+                        <p class="text-xs leading-relaxed text-content-subtle mb-5">
+                            The assistant reads the page you have open, so you can leave out the obvious.
+                        </p>
+                        <div class="w-full space-y-2">
+                            @foreach (var suggestion in Suggestions)
+                            {
+                                <button type="button" @onclick="() => UseSuggestion(suggestion)"
+                                        class="w-full text-left rounded-lg border border-line bg-surface-raised px-3 py-2 text-xs leading-snug text-content-muted hover:text-content hover:border-line-strong transition">
+                                    @suggestion
+                                </button>
+                            }
+                        </div>
+                    </div>
+                }
+                else
+                {
+                    <div class="grow overflow-y-auto px-4 py-4 space-y-3.5">
+                        @foreach (var message in messages)
+                        {
+                            var isUser = message.Author == ChatAuthor.User;
+                            <div class="flex flex-col @(isUser ? "items-end" : "items-start")">
+                                <div class="@BubbleClass(isUser)">
+                                    <p class="whitespace-pre-line">@message.Body</p>
+                                </div>
+                                <span class="mt-1 text-[10px] text-content-faint">@message.SentAtLabel</span>
+                            </div>
+                        }
+
+                        @* Thinking state, parked on so the shape can be reviewed. When the API is
+                           wired up this belongs behind an "awaiting reply" flag. *@
+                        <div class="flex flex-col items-start">
+                            <div class="rounded-2xl rounded-bl-md border border-line bg-surface-raised px-3.5 py-3 flex items-center gap-1.5">
+                                <span class="jpms-typing-dot w-1.5 h-1.5 rounded-full bg-content-subtle"></span>
+                                <span class="jpms-typing-dot jpms-typing-dot-2 w-1.5 h-1.5 rounded-full bg-content-subtle"></span>
+                                <span class="jpms-typing-dot jpms-typing-dot-3 w-1.5 h-1.5 rounded-full bg-content-subtle"></span>
+                            </div>
+                            <span class="mt-1 text-[10px] text-content-faint">Drafting…</span>
+                        </div>
+                    </div>
+                }
+
+                <footer class="shrink-0 border-t border-line px-3 py-3">
+                    <div class="rounded-xl border border-line bg-surface-field transition focus-within:border-line-strong">
+                        <textarea @bind="draft" @bind:event="oninput" rows="2" maxlength="4000"
+                                  placeholder="Ask about @ContextLabel…" aria-label="Message"
+                                  class="w-full resize-none bg-transparent px-3 pt-2.5 pb-1 text-sm leading-relaxed text-content placeholder:text-content-faint focus:outline-none"></textarea>
+                        <div class="flex items-center justify-between gap-2 px-2 pb-2">
+                            <span class="pl-1 text-[10px] text-content-faint">@Hint</span>
+                            <button type="button" class="btn-primary px-3 py-1.5" disabled="@CannotSend" @onclick="Send">
+                                <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+                                     stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                    <path d="M4 12l16-8-5.5 16-3.2-6.3z" />
+                                </svg>
+                                Send
+                            </button>
+                        </div>
+                    </div>
+                </footer>
+            }
+        </div>
+    </aside>
+}
+
+@code {
+    /// <summary>Stable id so the launchers can point aria-controls at the panel.</summary>
+    public const string DomId = "jpms-chat-panel";
+
+    private static readonly string[] Suggestions =
+    {
+        "Summarise where this project stands this week",
+        "Which variations are still awaiting an AI?",
+        "What is unclaimed against the current valuation?"
+    };
+
+    private List<ChatMessage> messages = ChatSampleTranscript.Messages.ToList();
+    private string draft = "";
+    private bool sendAttempted;
+
+    private bool CanUseAssistant =>
+        Session.ActiveRole is { } role && DesktopNavigation.CanUseAssistant(role);
+
+    // Widths mirror MainLayout's reserved shell padding — change the two together or the page and
+    // the panel will overlap. The slide itself is `chat-panel*` in Styles/app.tailwind.css.
+    private string PanelClass
+    {
+        get
+        {
+            var baseClass = "chat-panel fixed top-0 bottom-0 right-0 z-40 "
+                + "w-full md:w-[400px] lg:w-[440px] md:border-l border-line";
+            return Chat.IsOpen ? $"{baseClass} chat-panel-open" : $"{baseClass} chat-panel-closed";
+        }
+    }
+
+    private string AriaHidden => Chat.IsOpen ? "false" : "true";
+
+    private string BubbleClass(bool isUser)
+    {
+        var baseClass = "max-w-[17rem] rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed";
+        return isUser
+            ? $"{baseClass} rounded-br-md bg-accent text-accent-ink"
+            : $"{baseClass} rounded-bl-md border border-line bg-surface-raised text-content-muted";
+    }
+
+    private bool CannotSend => string.IsNullOrWhiteSpace(draft);
+
+    // Reinstate a "Shift + Enter for a new line" hint only alongside the @onkeydown that makes it
+    // true — until then the copy would document the opposite of what the textarea does.
+    private string Hint => sendAttempted
+        ? "Not wired up yet — the API call comes next."
+        : "Sending arrives with the API call";
+
+    // The panel's subject: the page in the middle column, named exactly as the header above it
+    // names it, prefixed with the project when the page belongs to one.
+    private string ContextLabel
+    {
+        get
+        {
+            var page = PageContext.LabelFor(CurrentPath, Session.ActiveRole) ?? "this page";
+            return PageProject is { } project ? $"{project.Reference} · {page}" : page;
+        }
+    }
+
+    private string CurrentPath => new Uri(Nav.Uri).AbsolutePath;
+
+    // Read from the URL, not CurrentProjectService: the remembered project is what sidebar links
+    // aim at and falls back to the first active project, which would have the panel claim to be
+    // looking at a different project from the one actually on screen.
+    private Project? PageProject
+    {
+        get
+        {
+            const string prefix = "/projects/";
+            var path = CurrentPath;
+            if (!path.StartsWith(prefix, StringComparison.Ordinal)) return null;
+            var rest = path[prefix.Length..];
+            var slash = rest.IndexOf('/');
+            var id = slash < 0 ? rest : rest[..slash];
+            return id.Length == 0 ? null : Projects.Find(id);
+        }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        Session.OnChange += HandleSessionChange;
+        Chat.OnChange += StateHasChanged;
+        Projects.OnChanged += StateHasChanged;
+        Nav.LocationChanged += HandleLocationChanged;
+        // The sidebar loads the project list; the panel only reads it.
+        await Chat.EnsureAcknowledgementLoadedAsync();
+    }
+
+    // The panel is instantiated before auth resolves, so the acknowledgement can only be read once
+    // the session lands — the same reason SideNav defers its project fetch to this event.
+    private void HandleSessionChange()
+    {
+        _ = Chat.EnsureAcknowledgementLoadedAsync();
+        StateHasChanged();
+    }
+
+    private void HandleLocationChanged(object? sender, EventArgs args) => StateHasChanged();
+
+    private void CloseChat() => Chat.Close();
+
+    private Task AcknowledgeCost() => Chat.AcknowledgeCostAsync();
+
+    private void StartNewChat()
+    {
+        messages = new List<ChatMessage>();
+        draft = "";
+        sendAttempted = false;
+    }
+
+    private void UseSuggestion(string suggestion) => draft = suggestion;
+
+    // Deliberately inert: the composer is real enough to judge, but nothing is sent until the
+    // Claude API call is built. Saying so beats a button that silently does nothing.
+    private void Send() => sendAttempted = true;
+
+    public void Dispose()
+    {
+        Session.OnChange -= HandleSessionChange;
+        Chat.OnChange -= StateHasChanged;
+        Projects.OnChanged -= StateHasChanged;
+        Nav.LocationChanged -= HandleLocationChanged;
+    }
+}

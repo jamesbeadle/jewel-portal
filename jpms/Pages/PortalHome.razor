@@ -10,7 +10,9 @@
 
 @if (!isLoaded)
 {
-    <section class="px-4 md:px-8 py-12 text-content-subtle text-sm">Loading…</section>
+    <section class="px-4 md:px-8 py-12">
+        <LoadGate IsLoading="true" Prominent="true" Label="Loading" />
+    </section>
 }
 else if (!Session.IsApproved)
 {
@@ -38,7 +40,9 @@ else if (!HasLinkedRecord)
 }
 else if (!PortalStore.IsLoaded)
 {
-    <section class="px-4 md:px-8 py-12 text-content-subtle text-sm">Loading…</section>
+    <section class="px-4 md:px-8 py-12">
+        <LoadGate IsLoading="true" Prominent="true" Label="Loading" />
+    </section>
 }
 else if (myRecord is null)
 {

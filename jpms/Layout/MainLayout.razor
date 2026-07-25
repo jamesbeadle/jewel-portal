@@ -2,9 +2,15 @@
 @inject AuthService Auth
 @inject SessionService Session
 @inject StoreChangeHub Stores
+@inject ChatPanelState Chat
 @implements IDisposable
 
 <div class="min-h-dvh bg-canvas text-content antialiased">
+
+    @* Above everything, including the sticky header — an error the user cannot see is an error
+       that gets reported as "it just doesn't work". *@
+    <ErrorToast />
+
 
     @if (CanSeeNavigation)
     {
@@ -24,14 +30,17 @@
                 {
                     <span></span>
                 }
-                @if (Auth.IsSignedIn)
-                {
-                    <RoleSwitcher />
-                }
-                else
-                {
-                    <span class="eyebrow">Jewel Project Management System</span>
-                }
+                <div class="shrink-0 flex items-center gap-2">
+                    @if (Auth.IsSignedIn)
+                    {
+                        <RoleSwitcher />
+                        <ChatLauncher />
+                    }
+                    else
+                    {
+                        <span class="eyebrow">Jewel Project Management System</span>
+                    }
+                </div>
             </div>
         </header>
 
@@ -46,6 +55,12 @@
             </div>
         </footer>
     </div>
+
+    @* The assistant lives outside the shell so it can pin to the viewport's right edge while the
+       shell's padding (see ShellClass) reserves its width — the page narrows instead of being
+       covered. Both components self-gate on role, so they cost nothing for everyone else. *@
+    <ChatPanel />
+    <ChatLauncher Floating="true" />
 </div>
 
 @code {
@@ -66,10 +81,12 @@
     {
         get
         {
-            var column = "min-h-dvh flex flex-col";
-            if (!CanSeeNavigation) return column;
+            // Width mirrors ChatPanel's own md:/lg: widths — change the two together.
+            var column = "chat-push min-h-dvh flex flex-col";
+            var chat = Chat.IsOpen ? "md:pr-[400px] lg:pr-[440px]" : "";
+            if (!CanSeeNavigation) return $"{column} {chat}";
             var padding = isSideNavExpanded ? "pl-16 md:pl-64" : "pl-16 md:pl-16";
-            return $"{column} {padding}";
+            return $"{column} {padding} {chat}";
         }
     }
 
@@ -77,6 +94,8 @@
     {
         Auth.OnChange += StateHasChanged;
         Session.OnChange += StateHasChanged;
+        // Reserving the panel's width is the layout's job, so the shell repaints when it opens.
+        Chat.OnChange += StateHasChanged;
         // Repaint the current page whenever any data store finishes a background
         // load, so views that read lazily-loaded data fill in on their own instead
         // of staying empty until the user navigates away and back.
@@ -91,6 +110,7 @@
     {
         Auth.OnChange -= StateHasChanged;
         Session.OnChange -= StateHasChanged;
+        Chat.OnChange -= StateHasChanged;
         Stores.OnAnyChange -= Repaint;
     }
 }

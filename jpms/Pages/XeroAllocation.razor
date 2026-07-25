@@ -15,7 +15,9 @@
 
 @if (!isLoaded)
 {
-    <section class="w-full px-6 py-12 text-content-subtle text-sm">Loading…</section>
+    <section class="w-full px-6 py-12">
+        <LoadGate IsLoading="true" Prominent="true" Label="Loading" />
+    </section>
 }
 else if (!Session.IsApproved)
 {
@@ -61,11 +63,16 @@ else
             <div class="rounded-xl border border-line bg-surface-raised px-5 py-3 text-sm text-content mb-6">@errorMessage</div>
         }
 
-        @if (Lines is null)
+        @* This gate asks about the LEDGER, not about the open tab. It has to: the tab bar lives
+           inside the else branch, so gating on the open tab's own emptiness would hide the tab bar
+           whenever someone returned to a tab that happens to be empty — and the tab is remembered
+           between sessions, so they would have had no way to get back out. The counts come from the
+           server and cover every status. *@
+        @if (Ledger.Counts() is not { } counts)
         {
             <p class="text-sm text-content-subtle py-8">Loading the stored ledger…</p>
         }
-        else if (Lines.Count == 0)
+        else if (LedgerTotal(counts) == 0)
         {
             <p class="text-sm text-content-subtle py-8">
                 Nothing stored yet — press “Sync from Xero” to pull the purchase ledger in for allocation.
@@ -410,6 +417,21 @@ else
                 </table>
             </div>
 
+            @* Tabs load independently now, so a tab can be mid-fetch or genuinely empty while the
+               ledger as a whole is neither. Say which. *@
+            @if (Lines is null)
+            {
+                <JewelSpinner Class="py-6" Label="Loading" />
+            }
+            else if (Visible.Count == 0)
+            {
+                <p class="text-sm text-content-subtle py-6 text-center">
+                    @(HasTabFilters
+                        ? "No lines match the current filters on this tab."
+                        : "Nothing on this tab.")
+                </p>
+            }
+
             <div class="mt-3 flex items-center justify-between gap-4 flex-wrap">
                 <p class="text-xs text-content-subtle">
                     @Visible.Count lines · @Money(Visible.Sum(SignedNet)) net.
@@ -648,7 +670,15 @@ else
 
     private bool isBusy => isSyncing || isRechecking || isApplying;
 
-    private IReadOnlyList<XeroLedgerLine>? Lines => Ledger.Lines();
+    // The lines for the tab currently open. Reading this starts that status' load if it hasn't
+    // happened yet, so a tab switch fetches just that tab.
+    private IReadOnlyList<XeroLedgerLine>? Lines => Ledger.Lines(activeTab);
+
+    // The unallocated queue, which the tab bar itself is built from (its project tabs and their
+    // counts) and which the "allocate all matched" banner counts against — so it is loaded whatever
+    // tab is open. On the Unallocated tab this is the same list as Lines.
+    private IReadOnlyList<XeroLedgerLine> UnallocatedLines =>
+        Ledger.Lines(XeroAllocationStatus.Unallocated) ?? Array.Empty<XeroLedgerLine>();
 
     private IReadOnlyList<Jewel.JPMS.Models.Project> Projects =>
         ProjectsReadModel.Current ?? Array.Empty<Jewel.JPMS.Models.Project>();
@@ -674,6 +704,9 @@ else
             {
                 visibleCache = Lines is null
                     ? Array.Empty<XeroLedgerLine>()
+                    // Filtering by status is the server's job now — Lines IS the open tab's set —
+                    // but the check stays as a cheap guard against rendering the previous tab's
+                    // rows in the moment between a switch and its fetch landing.
                     : Lines.Where(line => line.AllocationStatus == activeTab)
                            .Where(line => activeTab != XeroAllocationStatus.Unallocated
                                           || GroupProjectFor(line) == (activeProjectId ?? ""))
@@ -705,11 +738,11 @@ else
     {
         get
         {
-            var key = (Lines, (object)Projects, activeProjectId);
+            var unallocated = UnallocatedLines;
+            var key = ((IReadOnlyList<XeroLedgerLine>?)unallocated, (object)Projects, activeProjectId);
             if (projectTabsCache is null || key != projectTabsCacheKey)
             {
-                var tabs = (Lines ?? Array.Empty<XeroLedgerLine>())
-                    .Where(line => line.AllocationStatus == XeroAllocationStatus.Unallocated)
+                var tabs = unallocated
                     .GroupBy(GroupProjectFor)
                     .Where(group => group.Key != "")
                     .Select(group => (ProjectId: group.Key, Name: ProjectName(group.Key), Count: group.Count()))
@@ -733,8 +766,18 @@ else
     }
 
     private int UnassignedCount =>
-        Lines?.Count(line => line.AllocationStatus == XeroAllocationStatus.Unallocated
-                             && GroupProjectFor(line) == "") ?? 0;
+        UnallocatedLines.Count(line => GroupProjectFor(line) == "");
+
+    // Every stored line, from the server's counts — what the page-level "has anything been synced
+    // yet?" gate asks about. Deliberately not derived from the loaded tab: the tab bar is inside
+    // that gate, and a remembered-but-empty tab would otherwise lock the user out of the page.
+    private static int LedgerTotal(XeroLedgerCounts counts) =>
+        counts.Unallocated + counts.Allocated + counts.Bucketed + counts.Ignored;
+
+    // Whether the empty tab is empty because of a filter the user set, or just empty.
+    private bool HasTabFilters =>
+        !string.IsNullOrWhiteSpace(search) || bucketFilter is not null
+        || allocatedProjectFilter != "" || activeProjectId is not null;
 
     private int PageCount => Math.Max(1, (Visible.Count + PageSize - 1) / PageSize);
 
@@ -850,7 +893,12 @@ else
         isLoaded = true;
 
         if (ProjectsReadModel.Current is null) _ = ProjectsReadModel.RefreshAsync(CancellationToken.None);
-        _ = Ledger.RefreshAsync();
+        // Load the tab being opened (RestoreLastTabAsync may have restored a different one) plus,
+        // when that isn't the unallocated queue, the queue itself — the tab bar's project tabs and
+        // the "allocate all matched" banner are built from it.
+        _ = Ledger.RefreshAsync(activeTab);
+        if (activeTab != XeroAllocationStatus.Unallocated)
+            _ = Ledger.RefreshAsync(XeroAllocationStatus.Unallocated);
     }
 
     /// <summary>
@@ -867,7 +915,9 @@ else
         {
             var matchedBefore = FullyMatchedCount;
             await ProjectsReadModel.RefreshAsync(CancellationToken.None);
-            await Ledger.RefreshAsync();
+            // Suggestions are recomputed server-side on read, and they only exist on unallocated
+            // lines — so that is the status to re-read.
+            await Ledger.RefreshAsync(XeroAllocationStatus.Unallocated);
             var newlyMatched = FullyMatchedCount - matchedBefore;
             syncMessage = newlyMatched > 0
                 ? $"Re-checked: {newlyMatched} more lines now match a project and cost centre — {FullyMatchedCount} matched in total."
@@ -1079,9 +1129,8 @@ else
     // Mirrors the server's rule: a set (persisted) project counts as matched —
     // it's a human decision and beats the suggestion — the centre must match.
     private int FullyMatchedCount =>
-        Lines?.Count(line => line.AllocationStatus == XeroAllocationStatus.Unallocated
-                             && (line.ProjectId ?? line.SuggestedProjectId) is not null
-                             && line.SuggestedCostCenterCode is not null) ?? 0;
+        UnallocatedLines.Count(line => (line.ProjectId ?? line.SuggestedProjectId) is not null
+                                       && line.SuggestedCostCenterCode is not null);
 
     private async Task AllocateMatchedAsync()
     {
@@ -1551,6 +1600,9 @@ else
         // On a project tab every line is already pointed at that project, so
         // pre-arm the bulk bar's project with it.
         if (activeProjectId is not null) bulkProjectId = activeProjectId;
+        // Reading Lines starts the fetch for a status not yet held; this just makes it explicit
+        // (and revalidates a tab already in hand, per the stale-while-revalidate convention).
+        _ = Ledger.RefreshAsync(tab);
         _ = PersistTabAsync();
     }
 
@@ -1584,8 +1636,10 @@ else
 
     // -- display helpers ------------------------------------------------------
 
+    // From the server's GROUP BY, not from counting a downloaded list: the tab bar shows a number
+    // for every status while the page only ever holds one status' lines.
     private int CountOf(XeroAllocationStatus status) =>
-        Lines?.Count(line => line.AllocationStatus == status) ?? 0;
+        Ledger.Counts()?.For(status) ?? 0;
 
     private bool MatchesSearch(XeroLedgerLine line)
     {

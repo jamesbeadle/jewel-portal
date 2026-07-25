@@ -1,0 +1,61 @@
+@*
+    The single loading primitive for in-page regions.
+
+    House rule (DESIGN-SYSTEM.md → "Loading"): anything that will render figures, rows or an empty
+    state has to distinguish "no data yet" from "no data". A stat that shows 0 and silently becomes
+    47 a second later is worse than no stat at all — the reader has already believed the 0.
+
+    Wrap the region, pass one IsLoading that is true until EVERY store the region reads has landed
+    (LoadState.UntilAll composes them), and the gate shows the pulsing jewel in the region's own
+    space until the whole thing can be shown at once.
+
+    Prominent="true" for a main panel — anything occupying roughly a third of the screen or more —
+    which gets the larger jewel and a taller reserved space so the page does not jump when the
+    content arrives. Overlay="true" instead keeps already-rendered content in place and floats the
+    jewel over it, which is the right choice for a refresh (filters, pagination, tab switches)
+    where the previous answer is still meaningful.
+*@
+
+@if (!IsLoading)
+{
+    @ChildContent
+}
+else if (Overlay)
+{
+    <div class="relative">
+        @ChildContent
+        <JewelSpinner Overlay="true" Size="@SpinnerSize" IconSize="@IconSize" Label="@Label" />
+    </div>
+}
+else
+{
+    <div class="@MinHeight flex items-center justify-center" role="status" aria-live="polite" aria-busy="true">
+        <JewelSpinner Size="@SpinnerSize" IconSize="@IconSize" Label="@Label" Class="py-0" />
+    </div>
+}
+
+@code {
+    /// <summary>True until every store this region reads has produced its first result.</summary>
+    [Parameter] public bool IsLoading { get; set; }
+
+    /// <summary>A main panel rather than an inline region: bigger jewel, taller reserved space.</summary>
+    [Parameter] public bool Prominent { get; set; }
+
+    /// <summary>Float the indicator over the existing content instead of replacing it. Use when the
+    /// content on screen is a previous, still-useful answer being refreshed.</summary>
+    [Parameter] public bool Overlay { get; set; }
+
+    /// <summary>Caption under the jewel. Keep it specific — "Loading valuations" beats "Loading".</summary>
+    [Parameter] public string? Label { get; set; } = "Loading";
+
+    /// <summary>Override the reserved height when the incoming content has a known size.</summary>
+    [Parameter] public string? Height { get; set; }
+
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    private string MinHeight => Height ?? (Prominent ? "min-h-[220px]" : "min-h-[96px]");
+
+    private string SpinnerSize => Prominent ? "w-12 h-12" : "w-8 h-8";
+
+    private string IconSize => Prominent ? "w-5 h-5" : "w-3.5 h-3.5";
+}

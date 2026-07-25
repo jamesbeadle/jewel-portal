@@ -23,4 +23,16 @@ public sealed class LoggingInviteNotifier : IInviteNotifier
             email);
         return Task.CompletedTask;
     }
+
+    public Task SendPasswordResetAsync(string email, string displayName, string resetLink, CancellationToken cancellationToken)
+    {
+        // A self-service reset has nobody to hand the link to, so without a mail provider the
+        // request simply cannot complete. Say so loudly in the log rather than failing the request,
+        // which would tell an anonymous caller whether the address exists.
+        logger.LogWarning(
+            "No email provider configured; the password reset for {Email} could not be delivered. " +
+            "An administrator can send them a reset link from the Users panel instead.",
+            email);
+        return Task.CompletedTask;
+    }
 }

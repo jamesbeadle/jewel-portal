@@ -21,6 +21,8 @@ public sealed class HttpUserDirectory : IUserDirectory
 
     public event Action? OnChange;
 
+    public bool IsLoaded => readModel.Current is not null;
+
     public IReadOnlyList<DirectoryUser> All()
     {
         if (readModel.Current is null) _ = readModel.RefreshAsync(CancellationToken.None);
@@ -35,25 +37,27 @@ public sealed class HttpUserDirectory : IUserDirectory
 
     public DirectoryUser Upsert(DirectoryUser user)
     {
-        _ = UpsertAsync(user);
+        _ = SaveAsync(user, CancellationToken.None);
         return user;
+    }
+
+    public async Task<DirectoryUser> SaveAsync(DirectoryUser user, CancellationToken cancellationToken)
+    {
+        var saved = await commands.SendAsync(
+            new UpsertDirectoryUser(user.Email, user.DisplayName, user.Roles), cancellationToken);
+        await readModel.RefreshAsync(cancellationToken);
+        return saved;
     }
 
     public bool Remove(string email)
     {
-        _ = RemoveAsync(email);
+        _ = RemoveAsync(email, CancellationToken.None);
         return true;
     }
 
-    private async Task UpsertAsync(DirectoryUser user)
+    public async Task RemoveAsync(string email, CancellationToken cancellationToken)
     {
-        await commands.SendAsync(new UpsertDirectoryUser(user.Email, user.DisplayName, user.Roles), CancellationToken.None);
-        await readModel.RefreshAsync(CancellationToken.None);
-    }
-
-    private async Task RemoveAsync(string email)
-    {
-        await commands.SendAsync(new RemoveDirectoryUser(email), CancellationToken.None);
-        await readModel.RefreshAsync(CancellationToken.None);
+        await commands.SendAsync(new RemoveDirectoryUser(email), cancellationToken);
+        await readModel.RefreshAsync(cancellationToken);
     }
 }

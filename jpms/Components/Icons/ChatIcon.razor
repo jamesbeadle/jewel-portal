@@ -1,0 +1,14 @@
+@namespace Jewel.JPMS.Components.Icons
+
+@* The assistant mark: a speech bubble with a spark, drawn in the same outline weight as NavIcon so
+   the launcher sits happily beside the rail's icons. *@
+
+<svg class="@Class" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+     stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+    <path d="M20 12a7.5 7.5 0 0 1-7.5 7.5H8.6L4.5 22v-4.2A7.5 7.5 0 0 1 12.5 4.5 7.5 7.5 0 0 1 20 12z" />
+    <path d="M12.4 8.4l.85 2.15 2.15.85-2.15.85-.85 2.15-.85-2.15L9.4 11.4l2.15-.85z" />
+</svg>
+
+@code {
+    [Parameter] public string Class { get; set; } = "w-5 h-5";
+}

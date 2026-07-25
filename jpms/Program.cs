@@ -37,6 +37,8 @@ using Jewel.JPMS.Services;
 using Jewel.JPMS.Services.Excel;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 var builder = WebAssemblyHostBuilder.CreateDefault(args);
 
@@ -47,6 +49,15 @@ builder.Services.AddScoped(serviceProvider => new HttpClient
 {
     BaseAddress = new Uri(builder.HostEnvironment.BaseAddress)
 });
+
+// Error reporting is wired before anything else so that a failure during start-up still has
+// somewhere to go. The sink is created by hand rather than resolved, because builder.Logging is
+// configured before there is a service provider to resolve from.
+var globalErrorSink = new GlobalErrorSink();
+builder.Services.AddSingleton(globalErrorSink);
+builder.Logging.AddProvider(new ErrorReportingLoggerProvider(globalErrorSink));
+builder.Services.AddScoped<ErrorReporter>();
+builder.Services.AddScoped<IErrorSink>(services => services.GetRequiredService<ErrorReporter>());
 
 builder.Services.AddCqrsTransport();
 builder.Services.AddDirectoryReadModels();
@@ -117,6 +128,7 @@ builder.Services.AddScoped<AllocationTabStorage>();
 builder.Services.AddScoped<WorkOrderGroupingStorage>();
 builder.Services.AddScoped<TriageSortStorage>();
 builder.Services.AddScoped<CurrentProjectService>();
+builder.Services.AddScoped<ChatPanelState>();
 builder.Services.AddScoped<SessionService>();
 builder.Services.AddScoped<ExcelExportService>();
 

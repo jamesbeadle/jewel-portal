@@ -24,7 +24,23 @@ public static class XeroRouteRegistration
             new QueryRoute("/api/xero/cash-summary",
                 query => ((GetXeroCashSummary)query).Force ? "/api/xero/cash-summary?force=true" : "/api/xero/cash-summary"));
 
-        queries.Register<ListXeroLedgerLines, IReadOnlyList<XeroLedgerLine>>(QueryRoute.Static("/api/xero/ledger"));
+        // The allocation page reads one status at a time; ?status= is what keeps it from
+        // downloading the whole ledger to render one tab.
+        queries.Register<ListXeroLedgerLines, IReadOnlyList<XeroLedgerLine>>(
+            new QueryRoute("/api/xero/ledger", query =>
+            {
+                var status = ((ListXeroLedgerLines)query).Status;
+                return status is null ? "/api/xero/ledger" : $"/api/xero/ledger?status={status}";
+            }));
+
+        queries.Register<GetXeroLedgerCounts, XeroLedgerCounts>(QueryRoute.Static("/api/xero/ledger/counts"));
+
+        queries.Register<ListXeroLedgerLinesForProject, IReadOnlyList<XeroLedgerLine>>(
+            new QueryRoute("/api/projects/{projectId}/xero/ledger", query =>
+            {
+                var forProject = (ListXeroLedgerLinesForProject)query;
+                return $"/api/projects/{forProject.ProjectId}/xero/ledger?take={forProject.Take}";
+            }));
 
         queries.Register<ListXeroInvoiceAttachments, IReadOnlyList<XeroInvoiceAttachment>>(
             new QueryRoute("/api/xero/invoice/attachments", query =>

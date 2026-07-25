@@ -23,7 +23,9 @@
 
 @if (!isLoaded)
 {
-    <section class="px-6 md:px-8 py-12 text-content-subtle text-sm">Loading…</section>
+    <section class="px-6 md:px-8 py-12">
+        <LoadGate IsLoading="true" Prominent="true" Label="Loading" />
+    </section>
 }
 else if (!Session.IsApproved)
 {
@@ -79,7 +81,9 @@ else
             }
             else if (clients.Count == 0)
             {
-                <p class="text-sm text-content-subtle italic">@(clientsLoaded ? "No client accounts yet." : "Loading…")</p>
+                <LoadGate IsLoading="@(!clientsLoaded)" Label="Loading">
+                    <p class="text-sm text-content-subtle italic">No client accounts yet.</p>
+                </LoadGate>
             }
             else
             {
@@ -118,7 +122,9 @@ else
             }
             else if (architects.Count == 0)
             {
-                <p class="text-sm text-content-subtle italic">@(architectsLoaded ? "No architect practices yet." : "Loading…")</p>
+                <LoadGate IsLoading="@(!architectsLoaded)" Label="Loading">
+                    <p class="text-sm text-content-subtle italic">No architect practices yet.</p>
+                </LoadGate>
             }
             else
             {
@@ -157,7 +163,9 @@ else
             }
             else if (StaffUsers.Count == 0)
             {
-                <p class="text-sm text-content-subtle italic">@(staffLoaded ? "No internal staff recorded." : "Loading…")</p>
+                <LoadGate IsLoading="@(!staffLoaded)" Label="Loading">
+                    <p class="text-sm text-content-subtle italic">No internal staff recorded.</p>
+                </LoadGate>
             }
             else
             {

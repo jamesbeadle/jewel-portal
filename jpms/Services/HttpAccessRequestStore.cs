@@ -19,6 +19,8 @@ public sealed class HttpAccessRequestStore : IAccessRequestStore
 
     public event Action? OnChange;
 
+    public bool IsLoaded => readModel.Current is not null;
+
     public IReadOnlyList<AccessRequest> Pending()
     {
         if (readModel.Current is null) _ = readModel.RefreshAsync(CancellationToken.None);

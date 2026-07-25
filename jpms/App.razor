@@ -4,7 +4,11 @@
            same route template — e.g. the project prev/next arrows — recreates the page and
            re-runs OnInitializedAsync (loading state + store refresh) instead of silently
            reusing the old project's component. *@
-        <KeyedPageRouteView RouteData="@routeData" DefaultLayout="@typeof(Layout.MainLayout)" />
+        @* Every page renders inside the boundary, so an exception in one becomes a report in the
+           error toast and a "Try again" rather than a blank screen with nothing to send on. *@
+        <ReportingErrorBoundary @ref="boundary">
+            <KeyedPageRouteView RouteData="@routeData" DefaultLayout="@typeof(Layout.MainLayout)" />
+        </ReportingErrorBoundary>
         <FocusOnNavigate RouteData="@routeData" Selector="h1" />
     </Found>
     <NotFound>
@@ -17,3 +21,17 @@
         </LayoutView>
     </NotFound>
 </Router>
+
+@implements IDisposable
+
+@code {
+    private ReportingErrorBoundary? boundary;
+
+    [Inject] private NavigationManager Navigation { get; set; } = default!;
+
+    protected override void OnInitialized() => Navigation.LocationChanged += ResetBoundary;
+
+    private void ResetBoundary(object? sender, LocationChangedEventArgs args) => boundary?.Reset();
+
+    public void Dispose() => Navigation.LocationChanged -= ResetBoundary;
+}

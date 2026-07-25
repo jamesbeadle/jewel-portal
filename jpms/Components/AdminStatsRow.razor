@@ -1,17 +1,40 @@
 @inject IUserDirectory UserDirectory
 @inject IAccessRequestStore Requests
+@implements IDisposable
+
+@*
+    The admin home's headline figures. All three are held together until BOTH stores have landed:
+    they are read as a set, and showing "12 users / 0 pending" while the requests fetch is still in
+    flight states something false with total confidence. One indicator, one reveal.
+*@
 
 <div class="grid grid-cols-3 gap-3 md:gap-4 mb-8">
-    <Stat Label="Approved users"   Value="@ApprovedUserCount" />
-    <Stat Label="Pending requests" Value="@PendingRequestCount" />
-    <Stat Label="Roles in use"     Value="@DistinctRoleCount" />
+    <Stat Label="Approved users"   Value="@ApprovedUserCount"  IsLoading="@IsLoading" />
+    <Stat Label="Pending requests" Value="@PendingRequestCount" IsLoading="@IsLoading" />
+    <Stat Label="Roles in use"     Value="@DistinctRoleCount"   IsLoading="@IsLoading" />
 </div>
 
 @code {
+    private bool IsLoading => LoadState.UntilAll(UserDirectory.IsLoaded, Requests.IsLoaded);
+
     private string ApprovedUserCount => UserDirectory.All().Count.ToString();
 
     private string PendingRequestCount => Requests.Pending().Count.ToString();
 
     private string DistinctRoleCount =>
         UserDirectory.All().SelectMany(user => user.Roles).Distinct().Count().ToString();
+
+    protected override void OnInitialized()
+    {
+        // Reading All()/Pending() is what starts the lazy fetch; subscribing here is what turns the
+        // jewel back into a figure when it lands.
+        UserDirectory.OnChange += StateHasChanged;
+        Requests.OnChange += StateHasChanged;
+    }
+
+    public void Dispose()
+    {
+        UserDirectory.OnChange -= StateHasChanged;
+        Requests.OnChange -= StateHasChanged;
+    }
 }

@@ -1,10 +1,14 @@
 @inject IUserDirectory UserDirectory
+@implements IDisposable
 
 <section class="panel overflow-hidden mb-6">
     <header class="panel-header flex items-center justify-between">
         <h2 class="text-sm font-medium text-content">Users</h2>
         <div class="flex items-center gap-3">
-            <span class="text-xs text-content-subtle">@ApprovedUsers.Count</span>
+            @if (UserDirectory.IsLoaded)
+            {
+                <span class="text-xs text-content-subtle">@ApprovedUsers.Count</span>
+            }
             <button type="button" @onclick="ToggleForm"
                     class="text-xs font-medium text-accent hover:text-accent-hover">
                 @(showForm ? "Close" : "+ Add user")
@@ -19,12 +23,25 @@
         </div>
     }
 
-    <ul class="divide-y divide-line">
-        @foreach (var user in ApprovedUsers)
+    <LoadGate IsLoading="@(!UserDirectory.IsLoaded)" Prominent="true" Label="Loading users">
+        @if (ApprovedUsers.Count == 0)
         {
-            <ApprovedUserRow User="user" IsCurrentUser="@IsCurrentUser(user.Email)" />
+            <div class="p-5">
+                <p class="text-content-subtle italic text-sm">
+                    No users yet. Use <em>Add user</em> to invite the first one.
+                </p>
+            </div>
         }
-    </ul>
+        else
+        {
+            <ul class="divide-y divide-line">
+                @foreach (var user in ApprovedUsers)
+                {
+                    <ApprovedUserRow @key="user.Email" User="user" IsCurrentUser="@IsCurrentUser(user.Email)" />
+                }
+            </ul>
+        }
+    </LoadGate>
 </section>
 
 @code {
@@ -46,4 +63,8 @@
         // Reflect the new user immediately; the API has already persisted them.
         UserDirectory.Upsert(invited);
     }
+
+    protected override void OnInitialized() => UserDirectory.OnChange += StateHasChanged;
+
+    public void Dispose() => UserDirectory.OnChange -= StateHasChanged;
 }

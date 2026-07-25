@@ -42,6 +42,9 @@ public static class XeroFeatureRegistration
         // Ledger allocation: stored Xero lines reconciled onto projects + master cost centres.
         services.AddScoped<ICommandHandler<SyncXeroLedger, XeroLedgerSyncResult>, SyncXeroLedgerHandler>();
         services.AddScoped<IQueryHandler<ListXeroLedgerLines, IReadOnlyList<XeroLedgerLine>>, ListXeroLedgerLinesHandler>();
+        services.AddScoped<IQueryHandler<GetXeroLedgerCounts, XeroLedgerCounts>, GetXeroLedgerCountsHandler>();
+        services.AddScoped<IQueryHandler<ListXeroLedgerLinesForProject, IReadOnlyList<XeroLedgerLine>>,
+            ListXeroLedgerLinesForProjectHandler>();
         services.AddScoped<ICommandHandler<SetXeroAllocation, int>, SetXeroAllocationHandler>();
         services.AddScoped<ICommandHandler<AllocateSuggestedXeroLines, int>, AllocateSuggestedXeroLinesHandler>();
         services.AddScoped<IQueryHandler<ListXeroInvoiceAttachments, IReadOnlyList<XeroInvoiceAttachment>>,

@@ -65,8 +65,47 @@ public static class XeroBuckets
     public static readonly IReadOnlyList<string> All = new[] { Parking, Fuel, Tolls, Travel, Software, Ica, Other };
 }
 
-/// <summary>All stored ledger lines with allocation state and server-computed suggestions.</summary>
-public sealed record ListXeroLedgerLines : IQuery<IReadOnlyList<XeroLedgerLine>>;
+/// <summary>
+/// Stored ledger lines with allocation state and server-computed suggestions.
+///
+/// <paramref name="Status"/> narrows the read to one allocation status, which is how the
+/// allocation page actually works — it is a tab per status, and only one tab is on screen at a
+/// time. Left null, the query returns the entire ledger: that is what it always used to do, and it
+/// is why the Xero tab was slow, since every visit shipped every line the business had ever
+/// received (plus the whole cost-split table) to the browser. Pass a status.
+/// </summary>
+public sealed record ListXeroLedgerLines(XeroAllocationStatus? Status = null)
+    : IQuery<IReadOnlyList<XeroLedgerLine>>;
+
+/// <summary>
+/// How many lines sit in each allocation status. The allocation page's tab bar shows a count for
+/// every status while only ever holding one status' lines, so the counts come from a GROUP BY on
+/// the server rather than from counting a list the browser had to download first.
+/// </summary>
+public sealed record GetXeroLedgerCounts : IQuery<XeroLedgerCounts>;
+
+/// <summary>One count per allocation status, for the allocation page's tab bar.</summary>
+public sealed record XeroLedgerCounts(int Unallocated, int Allocated, int Bucketed, int Ignored)
+{
+    public int For(XeroAllocationStatus status) => status switch
+    {
+        XeroAllocationStatus.Unallocated => Unallocated,
+        XeroAllocationStatus.Allocated   => Allocated,
+        XeroAllocationStatus.Bucketed    => Bucketed,
+        XeroAllocationStatus.Ignored     => Ignored,
+        _ => 0
+    };
+
+    public static readonly XeroLedgerCounts Empty = new(0, 0, 0, 0);
+}
+
+/// <summary>
+/// The allocated ledger lines coded to one project, newest first. Serves the labour tab's
+/// "mark invoice lines as covered" panel, which needs a hundred rows for a single project and used
+/// to fetch the entire company ledger to find them.
+/// </summary>
+public sealed record ListXeroLedgerLinesForProject(string ProjectId, int Take = 100)
+    : IQuery<IReadOnlyList<XeroLedgerLine>>;
 
 /// <summary>
 /// One stored Xero purchase-invoice line. Amounts are net (pre-VAT, normalised
