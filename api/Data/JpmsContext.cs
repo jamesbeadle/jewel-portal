@@ -126,6 +126,7 @@ public sealed class JpmsContext : DbContext
     public DbSet<ContraChargeEntity> ContraCharges => Set<ContraChargeEntity>();
     public DbSet<SubcontractorRetentionEntity> SubcontractorRetentions => Set<SubcontractorRetentionEntity>();
     public DbSet<ProjectRetentionEntity> ProjectRetentions => Set<ProjectRetentionEntity>();
+    public DbSet<ProjectContractEntity> ProjectContracts => Set<ProjectContractEntity>();
 
     public DbSet<DefectEntity> Defects => Set<DefectEntity>();
     public DbSet<PracticalCompletionEntity> PracticalCompletions => Set<PracticalCompletionEntity>();
@@ -181,6 +182,14 @@ public sealed class JpmsContext : DbContext
         modelBuilder.Entity<RequestMessageEntity>()
             .HasIndex(row => row.RequestId)
             .HasDatabaseName("IX_RequestMessages_RequestId");
+
+        // ---- Project contracts -----------------------------------------------------------------
+        // Unique: one contract per project. The handlers treat the row as an upsert, and this index
+        // is what stops two concurrent first-saves from both inserting.
+        modelBuilder.Entity<ProjectContractEntity>()
+            .HasIndex(row => row.ProjectId)
+            .IsUnique()
+            .HasDatabaseName("IX_ProjectContracts_ProjectId");
 
         // ---- Variations ------------------------------------------------------------------------
         modelBuilder.Entity<VariationOrderEntity>()

@@ -32,6 +32,7 @@ using Jewel.JPMS.Api.Features.Portal;
 using Jewel.JPMS.Api.Features.Procurement;
 using Jewel.JPMS.Api.Features.Progress;
 using Jewel.JPMS.Api.Features.Retention;
+using Jewel.JPMS.Api.Features.ProjectContracts;
 using Jewel.JPMS.Api.Features.Projects;
 using Jewel.JPMS.Api.Features.Rates;
 using Jewel.JPMS.Api.Features.RecordLinks;
@@ -77,6 +78,7 @@ var host = new HostBuilder()
         services.AddDirectoryFeature();
         services.AddAccessRequestsFeature();
         services.AddProjectsFeature();
+        services.AddProjectContractsFeature(context.Configuration);
         services.AddClientsFeature();
         services.AddArchitectsFeature();
         services.AddPartiesFeature();
