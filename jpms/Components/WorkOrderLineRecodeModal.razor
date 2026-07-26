@@ -29,17 +29,13 @@
                 var rowIndex = index;
                 var row = rows[rowIndex];
                 <div class="flex items-center gap-2">
-                    <select class="bg-surface border border-line rounded-lg px-2 py-1.5 text-content text-sm flex-1"
-                            disabled="@busy"
-                            @onchange="e => SetRowCode(rowIndex, e.Value?.ToString())">
-                        <option value="" selected="@(row.CostCode is null)">Choose a cost centre…</option>
-                        @foreach (var centre in CostCenters.OrderBy(c => c.Code, StringComparer.OrdinalIgnoreCase).ThenBy(c => c.Name, StringComparer.OrdinalIgnoreCase))
-                        {
-                            <option value="@centre.Code" selected="@(string.Equals(row.CostCode, centre.Code, StringComparison.OrdinalIgnoreCase))">
-                                @($"{centre.Code} — {centre.Name}")
-                            </option>
-                        }
-                    </select>
+                    @* Typed-to-find, like every other cost-centre picker: the whole point of this
+                       modal is moving value onto centres the order was never priced against, so
+                       the user arrives not knowing which row to scroll to. *@
+                    <SearchSelect Options="@CostCentreOptionsFor(row)" WidthClass="flex-1 min-w-0"
+                                  Placeholder="Choose a cost centre…" Disabled="@busy"
+                                  InputClass="bg-surface border border-line px-2 py-1.5"
+                                  Value="@RowCode(row)" ValueChanged="value => SetRowCode(rowIndex, value)" />
                     <input type="number" step="any" placeholder="Amount £" disabled="@busy"
                            class="bg-surface border border-line rounded-lg px-2 py-1.5 text-right text-content text-sm w-36"
                            value="@row.AmountText"
@@ -133,6 +129,49 @@
                 AmountText = LineTotal.ToString(System.Globalization.CultureInfo.InvariantCulture)
             }
         };
+    }
+
+    // Rows hold null for "not chosen yet"; the picker speaks in empty strings.
+    private static string RowCode(Row row) => row.CostCode ?? "";
+
+    // The label carries code + name so typing matches either ("kit" finds CARP-KIT Carpentry
+    // kitchens) — same convention as the valuation line form and the Xero allocation page.
+    // Cached against the parameter list so it isn't rebuilt per row on every render.
+    private IReadOnlyList<SearchSelect.Option>? costCentreOptionsCache;
+    private object? costCentreOptionsCacheKey;
+
+    private IReadOnlyList<SearchSelect.Option> CostCentreOptions
+    {
+        get
+        {
+            if (costCentreOptionsCache is null || !ReferenceEquals(costCentreOptionsCacheKey, CostCenters))
+            {
+                costCentreOptionsCache = CostCenters
+                    .OrderBy(centre => centre.Code, StringComparer.OrdinalIgnoreCase)
+                    .ThenBy(centre => centre.Name, StringComparer.OrdinalIgnoreCase)
+                    .Select(centre => new SearchSelect.Option(centre.Code, $"{centre.Code} {centre.Name}"))
+                    .ToList();
+                costCentreOptionsCacheKey = CostCenters;
+            }
+            return costCentreOptionsCache;
+        }
+    }
+
+    // The line's own centre may have been retired since the order was raised, and the first row is
+    // seeded with it. Lead the list with the stored value so that row shows the code the line
+    // actually sits on rather than reading as an unmade choice.
+    private IReadOnlyList<SearchSelect.Option> CostCentreOptionsFor(Row row)
+    {
+        var options = CostCentreOptions;
+        if (row.CostCode is not { } code || options.Any(option => option.Value == code)) return options;
+        var master = options.FirstOrDefault(option =>
+            string.Equals(option.Value, code, StringComparison.OrdinalIgnoreCase));
+        var withCurrent = new List<SearchSelect.Option>(options.Count + 1)
+        {
+            new(code, master?.Label ?? $"{code} (retired)")
+        };
+        withCurrent.AddRange(options.Where(option => !ReferenceEquals(option, master)));
+        return withCurrent;
     }
 
     private void AddRow() => rows.Add(new Row());
