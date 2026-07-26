@@ -41,6 +41,8 @@ public sealed class HttpCostCenterStore : ICostCenterStore
         return readModel.All;
     }
 
+    public bool IsLoaded => readModel.IsLoaded;
+
     private void EnsureRequested()
     {
         if (!requested) { requested = true; _ = LoadAsync(); }

@@ -67,6 +67,9 @@ public sealed class HttpValuationReportStore : IValuationReportStore
         catch { claimsRequested.Remove(projectId); }
     }
 
+    public bool ReportLoadedFor(string projectId) =>
+        linesReadModel.LoadedFor(projectId) && claimsReadModel.LoadedFor(projectId);
+
     public IReadOnlyList<ClaimLine> EntriesFor(string claimId)
     {
         if (claimLinesRequested.Add(claimId)) _ = LoadClaimLinesAsync(claimId);

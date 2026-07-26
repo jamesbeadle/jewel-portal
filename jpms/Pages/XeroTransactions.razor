@@ -8,7 +8,7 @@
 
 <PageTitle>Transactions · Xero · JPMS</PageTitle>
 
-@if (!isLoaded)
+@if (!sessionReady)
 {
     <section class="px-6 md:px-8 py-12">
         <LoadGate IsLoading="true" Prominent="true" Label="Loading" />
@@ -43,9 +43,12 @@ else
             </div>
         </header>
 
+        @* Both views — the transaction list and the site × cost code pivot — are computed off the
+           one snapshot, so the whole body waits on it together. A multi-year read is slow enough
+           that a row count or a total shown early would be believed. *@
         @if (Snapshot is null)
         {
-            <p class="text-sm text-content-subtle py-8">Fetching transactions from Xero — a multi-year read can take a little while…</p>
+            <LoadGate IsLoading="true" Prominent="true" Label="Loading transactions from Xero" />
         }
         else if (!Snapshot.IsConfigured)
         {
@@ -261,7 +264,9 @@ else
 @code {
     private enum View { Transactions, BySite }
 
-    private bool isLoaded;
+    // Session checked and the user is signed in. This is NOT "the transactions are here" — the
+    // header renders at once and the figures stay behind their own gate.
+    private bool sessionReady;
     private bool isRefreshing;
     private string? statusFilter;
     private string search = string.Empty;
@@ -399,7 +404,7 @@ else
         await Session.EnsureLoadedAsync();
         if (!Auth.IsSignedIn) { Nav.NavigateTo("/login", forceLoad: true); return; }
         Xero.OnChange += StateHasChanged;
-        isLoaded = true;
+        sessionReady = true;
 
         // Revalidate cached data in the background on tab entry (stale-while-revalidate) —
         // the store's fetch-once guard handles the very first load.

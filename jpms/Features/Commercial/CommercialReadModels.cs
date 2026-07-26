@@ -15,6 +15,10 @@ public sealed class ValuationsReadModel
 
     public IReadOnlyList<Valuation> Current(string projectId) =>
         valuationsByProject.TryGetValue(projectId, out var list) ? list : Array.Empty<Valuation>();
+    /// <summary>True once this key's rows have landed. Current(...) answers with an empty list
+    /// until then, which is indistinguishable from a real empty result — so anything rendering a
+    /// figure, a row count or an empty state must gate on this first.</summary>
+    public bool LoadedFor(string projectId) => valuationsByProject.ContainsKey(projectId);
 
     public async Task RefreshAsync(string projectId, CancellationToken cancellationToken)
     {
@@ -34,6 +38,10 @@ public sealed class CostCodeBudgetsReadModel
 
     public IReadOnlyList<CostCodeBudget> Current(string projectId) =>
         budgetsByProject.TryGetValue(projectId, out var list) ? list : Array.Empty<CostCodeBudget>();
+    /// <summary>True once this key's rows have landed. Current(...) answers with an empty list
+    /// until then, which is indistinguishable from a real empty result — so anything rendering a
+    /// figure, a row count or an empty state must gate on this first.</summary>
+    public bool LoadedFor(string projectId) => budgetsByProject.ContainsKey(projectId);
 
     public async Task RefreshAsync(string projectId, CancellationToken cancellationToken)
     {
@@ -53,6 +61,10 @@ public sealed class TimesheetsReadModel
 
     public IReadOnlyList<Timesheet> Current(string projectId) =>
         timesheetsByProject.TryGetValue(projectId, out var list) ? list : Array.Empty<Timesheet>();
+    /// <summary>True once this key's rows have landed. Current(...) answers with an empty list
+    /// until then, which is indistinguishable from a real empty result — so anything rendering a
+    /// figure, a row count or an empty state must gate on this first.</summary>
+    public bool LoadedFor(string projectId) => timesheetsByProject.ContainsKey(projectId);
 
     public async Task RefreshAsync(string projectId, CancellationToken cancellationToken)
     {

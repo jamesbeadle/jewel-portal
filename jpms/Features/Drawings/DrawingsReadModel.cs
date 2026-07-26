@@ -27,6 +27,11 @@ public sealed class DrawingsReadModel
     public IReadOnlyList<Drawing> DrawingsCurrent(string projectId) =>
         drawingsByProject.TryGetValue(projectId, out var list) ? list : Array.Empty<Drawing>();
 
+    /// <summary>True once this drawing's revisions have been fetched at least once. The register
+    /// landing says nothing about the revisions, so the preview and the revision list need this
+    /// before they can claim there is no file.</summary>
+    public bool RevisionsLoaded(string drawingId) => revisionsByDrawing.ContainsKey(drawingId);
+
     public IReadOnlyList<DrawingRevision> RevisionsCurrent(string drawingId) =>
         revisionsByDrawing.TryGetValue(drawingId, out var list) ? list : Array.Empty<DrawingRevision>();
 

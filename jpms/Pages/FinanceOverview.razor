@@ -16,7 +16,7 @@
     all-projects total; each row links into that project's Financials page for the full breakdown.
 *@
 
-@if (!isLoaded)
+@if (!sessionReady)
 {
     <section class="px-6 md:px-8 py-12">
         <LoadGate IsLoading="true" Prominent="true" Label="Loading" />
@@ -37,9 +37,13 @@ else
             </p>
         </header>
 
-        @if (!summariesLoaded)
+        @* One panel: the row per project and the all-projects total are the same arithmetic, so
+           the table waits for the project list AND every project's summary before showing any of
+           it. "No active projects" is a real answer and must not be shown as a guess. *@
+        <LoadGate IsLoading="@(!TableReady && !projectsFailed)" Prominent="true" Label="Loading project financials">
+        @if (projectsFailed)
         {
-            <JewelSpinner Class="py-16" Label="Loading project financials" />
+            <p class="text-sm text-negative">Couldn't load the project list. The details are in the red bar at the top — reload to try again.</p>
         }
         else if (ActiveProjects.Count == 0)
         {
@@ -111,13 +115,23 @@ else
                 </table>
             </div>
         }
+        </LoadGate>
     </section>
 }
 
 @code {
-    private bool isLoaded;
+    // Session checked and the user is signed in. This is NOT "the figures are here": the heading
+    // and its description show at once, the table waits behind its own gate.
+    private bool sessionReady;
     private bool summariesLoaded;
+    // The project list is what the whole table is built from, and its fetch throws rather than
+    // recording a per-project failure — so a failure here has to open the gate with a message.
+    private bool projectsFailed;
     private readonly List<string> failedProjects = new();
+
+    // Every row and the total read the project list and that project's summary; nothing shows
+    // until all of them are in, or a row would appear with a plausible zero in every column.
+    private bool TableReady => Projects.Current is not null && summariesLoaded;
 
     private record Figures(decimal Sales, decimal Claimed, decimal TargetCost, decimal ActualCost, decimal UnderOver);
 
@@ -190,8 +204,18 @@ else
         if (!Auth.IsSignedIn) { Nav.NavigateTo("/login", forceLoad: true); return; }
         Projects.OnChanged += StateHasChanged;
         Summary.OnChanged += StateHasChanged;
-        if (Projects.Current is null) await Projects.RefreshAsync(CancellationToken.None);
-        isLoaded = true;
+        sessionReady = true;
+        try
+        {
+            if (Projects.Current is null) await Projects.RefreshAsync(CancellationToken.None);
+        }
+        catch
+        {
+            // HttpQueryClient has already reported this to the error toast with a reference; here
+            // we only need to stop the table waiting on a list that is not coming.
+            projectsFailed = true;
+            return;
+        }
         await RefreshSummariesAsync();
     }
 

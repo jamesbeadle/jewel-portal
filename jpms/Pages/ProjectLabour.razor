@@ -17,7 +17,7 @@
     approved (budget hard-block enforced server-side) or rejected back to the worker.
 *@
 
-@if (!isLoaded)
+@if (!sessionReady)
 {
     <section class="px-6 md:px-8 py-12">
         <LoadGate IsLoading="true" Prominent="true" Label="Loading" />
@@ -61,7 +61,16 @@ else
             </div>
         </div>
 
+        @* The week's rows, their hours and their approval state are one panel: an empty week is a
+           real answer here, and shown early it reads as "nobody logged any time". *@
+        <LoadGate IsLoading="@(!TimesheetsReady && !dataFailed)" Prominent="true" Label="Loading timesheets">
         @{ var week = WeekTimesheets(); }
+        @if (dataFailed)
+        {
+            <p class="text-sm text-negative mb-6">Couldn't load the timesheets. The details are in the red bar at the top — reload to try again.</p>
+        }
+        else
+        {
         @if (week.Count == 0)
         {
             <p class="text-sm text-content-subtle italic mb-6">No timesheets this week. Workers log time from their My day page; their submitted hours appear here for approval.</p>
@@ -159,6 +168,8 @@ else
                 <span class="text-xs text-content-subtle">Only approved time posts to Financials as cost. Budget hard-block applies per cost code.</span>
             </div>
         }
+        }
+        </LoadGate>
 
         @if (rejectingId is not null)
         {
@@ -174,6 +185,15 @@ else
             <section>
                 <h3 class="text-base font-semibold text-content mb-2">Missed sign-outs / manual entry</h3>
                 <p class="text-xs text-content-subtle mb-3">For workers who forgot to sign out, enter their day here — it joins the approval queue as normal.</p>
+                @* The worker list and the cost codes are the whole form — offered half-populated it
+                   silently omits people and codes that exist. *@
+                <LoadGate IsLoading="@(!ManualEntryReady && !dataFailed)" Height="min-h-[56px]" Label="Loading workers">
+                @if (dataFailed)
+                {
+                    <p class="text-sm text-negative">Couldn't load the workers and cost codes — reload to try again.</p>
+                }
+                else
+                {
                 <div class="flex flex-wrap items-end gap-2">
                     <select class="field" @bind="manualWorkerId">
                         <option value="">Worker…</option>
@@ -193,6 +213,8 @@ else
                     <input class="field w-20" type="number" step="0.5" min="0.5" @bind="manualHours" placeholder="hrs" />
                     <button type="button" class="btn-secondary" @onclick="AddManualAsync">Add</button>
                 </div>
+                }
+                </LoadGate>
             </section>
 
             <section>
@@ -204,6 +226,15 @@ else
                     email on the <a class="underline underline-offset-2" href="/labour/workers">Workers page</a>
                     and assign them to this project below.
                 </p>
+                @* Who is offered depends on the registry minus who is already assigned, and the list
+                   below is the other half of the same answer — so both wait for both. *@
+                <LoadGate IsLoading="@(!AssignmentsReady && !dataFailed)" Height="min-h-[56px]" Label="Loading workers">
+                @if (dataFailed)
+                {
+                    <p class="text-sm text-negative">Couldn't load the worker registry — reload to try again.</p>
+                }
+                else
+                {
                 <div class="flex flex-wrap items-end gap-2">
                     <select class="field" @bind="assignWorkerId">
                         <option value="">Add worker to project…</option>
@@ -226,12 +257,21 @@ else
                         }
                     </ul>
                 }
+                }
+                </LoadGate>
             </section>
         </div>
 
         <section class="mb-8">
             <h3 class="text-base font-semibold text-content mb-2">Site register</h3>
+            <LoadGate IsLoading="@(!RegisterReady && !dataFailed)" Prominent="true" Label="Loading the site register">
             @{ var register = Labour.AttendanceFor(ProjectId).Take(60).ToList(); }
+            @if (dataFailed)
+            {
+                <p class="text-sm text-negative">Couldn't load the site register — reload to try again.</p>
+            }
+            else
+            {
             @if (register.Count == 0)
             {
                 <p class="text-sm text-content-subtle italic">No attendance recorded yet.</p>
@@ -267,6 +307,8 @@ else
                     </tbody>
                 </table>
             }
+            }
+            </LoadGate>
         </section>
 
         <section class="mb-8">
@@ -277,7 +319,16 @@ else
                 stays open until timesheets are corrected, the invoice is amended or split, or the
                 difference is posted as a settlement variance.
             </p>
+            @* Approved cost, covered invoices and the unresolved variance are one reconciliation:
+               "nothing to reconcile" is a real answer and must not be guessed at. *@
+            <LoadGate IsLoading="@(!SettlementReady && !dataFailed)" Prominent="true" Label="Loading settlement">
             @{ var settlement = Labour.SettlementFor(ProjectId); }
+            @if (dataFailed)
+            {
+                <p class="text-sm text-negative">Couldn't load the settlement figures — reload to try again.</p>
+            }
+            else
+            {
             @if (settlement.Count == 0)
             {
                 <p class="text-sm text-content-subtle italic">Nothing to reconcile yet.</p>
@@ -310,6 +361,8 @@ else
                     </tbody>
                 </table>
             }
+            }
+            </LoadGate>
 
             <div class="mt-4">
                 @if (!showCoverPanel)
@@ -322,7 +375,7 @@ else
                     <p class="text-xs text-content-subtle mb-2">Pick the subcontractor whose timesheets each line settles, then mark it covered — the line leaves cost of sales and joins the reconciliation above.</p>
                     @if (ledgerLines is null)
                     {
-                        <p class="text-sm text-content-subtle italic">Loading ledger…</p>
+                        <LoadGate IsLoading="true" Label="Loading the ledger" />
                     }
                     else if (ProjectLedgerLines().Count == 0)
                     {
@@ -372,7 +425,21 @@ else
 @code {
     [Parameter] public string ProjectId { get; set; } = "";
 
-    private bool isLoaded;
+    // Session checked and the user is signed in. This is NOT "the data is here" — the tab's
+    // headings and its week nav show at once; each panel below holds until its own figures land.
+    private bool sessionReady;
+
+    // A failed fetch must open the gates, or the jewels pulse forever. The panel says so instead
+    // of showing rows; the toast at the top carries the reference and the detail.
+    private bool dataFailed;
+
+    // -- Panel gates. Each lists every source the panel reads, so it appears in one piece. --
+    private bool TimesheetsReady => Labour.TimesheetsLoadedFor(ProjectId) && CostCenters.IsLoaded;
+    private bool ManualEntryReady => Labour.AssignmentsLoadedFor(ProjectId) && CostCenters.IsLoaded;
+    private bool AssignmentsReady => Labour.AssignmentsLoadedFor(ProjectId) && Labour.WorkersLoaded;
+    private bool RegisterReady => Labour.AttendanceLoadedFor(ProjectId);
+    private bool SettlementReady => Labour.SettlementLoadedFor(ProjectId);
+
     private string? actionError;
     private DateTimeOffset weekStart = StartOfWeek(DateTimeOffset.Now);
 
@@ -398,15 +465,29 @@ else
         if (!Auth.IsSignedIn) { Nav.NavigateTo("/login", forceLoad: true); return; }
         Labour.OnChange += StateHasChanged;
         CostCenters.OnChanged += StateHasChanged;
-        isLoaded = true;
+        sessionReady = true;
 
         // Revalidate cached data in the background on every visit (stale-while-revalidate —
         // see the front-end data-loading convention in CLAUDE.md).
-        _ = Labour.RefreshTimesheetsAsync(ProjectId);
-        _ = Labour.RefreshAttendanceAsync(ProjectId);
-        _ = Labour.RefreshAssignmentsAsync(ProjectId);
-        _ = Labour.RefreshSettlementAsync(ProjectId);
-        _ = CostCenters.RefreshAsync(CancellationToken.None);
+        // Fired together, awaited together: none of these read models records its own failures, so
+        // the awaits are what tell the panels the data is not coming. The registry is fetched here
+        // rather than lazily on read — behind a gate nothing reads it, so nothing would start it.
+        try
+        {
+            await Task.WhenAll(
+                Labour.RefreshTimesheetsAsync(ProjectId),
+                Labour.RefreshAttendanceAsync(ProjectId),
+                Labour.RefreshAssignmentsAsync(ProjectId),
+                Labour.RefreshSettlementAsync(ProjectId),
+                Labour.RefreshWorkersAsync(),
+                CostCenters.RefreshAsync(CancellationToken.None));
+        }
+        catch
+        {
+            // HttpQueryClient has already reported this to the error toast with a reference; here
+            // we only need to stop the panels waiting on data that is not coming.
+            dataFailed = true;
+        }
     }
 
     public void Dispose()

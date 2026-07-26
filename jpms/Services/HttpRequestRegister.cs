@@ -25,6 +25,8 @@ public sealed class HttpRequestRegister : IRequestRegister
 
     public event Action? OnChange;
 
+    public bool LoadedFor(string projectId) => readModel.LoadedFor(projectId);
+
     public IReadOnlyList<Request> ForProject(string projectId)
     {
         if (requested.Add(projectId)) _ = LoadAsync(projectId);

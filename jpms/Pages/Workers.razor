@@ -15,7 +15,7 @@
     keep their snapshotted rate. Rates never reach the site capture page.
 *@
 
-@if (!isLoaded)
+@if (!sessionReady)
 {
     <section class="px-6 md:px-8 py-12">
         <LoadGate IsLoading="true" Prominent="true" Label="Loading" />
@@ -53,15 +53,19 @@ else
                 <label class="text-xs text-content-subtle">Day rate £ (÷ 8 = hourly)
                     <input class="field mt-1 w-28" type="number" step="1" min="0" @bind="formDayRate" />
                 </label>
-                <label class="text-xs text-content-subtle">Subcontractor
-                    <select class="field mt-1" @bind="formSubcontractorId">
-                        <option value="">— none —</option>
-                        @foreach (var subcontractor in Subcontractors.All())
-                        {
-                            <option value="@subcontractor.SubcontractorId">@subcontractor.CompanyName</option>
-                        }
-                    </select>
-                </label>
+                @* The picker is the directory: offering only "— none —" while it loads invites a
+                   worker to be saved unlinked, so the field waits rather than the whole form. *@
+                <LoadGate IsLoading="@(!Subcontractors.IsLoaded)" Height="min-h-[52px]" Label="">
+                    <label class="text-xs text-content-subtle">Subcontractor
+                        <select class="field mt-1" @bind="formSubcontractorId">
+                            <option value="">— none —</option>
+                            @foreach (var subcontractor in Subcontractors.All())
+                            {
+                                <option value="@subcontractor.SubcontractorId">@subcontractor.CompanyName</option>
+                            }
+                        </select>
+                    </label>
+                </LoadGate>
                 <label class="text-xs text-content-subtle">Phone
                     <input class="field mt-1 w-36" @bind="formPhone" />
                 </label>
@@ -83,7 +87,14 @@ else
         </div>
 
         @{ var workers = Labour.Workers(); }
-        @if (workers.Count == 0)
+        @* One gate over the registry: the Subcontractor column is resolved from the directory, so a
+           row rendered before it lands reads "—" for a worker who is in fact linked. *@
+        <LoadGate IsLoading="@(!RegistryReady && !workersFailed)" Prominent="true" Label="Loading workers">
+        @if (!Labour.WorkersLoaded)
+        {
+            <p class="text-sm text-negative">Couldn't load the workers. The details are in the red bar at the top — reload to try again.</p>
+        }
+        else if (workers.Count == 0)
         {
             <p class="text-sm text-content-subtle italic">No workers yet — add the first one above.</p>
         }
@@ -132,14 +143,24 @@ else
                 </tbody>
             </table>
         }
+        </LoadGate>
     </section>
 }
 
 @code {
     private const decimal StandardDayHours = 8m; // scope §4: standard day; per-worker override deferred
 
-    private bool isLoaded;
+    // Session checked and the user signed in. This is NOT "the data is here" — keeping the two
+    // apart is what lets the page show its chrome at once and hold the registry until it lands.
+    private bool sessionReady;
+
+    // A failed fetch has to open the gate, or the jewel pulses forever; the table then says so.
+    private bool workersFailed;
     private string? actionError;
+
+    // Everything the registry table reads: the workers themselves and the directory the
+    // Subcontractor column is resolved against.
+    private bool RegistryReady => Labour.WorkersLoaded && Subcontractors.IsLoaded;
 
     private string? editingWorkerId;
     private string? deletingWorkerId;
@@ -155,11 +176,22 @@ else
         await Session.EnsureLoadedAsync();
         if (!Auth.IsSignedIn) { Nav.NavigateTo("/login", forceLoad: true); return; }
         Labour.OnChange += StateHasChanged;
-        isLoaded = true;
-        _ = Labour.RefreshWorkersAsync();
+        // The directory feeds the picker and the Subcontractor column, so its arrival has to
+        // re-render this page too — nothing else here listens for it.
+        Subcontractors.OnChange += StateHasChanged;
+        sessionReady = true;
+        // Paint the chrome before the fetch: Blazor re-renders OnInitializedAsync only at its
+        // FIRST await, which has already passed, so without this the page waits on the registry.
+        StateHasChanged();
+        try { await Labour.RefreshWorkersAsync(); }
+        catch { workersFailed = true; }
     }
 
-    public void Dispose() => Labour.OnChange -= StateHasChanged;
+    public void Dispose()
+    {
+        Labour.OnChange -= StateHasChanged;
+        Subcontractors.OnChange -= StateHasChanged;
+    }
 
     private decimal HourlyRate() => StandardDayHours == 0m ? 0m : Math.Round(formDayRate / StandardDayHours, 2);
 

@@ -15,6 +15,10 @@ public sealed class BoqLinesReadModel
 
     public IReadOnlyList<BoqLineItem> Current(string projectId) =>
         linesByProject.TryGetValue(projectId, out var lines) ? lines : Array.Empty<BoqLineItem>();
+    /// <summary>True once this key's rows have landed. Current(...) answers with an empty list
+    /// until then, which is indistinguishable from a real empty result — so anything rendering a
+    /// figure, a row count or an empty state must gate on this first.</summary>
+    public bool LoadedFor(string projectId) => linesByProject.ContainsKey(projectId);
 
     public async Task RefreshAsync(string projectId, CancellationToken cancellationToken)
     {

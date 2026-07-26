@@ -1,5 +1,5 @@
 using System.Net;
-using System.Net.Http.Json;
+using System.Text.Json;
 using Jewel.JPMS.Contracts.Cqrs;
 
 namespace Jewel.JPMS.Cqrs;
@@ -32,10 +32,17 @@ public sealed class HttpQueryClient : IQueryClient
             // no retention terms, a lead with no outcome — but it never arrives as JSON. ASP.NET
             // renders OkObjectResult(null) as 204 with an empty body, and deserialising nothing
             // throws. An empty body behind a success status means null, not a broken response.
-            if (IsEmpty(response)) return default!;
+            // The emptiness has to be decided on the BYTES, not the headers. Content-Length is
+            // absent on a chunked response — which is how Static Web Apps' managed Functions
+            // routinely answer — so a header-only check reads "unknown length" as "not empty",
+            // falls through to the deserialiser and throws the very JsonException it was added to
+            // prevent. Reading the body first costs one string per query and closes the hole.
+            if (response.StatusCode == HttpStatusCode.NoContent) return default!;
 
-            var result = await response.Content.ReadFromJsonAsync<TResult>(cancellationToken: cancellationToken);
-            return result!;
+            var json = await response.Content.ReadAsStringAsync(cancellationToken);
+            if (string.IsNullOrWhiteSpace(json)) return default!;
+
+            return JsonSerializer.Deserialize<TResult>(json, WebJson)!;
         }
         catch (OperationCanceledException)
         {
@@ -58,8 +65,9 @@ public sealed class HttpQueryClient : IQueryClient
         }
     }
 
-    /// <summary>A 204, or a 200 the endpoint sent with no bytes behind it. Either way there is
-    /// nothing to deserialise. ContentLength is null on a chunked response, which is not empty.</summary>
-    private static bool IsEmpty(HttpResponseMessage response) =>
-        response.StatusCode == HttpStatusCode.NoContent || response.Content.Headers.ContentLength == 0;
+    /// <summary>The same options ReadFromJsonAsync applied by default (camelCase in, camelCase out),
+    /// held once so switching to the explicit deserialiser changed nothing about how payloads are
+    /// read. A shared instance is required — building JsonSerializerOptions per call is slow and
+    /// defeats the serializer's own metadata cache.</summary>
+    private static readonly JsonSerializerOptions WebJson = new(JsonSerializerDefaults.Web);
 }

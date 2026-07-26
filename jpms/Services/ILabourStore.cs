@@ -13,6 +13,9 @@ public interface ILabourStore
 
     // Registry (commercial team only — includes rates).
     IReadOnlyList<Worker> Workers();
+    /// <summary>False until the registry has landed — the synchronous reads answer with empty
+    /// lists in the meantime, which no view can tell apart from a real empty result.</summary>
+    bool WorkersLoaded { get; }
     Task RefreshWorkersAsync();
     Task<Worker> AddWorkerAsync(string name, decimal hourlyRate, string? subcontractorId, string contactEmail, string contactPhone);
     Task<Worker> UpdateWorkerAsync(Worker worker);
@@ -20,6 +23,8 @@ public interface ILabourStore
 
     // Project assignment.
     IReadOnlyList<ProjectWorkerAssignment> AssignmentsFor(string projectId);
+    /// <summary>False until this project's assignments have landed — see <see cref="WorkersLoaded"/>.</summary>
+    bool AssignmentsLoadedFor(string projectId);
     Task RefreshAssignmentsAsync(string projectId);
     Task SetAssignmentAsync(string projectId, string workerId, bool isActive);
 
@@ -32,8 +37,12 @@ public interface ILabourStore
 
     // Timesheets + register.
     IReadOnlyList<TimesheetDetail> TimesheetsFor(string projectId);
+    /// <summary>False until this project's timesheets have landed — see <see cref="WorkersLoaded"/>.</summary>
+    bool TimesheetsLoadedFor(string projectId);
     Task RefreshTimesheetsAsync(string projectId);
     IReadOnlyList<SiteAttendance> AttendanceFor(string projectId);
+    /// <summary>False until this project's register has landed — see <see cref="WorkersLoaded"/>.</summary>
+    bool AttendanceLoadedFor(string projectId);
     Task RefreshAttendanceAsync(string projectId);
 
     Task<TimesheetDetail> AddWorkerTimesheetAsync(string projectId, string workerId, DateTimeOffset workedOn, decimal hours, string costCode);
@@ -43,6 +52,8 @@ public interface ILabourStore
 
     // Settlement reconciliation.
     IReadOnlyList<LabourSettlementRow> SettlementFor(string projectId);
+    /// <summary>False until this project's settlement rows have landed — see <see cref="WorkersLoaded"/>.</summary>
+    bool SettlementLoadedFor(string projectId);
     Task RefreshSettlementAsync(string projectId);
     Task SetTimesheetCoverAsync(string projectId, string xeroLedgerLineId, bool isCovered, string subcontractorId, DateTimeOffset periodStart, DateTimeOffset periodEnd);
     Task AddSettlementVarianceAsync(string projectId, string costCode, string subcontractorId, decimal amount, string reason, string? xeroLedgerLineId);

@@ -19,7 +19,7 @@
 
 <PageTitle>Bid Package Invite · JPMS</PageTitle>
 
-@if (!isLoaded)
+@if (!sessionReady)
 {
     <section class="px-6 md:px-8 py-12">
         <LoadGate IsLoading="true" Prominent="true" Label="Loading" />
@@ -41,6 +41,7 @@ else
             <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-4 whitespace-pre-wrap">@error</p>
         }
 
+        <LoadGate IsLoading="@(package is null && !loadAttempted)" Prominent="true" Label="Loading bid package">
         @if (package is null)
         {
             <p class="text-sm text-content-subtle italic">That bid package could not be loaded.</p>
@@ -120,9 +121,14 @@ else
                     </p>
                 }
 
+                <LoadGate IsLoading="@(!RecipientsReady)" Prominent="true" Label="Loading invited subcontractors">
                 @if (recipients.Count == 0)
                 {
-                    <p class="text-sm text-content-subtle italic">No subcontractors invited yet.</p>
+                    @* Only once the fetch has answered — the banner above carries a failure. *@
+                    @if (fetchedRecipients is not null)
+                    {
+                        <p class="text-sm text-content-subtle italic">No subcontractors invited yet.</p>
+                    }
                 }
                 else
                 {
@@ -187,6 +193,7 @@ else
                         for you to review and send.
                     </p>
                 }
+                </LoadGate>
             </section>
 
             @* ---- Line items, grouped by trade ---- *@
@@ -199,6 +206,7 @@ else
                     }
                 </div>
 
+                <LoadGate IsLoading="@(!LineItemsReady)" Prominent="true" Label="Loading line items">
                 @if (editingLines)
                 {
                     <div class="rounded-xl border border-line bg-surface overflow-x-auto overflow-y-auto max-h-[85vh] mb-3">
@@ -247,7 +255,11 @@ else
                 }
                 else if (lineItems.Count == 0)
                 {
-                    <p class="text-sm text-content-subtle italic">No line items on this package yet.</p>
+                    @* Only once the fetch has answered — the banner above carries a failure. *@
+                    @if (fetchedLineItems is not null)
+                    {
+                        <p class="text-sm text-content-subtle italic">No line items on this package yet.</p>
+                    }
                 }
                 else
                 {
@@ -312,6 +324,7 @@ else
                         </div>
                     }
                 }
+                </LoadGate>
             </section>
 
             @* ---- Tender submissions: quotes compared line by line ---- *@
@@ -364,12 +377,17 @@ else
                     }
                 }
 
+                <LoadGate IsLoading="@(!QuotesReady)" Prominent="true" Label="Loading tender submissions">
                 @if (quotes.Count == 0)
                 {
-                    <p class="text-sm text-content-subtle italic">
-                        No tender submissions yet. Extract one from a tagged email below, or use
-                        “Record tender manually” for prices that arrived by phone or outside the mailbox.
-                    </p>
+                    @* Only once the fetch has answered — the banner above carries a failure. *@
+                    @if (fetchedQuotes is not null)
+                    {
+                        <p class="text-sm text-content-subtle italic">
+                            No tender submissions yet. Extract one from a tagged email below, or use
+                            “Record tender manually” for prices that arrived by phone or outside the mailbox.
+                        </p>
+                    }
                 }
                 else
                 {
@@ -457,6 +475,7 @@ else
                         <p class="text-xs text-content-subtle mt-2"><span class="font-medium text-content-muted">@(sub?.CompanyName ?? quote.SubcontractorId):</span> @quote.Notes</p>
                     }
                 }
+                </LoadGate>
             </section>
 
             @* ---- Documents: project drawings linked to this package ---- *@
@@ -469,12 +488,17 @@ else
                     }
                 </div>
 
+                <LoadGate IsLoading="@(!DrawingsReady)" Label="Loading documents">
                 @if (packageDrawings.Count == 0)
                 {
-                    <div class="rounded-xl border border-dashed border-line bg-surface-raised px-4 py-5 text-sm text-content-subtle">
-                        No drawings linked yet. Link drawings from the project's Drawings section — they're attached
-                        to the invite email when it's sent. (Save drawings out of any email from Triage.)
-                    </div>
+                    @* Only once the fetch has answered — the banner above carries a failure. *@
+                    @if (fetchedPackageDrawings is not null)
+                    {
+                        <div class="rounded-xl border border-dashed border-line bg-surface-raised px-4 py-5 text-sm text-content-subtle">
+                            No drawings linked yet. Link drawings from the project's Drawings section — they're attached
+                            to the invite email when it's sent. (Save drawings out of any email from Triage.)
+                        </div>
+                    }
                 }
                 else
                 {
@@ -496,17 +520,23 @@ else
                         }
                     </ul>
                 }
+                </LoadGate>
             </section>
 
             @* ---- Tender responses & related emails (read live by the package's tag) ---- *@
             <section>
                 <h3 class="eyebrow mb-3">Tender responses & related emails</h3>
+                <LoadGate IsLoading="@(!EmailsReady)" Prominent="true" Label="Loading related emails">
                 @if (emails.Count == 0)
                 {
-                    <p class="text-sm text-content-subtle italic">
-                        No emails tagged to this bid package. Replies to the invite land in Triage —
-                        tag them with @package.Reference and they appear here.
-                    </p>
+                    @* Only once the fetch has answered — the banner above carries a failure. *@
+                    @if (fetchedEmails is not null)
+                    {
+                        <p class="text-sm text-content-subtle italic">
+                            No emails tagged to this bid package. Replies to the invite land in Triage —
+                            tag them with @package.Reference and they appear here.
+                        </p>
+                    }
                 }
                 else
                 {
@@ -540,8 +570,10 @@ else
                         }
                     </ul>
                 }
+                </LoadGate>
             </section>
         }
+        </LoadGate>
     </ProjectPageShell>
 
     @* ---- Add-subcontractor modal: the directory, searchable ---- *@
@@ -1044,21 +1076,46 @@ else
     [Parameter] public string ProjectId { get; set; } = "";
     [Parameter] public string BidPackageId { get; set; } = "";
 
-    private bool isLoaded;
+    // Session checked and the user is signed in — not "the package is here". The tab chrome and
+    // the back link show straight away; each section waits behind its own gate.
+    private bool sessionReady;
+    // Every query in LoadAsync has had its turn. Some may have failed — that is the point: a gate
+    // held open by a fetch that is never coming back is worse than an empty panel.
+    private bool loadAttempted;
     private bool busy;
     private string? error;
     private string? aiNote;
 
     private BidPackage? package;
-    private IReadOnlyList<BidPackageRecipient> recipients = Array.Empty<BidPackageRecipient>();
-    private IReadOnlyList<BidPackageLineItem> lineItems = Array.Empty<BidPackageLineItem>();
-    private IReadOnlyList<MailboxMessage> emails = Array.Empty<MailboxMessage>();
-    private IReadOnlyList<Quote> quotes = Array.Empty<Quote>();
-    private IReadOnlyList<QuoteLineItem> quoteLines = Array.Empty<QuoteLineItem>();
-    private IReadOnlyList<Drawing> packageDrawings = Array.Empty<Drawing>();
+    // Nullable on purpose: every one of these lists has a real empty answer ("nobody invited yet",
+    // "no drawings linked"), so "not fetched" has to be a state of its own or each panel announces
+    // an emptiness it hasn't checked. The lowercase accessors keep the reads non-null.
+    private IReadOnlyList<BidPackageRecipient>? fetchedRecipients;
+    private IReadOnlyList<BidPackageLineItem>? fetchedLineItems;
+    private IReadOnlyList<MailboxMessage>? fetchedEmails;
+    private IReadOnlyList<Quote>? fetchedQuotes;
+    private IReadOnlyList<QuoteLineItem>? fetchedQuoteLines;
+    private IReadOnlyList<Drawing>? fetchedPackageDrawings;
+
+    private IReadOnlyList<BidPackageRecipient> recipients => fetchedRecipients ?? Array.Empty<BidPackageRecipient>();
+    private IReadOnlyList<BidPackageLineItem> lineItems => fetchedLineItems ?? Array.Empty<BidPackageLineItem>();
+    private IReadOnlyList<MailboxMessage> emails => fetchedEmails ?? Array.Empty<MailboxMessage>();
+    private IReadOnlyList<Quote> quotes => fetchedQuotes ?? Array.Empty<Quote>();
+    private IReadOnlyList<QuoteLineItem> quoteLines => fetchedQuoteLines ?? Array.Empty<QuoteLineItem>();
+    private IReadOnlyList<Drawing> packageDrawings => fetchedPackageDrawings ?? Array.Empty<Drawing>();
+
     private IReadOnlyList<ProjectWorkOrderDetail> projectOrders = Array.Empty<ProjectWorkOrderDetail>();
     private IReadOnlyList<BoqLineItem> boqLines = Array.Empty<BoqLineItem>();
     private IReadOnlyList<VariationOrder> variations = Array.Empty<VariationOrder>();
+
+    // ── Panel gates. A query that failed has "arrived" as far as the gate is concerned: the
+    // banner at the top says what went wrong, and a jewel that pulses for ever says nothing. ──
+    private bool RecipientsReady => fetchedRecipients is not null || loadAttempted;
+    private bool LineItemsReady => fetchedLineItems is not null || loadAttempted;
+    private bool EmailsReady => fetchedEmails is not null || loadAttempted;
+    // The comparison table reads the quote lines alongside the quotes, so it waits for both.
+    private bool QuotesReady => (fetchedQuotes is not null && fetchedQuoteLines is not null) || loadAttempted;
+    private bool DrawingsReady => fetchedPackageDrawings is not null || loadAttempted;
 
     private bool showInviteModal;
     private string subSearch = "";
@@ -1073,6 +1130,7 @@ else
         {
             await Session.EnsureLoadedAsync();
             if (!Auth.IsSignedIn) { Nav.NavigateTo("/login", forceLoad: true); return; }
+            sessionReady = true;
             Subs.OnChange += OnStoreChanged;
             CostCenters.OnChanged += OnStoreChanged;
             try { _ = Subs.All(); } catch { /* directory load is best-effort */ }
@@ -1086,7 +1144,10 @@ else
         }
         finally
         {
-            isLoaded = true;
+            // Set here too: a failure before the session resolved still has to reveal the page,
+            // banner and all, rather than leaving it under a spinner.
+            sessionReady = true;
+            loadAttempted = true;
         }
     }
 
@@ -1104,22 +1165,22 @@ else
         try { package = await Queries.AskAsync(new GetBidPackageById(BidPackageId), CancellationToken.None); }
         catch (Exception ex) { error = $"Couldn't load the bid package: {ex.Message}"; }
 
-        try { recipients = await Queries.AskAsync(new ListBidPackageRecipients(BidPackageId), CancellationToken.None); }
+        try { fetchedRecipients = await Queries.AskAsync(new ListBidPackageRecipients(BidPackageId), CancellationToken.None); }
         catch (Exception ex) { error = Append(error, $"Couldn't load invited subcontractors: {ex.Message}"); }
 
-        try { lineItems = await Queries.AskAsync(new ListBidPackageLineItems(BidPackageId), CancellationToken.None); }
+        try { fetchedLineItems = await Queries.AskAsync(new ListBidPackageLineItems(BidPackageId), CancellationToken.None); }
         catch (Exception ex) { error = Append(error, $"Couldn't load line items: {ex.Message}"); }
 
-        try { emails = await Queries.AskAsync(new ListBidPackageEmails(BidPackageId), CancellationToken.None); }
+        try { fetchedEmails = await Queries.AskAsync(new ListBidPackageEmails(BidPackageId), CancellationToken.None); }
         catch (Exception ex) { error = Append(error, $"Couldn't load related emails: {ex.Message}"); }
 
-        try { quotes = await Queries.AskAsync(new ListQuotesForBidPackage(BidPackageId), CancellationToken.None); }
+        try { fetchedQuotes = await Queries.AskAsync(new ListQuotesForBidPackage(BidPackageId), CancellationToken.None); }
         catch (Exception ex) { error = Append(error, $"Couldn't load tender submissions: {ex.Message}"); }
 
-        try { quoteLines = await Queries.AskAsync(new ListQuoteLineItemsForBidPackage(BidPackageId), CancellationToken.None); }
+        try { fetchedQuoteLines = await Queries.AskAsync(new ListQuoteLineItemsForBidPackage(BidPackageId), CancellationToken.None); }
         catch { /* comparison simply shows totals only */ }
 
-        try { packageDrawings = await Queries.AskAsync(new ListBidPackageDrawings(BidPackageId), CancellationToken.None); }
+        try { fetchedPackageDrawings = await Queries.AskAsync(new ListBidPackageDrawings(BidPackageId), CancellationToken.None); }
         catch { /* documents section simply shows none */ }
 
         // The order this package's award raised — drives the persistent award summary. Best-effort:
@@ -1212,7 +1273,7 @@ else
             busy = true;
             var boqId = coverageChoice == BidPackageLineCoverage.ContractLine && !string.IsNullOrWhiteSpace(coverageBoqId) ? coverageBoqId : null;
             var variationId = coverageChoice == BidPackageLineCoverage.Variation && !string.IsNullOrWhiteSpace(coverageVariationId) ? coverageVariationId : null;
-            lineItems = await Commands.SendAsync(
+            fetchedLineItems = await Commands.SendAsync(
                 new SetBidPackageLineItemCoverage(linkingLine.LineItemId, coverageChoice, boqId, variationId), CancellationToken.None);
             showCoverageModal = false;
             linkingLine = null;
@@ -1321,7 +1382,7 @@ else
                 .Select(d => new BidPackageLineItemInput(
                     d.Description.Trim(), (d.Unit ?? "").Trim(), d.Quantity, (d.Trade ?? "").Trim(), d.CostCode.Trim()))
                 .ToList();
-            lineItems = await Commands.SendAsync(new AddBidPackageLineItems(BidPackageId, inputs), CancellationToken.None);
+            fetchedLineItems = await Commands.SendAsync(new AddBidPackageLineItems(BidPackageId, inputs), CancellationToken.None);
             showAiReviewModal = false;
             aiNote = $"Added {accepted.Count} line item{(accepted.Count == 1 ? "" : "s")} from the AI draft. Existing line items were left untouched.";
         }
@@ -1438,7 +1499,7 @@ else
                 ids.Add(created.SubcontractorId);
                 await SubsReadModel.RefreshAsync(CancellationToken.None);
             }
-            recipients = await Commands.SendAsync(
+            fetchedRecipients = await Commands.SendAsync(
                 new InviteSubcontractorsToBidPackage(BidPackageId, ids), CancellationToken.None);
             selected.Clear();
             quickAddName = quickAddEmail = quickAddTradeId = "";
@@ -1573,7 +1634,7 @@ else
             }
             if (directoryChanged) await SubsReadModel.RefreshAsync(CancellationToken.None);
 
-            recipients = await Commands.SendAsync(
+            fetchedRecipients = await Commands.SendAsync(
                 new InviteSubcontractorsToBidPackage(BidPackageId, ids), CancellationToken.None);
             selectedPlaces.Clear();
             showFindModal = false;
@@ -1593,7 +1654,7 @@ else
         try
         {
             busy = true;
-            recipients = await Commands.SendAsync(
+            fetchedRecipients = await Commands.SendAsync(
                 new RemoveBidPackageRecipient(BidPackageId, recipient.RecipientId), CancellationToken.None);
         }
         catch { error = "Couldn't remove that subcontractor. Please try again."; }
@@ -1609,7 +1670,7 @@ else
         try
         {
             busy = true;
-            recipients = await Commands.SendAsync(
+            fetchedRecipients = await Commands.SendAsync(
                 new DeclineBidPackageRecipient(BidPackageId, recipient.RecipientId, declined), CancellationToken.None);
         }
         catch { error = "Couldn't update that subcontractor's status. Please try again."; }
@@ -1646,7 +1707,7 @@ else
         try
         {
             busy = true;
-            packageDrawings = await Commands.SendAsync(
+            fetchedPackageDrawings = await Commands.SendAsync(
                 new SetBidPackageDrawings(BidPackageId, selectedDrawingIds.ToList()), CancellationToken.None);
             showDrawingsModal = false;
         }
@@ -2045,7 +2106,7 @@ else
                     (draft.Trade ?? "").Trim(),
                     draft.CostCode.Trim()))
                 .ToList();
-            lineItems = await Commands.SendAsync(new SetBidPackageLineItems(BidPackageId, inputs), CancellationToken.None);
+            fetchedLineItems = await Commands.SendAsync(new SetBidPackageLineItems(BidPackageId, inputs), CancellationToken.None);
             editingLines = false;
             lineDrafts.Clear();
         }

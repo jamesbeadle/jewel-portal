@@ -7,7 +7,7 @@
 
 <PageTitle>Progress · JPMS</PageTitle>
 
-@if (!isLoaded)
+@if (!sessionReady)
 {
     <section class="px-6 md:px-8 py-12">
         <LoadGate IsLoading="true" Prominent="true" Label="Loading" />
@@ -45,6 +45,7 @@ else
             </div>
         }
 
+        <LoadGate IsLoading="@(!ReportsReady)" Label="Loading reports">
         @if (Reports.Count == 0)
         {
             <p class="text-sm text-content-subtle italic mb-8">No progress reports yet.</p>
@@ -84,12 +85,21 @@ else
                 }
             </ul>
         }
+        </LoadGate>
 
         @* ---- Progress updates -------------------------------------------------------------- *@
         <div class="flex flex-wrap items-end justify-between gap-3 mb-5">
             <div>
                 <h2 class="text-lg font-semibold text-content">Progress of the works</h2>
-                <p class="text-sm text-content-muted">@Updates.Count update@(Updates.Count == 1 ? "" : "s") · groups of photos with a description, recorded as the works progress</p>
+                @* The tally waits for the register: "0 updates" that turns into "12" a second later
+                   has already been read and believed. *@
+                <p class="text-sm text-content-muted">
+                    @if (UpdatesReady)
+                    {
+                        <text>@Updates.Count update@(Updates.Count == 1 ? "" : "s") · </text>
+                    }
+                    groups of photos with a description, recorded as the works progress
+                </p>
             </div>
             @if (CanContribute)
             {
@@ -107,11 +117,10 @@ else
             </div>
         }
 
+        <LoadGate IsLoading="@(!UpdatesReady)" Prominent="true" Label="Loading progress">
         @if (Updates.Count == 0)
         {
-            <LoadGate IsLoading="@(!ProgressStore.UpdatesLoadedFor(ProjectId))" Label="Loading progress">
-                <p class="text-sm text-content-subtle italic">No progress recorded yet.</p>
-            </LoadGate>
+            <p class="text-sm text-content-subtle italic">No progress recorded yet.</p>
         }
         else
         {
@@ -179,6 +188,7 @@ else
                 }
             </ul>
         }
+        </LoadGate>
 
         @if (actionError is not null)
         {
@@ -192,7 +202,9 @@ else
 
     [Parameter] public string ProjectId { get; set; } = "";
 
-    private bool isLoaded;
+    // Session checked and the user is signed in — not "the data is here". The page chrome shows
+    // straight away; each panel waits for its own register.
+    private bool sessionReady;
     private bool isRecording;
     private bool isBuildingReport;
     private ProgressReport? editingReport;
@@ -204,6 +216,10 @@ else
 
     private IReadOnlyList<ProgressUpdate> Updates => ProgressStore.UpdatesFor(ProjectId);
     private IReadOnlyList<ProgressReport> Reports => ProgressStore.ReportsFor(ProjectId);
+
+    // ── Panel gates. Reports and updates are fetched separately, so they wait separately. ──
+    private bool ReportsReady => ProgressStore.ReportsLoadedFor(ProjectId);
+    private bool UpdatesReady => ProgressStore.UpdatesLoadedFor(ProjectId);
 
     // Site Managers collate progress on site; Project Managers and the Managing Director may
     // contribute too (the MD helps out). Administrators pass every gate.
@@ -218,7 +234,7 @@ else
         // Refresh on entry: cached updates/reports render immediately, then update when the
         // background reload lands — so navigating back to this tab never shows stale data.
         ProgressStore.Refresh(ProjectId);
-        isLoaded = true;
+        sessionReady = true;
     }
 
     // One compact line, only the recorded parts: "Partly cloudy · 17°C / 9°C · Wind 6 mph · …"

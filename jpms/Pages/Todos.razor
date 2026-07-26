@@ -27,7 +27,7 @@
     the item onto the Done tab.
 *@
 
-@if (!isLoaded)
+@if (!sessionReady)
 {
     <section class="px-6 md:px-8 py-12">
         <LoadGate IsLoading="true" Prominent="true" Label="Loading" />
@@ -74,32 +74,38 @@ else
             <button type="button" class="@StatusTabClass(StatusFilter.Done)" @onclick="() => statusFilter = StatusFilter.Done">Done</button>
             <button type="button" class="@StatusTabClass(StatusFilter.All)" @onclick="() => statusFilter = StatusFilter.All">All</button>
 
-            @* The project filter: every project with items, plus company-wide (no-project) only. *@
-            <select class="field !w-auto text-xs" value="@scopeFilter" @onchange="e => scopeFilter = e.Value?.ToString() ?? ScopeAll">
-                <option value="@ScopeAll">All</option>
-                <option value="@ScopeGeneral">Company-wide</option>
-                @foreach (var project in ProjectsWithItems)
-                {
-                    <option value="@project.ProjectId">@project.Reference — @project.Name</option>
-                }
-            </select>
-
-            @if (CanSeeAll && assigneeOptions.Count > 0)
-            {
-                <select class="field !w-auto text-xs" value="@assigneeFilter" @onchange="e => assigneeFilter = e.Value?.ToString() ?? string.Empty">
-                    <option value="">Any role</option>
-                    <option value="@Unassigned">Unassigned</option>
-                    @foreach (var option in assigneeOptions)
+            @* Both selects are built from data — the scope filter from the projects that have
+               items, the role filter from the assignable-role pool — so they wait with the list.
+               A short list of options that quietly grows misleads exactly as a 0 count does. *@
+            <LoadGate IsLoading="@(!filtersReady)" Height="min-h-[30px]" Label="">
+                @* The project filter: every project with items, plus company-wide (no-project) only. *@
+                <select class="field !w-auto text-xs" value="@scopeFilter" @onchange="e => scopeFilter = e.Value?.ToString() ?? ScopeAll">
+                    <option value="@ScopeAll">All</option>
+                    <option value="@ScopeGeneral">Company-wide</option>
+                    @foreach (var project in ProjectsWithItems)
                     {
-                        <option value="@option.Value">@option.Label</option>
+                        <option value="@project.ProjectId">@project.Reference — @project.Name</option>
                     }
                 </select>
-            }
+
+                @if (CanSeeAll && assigneeOptions.Count > 0)
+                {
+                    <select class="field !w-auto text-xs" value="@assigneeFilter" @onchange="e => assigneeFilter = e.Value?.ToString() ?? string.Empty">
+                        <option value="">Any role</option>
+                        <option value="@Unassigned">Unassigned</option>
+                        @foreach (var option in assigneeOptions)
+                        {
+                            <option value="@option.Value">@option.Label</option>
+                        }
+                    </select>
+                }
+            </LoadGate>
         </div>
 
-        @if (loading)
+        <LoadGate IsLoading="@loading" Prominent="true" Label="Loading to-dos">
+        @if (listFailed)
         {
-            <JewelSpinner Class="py-10" Label="Loading" />
+            <p class="text-sm text-negative">Couldn't load the to-do list. The reason is in the red bar above — reload to try again.</p>
         }
         else
         {
@@ -156,6 +162,7 @@ else
                 }
             </div>
         }
+        </LoadGate>
 
     </section>
 }
@@ -205,8 +212,15 @@ else
 
     private enum StatusFilter { Open, Done, All }
 
-    private bool isLoaded;
+    // Session checked and the user signed in. This is NOT "the data is here" — keeping the two
+    // apart is what lets the page show its chrome at once and hold the list until it lands.
+    private bool sessionReady;
     private bool loading = true;
+    // A failed fetch has to open the gate, or the jewel pulses forever; the panel then says so
+    // rather than reporting an empty list nobody actually asked for.
+    private bool listFailed;
+    // The filter row is built from the same round of fetches as the list, so it waits with it.
+    private bool filtersReady;
     private bool busy;
     private string? error;
 
@@ -244,7 +258,10 @@ else
     {
         await Session.EnsureLoadedAsync();
         if (!Auth.IsSignedIn) { Nav.NavigateTo("/login", forceLoad: true); return; }
-        isLoaded = true;
+        sessionReady = true;
+        // Paint the chrome before the fetches: Blazor re-renders OnInitializedAsync only at its
+        // FIRST await, which has already passed, so without this the page waits on the list.
+        StateHasChanged();
         if (!Session.IsApproved || !HasInternalRole) { loading = false; return; }
 
         // The list, the project labels and the assignable-role pool are independent, so they go
@@ -252,6 +269,7 @@ else
         var loads = new List<Task> { LoadAsync(), LoadProjectLabelsAsync() };
         if (CanSeeAll) loads.Add(LoadAssigneeOptionsAsync());
         await Task.WhenAll(loads);
+        filtersReady = true;
     }
 
     // Project labels for the scope chips/filter, and the assignable-role pool for the
@@ -275,8 +293,8 @@ else
     private async Task LoadAsync()
     {
         loading = true;
-        try { items = CanSeeAll ? await TodoStore.ListAllAsync() : await TodoStore.ListMineAsync(); }
-        catch { error = "Couldn't load the to-do list. Please try again."; }
+        try { items = CanSeeAll ? await TodoStore.ListAllAsync() : await TodoStore.ListMineAsync(); listFailed = false; }
+        catch { error = "Couldn't load the to-do list. Please try again."; listFailed = true; }
         finally { loading = false; }
     }
 

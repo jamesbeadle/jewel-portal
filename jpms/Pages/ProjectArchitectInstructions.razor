@@ -19,7 +19,7 @@
     from the attachment, or filed straight into this register by the architect or the Jewel team.
 *@
 
-@if (!isLoaded)
+@if (!sessionReady)
 {
     <LoadGate IsLoading="true" Prominent="true" Label="Loading" />
 }
@@ -50,16 +50,21 @@ else
             <div class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-4">@error</div>
         }
 
-        <Panel IsLoading="@(!loaded)">
-            @if (instructions.Count == 0)
+        @* A failed load must open the panel, or the jewel pulses for ever; the banner above carries
+           the reason, and claiming "none recorded" over a fetch that failed would be worse still. *@
+        <Panel IsLoading="@(instructions is null && error is null)">
+            @if (instructions is null || instructions.Count == 0)
             {
-                <p class="text-sm text-content-subtle">
-                    No instructions recorded on this project yet.
-                    @if (CanManage)
-                    {
-                        <text>File one when it arrives — by email or straight from the architect.</text>
-                    }
-                </p>
+                @if (error is null)
+                {
+                    <p class="text-sm text-content-subtle">
+                        No instructions recorded on this project yet.
+                        @if (CanManage)
+                        {
+                            <text>File one when it arrives — by email or straight from the architect.</text>
+                        }
+                    </p>
+                }
             }
             else
             {
@@ -77,7 +82,7 @@ else
                             </tr>
                         </thead>
                         <tbody>
-                            @foreach (var item in instructions)
+                            @foreach (var item in instructions!)
                             {
                                 var instruction = item;
                                 <tr class="border-b border-line/60 align-top">
@@ -292,13 +297,16 @@ else
 @code {
     [Parameter] public string ProjectId { get; set; } = "";
 
-    private bool isLoaded;
-    private bool loaded;
+    // Session checked and the user is signed in — the heading and the File button show straight
+    // away. Whether the register has arrived is a separate question, answered by `instructions`.
+    private bool sessionReady;
     private bool busy;
     private string? error;
     private string? dialogError;
 
-    private List<ArchitectInstruction> instructions = new();
+    // Nullable on purpose: an empty register is a real answer, so "not fetched yet" has to be a
+    // distinct state — otherwise the panel says "none recorded" before it has looked.
+    private List<ArchitectInstruction>? instructions;
     private List<VariationOrder> variations = new();
 
     private bool fileDialogOpen;
@@ -330,8 +338,8 @@ else
     {
         await Session.EnsureLoadedAsync();
         if (!Auth.IsSignedIn) { Nav.NavigateTo("/login", forceLoad: true); return; }
-        isLoaded = true;
-        if (!Session.IsApproved) { loaded = true; return; }
+        sessionReady = true;
+        if (!Session.IsApproved) return;
 
         await LoadAsync();
     }
@@ -357,8 +365,6 @@ else
             // The register still reads without the variation list; only the link pickers degrade.
             variations = new List<VariationOrder>();
         }
-
-        loaded = true;
     }
 
     private void OpenFileDialog()

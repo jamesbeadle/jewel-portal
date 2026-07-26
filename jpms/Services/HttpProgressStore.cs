@@ -35,6 +35,8 @@ public sealed class HttpProgressStore : IProgressStore
         return readModel.UpdatesCurrent(projectId);
     }
 
+    public bool ReportsLoadedFor(string projectId) => readModel.ReportsLoaded(projectId);
+
     public IReadOnlyList<ProgressReport> ReportsFor(string projectId)
     {
         readModel.EnsureReports(projectId, CancellationToken.None);

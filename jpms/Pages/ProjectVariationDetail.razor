@@ -18,7 +18,7 @@
 
 <PageTitle>Variation · JPMS</PageTitle>
 
-@if (!isLoaded)
+@if (!sessionReady)
 {
     <section class="px-6 md:px-8 py-12">
         <LoadGate IsLoading="true" Prominent="true" Label="Loading" />
@@ -28,10 +28,19 @@ else if (!Session.IsApproved)
 {
     <RequestAccessView Email="@Auth.CurrentUser!.Email" DisplayName="@Auth.CurrentUser.DisplayName" />
 }
+else if (!orderLoaded)
+{
+    @* Tab chrome first, the record when it lands — "could not be found" must never flash over a
+       fetch that is still running. *@
+    <ProjectPageShell ProjectId="@ProjectId" ActiveTab="requests">
+        <LoadGate IsLoading="true" Prominent="true" Label="Loading variation" />
+    </ProjectPageShell>
+}
 else if (order is null)
 {
     <ProjectPageShell ProjectId="@ProjectId" ActiveTab="requests">
-        <p class="text-sm text-content-subtle italic">That variation order could not be found.</p>
+        @* A failed fetch and a missing record both leave `order` null — say which. *@
+        <p class="text-sm text-content-subtle italic">@(error ?? "That variation order could not be found.")</p>
     </ProjectPageShell>
 }
 else
@@ -130,11 +139,14 @@ else
         }
         else if (order.Status == VariationOrderStatus.AwaitingArchitectInstruction)
         {
+            @* "None is linked yet" is the one thing this page must not say before it has looked. *@
+            <LoadGate IsLoading="@(!instructionsLoaded)" Label="Loading instructions">
             <div class="rounded-lg bg-surface-raised border border-line px-3 py-2 mb-4 text-sm text-content-subtle">
                 Waiting on a formal Architect's Instruction. None is linked yet —
                 <a href="@($"/projects/{ProjectId}/architect-instructions")" class="text-accent hover:underline">file or link one</a>
                 when it arrives, then approve the variation to write the contract figures.
             </div>
+            </LoadGate>
         }
 
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
@@ -294,17 +306,18 @@ else
                         <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-3">@emailsError</p>
                     }
 
-                    @if (!emailsLoaded)
+                    <LoadGate IsLoading="@(!emailsLoaded)" Prominent="true" Label="Loading emails">
+                    @if (emails.Count == 0)
                     {
-                        <JewelSpinner Class="py-6" Label="Loading" />
-                    }
-                    else if (emails.Count == 0)
-                    {
+                        @* Only when the mailbox actually answered "none" — a failure says so above. *@
+                        @if (emailsError is null)
+                        {
                         <p class="text-sm text-content-subtle italic">
                             No emails are tagged to this variation yet. Tag an email to
                             <span class="font-medium not-italic text-content">@order.Reference</span>@(ApprovedOrder is not null ? $" or {order.VariationRef}" : "")
                             in mailbox triage and it appears here.
                         </p>
+                        }
                     }
                     else
                     {
@@ -331,15 +344,20 @@ else
                             }
                         </ul>
                     }
+                    </LoadGate>
                 </div>
             </div>
 
             <div class="space-y-5">
                 <div class="panel p-5 space-y-3 text-sm">
+                    @* One panel, one arrival: the selected sub's name comes from the subcontractor
+                       directory, so the rows wait for it rather than showing a raw id first. *@
+                    <LoadGate IsLoading="@(!Subcontractors.IsLoaded)" Label="Loading details">
                     <div class="flex justify-between"><span class="text-content-subtle">Reference</span><span class="font-mono">@order.Reference</span></div>
                     <div class="flex justify-between"><span class="text-content-subtle">Status</span><span>@order.Status.DisplayName()</span></div>
                     <div class="flex justify-between"><span class="text-content-subtle">Estimated value</span><span>@(order.EstimatedValue is null ? "—" : Money(order.EstimatedValue.Value))</span></div>
                     <div class="flex justify-between"><span class="text-content-subtle">Selected sub</span><span>@SelectedSubName()</span></div>
+                    </LoadGate>
                 </div>
 
                 @if (ApprovedOrder is not null)
@@ -354,6 +372,9 @@ else
                             <span class="font-mono font-semibold">@(approved.VariationRef ?? approved.DisplayNumber)</span>
                         </div>
                         <div class="flex justify-between text-sm"><span class="text-content-subtle">Value</span><span>@Money(approved.Value)</span></div>
+                        @* The cost-centre split is read off the valuation report's lines, so it waits
+                           for them: one centre that quietly becomes three is the same lie as a £0. *@
+                        <LoadGate IsLoading="@(!ValuationLinesReady)" Label="Loading cost centres">
                         @{ var centres = ApprovedCostCentres; }
                         <div class="flex justify-between text-sm gap-3">
                             <span class="text-content-subtle whitespace-nowrap">Cost @(centres.Count > 1 ? "centres" : "centre")</span>
@@ -367,6 +388,7 @@ else
                         {
                             <p class="text-xs text-content-subtle">Added to the Valuation Report and committed to the cost centre.</p>
                         }
+                        </LoadGate>
                         @if (CanManage)
                         {
                             <button type="button" class="btn-secondary w-full" disabled="@busy" @onclick="IssueWorkOrder">Issue work order</button>
@@ -590,7 +612,12 @@ else
     [Parameter] public string ProjectId { get; set; } = "";
     [Parameter] public string VariationOrderId { get; set; } = "";
 
-    private bool isLoaded;
+    // Session checked and the user is signed in — not "the record is here". The tab chrome shows
+    // straight away; the record and each panel's own sources arrive behind their gates.
+    private bool sessionReady;
+    // The record's fetch has answered, one way or the other. Distinct from `order is not null`,
+    // which is also how "no such variation" looks.
+    private bool orderLoaded;
     private bool busy;
     private string? error;
     private VariationOrder? order;
@@ -604,6 +631,7 @@ else
     // The Architect's Instructions that cover this variation — the evidence behind its figures, and
     // the thing an Awaiting-AI variation is waiting for.
     private List<ArchitectInstruction> linkedInstructions = new();
+    private bool instructionsLoaded;
 
     private bool returningToQuoting;
     private bool rejectingOrder;   // post-approval reject (reverses commercial writes) — inline panel
@@ -680,6 +708,10 @@ else
 
     private IReadOnlyList<Subcontractor> Subs => Subcontractors.All();
 
+    // The approved variation's build-up lives on the valuation report; until its lines land,
+    // ApprovedCostCentres falls back to the order's single primary code.
+    private bool ValuationLinesReady => Valuation.ReportLoadedFor(ProjectId);
+
     protected override async Task OnInitializedAsync()
     {
         await Session.EnsureLoadedAsync();
@@ -694,8 +726,8 @@ else
         // and re-render when the lines land (stale-while-revalidate).
         Valuation.OnChange += StateHasChanged;
         Valuation.Refresh(ProjectId);
+        sessionReady = true;
         await ReloadAsync();
-        isLoaded = true;
     }
 
     // Scrolls to and flashes the approved-figures panel. The lineage bar no longer needs this —
@@ -731,6 +763,7 @@ else
         {
             linkedInstructions = new List<ArchitectInstruction>();
         }
+        finally { instructionsLoaded = true; }
     }
 
     private async Task ReloadAsync()
@@ -753,6 +786,7 @@ else
             error = null;
         }
         catch { error = "Couldn't load the variation order. Please try again."; }
+        finally { orderLoaded = true; }
 
         await LoadLinkedInstructionsAsync();
         await LoadEmailsAsync();

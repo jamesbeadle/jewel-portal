@@ -18,7 +18,7 @@
     TriageRoles.AllowedToTriage); rows about the client pathway are ABOUT the wall, never inside it.
 *@
 
-@if (!isLoaded)
+@if (!sessionReady)
 {
     <section class="px-6 md:px-8 py-12">
         <LoadGate IsLoading="true" Prominent="true" Label="Loading" />
@@ -60,13 +60,18 @@ else
                 }
             </select>
 
-            <select class="field !w-auto text-xs" value="@projectFilter" @onchange="OnProjectChanged">
-                <option value="">All projects</option>
-                @foreach (var project in ProjectOptions)
-                {
-                    <option value="@project.ProjectId">@project.Reference — @project.Name</option>
-                }
-            </select>
+            @* Built from the project list, so it waits for it: a picker offering "All projects"
+               alone reads as "there are none to filter by", and the reader has already believed it
+               by the time the options appear. The event-type list is a constant and needs no gate. *@
+            <LoadGate IsLoading="@(!projectOptionsReady)" Height="min-h-[30px]" Label="">
+                <select class="field !w-auto text-xs" value="@projectFilter" @onchange="OnProjectChanged">
+                    <option value="">All projects</option>
+                    @foreach (var project in ProjectOptions)
+                    {
+                        <option value="@project.ProjectId">@project.Reference — @project.Name</option>
+                    }
+                </select>
+            </LoadGate>
 
             @if (loaded && total > 0)
             {
@@ -79,9 +84,11 @@ else
             <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-4">@loadError</p>
         }
 
-        @if (!loaded)
+        <LoadGate IsLoading="@(!loaded)" Prominent="true" Label="Loading the audit trail">
+        @if (loadError is not null && items.Count == 0)
         {
-            <JewelSpinner Class="py-16" Label="Loading" />
+            @* A failed page has nothing to report; saying "nothing recorded" would read as one. *@
+            <p class="text-sm text-negative">Couldn't load the audit trail. The reason is in the red bar above — reload to try again.</p>
         }
         else if (items.Count == 0)
         {
@@ -160,14 +167,21 @@ else
                 </div>
             }
         }
+        </LoadGate>
     </section>
 }
 
 @code {
     private const int PageSize = 50;
 
-    private bool isLoaded;
+    // Session checked and the user signed in. This is NOT "the register is here" — that is
+    // `loaded`, below; keeping the two apart is what lets the chrome and the filters show at once
+    // while the first page is still in flight.
+    private bool sessionReady;
     private bool loaded;
+    // The project labels have answered (or failed — a failure leaves the picker with the one
+    // "All projects" option, which is honest once it is known to be all there is).
+    private bool projectOptionsReady;
     private bool loadingMore;
     private string? loadError;
 
@@ -216,11 +230,15 @@ else
     {
         await Session.EnsureLoadedAsync();
         if (!Auth.IsSignedIn) { Nav.NavigateTo("/login", forceLoad: true); return; }
-        isLoaded = true;
-        if (!Session.IsApproved || !CanAccess) { loaded = true; return; }
+        sessionReady = true;
+        // Paint the chrome before the fetches: Blazor re-renders OnInitializedAsync only at its
+        // FIRST await, which has already passed, so without this the page waits on the first page.
+        StateHasChanged();
+        if (!Session.IsApproved || !CanAccess) { loaded = true; projectOptionsReady = true; return; }
 
         // Project labels for the filter dropdown; failing only degrades the filter, never the list.
         try { if (Projects.Current is null) await Projects.RefreshAsync(CancellationToken.None); } catch { }
+        projectOptionsReady = true;
         await LoadAsync(reset: true);
     }
 

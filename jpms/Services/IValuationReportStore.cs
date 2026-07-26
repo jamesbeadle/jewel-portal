@@ -9,6 +9,12 @@ public interface IValuationReportStore
     IReadOnlyList<ValuationClaim> ClaimsFor(string projectId);
     IReadOnlyList<ClaimLine> EntriesFor(string claimId);
 
+    /// <summary>True once this project's valuation lines AND claims have both landed. Every
+    /// figure derived from the report (works complete, revised contract sum, retention) is a sum
+    /// over those two lists, and each answers empty until it arrives — so a page that renders
+    /// before this is true states a confident zero it will silently correct.</summary>
+    bool ReportLoadedFor(string projectId);
+
     /// <summary>Starts a background refetch of the project's lines and claims even if cached,
     /// and marks per-claim entries stale so the next read refetches them. Call on page entry
     /// so navigating back to the Valuation tab shows fresh data (stale-while-revalidate).</summary>

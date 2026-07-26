@@ -7,7 +7,7 @@
 
 <PageTitle>Drawing · JPMS</PageTitle>
 
-@if (!isLoaded)
+@if (!sessionReady)
 {
     <section class="px-6 md:px-8 py-12">
         <LoadGate IsLoading="true" Prominent="true" Label="Loading" />
@@ -20,12 +20,9 @@ else if (!Session.IsApproved)
 else
 {
     <ProjectPageShell ProjectId="@ProjectId" ActiveTab="drawings">
-        @if (!DrawingStore.DrawingsLoadedFor(ProjectId))
-        {
-            @* Register fetch still in flight — don't flash "not found" before it lands. *@
-            <JewelSpinner Class="py-6" Label="Loading" />
-        }
-        else if (drawing is null)
+        @* Register fetch still in flight — don't flash "not found" before it lands. *@
+        <LoadGate IsLoading="@(!DrawingStore.DrawingsLoadedFor(ProjectId))" Prominent="true" Label="Loading drawing">
+        @if (drawing is null)
         {
             <p class="text-sm text-content-subtle italic">Drawing not found.</p>
         }
@@ -115,6 +112,9 @@ else
                 </div>
             }
 
+            @* Preview and revision list both read the revision set — one gate, so neither can
+               announce "no file to preview yet" while the fetch is still running. *@
+            <LoadGate IsLoading="@(!RevisionsReady)" Prominent="true" Label="Loading revisions">
             <div class="grid gap-6 lg:grid-cols-5">
                 <div class="lg:col-span-3">
                     @if (PreviewRevision is null)
@@ -151,7 +151,9 @@ else
                                          ProjectId="@ProjectId" DrawingId="@drawing.DrawingId" />
                 </div>
             </div>
+            </LoadGate>
         }
+        </LoadGate>
     </ProjectPageShell>
 }
 
@@ -159,7 +161,9 @@ else
     [Parameter] public string ProjectId { get; set; } = "";
     [Parameter] public string DrawingId { get; set; } = "";
 
-    private bool isLoaded;
+    // Session checked and the user is signed in — not "the drawing is here". The tab chrome shows
+    // straight away; the register and the revisions each hold their own panel.
+    private bool sessionReady;
     private bool isUploading;
     private bool confirmingDelete;
     private bool deleteBusy;
@@ -169,21 +173,29 @@ else
     private bool CanManage =>
         Auth.CurrentRoles.Any(role => role is Role.Admin or Role.ManagingDirector or Role.ProjectManager);
 
+    // The register landing says nothing about this drawing's revisions — they are a separate fetch.
+    private bool RevisionsReady => DrawingStore.RevisionsLoadedFor(DrawingId);
+
     protected override async Task OnInitializedAsync()
     {
         await Session.EnsureLoadedAsync();
         if (!Auth.IsSignedIn) { Nav.NavigateTo("/login", forceLoad: true); return; }
         DrawingStore.OnChange += HandleChange;
         Reload();
-        isLoaded = true;
+        sessionReady = true;
     }
 
     protected override void OnParametersSet() => Reload();
 
     // Read from the cached register rather than a blocking query. A synchronous
     // wait on an async HTTP call (the old DrawingStore.Find) deadlocks on WebAssembly.
-    private void Reload() =>
+    private void Reload()
+    {
         drawing = Siblings.FirstOrDefault(candidate => candidate.DrawingId == DrawingId);
+        // The revision fetch is started by reading it, and every read now sits behind a closed
+        // gate — so start it here or the gate waits on a load nothing ever asked for.
+        _ = DrawingStore.RevisionsFor(DrawingId);
+    }
 
     private IReadOnlyList<Drawing> Siblings => DrawingStore.DrawingsFor(ProjectId);
 

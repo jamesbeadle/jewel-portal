@@ -15,7 +15,7 @@
 
 <PageTitle>Work Orders · JPMS</PageTitle>
 
-@if (!isLoaded)
+@if (!sessionReady)
 {
     <section class="px-6 md:px-8 py-12">
         <LoadGate IsLoading="true" Prominent="true" Label="Loading" />
@@ -58,7 +58,15 @@ else
             </div>
         </div>
 
-        @if (Orders.Count == 0)
+        @* One panel. The summary line, the table and its footer are the same arithmetic over the
+           orders, their cost-centre master names and the per-order invoiced balances — and "no
+           work orders recorded" is a real answer, not something to guess at while they load. *@
+        <LoadGate IsLoading="@(!OrdersReady && !dataFailed)" Prominent="true" Label="Loading work orders">
+        @if (dataFailed)
+        {
+            <p class="text-sm text-negative">Couldn't load the work orders. The details are in the red bar at the top — reload to try again.</p>
+        }
+        else if (Orders.Count == 0)
         {
             <p class="text-sm text-content-subtle italic">No work orders recorded for this project yet.</p>
         }
@@ -68,7 +76,7 @@ else
                 @Orders.Count work order@(Orders.Count == 1 ? "" : "s") issued ·
                 <span class="text-content font-medium">@Money(TotalCommitted)</span> committed ·
                 @Money(TotalPaid) paid · @Money(TotalCommitted - TotalPaid) remaining
-                @if (summariesByOrder.Count > 0)
+                @if (SummariesByOrder.Count > 0)
                 {
                     <text> · </text><span class="text-content font-medium">@Money(TotalInvoiced)</span><text> invoiced against orders · @Money(TotalCommitted - TotalInvoiced) left to invoice — see the </text><a class="underline underline-offset-4 hover:text-content" href="@($"/projects/{ProjectId}/work-order-allocation")">WO Allocation tab</a>
                 }
@@ -166,7 +174,7 @@ else
                                                         <td class="px-3 py-2" title="@line.Line.Description">@line.Line.Title</td>
                                                         <td class="px-3 py-2 whitespace-nowrap">
                                                             <span class="inline-block rounded-full border border-line px-2 py-0.5 text-[11px] text-content-subtle">@line.Detail.Order.Status</span>
-                                                            @if (summariesByOrder.TryGetValue(line.Detail.Order.WorkOrderId, out var summary))
+                                                            @if (SummariesByOrder.TryGetValue(line.Detail.Order.WorkOrderId, out var summary))
                                                             {
                                                                 <span class="ml-1 inline-block rounded-full border border-line px-2 py-0.5 text-[11px] @InvoicingClass(summary.InvoicingStatus)"
                                                                       title="@($"{MoneyExact(summary.InvoicedToDate)} invoiced of {MoneyExact(summary.Value)} · {MoneyExact(summary.RemainingToInvoice)} left to invoice (whole order)")">
@@ -278,6 +286,7 @@ else
                                       OnClose="CloseRecode"
                                       OnSaved="HandleRecodedAsync" />
         }
+        </LoadGate>
 
         <ManualWorkOrderModal IsOpen="@manualOrderOpen"
                               ProjectId="@ProjectId"
@@ -290,7 +299,25 @@ else
 @code {
     [Parameter] public string ProjectId { get; set; } = "";
 
-    private bool isLoaded;
+    // Session checked and the user is signed in. This is NOT "the orders are here": the heading,
+    // the grouping toggle and the search box show at once, the table waits behind its own gate.
+    private bool sessionReady;
+
+    // The remembered grouping decides how the whole table is rolled up, so the rows wait for it
+    // rather than being grouped one way and re-grouped a moment later.
+    private bool groupingReady;
+
+    // A failed fetch must open the gate, or the jewel pulses forever.
+    private bool dataFailed;
+
+    // The panel reads all four: the orders, the cost-centre master its rows are named from, the
+    // per-order invoiced balances behind "left to invoice", and the grouping choice.
+    private bool OrdersReady =>
+        WorkOrders.LoadedFor(ProjectId)
+        && CostCenters.IsLoaded
+        && summariesByOrder is not null
+        && groupingReady;
+
     // Expanded group rows — cost codes in the cost-centre view, supplier names in the
     // supplier view; cleared when the grouping switches so the keys never mix.
     private readonly HashSet<string> expandedKeys = new(StringComparer.OrdinalIgnoreCase);
@@ -342,11 +369,17 @@ else
 
     private decimal TotalCommitted => Orders.Sum(detail => detail.Order.Value);
     private decimal TotalPaid => AllLines.Sum(entry => entry.Line.PaidToDate);
-    private decimal TotalInvoiced => summariesByOrder.Values.Sum(summary => summary.InvoicedToDate);
+    private decimal TotalInvoiced => SummariesByOrder.Values.Sum(summary => summary.InvoicedToDate);
 
     // Per-order invoiced balances from the linked Xero purchase lines — the same figures
     // the WO Allocation tab manages. Fetched once per tab entry alongside the orders.
-    private Dictionary<string, WorkOrderInvoiceSummary> summariesByOrder = new(StringComparer.OrdinalIgnoreCase);
+    // Nullable on purpose: no summaries is a real answer that means nothing has been invoiced,
+    // and it is indistinguishable from a fetch that hasn't landed.
+    private Dictionary<string, WorkOrderInvoiceSummary>? summariesByOrder;
+
+    private static readonly Dictionary<string, WorkOrderInvoiceSummary> NoSummaries = new(StringComparer.OrdinalIgnoreCase);
+
+    private Dictionary<string, WorkOrderInvoiceSummary> SummariesByOrder => summariesByOrder ?? NoSummaries;
 
     private static string InvoicingLabel(WorkOrderInvoicingStatus status) => status switch
     {
@@ -433,7 +466,7 @@ else
     // line above and on the WO Allocation tab.
     private decimal InvoicedShare(OrderLine entry)
     {
-        if (!summariesByOrder.TryGetValue(entry.Detail.Order.WorkOrderId, out var summary))
+        if (!SummariesByOrder.TryGetValue(entry.Detail.Order.WorkOrderId, out var summary))
             return 0m;
         var orderLineTotal = entry.Detail.Lines.Sum(line => line.LineTotal);
         return orderLineTotal == 0m
@@ -627,6 +660,7 @@ else
         if (!Auth.IsSignedIn) { Nav.NavigateTo("/login", forceLoad: true); return; }
         CostCenters.OnChanged += StateHasChanged;
         WorkOrders.OnChanged += StateHasChanged;
+        sessionReady = true;
         // Refresh once per tab entry (stale-while-revalidate, per the front-end
         // data-loading convention) — cached figures render immediately, then update.
         _ = WorkOrders.RefreshAsync(ProjectId, CancellationToken.None);
@@ -635,12 +669,21 @@ else
         // other, so they go out together instead of in series.
         var groupingTask = GroupingStorage.ReadGroupBySupplierAsync(Auth.CurrentUser!.Email);
         var summariesTask = Queries.AskAsync(new ListWorkOrderInvoiceSummaries(ProjectId), CancellationToken.None);
-        await Task.WhenAll(CostCenters.RefreshAsync(CancellationToken.None), groupingTask, summariesTask);
+        try
+        {
+            await Task.WhenAll(CostCenters.RefreshAsync(CancellationToken.None), groupingTask, summariesTask);
 
-        // Reopen in whichever grouping this user last used (cost centre by default).
-        groupBySupplier = await groupingTask;
-        isLoaded = true;
-        summariesByOrder = (await summariesTask).ToDictionary(summary => summary.WorkOrderId, StringComparer.OrdinalIgnoreCase);
+            // Reopen in whichever grouping this user last used (cost centre by default).
+            groupBySupplier = await groupingTask;
+            groupingReady = true;
+            summariesByOrder = (await summariesTask).ToDictionary(summary => summary.WorkOrderId, StringComparer.OrdinalIgnoreCase);
+        }
+        catch
+        {
+            // HttpQueryClient has already reported this to the error toast with a reference; here
+            // we only need to stop the table waiting on data that is not coming.
+            dataFailed = true;
+        }
     }
 
     public void Dispose()

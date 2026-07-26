@@ -14,6 +14,11 @@ public interface ICostCenterStore
     /// <summary>Every cost code including retired ones — for the admin page.</summary>
     IReadOnlyList<CostCenter> All();
 
+    /// <summary>False until the first fetch has landed. The read accessors answer with an empty
+    /// list in the meantime, which reads as a master with no codes in it — so a view that renders
+    /// cost-centre names or offers them in a dropdown has to wait on this.</summary>
+    bool IsLoaded { get; }
+
     event Action? OnChange;
 
     Task<IReadOnlyList<CostCenter>> ListAllAsync(CancellationToken cancellationToken = default);

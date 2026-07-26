@@ -20,6 +20,21 @@
 - **A panel reveals itself in one piece.** If a panel reads several stores, gate it on all of them
   at once with `LoadState.UntilAll(a.IsLoaded, b.IsLoaded)` (or `UntilAllPresent(x.Current, …)`)
   rather than letting each half appear on its own.
+- **`sessionReady` is not `dataReady`.** A page's auth flag says the session has been checked and
+  the user is signed in — nothing more. It gates the RequestAccessView branch and the page chrome
+  (title, intro, footnotes, tab nav), which need no data. Every data-bearing panel gates on its own
+  sources. Naming the flag `isLoaded` and setting it before the awaits is what produced the
+  zero-then-value flash this convention exists to prevent.
+- **A failed fetch must open the gate.** Pair each gate with a `dataFailed` flag set in a
+  `try/catch` around the awaited queries (and `|| X.LastRefreshFailed(id)` for read models that
+  record failure rather than throwing), so the panel says what went wrong instead of pulsing
+  forever. The error toast already carries the reference and the detail.
+- **Backing fields are nullable, not `Array.Empty<T>()`.** An empty list is a real answer that sums
+  to a real-looking zero; `null` is the only honest "not fetched yet". Expose a non-null accessor
+  (`Rows => rows ?? Array.Empty<T>()`) for the computations and gate on the nullable field.
+- Signals to gate on: `IsLoaded` / `LoadedFor(key)` / `XxxLoadedFor(key)` on stores and read models,
+  `AsyncQueryCache.Has(key)` underneath most of them, or `Current is not null` on a read model.
+  If the signal you need is missing, add it — do not gate on a proxy that happens to correlate.
 - `wwwroot/index.html`'s boot screen mirrors `LoadingScreen.razor` exactly, so the handover from
   static HTML to Blazor is invisible.
 

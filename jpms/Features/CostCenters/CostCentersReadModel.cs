@@ -18,6 +18,11 @@ public sealed class CostCentersReadModel
     /// <summary>Active cost codes in master (SortOrder) order — what the Financials tab consumes.</summary>
     public IReadOnlyList<CostCenter> Current => costCenters ?? Array.Empty<CostCenter>();
 
+    /// <summary>True once a fetch has landed. Current answers with an empty list until then, which
+    /// is indistinguishable from a master with no codes in it — so anything rendering cost-centre
+    /// names, a dropdown or a roll-up keyed on the master has to gate on this first.</summary>
+    public bool IsLoaded => costCenters is not null;
+
     /// <summary>Active cost codes in alphabetical order (by code, then name) — what select boxes consume.</summary>
     public IReadOnlyList<CostCenter> Alphabetical => alphabetical ??= Current
         .OrderBy(c => c.Code, StringComparer.OrdinalIgnoreCase)

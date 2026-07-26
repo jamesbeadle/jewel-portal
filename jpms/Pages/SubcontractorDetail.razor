@@ -8,7 +8,7 @@
 
 <PageTitle>@PageTitleText · JPMS</PageTitle>
 
-@if (!isLoaded)
+@if (!sessionReady)
 {
     <section class="px-6 md:px-8 py-12">
         <LoadGate IsLoading="true" Prominent="true" Label="Loading" />
@@ -89,13 +89,18 @@ else
                 }
             </div>
             <div class="flex flex-wrap gap-2">
-                <select class="field w-56" value="" disabled="@tradesBusy" @onchange="AddExistingTrade">
-                    <option value="">Add a trade…</option>
-                    @foreach (var trade in SubcontractorStore.Trades().Where(t => !subcontractor.HasTrade(t.TradeId)))
-                    {
-                        <option value="@trade.TradeId">@trade.Name</option>
-                    }
-                </select>
+                @* The curated list is a second fetch. An empty picker reads as "there are no other
+                   trades", which is the cue to type a new one — and that would duplicate an
+                   existing trade under a slightly different name. *@
+                <LoadGate IsLoading="@(!SubcontractorStore.TradesLoaded)" Height="min-h-[38px]" Label="">
+                    <select class="field w-56" value="" disabled="@tradesBusy" @onchange="AddExistingTrade">
+                        <option value="">Add a trade…</option>
+                        @foreach (var trade in SubcontractorStore.Trades().Where(t => !subcontractor.HasTrade(t.TradeId)))
+                        {
+                            <option value="@trade.TradeId">@trade.Name</option>
+                        }
+                    </select>
+                </LoadGate>
                 <input class="field w-56" placeholder="New trade, e.g. Hod carrier" @bind="newTradeName" @bind:event="oninput" />
                 <button type="button" class="btn-secondary" disabled="@(tradesBusy || string.IsNullOrWhiteSpace(newTradeName))" @onclick="AddNewTrade">
                     @(tradesBusy ? "Saving…" : "Add new trade")
@@ -200,7 +205,10 @@ else
 @code {
     [Parameter] public string SubcontractorId { get; set; } = "";
 
-    private bool isLoaded;
+    // Session checked and the user signed in. This is NOT "the record is here" — the directory's
+    // own arrival is read from SubcontractorStore.IsLoaded above, so "not found" is never flashed
+    // before the fetch lands.
+    private bool sessionReady;
     private Subcontractor? subcontractor;
 
     // Statement-of-account email modal (the download link needs no state).
@@ -258,7 +266,7 @@ else
         if (!Auth.IsSignedIn) { Nav.NavigateTo("/login", forceLoad: true); return; }
         SubcontractorStore.OnChange += HandleChange;
         Reload();
-        isLoaded = true;
+        sessionReady = true;
     }
 
     protected override void OnParametersSet() => Reload();

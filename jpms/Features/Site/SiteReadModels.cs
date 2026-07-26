@@ -15,6 +15,10 @@ public sealed class SiteReportsReadModel
 
     public IReadOnlyList<SiteReport> Current(string projectId) =>
         reportsByProject.TryGetValue(projectId, out var list) ? list : Array.Empty<SiteReport>();
+    /// <summary>True once this key's rows have landed. Current(...) answers with an empty list
+    /// until then, which is indistinguishable from a real empty result — so anything rendering a
+    /// figure, a row count or an empty state must gate on this first.</summary>
+    public bool LoadedFor(string projectId) => reportsByProject.ContainsKey(projectId);
 
     public async Task RefreshAsync(string projectId, CancellationToken cancellationToken)
     {
@@ -34,6 +38,10 @@ public sealed class ProgrammeReadModel
 
     public IReadOnlyList<ProgrammeTask> Current(string projectId) =>
         tasksByProject.TryGetValue(projectId, out var list) ? list : Array.Empty<ProgrammeTask>();
+    /// <summary>True once this key's rows have landed. Current(...) answers with an empty list
+    /// until then, which is indistinguishable from a real empty result — so anything rendering a
+    /// figure, a row count or an empty state must gate on this first.</summary>
+    public bool LoadedFor(string projectId) => tasksByProject.ContainsKey(projectId);
 
     public async Task RefreshAsync(string projectId, CancellationToken cancellationToken)
     {

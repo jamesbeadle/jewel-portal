@@ -46,6 +46,8 @@ public sealed class HttpSubcontractorStore : ISubcontractorStore
         return tradesReadModel.Current ?? Array.Empty<Trade>();
     }
 
+    public bool TradesLoaded => tradesReadModel.Current is not null;
+
     public async Task<Trade> AddTradeAsync(string name)
     {
         var trade = await commands.SendAsync(new AddTrade(name), CancellationToken.None);

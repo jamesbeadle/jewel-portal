@@ -43,6 +43,10 @@ public sealed class ProjectWorkOrdersReadModel
     public IReadOnlyList<ProjectWorkOrderDetail> Current(string projectId) =>
         ordersByProject.TryGetValue(projectId, out var list) ? list : Array.Empty<ProjectWorkOrderDetail>();
 
+    /// <summary>True once this project's work orders have landed — Current(...) answers empty
+    /// until then, which sums to a misleading zero.</summary>
+    public bool LoadedFor(string projectId) => ordersByProject.ContainsKey(projectId);
+
     public async Task RefreshAsync(string projectId, CancellationToken cancellationToken)
     {
         ordersByProject[projectId] = await queries.AskAsync(new ListProjectWorkOrders(projectId), cancellationToken);

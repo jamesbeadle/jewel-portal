@@ -108,7 +108,12 @@ else
         // Every project page passing through the shell marks its project as the one the user is
         // working on — the side nav's project-scoped entries follow it.
         _ = CurrentProject.RememberAsync(ProjectId);
-        if (Projects.Current is null) await Projects.RefreshAsync(CancellationToken.None);
+        // The cold-load path has to swallow too, for the same reason the background one does: an
+        // exception escaping OnInitializedAsync replaces every project page with the error boundary,
+        // so a single failed read would take out the whole project section rather than showing
+        // "Project not found" and letting the next navigation retry. The failure still reaches the
+        // toast via the query client's error sink.
+        if (Projects.Current is null) await RefreshInBackgroundAsync();
         else _ = RefreshInBackgroundAsync(); // stale-while-revalidate: header/stage update on tab nav
     }
 

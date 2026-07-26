@@ -18,7 +18,7 @@
     AND a cost centre). Informational only: tagging itself stays in mailbox triage.
 *@
 
-@if (!isLoaded)
+@if (!sessionReady)
 {
     <section class="px-6 md:px-8 py-12">
         <LoadGate IsLoading="true" Prominent="true" Label="Loading" />
@@ -65,18 +65,20 @@ else
             <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-4">@loadError</p>
         }
 
-        @if (!loaded)
+        <LoadGate IsLoading="@(!loaded)" Prominent="true" Label="Loading communications">
+        @if (items.Count == 0)
         {
-            <JewelSpinner Class="py-16" Label="Loading" />
-        }
-        else if (items.Count == 0)
-        {
-            <div class="panel p-8 text-center">
-                <p class="text-sm text-content">@EmptyHeadline</p>
-                <p class="text-xs text-content-subtle mt-1">
-                    Tag an email to a record in mailbox triage and it will appear here.
-                </p>
-            </div>
+            @* A failed fetch leaves the list empty; the banner above says so, and "nothing tagged
+               yet" would read as an answer rather than a failure. *@
+            @if (loadError is null)
+            {
+                <div class="panel p-8 text-center">
+                    <p class="text-sm text-content">@EmptyHeadline</p>
+                    <p class="text-xs text-content-subtle mt-1">
+                        Tag an email to a record in mailbox triage and it will appear here.
+                    </p>
+                </div>
+            }
         }
         else
         {
@@ -140,6 +142,7 @@ else
                 </div>
             }
         }
+        </LoadGate>
     </ProjectPageShell>
 }
 
@@ -148,7 +151,9 @@ else
 
     private const int PageSize = 25;
 
-    private bool isLoaded;
+    // Session checked and the user is signed in — the filters and the tab chrome show straight
+    // away. `loaded` is the separate question of whether the page of emails has arrived.
+    private bool sessionReady;
     private bool loaded;
     private bool loadingMore;
     private string? loadError;
@@ -184,7 +189,7 @@ else
     {
         await Session.EnsureLoadedAsync();
         if (!Auth.IsSignedIn) { Nav.NavigateTo("/login", forceLoad: true); return; }
-        isLoaded = true;
+        sessionReady = true;
         await LoadAsync(reset: true);
     }
 

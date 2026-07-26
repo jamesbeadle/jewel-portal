@@ -60,6 +60,8 @@ public sealed class HttpLabourStore : ILabourStore
         catch { workersRequested = false; }
     }
 
+    public bool WorkersLoaded => workersReadModel.IsLoaded;
+
     public Task RefreshWorkersAsync() => workersReadModel.RefreshAsync(CancellationToken.None);
 
     public async Task<Worker> AddWorkerAsync(string name, decimal hourlyRate, string? subcontractorId, string contactEmail, string contactPhone)
@@ -88,6 +90,8 @@ public sealed class HttpLabourStore : ILabourStore
         if (assignmentsRequested.Add(projectId)) _ = LoadAsync(() => assignmentsReadModel.RefreshAsync(projectId, CancellationToken.None), assignmentsRequested, projectId);
         return assignmentsReadModel.Current(projectId);
     }
+
+    public bool AssignmentsLoadedFor(string projectId) => assignmentsReadModel.LoadedFor(projectId);
 
     public Task RefreshAssignmentsAsync(string projectId) => assignmentsReadModel.RefreshAsync(projectId, CancellationToken.None);
 
@@ -135,6 +139,8 @@ public sealed class HttpLabourStore : ILabourStore
         return timesheetsReadModel.Current(projectId);
     }
 
+    public bool TimesheetsLoadedFor(string projectId) => timesheetsReadModel.LoadedFor(projectId);
+
     public Task RefreshTimesheetsAsync(string projectId) => timesheetsReadModel.RefreshAsync(projectId, CancellationToken.None);
 
     public IReadOnlyList<SiteAttendance> AttendanceFor(string projectId)
@@ -142,6 +148,8 @@ public sealed class HttpLabourStore : ILabourStore
         if (attendanceRequested.Add(projectId)) _ = LoadAsync(() => attendanceReadModel.RefreshAsync(projectId, CancellationToken.None), attendanceRequested, projectId);
         return attendanceReadModel.Current(projectId);
     }
+
+    public bool AttendanceLoadedFor(string projectId) => attendanceReadModel.LoadedFor(projectId);
 
     public Task RefreshAttendanceAsync(string projectId) => attendanceReadModel.RefreshAsync(projectId, CancellationToken.None);
 
@@ -178,6 +186,8 @@ public sealed class HttpLabourStore : ILabourStore
         if (settlementRequested.Add(projectId)) _ = LoadAsync(() => settlementReadModel.RefreshAsync(projectId, CancellationToken.None), settlementRequested, projectId);
         return settlementReadModel.Current(projectId);
     }
+
+    public bool SettlementLoadedFor(string projectId) => settlementReadModel.LoadedFor(projectId);
 
     public Task RefreshSettlementAsync(string projectId) => settlementReadModel.RefreshAsync(projectId, CancellationToken.None);
 

@@ -23,6 +23,8 @@ public sealed class HttpProjectRetentionStore : IProjectRetentionStore
     public ProjectRetention? RetentionFor(string projectId) =>
         retentions.Get(projectId, null);
 
+    public bool RetentionLoadedFor(string projectId) => retentions.Has(projectId);
+
     public void Refresh(string projectId) => retentions.Refetch(projectId);
 
     public async Task<ProjectRetention> SetAsync(SetProjectRetention command)

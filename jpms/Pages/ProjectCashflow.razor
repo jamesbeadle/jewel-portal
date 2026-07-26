@@ -18,7 +18,7 @@
 
 <PageTitle>Cashflow · JPMS</PageTitle>
 
-@if (!isLoaded)
+@if (!sessionReady)
 {
     <section class="px-6 md:px-8 py-12">
         <LoadGate IsLoading="true" Prominent="true" Label="Loading" />
@@ -39,135 +39,162 @@ else
 
         @* ── Funds in — the client side, from valuation invoices ─────────────── *@
         <h3 class="text-sm font-semibold text-content mb-2">Funds in — client</h3>
-        <div class="grid grid-cols-2 md:grid-cols-3 gap-3 mb-6">
-            <div class="rounded-xl border border-line bg-surface px-4 py-3">
-                <p class="text-[11px] uppercase tracking-wider text-content-subtle font-semibold"
-                   title="The valuation report's counting lines — contract works, provisional sums, contingency and variations">Contract sales value</p>
-                <p class="text-lg font-semibold text-content">@Money(ContractSales)</p>
-            </div>
-            <div class="rounded-xl border border-line bg-surface px-4 py-3">
-                <p class="text-[11px] uppercase tracking-wider text-content-subtle font-semibold"
-                   title="Issued and paid valuation invoices — certified to date">Invoiced to date</p>
-                <p class="text-lg font-semibold text-content">@Money(invoiceSummary?.TotalInvoiced ?? 0m)</p>
-                @if ((invoiceSummary?.TotalAwaitingApproval ?? 0m) != 0m)
-                {
-                    <p class="text-xs text-content-subtle mt-0.5">+ @Money(invoiceSummary!.TotalAwaitingApproval) awaiting approval</p>
-                }
-            </div>
-            <div class="rounded-xl border border-line bg-surface px-4 py-3">
-                <p class="text-[11px] uppercase tracking-wider text-content-subtle font-semibold"
-                   title="Valuation invoices the client has paid — money received">Funds in</p>
-                <p class="text-lg font-semibold text-positive">@Money(invoiceSummary?.TotalPaid ?? 0m)</p>
-            </div>
-            <div class="rounded-xl border border-line bg-surface px-4 py-3">
-                <p class="text-[11px] uppercase tracking-wider text-content-subtle font-semibold"
-                   title="Valuation invoices issued to the client but not yet paid">Awaiting payment</p>
-                <p class="text-lg font-semibold text-content">@Money(invoiceSummary?.Outstanding ?? 0m)</p>
-            </div>
-            <div class="rounded-xl border border-line bg-surface px-4 py-3">
-                <p class="text-[11px] uppercase tracking-wider text-content-subtle font-semibold"
-                   title="Retention withheld by the client on works complete — held less confirmed releases, from the project's retention terms on the Setup tab. Earned but not invoiceable until released">Retention held</p>
-                @if (RetentionTerms is { } terms && Schedule is { } schedule)
-                {
-                    <p class="text-lg font-semibold text-content">@Money(schedule.Outstanding)</p>
-                    <p class="text-xs text-content-subtle mt-0.5">
-                        @Money(schedule.HeldToDate) held (@Pct(terms.RetentionPercent)) ·
-                        @Money(schedule.ReleasedToDate) released
-                    </p>
-                    <p class="text-xs text-content-subtle mt-0.5">@ReleaseLine(schedule.CompletionRelease, $"{Pct(terms.CompletionReleasePercent)} at completion")</p>
-                    <p class="text-xs text-content-subtle">@ReleaseLine(schedule.FinalRelease, $"balance after {terms.DefectsPeriodMonths} months")</p>
-                }
-                else
-                {
-                    <p class="text-lg font-semibold text-content-subtle">—</p>
-                    <p class="text-xs text-content-subtle mt-0.5">No retention terms — add them on the Setup tab.</p>
-                }
-            </div>
-            <div class="rounded-xl border border-line bg-surface px-4 py-3">
-                <p class="text-[11px] uppercase tracking-wider text-content-subtle font-semibold"
-                   title="Contract sales value less funds in — everything not yet received, whether invoiced, retained or still to invoice">Left to come in</p>
-                <p class="text-lg font-semibold text-content">@Money(LeftToComeIn)</p>
-                <p class="text-xs text-content-subtle mt-0.5">
-                    of which @Money(invoiceSummary?.Outstanding ?? 0m) invoiced@(RetentionTerms is null ? "" : $" · {Money(RetentionOutstanding)} retention")
-                </p>
-            </div>
-        </div>
-
-        @* ── Funds out — the cost side: work orders and Xero spend ──────────── *@
-        <h3 class="text-sm font-semibold text-content mb-2">Funds out — costs</h3>
-        <div class="grid grid-cols-2 md:grid-cols-3 gap-3 mb-6">
-            <div class="rounded-xl border border-line bg-surface px-4 py-3">
-                <p class="text-[11px] uppercase tracking-wider text-content-subtle font-semibold"
-                   title="The value committed to work orders — see the Work Orders tab">Committed to work orders</p>
-                <p class="text-lg font-semibold text-content">@Money(WoCommitted)</p>
-            </div>
-            <div class="rounded-xl border border-line bg-surface px-4 py-3">
-                <p class="text-[11px] uppercase tracking-wider text-content-subtle font-semibold"
-                   title="Xero purchase spend allocated to this project, net of credit notes — see the WO Allocation tab">Actual cost of sales</p>
-                <p class="text-lg font-semibold text-content">@Money(CostOfSales)</p>
-            </div>
-            <div class="rounded-xl border border-line bg-surface px-4 py-3">
-                <p class="text-[11px] uppercase tracking-wider text-content-subtle font-semibold"
-                   title="Cost of sales on bills Xero shows as paid — money actually out the door">Paid to suppliers</p>
-                <p class="text-lg font-semibold text-content">@Money(BillsPaid)</p>
-            </div>
-            <div class="rounded-xl border border-line bg-surface px-4 py-3">
-                <p class="text-[11px] uppercase tracking-wider text-content-subtle font-semibold"
-                   title="Cost of sales on bills received but not yet paid in Xero — due now">Bills awaiting payment</p>
-                <p class="text-lg font-semibold @(BillsUnpaid == 0m ? "text-content" : "text-negative")">@Money(BillsUnpaid)</p>
-            </div>
-            <div class="rounded-xl border border-line bg-surface px-4 py-3">
-                <p class="text-[11px] uppercase tracking-wider text-content-subtle font-semibold"
-                   title="Work-order value not yet invoiced by suppliers — committed spend still to bill; see the WO Allocation tab">WO left to invoice</p>
-                <p class="text-lg font-semibold text-content">@Money(WoLeftToInvoice)</p>
-            </div>
-            <div class="rounded-xl border border-line bg-surface px-4 py-3">
-                <p class="text-[11px] uppercase tracking-wider text-content-subtle font-semibold"
-                   title="The funds still available across the project — the Financials tab's drawdown to the penny: each cost centre's unspent target cost, with finalised lines realised to profit / loss and reconciliation packages accounted for. Negative means overspent.">Drawdown available</p>
-                <p class="text-lg font-semibold @(Drawdown < 0m ? "text-negative" : "text-content")">@Money(Drawdown)</p>
-            </div>
-        </div>
-
-        @* ── The position: what's still to come in against what's due to go out ── *@
-        <h3 class="text-sm font-semibold text-content mb-2">Position</h3>
-        <div class="rounded-xl border border-line bg-surface px-4 py-4 mb-4">
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
+        <LoadGate IsLoading="@(!FundsInReady && !dataFailed)" Prominent="true" Label="Loading funds in">
+            @if (dataFailed)
+            {
+                <p class="text-sm text-negative mb-6">Couldn't load the client figures. The details are in the red bar at the top — reload to try again.</p>
+            }
+            else
+            {
+            <div class="grid grid-cols-2 md:grid-cols-3 gap-3 mb-6">
+                <div class="rounded-xl border border-line bg-surface px-4 py-3">
                     <p class="text-[11px] uppercase tracking-wider text-content-subtle font-semibold"
-                       title="Contract sales value less funds in">Still to come in from income</p>
-                    <p class="text-xl font-semibold text-content">@Money(LeftToComeIn)</p>
-                    @if (RetentionTerms is not null)
+                       title="The valuation report's counting lines — contract works, provisional sums, contingency and variations">Contract sales value</p>
+                    <p class="text-lg font-semibold text-content">@Money(ContractSales)</p>
+                </div>
+                <div class="rounded-xl border border-line bg-surface px-4 py-3">
+                    <p class="text-[11px] uppercase tracking-wider text-content-subtle font-semibold"
+                       title="Issued and paid valuation invoices — certified to date">Invoiced to date</p>
+                    <p class="text-lg font-semibold text-content">@Money(invoiceSummary!.TotalInvoiced)</p>
+                    @if (invoiceSummary!.TotalAwaitingApproval != 0m)
                     {
-                        <p class="text-xs text-content-subtle mt-1">
-                            @Money(invoiceSummary?.Outstanding ?? 0m) invoiced &amp; awaiting payment ·
-                            @Money(RetentionOutstanding) retention held ·
-                            @Money(NotYetInvoicedIncome - RetentionOutstanding) works not yet invoiced
+                        <p class="text-xs text-content-subtle mt-0.5">+ @Money(invoiceSummary!.TotalAwaitingApproval) awaiting approval</p>
+                    }
+                </div>
+                <div class="rounded-xl border border-line bg-surface px-4 py-3">
+                    <p class="text-[11px] uppercase tracking-wider text-content-subtle font-semibold"
+                       title="Valuation invoices the client has paid — money received">Funds in</p>
+                    <p class="text-lg font-semibold text-positive">@Money(invoiceSummary!.TotalPaid)</p>
+                </div>
+                <div class="rounded-xl border border-line bg-surface px-4 py-3">
+                    <p class="text-[11px] uppercase tracking-wider text-content-subtle font-semibold"
+                       title="Valuation invoices issued to the client but not yet paid">Awaiting payment</p>
+                    <p class="text-lg font-semibold text-content">@Money(invoiceSummary!.Outstanding)</p>
+                </div>
+                <div class="rounded-xl border border-line bg-surface px-4 py-3">
+                    <p class="text-[11px] uppercase tracking-wider text-content-subtle font-semibold"
+                       title="Retention withheld by the client on works complete — held less confirmed releases, from the project's retention terms on the Setup tab. Earned but not invoiceable until released">Retention held</p>
+                    @if (RetentionTerms is { } terms && Schedule is { } schedule)
+                    {
+                        <p class="text-lg font-semibold text-content">@Money(schedule.Outstanding)</p>
+                        <p class="text-xs text-content-subtle mt-0.5">
+                            @Money(schedule.HeldToDate) held (@Pct(terms.RetentionPercent)) ·
+                            @Money(schedule.ReleasedToDate) released
                         </p>
+                        <p class="text-xs text-content-subtle mt-0.5">@ReleaseLine(schedule.CompletionRelease, $"{Pct(terms.CompletionReleasePercent)} at completion")</p>
+                        <p class="text-xs text-content-subtle">@ReleaseLine(schedule.FinalRelease, $"balance after {terms.DefectsPeriodMonths} months")</p>
                     }
                     else
                     {
-                        <p class="text-xs text-content-subtle mt-1">
-                            @Money(invoiceSummary?.Outstanding ?? 0m) invoiced &amp; awaiting payment ·
-                            @Money(NotYetInvoicedIncome) not yet invoiced
-                        </p>
+                        <p class="text-lg font-semibold text-content-subtle">—</p>
+                        <p class="text-xs text-content-subtle mt-0.5">No retention terms — add them on the Setup tab.</p>
                     }
                 </div>
-                <div>
+                <div class="rounded-xl border border-line bg-surface px-4 py-3">
                     <p class="text-[11px] uppercase tracking-wider text-content-subtle font-semibold"
-                       title="Unpaid supplier bills plus committed work-order value suppliers haven't billed yet">Due to be paid out in total</p>
-                    <p class="text-xl font-semibold text-content">@Money(DueOut)</p>
-                    <p class="text-xs text-content-subtle mt-1">
-                        @Money(BillsUnpaid) bills awaiting payment ·
-                        @Money(WoLeftToInvoice) WO still to be invoiced
+                       title="Contract sales value less funds in — everything not yet received, whether invoiced, retained or still to invoice">Left to come in</p>
+                    <p class="text-lg font-semibold text-content">@Money(LeftToComeIn)</p>
+                    <p class="text-xs text-content-subtle mt-0.5">
+                        of which @Money(invoiceSummary!.Outstanding) invoiced@(RetentionTerms is null ? "" : $" · {Money(RetentionOutstanding)} retention")
                     </p>
                 </div>
-                <div>
+            </div>
+            }
+        </LoadGate>
+
+        @* ── Funds out — the cost side: work orders and Xero spend ──────────── *@
+        <h3 class="text-sm font-semibold text-content mb-2">Funds out — costs</h3>
+        <LoadGate IsLoading="@(!FundsOutReady && !dataFailed)" Prominent="true" Label="Loading costs">
+            @if (dataFailed)
+            {
+                <p class="text-sm text-negative mb-6">Couldn't load the cost figures. The details are in the red bar at the top — reload to try again.</p>
+            }
+            else
+            {
+            <div class="grid grid-cols-2 md:grid-cols-3 gap-3 mb-6">
+                <div class="rounded-xl border border-line bg-surface px-4 py-3">
                     <p class="text-[11px] uppercase tracking-wider text-content-subtle font-semibold"
-                       title="Still to come in, less due to go out — the project's remaining net cash movement">Net still to come</p>
-                    <p class="text-xl font-semibold @(NetPosition < 0m ? "text-negative" : "text-positive")">@Money(NetPosition)</p>
+                       title="The value committed to work orders — see the Work Orders tab">Committed to work orders</p>
+                    <p class="text-lg font-semibold text-content">@Money(WoCommitted)</p>
+                </div>
+                <div class="rounded-xl border border-line bg-surface px-4 py-3">
+                    <p class="text-[11px] uppercase tracking-wider text-content-subtle font-semibold"
+                       title="Xero purchase spend allocated to this project, net of credit notes — see the WO Allocation tab">Actual cost of sales</p>
+                    <p class="text-lg font-semibold text-content">@Money(CostOfSales)</p>
+                </div>
+                <div class="rounded-xl border border-line bg-surface px-4 py-3">
+                    <p class="text-[11px] uppercase tracking-wider text-content-subtle font-semibold"
+                       title="Cost of sales on bills Xero shows as paid — money actually out the door">Paid to suppliers</p>
+                    <p class="text-lg font-semibold text-content">@Money(BillsPaid)</p>
+                </div>
+                <div class="rounded-xl border border-line bg-surface px-4 py-3">
+                    <p class="text-[11px] uppercase tracking-wider text-content-subtle font-semibold"
+                       title="Cost of sales on bills received but not yet paid in Xero — due now">Bills awaiting payment</p>
+                    <p class="text-lg font-semibold @(BillsUnpaid == 0m ? "text-content" : "text-negative")">@Money(BillsUnpaid)</p>
+                </div>
+                <div class="rounded-xl border border-line bg-surface px-4 py-3">
+                    <p class="text-[11px] uppercase tracking-wider text-content-subtle font-semibold"
+                       title="Work-order value not yet invoiced by suppliers — committed spend still to bill; see the WO Allocation tab">WO left to invoice</p>
+                    <p class="text-lg font-semibold text-content">@Money(WoLeftToInvoice)</p>
+                </div>
+                <div class="rounded-xl border border-line bg-surface px-4 py-3">
+                    <p class="text-[11px] uppercase tracking-wider text-content-subtle font-semibold"
+                       title="The funds still available across the project — the Financials tab's drawdown to the penny: each cost centre's unspent target cost, with finalised lines realised to profit / loss and reconciliation packages accounted for. Negative means overspent.">Drawdown available</p>
+                    <p class="text-lg font-semibold @(Drawdown < 0m ? "text-negative" : "text-content")">@Money(Drawdown)</p>
                 </div>
             </div>
-        </div>
+            }
+        </LoadGate>
+
+        @* ── The position: what's still to come in against what's due to go out ── *@
+        <h3 class="text-sm font-semibold text-content mb-2">Position</h3>
+        <LoadGate IsLoading="@(!PositionReady && !dataFailed)" Prominent="true" Label="Loading position">
+            @if (dataFailed)
+            {
+                <p class="text-sm text-negative mb-6">Couldn't load the cash position. The details are in the red bar at the top — reload to try again.</p>
+            }
+            else
+            {
+            <div class="rounded-xl border border-line bg-surface px-4 py-4 mb-4">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                        <p class="text-[11px] uppercase tracking-wider text-content-subtle font-semibold"
+                           title="Contract sales value less funds in">Still to come in from income</p>
+                        <p class="text-xl font-semibold text-content">@Money(LeftToComeIn)</p>
+                        @if (RetentionTerms is not null)
+                        {
+                            <p class="text-xs text-content-subtle mt-1">
+                                @Money(invoiceSummary!.Outstanding) invoiced &amp; awaiting payment ·
+                                @Money(RetentionOutstanding) retention held ·
+                                @Money(NotYetInvoicedIncome - RetentionOutstanding) works not yet invoiced
+                            </p>
+                        }
+                        else
+                        {
+                            <p class="text-xs text-content-subtle mt-1">
+                                @Money(invoiceSummary!.Outstanding) invoiced &amp; awaiting payment ·
+                                @Money(NotYetInvoicedIncome) not yet invoiced
+                            </p>
+                        }
+                    </div>
+                    <div>
+                        <p class="text-[11px] uppercase tracking-wider text-content-subtle font-semibold"
+                           title="Unpaid supplier bills plus committed work-order value suppliers haven't billed yet">Due to be paid out in total</p>
+                        <p class="text-xl font-semibold text-content">@Money(DueOut)</p>
+                        <p class="text-xs text-content-subtle mt-1">
+                            @Money(BillsUnpaid) bills awaiting payment ·
+                            @Money(WoLeftToInvoice) WO still to be invoiced
+                        </p>
+                    </div>
+                    <div>
+                        <p class="text-[11px] uppercase tracking-wider text-content-subtle font-semibold"
+                           title="Still to come in, less due to go out — the project's remaining net cash movement">Net still to come</p>
+                        <p class="text-xl font-semibold @(NetPosition < 0m ? "text-negative" : "text-positive")">@Money(NetPosition)</p>
+                    </div>
+                </div>
+            </div>
+            }
+        </LoadGate>
 
         <p class="text-xs text-content-subtle">
             Funds in figures come from valuation invoices (Issued counts as invoiced; Paid as
@@ -192,12 +219,46 @@ else
 @code {
     [Parameter] public string ProjectId { get; set; } = "";
 
-    private bool isLoaded;
+    // Session checked and the user is signed in. This is NOT "the data is here" — keeping the two
+    // apart is the whole point: this page reveals its chrome immediately and holds each panel until
+    // the figures behind it can all be shown at once.
+    private bool sessionReady;
 
+    // A failed fetch must open the gate, or the jewel pulses forever. The panel then says so
+    // instead of showing figures; the toast at the top carries the reference and the detail.
+    private bool dataFailed;
+
+    // Nullable on purpose. An empty list is a real answer here and sums to a real-looking zero,
+    // so "not yet fetched" needs to be a distinct state.
     private ProjectValuationInvoiceSummary? invoiceSummary;
-    private IReadOnlyList<WorkOrderInvoiceSummary> woSummaries = Array.Empty<WorkOrderInvoiceSummary>();
-    private IReadOnlyList<ProjectCostOfSalesLine> costLines = Array.Empty<ProjectCostOfSalesLine>();
-    private IReadOnlyList<PackageReconciliationRow> packageRows = Array.Empty<PackageReconciliationRow>();
+    private IReadOnlyList<WorkOrderInvoiceSummary>? woSummaries;
+    private IReadOnlyList<ProjectCostOfSalesLine>? costLines;
+    private IReadOnlyList<PackageReconciliationRow>? packageRows;
+
+    private IReadOnlyList<WorkOrderInvoiceSummary> WoSummaries => woSummaries ?? Array.Empty<WorkOrderInvoiceSummary>();
+    private IReadOnlyList<ProjectCostOfSalesLine> CostLines => costLines ?? Array.Empty<ProjectCostOfSalesLine>();
+    private IReadOnlyList<PackageReconciliationRow> PackageRows => packageRows ?? Array.Empty<PackageReconciliationRow>();
+
+    // A refresh that failed has "arrived" as far as the gate is concerned — the read model records
+    // the failure rather than the rows, so waiting for rows that will never come is a hang.
+    private bool SummaryArrived => Summary.LoadedFor(ProjectId) || Summary.LastRefreshFailed(ProjectId);
+
+    // ── Panel gates. Each lists every source the panel reads, so its figures appear together. ──
+    private bool FundsInReady =>
+        SummaryArrived
+        && invoiceSummary is not null
+        && ValuationReport.ReportLoadedFor(ProjectId)
+        && Retention.RetentionLoadedFor(ProjectId);
+
+    private bool FundsOutReady =>
+        SummaryArrived
+        && WorkOrders.LoadedFor(ProjectId)
+        && woSummaries is not null
+        && costLines is not null
+        && packageRows is not null;
+
+    // The position is arithmetic over both halves, so it waits for both.
+    private bool PositionReady => FundsInReady && FundsOutReady;
 
     // ── Funds in — from valuation invoices and the valuation's counting lines ──
     private decimal ContractSales => Summary.Current(ProjectId).Sum(row => row.BudgetedSales);
@@ -236,12 +297,12 @@ else
 
     // ── Funds out — work orders committed and Xero purchase spend ──
     private decimal WoCommitted => WorkOrders.Current(ProjectId).Sum(detail => detail.Order.Value);
-    private decimal WoInvoiced => woSummaries.Sum(summary => summary.InvoicedToDate);
+    private decimal WoInvoiced => WoSummaries.Sum(summary => summary.InvoicedToDate);
     private decimal WoLeftToInvoice => WoCommitted - WoInvoiced;
 
-    private decimal CostOfSales => costLines.Sum(line => line.Net);
-    private decimal BillsPaid => costLines.Where(line => line.IsPaid).Sum(line => line.Net);
-    private decimal BillsUnpaid => costLines.Where(line => !line.IsPaid).Sum(line => line.Net);
+    private decimal CostOfSales => CostLines.Sum(line => line.Net);
+    private decimal BillsPaid => CostLines.Where(line => line.IsPaid).Sum(line => line.Net);
+    private decimal BillsUnpaid => CostLines.Where(line => !line.IsPaid).Sum(line => line.Net);
 
     // The Financials tab's project drawdown, to the penny — computed by the shared
     // calculator from the same inputs (finalised centres realised to profit / loss and
@@ -250,7 +311,7 @@ else
         ProjectDrawdown.CommittedByCostCode(WorkOrders.Current(ProjectId));
 
     private decimal Drawdown =>
-        ProjectDrawdown.ForProject(Summary.Current(ProjectId), WoCommittedByCode, packageRows);
+        ProjectDrawdown.ForProject(Summary.Current(ProjectId), WoCommittedByCode, PackageRows);
 
     // ── Position ──
     private decimal DueOut => BillsUnpaid + WoLeftToInvoice;
@@ -277,16 +338,26 @@ else
         _ = WorkOrders.RefreshAsync(ProjectId, CancellationToken.None);
         ValuationReport.Refresh(ProjectId);
         Retention.Refresh(ProjectId);
-        isLoaded = true;
+        sessionReady = true;
 
-        var invoiceSummaryTask = Queries.AskAsync(new GetProjectValuationInvoiceSummary(ProjectId), CancellationToken.None);
-        var woSummariesTask = Queries.AskAsync(new ListWorkOrderInvoiceSummaries(ProjectId), CancellationToken.None);
-        var costLinesTask = Queries.AskAsync(new ListProjectCostOfSalesLines(ProjectId), CancellationToken.None);
-        var packageRowsTask = Queries.AskAsync(new ListPackageReconciliation(ProjectId), CancellationToken.None);
-        invoiceSummary = await invoiceSummaryTask;
-        woSummaries = await woSummariesTask;
-        costLines = await costLinesTask;
-        packageRows = await packageRowsTask;
+        // Fired together, awaited together — the panels stay behind their jewels until they land.
+        try
+        {
+            var invoiceSummaryTask = Queries.AskAsync(new GetProjectValuationInvoiceSummary(ProjectId), CancellationToken.None);
+            var woSummariesTask = Queries.AskAsync(new ListWorkOrderInvoiceSummaries(ProjectId), CancellationToken.None);
+            var costLinesTask = Queries.AskAsync(new ListProjectCostOfSalesLines(ProjectId), CancellationToken.None);
+            var packageRowsTask = Queries.AskAsync(new ListPackageReconciliation(ProjectId), CancellationToken.None);
+            invoiceSummary = await invoiceSummaryTask;
+            woSummaries = await woSummariesTask;
+            costLines = await costLinesTask;
+            packageRows = await packageRowsTask;
+        }
+        catch
+        {
+            // HttpQueryClient has already reported this to the error toast with a reference; here we
+            // only need to stop the panels waiting on data that is not coming.
+            dataFailed = true;
+        }
     }
 
     public void Dispose()

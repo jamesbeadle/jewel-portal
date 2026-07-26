@@ -11,6 +11,11 @@ public interface IDrawingStore
 
     IReadOnlyList<Drawing> DrawingsFor(string projectId);
 
+    /// <summary>False until this drawing's revisions have been fetched at least once. Distinct
+    /// from <see cref="DrawingsLoadedFor"/>: the register can be here while the revisions are not,
+    /// and "no file to preview" is only true once they have landed.</summary>
+    bool RevisionsLoadedFor(string drawingId);
+
     IReadOnlyList<DrawingRevision> RevisionsFor(string drawingId);
 
     IReadOnlyList<DrawingRevision> AmbiguousFor(string projectId);

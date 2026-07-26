@@ -16,6 +16,10 @@ public sealed class ValuationLinesReadModel
     public IReadOnlyList<ValuationLineItem> Current(string projectId) =>
         linesByProject.TryGetValue(projectId, out var list) ? list : Array.Empty<ValuationLineItem>();
 
+    /// <summary>True once this key's rows have landed. Current(...) answers empty until then,
+    /// which reads as real data to anything summing or counting it.</summary>
+    public bool LoadedFor(string projectId) => linesByProject.ContainsKey(projectId);
+
     public async Task RefreshAsync(string projectId, CancellationToken cancellationToken)
     {
         linesByProject[projectId] = await queries.AskAsync(new ListValuationLinesForProject(projectId), cancellationToken);
@@ -34,6 +38,10 @@ public sealed class ValuationClaimsReadModel
 
     public IReadOnlyList<ValuationClaim> Current(string projectId) =>
         claimsByProject.TryGetValue(projectId, out var list) ? list : Array.Empty<ValuationClaim>();
+
+    /// <summary>True once this key's rows have landed. Current(...) answers empty until then,
+    /// which reads as real data to anything summing or counting it.</summary>
+    public bool LoadedFor(string projectId) => claimsByProject.ContainsKey(projectId);
 
     public async Task RefreshAsync(string projectId, CancellationToken cancellationToken)
     {
@@ -127,6 +135,11 @@ public sealed class ProjectFinancialSummaryReadModel
 
     public IReadOnlyList<ProjectFinancialSummaryRow> Current(string projectId) =>
         rowsByProject.TryGetValue(projectId, out var list) ? list : Array.Empty<ProjectFinancialSummaryRow>();
+
+    /// <summary>True once this project's rows have landed. Every figure on the Cashflow and
+    /// Financials tabs is a sum over Current(...), which answers with an empty list until then —
+    /// i.e. a confident zero. Gate on this, not on the page's session flag.</summary>
+    public bool LoadedFor(string projectId) => rowsByProject.ContainsKey(projectId);
 
     /// <summary>True when the last refresh for this project failed. The Financials page fires
     /// RefreshAsync fire-and-forget, so without this a failed fetch silently renders as

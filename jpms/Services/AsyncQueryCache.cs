@@ -31,6 +31,15 @@ public sealed class AsyncQueryCache<TKey, TValue> where TKey : notnull
         return values.TryGetValue(key, out var value) ? value : fallback;
     }
 
+    /// <summary>
+    /// True once a value for this key has actually landed. The distinction matters because
+    /// <see cref="Get"/> answers with the caller's fallback in the meantime, and an empty list or a
+    /// zero is indistinguishable from a real one — so anything that renders a figure, a row count
+    /// or an empty state has to ask this first and show a loading indicator instead.
+    /// Does not start a fetch; pair it with the read that does.
+    /// </summary>
+    public bool Has(TKey key) => values.ContainsKey(key);
+
     /// <summary>Starts a background load for a key if one has not already been started.</summary>
     public void EnsureLoaded(TKey key)
     {

@@ -8,7 +8,7 @@
 
 <PageTitle>Cost codes · JPMS</PageTitle>
 
-@if (!isLoaded)
+@if (!sessionReady)
 {
     <section class="px-6 md:px-8 py-12">
         <LoadGate IsLoading="true" Prominent="true" Label="Loading" />
@@ -43,7 +43,14 @@ else
             <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-4">@loadError</p>
         }
 
-        @if (costCodes.Count == 0)
+        @* One gate over the whole body: the "Show retired" toggle and the export button are read
+           off the master list too, so they belong with the table rather than ahead of it. *@
+        <LoadGate IsLoading="@(!CostCodesReady)" Prominent="true" Label="Loading cost codes">
+        @if (costCodes is null)
+        {
+            <p class="text-sm text-negative">Couldn't load the cost codes. The reason is in the red bar above — reload to try again.</p>
+        }
+        else if (costCodes.Count == 0)
         {
             <div class="panel p-8 text-center text-sm text-content-subtle">No cost codes yet. Add one to start allocating costs.</div>
         }
@@ -55,7 +62,7 @@ else
                     <span>Show retired</span>
                 </label>
                 <ExportToExcelButton FileName="Cost codes"
-                                     Disabled="@(costCodes.Count == 0)"
+                                     Disabled="@(AllCostCodes.Count == 0)"
                                      ShowIncludeAllRows="@(!showRetired)"
                                      IncludeAllLabel="Include retired"
                                      BuildWorkbook="BuildExportWorkbook" />
@@ -110,6 +117,7 @@ else
             </div>
             }
         }
+        </LoadGate>
     </section>
 
     <Modal IsOpen="adding"
@@ -148,15 +156,24 @@ else
 }
 
 @code {
-    private bool isLoaded;
+    // Session checked and the user signed in. This is NOT "the data is here" — keeping the two
+    // apart is what lets the page show its chrome at once and hold the table until the list lands.
+    private bool sessionReady;
     private bool busy;
     private string? loadError;
     private string? formError;
-    private IReadOnlyList<CostCenter> costCodes = Array.Empty<CostCenter>();
+    // Nullable on purpose. "No cost codes yet" is a real answer, so "not fetched" needs to be a
+    // distinct state — otherwise the empty state is shown before anything was asked.
+    private IReadOnlyList<CostCenter>? costCodes;
     private bool showRetired;
 
+    private IReadOnlyList<CostCenter> AllCostCodes => costCodes ?? Array.Empty<CostCenter>();
+
+    // A failed fetch opens the gate too, or the jewel pulses forever; the red bar above says why.
+    private bool CostCodesReady => costCodes is not null || loadError is not null;
+
     private IReadOnlyList<CostCenter> VisibleCostCodes =>
-        showRetired ? costCodes : costCodes.Where(c => c.IsActive).ToList();
+        showRetired ? AllCostCodes : AllCostCodes.Where(c => c.IsActive).ToList();
 
     private bool CanManage => Session.AvailableRoles.Any(role =>
         role is Role.Admin or Role.ManagingDirector or Role.FinanceDirector or Role.QuantitySurveyor);
@@ -173,8 +190,11 @@ else
         await Session.EnsureLoadedAsync();
         if (!Auth.IsSignedIn) { Nav.NavigateTo("/login", forceLoad: true); return; }
         CostCenters.OnChange += StateHasChanged;
+        sessionReady = true;
+        // Paint the chrome before the fetch: Blazor re-renders OnInitializedAsync only at its
+        // FIRST await, which has already passed, so without this the page waits on the list.
+        StateHasChanged();
         await ReloadAsync();
-        isLoaded = true;
     }
 
     private async Task ReloadAsync()
@@ -267,7 +287,7 @@ else
     {
         // "Include retired" exports the whole master list even while the table hides
         // retired codes — the Status column tells them apart.
-        var costCodesToExport = includeRetired ? costCodes : VisibleCostCodes;
+        var costCodesToExport = includeRetired ? AllCostCodes : VisibleCostCodes;
         if (costCodesToExport.Count == 0) return null;
 
         var workbook = new ExcelWorkbook();

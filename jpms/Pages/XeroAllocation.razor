@@ -13,7 +13,7 @@
 
 <PageTitle>Cost allocation · JPMS</PageTitle>
 
-@if (!isLoaded)
+@if (!sessionReady)
 {
     <section class="w-full px-6 py-12">
         <LoadGate IsLoading="true" Prominent="true" Label="Loading" />
@@ -68,9 +68,9 @@ else
            whenever someone returned to a tab that happens to be empty — and the tab is remembered
            between sessions, so they would have had no way to get back out. The counts come from the
            server and cover every status. *@
-        @if (Ledger.Counts() is not { } counts)
+        @if (!tabRestored || Ledger.Counts() is not { } counts)
         {
-            <p class="text-sm text-content-subtle py-8">Loading the stored ledger…</p>
+            <LoadGate IsLoading="true" Prominent="true" Label="Loading the stored ledger" />
         }
         else if (LedgerTotal(counts) == 0)
         {
@@ -113,6 +113,10 @@ else
                    project's tab, so people working a specific project approve just their
                    own costs. Dropdown picks alone don't move rows; Set/Allocate do.
                    "Unallocated" keeps only the lines nothing points at a project yet. *@
+                @* Every count in the bar is counted here, out of the unallocated queue and the
+                   project list — a bar drawn before those land offers "Unallocated (0)" and no
+                   project tabs at all. *@
+                <LoadGate IsLoading="@(!TabBarReady)" Height="min-h-[38px]" Label="Loading tabs">
                 <div class="inline-flex flex-wrap rounded-lg border border-line overflow-hidden">
                     <button class="@TabClass(XeroAllocationStatus.Unallocated)" @onclick="() => SwitchTab(XeroAllocationStatus.Unallocated)">
                         Unallocated (@UnassignedCount)
@@ -134,6 +138,7 @@ else
                         Ignored (@CountOf(XeroAllocationStatus.Ignored))
                     </button>
                 </div>
+                </LoadGate>
                 <div class="flex items-center gap-4">
                     <ExportToExcelButton FileName="Cost allocation"
                                          Disabled="@(Visible.Count == 0)"
@@ -198,6 +203,9 @@ else
                 </div>
             }
 
+            @* One panel: the bucket totals, the rows and the footer's line count and net are all
+               read off the open tab's lines, named through the project and cost-centre masters. *@
+            <LoadGate IsLoading="@(!QueueReady)" Prominent="true" Label="Loading lines">
             @if (activeTab == XeroAllocationStatus.Bucketed)
             {
                 <div class="mb-4 flex flex-wrap gap-2">
@@ -419,11 +427,7 @@ else
 
             @* Tabs load independently now, so a tab can be mid-fetch or genuinely empty while the
                ledger as a whole is neither. Say which. *@
-            @if (Lines is null)
-            {
-                <JewelSpinner Class="py-6" Label="Loading" />
-            }
-            else if (Visible.Count == 0)
+            @if (Visible.Count == 0)
             {
                 <p class="text-sm text-content-subtle py-6 text-center">
                     @(HasTabFilters
@@ -449,6 +453,7 @@ else
                     </div>
                 }
             </div>
+            </LoadGate>
         }
 
         @* Hidden while the invoice document modal is open — a split started from
@@ -633,7 +638,15 @@ else
 }
 
 @code {
-    private bool isLoaded;
+    // Session checked and the user is signed in. This is NOT "the ledger is here" — the heading,
+    // the Sync and Re-check buttons show at once; the tab bar and the rows wait behind their own
+    // gates.
+    private bool sessionReady;
+
+    // Which tab is open decides which status is fetched and which counts the bar shows, so the
+    // ledger section waits for the remembered choice rather than opening on the wrong tab.
+    private bool tabRestored;
+
     private bool isSyncing;
     private bool isRechecking;
     private bool isApplying;
@@ -669,6 +682,15 @@ else
     private string? sendError;
 
     private bool isBusy => isSyncing || isRechecking || isApplying;
+
+    // -- Panel gates. Each lists every source the panel reads, so it appears in one piece. --
+    // Both panels name their rows through the project list and the cost-centre master, and both
+    // offer them as dropdown options — neither can be drawn before those land.
+    private bool MastersReady => ProjectsReadModel.Current is not null && CostCenters.IsLoaded;
+
+    private bool TabBarReady => Ledger.Lines(XeroAllocationStatus.Unallocated) is not null && MastersReady;
+
+    private bool QueueReady => Lines is not null && MastersReady;
 
     // The lines for the tab currently open. Reading this starts that status' load if it hasn't
     // happened yet, so a tab switch fetches just that tab.
@@ -886,13 +908,18 @@ else
     {
         await Session.EnsureLoadedAsync();
         if (!Auth.IsSignedIn) { Nav.NavigateTo("/login", forceLoad: true); return; }
-        await RestoreLastTabAsync();
         Ledger.OnChange += StateHasChanged;
         CostCenters.OnChange += StateHasChanged;
         ProjectsReadModel.OnChanged += StateHasChanged;
-        isLoaded = true;
+        sessionReady = true;
+        await RestoreLastTabAsync();
+        tabRestored = true;
 
         if (ProjectsReadModel.Current is null) _ = ProjectsReadModel.RefreshAsync(CancellationToken.None);
+        // The cost-centre master names every allocated row and fills both dropdowns. It used to be
+        // pulled in by the first render that read it; behind a gate nothing reads it until it has
+        // landed, so the load has to be started here.
+        _ = CostCenters.ListAllAsync();
         // Load the tab being opened (RestoreLastTabAsync may have restored a different one) plus,
         // when that isn't the unallocated queue, the queue itself — the tab bar's project tabs and
         // the "allocate all matched" banner are built from it.

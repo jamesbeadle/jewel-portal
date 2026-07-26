@@ -11,6 +11,10 @@ public interface IProgressStore
 
     IReadOnlyList<ProgressUpdate> UpdatesFor(string projectId);
 
+    /// <summary>False until the project's progress reports have been fetched at least once.
+    /// The reports panel loads separately from the updates, so it needs its own signal.</summary>
+    bool ReportsLoadedFor(string projectId);
+
     IReadOnlyList<ProgressReport> ReportsFor(string projectId);
 
     /// <summary>Starts a background refetch of the project's progress updates and reports even if

@@ -37,6 +37,8 @@ public sealed class HttpDrawingStore : IDrawingStore
         return readModel.DrawingsCurrent(projectId);
     }
 
+    public bool RevisionsLoadedFor(string drawingId) => readModel.RevisionsLoaded(drawingId);
+
     public IReadOnlyList<DrawingRevision> RevisionsFor(string drawingId)
     {
         readModel.EnsureRevisions(drawingId, CancellationToken.None);

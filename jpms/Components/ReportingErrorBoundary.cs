@@ -44,30 +44,76 @@ public sealed class ReportingErrorBoundary : ErrorBoundaryBase
             return;
         }
 
-        // The toast has already said what went wrong and holds the detail; this is only the way
-        // back. Recover() re-renders the page from scratch, which is almost always enough.
+        // This screen carries the detail ITSELF rather than pointing at the error toast.
+        //
+        // The toast lives inside MainLayout, and the layout is rendered by the Router — which sits
+        // INSIDE this boundary (see App.razor). So the moment the boundary trips it replaces the
+        // layout, taking the toast with it: the old wording told the user to read a red bar that
+        // this very screen had just removed from the page. Every render failure was therefore
+        // reported as "something went wrong" with nothing to send on — the exact dead end this
+        // component exists to prevent.
+        var report = Reporter.Current;
+
         builder.OpenElement(2, "section");
-        builder.AddAttribute(3, "class", "px-6 md:px-8 py-16 text-center");
+        builder.AddAttribute(3, "class", "px-6 md:px-8 py-16");
 
-        builder.OpenElement(4, "h1");
-        builder.AddAttribute(5, "class", "text-2xl font-semibold text-content mb-2");
-        builder.AddContent(6, "This page couldn't finish loading");
+        builder.OpenElement(4, "div");
+        builder.AddAttribute(5, "class", "max-w-2xl mx-auto text-center");
+
+        builder.OpenElement(6, "h1");
+        builder.AddAttribute(7, "class", "text-2xl font-semibold text-content mb-2");
+        builder.AddContent(8, "This page couldn't finish loading");
         builder.CloseElement();
 
-        builder.OpenElement(7, "p");
-        builder.AddAttribute(8, "class", "text-content-muted mb-6 max-w-md mx-auto leading-relaxed");
-        builder.AddContent(9, "The details are in the red bar at the top of the screen — copy them and send them on, "
-                             + "then try again. Nothing you had already saved is affected.");
+        builder.OpenElement(9, "p");
+        builder.AddAttribute(10, "class", "text-content-muted mb-6 max-w-md mx-auto leading-relaxed");
+        builder.AddContent(11, "Copy the details below and send them on, then try again. Nothing you had "
+                             + "already saved is affected.");
         builder.CloseElement();
 
-        builder.OpenElement(10, "button");
-        builder.AddAttribute(11, "type", "button");
-        builder.AddAttribute(12, "class",
+        builder.OpenElement(12, "button");
+        builder.AddAttribute(13, "type", "button");
+        builder.AddAttribute(14, "class",
             "rounded-lg bg-accent text-accent-ink font-medium px-4 py-2.5 hover:bg-accent-hover transition");
-        builder.AddAttribute(13, "onclick", EventCallback.Factory.Create(this, Recover));
-        builder.AddContent(14, "Try again");
+        builder.AddAttribute(15, "onclick", EventCallback.Factory.Create(this, Recover));
+        builder.AddContent(16, "Try again");
         builder.CloseElement();
 
-        builder.CloseElement();
+        builder.CloseElement(); // centred block
+
+        if (report is not null)
+        {
+            builder.OpenElement(17, "div");
+            builder.AddAttribute(18, "class",
+                "max-w-2xl mx-auto mt-8 rounded-lg border border-line bg-surface-raised overflow-hidden text-left");
+
+            builder.OpenElement(19, "div");
+            builder.AddAttribute(20, "class",
+                "px-4 py-2 border-b border-line flex items-center justify-between gap-3");
+
+            builder.OpenElement(21, "span");
+            builder.AddAttribute(22, "class", "font-mono text-sm font-semibold text-content");
+            builder.AddContent(23, report.Reference);
+            builder.CloseElement();
+
+            builder.OpenElement(24, "span");
+            builder.AddAttribute(25, "class", "text-xs text-content-subtle");
+            builder.AddContent(26, report.OccurredAt.ToLocalTime().ToString("dd MMM yyyy, HH:mm:ss"));
+            builder.CloseElement();
+
+            builder.CloseElement(); // header
+
+            // Selectable plain text — the same block the toast's Copy button produces, so someone
+            // stuck on this screen can select all and paste it into an email with nothing lost.
+            builder.OpenElement(27, "pre");
+            builder.AddAttribute(28, "class",
+                "px-4 py-3 text-xs text-content-muted whitespace-pre-wrap break-words max-h-80 overflow-y-auto");
+            builder.AddContent(29, report.ToPlainText());
+            builder.CloseElement();
+
+            builder.CloseElement(); // detail block
+        }
+
+        builder.CloseElement(); // section
     }
 }

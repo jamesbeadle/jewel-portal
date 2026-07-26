@@ -27,6 +27,11 @@ public sealed class ProgressReadModel
     public IReadOnlyList<ProgressUpdate> UpdatesCurrent(string projectId) =>
         updatesByProject.TryGetValue(projectId, out var list) ? list : Array.Empty<ProgressUpdate>();
 
+    /// <summary>True once the project's progress reports have been fetched at least once. The
+    /// reports list is a panel of its own, so it needs its own signal — updates landing first must
+    /// not let "No progress reports yet" appear over a fetch that is still running.</summary>
+    public bool ReportsLoaded(string projectId) => reportsByProject.ContainsKey(projectId);
+
     public IReadOnlyList<ProgressReport> ReportsCurrent(string projectId) =>
         reportsByProject.TryGetValue(projectId, out var list) ? list : Array.Empty<ProgressReport>();
 

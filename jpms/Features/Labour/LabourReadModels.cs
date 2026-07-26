@@ -8,13 +8,17 @@ namespace Jewel.JPMS.Features.Labour;
 public sealed class WorkersReadModel
 {
     private readonly IQueryClient queries;
-    private IReadOnlyList<Worker> workers = Array.Empty<Worker>();
+    private IReadOnlyList<Worker>? workers;
 
     public WorkersReadModel(IQueryClient queries) { this.queries = queries; }
 
     public event Action? OnChanged;
 
-    public IReadOnlyList<Worker> Current => workers;
+    public IReadOnlyList<Worker> Current => workers ?? Array.Empty<Worker>();
+    /// <summary>True once the registry has landed. Current answers with an empty list until then,
+    /// which is indistinguishable from a registry with nobody in it — so anything rendering a
+    /// worker list, a picker or a count must gate on this first.</summary>
+    public bool IsLoaded => workers is not null;
 
     public async Task RefreshAsync(CancellationToken cancellationToken)
     {
@@ -34,6 +38,10 @@ public sealed class WorkerAssignmentsReadModel
 
     public IReadOnlyList<ProjectWorkerAssignment> Current(string projectId) =>
         assignmentsByProject.TryGetValue(projectId, out var list) ? list : Array.Empty<ProjectWorkerAssignment>();
+    /// <summary>True once this key's rows have landed. Current(...) answers with an empty list
+    /// until then, which is indistinguishable from a real empty result — so anything rendering a
+    /// figure, a row count or an empty state must gate on this first.</summary>
+    public bool LoadedFor(string projectId) => assignmentsByProject.ContainsKey(projectId);
 
     public async Task RefreshAsync(string projectId, CancellationToken cancellationToken)
     {
@@ -53,6 +61,10 @@ public sealed class LabourTimesheetsReadModel
 
     public IReadOnlyList<TimesheetDetail> Current(string projectId) =>
         timesheetsByProject.TryGetValue(projectId, out var list) ? list : Array.Empty<TimesheetDetail>();
+    /// <summary>True once this key's rows have landed. Current(...) answers with an empty list
+    /// until then, which is indistinguishable from a real empty result — so anything rendering a
+    /// figure, a row count or an empty state must gate on this first.</summary>
+    public bool LoadedFor(string projectId) => timesheetsByProject.ContainsKey(projectId);
 
     public async Task RefreshAsync(string projectId, CancellationToken cancellationToken)
     {
@@ -72,6 +84,10 @@ public sealed class SiteAttendanceReadModel
 
     public IReadOnlyList<SiteAttendance> Current(string projectId) =>
         attendanceByProject.TryGetValue(projectId, out var list) ? list : Array.Empty<SiteAttendance>();
+    /// <summary>True once this key's rows have landed. Current(...) answers with an empty list
+    /// until then, which is indistinguishable from a real empty result — so anything rendering a
+    /// figure, a row count or an empty state must gate on this first.</summary>
+    public bool LoadedFor(string projectId) => attendanceByProject.ContainsKey(projectId);
 
     public async Task RefreshAsync(string projectId, CancellationToken cancellationToken)
     {
@@ -110,6 +126,10 @@ public sealed class LabourSettlementReadModel
 
     public IReadOnlyList<LabourSettlementRow> Current(string projectId) =>
         settlementByProject.TryGetValue(projectId, out var list) ? list : Array.Empty<LabourSettlementRow>();
+    /// <summary>True once this key's rows have landed. Current(...) answers with an empty list
+    /// until then, which is indistinguishable from a real empty result — so anything rendering a
+    /// figure, a row count or an empty state must gate on this first.</summary>
+    public bool LoadedFor(string projectId) => settlementByProject.ContainsKey(projectId);
 
     public async Task RefreshAsync(string projectId, CancellationToken cancellationToken)
     {

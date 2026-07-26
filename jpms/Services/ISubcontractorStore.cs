@@ -15,6 +15,11 @@ public interface ISubcontractorStore
     /// <summary>The curated master list of trades (sorted by name).</summary>
     IReadOnlyList<Trade> Trades();
 
+    /// <summary>False until the trade list has been fetched at least once. Trades() answers with an
+    /// empty list in the meantime, so a picker built from it needs this to tell "no trades yet"
+    /// from "not asked yet" rather than offering nothing and looking like the whole list.</summary>
+    bool TradesLoaded { get; }
+
     /// <summary>Adds a trade to the curated list; returns the existing trade if the name already exists.</summary>
     Task<Trade> AddTradeAsync(string name);
 

@@ -283,7 +283,7 @@
     </text>;
 }
 
-@if (!isLoaded)
+@if (!sessionReady)
 {
     <section class="px-6 md:px-8 py-12">
         <LoadGate IsLoading="true" Prominent="true" Label="Loading" />
@@ -308,23 +308,31 @@ else
         <header class="mb-6">
             <p class="text-xs uppercase tracking-wider text-content-subtle font-medium mb-1">JPMS · projects@@jewelbb.co.uk</p>
             <h1 class="text-2xl md:text-3xl font-semibold text-content leading-tight">Mailbox triage</h1>
+            @* Each strapline is a count, not a description, so it waits for its own list. "0 emails
+               in the inbox" is the one sentence a triager must never be told wrongly. *@
             @if (view == QueueView.Active)
             {
-                <p class="text-sm text-content-muted mt-2">
-                    @total email@(total == 1 ? "" : "s") in the inbox waiting to be assigned to a request.
-                </p>
+                <LoadGate IsLoading="@(!queueArrived)" Height="min-h-[28px]" Label="">
+                    <p class="text-sm text-content-muted mt-2">
+                        @total email@(total == 1 ? "" : "s") in the inbox waiting to be assigned to a request.
+                    </p>
+                </LoadGate>
             }
             else if (view == QueueView.Discarded)
             {
-                <p class="text-sm text-content-muted mt-2">
-                    @discardedTotal discarded email@(discardedTotal == 1 ? "" : "s") — restore one to put it back in the queue.
-                </p>
+                <LoadGate IsLoading="@(!discardedArrived)" Height="min-h-[28px]" Label="">
+                    <p class="text-sm text-content-muted mt-2">
+                        @discardedTotal discarded email@(discardedTotal == 1 ? "" : "s") — restore one to put it back in the queue.
+                    </p>
+                </LoadGate>
             }
             else
             {
-                <p class="text-sm text-content-muted mt-2">
-                    @taggedTotal tagged email@(taggedTotal == 1 ? "" : "s") — add or remove tags to manage which processes use them.
-                </p>
+                <LoadGate IsLoading="@(!taggedArrived)" Height="min-h-[28px]" Label="">
+                    <p class="text-sm text-content-muted mt-2">
+                        @taggedTotal tagged email@(taggedTotal == 1 ? "" : "s") — add or remove tags to manage which processes use them.
+                    </p>
+                </LoadGate>
             }
         </header>
 
@@ -351,6 +359,9 @@ else
 
         @if (view == QueueView.Active)
         {
+        @* The panel only exists when there ARE unassigned requests, so its absence is an answer —
+           and one this page must not give before the register has been asked. *@
+        <LoadGate IsLoading="@(!unassignedArrived)" Label="Loading unassigned requests">
         @if (unassigned.Count > 0)
         {
             <div class="panel p-5 mb-6 border-amber-500/40">
@@ -384,10 +395,13 @@ else
                 </div>
             </div>
         }
+        </LoadGate>
 
-        @if (listLoading && items.Count == 0)
+        <LoadGate IsLoading="@(!queueArrived)" Prominent="true" Label="Loading the inbox">
+        @if (loadError is not null && items.Count == 0)
         {
-            <JewelSpinner Class="py-16" Label="Loading" />
+            @* A failed page has no queue to report; "nothing in the queue" would read as one. *@
+            <p class="text-sm text-negative">Couldn't load the inbox. The reason is in the red bar above — reload to try again.</p>
         }
         else if (total == 0)
         {
@@ -878,12 +892,15 @@ else
                 </div>
             </div>
         }
+        </LoadGate>
         }
         else if (view == QueueView.Discarded)
         {
-            @if (listLoading && discardedItems.Count == 0)
+            <LoadGate IsLoading="@(!discardedArrived)" Prominent="true" Label="Loading discarded emails">
+            @if (loadError is not null && discardedItems.Count == 0)
             {
-                <JewelSpinner Class="py-16" Label="Loading" />
+                @* A failed page has nothing to report; "no discarded emails" would read as an answer. *@
+                <p class="text-sm text-negative">Couldn't load the discarded emails. The reason is in the red bar above — reload to try again.</p>
             }
             else if (discardedTotal == 0)
             {
@@ -980,6 +997,7 @@ else
                     </div>
                 </div>
             }
+            </LoadGate>
         }
         else
         {
@@ -995,6 +1013,9 @@ else
                 <button type="button" class="@PathwayFilterChipClass(InternalBucket)" @onclick="() => SetPathwayFilter(InternalBucket)">Internal</button>
             </div>
 
+            @* The tag list accrues from the emails that have loaded, so before the first page lands
+               the dropdown offers only "Discarded" — a short list that looks like the whole list. *@
+            <LoadGate IsLoading="@(!taggedArrived)" Height="min-h-[34px]" Label="">
             <div class="flex flex-wrap items-center gap-2 mb-5">
                 <span class="text-xs uppercase tracking-wider text-content-subtle font-semibold mr-1">Filter</span>
                 <div class="relative">
@@ -1031,10 +1052,13 @@ else
                     </span>
                 }
             </div>
+            </LoadGate>
 
-            @if (listLoading && taggedItems.Count == 0)
+            <LoadGate IsLoading="@(!taggedArrived)" Prominent="true" Label="Loading tagged emails">
+            @if (loadError is not null && taggedItems.Count == 0)
             {
-                <JewelSpinner Class="py-16" Label="Loading" />
+                @* A failed page has nothing to report; "no tagged emails" would read as an answer. *@
+                <p class="text-sm text-negative">Couldn't load the tagged emails. The reason is in the red bar above — reload to try again.</p>
             }
             else if (taggedTotal == 0)
             {
@@ -1231,6 +1255,7 @@ else
                     </div>
                 </div>
             }
+            </LoadGate>
         }
     </section>
 }
@@ -1441,11 +1466,22 @@ else
 
     private const int PageSize = 5;
 
-    private bool isLoaded;
+    // Session checked and the user signed in. This is NOT "the mailbox is here" — keeping the two
+    // apart is what lets the heaviest page in the app show its chrome while four fetches are still
+    // out, without ever claiming a count it does not have.
+    private bool sessionReady;
     private string? loadError;
     // True while a list page (queue / discarded / tagged) is being re-fetched — drives the inline
     // spinner over the list column so pagination and filter changes fade rather than jolt.
     private bool listLoading;
+
+    // Has this list ANSWERED yet — a failed answer counts, or the jewel pulses forever. listLoading
+    // can't stand in: it is false before the first fetch starts as well as after it finishes, and a
+    // total of 0 read in that gap is the "nothing in the queue" this page must never show early.
+    private bool queueArrived;
+    private bool discardedArrived;
+    private bool taggedArrived;
+    private bool unassignedArrived;
 
     // The current page only. Graph pages with an opaque cursor, so we keep a small stack of the
     // cursors we've walked (index 0 = first page, cursor null) to support Previous/Next.
@@ -1648,15 +1684,34 @@ else
         // reading it late would fetch the first page the wrong way round. It is a local-storage
         // read, so it costs almost nothing.
         newestFirst = await SortStorage.ReadNewestFirstAsync(Auth.CurrentUser!.Email);
+        sessionReady = true;
+        // Paint the chrome before the four fetches: Blazor re-renders OnInitializedAsync only at
+        // its FIRST await, which has already passed. The sort toggle is drawn from newestFirst, so
+        // it goes out with the rest rather than flipping under the cursor a moment later.
+        StateHasChanged();
 
         // The remaining four are independent of each other; issued together the page waits once
         // for the slowest instead of for the sum. Triage is the heaviest page in the app to open.
+        //
+        // Every one of them has to be non-throwing. Task.WhenAll rethrows the first failure, and an
+        // exception escaping OnInitializedAsync takes the whole page down to the error boundary —
+        // which is exactly what a failing project list used to do here, turning one bad read into a
+        // dead triage queue. The other three already swallowed their own failures; the project list
+        // was the odd one out. The error still reaches the toast, because the query client reports
+        // it to the error sink before rethrowing, so nothing is hidden by catching it here.
         await Task.WhenAll(
-            Projects.RefreshAsync(CancellationToken.None),
+            LoadProjectsAsync(),
             LoadAsync(),
             LoadUnassignedAsync(),
             LoadTodoAssignableRolesAsync());
-        isLoaded = true;
+    }
+
+    // The project list only feeds the "file this email against a project" pickers. Losing it should
+    // cost the pickers their options, not cost the triager the entire queue.
+    private async Task LoadProjectsAsync()
+    {
+        try { await Projects.RefreshAsync(CancellationToken.None); }
+        catch { /* reported by the query client; the pickers render empty */ }
     }
 
     private async Task SwitchView(QueueView next)
@@ -1731,6 +1786,7 @@ else
         finally
         {
             listLoading = false;
+            queueArrived = true;
         }
     }
 
@@ -1758,6 +1814,7 @@ else
         finally
         {
             listLoading = false;
+            discardedArrived = true;
         }
     }
 
@@ -1822,6 +1879,7 @@ else
         finally
         {
             listLoading = false;
+            taggedArrived = true;
         }
     }
 
@@ -1895,6 +1953,7 @@ else
         unassignedError = null;
         try { unassigned = await RequestRegister.ListUnassignedAsync(); }
         catch { unassigned = Array.Empty<Request>(); }
+        finally { unassignedArrived = true; }
     }
 
     private async Task ReturnUnassigned(Request request)

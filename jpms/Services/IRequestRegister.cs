@@ -5,6 +5,11 @@ namespace Jewel.JPMS.Services;
 
 public interface IRequestRegister
 {
+    /// <summary>False until the project's requests have been fetched at least once. ForProject
+    /// answers with an empty list until then, which is indistinguishable from a project with no
+    /// requests — so anything rendering a count or an empty state has to gate on this first.</summary>
+    bool LoadedFor(string projectId);
+
     IReadOnlyList<Request> ForProject(string projectId);
     IReadOnlyList<Request> ForProject(string projectId, RequestType kind);
 

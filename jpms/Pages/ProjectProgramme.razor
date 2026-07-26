@@ -24,7 +24,7 @@
     the same message can feed a request AND appear here.
 *@
 
-@if (!isLoaded)
+@if (!sessionReady)
 {
     <section class="px-6 md:px-8 py-12">
         <LoadGate IsLoading="true" Prominent="true" Label="Loading" />
@@ -74,11 +74,10 @@ else
                 <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-4">@programmeError</p>
             }
 
-            @if (!programmeLoaded)
-            {
-                <JewelSpinner Class="py-16" Label="Loading" />
-            }
-            else
+            <LoadGate IsLoading="@(!programmeLoaded)" Prominent="true" Label="Loading programme">
+            @* The banner above carries the reason a failed fetch gives; rendering the body anyway
+               would turn "couldn't load the programme" into "no programme tasks yet". *@
+            @if (programmeError is null)
             {
                 @* Movement banner — the programme measured against its latest baseline. *@
                 @if (programme?.Baseline is { } baseline)
@@ -347,6 +346,7 @@ else
                     </p>
                 }
             }
+            </LoadGate>
         }
         else if (view == SubView.Claims)
         {
@@ -451,6 +451,7 @@ else
             <div class="space-y-6">
                 <div>
                     <h3 class="text-sm font-semibold text-content mb-2">Notices of Delay <span class="font-normal text-content-subtle">— raised by Jewel (JCT ICD 2024 cl. 2.19)</span></h3>
+                    <LoadGate IsLoading="@(!RequestsReady)" Label="Loading notices">
                     @if (Nods.Count == 0)
                     {
                         <div class="panel p-5 text-center"><p class="text-xs text-content-subtle">No Notices of Delay on this project.</p></div>
@@ -479,10 +480,12 @@ else
                             }
                         </ul>
                     }
+                    </LoadGate>
                 </div>
 
                 <div>
                     <h3 class="text-sm font-semibold text-content mb-2">Extensions of Time <span class="font-normal text-content-subtle">— raised by Jewel (JCT ICD 2024 cl. 2.19/2.20)</span></h3>
+                    <LoadGate IsLoading="@(!RequestsReady)" Label="Loading extensions">
                     @if (Eots.Count == 0)
                     {
                         <div class="panel p-5 text-center"><p class="text-xs text-content-subtle">No Extensions of Time on this project.</p></div>
@@ -515,17 +518,19 @@ else
                             }
                         </ul>
                     }
+                    </LoadGate>
                 </div>
 
                 <div>
                     <h3 class="text-sm font-semibold text-content mb-2">Liquidated Damages <span class="font-normal text-content-subtle">— claimed by the client against Jewel</span></h3>
-                    @if (!ladsLoaded)
+                    <LoadGate IsLoading="@(!ladsLoaded)" Label="Loading LADs claims">
+                    @if (lads.Count == 0)
                     {
-                        <JewelSpinner Class="py-8" Label="Loading" />
-                    }
-                    else if (lads.Count == 0)
-                    {
-                        <div class="panel p-5 text-center"><p class="text-xs text-content-subtle">No LADs claims recorded on this project.</p></div>
+                        @* Only when the fetch actually answered "none" — a failure says so above. *@
+                        @if (!ladsFailed)
+                        {
+                            <div class="panel p-5 text-center"><p class="text-xs text-content-subtle">No LADs claims recorded on this project.</p></div>
+                        }
                     }
                     else
                     {
@@ -554,6 +559,7 @@ else
                             }
                         </ul>
                     }
+                    </LoadGate>
                 </div>
             </div>
         }
@@ -563,6 +569,7 @@ else
                programme's critical path. The tag is set on the RFI itself (detail page → Actions or
                Edit details); this view is the programme-side lens on that subset, open and closed,
                so it doubles as the programme-impact history. *@
+            <LoadGate IsLoading="@(!RequestsReady)" Prominent="true" Label="Loading critical path RFIs">
             @if (CriticalRfis.Count == 0)
             {
                 <div class="panel p-8 text-center">
@@ -615,6 +622,7 @@ else
                     }
                 </ul>
             }
+            </LoadGate>
         }
         else
         {
@@ -623,18 +631,19 @@ else
                 <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-4">@emailsError</p>
             }
 
-            @if (!emailsLoaded)
+            <LoadGate IsLoading="@(!emailsLoaded)" Prominent="true" Label="Loading programme emails">
+            @if (emails.Count == 0)
             {
-                <JewelSpinner Class="py-16" Label="Loading" />
-            }
-            else if (emails.Count == 0)
-            {
+                @* Only when the mailbox actually answered "none" — a failure says so above. *@
+                @if (emailsError is null)
+                {
                 <div class="panel p-8 text-center">
                     <p class="text-sm text-content">No programme emails yet.</p>
                     <p class="text-xs text-content-subtle mt-1">
                         Tag an email to <span class="font-medium text-content">Programme</span> in mailbox triage and it will appear here.
                     </p>
                 </div>
+                }
             }
             else
             {
@@ -661,6 +670,7 @@ else
                     }
                 </ul>
             }
+            </LoadGate>
         }
     </ProjectPageShell>
 }
@@ -674,7 +684,9 @@ else
     private enum ClaimForm { None, Nod, Eot, Lad }
     private ClaimForm openForm = ClaimForm.None;
 
-    private bool isLoaded;
+    // Session checked and the user is signed in — not "the data is here". The heading and the
+    // sub-tabs show straight away; each view holds its own panels until their sources land.
+    private bool sessionReady;
     private bool emailsLoaded;
     private string? emailsError;
     private IReadOnlyList<MailboxMessage> emails = Array.Empty<MailboxMessage>();
@@ -682,6 +694,9 @@ else
     // Claims state. NOD/EOT come from the request register (they ARE requests, of those kinds);
     // LADs claims come from their own store.
     private bool ladsLoaded;
+    // Kept apart from claimsError, which also carries the raise/record failures: only a failed
+    // *fetch* means the empty list is not an answer.
+    private bool ladsFailed;
     private string? claimsError;
     private bool claimsBusy;
     private IReadOnlyList<LadClaim> lads = Array.Empty<LadClaim>();
@@ -703,6 +718,10 @@ else
     private int ladDaysClaimed;
     private decimal ladRatePerWeek;
     private decimal ladAmount;
+
+    // The register backs the NODs, the EOTs and the critical-path RFIs alike: until it has landed
+    // an empty list is indistinguishable from a project with no claims at all.
+    private bool RequestsReady => RequestRegister.LoadedFor(ProjectId);
 
     private IReadOnlyList<Request> Nods => RequestRegister.ForProject(ProjectId, RequestType.NoticeOfDelay);
     private IReadOnlyList<Request> Eots => RequestRegister.ForProject(ProjectId, RequestType.ExtensionOfTime);
@@ -768,7 +787,7 @@ else
         // Refresh on entry so NoD / EOT rows and count badges reflect changes made since the
         // register was first cached (stale-while-revalidate).
         RequestRegister.Refresh(ProjectId);
-        isLoaded = true;
+        sessionReady = true;
         // Load the programme, claims + communications in the background so the default view and the
         // count badges are ready when the tabs are opened.
         await Task.WhenAll(LoadProgrammeAsync(), LoadLadsAsync(), LoadEmailsAsync());
@@ -1076,10 +1095,12 @@ else
         try
         {
             lads = await Queries.AskAsync(new ListLadClaimsForProject(ProjectId), CancellationToken.None);
+            ladsFailed = false;
         }
         catch
         {
             lads = Array.Empty<LadClaim>();
+            ladsFailed = true;
             claimsError = "Couldn't load the LADs claims. Please try again.";
         }
         finally
