@@ -129,7 +129,9 @@
     // so no fetch-once-per-key bookkeeping applies here.
     private IReadOnlyList<ProjectContact> projectContacts = Array.Empty<ProjectContact>();
     private bool contactsLoading;
-    private string responseDue = "";
+    // Pre-filled with the standard one-week window (RequestDefaults) so the common case needs no
+    // typing; editable as before, and cleared to blank means no due date at all.
+    private string responseDue = RequestDefaults.ResponseDue();
     private string valueText = "";
 
     private bool backfill;
@@ -172,7 +174,8 @@
 
     private void Reset()
     {
-        title = description = raisedToContactId = drawingRef = responseDue = valueText = "";
+        title = description = raisedToContactId = drawingRef = valueText = "";
+        responseDue = RequestDefaults.ResponseDue();
         backfill = false;
         raisedAt = respondedAt = responseText = "";
         status = RequestStatus.NeedsAction;
@@ -211,7 +214,15 @@
         if (int.TryParse(e.Value?.ToString(), out var raw)) status = (RequestStatus)raw;
     }
 
-    private void OnBackfillChanged(ChangeEventArgs e) => backfill = e.Value is true;
+    // Logging a HISTORICAL request clears the pre-filled response due: a week from today is a
+    // sensible default for a request being raised now, and nonsense for one raised months ago. The
+    // field stays editable either way, so the real historical date can be typed in.
+    private void OnBackfillChanged(ChangeEventArgs e)
+    {
+        backfill = e.Value is true;
+        if (backfill && responseDue == RequestDefaults.ResponseDue()) responseDue = "";
+        else if (!backfill && string.IsNullOrWhiteSpace(responseDue)) responseDue = RequestDefaults.ResponseDue();
+    }
 
     private void OnDescriptionInput(ChangeEventArgs e) => description = e.Value?.ToString() ?? "";
 

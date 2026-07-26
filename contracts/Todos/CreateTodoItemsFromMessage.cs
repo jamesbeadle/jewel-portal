@@ -22,7 +22,8 @@ public sealed record CreateTodoItemsFromMessage(
     string? LinkRequestId = null,
     string? InternetMessageId = null,
     string CreatedByEmail = "",
-    // The pathway the triager worked down. To-dos are pathway-NEUTRAL: this only files the thread
-    // under Internal when it is "Internal" AND the thread has no pathway yet — a to-do raised from
-    // a client email leaves the thread Client. Null = no pathway involvement.
+    // The pathway the triager worked down ("Internal" / "Subcontractor"). To-dos are pathway-NEUTRAL:
+    // this only files the thread under that pathway when the thread has no pathway yet — a to-do
+    // raised from a client email leaves the thread Client. "Client" is ignored (the wall is only
+    // crossed into by an explicit client record). Null = no pathway involvement.
     string? Pathway = null) : ICommand<IReadOnlyList<TodoItem>>;

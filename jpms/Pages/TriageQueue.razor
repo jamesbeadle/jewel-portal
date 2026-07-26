@@ -550,9 +550,9 @@ else
                                         {
                                             @* The quiet consequence line: what the pending action does to the thread's
                                                filing. A to-do LINK is the one neutral case — it never files a thread. *@
-                                            @if (pathway == TriagePathway.Internal && mode == TriageMode.Link)
+                                            @if (PendingActionIsNeutral)
                                             {
-                                                <p class="text-xs text-content-subtle mt-2">To-do links are neutral — this won't file the thread under a pathway.</p>
+                                                <p class="text-xs text-content-subtle mt-2">To-dos are neutral — this won't file the thread under a pathway.</p>
                                             }
                                             else
                                             {
@@ -745,7 +745,8 @@ else
                                 }
                                 else if (mode == TriageMode.GeneralTodo)
                                 {
-                                    @* Internal → To-dos: capture the email as one or more to-do items. The project is
+                                    @* To-dos (Internal, and Subcontractor for "chase them for X"): capture the email as one or
+                                       more to-do items. The project is
                                        OPTIONAL — chosen, the items land on that project's To-do tab (and the email can
                                        also feed one of its open requests); left blank they are GENERAL (company-wide)
                                        items that live on the To-dos browser page and the dashboards of everyone
@@ -766,7 +767,7 @@ else
                                             </select>
                                         </div>
 
-                                        @if (!string.IsNullOrWhiteSpace(createProjectId))
+                                        @if (!string.IsNullOrWhiteSpace(createProjectId) && TodoRequestLinkOffered)
                                         {
                                             <div>
                                                 <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Link to an open request (optional)</label>
@@ -830,7 +831,7 @@ else
 
                                         <button type="button" class="btn-secondary text-xs" @onclick="AddTodoRow">+ Add another item</button>
 
-                                        <button type="button" class="btn-primary" disabled="@(busy || !createTodoRows.Any(r => !string.IsNullOrWhiteSpace(r.Title)))" @onclick="DoCreateInternalTodos">
+                                        <button type="button" class="btn-primary" disabled="@(busy || !createTodoRows.Any(r => !string.IsNullOrWhiteSpace(r.Title)))" @onclick="DoCreateTodos">
                                             Create @(TodoRowCountLabel) from email
                                         </button>
                                     </div>
@@ -1298,7 +1299,7 @@ else
     // subsets below are what the pickers normally offer.
     private static readonly RecordType[] RecordTypeOptions =
     {
-        RecordType.Request, RecordType.BidPackageInvite, RecordType.CostCentre, RecordType.Scheduling, RecordType.Lad, RecordType.VariationQuote, RecordType.Variation, RecordType.Todo
+        RecordType.Request, RecordType.BidPackageInvite, RecordType.WorkOrder, RecordType.CostCentre, RecordType.Scheduling, RecordType.Lad, RecordType.VariationQuote, RecordType.Variation, RecordType.Todo
     };
 
     // What each pathway's "Link to existing" offers (the pathway filters the actions — the plan's
@@ -1310,7 +1311,15 @@ else
     {
         RecordType.Request, RecordType.Variation, RecordType.VariationQuote, RecordType.Scheduling, RecordType.Lad, RecordType.CostCentre
     };
-    private static readonly RecordType[] SubcontractorLinkTypes = { RecordType.BidPackageInvite, RecordType.CostCentre };
+    // Subcontractor covers the whole subcontract lifecycle, not just the tender: an email can land
+    // before a package exists (a chase, an H&S request), against the order that followed the award
+    // (WorkOrder — the plan's §2.2 "link work order"), or onto a to-do that tracks something the
+    // supplier owes us. Todo is offered here because to-do links are pathway-neutral, so tagging one
+    // never re-files the thread — the same reason the Tagged picker offers it on every pathway.
+    private static readonly RecordType[] SubcontractorLinkTypes =
+    {
+        RecordType.BidPackageInvite, RecordType.WorkOrder, RecordType.CostCentre, RecordType.Todo
+    };
     private static readonly RecordType[] InternalLinkTypes = { RecordType.Todo };
 
     // The Tagged tab's "link to another record" pool per THREAD pathway. The client wall is
@@ -1322,7 +1331,7 @@ else
     {
         RecordType.Request, RecordType.Variation, RecordType.VariationQuote, RecordType.Scheduling, RecordType.Lad, RecordType.CostCentre, RecordType.Todo
     };
-    private static readonly RecordType[] NonClientTaggedLinkTypes = { RecordType.BidPackageInvite, RecordType.CostCentre, RecordType.Todo };
+    private static readonly RecordType[] NonClientTaggedLinkTypes = { RecordType.BidPackageInvite, RecordType.WorkOrder, RecordType.CostCentre, RecordType.Todo };
 
     private IReadOnlyList<RecordType> QueueLinkTypeOptions => pathway switch
     {
@@ -1345,16 +1354,32 @@ else
     {
         RecordType.Request or RecordType.Variation or RecordType.VariationQuote
             or RecordType.Scheduling or RecordType.Lad => "Client",
-        RecordType.BidPackageInvite => "Subcontractor",
+        RecordType.BidPackageInvite or RecordType.WorkOrder => "Subcontractor",
         RecordType.CostCentre       => "Client or Subcontractor",
         RecordType.Todo             => "Neutral",
         _ => ""
     };
 
+    // The optional "link these to-dos to an open request" picker, offered on every pathway EXCEPT
+    // Subcontractor. A request is a Client record: tagging one files the thread under Client, which is
+    // right for an internal thread that turns out to be client business but is a wall crossing for
+    // subcontract mail. Hiding the control means the Subcontractor → To-dos action is always neutral.
+    private bool TodoRequestLinkOffered => pathway != TriagePathway.Subcontractor;
+
+    // True when the pending action only touches to-do items, which are pathway-neutral — it tags the
+    // email without filing the thread under any pathway. Drives the consequence line under the
+    // selector so it never promises a filing that won't happen.
+    private bool PendingActionIsNeutral =>
+        (mode == TriageMode.Link && linkRecordType == RecordType.Todo)
+        || (mode == TriageMode.GeneralTodo && string.IsNullOrWhiteSpace(createTodoLinkRequestId));
+
     // The action tabs each pathway offers — the router's whole point (plan §2.2). Discard is in
     // every set: discarding is pathway-less, and it is ALL that's offered before a pathway is chosen.
     private static readonly TriageMode[] ClientModes = { TriageMode.Link, TriageMode.Create, TriageMode.Reply, TriageMode.Discard };
-    private static readonly TriageMode[] SubcontractorModes = { TriageMode.Link, TriageMode.Create, TriageMode.Discard };
+    // Subcontractor gets To-dos as well as Link/Create: "chase this subbie for their H&S file" is a
+    // to-do, not a bid package, and to-do links are pathway-neutral so raising one from a subcontract
+    // email files nothing — exactly the "copy, don't share" pattern the wall wants (plan §2.1).
+    private static readonly TriageMode[] SubcontractorModes = { TriageMode.Link, TriageMode.Create, TriageMode.GeneralTodo, TriageMode.Discard };
     private static readonly TriageMode[] InternalModes = { TriageMode.GeneralTodo, TriageMode.Link, TriageMode.Discard };
     private static readonly TriageMode[] NoPathwayModes = { TriageMode.Discard };
 
@@ -1380,6 +1405,7 @@ else
     {
         RecordType.Request          => "Request",
         RecordType.BidPackageInvite => "Bid Package Invite",
+        RecordType.WorkOrder        => "Work Order",
         RecordType.CostCentre       => "Cost Centre",
         // UI terminology is "Programme" (UK construction usage); the RecordType/tag layer keeps
         // its Scheduling identifiers.
@@ -1531,7 +1557,10 @@ else
     private string createDescription = "";
     private string createRaisedTo = "";
     private string createDrawingRef = "";
-    private string createResponseDue = "";
+    // Pre-filled with the house standard response window rather than left blank: a week is what all
+    // but a handful of requests get, so typing a date is keystrokes spent on the common case. Still
+    // fully editable — the triager overrides it for anything urgent or long-dated.
+    private string createResponseDue = RequestDefaults.ResponseDue();
     // "Also add to Programme": as well as tagging the email to the new request, the server tags it
     // to the project's scheduling bucket (the same tag "Tag email to programme" applies) so the
     // thread appears under the Programme tab too. Reset per selection like the rest of the form.
@@ -1911,7 +1940,8 @@ else
         // rarely the right subject/detail for the record, so the triager writes their own.
         createTitle = "";
         createDescription = "";
-        createRaisedTo = createDrawingRef = createResponseDue = "";
+        createRaisedTo = createDrawingRef = "";
+        createResponseDue = RequestDefaults.ResponseDue();
         createAddToProgramme = false;
         createTrade = "";
         createTodoRows = new List<TodoDraftRow> { new() };
@@ -2122,7 +2152,10 @@ else
     private async Task LoadCreateTodoLinkRequestsAsync()
     {
         createTodoLinkRequestId = "";
-        if (mode != TriageMode.GeneralTodo || string.IsNullOrWhiteSpace(createProjectId))
+        // Never offered on the Subcontractor pathway: a request is a client record, so tagging one
+        // would file a subcontract thread under Client — the wall crossing the whole design forbids.
+        // To-dos raised from subcontract mail stay pathway-neutral (see TodoRequestLinkOffered).
+        if (mode != TriageMode.GeneralTodo || !TodoRequestLinkOffered || string.IsNullOrWhiteSpace(createProjectId))
         {
             createTodoLinkRequests = Array.Empty<LinkableRecord>();
             return;
@@ -2314,10 +2347,12 @@ else
     // roles' dashboards. Either way the email is tagged "JPMS/TODO-####" once per created item, so
     // each item reads this email back live by its own tag — one email can feed several to-dos.
     //
-    // Pathway: "Internal" rides along so the server files a not-yet-filed thread under Internal —
-    // EXCEPT when a request link is picked: the request tag makes the thread feed a client-side
-    // record, so the pathway is withheld and the thread's filing follows the request instead.
-    private async Task DoCreateInternalTodos()
+    // Pathway: the pathway the triager actually chose rides along, so a not-yet-filed thread is filed
+    // where they said — Internal for company admin, Subcontractor for a supplier chase. EXCEPT when a
+    // request link is picked: the request tag makes the thread feed a client-side record, so the
+    // pathway is withheld and the thread's filing follows the request instead. (The request picker is
+    // hidden on Subcontractor, so that exception only ever applies to an Internal batch.)
+    private async Task DoCreateTodos()
     {
         if (selected is null || busy) return;
 
@@ -2338,7 +2373,7 @@ else
             drafts,
             LinkRequestId: linkRequestId,
             InternetMessageId: selected.InternetMessageId,
-            Pathway: linkRequestId is null ? "Internal" : null);
+            Pathway: linkRequestId is null && pathway is { } chosen ? PathwayLabel(chosen) : null);
 
         await RunAction("Creating to-dos", async () => await Intake.CreateTodoItemsFromMessageAsync(command));
     }

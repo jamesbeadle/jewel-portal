@@ -114,18 +114,27 @@ public sealed class CreateTodoItemsFromMessageHandler : ICommandHandler<CreateTo
 
         // Pathway (docs/Pathway-Split-Platform-Flow-Plan.md §2.1): a to-do link is NEUTRAL — it never
         // sets or changes a pathway on a thread that already has one (a to-do raised from a client
-        // email leaves the thread Client). Only when the triager worked down the Internal pathway AND
-        // the thread has no pathway yet is it filed under Internal. Best-effort: the to-do tags are
-        // the primary association; a missed stamp is healed by the backfill.
-        var wantsInternal = string.Equals(command.Pathway?.Trim(), "Internal", StringComparison.OrdinalIgnoreCase);
+        // email leaves the thread Client). Only when the triager worked down a NON-CLIENT pathway AND
+        // the thread has no pathway yet is it filed there — Internal for company admin, Subcontractor
+        // for "chase this supplier for their H&S file", which is subcontract correspondence that
+        // happens to be captured as a to-do. Client is never stamped from here: the wall is only ever
+        // crossed into by an explicit client record (a request link does that, and withholds Pathway).
+        // Best-effort: the to-do tags are the primary association; a missed stamp is healed by the
+        // backfill.
+        var requested = command.Pathway?.Trim();
+        var bucket = string.Equals(requested, "Internal", StringComparison.OrdinalIgnoreCase)
+            ? TriageCategories.Internal
+            : string.Equals(requested, "Subcontractor", StringComparison.OrdinalIgnoreCase)
+                ? TriageCategories.Subcontractor
+                : null;
         var hasBucket = (snapshot.Categories ?? Array.Empty<string>()).Any(TriageCategories.IsBucketTag);
-        if (wantsInternal && !hasBucket)
+        if (bucket is not null && !hasBucket)
         {
             try
             {
                 await threadTagger.TagThreadAsync(
                     command.MessageId, snapshot.InternetMessageId, snapshot.ConversationId,
-                    TriageCategories.Internal, cancellationToken);
+                    bucket, cancellationToken);
             }
             catch (Exception ex) when (ex is not OperationCanceledException) { /* best-effort */ }
         }

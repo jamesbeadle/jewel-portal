@@ -212,6 +212,7 @@ public sealed class BackfillBucketsEndpoint
         if (stem.StartsWith("SCH-", StringComparison.OrdinalIgnoreCase)) return TriageCategories.Client;
         if (stem.StartsWith("LAD-", StringComparison.OrdinalIgnoreCase)) return TriageCategories.Client;
         if (stem.StartsWith("BPI-", StringComparison.OrdinalIgnoreCase)) return TriageCategories.Subcontractor;
+        if (stem.StartsWith("WO-", StringComparison.OrdinalIgnoreCase)) return TriageCategories.Subcontractor;
         if (stem.StartsWith("CC-", StringComparison.OrdinalIgnoreCase)) return "CC";
         if (stem.StartsWith("TODO-", StringComparison.OrdinalIgnoreCase)) return "TODO";
 

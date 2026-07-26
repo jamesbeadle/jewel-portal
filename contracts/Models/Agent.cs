@@ -13,7 +13,8 @@ public enum RecordType
     Todo = 4,              // a project to-do item — created at triage or on the project's Overview tab
     Lad = 5,               // a Liquidated Damages claim — a claims document on the Programme tab
     Variation = 6,         // a Variation Order — the approved change feeding the valuation report
-    VariationQuote = 7     // a Variation Order Quote (VOQ) — the pre-approval quote a VO is raised from
+    VariationQuote = 7,    // a Variation Order Quote (VOQ) — the pre-approval quote a VO is raised from
+    WorkOrder = 8          // a work order (purchase order) awarded to a subcontractor — subcontract-side
 }
 
 // The discipline an agent belongs to. Mirrors the columns of the request-agent flow diagram:
