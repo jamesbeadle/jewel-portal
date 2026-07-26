@@ -1,4 +1,5 @@
 using System.Net.Http.Json;
+using System.Text.Json;
 using Jewel.JPMS.Contracts.Cqrs;
 
 namespace Jewel.JPMS.Cqrs;
@@ -47,7 +48,7 @@ public sealed class HttpCommandSender : ICommandSender
                 errors.ReportRequestFailure(operation, route.HttpMethod, path, status, NullIfBlank(detail), null);
 
             throw new CommandFailedException(string.IsNullOrWhiteSpace(detail)
-                ? $"The request failed ({status})."
+                ? DescribeBodilessFailure(status)
                 : detail);
         }
 
@@ -65,15 +66,47 @@ public sealed class HttpCommandSender : ICommandSender
     /// </summary>
     private static bool DeservesAToast(int statusCode) => statusCode is not (400 or 409 or 422);
 
-    // Endpoints return the message either as a raw string or a JSON-quoted string; strip wrapping quotes
-    // so the user sees clean text.
+    // Endpoints return the message as a raw string, a JSON-quoted string, or — the validation
+    // shape used across the labour and commercial slices — a JSON array of messages
+    // (BadRequestObjectResult(new[] { "…" })). Unwrap all three so the user reads the sentence and
+    // not its packaging; several messages join into one line rather than being silently truncated.
     private static string CleanErrorBody(string body)
     {
         var trimmed = body.Trim();
+        if (trimmed.Length >= 2 && trimmed[0] == '[' && trimmed[^1] == ']')
+        {
+            try
+            {
+                var messages = JsonSerializer.Deserialize<string[]>(trimmed);
+                if (messages is { Length: > 0 })
+                    return string.Join(" ", messages.Where(message => !string.IsNullOrWhiteSpace(message)));
+            }
+            catch (JsonException)
+            {
+                // Not an array of strings (e.g. a ProblemDetails list) — fall through and show it raw.
+            }
+        }
         if (trimmed.Length >= 2 && trimmed[0] == '"' && trimmed[^1] == '"')
             trimmed = trimmed[1..^1].Replace("\\\"", "\"");
         return trimmed;
     }
+
+    /// <summary>
+    /// The gates return bare status results — <c>StatusCodeResult(403)</c>, <c>UnauthorizedResult</c>,
+    /// <c>BadRequestResult</c> — with no body at all, so the caller has nothing to show but a number.
+    /// "The request failed (403)." is what a dialog then either prints or, worse, papers over with a
+    /// guess of its own; this says the actual thing that happened. The status stays in the text so
+    /// the sentence is still diagnosable when it reaches a screenshot.
+    /// </summary>
+    private static string DescribeBodilessFailure(int status) => status switch
+    {
+        401 => "Your session has expired — sign in again and retry.",
+        403 => "Your role doesn't have permission to do this. Ask an administrator if you think it should.",
+        404 => "That endpoint wasn't found (404) — the page may be newer than the deployed API.",
+        408 or 504 => "The server took too long to answer — try again in a moment.",
+        >= 500 => $"The server hit an error ({status}) — the reference in the red bar at the top will identify it.",
+        _ => $"The request was rejected ({status})."
+    };
 
     private static string? NullIfBlank(string? value) => string.IsNullOrWhiteSpace(value) ? null : value;
 }

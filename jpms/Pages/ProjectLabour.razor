@@ -176,6 +176,10 @@ else
             <div class="rounded-lg border border-line bg-surface-raised p-4 mb-6 max-w-lg">
                 <p class="text-sm text-content mb-2">Reason for rejection (the worker sees this):</p>
                 <input class="field w-full mb-2" @bind="rejectReason" placeholder="e.g. Hours look double-entered — please re-check Tuesday" />
+                @if (rejectError is not null)
+                {
+                    <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-2">@rejectError</p>
+                }
                 <button type="button" class="btn-primary mr-2" @onclick="ConfirmRejectAsync">Reject timesheet</button>
                 <button type="button" class="btn-secondary" @onclick="() => rejectingId = null">Cancel</button>
             </div>
@@ -211,8 +215,17 @@ else
                         }
                     </select>
                     <input class="field w-20" type="number" step="0.5" min="0.5" @bind="manualHours" placeholder="hrs" />
-                    <button type="button" class="btn-secondary" @onclick="AddManualAsync">Add</button>
+                    <button type="button" class="btn-secondary" disabled="@isAddingManual" @onclick="AddManualAsync">@(isAddingManual ? "Adding…" : "Add")</button>
                 </div>
+                @* Under the button that caused it. This message used to go to actionError at the top
+                   of the tab — a full screen above this form, so pressing Add with a field unfilled
+                   still looked like nothing had happened. *@
+                @if (manualError is not null)
+                {
+                    <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mt-2">@manualError</p>
+                }
+                @* The rule the server enforces, stated before it is broken rather than after. *@
+                <p class="text-xs text-content-subtle mt-2">Hours in half-hour steps — 0.5, 1, 1.5 and so on. A whole day is 8.</p>
                 }
                 </LoadGate>
             </section>
@@ -458,6 +471,40 @@ else
     private DateTime manualDate = DateTime.Today;
     private string manualCostCode = "";
     private decimal manualHours;
+    private bool isAddingManual;
+
+    // Failures belonging to a particular form render next to that form. actionError stays for
+    // page-level failures (approval, assignment, the ledger) and renders at the top of the tab.
+    private string? manualError;
+    private string? rejectError;
+
+    // -- Failure reporting ------------------------------------------------------
+    // Every action below used to end in `catch (Exception) { actionError = "<a guess>"; }`, and the
+    // guess on the two hours-bearing actions was "hours must be in half-hour steps of at least 0.5"
+    // — printed for a 403, a 404, a dropped connection, anything. An administrator entering a
+    // perfectly valid 4 was told their hours were wrong, and the one fact that would have found the
+    // real fault (the labour gates never named Role.Admin) was the one thing the screen would not
+    // say. A message the code invented cannot be wrong about the server, because it never asked it.
+    //
+    // CommandFailedException carries the endpoint's own words. Show those. `fallback` covers only
+    // the case where nothing came back to show — a transport failure with no response at all.
+    private static string DescribeFailure(Exception failure, string fallback) =>
+        failure is CommandFailedException rejection && !string.IsNullOrWhiteSpace(rejection.Message)
+            ? rejection.Message
+            : fallback;
+
+    private void ReportFailure(Exception failure, string fallback) =>
+        actionError = DescribeFailure(failure, fallback);
+
+    /// <summary>
+    /// The server's rule (LabourRules.IsValidHours), checked here so a typo is answered in the form
+    /// instead of after a round trip. It must stay in step with the server, which remains the
+    /// authority — this is the courtesy, not the control.
+    /// </summary>
+    private static string? HoursProblem(decimal hours) =>
+        hours < 0.5m ? "Hours must be at least 0.5."
+        : hours % 0.5m != 0m ? $"Hours must be in half-hour steps — {hours} isn't. Try {Math.Round(hours * 2m, MidpointRounding.AwayFromZero) / 2m}."
+        : null;
 
     protected override async Task OnInitializedAsync()
     {
@@ -541,7 +588,10 @@ else
             approvalFailures = result.Failures;
             selectedIds.Clear();
         }
-        catch (Exception) { actionError = "Approval failed — check your connection and try again."; }
+        catch (Exception failure)
+        {
+            ReportFailure(failure, "Approval failed — check your connection and try again.");
+        }
         finally { isApproving = false; }
     }
 
@@ -555,43 +605,67 @@ else
     private async Task SaveEditAsync()
     {
         if (editingId is null) return;
-        actionError = null;
+        actionError = editCostCode == "" ? "Pick a cost code." : HoursProblem(editHours);
+        if (actionError is not null) return;
         try
         {
             await Labour.AdjustTimesheetAsync(ProjectId, editingId, editHours, editCostCode);
             editingId = null;
         }
-        catch (Exception) { actionError = "Could not save the adjustment — hours must be in half-hour steps of at least 0.5."; }
+        catch (Exception failure)
+        {
+            ReportFailure(failure, "Could not save the adjustment — check your connection and try again.");
+        }
     }
 
     private void StartReject(TimesheetDetail timesheet)
     {
         rejectingId = timesheet.TimesheetId;
         rejectReason = "";
+        rejectError = null;
     }
 
     private async Task ConfirmRejectAsync()
     {
-        if (rejectingId is null || string.IsNullOrWhiteSpace(rejectReason)) return;
-        actionError = null;
+        if (rejectingId is null) return;
+        if (string.IsNullOrWhiteSpace(rejectReason))
+        {
+            rejectError = "Give a reason — the worker sees it, and it's how they know what to fix.";
+            return;
+        }
+        rejectError = null;
         try
         {
             await Labour.RejectTimesheetAsync(ProjectId, rejectingId, rejectReason);
             rejectingId = null;
         }
-        catch (Exception) { actionError = "Could not reject the timesheet — try again."; }
+        catch (Exception failure)
+        {
+            rejectError = DescribeFailure(failure, "Could not reject the timesheet — check your connection and try again.");
+        }
     }
 
     private async Task AddManualAsync()
     {
-        if (manualWorkerId == "" || manualCostCode == "" || manualHours <= 0) return;
-        actionError = null;
+        // Previously a bare `return`: pressing Add with a field unfilled did nothing at all, no
+        // message, no movement. A button that silently declines reads as a broken button.
+        manualError =
+            manualWorkerId == "" ? "Pick which worker the day belongs to."
+            : manualCostCode == "" ? "Pick a cost code for the hours."
+            : HoursProblem(manualHours);
+        if (manualError is not null) return;
+
+        isAddingManual = true;
         try
         {
             await Labour.AddWorkerTimesheetAsync(ProjectId, manualWorkerId, new DateTimeOffset(manualDate, TimeSpan.Zero), manualHours, manualCostCode);
             manualHours = 0;
         }
-        catch (Exception) { actionError = "Could not add the timesheet — hours must be in half-hour steps of at least 0.5."; }
+        catch (Exception failure)
+        {
+            manualError = DescribeFailure(failure, "Could not add the timesheet — check your connection and try again.");
+        }
+        finally { isAddingManual = false; }
     }
 
     private bool showCoverPanel;
@@ -640,7 +714,7 @@ else
             await Labour.SetTimesheetCoverAsync(ProjectId, line.XeroLedgerLineId, true, subcontractorId, periodStart, periodStart.AddMonths(1));
             ledgerLines = ledgerLines!.Where(candidate => candidate.XeroLedgerLineId != line.XeroLedgerLineId).ToList();
         }
-        catch (Exception) { actionError = "Could not mark the line as covered — try again."; }
+        catch (Exception failure) { ReportFailure(failure, "Could not mark the line as covered — try again."); }
     }
 
     private string assignWorkerId = "";
@@ -658,21 +732,21 @@ else
 
     private async Task AssignWorkerAsync()
     {
-        if (assignWorkerId == "") return;
+        if (assignWorkerId == "") { actionError = "Pick a worker to assign first."; return; }
         actionError = null;
         try
         {
             await Labour.SetAssignmentAsync(ProjectId, assignWorkerId, true);
             assignWorkerId = "";
         }
-        catch (Exception) { actionError = "Could not assign the worker — try again."; }
+        catch (Exception failure) { ReportFailure(failure, "Could not assign the worker — try again."); }
     }
 
     private async Task UnassignAsync(string workerId)
     {
         actionError = null;
         try { await Labour.SetAssignmentAsync(ProjectId, workerId, false); }
-        catch (Exception) { actionError = "Could not remove the worker — try again."; }
+        catch (Exception failure) { ReportFailure(failure, "Could not remove the worker — try again."); }
     }
 
     // -- Excel export -----------------------------------------------------------

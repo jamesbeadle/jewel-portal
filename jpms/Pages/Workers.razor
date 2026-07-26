@@ -27,9 +27,16 @@ else if (!Session.IsApproved)
 }
 else
 {
-    <section class="px-6 md:px-8 py-8 max-w-3xl">
-        <h2 class="text-lg font-semibold text-content mb-1">Workers</h2>
-        <p class="text-sm text-content-subtle mb-5">
+    <section class="px-6 md:px-8 py-8 max-w-6xl">
+        <div class="flex flex-wrap items-start justify-between gap-3 mb-1">
+            <h2 class="text-lg font-semibold text-content">Workers</h2>
+            @* The registry is what this page is for, so the registry is what it opens on. The form
+               used to sit above the table permanently, pushing the rows the page exists to show
+               below the fold to make room for a form that is used once per worker and then never
+               again. It is a modal now — the table is the page. *@
+            <button type="button" class="btn-primary" @onclick="StartAdd">Add worker</button>
+        </div>
+        <p class="text-sm text-content-subtle mb-5 max-w-3xl">
             Day-rate site operatives and their cost rates. Each worker logs their own time on the
             My day page: invite them as a user with the Site Operative role, then enter the same
             email here — that links their account to this record. Assign workers to projects from
@@ -41,50 +48,6 @@ else
             <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-3">@actionError</p>
         }
 
-        <div class="panel p-4 mb-6">
-            <h3 class="text-sm font-semibold text-content mb-3">@(editingWorkerId is null ? "Add worker" : "Edit worker")</h3>
-            <div class="flex flex-wrap items-end gap-3">
-                <label class="text-xs text-content-subtle">Name
-                    <input class="field mt-1" @bind="formName" placeholder="e.g. Marek Kowalski" />
-                </label>
-                <label class="text-xs text-content-subtle">Portal email (their user account)
-                    <input class="field mt-1 w-56" type="email" @bind="formEmail" placeholder="name@example.com" />
-                </label>
-                <label class="text-xs text-content-subtle">Day rate £ (÷ 8 = hourly)
-                    <input class="field mt-1 w-28" type="number" step="1" min="0" @bind="formDayRate" />
-                </label>
-                @* Disabled while the directory loads: offering only "— none —" invites a worker to
-                   be saved unlinked. A field that greys out reads as "not yet", and the form keeps
-                   its shape — a spinner in a form row does neither. *@
-                <label class="text-xs text-content-subtle">Subcontractor
-                    <select class="field mt-1" @bind="formSubcontractorId" disabled="@(!Subcontractors.IsLoaded)">
-                        <option value="">@(Subcontractors.IsLoaded ? "— none —" : "Loading…")</option>
-                        @foreach (var subcontractor in Subcontractors.All())
-                        {
-                            <option value="@subcontractor.SubcontractorId">@subcontractor.CompanyName</option>
-                        }
-                    </select>
-                </label>
-                <label class="text-xs text-content-subtle">Phone
-                    <input class="field mt-1 w-36" @bind="formPhone" />
-                </label>
-                @if (editingWorkerId is not null)
-                {
-                    <label class="text-xs text-content-subtle flex items-center gap-2 pb-1">
-                        <input type="checkbox" @bind="formIsActive" /> Active
-                    </label>
-                }
-                <button type="button" class="btn-primary" @onclick="SaveAsync">@(editingWorkerId is null ? "Add" : "Save")</button>
-                @if (editingWorkerId is not null)
-                {
-                    <button type="button" class="btn-secondary" @onclick="ClearForm">Cancel</button>
-                }
-            </div>
-            <p class="text-xs text-content-subtle mt-2">
-                Hourly rate stored: £@HourlyRate().ToString("N2")/h. Rate changes apply to future approvals only.
-            </p>
-        </div>
-
         @{ var workers = Labour.Workers(); }
         @* One gate over the registry: the Subcontractor column is resolved from the directory, so a
            row rendered before it lands reads "—" for a worker who is in fact linked. *@
@@ -95,7 +58,7 @@ else
         }
         else if (workers.Count == 0)
         {
-            <p class="text-sm text-content-subtle italic">No workers yet — add the first one above.</p>
+            <p class="text-sm text-content-subtle italic">No workers yet — use Add worker above to enter the first one.</p>
         }
         else
         {
@@ -105,22 +68,26 @@ else
                                      BuildWorkbook="BuildExportWorkbook" />
             </div>
 
+            @* Every column but Name is capped, so Name takes whatever the page has left. The three
+               money/status columns need only the width of their own figures; giving them a share of
+               the table was what squeezed the one column people actually read. *@
             <table class="data-table">
                 <thead>
                     <tr>
-                        <th>Name</th><th>Portal email</th><th>Subcontractor</th><th class="text-right">Hourly £</th>
-                        <th class="text-right">Day £ (8h)</th><th>Status</th><th></th>
+                        <th>Name</th><th class="w-[210px]">Portal email</th><th class="w-[190px]">Subcontractor</th>
+                        <th class="text-right w-[100px]">Hourly £</th>
+                        <th class="text-right w-[110px]">Day £ (8h)</th><th class="w-[90px]">Status</th><th class="w-[190px]"></th>
                     </tr>
                 </thead>
                 <tbody>
                     @foreach (var worker in workers)
                     {
                         <tr>
-                            <td class="text-content">@worker.Name</td>
-                            <td class="text-content-subtle">@(worker.ContactEmail == "" ? "— not linked —" : worker.ContactEmail)</td>
+                            <td class="text-content font-medium">@worker.Name</td>
+                            <td class="text-content-subtle truncate max-w-[16rem]" title="@worker.ContactEmail">@(worker.ContactEmail == "" ? "— not linked —" : worker.ContactEmail)</td>
                             <td>@SubcontractorName(worker.SubcontractorId)</td>
-                            <td class="text-right">@worker.HourlyRate.ToString("N2")</td>
-                            <td class="text-right">@((worker.HourlyRate * 8m).ToString("N2"))</td>
+                            <td class="text-right tabular-nums">@worker.HourlyRate.ToString("N2")</td>
+                            <td class="text-right tabular-nums">@((worker.HourlyRate * 8m).ToString("N2"))</td>
                             <td>
                                 @if (worker.IsActive) { <span class="text-positive">Active</span> }
                                 else { <span class="text-content-subtle">Inactive</span> }
@@ -144,6 +111,65 @@ else
         }
         </LoadGate>
     </section>
+
+    @* One modal serves both Add and Edit — they are the same six fields, and the only thing that
+       differs is whether a worker is already behind them. Two dialogs would be two places to keep
+       the day-rate arithmetic right. *@
+    @* Title and label come from properties rather than inline ternaries: a nested double-quoted
+       string inside an @(…) attribute value is exactly the shape the Razor parser mis-reads. *@
+    <Modal IsOpen="@isFormOpen"
+           Title="@FormTitle"
+           Class="max-w-lg"
+           ConfirmLabel="@FormConfirmLabel"
+           @* Disabled ONLY while a save is in flight. Disabling it on an incomplete form deadlocks
+              the dialog: @bind updates on blur, a disabled button takes no click and so never blurs
+              the field being typed in, and the last value typed never reaches the model. The user
+              fills the form correctly, presses the button, and nothing happens for ever. SaveAsync
+              validates instead and says which field is wrong. *@
+           ConfirmDisabled="@isSaving"
+           OnConfirm="SaveAsync"
+           OnCancel="CloseForm">
+        @if (formError is not null)
+        {
+            <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-3">@formError</p>
+        }
+        <div class="grid sm:grid-cols-2 gap-3">
+            <label class="text-xs text-content-subtle sm:col-span-2">Name
+                <input class="field mt-1" @bind="formName" placeholder="e.g. Marek Kowalski" />
+            </label>
+            <label class="text-xs text-content-subtle sm:col-span-2">Portal email (their user account)
+                <input class="field mt-1" type="email" @bind="formEmail" placeholder="name@example.com" />
+            </label>
+            <label class="text-xs text-content-subtle">Day rate £ (÷ 8 = hourly)
+                <input class="field mt-1" type="number" step="1" min="0" @bind="formDayRate" />
+            </label>
+            <label class="text-xs text-content-subtle">Phone
+                <input class="field mt-1" @bind="formPhone" />
+            </label>
+            @* Disabled while the directory loads: offering only "— none —" invites a worker to
+               be saved unlinked. A field that greys out reads as "not yet", and the form keeps
+               its shape — a spinner in a form row does neither. *@
+            <label class="text-xs text-content-subtle sm:col-span-2">Subcontractor
+                <select class="field mt-1" @bind="formSubcontractorId" disabled="@(!Subcontractors.IsLoaded)">
+                    <option value="">@(Subcontractors.IsLoaded ? "— none —" : "Loading…")</option>
+                    @foreach (var subcontractor in Subcontractors.All())
+                    {
+                        <option value="@subcontractor.SubcontractorId">@subcontractor.CompanyName</option>
+                    }
+                </select>
+            </label>
+            @if (editingWorkerId is not null)
+            {
+                <label class="text-xs text-content-subtle flex items-center gap-2 sm:col-span-2">
+                    <input type="checkbox" @bind="formIsActive" /> Active
+                </label>
+            }
+        </div>
+        <p class="text-xs text-content-subtle mt-3">
+            Hourly rate stored: £@HourlyRate().ToString("N2")/h. Rate changes apply to future approvals only —
+            already-approved timesheets keep the rate they were costed at.
+        </p>
+    </Modal>
 }
 
 @code {
@@ -169,6 +195,16 @@ else
     private string formPhone = "";
     private bool formIsActive = true;
     private string formEmail = "";
+
+    // The form lives in a modal now. Its own failures stay inside it (formError) — a message shown
+    // on the page behind a dialog is a message nobody reads. Failures from the table's own actions
+    // (delete) still use actionError, which renders above the table where they happened.
+    private bool isFormOpen;
+    private bool isSaving;
+    private string? formError;
+
+    private string FormTitle => editingWorkerId is null ? "Add worker" : "Edit worker";
+    private string FormConfirmLabel => editingWorkerId is null ? "Add worker" : "Save changes";
 
     protected override async Task OnInitializedAsync()
     {
@@ -249,8 +285,19 @@ else
         catch (Exception) { actionError = "Could not delete the worker — try again."; }
     }
 
+    private void StartAdd()
+    {
+        ClearForm();
+        // A delete failure from before, and a half-confirmed delete row, are both stale the moment
+        // the dialog covers them.
+        actionError = null;
+        deletingWorkerId = null;
+        isFormOpen = true;
+    }
+
     private void StartEdit(Worker worker)
     {
+        ClearForm();
         editingWorkerId = worker.WorkerId;
         formName = worker.Name;
         formDayRate = worker.HourlyRate * StandardDayHours;
@@ -258,6 +305,33 @@ else
         formPhone = worker.ContactPhone;
         formEmail = worker.ContactEmail;
         formIsActive = worker.IsActive;
+        // A half-finished delete confirmation on another row is stale the moment a dialog covers it.
+        deletingWorkerId = null;
+        isFormOpen = true;
+    }
+
+    /// <summary>
+    /// The user asking to close: backdrop, ✕, Cancel. Modal wires all three to OnCancel and never
+    /// closes itself, so this is the only route in. Refused mid-save — clearing the form the
+    /// in-flight request is still using would land the rejection on a dialog nobody can see, and a
+    /// duplicate email would vanish silently along with the typing (400/409/422 raise no toast by
+    /// design). The button is disabled while saving, so the wait is visible rather than mysterious.
+    /// </summary>
+    private void CloseForm()
+    {
+        if (isSaving) return;
+        DismissForm();
+    }
+
+    /// <summary>
+    /// Closing because the work is done. Kept separate from CloseForm: SaveAsync succeeds while
+    /// isSaving is still true, so routing it through the guard above would swallow the close and
+    /// leave the dialog open over a saved worker — inviting the user to press Add a second time.
+    /// </summary>
+    private void DismissForm()
+    {
+        isFormOpen = false;
+        ClearForm();
     }
 
     private void ClearForm()
@@ -269,25 +343,36 @@ else
         formPhone = "";
         formEmail = "";
         formIsActive = true;
+        formError = null;
     }
 
     private async Task SaveAsync()
     {
-        actionError = null;
-        if (string.IsNullOrWhiteSpace(formName) || formDayRate <= 0m)
-        {
-            actionError = "A name and a day rate above zero are required.";
-            return;
-        }
+        formError = null;
+        if (string.IsNullOrWhiteSpace(formName)) { formError = "A name is required."; return; }
+        if (formDayRate <= 0m) { formError = "A day rate above zero is required."; return; }
+
         var subcontractorId = formSubcontractorId == "" ? null : formSubcontractorId;
+        isSaving = true;
         try
         {
             if (editingWorkerId is null)
                 await Labour.AddWorkerAsync(formName, HourlyRate(), subcontractorId, formEmail, formPhone);
             else
                 await Labour.UpdateWorkerAsync(new Worker(editingWorkerId, formName, subcontractorId, HourlyRate(), formIsActive, formEmail, formPhone));
-            ClearForm();
+            DismissForm();
         }
-        catch (Exception) { actionError = "Could not save the worker — try again."; }
+        catch (CommandFailedException rejection)
+        {
+            // The endpoint's own words — a duplicate email, a rate the gate refused, a 403 from a
+            // role that cannot manage the registry. Keep the dialog open on top of the filled-in
+            // form: closing it would throw the user's typing away along with the explanation.
+            formError = rejection.Message;
+        }
+        catch (Exception)
+        {
+            formError = "Could not save the worker — check your connection and try again.";
+        }
+        finally { isSaving = false; }
     }
 }
