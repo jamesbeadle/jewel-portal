@@ -1,0 +1,487 @@
+@page "/projects/{ProjectId}/architect-instructions"
+@using Jewel.JPMS.Contracts.ArchitectInstructions
+@inject AuthService Auth
+@inject SessionService Session
+@inject IArchitectInstructionStore Instructions
+@inject IVariationStore Variations
+@inject NavigationManager Nav
+
+<PageTitle>Architect's Instructions · JPMS</PageTitle>
+
+@*
+    The project's register of Architect's Instructions — the formal written instructions that turn
+    "we'd like this changed" into work Jewel is entitled to be paid for. An instruction is what a
+    variation sitting at Awaiting AI is waiting for, so each one can be linked to the variations it
+    covers: one instruction routinely instructs several, and an instruction can land before the
+    variation it will end up justifying exists.
+
+    Instructions arrive two ways and both land here — emailed to the projects mailbox and imported
+    from the attachment, or filed straight into this register by the architect or the Jewel team.
+*@
+
+@if (!isLoaded)
+{
+    <LoadGate IsLoading="true" Prominent="true" Label="Loading" />
+}
+else if (!Session.IsApproved)
+{
+    <RequestAccessView Email="@(Auth.CurrentUser?.Email ?? "")" DisplayName="@(Auth.CurrentUser?.DisplayName ?? "")" />
+}
+else
+{
+    <ProjectPageShell ProjectId="@ProjectId" ActiveTab="architect-instructions">
+        <div class="flex items-start justify-between gap-3 mb-5">
+            <div>
+                <h2 class="text-xl font-semibold text-content">Architect's Instructions</h2>
+                <p class="text-sm text-content-muted mt-1">
+                    The formal instructions authorising varied work, and the variations each one covers.
+                </p>
+            </div>
+            @if (CanManage)
+            {
+                <button type="button" class="btn-primary shrink-0" disabled="@busy" @onclick="OpenFileDialog">
+                    File an instruction
+                </button>
+            }
+        </div>
+
+        @if (error is not null)
+        {
+            <div class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-4">@error</div>
+        }
+
+        <Panel IsLoading="@(!loaded)">
+            @if (instructions.Count == 0)
+            {
+                <p class="text-sm text-content-subtle">
+                    No instructions recorded on this project yet.
+                    @if (CanManage)
+                    {
+                        <text>File one when it arrives — by email or straight from the architect.</text>
+                    }
+                </p>
+            }
+            else
+            {
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm">
+                        <thead>
+                            <tr class="text-left text-xs uppercase tracking-wider text-content-subtle border-b border-line">
+                                <th class="py-2 pr-3 font-semibold">Ref</th>
+                                <th class="py-2 pr-3 font-semibold">Title</th>
+                                <th class="py-2 pr-3 font-semibold">Instructed</th>
+                                <th class="py-2 pr-3 font-semibold">Issued by</th>
+                                <th class="py-2 pr-3 font-semibold">Variations</th>
+                                <th class="py-2 pr-3 font-semibold">Document</th>
+                                <th class="py-2 font-semibold"></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var item in instructions)
+                            {
+                                var instruction = item;
+                                <tr class="border-b border-line/60 align-top">
+                                    <td class="py-2.5 pr-3">
+                                        <span class="font-mono text-content">@instruction.DisplayReference</span>
+                                        @if (!string.Equals(instruction.DisplayReference, instruction.Reference, StringComparison.OrdinalIgnoreCase))
+                                        {
+                                            <span class="block text-[11px] text-content-subtle font-mono">@instruction.Reference</span>
+                                        }
+                                    </td>
+                                    <td class="py-2.5 pr-3 text-content">
+                                        @instruction.Title
+                                        @if (!string.IsNullOrWhiteSpace(instruction.Notes))
+                                        {
+                                            <span class="block text-xs text-content-subtle">@instruction.Notes</span>
+                                        }
+                                    </td>
+                                    <td class="py-2.5 pr-3 text-content-muted whitespace-nowrap">@Date(instruction.InstructedAt ?? instruction.ReceivedAt)</td>
+                                    <td class="py-2.5 pr-3 text-content-muted">
+                                        @(string.IsNullOrWhiteSpace(instruction.IssuedByEmail) ? "—" : instruction.IssuedByEmail)
+                                        <span class="block text-[11px] text-content-subtle">
+                                            @(instruction.Source == ArchitectInstructionSource.Email ? "From email" : "Uploaded")
+                                        </span>
+                                    </td>
+                                    <td class="py-2.5 pr-3">
+                                        @if (instruction.Links.Count == 0)
+                                        {
+                                            <span class="text-content-subtle text-xs">Not linked</span>
+                                        }
+                                        else
+                                        {
+                                            <div class="flex flex-wrap gap-1">
+                                                @foreach (var link in instruction.Links)
+                                                {
+                                                    <a href="@($"/projects/{ProjectId}/variations/{link.VariationOrderId}")"
+                                                       title="@($"{link.Title} — {link.Status.DisplayName()}")"
+                                                       class="inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-mono bg-surface-raised border border-line text-content-muted hover:text-content">
+                                                        @link.DisplayNumber
+                                                    </a>
+                                                }
+                                            </div>
+                                        }
+                                        @if (CanManage)
+                                        {
+                                            <button type="button" class="mt-1 text-[11px] text-accent hover:underline"
+                                                    disabled="@busy" @onclick="() => OpenLinkDialog(instruction)">Link a variation…</button>
+                                        }
+                                    </td>
+                                    <td class="py-2.5 pr-3">
+                                        @if (instruction.HasFile)
+                                        {
+                                            <a class="text-accent hover:underline text-xs"
+                                               href="@Instructions.FileUrl(instruction.ArchitectInstructionId)"
+                                               target="_blank" rel="noopener">@(instruction.FileName ?? "Open")</a>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-xs text-content-subtle" title="No document has been attached yet">Awaited</span>
+                                        }
+                                    </td>
+                                    <td class="py-2.5 text-right">
+                                        @if (CanManage)
+                                        {
+                                            <button type="button" class="text-[11px] text-content-subtle hover:text-negative"
+                                                    disabled="@busy" @onclick="() => OpenDeleteDialog(instruction)">Delete…</button>
+                                        }
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </Panel>
+    </ProjectPageShell>
+
+    <Modal IsOpen="fileDialogOpen"
+           Title="File an Architect's Instruction"
+           ConfirmLabel="@(busy ? "Filing…" : "File instruction")"
+           ConfirmDisabled="@busy"
+           OnCancel="() => fileDialogOpen = false"
+           OnConfirm="SubmitInstruction"
+           Class="max-w-2xl">
+        <div class="space-y-4">
+            @if (dialogError is not null)
+            {
+                <div class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@dialogError</div>
+            }
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <FormField Label="Instruction ref" Value="@formRef" OnChange="v => formRef = v" />
+                <FormField Label="Date instructed" Value="@formInstructedAt" OnChange="v => formInstructedAt = v" InputType="date" />
+            </div>
+            <p class="-mt-2 text-xs text-content-subtle">
+                The architect's own number as written on the instruction. The portal always gives it one of ours too.
+            </p>
+
+            @* Not marked required: an instruction that arrives as "AI 042" with no covering title is
+               a real thing, and the server accepts either a reference or a title. *@
+            <FormField Label="Title" Value="@formTitle" OnChange="v => formTitle = v" />
+            <FormField Label="Issued by (architect's email)" Value="@formIssuedBy" OnChange="v => formIssuedBy = v" />
+
+            <div>
+                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Notes</label>
+                <textarea class="field" rows="3" value="@formNotes"
+                          @oninput="e => formNotes = e.Value?.ToString() ?? string.Empty"></textarea>
+            </div>
+
+            <div>
+                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Document</label>
+                <InputFile OnChange="OnInstructionFileSelected" accept=".pdf,image/*,.doc,.docx" class="text-sm" />
+                <p class="mt-1 text-xs text-content-subtle">
+                    @(formFile is null
+                        ? "Optional — file the row now and attach the document when it arrives."
+                        : formFile.Name)
+                </p>
+            </div>
+
+            @if (VariationOptions.Count > 0)
+            {
+                <div>
+                    <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Covers these variations</label>
+                    <p class="text-xs text-content-subtle mb-2">
+                        Variations waiting on an instruction are listed first — linking one here saves going back for it.
+                    </p>
+                    <ul class="space-y-1 max-h-48 overflow-y-auto">
+                        @foreach (var option in VariationOptions)
+                        {
+                            var variation = option;
+                            <li>
+                                <label class="flex items-start gap-2 text-sm text-content">
+                                    <input type="checkbox" class="mt-0.5"
+                                           checked="@formVariationIds.Contains(variation.VariationOrderId)"
+                                           @onchange="e => ToggleVariation(variation.VariationOrderId, e.Value is true)" />
+                                    <span>
+                                        <span class="font-mono">@variation.DisplayNumber</span>
+                                        <span class="text-content-subtle"> — @variation.Title (@variation.Status.DisplayName())</span>
+                                    </span>
+                                </label>
+                            </li>
+                        }
+                    </ul>
+                </div>
+            }
+        </div>
+    </Modal>
+
+    <Modal IsOpen="@(linking is not null)"
+           Title="@(linking is null ? "Link a variation" : $"Link {linking.DisplayReference} to a variation")"
+           ShowFooter="false"
+           OnCancel="() => linking = null"
+           Class="max-w-xl">
+        <div class="space-y-3">
+            @if (dialogError is not null)
+            {
+                <div class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@dialogError</div>
+            }
+            @if (VariationOptions.Count == 0)
+            {
+                <p class="text-sm text-content-subtle">This project has no variations to link to yet.</p>
+            }
+            else
+            {
+                <ul class="space-y-1 max-h-80 overflow-y-auto">
+                    @foreach (var option in VariationOptions)
+                    {
+                        var variation = option;
+                        var alreadyLinked = linking?.Links.Any(l => l.VariationOrderId == variation.VariationOrderId) == true;
+                        <li class="flex items-center justify-between gap-3 text-sm">
+                            <span>
+                                <span class="font-mono">@variation.DisplayNumber</span>
+                                <span class="text-content-subtle"> — @variation.Title (@variation.Status.DisplayName())</span>
+                            </span>
+                            @if (alreadyLinked)
+                            {
+                                <button type="button" class="text-xs text-content-subtle hover:text-negative"
+                                        disabled="@busy" @onclick="() => Unlink(variation.VariationOrderId)">Unlink</button>
+                            }
+                            else
+                            {
+                                <button type="button" class="btn-secondary text-xs"
+                                        disabled="@busy" @onclick="() => Link(variation.VariationOrderId)">Link</button>
+                            }
+                        </li>
+                    }
+                </ul>
+            }
+        </div>
+    </Modal>
+
+    <Modal IsOpen="@(confirmingDelete is not null)"
+           Title="@(confirmingDelete is null ? "Delete" : $"Delete {confirmingDelete.DisplayReference}?")"
+           ConfirmLabel="@(busy ? "Deleting…" : "Delete instruction")"
+           CancelLabel="Keep it"
+           ConfirmDisabled="@busy"
+           OnCancel="() => confirmingDelete = null"
+           OnConfirm="ConfirmDelete"
+           Class="max-w-md">
+        <div class="space-y-3">
+            @if (dialogError is not null)
+            {
+                <div class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@dialogError</div>
+            }
+            <p class="text-sm text-content-subtle">
+                Permanently removes the instruction, its stored document and its links to variations. The variations
+                themselves are untouched. This can't be undone.
+            </p>
+        </div>
+    </Modal>
+}
+
+@code {
+    [Parameter] public string ProjectId { get; set; } = "";
+
+    private bool isLoaded;
+    private bool loaded;
+    private bool busy;
+    private string? error;
+    private string? dialogError;
+
+    private List<ArchitectInstruction> instructions = new();
+    private List<VariationOrder> variations = new();
+
+    private bool fileDialogOpen;
+    private ArchitectInstruction? linking;
+    private ArchitectInstruction? confirmingDelete;
+
+    private string formRef = "";
+    private string formTitle = "";
+    private string formNotes = "";
+    private string formInstructedAt = "";
+    private string formIssuedBy = "";
+    private IBrowserFile? formFile;
+    private readonly HashSet<string> formVariationIds = new(StringComparer.OrdinalIgnoreCase);
+
+    // Filing, correcting and linking mirror the API's ArchitectInstructionRoles.AllowedToManage —
+    // the architect issues these, so the architect can file them without going through Jewel.
+    private bool CanManage => Session.AvailableRoles.Any(role =>
+        role is Role.Admin or Role.ManagingDirector or Role.FinanceDirector
+             or Role.ProjectManager or Role.Architect);
+
+    // Variations waiting on an instruction come first — they are the reason someone is on this page.
+    private List<VariationOrder> VariationOptions =>
+        variations
+            .OrderByDescending(variation => variation.Status == VariationOrderStatus.AwaitingArchitectInstruction)
+            .ThenByDescending(variation => variation.Number)
+            .ToList();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Session.EnsureLoadedAsync();
+        if (!Auth.IsSignedIn) { Nav.NavigateTo("/login", forceLoad: true); return; }
+        isLoaded = true;
+        if (!Session.IsApproved) { loaded = true; return; }
+
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        error = null;
+        try
+        {
+            instructions = (await Instructions.ListAsync(ProjectId)).ToList();
+        }
+        catch
+        {
+            error = "Couldn't load the instruction register. Please try again.";
+        }
+
+        try
+        {
+            variations = (await Variations.ListForProjectAsync(ProjectId)).ToList();
+        }
+        catch
+        {
+            // The register still reads without the variation list; only the link pickers degrade.
+            variations = new List<VariationOrder>();
+        }
+
+        loaded = true;
+    }
+
+    private void OpenFileDialog()
+    {
+        dialogError = null;
+        formRef = formTitle = formNotes = formInstructedAt = "";
+        formIssuedBy = "";
+        formFile = null;
+        formVariationIds.Clear();
+        fileDialogOpen = true;
+    }
+
+    private void OnInstructionFileSelected(InputFileChangeEventArgs e) => formFile = e.File;
+
+    private void ToggleVariation(string variationOrderId, bool selected)
+    {
+        if (selected) formVariationIds.Add(variationOrderId);
+        else formVariationIds.Remove(variationOrderId);
+    }
+
+    private async Task SubmitInstruction()
+    {
+        if (busy) return;
+        dialogError = null;
+
+        if (string.IsNullOrWhiteSpace(formTitle) && string.IsNullOrWhiteSpace(formRef))
+        {
+            dialogError = "Give the instruction a reference or a title so it can be found again.";
+            return;
+        }
+
+        DateTimeOffset? instructedAt = null;
+        if (!string.IsNullOrWhiteSpace(formInstructedAt))
+        {
+            if (!DateTimeOffset.TryParse(formInstructedAt, out var parsed))
+            {
+                dialogError = "The instruction date couldn't be read.";
+                return;
+            }
+            instructedAt = parsed;
+        }
+
+        try
+        {
+            busy = true;
+            await Instructions.FileAsync(
+                ProjectId, formRef.Trim(), formTitle.Trim(),
+                string.IsNullOrWhiteSpace(formNotes) ? null : formNotes.Trim(),
+                instructedAt,
+                string.IsNullOrWhiteSpace(formIssuedBy) ? null : formIssuedBy.Trim(),
+                formFile,
+                formVariationIds.ToList());
+            fileDialogOpen = false;
+            await LoadAsync();
+        }
+        catch (Exception ex)
+        {
+            dialogError = ex.Message;
+        }
+        finally { busy = false; }
+    }
+
+    private void OpenLinkDialog(ArchitectInstruction instruction)
+    {
+        dialogError = null;
+        linking = instruction;
+    }
+
+    private void OpenDeleteDialog(ArchitectInstruction instruction)
+    {
+        dialogError = null;
+        confirmingDelete = instruction;
+    }
+
+    private async Task Link(string variationOrderId)
+    {
+        if (busy || linking is null) return;
+        dialogError = null;
+        try
+        {
+            busy = true;
+            var updated = await Instructions.LinkToVariationAsync(linking.ArchitectInstructionId, variationOrderId);
+            linking = updated;
+            await LoadAsync();
+        }
+        catch (CommandFailedException ex) { dialogError = ex.Message; }
+        catch { dialogError = "Couldn't link that variation. Please try again."; }
+        finally { busy = false; }
+    }
+
+    private async Task Unlink(string variationOrderId)
+    {
+        if (busy || linking is null) return;
+        dialogError = null;
+        try
+        {
+            busy = true;
+            var updated = await Instructions.UnlinkFromVariationAsync(linking.ArchitectInstructionId, variationOrderId);
+            linking = updated;
+            await LoadAsync();
+        }
+        catch (CommandFailedException ex) { dialogError = ex.Message; }
+        catch { dialogError = "Couldn't unlink that variation. Please try again."; }
+        finally { busy = false; }
+    }
+
+    // Failures show INSIDE the modal: the page-level banner sits behind the overlay, so writing
+    // there would look like the button had done nothing at all.
+    private async Task ConfirmDelete()
+    {
+        if (busy || confirmingDelete is null) return;
+        dialogError = null;
+        try
+        {
+            busy = true;
+            await Instructions.DeleteAsync(confirmingDelete.ArchitectInstructionId);
+            confirmingDelete = null;
+            await LoadAsync();
+        }
+        catch (CommandFailedException ex) { dialogError = ex.Message; }
+        catch { dialogError = "Couldn't delete that instruction. Please try again."; }
+        finally { busy = false; }
+    }
+
+    private static string Date(DateTimeOffset value) => value.ToLocalTime().ToString("dd MMM yyyy");
+}

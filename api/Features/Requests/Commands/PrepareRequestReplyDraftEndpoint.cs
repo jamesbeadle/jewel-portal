@@ -20,17 +20,20 @@ public sealed class PrepareRequestReplyDraftEndpoint
     private readonly PrepareRequestReplyDraftAuthorisation authorisation;
     private readonly PrepareRequestReplyDraftValidation validation;
     private readonly ICommandHandler<PrepareRequestReplyDraft, RequestEmailDraft> handler;
+    private readonly Audit.AuditActor auditActor;
 
     public PrepareRequestReplyDraftEndpoint(
         SignedInUserResolver users,
         PrepareRequestReplyDraftAuthorisation authorisation,
         PrepareRequestReplyDraftValidation validation,
-        ICommandHandler<PrepareRequestReplyDraft, RequestEmailDraft> handler)
+        ICommandHandler<PrepareRequestReplyDraft, RequestEmailDraft> handler,
+        Audit.AuditActor auditActor)
     {
         this.users = users;
         this.authorisation = authorisation;
         this.validation = validation;
         this.handler = handler;
+        this.auditActor = auditActor;
     }
 
     [Function(nameof(PrepareRequestReplyDraft))]
@@ -42,6 +45,9 @@ public sealed class PrepareRequestReplyDraftEndpoint
 
         var signedInUser = await users.ResolveAsync(request, cancellationToken);
         if (signedInUser is null) return new UnauthorizedResult();
+
+        // Attribute the handler's DraftCreated audit row to whoever pressed the button.
+        auditActor.Email = signedInUser.Email;
 
         PrepareRequestReplyDraft? body = null;
         try { body = await request.ReadFromJsonAsync<PrepareRequestReplyDraft>(); }

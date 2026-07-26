@@ -546,6 +546,37 @@ else
                               UsedNumbers="@UsedVariationNumbers"
                               OnClose="CloseAddVariationDialog"
                               OnCreated="OnManualVariationCreated" />
+
+    @* Declining from the register is one click away from a terminal state, so it confirms first —
+       the same guard the variation's own page applies. Post-approval rejects never reach here:
+       that choice links through to the variation, where the reversal can be explained next to the
+       figures it changes. *@
+    @if (decliningVariation is { } declining)
+    {
+        <Modal IsOpen="true"
+               Title="@($"Decline {declining.DisplayNumber}?")"
+               ConfirmLabel="@(variationStatusBusyId is not null ? "Declining…" : "Decline variation")"
+               CancelLabel="Keep it open"
+               ConfirmDisabled="@(variationStatusBusyId is not null)"
+               OnCancel="() => decliningVariation = null"
+               OnConfirm="ConfirmDeclineVariation"
+               Class="max-w-md">
+            <div class="space-y-3">
+                @if (variationStatusError is not null)
+                {
+                    <div class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@variationStatusError</div>
+                }
+                <p class="text-sm text-content">
+                    <span class="font-mono">@declining.DisplayNumber</span> — @declining.Title
+                </p>
+                <p class="text-sm text-content-subtle">
+                    Closes the variation as <span class="text-content font-medium">Rejected</span>: the client
+                    declined it, or it has been withdrawn. Nothing commercial is written — it simply stops here.
+                </p>
+                <p class="text-xs text-content-subtle">Rejected is terminal; the variation can't be reopened.</p>
+            </div>
+        </Modal>
+    }
 }
 
 @code {
@@ -1092,8 +1123,10 @@ else
         choices.Add(new("Approved…",
             "Approving mints the V-ref and writes the contract figures — runs on the variation itself",
             false, Href: variationHref));
-        choices.Add(new("Rejected…", null, false,
-            Action: () => ChangeVariationStatusInline(order, VariationOrderStatus.Rejected)));
+        choices.Add(new("Rejected…",
+            "Declined by the client or withdrawn — terminal, and confirmed before it is applied",
+            false,
+            Action: () => { decliningVariation = order; return Task.CompletedTask; }));
         return choices;
     }
 
@@ -1103,6 +1136,18 @@ else
         if (choice.IsCurrent) return;
         if (choice.Href is not null) { Nav.NavigateTo(choice.Href); return; }
         if (choice.Action is not null) await choice.Action();
+    }
+
+    // The variation the decline modal is asking about; null when the modal is closed.
+    private VariationOrder? decliningVariation;
+
+    private async Task ConfirmDeclineVariation()
+    {
+        if (decliningVariation is not { } order) return;
+        await ChangeVariationStatusInline(order, VariationOrderStatus.Rejected);
+        // Close only on success — a failure leaves the modal up with the error visible behind it,
+        // rather than silently swallowing the attempt.
+        if (variationStatusError is null) decliningVariation = null;
     }
 
     private async Task ChangeVariationStatusInline(VariationOrder order, VariationOrderStatus status)

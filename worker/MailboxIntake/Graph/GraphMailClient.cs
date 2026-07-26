@@ -223,11 +223,40 @@ public sealed class GraphMailClient : IGraphMailClient
         }
     }
 
+    /// <summary>
+    /// Adds the projects mailbox to a draft's Cc so the mailbox receives the message as delivered
+    /// mail, not just as a Sent Items copy. Mirrors MailboxGraphClient.WithProjectsMailboxCopy on
+    /// the API side — both clients must agree or the same document would go out differently
+    /// depending on whether a person or the worker drafted it.
+    /// </summary>
+    private GraphOutboundMessage WithProjectsMailboxCopy(GraphOutboundMessage message)
+    {
+        var mailbox = _options.Mailbox;
+        if (string.IsNullOrWhiteSpace(mailbox)) return message;
+
+        bool Already(IReadOnlyList<GraphRecipient>? recipients) =>
+            recipients is not null
+            && recipients.Any(r => string.Equals(r.Email?.Trim(), mailbox, StringComparison.OrdinalIgnoreCase));
+
+        if (Already(message.To) || Already(message.Cc) || Already(message.Bcc)) return message;
+
+        var cc = message.Cc is null
+            ? new List<GraphRecipient>()
+            : new List<GraphRecipient>(message.Cc);
+        cc.Add(new GraphRecipient(mailbox.Trim(), null));
+        return message with { Cc = cc };
+    }
+
     public async Task<GraphDraft?> CreateDraftAsync(GraphOutboundMessage message, CancellationToken ct)
     {
         // POST /users/{mailbox}/messages creates the message in the Drafts folder and CANNOT send.
         // A human reviews the draft in Outlook and presses Send — code never calls /send or /sendMail.
         var url = $"{GraphBase}/users/{Mailbox}/messages";
+
+        // Copy the projects mailbox on every draft, exactly as the API-side client does (see
+        // MailboxGraphClient.WithProjectsMailboxCopy). Idempotent and never a demotion: if the
+        // address is already a To/Cc/Bcc recipient it is left where it is.
+        message = WithProjectsMailboxCopy(message);
 
         static object Recipient(GraphRecipient r) =>
             new { emailAddress = new { address = r.Email, name = r.Name ?? r.Email } };

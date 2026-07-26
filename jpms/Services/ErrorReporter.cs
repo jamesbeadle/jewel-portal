@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Jewel.JPMS.Cqrs;
 using Jewel.JPMS.Models;
 using Microsoft.AspNetCore.Components;
@@ -70,7 +71,7 @@ public sealed class ErrorReporter : IErrorSink, IDisposable
         Publish(new ErrorReport(
             ErrorReport.NewReference(),
             DateTimeOffset.Now,
-            SummaryFor(statusCode, serverMessage),
+            SummaryFor(statusCode, serverMessage, exception),
             Detail: serverMessage ?? exception?.Message,
             Operation: operation,
             HttpMethod: httpMethod,
@@ -125,9 +126,15 @@ public sealed class ErrorReporter : IErrorSink, IDisposable
     /// that bothered to explain itself ("Reference 'RFI-012' is already used…") is always clearer
     /// than anything we could infer from a status code.
     /// </summary>
-    private static string SummaryFor(int? statusCode, string? serverMessage)
+    private static string SummaryFor(int? statusCode, string? serverMessage, Exception? exception)
     {
         if (!string.IsNullOrWhiteSpace(serverMessage)) return serverMessage!;
+
+        // A JsonException means the request did land — we simply could not read the answer. Telling
+        // the user to check their connection sends them hunting for a fault that is ours, not theirs.
+        if (exception is JsonException)
+            return "The server's answer couldn't be read. Copy the reference below and send it on — this one is ours to fix.";
+
         return statusCode switch
         {
             401 => "Your session has expired. Sign in again to carry on.",

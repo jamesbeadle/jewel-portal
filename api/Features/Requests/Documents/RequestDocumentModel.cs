@@ -56,11 +56,11 @@ public sealed record RequestDocumentModel(
     /// client-facing date than when the request was raised).</summary>
     public DateTimeOffset IssuedDisplayDate => IssuedAt ?? RaisedAt;
 
-    /// <summary>True when a still-open request has been outstanding past its response-due date.</summary>
+    /// <summary>True when a still-open request has been outstanding past its response-due date.
+    /// Routed through the shared rule so the PDF's red styling and the register's overdue counts
+    /// are the same judgement — including the default response window when no due date was set.</summary>
     public bool IsOverdue =>
-        RespondedAt is null
-        && ResponseDue is { } due
-        && DateTimeOffset.UtcNow > due;
+        RequestDates.IsOverdue(IssuedDisplayDate, ResponseDue, RespondedAt);
 
     /// <summary>A safe, human file name for the PDF — the client-visible reference plus the subject,
     /// e.g. "RFI-052 - Shower Trays.pdf" (falling back to "REQ-0001 - RFI.pdf" pre-numbering).</summary>

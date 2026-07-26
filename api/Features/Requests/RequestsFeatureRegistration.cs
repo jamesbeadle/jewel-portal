@@ -1,17 +1,29 @@
 using Jewel.JPMS.Api.Cqrs;
+using Jewel.JPMS.Api.Features.Requests.Attachments;
 using Jewel.JPMS.Api.Features.Requests.Commands;
 using Jewel.JPMS.Api.Features.Requests.Queries;
 using Jewel.JPMS.Contracts.Cqrs;
 using Jewel.JPMS.Contracts.Requests;
 using Jewel.JPMS.Models;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Jewel.JPMS.Api.Features.Requests;
 
 public static class RequestsFeatureRegistration
 {
-    public static IServiceCollection AddRequestsFeature(this IServiceCollection services)
+    public static IServiceCollection AddRequestsFeature(this IServiceCollection services, IConfiguration configuration)
     {
+        RegisterAttachmentStore(services, configuration);
+
+        // Attachments on a request: linked drawing revisions and uploaded site photos.
+        services.AddScoped<IQueryHandler<ListRequestAttachments, IReadOnlyList<RequestAttachment>>,
+            ListRequestAttachmentsHandler>();
+        services.AddScoped<ICommandHandler<AttachDrawingsToRequest, IReadOnlyList<RequestAttachment>>,
+            AttachDrawingsToRequestHandler>();
+        services.AddScoped<ICommandHandler<RemoveRequestAttachment, IReadOnlyList<RequestAttachment>>,
+            RemoveRequestAttachmentHandler>();
+
         services.AddScoped<IQueryHandler<ListRequestsForProject, IReadOnlyList<Request>>, ListRequestsForProjectHandler>();
         services.AddScoped<IQueryHandler<GetRequestById, Request?>, GetRequestByIdHandler>();
         services.AddScoped<IQueryHandler<GetRequestDocument, RequestDocumentFile?>, GetRequestDocumentHandler>();
@@ -110,5 +122,21 @@ public static class RequestsFeatureRegistration
         services.AddScoped<ResendRequestDocumentValidation>();
 
         return services;
+    }
+
+    // Request attachments share the drawings storage account by default — one connection string to
+    // configure, one backup story — but can be pointed at their own account if photo volume ever
+    // warrants it.
+    private static void RegisterAttachmentStore(IServiceCollection services, IConfiguration configuration)
+    {
+        var connectionString = configuration["RequestAttachmentsStorage:ConnectionString"]
+            ?? configuration["DrawingsStorage:ConnectionString"]
+            ?? configuration["AzureWebJobsStorage"];
+
+        if (string.IsNullOrWhiteSpace(connectionString))
+            services.AddSingleton<IRequestAttachmentStore, NullRequestAttachmentStore>();
+        else
+            services.AddSingleton<IRequestAttachmentStore>(
+                _ => new AzureBlobRequestAttachmentStore(connectionString));
     }
 }

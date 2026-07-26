@@ -51,6 +51,19 @@ public static class DesktopNavigation
         Role.OfficeComplianceCoordinator
     };
 
+    // Who sees the Architect's Instruction register. Mirrors the API's ArchitectInstructionRoles:
+    // the project roles that own the commercial consequence of an instruction, plus the architect
+    // who issues them (they can file their own rather than emailing and waiting).
+    internal static readonly Role[] ArchitectInstructionRoles =
+    {
+        Role.ManagingDirector,
+        Role.FinanceDirector,
+        Role.ProjectManager,
+        Role.QuantitySurveyor,
+        Role.SiteManager,
+        Role.Architect
+    };
+
     internal static readonly Role[] FinanceRoles =
     {
         Role.ManagingDirector,

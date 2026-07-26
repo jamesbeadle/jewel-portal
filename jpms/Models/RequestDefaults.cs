@@ -7,8 +7,10 @@ public static class RequestDefaults
 {
     // The house standard: an answer is expected inside a week. Applied as a pre-filled value only —
     // the field stays editable and the server has no opinion, so overriding it (or clearing it) is
-    // always allowed.
-    public const int ResponseWindowDays = 7;
+    // always allowed. Deliberately the SAME constant the overdue rule falls back to for a request
+    // with no due date (RequestDates.DefaultResponseWindowDays), so the date this form suggests and
+    // the date the register measures against can never drift apart.
+    public const int ResponseWindowDays = RequestDates.DefaultResponseWindowDays;
 
     // Pre-fill value for an <input type="date"> bound as a string. Local date, since the triager
     // reads it as "next Tuesday" rather than as an instant.

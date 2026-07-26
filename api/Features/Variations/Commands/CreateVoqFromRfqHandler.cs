@@ -8,8 +8,15 @@ using Microsoft.EntityFrameworkCore;
 namespace Jewel.JPMS.Api.Features.Variations.Commands;
 
 /// <summary>
-/// Creates a VOQ from a request that has an RFQ enabled. Enforces one variation order per request. The VOQ
-/// inherits the request's project and (by default) its title.
+/// Creates a VOQ from a request. Enforces one variation order per request; the VOQ inherits the
+/// request's project and (by default) its title.
+///
+/// The gate is the record's STAGE, not its RFQ flag: any RFI can raise a variation order quote,
+/// because that is how an architect's answer routinely lands — "yes, do it, price it" — with no
+/// subcontractor tender involved at all. Requiring an RFQ first forced a procurement step onto
+/// variations Jewel prices itself. A General container still cannot: promote it to an RFI first, so
+/// the variation has a numbered request to hang off. Enabling an RFQ remains what unlocks bid
+/// packages under the variation, which is a separate decision made on the variation itself.
 /// </summary>
 public sealed class CreateVoqFromRfqHandler : ICommandHandler<CreateVoqFromRfq, VariationOrder>
 {
@@ -20,7 +27,9 @@ public sealed class CreateVoqFromRfqHandler : ICommandHandler<CreateVoqFromRfq, 
     {
         var request = await context.Requests.FindAsync(new object[] { command.RequestId }, cancellationToken);
         if (request is null) throw new InvalidOperationException($"Request {command.RequestId} not found.");
-        if (!request.HasRfq) throw new InvalidOperationException("A variation order can only be created once an RFQ is enabled on the request.");
+        if ((RequestType)request.Kind is not RequestType.Rfi && !request.HasRfq)
+            throw new InvalidOperationException(
+                "A variation order is raised from an RFI. Promote this request to an RFI first, then raise the variation from it.");
 
         var existing = await context.VariationOrders
             .AnyAsync(vo => vo.RequestId == command.RequestId, cancellationToken);

@@ -86,8 +86,40 @@ public sealed record Request(
             ? null
             : Math.Max(0, (int)(DateTimeOffset.UtcNow.Date - (IssuedAt ?? RaisedAt).Date).TotalDays);
 
-    // Not yet closed and older than 7 days since issue (responded-but-open requests count too).
-    public bool IsOverdue => DaysOutstanding is > 7;
+    // Overdue is a question about THEM, not us: the correspondent has not come back by the date we
+    // asked them to. So it is measured against the request's own Response due date — the contractual
+    // date carried on the issued document — and it stops the moment a response is recorded, even
+    // though the request itself stays open while we act on that response. Requests with no due date
+    // fall back to the default response window from the issue date, which is the rule every request
+    // had before the due date became a field. Deliberately shared with the PDF's own overdue flag
+    // (RequestDocumentModel) so the register, the dashboards and the issued document can never
+    // disagree about what "overdue" means.
+    public bool IsOverdue =>
+        Status is not RequestStatus.Closed
+        && RequestDates.IsOverdue(IssuedAt ?? RaisedAt, ResponseDue, RespondedAt);
+}
+
+/// <summary>
+/// The one shared reading of a request's dates. Kept out of the record itself so the api-side
+/// document model applies the identical rule instead of a second, drifting copy of it.
+/// </summary>
+public static class RequestDates
+{
+    /// <summary>Days allowed for a response when a request carries no explicit due date.</summary>
+    public const int DefaultResponseWindowDays = 7;
+
+    /// <summary>
+    /// True when a response was due and has not arrived. <paramref name="issuedAt"/> is where the
+    /// clock starts (the request's issue date); <paramref name="responseDue"/> is the date it was
+    /// contractually asked for, and when absent the default window from issue applies instead.
+    /// A recorded <paramref name="respondedAt"/> always stops the clock.
+    /// </summary>
+    public static bool IsOverdue(DateTimeOffset issuedAt, DateTimeOffset? responseDue, DateTimeOffset? respondedAt)
+    {
+        if (respondedAt is not null) return false;
+        var due = responseDue?.Date ?? issuedAt.Date.AddDays(DefaultResponseWindowDays);
+        return DateTimeOffset.UtcNow.Date > due;
+    }
 }
 
 /// <summary>
@@ -111,7 +143,9 @@ public static class RequestStatusExtensions
     public static string DisplayName(this RequestStatus status) => status switch
     {
         RequestStatus.NeedsAction    => "Needs action",
-        RequestStatus.Open           => "Open",
+        // Named for both halves of what it means: the request is open, and the ball is with the
+        // correspondent. Reading "Open" alone left people unsure whether it meant "still ours".
+        RequestStatus.Open           => "Open / Awaiting response",
         RequestStatus.NeedsVariation => "Needs variation",
         RequestStatus.Closed         => "Closed",
         _ => status.ToString()

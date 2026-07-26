@@ -20,6 +20,8 @@ public static class AuditRouteRegistration
                     if (q.EventType is { } eventType) url += $"&eventType={eventType}";
                     if (!string.IsNullOrWhiteSpace(q.ActorEmail)) url += $"&actor={Uri.EscapeDataString(q.ActorEmail)}";
                     if (!string.IsNullOrWhiteSpace(q.Cursor)) url += $"&cursor={Uri.EscapeDataString(q.Cursor)}";
+                    if (!string.IsNullOrWhiteSpace(q.RecordId)) url += $"&recordId={Uri.EscapeDataString(q.RecordId)}";
+                    if (q.RecordType is { } recordType) url += $"&recordType={recordType}";
                     return url;
                 }));
     }

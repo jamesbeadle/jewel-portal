@@ -52,6 +52,11 @@ public static class SidebarFolders
                 // and variations are one lifecycle in one place.
                 new SidebarRow(new NavigationItem("Requests", "/projects/{project}/requests"),
                     DesktopNavigation.ProjectRoles),
+                // The formal instructions that authorise varied work. Sits with Requests because it
+                // is the same correspondence with the same people, and it is what a variation at
+                // Awaiting AI is waiting for. The architect can see it: they issue them.
+                new SidebarRow(new NavigationItem("Architect's Instructions", "/projects/{project}/architect-instructions"),
+                    DesktopNavigation.ArchitectInstructionRoles),
                 // Point-in-time captures of issued valuation reports — what the client was
                 // actually sent, frozen. New page; finance-gated like the live report.
                 new SidebarRow(new NavigationItem("Valuation Report Snapshots", "/projects/{project}/valuation-snapshots"),

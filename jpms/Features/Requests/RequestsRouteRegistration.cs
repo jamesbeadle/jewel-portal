@@ -181,5 +181,24 @@ public static class RequestsRouteRegistration
         // thread quoted behind it) plus a background General request created from the same email.
         commands.Register<ReplyInThreadFromMessage, ReplyInThreadOutcome>(
             new CommandRoute("POST", "/api/mailbox/message/reply-in-thread", _ => "/api/mailbox/message/reply-in-thread"));
+
+        // Attachments: drawing revisions linked from the project register, and site photos. The
+        // photo UPLOAD is multipart and posted directly by HttpRequestAttachmentStore, so — like
+        // drawing revisions — it is deliberately not registered here.
+        queries.Register<ListRequestAttachments, IReadOnlyList<RequestAttachment>>(
+            new QueryRoute("/api/requests/{requestId}/attachments",
+                query => $"/api/requests/{((ListRequestAttachments)query).RequestId}/attachments"));
+
+        commands.Register<AttachDrawingsToRequest, IReadOnlyList<RequestAttachment>>(
+            new CommandRoute("POST", "/api/requests/{requestId}/attachments/drawings",
+                command => $"/api/requests/{((AttachDrawingsToRequest)command).RequestId}/attachments/drawings"));
+
+        commands.Register<RemoveRequestAttachment, IReadOnlyList<RequestAttachment>>(
+            new CommandRoute("DELETE", "/api/requests/{requestId}/attachments/{attachmentId}",
+                command =>
+                {
+                    var remove = (RemoveRequestAttachment)command;
+                    return $"/api/requests/{remove.RequestId}/attachments/{remove.RequestAttachmentId}";
+                }));
     }
 }

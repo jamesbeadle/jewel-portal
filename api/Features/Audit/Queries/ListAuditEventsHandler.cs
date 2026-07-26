@@ -24,6 +24,10 @@ public sealed class ListAuditEventsHandler : IQueryHandler<ListAuditEvents, Audi
             events = events.Where(e => e.EventType == (int)eventType);
         if (!string.IsNullOrWhiteSpace(query.ActorEmail))
             events = events.Where(e => e.ActorEmail == query.ActorEmail);
+        if (!string.IsNullOrWhiteSpace(query.RecordId))
+            events = events.Where(e => e.RecordId == query.RecordId);
+        if (query.RecordType is { } recordType)
+            events = events.Where(e => e.RecordType == (int)recordType);
 
         var total = await events.CountAsync(cancellationToken);
 

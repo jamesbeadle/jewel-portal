@@ -2,10 +2,13 @@
 @inject AuthService Auth
 @inject IRequestRegister RequestRegister
 @inject ICorrespondenceStore Correspondence
+@inject IRequestAttachmentStore Attachments
+@inject IDrawingStore Drawings
+@implements IDisposable
 
 <Modal IsOpen="IsOpen"
        Title="Raise a request"
-       ConfirmLabel="@(saving ? "Raising…" : "Raise request")"
+       ConfirmLabel="@(saving ? "Raising…" : raisedRequest is null ? "Raise request" : "Continue to the request")"
        OnCancel="Cancel"
        OnConfirm="Submit"
        Class="max-w-2xl">
@@ -63,7 +66,53 @@
             <FormField Label="Value (£)" Value="@valueText" OnChange="v => valueText = v" InputType="number" />
         </div>
 
+        @* Attachments are chosen here and applied the moment the request exists — the request has no
+           id until it is raised, so nothing can be attached before then. A site manager standing in
+           front of the problem photographs it and points at the detail it contradicts, and both go
+           out with the RFI when it is issued. *@
         <div class="pt-1 border-t border-line">
+            <div class="flex items-center justify-between gap-3 mt-3">
+                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold">Attachments</label>
+                <div class="flex items-center gap-2">
+                    <button type="button" class="btn-secondary text-xs" disabled="@saving" @onclick="OpenDrawingPicker">
+                        Attach drawings@(selectedRevisions.Count > 0 ? $" ({selectedRevisions.Count})" : "")
+                    </button>
+                    <label class="btn-secondary text-xs cursor-pointer @(saving ? "opacity-50 pointer-events-none" : "")">
+                        Attach images@(pendingFiles.Count > 0 ? $" ({pendingFiles.Count})" : "")
+                        @* Deliberately no `capture`: forcing the camera on mobile removes the photo
+                           library, and site photos are as often taken earlier as taken now. *@
+                        <InputFile OnChange="OnFilesSelected" multiple accept="image/*,application/pdf" class="hidden" />
+                    </label>
+                </div>
+            </div>
+            @if (selectedRevisions.Count > 0 || pendingFiles.Count > 0)
+            {
+                <ul class="mt-2 space-y-1">
+                    @foreach (var revision in selectedRevisions)
+                    {
+                        var option = revision;
+                        <li class="flex items-center justify-between gap-2 text-xs text-content-muted">
+                            <span class="truncate"><span class="font-mono">@option.Code</span> rev @option.Label</span>
+                            <button type="button" class="text-content-subtle hover:text-negative"
+                                    @onclick="() => selectedRevisions.Remove(option)">Remove</button>
+                        </li>
+                    }
+                    @foreach (var file in pendingFiles)
+                    {
+                        var pending = file;
+                        <li class="flex items-center justify-between gap-2 text-xs text-content-muted">
+                            <span class="truncate">@pending.Name</span>
+                            <button type="button" class="text-content-subtle hover:text-negative"
+                                    @onclick="() => pendingFiles.Remove(pending)">Remove</button>
+                        </li>
+                    }
+                </ul>
+            }
+            @if (attachmentWarning is not null)
+            {
+                <p class="mt-2 text-xs text-negative">@attachmentWarning</p>
+            }
+
             <label class="inline-flex items-center gap-2 mt-3 text-sm text-content-muted cursor-pointer">
                 <input type="checkbox" checked="@backfill" @onchange="OnBackfillChanged" class="rounded border-line-strong" />
                 Log a historical request (set issue date &amp; status)
@@ -93,6 +142,53 @@
                 </div>
             }
         </div>
+    </div>
+</Modal>
+
+@* Picking a drawing is a second dialog over the first — the register can be long, and the raise
+   form must not lose what has been typed into it. *@
+<Modal IsOpen="drawingPickerOpen"
+       Title="Attach drawings"
+       ConfirmLabel="Done"
+       CancelLabel="Cancel"
+       OnCancel="() => drawingPickerOpen = false"
+       OnConfirm="() => drawingPickerOpen = false"
+       Class="max-w-2xl">
+    <div class="space-y-3">
+        @if (PickableRevisions.Count == 0)
+        {
+            <p class="text-sm text-content-subtle">
+                This project has no drawing revisions yet. Upload them on the Drawings tab first.
+            </p>
+        }
+        else
+        {
+            <p class="text-xs text-content-subtle">
+                Attaching links the revision rather than copying it, so the drawing register stays the single
+                record of what is current.
+            </p>
+            <ul class="space-y-1 max-h-80 overflow-y-auto">
+                @foreach (var option in PickableRevisions)
+                {
+                    var revision = option;
+                    <li>
+                        <label class="flex items-start gap-2 text-sm text-content">
+                            <input type="checkbox" class="mt-0.5"
+                                   checked="@selectedRevisions.Any(r => r.RevisionId == revision.RevisionId)"
+                                   @onchange="e => ToggleRevision(revision, e.Value is true)" />
+                            <span>
+                                <span class="font-mono">@revision.Code</span>
+                                <span class="text-content-subtle"> rev @revision.Label</span>
+                                @if (!string.IsNullOrWhiteSpace(revision.Title))
+                                {
+                                    <span class="text-content-subtle"> — @revision.Title</span>
+                                }
+                            </span>
+                        </label>
+                    </li>
+                }
+            </ul>
+        }
     </div>
 </Modal>
 
@@ -144,6 +240,55 @@
     private string? error;
     private bool wasOpen;
 
+    // Attachments chosen before the request exists, applied straight after it is raised.
+    private sealed record RevisionOption(string RevisionId, string Code, string Label, string Title);
+    private readonly List<RevisionOption> selectedRevisions = new();
+    private readonly List<IBrowserFile> pendingFiles = new();
+    private bool drawingPickerOpen;
+    // Attachments failing must not lose the request that was just created, so a failure here is a
+    // warning on a request that already exists — not an error that pretends nothing happened.
+    private string? attachmentWarning;
+    // Non-null once the request has actually been created. Guards against a second press raising a
+    // second request when only the attachment step failed.
+    private Request? raisedRequest;
+
+    // Every revision of every drawing on the project, newest first within each drawing, so the
+    // current issue is the obvious one to tick.
+    private List<RevisionOption> PickableRevisions =>
+        Drawings.DrawingsFor(ProjectId)
+            .SelectMany(drawing => Drawings.RevisionsFor(drawing.DrawingId)
+                .OrderByDescending(revision => revision.ReceivedAt)
+                .Select(revision => new RevisionOption(
+                    revision.DrawingRevisionId, drawing.DrawingCode, revision.RevisionLabel, drawing.Title)))
+            .ToList();
+
+    private void OpenDrawingPicker()
+    {
+        // Fetch on open, never from render.
+        Drawings.Refresh(ProjectId);
+        drawingPickerOpen = true;
+    }
+
+    private void ToggleRevision(RevisionOption revision, bool selected)
+    {
+        selectedRevisions.RemoveAll(r => r.RevisionId == revision.RevisionId);
+        if (selected) selectedRevisions.Add(revision);
+    }
+
+    private void OnFilesSelected(InputFileChangeEventArgs e)
+    {
+        attachmentWarning = null;
+        foreach (var file in e.GetMultipleFiles(20))
+            if (!pendingFiles.Any(existing => existing.Name == file.Name && existing.Size == file.Size))
+                pendingFiles.Add(file);
+    }
+
+    // The drawing store fills in the background and publishes OnChange when it lands; without this
+    // the picker would render once, empty, and never catch up.
+    protected override void OnInitialized() => Drawings.OnChange += StateHasChanged;
+
+    public void Dispose() => Drawings.OnChange -= StateHasChanged;
+
     protected override async Task OnParametersSetAsync()
     {
         var opening = IsOpen && !wasOpen;
@@ -151,6 +296,9 @@
         if (!opening) return;
 
         Reset();
+        // Warm the drawing register from a lifecycle method, not from render, so "Attach drawings"
+        // has something in it the first time it is pressed.
+        Drawings.Refresh(ProjectId);
         await LoadContactsAsync();
     }
 
@@ -183,6 +331,11 @@
         reference = suggestedReference = "";
         saving = false;
         error = null;
+        selectedRevisions.Clear();
+        pendingFiles.Clear();
+        drawingPickerOpen = false;
+        attachmentWarning = null;
+        raisedRequest = null;
     }
 
     private void SetKind(RequestType selected)
@@ -233,6 +386,15 @@
     private async Task Submit()
     {
         if (saving) return;
+
+        // The request was already raised and only its attachments failed — the button now means
+        // "carry on to it", never "raise another one".
+        if (raisedRequest is { } alreadyRaised)
+        {
+            await OnRaised.InvokeAsync(alreadyRaised);
+            return;
+        }
+
         error = null;
 
         if (string.IsNullOrWhiteSpace(title)) { error = "A subject is required."; return; }
@@ -278,6 +440,36 @@
         {
             saving = true;
             var raised = await RequestRegister.RaiseAsync(command);
+            // Remember it immediately: from here on the request EXISTS, and pressing the button
+            // again must never raise a second one.
+            raisedRequest = raised;
+
+            // The request now has an id, so the chosen attachments can be applied. If that fails
+            // the request is still real and is not rolled back — the user is told what didn't land
+            // and the button becomes "Continue", which carries them through to the request where
+            // they can attach it by hand. Losing the request would be far worse than losing a photo.
+            if (selectedRevisions.Count > 0 || pendingFiles.Count > 0)
+            {
+                try
+                {
+                    if (selectedRevisions.Count > 0)
+                        await Attachments.AttachDrawingsAsync(
+                            raised.RequestId, selectedRevisions.Select(r => r.RevisionId).ToList());
+                    if (pendingFiles.Count > 0)
+                        await Attachments.UploadFilesAsync(raised.RequestId, pendingFiles, caption: null);
+                }
+                catch (Exception attachmentFailure)
+                {
+                    attachmentWarning =
+                        $"{raised.DisplayNumber} was raised, but the attachments didn't save: {attachmentFailure.Message} " +
+                        "Continue to the request and add them there.";
+                    selectedRevisions.Clear();
+                    pendingFiles.Clear();
+                    saving = false;
+                    return;
+                }
+            }
+
             await OnRaised.InvokeAsync(raised);
         }
         catch (CommandFailedException ex)

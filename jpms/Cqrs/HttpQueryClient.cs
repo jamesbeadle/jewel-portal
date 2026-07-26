@@ -25,7 +25,16 @@ public sealed class HttpQueryClient : IQueryClient
 
         try
         {
-            var result = await httpClient.GetFromJsonAsync<TResult>(path, cancellationToken);
+            using var response = await httpClient.GetAsync(path, cancellationToken);
+            response.EnsureSuccessStatusCode();
+
+            // "Nothing recorded yet" is a legitimate answer to the nullable queries — a project with
+            // no retention terms, a lead with no outcome — but it never arrives as JSON. ASP.NET
+            // renders OkObjectResult(null) as 204 with an empty body, and deserialising nothing
+            // throws. An empty body behind a success status means null, not a broken response.
+            if (IsEmpty(response)) return default!;
+
+            var result = await response.Content.ReadFromJsonAsync<TResult>(cancellationToken: cancellationToken);
             return result!;
         }
         catch (OperationCanceledException)
@@ -48,4 +57,9 @@ public sealed class HttpQueryClient : IQueryClient
             throw;
         }
     }
+
+    /// <summary>A 204, or a 200 the endpoint sent with no bytes behind it. Either way there is
+    /// nothing to deserialise. ContentLength is null on a chunked response, which is not empty.</summary>
+    private static bool IsEmpty(HttpResponseMessage response) =>
+        response.StatusCode == HttpStatusCode.NoContent || response.Content.Headers.ContentLength == 0;
 }

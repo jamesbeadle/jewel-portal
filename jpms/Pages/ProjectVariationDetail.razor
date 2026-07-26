@@ -7,6 +7,7 @@
 @inject AuthService Auth
 @inject SessionService Session
 @inject IVariationStore Variations
+@inject IArchitectInstructionStore Instructions
 @inject ISubcontractorStore Subcontractors
 @inject IRequestRegister RequestRegister
 @inject IQueryClient Queries
@@ -105,6 +106,35 @@ else
         @if (error is not null)
         {
             <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-4">@error</p>
+        }
+
+        @* A variation at Awaiting AI is, by definition, waiting for a document — so say whether it
+           has arrived, right here, rather than making someone go and look. Once instructions are
+           linked they stay on show at every stage: they are the evidence behind the figures. *@
+        @if (linkedInstructions.Count > 0)
+        {
+            <div class="rounded-lg bg-surface-raised border border-line px-3 py-2 mb-4 flex flex-wrap items-center gap-x-2 gap-y-1">
+                <span class="text-xs uppercase tracking-wider text-content-subtle font-semibold">Architect's Instruction</span>
+                @foreach (var instruction in linkedInstructions)
+                {
+                    <a href="@($"/projects/{ProjectId}/architect-instructions")"
+                       title="@instruction.Title"
+                       class="text-sm text-content hover:underline font-mono">@instruction.DisplayReference</a>
+                }
+                <span class="text-xs text-content-subtle">
+                    @(linkedInstructions.Any(instruction => instruction.HasFile)
+                        ? "· document on file"
+                        : "· document still awaited")
+                </span>
+            </div>
+        }
+        else if (order.Status == VariationOrderStatus.AwaitingArchitectInstruction)
+        {
+            <div class="rounded-lg bg-surface-raised border border-line px-3 py-2 mb-4 text-sm text-content-subtle">
+                Waiting on a formal Architect's Instruction. None is linked yet —
+                <a href="@($"/projects/{ProjectId}/architect-instructions")" class="text-accent hover:underline">file or link one</a>
+                when it arrives, then approve the variation to write the contract figures.
+            </div>
         }
 
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
@@ -519,6 +549,40 @@ else
                 }
             </div>
         </div>
+
+        @* Declining a variation the client never approved is a plain status move — nothing comes
+           off the Valuation Report, no omit is recorded, no budget is released — but it IS terminal:
+           Rejected has no way back, so the pill disappears once it is reached. That deserves a
+           deliberate confirm rather than a one-click move, which is what this modal is. The
+           post-approval reject keeps its own inline panel, because it reverses real commercial
+           writes and needs to say so next to the figures it will change. *@
+        <Modal IsOpen="decliningOrder"
+               Title="@($"Decline {order.DisplayNumber}?")"
+               ConfirmLabel="@(busy ? "Declining…" : "Decline variation")"
+               CancelLabel="Keep it open"
+               ConfirmDisabled="@busy"
+               OnCancel="() => decliningOrder = false"
+               OnConfirm="RejectOrder"
+               Class="max-w-md">
+            <div class="space-y-3">
+                @if (error is not null)
+                {
+                    <div class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@error</div>
+                }
+                <p class="text-sm text-content">
+                    <span class="font-mono">@order.DisplayNumber</span> — @order.Title
+                </p>
+                <p class="text-sm text-content-subtle">
+                    Closes the variation as <span class="text-content font-medium">Rejected</span>: the client
+                    declined it, or it has been withdrawn. It stays on the register for the record, but nothing
+                    commercial is written — no line reaches the Valuation Report and no budget is committed.
+                </p>
+                <p class="text-xs text-content-subtle">
+                    Rejected is the end of the road for this variation — it can't be reopened. If the work is
+                    still live, leave it where it is instead.
+                </p>
+            </div>
+        </Modal>
     </ProjectPageShell>
 }
 
@@ -537,8 +601,13 @@ else
     private bool revisingValue;
     private string reviseValue = "";
 
+    // The Architect's Instructions that cover this variation — the evidence behind its figures, and
+    // the thing an Awaiting-AI variation is waiting for.
+    private List<ArchitectInstruction> linkedInstructions = new();
+
     private bool returningToQuoting;
-    private bool rejectingOrder;
+    private bool rejectingOrder;   // post-approval reject (reverses commercial writes) — inline panel
+    private bool decliningOrder;   // pre-approval decline (plain status move) — confirm modal
     private bool deletingOrder;
     private bool editLinesModalOpen;
 
@@ -647,6 +716,23 @@ else
         Valuation.OnChange -= StateHasChanged;
     }
 
+    // Best-effort: the instruction register is context on this page, never the point of it, so a
+    // failure (or a role without access to it) leaves the banner off rather than the page broken.
+    private async Task LoadLinkedInstructionsAsync()
+    {
+        try
+        {
+            var all = await Instructions.ListAsync(ProjectId);
+            linkedInstructions = all
+                .Where(instruction => instruction.Links.Any(link => link.VariationOrderId == VariationOrderId))
+                .ToList();
+        }
+        catch
+        {
+            linkedInstructions = new List<ArchitectInstruction>();
+        }
+    }
+
     private async Task ReloadAsync()
     {
         try
@@ -668,6 +754,7 @@ else
         }
         catch { error = "Couldn't load the variation order. Please try again."; }
 
+        await LoadLinkedInstructionsAsync();
         await LoadEmailsAsync();
     }
 
@@ -848,7 +935,8 @@ else
             }
             else
             {
-                await RejectOrder();
+                // Quoting / Issued / Awaiting AI: a plain move, but a terminal one — confirm first.
+                decliningOrder = true;
             }
             return;
         }
@@ -881,6 +969,7 @@ else
             busy = true;
             order = await Variations.RejectAsync(VariationOrderId);
             rejectingOrder = false;
+            decliningOrder = false;
             await ReloadAsync();
         }
         catch (CommandFailedException ex) { error = ex.Message; }

@@ -138,6 +138,15 @@ public sealed class JpmsContext : DbContext
     // docs/Pathway-Split-Platform-Flow-Plan.md §4).
     public DbSet<AuditEventEntity> AuditEvents => Set<AuditEventEntity>();
 
+    // Architect's Instructions — the formal instructions that authorise varied work — plus the
+    // many-to-many between them and the variations they cover.
+    public DbSet<ArchitectInstructionEntity> ArchitectInstructions => Set<ArchitectInstructionEntity>();
+    public DbSet<ArchitectInstructionVariationEntity> ArchitectInstructionVariations =>
+        Set<ArchitectInstructionVariationEntity>();
+
+    // Drawings and files attached to a request (site photos, marked-up details, linked revisions).
+    public DbSet<RequestAttachmentEntity> RequestAttachments => Set<RequestAttachmentEntity>();
+
     /// <summary>
     /// Read-path indexes. JPMS deliberately declares no FK relationships (records link by loose
     /// string id), so EF's automatic FK-index convention never fires — every ProjectId / RequestId
@@ -231,5 +240,27 @@ public sealed class JpmsContext : DbContext
         modelBuilder.Entity<ComplianceDocumentEntity>()
             .HasIndex(row => row.SubcontractorId)
             .HasDatabaseName("IX_ComplianceDocuments_SubcontractorId");
+
+        // ---- Architect's Instructions ------------------------------------------------------------
+        modelBuilder.Entity<ArchitectInstructionEntity>()
+            .HasIndex(row => row.ProjectId)
+            .HasDatabaseName("IX_ArchitectInstructions_ProjectId");
+        modelBuilder.Entity<ArchitectInstructionVariationEntity>()
+            .HasIndex(row => row.ArchitectInstructionId)
+            .HasDatabaseName("IX_ArchitectInstructionVariations_ArchitectInstructionId");
+        modelBuilder.Entity<ArchitectInstructionVariationEntity>()
+            .HasIndex(row => row.VariationOrderId)
+            .HasDatabaseName("IX_ArchitectInstructionVariations_VariationOrderId");
+
+        // ---- Request attachments ------------------------------------------------------------------
+        modelBuilder.Entity<RequestAttachmentEntity>()
+            .HasIndex(row => row.RequestId)
+            .HasDatabaseName("IX_RequestAttachments_RequestId");
+
+        // ---- Audit trail ---------------------------------------------------------------------------
+        // The register is read per record (a request's own History panel) as well as per project.
+        modelBuilder.Entity<AuditEventEntity>()
+            .HasIndex(row => row.RecordId)
+            .HasDatabaseName("IX_AuditEvents_RecordId");
     }
 }

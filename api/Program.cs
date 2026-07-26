@@ -5,6 +5,7 @@ using Jewel.JPMS.Api.Features.AccessRequests;
 using Jewel.JPMS.Api.Features.Agents;
 using Jewel.JPMS.Api.Features.Audit;
 using Jewel.JPMS.Api.Features.Architects;
+using Jewel.JPMS.Api.Features.ArchitectInstructions;
 using Jewel.JPMS.Api.Features.Ai;
 using Jewel.JPMS.Api.Features.Auth;
 using Jewel.JPMS.Api.Features.Boq;
@@ -100,7 +101,8 @@ var host = new HostBuilder()
         services.AddValuationInvoicesFeature();
         services.AddCvrFeature();
         services.AddCloseoutFeature();
-        services.AddRequestsFeature();
+        services.AddRequestsFeature(context.Configuration);
+        services.AddArchitectInstructionsFeature(context.Configuration);
         services.AddRecordLinksFeature();
         services.AddAuditFeature();
         services.AddTodosFeature();

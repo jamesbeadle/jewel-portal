@@ -781,11 +781,38 @@ public sealed class MailboxGraphClient : IMailboxGraphClient
     // Graph only accepts attachments up to ~3 MB inline; larger files stream through an upload session.
     private const long InlineAttachmentLimit = 3_000_000;
 
+    /// <summary>
+    /// The projects mailbox is copied on every outbound draft. The draft already sits in the
+    /// mailbox's Drafts folder and the sent copy lands in its Sent Items, but an explicit Cc means
+    /// the mailbox also receives the message as delivered mail — so the thread is complete in one
+    /// place even when a recipient replies to only some of the addressees. Applied here, at the one
+    /// chokepoint every new draft passes through, so no caller can forget it. Idempotent: the
+    /// address is never added twice, and never demoted from an existing To/Bcc placement.
+    /// </summary>
+    private MailboxDraftMessage WithProjectsMailboxCopy(MailboxDraftMessage draft)
+    {
+        var mailbox = _options.Mailbox;
+        if (string.IsNullOrWhiteSpace(mailbox)) return draft;
+
+        bool Already(IReadOnlyList<MailboxDraftRecipient>? recipients) =>
+            recipients is not null
+            && recipients.Any(r => string.Equals(r.Email?.Trim(), mailbox, StringComparison.OrdinalIgnoreCase));
+
+        if (Already(draft.To) || Already(draft.Cc) || Already(draft.Bcc)) return draft;
+
+        var cc = draft.Cc is null
+            ? new List<MailboxDraftRecipient>()
+            : new List<MailboxDraftRecipient>(draft.Cc);
+        cc.Add(new MailboxDraftRecipient(mailbox.Trim()));
+        return draft with { Cc = cc };
+    }
+
     public async Task<MailboxDraft?> CreateDraftAsync(MailboxDraftMessage draft, CancellationToken ct)
     {
         // POST /users/{mailbox}/messages creates the message in the Drafts folder. Attachments under
         // the ~3 MB inline limit go in the same call; anything larger (e.g. drawings) is streamed
         // onto the created draft through an upload session afterwards.
+        draft = WithProjectsMailboxCopy(draft);
         var url = $"{GraphBase}/users/{Mailbox}/messages";
         var large = draft.Attachments.Where(a => a.Content.LongLength > InlineAttachmentLimit).ToList();
         var small = large.Count == 0 ? draft.Attachments : draft.Attachments.Where(a => a.Content.LongLength <= InlineAttachmentLimit).ToList();
@@ -865,6 +892,21 @@ public sealed class MailboxGraphClient : IMailboxGraphClient
         };
         if (reply.Categories is { Count: > 0 } categories)
             patchPayload["categories"] = categories.ToArray();
+
+        // Copy the projects mailbox on the reply too. createReplyAll pre-fills the original
+        // correspondents but never the mailbox itself, so it is added here (once) alongside them —
+        // the same rule new drafts get in WithProjectsMailboxCopy.
+        if (!string.IsNullOrWhiteSpace(_options.Mailbox)
+            && !to.Concat(cc).Any(e => string.Equals(e.Trim(), _options.Mailbox, StringComparison.OrdinalIgnoreCase)))
+        {
+            cc.Add(_options.Mailbox.Trim());
+            patchPayload["ccRecipients"] = cc
+                .Select(email => new Dictionary<string, object?>
+                {
+                    ["emailAddress"] = new Dictionary<string, object?> { ["address"] = email }
+                })
+                .ToArray();
+        }
 
         using (var patchContent = JsonContent.Create(patchPayload))
         using (var patchResponse = await SendAsync(HttpMethod.Patch, $"{GraphBase}/users/{Mailbox}/messages/{Uri.EscapeDataString(id)}", patchContent, ct))

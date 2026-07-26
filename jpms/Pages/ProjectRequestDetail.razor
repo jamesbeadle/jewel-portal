@@ -328,7 +328,20 @@ else
 
                 @* Per-message reply drafting is off: emailing the document (fresh or into a tagged
                    chain) is consolidated behind the single Email button in the page header. *@
+                @* Drawings linked from the register and photos taken on site. Uploaded files ride
+                   out on the RFI email; linked drawings do not — the architect issued those, and
+                   the document already cites them by code and revision. *@
+                <RequestAttachmentsPanel ProjectId="@ProjectId" RequestId="@RequestId" CanEdit="@CanEditDetails" />
+
                 <RequestConversation RequestId="@RequestId" CanDraftReply="false" />
+
+                @* The record's own audit slice. Its main job here is answering "did the document go
+                   out?" — every draft the portal creates writes a row the moment it lands in the
+                   projects mailbox, with a link that opens that draft in Outlook. Sent is never
+                   observable from code (a human presses Send), so "drafted" is the honest signal. *@
+                <RecordAuditHistory RecordId="@RequestId"
+                                    RecordType="Jewel.JPMS.Models.RecordType.Request"
+                                    Title="History" />
 
                 @* Agents are parked for now — the workspace is hidden until we settle on whether
                    attaching agents to requests is the right model. Re-add <AgentWorkspace> here. *@
@@ -442,7 +455,11 @@ else
                 </div>
                 }
 
-                @if (record.HasRfq || variation is not null)
+                @* Any RFI can raise a variation order quote — an architect answering "yes, do it"
+                   is the ordinary way one starts, with no subcontractor tender involved. The RFQ
+                   flag is not the gate; it only decides whether bid packages hang off the
+                   variation afterwards. *@
+                @if (record.Kind is RequestType.Rfi || record.HasRfq || variation is not null)
                 {
                     <div class="panel p-5 space-y-3">
                         <h3 class="eyebrow">Variation</h3>
@@ -460,10 +477,16 @@ else
                             {
                                 <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@variationError</p>
                             }
-                            <p class="text-xs text-content-subtle">This RFI carries an RFQ. Raise the variation to send bid packages to subcontractors — the draft is prepared from this RFI and its tagged emails for you to review. It stays in Quoting until the client approves it.</p>
+                            <p class="text-xs text-content-subtle">
+                                @(record.HasRfq
+                                    ? "This RFI carries an RFQ, so bid packages can go out to subcontractors under the variation."
+                                    : "Price the work this RFI has led to.")
+                                The quote is drafted from this RFI and its tagged emails for you to review — you decide
+                                the title, the value and which lines to keep. It stays in Quoting until the client approves it.
+                            </p>
                             @if (CanEditDetails)
                             {
-                                <button type="button" class="btn-primary w-full" disabled="@busy" @onclick="OpenVariationDraft">Raise variation</button>
+                                <button type="button" class="btn-primary w-full" disabled="@busy" @onclick="OpenVariationDraft">Create Variation Order Quote</button>
                             }
                         }
                     </div>
@@ -759,7 +782,9 @@ else
                 {
                     <div>
                         <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Suggested scope lines</label>
-                        <p class="text-xs text-content-subtle mb-2">Ticked lines are added to a draft bid package (@DraftPackageTrade) under the variation, ready to send to subcontractors. Every ticked line needs a cost centre — that's the cost code its committed value lands on.</p>
+                        <p class="text-xs text-content-subtle mb-2">
+                            Ticked lines become the variation's scope, held as a draft bid package (@DraftPackageTrade)@(record?.HasRfq == true ? " ready to send to subcontractors" : " — send it out to subcontractors later, or price it yourselves"). Every ticked line needs a cost centre — that's the cost code its committed value lands on. Untick any line you don't want; untick them all to raise the variation on its own.
+                        </p>
                         <ul class="space-y-1.5">
                             @foreach (var (row, index) in draftVariationLines.Select((r, i) => (r, i)))
                             {
@@ -1103,7 +1128,14 @@ else
                 if (record.Kind is RequestType.Rfi && !record.HasRfq && variation is null)
                     items.Add(new(Label: "Create bid packages",
                         OnSelect: EventCallback.Factory.Create(this, CreateBidPackagesFromMenu),
-                        Hint: "Marks this RFI as carrying an RFQ, unlocking the variation and its bid packages", Group: 2));
+                        Hint: "Marks this RFI as carrying an RFQ, so the variation's scope can go out to tender", Group: 2));
+
+                // The same action as the rail's button, mirrored into the menu so it sits with the
+                // other "move this record along" steps. Any RFI can raise one — no RFQ required.
+                if (record.Kind is RequestType.Rfi && variation is null)
+                    items.Add(new(Label: "Create Variation Order Quote…",
+                        OnSelect: EventCallback.Factory.Create(this, OpenVariationDraft),
+                        Hint: "Drafts a priced quote from this RFI and its tagged emails for you to review", Group: 1));
             }
 
             // Group 3 — the destructive tail, kept last and marked.
@@ -1232,6 +1264,27 @@ else
     // Reopening puts the ball back in our court — the reopened request needs someone to act.
     private async Task ReopenRequest() => await Apply(RequestStatus.NeedsAction, record?.ResponseText);
 
+    // Drops every dialog and inline editor on the page. Used when the page is about to navigate
+    // away, so a modal can never be left hanging over the destination during the transition.
+    private void CloseOpenDialogs()
+    {
+        confirmingDelete = false;
+        confirmingReturn = false;
+        confirmingClose = false;
+        respondingOpen = false;
+        emailModalOpen = false;
+        editingHeader = false;
+        editingFacts = false;
+        editingDetail = false;
+        editingForm = false;
+        variationDraftOpen = false;
+    }
+
+    // Promotion is the end of this record's triage, not the start of another edit: it mints the RFI
+    // reference and the official document, and the next thing anyone does is pick up the next
+    // request. So the page closes anything open and returns to the register, where the promoted row
+    // now reads as an RFI — rather than leaving the user on a page whose buttons have all changed
+    // underneath them. A failure keeps them here with the reason.
     private async Task PromoteToRfi()
     {
         if (record is null || busy) return;
@@ -1239,8 +1292,11 @@ else
         try
         {
             busy = true;
-            record = await RequestRegister.PromoteToRfiAsync(record.RequestId, ProjectId);
-            responseDraft = record.ResponseText ?? "";
+            var promoted = await RequestRegister.PromoteToRfiAsync(record.RequestId, ProjectId);
+            record = promoted;
+            responseDraft = promoted.ResponseText ?? "";
+            CloseOpenDialogs();
+            Nav.NavigateTo($"/projects/{ProjectId}/requests");
         }
         catch
         {

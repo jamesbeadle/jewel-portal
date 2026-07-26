@@ -1,0 +1,150 @@
+@using Jewel.JPMS.Contracts.Audit
+@inject IQueryClient Queries
+
+@*
+    One record's own slice of the audit register, newest first — the same append-only rows the
+    /audit page shows, narrowed server-side to this record. Its job on a request page is to answer
+    "has this document been sent?": every draft the portal creates writes a DraftCreated row here
+    the moment it lands in the projects mailbox, so a drafted document leaves a trace even though
+    the send itself happens in Outlook and code never sees it.
+
+    The Outlook link on a row opens that very draft, so the register doubles as the index into the
+    mailbox. Reads are gated server-side (AuditEndpoints widens the triage gate for record-scoped
+    reads to the internal team); a 403 renders as nothing rather than an error, so a page that
+    someone can otherwise see never shows a broken panel.
+*@
+
+<Panel Title="@Title" IsLoading="@(!loaded)" Prominent="false">
+    @if (loadError is not null)
+    {
+        <p class="text-sm text-content-subtle">@loadError</p>
+    }
+    else if (items.Count == 0)
+    {
+        <p class="text-sm text-content-subtle">
+            Nothing recorded yet. Drafted correspondence, triage decisions and record links appear here.
+        </p>
+    }
+    else
+    {
+        <ol class="space-y-3">
+            @foreach (var item in items)
+            {
+                <li class="flex gap-3">
+                    <span class="mt-1.5 w-1.5 h-1.5 rounded-full bg-accent shrink-0" aria-hidden="true"></span>
+                    <div class="min-w-0">
+                        <p class="text-sm text-content">@item.Detail</p>
+                        <p class="text-xs text-content-subtle mt-0.5">
+                            <span title="@item.OccurredAt.ToLocalTime().ToString("dd MMM yyyy HH:mm")">
+                                @item.OccurredAt.ToLocalTime().ToString("dd MMM yyyy HH:mm")
+                            </span>
+                            <span class="mx-1.5" aria-hidden="true">·</span>
+                            <span>@EventLabel(item.EventType)</span>
+                            @if (!string.IsNullOrWhiteSpace(item.ActorEmail))
+                            {
+                                <span class="mx-1.5" aria-hidden="true">·</span>
+                                <span>@item.ActorEmail</span>
+                            }
+                            @if (!string.IsNullOrWhiteSpace(item.WebLink))
+                            {
+                                <span class="mx-1.5" aria-hidden="true">·</span>
+                                <a href="@item.WebLink" target="_blank" rel="noopener" class="text-accent hover:underline">Open in Outlook</a>
+                            }
+                        </p>
+                    </div>
+                </li>
+            }
+        </ol>
+
+        @if (nextCursor is not null)
+        {
+            <div class="mt-4">
+                <button type="button" class="btn-secondary text-xs" disabled="@loadingMore" @onclick="LoadMoreAsync">
+                    @(loadingMore ? "Loading…" : "Show earlier")
+                </button>
+            </div>
+        }
+    }
+</Panel>
+
+@code {
+    /// <summary>The record whose history to show (e.g. a RequestId).</summary>
+    [Parameter, EditorRequired] public string RecordId { get; set; } = "";
+
+    /// <summary>Narrows the read to one record kind, so two features can never share an id space.</summary>
+    [Parameter, EditorRequired] public RecordType RecordType { get; set; }
+
+    [Parameter] public string Title { get; set; } = "History";
+
+    /// <summary>How many rows to fetch at a time. The panel is a sidebar-sized summary, not the register.</summary>
+    [Parameter] public int PageSize { get; set; } = 15;
+
+    private readonly List<AuditEvent> items = new();
+    private string? nextCursor;
+    private bool loaded;
+    private bool loadingMore;
+    private string? loadError;
+
+    private string? loadedFor;
+
+    // Per the front-end convention: fetch from OnInitializedAsync, never from render. The router
+    // keys pages by their route values, so navigating between two requests recreates this component
+    // — but OnParametersSetAsync is still guarded so a re-render with the same id never refetches.
+    protected override async Task OnParametersSetAsync()
+    {
+        if (string.IsNullOrWhiteSpace(RecordId) || loadedFor == RecordId) return;
+        loadedFor = RecordId;
+        items.Clear();
+        nextCursor = null;
+        loaded = false;
+        await LoadAsync();
+    }
+
+    private Task LoadMoreAsync() => LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        loadError = null;
+        loadingMore = nextCursor is not null;
+        try
+        {
+            var page = await Queries.AskAsync(
+                new ListAuditEvents(
+                    Cursor: nextCursor,
+                    Take: PageSize,
+                    RecordId: RecordId,
+                    RecordType: RecordType),
+                CancellationToken.None);
+            items.AddRange(page.Items);
+            nextCursor = page.NextCursor;
+        }
+        catch
+        {
+            // A read this page has no right to (403) or a transient failure both degrade to a quiet
+            // line rather than the error toast — the history is context, never the point of the page.
+            loadError = "Couldn't load the history.";
+        }
+        finally
+        {
+            loaded = true;
+            loadingMore = false;
+        }
+    }
+
+    private static string EventLabel(AuditEventType type) => type switch
+    {
+        AuditEventType.EmailTriaged           => "Email triaged",
+        AuditEventType.RecordLinked           => "Record linked",
+        AuditEventType.RecordCreatedFromEmail => "Record created from email",
+        AuditEventType.TagRemoved             => "Tag removed",
+        AuditEventType.Discarded              => "Discarded",
+        AuditEventType.Restored               => "Restored",
+        AuditEventType.WallRejected           => "Wall refused",
+        AuditEventType.DraftCreated           => "Draft created",
+        AuditEventType.SnapshotTaken          => "Snapshot taken",
+        AuditEventType.BackfillStamped        => "Backfill stamped",
+        AuditEventType.CrossPathwayOverride   => "Cross-pathway override",
+        AuditEventType.ThreadSwept            => "Thread swept",
+        _                                     => type.ToString()
+    };
+}

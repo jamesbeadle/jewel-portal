@@ -20,17 +20,20 @@ public sealed class PrepareRequestEmailDraftEndpoint
     private readonly PrepareRequestEmailDraftAuthorisation authorisation;
     private readonly PrepareRequestEmailDraftValidation validation;
     private readonly ICommandHandler<PrepareRequestEmailDraft, RequestEmailDraft> handler;
+    private readonly Audit.AuditActor auditActor;
 
     public PrepareRequestEmailDraftEndpoint(
         SignedInUserResolver users,
         PrepareRequestEmailDraftAuthorisation authorisation,
         PrepareRequestEmailDraftValidation validation,
-        ICommandHandler<PrepareRequestEmailDraft, RequestEmailDraft> handler)
+        ICommandHandler<PrepareRequestEmailDraft, RequestEmailDraft> handler,
+        Audit.AuditActor auditActor)
     {
         this.users = users;
         this.authorisation = authorisation;
         this.validation = validation;
         this.handler = handler;
+        this.auditActor = auditActor;
     }
 
     [Function(nameof(PrepareRequestEmailDraft))]
@@ -42,6 +45,10 @@ public sealed class PrepareRequestEmailDraftEndpoint
 
         var signedInUser = await users.ResolveAsync(request, cancellationToken);
         if (signedInUser is null) return new UnauthorizedResult();
+
+        // The handler's audit write attributes the draft to whoever pressed the button — commands
+        // don't carry the caller's identity, so it reaches the handler through the scoped actor.
+        auditActor.Email = signedInUser.Email;
 
         PrepareRequestEmailDraft? body = null;
         if (request.ContentLength > 0)

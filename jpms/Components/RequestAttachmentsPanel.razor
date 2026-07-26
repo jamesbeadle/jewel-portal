@@ -1,0 +1,281 @@
+@using Jewel.JPMS.Contracts.Requests
+@inject IRequestAttachmentStore Attachments
+@inject IDrawingStore Drawings
+@implements IDisposable
+
+@*
+    What is attached to a request: drawing revisions linked from the project register, and photos
+    uploaded onto the request itself. One list, in the order things were added, because that is the
+    order they were meant to be read in — the photo, then the detail it contradicts.
+
+    Drawings are LINKED rather than copied, so the register stays the single truth about which
+    revision is current; the panel shows the revision that was picked, which is the one the RFI was
+    written against.
+*@
+
+<Panel Title="Attachments" IsLoading="@(!loaded)" Prominent="false">
+    <HeaderActions>
+        @if (CanEdit)
+        {
+            <button type="button" class="btn-secondary text-xs" disabled="@busy" @onclick="OpenDrawingPicker">Attach drawings</button>
+            <label class="btn-secondary text-xs cursor-pointer @(busy ? "opacity-50 pointer-events-none" : "")">
+                @(uploading ? "Uploading…" : "Attach images")
+                @* No `capture` attribute: on mobile it forces the camera and takes away the photo
+                   library, which would stop someone attaching a picture they took ten minutes ago.
+                   The camera is still one tap away in the browser's own picker. *@
+                <InputFile OnChange="OnFilesSelected" multiple accept="image/*,application/pdf" class="hidden" />
+            </label>
+        }
+    </HeaderActions>
+    <ChildContent>
+
+    @if (error is not null)
+    {
+        <div class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-3">@error</div>
+    }
+
+    @if (items.Count == 0)
+    {
+        <p class="text-sm text-content-subtle">
+            @(CanEdit
+                ? "Nothing attached. Link a drawing from the register, or add a photo from site."
+                : "Nothing attached.")
+        </p>
+    }
+    else
+    {
+        <ul class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+            @foreach (var item in items)
+            {
+                var attachment = item;
+                <li class="rounded-lg border border-line overflow-hidden bg-surface-raised">
+                    @if (attachment.IsImage)
+                    {
+                        <a href="@Attachments.FileUrl(RequestId, attachment.RequestAttachmentId)" target="_blank" rel="noopener">
+                            <img src="@Attachments.FileUrl(RequestId, attachment.RequestAttachmentId, inline: true)"
+                                 alt="@attachment.DisplayName" loading="lazy"
+                                 class="w-full h-28 object-cover" />
+                        </a>
+                    }
+                    else
+                    {
+                        <div class="h-28 flex items-center justify-center text-content-subtle text-xs px-2 text-center">
+                            @(attachment.Kind == RequestAttachmentKind.Drawing ? "Drawing" : "File")
+                        </div>
+                    }
+                    <div class="px-2 py-1.5">
+                        <p class="text-xs text-content truncate" title="@attachment.DisplayName">@attachment.DisplayName</p>
+                        @if (!string.IsNullOrWhiteSpace(attachment.Caption))
+                        {
+                            <p class="text-[11px] text-content-subtle truncate" title="@attachment.Caption">@attachment.Caption</p>
+                        }
+                        <div class="flex items-center justify-between gap-2 mt-1">
+                            <a class="text-[11px] text-accent hover:underline"
+                               href="@LinkFor(attachment)" target="_blank" rel="noopener">Open</a>
+                            @if (CanEdit)
+                            {
+                                <button type="button" class="text-[11px] text-content-subtle hover:text-negative"
+                                        disabled="@busy" @onclick="() => Remove(attachment)">Remove</button>
+                            }
+                        </div>
+                    </div>
+                </li>
+            }
+        </ul>
+    }
+    </ChildContent>
+</Panel>
+
+@* The drawing picker: the project's register, with the revision each drawing is currently on. *@
+<Modal IsOpen="pickerOpen"
+       Title="Attach drawings"
+       ConfirmLabel="@(busy ? "Attaching…" : "Attach selected")"
+       ConfirmDisabled="@(busy || selectedRevisionIds.Count == 0)"
+       OnCancel="() => pickerOpen = false"
+       OnConfirm="ConfirmDrawings"
+       Class="max-w-2xl">
+    <div class="space-y-3">
+        @if (pickerError is not null)
+        {
+            <div class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@pickerError</div>
+        }
+        @if (PickableRevisions.Count == 0)
+        {
+            <p class="text-sm text-content-subtle">
+                This project has no drawing revisions to attach yet. Upload them on the Drawings tab first.
+            </p>
+        }
+        else
+        {
+            <p class="text-xs text-content-subtle">
+                Attaching links the revision — it doesn't copy it, so the drawing register stays the single
+                record of what is current.
+            </p>
+            <ul class="space-y-1 max-h-80 overflow-y-auto">
+                @foreach (var option in PickableRevisions)
+                {
+                    var revisionId = option.RevisionId;
+                    <li>
+                        <label class="flex items-start gap-2 text-sm text-content">
+                            <input type="checkbox" class="mt-0.5"
+                                   checked="@selectedRevisionIds.Contains(revisionId)"
+                                   @onchange="e => ToggleRevision(revisionId, e.Value is true)" />
+                            <span>
+                                <span class="font-mono">@option.Code</span>
+                                <span class="text-content-subtle"> rev @option.Label</span>
+                                @if (!string.IsNullOrWhiteSpace(option.Title))
+                                {
+                                    <span class="text-content-subtle"> — @option.Title</span>
+                                }
+                            </span>
+                        </label>
+                    </li>
+                }
+            </ul>
+        }
+    </div>
+</Modal>
+
+@code {
+    [Parameter, EditorRequired] public string ProjectId { get; set; } = "";
+    [Parameter, EditorRequired] public string RequestId { get; set; } = "";
+    [Parameter] public bool CanEdit { get; set; }
+
+    /// <summary>Raised whenever the attachment list changes, so a parent can re-read its own counts.</summary>
+    [Parameter] public EventCallback OnChanged { get; set; }
+
+    private List<RequestAttachment> items = new();
+    private bool loaded;
+    private bool busy;
+    private bool uploading;
+    private string? error;
+
+    private bool pickerOpen;
+    private string? pickerError;
+    private readonly HashSet<string> selectedRevisionIds = new(StringComparer.OrdinalIgnoreCase);
+
+    private string? loadedFor;
+
+    private sealed record RevisionOption(string RevisionId, string Code, string Label, string Title);
+
+    // The register flattened to "pick a revision": every revision of every drawing on the project,
+    // newest first within each drawing, so the current issue is the obvious thing to tick.
+    private List<RevisionOption> PickableRevisions =>
+        Drawings.DrawingsFor(ProjectId)
+            .SelectMany(drawing => Drawings.RevisionsFor(drawing.DrawingId)
+                .OrderByDescending(revision => revision.ReceivedAt)
+                .Select(revision => new RevisionOption(
+                    revision.DrawingRevisionId, drawing.DrawingCode, revision.RevisionLabel, drawing.Title)))
+            .ToList();
+
+    // The drawing store is lazy and fills in the background, publishing OnChange when data lands.
+    // Without this subscription the picker would render once — empty — and never update.
+    protected override void OnInitialized() => Drawings.OnChange += StateHasChanged;
+
+    public void Dispose() => Drawings.OnChange -= StateHasChanged;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (string.IsNullOrWhiteSpace(RequestId) || loadedFor == RequestId) return;
+        loadedFor = RequestId;
+        loaded = false;
+        // Warm the drawing register now, from a lifecycle method rather than from render, so the
+        // picker has something in it the moment it is opened.
+        Drawings.Refresh(ProjectId);
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        error = null;
+        try
+        {
+            items = (await Attachments.ListAsync(RequestId)).ToList();
+        }
+        catch
+        {
+            error = "Couldn't load the attachments.";
+        }
+        finally
+        {
+            loaded = true;
+        }
+    }
+
+    private string LinkFor(RequestAttachment attachment) =>
+        attachment.Kind == RequestAttachmentKind.Drawing
+            ? $"/projects/{ProjectId}/drawings/{attachment.DrawingId}"
+            : Attachments.FileUrl(RequestId, attachment.RequestAttachmentId);
+
+    private void OpenDrawingPicker()
+    {
+        pickerError = null;
+        selectedRevisionIds.Clear();
+        // Revalidate on open (stale-while-revalidate): the list already on screen is shown
+        // immediately and quietly replaced if a drawing has been issued since.
+        Drawings.Refresh(ProjectId);
+        pickerOpen = true;
+    }
+
+    private void ToggleRevision(string revisionId, bool selected)
+    {
+        if (selected) selectedRevisionIds.Add(revisionId);
+        else selectedRevisionIds.Remove(revisionId);
+    }
+
+    private async Task ConfirmDrawings()
+    {
+        if (busy || selectedRevisionIds.Count == 0) return;
+        pickerError = null;
+        try
+        {
+            busy = true;
+            items = (await Attachments.AttachDrawingsAsync(RequestId, selectedRevisionIds.ToList())).ToList();
+            pickerOpen = false;
+            await OnChanged.InvokeAsync();
+        }
+        catch (CommandFailedException ex) { pickerError = ex.Message; }
+        catch { pickerError = "Couldn't attach those drawings. Please try again."; }
+        finally { busy = false; }
+    }
+
+    private async Task OnFilesSelected(InputFileChangeEventArgs e)
+    {
+        if (busy) return;
+        var files = e.GetMultipleFiles(20);
+        if (files.Count == 0) return;
+
+        error = null;
+        try
+        {
+            busy = uploading = true;
+            items = (await Attachments.UploadFilesAsync(RequestId, files, caption: null)).ToList();
+            await OnChanged.InvokeAsync();
+        }
+        catch (Exception ex)
+        {
+            // The store surfaces the server's own message (storage unconfigured, file too big),
+            // which is the part a user can act on.
+            error = ex.Message;
+        }
+        finally
+        {
+            busy = uploading = false;
+        }
+    }
+
+    private async Task Remove(RequestAttachment attachment)
+    {
+        if (busy) return;
+        error = null;
+        try
+        {
+            busy = true;
+            items = (await Attachments.RemoveAsync(RequestId, attachment.RequestAttachmentId)).ToList();
+            await OnChanged.InvokeAsync();
+        }
+        catch (CommandFailedException ex) { error = ex.Message; }
+        catch { error = "Couldn't remove that attachment. Please try again."; }
+        finally { busy = false; }
+    }
+}

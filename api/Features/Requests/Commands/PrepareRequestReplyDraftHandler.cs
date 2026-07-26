@@ -75,6 +75,7 @@ public sealed class PrepareRequestReplyDraftHandler : ICommandHandler<PrepareReq
             recordType: RecordType.Request,
             recordId: request.RequestId,
             recordReference: model.DisplayNumber,
+            emailMessageId: created.Id,
             webLink: created.WebLink,
             cancellationToken: cancellationToken);
 
