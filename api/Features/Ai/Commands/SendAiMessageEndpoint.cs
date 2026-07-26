@@ -5,6 +5,7 @@ using Jewel.JPMS.Models;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.Functions.Worker;
+using Microsoft.Extensions.Logging;
 
 namespace Jewel.JPMS.Api.Features.Ai.Commands;
 
@@ -22,19 +23,22 @@ public sealed class SendAiMessageEndpoint
     private readonly SendAiMessageAuthorisation authorisation;
     private readonly SendAiMessageValidation validation;
     private readonly ICommandHandler<SendAiMessage, AiTurnResult> handler;
+    private readonly ILogger<SendAiMessageEndpoint> logger;
 
     public SendAiMessageEndpoint(
         SignedInUserResolver users,
         AiCaller caller,
         SendAiMessageAuthorisation authorisation,
         SendAiMessageValidation validation,
-        ICommandHandler<SendAiMessage, AiTurnResult> handler)
+        ICommandHandler<SendAiMessage, AiTurnResult> handler,
+        ILogger<SendAiMessageEndpoint> logger)
     {
         this.users = users;
         this.caller = caller;
         this.authorisation = authorisation;
         this.validation = validation;
         this.handler = handler;
+        this.logger = logger;
     }
 
     [Function(nameof(SendAiMessage))]
@@ -67,5 +71,42 @@ public sealed class SendAiMessageEndpoint
         {
             return new BadRequestObjectResult(new[] { ex.Message });
         }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            // Deliberately verbose. This endpoint is reachable only by administrators and directors,
+            // and an opaque 500 in a chat panel is a debugging session — the sentence below is the
+            // difference between "Backend call failure" and knowing a migration has not been run.
+            logger.LogError(ex, "Assistant turn failed for {Email}.", signedInUser.Email);
+
+            return new ObjectResult(Explain(ex))
+            {
+                StatusCode = StatusCodes.Status500InternalServerError
+            };
+        }
+    }
+
+    /// <summary>
+    /// Turns the exception into something the person reading the chat panel can act on. Recognises
+    /// the failures that are configuration rather than bugs; everything else falls back to the
+    /// exception's own message, which is more use than nothing.
+    /// </summary>
+    private static string Explain(Exception ex)
+    {
+        var message = ex.Message;
+
+        if (message.Contains("Invalid object name", StringComparison.OrdinalIgnoreCase)
+            || message.Contains("Invalid column name", StringComparison.OrdinalIgnoreCase))
+        {
+            return "The assistant's database tables are missing or out of date. "
+                + "A pending EF migration has not been applied to this environment. "
+                + $"({message})";
+        }
+
+        if (message.Contains("Unable to resolve service", StringComparison.OrdinalIgnoreCase))
+        {
+            return $"The assistant is not wired up correctly on this environment. ({message})";
+        }
+
+        return $"The assistant hit an unexpected error. ({message})";
     }
 }
