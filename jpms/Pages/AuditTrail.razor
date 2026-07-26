@@ -63,15 +63,16 @@ else
             @* Built from the project list, so it waits for it: a picker offering "All projects"
                alone reads as "there are none to filter by", and the reader has already believed it
                by the time the options appear. The event-type list is a constant and needs no gate. *@
-            <LoadGate IsLoading="@(!projectOptionsReady)" Height="min-h-[30px]" Label="">
-                <select class="field !w-auto text-xs" value="@projectFilter" @onchange="OnProjectChanged">
-                    <option value="">All projects</option>
+            @* Disabled until the options land: a project list that quietly grows misleads exactly
+               as a 0 count does, but a filter is a control, not a panel — it says so itself. *@
+            <select class="field !w-auto text-xs" value="@projectFilter" @onchange="OnProjectChanged"
+                    disabled="@(!projectOptionsReady)">
+                <option value="">@(projectOptionsReady ? "All projects" : "Loading projects…")</option>
                     @foreach (var project in ProjectOptions)
                     {
                         <option value="@project.ProjectId">@project.Reference — @project.Name</option>
                     }
-                </select>
-            </LoadGate>
+            </select>
 
             @if (loaded && total > 0)
             {

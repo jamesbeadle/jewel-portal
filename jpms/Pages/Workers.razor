@@ -53,19 +53,18 @@ else
                 <label class="text-xs text-content-subtle">Day rate £ (÷ 8 = hourly)
                     <input class="field mt-1 w-28" type="number" step="1" min="0" @bind="formDayRate" />
                 </label>
-                @* The picker is the directory: offering only "— none —" while it loads invites a
-                   worker to be saved unlinked, so the field waits rather than the whole form. *@
-                <LoadGate IsLoading="@(!Subcontractors.IsLoaded)" Height="min-h-[52px]" Label="">
-                    <label class="text-xs text-content-subtle">Subcontractor
-                        <select class="field mt-1" @bind="formSubcontractorId">
-                            <option value="">— none —</option>
-                            @foreach (var subcontractor in Subcontractors.All())
-                            {
-                                <option value="@subcontractor.SubcontractorId">@subcontractor.CompanyName</option>
-                            }
-                        </select>
-                    </label>
-                </LoadGate>
+                @* Disabled while the directory loads: offering only "— none —" invites a worker to
+                   be saved unlinked. A field that greys out reads as "not yet", and the form keeps
+                   its shape — a spinner in a form row does neither. *@
+                <label class="text-xs text-content-subtle">Subcontractor
+                    <select class="field mt-1" @bind="formSubcontractorId" disabled="@(!Subcontractors.IsLoaded)">
+                        <option value="">@(Subcontractors.IsLoaded ? "— none —" : "Loading…")</option>
+                        @foreach (var subcontractor in Subcontractors.All())
+                        {
+                            <option value="@subcontractor.SubcontractorId">@subcontractor.CompanyName</option>
+                        }
+                    </select>
+                </label>
                 <label class="text-xs text-content-subtle">Phone
                     <input class="field mt-1 w-36" @bind="formPhone" />
                 </label>
@@ -183,6 +182,11 @@ else
         // Paint the chrome before the fetch: Blazor re-renders OnInitializedAsync only at its
         // FIRST await, which has already passed, so without this the page waits on the registry.
         StateHasChanged();
+        // The directory is lazily loaded: All() is what starts its fetch, and every call to it sits
+        // inside the registry gate. Without this the gate waits on a load its own closure prevented
+        // from ever starting — the workers arrive, IsLoaded stays false, and the jewel pulses
+        // forever. Any gate that waits on a lazily-loaded store has to start that store itself.
+        Subcontractors.All();
         try { await Labour.RefreshWorkersAsync(); }
         catch { workersFailed = true; }
     }

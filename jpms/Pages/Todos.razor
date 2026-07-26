@@ -77,29 +77,30 @@ else
             @* Both selects are built from data — the scope filter from the projects that have
                items, the role filter from the assignable-role pool — so they wait with the list.
                A short list of options that quietly grows misleads exactly as a 0 count does. *@
-            <LoadGate IsLoading="@(!filtersReady)" Height="min-h-[30px]" Label="">
-                @* The project filter: every project with items, plus company-wide (no-project) only. *@
-                <select class="field !w-auto text-xs" value="@scopeFilter" @onchange="e => scopeFilter = e.Value?.ToString() ?? ScopeAll">
-                    <option value="@ScopeAll">All</option>
-                    <option value="@ScopeGeneral">Company-wide</option>
-                    @foreach (var project in ProjectsWithItems)
+            @* The project filter: every project with items, plus company-wide (no-project) only.
+               Disabled until the options land — a short list that quietly grows misleads as a 0
+               count does — but a filter is a control, so it says so in its own placeholder. *@
+            <select class="field !w-auto text-xs" value="@scopeFilter" @onchange="e => scopeFilter = e.Value?.ToString() ?? ScopeAll"
+                    disabled="@(!filtersReady)">
+                <option value="@ScopeAll">@(filtersReady ? "All" : "Loading…")</option>
+                <option value="@ScopeGeneral">Company-wide</option>
+                @foreach (var project in ProjectsWithItems)
+                {
+                    <option value="@project.ProjectId">@project.Reference — @project.Name</option>
+                }
+            </select>
+
+            @if (CanSeeAll && assigneeOptions.Count > 0)
+            {
+                <select class="field !w-auto text-xs" value="@assigneeFilter" @onchange="e => assigneeFilter = e.Value?.ToString() ?? string.Empty">
+                    <option value="">Any role</option>
+                    <option value="@Unassigned">Unassigned</option>
+                    @foreach (var option in assigneeOptions)
                     {
-                        <option value="@project.ProjectId">@project.Reference — @project.Name</option>
+                        <option value="@option.Value">@option.Label</option>
                     }
                 </select>
-
-                @if (CanSeeAll && assigneeOptions.Count > 0)
-                {
-                    <select class="field !w-auto text-xs" value="@assigneeFilter" @onchange="e => assigneeFilter = e.Value?.ToString() ?? string.Empty">
-                        <option value="">Any role</option>
-                        <option value="@Unassigned">Unassigned</option>
-                        @foreach (var option in assigneeOptions)
-                        {
-                            <option value="@option.Value">@option.Label</option>
-                        }
-                    </select>
-                }
-            </LoadGate>
+            }
         </div>
 
         <LoadGate IsLoading="@loading" Prominent="true" Label="Loading to-dos">

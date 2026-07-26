@@ -9,6 +9,13 @@
     (LoadState.UntilAll composes them), and the gate shows the pulsing jewel in the region's own
     space until the whole thing can be shown at once.
 
+    Use it sparingly. A gate is for a REGION that will definitely render something and takes up
+    real space — a table, a stat grid, a panel body. Not a filter or a picker (render those
+    `disabled` with a "Loading…" placeholder), not a single line of text (just do not render it
+    until the number is known), and not a panel that only exists when it has something to show
+    (its absence during the load is the same as its absence after). Three of these pulsing down
+    one page is worse than the zeros they replaced.
+
     Prominent="true" for a main panel — anything occupying roughly a third of the screen or more —
     which gets the larger jewel and a taller reserved space so the page does not jump when the
     content arrives. Overlay="true" instead keeps already-rendered content in place and floats the

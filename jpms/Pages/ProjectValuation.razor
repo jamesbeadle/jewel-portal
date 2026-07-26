@@ -28,8 +28,17 @@ else
         <div class="flex items-center justify-between gap-4 mb-4 flex-wrap">
             <h2 class="text-lg font-semibold text-content">Valuation Report</h2>
             <div class="flex items-center gap-2 flex-wrap">
-                <LoadGate IsLoading="@(!ClaimReady)" Height="min-h-[42px]" Label="Loading claims">
-                @if (Claims.Count > 0)
+                @* The claim picker sits in a row with the New claim button, so it shows its own
+                   waiting state rather than a spinner between two controls. Disabled while the
+                   claims load: an empty picker reads as "this project has never been valued". *@
+                @if (!ClaimReady)
+                {
+                    <select disabled
+                            class="rounded-lg border border-line-strong bg-surface-field px-3 py-2 text-sm text-content-subtle">
+                        <option>Loading claims…</option>
+                    </select>
+                }
+                else if (Claims.Count > 0)
                 {
                     <select @bind="selectedClaimId"
                             class="rounded-lg border border-line-strong bg-surface-field px-3 py-2 text-sm text-content focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent">
@@ -39,7 +48,6 @@ else
                         }
                     </select>
                 }
-                </LoadGate>
                 <button @onclick="ToggleStartClaim"
                         class="rounded-lg border border-line bg-surface text-content-muted font-medium text-sm px-3 py-2 hover:border-line-strong transition">
                     New claim

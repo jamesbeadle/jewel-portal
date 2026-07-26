@@ -89,18 +89,18 @@ else
                 }
             </div>
             <div class="flex flex-wrap gap-2">
-                @* The curated list is a second fetch. An empty picker reads as "there are no other
-                   trades", which is the cue to type a new one — and that would duplicate an
-                   existing trade under a slightly different name. *@
-                <LoadGate IsLoading="@(!SubcontractorStore.TradesLoaded)" Height="min-h-[38px]" Label="">
-                    <select class="field w-56" value="" disabled="@tradesBusy" @onchange="AddExistingTrade">
-                        <option value="">Add a trade…</option>
-                        @foreach (var trade in SubcontractorStore.Trades().Where(t => !subcontractor.HasTrade(t.TradeId)))
-                        {
-                            <option value="@trade.TradeId">@trade.Name</option>
-                        }
-                    </select>
-                </LoadGate>
+                @* The curated list is a second fetch, and an empty picker reads as "there are no
+                   other trades" — the cue to type a new one, which would duplicate an existing
+                   trade under a slightly different name. Disabled says "not yet" without a spinner
+                   in the middle of a row of controls. *@
+                <select class="field w-56" value="" @onchange="AddExistingTrade"
+                        disabled="@(tradesBusy || !SubcontractorStore.TradesLoaded)">
+                    <option value="">@(SubcontractorStore.TradesLoaded ? "Add a trade…" : "Loading trades…")</option>
+                    @foreach (var trade in SubcontractorStore.Trades().Where(t => !subcontractor.HasTrade(t.TradeId)))
+                    {
+                        <option value="@trade.TradeId">@trade.Name</option>
+                    }
+                </select>
                 <input class="field w-56" placeholder="New trade, e.g. Hod carrier" @bind="newTradeName" @bind:event="oninput" />
                 <button type="button" class="btn-secondary" disabled="@(tradesBusy || string.IsNullOrWhiteSpace(newTradeName))" @onclick="AddNewTrade">
                     @(tradesBusy ? "Saving…" : "Add new trade")

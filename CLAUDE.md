@@ -20,6 +20,18 @@
 - **A panel reveals itself in one piece.** If a panel reads several stores, gate it on all of them
   at once with `LoadState.UntilAll(a.IsLoaded, b.IsLoaded)` (or `UntilAllPresent(x.Current, …)`)
   rather than letting each half appear on its own.
+- **Restraint: one jewel per screen, near enough.** A gate is for a REGION that will definitely
+  render something and occupies real space. Three pulsing diamonds stacked down one page is worse
+  than the zeros they replaced — the eye is drawn to the waiting rather than the work. In
+  particular:
+  - **Never gate a control.** A filter, a picker, a form field: render it `disabled` with a
+    "Loading…" placeholder option instead. That says "not ready" in the control's own language,
+    holds the layout still, and cannot be used to make a wrong choice.
+  - **Never gate a single line of text.** A count or strapline simply does not render until it is
+    known — a line of muted text arriving late is invisible, a spinner in its place is an event.
+  - **Never gate a conditional panel.** If the panel only exists when there is something to show,
+    its absence during the load is the same as its absence after it; a gate there announces a wait
+    for something that usually never arrives.
 - **`sessionReady` is not `dataReady`.** A page's auth flag says the session has been checked and
   the user is signed in — nothing more. It gates the RequestAccessView branch and the page chrome
   (title, intro, footnotes, tab nav), which need no data. Every data-bearing panel gates on its own

@@ -308,31 +308,27 @@ else
         <header class="mb-6">
             <p class="text-xs uppercase tracking-wider text-content-subtle font-medium mb-1">JPMS · projects@@jewelbb.co.uk</p>
             <h1 class="text-2xl md:text-3xl font-semibold text-content leading-tight">Mailbox triage</h1>
-            @* Each strapline is a count, not a description, so it waits for its own list. "0 emails
-               in the inbox" is the one sentence a triager must never be told wrongly. *@
-            @if (view == QueueView.Active)
+            @* Each strapline is a count, not a description, so it waits for its own list —
+               "0 emails in the inbox" is the one sentence a triager must never be told wrongly.
+               It simply does not render until the count is known: a line of muted text that
+               arrives a moment late is invisible, whereas a spinner in its place is an event. *@
+            @if (view == QueueView.Active && queueArrived)
             {
-                <LoadGate IsLoading="@(!queueArrived)" Height="min-h-[28px]" Label="">
-                    <p class="text-sm text-content-muted mt-2">
-                        @total email@(total == 1 ? "" : "s") in the inbox waiting to be assigned to a request.
-                    </p>
-                </LoadGate>
+                <p class="text-sm text-content-muted mt-2">
+                    @total email@(total == 1 ? "" : "s") in the inbox waiting to be assigned to a request.
+                </p>
             }
-            else if (view == QueueView.Discarded)
+            else if (view == QueueView.Discarded && discardedArrived)
             {
-                <LoadGate IsLoading="@(!discardedArrived)" Height="min-h-[28px]" Label="">
-                    <p class="text-sm text-content-muted mt-2">
-                        @discardedTotal discarded email@(discardedTotal == 1 ? "" : "s") — restore one to put it back in the queue.
-                    </p>
-                </LoadGate>
+                <p class="text-sm text-content-muted mt-2">
+                    @discardedTotal discarded email@(discardedTotal == 1 ? "" : "s") — restore one to put it back in the queue.
+                </p>
             }
-            else
+            else if (view == QueueView.Tagged && taggedArrived)
             {
-                <LoadGate IsLoading="@(!taggedArrived)" Height="min-h-[28px]" Label="">
-                    <p class="text-sm text-content-muted mt-2">
-                        @taggedTotal tagged email@(taggedTotal == 1 ? "" : "s") — add or remove tags to manage which processes use them.
-                    </p>
-                </LoadGate>
+                <p class="text-sm text-content-muted mt-2">
+                    @taggedTotal tagged email@(taggedTotal == 1 ? "" : "s") — add or remove tags to manage which processes use them.
+                </p>
             }
         </header>
 
@@ -359,10 +355,10 @@ else
 
         @if (view == QueueView.Active)
         {
-        @* The panel only exists when there ARE unassigned requests, so its absence is an answer —
-           and one this page must not give before the register has been asked. *@
-        <LoadGate IsLoading="@(!unassignedArrived)" Label="Loading unassigned requests">
-        @if (unassigned.Count > 0)
+        @* No gate: this panel only exists when there ARE unassigned requests, so on most loads it
+           is absent before the register answers and absent after it — announcing that wait would
+           promise something that never arrives. It appears if and when there is something to say. *@
+        @if (unassignedArrived && unassigned.Count > 0)
         {
             <div class="panel p-5 mb-6 border-amber-500/40">
                 <div class="flex items-start gap-2 mb-1">
@@ -395,7 +391,6 @@ else
                 </div>
             </div>
         }
-        </LoadGate>
 
         <LoadGate IsLoading="@(!queueArrived)" Prominent="true" Label="Loading the inbox">
         @if (loadError is not null && items.Count == 0)
@@ -1015,7 +1010,8 @@ else
 
             @* The tag list accrues from the emails that have loaded, so before the first page lands
                the dropdown offers only "Discarded" — a short list that looks like the whole list. *@
-            <LoadGate IsLoading="@(!taggedArrived)" Height="min-h-[34px]" Label="">
+            @if (taggedArrived)
+            {
             <div class="flex flex-wrap items-center gap-2 mb-5">
                 <span class="text-xs uppercase tracking-wider text-content-subtle font-semibold mr-1">Filter</span>
                 <div class="relative">
@@ -1052,7 +1048,7 @@ else
                     </span>
                 }
             </div>
-            </LoadGate>
+            }
 
             <LoadGate IsLoading="@(!taggedArrived)" Prominent="true" Label="Loading tagged emails">
             @if (loadError is not null && taggedItems.Count == 0)
