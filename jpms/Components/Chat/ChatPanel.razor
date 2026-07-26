@@ -1,24 +1,21 @@
 @namespace Jewel.JPMS.Components.Chat
+@using System.Text.Json
+@using Jewel.JPMS.Contracts.Ai
 @using Jewel.JPMS.Features.Projects
 @inject SessionService Session
 @inject ChatPanelState Chat
 @inject NavigationManager Nav
 @inject ProjectListReadModel Projects
+@inject ICommandSender Commands
 @implements IDisposable
 
 @*
-    The assistant panel. Desktop: a fixed column pinned to the right edge, the width of which
-    MainLayout also reserves as shell padding — so the page in the middle narrows rather than being
-    covered, and nav | page | chat read as three columns. Mobile: the same element goes full-bleed
-    and overlays everything, dismissable by the backdrop or the header's close button.
+    The assistant panel. Desktop: a fixed column pinned to the right edge, whose width MainLayout
+    also reserves as shell padding — so the page in the middle narrows rather than being covered.
+    Mobile: the same element goes full-bleed and overlays everything.
 
-    It stays mounted while closed (translated off-screen) so it can slide both ways; `inert` and
-    aria-hidden keep a closed panel out of the tab order and out of the accessibility tree.
-
-    UI only for now — no API call, no persistence. Two things here are deliberately load-bearing
-    rather than decorative, and should survive being wired up:
-      · the cost gate, which withholds the composer until the user accepts that sending spends money
-      · the cost strip, which keeps that fact on screen afterwards instead of letting it scroll away
+    The conversation lives on the SERVER. This component sends one message and the scope it was sent
+    from; it never sends history. See docs/ai/00-agent-architecture.md §3.
 *@
 
 @if (CanUseAssistant)
@@ -26,7 +23,7 @@
     @if (Chat.IsOpen)
     {
         @* Mobile only: tapping beside a full-screen panel closes it. Desktop pushes rather than
-           overlays, so the page behind stays live and must not be covered by a backdrop. *@
+           overlays, so the page behind stays live and must not be covered. *@
         <button type="button" @onclick="CloseChat" tabindex="-1" aria-hidden="true"
                 class="md:hidden fixed inset-0 z-30 bg-canvas/70 cursor-default"></button>
     }
@@ -66,7 +63,7 @@
 
             @if (!Chat.HasAcknowledgedCost)
             {
-                @* ---- Cost gate: shown once per user, per browser. No composer behind it. ---- *@
+                @* ---- Cost gate: once per user, per browser. No composer behind it. ---- *@
                 <div class="grow overflow-y-auto px-5 py-5">
                     <div class="rounded-xl border border-negative/40 bg-negative/5 p-4">
                         <div class="flex items-start gap-3">
@@ -87,7 +84,7 @@
                                     <li class="flex gap-2"><span class="text-content-faint" aria-hidden="true">&mdash;</span>
                                         Charges land on the company account, not a personal one.</li>
                                     <li class="flex gap-2"><span class="text-content-faint" aria-hidden="true">&mdash;</span>
-                                        Usage is recorded against your name and visible to the finance director.</li>
+                                        Every message and every look-up is recorded against your name.</li>
                                     <li class="flex gap-2"><span class="text-content-faint" aria-hidden="true">&mdash;</span>
                                         Having the panel open is free. Each message you send is not.</li>
                                 </ul>
@@ -120,7 +117,7 @@
                     </p>
                 </div>
 
-                @if (messages.Count == 0)
+                @if (messages.Count == 0 && !busy)
                 {
                     <div class="grow overflow-y-auto px-5 py-6 flex flex-col items-center text-center">
                         <span class="w-11 h-11 rounded-xl border border-line bg-surface-raised flex items-center justify-center text-accent mb-3">
@@ -133,7 +130,7 @@
                         <div class="w-full space-y-2">
                             @foreach (var suggestion in Suggestions)
                             {
-                                <button type="button" @onclick="() => UseSuggestion(suggestion)"
+                                <button type="button" @onclick="() => SendSuggestion(suggestion)"
                                         class="w-full text-left rounded-lg border border-line bg-surface-raised px-3 py-2 text-xs leading-snug text-content-muted hover:text-content hover:border-line-strong transition">
                                     @suggestion
                                 </button>
@@ -146,35 +143,53 @@
                     <div class="grow overflow-y-auto px-4 py-4 space-y-3.5">
                         @foreach (var message in messages)
                         {
-                            var isUser = message.Author == ChatAuthor.User;
+                            var isUser = message.Role == AiChatRole.User;
                             <div class="flex flex-col @(isUser ? "items-end" : "items-start")">
                                 <div class="@BubbleClass(isUser)">
                                     <p class="whitespace-pre-line">@message.Body</p>
                                 </div>
-                                <span class="mt-1 text-[10px] text-content-faint">@message.SentAtLabel</span>
+                                <span class="mt-1 text-[10px] text-content-faint">@message.PostedAt.ToLocalTime().ToString("HH:mm")</span>
                             </div>
                         }
 
-                        @* Thinking state, parked on so the shape can be reviewed. When the API is
-                           wired up this belongs behind an "awaiting reply" flag. *@
-                        <div class="flex flex-col items-start">
-                            <div class="rounded-2xl rounded-bl-md border border-line bg-surface-raised px-3.5 py-3 flex items-center gap-1.5">
-                                <span class="jpms-typing-dot w-1.5 h-1.5 rounded-full bg-content-subtle"></span>
-                                <span class="jpms-typing-dot jpms-typing-dot-2 w-1.5 h-1.5 rounded-full bg-content-subtle"></span>
-                                <span class="jpms-typing-dot jpms-typing-dot-3 w-1.5 h-1.5 rounded-full bg-content-subtle"></span>
+                        @if (lastToolsUsed.Count > 0 && !busy)
+                        {
+                            <div class="flex flex-wrap gap-1.5 pt-0.5">
+                                @foreach (var tool in lastToolsUsed.Distinct())
+                                {
+                                    <span class="rounded-md border border-line bg-surface-raised px-2 py-0.5 text-[10px] text-content-faint">@tool</span>
+                                }
                             </div>
-                            <span class="mt-1 text-[10px] text-content-faint">Drafting…</span>
-                        </div>
+                        }
+
+                        @if (busy)
+                        {
+                            <div class="flex flex-col items-start">
+                                <div class="rounded-2xl rounded-bl-md border border-line bg-surface-raised px-3.5 py-3 flex items-center gap-1.5">
+                                    <span class="jpms-typing-dot w-1.5 h-1.5 rounded-full bg-content-subtle"></span>
+                                    <span class="jpms-typing-dot jpms-typing-dot-2 w-1.5 h-1.5 rounded-full bg-content-subtle"></span>
+                                    <span class="jpms-typing-dot jpms-typing-dot-3 w-1.5 h-1.5 rounded-full bg-content-subtle"></span>
+                                </div>
+                                <span class="mt-1 text-[10px] text-content-faint">Thinking…</span>
+                            </div>
+                        }
+
+                        @if (error is not null)
+                        {
+                            <div class="rounded-lg border border-negative/40 bg-negative/5 px-3 py-2">
+                                <p class="text-xs leading-snug text-content-muted">@error</p>
+                            </div>
+                        }
                     </div>
                 }
 
                 <footer class="shrink-0 border-t border-line px-3 py-3">
                     <div class="rounded-xl border border-line bg-surface-field transition focus-within:border-line-strong">
-                        <textarea @bind="draft" @bind:event="oninput" rows="2" maxlength="4000"
+                        <textarea @bind="draft" @bind:event="oninput" rows="2" maxlength="8000" disabled="@busy"
                                   placeholder="Ask about @ContextLabel…" aria-label="Message"
-                                  class="w-full resize-none bg-transparent px-3 pt-2.5 pb-1 text-sm leading-relaxed text-content placeholder:text-content-faint focus:outline-none"></textarea>
+                                  class="w-full resize-none bg-transparent px-3 pt-2.5 pb-1 text-sm leading-relaxed text-content placeholder:text-content-faint focus:outline-none disabled:opacity-60"></textarea>
                         <div class="flex items-center justify-between gap-2 px-2 pb-2">
-                            <span class="pl-1 text-[10px] text-content-faint">@Hint</span>
+                            <span class="pl-1 text-[10px] text-content-faint">Reads the portal; can't change anything yet</span>
                             <button type="button" class="btn-primary px-3 py-1.5" disabled="@CannotSend" @onclick="Send">
                                 <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
                                      stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -194,16 +209,12 @@
     /// <summary>Stable id so the launchers can point aria-controls at the panel.</summary>
     public const string DomId = "jpms-chat-panel";
 
-    private static readonly string[] Suggestions =
-    {
-        "Summarise where this project stands this week",
-        "Which variations are still awaiting an AI?",
-        "What is unclaimed against the current valuation?"
-    };
-
-    private List<ChatMessage> messages = ChatSampleTranscript.Messages.ToList();
+    private readonly List<AiChatMessage> messages = new();
+    private List<string> lastToolsUsed = new();
+    private string? conversationId;
     private string draft = "";
-    private bool sendAttempted;
+    private bool busy;
+    private string? error;
 
     private bool CanUseAssistant =>
         Session.ActiveRole is { } role && DesktopNavigation.CanUseAssistant(role);
@@ -230,13 +241,10 @@
             : $"{baseClass} rounded-bl-md border border-line bg-surface-raised text-content-muted";
     }
 
-    private bool CannotSend => string.IsNullOrWhiteSpace(draft);
+    private bool CannotSend => busy || string.IsNullOrWhiteSpace(draft);
 
-    // Reinstate a "Shift + Enter for a new line" hint only alongside the @onkeydown that makes it
-    // true — until then the copy would document the opposite of what the textarea does.
-    private string Hint => sendAttempted
-        ? "Not wired up yet — the API call comes next."
-        : "Sending arrives with the API call";
+    private IReadOnlyList<string> Suggestions =>
+        ChatSuggestions.For(CurrentPath, PageProject?.Reference);
 
     // The panel's subject: the page in the middle column, named exactly as the header above it
     // names it, prefixed with the project when the page belongs to one.
@@ -274,7 +282,6 @@
         Chat.OnChange += StateHasChanged;
         Projects.OnChanged += StateHasChanged;
         Nav.LocationChanged += HandleLocationChanged;
-        // The sidebar loads the project list; the panel only reads it.
         await Chat.EnsureAcknowledgementLoadedAsync();
     }
 
@@ -294,16 +301,92 @@
 
     private void StartNewChat()
     {
-        messages = new List<ChatMessage>();
+        messages.Clear();
+        lastToolsUsed = new List<string>();
+        conversationId = null;
         draft = "";
-        sendAttempted = false;
+        error = null;
     }
 
-    private void UseSuggestion(string suggestion) => draft = suggestion;
+    private async Task SendSuggestion(string suggestion)
+    {
+        draft = suggestion;
+        await Send();
+    }
 
-    // Deliberately inert: the composer is real enough to judge, but nothing is sent until the
-    // Claude API call is built. Saying so beats a button that silently does nothing.
-    private void Send() => sendAttempted = true;
+    private async Task Send()
+    {
+        if (CannotSend) return;
+
+        var text = draft.Trim();
+        draft = "";
+        error = null;
+        busy = true;
+        lastToolsUsed = new List<string>();
+
+        // Show the user's own message straight away rather than waiting on the round trip. The
+        // server's copy replaces it when the reply lands, so the id is only ever local.
+        messages.Add(new AiChatMessage(
+            Guid.NewGuid().ToString("N"), AiChatRole.User, text, null, DateTimeOffset.UtcNow));
+        StateHasChanged();
+
+        try
+        {
+            var scope = new AiScope(
+                PageProject?.ProjectId,
+                CurrentPath,
+                PageContext.LabelFor(CurrentPath, Session.ActiveRole));
+
+            var result = await Commands.SendAsync(
+                new SendAiMessage(conversationId, text, scope, string.Empty), CancellationToken.None);
+
+            conversationId = result.ConversationId;
+            lastToolsUsed = result.ToolsUsed.ToList();
+
+            // Replace the optimistic user turn with the server's, then append the rest.
+            messages.RemoveAt(messages.Count - 1);
+            messages.AddRange(result.NewMessages);
+
+            foreach (var action in result.UiActions) Apply(action);
+
+            if (result.Status == AiTurnStatus.Truncated)
+                error = "That answer was cut short — ask me to carry on and I'll pick it up.";
+        }
+        catch (Exception ex)
+        {
+            error = $"Couldn't send that: {ex.Message}";
+        }
+        finally
+        {
+            busy = false;
+        }
+    }
+
+    /// <summary>
+    /// UI tools are the only ones that run in the browser. Nothing security-relevant is asserted
+    /// here — the worst a bad action can do is take the user to a page they can already open.
+    /// </summary>
+    private void Apply(AiUiAction action)
+    {
+        if (!string.Equals(action.Tool, "navigate_to", StringComparison.OrdinalIgnoreCase)) return;
+
+        try
+        {
+            using var document = JsonDocument.Parse(
+                string.IsNullOrWhiteSpace(action.ArgumentsJson) ? "{}" : action.ArgumentsJson);
+            if (!document.RootElement.TryGetProperty("route", out var routeElement)) return;
+
+            var route = routeElement.GetString();
+            // Relative paths only — never let a tool result become an off-site redirect.
+            if (string.IsNullOrWhiteSpace(route) || !route.StartsWith('/') || route.StartsWith("//")) return;
+
+            Nav.NavigateTo(route);
+        }
+        catch (JsonException)
+        {
+            // A malformed argument is the model's problem, not the user's. Stay put.
+        }
+    }
 
     public void Dispose()
     {

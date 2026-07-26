@@ -128,6 +128,9 @@ public sealed class JpmsContext : DbContext
     public DbSet<ProjectRetentionEntity> ProjectRetentions => Set<ProjectRetentionEntity>();
     public DbSet<ProjectContractEntity> ProjectContracts => Set<ProjectContractEntity>();
 
+    public DbSet<AiConversationEntity> AiConversations => Set<AiConversationEntity>();
+    public DbSet<AiConversationMessageEntity> AiConversationMessages => Set<AiConversationMessageEntity>();
+
     public DbSet<DefectEntity> Defects => Set<DefectEntity>();
     public DbSet<PracticalCompletionEntity> PracticalCompletions => Set<PracticalCompletionEntity>();
     public DbSet<HandoverPackItemEntity> HandoverPackItems => Set<HandoverPackItemEntity>();
@@ -182,6 +185,15 @@ public sealed class JpmsContext : DbContext
         modelBuilder.Entity<RequestMessageEntity>()
             .HasIndex(row => row.RequestId)
             .HasDatabaseName("IX_RequestMessages_RequestId");
+
+        // ---- Assistant conversations -----------------------------------------------------------
+        // Every turn replays the whole conversation in sequence order, so this index is the hot path.
+        modelBuilder.Entity<AiConversationMessageEntity>()
+            .HasIndex(row => new { row.ConversationId, row.Sequence })
+            .HasDatabaseName("IX_AiConversationMessages_ConversationId_Sequence");
+        modelBuilder.Entity<AiConversationEntity>()
+            .HasIndex(row => new { row.StartedByEmail, row.LastMessageAt })
+            .HasDatabaseName("IX_AiConversations_StartedByEmail_LastMessageAt");
 
         // ---- Project contracts -----------------------------------------------------------------
         // Unique: one contract per project. The handlers treat the row as an upsert, and this index

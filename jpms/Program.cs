@@ -26,6 +26,7 @@ using Jewel.JPMS.Features.Parties;
 using Jewel.JPMS.Features.Portal;
 using Jewel.JPMS.Features.Procurement;
 using Jewel.JPMS.Features.Progress;
+using Jewel.JPMS.Features.Ai;
 using Jewel.JPMS.Features.ProjectContracts;
 using Jewel.JPMS.Features.Projects;
 using Jewel.JPMS.Features.Variations;
@@ -146,6 +147,7 @@ using (var routeScope = app.Services.CreateScope())
     DirectoryRouteRegistration.RegisterDirectoryRoutes(queryRoutes, commandRoutes);
     ProjectsRouteRegistration.RegisterProjectsRoutes(queryRoutes, commandRoutes);
     ProjectContractsRouteRegistration.RegisterProjectContractsRoutes(queryRoutes, commandRoutes);
+    AiRouteRegistration.RegisterAiRoutes(queryRoutes, commandRoutes);
     LeadsRouteRegistration.RegisterLeadsRoutes(queryRoutes, commandRoutes);
     BoqRouteRegistration.RegisterBoqRoutes(queryRoutes, commandRoutes);
     RatesRouteRegistration.RegisterRatesRoutes(queryRoutes, commandRoutes);
