@@ -115,21 +115,8 @@ else
     @* One modal serves both Add and Edit — they are the same six fields, and the only thing that
        differs is whether a worker is already behind them. Two dialogs would be two places to keep
        the day-rate arithmetic right. *@
-    @*
-        Title and label come from properties rather than inline ternaries: a nested double-quoted
-        string inside an @(…) attribute value is exactly the shape the Razor parser mis-reads.
-
-        ConfirmDisabled is bound ONLY to isSaving. Disabling the button on an incomplete form
-        deadlocks the dialog: @bind updates on blur, a disabled button takes no click and so never
-        blurs the field being typed in, and the last value typed never reaches the model — the user
-        fills the form correctly, presses the button, and nothing happens, for ever. SaveAsync
-        validates instead and says which field is wrong.
-
-        NOTE: keep commentary out here. A @* … *@ comment placed BETWEEN a component's attributes
-        is parsed as an attribute NAME, and Blazor throws at render — "does not have a property
-        matching the name '@* … *@'" — taking the whole page down. Razor comments are only safe
-        between elements or inside element content, never inside a tag.
-    *@
+    @* Title and confirm label come from properties, not inline ternaries, and the rationale for
+       ConfirmDisabled binding only to isSaving is in the code block below. See ModalNotes. *@
     <Modal IsOpen="@isFormOpen"
            Title="@FormTitle"
            Class="max-w-lg"
@@ -213,6 +200,24 @@ else
 
     private string FormTitle => editingWorkerId is null ? "Add worker" : "Edit worker";
     private string FormConfirmLabel => editingWorkerId is null ? "Add worker" : "Save changes";
+
+    // ModalNotes — why the Modal above is written the way it is. Kept here, in C#, because prose
+    // about Razor syntax cannot safely be written in a Razor comment (see the third note).
+    //
+    // 1. Title and ConfirmLabel come from these properties rather than inline ternaries. A nested
+    //    double-quoted string inside an @(...) attribute value is a shape the Razor parser misreads.
+    //
+    // 2. ConfirmDisabled binds ONLY to isSaving. Disabling the button on an incomplete form
+    //    deadlocks the dialog: bindings update on blur, a disabled button takes no click and so
+    //    never blurs the field being typed in, and the last value typed never reaches the model.
+    //    The user fills the form correctly, presses the button, and nothing happens, for ever.
+    //    SaveAsync validates instead and names the field that is wrong.
+    //
+    // 3. Razor comments are only valid BETWEEN elements or inside element content — never between
+    //    a tag's attributes, where the comment is parsed as an attribute name and Blazor throws at
+    //    render. They also do not nest: the first closing delimiter ends the comment, so a comment
+    //    whose prose quotes those delimiters spills its remaining text out as C# and fails to
+    //    build. Both mistakes were made here on 2026-07-26; hence this note lives in C#.
 
     protected override async Task OnInitializedAsync()
     {
