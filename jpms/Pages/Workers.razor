@@ -115,17 +115,25 @@ else
     @* One modal serves both Add and Edit — they are the same six fields, and the only thing that
        differs is whether a worker is already behind them. Two dialogs would be two places to keep
        the day-rate arithmetic right. *@
-    @* Title and label come from properties rather than inline ternaries: a nested double-quoted
-       string inside an @(…) attribute value is exactly the shape the Razor parser mis-reads. *@
+    @*
+        Title and label come from properties rather than inline ternaries: a nested double-quoted
+        string inside an @(…) attribute value is exactly the shape the Razor parser mis-reads.
+
+        ConfirmDisabled is bound ONLY to isSaving. Disabling the button on an incomplete form
+        deadlocks the dialog: @bind updates on blur, a disabled button takes no click and so never
+        blurs the field being typed in, and the last value typed never reaches the model — the user
+        fills the form correctly, presses the button, and nothing happens, for ever. SaveAsync
+        validates instead and says which field is wrong.
+
+        NOTE: keep commentary out here. A @* … *@ comment placed BETWEEN a component's attributes
+        is parsed as an attribute NAME, and Blazor throws at render — "does not have a property
+        matching the name '@* … *@'" — taking the whole page down. Razor comments are only safe
+        between elements or inside element content, never inside a tag.
+    *@
     <Modal IsOpen="@isFormOpen"
            Title="@FormTitle"
            Class="max-w-lg"
            ConfirmLabel="@FormConfirmLabel"
-           @* Disabled ONLY while a save is in flight. Disabling it on an incomplete form deadlocks
-              the dialog: @bind updates on blur, a disabled button takes no click and so never blurs
-              the field being typed in, and the last value typed never reaches the model. The user
-              fills the form correctly, presses the button, and nothing happens for ever. SaveAsync
-              validates instead and says which field is wrong. *@
            ConfirmDisabled="@isSaving"
            OnConfirm="SaveAsync"
            OnCancel="CloseForm">
