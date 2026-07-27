@@ -19,6 +19,18 @@ public static class ValuationCalculations
     public static decimal CumulativeClaimed(decimal percentComplete, decimal lineAmount) =>
         percentComplete / WholePercent * lineAmount;
 
+    // Where a re-priced line leaves the claim in progress. The percentage is what a QS entered, so
+    // it stands; the money is derived, so it follows the new line amount. The period increment is
+    // what that adds to — or takes back off — the figure last CERTIFIED for the line, which was
+    // certified at the old amount and does not move: the correction lands in the open period
+    // instead of rewriting a closed one.
+    public static (decimal CumulativeClaimed, decimal PeriodIncrement) RebasedClaim(
+        decimal percentComplete, decimal lineAmount, decimal certifiedCumulative)
+    {
+        var cumulative = CumulativeClaimed(percentComplete, lineAmount);
+        return (cumulative, cumulative - certifiedCumulative);
+    }
+
     // Original contract sum = priced works + PC sums + contingency (excludes variations,
     // and excludes Declined/TBC lines).
     public static decimal ContractSum(IEnumerable<ValuationLineItem> lines) =>

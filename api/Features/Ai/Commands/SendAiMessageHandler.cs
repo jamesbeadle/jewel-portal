@@ -33,19 +33,27 @@ public sealed class SendAiMessageHandler : ICommandHandler<SendAiMessage, AiTurn
     private readonly JpmsContext context;
     private readonly IClaudeConversationClient claude;
     private readonly AiCaller caller;
+    private readonly AgentActivityLog activityLog;
 
     public SendAiMessageHandler(
-        JpmsContext context, IClaudeConversationClient claude, AiCaller caller)
+        JpmsContext context, IClaudeConversationClient claude, AiCaller caller, AgentActivityLog activityLog)
     {
         this.context = context;
         this.claude = claude;
         this.caller = caller;
+        this.activityLog = activityLog;
     }
 
     public async Task<AiTurnResult> HandleAsync(SendAiMessage command, CancellationToken cancellationToken)
     {
         var user = caller.Current
             ?? throw new InvalidOperationException("The assistant needs a signed-in user.");
+
+        // Every exit path below logs exactly one activity row — a run that failed is precisely the
+        // one worth being able to see.
+        var runClock = Stopwatch.StartNew();
+        var inputTokens = 0;
+        var outputTokens = 0;
 
         var conversation = await LoadOrStartConversationAsync(command, cancellationToken);
         var sequence = await context.AiConversationMessages
@@ -68,6 +76,9 @@ public sealed class SendAiMessageHandler : ICommandHandler<SendAiMessage, AiTurn
                 ++sequence);
             context.AiConversationMessages.Add(unavailable);
             await SaveAndTouchAsync(conversation, cancellationToken);
+            await LogAsync(command, conversation, AgentOutcome.NotConfigured,
+                "No Anthropic API key is configured on this environment.",
+                Array.Empty<string>(), runClock, 0, 0, cancellationToken);
             return Result(conversation, AiTurnStatus.Unavailable, new[] { userMessage, unavailable },
                 Array.Empty<AiUiAction>(), Array.Empty<string>());
         }
@@ -100,6 +111,8 @@ public sealed class SendAiMessageHandler : ICommandHandler<SendAiMessage, AiTurn
             }
 
             var reply = await claude.ContinueAsync(systemPrompt, transcript, tools, cancellationToken);
+            inputTokens += reply.InputTokens;
+            outputTokens += reply.OutputTokens;
 
             if (!reply.Ok)
             {
@@ -110,6 +123,9 @@ public sealed class SendAiMessageHandler : ICommandHandler<SendAiMessage, AiTurn
                 newMessages.Add(failed);
                 context.AiConversationMessages.Add(failed);
                 await SaveAndTouchAsync(conversation, cancellationToken);
+                await LogAsync(command, conversation, AgentOutcome.Failed,
+                    $"The Claude API call failed ({reply.Error}).",
+                    toolsUsed, runClock, inputTokens, outputTokens, cancellationToken);
                 return Result(conversation, AiTurnStatus.Unavailable, newMessages, uiActions, toolsUsed);
             }
 
@@ -200,8 +216,44 @@ public sealed class SendAiMessageHandler : ICommandHandler<SendAiMessage, AiTurn
             await SaveAndTouchAsync(conversation, cancellationToken);
         }
 
+        await LogAsync(command, conversation,
+            status == AiTurnStatus.Truncated ? AgentOutcome.Truncated : AgentOutcome.Ok,
+            Truncate(command.Message, 400),
+            toolsUsed, runClock, inputTokens, outputTokens, cancellationToken);
+
         return Result(conversation, status, newMessages, uiActions, toolsUsed);
     }
+
+    /// <summary>
+    /// One row per turn. Trigger is always Chat here — a person typed something — so IsAutonomous is
+    /// false. The scheduled agents will write to the same table with Trigger.Schedule, which is what
+    /// makes "show me only what ran unattended" a single filter.
+    /// </summary>
+    private Task LogAsync(
+        SendAiMessage command,
+        AiConversationEntity conversation,
+        AgentOutcome outcome,
+        string summary,
+        IReadOnlyList<string> toolsUsed,
+        Stopwatch clock,
+        int inputTokens,
+        int outputTokens,
+        CancellationToken ct) =>
+        activityLog.WriteAsync(
+            agentKey: conversation.CapabilityKey,
+            trigger: AgentTrigger.Chat,
+            actorEmail: command.SentByEmail,
+            action: "chat.turn",
+            outcome: outcome,
+            summary: summary,
+            cancellationToken: ct,
+            conversationId: conversation.ConversationId,
+            projectId: command.Scope?.ProjectId,
+            route: command.Scope?.Route,
+            toolsUsed: toolsUsed,
+            durationMs: (int)clock.ElapsedMilliseconds,
+            inputTokens: inputTokens,
+            outputTokens: outputTokens);
 
     /// <summary>Rebuilds the Anthropic messages array from the database. Tool rows are paired back to
     /// their calls by <c>ToolUseId</c>; a row without one is a plain turn.</summary>

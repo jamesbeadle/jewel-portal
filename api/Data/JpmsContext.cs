@@ -130,6 +130,7 @@ public sealed class JpmsContext : DbContext
 
     public DbSet<AiConversationEntity> AiConversations => Set<AiConversationEntity>();
     public DbSet<AiConversationMessageEntity> AiConversationMessages => Set<AiConversationMessageEntity>();
+    public DbSet<AgentActivityEntity> AgentActivity => Set<AgentActivityEntity>();
 
     public DbSet<DefectEntity> Defects => Set<DefectEntity>();
     public DbSet<PracticalCompletionEntity> PracticalCompletions => Set<PracticalCompletionEntity>();
@@ -185,6 +186,18 @@ public sealed class JpmsContext : DbContext
         modelBuilder.Entity<RequestMessageEntity>()
             .HasIndex(row => row.RequestId)
             .HasDatabaseName("IX_RequestMessages_RequestId");
+
+        // ---- Agent activity log ----------------------------------------------------------------
+        // Read newest-first, and the filter that matters most is "only what ran unattended".
+        modelBuilder.Entity<AgentActivityEntity>()
+            .HasIndex(row => row.OccurredAt)
+            .HasDatabaseName("IX_AgentActivity_OccurredAt");
+        modelBuilder.Entity<AgentActivityEntity>()
+            .HasIndex(row => new { row.IsAutonomous, row.OccurredAt })
+            .HasDatabaseName("IX_AgentActivity_IsAutonomous_OccurredAt");
+        modelBuilder.Entity<AgentActivityEntity>()
+            .HasIndex(row => row.ProjectId)
+            .HasDatabaseName("IX_AgentActivity_ProjectId");
 
         // ---- Assistant conversations -----------------------------------------------------------
         // Every turn replays the whole conversation in sequence order, so this index is the hot path.

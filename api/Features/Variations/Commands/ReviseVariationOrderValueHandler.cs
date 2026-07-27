@@ -1,6 +1,7 @@
 using Jewel.JPMS.Api.Cqrs;
 using Jewel.JPMS.Api.Data;
 using Jewel.JPMS.Api.Data.Entities;
+using Jewel.JPMS.Api.Features.Commercial;
 using Jewel.JPMS.Commercial;
 using Jewel.JPMS.Contracts.Variations;
 using Jewel.JPMS.Models;
@@ -48,11 +49,23 @@ public sealed class ReviseVariationOrderValueHandler : ICommandHandler<ReviseVar
         // with the new lines, not here.
         if (lines.Count > 1)
             throw new InvalidOperationException("This variation is priced as multiple lines — reject it and re-approve with the revised breakdown to change its value.");
+
+        // A claim whose totals are already locked must not have this line move underneath it.
+        var lineIds = lines.Select(line => line.ValuationLineItemId).ToList();
+        await DraftClaimRebase.GuardNoClaimInFlightAsync(context, entity.ProjectId, lineIds, cancellationToken);
+        var amountsBefore = lines.ToDictionary(line => line.ValuationLineItemId, line => line.LineAmount);
+
         foreach (var line in lines)
         {
             line.Rate = command.Value;
             line.LineAmount = ValuationCalculations.LineAmount((ValuationLineType)line.LineType, line.Quantity, command.Value);
         }
+
+        // 1b) The line keeps its id, so the claim in progress still points at it — and its stored
+        //     money, which the next snapshot copies into the client's document, has to follow the
+        //     new amount rather than sit at what the line used to be worth.
+        await DraftClaimRebase.ApplyAsync(
+            context, lines.Where(line => line.LineAmount != amountsBefore[line.ValuationLineItemId]).ToList(), cancellationToken);
 
         // 2) Record the CVR impact as a delta accrual, so the revision history stays on the CVR.
         context.QsAccruals.Add(new QsAccrualEntity

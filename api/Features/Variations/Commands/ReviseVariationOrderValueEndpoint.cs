@@ -51,6 +51,14 @@ public sealed class ReviseVariationOrderValueEndpoint
         var validationOutcome = validation.Check(command);
         if (validationOutcome.HasFailed) return new BadRequestObjectResult(validationOutcome.Errors);
 
-        return new OkObjectResult(await handler.HandleAsync(command, cancellationToken));
+        try
+        {
+            return new OkObjectResult(await handler.HandleAsync(command, cancellationToken));
+        }
+        catch (InvalidOperationException ex)
+        {
+            // Same as revise-lines: a guard is a reason the caller can show, not a server fault.
+            return new BadRequestObjectResult(ex.Message);
+        }
     }
 }

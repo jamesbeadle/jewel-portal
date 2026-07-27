@@ -14,7 +14,10 @@ public sealed record ClaudeReply(
     string? Text,
     IReadOnlyList<ClaudeToolCall> ToolCalls,
     string? StopReason,
-    string? Error);
+    string? Error,
+    /// <summary>Reported by Anthropic per call. Summed across a turn's steps for the activity log.</summary>
+    int InputTokens = 0,
+    int OutputTokens = 0);
 
 /// <summary>
 /// Multi-turn client with tool support. Separate from <see cref="IClaudeClient"/>, which stays as
@@ -123,6 +126,17 @@ public sealed class ClaudeConversationClient : IClaudeConversationClient
                 ? stopElement.GetString()
                 : null;
 
+            // { usage: { input_tokens, output_tokens } } — the only honest source of spend.
+            var inputTokens = 0;
+            var outputTokens = 0;
+            if (root.TryGetProperty("usage", out var usage) && usage.ValueKind == JsonValueKind.Object)
+            {
+                if (usage.TryGetProperty("input_tokens", out var inElement) && inElement.TryGetInt32(out var parsedIn))
+                    inputTokens = parsedIn;
+                if (usage.TryGetProperty("output_tokens", out var outElement) && outElement.TryGetInt32(out var parsedOut))
+                    outputTokens = parsedOut;
+            }
+
             string? text = null;
             var toolCalls = new List<ClaudeToolCall>();
 
@@ -152,7 +166,7 @@ public sealed class ClaudeConversationClient : IClaudeConversationClient
                 }
             }
 
-            return new ClaudeReply(true, text, toolCalls, stopReason, null);
+            return new ClaudeReply(true, text, toolCalls, stopReason, null, inputTokens, outputTokens);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {

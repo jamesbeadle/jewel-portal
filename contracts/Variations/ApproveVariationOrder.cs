@@ -13,7 +13,12 @@ public sealed record VariationLineInput(
     string CostCode,
     string Description,
     decimal Quantity,
-    decimal Rate);
+    decimal Rate,
+    // The report line this row came from, when the build-up is being EDITED rather than approved:
+    // it is how a revision says "this is the same line, re-priced" instead of "delete that one and
+    // add this one", which is what keeps a line's claim history attached to it. Null on approval,
+    // and null for a row the user has just added.
+    string? ValuationLineItemId = null);
 
 /// <summary>
 /// Approves a variation order — the client's instruction to proceed. In one transaction it mints

@@ -397,9 +397,16 @@ else
                         {
                             @* Add / edit / remove the priced lines without un-approving — the report,
                                CVR and per-centre budgets move by the difference. *@
-                            <button type="button" class="btn-secondary w-full" disabled="@busy" @onclick="() => editLinesModalOpen = true">Edit lines</button>
+                            @* Held shut until the report lines are in: the dialog seeds itself from
+                               them, so opening it early would offer an empty build-up and saving
+                               that would read as "the user deleted every line". *@
+                            <button type="button" class="btn-secondary w-full"
+                                    disabled="@(busy || !ValuationLinesReady)" @onclick="OpenEditLines">Edit lines</button>
                         }
-                        @if (CanManage && VariationLines.Count <= 1)
+                        @* Same reason as Edit lines: before the report lines land, "one line" is
+                           indistinguishable from "none loaded yet", and revising against none would
+                           move the CVR and the budget with no line to show for it. *@
+                        @if (CanManage && ValuationLinesReady && VariationLines.Count <= 1)
                         {
                             @if (!revisingValue)
                             {
@@ -471,13 +478,14 @@ else
                     <Modal IsOpen="editLinesModalOpen"
                            Title="@($"Edit lines — {order.Reference}")"
                            ShowFooter="false"
-                           OnCancel="@(() => editLinesModalOpen = false)"
+                           OnCancel="@(() => { editLinesModalOpen = false; editLinesError = null; })"
                            Class="max-w-3xl">
                         <VariationApprovePanel ShowHeading="false"
                                                InitialLines="@CurrentLineInputs"
                                                SubmitLabel="Save lines"
                                                HelpOverride="Editing re-prices these lines on the Valuation Report and moves the CVR and cost-centre budgets by the difference. Nothing else changes."
                                                Busy="@busy"
+                                               SubmitError="@editLinesError"
                                                OnApprove="SaveLinesEdit" />
                     </Modal>
                 }
@@ -640,8 +648,13 @@ else
     private bool editLinesModalOpen;
 
     // The approved variation's current lines, shaped for the edit panel to seed its rows.
+    // Each row carries the report line it came from, so a save says "re-price this line" rather
+    // than "delete them all and add these" — that is what keeps a claimed line's history attached.
     private IReadOnlyList<VariationLineInput> CurrentLineInputs =>
-        VariationLines.Select(line => new VariationLineInput(line.CostCode, line.Description, line.Quantity, line.Rate)).ToList();
+        VariationLines
+            .Select(line => new VariationLineInput(
+                line.CostCode, line.Description, line.Quantity, line.Rate, line.ValuationLineItemId))
+            .ToList();
 
     // Status pill dropdown — same dismiss pattern as the request page's Actions dropdown: every
     // item closes it before running, the toggle is the dismiss.
@@ -679,6 +692,11 @@ else
 
     // The approve build-up is captured in a modal (the sidebar is too narrow for the line table).
     private bool approveModalOpen;
+
+    // Why a line edit was refused. Held apart from the page's `error` because it has to render
+    // inside the open dialog — the page's banner sits behind the overlay, where a reader who is
+    // mid-edit never sees it, and the dialog staying put with no explanation reads as a hang.
+    private string? editLinesError;
 
     private static readonly System.Globalization.CultureInfo Gb = System.Globalization.CultureInfo.GetCultureInfo("en-GB");
     private static string MoneyPennies(decimal value) => value.ToString("C2", Gb);
@@ -1026,10 +1044,17 @@ else
         catch { error = "Couldn't delete the variation order. Please try again."; busy = false; }
     }
 
+    // A fresh attempt starts clean: last time's refusal must not read as this time's.
+    private void OpenEditLines()
+    {
+        editLinesError = null;
+        editLinesModalOpen = true;
+    }
+
     private async Task SaveLinesEdit(VariationApprovePanel.ApproveRequest request)
     {
         if (busy || order is null) return;
-        error = null;
+        editLinesError = null;
         try
         {
             busy = true;
@@ -1038,8 +1063,10 @@ else
             Valuation.Refresh(ProjectId); // pull the re-priced lines for the breakdown
             await ReloadAsync();
         }
-        catch (CommandFailedException ex) { error = ex.Message; }
-        catch { error = "Couldn't save the variation lines. Please try again."; }
+        // The endpoint answers a refused revision with 400 and its own words (no toast, by
+        // convention) — so they have to land in the dialog the user is still standing in.
+        catch (CommandFailedException ex) { editLinesError = ex.Message; }
+        catch { editLinesError = "Couldn't save the variation lines. Please try again."; }
         finally { busy = false; }
     }
 

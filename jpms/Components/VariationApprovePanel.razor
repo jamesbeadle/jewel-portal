@@ -32,9 +32,11 @@
         <p class="text-xs text-content-subtle">Approving writes these lines into the Valuation Report, the CVR and the cost-centre budgets.</p>
     }
 
-    @if (error is not null)
+    @* The panel's own validation, or the caller's report of a refused save — either way the reason
+       belongs in front of the lines it is about, not on the page behind the dialog. *@
+    @if (error is not null || SubmitError is not null)
     {
-        <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@error</p>
+        <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@(error ?? SubmitError)</p>
     }
 
     <div class="space-y-2">
@@ -94,11 +96,15 @@
     [Parameter] public IReadOnlyList<VariationLineInput>? InitialLines { get; set; }
     [Parameter] public string? SubmitLabel { get; set; }
     [Parameter] public string? HelpOverride { get; set; }
+    // Why the caller's save was refused, shown where the panel shows its own validation.
+    [Parameter] public string? SubmitError { get; set; }
 
     public sealed record ApproveRequest(string PrimaryCostCode, decimal Total, IReadOnlyList<VariationLineInput> Lines);
 
     private sealed class LineRow
     {
+        // Set only on a row seeded from an existing report line; null on a row the user added.
+        public string? ValuationLineItemId { get; set; }
         public string CostCode { get; set; } = "";
         public string Description { get; set; } = "";
         public string Qty { get; set; } = "1";
@@ -119,6 +125,7 @@
             foreach (var line in InitialLines)
                 lines.Add(new LineRow
                 {
+                    ValuationLineItemId = line.ValuationLineItemId,
                     CostCode = line.CostCode,
                     Description = line.Description,
                     Qty = line.Quantity.ToString(System.Globalization.CultureInfo.InvariantCulture),
@@ -179,13 +186,15 @@
             var blank = string.IsNullOrWhiteSpace(costCode)
                         && string.IsNullOrWhiteSpace(row.Description)
                         && qty == 0m && rate == 0m;
-            if (blank) continue; // an untouched extra row is ignored
+            // An untouched extra row is ignored; a seeded row the user has emptied is how a line is
+            // removed — it simply isn't submitted, so the revision drops it.
+            if (blank) continue;
             if (string.IsNullOrWhiteSpace(costCode))
             {
                 error = "Every line needs a cost centre — pick one or clear the line.";
                 return;
             }
-            built.Add(new VariationLineInput(costCode, row.Description?.Trim() ?? "", qty, rate));
+            built.Add(new VariationLineInput(costCode, row.Description?.Trim() ?? "", qty, rate, row.ValuationLineItemId));
         }
 
         if (built.Count == 0)

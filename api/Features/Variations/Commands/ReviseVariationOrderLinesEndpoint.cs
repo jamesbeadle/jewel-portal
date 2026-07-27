@@ -51,6 +51,16 @@ public sealed class ReviseVariationOrderLinesEndpoint
         var validationOutcome = validation.Check(command);
         if (validationOutcome.HasFailed) return new BadRequestObjectResult(validationOutcome.Errors);
 
-        return new OkObjectResult(await handler.HandleAsync(command, cancellationToken));
+        try
+        {
+            return new OkObjectResult(await handler.HandleAsync(command, cancellationToken));
+        }
+        catch (InvalidOperationException ex)
+        {
+            // The handler's guards (not approved, nothing to price, value settled on a claim) are
+            // answers to what was asked, not faults — 400 so the dialog shows the reason next to
+            // the lines rather than the client falling back to "Backend call failure" on a 500.
+            return new BadRequestObjectResult(ex.Message);
+        }
     }
 }

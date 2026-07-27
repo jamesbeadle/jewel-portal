@@ -106,6 +106,11 @@ public static class SidebarFolders
                 // Same gate as Triage: the people who make routing decisions review them.
                 new SidebarRow(new NavigationItem("Audit Trail", "/audit"),
                     DesktopNavigation.TriageRoles),
+                // What the assistant has done, on whose behalf, and what it cost. Directors only —
+                // the log carries spend, and the people who authorise it are the people who see it.
+                // Mirrors the API's AiRoles.AllowedToUseAssistant.
+                new SidebarRow(new NavigationItem("Agent Activity", "/agents/activity"),
+                    DesktopNavigation.DirectorRoles),
                 // Everyone the company deals with — the unified page replaces the old separate
                 // Clients and Architects entries (their routes survive; the page filters by
                 // Clients · Architects · Subcontractors · Internal staff).

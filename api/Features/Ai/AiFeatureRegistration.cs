@@ -54,6 +54,10 @@ public static class AiFeatureRegistration
 
         services.AddScoped<IQueryHandler<ListAiConversation, IReadOnlyList<AiChatMessage>>, ListAiConversationHandler>();
 
+        // The agent activity log. Scoped because it writes through the request's JpmsContext.
+        services.AddScoped<AgentActivityLog>();
+        services.AddScoped<IQueryHandler<ListAgentActivity, IReadOnlyList<AgentActivity>>, ListAgentActivityHandler>();
+
         return services;
     }
 }
