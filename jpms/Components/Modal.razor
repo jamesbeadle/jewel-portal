@@ -1,6 +1,9 @@
+@inject ChatPanelState Chat
+@implements IDisposable
+
 @if (IsOpen)
 {
-    <div class="modal-overlay" @onclick="OnCancel">
+    <div class="@OverlayClass" @onclick="HandleOverlayClick">
         <div class="modal-panel @Class flex flex-col max-h-[85vh]" @onclick:stopPropagation="true">
             <header class="shrink-0 flex items-center justify-between gap-3 px-5 py-4 border-b border-line">
                 <h2 class="text-base font-semibold text-content">@Title</h2>
@@ -46,4 +49,41 @@
     [Parameter] public string Class { get; set; } = "";
     [Parameter] public EventCallback OnCancel { get; set; }
     [Parameter] public EventCallback OnConfirm { get; set; }
+
+    /// <summary>
+    /// Opt in to being worked ALONGSIDE the assistant rather than instead of it: while the chat
+    /// panel is open the overlay reserves its width, so this dialog centres in the column beside the
+    /// conversation instead of underneath it (.modal-overlay-chat), and ChatPanel raises itself
+    /// above the overlay so it stays live. Off by default, so every other dialog is untouched.
+    /// </summary>
+    [Parameter] public bool ChatAware { get; set; }
+
+    /// <summary>
+    /// Clicking the backdrop cancels. Set false for a dialog holding state that reopening cannot
+    /// rebuild — a stray click beside a live conversation must not throw away a drafted variation
+    /// and the exchange that produced it. The header X and the Cancel button still work.
+    /// </summary>
+    [Parameter] public bool DismissOnOverlayClick { get; set; } = true;
+
+    // Only a chat-aware dialog listens: otherwise all ~74 modals in the app would re-render every
+    // time the panel slides open or shut, for a class name none of them use.
+    private bool subscribed;
+
+    private string OverlayClass =>
+        ChatAware && Chat.IsOpen ? "modal-overlay modal-overlay-chat" : "modal-overlay";
+
+    protected override void OnInitialized()
+    {
+        if (!ChatAware) return;
+        Chat.OnChange += StateHasChanged;
+        subscribed = true;
+    }
+
+    private Task HandleOverlayClick() =>
+        DismissOnOverlayClick ? OnCancel.InvokeAsync() : Task.CompletedTask;
+
+    public void Dispose()
+    {
+        if (subscribed) Chat.OnChange -= StateHasChanged;
+    }
 }

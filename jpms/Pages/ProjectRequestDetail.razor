@@ -1,8 +1,11 @@
 @page "/projects/{ProjectId}/requests/view/{RequestId}"
+@using System.Text.Json
+@using Jewel.JPMS.Contracts.Ai
 @using Jewel.JPMS.Contracts.Requests
 @using Jewel.JPMS.Contracts.Procurement
 @using Jewel.JPMS.Contracts.Variations
 @using Jewel.JPMS.Features.CostCenters
+@implements IDisposable
 @inject AuthService Auth
 @inject ICommandSender Commands
 @inject CostCentersReadModel CostCenters
@@ -14,6 +17,9 @@
 @inject IVariationStore Variations
 @inject IAgentDesk Agents
 @inject NavigationManager Nav
+@inject IJSRuntime JS
+@inject ChatPanelState Chat
+@inject AiTaskState AiTasks
 
 <PageTitle>Request · JPMS</PageTitle>
 
@@ -490,10 +496,15 @@ else
                                 @(record.HasRfq
                                     ? "This RFI carries an RFQ, so bid packages can go out to subcontractors under the variation."
                                     : "Price the work this RFI has led to.")
-                                The quote is drafted from this RFI and its tagged emails for you to review — you decide
-                                the title, the value and which lines to keep. It stays in Quoting until the client approves it.
+                                @if (CanUseAssistant)
+                                {
+                                    @:The assistant drafts it from this RFI and its tagged emails, in the panel beside the
+                                    @:form — talk it through and change anything you like before you raise it.
+                                }
+                                You decide the title, the value and which lines to keep. It stays in Quoting until the
+                                client approves it.
                             </p>
-                            @if (CanEditDetails)
+                            @if (CanRaiseVariation)
                             {
                                 <button type="button" class="btn-primary w-full" disabled="@busy" @onclick="OpenVariationDraft">Create Variation Order Quote</button>
                             }
@@ -746,10 +757,16 @@ else
         </div>
     </Modal>
 
+    @* Worked alongside the assistant, not instead of it: ChatAware reserves the panel's width so
+       this dialog centres beside the conversation rather than under it, and the backdrop does not
+       dismiss — a stray click must not throw away a drafted variation and the exchange that
+       produced it. The X and Cancel still close it, and both keep the draft for reopening. *@
     <Modal IsOpen="variationDraftOpen"
            Title="Create Variation Order Quote"
            ConfirmLabel="@(busy ? "Raising…" : "Raise variation")"
-           ConfirmDisabled="@(busy || variationDraftLoading)"
+           ConfirmDisabled="@busy"
+           ChatAware="true"
+           DismissOnOverlayClick="false"
            OnCancel="CancelVariationDraft"
            OnConfirm="ConfirmVariationDraft"
            Class="max-w-2xl">
@@ -759,65 +776,63 @@ else
                 <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@variationDraftError</p>
             }
 
-            @if (variationDraftLoading)
+            @if (TaskIsForThisRecord)
             {
-                <p class="text-sm text-content-subtle">Drafting the variation from this RFI and its tagged emails…</p>
+                <p class="rounded-lg bg-accent/10 border border-accent/30 px-3 py-2 text-xs text-content">
+                    The assistant is working on this with you in the panel on the right. Everything here is
+                    yours to change, and nothing is created until you press Raise variation.
+                </p>
             }
-            else
+
+            <div class="@FlashClass("title")">
+                <FormField Label="Title" Value="@draftVariationTitle" OnChange="OnDraftTitleChanged" Required="true" />
+            </div>
+
+            <div class="@FlashClass("description")">
+                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Scope description</label>
+                <textarea class="field" rows="6" value="@draftVariationDescription" @oninput="OnDraftDescriptionInput"></textarea>
+            </div>
+
+            <div class="@FlashClass("estimatedValue")">
+                <FormField Label="Estimated value (£, optional)" Value="@draftVariationValue" OnChange="OnDraftValueChanged" />
+            </div>
+
+            @if (draftVariationLines.Count > 0)
             {
-                @if (variationDraft?.Proposed == true)
-                {
-                    <p class="rounded-lg bg-accent/10 border border-accent/30 px-3 py-2 text-xs text-content">
-                        Drafted by AI from this RFI and its tagged emails. Review and edit everything below — nothing is created until you confirm.
+                <div class="@FlashClass("lines")">
+                    <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Suggested scope lines</label>
+                    <p class="text-xs text-content-subtle mb-2">
+                        Ticked lines become the variation's scope, held as a draft bid package (@DraftPackageTrade)@(record?.HasRfq == true ? " ready to send to subcontractors" : " — send it out to subcontractors later, or price it yourselves"). Every ticked line needs a cost centre — that's the cost code its committed value lands on. Untick any line you don't want; untick them all to raise the variation on its own.
                     </p>
-                }
-                else if (variationDraft is not null)
-                {
-                    <p class="text-xs text-content-subtle">AI drafting isn't available right now, so this starts from the RFI's own details.</p>
-                }
-
-                <FormField Label="Title" Value="@draftVariationTitle" OnChange="v => draftVariationTitle = v" Required="true" />
-
-                <div>
-                    <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Scope description</label>
-                    <textarea class="field" rows="6" value="@draftVariationDescription" @oninput="e => draftVariationDescription = e.Value?.ToString() ?? string.Empty"></textarea>
+                    <ul class="space-y-1.5">
+                        @foreach (var (row, index) in draftVariationLines.Select((r, i) => (r, i)))
+                        {
+                            var i = index;
+                            <li>
+                                <label class="flex items-start gap-2 text-sm text-content">
+                                    <input type="checkbox" class="mt-0.5" checked="@row.Accepted"
+                                           @onchange="e => OnDraftLineAcceptedChanged(i, e.Value is true)" />
+                                    <span>@row.Line.Description <span class="text-content-subtle">— @row.Line.Quantity @row.Line.Unit · @row.Line.Trade</span></span>
+                                </label>
+                                @if (row.Accepted)
+                                {
+                                    @* A control, not a region: it renders disabled with a "Loading…"
+                                       placeholder rather than behind a gate, so the layout holds
+                                       still and a wrong choice cannot be made (CLAUDE.md). *@
+                                    <select class="field mt-1 ml-6 min-w-[14rem] text-sm" value="@row.CostCode"
+                                            disabled="@(!CostCenters.IsLoaded)"
+                                            @onchange="e => OnDraftLineCostCodeChanged(i, e.Value?.ToString() ?? string.Empty)">
+                                        <option value="">@(CostCenters.IsLoaded ? "Cost centre…" : "Loading…")</option>
+                                        @foreach (var centre in CostCenters.Alphabetical)
+                                        {
+                                            <option value="@centre.Code">@($"{centre.Code} — {centre.Name}")</option>
+                                        }
+                                    </select>
+                                }
+                            </li>
+                        }
+                    </ul>
                 </div>
-
-                <FormField Label="Estimated value (£, optional)" Value="@draftVariationValue" OnChange="v => draftVariationValue = v" />
-
-                @if (draftVariationLines.Count > 0)
-                {
-                    <div>
-                        <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Suggested scope lines</label>
-                        <p class="text-xs text-content-subtle mb-2">
-                            Ticked lines become the variation's scope, held as a draft bid package (@DraftPackageTrade)@(record?.HasRfq == true ? " ready to send to subcontractors" : " — send it out to subcontractors later, or price it yourselves"). Every ticked line needs a cost centre — that's the cost code its committed value lands on. Untick any line you don't want; untick them all to raise the variation on its own.
-                        </p>
-                        <ul class="space-y-1.5">
-                            @foreach (var (row, index) in draftVariationLines.Select((r, i) => (r, i)))
-                            {
-                                var i = index;
-                                <li>
-                                    <label class="flex items-start gap-2 text-sm text-content">
-                                        <input type="checkbox" class="mt-0.5" checked="@row.Accepted"
-                                               @onchange="e => draftVariationLines[i] = draftVariationLines[i] with { Accepted = e.Value is true }" />
-                                        <span>@row.Line.Description <span class="text-content-subtle">— @row.Line.Quantity @row.Line.Unit · @row.Line.Trade</span></span>
-                                    </label>
-                                    @if (row.Accepted)
-                                    {
-                                        <select class="field mt-1 ml-6 min-w-[14rem] text-sm" value="@row.CostCode"
-                                                @onchange="e => draftVariationLines[i] = draftVariationLines[i] with { CostCode = e.Value?.ToString() ?? string.Empty }">
-                                            <option value="">Cost centre…</option>
-                                            @foreach (var centre in CostCenters.Alphabetical)
-                                            {
-                                                <option value="@centre.Code">@($"{centre.Code} — {centre.Name}")</option>
-                                            }
-                                        </select>
-                                    }
-                                </li>
-                            }
-                        </ul>
-                    </div>
-                }
             }
         </div>
     </Modal>
@@ -914,6 +929,15 @@ else
     // managers and administrators. Admins carry every role server-side, so they always qualify.
     private bool CanEditDetails => Session.AvailableRoles.Any(role => role is Role.Admin or Role.ProjectManager);
 
+    // Raising a variation is a wider set than editing the request, and always was on the server:
+    // this mirrors VariationRoles.AllowedToManageVariations and ModalCatalog.VariationDraft's
+    // OpenableBy exactly. Keeping the button behind CanEditDetails hid it from the MD and the QS
+    // while the API would happily have accepted CreateVoqFromRfq from either — and now that the
+    // assistant can route someone here with open_modal, a gate narrower than the grant means being
+    // told a form has been opened over a page that has no form.
+    private bool CanRaiseVariation => Session.AvailableRoles.Any(role =>
+        role is Role.Admin or Role.ManagingDirector or Role.ProjectManager or Role.QuantitySurveyor);
+
     // Lifecycle order: the ball starts with us (Needs action), goes to the correspondent (Open),
     // may come back needing a variation order quote (Needs variation), then closes.
     private static readonly RequestStatus[] StatusOptions =
@@ -955,6 +979,11 @@ else
 
     protected override async Task OnInitializedAsync()
     {
+        // The pipe from the assistant panel. Subscribed before anything awaits, so a proposal that
+        // lands while the page is still loading is not dropped on the floor.
+        AiTasks.OnDraftApplied += HandleAssistantDraft;
+        CostCenters.OnChanged += Repaint;
+
         await Session.EnsureLoadedAsync();
         if (!Auth.IsSignedIn) { Nav.NavigateTo("/login", forceLoad: true); return; }
         sessionReady = true;
@@ -974,6 +1003,65 @@ else
 
         await LoadRecipientPreviewAsync();
         dataLoaded = true;
+
+        await HonourRequestedModalAsync();
+    }
+
+    /// <summary>
+    /// The assistant's open_modal lands here with <c>?openModal=variation_draft</c>.
+    ///
+    /// <para>Called from BOTH lifecycle hooks. KeyedPageRouteView keys on route values, and the
+    /// query string is not one — so arriving from another page runs OnInitializedAsync, while
+    /// arriving from this very record (the common case: the user is already looking at the RFI they
+    /// asked about) reuses the component and only runs OnParametersSetAsync.</para>
+    ///
+    /// <para>Honoured only where this user could have opened the dialog by clicking, under the same
+    /// conditions the button itself renders under. The assistant can route somebody to a page; it
+    /// cannot get them past a gate.</para>
+    /// </summary>
+    private async Task HonourRequestedModalAsync()
+    {
+        if (!WantsVariationDraftFromRoute()) return;
+
+        // Cleared first, whether or not it is honoured, and through history rather than the router:
+        // NavigateTo here would re-enter OnParametersSetAsync and fire a second, concurrent fetch of
+        // the record. Left in the address bar it would re-open on every refresh or restored tab — a
+        // fresh conversation and another paid read of the whole email thread, for pressing F5.
+        try { await JS.InvokeVoidAsync("history.replaceState", null, "", new Uri(Nav.Uri).GetLeftPart(UriPartial.Path)); }
+        catch { /* Address bar cosmetics. Never worth failing the page over. */ }
+        modalRequestHonoured = true;
+
+        if (!CanRaiseVariation || record is null || variation is not null) return;
+        if (record.Kind is not RequestType.Rfi && !record.HasRfq) return;
+
+        await OpenVariationDraft();
+    }
+
+    // history.replaceState does not raise LocationChanged, so Nav.Uri keeps the stripped-out query
+    // for the life of this component. This is what stops a later repaint re-honouring it.
+    private bool modalRequestHonoured;
+
+    private bool WantsVariationDraftFromRoute() =>
+        !modalRequestHonoured
+        && new Uri(Nav.Uri).Query.Contains(
+            $"openModal={ModalCatalog.VariationDraft.ModalKey}", StringComparison.OrdinalIgnoreCase);
+
+    private void Repaint() => InvokeAsync(StateHasChanged);
+
+    public void Dispose()
+    {
+        AiTasks.OnDraftApplied -= HandleAssistantDraft;
+        CostCenters.OnChanged -= Repaint;
+        flashTimer?.Dispose();
+
+        // The dialog goes with the page, so the panel must not stay lifted above an overlay that no
+        // longer exists.
+        Chat.SetCoexistence(false);
+
+        // The task belongs to this page too. Navigating away ends it, so the panel does not keep
+        // offering to fill in a form that is no longer on screen. The conversation is persisted
+        // server-side, so nothing evidential goes with it.
+        if (AiTasks.Active?.RecordId == RequestId) AiTasks.End();
     }
 
     // Each of these swallows its own failure so one unavailable picker can never stop the page
@@ -1064,7 +1152,11 @@ else
 
     protected override async Task OnParametersSetAsync()
     {
-        if (dataLoaded) await LoadAsync();
+        if (!dataLoaded) return;
+        await LoadAsync();
+        // Query-only navigation reuses this component, so this is the hook that catches an
+        // open_modal aimed at the record already on screen.
+        await HonourRequestedModalAsync();
     }
 
     private async Task LoadAsync()
@@ -1141,13 +1233,17 @@ else
                         OnSelect: EventCallback.Factory.Create(this, CreateBidPackagesFromMenu),
                         Hint: "Marks this RFI as carrying an RFQ, so the variation's scope can go out to tender", Group: 2));
 
-                // The same action as the rail's button, mirrored into the menu so it sits with the
-                // other "move this record along" steps. Any RFI can raise one — no RFQ required.
-                if (record.Kind is RequestType.Rfi && variation is null)
-                    items.Add(new(Label: "Create Variation Order Quote…",
-                        OnSelect: EventCallback.Factory.Create(this, OpenVariationDraft),
-                        Hint: "Drafts a priced quote from this RFI and its tagged emails for you to review", Group: 1));
             }
+
+            // The same action as the rail's button, mirrored into the menu so it sits with the
+            // other "move this record along" steps. Any RFI can raise one — no RFQ required.
+            // Outside the CanEditDetails block on purpose: raising a variation is the wider gate
+            // (CanRaiseVariation), and the two must agree or the MD and the QS get a button on the
+            // rail and no matching row in the menu.
+            if (record.Kind is RequestType.Rfi && variation is null && CanRaiseVariation)
+                items.Add(new(Label: "Create Variation Order Quote…",
+                    OnSelect: EventCallback.Factory.Create(this, OpenVariationDraft),
+                    Hint: "Drafts a priced quote from this RFI and its tagged emails for you to review", Group: 1));
 
             // Group 3 — the destructive tail, kept last and marked.
             if (CanTriage)
@@ -1289,6 +1385,7 @@ else
         editingDetail = false;
         editingForm = false;
         variationDraftOpen = false;
+        Chat.SetCoexistence(false);
     }
 
     // Promotion is the end of this record's triage, not the start of another edit: it mints the RFI
@@ -1339,27 +1436,56 @@ else
         }
     }
 
-    // AI-drafted variation review: PrepareVoqDraft proposes, the user edits, CreateVoqFromRfq
-    // commits. (Those command names are API identifiers and keep their historic spelling.)
+    // The variation draft. The dialog opens INSTANTLY, seeded from the RFI's own title and
+    // description, and the assistant fills it in from the panel beside it — an exchange rather than
+    // a five-second wait on one blocking call. Nothing here writes: CreateVoqFromRfq commits what
+    // the user presses Raise variation on. (Those command names are API identifiers and keep their
+    // historic spelling.)
     private bool variationDraftOpen;
-    private bool variationDraftLoading;
-    private VoqDraftProposal? variationDraft;
+
+    // Whether the form has already been filled in for this page's record. Keyed on the PAGE, not on
+    // AiTaskState: ending the conversation (the panel's "Done") must never be the thing that
+    // discards a drafted variation the next time the dialog is opened.
+    private bool variationDraftSeeded;
+
     private string? variationDraftError;
     private string draftVariationTitle = "";
     private string draftVariationDescription = "";
     private string draftVariationValue = "";
+    private string draftVariationTrade = "";
     private List<DraftLineRow> draftVariationLines = new();
+
+    // Which fields the assistant changed on its last pass, so they pulse rather than silently
+    // differing from what the user last read. Cleared on a timer.
+    private HashSet<string> flashedFields = new();
+    private System.Threading.Timer? flashTimer;
+
+    // Storage limits on VariationOrderEntity. Enforced here now that no server-side draft handler
+    // sits in front of the dialog to clamp what a model returned.
+    private const int MaxVariationTitleChars = 256;
+    private const int MaxVariationDescriptionChars = 2048;
 
     private sealed record DraftLineRow(VoqDraftLine Line, bool Accepted, string CostCode = "");
 
-    // The trade for the draft bid package: the first accepted line's, else the model's suggestion.
+    private bool CanUseAssistant =>
+        Session.ActiveRole is { } role && DesktopNavigation.CanUseAssistant(role);
+
+    private bool TaskIsForThisRecord =>
+        AiTasks.Active is { } task && task.RecordId == RequestId;
+
+    private string FlashClass(string field) => flashedFields.Contains(field) ? "jpms-flash" : "";
+
+    // The trade for the draft bid package. An explicitly-set trade wins: the assistant is told the
+    // field IS the package's trade, so honouring it is both what the schema promises and what makes
+    // it round-trip — set Electrical, read Electrical back next turn. Falls back to the first
+    // accepted line's trade, which is what this used before the field existed.
     private string DraftPackageTrade
     {
         get
         {
+            if (!string.IsNullOrWhiteSpace(draftVariationTrade)) return draftVariationTrade;
             var accepted = draftVariationLines.FirstOrDefault(row => row.Accepted && !string.IsNullOrWhiteSpace(row.Line.Trade));
-            if (accepted is not null) return accepted.Line.Trade;
-            return string.IsNullOrWhiteSpace(variationDraft?.SuggestedTrade) ? "General" : variationDraft!.SuggestedTrade;
+            return accepted is not null ? accepted.Line.Trade : "General";
         }
     }
 
@@ -1368,45 +1494,65 @@ else
         if (record is null || busy) return;
         variationError = null;
         variationDraftError = null;
-        variationDraft = null;
         variationDraftOpen = true;
-        variationDraftLoading = true;
-        draftVariationTitle = record.Title;
-        draftVariationDescription = record.Description;
-        draftVariationValue = "";
-        draftVariationLines = new();
 
-        // Cost centres feed the scope lines' cost-code selects — best-effort background refresh.
-        try { _ = CostCenters.RefreshAsync(CancellationToken.None); } catch { }
+        // The panel has to sit above the dialog's overlay while both are on screen. Owned here, by
+        // the thing that knows whether a dialog is open, and cleared everywhere this one closes.
+        Chat.SetCoexistence(true);
 
-        try
+        // Reopening after a cancel restores what was drafted rather than discarding the exchange
+        // that produced it. Only a first open reseeds the form.
+        if (!variationDraftSeeded)
         {
-            variationDraft = await Variations.PrepareVoqDraftAsync(record.RequestId);
-            draftVariationTitle = variationDraft.Title;
-            draftVariationDescription = variationDraft.Description;
-            draftVariationValue = variationDraft.EstimatedValue?.ToString("0.##") ?? "";
-            draftVariationLines = variationDraft.Lines.Select(line => new DraftLineRow(line, true)).ToList();
+            variationDraftSeeded = true;
+            draftVariationTitle = record.Title;
+            draftVariationDescription = record.Description;
+            draftVariationValue = "";
+            draftVariationTrade = "";
+            draftVariationLines = new();
+            flashedFields = new();
+
+            if (CanUseAssistant)
+            {
+                AiTasks.Start(
+                    new AiTask(
+                        TaskKey: "variation-draft",
+                        ModalKey: ModalCatalog.VariationDraft.ModalKey,
+                        BannerLabel: $"Drafting a variation from {record.Reference}",
+                        BusyLabel: $"Reading {record.Reference} and the emails tagged to it…",
+                        KickoffMessage:
+                            $"Draft the variation that {record.Reference} has led to. Read the RFI and the "
+                            + "emails tagged to it, then put your draft into the form that is open beside you. "
+                            + "If the correspondence does not tell you enough to scope or price it, ask me "
+                            + "before you write anything.",
+                        ProjectId: ProjectId,
+                        RecordType: nameof(RecordType.Request),
+                        RecordId: record.RequestId,
+                        RecordReference: record.Reference),
+                    SerialiseDraft());
+
+                Chat.Open();
+            }
         }
-        catch
-        {
-            // A failed draft never blocks raising the variation — fall back to the RFI's own details.
-            variationDraftError = "Couldn't draft from the tagged emails; starting from the RFI's details instead.";
-        }
-        finally
-        {
-            variationDraftLoading = false;
-        }
+
+        // Cost centres feed the scope lines' cost-code selects. Awaited, not fire-and-forget: the
+        // select renders disabled until this lands, and nothing was repainting it before.
+        try { await CostCenters.RefreshAsync(CancellationToken.None); }
+        catch { /* the select stays disabled; a ticked line without a code still blocks the create. */ }
     }
 
     private void CancelVariationDraft()
     {
         if (busy) return;
+        // The task and the draft survive: this closes a window, it does not abandon the work. The
+        // assistant panel stays open beside the page and reopening restores everything.
         variationDraftOpen = false;
+        Chat.SetCoexistence(false);
     }
 
     private async Task ConfirmVariationDraft()
     {
-        if (record is null || busy || variationDraftLoading) return;
+        if (record is null || busy) return;
         variationDraftError = null;
 
         if (string.IsNullOrWhiteSpace(draftVariationTitle))
@@ -1455,6 +1601,11 @@ else
             }
 
             variationDraftOpen = false;
+            Chat.SetCoexistence(false);
+            // The work is done: end the task so the panel drops its banner and goes back to being
+            // the general assistant. The conversation itself is already persisted server-side, so
+            // nothing evidential is lost by clearing the client's handle on it.
+            AiTasks.End();
             Nav.NavigateTo($"/projects/{ProjectId}/variations/{variation.VariationOrderId}");
         }
         catch
@@ -1467,6 +1618,223 @@ else
         {
             busy = false;
         }
+    }
+
+    // ---- The dialog ⇄ assistant pipe -----------------------------------------------------------
+    //
+    // Out: every edit republishes the form so the model always reasons from what is on screen NOW.
+    // In: the assistant's proposals arrive as raw JSON and are MERGED, never swapped in wholesale.
+
+    private void PublishDraft() => AiTasks.UpdateDraft(SerialiseDraft());
+
+    private void OnDraftTitleChanged(string value)
+    {
+        draftVariationTitle = value;
+        PublishDraft();
+    }
+
+    private void OnDraftDescriptionInput(ChangeEventArgs e)
+    {
+        draftVariationDescription = e.Value?.ToString() ?? string.Empty;
+        PublishDraft();
+    }
+
+    private void OnDraftValueChanged(string value)
+    {
+        draftVariationValue = value;
+        PublishDraft();
+    }
+
+    private void OnDraftLineAcceptedChanged(int index, bool accepted)
+    {
+        if (index < 0 || index >= draftVariationLines.Count) return;
+        draftVariationLines[index] = draftVariationLines[index] with { Accepted = accepted };
+        PublishDraft();
+    }
+
+    private void OnDraftLineCostCodeChanged(int index, string costCode)
+    {
+        if (index < 0 || index >= draftVariationLines.Count) return;
+        draftVariationLines[index] = draftVariationLines[index] with { CostCode = costCode };
+        PublishDraft();
+    }
+
+    /// <summary>The form, as the model will read it. Field names and TYPES match
+    /// ModalCatalog.VariationDraft exactly — that is the contract between the dialog and the tool's
+    /// input schema, and a value it reads as a string but is told to send as a number is the one
+    /// place the two could quietly disagree.</summary>
+    private string SerialiseDraft() => JsonSerializer.Serialize(new
+    {
+        title = draftVariationTitle,
+        description = draftVariationDescription,
+        estimatedValue = ParsedDraftValue(),
+        trade = DraftPackageTrade,
+        lines = draftVariationLines.Select(row => new
+        {
+            description = row.Line.Description,
+            unit = row.Line.Unit,
+            quantity = row.Line.Quantity,
+            trade = row.Line.Trade,
+            costCode = row.CostCode,
+            accepted = row.Accepted
+        })
+    });
+
+    /// <summary>The value box as a number, or null when it is blank or not one — never a string, so
+    /// the model is not shown "" where its own schema says number.</summary>
+    private decimal? ParsedDraftValue()
+    {
+        if (string.IsNullOrWhiteSpace(draftVariationValue)) return null;
+        var raw = draftVariationValue.Replace("£", "").Replace(",", "").Trim();
+        return decimal.TryParse(raw, out var parsed) && parsed >= 0 ? parsed : null;
+    }
+
+    private void HandleAssistantDraft(string fieldsJson) =>
+        _ = InvokeAsync(() =>
+        {
+            ApplyAssistantDraft(fieldsJson);
+            StateHasChanged();
+        });
+
+    /// <summary>
+    /// MERGE, never replace. Only the fields the assistant actually sent are touched, so an edit the
+    /// user made to a field it did not mention survives — which is the entire reason it is shown the
+    /// live values in the first place. A malformed payload changes nothing.
+    /// </summary>
+    private void ApplyAssistantDraft(string fieldsJson)
+    {
+        var changed = new HashSet<string>();
+
+        try
+        {
+            using var document = JsonDocument.Parse(fieldsJson);
+            var root = document.RootElement;
+            if (root.ValueKind != JsonValueKind.Object) return;
+
+            if (ReadText(root, "title") is { } title && !string.IsNullOrWhiteSpace(title))
+            {
+                draftVariationTitle = Clamp(title, MaxVariationTitleChars);
+                changed.Add("title");
+            }
+
+            if (ReadText(root, "description") is { } description && !string.IsNullOrWhiteSpace(description))
+            {
+                draftVariationDescription = Clamp(description, MaxVariationDescriptionChars);
+                changed.Add("description");
+            }
+
+            // Counted as a change even though it has no field of its own on the form: without it, a
+            // turn that set only the trade would fall through the "nothing changed" guard below and
+            // never republish, so the next turn would still be shown the old one.
+            if (ReadText(root, "trade") is { } trade && !string.IsNullOrWhiteSpace(trade))
+            {
+                draftVariationTrade = trade.Trim();
+                changed.Add("trade");
+            }
+
+            // A string here is the model ignoring the schema; a zero or a negative is nonsense as a
+            // variation value. Both are dropped rather than shown to the user as a figure.
+            if (root.TryGetProperty("estimatedValue", out var value)
+                && value.ValueKind == JsonValueKind.Number
+                && value.TryGetDecimal(out var parsed) && parsed > 0)
+            {
+                draftVariationValue = parsed.ToString("0.##");
+                changed.Add("estimatedValue");
+            }
+
+            if (root.TryGetProperty("lines", out var lines) && lines.ValueKind == JsonValueKind.Array)
+            {
+                draftVariationLines = MergeLines(lines);
+                changed.Add("lines");
+            }
+        }
+        catch (JsonException)
+        {
+            // A malformed argument is the model's problem, not the user's. Leave the form alone.
+            return;
+        }
+
+        if (changed.Count == 0) return;
+
+        flashedFields = changed;
+        PublishDraft();
+        RestartFlashTimer();
+    }
+
+    /// <summary>
+    /// Rebuilds the scope lines from the assistant's list, carrying forward the two decisions the
+    /// USER owns — whether a line is ticked, and which cost centre it lands on — for any line whose
+    /// description it recognises.
+    /// </summary>
+    private List<DraftLineRow> MergeLines(JsonElement lines)
+    {
+        var existing = draftVariationLines.ToList();
+        var merged = new List<DraftLineRow>();
+
+        foreach (var item in lines.EnumerateArray())
+        {
+            if (item.ValueKind != JsonValueKind.Object) continue;
+
+            var description = ReadText(item, "description");
+            if (string.IsNullOrWhiteSpace(description)) continue;
+
+            var quantity = item.TryGetProperty("quantity", out var q)
+                && q.ValueKind == JsonValueKind.Number
+                && q.TryGetDecimal(out var parsedQuantity) && parsedQuantity > 0
+                    ? parsedQuantity
+                    : 1m;
+
+            var line = new VoqDraftLine(
+                ReadText(item, "trade") ?? "",
+                description.Trim(),
+                ReadText(item, "unit") ?? "item",
+                quantity);
+
+            var previous = existing.FirstOrDefault(row =>
+                string.Equals(row.Line.Description.Trim(), description.Trim(), StringComparison.OrdinalIgnoreCase));
+
+            merged.Add(previous is not null
+                ? previous with { Line = line }
+                : new DraftLineRow(line, true, ResolveCostCode(ReadText(item, "costCode"))));
+        }
+
+        return merged;
+    }
+
+    /// <summary>
+    /// A suggested cost code counts only if it is one the portal actually has, spelled exactly.
+    /// Anything else is dropped in silence and the user picks from the list — a hallucinated code
+    /// would send a real committed value to the wrong cost centre and go unnoticed for a month.
+    /// </summary>
+    private string ResolveCostCode(string? suggested)
+    {
+        if (string.IsNullOrWhiteSpace(suggested)) return "";
+        var match = CostCenters.Alphabetical.FirstOrDefault(centre =>
+            string.Equals(centre.Code, suggested.Trim(), StringComparison.OrdinalIgnoreCase));
+        return match?.Code ?? "";
+    }
+
+    private static string? ReadText(JsonElement element, string property) =>
+        element.TryGetProperty(property, out var value) && value.ValueKind == JsonValueKind.String
+            ? value.GetString()
+            : null;
+
+    private static string Clamp(string value, int max)
+    {
+        var trimmed = value.Trim();
+        return trimmed.Length > max ? trimmed[..max] : trimmed;
+    }
+
+    // Roughly the length of the .jpms-flash keyframe. The pulse marks what moved; leaving it on
+    // would just be decoration.
+    private void RestartFlashTimer()
+    {
+        flashTimer?.Dispose();
+        flashTimer = new System.Threading.Timer(_ => InvokeAsync(() =>
+        {
+            flashedFields = new HashSet<string>();
+            StateHasChanged();
+        }), null, TimeSpan.FromMilliseconds(1600), Timeout.InfiniteTimeSpan);
     }
 
     private async Task OnPartyChanged(ChangeEventArgs e)

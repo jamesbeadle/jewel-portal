@@ -34,14 +34,19 @@ public sealed class SendAiMessageHandler : ICommandHandler<SendAiMessage, AiTurn
     private readonly IClaudeConversationClient claude;
     private readonly AiCaller caller;
     private readonly AgentActivityLog activityLog;
+    private readonly IServiceProvider services;
 
     public SendAiMessageHandler(
-        JpmsContext context, IClaudeConversationClient claude, AiCaller caller, AgentActivityLog activityLog)
+        JpmsContext context, IClaudeConversationClient claude, AiCaller caller,
+        AgentActivityLog activityLog, IServiceProvider services)
     {
         this.context = context;
         this.claude = claude;
         this.caller = caller;
         this.activityLog = activityLog;
+        // The request's own scope, handed to the tools that need a registered service rather than
+        // raw EF (get_request_context → RequestContextAssembler → the Graph mailbox reader).
+        this.services = services;
     }
 
     public async Task<AiTurnResult> HandleAsync(SendAiMessage command, CancellationToken cancellationToken)
@@ -90,12 +95,12 @@ public sealed class SendAiMessageHandler : ICommandHandler<SendAiMessage, AiTurn
                 .FirstOrDefaultAsync(row => row.ProjectId == command.Scope!.ProjectId, cancellationToken);
 
         var systemPrompt = AiSystemPrompt.Build(user, command.Scope, project?.Reference, project?.Name);
-        var tools = AiToolCatalogue.For(user)
+        var tools = AiToolCatalogue.For(user, command.Scope)
             .Select(tool => new ClaudeToolSpec(tool.Name, tool.Description, tool.InputSchema))
             .ToList();
 
         var transcript = await BuildTranscriptAsync(conversation.ConversationId, cancellationToken);
-        var toolContext = new AiToolContext(context, user, command.Scope);
+        var toolContext = new AiToolContext(context, user, command.Scope, services);
 
         var uiActions = new List<AiUiAction>();
         var toolsUsed = new List<string>();
@@ -249,14 +254,16 @@ public sealed class SendAiMessageHandler : ICommandHandler<SendAiMessage, AiTurn
             cancellationToken: ct,
             conversationId: conversation.ConversationId,
             projectId: command.Scope?.ProjectId,
+            // So a task run reads as "RFI-049" at a glance on /agents rather than as a bare id.
+            recordReference: command.Scope?.Task?.RecordReference,
             route: command.Scope?.Route,
             toolsUsed: toolsUsed,
             durationMs: (int)clock.ElapsedMilliseconds,
             inputTokens: inputTokens,
             outputTokens: outputTokens);
 
-    /// <summary>Rebuilds the Anthropic messages array from the database. Tool rows are paired back to
-    /// their calls by <c>ToolUseId</c>; a row without one is a plain turn.</summary>
+    /// <summary>Reads the conversation and hands it to <see cref="AiTranscript"/>, which owns the
+    /// shape and the two size bounds that keep a replayed email thread from costing a fortune.</summary>
     private async Task<List<object>> BuildTranscriptAsync(string conversationId, CancellationToken ct)
     {
         var rows = await context.AiConversationMessages
@@ -265,32 +272,7 @@ public sealed class SendAiMessageHandler : ICommandHandler<SendAiMessage, AiTurn
             .OrderBy(row => row.Sequence)
             .ToListAsync(ct);
 
-        var transcript = new List<object>();
-        foreach (var row in rows)
-        {
-            switch ((AiChatRole)row.Role)
-            {
-                case AiChatRole.User:
-                    transcript.Add(new { role = "user", content = row.Body });
-                    break;
-                case AiChatRole.Assistant:
-                    if (!string.IsNullOrWhiteSpace(row.Body))
-                        transcript.Add(new { role = "assistant", content = row.Body });
-                    break;
-                case AiChatRole.Tool:
-                    // Replayed as prose rather than a tool_result block: the assistant turn that
-                    // requested it is not stored with its tool_use blocks, and an orphan tool_result
-                    // is rejected by the API. Within a turn the live blocks are used instead.
-                    transcript.Add(new
-                    {
-                        role = "user",
-                        content = $"[earlier result from {row.ToolName}]\n{row.Body}"
-                    });
-                    break;
-            }
-        }
-
-        return transcript;
+        return AiTranscript.Build(rows);
     }
 
     private static object[] BuildAssistantContent(ClaudeReply reply)
@@ -331,15 +313,25 @@ public sealed class SendAiMessageHandler : ICommandHandler<SendAiMessage, AiTurn
             }
         }
 
+        // A conversation started from a task is stamped with the task and the record it is about, so
+        // "show me the exchange that drafted V72" is one query years later — docs/ai §8, the dispute
+        // test. A general conversation keeps the orchestrator key and its first line as a title.
+        var task = command.Scope?.Task;
+        var modal = ModalCatalog.Find(task?.ModalKey);
+
         var now = DateTimeOffset.UtcNow;
         var conversation = new AiConversationEntity
         {
             ConversationId = Guid.NewGuid().ToString("N"),
             ProjectId = command.Scope?.ProjectId,
             Route = command.Scope?.Route,
-            CapabilityKey = "orchestrator",
+            CapabilityKey = string.IsNullOrWhiteSpace(task?.TaskKey) ? "orchestrator" : task!.TaskKey,
+            ScopeRecordType = task?.RecordType,
+            ScopeRecordId = task?.RecordId,
             StartedByEmail = command.SentByEmail,
-            Title = Truncate(command.Message, 120),
+            Title = modal is null
+                ? Truncate(command.Message, 120)
+                : Truncate($"{task?.RecordReference ?? "Untitled"} — {modal.DisplayName}", 120),
             StartedAt = now,
             LastMessageAt = now
         };

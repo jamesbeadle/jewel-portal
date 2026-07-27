@@ -13,6 +13,19 @@ public sealed class AiConversationEntity
     [MaxLength(64)] public string? ProjectId { get; set; }
     [MaxLength(512)] public string? Route { get; set; }
     [MaxLength(64)] public string CapabilityKey { get; set; } = "orchestrator";
+
+    /// <summary>
+    /// The record a task conversation was about — <c>RecordType.Request</c> and that request's id
+    /// for a variation draft. Both null for a general conversation, which is scoped to a page rather
+    /// than to a record.
+    ///
+    /// <para>Stored as loose strings, like every other cross-feature link in this schema (there are
+    /// no foreign keys). Their job is to make "show me the exchange that drafted V72" one query when
+    /// somebody asks in two years' time — docs/ai/00-agent-architecture.md §8.</para>
+    /// </summary>
+    [MaxLength(64)] public string? ScopeRecordType { get; set; }
+    [MaxLength(64)] public string? ScopeRecordId { get; set; }
+
     [MaxLength(256)] public string StartedByEmail { get; set; } = "";
     [MaxLength(256)] public string? Title { get; set; }
     public DateTimeOffset StartedAt { get; set; }

@@ -122,12 +122,28 @@ public static class DesktopNavigation
 
     public static bool CanSeeProjects(Role role) => CanSee(role, ProjectRoles);
 
-    /// <summary>Who may open the assistant chat panel: the directors, plus administrators via the
-    /// CanSee bypass. Deliberately the narrowest gate in the app — every message spends money on
-    /// the Claude API, so the panel is not offered to anyone who cannot authorise that spend. It
-    /// reuses DirectorRoles rather than declaring its own set: if the definition of "director"
-    /// changes, the assistant's reach should change with it.</summary>
-    public static bool CanUseAssistant(Role role) => CanSee(role, DirectorRoles);
+    // Decision 2026-07-27: widened from DirectorRoles to the commercial team. The assistant now
+    // drafts variations from RFI correspondence inside the Create Variation Order Quote dialog
+    // (ProjectRequestDetail.razor), and that work belongs to the people who raise variations —
+    // VariationRoles.AllowedToManageVariations, i.e. PM and QS as well as the board. A role that
+    // can see the button but not the assistant that fills it in is the worst of both.
+    //
+    // Spend is still gated, just not by role alone: ChatPanel's cost notice is accepted once per
+    // user per browser before a single message is sent, and every turn is logged against the
+    // sender's name in AgentActivity.
+    //
+    // Mirrors the API's AiRoles.AllowedToUseAssistant — keep the two lists in step.
+    internal static readonly Role[] AssistantRoles =
+    {
+        Role.ManagingDirector,
+        Role.FinanceDirector,
+        Role.ProjectManager,
+        Role.QuantitySurveyor
+    };
+
+    /// <summary>Who may open the assistant chat panel: the commercial team, plus administrators via
+    /// the CanSee bypass.</summary>
+    public static bool CanUseAssistant(Role role) => CanSee(role, AssistantRoles);
 
     /// <summary>The sidebar's folders for a role: each folder keeps only the rows the role can
     /// see, and a folder with no surviving rows disappears entirely. Built from SidebarFolders

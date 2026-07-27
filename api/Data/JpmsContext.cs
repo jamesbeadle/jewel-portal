@@ -207,6 +207,11 @@ public sealed class JpmsContext : DbContext
         modelBuilder.Entity<AiConversationEntity>()
             .HasIndex(row => new { row.StartedByEmail, row.LastMessageAt })
             .HasDatabaseName("IX_AiConversations_StartedByEmail_LastMessageAt");
+        // "Which conversations drafted this variation / this RFI", newest first — the lookup an
+        // argument about a document starts from.
+        modelBuilder.Entity<AiConversationEntity>()
+            .HasIndex(row => new { row.ScopeRecordId, row.LastMessageAt })
+            .HasDatabaseName("IX_AiConversations_ScopeRecordId");
 
         // ---- Project contracts -----------------------------------------------------------------
         // Unique: one contract per project. The handlers treat the row as an upsert, and this index

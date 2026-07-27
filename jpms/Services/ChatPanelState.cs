@@ -38,9 +38,25 @@ public sealed class ChatPanelState
     /// </summary>
     public bool HasAcknowledgedCost { get; private set; }
 
+    /// <summary>
+    /// True while a chat-aware dialog is being worked alongside the panel (raised and cleared by
+    /// <see cref="AiTaskState"/>). The panel lifts itself above the modal overlay's z-50 while it is
+    /// set, so the conversation stays live beside the form instead of being covered by it.
+    /// </summary>
+    public bool CoexistingModalOpen { get; private set; }
+
     public void Toggle()
     {
         IsOpen = !IsOpen;
+        OnChange?.Invoke();
+    }
+
+    /// <summary>Opens the panel. Distinct from <see cref="Toggle"/> on purpose: a caller that means
+    /// "show the assistant" must not close it because it happened to be open already.</summary>
+    public void Open()
+    {
+        if (IsOpen) return;
+        IsOpen = true;
         OnChange?.Invoke();
     }
 
@@ -48,6 +64,13 @@ public sealed class ChatPanelState
     {
         if (!IsOpen) return;
         IsOpen = false;
+        OnChange?.Invoke();
+    }
+
+    public void SetCoexistence(bool value)
+    {
+        if (CoexistingModalOpen == value) return;
+        CoexistingModalOpen = value;
         OnChange?.Invoke();
     }
 

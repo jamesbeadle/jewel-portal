@@ -125,13 +125,27 @@
     }
 
     @media (prefers-reduced-motion: reduce) {
-        .chat-panel, .chat-push {
+        .chat-panel, .chat-push, .modal-overlay-chat {
             transition: none;
         }
     }
 
     .modal-overlay {
         @apply fixed inset-0 z-50 flex items-center justify-center bg-canvas/70 p-4;
+    }
+
+    /* A dialog meant to be WORKED alongside the assistant rather than instead of it (Modal's
+       ChatAware parameter). The overlay reserves the panel's width, so the dialog centres in the
+       column beside the conversation instead of underneath it, and ChatPanel raises itself above
+       z-50 while such a dialog is open.
+
+       The widths mirror ChatPanel.PanelClass and MainLayout.ShellClass — change all three together.
+
+       Below md there is no "beside": the panel goes full-bleed and a 400px conversation will not sit
+       next to a form on a phone. The modal wins there and the chat sits behind it, deliberately. */
+    .modal-overlay-chat {
+        @apply md:pr-[400px] lg:pr-[440px];
+        transition: padding-right 300ms ease-out;
     }
 
     .modal-panel {

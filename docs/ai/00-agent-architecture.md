@@ -236,6 +236,11 @@ the most valuable sentence in most descriptions is the negative one.
 
 ## 5. ADR-003 — The portal as a tool surface
 
+> **Partly landed, 2026-07-27.** The dialog half is built and in use: `ModalCatalog`,
+> `update_open_modal`, `open_modal`, and `AiTaskState` as the pipe between a page's dialog and the
+> panel. First registered dialog: `variation_draft` on the RFI page. `highlight`, `set_filter` and
+> `ask_user` are still design. What actually shipped is recorded under "As built" below.
+
 This is the piece that makes it feel like the assistant is *operating* the portal rather than
 talking about it, and it is the cheapest part of the whole design because it never touches the
 server.
@@ -247,15 +252,57 @@ A third tool kind, `Ui`, executed entirely in the Blazor client:
 | Tool | Effect |
 |---|---|
 | `navigate_to(route, reason)` | `NavigationManager.NavigateTo`. The middle column changes under the chat. |
-| `open_modal(modal_key, prefill)` | Opens a registered dialog with fields pre-populated. The user completes and submits it themselves. |
+| `open_modal(modal_key, record_id, …)` | Takes the user to the page that owns a registered dialog and opens it. |
+| `update_open_modal(fields…)` | Writes fields into the dialog already open beside the chat. |
 | `highlight(anchor)` | Scrolls to and pulses an element. `jpmsFocusElement` + the existing `.jpms-flash` keyframe already do this. |
 | `set_filter(key, value)` | Applies a filter on the active page. |
 | `ask_user(question, options)` | Renders tappable choices in the chat instead of guessing. |
 
-`open_modal` is the important one. It is the answer to *"create new x loading a modal, with the user
-able to take control at any point"* — the assistant assembles the record and presents it in the
+The dialog pair is the important part. It is the answer to *"create new x loading a modal, with the
+user able to take control at any point"* — the assistant assembles the record and presents it in the
 **same dialog the user already knows**, pre-filled. They can accept it, correct one field, or close
 it. Control transfer is a non-event because the destination was always the normal UI.
+
+### As built
+
+**The split into two tools.** The original single `open_modal(modal_key, prefill)` assumed the
+assistant starts the job. In practice the common case is the opposite: the user clicks *Create
+Variation Order Quote*, the dialog opens **synchronously** (nothing to wait for, seeded from the
+RFI's own title and description), and the panel opens beside it. So:
+
+- `update_open_modal` is the workhorse — the dialog is already there, and this is a conversation
+  editing it, turn after turn, not a one-shot prefill.
+- `open_modal` covers only the assistant-initiated case ("draft the variation off RFI-049", typed
+  from the register). It navigates and the destination page opens the dialog on arrival.
+
+**The schema is specialised per dialog, per turn.** `update_open_modal` is registered once with a
+placeholder, and `AiToolCatalogue.For(user, scope)` rewrites its description and `InputSchema` from
+the open dialog's `ModalDescriptor`. When no registered dialog is open it is dropped from the
+catalogue entirely. One tool name for the client to switch on; a precise, per-form schema for the
+model; and ADR-002's rule intact — a tool the user could not invoke is never described to it.
+
+**The dialog is the proposal card.** §4 asks for `Write` tools that return a proposal rendered as a
+card with Confirm / Edit / Discard. For anything a page already has a dialog for, that card exists
+and the user knows it: the dialog **is** the proposal, its fields are the editable values, and its
+own confirm button is the approval step. That is why filling one is a `Ui` tool rather than a write —
+nothing reaches the server until the user presses the button themselves.
+
+**Merge, never replace.** The dialog's live field values ride up on every turn in
+`AiScope.Task.DraftJson` and are rendered into the *system prompt*, not the transcript — the prompt
+is rebuilt each turn and never persisted, so the model always sees what the user last typed rather
+than an accumulating pile of stale copies. Coming back, only the fields the model actually sent are
+touched, and a suggested cost code is accepted only on an exact match against the real cost-centre
+master. A field the assistant did not mention keeps the user's edit.
+
+**The two windows have to coexist.** A modal overlay is `z-50` and covered the panel. `Modal` gained
+an opt-in `ChatAware` (the overlay reserves the panel's width) and `DismissOnOverlayClick="false"`
+(a stray click beside a live conversation must not discard the draft and the exchange that produced
+it); the panel lifts to `z-[60]` while such a dialog is open. Below `md` there is no "beside" — the
+modal wins and the chat sits behind it.
+
+**Cost, and the warning.** The panel's existing per-user billed-usage notice is the gate: starting a
+task queues its kick-off turn and sends it only once the notice is accepted. Decline and the dialog
+still works — the user fills it in by hand, exactly as before the assistant existed.
 
 ### The manifest is generated, never written
 
@@ -268,6 +315,12 @@ within a fortnight.
 - Modals need a new `ModalCatalog`: a registry keyed by `modal_key`, declaring the dialog component,
   its prefill contract, and the `RoleSet` that may open it. Registering a modal there is what makes
   it reachable by the assistant — an explicit opt-in, one line per dialog.
+  **Built** at `contracts/Ai/ModalCatalog.cs` — in `contracts` because both runtimes need it (the
+  server renders the tool schema from it, the client routes the action by it) and because the test
+  project references `contracts` alone. A `ModalDescriptor` carries the key, the display name, the
+  purpose, the route template, the roles that may open it, and the fields. Each `ModalField`'s
+  description is **prompt text**: it is where the house rules for that field live now, moved out of
+  `PrepareVoqDraftHandler`'s system prompt so there is one statement of them rather than two.
 - The manifest is assembled **per user, per turn**, so it can only ever describe what that person
   can actually reach.
 
@@ -358,6 +411,22 @@ it read a wiki.
 **Layer 3 — Retrieved. On demand, via tools.**
 Everything else. The model asks. `RequestContextAssembler` is already the right shape for this and
 should become a tool (`get_request_context`) rather than an always-on preamble.
+
+> **Built, 2026-07-27.** `get_request_context` wraps the assembler unchanged. Two things it had to
+> learn that a one-shot call never needed. It **truncates newest-first** (default 12k chars, 40k
+> ceiling): the recent legs carry the instruction that made the work a variation, and the request's
+> own description is already in the header in full — so the payload says `truncated`,
+> `omittedChars`, and how to ask for more. And because `AiTranscript` replays every tool row on every
+> subsequent turn, a second call to it **supersedes** the first, which collapses to a one-line stub.
+> Without that, a ten-turn drafting conversation pays for the same email thread ten times.
+>
+> There is also a global 60k transcript budget that stubs old tool rows oldest-first. It never
+> touches a user or assistant turn — that is the conversation, and losing a line of it loses the
+> thread.
+
+There is a fourth layer the original three did not anticipate: **the live contents of the dialog the
+user is working in**, when there is one (§5). It goes in the *system prompt* rather than the
+transcript, precisely because it is mutable — see `AiSystemPrompt.AppendTask`.
 
 **Anti-pattern, stated explicitly:** do not put the schema, the entity docs, or the API map in the
 prompt. The tool catalogue *is* the API map, it is role-filtered, and it cannot go stale.
