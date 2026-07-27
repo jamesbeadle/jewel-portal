@@ -55,6 +55,10 @@ public interface IVariationStore
     /// freeing its V-ref — for records approved in error (chiefly seeded history).</summary>
     Task<VariationOrder> ReturnToQuotingAsync(string variationOrderId, CancellationToken cancellationToken = default);
 
+    /// <summary>Retitles a variation order — allowed at every stage. Only the title moves: figures
+    /// already written to the valuation report and CVR keep the wording they were issued with.</summary>
+    Task<VariationOrder> RenameAsync(string variationOrderId, string title, CancellationToken cancellationToken = default);
+
     /// <summary>Deletes a non-approved variation order and its bid-package tender data — a VOQ raised
     /// in error. Refused for an approved order (reject / return to quoting first).</summary>
     Task DeleteAsync(string variationOrderId, CancellationToken cancellationToken = default);

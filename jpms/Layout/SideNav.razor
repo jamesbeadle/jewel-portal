@@ -14,7 +14,9 @@
     the project switcher (the portfolio lives in its footer); picking a project while on a
     project page jumps to the same page of the new project. A role whose whole world is one
     folder sees that folder's rows flat, with no header (decision 2026-07-22) — folder chrome is
-    for people who work across folders.
+    for people who work across folders. Below every folder sit the folderless rows
+    (SidebarFolders.Standalone, e.g. Triage): top-level links, because they are not about the
+    project the picker has chosen.
 *@
 
 <div class="h-full flex flex-col bg-surface">
@@ -35,7 +37,7 @@
         </button>
     </div>
 
-    <nav class="flex-1 px-2 py-3 overflow-y-auto">
+    <nav class="flex-1 px-2 py-3 overflow-y-auto flex flex-col">
         <ul class="space-y-0.5">
             <li>
                 <a href="@DesktopNavigation.Home.Href" @onclick="HandleNavigate" @onclick:preventDefault="false"
@@ -180,6 +182,25 @@
                 }
             }
         </ul>
+
+        @if (StandaloneItems.Count > 0)
+        {
+            @* ---- Folderless rows, pinned below every folder (mt-auto). Top-level links with an
+               icon, like Home: they are not about the picked project, so they must not read as a
+               row of one of the folders the picker feeds. ---- *@
+            <ul class="mt-auto pt-3 space-y-0.5 border-t border-line">
+                @foreach (var item in StandaloneItems)
+                {
+                    <li>
+                        <a href="@item.ResolveHref(EffectiveProjectId)" @onclick="HandleNavigate" @onclick:preventDefault="false"
+                           class="@LinkClass(item.IsActiveFor(CurrentPath))" title="@item.Label">
+                            <NavIcon Route="@item.Href" Class="w-5 h-5 shrink-0" />
+                            <span class="@LabelClass">@item.Label</span>
+                        </a>
+                    </li>
+                }
+            </ul>
+        }
     </nav>
 
     @if (Auth.IsSignedIn)
@@ -225,6 +246,11 @@
     // project-scoped row is inside ProjectRoles (finance/triage/directory sets are subsets).
     private bool ShowsProjectPicker =>
         Session.ActiveRole is { } role && DesktopNavigation.CanSeeProjects(role);
+
+    // Rows that belong to no folder (SidebarFolders.Standalone) — rendered at the foot of the nav,
+    // below every folder, in both the expanded panel and the collapsed rail.
+    private IReadOnlyList<NavigationItem> StandaloneItems =>
+        Session.ActiveRole is { } role ? DesktopNavigation.StandaloneItemsFor(role) : Array.Empty<NavigationItem>();
 
     private IReadOnlyList<DesktopNavigation.VisibleFolder> Folders =>
         Session.ActiveRole is { } role ? DesktopNavigation.FoldersFor(role) : Array.Empty<DesktopNavigation.VisibleFolder>();

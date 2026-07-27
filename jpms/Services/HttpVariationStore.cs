@@ -107,6 +107,13 @@ public sealed class HttpVariationStore : IVariationStore
         return order;
     }
 
+    public async Task<VariationOrder> RenameAsync(string variationOrderId, string title, CancellationToken cancellationToken = default)
+    {
+        var order = await commands.SendAsync(new RenameVariationOrder(variationOrderId, title), cancellationToken);
+        OnChange?.Invoke();
+        return order;
+    }
+
     public async Task<VariationOrder> ReviseVariationOrderValueAsync(string variationOrderId, decimal value, CancellationToken cancellationToken = default)
     {
         // RevisedByEmail is stamped from the signed-in user server-side.

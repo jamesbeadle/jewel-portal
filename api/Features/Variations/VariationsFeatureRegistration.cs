@@ -65,6 +65,10 @@ public static class VariationsFeatureRegistration
         services.AddScoped<SetVariationOrderStatusAuthorisation>();
         services.AddScoped<SetVariationOrderStatusValidation>();
 
+        services.AddScoped<ICommandHandler<RenameVariationOrder, VariationOrder>, RenameVariationOrderHandler>();
+        services.AddScoped<RenameVariationOrderAuthorisation>();
+        services.AddScoped<RenameVariationOrderValidation>();
+
         services.AddScoped<ICommandHandler<DeleteVariationOrder, Acknowledgement>, DeleteVariationOrderHandler>();
         services.AddScoped<DeleteVariationOrderAuthorisation>();
         services.AddScoped<DeleteVariationOrderValidation>();

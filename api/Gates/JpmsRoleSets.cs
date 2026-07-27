@@ -13,7 +13,10 @@ namespace Jewel.JPMS.Api.Gates;
 /// </summary>
 public static class JpmsRoleSets
 {
-    /// <summary>Every internal (JBB staff) role. Mirrors DesktopNavigation.AllInternalRoles.</summary>
+    /// <summary>Every internal (JBB staff) role. Mirrors DesktopNavigation.AllInternalRoles.
+    /// Accounts belongs here — it is staff, and this is the floor that lets it read its own
+    /// to-dos (ListMyTodoItems) — but NOT in CommercialTeam below, which is the money-facing
+    /// reach the role is deliberately without.</summary>
     public static readonly RoleSet AllInternal = RoleSet.Of(
         JpmsRoles.Director,
         JpmsRoles.FinanceDirector,
@@ -22,10 +25,17 @@ public static class JpmsRoleSets
         JpmsRoles.SiteManager,
         JpmsRoles.HealthAndSafetyLead,
         JpmsRoles.OfficeComplianceCoordinator,
-        JpmsRoles.Foreman);
+        JpmsRoles.Foreman,
+        JpmsRoles.Accounts);
 
     /// <summary>Internal roles plus the architect, who reads/approves RFIs, submittals and
-    /// variations per the permissions matrix.</summary>
+    /// variations per the permissions matrix.
+    ///
+    /// NOT a superset of AllInternal: Accounts is deliberately absent here and from DrawingReaders
+    /// below. Those two sets gate the request/RFI/submittal/variation reads and the drawing
+    /// downloads — project delivery, which Accounts has no part in and no UI for (it holds no
+    /// DesktopNavigation.ProjectRoles rows). Adding it to "keep the lists in step" would widen the
+    /// role well past the to-do list it exists for.</summary>
     public static readonly RoleSet InternalAndArchitect = RoleSet.Of(
         JpmsRoles.Director,
         JpmsRoles.FinanceDirector,

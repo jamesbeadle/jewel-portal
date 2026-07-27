@@ -20,7 +20,7 @@ namespace Jewel.JPMS.Api.Features.Variations.Commands;
 ///   - Valuation line: a single line for the V-ref reverts to a TBC placeholder (recorded, not
 ///     priced into totals — the seeded-register convention for unapproved variations). Zero-amount
 ///     claim rows against it are dropped; any claimed value blocks the return.
-///   - CVR accrual: the approval's accrual (recognised by its "{ref} — {title}" signature) is
+///   - CVR accrual: the approval's accrual (recognised by its "{ref} — …" signature) is
 ///     deleted if present. Seeded approvals never wrote one, so nothing phantom is offset.
 ///   - Budget: commitment is released only when the approval accrual proved the approval committed
 ///     it in the first place.
@@ -49,11 +49,21 @@ public sealed class ReturnVariationOrderToQuotingHandler : ICommandHandler<Retur
             throw new InvalidOperationException("Work orders instruct this variation — cancel them before returning it to quoting.");
 
         // A revised variation has moved the CVR/budget by deltas this reversal doesn't model.
+        //
+        // The tail of every one of these descriptions is a free-text TITLE, so the marker has to be
+        // something a title cannot plausibly be. Both revise handlers write "(revised {money} →
+        // {money})", and it is the ARROW that a person would never type into the name of a
+        // variation — "Rooflight upgrade (revised spec)" is ordinary wording, and on "(revised"
+        // alone that title would block its own un-approve for good, with no way back: the accrual
+        // deliberately keeps the wording it was written with, so retitling the record cannot clear
+        // it either. Requiring both markers still catches every real revision, because both
+        // handlers write both.
         var revised = await context.QsAccruals.AnyAsync(
             accrual => accrual.ProjectId == order.ProjectId
                        && accrual.Category == "Variation"
                        && accrual.Description.StartsWith(order.VariationRef + " — ")
-                       && accrual.Description.Contains("(revised"),
+                       && accrual.Description.Contains("(revised ")
+                       && accrual.Description.Contains(" → "),
             cancellationToken);
         if (revised)
             throw new InvalidOperationException("This variation's value has been revised since approval — its CVR history must be unwound manually.");
@@ -86,10 +96,17 @@ public sealed class ReturnVariationOrderToQuotingHandler : ICommandHandler<Retur
         }
 
         // ---- CVR accrual + budget: reverse only what the approval provably wrote ----
+        // Matched on the V-REF, never on the title: a variation can be retitled at any stage
+        // (RenameVariationOrder) while the accrual keeps the wording it was written with, so an
+        // equality test against the live title would silently find nothing — and silently finding
+        // nothing here reads as "seeded approval, nothing to reverse", leaving the accrual and the
+        // budget commitment standing. The " — " separator keeps V7 clear of V70; the revised guard
+        // above has already rejected anything carrying a revision suffix.
         var approvalAccruals = await context.QsAccruals
             .Where(accrual => accrual.ProjectId == order.ProjectId
                               && accrual.Category == "Variation"
-                              && accrual.Description == order.VariationRef + " — " + order.Title)
+                              && accrual.Description.StartsWith(order.VariationRef + " — ")
+                              && !accrual.Description.Contains("(rejected)"))
             .ToListAsync(cancellationToken);
         if (approvalAccruals.Count > 0)
         {

@@ -84,7 +84,11 @@ public sealed class HttpProjectContractStore : IProjectContractStore
 
         // The write has been committed. Re-read rather than trusting the response body so the
         // cached row matches whatever the server actually stored.
-        byProject.Remove(projectId);
+        //
+        // Deliberately NOT clearing the cached row first: RefreshAsync overwrites it on success, so
+        // the removal bought nothing, and if the re-read then failed the store was left with no key
+        // at all — LoadedFor(projectId) went back to false and every panel gated on it pulsed
+        // forever, hiding the very error message the caller had just set.
         await RefreshAsync(projectId, cancellationToken);
     }
 }

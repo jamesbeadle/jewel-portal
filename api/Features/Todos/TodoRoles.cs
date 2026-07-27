@@ -3,9 +3,9 @@ using Jewel.JPMS.Models;
 
 namespace Jewel.JPMS.Api.Features.Todos;
 
-// Project to-dos are a back-office project-management surface. Directors, project managers and site
-// managers may manage them; administrators pass via Role.Admin (they are granted every role
-// server-side anyway, mirroring TriageRoles' belt-and-braces inclusion).
+// Project to-dos are a back-office project-management surface. Directors, project managers, site
+// managers and accounts may manage them; administrators pass via Role.Admin (they are granted every
+// role server-side anyway, mirroring TriageRoles' belt-and-braces inclusion).
 internal static class TodoRoles
 {
     public static readonly RoleSet AllowedToManageTodos =
@@ -13,7 +13,11 @@ internal static class TodoRoles
             Role.Admin,
             JpmsRoles.Director,
             JpmsRoles.ProjectManager,
-            JpmsRoles.SiteManager);
+            JpmsRoles.SiteManager,
+            // Accounts raises and assigns its own accounts-based items. Managing to-dos is NOT
+            // seeing every to-do: AllowedToSeeAllTodos below stays MD + admin, so Accounts still
+            // reads only the items assigned to a role it holds.
+            JpmsRoles.Accounts);
 
     // Who sees EVERY to-do item in the To-dos browser (and may add/manage general, no-project
     // items there): the managing director and administrators only. Everyone else reads their own
@@ -32,6 +36,9 @@ internal static class TodoRoles
     {
         JpmsRoles.Director,
         JpmsRoles.FinanceDirector,
+        // Accounts sits directly under the FD in the picker: it is where the accounts-based
+        // items go that used to have nowhere to land but the FD.
+        JpmsRoles.Accounts,
         JpmsRoles.ProjectManager,
         JpmsRoles.Estimator,
         JpmsRoles.SiteManager,

@@ -107,7 +107,41 @@ else
                 <span class="inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium bg-surface-raised text-content-muted">@order.Status.DisplayName()</span>
             }
         </div>
-        <h2 class="text-xl font-semibold text-content mb-5">@order.Title</h2>
+        @* ---- Title, editable in place ------------------------------------------------------
+               Retitling is allowed at EVERY stage, approved ones included: a badly worded title is
+               worth fixing whenever it is spotted, and it is the number — not the wording — that the
+               client's paperwork is keyed to. What has already been claimed keeps the wording it was
+               issued with (the handler rewrites nothing downstream), which is exactly what the note
+               under the field promises on an approved record. *@
+        @if (renamingOrder)
+        {
+            <div class="mb-5 max-w-2xl space-y-2">
+                <FormField Label="Title" Value="@renameTitle" OnChange="v => renameTitle = v" Required="true" />
+                @if (order.Status == VariationOrderStatus.Approved)
+                {
+                    <p class="text-xs text-content-subtle">
+                        Valuation lines and CVR entries already written for
+                        <span class="font-mono">@order.VariationRef</span> keep the title they were issued with —
+                        this record and anything written from here on read the new one.
+                    </p>
+                }
+                <div class="flex gap-2">
+                    <button type="button" class="btn-primary" disabled="@busy" @onclick="SaveTitle">Save title</button>
+                    <button type="button" class="btn-secondary" disabled="@busy" @onclick="CancelRename">Cancel</button>
+                </div>
+            </div>
+        }
+        else
+        {
+            <div class="flex items-start gap-2 mb-5">
+                <h2 class="text-xl font-semibold text-content">@order.Title</h2>
+                @if (CanManage)
+                {
+                    <button type="button" class="btn-ghost text-xs px-2 py-1 shrink-0 mt-0.5"
+                            title="Edit the title" disabled="@busy" @onclick="StartRename">Edit</button>
+                }
+            </div>
+        }
 
         <RecordLineage ProjectId="@ProjectId" ActiveId="variation"
                        Request="request" Variation="order" BidPackages="packages" />
@@ -636,6 +670,13 @@ else
     private bool revisingValue;
     private string reviseValue = "";
 
+    // ---- Retitle -------------------------------------------------------------------------------
+    // Editing the title in place, at any stage. Held apart from the approve/revise flows on purpose:
+    // this moves the wording and nothing else, so it can never be the thing that quietly shifted a
+    // figure. Cancelling simply drops the draft — the record is untouched until Save.
+    private bool renamingOrder;
+    private string renameTitle = "";
+
     // The Architect's Instructions that cover this variation — the evidence behind its figures, and
     // the thing an Awaiting-AI variation is waiting for.
     private List<ArchitectInstruction> linkedInstructions = new();
@@ -874,6 +915,41 @@ else
         catch (CommandFailedException ex) { linkError = ex.Message; }
         catch { linkError = "Couldn't link the request. Please try again."; }
         finally { linkBusy = false; }
+    }
+
+    private void StartRename()
+    {
+        renameTitle = order?.Title ?? "";
+        // Open on a clean slate: a banner left over from an earlier failed save reads as a fresh
+        // refusal of the edit that has only just been started.
+        error = null;
+        renamingOrder = true;
+    }
+
+    private void CancelRename()
+    {
+        renamingOrder = false;
+        // The banner belongs to the edit being abandoned — it must not outlive it.
+        error = null;
+    }
+
+    private async Task SaveTitle()
+    {
+        if (busy || order is null) return;
+        error = null;
+        var title = renameTitle.Trim();
+        if (title.Length == 0) { error = "A title is required."; return; }
+        // An unchanged title is a cancel by another name — no round-trip, no audit noise.
+        if (string.Equals(title, order.Title, StringComparison.Ordinal)) { renamingOrder = false; return; }
+        try
+        {
+            busy = true;
+            order = await Variations.RenameAsync(VariationOrderId, title);
+            renamingOrder = false;
+        }
+        catch (CommandFailedException ex) { error = ex.Message; }
+        catch { error = "Couldn't save the new title. Please try again."; }
+        finally { busy = false; }
     }
 
     private async Task AddPackage()

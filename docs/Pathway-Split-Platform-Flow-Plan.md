@@ -306,7 +306,7 @@ client-facing correspondence trail, a different animal). The audit register is a
 
 | Feature (files) | Pathway home | Impact |
 |---|---|---|
-| **Triage queue** (`TriageQueue.razor`, mailbox handlers) | Router (nav: Internal folder) | Pathway-first action panel (§2.2); wall/lane guards (§2.3); every action writes audit events (§4). Queue view itself unchanged — untagged mail has no pathway by definition. |
+| **Triage queue** (`TriageQueue.razor`, mailbox handlers) | Router (nav: folderless link at the foot) | Pathway-first action panel (§2.2); wall/lane guards (§2.3); every action writes audit events (§4). Queue view itself unchanged — untagged mail has no pathway by definition. |
 | **Requests + RFI/NOD/EOT + VOQ/VO** (`ProjectRequests.razor`, `ProjectRequestDetail.razor`, `ProjectVoqDetail.razor`, Requests feature) | **Client** | Becomes the Client folder's flagship register ("Requests"). General request = the default client container; promotion ladder untouched. VOs/VOQs remain inside the register (one lifecycle, as the current code comment says) — no separate nav entry. Reply/draft handlers gain the belt-and-braces Client-thread assertion. |
 | **Valuation report snapshots** (`ValuationReportSnapshotCapture`, `TakeValuationReportSnapshot`, list/get/delete) | **Client** | Confirmed direction (2026-07-22): **the live valuation report is never client-facing; only snapshots are.** A snapshot is frozen at the moment a valuation invoice is **raised** — the as-at-a-point-in-time statement — and attached to that invoice. (Today capture happens at invoice *submit*; the trigger moves to raise, keeping the supersede-on-amend behaviour.) New read-only register page `/projects/{id}/valuation-snapshots` lists each snapshot with its invoice; this is the page a client could one day be shown. The Valuation Report working tab stays in Financials — the working document is internal. |
 | **Bid package invites** (`ProjectBidPackageInvites.razor` + detail, Procurement feature) | **Subcontractor** | Nav home moves from Operations to the Subcontractor folder. Invite drafts stamp `JPMS/Subcontractor` alongside `JPMS/BPI-####` (worker parity via the linked `TriageCategories` include). Response mail inherits both via the sweep. |
@@ -345,7 +345,6 @@ Home
     Work Orders              → /projects/{p}/work-orders
     WO Allocation            → /projects/{p}/work-order-allocation
 ▸ Internal                   (mixed scope)
-    Triage                   → /requests/triage                      (company)
     Todo                     → /todos          (master list, all projects + company-wide,
                                                 with a project filter — revived page)
     Labour                   → /projects/{p}/labour
@@ -369,6 +368,8 @@ Home
 ▸ Directory                  (company)
     Directory                → /directory  with filter chips:
                                Clients · Architects · Subcontractors · Internal staff
+
+  Triage                     → /requests/triage    (company; folderless, foot of the nav)
 
 Signed in as … / Sign out
 ```
@@ -453,9 +454,14 @@ portal) — the conflict report is the reconciliation for that.
 
 **Six folders is more nav than three blocks + a flat list.** Collapsible headers (confirmed)
 are the mitigation, and the grouping matches how the business now thinks (who the
-correspondence is with, then the job, then the money, then the people). The risk of "Triage
-under Internal" reading as "internal mail only" is handled by copy — the queue's own header
-should say what it is (the router for everything) — and costs nothing structurally.
+correspondence is with, then the job, then the money, then the people).
+
+**Triage is folderless (decision 2026-07-27).** It sat under Internal, where it read as
+"internal mail only" — and, worse, as a row of a folder the project picker feeds, when the queue
+routes correspondence for every project at once. Copy was the first mitigation; the structure is
+the real one. It now renders as a top-level link at the foot of the nav, below every folder
+(`SidebarFolders.Standalone` → `DesktopNavigation.StandaloneItemsFor`), keeping its PM/FD gate
+and its `/requests/triage` route. Audit Trail stays under Internal on the same gate.
 
 **Mixed scope inside folders.** Internal and Financials folders mix project rows and company
 rows. Alternative was keeping two scopes (workspace vs company), which preserves purity but

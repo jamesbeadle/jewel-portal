@@ -252,8 +252,9 @@
 
 <TodoDetailModal Item="@selected" Busy="@busy" Error="@(selected is null ? null : error)"
                  CanComplete="@CanManage" CanDelete="@CanManage"
+                 CanReassign="@CanManage" AssigneeOptions="@AssigneeOptions"
                  OnClose="() => selected = null"
-                 OnToggleComplete="ToggleComplete" OnDelete="Delete" />
+                 OnToggleComplete="ToggleComplete" OnDelete="Delete" OnReassign="Reassign" />
 
 <Modal IsOpen="@addOpen" Title="Add a to-do item" ConfirmLabel="Add to-do item" CancelLabel="Cancel"
        OnConfirm="Add" OnCancel="CloseAdd">
@@ -317,10 +318,12 @@
     private string newAssignee = "";
     private string newDue = "";
 
-    // Managing the list mirrors the server-side TodoRoles gate: directors, project managers and site
-    // managers (administrators carry every role). Everyone else sees the list read-only.
+    // Managing the list mirrors the server-side TodoRoles.AllowedToManageTodos gate: directors,
+    // project managers, site managers and accounts (administrators carry every role). Everyone else
+    // sees the list read-only.
     private bool CanManage =>
-        Session.AvailableRoles.Any(role => role is Role.Admin or Role.ManagingDirector or Role.ProjectManager or Role.SiteManager);
+        Session.AvailableRoles.Any(role => role is Role.Admin or Role.ManagingDirector or Role.ProjectManager
+            or Role.SiteManager or Role.Accounts);
 
     protected override async Task OnInitializedAsync()
     {
@@ -429,6 +432,23 @@
         // Success closes the detail modal — the reloaded list shows the item in its new section.
         // A failure keeps it open with the error surfaced inside.
         if (error is null) selected = null;
+    }
+
+    // Move the item to a different role — everything else about it stays put. The modal stays
+    // open on the refreshed item so the new assignee is read back where it was changed.
+    private async Task Reassign(Role? role)
+    {
+        if (busy || selected is null) return;
+        var item = selected;
+        if (role == item.AssigneeRole) return;
+        await Run(() => Todos.UpdateAsync(new UpdateTodoItem(
+            item.TodoItemId,
+            item.Title,
+            NullIfBlank(item.Notes),
+            role,
+            item.DueAt,
+            item.IsComplete)));
+        if (error is null) selected = items.FirstOrDefault(i => i.TodoItemId == item.TodoItemId);
     }
 
     private async Task Delete(TodoItem item)

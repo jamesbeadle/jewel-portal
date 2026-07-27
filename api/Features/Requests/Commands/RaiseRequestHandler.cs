@@ -52,7 +52,10 @@ public sealed class RaiseRequestHandler : ICommandHandler<RaiseRequest, Request>
                 Reference = reference,
                 Title = command.Title,
                 Description = command.Description,
-                Status = (int)(command.Status ?? RequestStatus.NeedsAction),
+                // No explicit status means a brand-new record, which starts where the raise policy
+                // says: an official instrument is already with the correspondent (Open), a General
+                // container is ours to act on (Needs action). Backfills pass their status through.
+                Status = (int)(command.Status ?? command.Kind.DefaultStatusOnRaise()),
                 Value = command.Value,
                 RaisedByEmail = command.RaisedByEmail,
                 RaisedAt = command.RaisedAt ?? DateTimeOffset.UtcNow,
@@ -65,7 +68,7 @@ public sealed class RaiseRequestHandler : ICommandHandler<RaiseRequest, Request>
                 RespondedByEmail = command.RespondedByEmail,
                 // A backfilled record created already-Closed takes its response date as the close
                 // date (the best evidence of when it actually closed), else the backfill moment.
-                ClosedAt = (command.Status ?? RequestStatus.NeedsAction) == RequestStatus.Closed
+                ClosedAt = (command.Status ?? command.Kind.DefaultStatusOnRaise()) == RequestStatus.Closed
                     ? command.RespondedAt ?? DateTimeOffset.UtcNow
                     : null,
                 ImpliesVariation = false,

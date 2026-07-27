@@ -11,8 +11,9 @@
 @*
     The project's ONE settings page — the three per-section Setup tabs recombined so "Setup" means
     a single place: Details (identity and stage banner), Retention & valuation (the money-side
-    profile), and Correspondence (the profile that routes every document the project issues). The
-    old /setup, /financials-setup and /operations-setup routes redirect here.
+    profile), Contract (the executed document and the terms every clause citation is argued from),
+    and Correspondence (the profile that routes every document the project issues). The old /setup,
+    /financials-setup and /operations-setup routes redirect here.
 *@
 
 @if (!isLoaded)
@@ -49,6 +50,9 @@ else
                         <Stat Label="Project Manager" Value="@Project.ProjectManagerEmail" />
                     </div>
                     break;
+                case ContractPane:
+                    <ProjectContractPanel ProjectId="@ProjectId" />
+                    break;
                 case RetentionPane:
                     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 mb-6">
                         <NextValuationDateEditor ProjectId="@ProjectId" />
@@ -68,8 +72,9 @@ else
 
     private const string DetailsPane = "Details";
     private const string RetentionPane = "Retention & valuation";
+    private const string ContractPane = "Contract";
     private const string CorrespondencePane = "Correspondence";
-    private static readonly string[] Panes = { DetailsPane, RetentionPane, CorrespondencePane };
+    private static readonly string[] Panes = { DetailsPane, RetentionPane, ContractPane, CorrespondencePane };
 
     private bool isLoaded;
     private string activePane = DetailsPane;

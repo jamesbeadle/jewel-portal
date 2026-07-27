@@ -36,6 +36,17 @@ public sealed class UpdateSubcontractorEndpoint
         var validationOutcome = validation.Check(command);
         if (validationOutcome.HasFailed) return new BadRequestObjectResult(validationOutcome.Errors);
 
-        return new OkObjectResult(await handler.HandleAsync(command, request.HttpContext.RequestAborted));
+        try
+        {
+            return new OkObjectResult(await handler.HandleAsync(command, request.HttpContext.RequestAborted));
+        }
+        catch (InvalidOperationException ex)
+        {
+            // The handler's guards (record gone, last trade being removed, a trade id outside the
+            // curated list) are answers to what was asked, not faults — 400 so the dialog shows the
+            // reason next to the field instead of the client falling back to the host's opaque
+            // "Backend call failure" on a 500.
+            return new BadRequestObjectResult(ex.Message);
+        }
     }
 }

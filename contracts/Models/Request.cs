@@ -171,6 +171,18 @@ public static class RequestTypeExtensions
     public static bool IsEmailable(this RequestType kind) =>
         kind is RequestType.Rfi or RequestType.NoticeOfDelay or RequestType.ExtensionOfTime;
 
+    // RAISE POLICY — the status a newly raised request starts at, which is only ever a question of
+    // whose court the ball is in the moment the record exists. Raising an official instrument (an
+    // RFI, a JCT notice, an RFA/RFC/RFQ/RFP) is us asking someone else something: the ball is with
+    // the correspondent from the off, so it starts Open / Awaiting response. Needs action is
+    // reserved for what is genuinely ours to do — a General container (a mailbox-raised email
+    // sitting in triage, or a holding record we have not asked anything of anyone with yet), a
+    // recorded response waiting to be acted on, and a reopened request.
+    // The raise handler and the Raise request dialog both read this, so the default can never
+    // differ between what the dialog shows and what the server stores.
+    public static RequestStatus DefaultStatusOnRaise(this RequestType kind) =>
+        kind is RequestType.General ? RequestStatus.NeedsAction : RequestStatus.Open;
+
     public static string DisplayName(this RequestType kind) => kind switch
     {
         RequestType.Rfi             => "RFI",

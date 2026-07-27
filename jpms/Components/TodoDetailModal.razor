@@ -44,9 +44,39 @@
                             <dd class="text-content mt-0.5">@ScopeLabel</dd>
                         </div>
                     }
+                    @* Assignment is to a ROLE, so reassigning is picking a different role — whoever
+                       holds it inherits the item, which is the whole point of not naming a person.
+                       Two steps on purpose (Reassign, then Save): a single-click picker sitting in a
+                       detail panel is one stray click away from handing someone else's work away. *@
                     <div>
                         <dt class="text-[11px] uppercase tracking-wider text-content-subtle font-semibold">Assigned role</dt>
-                        <dd class="text-content mt-0.5">@(Item.AssigneeRole is Role role ? role.DisplayName() : "Unassigned")</dd>
+                        @if (reassigning)
+                        {
+                            <dd class="mt-1 space-y-2">
+                                <SearchSelect Options="@AssigneeOptions" Value="@reassignTo" ValueChanged="v => reassignTo = v"
+                                              Placeholder="Unassigned" WidthClass="w-full"
+                                              InputClass="bg-surface border border-line px-2 py-1"
+                                              Disabled="@Busy" />
+                                <div class="flex gap-2">
+                                    <button type="button" class="btn-primary text-xs px-2 py-1" disabled="@Busy" @onclick="HandleReassign">Save</button>
+                                    <button type="button" class="btn-secondary text-xs px-2 py-1" disabled="@Busy" @onclick="CancelReassign">Cancel</button>
+                                </div>
+                                <p class="text-[11px] text-content-subtle">
+                                    Everyone holding the new role sees this item; it leaves the old role's list.
+                                </p>
+                            </dd>
+                        }
+                        else
+                        {
+                            <dd class="text-content mt-0.5 flex flex-wrap items-center gap-2">
+                                <span>@(Item.AssigneeRole is Role role ? role.DisplayName() : "Unassigned")</span>
+                                @if (ShowReassign)
+                                {
+                                    <button type="button" class="btn-ghost text-[11px] px-1.5 py-0.5" disabled="@Busy"
+                                            title="Assign this item to a different role" @onclick="StartReassign">Reassign</button>
+                                }
+                            </dd>
+                        }
                     </div>
                     <div>
                         <dt class="text-[11px] uppercase tracking-wider text-content-subtle font-semibold">Due</dt>
@@ -155,6 +185,16 @@
     [Parameter] public string? ScopeLabel { get; set; }
     [Parameter] public bool CanComplete { get; set; }
     [Parameter] public bool CanDelete { get; set; }
+    /// <summary>Whether the signed-in user may move this item to a different role — the API's
+    /// TodoRoles.AllowedToManageTodos gate, mirrored by the parent.</summary>
+    [Parameter] public bool CanReassign { get; set; }
+    /// <summary>The role pool for the reassign picker (ListTodoAssignableRoles), already shaped as
+    /// options by the parent that loaded it. Empty hides the control rather than offering a picker
+    /// with nothing in it.</summary>
+    [Parameter] public IReadOnlyList<SearchSelect.Option> AssigneeOptions { get; set; } = Array.Empty<SearchSelect.Option>();
+    /// <summary>Raised with the chosen role (null = unassigned). Like complete/delete, the write
+    /// itself belongs to the parent, which owns the reload.</summary>
+    [Parameter] public EventCallback<Role?> OnReassign { get; set; }
     /// <summary>The parent's in-flight-action flag — disables the action buttons while a
     /// complete/reopen/delete round-trip runs.</summary>
     [Parameter] public bool Busy { get; set; }
@@ -174,6 +214,18 @@
     // the shown item changes, the modal closes, or the user does something else instead.
     private bool deleteArmed;
 
+    // Reassign editor state. `submittedReassignTo` holds the pick that has been sent but not yet
+    // seen coming back: the editor closes only when the refreshed Item actually carries the new
+    // role, so a failed save leaves the pick on screen to retry rather than silently reverting.
+    private bool reassigning;
+    private string reassignTo = "";
+    private string? submittedReassignTo;
+
+    // Reassigning a DONE item would move work nobody is going to do, so the control is for open
+    // items only — and it needs a pool to pick from.
+    private bool ShowReassign =>
+        CanReassign && Item is { IsComplete: false } && AssigneeOptions.Count > 0;
+
     // Fetch the linked emails once per opened item (an on-demand read, not a cached render-time
     // store — so no fetch-once-per-key store bookkeeping applies here). Re-opening the same item
     // while the modal never left the page re-reads, since closing clears the key.
@@ -186,14 +238,23 @@
             emailsError = null;
             emailsLoading = false;
             deleteArmed = false;
+            ResetReassign();
             return;
         }
 
-        if (Item.TodoItemId == loadedForItemId) return;
+        if (Item.TodoItemId == loadedForItemId)
+        {
+            // The same item, re-supplied after a save: close the editor once the record itself
+            // shows the role that was picked. Anything else (a failed save, an unrelated reload)
+            // leaves it open with the pick intact.
+            if (submittedReassignTo is not null && RoleValue(Item.AssigneeRole) == submittedReassignTo) ResetReassign();
+            return;
+        }
 
         var itemId = Item.TodoItemId;
         loadedForItemId = itemId;
         deleteArmed = false;
+        ResetReassign();
         emailsLoading = true;
         emailsError = null;
         emails = Array.Empty<MailboxMessage>();
@@ -223,16 +284,51 @@
         await OnDelete.InvokeAsync(Item);
     }
 
+    private void StartReassign()
+    {
+        // Start from the current role when it is one the picker actually offers; a legacy role
+        // outside the pool starts blank rather than silently pre-selecting something else.
+        var current = RoleValue(Item?.AssigneeRole);
+        reassignTo = AssigneeOptions.Any(option => option.Value == current) ? current : "";
+        submittedReassignTo = null;
+        deleteArmed = false;
+        reassigning = true;
+    }
+
+    private void CancelReassign() => ResetReassign();
+
+    private void ResetReassign()
+    {
+        reassigning = false;
+        reassignTo = "";
+        submittedReassignTo = null;
+    }
+
+    private async Task HandleReassign()
+    {
+        if (Item is null) return;
+        submittedReassignTo = reassignTo;
+        await OnReassign.InvokeAsync(ParseRole(reassignTo));
+    }
+
+    // Role <-> picker value plumbing, matching the add-item forms: the role's int as a string
+    // ("" = unassigned).
+    private static string RoleValue(Role? role) => role is null ? "" : ((int)role).ToString();
+
+    private static Role? ParseRole(string value) => int.TryParse(value, out var parsed) ? (Role)parsed : null;
+
     private async Task HandleToggleComplete()
     {
         if (Item is null) return;
         deleteArmed = false;
+        ResetReassign();
         await OnToggleComplete.InvokeAsync(Item);
     }
 
     private Task Close()
     {
         deleteArmed = false;
+        ResetReassign();
         return OnClose.InvokeAsync();
     }
 }

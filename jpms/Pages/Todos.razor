@@ -90,10 +90,13 @@ else
                 }
             </select>
 
-            @if (CanSeeAll && assigneeOptions.Count > 0)
+            @if (CanSeeAll)
             {
-                <select class="field !w-auto text-xs" value="@assigneeFilter" @onchange="e => assigneeFilter = e.Value?.ToString() ?? string.Empty">
-                    <option value="">Any role</option>
+                @* Disabled until the pool lands, never absent: a filter that pops into the row a
+                   second late is a control the reader has already decided isn't there. *@
+                <select class="field !w-auto text-xs" value="@assigneeFilter" @onchange="e => assigneeFilter = e.Value?.ToString() ?? string.Empty"
+                        disabled="@(!filtersReady)">
+                    <option value="">@(filtersReady ? "Any role" : "Loading…")</option>
                     <option value="@Unassigned">Unassigned</option>
                     @foreach (var option in assigneeOptions)
                     {
@@ -172,8 +175,9 @@ else
                  ScopeLabel="@(selected is null ? null : ScopeLabel(selected))"
                  CanComplete="@(selected is not null && (CanSeeAll || IsMine(selected)))"
                  CanDelete="@CanSeeAll"
+                 CanReassign="@CanManage" AssigneeOptions="@assigneeOptions"
                  OnClose="() => selected = null"
-                 OnToggleComplete="ToggleComplete" OnDelete="Delete" />
+                 OnToggleComplete="ToggleComplete" OnDelete="Delete" OnReassign="Reassign" />
 
 <Modal IsOpen="@addOpen" Title="Add a general to-do" ConfirmLabel="Add to-do item" CancelLabel="Cancel"
        OnConfirm="Add" OnCancel="CloseAdd">
@@ -249,11 +253,18 @@ else
     private bool CanSeeAll =>
         Session.AvailableRoles.Any(role => role is Role.Admin or Role.ManagingDirector);
 
+    // Mirrors the API's TodoRoles.AllowedToManageTodos gate — deliberately WIDER than CanSeeAll:
+    // a PM, site manager or accounts user reads only their own items here but may still hand one
+    // on to another role, exactly as they can on a project's To-do tab.
+    private bool CanManage =>
+        Session.AvailableRoles.Any(role => role is Role.Admin or Role.ManagingDirector or Role.ProjectManager
+            or Role.SiteManager or Role.Accounts);
+
     // Mirrors the API's JpmsRoleSets.AllInternal — who may read to-dos at all.
     private bool HasInternalRole =>
         Session.AvailableRoles.Any(role => role is Role.Admin or Role.ManagingDirector or Role.FinanceDirector
             or Role.ProjectManager or Role.QuantitySurveyor or Role.SiteManager or Role.HealthSafetyOfficer
-            or Role.OfficeComplianceCoordinator or Role.Foreman);
+            or Role.OfficeComplianceCoordinator or Role.Foreman or Role.Accounts);
 
     protected override async Task OnInitializedAsync()
     {
@@ -268,7 +279,9 @@ else
         // The list, the project labels and the assignable-role pool are independent, so they go
         // out together rather than one after another.
         var loads = new List<Task> { LoadAsync(), LoadProjectLabelsAsync() };
-        if (CanSeeAll) loads.Add(LoadAssigneeOptionsAsync());
+        // The role pool feeds the assignee FILTER (MD/admin only) and the reassign picker in the
+        // detail modal (anyone in the manage gate), so either reason is enough to fetch it.
+        if (CanSeeAll || CanManage) loads.Add(LoadAssigneeOptionsAsync());
         await Task.WhenAll(loads);
         filtersReady = true;
     }
@@ -399,6 +412,23 @@ else
         // Success closes the detail modal — the reloaded list re-files the item (a completed item
         // leaves the Open tab for Done). A failure keeps it open with the error surfaced inside.
         if (error is null) selected = null;
+    }
+
+    // Move the item to a different role. On a non-CanSeeAll list this can hand an item out of the
+    // reader's own list entirely — the reload then drops it and the modal closes with it.
+    private async Task Reassign(Role? role)
+    {
+        if (busy || selected is null) return;
+        var item = selected;
+        if (role == item.AssigneeRole) return;
+        await Run(() => TodoStore.UpdateAsync(new UpdateTodoItem(
+            item.TodoItemId,
+            item.Title,
+            NullIfBlank(item.Notes),
+            role,
+            item.DueAt,
+            item.IsComplete)));
+        if (error is null) selected = items.FirstOrDefault(i => i.TodoItemId == item.TodoItemId);
     }
 
     private async Task Delete(TodoItem item)

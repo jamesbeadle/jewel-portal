@@ -55,13 +55,33 @@ All optional: a request without them renders exactly as before.
   (drafts are created with `POST /users/{mailbox}/messages`, which `Mail.Send` alone does not cover).
 
 Auto-drafting fires when a request is raised (`RaiseRequest`) or created from an intake email
-(`CreateRequestFromIntake`), provided it is in the `Needs action` state. The document email is only ever
+(`CreateRequestFromIntake`). The document email is only ever
 placed in the mailbox's **Drafts** folder — a human reviews and sends it from Outlook. Nothing is
 sent from code, but every draft-creation path (on-demand, bulk, reply-into-thread, and the
 worker's queued send) moves a `Needs action` request to `Open` — the working assumption is that
 a drafted document goes out and the ball passes to the correspondent. If the send is cancelled,
 staff manually set the request back to `Needs action`; a request already past `Needs action`
 (open / needs variation / closed) is never rewound by a re-draft.
+
+### Where a request starts
+
+`Needs action` means the ball is with **us**, so only a record that is genuinely ours to act on
+starts there. `RequestTypeExtensions.DefaultStatusOnRaise` is the single rule, read by both
+`RaiseRequestHandler` and the Raise request dialog so the picker can never show one answer while
+the server stores another:
+
+- **Official instruments** (RFI, NOD, EOT, RFA, RFC, RFQ, RFP) start at `Open` — raising one is us
+  asking someone else something, so the ball is with the correspondent from the moment the record
+  exists.
+- **General containers** start at `Needs action` — an email arriving in triage, or a holding record
+  we have not yet asked anything of anyone with, is ours to deal with. Mailbox-created requests
+  (`CreateRequestFromMessage`) are General and keep this.
+- **Backfills** pass their status through explicitly and are not defaulted at all.
+
+Promoting a General container to an RFI (`PromoteRequestToRfi`) deliberately does **not** apply the
+rule: the record already exists and inherited its status from how it arrived, and the draft paths
+above move it on when the document actually goes out. The one exception it does make is reopening a
+closed request, which returns to `Needs action`.
 
 ## Deployment prerequisites
 

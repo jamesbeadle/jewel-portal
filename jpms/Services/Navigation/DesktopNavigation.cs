@@ -5,8 +5,10 @@ namespace Jewel.JPMS.Services.Navigation;
 /// <summary>
 /// The sidebar catalog — the app's single navigation plane. One list of five collapsible folders
 /// (SidebarFolders, docs/Pathway-Split-Platform-Flow-Plan.md §6) under the project picker, with
-/// Home above everything. Folders mix project-scoped rows ({project} templates resolved against
-/// CurrentProjectService) with company rows where the work mixes. This class is the RBAC home:
+/// Home above everything and any folderless rows (SidebarFolders.Standalone — destinations that
+/// are not about the picked project) as top-level links at the foot. Folders mix project-scoped
+/// rows ({project} templates resolved against CurrentProjectService) with company rows where the
+/// work mixes. This class is the RBAC home:
 /// the role sets, the per-role folder filtering, and the flatten rule — a role whose whole world
 /// is one folder sees rows, never a folder header. Role gates reproduce what each page had
 /// before the regrouping; grouping widens nothing, and administrators see everything.
@@ -28,7 +30,8 @@ public static class DesktopNavigation
         Role.SiteManager,
         Role.HealthSafetyOfficer,
         Role.OfficeComplianceCoordinator,
-        Role.Foreman
+        Role.Foreman,
+        Role.Accounts
     };
 
     private static readonly Role[] AllRoles =
@@ -50,6 +53,14 @@ public static class DesktopNavigation
         Role.HealthSafetyOfficer,
         Role.OfficeComplianceCoordinator
     };
+
+    // Who sees the master To-do list in the sidebar. The project roles — whose sidebar is the
+    // project — plus Accounts, whose whole reason for existing is the to-do list: it is NOT a
+    // ProjectRole (no project tabs, no registers), so without its own set the one page it needs
+    // would be unreachable. Mirrors the API's ListMyTodoItems floor (JpmsRoleSets.AllInternal)
+    // narrowed to the roles that actually carry assignable items.
+    internal static readonly Role[] TodoListRoles =
+        ProjectRoles.Append(Role.Accounts).ToArray();
 
     // Who sees the Architect's Instruction register. Mirrors the API's ArchitectInstructionRoles:
     // the project roles that own the commercial consequence of an instruction, plus the architect
@@ -131,6 +142,15 @@ public static class DesktopNavigation
             .Where(folder => folder.Items.Count > 0)
             .ToList();
 
+    /// <summary>The folderless rows a role may see (SidebarFolders.Standalone), in catalog order.
+    /// They render as top-level links at the foot of the sidebar, below every folder; an empty
+    /// list renders nothing at all.</summary>
+    public static IReadOnlyList<NavigationItem> StandaloneItemsFor(Role role) =>
+        SidebarFolders.Standalone
+            .Where(row => CanSee(role, row.VisibleTo))
+            .Select(row => row.Item)
+            .ToList();
+
     /// <summary>Where the bare project URL (/projects/{id}) lands: the first project-scoped row
     /// of the first visible folder — Client → Requests for full-access roles. The Requests
     /// fallback keeps the redirect deterministic if a role somehow reaches a project URL with no
@@ -151,6 +171,7 @@ public static class DesktopNavigation
     {
         var items = new List<NavigationItem> { Home };
         items.AddRange(FoldersFor(role).SelectMany(folder => folder.Items));
+        items.AddRange(StandaloneItemsFor(role));
         return items;
     }
 }

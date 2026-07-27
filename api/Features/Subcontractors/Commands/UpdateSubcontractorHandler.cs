@@ -20,9 +20,20 @@ public sealed class UpdateSubcontractorHandler
         if (entity is null) throw new InvalidOperationException($"Subcontractor {command.SubcontractorId} not found.");
 
         var tradeIds = (command.TradeIds ?? Array.Empty<string>()).Distinct().ToList();
-        // Companies we buy work from must keep at least one trade — it's how bid-package invites find them.
+
+        var existingLinks = await context.SubcontractorTrades
+            .Where(link => link.SubcontractorId == command.SubcontractorId)
+            .ToListAsync(cancellationToken);
+
+        // Companies we buy work from must keep at least one trade — it's how bid-package invites
+        // find them — but that is a rule about *changing* trades, not a toll on every save. Records
+        // that arrived without any (the work-order seeds insert category-0 companies with no trade
+        // links; the AddCuratedTrades backfill only linked a non-empty PrimaryTrade) would otherwise
+        // be permanently un-editable, because the Edit company details dialog carries no trades
+        // field and so round-trips the empty list straight back into this guard. Refuse only to
+        // empty a list that has something in it.
         var needsTrade = (DirectoryCategory)entity.Category is DirectoryCategory.Subcontractor or DirectoryCategory.Supplier;
-        if (needsTrade && tradeIds.Count == 0)
+        if (needsTrade && tradeIds.Count == 0 && existingLinks.Count > 0)
             throw new InvalidOperationException("At least one trade is required for subcontractors and suppliers.");
 
         var trades = await context.Trades.Where(trade => tradeIds.Contains(trade.TradeId)).ToListAsync(cancellationToken);
@@ -36,9 +47,6 @@ public sealed class UpdateSubcontractorHandler
         entity.CisStatus = command.CisStatus;
 
         // Sync the trade links to exactly the requested set (add missing, remove dropped).
-        var existingLinks = await context.SubcontractorTrades
-            .Where(link => link.SubcontractorId == command.SubcontractorId)
-            .ToListAsync(cancellationToken);
         context.SubcontractorTrades.RemoveRange(existingLinks.Where(link => !tradeIds.Contains(link.TradeId)));
         var existingTradeIds = existingLinks.Select(link => link.TradeId).ToHashSet(StringComparer.OrdinalIgnoreCase);
         foreach (var tradeId in tradeIds.Where(id => !existingTradeIds.Contains(id)))

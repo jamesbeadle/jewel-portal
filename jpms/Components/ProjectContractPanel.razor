@@ -1,0 +1,279 @@
+@using Jewel.JPMS.Contracts.ProjectContracts
+@inject IProjectContractStore Contracts
+@inject SessionService Session
+@implements IDisposable
+
+@*
+    The project's contract: the executed document and the terms keyed off it.
+
+    One document per project — there is one executed contract, and uploading again means the wrong
+    file went up, so a replacement supersedes rather than versions (the server deletes the old blob
+    once the row is committed). Contract amendments that need their own history are a separate
+    record, not a version chain here.
+
+    The terms beside it are what get_project_contract returns: until they are keyed, the AI
+    correctly answers "no contract has been recorded for this project" to any question about
+    retention, notice periods or OH&P, because the system prompt forbids it guessing them.
+
+    One gate over the whole body (Panel's own LoadGate): the document line and the terms come from
+    the same store, so revealing either before the other would just be two waits where there is one.
+*@
+
+<Panel Title="Contract" IsLoading="@(!Contracts.LoadedFor(ProjectId) && !dataFailed)" LoadingLabel="Loading contract">
+    <HeaderActions>
+        @if (CanManage && Contracts.LoadedFor(ProjectId))
+        {
+            <button type="button" class="btn-secondary text-xs px-2.5 py-1.5" @onclick="OpenTerms">
+                @(Current is null ? "Record terms" : "Edit terms")
+            </button>
+        }
+    </HeaderActions>
+    <ChildContent>
+
+    @if (dataFailed)
+    {
+        <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">
+            Couldn't load the contract. The error toast has the reference and the detail.
+        </p>
+    }
+    else
+    {
+        <section class="mb-6">
+            <h4 class="eyebrow mb-2">Executed contract</h4>
+
+            @if (Current is { HasDocument: true } contract)
+            {
+                <div class="rounded-lg border border-line bg-surface px-3 py-2.5 flex items-start justify-between gap-3">
+                    <div class="min-w-0">
+                        <p class="text-sm text-content font-medium truncate">@contract.DocumentFileName</p>
+                        <p class="text-xs text-content-subtle mt-0.5">
+                            @FormatSize(contract.DocumentFileSizeBytes)
+                            @if (contract.DocumentUploadedAt is { } uploadedAt)
+                            {
+                                <text> · uploaded @uploadedAt.ToLocalTime().ToString("d MMM yyyy")</text>
+                            }
+                            @if (!string.IsNullOrWhiteSpace(contract.DocumentUploadedByEmail))
+                            {
+                                <text> by @contract.DocumentUploadedByEmail</text>
+                            }
+                        </p>
+                    </div>
+                    <div class="flex items-center gap-3 shrink-0">
+                        <a href="@DocumentUrl(inline: true)" target="_blank" rel="noopener"
+                           class="text-xs text-accent hover:underline underline-offset-2">View</a>
+                        <a href="@DocumentUrl(inline: false)" target="_blank" rel="noopener"
+                           class="text-xs text-accent hover:underline underline-offset-2">Download</a>
+                    </div>
+                </div>
+            }
+            else
+            {
+                <p class="text-sm text-content-subtle">
+                    No contract document uploaded.
+                    @if (CanManage)
+                    {
+                        <text>Upload the executed contract below — it is stored against the project and downloadable by anyone internal.</text>
+                    }
+                </p>
+            }
+
+            @if (CanManage)
+            {
+                <div class="mt-3 flex flex-wrap items-end gap-3">
+                    <div class="min-w-0">
+                        <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">
+                            @(Current is { HasDocument: true } ? "Replace document" : "Contract document")
+                        </label>
+                        <InputFile OnChange="OnFileSelected" disabled="@uploading" class="text-sm text-content-muted" />
+                    </div>
+                    <button type="button" class="btn-secondary text-xs px-2.5 py-1.5"
+                            disabled="@(uploading || selectedFile is null)" @onclick="UploadAsync">
+                        @(uploading ? "Uploading…" : "Upload")
+                    </button>
+                </div>
+
+                @if (selectedFile is not null && !uploading)
+                {
+                    <p class="text-xs text-content-subtle mt-1.5">
+                        @selectedFile.Name · @FormatSize(selectedFile.Size)
+                        @if (Current is { HasDocument: true } existing)
+                        {
+                            <text> — this supersedes @existing.DocumentFileName, which is deleted once the upload lands.</text>
+                        }
+                    </p>
+                }
+
+                @if (uploadError is not null)
+                {
+                    <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mt-2">@uploadError</p>
+                }
+
+                <p class="text-xs text-content-subtle mt-1.5">PDF or Word, up to 100 MB.</p>
+            }
+        </section>
+
+        <section>
+            <h4 class="eyebrow mb-2">Terms</h4>
+
+            @if (Current is not { } terms)
+            {
+                <p class="text-sm text-content-subtle">
+                    No contract terms recorded. Until they are, anything that needs a retention rate,
+                    a notice period or an OH&amp;P percentage — the valuation cycle, variation pricing,
+                    and the assistant — has nothing to read.
+                </p>
+            }
+            else
+            {
+                @if (terms.IsAmended)
+                {
+                    <p class="rounded-lg bg-info/10 border border-info/30 px-3 py-2 text-xs text-content mb-3">
+                        <span class="font-semibold">Amended form.</span>
+                        @(string.IsNullOrWhiteSpace(terms.BespokeDeviations)
+                            ? "Clause numbers do not map to the standard form."
+                            : terms.BespokeDeviations)
+                    </p>
+                }
+
+                <dl class="grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-3 text-sm">
+                    @foreach (var (label, value) in Summary(terms))
+                    {
+                        <div>
+                            <dt class="text-[11px] uppercase tracking-wider text-content-subtle font-semibold">@label</dt>
+                            <dd class="text-content">@value</dd>
+                        </div>
+                    }
+                </dl>
+
+                @if (!string.IsNullOrWhiteSpace(terms.UpdatedByEmail))
+                {
+                    <p class="text-xs text-content-subtle mt-3">
+                        Last updated @terms.UpdatedAt.ToLocalTime().ToString("d MMM yyyy") by @terms.UpdatedByEmail
+                    </p>
+                }
+            }
+        </section>
+    }
+    </ChildContent>
+</Panel>
+
+@if (termsOpen)
+{
+    <ProjectContractTermsDialog ProjectId="@ProjectId"
+                                OnSaved="CloseTerms"
+                                OnCancelled="CloseTerms" />
+}
+
+@code {
+    [Parameter, EditorRequired] public string ProjectId { get; set; } = "";
+
+    private bool dataFailed;
+    private bool termsOpen;
+    private bool uploading;
+    private string? uploadError;
+    private IBrowserFile? selectedFile;
+
+    private ProjectContract? Current => Contracts.ForProject(ProjectId);
+
+    // Mirrors ProjectContractRoles.AllowedToManageContract. Deliberately narrower than who can
+    // read: a wrong retention percent or completion date propagates silently into every notice the
+    // project issues.
+    private bool CanManage =>
+        Session.AvailableRoles.Any(role =>
+            role is Role.Admin or Role.ManagingDirector or Role.FinanceDirector or Role.QuantitySurveyor);
+
+    protected override async Task OnInitializedAsync()
+    {
+        Contracts.OnChange += StateHasChanged;
+        await LoadAsync();
+    }
+
+    public void Dispose() => Contracts.OnChange -= StateHasChanged;
+
+    // Once, from OnInitializedAsync, never from render. RefreshAsync re-reads on every call (it
+    // only guards against a concurrent duplicate), so returning to this pane revalidates rather
+    // than showing whatever was cached the first time.
+    private async Task LoadAsync()
+    {
+        dataFailed = false;
+        try
+        {
+            await Contracts.RefreshAsync(ProjectId, CancellationToken.None);
+        }
+        catch
+        {
+            // The gate has to open on a failure or the panel pulses forever. The toast already
+            // carries the reference and the detail.
+            dataFailed = true;
+        }
+    }
+
+    private void OnFileSelected(InputFileChangeEventArgs args)
+    {
+        selectedFile = args.FileCount > 0 ? args.File : null;
+        uploadError = null;
+    }
+
+    private async Task UploadAsync()
+    {
+        if (uploading || selectedFile is null) return;
+        uploading = true;
+        uploadError = null;
+        try
+        {
+            await Contracts.UploadDocumentAsync(ProjectId, selectedFile, CancellationToken.None);
+            selectedFile = null;
+        }
+        catch (Exception ex)
+        {
+            // The store surfaces the server's own sentence — a storage misconfiguration says so
+            // rather than showing a bare status code.
+            uploadError = $"Upload failed: {ex.Message}";
+        }
+        finally
+        {
+            uploading = false;
+        }
+    }
+
+    private void OpenTerms() => termsOpen = true;
+
+    private void CloseTerms() => termsOpen = false;
+
+    private string DocumentUrl(bool inline) =>
+        $"/api/projects/{ProjectId}/contract/document{(inline ? "?inline=1" : "")}";
+
+    private static IEnumerable<(string Label, string Value)> Summary(ProjectContract contract)
+    {
+        yield return ("Form", contract.FormDisplayName);
+        yield return ("Contract sum", Money(contract.ContractSum));
+        yield return ("LADs", $"{Money(contract.LiquidatedDamagesPerWeek)} / week");
+        yield return ("Employer", Text(contract.EmployerName));
+        yield return ("Contract administrator", Text(contract.ContractAdministratorName));
+        yield return ("Contractor", Text(contract.ContractorName));
+        yield return ("Possession", Date(contract.PossessionDate));
+        yield return ("Completion", Date(contract.CompletionDate));
+        yield return ("Defects liability", $"{contract.DefectsLiabilityPeriodMonths} months");
+        yield return ("Retention", $"{Pct(contract.RetentionPercent)} → {Pct(contract.RetentionPercentAfterCompletion)}");
+        yield return ("Valuation cut-off", contract.ApplicationCutOffDayOfMonth is { } day ? $"Day {day}" : "—");
+        yield return ("Payment notices", $"{contract.PaymentNoticeDays}d notice · {contract.PayLessNoticeDays}d pay-less · {contract.FinalDateForPaymentDays}d final date");
+        yield return ("OH&P", $"{Pct(contract.OhpDirectWorksPercent)} direct · {Pct(contract.OhpSubcontractorPercent)} sub · {Pct(contract.AttendanceOnClientDirectPercent)} attendance");
+        yield return ("Daywork", $"{Pct(contract.DayworkLabourPercent)} labour · {Pct(contract.DayworkMaterialsPercent)} materials · {Pct(contract.DayworkPlantPercent)} plant");
+    }
+
+    private static string Money(decimal value) => value.ToString("C0", System.Globalization.CultureInfo.GetCultureInfo("en-GB"));
+
+    private static string Pct(decimal value) => $"{value:0.##}%";
+
+    private static string Date(DateTimeOffset? value) => value?.ToString("d MMM yyyy") ?? "—";
+
+    private static string Text(string? value) => string.IsNullOrWhiteSpace(value) ? "—" : value;
+
+    private static string FormatSize(long? bytes)
+    {
+        if (bytes is not { } size) return "Unknown size";
+        if (size >= 1024 * 1024) return $"{size / (1024.0 * 1024.0):0.#} MB";
+        if (size >= 1024) return $"{size / 1024.0:0.#} KB";
+        return $"{size} B";
+    }
+}

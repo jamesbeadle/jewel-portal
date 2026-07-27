@@ -207,8 +207,10 @@
     private string reference = "";
     private string suggestedReference = "";
 
-    // Lifecycle order: the ball starts with us (Needs action), goes to the correspondent (Open),
-    // may come back needing a variation order quote (Needs variation), then closes.
+    // Lifecycle order, listed as the ball moves: ours to do (Needs action), with the correspondent
+    // (Open), back with us needing a variation order quote (Needs variation), then closed. Where a
+    // request JOINS that order depends on its kind — an official instrument is raised straight into
+    // Open, a General container into Needs action (see DefaultStatusOnRaise).
     private static readonly RequestStatus[] StatusOptions =
     {
         RequestStatus.NeedsAction, RequestStatus.Open,
@@ -234,7 +236,12 @@
     private string raisedAt = "";
     private string respondedAt = "";
     private string responseText = "";
-    private RequestStatus status = RequestStatus.NeedsAction;
+    // The backfill status picker's starting point. Follows the same raise policy the server applies
+    // to a brand-new record (RequestTypeExtensions.DefaultStatusOnRaise), so the dialog never shows
+    // one answer while the server stores another — and it moves with the kind toggle below. Once
+    // the user picks a status by hand, that choice is theirs and the toggle stops overwriting it.
+    private RequestStatus status = RequestType.General.DefaultStatusOnRaise();
+    private bool statusChosenByUser;
 
     private bool saving;
     private string? error;
@@ -326,8 +333,9 @@
         responseDue = RequestDefaults.ResponseDue();
         backfill = false;
         raisedAt = respondedAt = responseText = "";
-        status = RequestStatus.NeedsAction;
         kind = RequestType.General;
+        status = kind.DefaultStatusOnRaise();
+        statusChosenByUser = false;
         reference = suggestedReference = "";
         saving = false;
         error = null;
@@ -342,6 +350,9 @@
     {
         if (kind == selected) return;
         kind = selected;
+        // An official RFI is with the architect the moment it is raised; a General container is
+        // ours. Track that as the kind toggles, unless the user has already set the status.
+        if (!statusChosenByUser) status = kind.DefaultStatusOnRaise();
         if (kind == RequestType.Rfi)
         {
             // Suggest the project's next RFI number from the local register (the server re-derives it
@@ -364,7 +375,9 @@
 
     private void OnStatusChanged(ChangeEventArgs e)
     {
-        if (int.TryParse(e.Value?.ToString(), out var raw)) status = (RequestStatus)raw;
+        if (!int.TryParse(e.Value?.ToString(), out var raw)) return;
+        status = (RequestStatus)raw;
+        statusChosenByUser = true;
     }
 
     // Logging a HISTORICAL request clears the pre-filled response due: a week from today is a

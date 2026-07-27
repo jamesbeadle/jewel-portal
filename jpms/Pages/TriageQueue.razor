@@ -153,7 +153,7 @@
                                 <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Project *</label>
                                 <select class="field" value="@importProjectId" @onchange="OnImportProjectChanged">
                                     <option value="">Select a project…</option>
-                                    @foreach (var project in ProjectOptions)
+                                    @foreach (var project in ProjectOptionsFor(importProjectId))
                                     {
                                         <option value="@project.ProjectId">@project.Reference — @project.Name</option>
                                     }
@@ -335,7 +335,18 @@ else
         <div class="flex items-center gap-2 mb-6 border-b border-line">
             <button type="button" class="@ViewTabClass(QueueView.Active)" @onclick="() => SwitchView(QueueView.Active)">Queue</button>
             <button type="button" class="@ViewTabClass(QueueView.Tagged)" @onclick="() => SwitchView(QueueView.Tagged)">Tagged</button>
-            <div class="ml-auto mb-1.5 inline-flex rounded-lg border border-line-strong p-0.5 gap-0.5"
+            @* One toggle for the whole page: every project picker below (import a drawing, link to
+               a record, create a request or bid package, raise a to-do, reply in thread) hides
+               completed projects unless this is ticked. No gate — it is a control, not a figure,
+               so it renders straight away and holds the layout; only the count on the label waits
+               until the project list has actually landed. *@
+            <label class="ml-auto mb-1.5 flex items-center gap-2 text-sm text-content-muted cursor-pointer select-none"
+                   title="Completed projects are kept out of the project pickers below until you ask for them">
+                <input type="checkbox" checked="@showCompletedProjects"
+                       @onchange="e => showCompletedProjects = (bool)e.Value!" />
+                <span>Show completed projects@(HiddenCompletedCount > 0 ? $" ({HiddenCompletedCount})" : "")</span>
+            </label>
+            <div class="mb-1.5 inline-flex rounded-lg border border-line-strong p-0.5 gap-0.5"
                  title="Show the oldest or the newest emails first — your choice is remembered">
                 <button type="button" disabled="@listLoading" @onclick="() => SetSortAsync(newest: false)"
                         class="rounded-md text-xs px-2.5 py-1.5 transition @(!newestFirst ? "bg-accent text-accent-ink font-medium" : "text-content-muted hover:bg-surface-raised")">
@@ -598,7 +609,7 @@ else
                                             <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Project</label>
                                             <select class="field" value="@linkProjectId" @onchange="OnLinkProjectChanged">
                                                 <option value="">Select a project…</option>
-                                                @foreach (var project in ProjectOptions)
+                                                @foreach (var project in ProjectOptionsFor(linkProjectId))
                                                 {
                                                     <option value="@project.ProjectId">@project.Reference — @project.Name</option>
                                                 }
@@ -704,7 +715,7 @@ else
                                             <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Project *</label>
                                             <select class="field" value="@createProjectId" @onchange="OnCreateProjectChanged">
                                                 <option value="">Select a project…</option>
-                                                @foreach (var project in ProjectOptions)
+                                                @foreach (var project in ProjectOptionsFor(createProjectId))
                                                 {
                                                     <option value="@project.ProjectId">@project.Reference — @project.Name</option>
                                                 }
@@ -769,7 +780,7 @@ else
                                             <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Project (optional)</label>
                                             <select class="field" value="@createProjectId" @onchange="OnCreateProjectChanged">
                                                 <option value="">No project — company-wide</option>
-                                                @foreach (var project in ProjectOptions)
+                                                @foreach (var project in ProjectOptionsFor(createProjectId))
                                                 {
                                                     <option value="@project.ProjectId">@project.Reference — @project.Name</option>
                                                 }
@@ -883,7 +894,7 @@ else
                                             <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Project *</label>
                                             <select class="field" value="@replyProjectId" @onchange="OnReplyProjectChanged">
                                                 <option value="">Select a project…</option>
-                                                @foreach (var project in ProjectOptions)
+                                                @foreach (var project in ProjectOptionsFor(replyProjectId))
                                                 {
                                                     <option value="@project.ProjectId">@project.Reference — @project.Name</option>
                                                 }
@@ -1227,7 +1238,7 @@ else
 
                                             <select class="field" value="@linkProjectId" @onchange="OnLinkProjectChanged">
                                                 <option value="">Select a project…</option>
-                                                @foreach (var project in ProjectOptions)
+                                                @foreach (var project in ProjectOptionsFor(linkProjectId))
                                                 {
                                                     <option value="@project.ProjectId">@project.Reference — @project.Name</option>
                                                 }
@@ -2655,7 +2666,7 @@ else
                     importProjectId, selected.Id, importAttachment.Id,
                     code, title, importRevision.Trim()),
                 CancellationToken.None);
-            var project = ProjectOptions.FirstOrDefault(p => p.ProjectId == importProjectId);
+            var project = AllProjects.FirstOrDefault(p => p.ProjectId == importProjectId);
             importNote = $"Saved as {drawing.DrawingCode} (unapproved revision) under {(project is null ? "the project" : project.Name)}'s drawings.";
             importAttachment = null;
             importDrawingId = "";
@@ -2781,8 +2792,38 @@ else
     private static string TagLabel(string tag) =>
         tag.StartsWith("JPMS/", StringComparison.OrdinalIgnoreCase) ? tag["JPMS/".Length..] : tag;
 
-    private IReadOnlyList<Project> ProjectOptions =>
+    // Every project the signed-in user can see, completed ones included. Use this for LOOKING A
+    // PROJECT UP BY ID (a stored id can point at a completed project whatever the toggle says);
+    // use ProjectOptionsFor for anything a user picks from.
+    private IReadOnlyList<Project> AllProjects =>
         Projects.Current ?? (IReadOnlyList<Project>)Array.Empty<Project>();
+
+    // Completed projects are hidden from every picker on this page by default: triage routes live
+    // work, and a finished job sitting in a long dropdown is mostly a mis-click waiting to happen.
+    // The header checkbox brings them back for the late email that genuinely belongs to one.
+    private bool showCompletedProjects;
+
+    // The options for ONE picker. Always keeps the project that picker has already chosen, even if
+    // it is completed and the toggle is off — otherwise unticking the box would leave a <select>
+    // bound to a value with no matching <option>, which paints as the first option and quietly
+    // changes the project the user is about to file against.
+    private IReadOnlyList<Project> ProjectOptionsFor(string? selectedProjectId) =>
+        AllProjects
+            .Where(project =>
+                showCompletedProjects
+                || project.Stage != ProjectStage.Completed
+                || (!string.IsNullOrWhiteSpace(selectedProjectId)
+                    && string.Equals(project.ProjectId, selectedProjectId, StringComparison.OrdinalIgnoreCase)))
+            .ToList();
+
+    // How many completed projects the toggle is currently holding back — so the label says what
+    // ticking it would actually do rather than offering an empty gesture. Zero once the box is
+    // ticked (nothing is hidden any more) and zero before the project list lands, which is also
+    // why the label needs no load gate: a count that isn't known yet simply doesn't render.
+    private int HiddenCompletedCount =>
+        showCompletedProjects
+            ? 0
+            : AllProjects.Count(project => project.Stage == ProjectStage.Completed);
 
     // The loaded records for the chosen type + project (empty until both are chosen and the load runs).
     private IReadOnlyList<LinkableRecord> ProjectRecords() => linkRecords;

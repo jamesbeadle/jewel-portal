@@ -1,5 +1,6 @@
 @using Jewel.JPMS.Contracts.Todos
 @inject ITodoStore Todos
+@inject SessionService Session
 @inject Jewel.JPMS.Features.Projects.ProjectListReadModel Projects
 
 @*
@@ -72,11 +73,15 @@
 <TodoDetailModal Item="@selected" Busy="@busy" Error="@(selected is null ? null : error)"
                  ScopeLabel="@(selected is null ? null : ScopeLabel(selected))"
                  CanComplete="true" CanDelete="false"
+                 CanReassign="@CanManage" AssigneeOptions="@assigneeOptions"
                  OnClose="() => selected = null"
-                 OnToggleComplete="Complete" />
+                 OnToggleComplete="Complete" OnReassign="Reassign" />
 
 @code {
     private IReadOnlyList<TodoItem> openItems = Array.Empty<TodoItem>();
+    // The role pool for the detail modal's reassign picker — fetched only for users inside the
+    // manage gate, who are the only ones offered the control.
+    private IReadOnlyList<SearchSelect.Option> assigneeOptions = Array.Empty<SearchSelect.Option>();
     private bool loading = true;
     private bool busy;
     private string? error;
@@ -86,11 +91,30 @@
     // where it reappears under Done.
     private TodoItem? selected;
 
+    // Mirrors the API's TodoRoles.AllowedToManageTodos gate: directors, project managers, site
+    // managers and accounts (administrators carry every role). Everyone else can tick their own
+    // items off here but not hand them on.
+    private bool CanManage =>
+        Session.AvailableRoles.Any(role => role is Role.Admin or Role.ManagingDirector or Role.ProjectManager
+            or Role.SiteManager or Role.Accounts);
+
     protected override async Task OnInitializedAsync()
     {
         await LoadAsync();
         // Project labels for the modal's scope line — a failed load degrades the label, never the list.
         try { if (Projects.Current is null) await Projects.RefreshAsync(CancellationToken.None); } catch { }
+        // A failed load leaves the reassign picker with no options, which hides the control — the
+        // panel's own job (read and tick off) is untouched.
+        if (CanManage)
+        {
+            try
+            {
+                assigneeOptions = (await Todos.ListAssignableRolesAsync())
+                    .Select(role => new SearchSelect.Option(((int)role).ToString(), role.DisplayName()))
+                    .ToList();
+            }
+            catch { }
+        }
     }
 
     private async Task LoadAsync()
@@ -120,6 +144,33 @@
                 IsComplete: true));
             openItems = openItems.Where(open => open.TodoItemId != item.TodoItemId).ToList();
             selected = null;
+        }
+        catch (CommandFailedException ex) { error = ex.Message; }
+        catch { error = "That action didn't complete. Please try again."; }
+        finally { busy = false; }
+    }
+
+    // Hand the item to a different role. This panel is "items assigned to MY role", so passing one
+    // on usually means it leaves the panel — reload and re-find, and close the modal when it has
+    // gone rather than leaving a record on screen that is no longer this reader's.
+    private async Task Reassign(Role? role)
+    {
+        if (busy || selected is null) return;
+        var item = selected;
+        if (role == item.AssigneeRole) return;
+        error = null;
+        try
+        {
+            busy = true;
+            await Todos.UpdateAsync(new UpdateTodoItem(
+                item.TodoItemId,
+                item.Title,
+                NullIfBlank(item.Notes),
+                role,
+                item.DueAt,
+                item.IsComplete));
+            openItems = (await Todos.ListMineAsync()).Where(open => !open.IsComplete).ToList();
+            selected = openItems.FirstOrDefault(open => open.TodoItemId == item.TodoItemId);
         }
         catch (CommandFailedException ex) { error = ex.Message; }
         catch { error = "That action didn't complete. Please try again."; }

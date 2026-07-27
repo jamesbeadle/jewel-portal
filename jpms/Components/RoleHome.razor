@@ -137,7 +137,7 @@
     private bool ShowMyTodos =>
         Role is Role.ManagingDirector or Role.FinanceDirector or Role.ProjectManager
             or Role.QuantitySurveyor or Role.SiteManager or Role.HealthSafetyOfficer
-            or Role.OfficeComplianceCoordinator;
+            or Role.OfficeComplianceCoordinator or Role.Accounts;
 
     // Whoever chases or answers RFIs: the PM owns the change layer, the director watches it, the
     // QS prices what comes out of it, and the architect is usually the one being waited on.
@@ -193,8 +193,9 @@
     // ---- Navigation cards -------------------------------------------------------------------------
 
     // One card per visible folder, landing on the folder's first visible row (project-scoped rows
-    // resolve against the last-viewed project). Reads the same catalog as the sidebar
-    // (DesktopNavigation.FoldersFor) so the two can never drift apart.
+    // resolve against the last-viewed project), then one card per folderless row. Reads the same
+    // catalog as the sidebar (DesktopNavigation.FoldersFor / StandaloneItemsFor) so the two can
+    // never drift apart — and so a row that leaves the folders keeps its place here.
     private IEnumerable<(string Label, string IconKey, string Href)> Destinations
     {
         get
@@ -210,11 +211,19 @@
                 {
                     yield return (item.Label, item.Href, item.ResolveHref(projectId));
                 }
-                yield break;
             }
-            foreach (var folder in folders)
+            else
             {
-                yield return (folder.Label, folder.IconKey, folder.Items[0].ResolveHref(projectId));
+                foreach (var folder in folders)
+                {
+                    yield return (folder.Label, folder.IconKey, folder.Items[0].ResolveHref(projectId));
+                }
+            }
+            // Folderless rows come last, as themselves — whole-company destinations, so there is
+            // no folder card they could sit behind (SidebarFolders.Standalone).
+            foreach (var item in DesktopNavigation.StandaloneItemsFor(Role))
+            {
+                yield return (item.Label, item.Href, item.ResolveHref(projectId));
             }
         }
     }
@@ -241,6 +250,7 @@
         Role.SiteManager => "Today on site, and anything holding the work up.",
         Role.HealthSafetyOfficer => "Open actions and anything due for inspection.",
         Role.OfficeComplianceCoordinator => "Paperwork that is about to lapse.",
+        Role.Accounts => "The accounts work waiting on you.",
         Role.Architect => "The requests waiting on your response.",
         Role.Client => "Where your project has got to.",
         Role.Foreman or Role.SiteOperative => "Sign in, log your hours, flag anything wrong.",

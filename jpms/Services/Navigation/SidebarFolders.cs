@@ -8,7 +8,8 @@ namespace Jewel.JPMS.Services.Navigation;
 /// who the correspondence is with (Client, Subcontractor, Internal), then the job (Project),
 /// then the money (Financials); the people directory lives under Internal. Folders mix scopes
 /// deliberately — project-scoped rows ("/projects/{project}/…" templates) and company rows sit
-/// side by side where the work does (e.g. Triage and Workers live with Labour under Internal).
+/// side by side where the work does (e.g. Workers lives with Labour under Internal). A row that
+/// belongs to no project at all belongs to no folder either: see SidebarFolders.Standalone.
 /// </summary>
 public enum SidebarFolder
 {
@@ -79,31 +80,27 @@ public static class SidebarFolders
                     DesktopNavigation.ProjectRoles)
             }),
 
-        // ---- Internal: the company's own machinery — the triage router, the master to-do
-        // list, labour on site and the worker registry, the audit register, and the people
-        // directory. ----
+        // ---- Internal: the company's own machinery — the master to-do list, labour on site and
+        // the worker registry, the audit register, and the people directory. ----
         new SidebarFolderInfo(
             SidebarFolder.Internal,
             "Internal",
             "#internal",
             new[]
             {
-                // The mailbox intake queue — the router for ALL correspondence, not internal
-                // mail only; it sits here because triaging is internal work. Mirrors the API's
-                // TriageRoles gate.
-                new SidebarRow(new NavigationItem("Triage", "/requests/triage"),
-                    DesktopNavigation.TriageRoles),
                 // The master to-do list: all projects plus company-wide items, with a project
-                // filter (revived page).
+                // filter (revived page). TodoListRoles, not ProjectRoles — Accounts holds no
+                // project rows but this is the page its work lives on.
                 new SidebarRow(new NavigationItem("Todo", "/todos"),
-                    DesktopNavigation.ProjectRoles),
+                    DesktopNavigation.TodoListRoles),
                 new SidebarRow(new NavigationItem("Labour", "/projects/{project}/labour"),
                     DesktopNavigation.ProjectRoles),
                 // Mirrors the API's labour registry authorisation (LabourRoleSets.ManageWorkers).
                 new SidebarRow(new NavigationItem("Workers", "/labour/workers"),
                     DesktopNavigation.WorkerRegistryRoles),
                 // The append-only audit register (new page) — who routed, linked and filed what.
-                // Same gate as Triage: the people who make routing decisions review them.
+                // Same gate as Triage (Standalone below): the people who make routing decisions
+                // review them.
                 new SidebarRow(new NavigationItem("Audit Trail", "/audit"),
                     DesktopNavigation.TriageRoles),
                 // What the assistant has done, on whose behalf, and what it cost. Directors only —
@@ -169,5 +166,18 @@ public static class SidebarFolders
                 new SidebarRow(new NavigationItem("Cost Codes & Rates", "/cost-codes", new[] { "/rate-library" }),
                     DesktopNavigation.FinanceRoles)
             })
+    };
+
+    /// <summary>Rows that belong to no folder — whole-company destinations that answer to no one
+    /// project and no one workspace. They render as top-level links at the FOOT of the sidebar,
+    /// below every folder, because the shape says what a folder cannot: these sit outside whatever
+    /// the project picker has selected. Gated per row exactly like folder rows.</summary>
+    public static readonly IReadOnlyList<SidebarRow> Standalone = new[]
+    {
+        // The mailbox intake queue — the router for ALL correspondence across EVERY project, and
+        // the reason it is not a folder row: under Internal it read as this project's internal
+        // work, which it never was. Mirrors the API's TriageRoles gate.
+        new SidebarRow(new NavigationItem("Triage", "/requests/triage"),
+            DesktopNavigation.TriageRoles)
     };
 }

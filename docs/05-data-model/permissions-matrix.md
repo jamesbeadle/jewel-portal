@@ -19,6 +19,16 @@ Coarse-grained matrix of who is responsible for what across the ten workflows. P
 | P09 | Client / Homeowner |
 | P10 | Subcontractor |
 | P11 | Foreman / Site Team |
+| P13 | Accounts |
+
+**P13 Accounts** was added 2026-07-27 so accounts-based to-dos have an assignee of their own
+instead of everything landing on the Finance Director. It is deliberately narrower than P02: it
+sits in `JpmsRoleSets.AllInternal` (so it reads the to-dos assigned to it, and may raise and
+assign to-dos via `TodoRoles.AllowedToManageTodos`), but it is **not** in `CommercialTeam` — no
+cashflow, Xero or ledger detail — and not in any director gate, including
+`TodoRoles.AllowedToSeeAllTodos`. It holds no project rows in the sidebar; the master To-do list
+is its one page. It is absent from the matrix below because it owns no workflow — its work arrives
+as to-do items raised elsewhere. (P12, Site Operative, is likewise absent, for the same reason.)
 
 ## Matrix
 

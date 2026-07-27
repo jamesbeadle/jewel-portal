@@ -94,6 +94,12 @@ public static class VariationsRouteRegistration
             new CommandRoute("POST", "/api/variation-orders/{voId}/status",
                 command => $"/api/variation-orders/{((SetVariationOrderStatus)command).VariationOrderId}/status"));
 
+        // Retitle — a wording correction on the record, allowed at every stage. Nothing already
+        // written downstream (valuation lines, CVR accruals) is rewritten.
+        commands.Register<RenameVariationOrder, VariationOrder>(
+            new CommandRoute("POST", "/api/variation-orders/{voId}/title",
+                command => $"/api/variation-orders/{((RenameVariationOrder)command).VariationOrderId}/title"));
+
         // Delete a non-approved variation order (cascades its bid-package tender data).
         commands.Register<DeleteVariationOrder, Acknowledgement>(
             new CommandRoute("DELETE", "/api/variation-orders/{voId}",

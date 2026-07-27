@@ -110,6 +110,20 @@ public sealed class ReplyInThreadFromMessageHandler : ICommandHandler<ReplyInThr
                 "mailbox connection failed — check and try again.");
         }
 
+        // The reply is staged, so the ball has moved: the request the triage created is a General
+        // container raised at Needs action (an email arriving IS ours to act on), and drafting the
+        // answer is that action being taken. It moves to Open — with the correspondent, awaiting
+        // their response — exactly as the two document-draft paths do. The team sets it back to
+        // Needs action by hand if the draft is never sent. Only Needs action moves, so a re-triage
+        // can never rewind a request that has already moved on.
+        var raised = await context.Requests.FirstOrDefaultAsync(r => r.RequestId == request.RequestId, cancellationToken);
+        if (raised is not null && (RequestStatus)raised.Status == RequestStatus.NeedsAction)
+        {
+            raised.Status = (int)RequestStatus.Open;
+            await context.SaveChangesAsync(cancellationToken);
+            request = request with { Status = RequestStatus.Open };
+        }
+
         return new ReplyInThreadOutcome(
             request,
             new RequestEmailDraft(request.RequestId, created.Subject, created.To, created.WebLink, Cc: created.Cc));
