@@ -44,26 +44,26 @@ public enum AiTurnStatus
     NeedsContinue = 3
 }
 
-/// <summary>One field of a form the user currently has open.</summary>
-public sealed record AiFormField(
-    string Name,
-    string Label,
-    /// <summary>text | number | money | date | select | textarea — how the value should be shaped.</summary>
-    string Kind,
-    string? Value,
-    bool Required,
-    /// <summary>For a select: the values that will be accepted. Empty otherwise.</summary>
-    IReadOnlyList<string> Options);
-
 /// <summary>
-/// A form the user has open in the middle column. Sent by the client so the assistant can help
-/// complete it — the values it proposes go back into that same dialog, which the user then submits
-/// themselves. The assistant never submits a form.
+/// The task the user and the assistant are doing together in a dialog beside the chat — the client
+/// side of this is <c>AiTaskState</c> / <c>AiTask</c>, and <see cref="ModalKey"/> names a
+/// <c>ModalCatalog</c> entry.
+///
+/// <para><see cref="DraftJson"/> is the dialog's field values as they stand right now, sent with
+/// every turn so the model always sees the user's own edits. It crosses as JSON on purpose: the page
+/// that owns the dialog owns its shape, and the moment this record knows what a variation looks like
+/// the mechanism stops being reusable.</para>
 /// </summary>
-public sealed record AiFormSnapshot(
-    string FormKey,
-    string Title,
-    IReadOnlyList<AiFormField> Fields);
+public sealed record AiTaskScope(
+    /// <summary>Also the conversation's CapabilityKey, e.g. "variation-draft".</summary>
+    string TaskKey,
+    /// <summary>A ModalCatalog key, e.g. "variation_draft".</summary>
+    string ModalKey,
+    string? RecordType,
+    string? RecordId,
+    /// <summary>What the user reads the record as — "RFI-049". What the model should say out loud.</summary>
+    string? RecordReference,
+    string? DraftJson);
 
 /// <summary>Where the user is when they send a message. Assembled by the client from the route.</summary>
 public sealed record AiScope(
@@ -77,10 +77,11 @@ public sealed record AiScope(
     /// (every page and endpoint gates itself), so client-supplied is acceptable here and nowhere else.
     /// </summary>
     string? SiteMap = null,
-    AiFormSnapshot? ActiveForm = null,
     /// <summary>The kind of record the route is showing — "variation", "request". Null off a record page.</summary>
     string? RecordType = null,
-    string? RecordId = null);
+    string? RecordId = null,
+    /// <summary>Set when a task dialog is open beside the chat. Null for an ordinary conversation.</summary>
+    AiTaskScope? Task = null);
 
 /// <summary>
 /// One hop, not one turn. A turn is a sequence of hops the client pumps until
