@@ -17,6 +17,9 @@ public static class AiRouteRegistration
 
         commands.Register<SendAiMessage, AiTurnResult>(
             CommandRoute.Post("/api/ai/messages"));
+
+        commands.Register<ContinueAiTurn, AiTurnResult>(
+            CommandRoute.Post("/api/ai/turn/continue"));
     }
 
     private static string BuildAgentActivityPath(object query)

@@ -23,54 +23,48 @@ public sealed record AiChatMessage(
 /// </summary>
 public sealed record AiUiAction(string Tool, string ArgumentsJson);
 
+/// <summary>
+/// One thing the assistant did during a hop, phrased for a human watching the panel.
+///
+/// <para>This is what replaces streaming. We do not get a token stream from the API, but we always
+/// know which tool we are about to call and why — so the panel says "Looking up V72" rather than
+/// "Thinking…" for twenty seconds.</para>
+/// </summary>
+public sealed record AiStep(string Label, string Tool, bool Ok);
+
 public enum AiTurnStatus
 {
+    /// <summary>The assistant has finished. Nothing more to send.</summary>
     Complete = 0,
-    /// <summary>The step budget or time budget ran out before the model finished. The reply is
-    /// what it had; the user can ask it to carry on.</summary>
+    /// <summary>The step budget or time budget ran out. The reply is what it had.</summary>
     Truncated = 1,
-    /// <summary>No Anthropic key is configured. The panel says so rather than failing silently.</summary>
-    Unavailable = 2
+    /// <summary>No Anthropic key, or the API could not be reached.</summary>
+    Unavailable = 2,
+    /// <summary>Tools ran and the model needs another hop. The client calls continue.</summary>
+    NeedsContinue = 3
 }
-
-/// <summary>
-/// A task the user has under way in a dialog open beside the chat — the assistant and the user
-/// working on one document together rather than talking about it.
-///
-/// <para><see cref="DraftJson"/> is the dialog's field values AS THEY STAND RIGHT NOW, sent with
-/// every turn. It is rendered into the system prompt rather than the transcript, deliberately: the
-/// prompt is rebuilt from scratch each turn and never persisted, so the model always sees the
-/// current values and never accumulates a pile of stale ones to disagree with.</para>
-///
-/// <para>Client-supplied and therefore untrusted. The server re-checks the dialog against the
-/// caller's real roles before it renders any of this, and the contents reach the prompt clearly
-/// labelled as data on the user's own screen — never as instructions, and never as a tool
-/// argument.</para>
-/// </summary>
-public sealed record AiTaskScope(
-    /// <summary>Also the conversation's CapabilityKey, e.g. "variation-draft".</summary>
-    string TaskKey,
-    /// <summary>A ModalCatalog key, e.g. "variation_draft".</summary>
-    string ModalKey,
-    string? RecordType,
-    string? RecordId,
-    /// <summary>What the user reads the record as — "RFI-049". What the model should say out loud.</summary>
-    string? RecordReference,
-    string? DraftJson);
 
 /// <summary>Where the user is when they send a message. Assembled by the client from the route.</summary>
 public sealed record AiScope(
     string? ProjectId,
     string? Route,
-    string? PageLabel,
-    /// <summary>Defaulted, so the plain three-argument construction sites keep working.</summary>
-    AiTaskScope? Task = null);
+    string? PageLabel);
 
+/// <summary>
+/// One hop, not one turn. A turn is a sequence of hops the client pumps until
+/// <see cref="Status"/> stops being <see cref="AiTurnStatus.NeedsContinue"/>.
+/// </summary>
 public sealed record AiTurnResult(
     string ConversationId,
     AiTurnStatus Status,
-    /// <summary>Only the messages produced by this turn — the client appends them.</summary>
+    /// <summary>Messages produced by this hop only — the client appends them.</summary>
     IReadOnlyList<AiChatMessage> NewMessages,
     IReadOnlyList<AiUiAction> UiActions,
-    /// <summary>Tool names called, in order. Rendered in the panel so the work is visible.</summary>
-    IReadOnlyList<string> ToolsUsed);
+    /// <summary>What happened in this hop, in order, for the live status line.</summary>
+    IReadOnlyList<AiStep> Steps,
+    /// <summary>Hops left in the budget. Zero means the next one will be the last.</summary>
+    int StepsRemaining)
+{
+    /// <summary>The label to show beside the pulsing jewel while the next hop runs.</summary>
+    public string? LatestLabel => Steps.Count > 0 ? Steps[^1].Label : null;
+}

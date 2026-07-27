@@ -4,7 +4,6 @@
 @using Jewel.JPMS.Features.Projects
 @inject SessionService Session
 @inject ChatPanelState Chat
-@inject AiTaskState AiTasks
 @inject NavigationManager Nav
 @inject ProjectListReadModel Projects
 @inject ICommandSender Commands
@@ -17,11 +16,6 @@
 
     The conversation lives on the SERVER. This component sends one message and the scope it was sent
     from; it never sends history. See docs/ai/00-agent-architecture.md §3.
-
-    It also drives TASKS: a page opens a registered dialog, starts an AiTask, and this panel runs the
-    conversation that fills it in. The dialog's live contents ride along with every turn and the
-    assistant's proposals come back as update_open_modal actions. Nothing here writes to JPMS — the
-    user presses the dialog's own button. See docs/ai/00-agent-architecture.md §5.
 *@
 
 @if (CanUseAssistant)
@@ -52,10 +46,8 @@
                     <div class="shrink-0 flex items-center gap-1">
                         @if (Chat.HasAcknowledgedCost && messages.Count > 0)
                         {
-                            @* Disabled mid-turn: clearing the transcript while a reply is in flight
-                               lands the old conversation's messages, and its id, in the new chat. *@
-                            <button type="button" @onclick="StartNewChat" title="New chat" aria-label="New chat" disabled="@busy"
-                                    class="inline-flex items-center justify-center w-8 h-8 rounded-md text-content-subtle hover:text-content hover:bg-surface-raised disabled:opacity-40">
+                            <button type="button" @onclick="StartNewChat" title="New chat" aria-label="New chat"
+                                    class="inline-flex items-center justify-center w-8 h-8 rounded-md text-content-subtle hover:text-content hover:bg-surface-raised">
                                 <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
                                      stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>
                             </button>
@@ -68,23 +60,6 @@
                     </div>
                 </div>
             </header>
-
-            @if (AiTasks.Active is { } activeTask)
-            {
-                @* The task banner. Not a LoadGate — nothing here is loading; this says what the
-                   conversation is FOR, so a panel full of variation talk is never a mystery. *@
-                <div class="shrink-0 flex items-start gap-2 px-4 py-2 border-b border-line bg-accent/5">
-                    <span class="grow min-w-0">
-                        <span class="block eyebrow text-accent">Working on</span>
-                        <span class="block text-xs leading-snug text-content-muted truncate"
-                              title="@activeTask.BannerLabel">@activeTask.BannerLabel</span>
-                    </span>
-                    <button type="button" @onclick="EndTask" title="Stop working on this"
-                            class="shrink-0 text-[11px] text-content-subtle hover:text-content underline underline-offset-2">
-                        Done
-                    </button>
-                </div>
-            }
 
             @if (!Chat.HasAcknowledgedCost)
             {
@@ -113,27 +88,9 @@
                                     <li class="flex gap-2"><span class="text-content-faint" aria-hidden="true">&mdash;</span>
                                         Having the panel open is free. Each message you send is not.</li>
                                 </ul>
-
-                                @if (AiTasks.Active is { } pending)
-                                {
-                                    @* The whole point of the gate, said in the terms of the thing they
-                                       just clicked: this is where the RFI and its emails leave JPMS.
-                                       Nothing has been sent yet and nothing will be if they decline. *@
-                                    <div class="rounded-lg border border-line bg-surface px-3 py-2 mb-3">
-                                        <p class="text-xs leading-relaxed text-content-muted">
-                                            <span class="text-content font-medium">@pending.BannerLabel.</span>
-                                            To do it, the assistant will read that record and every email tagged to it,
-                                            and send them to the Claude API. Nothing has been sent yet.
-                                        </p>
-                                        <p class="text-[11px] leading-relaxed text-content-subtle mt-1.5">
-                                            Decline and the form beside this panel still works — you just fill it in
-                                            yourself.
-                                        </p>
-                                    </div>
-                                }
-
                                 <p class="text-[11px] leading-relaxed text-content-subtle">
-                                    Access is limited to the commercial team for this reason.
+                                    Access is limited to administrators, the managing director and the finance
+                                    director for this reason.
                                 </p>
                             </div>
                         </div>
@@ -160,11 +117,8 @@
                     </p>
                 </div>
 
-                @if (messages.Count == 0 && !busy && AiTasks.Active is null)
+                @if (messages.Count == 0 && !busy)
                 {
-                    @* Suppressed during a task: the kick-off turn is on its way, and three prompts
-                       about something else is the panel not paying attention at the exact moment it
-                       was asked to do one specific job. *@
                     <div class="grow overflow-y-auto px-5 py-6 flex flex-col items-center text-center">
                         <span class="w-11 h-11 rounded-xl border border-line bg-surface-raised flex items-center justify-center text-accent mb-3">
                             <ChatIcon Class="w-5 h-5" />
@@ -216,9 +170,7 @@
                                     <span class="jpms-typing-dot jpms-typing-dot-2 w-1.5 h-1.5 rounded-full bg-content-subtle"></span>
                                     <span class="jpms-typing-dot jpms-typing-dot-3 w-1.5 h-1.5 rounded-full bg-content-subtle"></span>
                                 </div>
-                                @* Named, during a task, so a 20-second wait says what it is waiting
-                                   on rather than leaving the user to wonder whether it hung. *@
-                                <span class="mt-1 text-[10px] text-content-faint">@BusyLabel</span>
+                                <span class="mt-1 text-[10px] text-content-faint">@(activityLabel ?? "Thinking…")</span>
                             </div>
                         }
 
@@ -234,10 +186,10 @@
                 <footer class="shrink-0 border-t border-line px-3 py-3">
                     <div class="rounded-xl border border-line bg-surface-field transition focus-within:border-line-strong">
                         <textarea @bind="draft" @bind:event="oninput" rows="2" maxlength="8000" disabled="@busy"
-                                  placeholder="@ComposerPlaceholder" aria-label="Message"
+                                  placeholder="Ask about @ContextLabel…" aria-label="Message"
                                   class="w-full resize-none bg-transparent px-3 pt-2.5 pb-1 text-sm leading-relaxed text-content placeholder:text-content-faint focus:outline-none disabled:opacity-60"></textarea>
                         <div class="flex items-center justify-between gap-2 px-2 pb-2">
-                            <span class="pl-1 text-[10px] text-content-faint">@ComposerFootnote</span>
+                            <span class="pl-1 text-[10px] text-content-faint">Reads the portal; can't change anything yet</span>
                             <button type="button" class="btn-primary px-3 py-1.5" disabled="@CannotSend" @onclick="Send">
                                 <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
                                      stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -262,27 +214,19 @@
     private string? conversationId;
     private string draft = "";
     private bool busy;
+    private string? activityLabel;
     private string? error;
 
     private bool CanUseAssistant =>
         Session.ActiveRole is { } role && DesktopNavigation.CanUseAssistant(role);
 
-    // Widths mirror MainLayout's reserved shell padding and .modal-overlay-chat — change all three
-    // together or the page and the panel will overlap. The slide itself is `chat-panel*` in
-    // Styles/app.tailwind.css.
-    //
-    // The layer moves: a modal overlay is z-50, so while a chat-aware dialog is being worked
-    // alongside the panel the panel has to sit ABOVE it, or the conversation the dialog is being
-    // filled in from would be behind the dim.
+    // Widths mirror MainLayout's reserved shell padding — change the two together or the page and
+    // the panel will overlap. The slide itself is `chat-panel*` in Styles/app.tailwind.css.
     private string PanelClass
     {
         get
         {
-            // Only from md up. Below that the panel is full-bleed, so lifting it above the overlay
-            // would hide the very form it is meant to sit beside — and with the backdrop click
-            // disabled there would be no way back to it. On a phone the modal wins.
-            var layer = Chat.CoexistingModalOpen ? "z-40 md:z-[60]" : "z-40";
-            var baseClass = $"chat-panel fixed top-0 bottom-0 right-0 {layer} "
+            var baseClass = "chat-panel fixed top-0 bottom-0 right-0 z-40 "
                 + "w-full md:w-[400px] lg:w-[440px] md:border-l border-line";
             return Chat.IsOpen ? $"{baseClass} chat-panel-open" : $"{baseClass} chat-panel-closed";
         }
@@ -302,18 +246,6 @@
 
     private IReadOnlyList<string> Suggestions =>
         ChatSuggestions.For(CurrentPath, PageProject?.Reference);
-
-    private string BusyLabel => AiTasks.Active?.BusyLabel ?? "Thinking…";
-
-    private string ComposerPlaceholder => AiTasks.Active is null
-        ? $"Ask about {ContextLabel}…"
-        : "Tell it what to change…";
-
-    // "Can't change anything yet" is true of the portal and false of the form beside the panel. The
-    // second half of the task wording is the part that matters: the assistant never presses anything.
-    private string ComposerFootnote => AiTasks.Active is null
-        ? "Reads the portal; can't change anything yet"
-        : "Fills in the form beside you. You still press the button.";
 
     // The panel's subject: the page in the middle column, named exactly as the header above it
     // names it, prefixed with the project when the page belongs to one.
@@ -349,7 +281,6 @@
     {
         Session.OnChange += HandleSessionChange;
         Chat.OnChange += StateHasChanged;
-        AiTasks.OnChange += HandleTaskChanged;
         Projects.OnChanged += StateHasChanged;
         Nav.LocationChanged += HandleLocationChanged;
         await Chat.EnsureAcknowledgementLoadedAsync();
@@ -367,52 +298,7 @@
 
     private void CloseChat() => Chat.Close();
 
-    private async Task AcknowledgeCost()
-    {
-        await Chat.AcknowledgeCostAsync();
-        // The queued kick-off goes now, and only now. Nothing has reached the Claude API before
-        // this click, which is the whole point of the gate.
-        await TryStartTaskAsync();
-    }
-
-    private void EndTask() => AiTasks.End();
-
-    /// <summary>
-    /// A task started, or ended. Fired by AiTaskState — never by an edit in the dialog, which would
-    /// repaint the panel on every keystroke.
-    /// </summary>
-    private void HandleTaskChanged() => _ = InvokeAsync(async () =>
-    {
-        await TryStartTaskAsync();
-        StateHasChanged();
-    });
-
-    /// <summary>
-    /// Opens the drafting conversation. A task always gets a FRESH conversation: the transcript is
-    /// the account of how this one document came to say what it says (docs/ai §8), and starting it
-    /// clean is also the cheapest possible first turn.
-    ///
-    /// <para>Does nothing until the billed-usage notice has been accepted — the kick-off simply
-    /// stays queued in AiTaskState, and the user fills the form in by hand if they decline. It also
-    /// stands off while a turn is in flight rather than consuming the kick-off and discovering that
-    /// Send() will refuse it: the queue is left intact and Send's own tail retries. Taking it and
-    /// dropping it would leave the dialog open, the banner up, and the assistant permanently idle.
-    /// </para>
-    /// </summary>
-    private async Task TryStartTaskAsync()
-    {
-        if (AiTasks.Active is null) return;
-        if (!Chat.HasAcknowledgedCost) return;
-        if (busy) return;
-
-        // TakePendingKickoff clears as it reads, so this is what makes the send exactly-once.
-        var kickoff = AiTasks.TakePendingKickoff();
-        if (string.IsNullOrWhiteSpace(kickoff)) return;
-
-        StartNewChat();
-        draft = kickoff;
-        await Send();
-    }
+    private Task AcknowledgeCost() => Chat.AcknowledgeCostAsync();
 
     private void StartNewChat()
     {
@@ -429,6 +315,11 @@
         await Send();
     }
 
+    /// <summary>
+    /// Drives the turn. Each hop is one Claude call server-side; we pump until it says it is done,
+    /// showing what it is doing between hops. That is what replaces streaming — we do not get a
+    /// token stream, but we always know which tool was just called and why.
+    /// </summary>
     private async Task Send()
     {
         if (CannotSend) return;
@@ -437,89 +328,88 @@
         draft = "";
         error = null;
         busy = true;
+        activityLabel = null;
         lastToolsUsed = new List<string>();
 
-        // Show the user's own message straight away rather than waiting on the round trip. The
-        // server's copy replaces it when the reply lands, so the id is only ever local.
+        // Show the user's own message straight away rather than waiting on the round trip.
         messages.Add(new AiChatMessage(
             Guid.NewGuid().ToString("N"), AiChatRole.User, text, null, DateTimeOffset.UtcNow));
         StateHasChanged();
 
         try
         {
-            // The task block carries the dialog's contents AS THEY STAND NOW, every turn — so an
-            // edit the user made a second ago is what the model reasons from, not a copy of the
-            // form from three turns back.
             var scope = new AiScope(
                 PageProject?.ProjectId,
                 CurrentPath,
-                PageContext.LabelFor(CurrentPath, Session.ActiveRole),
-                AiTasks.Active is { } task
-                    ? new AiTaskScope(
-                        task.TaskKey, task.ModalKey, task.RecordType,
-                        task.RecordId, task.RecordReference, AiTasks.DraftJson)
-                    : null);
+                PageContext.LabelFor(CurrentPath, Session.ActiveRole));
 
             var result = await Commands.SendAsync(
                 new SendAiMessage(conversationId, text, scope, string.Empty), CancellationToken.None);
 
             conversationId = result.ConversationId;
-            lastToolsUsed = result.ToolsUsed.ToList();
 
-            // Replace the optimistic user turn with the server's, then append the rest. Guarded:
-            // StartNewChat can empty the list while this turn is in flight.
-            if (messages.Count > 0) messages.RemoveAt(messages.Count - 1);
-            messages.AddRange(result.NewMessages);
+            // Hard ceiling on the client side too: the server bounds hops, but a client that trusts
+            // NeedsContinue blindly would spin forever on a bug.
+            for (var hop = 0; hop < 8; hop++)
+            {
+                Apply(result);
+                if (result.Status != AiTurnStatus.NeedsContinue) break;
 
-            foreach (var action in result.UiActions) Apply(action);
+                result = await Commands.SendAsync(
+                    new ContinueAiTurn(conversationId, scope, string.Empty), CancellationToken.None);
+                conversationId = result.ConversationId;
+            }
 
             if (result.Status == AiTurnStatus.Truncated)
                 error = "That answer was cut short — ask me to carry on and I'll pick it up.";
-
-            // No API key, or the Claude call failed. Tell the dialog, so a form that is sitting
-            // blank waiting for a draft fills itself in from the record instead.
-            if (result.Status == AiTurnStatus.Unavailable) AiTasks.ReportAssistantUnavailable();
         }
         catch (Exception ex)
         {
             error = $"Couldn't send that: {ex.Message}";
-            AiTasks.ReportAssistantUnavailable();
         }
         finally
         {
             busy = false;
+            activityLabel = null;
+        }
+    }
+
+    /// <summary>Folds one hop's result into the panel, then repaints so the status line moves.</summary>
+    private void Apply(AiTurnResult result)
+    {
+        foreach (var message in result.NewMessages)
+        {
+            if (message.Role == AiChatRole.User) continue;   // ours is already on screen
+            messages.Add(message);
         }
 
-        // A task started while this turn was in flight left its kick-off queued. Send it now.
-        // Not recursive: TakePendingKickoff has already cleared the queue by the time Send runs
-        // again, so the second pass returns immediately.
-        await TryStartTaskAsync();
+        foreach (var step in result.Steps) lastToolsUsed.Add(step.Tool);
+        foreach (var action in result.UiActions) Apply(action);
+
+        // The last thing it did is the best description of what it is about to do next.
+        activityLabel = result.LatestLabel;
+        StateHasChanged();
     }
 
     /// <summary>
     /// UI tools are the only ones that run in the browser. Nothing security-relevant is asserted
-    /// here — the worst a bad action can do is take the user to a page they can already open, or put
-    /// a wrong word in a form they are looking at and have not submitted.
+    /// here — the worst a bad action can do is take the user to a page they can already open.
     /// </summary>
     private void Apply(AiUiAction action)
     {
-        switch (action.Tool?.ToLowerInvariant())
-        {
-            case "navigate_to": ApplyNavigate(action); break;
-            case "update_open_modal": ApplyModalUpdate(action); break;
-            case "open_modal": ApplyOpenModal(action); break;
-        }
-    }
+        if (!string.Equals(action.Tool, "navigate_to", StringComparison.OrdinalIgnoreCase)) return;
 
-    private void ApplyNavigate(AiUiAction action)
-    {
         try
         {
             using var document = JsonDocument.Parse(
                 string.IsNullOrWhiteSpace(action.ArgumentsJson) ? "{}" : action.ArgumentsJson);
             if (!document.RootElement.TryGetProperty("route", out var routeElement)) return;
 
-            Navigate(routeElement.GetString());
+            var route = routeElement.GetString();
+            // Relative paths only — never let a tool result become an off-site redirect.
+            if (string.IsNullOrWhiteSpace(route) || !route.StartsWith('/') || route.StartsWith("//")) return;
+
+            Nav.NavigateTo(route);
         }
         catch (JsonException)
         {
@@ -527,72 +417,10 @@
         }
     }
 
-    /// <summary>
-    /// The assistant's draft, on its way to the dialog. The arguments ARE the field values, so they
-    /// go straight through: the dialog is the only thing that knows its own shape, and it validates
-    /// and MERGES rather than replacing — a field the assistant did not mention keeps what the user
-    /// typed. Nothing is created; the user still presses the dialog's button.
-    /// </summary>
-    private void ApplyModalUpdate(AiUiAction action)
-    {
-        if (AiTasks.Active is null) return;
-        if (string.IsNullOrWhiteSpace(action.ArgumentsJson)) return;
-        AiTasks.ApplyFromAssistant(action.ArgumentsJson);
-    }
-
-    /// <summary>
-    /// Take the user to the page that owns a registered dialog. The page opens it on arrival — see
-    /// ProjectRequestDetail's pending-task check. Only dialogs in the catalogue, and only ones this
-    /// user's role may open, so the assistant cannot route anybody somewhere they'd be bounced from.
-    /// </summary>
-    private void ApplyOpenModal(AiUiAction action)
-    {
-        if (Session.ActiveRole is not { } role) return;
-
-        try
-        {
-            using var document = JsonDocument.Parse(
-                string.IsNullOrWhiteSpace(action.ArgumentsJson) ? "{}" : action.ArgumentsJson);
-            var root = document.RootElement;
-
-            var modal = ModalCatalog.Find(ReadString(root, "modal_key"));
-            if (modal is null || !ModalCatalog.CanOpen(modal, new[] { role })) return;
-
-            var recordId = ReadString(root, "record_id");
-            if (string.IsNullOrWhiteSpace(recordId)) return;
-
-            var projectId = ReadString(root, "project_id") ?? PageProject?.ProjectId;
-            if (string.IsNullOrWhiteSpace(projectId)) return;
-
-            Navigate(modal.RouteTemplate
-                .Replace("{project}", projectId, StringComparison.Ordinal)
-                .Replace("{record}", recordId, StringComparison.Ordinal)
-                + "?openModal=" + modal.ModalKey);
-        }
-        catch (JsonException)
-        {
-        }
-    }
-
-    private static string? ReadString(JsonElement root, string name) =>
-        root.ValueKind == JsonValueKind.Object
-        && root.TryGetProperty(name, out var value)
-        && value.ValueKind == JsonValueKind.String
-            ? value.GetString()
-            : null;
-
-    private void Navigate(string? route)
-    {
-        // Relative paths only — never let a tool result become an off-site redirect.
-        if (string.IsNullOrWhiteSpace(route) || !route.StartsWith('/') || route.StartsWith("//")) return;
-        Nav.NavigateTo(route);
-    }
-
     public void Dispose()
     {
         Session.OnChange -= HandleSessionChange;
         Chat.OnChange -= StateHasChanged;
-        AiTasks.OnChange -= HandleTaskChanged;
         Projects.OnChanged -= StateHasChanged;
         Nav.LocationChanged -= HandleLocationChanged;
     }

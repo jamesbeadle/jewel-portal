@@ -48,9 +48,16 @@ public static class AiFeatureRegistration
         // gate, because the tool layer filters on the caller's roles, not just their email.
         services.AddScoped<AiCaller>();
 
+        // One hop of a turn. Shared by the first hop and every continuation so they cannot diverge.
+        services.AddScoped<AiTurnRunner>();
+
         services.AddScoped<ICommandHandler<SendAiMessage, AiTurnResult>, SendAiMessageHandler>();
         services.AddScoped<SendAiMessageAuthorisation>();
         services.AddScoped<SendAiMessageValidation>();
+
+        services.AddScoped<ICommandHandler<ContinueAiTurn, AiTurnResult>, ContinueAiTurnHandler>();
+        services.AddScoped<ContinueAiTurnAuthorisation>();
+        services.AddScoped<ContinueAiTurnValidation>();
 
         services.AddScoped<IQueryHandler<ListAiConversation, IReadOnlyList<AiChatMessage>>, ListAiConversationHandler>();
 
