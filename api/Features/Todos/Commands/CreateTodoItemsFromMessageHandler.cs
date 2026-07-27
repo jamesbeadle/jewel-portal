@@ -79,20 +79,28 @@ public sealed class CreateTodoItemsFromMessageHandler : ICommandHandler<CreateTo
                 throw new InvalidOperationException("The email couldn't be tagged to the request. Please try again.");
         }
 
+        // FAN-OUT: a row may name several roles, and each one becomes its own item — same title,
+        // detail and due date, but its own TODO-#### reference, its own tag on this email and its own
+        // tick-box. An internal email that needs the QS to price something and the site manager to
+        // book the access is two to-dos raised in one action, and either can be completed without
+        // closing the other. A row with no roles stays a single unassigned item. Duplicate roles on
+        // one row collapse, so the triager can't accidentally raise the same item twice.
+        var expanded = TodoItemDrafts.FanOutByRole(drafts);
+
         var nextNumber = (await context.TodoItems.MaxAsync(t => (int?)t.Number, cancellationToken) ?? 0) + 1;
 
-        var entities = drafts.Select((draft, index) => new TodoItemEntity
+        var entities = expanded.Select((item, index) => new TodoItemEntity
         {
             TodoItemId = TodosIdentifierFactory.Next(),
             ProjectId = projectId,
             Number = nextNumber + index,
-            Title = Clamp(draft.Title.Trim(), 256),
-            Notes = Clamp(draft.Notes?.Trim() ?? "", 2048),
-            AssigneeRole = (int?)draft.AssigneeRole,
+            Title = Clamp(item.Draft.Title.Trim(), 256),
+            Notes = Clamp(item.Draft.Notes?.Trim() ?? "", 2048),
+            AssigneeRole = (int?)item.AssigneeRole,
             CreatedByEmail = command.CreatedByEmail,
             IsComplete = false,
             CreatedAt = snapshot.ReceivedAt,
-            DueAt = draft.DueAt
+            DueAt = item.Draft.DueAt
         }).ToList();
 
         // Tag the email to every new item first (one "JPMS/TODO-####" category per item, verified by

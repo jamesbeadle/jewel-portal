@@ -13,8 +13,10 @@ public sealed class CreateTodoItemsFromMessageValidation
         if (string.IsNullOrWhiteSpace(command.MessageId)) errors.Add("MessageId is required.");
         if (command.Items is null || command.Items.Count == 0 || command.Items.All(item => string.IsNullOrWhiteSpace(item.Title)))
             errors.Add("At least one to-do item with a title is required.");
+        // A row may name several roles (it fans out into one item per role) — every one of them has
+        // to be in the assignable pool.
         if (command.Items is not null && command.Items.Any(item =>
-                item.AssigneeRole is Role role && !TodoRoles.AssignableAsTodoAssignee.Includes(role)))
+                (item.AssigneeRoles ?? Array.Empty<Role>()).Any(role => !TodoRoles.AssignableAsTodoAssignee.Includes(role))))
             errors.Add("To-do items can't be assigned to that role.");
         if (errors.Count == 0) return ValidationOutcome.Passed;
         return new ValidationOutcome(errors);

@@ -6,7 +6,9 @@ namespace Jewel.JPMS.Contracts.Todos;
 // Create one or more to-do items from a mailbox message at the triage stage. The email (and its
 // thread) is tagged "JPMS/TODO-####" for every item created, so each item reads its linked mail
 // back live by its own tag — the same mechanism as requests and bid packages, and the reason a
-// single email can feed several to-dos. ProjectId null/blank creates GENERAL (company-wide) items
+// single email can feed several to-dos. Each Items row may name SEVERAL assignee roles and fans out
+// into one item per role (see TodoItemDraft), so the number of items created is normally larger than
+// Items.Count. ProjectId null/blank creates GENERAL (company-wide) items
 // that belong to no project — the triage "General to-do" path for company-wide emails.
 // CreatedByEmail is stamped from the signed-in user server-side.
 //

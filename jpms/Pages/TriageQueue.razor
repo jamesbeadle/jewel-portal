@@ -762,7 +762,7 @@ else
                                        holding the assigned role. One row editor serves both. *@
                                     <div class="space-y-4">
                                         <p class="rounded-lg bg-surface-raised border border-line px-3 py-2 text-xs text-content-subtle">
-                                            Each item is numbered TODO-#### and this email is tagged to <span class="font-medium text-content">every item</span> you add here, so one email can feed several to-dos. Choose a project to put the items on its To-do tab, or leave it blank for <span class="font-medium text-content">company-wide</span> items that appear on the To-dos page and the dashboard of everyone holding the assigned role.
+                                            Each item is numbered TODO-#### and this email is tagged to <span class="font-medium text-content">every item</span> you add here, so one email can feed several to-dos. Assign an item to <span class="font-medium text-content">more than one role</span> and it is raised once per role — separate items, each ticked off on its own. Choose a project to put the items on its To-do tab, or leave it blank for <span class="font-medium text-content">company-wide</span> items that appear on the To-dos page and the dashboard of everyone holding the assigned role.
                                         </p>
 
                                         <div>
@@ -823,10 +823,37 @@ else
                                                 <FormField Label="Title" Value="@row.Title" OnChange="v => row.Title = v" Required="true" />
 
                                                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                                    @* Assigned roles: pick as many as the item needs. Each one becomes its
+                                                       own TODO-#### on save (see DoCreateTodos), so two roles here means two
+                                                       independent items rather than one shared between them. Picked roles show
+                                                       as removable chips and drop out of the picker so they can't be added twice. *@
                                                     <div>
-                                                        <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Assigned role</label>
-                                                        <SearchSelect Options="@todoAssigneeOptions" Value="@row.AssigneeRole" ValueChanged="v => row.AssigneeRole = v"
-                                                                      Placeholder="Unassigned" WidthClass="w-full" />
+                                                        <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Assigned roles</label>
+                                                        @if (row.AssigneeRoles.Count > 0)
+                                                        {
+                                                            <div class="flex flex-wrap gap-1 mb-1.5">
+                                                                @foreach (var roleValue in row.AssigneeRoles.ToList())
+                                                                {
+                                                                    var pickedRole = roleValue;
+                                                                    <span class="inline-flex items-center gap-1 rounded-full border border-line bg-surface-raised pl-2 pr-1 py-0.5 text-xs text-content">
+                                                                        @TodoRoleLabel(pickedRole)
+                                                                        <button type="button" title="Remove role"
+                                                                                class="leading-none px-1 text-content-subtle hover:text-negative"
+                                                                                @onclick="() => RemoveTodoRole(row, pickedRole)">&times;</button>
+                                                                    </span>
+                                                                }
+                                                            </div>
+                                                        }
+                                                        @{ var roleOptions = AvailableTodoRoleOptions(row); }
+                                                        <SearchSelect Options="@roleOptions" Value=""
+                                                                      ValueChanged="v => AddTodoRole(row, v)"
+                                                                      Placeholder="@TodoRolePlaceholder(row)"
+                                                                      Disabled="@(roleOptions.Count == 0)"
+                                                                      WidthClass="w-full" />
+                                                        @if (row.AssigneeRoles.Count > 1)
+                                                        {
+                                                            <p class="text-xs text-content-subtle mt-1">Raised as @row.AssigneeRoles.Count separate to-dos, one per role.</p>
+                                                        }
                                                     </div>
                                                     <FormField Label="Due" Value="@row.Due" OnChange="v => row.Due = v" InputType="date" />
                                                 </div>
@@ -1616,8 +1643,11 @@ else
     {
         public string Title { get; set; } = "";
         public string Notes { get; set; } = "";
-        // The assigned ROLE, held as the SearchSelect's string value (the role's int; "" = unassigned).
-        public string AssigneeRole { get; set; } = "";
+        // The assigned ROLES, each held as the SearchSelect's string value (the role's int). Empty =
+        // unassigned. A row with several roles is raised as one to-do PER ROLE — same title, detail
+        // and due date, separate TODO-#### references and separate tick-boxes — so an email that
+        // needs two people to act becomes two items in one triage action.
+        public List<string> AssigneeRoles { get; } = new();
         public string Due { get; set; } = "";
     }
     private List<TodoDraftRow> createTodoRows = new() { new TodoDraftRow() };
@@ -1638,14 +1668,44 @@ else
     // person, so they survive staff changes. Assignment is picker-only.
     private IReadOnlyList<SearchSelect.Option> todoAssigneeOptions = Array.Empty<SearchSelect.Option>();
 
-    private string TodoRowCountLabel
+    // The drafts exactly as they will be posted. Built in one place so the count promised on the
+    // button and the batch DoCreateTodos actually sends can never disagree.
+    private List<TodoItemDraft> CurrentTodoDrafts() => createTodoRows
+        .Where(row => !string.IsNullOrWhiteSpace(row.Title))
+        .Select(row => new TodoItemDraft(
+            row.Title.Trim(),
+            NullIfBlank(row.Notes),
+            ParseTodoRoles(row.AssigneeRoles),
+            ParseDate(row.Due)))
+        .ToList();
+
+    // What the button promises has to be what the server creates, so the count comes from the SAME
+    // fan-out rule the handler runs: a row assigned to two roles is two items, an unassigned row is
+    // still one.
+    private int TodoItemCount => TodoItemDrafts.FanOutByRole(CurrentTodoDrafts()).Count;
+
+    private string TodoRowCountLabel => TodoItemCount == 1 ? "1 to-do item" : $"{TodoItemCount} to-do items";
+
+    // The roles already on a row drop out of its own picker, so the same role can't be added twice
+    // (and the picker disables itself once every assignable role is on the row).
+    private IReadOnlyList<SearchSelect.Option> AvailableTodoRoleOptions(TodoDraftRow row) =>
+        todoAssigneeOptions.Where(option => !row.AssigneeRoles.Contains(option.Value)).ToList();
+
+    private static string TodoRolePlaceholder(TodoDraftRow row) =>
+        row.AssigneeRoles.Count == 0 ? "Unassigned" : "Add another role…";
+
+    private string TodoRoleLabel(string value) =>
+        todoAssigneeOptions.FirstOrDefault(option => option.Value == value)?.Label ?? value;
+
+    // The picker is an ADDER: it is bound to a constant empty Value, so picking an option raises
+    // ValueChanged and then re-renders back to its placeholder, ready for the next role.
+    private void AddTodoRole(TodoDraftRow row, string value)
     {
-        get
-        {
-            var count = createTodoRows.Count(r => !string.IsNullOrWhiteSpace(r.Title));
-            return count == 1 ? "1 to-do item" : $"{count} to-do items";
-        }
+        if (string.IsNullOrWhiteSpace(value) || row.AssigneeRoles.Contains(value)) return;
+        row.AssigneeRoles.Add(value);
     }
+
+    private void RemoveTodoRole(TodoDraftRow row, string value) => row.AssigneeRoles.Remove(value);
 
     private void AddTodoRow() => createTodoRows.Add(new TodoDraftRow());
 
@@ -2411,14 +2471,7 @@ else
     {
         if (selected is null || busy) return;
 
-        var drafts = createTodoRows
-            .Where(row => !string.IsNullOrWhiteSpace(row.Title))
-            .Select(row => new TodoItemDraft(
-                row.Title.Trim(),
-                NullIfBlank(row.Notes),
-                ParseTodoRole(row.AssigneeRole),
-                ParseDate(row.Due)))
-            .ToList();
+        var drafts = CurrentTodoDrafts();
         if (drafts.Count == 0) { actionError = "At least one to-do item needs a title."; return; }
 
         var linkRequestId = string.IsNullOrWhiteSpace(createProjectId) ? null : NullIfBlank(createTodoLinkRequestId);
@@ -2808,9 +2861,14 @@ else
 
     private static string? NullIfBlank(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 
-    // The to-do rows' SearchSelect holds the assigned role as its int-in-a-string value ("" = unassigned).
-    private static Role? ParseTodoRole(string value) =>
-        int.TryParse(value, out var parsed) ? (Role)parsed : null;
+    // The to-do rows' role chips hold each assigned role as its int-in-a-string value. An empty list
+    // means unassigned; the server raises one item per role in the list.
+    private static IReadOnlyList<Role> ParseTodoRoles(IEnumerable<string> values) =>
+        values
+            .Where(value => int.TryParse(value, out _))
+            .Select(value => (Role)int.Parse(value))
+            .Distinct()
+            .ToList();
 
     private static DateTimeOffset? ParseDate(string value) =>
         DateTimeOffset.TryParse(value, out var parsed) ? parsed : null;
