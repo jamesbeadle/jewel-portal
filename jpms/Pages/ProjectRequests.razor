@@ -45,7 +45,7 @@ else
             <div class="flex items-center gap-3">
                 <ExportToExcelButton FileName="Requests register"
                                      Disabled="@(!HasExportableRows)"
-                                     ShowIncludeAllRows="@(statusView != StatusView.All || ActiveSlug != "all")"
+                                     ShowIncludeAllRows="@(Searching || statusView != StatusView.All || ActiveSlug != "all")"
                                      IncludeAllLabel="Include entire register"
                                      BuildWorkbook="BuildExportWorkbook" />
                 <button type="button" class="btn-primary" @onclick="OpenRaiseDialog">Raise request</button>
@@ -140,16 +140,51 @@ else
             }
         </div>
 
-        @if (ShowsRequestRows)
-        {
-            <div class="flex flex-wrap items-center gap-2 mb-5 text-sm">
+        @* The status chips belong to the Requests & RFIs table, so they follow it; the search box
+           sits in the same row but stays for every tab, because it filters both tables below. *@
+        <div class="flex flex-wrap items-center gap-2 mb-5 text-sm">
+            @if (ShowsRequestRows)
+            {
                 @foreach (var option in StatusViews)
                 {
                     <button type="button" class="@StatusViewClass(option)" @onclick="() => statusView = option">
                         @StatusViewLabel(option) · @StatusViewCount(option)
                     </button>
                 }
+            }
+
+            @* Free-text search over everything the register already holds about a record — not just
+               the reference and subject, but the description, the recorded response, both note
+               fields and the official-document sections. Someone who remembers "Worcester Greenstar"
+               but not the RFI number shouldn't have to open records one at a time. The status counts
+               follow the search, so a match sitting under Closed announces itself rather than
+               reading as "nothing found". *@
+            <div class="relative ml-auto w-full sm:w-80">
+                <input type="search" placeholder="@SearchPlaceholder"
+                       class="bg-surface border border-line rounded-lg pl-3 pr-8 py-1.5 text-sm text-content placeholder:text-content-subtle w-full focus:outline-none focus:border-accent"
+                       value="@search" @oninput="OnSearchInput" />
+                @if (Searching)
+                {
+                    <button type="button" title="Clear search"
+                            class="absolute right-2 top-1/2 -translate-y-1/2 text-content-faint hover:text-content-muted text-sm leading-none"
+                            @onclick="ClearSearch">✕</button>
+                }
             </div>
+        </div>
+
+        @if (Searching)
+        {
+            <p class="text-sm text-content-subtle -mt-2 mb-5">
+                @MatchCount match@(MatchCount == 1 ? "" : "es") for “@search.Trim()”
+                <span class="text-content-faint">· searches subject, description, response, notes and drawing references</span>
+                @if (ShowsRequestRows && HiddenByStatusCount > 0)
+                {
+                    <button type="button" class="ml-1 underline underline-offset-4 hover:text-content"
+                            @onclick="() => statusView = StatusView.All">
+                        @HiddenByStatusCount more under another status — show all
+                    </button>
+                }
+            </p>
         }
 
         @if (ShowsRequestRows && CanDraftEmail && SelectedRfis.Count > 0)
@@ -252,7 +287,9 @@ else
             }
             @if (FilteredRecords.Count == 0)
             {
-                <p class="text-sm text-content-subtle italic mb-6">No requests recorded.</p>
+                <p class="text-sm text-content-subtle italic mb-6">
+                    @(Searching ? $"No requests match “{search.Trim()}”." : "No requests recorded.")
+                </p>
             }
             else
             {
@@ -397,11 +434,20 @@ else
                 <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-4">@requestError</p>
             }
 
-            @if (Rows.Count == 0)
+            @if (FilteredRows.Count == 0)
             {
                 <p class="text-sm text-content-subtle italic">
-                    No variations yet. Raise one from an RFQ on one of the requests above, or accept a
-                    subcontractor's variation request.
+                    @if (Searching)
+                    {
+                        <text>No variations match “@search.Trim()”.</text>
+                    }
+                    else
+                    {
+                        <text>
+                            No variations yet. Raise one from an RFQ on one of the requests above, or accept a
+                            subcontractor's variation request.
+                        </text>
+                    }
                 </p>
             }
             else
@@ -425,7 +471,7 @@ else
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-line">
-                            @foreach (var order in Rows)
+                            @foreach (var order in FilteredRows)
                             {
                                 <tr class="hover:bg-surface-raised">
                                     <td class="px-4 py-3 font-mono text-[12px] whitespace-nowrap">
@@ -881,9 +927,109 @@ else
                 StatusView.Closed => KindRecords.Where(r => r.Status is RequestStatus.Closed),
                 _                 => KindRecords
             };
-            return InRegisterOrder(records);
+            return InRegisterOrder(records.Where(MatchesSearch));
         }
     }
+
+    // ---- Free-text search ------------------------------------------------------------------------
+    // The register list already carries every text field the API holds for a request, so searching
+    // the body text costs nothing beyond a string scan — no extra fetch, no new endpoint. Keywords
+    // are ANDed on whitespace (the same behaviour as the project to-do list's search), so each extra
+    // word narrows rather than widens the result.
+    //
+    // Two things are deliberately *not* searched, because neither arrives with the register: the
+    // itemised queries (the list endpoint returns Items as null) and the email conversation (fetched
+    // per record). Searching either would mean one request per row, so they stay a detail-page
+    // concern until there's a server-side search to do it properly.
+
+    private string search = "";
+
+    private bool Searching => !string.IsNullOrWhiteSpace(search);
+
+    private void OnSearchInput(ChangeEventArgs e) => search = e.Value?.ToString() ?? "";
+
+    private void ClearSearch() => search = "";
+
+    private bool MatchesSearch(Request record)
+    {
+        if (!Searching) return true;
+
+        var tokens = search.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        return tokens.All(token =>
+            SearchableText(record).Any(field => field is not null && field.Contains(token, StringComparison.OrdinalIgnoreCase)));
+    }
+
+    // Everything on the record a person might half-remember: how it's referenced, what it says, who
+    // it went to, what came back, and the sections of the official document.
+    private static IEnumerable<string?> SearchableText(Request record)
+    {
+        yield return record.Reference;
+        yield return record.DisplayNumber;
+        yield return record.Title;
+        yield return record.Description;
+        yield return record.RaisedTo;
+        yield return record.DrawingRef;
+        yield return record.RelatedDrawingSpec;
+        yield return record.ResponseText;
+        yield return record.InternalNotes;
+        yield return record.ClientNotes;
+        yield return record.BasisOfQueries;
+        yield return record.ResponseActionRequired;
+        yield return record.ImpactIfLate;
+    }
+
+    // Matches sitting outside the current status view. The register opens on Active, and much of
+    // what anyone searches for is historic — so say how many are hiding rather than showing zero.
+    // Requests only: the variations table has no status filter to hide anything behind.
+    private int HiddenByStatusCount =>
+        !Searching || statusView == StatusView.All
+            ? 0
+            : KindRecords.Count(MatchesSearch) - FilteredRecords.Count;
+
+    // Variations are a different document with a different shape, so they get their own reading of
+    // the same keywords: the reference in both its spellings, the title and description, the cost
+    // code, and the originating request — someone searching "boiler" should find the variation that
+    // priced the boiler RFI even when only the RFI says the word.
+    private bool MatchesSearch(VariationOrder order)
+    {
+        if (!Searching) return true;
+
+        var tokens = search.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        return tokens.All(token =>
+            SearchableText(order).Any(field => field is not null && field.Contains(token, StringComparison.OrdinalIgnoreCase)));
+    }
+
+    private IEnumerable<string?> SearchableText(VariationOrder order)
+    {
+        yield return order.Reference;
+        yield return order.DisplayNumber;
+        yield return order.VariationRef;
+        yield return order.Title;
+        yield return order.Description;
+        yield return order.CostCode;
+
+        // The Request column's own text, so the two tables answer the same search consistently.
+        var source = RequestFor(order);
+        if (source is null) yield break;
+        yield return source.Reference;
+        yield return source.DisplayNumber;
+        yield return source.Title;
+    }
+
+    private IReadOnlyList<VariationOrder> FilteredRows =>
+        Rows.Where(MatchesSearch).ToList();
+
+    // What the search actually turned up on screen, across whichever tables the active tab shows.
+    private int MatchCount =>
+        (ShowsRequestRows ? FilteredRecords.Count : 0) + (ShowsVariationRows ? FilteredRows.Count : 0);
+
+    private string SearchPlaceholder => ActiveSlug switch
+    {
+        "variations" => "Search text in variations…",
+        "general"    => "Search text in requests…",
+        "rfis"       => "Search text in RFIs…",
+        _            => "Search text in the register…"
+    };
 
     // Register reads in reference order, ascending (RFI-001 at the top). The number is
     // parsed rather than string-compared so unpadded or suffixed references (RFI-49,
@@ -911,11 +1057,13 @@ else
         return (raw, int.MaxValue); // unnumbered free text after numbered refs
     }
 
+    // Counts follow the search, so the chips double as "where did my match go" signposting: search
+    // for a boiler RFI closed last month and Active reads 0 while Closed reads 1.
     private int StatusViewCount(StatusView view) => view switch
     {
-        StatusView.Open   => KindRecords.Count(r => r.Status is not RequestStatus.Closed),
-        StatusView.Closed => KindRecords.Count(r => r.Status is RequestStatus.Closed),
-        _                 => KindRecords.Count
+        StatusView.Open   => KindRecords.Count(r => r.Status is not RequestStatus.Closed && MatchesSearch(r)),
+        StatusView.Closed => KindRecords.Count(r => r.Status is RequestStatus.Closed && MatchesSearch(r)),
+        _                 => KindRecords.Count(MatchesSearch)
     };
 
     private static string StatusViewLabel(StatusView view) => view switch
@@ -1197,7 +1345,7 @@ else
     // ---- Excel export ----------------------------------------------------------------------
     // One workbook, one sheet per register currently shown — following the active document-type
     // filter (ShowsRequestRows / ShowsVariationRows), same as the register's on-screen sections.
-    // Ticking "Include entire register" overrides both the document-type and status filters:
+    // Ticking "Include entire register" overrides the document-type, status and search filters:
     // every request (all kinds, open and closed) plus the full Variations sheet — the Kind and
     // Status columns carry the distinctions the on-screen filters make.
 
@@ -1238,7 +1386,8 @@ else
             }
         }
 
-        if ((includeEntireRegister || ShowsVariationRows) && Rows.Count > 0)
+        var variationRows = includeEntireRegister ? Rows : FilteredRows;
+        if ((includeEntireRegister || ShowsVariationRows) && variationRows.Count > 0)
         {
             var sheet = workbook.AddSheet("Variations",
                 new ExcelColumn("Ref"),
@@ -1250,7 +1399,7 @@ else
                 new ExcelColumn("Approved", ExcelFormat.Date),
                 new ExcelColumn("Work order"));
 
-            foreach (var order in Rows)
+            foreach (var order in variationRows)
             {
                 var sourceRequest = RequestFor(order);
                 var issued = IssuedWorkOrdersFor(order);
