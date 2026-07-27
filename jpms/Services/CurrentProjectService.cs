@@ -54,14 +54,16 @@ public sealed class CurrentProjectService
 
     /// <summary>
     /// The project that project-scoped navigation should target: the remembered project while it
-    /// is still active, otherwise the first active project by reference, otherwise whatever was
-    /// remembered (a completed project beats nowhere), otherwise null (no projects loaded yet).
+    /// is still active, otherwise the first active project in the canonical work order (live sites
+    /// before Defects Period before Leads — the same order the side-nav switcher lists, so the
+    /// fallback lands on the top entry the user sees), otherwise whatever was remembered (a
+    /// completed project beats nowhere), otherwise null (no projects loaded yet).
     /// </summary>
     public string? ResolveFor(IReadOnlyList<Project>? projects)
     {
         var active = projects?
             .Where(project => project.Stage != ProjectStage.Completed)
-            .OrderBy(project => project.Reference, StringComparer.OrdinalIgnoreCase)
+            .InWorkOrder()
             .ToList();
         if (active is null || active.Count == 0) return currentProjectId;
         if (currentProjectId is not null

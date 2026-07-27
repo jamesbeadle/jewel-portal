@@ -222,9 +222,11 @@ else
     private bool HasFilter =>
         pathwayFilter is not null || EventTypeFilter is not null || !string.IsNullOrEmpty(projectFilter);
 
+    // Every project, Completed included (the audit trail is history), in the canonical work order
+    // — live sites first, Completed last (ProjectOrdering.InWorkOrder).
     private IReadOnlyList<Project> ProjectOptions =>
         (Projects.Current ?? (IReadOnlyList<Project>)Array.Empty<Project>())
-            .OrderBy(project => project.Reference, StringComparer.OrdinalIgnoreCase)
+            .InWorkOrder()
             .ToList();
 
     protected override async Task OnInitializedAsync()

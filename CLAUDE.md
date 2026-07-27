@@ -69,3 +69,21 @@
 
 - Stores that back synchronous render-time reads (e.g. `ForProject`, `LinesFor`, `PackagesFor`) fetch at most once per key to avoid render → fetch → render loops. Every project tab page must therefore call the store's `Refresh(projectId)` once from `OnInitializedAsync` (never from render) so navigating between tabs revalidates cached data in the background (stale-while-revalidate). Follow this pattern when adding new tabs or stores.
 - The router (`App.razor`) uses `KeyedPageRouteView`, which keys each page by its type + route parameter values. Navigating between two URLs of the same route template (e.g. the project header's prev/next arrows) therefore recreates the page and re-runs `OnInitializedAsync`, so the convention above fires there too — pages never need `OnParametersSetAsync` guards for route-value changes.
+
+## Project ordering (jpms)
+
+- **Every list of projects is in one order: live work first.** `ProjectOrdering.InWorkOrder()`
+  (contracts/Models) sorts by a coarse four-band rank — Pre-Construction/Procurement/Mobilisation/
+  Live Delivery/Close-Out (0) → Defects Period (1) → Lead (2) → Completed (3) — then A–Z by name,
+  then by reference. The bands are deliberately coarse so a project moving from Procurement to
+  Mobilisation does not jump the list mid-build.
+- It is applied **once**, in `ListProjectsVisibleToUserHandler`, so everything reading
+  `ProjectListReadModel` inherits it. Callers that narrow the list (`.Where(Stage != Completed)`)
+  re-apply `.InWorkOrder()` after the filter; nothing sorts projects by its own rule. If a list
+  needs a different order, it needs a reason written next to it.
+- **Completed projects are ordered last, not hidden** — except from the side-nav switcher, the
+  header's prev/next cycle and the finance overview, which are about work in progress. Anywhere
+  costs or history are recoded (Xero allocation, audit trail) the full list stays available.
+- `SearchSelect` already leads its unfiltered list with a blank entry labelled with its
+  `Placeholder`, which *is* the clear/"All …" row. Do not prepend another one — that is what put
+  "All projects" in the Xero allocation filter twice.

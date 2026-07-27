@@ -7,7 +7,15 @@ public sealed record RequestAgentContext(
     string RequestId,
     string Header,
     string Conversation,
-    string IntakeEmails)
+    string IntakeEmails,
+    /// <summary>
+    /// True when at least one email body was cut to fit the caller's budget. Defaulted, so existing
+    /// construction sites are unchanged. It matters because the point of assembling full bodies is
+    /// that a reader can trust it has read everything: telling a model "this is the complete
+    /// correspondence" when it is not produces confident nonsense, and for a priced variation that
+    /// is worse than the question it was trying to avoid.
+    /// </summary>
+    bool Trimmed = false)
 {
     // Flattened prompt-ready form combining every section, for handing to Claude.
     public string ToPromptText()

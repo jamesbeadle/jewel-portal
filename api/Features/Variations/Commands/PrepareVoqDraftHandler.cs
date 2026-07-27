@@ -18,6 +18,10 @@ namespace Jewel.JPMS.Api.Features.Variations.Commands;
 public sealed class PrepareVoqDraftHandler : ICommandHandler<PrepareVoqDraft, VoqDraftProposal>
 {
     // Generous for any real RFI thread; guards the prompt against pathological conversations.
+    // Handed DOWN to the assembler rather than used to slice the assembled text: now that email
+    // bodies are read in full instead of as Graph's 255-character previews, a flat slice here would
+    // drop whole messages and cut the survivor mid-sentence. The assembler spends the same budget
+    // per message, so every one keeps its date, author, subject and attachment names.
     private const int MaxConversationChars = 40_000;
 
     // Storage limits on VariationOrderEntity.
@@ -47,7 +51,8 @@ public sealed class PrepareVoqDraftHandler : ICommandHandler<PrepareVoqDraft, Vo
         if (!claude.IsConfigured)
             return skeleton;
 
-        var agentContext = await assembler.AssembleAsync(command.RequestId, cancellationToken);
+        var agentContext = await assembler.AssembleAsync(
+            command.RequestId, cancellationToken, MaxConversationChars);
         if (agentContext is null)
             return skeleton;
 
@@ -103,9 +108,9 @@ public sealed class PrepareVoqDraftHandler : ICommandHandler<PrepareVoqDraft, Vo
 
     private static string BuildUserPrompt(string header, string conversation)
     {
-        var thread = conversation.Length > MaxConversationChars
-            ? conversation[..MaxConversationChars]
-            : conversation;
+        // Already budgeted per message by the assembler — slicing again here is what used to cut a
+        // thread mid-sentence.
+        var thread = conversation;
 
         var sb = new StringBuilder();
         sb.AppendLine("RFI:");

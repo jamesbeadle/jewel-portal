@@ -135,12 +135,12 @@ else
 
     private record Figures(decimal Sales, decimal Claimed, decimal TargetCost, decimal ActualCost, decimal UnderOver);
 
-    // The overview covers active (non-Completed) projects, ordered by reference — the same cycle
-    // as the project header's switcher and prev/next arrows.
+    // The overview covers active (non-Completed) projects in the canonical work order
+    // (ProjectOrdering.InWorkOrder) — the same cycle as the project header's switcher and arrows.
     private List<Project> ActiveProjects =>
         (Projects.Current ?? (IReadOnlyList<Project>)Array.Empty<Project>())
             .Where(project => project.Stage != ProjectStage.Completed)
-            .OrderBy(project => project.Reference, StringComparer.OrdinalIgnoreCase)
+            .InWorkOrder()
             .ToList();
 
     private Figures FiguresFor(string projectId)

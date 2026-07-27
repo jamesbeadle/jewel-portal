@@ -25,6 +25,15 @@ public sealed class XeroLedgerLineEntity
     [MaxLength(1024)]     public string? Description { get; set; }
     public decimal Net { get; set; }
     public decimal Tax { get; set; }
+
+    // The bill's payment state. Xero holds these per INVOICE, so like InvoiceStatus above they
+    // are repeated on every stored line of the bill: InvoiceTotal is the gross as Xero states
+    // it, AmountDue what is still outstanding on it. Together they say how much of the bill has
+    // been settled, which is what turns a work-order link into a paid position (XeroPaymentMaths).
+    // Both read 0 on rows synced before the AddXeroLinePaymentState migration; InvoiceStatus is
+    // the fallback for those until the next sync fills them.
+    public decimal InvoiceTotal { get; set; }
+    public decimal AmountDue { get; set; }
     [MaxLength(32)]       public string? AccountCode { get; set; }
     [MaxLength(256)]      public string? AccountName { get; set; }
 

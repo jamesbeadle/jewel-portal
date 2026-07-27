@@ -1,6 +1,8 @@
 using Jewel.JPMS.Api.Cqrs;
 using Jewel.JPMS.Api.Data;
+using Jewel.JPMS.Api.Features.Commercial;
 using Jewel.JPMS.Contracts.Procurement;
+using Jewel.JPMS.Contracts.Xero;
 using Jewel.JPMS.Models;
 using Microsoft.EntityFrameworkCore;
 
@@ -33,13 +35,48 @@ public sealed class ListProjectWorkOrdersHandler
             .Where(sub => subcontractorIds.Contains(sub.SubcontractorId))
             .ToDictionaryAsync(sub => sub.SubcontractorId, sub => sub.CompanyName, cancellationToken);
 
-        return orders.Select(order => new ProjectWorkOrderDetail(
-                order.ToModel(),
-                namesById.TryGetValue(order.SubcontractorId, out var name) ? name : "(unknown supplier)",
-                linesByOrder.TryGetValue(order.WorkOrderId, out var lines)
-                    ? lines.OrderBy(line => line.SortOrder).Select(line => line.ToModel()).ToList()
-                    : new List<WorkOrderLine>()))
+        // What each order has actually been paid, from the settled Xero bills linked to it. The
+        // stored per-line PaidToDate is only the Buildertrend opening balance and stands in for
+        // orders the ledger has nothing linked against — see WorkOrderPaidPositions for why the
+        // two are never added together. Every consumer of this query (the Work Orders tab and its
+        // export, the printed purchase order, the cost-centre drill-down) reads the line figure,
+        // so restating it here is what makes them all agree with Xero.
+        var paidByOrder = await WorkOrderPaidPositions.ForProjectAsync(context, query.ProjectId, cancellationToken);
+
+        return orders.Select(order =>
+            {
+                var lines = linesByOrder.TryGetValue(order.WorkOrderId, out var stored)
+                    ? stored.OrderBy(line => line.SortOrder).Select(line => line.ToModel()).ToList()
+                    : new List<WorkOrderLine>();
+
+                return new ProjectWorkOrderDetail(
+                    order.ToModel(),
+                    namesById.TryGetValue(order.SubcontractorId, out var name) ? name : "(unknown supplier)",
+                    paidByOrder.TryGetValue(order.WorkOrderId, out var paid)
+                        ? SpreadPaidAcrossLines(lines, paid)
+                        : lines);
+            })
             .ToList()
             .AsReadOnly();
+    }
+
+    /// <summary>
+    /// Restates each line's PaidToDate as its share of the order's paid position. Links are held
+    /// per ORDER and the Work Orders tab totals per LINE, so the amount is spread pro-rata by line
+    /// value with the last line absorbing the rounding remainder — the same penny-safe split the
+    /// re-code uses, so the lines always sum back to the order's paid position exactly. Where the
+    /// lines carry no value between them there is nothing to weight by, and the whole amount sits
+    /// on the first line rather than vanishing out of the tab's totals.
+    /// </summary>
+    private static List<WorkOrderLine> SpreadPaidAcrossLines(List<WorkOrderLine> lines, decimal paid)
+    {
+        if (lines.Count == 0) return lines;
+
+        var weights = lines.Select(line => line.LineTotal).ToList();
+        if (weights.Sum() == 0m)
+            return lines.Select((line, index) => line with { PaidToDate = index == 0 ? paid : 0m }).ToList();
+
+        var shares = XeroSplitMaths.ProportionalShares(paid, weights);
+        return lines.Select((line, index) => line with { PaidToDate = shares[index] }).ToList();
     }
 }

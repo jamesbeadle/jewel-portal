@@ -27,8 +27,14 @@ public static class AiTranscript
     /// <summary>
     /// The ceiling on a replayed transcript. Well inside the model's context window; the real point
     /// is the bill and the per-turn latency, both of which scale with what is sent again.
+    ///
+    /// <para>Sized so one full get_request_context result plus a long drafting conversation fits
+    /// without stubbing. That result can run past AiToolCatalogue.MaxConversationChars (50k),
+    /// because the assembler holds every message to a floor rather than dropping any — so the
+    /// headroom here is deliberate. Only ONE copy of that tool's result is ever replayed (see
+    /// ReplayLatestOnly), so it does not compound across turns.</para>
     /// </summary>
-    private const int MaxTranscriptChars = 60_000;
+    private const int MaxTranscriptChars = 110_000;
 
     public static List<object> Build(IReadOnlyList<AiConversationMessageEntity> rows)
     {

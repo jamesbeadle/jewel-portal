@@ -43,6 +43,24 @@ public sealed class ListWorkOrderInvoiceSummariesHandler
             .Where(sub => subcontractorIds.Contains(sub.SubcontractorId))
             .ToDictionaryAsync(sub => sub.SubcontractorId, sub => sub.CompanyName, cancellationToken);
 
+        // Paid, from the settled bills linked to each order — and the Buildertrend opening
+        // balance behind it, which is all there is to go on for an order nothing is linked to.
+        var paidByOrder = await WorkOrderPaidPositions.ForProjectAsync(context, query.ProjectId, cancellationToken);
+
+        var orderIds = orders.Select(order => order.WorkOrderId).ToList();
+        var openingByOrder = (await context.WorkOrderLines.AsNoTracking()
+                .Where(line => orderIds.Contains(line.WorkOrderId))
+                .GroupBy(line => line.WorkOrderId)
+                .Select(group => new { WorkOrderId = group.Key, Opening = group.Sum(line => line.PaidToDate) })
+                .ToListAsync(cancellationToken))
+            .ToDictionary(row => row.WorkOrderId, row => row.Opening, StringComparer.OrdinalIgnoreCase);
+
+        // When JPMS last heard from Xero at all. The sync is a button on the allocation page,
+        // not a schedule, so a paid figure is only ever as current as this — the tab says so
+        // rather than letting a stale zero pass for a confirmed one.
+        var ledgerSyncedAtUtc = await context.XeroLedgerLines.AsNoTracking()
+            .MaxAsync(line => (DateTimeOffset?)line.LastSyncedAtUtc, cancellationToken);
+
         return orders.Select(order =>
             {
                 totalsByOrder.TryGetValue(order.WorkOrderId, out var linked);
@@ -52,6 +70,11 @@ public sealed class ListWorkOrderInvoiceSummariesHandler
                     : remaining < 0m ? WorkOrderInvoicingStatus.OverInvoiced
                     : remaining == 0m ? WorkOrderInvoicingStatus.FullyInvoiced
                     : WorkOrderInvoicingStatus.PartInvoiced;
+
+                var linkedLineCount = linked?.Count ?? 0;
+                openingByOrder.TryGetValue(order.WorkOrderId, out var opening);
+                var paid = paidByOrder.TryGetValue(order.WorkOrderId, out var fromXero) ? fromXero : opening;
+
                 return new WorkOrderInvoiceSummary(
                     order.WorkOrderId,
                     order.Number,
@@ -61,8 +84,11 @@ public sealed class ListWorkOrderInvoiceSummariesHandler
                     order.Value,
                     invoiced,
                     remaining,
-                    linked?.Count ?? 0,
-                    invoicingStatus);
+                    linkedLineCount,
+                    invoicingStatus,
+                    paid,
+                    WorkOrderPaymentStatuses.For(linkedLineCount, paid, order.Value),
+                    ledgerSyncedAtUtc);
             })
             .ToList();
     }

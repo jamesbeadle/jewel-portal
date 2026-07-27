@@ -75,11 +75,12 @@ else
 
     private Project? Project => Projects.Find(ProjectId);
 
-    // The switcher/arrow loop: active (non-Completed) projects ordered by reference.
+    // The switcher/arrow loop: active (non-Completed) projects in the canonical work order
+    // (ProjectOrdering.InWorkOrder) — so the arrows walk the same sequence the switcher lists.
     private List<Project> Cycle =>
         (Projects.Current ?? (IReadOnlyList<Project>)Array.Empty<Project>())
             .Where(project => project.Stage != ProjectStage.Completed)
-            .OrderBy(project => project.Reference, StringComparer.OrdinalIgnoreCase)
+            .InWorkOrder()
             .ToList();
 
     private Project? Neighbour(int step)

@@ -475,10 +475,15 @@
 
             if (result.Status == AiTurnStatus.Truncated)
                 error = "That answer was cut short — ask me to carry on and I'll pick it up.";
+
+            // No API key, or the Claude call failed. Tell the dialog, so a form that is sitting
+            // blank waiting for a draft fills itself in from the record instead.
+            if (result.Status == AiTurnStatus.Unavailable) AiTasks.ReportAssistantUnavailable();
         }
         catch (Exception ex)
         {
             error = $"Couldn't send that: {ex.Message}";
+            AiTasks.ReportAssistantUnavailable();
         }
         finally
         {

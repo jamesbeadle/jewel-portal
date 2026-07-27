@@ -779,8 +779,10 @@ else
             @if (TaskIsForThisRecord)
             {
                 <p class="rounded-lg bg-accent/10 border border-accent/30 px-3 py-2 text-xs text-content">
-                    The assistant is working on this with you in the panel on the right. Everything here is
-                    yours to change, and nothing is created until you press Raise variation.
+                    @(IsDraftBlank && AssistantWillDraft
+                        ? "The assistant is reading this RFI and its emails in the panel on the right; the draft will appear here. Start typing if you would rather write it yourself."
+                        : "The assistant is working on this with you in the panel on the right.")
+                    Everything here is yours to change, and nothing is created until you press Raise variation.
                 </p>
             }
 
@@ -982,6 +984,7 @@ else
         // The pipe from the assistant panel. Subscribed before anything awaits, so a proposal that
         // lands while the page is still loading is not dropped on the floor.
         AiTasks.OnDraftApplied += HandleAssistantDraft;
+        AiTasks.OnAssistantUnavailable += HandleAssistantUnavailable;
         CostCenters.OnChanged += Repaint;
 
         await Session.EnsureLoadedAsync();
@@ -1051,6 +1054,7 @@ else
     public void Dispose()
     {
         AiTasks.OnDraftApplied -= HandleAssistantDraft;
+        AiTasks.OnAssistantUnavailable -= HandleAssistantUnavailable;
         CostCenters.OnChanged -= Repaint;
         flashTimer?.Dispose();
 
@@ -1470,10 +1474,24 @@ else
     private bool CanUseAssistant =>
         Session.ActiveRole is { } role && DesktopNavigation.CanUseAssistant(role);
 
+    /// <summary>
+    /// A draft is genuinely on its way: this user has the assistant AND has accepted the billed-usage
+    /// notice. Without the second half the kick-off stays queued in AiTaskState and nothing is ever
+    /// sent — so a form left blank for it would stay blank.
+    /// </summary>
+    private bool AssistantWillDraft => CanUseAssistant && Chat.HasAcknowledgedCost;
+
     private bool TaskIsForThisRecord =>
         AiTasks.Active is { } task && task.RecordId == RequestId;
 
     private string FlashClass(string field) => flashedFields.Contains(field) ? "jpms-flash" : "";
+
+    /// <summary>Nothing typed and nothing drafted yet — the state the dialog opens in while the
+    /// assistant reads. Not a load gate: the form is fully usable, it is simply still empty.</summary>
+    private bool IsDraftBlank =>
+        string.IsNullOrWhiteSpace(draftVariationTitle)
+        && string.IsNullOrWhiteSpace(draftVariationDescription)
+        && draftVariationLines.Count == 0;
 
     // The trade for the draft bid package. An explicitly-set trade wins: the assistant is told the
     // field IS the package's trade, so honouring it is both what the schema promises and what makes
@@ -1505,12 +1523,21 @@ else
         if (!variationDraftSeeded)
         {
             variationDraftSeeded = true;
-            draftVariationTitle = record.Title;
-            draftVariationDescription = record.Description;
             draftVariationValue = "";
             draftVariationTrade = "";
             draftVariationLines = new();
             flashedFields = new();
+
+            // Blank when the assistant is about to fill it in. Pre-filling with the RFI's own title
+            // and description only looked like an answer for the second before it was overwritten,
+            // and a variation's scope is not the RFI's question restated.
+            //
+            // Seeded whenever nothing else is coming — no assistant for this role, OR the billed-
+            // usage notice not accepted, which holds the kick-off back so no turn is ever sent and
+            // no "unavailable" ever arrives to trigger the fallback. Blank forever is the one
+            // outcome worse than a pre-filled form.
+            draftVariationTitle = AssistantWillDraft ? "" : record.Title;
+            draftVariationDescription = AssistantWillDraft ? "" : record.Description;
 
             if (CanUseAssistant)
             {
@@ -1520,11 +1547,15 @@ else
                         ModalKey: ModalCatalog.VariationDraft.ModalKey,
                         BannerLabel: $"Drafting a variation from {record.Reference}",
                         BusyLabel: $"Reading {record.Reference} and the emails tagged to it…",
+                        // A user turn, so it outranks the system prompt — it has to say the same
+                        // thing. An earlier version ended "ask me before you write anything", and
+                        // that one clause was enough to get a list of questions instead of a draft.
                         KickoffMessage:
-                            $"Draft the variation that {record.Reference} has led to. Read the RFI and the "
-                            + "emails tagged to it, then put your draft into the form that is open beside you. "
-                            + "If the correspondence does not tell you enough to scope or price it, ask me "
-                            + "before you write anything.",
+                            $"Draft the variation that {record.Reference} has led to. Read the RFI and every "
+                            + "email tagged to it properly, then put your draft into the form open beside me. "
+                            + "Draft whatever the correspondence supports and tell me in one line what you "
+                            + "could not establish from it. Only ask me a question if there is genuinely "
+                            + "nothing there to scope.",
                         ProjectId: ProjectId,
                         RecordType: nameof(RecordType.Request),
                         RecordId: record.RequestId,
@@ -1688,6 +1719,22 @@ else
         var raw = draftVariationValue.Replace("£", "").Replace(",", "").Trim();
         return decimal.TryParse(raw, out var parsed) && parsed >= 0 ? parsed : null;
     }
+
+    /// <summary>
+    /// The assistant cannot answer — unkeyed environment, or the API failed. The dialog was opened
+    /// blank on the promise of a draft, so it now fills itself in from the record: back to exactly
+    /// what the user got before any of this existed. Only when it is still untouched — a draft the
+    /// user has started typing is theirs, and must not be overwritten by a fallback.
+    /// </summary>
+    private void HandleAssistantUnavailable() =>
+        _ = InvokeAsync(() =>
+        {
+            if (record is null || !IsDraftBlank) return;
+            draftVariationTitle = record.Title;
+            draftVariationDescription = record.Description;
+            PublishDraft();
+            StateHasChanged();
+        });
 
     private void HandleAssistantDraft(string fieldsJson) =>
         _ = InvokeAsync(() =>

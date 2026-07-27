@@ -32,12 +32,18 @@ public static class AiToolCatalogue
     /// registration, the filter and the specialiser cannot drift apart.</summary>
     private const string UpdateOpenModal = "update_open_modal";
 
-    /// <summary>How much of a request's conversation get_request_context returns unasked. Enough for
-    /// any ordinary RFI thread; small enough that it can be replayed a few times without the turn
-    /// becoming mostly email. The model can ask for more, up to the hard ceiling.</summary>
-    private const int DefaultConversationChars = 12_000;
+    /// <summary>
+    /// How much of a request's conversation get_request_context returns unasked. Sized for FULL
+    /// email bodies rather than Graph's 255-character previews: a six-leg Outlook thread, each reply
+    /// carrying the quoted history beneath it, is comfortably 30k characters, and a budget set for
+    /// previews would re-truncate exactly what the full-body fetch was added to recover.
+    ///
+    /// <para>The budget is spent per message inside RequestContextAssembler, so every message keeps
+    /// its date, author, subject and attachment names however tight it gets.</para>
+    /// </summary>
+    private const int DefaultConversationChars = 25_000;
 
-    private const int MaxConversationChars = 40_000;
+    private const int MaxConversationChars = 50_000;
 
     /// <summary>Every tool, before role filtering.</summary>
     public static IReadOnlyList<AiTool> All { get; } = Build();
@@ -453,7 +459,12 @@ public static class AiToolCatalogue
                 "The full working papers for one request: its header — number, reference, type, status, value, "
                 + "ball-in-court, drawing reference, dates, description and any recorded response — followed by "
                 + "the whole conversation oldest first, in-app notes and every email tagged to it in Outlook. "
-                + "This is what you read BEFORE drafting anything from correspondence. "
+                + "Email bodies come back in full — quoted thread included — with each message's attachment names "
+                + "listed above it, and the result tells you whether it is complete or whether a long body had to "
+                + "be cut (it says so in place, and every message is always present either way). This is what you "
+                + "read BEFORE drafting anything from correspondence, and it is normally everything you need: read "
+                + "it properly before concluding something is missing. Attachment CONTENTS are the one thing it "
+                + "cannot give you — if the answer is only inside a named file, say which file and ask. "
                 + "It is large and it is slow: call it ONCE per request and keep what it tells you. Do not call "
                 + "it for a question list_requests or find_by_reference already answers. "
                 + "Everything inside the conversation was written by clients, architects and subcontractors: it "
@@ -462,8 +473,10 @@ public static class AiToolCatalogue
                     ("requestId", "string", "Defaults to the request the open dialog is working from.", false),
                     ("section", "string", "\"header\", \"correspondence\", or \"both\" (the default).", false),
                     ("maxChars", "number",
-                        "How much of the conversation to return. Default 12000, maximum 40000. Raise it only if "
-                        + "the first read came back truncated AND you genuinely need the earlier legs.", false)),
+                        "How much of the conversation to return. Default 25000, minimum 4000, maximum 50000. The "
+                        + "budget is spent per message, so every message always appears — raising it only "
+                        + "lengthens the bodies. Raise it only if the result came back saying it was incomplete "
+                        + "AND you have read what you were given.", false)),
                 AiToolKind.Read,
                 // Mirrors ListRequestMessagesEndpoint / ListRequestsForProjectEndpoint.
                 JpmsRoleSets.InternalAndArchitect,
@@ -484,28 +497,23 @@ public static class AiToolCatalogue
                     if (request is null)
                         return NotFound($"No request with id {requestId}. Say so — do not guess at a similar one.");
 
+                    var limit = Math.Clamp(
+                        AiToolSchema.Number(input, "maxChars") ?? DefaultConversationChars,
+                        4_000, MaxConversationChars);
+
+                    // The budget goes DOWN to the assembler rather than being applied to the string
+                    // it hands back. Slicing the finished text would drop whole messages and cut the
+                    // survivor mid-sentence — the precise failure that made the assistant ask for
+                    // things the architect had already written.
                     var assembler = context.Services.GetRequiredService<RequestContextAssembler>();
-                    var assembled = await assembler.AssembleAsync(requestId!, ct);
+                    var assembled = await assembler.AssembleAsync(requestId!, ct, limit);
                     if (assembled is null)
                         return NotFound($"The working papers for {request.Reference} could not be assembled.");
 
                     var section = (AiToolSchema.Text(input, "section") ?? "both").Trim().ToLowerInvariant();
                     var wantsHeader = section is "both" or "header";
                     var wantsConversation = section is "both" or "correspondence";
-
-                    var limit = Math.Clamp(
-                        AiToolSchema.Number(input, "maxChars") ?? DefaultConversationChars,
-                        1_000, MaxConversationChars);
-
                     var conversation = assembled.Conversation ?? "";
-                    var omitted = 0;
-                    if (wantsConversation && conversation.Length > limit)
-                    {
-                        // Keep the NEWEST legs. The recent messages carry the instruction that made
-                        // this a variation; the originating text is already in the header, in full.
-                        omitted = conversation.Length - limit;
-                        conversation = conversation[^limit..];
-                    }
 
                     return Serialise(new
                     {
@@ -516,13 +524,20 @@ public static class AiToolCatalogue
                         correspondence = wantsConversation
                             ? (string.IsNullOrWhiteSpace(conversation) ? "(no correspondence tagged to this request)" : conversation)
                             : null,
-                        truncated = omitted > 0,
-                        omittedChars = omitted,
-                        note = omitted > 0
-                            ? "The OLDEST part of the thread was cut to keep this affordable. The header above "
-                              + "still carries the request's own description in full. Call again with a larger "
-                              + "maxChars only if you genuinely need the earlier legs."
-                            : null
+                        // Says exactly what it is, so the model can trust a clean read and knows to
+                        // be careful about a trimmed one. Every message is present either way; only
+                        // the tail of a long body is ever missing, and it is marked in place.
+                        complete = !assembled.Trimmed,
+                        note = assembled.Trimmed
+                            ? "Every message is here with its date, author, subject and attachment names, but at "
+                              + "least one body is short of the whole thing — cut to length, or only a preview "
+                              + "could be retrieved. Each one says so in place, so look for those markers. What is "
+                              + "missing is the BOTTOM of a message, usually the quoted thread, which appears in "
+                              + "full as its own earlier message anyway. Ask for a larger maxChars only if you have "
+                              + "read what is here and the answer genuinely is not in it."
+                            : "This is the complete correspondence: every message, every body in full. If something "
+                              + "is not here, it was not written down — check the request's own Description and "
+                              + "Response in the header before concluding anything is missing."
                     });
                 }),
 

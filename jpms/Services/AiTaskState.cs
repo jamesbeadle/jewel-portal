@@ -66,6 +66,13 @@ public sealed class AiTaskState
     /// </summary>
     public event Action<string>? OnDraftApplied;
 
+    /// <summary>
+    /// The assistant could not answer at all — no API key on this environment, or the Claude call
+    /// failed. The dialog listens so it can fall back to filling itself in from the record: a form
+    /// left blank waiting for a draft that is never coming is worse than no assistant at all.
+    /// </summary>
+    public event Action? OnAssistantUnavailable;
+
     public void Start(AiTask task, string draftJson)
     {
         Active = task;
@@ -86,6 +93,12 @@ public sealed class AiTaskState
     {
         if (Active is null || string.IsNullOrWhiteSpace(fieldsJson)) return;
         OnDraftApplied?.Invoke(fieldsJson);
+    }
+
+    public void ReportAssistantUnavailable()
+    {
+        if (Active is null) return;
+        OnAssistantUnavailable?.Invoke();
     }
 
     /// <summary>Returns the queued kick-off and clears it, so it can only ever be sent once.</summary>

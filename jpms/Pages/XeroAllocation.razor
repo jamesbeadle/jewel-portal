@@ -148,7 +148,7 @@ else
                     {
                         @* Narrow to one project first, then search within it — the
                            recode workflow: isolate what's coded where, select, resend. *@
-                        <SearchSelect Options="@AllocatedProjectFilterOptions" WidthClass="w-44" Placeholder="All projects"
+                        <SearchSelect Options="@ProjectOptions" WidthClass="w-44" Placeholder="All projects"
                                       Value="@allocatedProjectFilter" ValueChanged="OnAllocatedProjectFilterChanged" />
                     }
                     <input class="text-sm bg-surface border border-line rounded-lg px-3 py-1.5 text-content placeholder:text-content-subtle w-64"
@@ -1103,27 +1103,9 @@ else
         page = 0;
     }
 
-    private IReadOnlyList<SearchSelect.Option>? allocatedProjectFilterOptionsCache;
-    private object? allocatedProjectFilterOptionsCacheKey;
-
-    // ProjectOptions plus an explicit "All projects" entry so the filter can be
-    // cleared from inside the dropdown. Memoized on ProjectOptions' reference,
-    // same as the option lists it derives from.
-    private IReadOnlyList<SearchSelect.Option> AllocatedProjectFilterOptions
-    {
-        get
-        {
-            var options = ProjectOptions;
-            if (allocatedProjectFilterOptionsCache is null
-                || !ReferenceEquals(allocatedProjectFilterOptionsCacheKey, options))
-            {
-                allocatedProjectFilterOptionsCache =
-                    new[] { new SearchSelect.Option("", "All projects") }.Concat(options).ToList();
-                allocatedProjectFilterOptionsCacheKey = options;
-            }
-            return allocatedProjectFilterOptionsCache;
-        }
-    }
+    // The filter takes ProjectOptions as-is: SearchSelect already leads its unfiltered list with a
+    // blank entry labelled with the Placeholder ("All projects"), so adding one here printed it
+    // twice.
 
     private async Task BucketAsync(XeroLedgerLine line, string bucket) =>
         await ApplyAsync(new SetXeroAllocation(new[] { line.XeroLedgerLineId }, XeroAllocationAction.AllocateToBucket, Bucket: bucket));
@@ -1556,6 +1538,9 @@ else
     private IReadOnlyList<SearchSelect.Option>? projectOptionsCache;
     private object? projectOptionsCacheKey;
 
+    // Order comes from the read model, which serves the canonical work order (live sites first,
+    // Completed last) — the list is not re-sorted here. Completed projects stay in it: old costs
+    // still get recoded onto them.
     private IReadOnlyList<SearchSelect.Option> ProjectOptions
     {
         get

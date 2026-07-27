@@ -260,10 +260,12 @@
     // headers as normal.
     private bool RendersFlat => Folders.Count == 1;
 
+    // Active (non-Completed) projects in the canonical work order — live sites first, then Defects
+    // Period, then Leads (ProjectOrdering.InWorkOrder), so the switcher opens on what is on site.
     private List<Project> ActiveProjects =>
         (Projects.Current ?? (IReadOnlyList<Project>)Array.Empty<Project>())
             .Where(project => project.Stage != ProjectStage.Completed)
-            .OrderBy(project => project.Reference, StringComparer.OrdinalIgnoreCase)
+            .InWorkOrder()
             .ToList();
 
     // The workspace's project: last viewed while still active, else the first active project.

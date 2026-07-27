@@ -164,6 +164,11 @@ public sealed class SyncXeroLedgerHandler : ICommandHandler<SyncXeroLedger, Xero
                 entity.Description = Truncate(line.Description, 1024);
                 entity.Net = line.LineAmount;
                 entity.Tax = line.TaxAmount;
+                // Invoice-level payment state, stamped on each of the bill's lines — what the
+                // work-order paid position is derived from. AmountDue is the CIS-safe signal:
+                // it reaches zero when nothing further is owed, whatever was withheld.
+                entity.InvoiceTotal = transaction.Total;
+                entity.AmountDue = transaction.AmountDue;
                 entity.AccountCode = Truncate(line.AccountCode, 32);
                 entity.AccountName = Truncate(line.AccountName, 256);
                 entity.XeroSite = Truncate(line.Site, 128);

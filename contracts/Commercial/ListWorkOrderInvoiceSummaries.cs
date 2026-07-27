@@ -25,6 +25,45 @@ public enum WorkOrderInvoicingStatus
     OverInvoiced = 3
 }
 
+/// <summary>
+/// Where an order sits against its PAYMENT, which is a different question from its invoicing —
+/// and one where a bare zero lies. NotLinked is the important case: no purchase line is tied to
+/// the order, so JPMS knows nothing about what has been paid, and "GBP 0.00" would read as
+/// "nothing has been paid" when it means "we have not been told". Distinguishing the two is the
+/// whole point of this enum; the Work Orders tab shows an em dash rather than a figure for it.
+///
+/// OpeningBalance is its sibling for the migrated orders: nothing linked either, but the order
+/// carries a Buildertrend opening balance, so there IS a figure — it is just a carried-over one
+/// rather than anything Xero has confirmed.
+/// </summary>
+public enum WorkOrderPaymentStatus
+{
+    NotLinked = 0,
+    Unpaid = 1,
+    PartPaid = 2,
+    Paid = 3,
+    OpeningBalance = 4
+}
+
+/// <summary>How much an order's paid figure can be trusted. See WorkOrderPaymentStatus.</summary>
+public static class WorkOrderPaymentStatuses
+{
+    /// <summary>
+    /// With nothing linked, JPMS has not been told anything about this order's payments: that
+    /// is NotLinked, and the reader must be shown no figure rather than a zero — unless a
+    /// migrated opening balance gives it one. With links, Xero has answered, and the answer
+    /// runs from nothing settled through to the order's full value.
+    /// </summary>
+    public static WorkOrderPaymentStatus For(int linkedLineCount, decimal paid, decimal value)
+    {
+        if (linkedLineCount == 0)
+            return paid == 0m ? WorkOrderPaymentStatus.NotLinked : WorkOrderPaymentStatus.OpeningBalance;
+
+        if (paid <= 0m) return WorkOrderPaymentStatus.Unpaid;
+        return value > 0m && paid >= value ? WorkOrderPaymentStatus.Paid : WorkOrderPaymentStatus.PartPaid;
+    }
+}
+
 public sealed record WorkOrderInvoiceSummary(
     string WorkOrderId,
     int Number,
@@ -35,4 +74,12 @@ public sealed record WorkOrderInvoiceSummary(
     decimal InvoicedToDate,
     decimal RemainingToInvoice,
     int LinkedLineCount,
-    WorkOrderInvoicingStatus InvoicingStatus);
+    WorkOrderInvoicingStatus InvoicingStatus,
+    // What the order has actually been paid, and how much that figure can be trusted.
+    // PaidToDate is meaningless unless PaymentStatus says otherwise — read the status first.
+    decimal PaidToDate,
+    WorkOrderPaymentStatus PaymentStatus,
+    // When JPMS last heard from Xero. Project-wide, so the same value repeats on every row —
+    // the paid figures are only as current as this, and the sync is a button someone presses
+    // rather than a schedule. Null when no purchase line has ever been synced.
+    DateTimeOffset? LedgerSyncedAtUtc);

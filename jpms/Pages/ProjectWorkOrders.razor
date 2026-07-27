@@ -80,6 +80,13 @@ else
                 {
                     <text> · </text><span class="text-content font-medium">@Money(TotalInvoiced)</span><text> invoiced against orders · @Money(TotalCommitted - TotalInvoiced) left to invoice — see the </text><a class="underline underline-offset-4 hover:text-content" href="@($"/projects/{ProjectId}/work-order-allocation")">WO Allocation tab</a>
                 }
+                @if (LedgerSyncedAtUtc is { } syncedAt)
+                {
+                    <span class="block text-xs text-content-subtle mt-1"
+                          title="Paid comes from Xero and is only ever as current as this. The ledger sync is a button on the Xero allocation page, not a schedule.">
+                        Xero synced @Ago(syncedAt)
+                    </span>
+                }
             </p>
 
             @if (Searching && Rows.Count == 0 && OrdersWithoutLines.Count == 0)
@@ -135,8 +142,10 @@ else
                                 }
                                 <td class="px-4 py-3 text-right">@row.OrderCount</td>
                                 <td class="px-4 py-3 text-right">@Money(row.Committed)</td>
-                                <td class="px-4 py-3 text-right">@Money(row.Paid)</td>
-                                <td class="px-4 py-3 text-right @(row.Committed - row.Paid > 0 ? "text-content" : "text-content-subtle")">@Money(row.Committed - row.Paid)</td>
+                                <td class="px-4 py-3 text-right @(row.PaidKnown ? "" : "text-content-subtle")"
+                                    title="@(row.PaidKnown ? "" : UnknownPaidHint)">@(row.PaidKnown ? Money(row.Paid) : Dash)</td>
+                                <td class="px-4 py-3 text-right @(row.PaidKnown && row.Committed - row.Paid > 0 ? "text-content" : "text-content-subtle")"
+                                    title="@(row.PaidKnown ? "" : UnknownPaidHint)">@(row.PaidKnown ? Money(row.Committed - row.Paid) : Dash)</td>
                                 <td class="px-4 py-3 text-right @(row.Committed - row.Invoiced < 0m ? "text-negative font-medium" : row.Committed - row.Invoiced > 0m ? "text-content" : "text-content-subtle")"
                                     title="@($"{MoneyExact(row.Invoiced)} invoiced of {MoneyExact(row.Committed)} committed")">@Money(row.Committed - row.Invoiced)</td>
                             </tr>
@@ -180,10 +189,15 @@ else
                                                                       title="@($"{MoneyExact(summary.InvoicedToDate)} invoiced of {MoneyExact(summary.Value)} · {MoneyExact(summary.RemainingToInvoice)} left to invoice (whole order)")">
                                                                     @InvoicingLabel(summary.InvoicingStatus)
                                                                 </span>
+                                                                <span class="ml-1 inline-block rounded-full border border-line px-2 py-0.5 text-[11px] @PaymentClass(summary.PaymentStatus)"
+                                                                      title="@PaymentTitle(summary.PaymentStatus)">
+                                                                    @PaymentLabel(summary.PaymentStatus)
+                                                                </span>
                                                             }
                                                         </td>
                                                         <td class="px-3 py-2 text-right">@Money(line.Line.LineTotal)</td>
-                                                        <td class="px-3 py-2 text-right">@Money(line.Line.PaidToDate)</td>
+                                                        <td class="px-3 py-2 text-right @(PaymentKnown(line.Detail) ? "" : "text-content-subtle")"
+                                                            title="@(PaymentKnown(line.Detail) ? "" : UnknownPaidHint)">@(PaymentKnown(line.Detail) ? Money(line.Line.PaidToDate) : Dash)</td>
                                                         <td class="px-3 py-2 text-right whitespace-nowrap">
                                                             <a class="mr-3 text-xs font-medium text-content-subtle hover:text-content underline underline-offset-4"
                                                                title="View / print the purchase order sent to the supplier"
@@ -268,8 +282,10 @@ else
                 @(groupBySupplier
                     ? "Committed is the sum of work-order line totals per supplier."
                     : "Committed is the sum of work-order line totals per cost centre; one order can span several cost centres, so its value may appear split across rows.")
-                Paid is what has been paid against
-                each line so far. Click a row to see the orders behind it. Re-code a line to move it to
+                Paid is what Xero has settled against the bills linked to each order, spread
+                across its lines by value. An order with no bill linked to it shows “–” rather
+                than £0.00 — nothing is known about it either way until its bills are linked on
+                the WO Allocation tab. Click a row to see the orders behind it. Re-code a line to move it to
                 another cost centre, or to split its amount across several — for orders priced wholesale
                 under one code whose lines belong to different centres. The parts must total the line
                 exactly, so the order's value never changes; the Financials tab, invoice re-attribution
@@ -324,7 +340,10 @@ else
 
     private const string UnassignedCode = "(unassigned)";
 
-    private sealed record GroupRow(string Key, string Code, string Name, bool InMaster, int OrderCount, decimal Committed, decimal Paid, decimal Invoiced);
+    // PaidKnown: at least one order behind this row has a payment position JPMS can stand
+    // behind (a linked bill, or a migrated opening balance). When no order in the row does,
+    // the row's Paid is not zero — it is unknown — and the table says so with an em dash.
+    private sealed record GroupRow(string Key, string Code, string Name, bool InMaster, int OrderCount, decimal Committed, decimal Paid, decimal Invoiced, bool PaidKnown);
     private sealed record OrderLine(ProjectWorkOrderDetail Detail, WorkOrderLine Line);
 
     private IReadOnlyList<ProjectWorkOrderDetail> Orders => WorkOrders.Current(ProjectId);
@@ -381,6 +400,59 @@ else
 
     private Dictionary<string, WorkOrderInvoiceSummary> SummariesByOrder => summariesByOrder ?? NoSummaries;
 
+    // An em dash, not a zero. "GBP 0.00 paid" and "we have not been told what is paid" are
+    // different answers, and the second one must not be able to pass for the first.
+    private const string Dash = "–";
+
+    private const string UnknownPaidHint =
+        "No Xero bill is linked to this order yet, so nothing is known about what has been paid — link its bills on the WO Allocation tab";
+
+    private WorkOrderPaymentStatus PaymentStatusOf(ProjectWorkOrderDetail detail) =>
+        SummariesByOrder.TryGetValue(detail.Order.WorkOrderId, out var summary)
+            ? summary.PaymentStatus
+            : WorkOrderPaymentStatus.NotLinked;
+
+    private bool PaymentKnown(ProjectWorkOrderDetail detail) =>
+        PaymentStatusOf(detail) != WorkOrderPaymentStatus.NotLinked;
+
+    private static string PaymentLabel(WorkOrderPaymentStatus status) => status switch
+    {
+        WorkOrderPaymentStatus.NotLinked => "Not linked",
+        WorkOrderPaymentStatus.Unpaid => "Unpaid",
+        WorkOrderPaymentStatus.PartPaid => "Part paid",
+        WorkOrderPaymentStatus.Paid => "Paid",
+        _ => "Opening balance"
+    };
+
+    private static string PaymentClass(WorkOrderPaymentStatus status) => status switch
+    {
+        WorkOrderPaymentStatus.Paid => "text-positive",
+        WorkOrderPaymentStatus.NotLinked => "text-content-subtle italic",
+        _ => "text-content-subtle"
+    };
+
+    private static string PaymentTitle(WorkOrderPaymentStatus status) => status switch
+    {
+        WorkOrderPaymentStatus.NotLinked => UnknownPaidHint,
+        WorkOrderPaymentStatus.Unpaid => "Bills are linked to this order and Xero has settled none of them yet",
+        WorkOrderPaymentStatus.PartPaid => "Xero has settled some of the bills linked to this order",
+        WorkOrderPaymentStatus.Paid => "Xero has settled the bills linked to this order to its full value",
+        _ => "Carried over from Buildertrend at migration — no Xero bill is linked to this order yet"
+    };
+
+    // Project-wide, so any row carries it; null until a purchase line has ever been synced.
+    private DateTimeOffset? LedgerSyncedAtUtc =>
+        SummariesByOrder.Values.Select(summary => summary.LedgerSyncedAtUtc).FirstOrDefault();
+
+    private static string Ago(DateTimeOffset when)
+    {
+        var span = DateTimeOffset.UtcNow - when;
+        if (span < TimeSpan.FromMinutes(2)) return "moments ago";
+        if (span < TimeSpan.FromHours(1)) return $"{(int)span.TotalMinutes} minutes ago";
+        if (span < TimeSpan.FromDays(2)) return $"{(int)span.TotalHours} hour{((int)span.TotalHours == 1 ? "" : "s")} ago";
+        return $"{(int)span.TotalDays} days ago";
+    }
+
     private static string InvoicingLabel(WorkOrderInvoicingStatus status) => status switch
     {
         WorkOrderInvoicingStatus.NotInvoiced => "Not invoiced",
@@ -430,7 +502,8 @@ else
                 group.Select(entry => entry.Detail.Order.WorkOrderId).Distinct().Count(),
                 group.Sum(entry => entry.Line.LineTotal),
                 group.Sum(entry => entry.Line.PaidToDate),
-                group.Sum(entry => InvoicedShare(entry))))
+                group.Sum(entry => InvoicedShare(entry)),
+                group.Any(entry => PaymentKnown(entry.Detail))))
             .OrderBy(row => row.Code == UnassignedCode ? 2 : row.InMaster ? 0 : 1)
             .ThenBy(row => masterOrder.TryGetValue(row.Code, out var index) ? index : int.MaxValue)
             .ThenBy(row => row.Code, StringComparer.OrdinalIgnoreCase)
@@ -450,7 +523,8 @@ else
                 group.Select(entry => entry.Detail.Order.WorkOrderId).Distinct().Count(),
                 group.Sum(entry => entry.Line.LineTotal),
                 group.Sum(entry => entry.Line.PaidToDate),
-                group.Sum(entry => InvoicedShare(entry))))
+                group.Sum(entry => InvoicedShare(entry)),
+                group.Any(entry => PaymentKnown(entry.Detail))))
             .OrderBy(row => row.Name, StringComparer.OrdinalIgnoreCase)
             .ToList();
 
