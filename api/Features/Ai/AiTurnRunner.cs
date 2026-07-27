@@ -29,12 +29,16 @@ public sealed class AiTurnRunner
     private readonly JpmsContext context;
     private readonly IClaudeConversationClient claude;
     private readonly AgentActivityLog activityLog;
+    private readonly IServiceProvider services;
 
-    public AiTurnRunner(JpmsContext context, IClaudeConversationClient claude, AgentActivityLog activityLog)
+    public AiTurnRunner(
+        JpmsContext context, IClaudeConversationClient claude,
+        AgentActivityLog activityLog, IServiceProvider services)
     {
         this.context = context;
         this.claude = claude;
         this.activityLog = activityLog;
+        this.services = services;
     }
 
     public async Task<AiTurnResult> RunHopAsync(
@@ -110,13 +114,11 @@ public sealed class AiTurnRunner
         var assistantRow = Add(conversation, AiChatRole.Assistant, reply.Text ?? "", ++sequence, newMessages);
         if (reply.ToolCalls.Count > 0)
         {
-            // Serialised as the record, not an anonymous type: the reader binds by property
-            // name, and a lowercase/PascalCase mismatch fails silently rather than throwing.
             assistantRow.ToolCallsJson = JsonSerializer.Serialize(
-                reply.ToolCalls.Select(call => new StoredToolCall(call.Id, call.Name, call.ArgumentsJson)).ToList());
+                reply.ToolCalls.Select(call => new { id = call.Id, name = call.Name, input = call.ArgumentsJson }));
         }
 
-        var toolContext = new AiToolContext(context, user, scope);
+        var toolContext = new AiToolContext(context, user, scope, services);
 
         foreach (var call in reply.ToolCalls)
         {
@@ -264,16 +266,12 @@ public sealed class AiTurnRunner
 
     private sealed record StoredToolCall(string Id, string Name, string Input);
 
-    /// <summary>Case-insensitive so rows written before the shape was made symmetric still load.</summary>
-    private static readonly JsonSerializerOptions StoredToolCallJson = new() { PropertyNameCaseInsensitive = true };
-
     private static IReadOnlyList<StoredToolCall> ReadToolCalls(string? json)
     {
         if (string.IsNullOrWhiteSpace(json)) return Array.Empty<StoredToolCall>();
         try
         {
-            return JsonSerializer.Deserialize<List<StoredToolCall>>(json, StoredToolCallJson)
-                   ?? new List<StoredToolCall>();
+            return JsonSerializer.Deserialize<List<StoredToolCall>>(json) ?? new List<StoredToolCall>();
         }
         catch (JsonException)
         {

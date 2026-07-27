@@ -5,14 +5,10 @@ using Jewel.JPMS.Models;
 
 namespace Jewel.JPMS.Api.Features.Ai.Tools;
 
-/// <summary>
-/// What a tool can see when it runs. Scoped per turn.
-///
-/// <para><see cref="Services"/> is the request's own scope, for the handful of tools that need a
-/// registered service rather than raw EF — <c>get_request_context</c> resolves
-/// <c>RequestContextAssembler</c> from it, which in turn needs the Graph mailbox reader. Resolve
-/// inside the tool, not up front: nothing should be constructed for a turn that never calls it.</para>
-/// </summary>
+/// <summary>What a tool can see when it runs. Scoped per turn.</summary>
+/// <summary>What a tool can see when it runs. <paramref name="Services"/> is the request scope, so a
+/// tool can resolve a feature service (RequestContextAssembler, RequestEmailReader) rather than
+/// re-implementing it.</summary>
 public sealed record AiToolContext(
     JpmsContext Db, SignedInUser User, AiScope? Scope, IServiceProvider Services);
 
@@ -27,12 +23,9 @@ public enum AiToolKind
 /// <summary>
 /// A tool as the model sees it, plus how to run it.
 ///
-/// <para>Writes are deliberately absent. Every tool here is a read or a UI instruction, so the worst
-/// outcome of a bad model turn is a wasted call, an unexpected page, or a wrong word in a form the
-/// user is looking at and has not yet submitted. Filling a registered dialog
-/// (<c>update_open_modal</c>) is a UI instruction for exactly this reason: the dialog IS the
-/// proposal card of docs/ai/00-agent-architecture.md §4, and its own confirm button is the approval
-/// step. Server-side write tools still await that card.</para>
+/// <para>Writes are deliberately absent from this version. Every tool here is a read or a UI
+/// instruction, so the worst outcome of a bad model turn is a wasted call or an unexpected page.
+/// Write tools arrive with the proposal card (see docs/ai/00-agent-architecture.md §4).</para>
 /// </summary>
 public sealed record AiTool(
     string Name,

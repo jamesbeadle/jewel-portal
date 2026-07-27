@@ -44,11 +44,43 @@ public enum AiTurnStatus
     NeedsContinue = 3
 }
 
+/// <summary>One field of a form the user currently has open.</summary>
+public sealed record AiFormField(
+    string Name,
+    string Label,
+    /// <summary>text | number | money | date | select | textarea — how the value should be shaped.</summary>
+    string Kind,
+    string? Value,
+    bool Required,
+    /// <summary>For a select: the values that will be accepted. Empty otherwise.</summary>
+    IReadOnlyList<string> Options);
+
+/// <summary>
+/// A form the user has open in the middle column. Sent by the client so the assistant can help
+/// complete it — the values it proposes go back into that same dialog, which the user then submits
+/// themselves. The assistant never submits a form.
+/// </summary>
+public sealed record AiFormSnapshot(
+    string FormKey,
+    string Title,
+    IReadOnlyList<AiFormField> Fields);
+
 /// <summary>Where the user is when they send a message. Assembled by the client from the route.</summary>
 public sealed record AiScope(
     string? ProjectId,
     string? Route,
-    string? PageLabel);
+    string? PageLabel,
+    /// <summary>
+    /// The routes this user can reach, compact, built client-side from NavigationCatalog so it is
+    /// role-correct by construction and cannot drift from the real sidebar. Sent by the client
+    /// because the catalogue lives in the Blazor project — a route list is not security-relevant
+    /// (every page and endpoint gates itself), so client-supplied is acceptable here and nowhere else.
+    /// </summary>
+    string? SiteMap = null,
+    AiFormSnapshot? ActiveForm = null,
+    /// <summary>The kind of record the route is showing — "variation", "request". Null off a record page.</summary>
+    string? RecordType = null,
+    string? RecordId = null);
 
 /// <summary>
 /// One hop, not one turn. A turn is a sequence of hops the client pumps until

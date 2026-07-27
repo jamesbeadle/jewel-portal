@@ -135,6 +135,8 @@ builder.Services.AddScoped<WorkOrderGroupingStorage>();
 builder.Services.AddScoped<TriageSortStorage>();
 builder.Services.AddScoped<CurrentProjectService>();
 builder.Services.AddScoped<ChatPanelState>();
+// The one form the user has open, and the channel the assistant fills it through.
+builder.Services.AddScoped<Jewel.JPMS.Services.Ai.ActiveFormContext>();
 // The pipe between a task dialog on a page and the assistant panel in MainLayout.
 builder.Services.AddScoped<AiTaskState>();
 builder.Services.AddScoped<SessionService>();

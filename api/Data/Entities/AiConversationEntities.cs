@@ -13,6 +13,15 @@ public sealed class AiConversationEntity
     [MaxLength(64)] public string? ProjectId { get; set; }
     [MaxLength(512)] public string? Route { get; set; }
     [MaxLength(64)] public string CapabilityKey { get; set; } = "orchestrator";
+    /// <summary>
+    /// The record this conversation was about — "variation", "request", and so on, with its id.
+    /// Both null for a general conversation, which is scoped to a page rather than a record.
+    ///
+    /// <para>This is what turns "which conversation produced the wording of V72" from a scan of every
+    /// transcript into a lookup. See docs/ai/00-agent-architecture.md §8.</para>
+    /// </summary>
+    [MaxLength(64)] public string? ScopeRecordType { get; set; }
+    [MaxLength(64)] public string? ScopeRecordId { get; set; }
     [MaxLength(256)] public string StartedByEmail { get; set; } = "";
     [MaxLength(256)] public string? Title { get; set; }
     public DateTimeOffset StartedAt { get; set; }

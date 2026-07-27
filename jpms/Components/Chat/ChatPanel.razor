@@ -1,12 +1,14 @@
 @namespace Jewel.JPMS.Components.Chat
 @using System.Text.Json
 @using Jewel.JPMS.Contracts.Ai
+@using Jewel.JPMS.Services.Ai
 @using Jewel.JPMS.Features.Projects
 @inject SessionService Session
 @inject ChatPanelState Chat
 @inject NavigationManager Nav
 @inject ProjectListReadModel Projects
 @inject ICommandSender Commands
+@inject ActiveFormContext ActiveForm
 @implements IDisposable
 
 @*
@@ -338,10 +340,7 @@
 
         try
         {
-            var scope = new AiScope(
-                PageProject?.ProjectId,
-                CurrentPath,
-                PageContext.LabelFor(CurrentPath, Session.ActiveRole));
+            var scope = BuildScope();
 
             var result = await Commands.SendAsync(
                 new SendAiMessage(conversationId, text, scope, string.Empty), CancellationToken.None);
@@ -397,6 +396,12 @@
     /// </summary>
     private void Apply(AiUiAction action)
     {
+        if (string.Equals(action.Tool, "fill_form", StringComparison.OrdinalIgnoreCase))
+        {
+            FillForm(action.ArgumentsJson);
+            return;
+        }
+
         if (!string.Equals(action.Tool, "navigate_to", StringComparison.OrdinalIgnoreCase)) return;
 
         try
@@ -414,6 +419,57 @@
         catch (JsonException)
         {
             // A malformed argument is the model's problem, not the user's. Stay put.
+        }
+    }
+
+    /// <summary>
+    /// Everything the assistant needs to know about where the user is. The portal map is derived
+    /// from NavigationCatalog so it cannot drift; the form snapshot is read now, not when the form
+    /// opened, so the assistant sees the boxes as they currently stand.
+    /// </summary>
+    private AiScope BuildScope()
+    {
+        var (recordType, recordId) = RouteRecord.From(CurrentPath);
+        return new AiScope(
+            PageProject?.ProjectId,
+            CurrentPath,
+            PageContext.LabelFor(CurrentPath, Session.ActiveRole),
+            Session.ActiveRole is { } role ? PortalMap.For(role) : null,
+            ActiveForm.Current,
+            recordType,
+            recordId);
+    }
+
+    /// <summary>
+    /// Writes the assistant's proposed values into the open form. It fills the boxes; the user reads
+    /// them and presses the button. Nothing is submitted here.
+    /// </summary>
+    private void FillForm(string argumentsJson)
+    {
+        try
+        {
+            using var document = JsonDocument.Parse(
+                string.IsNullOrWhiteSpace(argumentsJson) ? "{}" : argumentsJson);
+            if (!document.RootElement.TryGetProperty("values", out var values)) return;
+            if (values.ValueKind != JsonValueKind.Object) return;
+
+            var proposed = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var property in values.EnumerateObject())
+            {
+                var value = property.Value.ValueKind switch
+                {
+                    JsonValueKind.String => property.Value.GetString(),
+                    JsonValueKind.Number or JsonValueKind.True or JsonValueKind.False => property.Value.ToString(),
+                    _ => null
+                };
+                if (value is not null) proposed[property.Name] = value;
+            }
+
+            if (proposed.Count > 0) ActiveForm.Fill(proposed);
+        }
+        catch (JsonException)
+        {
+            // A malformed argument is the model's problem. Leave the form as the user left it.
         }
     }
 

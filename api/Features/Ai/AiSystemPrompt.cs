@@ -31,10 +31,37 @@ public static class AiSystemPrompt
             prompt.AppendLine($"- They have the \"{scope.PageLabel}\" page open in the middle of the screen.");
         if (!string.IsNullOrWhiteSpace(scope?.Route))
             prompt.AppendLine($"- The route is {scope.Route}.");
+        if (!string.IsNullOrWhiteSpace(scope?.RecordId))
+            prompt.AppendLine($"- The {scope!.RecordType} in view has id {scope.RecordId}. \"This one\" means that record.");
         if (!string.IsNullOrWhiteSpace(projectReference))
             prompt.AppendLine($"- The project in view is {projectReference} — {projectName}. \"This project\" means that one.");
         else
             prompt.AppendLine("- No project is in view. If the user says \"this project\", ask which one or call list_projects.");
+        if (!string.IsNullOrWhiteSpace(scope?.SiteMap))
+        {
+            prompt.AppendLine();
+            prompt.AppendLine("## Where you can take them");
+            prompt.AppendLine("Routes this user can reach. `{project}` means the project in view. Use navigate_to with");
+            prompt.AppendLine("one of these, or with a route another tool handed you.");
+            prompt.AppendLine(scope!.SiteMap);
+        }
+
+        if (scope?.ActiveForm is { } form)
+        {
+            prompt.AppendLine();
+            prompt.AppendLine($"## The form they have open: {form.Title}");
+            prompt.AppendLine("You can fill this in with fill_form. Use these field names exactly, and nothing else.");
+            foreach (var field in form.Fields)
+            {
+                var required = field.Required ? ", required" : "";
+                var options = field.Options.Count > 0 ? $", one of: {string.Join(" | ", field.Options)}" : "";
+                var current = string.IsNullOrWhiteSpace(field.Value) ? "empty" : $"currently \"{field.Value}\"";
+                prompt.AppendLine($"- `{field.Name}` — {field.Label} ({field.Kind}{required}{options}) — {current}");
+            }
+            prompt.AppendLine("Filling a form does NOT submit it. Fill what you are confident about, leave the rest,");
+            prompt.AppendLine("and say in one clause what you put in and what you left for them.");
+        }
+
         prompt.AppendLine();
 
         // ---- Layer 2: pinned house rules ----

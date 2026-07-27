@@ -77,6 +77,10 @@ public sealed class SendAiMessageHandler : ICommandHandler<SendAiMessage, AiTurn
             ConversationId = Guid.NewGuid().ToString("N"),
             ProjectId = command.Scope?.ProjectId,
             Route = command.Scope?.Route,
+            // Stamped once, at the start. A conversation is about the record it opened on, even if
+            // the user navigates away mid-conversation.
+            ScopeRecordType = command.Scope?.RecordType,
+            ScopeRecordId = command.Scope?.RecordId,
             CapabilityKey = "orchestrator",
             StartedByEmail = command.SentByEmail,
             Title = command.Message.Length <= 120 ? command.Message : command.Message[..120],
