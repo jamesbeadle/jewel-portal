@@ -20,6 +20,10 @@ public static class XeroRouteRegistration
             new QueryRoute("/api/xero/transactions",
                 query => ((ListXeroTransactions)query).Force ? "/api/xero/transactions?force=true" : "/api/xero/transactions"));
 
+        queries.Register<ListXeroSuppliers, XeroSuppliersSnapshot>(
+            new QueryRoute("/api/xero/suppliers",
+                query => ((ListXeroSuppliers)query).Force ? "/api/xero/suppliers?force=true" : "/api/xero/suppliers"));
+
         queries.Register<GetXeroCashSummary, XeroCashSummarySnapshot>(
             new QueryRoute("/api/xero/cash-summary",
                 query => ((GetXeroCashSummary)query).Force ? "/api/xero/cash-summary?force=true" : "/api/xero/cash-summary"));

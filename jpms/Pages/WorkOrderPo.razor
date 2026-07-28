@@ -110,7 +110,7 @@ else
                             Lines="Detail.Lines"
                             SupplierName="@Detail.SubcontractorName"
                             SupplierContactName="@(Supplier?.ContactName ?? "")"
-                            SupplierAddress="@SupplierAddress"
+                            SupplierAddressLines="@SupplierAddressLines"
                             ProjectName="@(Project?.Name ?? "")"
                             SiteAddress="@SiteAddress"
                             ApprovedByName="@ApprovedByName"
@@ -158,10 +158,8 @@ else
             : (Subcontractors.Current ?? Array.Empty<Subcontractor>()).FirstOrDefault(sub =>
                 string.Equals(sub.SubcontractorId, Detail.Order.SubcontractorId, StringComparison.OrdinalIgnoreCase));
 
-    private string SupplierAddress =>
-        Supplier is null
-            ? ""
-            : string.Join(", ", new[] { Supplier.Town, Supplier.County }.Where(part => !string.IsNullOrWhiteSpace(part)));
+    private IReadOnlyList<string> SupplierAddressLines =>
+        Supplier?.AddressLines ?? Array.Empty<string>();
 
     private string SiteAddress =>
         Project is null

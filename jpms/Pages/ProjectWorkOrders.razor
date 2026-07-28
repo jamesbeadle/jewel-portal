@@ -76,7 +76,11 @@ else
             <p class="text-sm text-content-subtle mb-4">
                 @LiveOrders.Count work order@(LiveOrders.Count == 1 ? "" : "s") issued ·
                 <span class="text-content font-medium">@Money(TotalCommitted)</span> committed ·
-                @Money(TotalPaid) paid · @Money(TotalCommitted - TotalPaid) remaining
+                @Money(TotalPaid) paid · @Money(KnownRemainingOf(AllLines)) remaining
+                @if (UnknownCommittedOf(AllLines) > 0m)
+                {
+                    <text> · </text><span title="@UnknownCommittedHint">@Money(UnknownCommittedOf(AllLines)) on orders with no bill linked</span>
+                }
                 @if (DraftOrders.Count > 0)
                 {
                     <text> · </text><span class="text-content font-medium">@Money(DraftOrders.Sum(detail => detail.Order.Value))</span><text> in @DraftOrders.Count draft@(DraftOrders.Count == 1 ? "" : "s") awaiting approval</text>
@@ -250,10 +254,10 @@ else
                                 <td class="px-4 py-3 text-right">@Money(row.Committed)</td>
                                 <td class="px-4 py-3 text-right @(row.PaidKnown ? "" : "text-content-subtle")"
                                     title="@(row.PaidKnown ? "" : UnknownPaidHint)">@(row.PaidKnown ? Money(row.Paid) : Dash)</td>
-                                <td class="px-4 py-3 text-right @(row.PaidKnown && row.Committed - row.Paid > 0 ? "text-content" : "text-content-subtle")"
-                                    title="@(row.PaidKnown ? "" : UnknownPaidHint)">@(row.PaidKnown ? Money(row.Committed - row.Paid) : Dash)</td>
-                                <td class="px-4 py-3 text-right @(row.Committed - row.Invoiced < 0m ? "text-negative font-medium" : row.Committed - row.Invoiced > 0m ? "text-content" : "text-content-subtle")"
-                                    title="@($"{MoneyExact(row.Invoiced)} invoiced of {MoneyExact(row.Committed)} committed")">@Money(row.Committed - row.Invoiced)</td>
+                                <td class="px-4 py-3 text-right @(row.PaidKnown && row.KnownCommitted - row.Paid > 0 ? "text-content" : "text-content-subtle")"
+                                    title="@(!row.PaidKnown ? UnknownPaidHint : row.KnownCommitted < row.Committed ? $"Excludes {MoneyExact(row.Committed - row.KnownCommitted)} committed on orders in this group with no bill linked — nothing is known about what has been paid on them" : "")">@(row.PaidKnown ? Money(row.KnownCommitted - row.Paid) : Dash)</td>
+                                <td class="px-4 py-3 text-right @(AtPennies(row.Committed - row.Invoiced) < 0m ? "text-negative font-medium" : AtPennies(row.Committed - row.Invoiced) > 0m ? "text-content" : "text-content-subtle")"
+                                    title="@($"{MoneyExact(row.Invoiced)} invoiced of {MoneyExact(row.Committed)} committed")">@Money(AtPennies(row.Committed - row.Invoiced))</td>
                             </tr>
                             @if (IsExpanded(row.Key))
                             {
@@ -342,8 +346,9 @@ else
                             <td class="px-4 py-3 text-right">@VisibleOrderCount</td>
                             <td class="px-4 py-3 text-right">@Money(LineCommitted)</td>
                             <td class="px-4 py-3 text-right">@Money(LinePaid)</td>
-                            <td class="px-4 py-3 text-right">@Money(LineCommitted - LinePaid)</td>
-                            <td class="px-4 py-3 text-right">@Money(LineCommitted - LineInvoiced)</td>
+                            <td class="px-4 py-3 text-right"
+                                title="@(UnknownCommittedOf(VisibleLines) > 0m ? $"The sum of the figures above it. {MoneyExact(UnknownCommittedOf(VisibleLines))} committed on the “{Dash}” rows is not counted — nothing is known about what has been paid on those orders" : "")">@Money(KnownRemainingOf(VisibleLines))</td>
+                            <td class="px-4 py-3 text-right">@Money(AtPennies(LineCommitted - LineInvoiced))</td>
                         </tr>
                     </tfoot>
                 </table>
@@ -391,7 +396,9 @@ else
                 Paid is what Xero has settled against the bills linked to each order, spread
                 across its lines by value. An order with no bill linked to it shows “–” rather
                 than £0.00 — nothing is known about it either way until its bills are linked on
-                the WO Allocation tab. Click a row to see the orders behind it. Re-code a line to move it to
+                the WO Allocation tab, and its committed value counts in neither the paid nor
+                the remaining totals, so the Remaining column always sums to its total.
+                Click a row to see the orders behind it. Re-code a line to move it to
                 another cost centre, or to split its amount across several — for orders priced wholesale
                 under one code whose lines belong to different centres. The parts must total the line
                 exactly, so the order's value never changes; the Financials tab, invoice re-attribution
@@ -449,7 +456,10 @@ else
     // PaidKnown: at least one order behind this row has a payment position JPMS can stand
     // behind (a linked bill, or a migrated opening balance). When no order in the row does,
     // the row's Paid is not zero — it is unknown — and the table says so with an em dash.
-    private sealed record GroupRow(string Key, string Code, string Name, bool InMaster, int OrderCount, decimal Committed, decimal Paid, decimal Invoiced, bool PaidKnown);
+    // KnownCommitted is the committed value on just those known orders: Remaining is
+    // KnownCommitted less Paid, so an unlinked order's value is never passed off as
+    // wholly unpaid — and the Remaining column always sums to its footer total.
+    private sealed record GroupRow(string Key, string Code, string Name, bool InMaster, int OrderCount, decimal Committed, decimal KnownCommitted, decimal Paid, decimal Invoiced, bool PaidKnown);
     private sealed record OrderLine(ProjectWorkOrderDetail Detail, WorkOrderLine Line);
 
     private IReadOnlyList<ProjectWorkOrderDetail> Orders => WorkOrders.Current(ProjectId);
@@ -587,11 +597,36 @@ else
 
     private static string MoneyExact(decimal value) =>
         value.ToString("C2", System.Globalization.CultureInfo.GetCultureInfo("en-GB"));
+
+    // InvoicedShare spreads a whole-order invoiced figure across its lines in proportion to
+    // value, and decimal division leaves sub-penny residue: a fully invoiced order can come
+    // out at −£0.004 left to invoice, which renders as “£0.00” in over-invoiced red. Snap a
+    // figure to pennies before deciding whether it is negative, positive or zero — and before
+    // showing it — so a residue smaller than money can express never raises a false alarm.
+    private static decimal AtPennies(decimal value) => Math.Round(value, 2, MidpointRounding.AwayFromZero);
     // Table footer totals — over the visible (search-filtered) lines, so a supplier
     // search reads as that supplier's committed / paid position.
     private decimal LineCommitted => VisibleLines.Sum(entry => entry.Line.LineTotal);
     private decimal LinePaid => VisibleLines.Sum(entry => entry.Line.PaidToDate);
     private decimal LineInvoiced => VisibleLines.Sum(entry => InvoicedShare(entry));
+
+    // Remaining is only an answer where the payment position is known. An unlinked order
+    // carries PaidToDate = 0 — not because £0 has been paid but because nothing is known —
+    // so committed-less-paid over ALL lines would quietly count its full value as remaining
+    // while its row shows “–”: the total wouldn't match the column above it (which is
+    // exactly how this was found). Remaining therefore sums known orders only, and the
+    // committed value still unknown is said out loud next to the figures it is missing from.
+    private decimal KnownRemainingOf(List<OrderLine> lines) =>
+        lines.Where(entry => PaymentKnown(entry.Detail))
+             .Sum(entry => entry.Line.LineTotal - entry.Line.PaidToDate);
+
+    private decimal UnknownCommittedOf(List<OrderLine> lines) =>
+        lines.Where(entry => !PaymentKnown(entry.Detail)).Sum(entry => entry.Line.LineTotal);
+
+    private const string UnknownCommittedHint =
+        "Committed value on orders with no Xero bill linked — nothing is known about what has " +
+        "been paid on them, so they count in neither paid nor remaining. Link their bills on " +
+        "the WO Allocation tab and they move into the remaining figure.";
 
     private List<GroupRow> Rows => RowsFrom(VisibleLines);
 
@@ -618,6 +653,7 @@ else
                 namesByCode.ContainsKey(group.Key),
                 group.Select(entry => entry.Detail.Order.WorkOrderId).Distinct().Count(),
                 group.Sum(entry => entry.Line.LineTotal),
+                group.Where(entry => PaymentKnown(entry.Detail)).Sum(entry => entry.Line.LineTotal),
                 group.Sum(entry => entry.Line.PaidToDate),
                 group.Sum(entry => InvoicedShare(entry)),
                 group.Any(entry => PaymentKnown(entry.Detail))))
@@ -639,6 +675,7 @@ else
                 true,
                 group.Select(entry => entry.Detail.Order.WorkOrderId).Distinct().Count(),
                 group.Sum(entry => entry.Line.LineTotal),
+                group.Where(entry => PaymentKnown(entry.Detail)).Sum(entry => entry.Line.LineTotal),
                 group.Sum(entry => entry.Line.PaidToDate),
                 group.Sum(entry => InvoicedShare(entry)),
                 group.Any(entry => PaymentKnown(entry.Detail))))
@@ -803,6 +840,7 @@ else
         var exportOrderCount = ignoreSearch ? LiveOrders.Count : VisibleOrderCount;
         var exportCommitted = exportLines.Sum(entry => entry.Line.LineTotal);
         var exportPaid = exportLines.Sum(entry => entry.Line.PaidToDate);
+        var exportRemaining = KnownRemainingOf(exportLines);
         var exportInvoiced = exportLines.Sum(entry => InvoicedShare(entry));
         var filteredTotal = !ignoreSearch && Searching;
 
@@ -820,21 +858,23 @@ else
                 new ExcelColumn("Left to invoice", ExcelFormat.Currency));
             foreach (var row in rows)
             {
+                // Same honesty as the screen: an unknown payment position exports as a
+                // blank cell, not a £0.00 paid / full-value remaining that reads as fact.
                 suppliersSheet.AddRow(
                     row.Name,
                     row.OrderCount,
                     row.Committed,
-                    row.Paid,
-                    row.Committed - row.Paid,
-                    row.Committed - row.Invoiced);
+                    row.PaidKnown ? (object)row.Paid : null,
+                    row.PaidKnown ? (object)(row.KnownCommitted - row.Paid) : null,
+                    AtPennies(row.Committed - row.Invoiced));
             }
             suppliersSheet.AddRow(
                 filteredTotal ? "Total (filtered)" : "Total",
                 exportOrderCount,
                 exportCommitted,
                 exportPaid,
-                exportCommitted - exportPaid,
-                exportCommitted - exportInvoiced);
+                exportRemaining,
+                AtPennies(exportCommitted - exportInvoiced));
         }
         else
         {
@@ -848,14 +888,16 @@ else
                 new ExcelColumn("Left to invoice", ExcelFormat.Currency));
             foreach (var row in rows)
             {
+                // Same honesty as the screen: an unknown payment position exports as a
+                // blank cell, not a £0.00 paid / full-value remaining that reads as fact.
                 centresSheet.AddRow(
                     row.Code,
                     row.InMaster ? row.Name : null,
                     row.OrderCount,
                     row.Committed,
-                    row.Paid,
-                    row.Committed - row.Paid,
-                    row.Committed - row.Invoiced);
+                    row.PaidKnown ? (object)row.Paid : null,
+                    row.PaidKnown ? (object)(row.KnownCommitted - row.Paid) : null,
+                    AtPennies(row.Committed - row.Invoiced));
             }
             centresSheet.AddRow(
                 filteredTotal ? "Total (filtered)" : "Total",
@@ -863,8 +905,8 @@ else
                 exportOrderCount,
                 exportCommitted,
                 exportPaid,
-                exportCommitted - exportPaid,
-                exportCommitted - exportInvoiced);
+                exportRemaining,
+                AtPennies(exportCommitted - exportInvoiced));
         }
 
         var ordersSheet = workbook.AddSheet("Work orders",

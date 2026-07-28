@@ -1,4 +1,6 @@
+using Jewel.JPMS.Contracts.Cqrs;
 using Jewel.JPMS.Contracts.Subcontractors;
+using Jewel.JPMS.Contracts.Xero;
 using Jewel.JPMS.Cqrs;
 using Jewel.JPMS.Models;
 using Microsoft.Extensions.DependencyInjection;
@@ -35,6 +37,27 @@ public static class SubcontractorsRouteRegistration
                 command => $"/api/subcontractors/{((PrepareSubcontractorStatementEmailDraft)command).SubcontractorId}/statement/draft-email"));
 
         commands.Register<AddSubcontractorToDirectory, Subcontractor>(CommandRoute.Post("/api/subcontractors"));
+
+        // Xero import + consolidation (the duplicate-resolution flow) + company contacts.
+        commands.Register<ImportXeroSupplier, Subcontractor>(CommandRoute.Post("/api/subcontractors/import-from-xero"));
+
+        commands.Register<ConsolidateDirectoryRecords, Subcontractor>(CommandRoute.Post("/api/subcontractors/consolidate"));
+
+        queries.Register<ListCompanyContacts, IReadOnlyList<CompanyContact>>(
+            new QueryRoute("/api/subcontractors/{subcontractorId}/contacts",
+                query => $"/api/subcontractors/{((ListCompanyContacts)query).SubcontractorId}/contacts"));
+
+        commands.Register<UpsertCompanyContact, CompanyContact>(
+            new CommandRoute("POST", "/api/subcontractors/{subcontractorId}/contacts",
+                command => $"/api/subcontractors/{((UpsertCompanyContact)command).SubcontractorId}/contacts"));
+
+        commands.Register<RemoveCompanyContact, Acknowledgement>(
+            new CommandRoute("DELETE", "/api/subcontractors/{subcontractorId}/contacts/{companyContactId}",
+                command =>
+                {
+                    var c = (RemoveCompanyContact)command;
+                    return $"/api/subcontractors/{c.SubcontractorId}/contacts/{c.CompanyContactId}";
+                }));
 
         commands.Register<UpdateSubcontractor, Subcontractor>(
             new CommandRoute("PUT", "/api/subcontractors/{subcontractorId}",

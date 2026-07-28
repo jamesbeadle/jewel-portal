@@ -1,4 +1,5 @@
 using Jewel.JPMS.Contracts.Subcontractors;
+using Jewel.JPMS.Contracts.Xero;
 using Jewel.JPMS.Cqrs;
 using Jewel.JPMS.Features.Subcontractors;
 using Jewel.JPMS.Models;
@@ -16,6 +17,10 @@ public sealed class HttpSubcontractorStore : ISubcontractorStore
     // (which deadlocks on WebAssembly). Saving a document invalidates its subcontractor.
     private readonly AsyncQueryCache<string, IReadOnlyList<ComplianceDocument>> compliance;
 
+    // Company contacts per record, cached for the same render-time reason. Upserting or removing
+    // a contact invalidates its record.
+    private readonly AsyncQueryCache<string, IReadOnlyList<CompanyContact>> contacts;
+
     public HttpSubcontractorStore(SubcontractorsReadModel readModel, TradesReadModel tradesReadModel, IQueryClient queries, ICommandSender commands)
     {
         this.readModel = readModel;
@@ -25,6 +30,7 @@ public sealed class HttpSubcontractorStore : ISubcontractorStore
         readModel.OnChanged += () => OnChange?.Invoke();
         tradesReadModel.OnChanged += () => OnChange?.Invoke();
         compliance = new((id, ct) => queries.AskAsync(new ListComplianceDocumentsForSubcontractor(id), ct), () => OnChange?.Invoke());
+        contacts = new((id, ct) => queries.AskAsync(new ListCompanyContacts(id), ct), () => OnChange?.Invoke());
     }
 
     public event Action? OnChange;
@@ -113,6 +119,53 @@ public sealed class HttpSubcontractorStore : ISubcontractorStore
         await commands.SendAsync(new UpdateSubcontractor(sub.SubcontractorId, sub.CompanyName, TradeIds(sub), sub.ContactName, sub.ContactEmail, sub.ContactPhone, sub.CisStatus,
             PaymentTermsDays: sub.PaymentTermsDays), CancellationToken.None);
         await readModel.RefreshAsync(CancellationToken.None);
+    }
+
+    // ---- Xero import + consolidation ----
+
+    public Task<XeroSuppliersSnapshot> FetchXeroSuppliersAsync(bool force = false) =>
+        queries.AskAsync(new ListXeroSuppliers(force), CancellationToken.None);
+
+    public async Task<Subcontractor> ImportFromXeroAsync(string xeroContactId)
+    {
+        var imported = await commands.SendAsync(new ImportXeroSupplier(xeroContactId), CancellationToken.None);
+        await readModel.RefreshAsync(CancellationToken.None);
+        return imported;
+    }
+
+    public async Task<Subcontractor> ConsolidateAsync(ConsolidateDirectoryRecords command)
+    {
+        var master = await commands.SendAsync(command, CancellationToken.None);
+        // The merged-away records' cached contacts AND compliance documents are stale — the
+        // server moved their rows to the master.
+        contacts.Invalidate(command.MasterSubcontractorId);
+        compliance.Invalidate(command.MasterSubcontractorId);
+        foreach (var mergedId in command.MergedSubcontractorIds)
+        {
+            contacts.Invalidate(mergedId);
+            compliance.Invalidate(mergedId);
+        }
+        await readModel.RefreshAsync(CancellationToken.None);
+        return master;
+    }
+
+    // ---- Company contacts ----
+
+    public IReadOnlyList<CompanyContact> ContactsFor(string subcontractorId) =>
+        contacts.Get(subcontractorId, Array.Empty<CompanyContact>());
+
+    public bool ContactsLoadedFor(string subcontractorId) => contacts.Has(subcontractorId);
+
+    public async Task UpsertContactAsync(UpsertCompanyContact command)
+    {
+        await commands.SendAsync(command, CancellationToken.None);
+        contacts.Invalidate(command.SubcontractorId);
+    }
+
+    public async Task RemoveContactAsync(string subcontractorId, string companyContactId)
+    {
+        await commands.SendAsync(new RemoveCompanyContact(subcontractorId, companyContactId), CancellationToken.None);
+        contacts.Invalidate(subcontractorId);
     }
 
     private static IReadOnlyList<string> TradeIds(Subcontractor sub) =>

@@ -48,6 +48,11 @@ public sealed class UpdateSubcontractorHandler
         // Null means "leave unchanged": callers that only touch trades or contact details
         // (SetTradesAsync, the bid-invite quick edits) never reset a per-company override.
         if (command.PaymentTermsDays is { } paymentTermsDays) entity.PaymentTermsDays = paymentTermsDays;
+        // Same rule for the postal address — null leaves a field alone, empty string clears it.
+        if (command.AddressLine is not null) entity.AddressLine = command.AddressLine;
+        if (command.Town is not null) entity.Town = command.Town;
+        if (command.County is not null) entity.County = command.County;
+        if (command.Postcode is not null) entity.Postcode = command.Postcode;
 
         // Sync the trade links to exactly the requested set (add missing, remove dropped).
         context.SubcontractorTrades.RemoveRange(existingLinks.Where(link => !tradeIds.Contains(link.TradeId)));

@@ -36,7 +36,9 @@ public sealed class AddSubcontractorToDirectoryHandler
             Town = command.Town,
             County = command.County,
             Website = command.Website,
-            PaymentTermsDays = command.PaymentTermsDays
+            PaymentTermsDays = command.PaymentTermsDays,
+            AddressLine = command.AddressLine,
+            Postcode = command.Postcode
         };
         context.Subcontractors.Add(entity);
         foreach (var tradeId in tradeIds)

@@ -33,6 +33,14 @@ public interface IXeroClient
     Task<XeroCashSummarySnapshot> GetCashSummaryAsync(bool force, CancellationToken ct);
 
     /// <summary>
+    /// Lists the suppliers held in Xero (contacts flagged IsSupplier), A–Z by name, for the
+    /// directory's "Import from Xero" modal. Serves the cached snapshot when fresh enough unless
+    /// <paramref name="force"/> is set. The AlreadyImported/LinkedSubcontractorId stamps are left
+    /// at their defaults here — the query handler joins them on from the directory's Xero links.
+    /// </summary>
+    Task<XeroSuppliersSnapshot> GetSuppliersAsync(bool force, CancellationToken ct);
+
+    /// <summary>
     /// Confirms an allocated draft (or submitted) bill / credit note back into Xero and
     /// approves it: re-reads the invoice fresh, stamps Sites + Cost Code tracking on each
     /// instructed line — physically splitting a line into one Xero line per cost centre
@@ -87,6 +95,9 @@ public sealed class NullXeroClient : IXeroClient
     public Task<XeroCashSummarySnapshot> GetCashSummaryAsync(bool force, CancellationToken ct) =>
         Task.FromResult(XeroCashSummarySnapshot.NotConfigured());
 
+    public Task<XeroSuppliersSnapshot> GetSuppliersAsync(bool force, CancellationToken ct) =>
+        Task.FromResult(XeroSuppliersSnapshot.NotConfigured());
+
     public Task<XeroApprovalResult> ApproveInvoiceAsync(XeroApprovalRequest request, CancellationToken ct) =>
         Task.FromResult(XeroApprovalResult.Failed(
             "Xero isn't connected — add the Xero__ClientId / Xero__ClientSecret app settings."));
@@ -111,6 +122,7 @@ public sealed class XeroClient : IXeroClient
     private const string InvoicesUrl = "https://api.xero.com/api.xro/2.0/Invoices";
     private const string CreditNotesUrl = "https://api.xero.com/api.xro/2.0/CreditNotes";
     private const string AccountsUrl = "https://api.xero.com/api.xro/2.0/Accounts";
+    private const string ContactsUrl = "https://api.xero.com/api.xro/2.0/Contacts";
     private const string BankSummaryReportUrl = "https://api.xero.com/api.xro/2.0/Reports/BankSummary";
     private const string TrackingCategoriesUrl = "https://api.xero.com/api.xro/2.0/TrackingCategories";
     private const int PageSize = 100; // Xero's page size for the Invoices endpoint.
@@ -135,6 +147,12 @@ public sealed class XeroClient : IXeroClient
     private readonly SemaphoreSlim _cashSummaryLock = new(1, 1);
     private XeroCashSummarySnapshot? _cachedCashSummary;
     private DateTimeOffset _cachedCashSummaryAt = DateTimeOffset.MinValue;
+
+    // Supplier list cache — same rationale as the snapshots above (the contact list costs several
+    // paged calls against the 60/min limit, and one fetch serves every user for CacheMinutes).
+    private readonly SemaphoreSlim _suppliersLock = new(1, 1);
+    private XeroSuppliersSnapshot? _cachedSuppliers;
+    private DateTimeOffset _cachedSuppliersAt = DateTimeOffset.MinValue;
 
     // Chart of accounts changes rarely; refresh it hourly at most.
     private IReadOnlyDictionary<string, string>? _accountNamesByCode;
@@ -214,6 +232,135 @@ public sealed class XeroClient : IXeroClient
     private bool CachedCashSummaryIsFresh =>
         _cachedCashSummary is not null
         && DateTimeOffset.UtcNow < _cachedCashSummaryAt.AddMinutes(_options.CacheMinutes);
+
+    // -- suppliers: the contact list behind the directory's "Import from Xero" ----------
+
+    public async Task<XeroSuppliersSnapshot> GetSuppliersAsync(bool force, CancellationToken ct)
+    {
+        if (!_options.IsConfigured)
+            return XeroSuppliersSnapshot.NotConfigured();
+
+        await _suppliersLock.WaitAsync(ct);
+        try
+        {
+            if (!force && CachedSuppliersAreFresh)
+                return _cachedSuppliers!;
+
+            var snapshot = await FetchSuppliersAsync(ct);
+
+            // Only successful reads replace the cache — a transient failure shouldn't evict
+            // good data, but it is still returned so the user sees what went wrong.
+            if (snapshot.Error is null)
+            {
+                _cachedSuppliers = snapshot;
+                _cachedSuppliersAt = DateTimeOffset.UtcNow;
+            }
+            return snapshot;
+        }
+        finally
+        {
+            _suppliersLock.Release();
+        }
+    }
+
+    private bool CachedSuppliersAreFresh =>
+        _cachedSuppliers is not null
+        && DateTimeOffset.UtcNow < _cachedSuppliersAt.AddMinutes(_options.CacheMinutes);
+
+    private async Task<XeroSuppliersSnapshot> FetchSuppliersAsync(CancellationToken ct)
+    {
+        string token;
+        try
+        {
+            token = await GetAccessTokenAsync(ct);
+        }
+        catch (XeroCallFailedException tokenFailure)
+        {
+            return XeroSuppliersSnapshot.Failed(tokenFailure.Message);
+        }
+
+        var suppliers = new List<XeroSupplier>();
+        var truncated = false;
+        try
+        {
+            // Suppliers only (contacts that have had at least one bill), active by default —
+            // includeArchived is deliberately not sent. Paged like the invoices read.
+            for (var page = 1; ; page++)
+            {
+                if (page > _options.MaxPages) { truncated = true; break; }
+
+                var url = $"{ContactsUrl}?page={page}&where={Uri.EscapeDataString("IsSupplier==true")}&order={Uri.EscapeDataString("Name")}";
+                using var doc = await GetJsonAsync(token, url, "contacts", ct);
+
+                if (!doc.RootElement.TryGetProperty("Contacts", out var contacts) || contacts.ValueKind != JsonValueKind.Array)
+                    break;
+
+                var pageOfSuppliers = contacts.EnumerateArray().Select(ReadSupplier).ToList();
+                suppliers.AddRange(pageOfSuppliers);
+                if (pageOfSuppliers.Count < PageSize) break; // Short page — no more to fetch.
+            }
+        }
+        catch (XeroCallFailedException callFailure)
+        {
+            return XeroSuppliersSnapshot.Failed(callFailure.Message);
+        }
+
+        return new XeroSuppliersSnapshot(true, null, DateTimeOffset.UtcNow, truncated, suppliers);
+    }
+
+    private static XeroSupplier ReadSupplier(JsonElement contact) => new(
+        ContactId: StringOf(contact, "ContactID") ?? Guid.NewGuid().ToString(),
+        Name: StringOf(contact, "Name") ?? "",
+        EmailAddress: StringOf(contact, "EmailAddress") ?? "",
+        Phone: PhoneOf(contact, "DEFAULT") ?? PhoneOf(contact, "DDI") ?? "",
+        Mobile: PhoneOf(contact, "MOBILE") ?? "",
+        Town: AddressPartOf(contact, "City"),
+        County: AddressPartOf(contact, "Region"),
+        ContactPersons: ReadContactPersons(contact));
+
+    /// <summary>One phone line by Xero PhoneType, assembled country + area + number; null when empty.</summary>
+    private static string? PhoneOf(JsonElement contact, string phoneType)
+    {
+        if (!contact.TryGetProperty("Phones", out var phones) || phones.ValueKind != JsonValueKind.Array)
+            return null;
+        foreach (var phone in phones.EnumerateArray())
+        {
+            if (!string.Equals(StringOf(phone, "PhoneType"), phoneType, StringComparison.OrdinalIgnoreCase))
+                continue;
+            var number = string.Join(" ",
+                new[] { StringOf(phone, "PhoneCountryCode"), StringOf(phone, "PhoneAreaCode"), StringOf(phone, "PhoneNumber") }
+                    .Where(part => !string.IsNullOrWhiteSpace(part)));
+            if (!string.IsNullOrWhiteSpace(number)) return number;
+        }
+        return null;
+    }
+
+    /// <summary>One field ("City"/"Region") from the contact's first address that carries it.</summary>
+    private static string AddressPartOf(JsonElement contact, string part)
+    {
+        if (!contact.TryGetProperty("Addresses", out var addresses) || addresses.ValueKind != JsonValueKind.Array)
+            return "";
+        foreach (var address in addresses.EnumerateArray())
+        {
+            var value = StringOf(address, part);
+            if (!string.IsNullOrWhiteSpace(value)) return value;
+        }
+        return "";
+    }
+
+    private static IReadOnlyList<XeroContactPerson> ReadContactPersons(JsonElement contact)
+    {
+        if (!contact.TryGetProperty("ContactPersons", out var persons) || persons.ValueKind != JsonValueKind.Array)
+            return Array.Empty<XeroContactPerson>();
+        return persons.EnumerateArray()
+            .Select(person => new XeroContactPerson(
+                Name: string.Join(" ",
+                    new[] { StringOf(person, "FirstName"), StringOf(person, "LastName") }
+                        .Where(part => !string.IsNullOrWhiteSpace(part))),
+                EmailAddress: StringOf(person, "EmailAddress") ?? ""))
+            .Where(person => !string.IsNullOrWhiteSpace(person.Name) || !string.IsNullOrWhiteSpace(person.EmailAddress))
+            .ToList();
+    }
 
     private async Task<XeroCashSummarySnapshot> FetchCashSummaryAsync(CancellationToken ct)
     {

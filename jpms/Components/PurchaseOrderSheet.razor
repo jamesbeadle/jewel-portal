@@ -39,9 +39,9 @@
             {
                 <p>@SupplierContactName</p>
             }
-            @if (!string.IsNullOrWhiteSpace(SupplierAddress))
+            @foreach (var addressLine in SupplierAddressLines.Where(part => !string.IsNullOrWhiteSpace(part)))
             {
-                <p>@SupplierAddress</p>
+                <p>@addressLine</p>
             }
         </div>
         <div>
@@ -281,7 +281,11 @@
 
     [Parameter] public string SupplierName { get; set; } = "";
     [Parameter] public string SupplierContactName { get; set; } = "";
-    [Parameter] public string SupplierAddress { get; set; } = "";
+
+    /// <summary>The supplier's postal address as stacked letter lines (street / town / county /
+    /// postcode), printed one per line in the Sub/Vendor block. Hosts pass the directory
+    /// record's AddressLines; blanks are skipped.</summary>
+    [Parameter] public IReadOnlyList<string> SupplierAddressLines { get; set; } = Array.Empty<string>();
     [Parameter] public string ProjectName { get; set; } = "";
     [Parameter] public string SiteAddress { get; set; } = "";
 

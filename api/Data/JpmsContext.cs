@@ -46,6 +46,8 @@ public sealed class JpmsContext : DbContext
     public DbSet<SubcontractorEntity> Subcontractors => Set<SubcontractorEntity>();
     public DbSet<TradeEntity> Trades => Set<TradeEntity>();
     public DbSet<SubcontractorTradeEntity> SubcontractorTrades => Set<SubcontractorTradeEntity>();
+    public DbSet<SubcontractorXeroLinkEntity> SubcontractorXeroLinks => Set<SubcontractorXeroLinkEntity>();
+    public DbSet<CompanyContactEntity> CompanyContacts => Set<CompanyContactEntity>();
     public DbSet<ComplianceDocumentEntity> ComplianceDocuments => Set<ComplianceDocumentEntity>();
 
     public DbSet<HsRecordEntity> HsRecords => Set<HsRecordEntity>();
@@ -212,6 +214,20 @@ public sealed class JpmsContext : DbContext
         modelBuilder.Entity<AiConversationEntity>()
             .HasIndex(row => new { row.ScopeRecordId, row.LastMessageAt })
             .HasDatabaseName("IX_AiConversations_ScopeRecordId");
+
+        // ---- Company directory (Xero links + contacts) -----------------------------------------
+        // Unique: one Xero supplier can only ever be imported once — consolidation re-points the
+        // link rather than duplicating it.
+        modelBuilder.Entity<SubcontractorXeroLinkEntity>()
+            .HasIndex(row => row.XeroContactId)
+            .IsUnique()
+            .HasDatabaseName("IX_SubcontractorXeroLinks_XeroContactId");
+        modelBuilder.Entity<SubcontractorXeroLinkEntity>()
+            .HasIndex(row => row.SubcontractorId)
+            .HasDatabaseName("IX_SubcontractorXeroLinks_SubcontractorId");
+        modelBuilder.Entity<CompanyContactEntity>()
+            .HasIndex(row => row.SubcontractorId)
+            .HasDatabaseName("IX_CompanyContacts_SubcontractorId");
 
         // ---- Project contracts -----------------------------------------------------------------
         // Unique: one contract per project. The handlers treat the row as an upsert, and this index

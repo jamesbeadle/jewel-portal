@@ -27,6 +27,38 @@ public sealed class SubcontractorEntity
     public int PaymentTermsDays { get; set; } = 30;
 }
 
+// A link between a directory record and a Xero contact, written when a supplier is imported from
+// Xero. The link is what marks the record "linked to Xero" (the link glyph in the directory), and
+// it survives consolidation: merging re-points the links to the master record, so a master built
+// from any Xero-imported record stays linked — possibly to several Xero contacts at once.
+// XeroContactId is unique so one Xero supplier can only ever be imported once.
+public sealed class SubcontractorXeroLinkEntity
+{
+    [Key, MaxLength(64)] public string SubcontractorXeroLinkId { get; set; } = "";
+    [MaxLength(64)]      public string SubcontractorId { get; set; } = "";
+    [MaxLength(64)]      public string XeroContactId { get; set; } = "";
+    // The supplier's name in Xero at import time — kept for display/troubleshooting even if the
+    // portal record is later renamed or merged.
+    [MaxLength(256)]     public string XeroContactName { get; set; } = "";
+    public DateTimeOffset ImportedAt { get; set; }
+    [MaxLength(256)]     public string ImportedByEmail { get; set; } = "";
+}
+
+// A person on a directory record beyond its single primary contact line. Consolidation keeps every
+// merged record's contact details as one of these (so no email or phone number is lost), and Xero
+// imports add the Xero contact persons. Purpose is free text ("Accounts", "Projects"…) — the system
+// purpose the contact serves on the master record.
+public sealed class CompanyContactEntity
+{
+    [Key, MaxLength(64)] public string CompanyContactId { get; set; } = "";
+    [MaxLength(64)]      public string SubcontractorId { get; set; } = "";
+    [MaxLength(256)]     public string Name { get; set; } = "";
+    [MaxLength(128)]     public string Purpose { get; set; } = "";
+    [MaxLength(256)]     public string Email { get; set; } = "";
+    [MaxLength(64)]      public string Phone { get; set; } = "";
+    public DateTimeOffset CreatedAt { get; set; }
+}
+
 // The curated master list of trades. Directory records link to these via SubcontractorTrades, so a
 // trade is added deliberately once and reused everywhere — never typed free-text per record (the old
 // PrimaryTrade string allowed slash-separated compounds like "Boarding/drylining/Plastering").

@@ -2,6 +2,7 @@ using Jewel.JPMS.Api.Cqrs;
 using Jewel.JPMS.Api.Features.Subcontractors.Commands;
 using Jewel.JPMS.Api.Features.Subcontractors.Queries;
 using Jewel.JPMS.Api.Features.Subcontractors.Storage;
+using Jewel.JPMS.Contracts.Cqrs;
 using Jewel.JPMS.Contracts.Subcontractors;
 using Jewel.JPMS.Models;
 using Microsoft.Extensions.Configuration;
@@ -41,6 +42,21 @@ public static class SubcontractorsFeatureRegistration
         services.AddScoped<UploadComplianceDocumentValidation>();
 
         services.AddScoped<ICommandHandler<AddComplianceDocumentVersion, ComplianceDocument>, AddComplianceDocumentVersionHandler>();
+
+        // Xero import + consolidation (the duplicate-resolution flow) + company contacts.
+        services.AddScoped<ICommandHandler<ImportXeroSupplier, Subcontractor>, ImportXeroSupplierHandler>();
+        services.AddScoped<ImportXeroSupplierAuthorisation>();
+        services.AddScoped<ImportXeroSupplierValidation>();
+
+        services.AddScoped<ICommandHandler<ConsolidateDirectoryRecords, Subcontractor>, ConsolidateDirectoryRecordsHandler>();
+        services.AddScoped<ConsolidateDirectoryRecordsAuthorisation>();
+        services.AddScoped<ConsolidateDirectoryRecordsValidation>();
+
+        services.AddScoped<IQueryHandler<ListCompanyContacts, IReadOnlyList<CompanyContact>>, ListCompanyContactsHandler>();
+        services.AddScoped<ICommandHandler<UpsertCompanyContact, CompanyContact>, UpsertCompanyContactHandler>();
+        services.AddScoped<ICommandHandler<RemoveCompanyContact, Acknowledgement>, RemoveCompanyContactHandler>();
+        services.AddScoped<UpsertCompanyContactAuthorisation>();
+        services.AddScoped<UpsertCompanyContactValidation>();
 
         services.AddScoped<SubcontractorPortalInviter>();
         services.AddScoped<InviteSubcontractorPortalUserAuthorisation>();

@@ -48,6 +48,9 @@ public static class XeroFeatureRegistration
         // Cash summary: bank balances + outstanding sales invoices for the company Cash Summary page.
         services.AddScoped<IQueryHandler<GetXeroCashSummary, XeroCashSummarySnapshot>, GetXeroCashSummaryHandler>();
 
+        // Suppliers: the contact list behind the directory's "Import from Xero" modal.
+        services.AddScoped<IQueryHandler<ListXeroSuppliers, XeroSuppliersSnapshot>, ListXeroSuppliersHandler>();
+
         // Ledger allocation: stored Xero lines reconciled onto projects + master cost centres.
         services.AddScoped<ICommandHandler<SyncXeroLedger, XeroLedgerSyncResult>, SyncXeroLedgerHandler>();
         services.AddScoped<IQueryHandler<ListXeroLedgerLines, IReadOnlyList<XeroLedgerLine>>, ListXeroLedgerLinesHandler>();

@@ -96,7 +96,7 @@ else
                             Lines="Order.Lines"
                             SupplierName="@(MyRecord?.Record.CompanyName ?? "")"
                             SupplierContactName="@(MyRecord?.Record.ContactName ?? "")"
-                            SupplierAddress="@SupplierAddress"
+                            SupplierAddressLines="@SupplierAddressLines"
                             ProjectName="@Order.ProjectName"
                             SiteAddress="@Order.SiteAddress"
                             ApprovedByName="@Order.ApprovedByName"
@@ -132,10 +132,8 @@ else
     // Acceptance applies to live issued orders only — Complete/Cancelled are history.
     private bool CanAcceptThisOrder => Order?.Order.Status == WorkOrderStatus.Released;
 
-    private string SupplierAddress =>
-        MyRecord is null
-            ? ""
-            : string.Join(", ", new[] { MyRecord.Record.Town, MyRecord.Record.County }.Where(part => !string.IsNullOrWhiteSpace(part)));
+    private IReadOnlyList<string> SupplierAddressLines =>
+        MyRecord?.Record.AddressLines ?? Array.Empty<string>();
 
     private string Title => Order is null ? "Work order" : $"WO-{Order.Order.Number:0000}";
 

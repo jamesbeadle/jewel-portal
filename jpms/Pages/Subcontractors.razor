@@ -1,4 +1,6 @@
 @page "/directory"
+@using Jewel.JPMS.Contracts.Subcontractors
+@using Jewel.JPMS.Contracts.Xero
 @inject AuthService Auth
 @inject SessionService Session
 @inject ISubcontractorStore SubcontractorStore
@@ -217,6 +219,26 @@ else
                     }
                 </select>
             </div>
+            @if (CanManage)
+            {
+                <div class="flex items-center gap-2">
+                    <button type="button" class="btn-secondary inline-flex items-center gap-1.5"
+                            title="Copy supplier records from Xero into the directory"
+                            @onclick="OpenImportModal">
+                        <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                             stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" /><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" /></svg>
+                        Import from Xero
+                    </button>
+                    @if (SelectedForConsolidation().Count >= 2)
+                    {
+                        <button type="button" class="btn-primary"
+                                title="Merge the ticked records into one master record"
+                                @onclick="OpenConsolidateModal">
+                            Consolidate (@SelectedForConsolidation().Count)
+                        </button>
+                    }
+                </div>
+            }
         </div>
 
         @if (Filtered().Count == 0)
@@ -229,6 +251,10 @@ else
                 <table class="w-full text-sm">
                     <thead class="bg-surface-raised border-b border-line">
                         <tr class="text-left text-[11px] uppercase tracking-wider text-content-subtle font-semibold">
+                            @if (CanManage)
+                            {
+                                <th class="sticky top-0 z-20 bg-surface-raised pl-4 pr-1 py-3 w-8" title="Tick records to consolidate"></th>
+                            }
                             <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3">Company</th>
                             <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3">Type</th>
                             <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 hidden sm:table-cell">Trade</th>
@@ -240,7 +266,24 @@ else
                         @foreach (var sub in Filtered())
                         {
                             <tr class="hover:bg-surface-raised cursor-pointer transition" @onclick="() => Open(sub.SubcontractorId)">
-                                <td class="px-4 py-3 text-content font-medium">@sub.CompanyName</td>
+                                @if (CanManage)
+                                {
+                                    <td class="pl-4 pr-1 py-3" @onclick:stopPropagation="true">
+                                        <input type="checkbox" class="cursor-pointer"
+                                               checked="@selectedIds.Contains(sub.SubcontractorId)"
+                                               @onchange="e => ToggleSelected(sub.SubcontractorId, e)" />
+                                    </td>
+                                }
+                                <td class="px-4 py-3 text-content font-medium">
+                                    <span class="inline-flex items-center gap-1.5">
+                                        @sub.CompanyName
+                                        @if (sub.XeroLinked)
+                                        {
+                                            <svg class="w-3.5 h-3.5 text-content-subtle shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                                 stroke-linecap="round" stroke-linejoin="round" role="img" aria-label="Linked to Xero"><title>Linked to Xero</title><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" /><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" /></svg>
+                                        }
+                                    </span>
+                                </td>
                                 <td class="px-4 py-3">
                                     <span class="inline-flex items-center rounded-full bg-surface-raised border border-line px-2 py-0.5 text-[11px] font-medium text-content-muted">@Label(sub.Category)</span>
                                 </td>
@@ -359,6 +402,167 @@ else
             </div>
         </div>
     </Modal>
+
+    @* ---- Import from Xero: the supplier list straight out of the accounts system. Each import
+       creates a NEW linked record; duplicates are then resolved with Consolidate, so there is one
+       consistent flow for all duplicates. ---- *@
+    <Modal IsOpen="importOpen" Title="Import from Xero" ShowFooter="false"
+           OnCancel="CloseImportModal" Class="max-w-2xl w-full">
+        @if (importError is not null)
+        {
+            <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-3">@importError</p>
+        }
+        <div class="flex flex-wrap items-end gap-3 mb-4">
+            <div class="grow min-w-[14rem]">
+                <label class="eyebrow block mb-1">Search</label>
+                <input class="field" placeholder="Supplier name, email, town…" value="@importSearch"
+                       @oninput="OnImportSearchInput" />
+            </div>
+            <button type="button" class="btn-secondary shrink-0" disabled="@importLoading"
+                    title="Re-read the supplier list from Xero"
+                    @onclick="() => LoadSuppliersAsync(force: true)">
+                @(importLoading ? "Refreshing…" : "Refresh")
+            </button>
+        </div>
+
+        @if (importSnapshot is null)
+        {
+            @* A failed fetch must open the gate — the error paragraph above says what went wrong. *@
+            @if (importError is null)
+            {
+                <LoadGate IsLoading="true" Prominent="true" Label="Reading Xero" />
+            }
+        }
+        else if (!importSnapshot.IsConfigured)
+        {
+            <p class="text-sm text-content-subtle italic">
+                Xero isn't connected — the Xero__ClientId / Xero__ClientSecret app settings are missing.
+            </p>
+        }
+        else if (importSnapshot.Error is not null)
+        {
+            <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@importSnapshot.Error</p>
+        }
+        else if (FilteredSuppliers().Count == 0)
+        {
+            <p class="text-sm text-content-subtle italic">No Xero suppliers match.</p>
+        }
+        else
+        {
+            <div class="rounded-xl border border-line overflow-y-auto max-h-[50vh]">
+                <table class="w-full text-sm">
+                    <tbody class="divide-y divide-line">
+                        @foreach (var supplier in FilteredSuppliers())
+                        {
+                            <tr>
+                                <td class="px-4 py-3">
+                                    <p class="text-content font-medium">@supplier.Name</p>
+                                    <p class="text-xs text-content-subtle">
+                                        @string.Join(" · ", new[] { supplier.EmailAddress, supplier.Town }.Where(x => !string.IsNullOrWhiteSpace(x)))
+                                    </p>
+                                </td>
+                                <td class="px-4 py-3 text-right">
+                                    @if (supplier.AlreadyImported)
+                                    {
+                                        <span class="inline-flex items-center rounded-full bg-surface-raised border border-line px-2 py-0.5 text-[11px] font-medium text-content-muted">Imported</span>
+                                    }
+                                    else
+                                    {
+                                        <button type="button" class="btn-secondary text-xs px-2.5 py-1.5"
+                                                disabled="@(importingContactId is not null)"
+                                                @onclick="() => ImportSupplierAsync(supplier.ContactId)">
+                                            @(importingContactId == supplier.ContactId ? "Importing…" : "Import")
+                                        </button>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+            @if (importSnapshot.Truncated)
+            {
+                <p class="text-xs text-content-subtle mt-2">
+                    Xero holds more suppliers than the page cap allows — the list is incomplete (raise Xero__MaxPages).
+                </p>
+            }
+        }
+        <p class="text-xs text-content-subtle mt-3">
+            Importing copies the supplier into the directory as a new record marked with the
+            Xero link symbol. If it duplicates an existing record, tick both in the directory
+            and use Consolidate to merge them into one master record.
+        </p>
+    </Modal>
+
+    @* ---- Consolidate: merge the ticked records into one master. Pick the master, then the
+       winning value for each detail; every reference is re-pointed and the other records are
+       deleted — their contact details are kept as contacts on the master. ---- *@
+    <Modal IsOpen="consolidateOpen" Title="Consolidate records" ShowFooter="true"
+           ConfirmLabel="@(consolidating ? "Consolidating…" : $"Merge {consolidateCandidates.Count} records")"
+           CancelLabel="Cancel" DismissOnOverlayClick="false"
+           OnCancel="CloseConsolidateModal" OnConfirm="SaveConsolidationAsync" Class="max-w-2xl w-full">
+        @if (consolidateError is not null)
+        {
+            <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-3">@consolidateError</p>
+        }
+        <div class="space-y-4">
+            <div>
+                <p class="eyebrow mb-1">Master record</p>
+                <p class="text-xs text-content-subtle mb-2">
+                    The record the others merge into. It keeps its history (work orders, invites,
+                    compliance documents all move here) — the others are deleted after the merge.
+                </p>
+                <div class="space-y-1">
+                    @foreach (var candidate in consolidateCandidates)
+                    {
+                        var id = candidate.SubcontractorId;
+                        <label class="flex items-center gap-2 text-sm text-content cursor-pointer">
+                            <input type="radio" name="consolidate-master" checked="@(masterId == id)"
+                                   @onchange="() => masterId = id" />
+                            <span class="font-medium">@candidate.CompanyName</span>
+                            <span class="text-xs text-content-subtle">
+                                @string.Join(" · ", new[] { Label(candidate.Category), candidate.TradesLabel, candidate.XeroLinked ? "Linked to Xero" : "" }.Where(x => !string.IsNullOrWhiteSpace(x)))
+                            </span>
+                        </label>
+                    }
+                </div>
+            </div>
+
+            @if (mergeFields.Any(field => field.Options.Count > 1))
+            {
+                <div>
+                    <p class="eyebrow mb-1">Choose the winning values</p>
+                    <p class="text-xs text-content-subtle mb-2">
+                        Where the records disagree, pick the value the master record keeps. Contact
+                        details that lose here are kept as additional contacts on the master.
+                    </p>
+                    <div class="space-y-3">
+                        @foreach (var field in mergeFields.Where(field => field.Options.Count > 1))
+                        {
+                            <div>
+                                <p class="text-xs font-medium text-content-muted mb-1">@field.Fieldname</p>
+                                <div class="flex flex-wrap gap-x-4 gap-y-1">
+                                    @foreach (var option in field.Options)
+                                    {
+                                        <label class="flex items-center gap-1.5 text-sm text-content cursor-pointer">
+                                            <input type="radio" name="@("consolidate-" + field.Key)" checked="@(field.Chosen == option)"
+                                                   @onchange="() => field.Chosen = option" />
+                                            @option
+                                        </label>
+                                    }
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </div>
+            }
+
+            <p class="text-xs text-content-subtle">
+                Trades are combined, every contact is kept, and Xero links carry across — if any of
+                the merged records came from Xero, the master stays linked to Xero.
+            </p>
+        </div>
+    </Modal>
 }
 
 @code {
@@ -373,8 +577,10 @@ else
     private bool CanAccess => Session.AvailableRoles.Any(r =>
         r is Role.Admin or Role.ManagingDirector or Role.FinanceDirector or Role.ProjectManager);
 
-    // Adding companies keeps the original narrower gate (mirrors the API's add authorisation).
-    private bool CanManage => Session.AvailableRoles.Any(r => r is Role.Admin or Role.ManagingDirector);
+    // Adding companies mirrors the API's add authorisation (Admin, MD, FD — the API also allows
+    // Office & Compliance, but that role can't reach this page). FD added 2026-07-28.
+    private bool CanManage => Session.AvailableRoles.Any(r =>
+        r is Role.Admin or Role.ManagingDirector or Role.FinanceDirector);
 
     // ---- Group chips -------------------------------------------------------
     private enum DirectoryGroup { Clients, Architects, Subcontractors, Staff }
@@ -578,6 +784,192 @@ else
     }
 
     private void Open(string id) => Nav.NavigateTo($"/directory/{id}");
+
+    // ---- Import from Xero --------------------------------------------------
+    // The modal lists Xero's suppliers (contacts that have had a bill). Its search box starts
+    // from whatever is in the directory search box, so "sear" over the directory carries straight
+    // into the Xero list. Importing creates a NEW linked record every time — duplicates are then
+    // resolved with Consolidate below, one consistent flow for all duplicates.
+
+    private bool importOpen;
+    private string importSearch = "";
+    private XeroSuppliersSnapshot? importSnapshot;
+    private bool importLoading;
+    private string? importError;
+    private string? importingContactId;
+
+    private void OpenImportModal()
+    {
+        importSearch = search; // the modal's search starts as the directory's search text
+        importError = null;
+        importOpen = true;
+        if (importSnapshot is null) _ = LoadSuppliersAsync(force: false);
+    }
+
+    private void CloseImportModal() => importOpen = false;
+
+    private void OnImportSearchInput(ChangeEventArgs e) => importSearch = e.Value?.ToString() ?? "";
+
+    private async Task LoadSuppliersAsync(bool force)
+    {
+        if (importLoading) return;
+        importError = null;
+        try
+        {
+            importLoading = true;
+            if (force) importSnapshot = null;
+            importSnapshot = await SubcontractorStore.FetchXeroSuppliersAsync(force);
+        }
+        catch { importError = "The Xero supplier list couldn't be loaded. Please try again."; }
+        finally { importLoading = false; StateHasChanged(); }
+    }
+
+    private IReadOnlyList<XeroSupplier> FilteredSuppliers()
+    {
+        if (importSnapshot is null) return Array.Empty<XeroSupplier>();
+        var q = (importSearch ?? "").Trim();
+        return importSnapshot.Suppliers
+            .Where(supplier => q.Length == 0
+                || supplier.Name.Contains(q, StringComparison.OrdinalIgnoreCase)
+                || supplier.EmailAddress.Contains(q, StringComparison.OrdinalIgnoreCase)
+                || supplier.Town.Contains(q, StringComparison.OrdinalIgnoreCase)
+                || supplier.County.Contains(q, StringComparison.OrdinalIgnoreCase))
+            .ToList();
+    }
+
+    private async Task ImportSupplierAsync(string contactId)
+    {
+        if (importingContactId is not null) return;
+        importError = null;
+        try
+        {
+            importingContactId = contactId;
+            await SubcontractorStore.ImportFromXeroAsync(contactId);
+            // Mark the row imported in place rather than re-reading Xero for a flag we already know.
+            if (importSnapshot is not null)
+            {
+                importSnapshot = importSnapshot with
+                {
+                    Suppliers = importSnapshot.Suppliers
+                        .Select(supplier => supplier.ContactId == contactId
+                            ? supplier with { AlreadyImported = true }
+                            : supplier)
+                        .ToList()
+                };
+            }
+        }
+        catch (CommandFailedException ex) { importError = $"Couldn't import: {ex.Message}"; }
+        catch { importError = "Couldn't import that supplier. Please try again."; }
+        finally { importingContactId = null; }
+    }
+
+    // ---- Consolidation -----------------------------------------------------
+    // Tick 2+ records, choose the master and the winning value for each detail; the server
+    // re-points every reference to the master, keeps losing contact details as contacts, moves
+    // the Xero links across and deletes the merged-away records.
+
+    private readonly HashSet<string> selectedIds = new(StringComparer.OrdinalIgnoreCase);
+    private bool consolidateOpen;
+    private bool consolidating;
+    private string? consolidateError;
+    private string masterId = "";
+    private List<Subcontractor> consolidateCandidates = new();
+    private List<MergeField> mergeFields = new();
+
+    private sealed class MergeField
+    {
+        public string Key = "";
+        public string Fieldname = "";
+        public List<string> Options = new();
+        public string Chosen = "";
+    }
+
+    private void ToggleSelected(string subcontractorId, ChangeEventArgs e)
+    {
+        if (e.Value is bool ticked && ticked) selectedIds.Add(subcontractorId);
+        else selectedIds.Remove(subcontractorId);
+    }
+
+    // Selection intersected with the current directory, so a stale tick (record merged away in
+    // another tab) can never enter a consolidation.
+    private List<Subcontractor> SelectedForConsolidation() =>
+        SubcontractorStore.All().Where(sub => selectedIds.Contains(sub.SubcontractorId)).ToList();
+
+    private void OpenConsolidateModal()
+    {
+        consolidateCandidates = SelectedForConsolidation();
+        if (consolidateCandidates.Count < 2) return;
+
+        // Default master: the oldest record — the company has been known under it the longest.
+        masterId = consolidateCandidates.OrderBy(sub => sub.OnboardedAt).First().SubcontractorId;
+
+        var master = consolidateCandidates.First(sub => sub.SubcontractorId == masterId);
+        mergeFields = new List<MergeField>
+        {
+            BuildField("company", "Company name", master.CompanyName, consolidateCandidates.Select(sub => sub.CompanyName)),
+            BuildField("category", "Type", Label(master.Category), consolidateCandidates.Select(sub => Label(sub.Category))),
+            BuildField("contact", "Contact name", master.ContactName, consolidateCandidates.Select(sub => sub.ContactName)),
+            BuildField("email", "Email", master.ContactEmail, consolidateCandidates.Select(sub => sub.ContactEmail)),
+            BuildField("phone", "Phone", master.ContactPhone, consolidateCandidates.Select(sub => sub.ContactPhone)),
+            BuildField("mobile", "Mobile", master.MobileNumber, consolidateCandidates.Select(sub => sub.MobileNumber)),
+            BuildField("town", "Town", master.Town, consolidateCandidates.Select(sub => sub.Town)),
+            BuildField("county", "County", master.County, consolidateCandidates.Select(sub => sub.County)),
+            BuildField("website", "Website", master.Website, consolidateCandidates.Select(sub => sub.Website)),
+            BuildField("cis", "CIS status", master.CisStatus, consolidateCandidates.Select(sub => sub.CisStatus)),
+            BuildField("terms", "Payment terms (days)", master.PaymentTermsDays.ToString(),
+                consolidateCandidates.Select(sub => sub.PaymentTermsDays.ToString()))
+        };
+
+        consolidateError = null;
+        consolidateOpen = true;
+    }
+
+    private static MergeField BuildField(string key, string fieldname, string masterValue, IEnumerable<string> values)
+    {
+        var options = values
+            .Select(value => (value ?? "").Trim())
+            .Where(value => value.Length > 0)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+        var chosen = !string.IsNullOrWhiteSpace(masterValue) ? masterValue.Trim() : options.FirstOrDefault() ?? "";
+        return new MergeField { Key = key, Fieldname = fieldname, Options = options, Chosen = chosen };
+    }
+
+    private void CloseConsolidateModal() => consolidateOpen = false;
+
+    private string ChosenValue(string key) =>
+        mergeFields.FirstOrDefault(field => field.Key == key)?.Chosen ?? "";
+
+    private async Task SaveConsolidationAsync()
+    {
+        if (consolidating) return;
+        if (string.IsNullOrWhiteSpace(masterId)) { consolidateError = "Pick the master record."; return; }
+        if (string.IsNullOrWhiteSpace(ChosenValue("company"))) { consolidateError = "Company name is required."; return; }
+        consolidateError = null;
+
+        // The Type radio carries the label; map it back to the enum (labels are one-to-one).
+        var category = AllCategories.FirstOrDefault(c => Label(c) == ChosenValue("category"));
+        var terms = int.TryParse(ChosenValue("terms"), out var parsedTerms) ? parsedTerms : 30;
+        var mergedIds = consolidateCandidates
+            .Select(sub => sub.SubcontractorId)
+            .Where(id => !string.Equals(id, masterId, StringComparison.OrdinalIgnoreCase))
+            .ToList();
+
+        try
+        {
+            consolidating = true;
+            await SubcontractorStore.ConsolidateAsync(new ConsolidateDirectoryRecords(
+                masterId, mergedIds,
+                ChosenValue("company"), ChosenValue("contact"), ChosenValue("email"), ChosenValue("phone"),
+                ChosenValue("cis"), category, ChosenValue("mobile"), ChosenValue("town"), ChosenValue("county"),
+                ChosenValue("website"), terms));
+            selectedIds.Clear();
+            consolidateOpen = false;
+        }
+        catch (CommandFailedException ex) { consolidateError = $"Couldn't consolidate: {ex.Message}"; }
+        catch { consolidateError = "Couldn't consolidate the records. Please try again."; }
+        finally { consolidating = false; }
+    }
 
     // The screen's "Primary contact" cell is compound (name + email subtitle) — split
     // into two columns so the email isn't lost from the export.

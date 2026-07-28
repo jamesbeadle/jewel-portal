@@ -45,7 +45,11 @@ public sealed record Subcontractor(
     string PliExpiry = "",
     // Payment terms printed on this company's purchase orders ("30 day terms"): every company
     // defaults to 30 days, overridable per record from the directory's Edit details dialog.
-    int PaymentTermsDays = 30)
+    int PaymentTermsDays = 30,
+    // True when the record holds at least one Xero link — it was imported from Xero, or a
+    // Xero-imported record is among those consolidated into it. Shown as the link mark in the
+    // directory list and on the record's page.
+    bool XeroLinked = false)
 {
     // Display helper: the trade names joined for one-line contexts (tables, subtitles).
     public string TradesLabel => string.Join(" · ", Trades.Select(trade => trade.Name));
@@ -53,6 +57,19 @@ public sealed record Subcontractor(
     public bool HasTrade(string tradeId) =>
         Trades.Any(trade => string.Equals(trade.TradeId, tradeId, StringComparison.OrdinalIgnoreCase));
 }
+
+// A person on a company directory record, beyond the record's single primary contact line. A
+// consolidated master record keeps every merged email/phone as one of these, and Purpose is the
+// free-text system purpose the contact serves ("Accounts", "Projects", "Estimating"…) so different
+// contacts can be used for different purposes on one solid master record.
+public sealed record CompanyContact(
+    string CompanyContactId,
+    string SubcontractorId,
+    string Name,
+    string Purpose,
+    string Email,
+    string Phone,
+    DateTimeOffset CreatedAt);
 
 public sealed record ComplianceDocument(
     string ComplianceDocumentId,
