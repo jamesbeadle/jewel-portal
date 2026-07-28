@@ -25,9 +25,18 @@ public static class XeroFeatureRegistration
         if (options.IsConfigured)
         {
             // Own HttpClient instance so it doesn't clash with the Graph client's registration.
-            // Singleton so the cached access token is shared across requests.
+            // Singleton so the cached access token is shared across requests. Automatic
+            // decompression matters: some Xero responses arrive gzipped, and without it the
+            // body reads as byte garbage — which is what the ExtractXeroErrors path would
+            // then relay to the user's error toast.
             services.AddSingleton<IXeroClient>(sp =>
-                new XeroClient(new HttpClient(), options, sp.GetRequiredService<ILogger<XeroClient>>()));
+                new XeroClient(
+                    new HttpClient(new HttpClientHandler
+                    {
+                        AutomaticDecompression = System.Net.DecompressionMethods.All
+                    }),
+                    options,
+                    sp.GetRequiredService<ILogger<XeroClient>>()));
         }
         else
         {

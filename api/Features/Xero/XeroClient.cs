@@ -346,10 +346,12 @@ public sealed class XeroClient : IXeroClient
 
     /// <summary>
     /// Authorised sales invoices (ACCREC) with money still due, ordered soonest-due first.
-    /// summaryOnly skips line items (not needed here) which keeps the read cheap against
-    /// Xero's rate limit; AmountDue is filtered portal-side because it's a calculated field
-    /// Xero's where clause doesn't index (part-paid invoices stay AUTHORISED, fully paid
-    /// ones become PAID, so the filter rarely removes anything).
+    /// Deliberately NOT summaryOnly: Xero's lightweight mode doesn't accept the where/order
+    /// parameters (the combination is an HTTP 400), and the full shape is the same paged read
+    /// the purchase-side sync already uses — the line items it carries are simply ignored.
+    /// AmountDue is filtered portal-side because it's a calculated field Xero's where clause
+    /// doesn't index (part-paid invoices stay AUTHORISED, fully paid ones become PAID, so the
+    /// filter rarely removes anything).
     /// </summary>
     private async Task<IReadOnlyList<XeroOutstandingSalesInvoice>> FetchOutstandingSalesInvoicesAsync(
         string token, CancellationToken ct)
@@ -359,7 +361,7 @@ public sealed class XeroClient : IXeroClient
 
         for (var page = 1; page <= _options.MaxPages; page++)
         {
-            var url = $"{InvoicesUrl}?page={page}&summaryOnly=true"
+            var url = $"{InvoicesUrl}?page={page}"
                       + $"&where={Uri.EscapeDataString(where)}&order={Uri.EscapeDataString("DueDate ASC")}";
             using var doc = await GetJsonAsync(token, url, "sales invoices", ct);
 
@@ -889,7 +891,9 @@ public sealed class XeroClient : IXeroClient
             if (messages.Count > 0) return string.Join(" ", messages.Distinct().Take(5));
         }
         catch (JsonException) { }
-        return Truncate(body);
+        return LooksBinary(body)
+            ? "(Xero's response body wasn't readable text — likely compressed content the client couldn't decode.)"
+            : Truncate(body);
 
         static void CollectMessages(JsonElement element, List<string> messages)
         {
@@ -1019,7 +1023,7 @@ public sealed class XeroClient : IXeroClient
         {
             var body = await response.Content.ReadAsStringAsync(ct);
             _logger.LogWarning("Xero {What} call failed: {Status} {Body}.", what, (int)response.StatusCode, Truncate(body));
-            throw new XeroCallFailedException($"Xero rejected the {what} request with HTTP {(int)response.StatusCode}. {Truncate(body)}");
+            throw new XeroCallFailedException($"Xero rejected the {what} request with HTTP {(int)response.StatusCode}. {ExtractXeroErrors(body)}");
         }
 
         await using var stream = await response.Content.ReadAsStreamAsync(ct);
@@ -1185,6 +1189,13 @@ public sealed class XeroClient : IXeroClient
 
     private static string Truncate(string value) =>
         value.Length <= 300 ? value : value[..300] + "…";
+
+    /// <summary>
+    /// True when a response body decoded to unprintable garbage (U+FFFD replacement chars or raw
+    /// control bytes) — a compressed body read as text, not anything worth showing a user.
+    /// </summary>
+    private static bool LooksBinary(string value) =>
+        value.Any(ch => ch == '�' || (char.IsControl(ch) && ch is not ('\r' or '\n' or '\t')));
 }
 
 /// <summary>Internal signal that a Xero call failed with a message safe to show in the snapshot.</summary>
