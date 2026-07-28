@@ -28,12 +28,13 @@ public interface ISubcontractorStore
     /// <summary>Replaces a directory record's trades with exactly the given set.</summary>
     Task SetTradesAsync(string subcontractorId, IReadOnlyList<string> tradeIds);
 
-    /// <summary>Updates a directory record's company name, contact details and payment terms
-    /// (the days printed on its purchase orders), preserving its trades and every other field.
-    /// Server-side this goes through UpdateSubcontractor, which is restricted to Admin, MD,
-    /// FD and PM.</summary>
+    /// <summary>Updates a directory record's company name, contact details, payment terms (the
+    /// days printed on its purchase orders) and postal address (printed letter-style at the top
+    /// of those orders), preserving its trades and every other field. Server-side this goes
+    /// through UpdateSubcontractor, which is restricted to Admin, MD, FD and PM.</summary>
     Task UpdateDetailsAsync(string subcontractorId, string companyName,
-        string contactName, string contactEmail, string contactPhone, int paymentTermsDays);
+        string contactName, string contactEmail, string contactPhone, int paymentTermsDays,
+        string addressLine, string town, string county, string postcode);
     IReadOnlyList<ComplianceDocument> ComplianceFor(string subcontractorId);
     void SaveCompliance(ComplianceDocument document);
 

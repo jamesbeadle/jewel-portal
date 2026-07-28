@@ -316,7 +316,26 @@ public sealed class XeroClient : IXeroClient
         Mobile: PhoneOf(contact, "MOBILE") ?? "",
         Town: AddressPartOf(contact, "City"),
         County: AddressPartOf(contact, "Region"),
+        AddressLine: StreetOf(contact),
+        Postcode: AddressPartOf(contact, "PostalCode"),
         ContactPersons: ReadContactPersons(contact));
+
+    /// <summary>The street line(s) from the contact's first address that carries any — Xero's
+    /// AddressLine1–4 joined onto one line for the directory record's AddressLine field.</summary>
+    private static string StreetOf(JsonElement contact)
+    {
+        if (!contact.TryGetProperty("Addresses", out var addresses) || addresses.ValueKind != JsonValueKind.Array)
+            return "";
+        foreach (var address in addresses.EnumerateArray())
+        {
+            var street = string.Join(", ",
+                new[] { StringOf(address, "AddressLine1"), StringOf(address, "AddressLine2"),
+                        StringOf(address, "AddressLine3"), StringOf(address, "AddressLine4") }
+                    .Where(part => !string.IsNullOrWhiteSpace(part)));
+            if (!string.IsNullOrWhiteSpace(street)) return street;
+        }
+        return "";
+    }
 
     /// <summary>One phone line by Xero PhoneType, assembled country + area + number; null when empty.</summary>
     private static string? PhoneOf(JsonElement contact, string phoneType)

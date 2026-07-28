@@ -25,6 +25,11 @@ public sealed class SubcontractorEntity
     // Payment terms printed on this company's purchase orders ("30 day terms"). Every record
     // defaults to 30 days; overridable per company from the directory's Edit details dialog.
     public int PaymentTermsDays { get; set; } = 30;
+
+    // Postal address: street line(s) + postcode join Town/County above so a purchase order can
+    // print the supplier's full address letter-style in its Sub/Vendor block.
+    [MaxLength(256)]     public string AddressLine { get; set; } = "";
+    [MaxLength(32)]      public string Postcode { get; set; } = "";
 }
 
 // A link between a directory record and a Xero contact, written when a supplier is imported from

@@ -49,8 +49,19 @@ public sealed record Subcontractor(
     // True when the record holds at least one Xero link — it was imported from Xero, or a
     // Xero-imported record is among those consolidated into it. Shown as the link mark in the
     // directory list and on the record's page.
-    bool XeroLinked = false)
+    bool XeroLinked = false,
+    // Street line(s) and postcode of the company's postal address (with Town/County above they
+    // complete the letter block printed at the top of its purchase orders).
+    string AddressLine = "",
+    string Postcode = "")
 {
+    // The letter-style address block for the purchase order's Sub/Vendor panel: street line(s),
+    // town, county, postcode — blanks skipped.
+    public IReadOnlyList<string> AddressLines =>
+        new[] { AddressLine, Town, County, Postcode }
+            .Where(part => !string.IsNullOrWhiteSpace(part))
+            .ToList();
+
     // Display helper: the trade names joined for one-line contexts (tables, subtitles).
     public string TradesLabel => string.Join(" · ", Trades.Select(trade => trade.Name));
 

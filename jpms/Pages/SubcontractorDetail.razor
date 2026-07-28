@@ -308,6 +308,28 @@ else
                         </p>
                     </div>
                 </div>
+                <div>
+                    <label class="eyebrow block mb-1">Address line</label>
+                    <input class="field" @bind="eAddressLine" />
+                    <p class="text-xs text-content-subtle mt-1">
+                        With the town, county and postcode this prints letter-style at the top of
+                        the company's purchase orders.
+                    </p>
+                </div>
+                <div class="grid grid-cols-3 gap-3">
+                    <div>
+                        <label class="eyebrow block mb-1">Town</label>
+                        <input class="field" @bind="eTown" />
+                    </div>
+                    <div>
+                        <label class="eyebrow block mb-1">County</label>
+                        <input class="field" @bind="eCounty" />
+                    </div>
+                    <div>
+                        <label class="eyebrow block mb-1">Postcode</label>
+                        <input class="field" @bind="ePostcode" />
+                    </div>
+                </div>
             </div>
         </Modal>
     </section>
@@ -334,6 +356,10 @@ else
     private string eEmail = "";
     private string ePhone = "";
     private int eTermsDays = 30;
+    private string eAddressLine = "";
+    private string eTown = "";
+    private string eCounty = "";
+    private string ePostcode = "";
 
     private void OpenEdit()
     {
@@ -343,6 +369,10 @@ else
         eEmail = subcontractor.ContactEmail;
         ePhone = subcontractor.ContactPhone;
         eTermsDays = subcontractor.PaymentTermsDays;
+        eAddressLine = subcontractor.AddressLine;
+        eTown = subcontractor.Town;
+        eCounty = subcontractor.County;
+        ePostcode = subcontractor.Postcode;
         editError = null;
         editOpen = true;
     }
@@ -359,7 +389,8 @@ else
         {
             editBusy = true;
             await SubcontractorStore.UpdateDetailsAsync(
-                subcontractor.SubcontractorId, eCompany, eContact, eEmail, ePhone, eTermsDays);
+                subcontractor.SubcontractorId, eCompany, eContact, eEmail, ePhone, eTermsDays,
+                eAddressLine, eTown, eCounty, ePostcode);
             editOpen = false;
         }
         catch (CommandFailedException ex) { editError = $"Couldn't save: {ex.Message}"; }

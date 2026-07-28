@@ -66,6 +66,8 @@ public sealed class ConsolidateDirectoryRecordsHandler
         master.County = command.County.Trim();
         master.Website = command.Website.Trim();
         master.PaymentTermsDays = command.PaymentTermsDays;
+        master.AddressLine = command.AddressLine.Trim();
+        master.Postcode = command.Postcode.Trim();
         // The master keeps the earliest onboarding date — the company has been known since then.
         master.OnboardedAt = merged.Select(sub => sub.OnboardedAt).Append(master.OnboardedAt).Min();
         // Pli/PliExpiry: keep the master's unless it is blank and a merged record has one.

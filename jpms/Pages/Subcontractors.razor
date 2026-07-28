@@ -386,6 +386,10 @@ else
                     <input class="field" @bind="nMobile" />
                 </div>
             </div>
+            <div>
+                <label class="eyebrow block mb-1">Address line</label>
+                <input class="field" placeholder="Street address, printed on purchase orders" @bind="nAddressLine" />
+            </div>
             <div class="grid grid-cols-2 gap-3">
                 <div>
                     <label class="eyebrow block mb-1">Town</label>
@@ -396,9 +400,15 @@ else
                     <input class="field" @bind="nCounty" />
                 </div>
             </div>
-            <div>
-                <label class="eyebrow block mb-1">Website</label>
-                <input class="field" @bind="nWebsite" />
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="eyebrow block mb-1">Postcode</label>
+                    <input class="field" @bind="nPostcode" />
+                </div>
+                <div>
+                    <label class="eyebrow block mb-1">Website</label>
+                    <input class="field" @bind="nWebsite" />
+                </div>
             </div>
         </div>
     </Modal>
@@ -687,7 +697,7 @@ else
     private bool showAddModal;
     private bool saving;
     private string? addError;
-    private string nCompany = "", nContact = "", nEmail = "", nPhone = "", nMobile = "", nTown = "", nCounty = "", nWebsite = "";
+    private string nCompany = "", nContact = "", nEmail = "", nPhone = "", nMobile = "", nTown = "", nCounty = "", nWebsite = "", nAddressLine = "", nPostcode = "";
     private string nNewTrade = "";
     private bool addingTrade;
     private readonly HashSet<string> nTradeIds = new(StringComparer.OrdinalIgnoreCase);
@@ -695,7 +705,7 @@ else
 
     private void OpenAddModal()
     {
-        nCompany = nContact = nEmail = nPhone = nMobile = nTown = nCounty = nWebsite = nNewTrade = "";
+        nCompany = nContact = nEmail = nPhone = nMobile = nTown = nCounty = nWebsite = nAddressLine = nPostcode = nNewTrade = "";
         nTradeIds.Clear();
         nCategory = DirectoryCategory.Subcontractor;
         addError = null;
@@ -741,7 +751,8 @@ else
             saving = true;
             SubcontractorStore.Upsert(new Subcontractor(
                 "", nCompany.Trim(), SelectedTrades(nTradeIds), nContact.Trim(), nEmail.Trim(), nPhone.Trim(),
-                "", DateTimeOffset.UtcNow, nCategory, nMobile.Trim(), nTown.Trim(), nCounty.Trim(), nWebsite.Trim()));
+                "", DateTimeOffset.UtcNow, nCategory, nMobile.Trim(), nTown.Trim(), nCounty.Trim(), nWebsite.Trim(),
+                AddressLine: nAddressLine.Trim(), Postcode: nPostcode.Trim()));
             showAddModal = false;
         }
         catch { addError = "Couldn't add the company. Please try again."; }
@@ -912,8 +923,10 @@ else
             BuildField("email", "Email", master.ContactEmail, consolidateCandidates.Select(sub => sub.ContactEmail)),
             BuildField("phone", "Phone", master.ContactPhone, consolidateCandidates.Select(sub => sub.ContactPhone)),
             BuildField("mobile", "Mobile", master.MobileNumber, consolidateCandidates.Select(sub => sub.MobileNumber)),
+            BuildField("address", "Address line", master.AddressLine, consolidateCandidates.Select(sub => sub.AddressLine)),
             BuildField("town", "Town", master.Town, consolidateCandidates.Select(sub => sub.Town)),
             BuildField("county", "County", master.County, consolidateCandidates.Select(sub => sub.County)),
+            BuildField("postcode", "Postcode", master.Postcode, consolidateCandidates.Select(sub => sub.Postcode)),
             BuildField("website", "Website", master.Website, consolidateCandidates.Select(sub => sub.Website)),
             BuildField("cis", "CIS status", master.CisStatus, consolidateCandidates.Select(sub => sub.CisStatus)),
             BuildField("terms", "Payment terms (days)", master.PaymentTermsDays.ToString(),
@@ -962,7 +975,8 @@ else
                 masterId, mergedIds,
                 ChosenValue("company"), ChosenValue("contact"), ChosenValue("email"), ChosenValue("phone"),
                 ChosenValue("cis"), category, ChosenValue("mobile"), ChosenValue("town"), ChosenValue("county"),
-                ChosenValue("website"), terms));
+                ChosenValue("website"), terms,
+                AddressLine: ChosenValue("address"), Postcode: ChosenValue("postcode")));
             selectedIds.Clear();
             consolidateOpen = false;
         }

@@ -53,7 +53,9 @@ public sealed class ImportXeroSupplierHandler : ICommandHandler<ImportXeroSuppli
             Category = (int)DirectoryCategory.Supplier,
             MobileNumber = supplier.Mobile,
             Town = supplier.Town,
-            County = supplier.County
+            County = supplier.County,
+            AddressLine = supplier.AddressLine,
+            Postcode = supplier.Postcode
         };
         context.Subcontractors.Add(entity);
 

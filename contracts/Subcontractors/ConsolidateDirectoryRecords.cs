@@ -29,4 +29,8 @@ public sealed record ConsolidateDirectoryRecords(
     string Town,
     string County,
     string Website,
-    int PaymentTermsDays) : ICommand<Subcontractor>;
+    int PaymentTermsDays,
+    // Postal address (street line(s) + postcode; Town/County above complete the letter block
+    // printed on the company's purchase orders).
+    string AddressLine = "",
+    string Postcode = "") : ICommand<Subcontractor>;

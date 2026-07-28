@@ -47,6 +47,8 @@ public sealed record XeroSupplier(
     string Mobile,
     string Town,
     string County,
+    string AddressLine,
+    string Postcode,
     IReadOnlyList<XeroContactPerson> ContactPersons,
     bool AlreadyImported = false,
     string? LinkedSubcontractorId = null);
