@@ -113,6 +113,30 @@ public sealed class ProjectDrawdownTests
         Assert.False(byCode.ContainsKey(""));
     }
 
+    [Fact]
+    public void CommittedByCostCode_countsDrafts_butNeverRejected()
+    {
+        var released = new ProjectWorkOrderDetail(
+            Order: WorkOrderWith(),
+            SubcontractorName: "Sub",
+            Lines: new[] { Line("100", 4_000m) });
+        // A draft is an intended commitment being written up: the Financials tab counts it.
+        var draft = new ProjectWorkOrderDetail(
+            Order: WorkOrderWith() with { WorkOrderId = "WO-D", Number = 0, Status = WorkOrderStatus.Draft },
+            SubcontractorName: "Sub",
+            Lines: new[] { Line("100", 6_000m) });
+        // A rejected draft counts nowhere — the decision was no.
+        var rejected = new ProjectWorkOrderDetail(
+            Order: WorkOrderWith() with { WorkOrderId = "WO-R", Number = 0, Status = WorkOrderStatus.Rejected },
+            SubcontractorName: "Sub",
+            Lines: new[] { Line("100", 9_999m), Line("300", 2_000m) });
+
+        var byCode = ProjectDrawdown.CommittedByCostCode(new[] { released, draft, rejected });
+
+        Assert.Equal(10_000m, byCode["100"]);         // 4,000 released + 6,000 draft
+        Assert.False(byCode.ContainsKey("300"));      // a rejected-only centre commits nothing
+    }
+
     private static WorkOrder WorkOrderWith() =>
         new(WorkOrderId: "WO", ProjectId: "PRJ", BidPackageId: null, SubcontractorId: "S",
             Value: 0m, Scope: "", AwardedAt: default, AwardedByEmail: "", Number: 1, Title: "",

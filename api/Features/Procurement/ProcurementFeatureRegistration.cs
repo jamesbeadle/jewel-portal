@@ -111,6 +111,14 @@ public static class ProcurementFeatureRegistration
         services.AddScoped<UpdateManualWorkOrderAuthorisation>();
         services.AddScoped<UpdateManualWorkOrderValidation>();
 
+        services.AddScoped<ICommandHandler<ApproveWorkOrder, WorkOrder>, ApproveWorkOrderHandler>();
+        services.AddScoped<ApproveWorkOrderAuthorisation>();
+        services.AddScoped<ApproveWorkOrderValidation>();
+
+        services.AddScoped<ICommandHandler<RejectWorkOrder, WorkOrder>, RejectWorkOrderHandler>();
+        services.AddScoped<RejectWorkOrderAuthorisation>();
+        services.AddScoped<RejectWorkOrderValidation>();
+
         return services;
     }
 }

@@ -296,7 +296,10 @@ else
         : $"{label}: {Money(line.Amount)}{(line.DueOn is { } due ? $" due {due:d MMM yyyy}" : "")} (forecast)";
 
     // ── Funds out — work orders committed and Xero purchase spend ──
-    private decimal WoCommitted => WorkOrders.Current(ProjectId).Sum(detail => detail.Order.Value);
+    // Drafts count (an intended commitment being written up); rejected drafts don't —
+    // matching ProjectDrawdown.CommittedByCostCode below.
+    private decimal WoCommitted =>
+        WorkOrders.Current(ProjectId).Where(detail => !detail.Order.IsRejected).Sum(detail => detail.Order.Value);
     private decimal WoInvoiced => WoSummaries.Sum(summary => summary.InvoicedToDate);
     private decimal WoLeftToInvoice => WoCommitted - WoInvoiced;
 

@@ -28,9 +28,10 @@ else
     <ProjectPageShell ProjectId="@ProjectId" ActiveTab="work-order-allocation">
         <h2 class="text-lg font-semibold text-content mb-1">Work order invoice allocation</h2>
         <p class="text-sm text-content-subtle mb-4">
-            Tie each Xero purchase line to the work order it pays against. A work order can never be
-            invoiced past its value; unlinked lines count as non-work-order cost of sales on the
-            Financials tab.
+            Tie each Xero purchase line to the work order it pays against. Linking recodes the whole
+            order to the invoice's cost centre — the invoice drives the order's coding. A work order
+            can never be invoiced past its value; unlinked lines count as non-work-order cost of
+            sales on the Financials tab.
         </p>
 
         @* ── Headline figures ─────────────────────────────────────────────── *@
@@ -435,13 +436,14 @@ else
         }))
         + (line.UnlinkedRemainder == 0m ? "" : $" · {MoneyExact(line.UnlinkedRemainder)} not linked");
 
-    // The split editor offers every live order with its balance.
+    // The split editor offers every live order with its balance. Cancelled, draft and
+    // rejected orders are omitted — the API refuses links to all three.
     private IReadOnlyList<WorkOrderInvoiceSummary> LiveSummaries =>
-        summaries.Where(summary => summary.Status != WorkOrderStatus.Cancelled).ToList();
+        summaries.Where(summary => summary.Status is not (WorkOrderStatus.Cancelled or WorkOrderStatus.Draft or WorkOrderStatus.Rejected)).ToList();
 
     // The dropdown offers live orders whose lines are coded to the invoice line's centre
-    // first (the natural match), then everything else under a separate group. Cancelled
-    // orders are omitted — the API refuses links to them.
+    // first (the natural match), then everything else under a separate group. Cancelled,
+    // draft and rejected orders are omitted — the API refuses links to all three.
     private (List<WorkOrderInvoiceSummary> Matching, List<WorkOrderInvoiceSummary> Others) OptionsFor(ProjectCostOfSalesLine line)
     {
         var codesByOrder = WorkOrders.Current(ProjectId)
@@ -449,7 +451,7 @@ else
                 detail => detail.Lines.Select(orderLine => orderLine.CostCode).ToHashSet(StringComparer.OrdinalIgnoreCase),
                 StringComparer.OrdinalIgnoreCase);
 
-        var live = summaries.Where(summary => summary.Status != WorkOrderStatus.Cancelled).ToList();
+        var live = summaries.Where(summary => summary.Status is not (WorkOrderStatus.Cancelled or WorkOrderStatus.Draft or WorkOrderStatus.Rejected)).ToList();
         var matching = live.Where(summary =>
                 codesByOrder.TryGetValue(summary.WorkOrderId, out var codes) && codes.Contains(line.CostCode))
             .ToList();
@@ -532,7 +534,12 @@ else
     {
         var summariesTask = Queries.AskAsync(new ListWorkOrderInvoiceSummaries(ProjectId), CancellationToken.None);
         var linesTask = Queries.AskAsync(new ListProjectCostOfSalesLines(ProjectId), CancellationToken.None);
-        summaries = (await summariesTask).ToList();
+        // Drafts and rejected drafts are dropped at the door: unnumbered, uninvoiceable,
+        // nothing to allocate against — either would inflate "left to invoice" with an
+        // order that hasn't been (or never will be) issued.
+        summaries = (await summariesTask)
+            .Where(summary => summary.Status is not (WorkOrderStatus.Draft or WorkOrderStatus.Rejected))
+            .ToList();
         AllLines = (await linesTask).ToList();
     }
 

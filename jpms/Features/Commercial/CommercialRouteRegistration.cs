@@ -207,5 +207,11 @@ public static class CommercialRouteRegistration
         commands.Register<DeleteValuationReportSnapshot, Acknowledgement>(
             new CommandRoute("DELETE", "/api/valuation-report-snapshots/{snapshotId}",
                 command => $"/api/valuation-report-snapshots/{((DeleteValuationReportSnapshot)command).ValuationReportSnapshotId}"));
+
+        // The snapshot's PDF download is a plain GET (/api/valuation-report-snapshots/{id}/pdf,
+        // linked directly from the UI); only the email draft goes through the command pipeline.
+        commands.Register<PrepareValuationReportSnapshotEmailDraft, ValuationReportSnapshotEmailDraft>(
+            new CommandRoute("POST", "/api/valuation-report-snapshots/{snapshotId}/draft-email",
+                command => $"/api/valuation-report-snapshots/{((PrepareValuationReportSnapshotEmailDraft)command).ValuationReportSnapshotId}/draft-email"));
     }
 }

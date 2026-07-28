@@ -78,6 +78,14 @@
                  OnToggleComplete="Complete" OnReassign="Reassign" />
 
 @code {
+    /// <summary>
+    /// Fires with the current OPEN items whenever they change — on the initial load and after a
+    /// complete or reassign takes one out of (or back into) the list. RoleHome feeds its
+    /// open/overdue to-do count tiles from this, so the strip and the panel are always the same
+    /// fetch telling the same story — the tiles never show a figure the rows below contradict.
+    /// </summary>
+    [Parameter] public EventCallback<IReadOnlyList<TodoItem>> OnOpenItemsChanged { get; set; }
+
     private IReadOnlyList<TodoItem> openItems = Array.Empty<TodoItem>();
     // The role pool for the detail modal's reassign picker — fetched only for users inside the
     // manage gate, who are the only ones offered the control.
@@ -123,6 +131,7 @@
         try
         {
             openItems = (await Todos.ListMineAsync()).Where(item => !item.IsComplete).ToList();
+            await OnOpenItemsChanged.InvokeAsync(openItems);
         }
         catch { error = "Couldn't load your to-dos right now."; }
         finally { loading = false; }
@@ -143,6 +152,7 @@
                 item.DueAt,
                 IsComplete: true));
             openItems = openItems.Where(open => open.TodoItemId != item.TodoItemId).ToList();
+            await OnOpenItemsChanged.InvokeAsync(openItems);
             selected = null;
         }
         catch (CommandFailedException ex) { error = ex.Message; }
@@ -170,6 +180,7 @@
                 item.DueAt,
                 item.IsComplete));
             openItems = (await Todos.ListMineAsync()).Where(open => !open.IsComplete).ToList();
+            await OnOpenItemsChanged.InvokeAsync(openItems);
             selected = openItems.FirstOrDefault(open => open.TodoItemId == item.TodoItemId);
         }
         catch (CommandFailedException ex) { error = ex.Message; }

@@ -3,6 +3,10 @@ using Jewel.JPMS.Api.Features.MailboxIntake;
 using Jewel.JPMS.Api.Features.MailboxIntake.Actions;
 using Jewel.JPMS.Api.Features.MailboxIntake.Graph;
 using Jewel.JPMS.Api.Features.MailboxIntake.Queue;
+using Jewel.JPMS.Api.Cqrs;
+using Jewel.JPMS.Api.Features.Xero;
+using Jewel.JPMS.Api.Features.Xero.Ledger;
+using Jewel.JPMS.Contracts.Xero;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -58,6 +62,27 @@ var host = new HostBuilder()
             services.AddSingleton<IMailboxQueue, NullMailboxQueue>();
         }
         services.AddSingleton<IMailboxActionScheduler, MailboxActionScheduler>();
+
+        // Xero: the nightly ledger sync + auto-allocation timer (Xero/XeroNightlyWorker.cs) reuses
+        // the API's own handlers, compiled in via linked source. Real client when the custom
+        // connection's credentials are configured (app settings Xero__ClientId / Xero__ClientSecret,
+        // same names as the SWA API), otherwise the no-op client — the timer then logs that Xero is
+        // not configured and does nothing, so the host always starts. Singleton client so the cached
+        // snapshot and access token are shared across invocations, mirroring the API's registration.
+        var xeroOptions = XeroOptions.FromConfiguration(context.Configuration);
+        services.AddSingleton(xeroOptions);
+        if (xeroOptions.IsConfigured)
+        {
+            services.AddSingleton<IXeroClient>(sp =>
+                new XeroClient(new HttpClient(), xeroOptions, sp.GetRequiredService<ILogger<XeroClient>>()));
+        }
+        else
+        {
+            services.AddSingleton<IXeroClient, NullXeroClient>();
+        }
+        services.AddScoped<IXeroWriteBackService, XeroWriteBackService>();
+        services.AddScoped<ICommandHandler<SyncXeroLedger, XeroLedgerSyncResult>, SyncXeroLedgerHandler>();
+        services.AddScoped<ICommandHandler<AllocateSuggestedXeroLines, int>, AllocateSuggestedXeroLinesHandler>();
     })
     .Build();
 

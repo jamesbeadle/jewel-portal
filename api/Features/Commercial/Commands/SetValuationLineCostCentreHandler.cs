@@ -1,6 +1,8 @@
+using System.Globalization;
 using Jewel.JPMS.Api.Cqrs;
 using Jewel.JPMS.Api.Data;
 using Jewel.JPMS.Api.Data.Entities;
+using Jewel.JPMS.Api.Features.Audit;
 using Jewel.JPMS.Contracts.Commercial;
 using Jewel.JPMS.Models;
 using Microsoft.EntityFrameworkCore;
@@ -15,11 +17,24 @@ namespace Jewel.JPMS.Api.Features.Commercial.Commands;
 /// the commercial records written at approval consistent (see ApproveVariationOrderHandler) the
 /// matching Variation Order is recoded too and its committed value is moved between the cost-centre
 /// budgets.
+///
+/// Every recode is written to the audit trail (AuditEventType.CostCentreRecoded) — the finance
+/// reconciliation record of who moved which line, from where to where, and the value that moved
+/// with it. Per the AuditTrail convention the write happens AFTER the save has succeeded and is
+/// best-effort: an audit failure never fails the recode it records.
 /// </summary>
 public sealed class SetValuationLineCostCentreHandler : ICommandHandler<SetValuationLineCostCentre, ValuationLineItem>
 {
+    private static readonly CultureInfo Gb = CultureInfo.GetCultureInfo("en-GB");
+
     private readonly JpmsContext context;
-    public SetValuationLineCostCentreHandler(JpmsContext context) { this.context = context; }
+    private readonly AuditTrail audit;
+
+    public SetValuationLineCostCentreHandler(JpmsContext context, AuditTrail audit)
+    {
+        this.context = context;
+        this.audit = audit;
+    }
 
     public async Task<ValuationLineItem> HandleAsync(SetValuationLineCostCentre command, CancellationToken cancellationToken)
     {
@@ -33,6 +48,8 @@ public sealed class SetValuationLineCostCentreHandler : ICommandHandler<SetValua
             throw new InvalidOperationException($"'{newCode}' is not an active cost centre.");
 
         if (entity.CostCode == newCode) return entity.ToModel();
+
+        var oldCode = entity.CostCode;
 
         // Variation lines mirror an approved VO: keep the VO and its committed budget in step with the
         // recode. Approval committed the VO's value against the old centre's budget, so the
@@ -74,6 +91,30 @@ public sealed class SetValuationLineCostCentreHandler : ICommandHandler<SetValua
 
         entity.CostCode = newCode;
         await context.SaveChangesAsync(cancellationToken);
+
+        // The reconciliation record, after the save so the trail never records a move that didn't
+        // commit. Codes are labelled with the master's names where known (the OLD code may since
+        // have been retired — it still reads back as its bare code rather than blocking the trail).
+        var centreNames = await context.CostCenters.AsNoTracking()
+            .Where(centre => centre.Code == oldCode || centre.Code == newCode)
+            .ToDictionaryAsync(centre => centre.Code, centre => centre.Name, cancellationToken);
+        string Centre(string code) =>
+            centreNames.TryGetValue(code, out var name) && !string.IsNullOrWhiteSpace(name)
+                ? $"{code} {name}" : code;
+
+        var isVariation = entity.ElementType == (int)ValuationElementType.Variation;
+        var lineLabel = isVariation
+            ? $"{entity.VariationRef} {entity.VariationTitle}".Trim()
+            : $"{entity.SectionCode} {entity.SectionName}".Trim();
+        await audit.WriteAsync(
+            AuditEventType.CostCentreRecoded,
+            $"{lineLabel} ({entity.LineAmount.ToString("C2", Gb)}) moved from cost centre " +
+            $"{Centre(oldCode)} to {Centre(newCode)}.",
+            projectId: entity.ProjectId,
+            recordType: isVariation ? RecordType.Variation : null,
+            recordReference: isVariation ? entity.VariationRef : entity.SectionCode,
+            cancellationToken: cancellationToken);
+
         return entity.ToModel();
     }
 }

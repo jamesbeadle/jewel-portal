@@ -21,10 +21,15 @@ public static class ProjectDrawdown
 {
     // Committed work-order value per cost code: the totals of order lines that carry a cost
     // code (lines without one can't land on a Financials row, so they're excluded — matching
-    // the Financials tab). Case-insensitive keys, like every cost-code lookup.
+    // the Financials tab). Drafts COUNT: a draft is an intended commitment being written up,
+    // and the business wants the Financials tab to show the position including them. Rejected
+    // drafts count nowhere — the decision was no. (Cancelled orders keep their long-standing
+    // inclusion here; changing that is a separate decision.) Case-insensitive keys, like
+    // every cost-code lookup.
     public static IReadOnlyDictionary<string, decimal> CommittedByCostCode(
         IEnumerable<ProjectWorkOrderDetail> workOrders) =>
         workOrders
+            .Where(detail => !detail.Order.IsRejected)
             .SelectMany(detail => detail.Lines)
             .Where(line => !string.IsNullOrWhiteSpace(line.CostCode))
             .GroupBy(line => line.CostCode, StringComparer.OrdinalIgnoreCase)

@@ -1,0 +1,193 @@
+@using Jewel.JPMS.Contracts.Commercial
+@inject ICommandSender Commands
+@inject ProjectListReadModel Projects
+
+@* The client-facing valuation statement on its way out: confirming creates a DRAFT in the shared
+   mailbox — the frozen report rendered server-side and attached as the branded PDF, addressed to
+   the project's Client and Architect contacts (projects@ is cc'd automatically) — for a human to
+   review and send from Outlook. Nothing sends from here. The snapshot is immutable, so the
+   attachment is the report exactly as frozen, however long the draft sits. Used from the
+   Valuation Report tab's snapshot register and the Valuation Snapshots page. *@
+<Modal IsOpen="@(Snapshot is not null)"
+       Title="@($"Email valuation report · {Snapshot?.Label}")"
+       ConfirmLabel="@ConfirmLabelText"
+       ConfirmDisabled="@(busy || drafted)"
+       CancelLabel="Close"
+       OnConfirm="CreateDraftAsync"
+       OnCancel="Close"
+       Class="max-w-3xl w-full">
+    @if (Snapshot is { } snapshot)
+    {
+        <p class="rounded-lg bg-surface-raised border border-line px-3 py-2 text-xs text-content-muted mb-3">
+            Nothing sends from here — this creates a draft in the shared mailbox with the frozen
+            report attached as a PDF, addressed to the project's client and architect contacts,
+            for you to review and send from Outlook. The snapshot is immutable, so the attachment
+            shows the report exactly as it stood on @snapshot.TakenAt.ToString("dd MMM yyyy HH:mm").
+        </p>
+
+        @if (snapshot.IsSuperseded)
+        {
+            <p class="rounded-lg bg-warning/10 border border-warning/30 px-3 py-2 text-xs text-content mb-3">
+                A later snapshot has superseded this one — check you're not sending figures the
+                client has already had corrected.
+            </p>
+        }
+
+        <div class="rounded-xl border border-line bg-surface mb-3 overflow-x-auto">
+            <table class="w-full text-sm">
+                <tbody class="divide-y divide-line">
+                    <tr>
+                        <td class="px-3 py-2 text-content-subtle whitespace-nowrap">Revised contract sum</td>
+                        <td class="px-3 py-2 text-right text-content">@Money(snapshot.RevisedContractSum)</td>
+                        <td class="px-3 py-2 text-content-subtle whitespace-nowrap">Total works complete</td>
+                        <td class="px-3 py-2 text-right text-content">@Money(snapshot.TotalWorksComplete)</td>
+                    </tr>
+                    <tr>
+                        <td class="px-3 py-2 text-content-subtle whitespace-nowrap">Certified to date</td>
+                        <td class="px-3 py-2 text-right text-content">@Money(snapshot.CertifiedToDate)</td>
+                        <td class="px-3 py-2 text-content-subtle whitespace-nowrap">Payment due (ex VAT)</td>
+                        <td class="px-3 py-2 text-right font-semibold text-content">@Money(snapshot.PaymentDueExVat)</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="flex items-center justify-between gap-3 mb-3">
+            <a class="text-xs font-medium text-content-subtle hover:text-content underline underline-offset-4"
+               href="@($"/api/valuation-report-snapshots/{snapshot.ValuationReportSnapshotId}/pdf")" target="_blank" rel="noopener">
+                Download the report PDF (what gets attached)
+            </a>
+            <span class="text-xs text-content-subtle">All figures net of VAT</span>
+        </div>
+
+        @if (drafted)
+        {
+            <div class="rounded-lg bg-emerald-50 border border-emerald-200 px-3 py-2 text-sm text-emerald-900">
+                <p class="mb-1">
+                    Draft created in the shared mailbox to <span class="font-medium">@draftRecipients</span>,
+                    with the report PDF attached. Review and send it from the mailbox's Drafts folder.
+                </p>
+                @if (draftLink is not null)
+                {
+                    <a class="underline underline-offset-4 font-medium" href="@draftLink" target="_blank" rel="noopener">Open the draft in Outlook on the web</a>
+                }
+            </div>
+        }
+        else
+        {
+            <label class="block text-xs font-semibold uppercase tracking-wide text-content-subtle mb-1">Subject</label>
+            <input class="field mb-3" @bind="subject" />
+
+            <label class="block text-xs font-semibold uppercase tracking-wide text-content-subtle mb-1">Cover note (HTML) — the report itself travels as the attached PDF</label>
+            <textarea class="field font-mono text-xs" rows="10" @bind="htmlBody"></textarea>
+        }
+
+        @if (error is not null)
+        {
+            <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mt-3">@error</p>
+        }
+    }
+</Modal>
+
+@code {
+    /// <summary>The snapshot to email; null keeps the modal closed.</summary>
+    [Parameter] public ValuationReportSnapshot? Snapshot { get; set; }
+
+    [Parameter] public EventCallback OnClose { get; set; }
+
+    private static readonly System.Globalization.CultureInfo Gb = System.Globalization.CultureInfo.GetCultureInfo("en-GB");
+
+    private string? preparedForSnapshotId;
+
+    private bool busy;
+    private bool drafted;
+    private string? error;
+    private string? draftLink;
+    private string draftRecipients = "";
+
+    private string subject = "";
+    private string htmlBody = "";
+
+    private string ConfirmLabelText =>
+        busy ? "Drafting…" : drafted ? "Draft created" : "Create draft in mailbox";
+
+    protected override void OnParametersSet()
+    {
+        if (Snapshot is null)
+        {
+            // Reset the per-open outcome so reopening starts clean.
+            drafted = false;
+            error = null;
+            draftLink = null;
+            preparedForSnapshotId = null;
+            return;
+        }
+
+        if (preparedForSnapshotId == Snapshot.ValuationReportSnapshotId) return;
+        preparedForSnapshotId = Snapshot.ValuationReportSnapshotId;
+        drafted = false;
+        error = null;
+        draftLink = null;
+        subject = BuildDefaultSubject(Snapshot);
+        htmlBody = BuildDefaultBody(Snapshot);
+    }
+
+    private async Task CreateDraftAsync()
+    {
+        if (busy || drafted || Snapshot is null) return;
+        error = null;
+        try
+        {
+            busy = true;
+            var draft = await Commands.SendAsync(
+                new PrepareValuationReportSnapshotEmailDraft(Snapshot.ValuationReportSnapshotId, subject.Trim(), htmlBody),
+                CancellationToken.None);
+            drafted = true;
+            draftRecipients = string.Join(", ", draft.RecipientEmails);
+            draftLink = draft.WebLink;
+        }
+        catch (CommandFailedException ex) { error = $"Couldn't create the draft: {ex.Message}"; }
+        catch { error = "Couldn't create the draft. Check the project has a client or architect contact with an email address and the mailbox connection, then try again."; }
+        finally { busy = false; }
+    }
+
+    private Task Close() => OnClose.InvokeAsync();
+
+    private string? ProjectName => Snapshot is null ? null : Projects.Find(Snapshot.ProjectId)?.Name;
+
+    private string BuildDefaultSubject(ValuationReportSnapshot snapshot)
+    {
+        var project = ProjectName;
+        return string.IsNullOrWhiteSpace(project)
+            ? $"Valuation report — {snapshot.Label}"
+            : $"Valuation report — {project} — {snapshot.Label}";
+    }
+
+    // The cover note travels as HTML in the draft; the report detail itself is the attached PDF,
+    // so the note only summarises the position and invites queries.
+    private string BuildDefaultBody(ValuationReportSnapshot snapshot)
+    {
+        var project = ProjectName;
+        var sb = new System.Text.StringBuilder();
+        sb.AppendLine("<p>Dear all,</p>");
+        sb.AppendLine(string.IsNullOrWhiteSpace(project)
+            ? $"<p>Please find attached the valuation report — {snapshot.Label} — as it stood on {snapshot.TakenAt.LocalDateTime:d MMM yyyy}.</p>"
+            : $"<p>Please find attached the valuation report for {project} — {snapshot.Label} — as it stood on {snapshot.TakenAt.LocalDateTime:d MMM yyyy}.</p>");
+        sb.AppendLine("<table border=\"1\" cellpadding=\"6\" cellspacing=\"0\" style=\"border-collapse:collapse\">");
+        sb.AppendLine($"<tr><td>Original contract sum</td><td align=\"right\">{snapshot.ContractSum:£#,##0.00}</td></tr>");
+        sb.AppendLine($"<tr><td>Net variations</td><td align=\"right\">{snapshot.NetVariations:£#,##0.00}</td></tr>");
+        sb.AppendLine($"<tr><td><strong>Revised contract sum</strong></td><td align=\"right\"><strong>{snapshot.RevisedContractSum:£#,##0.00}</strong></td></tr>");
+        sb.AppendLine($"<tr><td>Total works complete</td><td align=\"right\">{snapshot.TotalWorksComplete:£#,##0.00}</td></tr>");
+        sb.AppendLine($"<tr><td>Retention held</td><td align=\"right\">{snapshot.RetentionHeld:£#,##0.00}</td></tr>");
+        sb.AppendLine($"<tr><td>Retention released</td><td align=\"right\">{snapshot.RetentionReleased:£#,##0.00}</td></tr>");
+        sb.AppendLine($"<tr><td>Certified to date</td><td align=\"right\">{snapshot.CertifiedToDate:£#,##0.00}</td></tr>");
+        sb.AppendLine($"<tr><td><strong>Payment due (ex VAT)</strong></td><td align=\"right\"><strong>{snapshot.PaymentDueExVat:£#,##0.00}</strong></td></tr>");
+        sb.AppendLine("</table>");
+        sb.AppendLine("<p>All figures are net of VAT. The attached PDF breaks the position down line by line — the contract works, provisional and contingency sums, and variations, each with its claimed value to date.</p>");
+        sb.AppendLine("<p>If you have any queries on the figures, please reply to this email and we'll pick them up.</p>");
+        sb.AppendLine("<p>Kind regards,<br/>Jewel Bespoke Build</p>");
+        return sb.ToString();
+    }
+
+    private static string Money(decimal value) => value.ToString("C2", Gb);
+}

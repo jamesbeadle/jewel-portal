@@ -26,6 +26,16 @@ public sealed class PrepareWorkOrderEmailDraftHandler : ICommandHandler<PrepareW
         var order = await context.WorkOrders.FindAsync(new object[] { command.WorkOrderId }, cancellationToken);
         if (order is null) throw new InvalidOperationException($"Work order {command.WorkOrderId} not found.");
 
+        // A draft is invisible to the supplier by definition — approve it first — and a
+        // rejected draft never becomes visible. The UI hides the button for both; this
+        // keeps the promise against direct calls.
+        if (order.Status == (int)WorkOrderStatus.Draft)
+            throw new InvalidOperationException(
+                "This work order is still a draft — approve it before emailing the supplier.");
+        if (order.Status == (int)WorkOrderStatus.Rejected)
+            throw new InvalidOperationException(
+                "This work order was rejected — it is never sent to the supplier.");
+
         var supplier = await context.Subcontractors.FindAsync(new object[] { order.SubcontractorId }, cancellationToken);
         if (supplier is null || string.IsNullOrWhiteSpace(supplier.ContactEmail))
             throw new InvalidOperationException(

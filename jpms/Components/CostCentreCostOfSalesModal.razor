@@ -370,9 +370,9 @@
     // own centre: on a roll-up, the invoice often sits on a sibling centre of the one
     // the work order is coded to (e.g. timber-windows invoice paying an aluminium-
     // windows order inside a "Windows, doors and glazing" group).
-    // Cancelled orders are omitted — the API refuses links to them.
+    // Cancelled, draft and rejected orders are omitted — the API refuses links to all three.
     private IEnumerable<ProjectWorkOrderDetail> LinkableWorkOrders =>
-        Orders.Where(detail => detail.Order.Status != WorkOrderStatus.Cancelled
+        Orders.Where(detail => detail.Order.Status is not (WorkOrderStatus.Cancelled or WorkOrderStatus.Draft or WorkOrderStatus.Rejected)
                                && detail.Lines.Any(line =>
                 CostCodes.Contains(line.CostCode, StringComparer.OrdinalIgnoreCase)))
             .OrderBy(detail => detail.Order.Number);

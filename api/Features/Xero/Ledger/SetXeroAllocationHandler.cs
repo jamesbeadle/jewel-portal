@@ -1,6 +1,7 @@
 using Jewel.JPMS.Api.Cqrs;
 using Jewel.JPMS.Api.Data;
 using Jewel.JPMS.Api.Data.Entities;
+using Jewel.JPMS.Api.Features.Commercial;
 using Jewel.JPMS.Contracts.Xero;
 using Microsoft.EntityFrameworkCore;
 
@@ -20,6 +21,11 @@ namespace Jewel.JPMS.Api.Features.Xero.Ledger;
 /// are now all allocated is confirmed back to Xero (tracking + approval) —
 /// best-effort: the allocation stands even when Xero says no, and the outcome
 /// is stamped on the lines.
+///
+/// A line that keeps its work-order links through a re-allocation (whole-line,
+/// same project, new centre) drags the linked orders with it: they are recoded
+/// wholesale to the new centre, because the invoice drives the work order's
+/// coding (see WorkOrderInvoiceRecoding).
 /// </summary>
 public sealed class SetXeroAllocationHandler : ICommandHandler<SetXeroAllocation, int>
 {
@@ -104,6 +110,7 @@ public sealed class SetXeroAllocationHandler : ICommandHandler<SetXeroAllocation
         var splitProjects = splits?.Select(split => split.ProjectId!).Distinct().ToList();
 
         var now = DateTimeOffset.UtcNow;
+        var linesKeepingLinks = new List<string>();
         foreach (var line in lines)
         {
             var previousProjectId = line.ProjectId;
@@ -179,6 +186,27 @@ public sealed class SetXeroAllocationHandler : ICommandHandler<SetXeroAllocation
                     .ToListAsync(cancellationToken);
                 context.ReconciliationPackageCostLines.RemoveRange(orphanedPackageCosts);
             }
+            else
+            {
+                linesKeepingLinks.Add(line.XeroLedgerLineId);
+            }
+        }
+
+        // The invoice drives the work order's coding: a linked line moving between cost
+        // centres within its project keeps its links (above), so the orders it pays are
+        // recoded wholesale to the new centre — allocation and committed value never
+        // drift apart. Only the whole-batch path reaches here (splits null the centre,
+        // which clears the links instead), so singleCode is the centre every kept line
+        // now carries.
+        if (linesKeepingLinks.Count > 0)
+        {
+            var linkedOrderIds = await context.XeroLineWorkOrderLinks
+                .Where(link => linesKeepingLinks.Contains(link.XeroLedgerLineId))
+                .Select(link => link.WorkOrderId)
+                .Distinct()
+                .ToListAsync(cancellationToken);
+            await WorkOrderInvoiceRecoding.RecodeOrdersToCentreAsync(
+                context, linkedOrderIds, singleCode!, cancellationToken);
         }
 
         await context.SaveChangesAsync(cancellationToken);

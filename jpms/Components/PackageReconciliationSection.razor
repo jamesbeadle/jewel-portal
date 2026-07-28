@@ -240,7 +240,7 @@
         packages.SelectMany(package => package.WorkOrderIds).ToHashSet(StringComparer.OrdinalIgnoreCase);
 
     private List<ProjectWorkOrderDetail> UnpackagedOrders =>
-        Orders.Where(detail => detail.Order.Status != WorkOrderStatus.Cancelled
+        Orders.Where(detail => detail.Order.Status is not (WorkOrderStatus.Cancelled or WorkOrderStatus.Draft or WorkOrderStatus.Rejected)
                                && !PackagedOrderIds.Contains(detail.Order.WorkOrderId))
             .OrderBy(detail => detail.Order.Number)
             .ToList();

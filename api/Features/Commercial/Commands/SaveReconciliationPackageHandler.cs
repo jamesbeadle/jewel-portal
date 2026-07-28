@@ -54,10 +54,16 @@ public sealed class SaveReconciliationPackageHandler : ICommandHandler<SaveRecon
         {
             var known = await context.WorkOrders
                 .Where(order => order.ProjectId == command.ProjectId && orderIds.Contains(order.WorkOrderId))
-                .Select(order => order.WorkOrderId)
+                .Select(order => new { order.WorkOrderId, order.Status })
                 .ToListAsync(cancellationToken);
             if (known.Count != orderIds.Count)
                 throw new InvalidOperationException("A work order in the package does not exist on this project.");
+
+            // A package carries approved scope: drafts aren't approved yet, rejected drafts never will be.
+            if (known.Any(order => order.Status == (int)WorkOrderStatus.Draft))
+                throw new InvalidOperationException("A work order in the package is still a draft — approve it before packaging it.");
+            if (known.Any(order => order.Status == (int)WorkOrderStatus.Rejected))
+                throw new InvalidOperationException("A work order in the package was rejected — it can't be packaged.");
 
             var claimedElsewhere = await context.ReconciliationPackageOrders
                 .Where(member => member.ProjectId == command.ProjectId

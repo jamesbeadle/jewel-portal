@@ -54,7 +54,7 @@
                             <th class="sticky top-0 z-20 bg-surface-raised px-3 py-3 text-right whitespace-nowrap">Works complete £</th>
                             <th class="sticky top-0 z-20 bg-surface-raised px-3 py-3 text-right whitespace-nowrap">Certified £</th>
                             <th class="sticky top-0 z-20 bg-surface-raised px-3 py-3 text-right whitespace-nowrap">Payment due £</th>
-                            <th class="sticky top-0 z-20 bg-surface-raised px-3 py-3 text-right w-[150px]"></th>
+                            <th class="sticky top-0 z-20 bg-surface-raised px-3 py-3 text-right w-[210px]"></th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-line">
@@ -76,6 +76,15 @@
                                 <td class="px-3 py-2 text-right whitespace-nowrap">
                                     <button type="button" @onclick="() => OnView.InvokeAsync(snapshot.ValuationReportSnapshotId)"
                                             class="text-content-subtle hover:text-content underline underline-offset-2 text-xs">View</button>
+                                    <a href="@($"/api/valuation-report-snapshots/{snapshot.ValuationReportSnapshotId}/pdf")"
+                                       target="_blank" rel="noopener" title="Download the frozen report as the branded PDF"
+                                       class="ml-2 text-content-subtle hover:text-content underline underline-offset-2 text-xs">PDF</a>
+                                    @if (CanManage && OnEmail.HasDelegate)
+                                    {
+                                        <button type="button" @onclick="() => OnEmail.InvokeAsync(snapshot.ValuationReportSnapshotId)"
+                                                title="Draft the report to the client in the shared mailbox — nothing sends from here"
+                                                class="ml-2 text-content-subtle hover:text-content underline underline-offset-2 text-xs">Email</button>
+                                    }
                                     @if (CanManage)
                                     {
                                         @if (pendingDeleteId == snapshot.ValuationReportSnapshotId)
@@ -125,6 +134,9 @@
     /// <summary>Raised after a snapshot is deleted — the server clears any invoice's link
     /// to it, so the invoices section should reload to drop its "View report" link.</summary>
     [Parameter] public EventCallback OnDeleted { get; set; }
+    /// <summary>Opens the email-draft modal for the given snapshot id. Left unwired, the
+    /// per-row Email action doesn't render.</summary>
+    [Parameter] public EventCallback<string> OnEmail { get; set; }
 
     private static readonly System.Globalization.CultureInfo Gb = System.Globalization.CultureInfo.GetCultureInfo("en-GB");
 

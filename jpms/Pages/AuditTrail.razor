@@ -11,7 +11,9 @@
 @*
     The audit register (pathway-split plan §4): every recorded client-facing interaction, newest
     first — triage decisions on client-pathway threads, records created/linked from email, drafted
-    client correspondence, wall refusals, valuation report snapshots. Two jobs in one table:
+    client correspondence, wall refusals, valuation report snapshots — plus, since 2026-07-28, the
+    finance reconciliation events (cost-centre recodes on the valuation report; each project's
+    Reconciliation Audit page shows the same rows narrowed to that project). Two jobs in one table:
     traceability (who did what, when, on which record) and findability (the WebLink column opens
     the drafted email straight in Outlook — the register is the index over the mailbox). It is an
     internal oversight tool, gated like triage (Admin/PM/FD, mirroring the API's
@@ -41,7 +43,7 @@ else
         <header class="mb-6">
             <p class="eyebrow mb-1">JPMS</p>
             <h1 class="text-2xl md:text-3xl font-semibold text-content leading-tight">Audit trail</h1>
-            <p class="text-sm text-content-muted mt-1">Client-facing interactions recorded by the portal.</p>
+            <p class="text-sm text-content-muted mt-1">Client-facing interactions and finance recodes recorded by the portal.</p>
         </header>
 
         <div class="flex flex-wrap items-center gap-2 mb-4">
@@ -196,8 +198,10 @@ else
 
     private static readonly string[] PathwayLabels = { "Client", "Subcontractor", "Internal" };
 
-    // The written (client-facing) vocabulary only — the reserved wider-scope values are declared
-    // in the enum but never recorded, so offering them would only produce empty results.
+    // The written vocabulary only — the reserved wider-scope values are declared in the enum but
+    // never recorded, so offering them would only produce empty results. CostCentreRecoded is
+    // written (the finance reconciliation trail, 2026-07-28); each project's Reconciliation Audit
+    // page reads the same events narrowed to its project.
     private static readonly (AuditEventType Type, string Label)[] EventTypeOptions =
     {
         (AuditEventType.EmailTriaged,           "Email triaged"),
@@ -209,7 +213,8 @@ else
         (AuditEventType.WallRejected,           "Wall refused"),
         (AuditEventType.DraftCreated,           "Draft created"),
         (AuditEventType.SnapshotTaken,          "Snapshot taken"),
-        (AuditEventType.BackfillStamped,        "Backfill stamped")
+        (AuditEventType.BackfillStamped,        "Backfill stamped"),
+        (AuditEventType.CostCentreRecoded,      "Cost centre recoded")
     };
 
     // Mirrors the API's TriageRoles.AllowedToTriage — the audit trail is a triage-side tool.
@@ -333,6 +338,7 @@ else
         AuditEventType.BackfillStamped        => "Backfill stamped",
         AuditEventType.CrossPathwayOverride   => "Cross-pathway override",
         AuditEventType.ThreadSwept            => "Thread swept",
+        AuditEventType.CostCentreRecoded      => "Cost centre recoded",
         _                                     => type.ToString()
     };
 

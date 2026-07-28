@@ -40,7 +40,7 @@
                         {
                             var remaining = entry.Line.LineTotal - entry.Line.PaidToDate;
                             <tr>
-                                <td class="px-4 py-2.5 font-mono text-[11px] text-content-subtle whitespace-nowrap" title="@entry.Order.Title">@($"WO-{entry.Order.Number:0000}")</td>
+                                <td class="px-4 py-2.5 font-mono text-[11px] text-content-subtle whitespace-nowrap" title="@entry.Order.Title">@entry.Order.Reference</td>
                                 @if (ShowCentreColumn)
                                 {
                                     <td class="px-4 py-2.5 font-mono text-[11px] text-content-subtle whitespace-nowrap">@entry.Line.CostCode</td>
@@ -90,8 +90,11 @@
 
     private sealed record Entry(WorkOrder Order, string SupplierName, WorkOrderLine Line);
 
+    // Mirrors CommittedByCostCode so this drill-down sums to the centre's committed
+    // figure: drafts count, rejected drafts don't.
     private List<Entry> Entries =>
-        Orders.SelectMany(detail => detail.Lines
+        Orders.Where(detail => !detail.Order.IsRejected)
+            .SelectMany(detail => detail.Lines
                 .Where(line => CostCodes.Contains(line.CostCode, StringComparer.OrdinalIgnoreCase))
                 .Select(line => new Entry(detail.Order, detail.SubcontractorName, line)))
             .OrderBy(entry => entry.Order.Number)

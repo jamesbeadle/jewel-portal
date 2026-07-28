@@ -157,6 +157,24 @@ public static class ProcurementRouteRegistration
                     return $"/api/projects/{c.ProjectId}/work-orders/{c.WorkOrderId}";
                 }));
 
+        // Approves a draft order — mints its sequential number and makes it live.
+        commands.Register<ApproveWorkOrder, WorkOrder>(
+            new CommandRoute("POST", "/api/projects/{projectId}/work-orders/{workOrderId}/approve",
+                command =>
+                {
+                    var c = (ApproveWorkOrder)command;
+                    return $"/api/projects/{c.ProjectId}/work-orders/{c.WorkOrderId}/approve";
+                }));
+
+        // Rejects a draft order — terminal; it stops counting anywhere.
+        commands.Register<RejectWorkOrder, WorkOrder>(
+            new CommandRoute("POST", "/api/projects/{projectId}/work-orders/{workOrderId}/reject",
+                command =>
+                {
+                    var c = (RejectWorkOrder)command;
+                    return $"/api/projects/{c.ProjectId}/work-orders/{c.WorkOrderId}/reject";
+                }));
+
         // Re-codes / splits one priced line across cost centres, by £ amount.
         commands.Register<RecodeWorkOrderLine, IReadOnlyList<WorkOrderLine>>(
             new CommandRoute("POST", "/api/projects/{projectId}/work-order-lines/{lineId}/recode",

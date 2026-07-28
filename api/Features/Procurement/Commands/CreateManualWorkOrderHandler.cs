@@ -10,8 +10,11 @@ namespace Jewel.JPMS.Api.Features.Procurement.Commands;
 /// <summary>
 /// Raises a work order directly, outside the tendering flow. Released immediately with
 /// the next sequential per-project number (shared with awarded / variation / seeded
-/// orders, so paperwork cross-references hold). The order's value is the sum of its
-/// lines; each line lands on a master cost centre so every allocation view can place it.
+/// orders, so paperwork cross-references hold) — unless the command says SaveAsDraft,
+/// in which case the order sits unnumbered (Number 0) at status Draft and the number
+/// is only minted when ApproveWorkOrder fires, so a rejected or abandoned draft never
+/// leaves a gap in the sequence. The order's value is the sum of its lines; each line
+/// lands on a master cost centre so every allocation view can place it.
 /// </summary>
 public sealed class CreateManualWorkOrderHandler
     : ICommandHandler<CreateManualWorkOrder, WorkOrder>
@@ -39,9 +42,12 @@ public sealed class CreateManualWorkOrderHandler
         if (unknown is not null)
             throw new InvalidOperationException($"Cost centre {unknown} is not in the cost-code master.");
 
-        var nextNumber = (await context.WorkOrders
-            .Where(order => order.ProjectId == command.ProjectId)
-            .MaxAsync(order => (int?)order.Number, cancellationToken) ?? 0) + 1;
+        // Drafts sit unnumbered at 0 — ApproveWorkOrder mints the sequential number.
+        var nextNumber = command.SaveAsDraft
+            ? 0
+            : (await context.WorkOrders
+                .Where(order => order.ProjectId == command.ProjectId)
+                .MaxAsync(order => (int?)order.Number, cancellationToken) ?? 0) + 1;
 
         var now = DateTimeOffset.UtcNow;
         var entity = new WorkOrderEntity
@@ -56,7 +62,7 @@ public sealed class CreateManualWorkOrderHandler
             AwardedByEmail = command.RaisedByEmail,
             Number = nextNumber,
             Title = command.Title.Length > 256 ? command.Title[..256] : command.Title,
-            Status = (int)WorkOrderStatus.Released,
+            Status = (int)(command.SaveAsDraft ? WorkOrderStatus.Draft : WorkOrderStatus.Released),
             CreatedAt = now,
             ProgrammeStart = command.ProgrammeStart,
             ScheduledCompletion = command.TargetCompletion,

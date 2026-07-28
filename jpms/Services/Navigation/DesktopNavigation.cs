@@ -85,8 +85,11 @@ public static class DesktopNavigation
 
     // The people who make routing decisions — mirrors the API's TriageRoles gate. Gates both
     // the Triage queue and the Audit Trail (reviewing routing decisions is the same duty).
+    // The MD joined when his dashboard grew a triage-backlog tile (RoleHome): a highlight he
+    // could not click through was worse than none.
     internal static readonly Role[] TriageRoles =
     {
+        Role.ManagingDirector,
         Role.ProjectManager,
         Role.FinanceDirector
     };

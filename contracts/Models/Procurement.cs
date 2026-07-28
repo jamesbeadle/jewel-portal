@@ -104,15 +104,20 @@ public sealed record QuoteLineItem(
     decimal Rate,
     decimal Total);
 
-// Where a work order sits in its lifecycle. Draft while being put together; Released once issued
-// to the supplier (Buildertrend's "Date Released"); Complete when the works are done and settled;
-// Cancelled if withdrawn. Awarding a bid package creates the order Released.
+// Where a work order sits in its lifecycle. Draft while being put together — it counts in the
+// Financials tab's committed figures (the commitment is intended) but is invisible to the
+// supplier and can't be invoiced, packaged or tagged until approved. Approving mints the next
+// sequential number and lands here as Released (the persisted name predates the approve verb;
+// Buildertrend's "Date Released"); Rejected is the terminal answer to a draft that shouldn't
+// proceed — it counts nowhere, like Cancelled. Complete when the works are done and settled;
+// Cancelled if a live order is withdrawn. Awarding a bid package creates the order Released.
 public enum WorkOrderStatus
 {
     Draft = 0,
     Released = 1,
     Complete = 2,
-    Cancelled = 3
+    Cancelled = 3,
+    Rejected = 4
 }
 
 // The purchase-order record raised against a supplier — the business calls these work orders.
@@ -150,6 +155,26 @@ public sealed record WorkOrder(
 {
     /// <summary>The supplier has electronically accepted this order from the portal.</summary>
     public bool IsAccepted => AcceptedAt is not null;
+
+    /// <summary>Still being put together — unnumbered and invisible to the supplier, though it
+    /// already counts in committed figures. ApproveWorkOrder mints the sequential number and
+    /// makes it a live order; RejectWorkOrder ends it.</summary>
+    public bool IsDraft => Status == WorkOrderStatus.Draft;
+
+    /// <summary>A rejected draft: terminal, unnumbered, counts nowhere.</summary>
+    public bool IsRejected => Status == WorkOrderStatus.Rejected;
+
+    /// <summary>The human reference. Drafts and rejected drafts have no number — approval is
+    /// what mints it — so they read by their state; anything else unnumbered falls back to an
+    /// id stem, mirroring WorkOrderEntity.Reference server-side. Never render
+    /// WO-{Number:0000} directly: a draft's 0 would print as "WO-0000".</summary>
+    public string Reference => Number > 0
+        ? $"WO-{Number:0000}"
+        : IsDraft
+            ? "Draft"
+            : IsRejected
+                ? "Rejected"
+                : "WO-" + (WorkOrderId.Length >= 8 ? WorkOrderId[..8] : WorkOrderId).ToUpperInvariant();
 
     /// <summary>Raised directly in JPMS — no tender, no variation, no seed — so its supplier,
     /// title, scope and priced lines can be edited wholesale via UpdateManualWorkOrder.</summary>

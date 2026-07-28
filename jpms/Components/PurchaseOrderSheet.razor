@@ -277,7 +277,9 @@
     /// (falls back to the raw AwardedByEmail when blank).</summary>
     [Parameter] public string ApprovedByName { get; set; } = "";
 
-    private string Reference => Order.Number > 0 ? $"WO-{Order.Number:0000}" : Order.WorkOrderId;
+    // Order.Reference reads "Draft" for an unreleased order (no number is minted until
+    // release) and falls back to an id stem for any other unnumbered order.
+    private string Reference => Order.Reference;
 
     private bool HasProgramme =>
         Order.ProgrammeStart is not null

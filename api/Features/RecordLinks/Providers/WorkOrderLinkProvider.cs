@@ -29,8 +29,14 @@ public sealed class WorkOrderLinkProvider : ILinkableRecordProvider
         // The supplier's company name is the discriminator a triager reads first ("which of the four
         // WOs on this project is the flooring one?"), so it is resolved alongside the order rather
         // than left to the title. One extra projection, no per-row queries.
+        // Drafts are excluded until approved (and rejected drafts forever): a draft has no
+        // number, so its tag stem would be the id fallback ("WO-A1B2C3D4") — and the moment
+        // approval mints the real number the stem would change, silently detaching any mail
+        // already tagged against it.
         var rows = await context.WorkOrders.AsNoTracking()
-            .Where(o => o.ProjectId == projectId)
+            .Where(o => o.ProjectId == projectId
+                        && o.Status != (int)WorkOrderStatus.Draft
+                        && o.Status != (int)WorkOrderStatus.Rejected)
             .OrderByDescending(o => o.Number)
             .Select(o => new
             {

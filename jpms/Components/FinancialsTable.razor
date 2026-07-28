@@ -62,6 +62,7 @@
                 <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 text-right whitespace-nowrap">@SortHeader("pl", "Profit / Loss")</th>
                 <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 text-right whitespace-nowrap">@SortHeader("costpct", "Cost % Complete")</th>
                 <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 w-[80px]"><span class="sr-only">Lock</span></th>
+                <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 w-[76px]"><span class="sr-only">Report</span></th>
                 @* Reference column: actual allocated spend, kept last — its click-through
                    opens the invoice modal where actual costs are allocated to work orders. *@
                 <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 text-right whitespace-nowrap">@SortHeader("acos", "Actual Cost of Sales")</th>
@@ -209,6 +210,15 @@
                         </button>
                     </td>
 
+                    <td class="px-4 py-3 text-right whitespace-nowrap">
+                        <button type="button"
+                                class="text-xs font-medium text-content-subtle hover:text-content underline underline-offset-4"
+                                title="Reconciliation of this line — sales lines, work orders and Xero costs, gross profit, procurement gain / loss and margin, with a PDF for the accountant"
+                                @onclick="() => OnReportSelected.InvokeAsync((Heading(reportLine), reportLine.CostCodes))">
+                            Report
+                        </button>
+                    </td>
+
                     @* Reference column: actual allocated spend — click through to allocate
                        invoices to work orders. Not part of the drawdown arithmetic. *@
                     @if (CostOfSalesFor(reportLine.CostCodes) != 0m)
@@ -283,6 +293,8 @@
                     <td class="px-4 py-3 text-right whitespace-nowrap">
                         <span class="text-xs text-content-subtle" title="Edit, lock or dissolve this package in the Packages section below the table">below</span>
                     </td>
+                    <td class="px-4 py-3 text-right text-content-muted"
+                        title="Packages are reconciled in the Packages section below the table">—</td>
                     <td class="px-4 py-3 text-right whitespace-nowrap @MoneyClass(package.InvoicedToDate)">@Money(package.InvoicedToDate)</td>
                 </tr>
             }
@@ -302,6 +314,7 @@
                 <td class="px-4 py-3 text-right">@Money(TotalNonWoCostOfSales)</td>
                 <td class="px-4 py-3 text-right @(TotalProfitLoss == 0m ? "" : TotalProfitLoss > 0m ? "text-positive" : "text-negative")">@Money(TotalProfitLoss)</td>
                 <td class="px-4 py-3 text-right pr-6">@Percent(WeightedCostCompletion)</td>
+                <td class="px-4 py-3"></td>
                 <td class="px-4 py-3"></td>
                 <td class="px-4 py-3 text-right">@Money(TotalCostOfSales)</td>
             </tr>
@@ -347,6 +360,10 @@
 
     /// <summary>Raised with a heading and the line's cost codes when an Actual Cost of Sales figure is clicked.</summary>
     [Parameter] public EventCallback<(string Heading, IReadOnlyList<string> CostCodes)> OnCostOfSalesSelected { get; set; }
+
+    /// <summary>Raised with a heading and the line's cost codes when its Report button is
+    /// clicked — the parent opens the cost-centre reconciliation modal.</summary>
+    [Parameter] public EventCallback<(string Heading, IReadOnlyList<string> CostCodes)> OnReportSelected { get; set; }
 
     /// <summary>Raised when a line's lock button is clicked: the line's cost codes and the state
     /// to apply to all of them (lock everything unless every member is already locked).</summary>

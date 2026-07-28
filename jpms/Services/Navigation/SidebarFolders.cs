@@ -148,6 +148,12 @@ public static class SidebarFolders
                     DesktopNavigation.FinanceRoles),
                 new SidebarRow(new NavigationItem("Valuation Report", "/projects/{project}/valuation"),
                     DesktopNavigation.FinanceRoles),
+                // The finance reconciliation trail (new page): every cost-centre move on the
+                // valuation report — who moved which line, from where to where, when. Sits under
+                // the report it audits; mirrors the API's CommercialTeam gate on the filtered
+                // audit read (AuditEndpoints).
+                new SidebarRow(new NavigationItem("Reconciliation Audit", "/projects/{project}/reconciliation-audit"),
+                    DesktopNavigation.FinanceRoles),
                 new SidebarRow(new NavigationItem("Cashflow", "/projects/{project}/cashflow"),
                     DesktopNavigation.FinanceRoles),
                 // One row per active project plus the total. Exact-only: /finance/* belongs to

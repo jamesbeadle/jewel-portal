@@ -8,9 +8,9 @@ using Microsoft.EntityFrameworkCore;
 namespace Jewel.JPMS.Api.Features.Portal.Queries;
 
 /// <summary>
-/// The subcontractor's own work orders, newest first. Drafts are excluded — a work order only
-/// exists for the supplier once it has been Released (issued). Complete and Cancelled orders stay
-/// visible as history.
+/// The subcontractor's own work orders, newest first. Drafts and rejected drafts are excluded —
+/// a work order only exists for the supplier once it has been Released (issued); a rejected
+/// draft never was. Complete and Cancelled orders stay visible as history.
 /// </summary>
 public sealed class ListMyWorkOrdersHandler : IQueryHandler<ListMyWorkOrders, IReadOnlyList<PortalWorkOrder>>
 {
@@ -22,7 +22,8 @@ public sealed class ListMyWorkOrdersHandler : IQueryHandler<ListMyWorkOrders, IR
     {
         var orders = await context.WorkOrders.AsNoTracking()
             .Where(order => order.SubcontractorId == query.SubcontractorId
-                && order.Status != (int)WorkOrderStatus.Draft)
+                && order.Status != (int)WorkOrderStatus.Draft
+                && order.Status != (int)WorkOrderStatus.Rejected)
             .OrderByDescending(order => order.AwardedAt)
             .ToListAsync(cancellationToken);
         if (orders.Count == 0) return Array.Empty<PortalWorkOrder>();

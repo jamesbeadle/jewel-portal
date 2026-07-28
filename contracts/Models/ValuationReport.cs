@@ -148,3 +148,17 @@ public sealed record ValuationReportSnapshotLine(
 public sealed record ValuationReportSnapshotDetail(
     ValuationReportSnapshot Snapshot,
     IReadOnlyList<ValuationReportSnapshotLine> Lines);
+
+/// <summary>
+/// The outcome of drafting a valuation-report email in the shared mailbox: which snapshot the
+/// attached PDF froze, who the draft is addressed to (the project's Client and Architect
+/// contacts), and where to open it. <see cref="WebLink"/> opens the draft in Outlook on the web
+/// when Graph returns one (it usually does); null otherwise — the draft is still in the mailbox's
+/// Drafts folder. Mirrors <see cref="SubcontractorStatementEmailDraft"/>.
+/// </summary>
+public sealed record ValuationReportSnapshotEmailDraft(
+    string ValuationReportSnapshotId,
+    string Label,
+    string Subject,
+    IReadOnlyList<string> RecipientEmails,
+    string? WebLink);

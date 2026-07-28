@@ -9,6 +9,7 @@
 @inject CostCentersReadModel CostCenters
 @inject ProjectWorkOrdersReadModel WorkOrders
 @inject WorkOrderGroupingStorage GroupingStorage
+@inject ICommandSender Commands
 @inject IQueryClient Queries
 @inject NavigationManager Nav
 @implements IDisposable
@@ -46,7 +47,7 @@ else
                        class="bg-surface border border-line rounded-lg px-3 py-1.5 text-sm text-content placeholder:text-content-subtle w-52 focus:outline-none focus:border-accent"
                        @bind="supplierSearch" @bind:event="oninput" />
                 <ExportToExcelButton FileName="Work orders"
-                                     Disabled="@(Orders.Count == 0)"
+                                     Disabled="@(LiveOrders.Count == 0)"
                                      ShowIncludeAllRows="@Searching"
                                      IncludeAllLabel="Ignore search"
                                      BuildWorkbook="BuildExportWorkbook" />
@@ -73,9 +74,14 @@ else
         else
         {
             <p class="text-sm text-content-subtle mb-4">
-                @Orders.Count work order@(Orders.Count == 1 ? "" : "s") issued ·
+                @LiveOrders.Count work order@(LiveOrders.Count == 1 ? "" : "s") issued ·
                 <span class="text-content font-medium">@Money(TotalCommitted)</span> committed ·
                 @Money(TotalPaid) paid · @Money(TotalCommitted - TotalPaid) remaining
+                @if (DraftOrders.Count > 0)
+                {
+                    <text> · </text><span class="text-content font-medium">@Money(DraftOrders.Sum(detail => detail.Order.Value))</span><text> in @DraftOrders.Count draft@(DraftOrders.Count == 1 ? "" : "s") awaiting approval</text>
+                    <span title="Drafts count in the Financials tab's committed figures but not in this tab's issued totals"> †</span>
+                }
                 @if (SummariesByOrder.Count > 0)
                 {
                     <text> · </text><span class="text-content font-medium">@Money(TotalInvoiced)</span><text> invoiced against orders · @Money(TotalCommitted - TotalInvoiced) left to invoice — see the </text><a class="underline underline-offset-4 hover:text-content" href="@($"/projects/{ProjectId}/work-order-allocation")">WO Allocation tab</a>
@@ -89,9 +95,109 @@ else
                 }
             </p>
 
-            @if (Searching && Rows.Count == 0 && OrdersWithoutLines.Count == 0)
+            @* ── Drafts: unnumbered, invisible to the supplier, awaiting a decision ──
+               Kept out of the table above so its arithmetic stays the truth about what
+               has actually been issued — though drafts DO count in the Financials tab's
+               committed figures (the commitment is intended). Approving mints the next
+               sequential order number and moves the draft into the table; rejecting
+               ends it. *@
+            @if (DraftOrders.Count > 0)
             {
-                <p class="text-sm text-content-subtle italic">No work orders match “@supplierSearch.Trim()”.</p>
+                <h3 class="text-sm font-semibold text-content mb-2">Draft work orders</h3>
+                <p class="text-xs text-content-subtle mb-2">
+                    Awaiting approval: a draft has no order number, is invisible to the supplier
+                    and can't be invoiced or packaged — but its value already counts in the
+                    Financials tab's committed figures. It can be edited freely. Approving mints
+                    the next order number and issues it like any other order; rejecting ends it
+                    and its value stops counting.
+                </p>
+                <ul class="text-sm divide-y divide-line rounded-xl border border-line bg-surface mb-6">
+                    @foreach (var detail in DraftOrders)
+                    {
+                        <li class="px-4 py-2 flex items-center gap-3">
+                            <span class="inline-block rounded-full border border-line px-2 py-0.5 text-[11px] text-content-subtle">Draft</span>
+                            <span class="text-content font-medium">@detail.Order.Title</span>
+                            <span class="text-content-subtle">@detail.SubcontractorName</span>
+                            <span class="ml-auto">@Money(detail.Order.Value)</span>
+                            @if (PendingFor(detail) is { } pending)
+                            {
+                                <button type="button" class="text-xs font-medium @(pending == DraftDecision.Approve ? "text-accent" : "text-negative") underline underline-offset-4"
+                                        title="@(pending == DraftDecision.Approve ? "Mint the next order number and issue this order" : "End this draft — its value stops counting and there is no undo")"
+                                        disabled="@decisionBusy"
+                                        @onclick="() => DecideAsync(detail, pending)">
+                                    @(decisionBusy ? "Working…" : pending == DraftDecision.Approve ? "Confirm approve" : "Confirm reject")
+                                </button>
+                                <button type="button" class="text-xs font-medium text-content-subtle hover:text-content underline underline-offset-4"
+                                        disabled="@decisionBusy"
+                                        @onclick="ClearPending">
+                                    Keep as draft
+                                </button>
+                            }
+                            else
+                            {
+                                <button type="button"
+                                        class="text-xs font-medium text-content-subtle hover:text-content underline underline-offset-4"
+                                        title="Edit the draft's supplier, title, scope and priced lines"
+                                        disabled="@decisionBusy"
+                                        @onclick="() => OpenEdit(detail)">
+                                    Edit…
+                                </button>
+                                <button type="button"
+                                        class="text-xs font-medium text-content-subtle hover:text-content underline underline-offset-4"
+                                        title="Approve this draft — it takes the next order number and becomes a live order"
+                                        disabled="@decisionBusy"
+                                        @onclick="() => SetPending(detail, DraftDecision.Approve)">
+                                    Approve…
+                                </button>
+                                <button type="button"
+                                        class="text-xs font-medium text-content-subtle hover:text-negative underline underline-offset-4"
+                                        title="Reject this draft — terminal; its value stops counting everywhere"
+                                        disabled="@decisionBusy"
+                                        @onclick="() => SetPending(detail, DraftDecision.Reject)">
+                                    Reject…
+                                </button>
+                            }
+                        </li>
+                    }
+                </ul>
+                @if (decisionError is not null)
+                {
+                    <p class="text-sm text-negative mb-4">@decisionError</p>
+                }
+            }
+
+            @* Rejected drafts stay on the page as a quiet record of the decision —
+               they count nowhere and offer no actions. *@
+            @if (RejectedOrders.Count > 0)
+            {
+                <details class="mb-6">
+                    <summary class="text-xs font-medium text-content-subtle cursor-pointer select-none">
+                        Rejected work orders (@RejectedOrders.Count)
+                    </summary>
+                    <ul class="mt-2 text-sm divide-y divide-line rounded-xl border border-line bg-surface opacity-70">
+                        @foreach (var detail in RejectedOrders)
+                        {
+                            <li class="px-4 py-2 flex items-center gap-3">
+                                <span class="inline-block rounded-full border border-line px-2 py-0.5 text-[11px] text-content-subtle">Rejected</span>
+                                <span class="text-content-muted">@detail.Order.Title</span>
+                                <span class="text-content-subtle">@detail.SubcontractorName</span>
+                                <span class="ml-auto text-content-subtle line-through">@Money(detail.Order.Value)</span>
+                            </li>
+                        }
+                    </ul>
+                </details>
+            }
+
+            @if (Rows.Count == 0 && OrdersWithoutLines.Count == 0)
+            {
+                @* Searching: nothing issued matched (drafts that matched are already listed
+                   above, so say "issued" when they are). Not searching: every order is still
+                   a draft, so an empty table of zeros would say nothing true. *@
+                <p class="text-sm text-content-subtle italic">
+                    @(Searching
+                        ? $"No {(DraftOrders.Count > 0 ? "issued " : "")}work orders match “{supplierSearch.Trim()}”."
+                        : "Nothing issued yet — every work order on this project is still awaiting approval, or was rejected.")
+                </p>
             }
             else
             {
@@ -348,8 +454,19 @@ else
 
     private IReadOnlyList<ProjectWorkOrderDetail> Orders => WorkOrders.Current(ProjectId);
 
+    // The table, its totals and the export are the truth about what has been ISSUED, so
+    // drafts and rejected drafts stay out of all of them and live in their own sections.
+    private List<ProjectWorkOrderDetail> LiveOrders =>
+        Orders.Where(detail => detail.Order.Status is not (WorkOrderStatus.Draft or WorkOrderStatus.Rejected)).ToList();
+
+    private List<ProjectWorkOrderDetail> DraftOrders =>
+        Orders.Where(detail => detail.Order.IsDraft && MatchesSearch(detail)).ToList();
+
+    private List<ProjectWorkOrderDetail> RejectedOrders =>
+        Orders.Where(detail => detail.Order.IsRejected && MatchesSearch(detail)).ToList();
+
     private List<OrderLine> AllLines =>
-        Orders.SelectMany(detail => detail.Lines.Select(line => new OrderLine(detail, line))).ToList();
+        LiveOrders.SelectMany(detail => detail.Lines.Select(line => new OrderLine(detail, line))).ToList();
 
     // Grouping toggle: by cost centre (the QS view, default) or by supplier (how the
     // accountant records costs). The choice is remembered per user, per browser.
@@ -381,12 +498,12 @@ else
         AllLines.Where(entry => MatchesSearch(entry.Detail)).ToList();
 
     private int VisibleOrderCount =>
-        Orders.Count(detail => MatchesSearch(detail));
+        LiveOrders.Count(detail => MatchesSearch(detail));
 
     private List<ProjectWorkOrderDetail> OrdersWithoutLines =>
-        Orders.Where(detail => detail.Lines.Count == 0 && MatchesSearch(detail)).ToList();
+        LiveOrders.Where(detail => detail.Lines.Count == 0 && MatchesSearch(detail)).ToList();
 
-    private decimal TotalCommitted => Orders.Sum(detail => detail.Order.Value);
+    private decimal TotalCommitted => LiveOrders.Sum(detail => detail.Order.Value);
     private decimal TotalPaid => AllLines.Sum(entry => entry.Line.PaidToDate);
     private decimal TotalInvoiced => SummariesByOrder.Values.Sum(summary => summary.InvoicedToDate);
 
@@ -616,7 +733,63 @@ else
         if (!expandedKeys.Remove(key)) expandedKeys.Add(key);
     }
 
-    private static string Reference(WorkOrder order) => $"WO-{order.Number:0000}";
+    private static string Reference(WorkOrder order) => order.Reference;
+
+    // ── Deciding a draft: approve (mints the next number) or reject (terminal) ──
+    // Two clicks on purpose either way: an approval mints a number that is never taken
+    // back, and a rejection has no undo. pendingDraftId holds the draft awaiting its
+    // confirm click, pendingDecision which decision was asked for.
+    private enum DraftDecision { Approve, Reject }
+
+    private string? pendingDraftId;
+    private DraftDecision pendingDecision;
+    private bool decisionBusy;
+    private string? decisionError;
+
+    private DraftDecision? PendingFor(ProjectWorkOrderDetail detail) =>
+        pendingDraftId == detail.Order.WorkOrderId ? pendingDecision : null;
+
+    private void SetPending(ProjectWorkOrderDetail detail, DraftDecision decision)
+    {
+        pendingDraftId = detail.Order.WorkOrderId;
+        pendingDecision = decision;
+        decisionError = null;
+    }
+
+    private void ClearPending() => pendingDraftId = null;
+
+    private async Task DecideAsync(ProjectWorkOrderDetail detail, DraftDecision decision)
+    {
+        if (decisionBusy) return;
+        decisionBusy = true;
+        decisionError = null;
+        try
+        {
+            if (decision == DraftDecision.Approve)
+            {
+                await Commands.SendAsync(new ApproveWorkOrder(
+                    ProjectId, detail.Order.WorkOrderId, Auth.CurrentUser?.Email ?? ""), CancellationToken.None);
+            }
+            else
+            {
+                await Commands.SendAsync(new RejectWorkOrder(
+                    ProjectId, detail.Order.WorkOrderId), CancellationToken.None);
+            }
+            pendingDraftId = null;
+            await WorkOrders.RefreshAsync(ProjectId, CancellationToken.None);
+        }
+        catch (CommandFailedException ex)
+        {
+            // 400s are answers for the caller to show, not toasts — say what refused and why.
+            decisionError = decision == DraftDecision.Approve
+                ? $"Couldn't approve \"{detail.Order.Title}\": {ex.Message}"
+                : $"Couldn't reject \"{detail.Order.Title}\": {ex.Message}";
+        }
+        finally
+        {
+            decisionBusy = false;
+        }
+    }
 
     // One workbook, two sheets: a roll-up matching the on-screen grouping (and the
     // tfoot total) and the flattened per-order lines the expanded groups show — both
@@ -624,10 +797,10 @@ else
     // search" (offered while a search narrows the table) exports every line instead.
     private ExcelWorkbook? BuildExportWorkbook(bool ignoreSearch)
     {
-        if (Orders.Count == 0) return null;
+        if (LiveOrders.Count == 0) return null;
 
         var exportLines = ignoreSearch ? AllLines : VisibleLines;
-        var exportOrderCount = ignoreSearch ? Orders.Count : VisibleOrderCount;
+        var exportOrderCount = ignoreSearch ? LiveOrders.Count : VisibleOrderCount;
         var exportCommitted = exportLines.Sum(entry => entry.Line.LineTotal);
         var exportPaid = exportLines.Sum(entry => entry.Line.PaidToDate);
         var exportInvoiced = exportLines.Sum(entry => InvoicedShare(entry));

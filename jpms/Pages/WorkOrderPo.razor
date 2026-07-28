@@ -61,10 +61,29 @@ else
                         Awaiting supplier acceptance
                     </span>
                 }
-                <button type="button" class="btn-secondary text-sm" @onclick="OpenEmailModal"
-                        title="Draft the covering email to the supplier in the shared mailbox — nothing sends until you review it in Outlook">
-                    Draft email to supplier…
-                </button>
+                else if (Detail.Order.IsDraft)
+                {
+                    <span class="rounded-full border border-line px-2.5 py-0.5 text-xs font-medium text-content-subtle"
+                          title="This order hasn't been approved — it has no order number and the supplier can't see it. Approve or reject it from the Work Orders tab.">
+                        Draft — awaiting approval
+                    </span>
+                }
+                else if (Detail.Order.IsRejected)
+                {
+                    <span class="rounded-full border border-line px-2.5 py-0.5 text-xs font-medium text-content-subtle"
+                          title="This draft was rejected — it was never issued and counts nowhere.">
+                        Rejected
+                    </span>
+                }
+                @* A draft has no number and the supplier must not hear about it (and a
+                   rejected draft never does), so the covering email waits for approval. *@
+                @if (Detail.Order.Status is not (WorkOrderStatus.Draft or WorkOrderStatus.Rejected))
+                {
+                    <button type="button" class="btn-secondary text-sm" @onclick="OpenEmailModal"
+                            title="Draft the covering email to the supplier in the shared mailbox — nothing sends until you review it in Outlook">
+                        Draft email to supplier…
+                    </button>
+                }
                 <button type="button" class="btn-secondary text-sm" @onclick="PrintAsync"
                         title="Print the purchase order, or save it as a PDF from the print dialog">
                     Print / save PDF
@@ -153,7 +172,7 @@ else
     private string ApprovedByName =>
         Detail is null ? "" : Users.Find(Detail.Order.AwardedByEmail)?.DisplayName ?? "";
 
-    private string Title => Detail is null ? "Purchase order" : $"WO-{Detail.Order.Number:0000} purchase order";
+    private string Title => Detail is null ? "Purchase order" : $"{Detail.Order.Reference} purchase order";
 
     private async Task PrintAsync() => await JS.InvokeVoidAsync("window.print");
 
@@ -167,12 +186,12 @@ else
     private string? emailError;
     private string? emailLink;
 
-    private string Title2 => Detail is null ? "" : $"WO-{Detail.Order.Number:0000}";
+    private string Title2 => Detail is null ? "" : Detail.Order.Reference;
 
     private void OpenEmailModal()
     {
         if (Detail is null) return;
-        emailSubject = $"Work order WO-{Detail.Order.Number:0000} — {Detail.Order.Title} — {Project?.Name ?? ProjectId}";
+        emailSubject = $"Work order {Detail.Order.Reference} — {Detail.Order.Title} — {Project?.Name ?? ProjectId}";
         emailBody = DefaultEmailBody(Detail);
         emailNote = null;
         emailError = null;
@@ -189,7 +208,7 @@ else
         var order = detail.Order;
         var sb = new System.Text.StringBuilder();
         sb.AppendLine($"<p>Hello {detail.SubcontractorName},</p>");
-        sb.AppendLine($"<p>Please find below the details of our work order <strong>WO-{order.Number:0000}</strong> for <strong>{Project?.Name ?? "the project"}</strong>.</p>");
+        sb.AppendLine($"<p>Please find below the details of our work order <strong>{order.Reference}</strong> for <strong>{Project?.Name ?? "the project"}</strong>.</p>");
         if (detail.Lines.Count > 0)
         {
             sb.AppendLine("<table border=\"1\" cellpadding=\"6\" cellspacing=\"0\" style=\"border-collapse:collapse\">");

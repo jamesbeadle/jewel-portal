@@ -18,6 +18,9 @@
     "MailboxIntake:Folders:InProgress": "",
     "MailboxIntake:Folders:Logged": "",
     "MailboxIntake:Folders:NotActioned": "",
-    "MailboxIntake:Folders:NeedsAttention": ""
+    "MailboxIntake:Folders:NeedsAttention": "",
+
+    "Xero:ClientId": "<custom connection client id; same value as the SWA API's Xero__ClientId>",
+    "Xero:ClientSecret": "<dev-only secret here; NEVER commit a real one>"
   }
 }

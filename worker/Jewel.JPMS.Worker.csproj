@@ -57,6 +57,17 @@
          mailbox category space). MailboxActionWorker resolves the outbound draft's workflow tag
          through this helper. -->
     <Compile Include="..\api\Features\Requests\RequestTags.cs" Link="Shared\RequestTags.cs" />
+    <!-- Shared Xero source: the nightly timer (Xero/XeroNightlyWorker.cs) runs the SAME sync and
+         auto-allocation handlers the API's HTTP endpoints use, compiled from the identical files so
+         the overnight run and the allocation page's buttons can never drift apart. -->
+    <Compile Include="..\api\Cqrs\ICommandHandler.cs" Link="Shared\Cqrs\ICommandHandler.cs" />
+    <Compile Include="..\api\Features\Xero\XeroClient.cs" Link="Shared\Xero\XeroClient.cs" />
+    <Compile Include="..\api\Features\Xero\XeroOptions.cs" Link="Shared\Xero\XeroOptions.cs" />
+    <Compile Include="..\api\Features\Xero\XeroApproval.cs" Link="Shared\Xero\XeroApproval.cs" />
+    <Compile Include="..\api\Features\Xero\Ledger\SyncXeroLedgerHandler.cs" Link="Shared\Xero\SyncXeroLedgerHandler.cs" />
+    <Compile Include="..\api\Features\Xero\Ledger\AllocateSuggestedXeroLinesHandler.cs" Link="Shared\Xero\AllocateSuggestedXeroLinesHandler.cs" />
+    <Compile Include="..\api\Features\Xero\Ledger\XeroAllocationSuggester.cs" Link="Shared\Xero\XeroAllocationSuggester.cs" />
+    <Compile Include="..\api\Features\Xero\Ledger\XeroWriteBackService.cs" Link="Shared\Xero\XeroWriteBackService.cs" />
   </ItemGroup>
 
   <ItemGroup>

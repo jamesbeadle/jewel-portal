@@ -19,7 +19,11 @@ public sealed class ListProjectWorkOrdersHandler
     {
         var orders = await context.WorkOrders.AsNoTracking()
             .Where(order => order.ProjectId == query.ProjectId)
+            // Drafts all sit at Number 0, so they need a stable tiebreak of their own —
+            // creation order, then id, matching the statement handler's convention.
             .OrderBy(order => order.Number)
+            .ThenBy(order => order.CreatedAt)
+            .ThenBy(order => order.WorkOrderId)
             .ToListAsync(cancellationToken);
         if (orders.Count == 0) return Array.Empty<ProjectWorkOrderDetail>();
 

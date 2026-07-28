@@ -62,6 +62,7 @@ else
                             <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 text-right whitespace-nowrap">Works complete £</th>
                             <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 text-right whitespace-nowrap">Certified £</th>
                             <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 text-right whitespace-nowrap">Payment due £</th>
+                            <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 text-right w-[120px]"></th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-line">
@@ -99,6 +100,17 @@ else
                                 <td class="px-4 py-3 text-right text-content-muted whitespace-nowrap">@Money(snapshot.TotalWorksComplete)</td>
                                 <td class="px-4 py-3 text-right text-content-muted whitespace-nowrap">@Money(snapshot.CertifiedToDate)</td>
                                 <td class="px-4 py-3 text-right text-content whitespace-nowrap">@Money(snapshot.PaymentDueExVat)</td>
+                                <td class="px-4 py-3 text-right whitespace-nowrap" @onclick:stopPropagation="true">
+                                    <a href="@($"/api/valuation-report-snapshots/{snapshot.ValuationReportSnapshotId}/pdf")"
+                                       target="_blank" rel="noopener" title="Download the frozen report as the branded PDF"
+                                       class="text-content-subtle hover:text-content underline underline-offset-2 text-xs">PDF</a>
+                                    @if (CanEmail)
+                                    {
+                                        <button type="button" @onclick="() => OpenSnapshotEmail(snapshot.ValuationReportSnapshotId)"
+                                                title="Draft the report to the client in the shared mailbox — nothing sends from here"
+                                                class="ml-2 text-content-subtle hover:text-content underline underline-offset-2 text-xs">Email</button>
+                                    }
+                                </td>
                             </tr>
                         }
                     </tbody>
@@ -111,9 +123,12 @@ else
                ShowFooter="false" Class="max-w-6xl" OnCancel="@(() => viewingSnapshotId = null)">
             @if (viewingSnapshotId is not null)
             {
-                <ValuationSnapshotViewer SnapshotId="@viewingSnapshotId" />
+                <ValuationSnapshotViewer SnapshotId="@viewingSnapshotId"
+                                         OnEmailRequested="@(CanEmail ? EventCallback.Factory.Create<string>(this, OpenSnapshotEmail) : default)" />
             }
         </Modal>
+
+        <ValuationSnapshotEmailModal Snapshot="@emailingSnapshot" OnClose="@(() => emailingSnapshot = null)" />
     </ProjectPageShell>
 }
 
@@ -122,6 +137,18 @@ else
 
     private bool isLoaded;
     private string? viewingSnapshotId;
+
+    // Email-draft flow — same circle as the register's take/delete gate: the roles that run
+    // the report, not everyone who may read snapshots.
+    private ValuationReportSnapshot? emailingSnapshot;
+    private bool CanEmail => Session.AvailableRoles.Any(role =>
+        role is Role.Admin or Role.ManagingDirector or Role.FinanceDirector or Role.ProjectManager);
+
+    private void OpenSnapshotEmail(string snapshotId)
+    {
+        viewingSnapshotId = null;
+        emailingSnapshot = Snapshots.FirstOrDefault(snapshot => snapshot.ValuationReportSnapshotId == snapshotId);
+    }
 
     // Invoice references for the register's invoice column, keyed once per load. A failed fetch
     // leaves the map empty — rows fall back to their label, never blocking the register itself.

@@ -69,6 +69,7 @@ else
                              OnContractSalesSelected="OpenSalesLinesModal"
                              OnWorkOrderCommittedSelected="OpenWorkOrdersModal"
                              OnCostOfSalesSelected="OpenCostOfSalesModal"
+                             OnReportSelected="OpenReconciliationModal"
                              OnGroupRequested="OpenGroupDialog"
                              OnUngroupRequested="HandleUngroupAsync"
                              OnCostCompletionChanged="HandleCostCompletionChangedAsync"
@@ -130,6 +131,15 @@ else
                                        CostCodes="@(selectedWo?.CostCodes ?? Array.Empty<string>())"
                                        Orders="WorkOrders.Current(ProjectId)"
                                        OnClose="CloseWorkOrdersModal" />
+
+            <CostCentreReconciliationModal IsOpen="@(selectedReport is not null)"
+                                           ProjectId="@ProjectId"
+                                           Heading="@(selectedReport?.Heading ?? "")"
+                                           CostCodes="@(selectedReport?.CostCodes ?? Array.Empty<string>())"
+                                           SummaryRows="Summary.Current(ProjectId)"
+                                           Lines="ValuationLines.Current(ProjectId)"
+                                           Orders="WorkOrders.Current(ProjectId)"
+                                           OnClose="CloseReconciliationModal" />
 
             <CostCentreCostOfSalesModal IsOpen="@(selectedCostOfSales is not null)"
                                         ProjectId="@ProjectId"
@@ -193,6 +203,7 @@ else
     private SelectedLine? selectedSales;
     private SelectedLine? selectedWo;
     private SelectedLine? selectedCostOfSales;
+    private SelectedLine? selectedReport;
 
     // Roll-up naming dialog state; non-null pendingGroupCodes means the dialog is open.
     // pendingReplaceGroupIds carries any selected roll-ups being merged into the new group.
@@ -249,6 +260,11 @@ else
         selectedCostOfSales = new SelectedLine(line.Heading, line.CostCodes);
 
     private void CloseCostOfSalesModal() => selectedCostOfSales = null;
+
+    private void OpenReconciliationModal((string Heading, IReadOnlyList<string> CostCodes) line) =>
+        selectedReport = new SelectedLine(line.Heading, line.CostCodes);
+
+    private void CloseReconciliationModal() => selectedReport = null;
 
     // An invoice was reallocated to another cost centre from inside the modal:
     // close it and re-pull the summary so the table reflects the move.

@@ -254,7 +254,7 @@ else
                 @* Snapshot register: the frozen report behind each invoice submission,
                    plus on-demand period-end captures. *@
                 <div class="mt-3">
-                    <ValuationSnapshotsSection ProjectId="@ProjectId" OnView="OpenSnapshot" OnDeleted="OnSnapshotDeleted" />
+                    <ValuationSnapshotsSection ProjectId="@ProjectId" OnView="OpenSnapshot" OnDeleted="OnSnapshotDeleted" OnEmail="OpenSnapshotEmail" />
                 </div>
             </ExtraSections>
         </ValuationReportTable>
@@ -271,9 +271,12 @@ else
                ShowFooter="false" Class="max-w-6xl" OnCancel="CloseSnapshot">
             @if (viewingSnapshotId is not null)
             {
-                <ValuationSnapshotViewer SnapshotId="@viewingSnapshotId" />
+                <ValuationSnapshotViewer SnapshotId="@viewingSnapshotId"
+                                         OnEmailRequested="@(CanEmailSnapshot ? EventCallback.Factory.Create<string>(this, OpenSnapshotEmail) : default)" />
             }
         </Modal>
+
+        <ValuationSnapshotEmailModal Snapshot="@emailingSnapshot" OnClose="@(() => emailingSnapshot = null)" />
 
         <Modal IsOpen="@showRename"
                Title="Rename claim"
@@ -451,6 +454,20 @@ else
     private string? viewingSnapshotId;
     private void OpenSnapshot(string snapshotId) => viewingSnapshotId = snapshotId;
     private void CloseSnapshot() => viewingSnapshotId = null;
+
+    // Email-draft flow for a snapshot — closes the viewer (one modal at a time) and opens the
+    // draft modal on the snapshot's cached header row. Same circle as the snapshot register's
+    // take/delete gate: the roles that run the report, not everyone who may read it.
+    private ValuationReportSnapshot? emailingSnapshot;
+    private bool CanEmailSnapshot => Session.AvailableRoles.Any(role =>
+        role is Role.Admin or Role.ManagingDirector or Role.FinanceDirector or Role.ProjectManager);
+
+    private void OpenSnapshotEmail(string snapshotId)
+    {
+        viewingSnapshotId = null;
+        emailingSnapshot = Store.SnapshotsFor(ProjectId)
+            .FirstOrDefault(snapshot => snapshot.ValuationReportSnapshotId == snapshotId);
+    }
 
     // Deleting a snapshot clears any invoice's link to it server-side — reload the
     // invoice section so a dead "View report" link doesn't linger.

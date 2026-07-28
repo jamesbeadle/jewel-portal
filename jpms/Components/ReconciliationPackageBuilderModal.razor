@@ -248,8 +248,9 @@
 
     private static decimal CommittedOf(ProjectWorkOrderDetail detail) => detail.Lines.Sum(line => line.LineTotal);
 
+    // Cancelled and rejected orders are gone; drafts aren't approved scope yet — none belong in a package.
     private List<ProjectWorkOrderDetail> FilteredOrders =>
-        Orders.Where(detail => detail.Order.Status != WorkOrderStatus.Cancelled)
+        Orders.Where(detail => detail.Order.Status is not (WorkOrderStatus.Cancelled or WorkOrderStatus.Draft or WorkOrderStatus.Rejected))
             .Where(detail => string.IsNullOrWhiteSpace(orderSearch)
                              || detail.SubcontractorName.Contains(orderSearch.Trim(), StringComparison.OrdinalIgnoreCase)
                              || detail.Order.Title.Contains(orderSearch.Trim(), StringComparison.OrdinalIgnoreCase))

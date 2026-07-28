@@ -1,9 +1,13 @@
 @using Jewel.JPMS.Contracts.Commercial
+@using Jewel.JPMS.Services.Excel
 @inject IValuationReportStore Store
 
 @* Read-only rendering of one frozen valuation-report snapshot: the same grouped-bill +
    summary-footer layout as the live ValuationReportTable, fed entirely from the
-   snapshot's copied lines — later edits to the live report never show here. *@
+   snapshot's copied lines — later edits to the live report never show here. Exports leave from
+   here too: the branded PDF (rendered server-side from the same frozen lines), the line-level
+   Excel workbook (built from exactly what this viewer shows), and — when the host page wires
+   OnEmailRequested — the email-draft flow that attaches the same PDF. *@
 @if (detail is null)
 {
     @if (loadFailed)
@@ -26,6 +30,22 @@ else
             <span class="text-content-muted"> Superseded by a later snapshot.</span>
         }
         <span class="text-content-subtle"> Read-only: this is the report exactly as it stood; live changes never alter it.</span>
+    </div>
+
+    <div class="mb-4 flex flex-wrap items-center gap-4">
+        <a class="text-sm font-medium text-content-muted hover:text-content underline underline-offset-4"
+           href="@($"/api/valuation-report-snapshots/{snapshot.ValuationReportSnapshotId}/pdf")" target="_blank" rel="noopener">
+            Download PDF
+        </a>
+        <ExportToExcelButton FileName="@($"Valuation report {snapshot.Label}")" BuildWorkbook="BuildExportWorkbook" />
+        @if (OnEmailRequested.HasDelegate)
+        {
+            <button type="button" @onclick="() => OnEmailRequested.InvokeAsync(snapshot.ValuationReportSnapshotId)"
+                    title="Draft the report to the client in the shared mailbox — nothing sends from here"
+                    class="text-sm font-medium text-content-muted hover:text-content underline underline-offset-4">
+                Email to client…
+            </button>
+        }
     </div>
 
     <div class="space-y-3">
@@ -112,6 +132,10 @@ else
 @code {
     [Parameter, EditorRequired] public string SnapshotId { get; set; } = "";
 
+    /// <summary>Wired by pages that host the email-draft modal: opens the draft flow for this
+    /// snapshot. Left unwired, the button simply doesn't render.</summary>
+    [Parameter] public EventCallback<string> OnEmailRequested { get; set; }
+
     private static readonly System.Globalization.CultureInfo Gb = System.Globalization.CultureInfo.GetCultureInfo("en-GB");
 
     private ValuationReportSnapshotDetail? detail;
@@ -166,4 +190,63 @@ else
     private static string Money(decimal v) => v.ToString("C2", Gb);
     private static string Num(decimal v) => v.ToString("0.##", Gb);
     private static string Pct(decimal v) => v.ToString("0.##", Gb) + "%";
+
+    // Every frozen line plus the summary footer — exactly what the viewer shows, so the workbook
+    // and the screen (and the PDF, rendered from the same lines) always agree.
+    private ExcelWorkbook? BuildExportWorkbook(bool _)
+    {
+        if (detail is null) return null;
+        var snapshot = detail.Snapshot;
+
+        var workbook = new ExcelWorkbook();
+        var lines = workbook.AddSheet("Valuation report",
+            new ExcelColumn("Section"),
+            new ExcelColumn("Code"),
+            new ExcelColumn("Description", Width: 44),
+            new ExcelColumn("Line type"),
+            new ExcelColumn("Unit"),
+            new ExcelColumn("Qty", ExcelFormat.Number),
+            new ExcelColumn("Rate £", ExcelFormat.Currency),
+            new ExcelColumn("Amount £", ExcelFormat.Currency),
+            new ExcelColumn("% Complete", ExcelFormat.Percent),
+            new ExcelColumn("Claimed £", ExcelFormat.Currency),
+            new ExcelColumn("Period increment £", ExcelFormat.Currency),
+            new ExcelColumn("Comments", Width: 36));
+
+        foreach (var section in Sections)
+        {
+            foreach (var line in section.Lines)
+            {
+                lines.AddRow(
+                    section.Title,
+                    CodeFor(line),
+                    TitleFor(line),
+                    line.LineType.ToString(),
+                    line.Unit,
+                    line.Quantity,
+                    line.Rate,
+                    line.LineAmount,
+                    line.CountsTowardTotals ? (decimal?)(line.PercentComplete / 100m) : null,
+                    line.CountsTowardTotals ? (decimal?)line.CumulativeClaimed : null,
+                    line.CountsTowardTotals ? (decimal?)line.PeriodIncrement : null,
+                    line.Comments);
+            }
+        }
+
+        var summary = workbook.AddSheet("Summary",
+            new ExcelColumn("Item", Width: 34),
+            new ExcelColumn("Amount £", ExcelFormat.Currency));
+        summary.AddRow("Snapshot", snapshot.Label);
+        summary.AddRow("Taken", snapshot.TakenAt.ToString("dd MMM yyyy HH:mm", Gb));
+        summary.AddRow("Original contract sum", snapshot.ContractSum);
+        summary.AddRow("Net variations", snapshot.NetVariations);
+        summary.AddRow("Revised contract sum", snapshot.RevisedContractSum);
+        summary.AddRow("Total works complete", snapshot.TotalWorksComplete);
+        summary.AddRow($"Retention held ({Pct(snapshot.RetentionPercent)})", snapshot.RetentionHeld);
+        summary.AddRow($"Retention released ({Pct(snapshot.RetentionReleasePercent)})", snapshot.RetentionReleased);
+        summary.AddRow("Certified to date", snapshot.CertifiedToDate);
+        summary.AddRow("Payment due (ex VAT)", snapshot.PaymentDueExVat);
+
+        return workbook;
+    }
 }

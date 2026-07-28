@@ -1,0 +1,332 @@
+@using Jewel.JPMS.Contracts.Commercial
+@using Jewel.JPMS.Contracts.Procurement
+@using Jewel.JPMS.Models
+@inject IQueryClient Queries
+
+@* The reconciliation of one Financials line — a cost centre or a roll-up group — for
+   briefing the managing director on the delivery position: the sales lines grouped under
+   the centre, the costs against it (work orders including drafts, marked; Xero spend not
+   on orders), then gross profit, procurement gain / loss and margin. Figures come from
+   the same sources the Financials tab reads (summary rows + the work-orders store) but
+   GROSS of reconciliation-package netting — with "Hide scope in packages" on (the
+   default), a line with packaged scope shows netted figures in the table and its full
+   position here. The PDF renders these same gross figures, so modal and PDF always agree. *@
+<Modal IsOpen="IsOpen" Title="@($"Reconciliation — {Heading}")" ShowFooter="false" OnCancel="OnClose" Class="max-w-5xl">
+    <LoadGate IsLoading="@(entries is null && !dataFailed)" Prominent="true" Label="Loading reconciliation">
+    @if (dataFailed)
+    {
+        <p class="text-sm text-negative">Couldn't load the Xero cost lines. The details are in the red bar at the top — close and reopen to try again.</p>
+    }
+    else
+    {
+        <div class="space-y-5">
+            <div class="flex items-center justify-between gap-3 flex-wrap">
+                <p class="text-xs text-content-subtle">
+                    Centre code@(CostCodes.Count == 1 ? "" : "s"): <span class="font-mono">@string.Join(", ", CostCodes)</span>
+                </p>
+                <a class="btn-secondary text-sm" target="_blank" rel="noopener"
+                   title="Download this reconciliation as a branded PDF for the accountant"
+                   href="@PdfHref">
+                    Download PDF
+                </a>
+            </div>
+
+            @* ── Sales: the valuation lines grouped under this centre ─────────── *@
+            <div>
+                <h3 class="text-sm font-semibold text-content mb-2">Sales — valuation lines</h3>
+                <div class="rounded-xl border border-line bg-surface overflow-x-auto max-h-60 overflow-y-auto">
+                    <table class="w-full text-sm border-collapse">
+                        <tbody class="divide-y divide-line">
+                            @foreach (var line in SalesLines)
+                            {
+                                <tr>
+                                    <td class="px-4 py-2 font-mono text-[11px] text-content-subtle whitespace-nowrap w-[90px]">@SalesRef(line)</td>
+                                    <td class="px-4 py-2 text-content">@DescriptionFor(line)</td>
+                                    <td class="px-4 py-2 text-right whitespace-nowrap">@Money(line.LineAmount)</td>
+                                </tr>
+                            }
+                            @if (SalesOther != 0m)
+                            {
+                                <tr>
+                                    <td class="px-4 py-2"></td>
+                                    <td class="px-4 py-2 text-content-subtle italic">Other / unlisted adjustments</td>
+                                    <td class="px-4 py-2 text-right whitespace-nowrap">@Money(SalesOther)</td>
+                                </tr>
+                            }
+                            @if (SalesLines.Count == 0 && SalesOther == 0m)
+                            {
+                                <tr><td class="px-4 py-2 text-content-subtle italic" colspan="3">No valuation lines are coded to this centre.</td></tr>
+                            }
+                        </tbody>
+                        <tfoot class="border-t border-line-strong bg-surface-raised">
+                            <tr class="font-medium text-content">
+                                <td class="px-4 py-2" colspan="2">Sales value</td>
+                                <td class="px-4 py-2 text-right">@Money(SalesValue)</td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+
+            @* ── Costs: work orders (drafts count and are marked) ─────────────── *@
+            <div>
+                <h3 class="text-sm font-semibold text-content mb-2">Costs — work orders</h3>
+                <div class="rounded-xl border border-line bg-surface overflow-x-auto max-h-60 overflow-y-auto">
+                    <table class="w-full text-sm border-collapse">
+                        <tbody class="divide-y divide-line">
+                            @foreach (var order in WorkOrderShares)
+                            {
+                                <tr>
+                                    <td class="px-4 py-2 font-mono text-[11px] text-content-subtle whitespace-nowrap w-[90px]">@order.Detail.Order.Reference</td>
+                                    <td class="px-4 py-2 whitespace-nowrap">@order.Detail.SubcontractorName</td>
+                                    <td class="px-4 py-2 text-content">@order.Detail.Order.Title</td>
+                                    <td class="px-4 py-2 whitespace-nowrap">
+                                        <span class="inline-block rounded-full border border-line px-2 py-0.5 text-[11px] text-content-subtle">@order.Detail.Order.Status</span>
+                                    </td>
+                                    <td class="px-4 py-2 text-right whitespace-nowrap" title="This centre's share of the order">@Money(order.Share)</td>
+                                </tr>
+                            }
+                            @if (WorkOrderShares.Count == 0)
+                            {
+                                <tr><td class="px-4 py-2 text-content-subtle italic" colspan="5">No work orders are coded to this centre.</td></tr>
+                            }
+                        </tbody>
+                        <tfoot class="border-t border-line-strong bg-surface-raised">
+                            <tr class="font-medium text-content">
+                                <td class="px-4 py-2" colspan="4">Work orders committed <span class="text-xs text-content-subtle font-normal">(drafts included)</span></td>
+                                <td class="px-4 py-2 text-right">@Money(WoCommitted)</td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+
+            @* ── Costs: Xero spend not linked to any work order ───────────────── *@
+            <div>
+                <h3 class="text-sm font-semibold text-content mb-2">Costs — Xero spend not on work orders</h3>
+                <div class="rounded-xl border border-line bg-surface overflow-x-auto max-h-60 overflow-y-auto">
+                    <table class="w-full text-sm border-collapse">
+                        <tbody class="divide-y divide-line">
+                            @foreach (var entry in XeroEntries)
+                            {
+                                <tr>
+                                    <td class="px-4 py-2 font-mono text-[11px] text-content-subtle whitespace-nowrap w-[100px]">@(entry.Line.Date?.ToString("dd MMM yyyy") ?? "")</td>
+                                    <td class="px-4 py-2 whitespace-nowrap">@entry.Line.Supplier</td>
+                                    <td class="px-4 py-2 font-mono text-[11px] text-content-subtle whitespace-nowrap">@entry.Line.InvoiceNumber</td>
+                                    <td class="px-4 py-2 text-content-muted">@entry.Line.Description</td>
+                                    <td class="px-4 py-2 text-right whitespace-nowrap">@Money(entry.Share)</td>
+                                </tr>
+                            }
+                            @if (LabourCost != 0m)
+                            {
+                                <tr>
+                                    <td class="px-4 py-2"></td>
+                                    <td class="px-4 py-2 whitespace-nowrap">Internal labour</td>
+                                    <td class="px-4 py-2"></td>
+                                    <td class="px-4 py-2 text-content-muted">Approved timesheets coded to this centre</td>
+                                    <td class="px-4 py-2 text-right whitespace-nowrap">@Money(LabourCost)</td>
+                                </tr>
+                            }
+                            @if (OtherAdjustments != 0m)
+                            {
+                                <tr>
+                                    <td class="px-4 py-2"></td>
+                                    <td class="px-4 py-2 whitespace-nowrap">Other allocations &amp; adjustments</td>
+                                    <td class="px-4 py-2"></td>
+                                    <td class="px-4 py-2 text-content-muted">Splits and re-attributions not itemised above</td>
+                                    <td class="px-4 py-2 text-right whitespace-nowrap">@Money(OtherAdjustments)</td>
+                                </tr>
+                            }
+                            @if (XeroEntries.Count == 0 && LabourCost == 0m && OtherAdjustments == 0m)
+                            {
+                                <tr><td class="px-4 py-2 text-content-subtle italic" colspan="5">No non-work-order spend is allocated to this centre.</td></tr>
+                            }
+                        </tbody>
+                        <tfoot class="border-t border-line-strong bg-surface-raised">
+                            <tr class="font-medium text-content">
+                                <td class="px-4 py-2" colspan="4">Xero &amp; other costs</td>
+                                <td class="px-4 py-2 text-right">@Money(NonWoCost)</td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+
+            @* ── The reconciliation itself ────────────────────────────────────── *@
+            <div class="rounded-xl border border-line bg-surface">
+                <table class="w-full text-sm border-collapse">
+                    <tbody class="divide-y divide-line">
+                        <tr>
+                            <td class="px-4 py-2 text-content-muted">Sales value</td>
+                            <td class="px-4 py-2 text-right whitespace-nowrap">@Money(SalesValue)</td>
+                        </tr>
+                        <tr>
+                            <td class="px-4 py-2 text-content-muted">Costs — work orders committed</td>
+                            <td class="px-4 py-2 text-right whitespace-nowrap">@Money(WoCommitted)</td>
+                        </tr>
+                        <tr>
+                            <td class="px-4 py-2 text-content-muted">Costs — Xero &amp; other</td>
+                            <td class="px-4 py-2 text-right whitespace-nowrap">@Money(NonWoCost)</td>
+                        </tr>
+                        <tr>
+                            <td class="px-4 py-2 text-content-muted">Total forecast cost of sales</td>
+                            <td class="px-4 py-2 text-right whitespace-nowrap">@Money(TotalCosts)</td>
+                        </tr>
+                        <tr class="bg-surface-raised font-semibold">
+                            <td class="px-4 py-2 text-content">Gross profit</td>
+                            <td class="px-4 py-2 text-right whitespace-nowrap @(GrossProfit < 0m ? "text-negative" : "text-content")">@Money(GrossProfit)</td>
+                        </tr>
+                        <tr>
+                            <td class="px-4 py-2 text-content-muted"
+                                title="@($"Contract sales value with our assumed {FinancialSummaryAssumptions.MarkupPercent:0.#}% markup backed out — what this line should cost us")">
+                                Target cost
+                            </td>
+                            <td class="px-4 py-2 text-right whitespace-nowrap">@Money(TargetCost)</td>
+                        </tr>
+                        <tr>
+                            <td class="px-4 py-2 text-content-muted"
+                                title="Target cost less total costs — the buying gain (or loss) procuring this scope">
+                                Procurement gain / loss
+                            </td>
+                            <td class="px-4 py-2 text-right whitespace-nowrap @(ProcurementGainLoss < 0m ? "text-negative" : ProcurementGainLoss > 0m ? "text-positive" : "text-content-muted")">@Money(ProcurementGainLoss)</td>
+                        </tr>
+                        <tr class="bg-surface-raised font-semibold">
+                            <td class="px-4 py-2 text-content" title="Gross profit as a percentage of sales value">Margin</td>
+                            <td class="px-4 py-2 text-right whitespace-nowrap @(GrossProfit < 0m ? "text-negative" : "text-content")">
+                                @(MarginPercent is { } margin ? $"{margin.ToString(margin == Math.Truncate(margin) ? "0" : "0.#")}%" : "—")
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <p class="text-xs text-content-subtle">
+                Work-order costs are committed values — draft orders count and are marked; rejected
+                drafts don't. Xero figures reflect the ledger as last synced. Figures are gross of
+                reconciliation-package netting, so a line with packaged scope reads fuller here than
+                in the table's netted view. The PDF renders these same figures for sending on.
+            </p>
+        </div>
+    }
+    </LoadGate>
+</Modal>
+
+@code {
+    [Parameter] public bool IsOpen { get; set; }
+    [Parameter] public string ProjectId { get; set; } = "";
+    [Parameter] public string Heading { get; set; } = "";
+    [Parameter] public IReadOnlyList<string> CostCodes { get; set; } = Array.Empty<string>();
+    [Parameter] public IReadOnlyList<ProjectFinancialSummaryRow> SummaryRows { get; set; } = Array.Empty<ProjectFinancialSummaryRow>();
+    [Parameter] public IReadOnlyList<ValuationLineItem> Lines { get; set; } = Array.Empty<ValuationLineItem>();
+    [Parameter] public IReadOnlyList<ProjectWorkOrderDetail> Orders { get; set; } = Array.Empty<ProjectWorkOrderDetail>();
+    [Parameter] public EventCallback OnClose { get; set; }
+
+    private sealed record XeroEntry(CostCentreActualCostLine Line, decimal Share);
+
+    // Null until the per-centre Xero fetch lands — the whole body gates on it so the
+    // reconciliation reveals in one piece rather than costs arriving under a sales
+    // section the reader has already believed.
+    private List<XeroEntry>? entries;
+    private bool dataFailed;
+    private string? loadedKey;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (!IsOpen)
+        {
+            loadedKey = null;
+            entries = null;
+            dataFailed = false;
+            return;
+        }
+        var key = $"{ProjectId}|{string.Join("|", CostCodes)}";
+        if (key == loadedKey) return;
+        loadedKey = key;
+        entries = null;
+        dataFailed = false;
+        try
+        {
+            var loaded = new List<XeroEntry>();
+            foreach (var costCode in CostCodes)
+            {
+                var lines = await Queries.AskAsync(new ListCostCentreActualCosts(ProjectId, costCode), CancellationToken.None);
+                // Re-attribution rows move linked spend between centres for the Actual Cost
+                // view; the non-WO figure is computed before re-attribution, so skip them.
+                loaded.AddRange(lines
+                    .Where(line => !line.IsWorkOrderAttribution)
+                    .Select(line => new XeroEntry(line, line.Net - (line.IsSplit ? 0m : line.LinkedTotal)))
+                    .Where(entry => entry.Share != 0m));
+            }
+            entries = loaded.OrderBy(entry => entry.Line.Date ?? DateTime.MaxValue).ToList();
+        }
+        catch
+        {
+            // HttpQueryClient has already reported this to the error toast with a reference.
+            dataFailed = true;
+        }
+    }
+
+    private HashSet<string> CodeSet => new(CostCodes, StringComparer.OrdinalIgnoreCase);
+
+    // ── Sales side ──
+    private List<ValuationLineItem> SalesLines =>
+        Lines.Where(line => CodeSet.Contains(line.CostCode) && line.CountsTowardTotals)
+            .OrderBy(line => line.CostCode, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(line => line.DisplayOrder)
+            .ToList();
+
+    private List<ProjectFinancialSummaryRow> Rows =>
+        SummaryRows.Where(row => CodeSet.Contains(row.CostCode)).ToList();
+
+    private decimal SalesValue => Rows.Sum(row => row.BudgetedSales);
+    private decimal TargetCost => Rows.Sum(row => row.BudgetedCost);
+    private decimal NonWoCost => Rows.Sum(row => row.NonWorkOrderActualCost);
+    private decimal LabourCost => Rows.Sum(row => row.LabourActualCost);
+    private decimal SalesOther => Math.Round(SalesValue - SalesLines.Sum(line => line.LineAmount), 2);
+
+    // ── Cost side: work orders (same rule as CommittedByCostCode — drafts in, rejected out) ──
+    private sealed record OrderShare(ProjectWorkOrderDetail Detail, decimal Share);
+
+    private List<OrderShare> WorkOrderShares =>
+        Orders.Where(detail => !detail.Order.IsRejected)
+            .Select(detail => new OrderShare(detail,
+                detail.Lines.Where(line => CodeSet.Contains(line.CostCode)).Sum(line => line.LineTotal)))
+            .Where(entry => entry.Share != 0m)
+            .OrderBy(entry => entry.Detail.Order.Number)
+            .ThenBy(entry => entry.Detail.Order.CreatedAt)
+            .ToList();
+
+    private decimal WoCommitted => WorkOrderShares.Sum(entry => entry.Share);
+
+    // ── Cost side: Xero ──
+    private List<XeroEntry> XeroEntries => entries ?? new List<XeroEntry>();
+
+    private decimal OtherAdjustments =>
+        Math.Round(NonWoCost - LabourCost - XeroEntries.Sum(entry => entry.Share), 2);
+
+    // ── The reconciliation ──
+    private decimal TotalCosts => WoCommitted + NonWoCost;
+    private decimal GrossProfit => SalesValue - TotalCosts;
+    private decimal ProcurementGainLoss => TargetCost - TotalCosts;
+    private decimal? MarginPercent => SalesValue == 0m ? null : Math.Round(GrossProfit / SalesValue * 100m, 1);
+
+    private string PdfHref =>
+        $"/api/projects/{ProjectId}/cost-centre-reconciliation/pdf"
+        + $"?codes={Uri.EscapeDataString(string.Join(",", CostCodes))}"
+        + $"&heading={Uri.EscapeDataString(Heading)}";
+
+    // Mirrors the valuation report / sales-lines modal conventions.
+    private static string SalesRef(ValuationLineItem line) =>
+        line.ElementType == ValuationElementType.Variation
+            ? (string.IsNullOrWhiteSpace(line.VariationRef) ? line.CostCode : line.VariationRef)
+            : (string.IsNullOrWhiteSpace(line.CostCode) ? line.SectionCode : line.CostCode);
+
+    private static string DescriptionFor(ValuationLineItem line) =>
+        line.ElementType == ValuationElementType.Variation && string.IsNullOrWhiteSpace(line.Description)
+            ? line.VariationTitle
+            : line.Description;
+
+    private static string Money(decimal value) =>
+        value.ToString(value == Math.Truncate(value) ? "C0" : "C2",
+            System.Globalization.CultureInfo.GetCultureInfo("en-GB"));
+}

@@ -7,9 +7,13 @@ namespace Jewel.JPMS.Contracts.Procurement;
 /// Raises a work order directly — no bid package, no tender — for commitments made
 /// outside the tendering flow (a sub engaged on a call, legacy paperwork, a direct
 /// instruction). Released immediately with the next sequential per-project number,
-/// like awarded and variation orders. Each line carries its own cost centre and £
-/// amount; the order's value is their sum. The Financials tab, WO allocation and
-/// reconciliation packages treat it exactly like any other order.
+/// like awarded and variation orders — unless SaveAsDraft is set, in which case the
+/// order is stored unnumbered with WorkOrderStatus.Draft: editable, counted in the
+/// Financials tab's committed figures (the commitment is intended), but invisible to
+/// the supplier and unlinkable until ApproveWorkOrder mints its number — or
+/// RejectWorkOrder ends it. Each line carries its own cost centre and £ amount; the
+/// order's value is their sum. The Financials tab, WO allocation and reconciliation
+/// packages treat an approved order exactly like any other order.
 /// </summary>
 public sealed record CreateManualWorkOrder(
     string ProjectId,
@@ -22,7 +26,9 @@ public sealed record CreateManualWorkOrder(
     // lands on WorkOrder.ScheduledCompletion; the PO's Programme section renders when any is set.
     DateTimeOffset? ProgrammeStart = null,
     DateTimeOffset? TargetCompletion = null,
-    string ProgrammeNotes = "") : ICommand<WorkOrder>;
+    string ProgrammeNotes = "",
+    // Save unissued: status Draft, no number minted until ApproveWorkOrder.
+    bool SaveAsDraft = false) : ICommand<WorkOrder>;
 
 /// <summary>One priced line: its cost centre, what it covers, and its £ amount.</summary>
 public sealed record ManualWorkOrderLine(string CostCode, string Title, decimal Amount);

@@ -14,6 +14,10 @@ namespace Jewel.JPMS.Api.Features.Commercial.Commands;
 /// slice is the everyday whole-line link; several slices split a bill across the orders
 /// it pays. Guards: slices carry the line's sign, may never total past the line's net,
 /// and no slice may take its order past its value (existing links on other lines count).
+///
+/// Linking also recodes each linked order wholesale to the line's cost centre — the
+/// invoice drives the work order's coding (see WorkOrderInvoiceRecoding). Unlinking
+/// (an empty set) leaves the order's coding where it last stood.
 /// </summary>
 public sealed class SetXeroLineWorkOrderLinksHandler : ICommandHandler<SetXeroLineWorkOrderLinks, Acknowledgement>
 {
@@ -75,6 +79,12 @@ public sealed class SetXeroLineWorkOrderLinksHandler : ICommandHandler<SetXeroLi
                     throw new InvalidOperationException("A work order in the split does not exist on this project.");
                 if (order.Status == (int)WorkOrderStatus.Cancelled)
                     throw new InvalidOperationException($"{order.Reference} is cancelled — invoices can't be linked to it.");
+                if (order.Status == (int)WorkOrderStatus.Draft)
+                    throw new InvalidOperationException(
+                        $"\"{order.Title}\" is still a draft — approve the work order before linking invoices to it.");
+                if (order.Status == (int)WorkOrderStatus.Rejected)
+                    throw new InvalidOperationException(
+                        $"\"{order.Title}\" was rejected — invoices can't be linked to it.");
 
                 // Hard balance check: a slice may never take the order past its value.
                 // Credit notes subtract, so they always fit.
@@ -110,6 +120,17 @@ public sealed class SetXeroLineWorkOrderLinksHandler : ICommandHandler<SetXeroLi
                 Amount = slice.Amount
             });
         }
+
+        // The invoice drives the work order's coding: recode every linked order to this
+        // line's cost centre. Safe to reach for the centre directly — links only ever
+        // exist on whole-line allocations (the centre-split guard above), so a non-empty
+        // slice set implies CostCenterCode is set.
+        if (slices.Count > 0)
+            await WorkOrderInvoiceRecoding.RecodeOrdersToCentreAsync(
+                context,
+                slices.Select(slice => slice.WorkOrderId).Distinct(StringComparer.OrdinalIgnoreCase).ToList(),
+                line.CostCenterCode!,
+                cancellationToken);
 
         await context.SaveChangesAsync(cancellationToken);
         return new Acknowledgement(line.XeroLedgerLineId);

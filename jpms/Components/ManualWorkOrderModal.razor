@@ -18,8 +18,8 @@
    With Editing set, the same form edits a manually raised order wholesale instead —
    supplier, title, scope and priced lines — without the packaging step. *@
 <Modal IsOpen="IsOpen"
-       Title="@(IsEditing ? $"Edit work order {EditingReference}" : "Add work order")"
-       ConfirmLabel="@(busy ? "Saving…" : IsEditing ? "Save changes" : createPackage && pickedAmounts.Count > 0 ? "Save order + package" : "Save order")"
+       Title="@(IsEditing ? Editing!.Order.IsDraft ? "Edit draft work order" : $"Edit work order {EditingReference}" : "Add work order")"
+       ConfirmLabel="@(busy ? "Saving…" : IsEditing ? "Save changes" : saveAsDraft ? "Save draft" : createPackage && pickedAmounts.Count > 0 ? "Save order + package" : "Save order")"
        ConfirmDisabled="@(busy || !CanSave)"
        OnConfirm="SaveAsync"
        OnCancel="OnClose"
@@ -123,9 +123,23 @@
             </div>
         </div>
 
-        @* ── Optional: package the order against its sales lines right away ──
-           Creation only: an existing order's packaging lives in the Packages section. *@
+        @* ── Draft or release: a draft sits unnumbered and uncommitted until released ── *@
         @if (!IsEditing)
+        {
+        @* Locked once the order itself has saved (the package-retry path): the order is
+           already issued by then, so "save as draft" would be a claim the save can't keep. *@
+        <label class="flex w-fit items-center gap-2 text-sm text-content cursor-pointer select-none"
+               title="A draft is stored without a number and is invisible to the supplier — though its value counts in the Financials tab's committed figures — until someone approves or rejects it from the Work Orders tab">
+            <input type="checkbox" class="cursor-pointer align-middle" disabled="@(busy || createdOrder is not null)" @bind="saveAsDraft" />
+            Save as a draft — needs approval before it's issued
+        </label>
+        }
+
+        @* ── Optional: package the order against its sales lines right away ──
+           Creation only (and never for a draft — packages carry approved scope, and a
+           draft hasn't been approved yet): an existing order's packaging lives in the
+           Packages section. *@
+        @if (!IsEditing && !saveAsDraft)
         {
         <div class="rounded-lg border border-line bg-surface p-3">
             <label class="flex w-fit items-center gap-2 text-sm text-content cursor-pointer select-none mb-2">
@@ -218,7 +232,7 @@
     [Parameter] public ProjectWorkOrderDetail? Editing { get; set; }
 
     private bool IsEditing => Editing is not null;
-    private string EditingReference => Editing is null ? "" : $"WO-{Editing.Order.Number:0000}";
+    private string EditingReference => Editing?.Order.Reference ?? "";
 
     private sealed class LineRow
     {
@@ -240,6 +254,8 @@
     private string programmeNotes = "";
     private List<LineRow> lines = new() { new LineRow() };
     private bool createPackage = true;
+    // Store the order as an unnumbered draft rather than releasing it (creation only).
+    private bool saveAsDraft;
     private string packageName = "";
     private string lineSearch = "";
     // Sales line id → this package's £ share, as typed (invariant decimal text).
@@ -295,6 +311,7 @@
             lines = new List<LineRow> { new LineRow() };
             createPackage = true;
         }
+        saveAsDraft = false;
         packageName = "";
         lineSearch = "";
         pickedAmounts.Clear();
@@ -433,7 +450,7 @@
                 if (Parse(line.AmountText) is { } amount && Math.Abs(amount) < Math.Abs(line.PaidToDate))
                     return $"\"{Truncate(line.Title, 40)}\" — {Money(line.PaidToDate)} has been paid against this line; its amount can't drop below that.";
             }
-            if (createPackage && !IsEditing)
+            if (createPackage && !IsEditing && !saveAsDraft)
             {
                 if (pickedAmounts.Values.Any(text => Parse(text) is not { } amount || amount == 0m))
                     return "Every ticked sales line needs a non-zero amount.";
@@ -498,11 +515,13 @@
                 createdOrder = await Commands.SendAsync(new CreateManualWorkOrder(
                     ProjectId, subcontractorId, title.Trim(), scope.Trim(),
                     Auth.CurrentUser?.Email ?? "", orderLines,
-                    AsUtcDate(programmeStart), AsUtcDate(targetCompletion), programmeNotes.Trim()), CancellationToken.None);
+                    AsUtcDate(programmeStart), AsUtcDate(targetCompletion), programmeNotes.Trim(),
+                    SaveAsDraft: saveAsDraft), CancellationToken.None);
             }
 
-            // Step 2 — the package, with the fresh order already assigned.
-            if (createPackage && pickedAmounts.Count > 0)
+            // Step 2 — the package, with the fresh order already assigned. Never for a
+            // draft: packages carry approved scope, and a draft hasn't been approved yet.
+            if (!saveAsDraft && createPackage && pickedAmounts.Count > 0)
             {
                 var slices = pickedAmounts
                     .Where(picked => Parse(picked.Value) is { } amount && amount != 0m)
@@ -525,7 +544,7 @@
                 ? $"Couldn't save the changes: {ex.Message}"
                 : createdOrder is null
                 ? $"Couldn't raise the order: {ex.Message}"
-                : $"The order was raised (WO-{createdOrder.Number:0000}) but the package couldn't be created: {ex.Message} — fix and save again, or close and build the package from the Packages section.";
+                : $"The order was raised ({createdOrder.Reference}) but the package couldn't be created: {ex.Message} — fix and save again, or close and build the package from the Packages section.";
         }
         finally
         {

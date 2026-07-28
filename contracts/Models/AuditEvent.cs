@@ -5,6 +5,11 @@ namespace Jewel.JPMS.Models;
 // records created or linked from email, drafted client correspondence, wall refusals, snapshots.
 // Subcontractor/internal event values are reserved (declared, never written yet) so widening the
 // scope later is a filter change, not a schema change.
+//
+// First widening, 2026-07-28: CostCentreRecoded — the finance reconciliation trail. Moving a
+// valuation report line between cost centres recodes where money sits in the cost-centre master,
+// so each move is recorded (who, when, which line, from → to, the value carried). Not a
+// client-facing event: Pathway is "", and the register's client filters simply never match it.
 public enum AuditEventType
 {
     EmailTriaged = 0,           // a thread was filed under a pathway via its first link/create
@@ -19,7 +24,9 @@ public enum AuditEventType
     BackfillStamped = 9,        // the backfill stamped a pathway onto an existing thread
     // Reserved for the wider scope — declared so persisted ints never shift:
     CrossPathwayOverride = 10,  // a deliberate Subcontractor↔Internal dual filing
-    ThreadSwept = 11            // the queue sweep propagated tags to a late reply
+    ThreadSwept = 11,           // the queue sweep propagated tags to a late reply
+    // Finance reconciliation (written since 2026-07-28):
+    CostCentreRecoded = 12      // a valuation report line moved to a different cost centre
 }
 
 // One append-only audit event. WebLink (when present) opens the email or draft in Outlook on the

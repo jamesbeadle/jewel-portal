@@ -14,14 +14,16 @@ public sealed class SetValuationLineCostCentreEndpoint
     private readonly ValuationReportAuthorisation authorisation;
     private readonly SetValuationLineCostCentreValidation validation;
     private readonly ICommandHandler<SetValuationLineCostCentre, ValuationLineItem> handler;
-    public SetValuationLineCostCentreEndpoint(SignedInUserResolver users, ValuationReportAuthorisation authorisation, SetValuationLineCostCentreValidation validation, ICommandHandler<SetValuationLineCostCentre, ValuationLineItem> handler)
-    { this.users = users; this.authorisation = authorisation; this.validation = validation; this.handler = handler; }
+    private readonly Audit.AuditActor auditActor;
+    public SetValuationLineCostCentreEndpoint(SignedInUserResolver users, ValuationReportAuthorisation authorisation, SetValuationLineCostCentreValidation validation, ICommandHandler<SetValuationLineCostCentre, ValuationLineItem> handler, Audit.AuditActor auditActor)
+    { this.users = users; this.authorisation = authorisation; this.validation = validation; this.handler = handler; this.auditActor = auditActor; }
 
     [Function(nameof(SetValuationLineCostCentre))]
     public async Task<IActionResult> Run([HttpTrigger(AuthorizationLevel.Anonymous, "put", Route = "valuation-lines/{lineItemId}/cost-centre")] HttpRequest request, string lineItemId)
     {
         var signedInUser = await users.ResolveAsync(request, request.HttpContext.RequestAborted);
         if (signedInUser is null) return new UnauthorizedResult();
+        auditActor.Email = signedInUser.Email; // audit rows record who moved the money
         var command = await request.ReadFromJsonAsync<SetValuationLineCostCentre>();
         if (command is null) return new BadRequestResult();
         if (command.ValuationLineItemId != lineItemId) return new BadRequestObjectResult("Route lineItemId does not match body.");

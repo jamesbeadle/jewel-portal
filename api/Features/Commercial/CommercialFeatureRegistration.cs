@@ -125,6 +125,18 @@ public static class CommercialFeatureRegistration
 
         services.AddScoped<ICommandHandler<DeleteValuationReportSnapshot, Acknowledgement>, DeleteValuationReportSnapshotHandler>();
 
+        // Snapshot exports — the branded PDF (download endpoint and email attachment render
+        // through the one builder, so they never diverge) and the client-facing email draft.
+        services.AddScoped<Documents.ValuationReportSnapshotPdfBuilder>();
+
+        // Cost-centre reconciliation PDF — the Financials tab's per-line report for the
+        // accountant, assembled from the same query handlers the tab itself reads.
+        services.AddScoped<Documents.CostCentreReconciliationPdfBuilder>();
+
+        services.AddScoped<ICommandHandler<PrepareValuationReportSnapshotEmailDraft, ValuationReportSnapshotEmailDraft>, PrepareValuationReportSnapshotEmailDraftHandler>();
+        services.AddScoped<PrepareValuationReportSnapshotEmailDraftAuthorisation>();
+        services.AddScoped<PrepareValuationReportSnapshotEmailDraftValidation>();
+
         return services;
     }
 }

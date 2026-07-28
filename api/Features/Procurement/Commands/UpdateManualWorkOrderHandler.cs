@@ -35,6 +35,8 @@ public sealed class UpdateManualWorkOrderHandler
             throw new InvalidOperationException("This order instructs a variation — edit the variation order instead.");
         if (entity.SourceReference is not null)
             throw new InvalidOperationException("This order was seeded from the source system and can't be edited here.");
+        if (entity.Status == (int)WorkOrderStatus.Rejected)
+            throw new InvalidOperationException("This work order was rejected — it can't be edited. Raise a fresh order instead.");
 
         var subcontractor = await context.Subcontractors.FindAsync(new object[] { command.SubcontractorId }, cancellationToken);
         if (subcontractor is null) throw new InvalidOperationException("Choose a subcontractor from the directory.");
