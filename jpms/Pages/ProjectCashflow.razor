@@ -109,7 +109,16 @@ else
                         <p class="text-sm text-content"
                            title="Cost of sales on bills received but not yet paid in Xero — due now; moves when bills are paid in Xero and re-synced">Unpaid Xero purchase invoices</p>
                     </div>
-                    <p class="text-base font-semibold @(BillsUnpaid == 0m ? "text-content" : "text-negative") whitespace-nowrap">@Money(-BillsUnpaid)</p>
+                    <span class="inline-flex items-center gap-1.5">
+                        <span class="text-base font-semibold @(BillsUnpaid == 0m ? "text-content" : "text-negative") whitespace-nowrap">@Money(-BillsUnpaid)</span>
+                        <button type="button" aria-label="View the unpaid invoices behind this figure"
+                                title="The transactions behind this figure — every allocated purchase line not yet paid in Xero, with Excel export for reconciling"
+                                class="inline-flex items-center justify-center w-7 h-7 rounded-md text-content-subtle hover:text-content hover:bg-surface-raised"
+                                @onclick="() => showUnpaidInvoices = true">
+                            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                 stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7" /><path d="m21 21-4.3-4.3" /></svg>
+                        </button>
+                    </span>
                 </div>
 
                 @* ── Retention release 1 — comes back before the project completes ── *@
@@ -185,6 +194,10 @@ else
             </p>
         </aside>
         </div>
+
+        <UnpaidXeroInvoicesModal IsOpen="showUnpaidInvoices"
+                                 Lines="UnpaidCostLines"
+                                 OnClose="() => showUnpaidInvoices = false" />
     </ProjectPageShell>
 }
 
@@ -269,7 +282,15 @@ else
     private decimal WoInvoiced => WoSummaries.Sum(summary => summary.InvoicedToDate);
     private decimal WoLeftToInvoice => WoCommitted - WoInvoiced;
 
-    private decimal BillsUnpaid => CostLines.Where(line => !line.IsPaid).Sum(line => line.Net);
+    // The statement's figure and the modal's rows come from the same filter, so the
+    // modal's total can never disagree with the row it explains.
+    private IReadOnlyList<ProjectCostOfSalesLine> UnpaidCostLines =>
+        CostLines.Where(line => !line.IsPaid).ToList();
+
+    private decimal BillsUnpaid => UnpaidCostLines.Sum(line => line.Net);
+
+    // Whether the unpaid-invoices breakdown modal is open (the magnifier on its row).
+    private bool showUnpaidInvoices;
 
     // The Financials tab's project drawdown, to the penny — computed by the shared
     // calculator from the same inputs (finalised centres realised to profit / loss and

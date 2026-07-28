@@ -1,0 +1,121 @@
+@using Jewel.JPMS.Contracts.Commercial
+@using Jewel.JPMS.Services.Excel
+
+@* The transactions behind the Cashflow statement's "Unpaid Xero purchase invoices" figure:
+   every allocated Xero purchase line whose bill is not yet marked paid in Xero, exactly the
+   rows the statement sums — so the modal's total always equals the figure it explains.
+   Read-only by design: linking, moving and splitting live on the Financials tab and the
+   cost allocation screen; this view exists to reconcile against Xero's Awaiting Payment. *@
+<Modal IsOpen="IsOpen"
+       Title="Unpaid Xero purchase invoices"
+       ShowFooter="false"
+       OnCancel="OnClose"
+       Class="max-w-5xl">
+    @if (Lines.Count == 0)
+    {
+        <p class="text-sm text-content-subtle italic">
+            Every allocated Xero purchase line on this project is showing as paid in Xero.
+        </p>
+    }
+    else
+    {
+        <div class="space-y-3">
+            <div class="flex items-start justify-between gap-3">
+                <p class="text-xs text-content-subtle max-w-xl">
+                    Allocated Xero purchase lines whose bill Xero last showed as unpaid — the rows
+                    behind the statement's figure, for reconciling against Awaiting Payment in
+                    Xero. Split lines show this project's share; credit notes are negative. The
+                    list moves when bills are paid in Xero and re-synced.
+                </p>
+                <ExportToExcelButton FileName="unpaid-xero-purchase-invoices" BuildWorkbook="BuildWorkbook" />
+            </div>
+
+            <div class="rounded-lg border border-line overflow-x-auto overflow-y-auto max-h-[60vh]">
+                <table class="w-full text-sm border-collapse">
+                    <thead class="bg-surface-raised border-b border-line">
+                        <tr class="text-left text-[11px] uppercase tracking-wider text-content-subtle font-semibold">
+                            <th class="sticky top-0 z-20 bg-surface-raised px-4 py-2.5 whitespace-nowrap">Date</th>
+                            <th class="sticky top-0 z-20 bg-surface-raised px-4 py-2.5">Supplier</th>
+                            <th class="sticky top-0 z-20 bg-surface-raised px-4 py-2.5 whitespace-nowrap">Invoice</th>
+                            <th class="sticky top-0 z-20 bg-surface-raised px-4 py-2.5">Description</th>
+                            <th class="sticky top-0 z-20 bg-surface-raised px-4 py-2.5 whitespace-nowrap">Centre</th>
+                            <th class="sticky top-0 z-20 bg-surface-raised px-4 py-2.5 whitespace-nowrap">Xero status</th>
+                            <th class="sticky top-0 z-20 bg-surface-raised px-4 py-2.5 text-right whitespace-nowrap">Net £</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-line">
+                        @foreach (var line in Ordered)
+                        {
+                            <tr>
+                                <td class="px-4 py-2.5 whitespace-nowrap text-content-muted">@(line.Date?.ToString("dd MMM yyyy") ?? "—")</td>
+                                <td class="px-4 py-2.5 text-content">@line.Supplier</td>
+                                <td class="px-4 py-2.5 whitespace-nowrap text-content-muted">@line.InvoiceNumber</td>
+                                <td class="px-4 py-2.5 text-content-muted">
+                                    @line.Description
+                                    @if (line.IsSplit)
+                                    {
+                                        <span class="ml-1.5 text-[10px] uppercase tracking-wider font-semibold border border-line rounded px-1 py-0.5"
+                                              title="This project's share of a line split across several cost centres">Split</span>
+                                    }
+                                </td>
+                                <td class="px-4 py-2.5 font-mono text-[11px] text-content-subtle whitespace-nowrap">@line.CostCode</td>
+                                <td class="px-4 py-2.5 whitespace-nowrap text-[11px] uppercase tracking-wider text-content-subtle">@(string.IsNullOrEmpty(line.InvoiceStatus) ? "—" : line.InvoiceStatus)</td>
+                                <td class="px-4 py-2.5 text-right whitespace-nowrap @(line.Net < 0 ? "text-negative" : "text-content")">@MoneyExact(line.Net)</td>
+                            </tr>
+                        }
+                    </tbody>
+                    <tfoot class="border-t-2 border-line-strong bg-surface-raised">
+                        <tr class="font-semibold text-content">
+                            <td class="px-4 py-2.5" colspan="6">Total — unpaid Xero purchase invoices</td>
+                            <td class="px-4 py-2.5 text-right whitespace-nowrap">@MoneyExact(Lines.Sum(line => line.Net))</td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+    }
+</Modal>
+
+@code {
+    [Parameter] public bool IsOpen { get; set; }
+
+    /// <summary>The unpaid cost-of-sales lines the statement summed — passed in by the
+    /// Cashflow page from data it already holds, so opening the modal fetches nothing
+    /// and the total here can never disagree with the figure on the row.</summary>
+    [Parameter] public IReadOnlyList<ProjectCostOfSalesLine> Lines { get; set; } = Array.Empty<ProjectCostOfSalesLine>();
+
+    [Parameter] public EventCallback OnClose { get; set; }
+
+    // Supplier then date — the order a Xero Awaiting Payment screen is easiest to tick off against.
+    private IEnumerable<ProjectCostOfSalesLine> Ordered =>
+        Lines.OrderBy(line => line.Supplier, StringComparer.OrdinalIgnoreCase)
+             .ThenBy(line => line.Date ?? DateTime.MaxValue)
+             .ThenBy(line => line.InvoiceNumber, StringComparer.OrdinalIgnoreCase);
+
+    private ExcelWorkbook? BuildWorkbook(bool _)
+    {
+        if (Lines.Count == 0) return null;
+
+        var workbook = new ExcelWorkbook();
+        var sheet = workbook.AddSheet("Unpaid Xero invoices",
+            new ExcelColumn("Date", ExcelFormat.Date),
+            new ExcelColumn("Supplier"),
+            new ExcelColumn("Invoice"),
+            new ExcelColumn("Description"),
+            new ExcelColumn("Cost centre"),
+            new ExcelColumn("Xero status"),
+            new ExcelColumn("Split line"),
+            new ExcelColumn("Net", ExcelFormat.Currency));
+
+        foreach (var line in Ordered)
+        {
+            sheet.AddRow(line.Date, line.Supplier, line.InvoiceNumber, line.Description,
+                line.CostCode, line.InvoiceStatus, line.IsSplit ? "Yes" : "", line.Net);
+        }
+        sheet.AddRow("Total", null, null, null, null, null, null, Lines.Sum(line => line.Net));
+        return workbook;
+    }
+
+    private static string MoneyExact(decimal value) =>
+        value.ToString("C2", System.Globalization.CultureInfo.GetCultureInfo("en-GB"));
+}
