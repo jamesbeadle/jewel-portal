@@ -14,4 +14,6 @@ public sealed record AddSubcontractorToDirectory(
     string MobileNumber = "",
     string Town = "",
     string County = "",
-    string Website = "") : ICommand<Subcontractor>;
+    string Website = "",
+    // Payment terms printed on the company's purchase orders ("30 day terms"); 30 by default.
+    int PaymentTermsDays = 30) : ICommand<Subcontractor>;

@@ -123,6 +123,27 @@
             </div>
         </div>
 
+        @* ── Deposit: printed at the foot of the purchase order when required ─
+           Percentage only — the business records the share of the order value,
+           never a £ figure. *@
+        <div class="rounded-lg border border-line bg-surface p-3">
+            <label class="flex w-fit items-center gap-2 text-sm text-content cursor-pointer select-none"
+                   title="Tick when the subcontractor requires a deposit — the percentage prints at the foot of the purchase order">
+                <input type="checkbox" class="cursor-pointer align-middle" disabled="@busy" @bind="depositRequired" />
+                Deposit required
+            </label>
+            @if (depositRequired)
+            {
+                <div class="mt-2 flex items-center gap-2">
+                    <input type="number" step="any" min="0" max="100" placeholder="%" disabled="@busy"
+                           class="bg-surface border border-line rounded-lg px-2 py-1.5 text-right text-content text-sm w-24"
+                           value="@depositPercentText"
+                           @onchange="e => SetDepositPercent(e.Value?.ToString())" />
+                    <span class="text-sm text-content-muted">% of the order value</span>
+                </div>
+            }
+        </div>
+
         @* ── Draft or release: a draft sits unnumbered and uncommitted until released ── *@
         @if (!IsEditing)
         {
@@ -253,6 +274,10 @@
     private DateTime? targetCompletion;
     private string programmeNotes = "";
     private List<LineRow> lines = new() { new LineRow() };
+    // Deposit the supplier requires — percentage of the order value only, printed at the
+    // foot of the purchase order. The text field is parsed like the line amounts.
+    private bool depositRequired;
+    private string depositPercentText = "";
     private bool createPackage = true;
     // Store the order as an unnumbered draft rather than releasing it (creation only).
     private bool saveAsDraft;
@@ -298,6 +323,9 @@
                 })
                 .ToList();
             if (lines.Count == 0) lines = new List<LineRow> { new LineRow() };
+            depositRequired = Editing.Order.DepositRequired;
+            depositPercentText = Editing.Order.DepositPercent?
+                .ToString(System.Globalization.CultureInfo.InvariantCulture) ?? "";
             createPackage = false;
         }
         else
@@ -309,6 +337,8 @@
             targetCompletion = null;
             programmeNotes = "";
             lines = new List<LineRow> { new LineRow() };
+            depositRequired = false;
+            depositPercentText = "";
             createPackage = true;
         }
         saveAsDraft = false;
@@ -417,6 +447,7 @@
     private static void SetLineTitle(LineRow line, string? value) => line.Title = value ?? "";
     private static void SetLineAmount(LineRow line, string? value) => line.AmountText = value ?? "";
     private void SetSalesAmount(string lineItemId, string? value) => pickedAmounts[lineItemId] = value ?? "";
+    private void SetDepositPercent(string? value) => depositPercentText = value ?? "";
 
     private void ToggleSalesLine((ValuationLineItem Line, decimal Available) entry)
     {
@@ -443,6 +474,9 @@
             if (filledLines.Any(line => string.IsNullOrWhiteSpace(line.Title))) return "Every line needs a title.";
             if (filledLines.Any(line => Parse(line.AmountText) is not { } amount || amount == 0m))
                 return "Every line needs a non-zero amount.";
+            if (depositRequired && (Parse(depositPercentText) is not { } depositPercent
+                                    || depositPercent <= 0m || depositPercent > 100m))
+                return "A required deposit needs a percentage above 0 and no more than 100.";
             // A paid line anchors the Financials tab's paid figures: its amount can
             // change, but never below what has already been paid against it.
             foreach (var line in filledLines.Where(line => line.PaidToDate != 0m))
@@ -498,7 +532,9 @@
                 await Commands.SendAsync(new UpdateManualWorkOrder(
                     ProjectId, Editing.Order.WorkOrderId, subcontractorId,
                     title.Trim(), scope.Trim(), editedLines,
-                    AsUtcDate(programmeStart), AsUtcDate(targetCompletion), programmeNotes.Trim()), CancellationToken.None);
+                    AsUtcDate(programmeStart), AsUtcDate(targetCompletion), programmeNotes.Trim(),
+                    DepositRequired: depositRequired,
+                    DepositPercent: depositRequired ? Parse(depositPercentText) : null), CancellationToken.None);
                 seeded = false; // reseed fresh on next open
                 await OnSaved.InvokeAsync();
                 return;
@@ -516,7 +552,9 @@
                     ProjectId, subcontractorId, title.Trim(), scope.Trim(),
                     Auth.CurrentUser?.Email ?? "", orderLines,
                     AsUtcDate(programmeStart), AsUtcDate(targetCompletion), programmeNotes.Trim(),
-                    SaveAsDraft: saveAsDraft), CancellationToken.None);
+                    SaveAsDraft: saveAsDraft,
+                    DepositRequired: depositRequired,
+                    DepositPercent: depositRequired ? Parse(depositPercentText) : null), CancellationToken.None);
             }
 
             // Step 2 — the package, with the fresh order already assigned. Never for a

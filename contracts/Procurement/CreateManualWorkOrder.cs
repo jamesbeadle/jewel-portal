@@ -28,7 +28,11 @@ public sealed record CreateManualWorkOrder(
     DateTimeOffset? TargetCompletion = null,
     string ProgrammeNotes = "",
     // Save unissued: status Draft, no number minted until ApproveWorkOrder.
-    bool SaveAsDraft = false) : ICommand<WorkOrder>;
+    bool SaveAsDraft = false,
+    // Deposit the supplier requires — a percentage of the order value only, printed at the
+    // foot of the purchase order. DepositPercent travels null unless DepositRequired.
+    bool DepositRequired = false,
+    decimal? DepositPercent = null) : ICommand<WorkOrder>;
 
 /// <summary>One priced line: its cost centre, what it covers, and its £ amount.</summary>
 public sealed record ManualWorkOrderLine(string CostCode, string Title, decimal Amount);

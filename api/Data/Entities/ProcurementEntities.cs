@@ -154,6 +154,12 @@ public sealed class WorkOrderEntity
     [MaxLength(256)]     public string AcceptedByEmail { get; set; } = "";
     [MaxLength(256)]     public string AcceptedByName { get; set; } = "";
 
+    // Deposit the subcontractor requires on this order, printed at the foot of the purchase
+    // order. Recorded as a percentage of the order value only — never a £ figure. Percent is
+    // null unless DepositRequired; captured on manually raised orders via the Add/Edit form.
+    public bool DepositRequired { get; set; }
+    public decimal? DepositPercent { get; set; }
+
     // Human reference, falling back to an id-derived stem for legacy rows that predate numbering.
     // Computed, not stored — mirrors BidPackageEntity.Reference.
     [System.ComponentModel.DataAnnotations.Schema.NotMapped]

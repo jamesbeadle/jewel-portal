@@ -22,7 +22,11 @@ public sealed record UpdateManualWorkOrder(
     // with the rest. TargetCompletion lands on WorkOrder.ScheduledCompletion.
     DateTimeOffset? ProgrammeStart = null,
     DateTimeOffset? TargetCompletion = null,
-    string ProgrammeNotes = "") : ICommand<WorkOrder>;
+    string ProgrammeNotes = "",
+    // Deposit the supplier requires — a percentage of the order value only, printed at the
+    // foot of the purchase order. DepositPercent travels null unless DepositRequired.
+    bool DepositRequired = false,
+    decimal? DepositPercent = null) : ICommand<WorkOrder>;
 
 /// <summary>
 /// One priced line as edited. WorkOrderLineId ties it to an existing line — preserving

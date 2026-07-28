@@ -193,9 +193,19 @@ else
                         <input class="field" @bind="eEmail" />
                     </div>
                 </div>
-                <div>
-                    <label class="eyebrow block mb-1">Phone</label>
-                    <input class="field" @bind="ePhone" />
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="eyebrow block mb-1">Phone</label>
+                        <input class="field" @bind="ePhone" />
+                    </div>
+                    <div>
+                        <label class="eyebrow block mb-1">Payment terms (days)</label>
+                        <input class="field" type="number" min="0" max="365" @bind="eTermsDays" />
+                        <p class="text-xs text-content-subtle mt-1">
+                            Printed on this company's purchase orders ("@(eTermsDays) day terms").
+                            Every company starts on 30 days.
+                        </p>
+                    </div>
                 </div>
             </div>
         </Modal>
@@ -222,6 +232,7 @@ else
     private string eContact = "";
     private string eEmail = "";
     private string ePhone = "";
+    private int eTermsDays = 30;
 
     private void OpenEdit()
     {
@@ -230,6 +241,7 @@ else
         eContact = subcontractor.ContactName;
         eEmail = subcontractor.ContactEmail;
         ePhone = subcontractor.ContactPhone;
+        eTermsDays = subcontractor.PaymentTermsDays;
         editError = null;
         editOpen = true;
     }
@@ -240,12 +252,13 @@ else
     {
         if (editBusy || subcontractor is null) return;
         if (string.IsNullOrWhiteSpace(eCompany)) { editError = "Company name can't be empty."; return; }
+        if (eTermsDays is < 0 or > 365) { editError = "Payment terms must be between 0 and 365 days."; return; }
         editError = null;
         try
         {
             editBusy = true;
             await SubcontractorStore.UpdateDetailsAsync(
-                subcontractor.SubcontractorId, eCompany, eContact, eEmail, ePhone);
+                subcontractor.SubcontractorId, eCompany, eContact, eEmail, ePhone, eTermsDays);
             editOpen = false;
         }
         catch (CommandFailedException ex) { editError = $"Couldn't save: {ex.Message}"; }

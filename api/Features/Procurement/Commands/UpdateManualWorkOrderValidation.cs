@@ -24,6 +24,9 @@ public sealed class UpdateManualWorkOrderValidation
         // Decimal constants can't appear in patterns, hence the explicit comparison.
         if (command.Lines.Any(line => line.Amount == 0m))
             errors.Add("Every line needs a non-zero amount.");
+        // Deposit is recorded as a percentage of the order value only, and only when required.
+        if (command.DepositRequired && (command.DepositPercent is not { } percent || percent <= 0m || percent > 100m))
+            errors.Add("A required deposit needs a percentage above 0 and no more than 100.");
         if (errors.Count == 0) return ValidationOutcome.Passed;
         return new ValidationOutcome(errors);
     }

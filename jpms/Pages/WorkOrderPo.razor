@@ -113,7 +113,8 @@ else
                             SupplierAddress="@SupplierAddress"
                             ProjectName="@(Project?.Name ?? "")"
                             SiteAddress="@SiteAddress"
-                            ApprovedByName="@ApprovedByName" />
+                            ApprovedByName="@ApprovedByName"
+                            PaymentTermsDays="@(Supplier?.PaymentTermsDays ?? 30)" />
 
         <Modal IsOpen="showEmailModal" Title="@($"Email work order {Title2} to {Detail.SubcontractorName}")" ShowFooter="true"
                ConfirmLabel="@(emailBusy ? "Drafting…" : "Create draft in mailbox")" ConfirmDisabled="@emailBusy" CancelLabel="Cancel"

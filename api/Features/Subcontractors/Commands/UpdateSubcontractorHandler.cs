@@ -45,6 +45,9 @@ public sealed class UpdateSubcontractorHandler
         entity.ContactEmail = command.ContactEmail;
         entity.ContactPhone = command.ContactPhone;
         entity.CisStatus = command.CisStatus;
+        // Null means "leave unchanged": callers that only touch trades or contact details
+        // (SetTradesAsync, the bid-invite quick edits) never reset a per-company override.
+        if (command.PaymentTermsDays is { } paymentTermsDays) entity.PaymentTermsDays = paymentTermsDays;
 
         // Sync the trade links to exactly the requested set (add missing, remove dropped).
         context.SubcontractorTrades.RemoveRange(existingLinks.Where(link => !tradeIds.Contains(link.TradeId)));

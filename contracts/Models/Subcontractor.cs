@@ -42,7 +42,10 @@ public sealed record Subcontractor(
     string County = "",
     string Website = "",
     string Pli = "",
-    string PliExpiry = "")
+    string PliExpiry = "",
+    // Payment terms printed on this company's purchase orders ("30 day terms"): every company
+    // defaults to 30 days, overridable per record from the directory's Edit details dialog.
+    int PaymentTermsDays = 30)
 {
     // Display helper: the trade names joined for one-line contexts (tables, subtitles).
     public string TradesLabel => string.Join(" · ", Trades.Select(trade => trade.Name));

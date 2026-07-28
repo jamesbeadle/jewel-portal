@@ -99,7 +99,8 @@ else
                             SupplierAddress="@SupplierAddress"
                             ProjectName="@Order.ProjectName"
                             SiteAddress="@Order.SiteAddress"
-                            ApprovedByName="@Order.ApprovedByName" />
+                            ApprovedByName="@Order.ApprovedByName"
+                            PaymentTermsDays="@(MyRecord?.Record.PaymentTermsDays ?? 30)" />
     </section>
 }
 

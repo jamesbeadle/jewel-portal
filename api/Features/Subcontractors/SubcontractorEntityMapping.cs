@@ -7,7 +7,8 @@ internal static class SubcontractorEntityMapping
 {
     public static Subcontractor ToModel(this SubcontractorEntity entity, IReadOnlyList<Trade> trades) =>
         new(entity.SubcontractorId, entity.CompanyName, trades, entity.ContactName, entity.ContactEmail, entity.ContactPhone, entity.CisStatus, entity.OnboardedAt,
-            (DirectoryCategory)entity.Category, entity.MobileNumber, entity.Town, entity.County, entity.Website, entity.Pli, entity.PliExpiry);
+            (DirectoryCategory)entity.Category, entity.MobileNumber, entity.Town, entity.County, entity.Website, entity.Pli, entity.PliExpiry,
+            entity.PaymentTermsDays);
 
     public static Trade ToModel(this TradeEntity entity) => new(entity.TradeId, entity.Name);
 

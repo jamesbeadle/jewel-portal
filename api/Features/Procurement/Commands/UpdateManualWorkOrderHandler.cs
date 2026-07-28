@@ -122,6 +122,10 @@ public sealed class UpdateManualWorkOrderHandler
         entity.ProgrammeStart = command.ProgrammeStart;
         entity.ScheduledCompletion = command.TargetCompletion;
         entity.ProgrammeNotes = command.ProgrammeNotes.Length > 2000 ? command.ProgrammeNotes[..2000] : command.ProgrammeNotes;
+        // Percent never survives without the flag — an untick clears it rather than leaving
+        // a stale figure that would print the moment the box is ticked again.
+        entity.DepositRequired = command.DepositRequired;
+        entity.DepositPercent = command.DepositRequired ? command.DepositPercent : null;
 
         await context.SaveChangesAsync(cancellationToken);
         return entity.ToModel();

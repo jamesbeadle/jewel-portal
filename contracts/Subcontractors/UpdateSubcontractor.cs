@@ -10,4 +10,7 @@ public sealed record UpdateSubcontractor(
     string ContactName,
     string ContactEmail,
     string ContactPhone,
-    string CisStatus) : ICommand<Subcontractor>;
+    string CisStatus,
+    // Payment terms printed on the company's purchase orders ("30 day terms"). Null means
+    // "leave unchanged", so callers that only touch other fields never reset an override.
+    int? PaymentTermsDays = null) : ICommand<Subcontractor>;

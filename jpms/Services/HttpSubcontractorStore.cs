@@ -65,17 +65,18 @@ public sealed class HttpSubcontractorStore : ISubcontractorStore
         await readModel.RefreshAsync(CancellationToken.None);
     }
 
-    // Company name + contact details, preserving the record's trades, CIS status and every
-    // other field. Renaming to match the Xero supplier name is what lines invoices up on the
-    // WO Allocation tab.
+    // Company name + contact details + payment terms, preserving the record's trades, CIS
+    // status and every other field. Renaming to match the Xero supplier name is what lines
+    // invoices up on the WO Allocation tab.
     public async Task UpdateDetailsAsync(string subcontractorId, string companyName,
-        string contactName, string contactEmail, string contactPhone)
+        string contactName, string contactEmail, string contactPhone, int paymentTermsDays)
     {
         var sub = Find(subcontractorId)
             ?? throw new InvalidOperationException($"Subcontractor {subcontractorId} not found.");
         await commands.SendAsync(new UpdateSubcontractor(
             sub.SubcontractorId, companyName.Trim(), TradeIds(sub), contactName.Trim(),
-            contactEmail.Trim(), contactPhone.Trim(), sub.CisStatus), CancellationToken.None);
+            contactEmail.Trim(), contactPhone.Trim(), sub.CisStatus,
+            PaymentTermsDays: paymentTermsDays), CancellationToken.None);
         await readModel.RefreshAsync(CancellationToken.None);
     }
 
@@ -103,13 +104,14 @@ public sealed class HttpSubcontractorStore : ISubcontractorStore
     private async Task AddAsync(Subcontractor sub)
     {
         await commands.SendAsync(new AddSubcontractorToDirectory(sub.CompanyName, TradeIds(sub), sub.ContactName, sub.ContactEmail, sub.ContactPhone, sub.CisStatus,
-            sub.Category, sub.MobileNumber, sub.Town, sub.County, sub.Website), CancellationToken.None);
+            sub.Category, sub.MobileNumber, sub.Town, sub.County, sub.Website, sub.PaymentTermsDays), CancellationToken.None);
         await readModel.RefreshAsync(CancellationToken.None);
     }
 
     private async Task UpdateAsync(Subcontractor sub)
     {
-        await commands.SendAsync(new UpdateSubcontractor(sub.SubcontractorId, sub.CompanyName, TradeIds(sub), sub.ContactName, sub.ContactEmail, sub.ContactPhone, sub.CisStatus), CancellationToken.None);
+        await commands.SendAsync(new UpdateSubcontractor(sub.SubcontractorId, sub.CompanyName, TradeIds(sub), sub.ContactName, sub.ContactEmail, sub.ContactPhone, sub.CisStatus,
+            PaymentTermsDays: sub.PaymentTermsDays), CancellationToken.None);
         await readModel.RefreshAsync(CancellationToken.None);
     }
 

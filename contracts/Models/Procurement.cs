@@ -151,7 +151,11 @@ public sealed record WorkOrder(
     // ---- Electronic acceptance from the subcontractor portal (one click under their login) ----
     DateTimeOffset? AcceptedAt = null,
     string AcceptedByEmail = "",
-    string AcceptedByName = "")
+    string AcceptedByName = "",
+    // ---- Deposit the supplier requires, printed at the foot of the purchase order.
+    //      Recorded as a percentage of the order value only; Percent is null unless required ----
+    bool DepositRequired = false,
+    decimal? DepositPercent = null)
 {
     /// <summary>The supplier has electronically accepted this order from the portal.</summary>
     public bool IsAccepted => AcceptedAt is not null;

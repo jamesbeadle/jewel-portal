@@ -66,7 +66,11 @@ public sealed class CreateManualWorkOrderHandler
             CreatedAt = now,
             ProgrammeStart = command.ProgrammeStart,
             ScheduledCompletion = command.TargetCompletion,
-            ProgrammeNotes = command.ProgrammeNotes.Length > 2000 ? command.ProgrammeNotes[..2000] : command.ProgrammeNotes
+            ProgrammeNotes = command.ProgrammeNotes.Length > 2000 ? command.ProgrammeNotes[..2000] : command.ProgrammeNotes,
+            // Percent never survives without the flag — an untick clears it rather than leaving
+            // a stale figure that would print the moment the box is ticked again.
+            DepositRequired = command.DepositRequired,
+            DepositPercent = command.DepositRequired ? command.DepositPercent : null
         };
         context.WorkOrders.Add(entity);
 

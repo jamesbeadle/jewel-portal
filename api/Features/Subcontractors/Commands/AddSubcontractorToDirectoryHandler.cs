@@ -35,7 +35,8 @@ public sealed class AddSubcontractorToDirectoryHandler
             MobileNumber = command.MobileNumber,
             Town = command.Town,
             County = command.County,
-            Website = command.Website
+            Website = command.Website,
+            PaymentTermsDays = command.PaymentTermsDays
         };
         context.Subcontractors.Add(entity);
         foreach (var tradeId in tradeIds)

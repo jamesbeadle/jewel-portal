@@ -21,6 +21,10 @@ public sealed class SubcontractorEntity
     [MaxLength(512)]     public string Website { get; set; } = "";
     [MaxLength(128)]     public string Pli { get; set; } = "";
     [MaxLength(64)]      public string PliExpiry { get; set; } = "";
+
+    // Payment terms printed on this company's purchase orders ("30 day terms"). Every record
+    // defaults to 30 days; overridable per company from the directory's Edit details dialog.
+    public int PaymentTermsDays { get; set; } = 30;
 }
 
 // The curated master list of trades. Directory records link to these via SubcontractorTrades, so a

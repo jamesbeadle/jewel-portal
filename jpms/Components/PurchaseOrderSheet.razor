@@ -67,6 +67,9 @@
         <p class="po-box-title">Scope of Work</p>
         <div class="po-box-body">
             <p class="po-quote">“This Works Order is issued subject to the terms and conditions which are appended hereto”</p>
+            @* The terms themselves live on the public site, so the order carries a live link the
+               supplier can follow from the emailed PDF (browser print keeps hyperlinks). *@
+            <p><a class="po-terms-link" href="https://www.jewelbb.co.uk/copy-of-privacy-policy" target="_blank" rel="noopener">Find terms of work order here</a></p>
 
             <p class="po-heading">Special Instructions</p>
             <p>Every site requires full PPE, boots and Hi-Vis, please ensure these are worn at all times, with all RAMS adhered to.</p>
@@ -108,7 +111,7 @@
             <p class="po-heading">Invoice and Payment Requirements</p>
             <p>
                 Please forward your invoice to <strong>accounts@jewelbb.co.uk</strong> and <strong>projects@jewelbb.co.uk</strong>
-                by COB Friday's with a <strong><em>30 day terms</em></strong>
+                by COB Friday's with a <strong><em>@PaymentTermsDays day terms</em></strong>
             </p>
             <p>Invoices to include <strong>CIS Breakdown</strong> (if necessary)</p>
             <p>Correct <strong>VAT breakdown</strong> (including Reverse Charge if necessary)</p>
@@ -116,6 +119,14 @@
                 In the event that your invoice does not contain the correct info or sent in on time, we will be unable to
                 process it in a timely manner.
             </p>
+
+            @* Deposit — only when the order says one is required. Percentage only: the business
+               records the share, never a £ figure, so nothing here computes an amount. *@
+            @if (HasDeposit)
+            {
+                <p class="po-heading">Deposit</p>
+                <p>A deposit of <strong><em>@Percent(Order.DepositPercent!.Value)</em></strong> of the order value is required on this order.</p>
+            }
 
             <p>We thank you for your business and look forward to working with you.</p>
             <p>Jewel Bespoke Build Ltd is Incorporated in England with Limited Liability. Registered Company Number: 13752749</p>
@@ -240,6 +251,7 @@
     .po-box-body { padding: 12px 14px; }
     .po-box-body p { margin: 0 0 9px; }
     .po-quote { color: #334155; }
+    .po-terms-link { color: #b45309; text-decoration: underline; text-underline-offset: 2px; }
     .po-heading { font-weight: 700; text-decoration: underline; color: #0f172a; margin-top: 14px !important; }
     .po-prewrap { white-space: pre-wrap; }
     .po-totals td { font-weight: 700; color: #0f172a; }
@@ -277,9 +289,18 @@
     /// (falls back to the raw AwardedByEmail when blank).</summary>
     [Parameter] public string ApprovedByName { get; set; } = "";
 
+    /// <summary>The supplier's payment terms, printed in the Invoice and Payment Requirements
+    /// section ("30 day terms"). Hosts resolve it from the subcontractor record; 30 is the
+    /// business default every record starts on.</summary>
+    [Parameter] public int PaymentTermsDays { get; set; } = 30;
+
     // Order.Reference reads "Draft" for an unreleased order (no number is minted until
     // release) and falls back to an id stem for any other unnumbered order.
     private string Reference => Order.Reference;
+
+    // A deposit renders only when the order both requires one and carries the percentage —
+    // the flag without a figure would print an empty promise.
+    private bool HasDeposit => Order.DepositRequired && Order.DepositPercent is not null;
 
     private bool HasProgramme =>
         Order.ProgrammeStart is not null
@@ -308,4 +329,8 @@
 
     private static string Money(decimal value) =>
         value.ToString("C2", System.Globalization.CultureInfo.GetCultureInfo("en-GB"));
+
+    // "25%" / "12.5%" — no trailing zeros, matching how the percentage was typed.
+    private static string Percent(decimal value) =>
+        value.ToString("0.##", System.Globalization.CultureInfo.GetCultureInfo("en-GB")) + "%";
 }
