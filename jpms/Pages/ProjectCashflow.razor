@@ -31,16 +31,17 @@ else if (!Session.IsApproved)
 else
 {
     <ProjectPageShell ProjectId="@ProjectId" ActiveTab="cashflow">
-        @* One centred column holds the whole tab — heading, statement and footnote share the
-           same measure, rather than a capped-width panel sitting against the left edge. *@
-        <div class="max-w-3xl mx-auto">
         <h2 class="text-lg font-semibold text-content mb-1">Cashflow</h2>
-        <p class="text-sm text-content-subtle mb-4">
+        <p class="text-sm text-content-subtle mb-4 max-w-2xl">
             The project claim against the cash already allocated, then the cash still to move —
             out to costs, back from retention — through practical completion to the end of the
             project.
         </p>
 
+        @* ── Statement on the left, its explanatory notes alongside — the two share the width
+           rather than one narrow column floating in it. Stacks on smaller screens. ── *@
+        <div class="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(0,22rem)] gap-6 items-start">
+        <div>
         @* ── One statement, one gate: every figure below reads every source, so it reveals in one piece. ── *@
         <LoadGate IsLoading="@(!StatementReady && !dataFailed)" Prominent="true" Label="Loading cashflow">
             @if (dataFailed)
@@ -145,23 +146,44 @@ else
             </div>
             }
         </LoadGate>
+        </div>
 
-        <p class="text-xs text-content-subtle">
-            The project claim is the valuation report's counting lines. Cash allocated counts
-            valuation invoices the client has paid plus retention withheld on works complete (held
-            less confirmed releases, from the retention terms on the Setup tab) — valuation
-            invoices are raised net of retention, so retention held is money earned but not
-            invoiceable until released. Cost centre drawdowns reuse the Financials tab's figure to
-            the penny, so the two always agree: each cost centre's unspent target cost, with
-            finalised lines realised to profit / loss and reconciliation packages accounted for.
-            Uninvoiced work orders are committed order value suppliers haven't billed yet, from the
-            invoice links managed on the WO Allocation tab; unpaid Xero purchase invoices read each
-            allocated purchase line's payment status, so that line moves when bills are paid in
-            Xero and re-synced. The two retention releases are forecast against the revised
-            contract sum with due dates anchored to practical completion; a confirmed release is
-            no longer added back because it has moved into the claim — and, once paid, into cash
-            allocated.
-        </p>
+        @* ── The notes are static copy, so they render immediately — no gate (never gate a line
+           of text); the jewel next door is the only loading mark on this screen. ── *@
+        <aside class="rounded-xl border border-line bg-surface px-4 py-4 space-y-3">
+            <h3 class="text-[11px] uppercase tracking-wider text-content-subtle font-semibold">Where these figures come from</h3>
+            <p class="text-xs text-content-subtle">
+                <span class="font-semibold text-content">Project claim</span> is the valuation
+                report's counting lines — contract works, provisional sums, contingency and
+                variations.
+            </p>
+            <p class="text-xs text-content-subtle">
+                <span class="font-semibold text-content">Cash allocated</span> counts valuation
+                invoices the client has paid plus retention withheld on works complete (held less
+                confirmed releases, from the retention terms on the Setup tab). Valuation invoices
+                are raised net of retention, so retention held is money earned but not invoiceable
+                until released.
+            </p>
+            <p class="text-xs text-content-subtle">
+                <span class="font-semibold text-content">Cost centre drawdowns</span> reuse the
+                Financials tab's figure to the penny, so the two always agree: each cost centre's
+                unspent target cost, with finalised lines realised to profit / loss and
+                reconciliation packages accounted for.
+            </p>
+            <p class="text-xs text-content-subtle">
+                <span class="font-semibold text-content">Uninvoiced work orders</span> are
+                committed order value suppliers haven't billed yet, from the invoice links managed
+                on the WO Allocation tab. <span class="font-semibold text-content">Unpaid Xero
+                purchase invoices</span> read each allocated purchase line's payment status, so
+                that line moves when bills are paid in Xero and re-synced.
+            </p>
+            <p class="text-xs text-content-subtle">
+                <span class="font-semibold text-content">The retention releases</span> are forecast
+                against the revised contract sum with due dates anchored to practical completion. A
+                confirmed release is no longer added back because it has moved into the claim —
+                and, once paid, into cash allocated.
+            </p>
+        </aside>
         </div>
     </ProjectPageShell>
 }

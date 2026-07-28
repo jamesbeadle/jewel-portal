@@ -129,6 +129,10 @@ else
     private bool projectsFailed;
     private readonly List<string> failedProjects = new();
 
+    // How many per-project summary refreshes run at once. Four keeps the overview quick on a
+    // dozen projects while staying well inside what the serverless SQL tier serves comfortably.
+    private const int SummaryRefreshConcurrency = 4;
+
     // Every row and the total read the project list and that project's summary; nothing shows
     // until all of them are in, or a row would appear with a plausible zero in every column.
     private bool TableReady => Projects.Current is not null && summariesLoaded;
@@ -223,10 +227,20 @@ else
     {
         summariesLoaded = false;
         failedProjects.Clear();
-        // One summary call per active project, concurrently; the read model records failures
-        // per project so a single bad fetch degrades to a zero row with the banner above.
+        // One summary call per active project, a few at a time — not all at once. Firing every
+        // project's summary together stampedes the serverless database (which may also be
+        // mid-resume), and the burst is what intermittently 500s individual projects and raises
+        // the error toast on whatever page the user has moved to. The read model still records
+        // failures per project, so a single bad fetch degrades to a zero row with the banner
+        // above rather than a blank page.
         var projects = ActiveProjects;
-        await Task.WhenAll(projects.Select(project => Summary.RefreshAsync(project.ProjectId, CancellationToken.None)));
+        using var throttle = new SemaphoreSlim(SummaryRefreshConcurrency);
+        await Task.WhenAll(projects.Select(async project =>
+        {
+            await throttle.WaitAsync();
+            try { await Summary.RefreshAsync(project.ProjectId, CancellationToken.None); }
+            finally { throttle.Release(); }
+        }));
         foreach (var project in projects.Where(project => Summary.LastRefreshFailed(project.ProjectId)))
         {
             failedProjects.Add(project.Reference);
