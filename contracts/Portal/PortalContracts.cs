@@ -18,14 +18,16 @@ public sealed record GetMyPortalRecord(string SubcontractorId = "") : IQuery<Sub
 
 /// <summary>A work order as the subcontractor sees it: the order, the project's display name
 /// (resolved server-side — portal sessions can't read the projects list) and the priced lines.
-/// ApprovedByName / SiteAddress are display fields for the printed purchase order, resolved
-/// server-side for the same reason (portal sessions can't read the user directory or projects).</summary>
+/// ApprovedByName / SiteAddressLines are display fields for the printed purchase order, resolved
+/// server-side for the same reason (portal sessions can't read the user directory or projects).
+/// SiteAddressLines is the project's address as stacked letter lines (AddressLine / Town /
+/// Postcode, blanks skipped), printed one per line under the job name.</summary>
 public sealed record PortalWorkOrder(
     WorkOrder Order,
     string ProjectName,
     IReadOnlyList<WorkOrderLine> Lines,
     string ApprovedByName = "",
-    string SiteAddress = "");
+    IReadOnlyList<string>? SiteAddressLines = null);
 
 /// <summary>
 /// GET /api/portal/my/work-orders — the caller's issued work orders (Released and later; Drafts

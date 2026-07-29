@@ -77,14 +77,22 @@
                                     @onclick="() => pickerOpen = false" tabindex="-1"></button>
                             <div class="absolute left-0 right-0 top-full z-40 mt-1 max-h-80 overflow-y-auto rounded-xl border border-line bg-surface shadow-lg py-1"
                                  role="listbox">
+                                @if (RecentlyOpened.Count > 0)
+                                {
+                                    @* The projects this user is actually working across, most
+                                       recently opened first — a shortcut into the list below,
+                                       which keeps its canonical order (see RecentlyOpened). *@
+                                    <p class="eyebrow px-3 pt-1.5 pb-1">Recent</p>
+                                    @foreach (var candidate in RecentlyOpened)
+                                    {
+                                        @ProjectOption(candidate)
+                                    }
+                                    <div class="border-t border-line mt-1"></div>
+                                    <p class="eyebrow px-3 pt-2 pb-1">All projects</p>
+                                }
                                 @foreach (var candidate in ActiveProjects)
                                 {
-                                    var isCurrent = string.Equals(candidate.ProjectId, EffectiveProjectId, StringComparison.OrdinalIgnoreCase);
-                                    <button type="button" role="option" aria-selected="@isCurrent"
-                                            class="w-full text-left px-3 py-2 text-sm transition @(isCurrent ? "bg-surface-raised text-content font-semibold" : "text-content-muted hover:text-content hover:bg-surface-raised")"
-                                            @onclick="() => PickProject(candidate)">
-                                        <span class="font-mono text-xs text-content-subtle mr-2">@candidate.Reference</span>@candidate.Name
-                                    </button>
+                                    @ProjectOption(candidate)
                                 }
                                 <div class="border-t border-line mt-1 pt-1">
                                     <a href="/projects" class="block px-3 py-2 text-xs text-content-subtle hover:text-content hover:bg-surface-raised transition"
@@ -267,6 +275,39 @@
             .Where(project => project.Stage != ProjectStage.Completed)
             .InWorkOrder()
             .ToList();
+
+    // The picker's Recent group: the last few projects this user actually opened
+    // (CurrentProjectService), most recently opened first — the one place recency, not
+    // ProjectOrdering, sets the order, because "what was I just in?" is the question the group
+    // answers. Active projects only, without the current one (it is the picker button itself).
+    // Deliberately NOT removed from the full list below: that list stays complete and in the
+    // canonical work order, so every project keeps one predictable place to be found.
+    private List<Project> RecentlyOpened
+    {
+        get
+        {
+            var active = ActiveProjects;
+            return CurrentProject.RecentProjectIds
+                .Where(id => !string.Equals(id, EffectiveProjectId, StringComparison.OrdinalIgnoreCase))
+                .Select(id => active.Find(project =>
+                    string.Equals(project.ProjectId, id, StringComparison.OrdinalIgnoreCase)))
+                .OfType<Project>()
+                .Take(4)
+                .ToList();
+        }
+    }
+
+    // One rendering for a project row in the picker dropdown, shared by the Recent group and the
+    // full list so the two can never drift apart.
+    private RenderFragment<Project> ProjectOption => candidate =>
+        @<button type="button" role="option" aria-selected="@IsCurrent(candidate)"
+                 class="w-full text-left px-3 py-2 text-sm transition @(IsCurrent(candidate) ? "bg-surface-raised text-content font-semibold" : "text-content-muted hover:text-content hover:bg-surface-raised")"
+                 @onclick="() => PickProject(candidate)">
+            <span class="font-mono text-xs text-content-subtle mr-2">@candidate.Reference</span>@candidate.Name
+        </button>;
+
+    private bool IsCurrent(Project candidate) =>
+        string.Equals(candidate.ProjectId, EffectiveProjectId, StringComparison.OrdinalIgnoreCase);
 
     // The workspace's project: last viewed while still active, else the first active project.
     private string? EffectiveProjectId => CurrentProject.ResolveFor(Projects.Current);

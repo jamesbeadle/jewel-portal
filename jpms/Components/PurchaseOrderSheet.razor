@@ -48,10 +48,11 @@
             <p class="po-label">Job</p>
             <p class="po-strong">@ProjectName</p>
             @* The site address, resolved from the project record (AddressLine / Town / Postcode —
-               edited in Project Details). Absent until the project has one filled in. *@
-            @if (!string.IsNullOrWhiteSpace(SiteAddress))
+               edited in Project Details). Stacked one part per line, like the supplier's address
+               opposite. Absent until the project has one filled in. *@
+            @foreach (var addressLine in SiteAddressLines.Where(part => !string.IsNullOrWhiteSpace(part)))
             {
-                <p>@SiteAddress</p>
+                <p>@addressLine</p>
             }
         </div>
     </div>
@@ -285,9 +286,10 @@
     [Parameter] public IReadOnlyList<string> SupplierAddressLines { get; set; } = Array.Empty<string>();
     [Parameter] public string ProjectName { get; set; } = "";
 
-    /// <summary>The site address printed under the job name — resolved by hosts from the
-    /// project record (AddressLine / Town / Postcode joined with commas). Empty hides it.</summary>
-    [Parameter] public string SiteAddress { get; set; } = "";
+    /// <summary>The site address printed under the job name as stacked letter lines
+    /// (street / town / postcode), one per line like the supplier's address — resolved by hosts
+    /// from the project record (AddressLine / Town / Postcode). Blanks are skipped; empty hides it.</summary>
+    [Parameter] public IReadOnlyList<string> SiteAddressLines { get; set; } = Array.Empty<string>();
 
     /// <summary>Display name of whoever raised/approved the order in the system
     /// (falls back to the raw AwardedByEmail when blank).</summary>

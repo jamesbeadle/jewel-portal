@@ -98,7 +98,7 @@ else
                             SupplierContactName="@(MyRecord?.Record.ContactName ?? "")"
                             SupplierAddressLines="@SupplierAddressLines"
                             ProjectName="@Order.ProjectName"
-                            SiteAddress="@Order.SiteAddress"
+                            SiteAddressLines="@(Order.SiteAddressLines ?? Array.Empty<string>())"
                             ApprovedByName="@Order.ApprovedByName"
                             PaymentTermsDays="@(MyRecord?.Record.PaymentTermsDays ?? 30)" />
     </section>

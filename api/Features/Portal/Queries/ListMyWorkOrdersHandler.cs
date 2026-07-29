@@ -61,9 +61,9 @@ public sealed class ListMyWorkOrdersHandler : IQueryHandler<ListMyWorkOrders, IR
                         : new List<WorkOrderLine>(),
                     approverNamesByEmail.TryGetValue(order.AwardedByEmail, out var approver) ? approver : "",
                     project is null
-                        ? ""
-                        : string.Join(", ", new[] { project.AddressLine, project.Town, project.Postcode }
-                            .Where(part => !string.IsNullOrWhiteSpace(part))));
+                        ? Array.Empty<string>()
+                        : new[] { project.AddressLine, project.Town, project.Postcode }
+                            .Where(part => !string.IsNullOrWhiteSpace(part)).ToArray());
             })
             .ToList()
             .AsReadOnly();
