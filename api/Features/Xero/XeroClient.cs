@@ -283,13 +283,16 @@ public sealed class XeroClient : IXeroClient
         var truncated = false;
         try
         {
-            // Suppliers only (contacts that have had at least one bill), active by default —
-            // includeArchived is deliberately not sent. Paged like the invoices read.
+            // EVERY active contact, not where=IsSupplier==true: Xero only sets IsSupplier once a
+            // contact has had a bill, so the filter would hide a supplier created moments ago and
+            // never yet billed. The flags come back per row and the modal narrows client-side
+            // (customer-only contacts hidden by default). includeArchived is deliberately not
+            // sent. Paged like the invoices read.
             for (var page = 1; ; page++)
             {
                 if (page > _options.MaxPages) { truncated = true; break; }
 
-                var url = $"{ContactsUrl}?page={page}&where={Uri.EscapeDataString("IsSupplier==true")}&order={Uri.EscapeDataString("Name")}";
+                var url = $"{ContactsUrl}?page={page}&order={Uri.EscapeDataString("Name")}";
                 using var doc = await GetJsonAsync(token, url, "contacts", ct);
 
                 if (!doc.RootElement.TryGetProperty("Contacts", out var contacts) || contacts.ValueKind != JsonValueKind.Array)
@@ -318,7 +321,9 @@ public sealed class XeroClient : IXeroClient
         County: AddressPartOf(contact, "Region"),
         AddressLine: StreetOf(contact),
         Postcode: AddressPartOf(contact, "PostalCode"),
-        ContactPersons: ReadContactPersons(contact));
+        ContactPersons: ReadContactPersons(contact),
+        IsSupplier: BoolOf(contact, "IsSupplier"),
+        IsCustomer: BoolOf(contact, "IsCustomer"));
 
     /// <summary>The street line(s) from the contact's first address that carries any — Xero's
     /// AddressLine1–4 joined onto one line for the directory record's AddressLine field.</summary>

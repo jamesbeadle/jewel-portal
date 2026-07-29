@@ -429,11 +429,16 @@ else
                        @oninput="OnImportSearchInput" />
             </div>
             <button type="button" class="btn-secondary shrink-0" disabled="@importLoading"
-                    title="Re-read the supplier list from Xero"
+                    title="Re-read the contact list from Xero"
                     @onclick="() => LoadSuppliersAsync(force: true)">
                 @(importLoading ? "Refreshing…" : "Refresh")
             </button>
         </div>
+        <label class="flex items-center gap-2 text-xs text-content-muted mb-3 cursor-pointer">
+            <input type="checkbox" checked="@importIncludeCustomers"
+                   @onchange="e => importIncludeCustomers = e.Value is bool ticked && ticked" />
+            Include Xero customers (clients) — hidden by default so the list stays supplier-shaped
+        </label>
 
         @if (importSnapshot is null)
         {
@@ -455,7 +460,9 @@ else
         }
         else if (FilteredSuppliers().Count == 0)
         {
-            <p class="text-sm text-content-subtle italic">No Xero suppliers match.</p>
+            <p class="text-sm text-content-subtle italic">
+                No Xero contacts match@(importIncludeCustomers ? "" : " — tick \"Include Xero customers\" if the contact is flagged as a customer, or Refresh if it was just created in Xero").
+            </p>
         }
         else
         {
@@ -466,7 +473,17 @@ else
                         {
                             <tr>
                                 <td class="px-4 py-3">
-                                    <p class="text-content font-medium">@supplier.Name</p>
+                                    <p class="text-content font-medium inline-flex items-center gap-1.5">
+                                        @supplier.Name
+                                        @if (supplier.IsCustomer && !supplier.IsSupplier)
+                                        {
+                                            <span class="inline-flex items-center rounded-full bg-surface-raised border border-line px-1.5 py-0.5 text-[10px] font-medium text-content-subtle">Customer</span>
+                                        }
+                                        else if (!supplier.IsSupplier)
+                                        {
+                                            <span class="inline-flex items-center rounded-full bg-surface-raised border border-line px-1.5 py-0.5 text-[10px] font-medium text-content-subtle" title="No bills in Xero yet">New contact</span>
+                                        }
+                                    </p>
                                     <p class="text-xs text-content-subtle">
                                         @string.Join(" · ", new[] { supplier.EmailAddress, supplier.Town }.Where(x => !string.IsNullOrWhiteSpace(x)))
                                     </p>
@@ -804,6 +821,10 @@ else
 
     private bool importOpen;
     private string importSearch = "";
+    // Customer-only Xero contacts (clients) are noise in a supplier import; hidden unless asked
+    // for. Contacts with NEITHER flag (created in Xero but never yet billed) always show — that
+    // is exactly the just-set-up supplier the import exists for.
+    private bool importIncludeCustomers;
     private XeroSuppliersSnapshot? importSnapshot;
     private bool importLoading;
     private string? importError;
@@ -840,6 +861,7 @@ else
         if (importSnapshot is null) return Array.Empty<XeroSupplier>();
         var q = (importSearch ?? "").Trim();
         return importSnapshot.Suppliers
+            .Where(supplier => importIncludeCustomers || supplier.IsSupplier || !supplier.IsCustomer)
             .Where(supplier => q.Length == 0
                 || supplier.Name.Contains(q, StringComparison.OrdinalIgnoreCase)
                 || supplier.EmailAddress.Contains(q, StringComparison.OrdinalIgnoreCase)
