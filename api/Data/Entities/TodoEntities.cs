@@ -13,10 +13,17 @@ public sealed class TodoItemEntity
     [MaxLength(2048)]    public string Notes { get; set; } = "";
 
     // The ROLE the item is assigned to (a Models.Role value stored as int, same convention as
-    // DirectoryUserRoleEntity.Role; null = unassigned). Items belong to a role, not a person, so
-    // they survive staff changes: whoever holds the role sees them, and a new starter taking over
-    // the role inherits the open items with no re-assignment.
+    // DirectoryUserRoleEntity.Role; null = unassigned). Items belong to a role first, so they
+    // survive staff changes: whoever holds the role sees them, and a new starter taking over the
+    // role inherits the open items with no re-assignment.
     public int? AssigneeRole { get; set; }
+
+    // Optional pin to ONE holder of AssigneeRole (a DirectoryUsers email; null = the whole role).
+    // A pinned item is on that person's list only. The pin never outlives the person's hold on the
+    // role: the directory commands clear it when the person is removed or loses the role, and the
+    // item falls back to the role — the survive-staff-changes property is kept by construction.
+    // Never set without AssigneeRole.
+    [MaxLength(256)] public string? AssigneePersonEmail { get; set; }
 
     [MaxLength(256)]     public string CreatedByEmail { get; set; } = "";
     public bool IsComplete { get; set; }

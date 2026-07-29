@@ -1,12 +1,14 @@
 @using Jewel.JPMS.Contracts.Todos
+@using Jewel.JPMS.Features.Todos
 @inject ITodoStore Todos
 @inject SessionService Session
 @inject Jewel.JPMS.Features.Projects.ProjectListReadModel Projects
 
 @*
     "My to-dos" — the dashboard home panel. Shows the OPEN items assigned to any ROLE the
-    signed-in user holds, general (company-wide) and project items alike, read through
-    ListMyTodoItems (the server stamps the roles from the session). Rows show only the title;
+    signed-in user holds — minus any pinned to a different named person, plus the ones pinned to
+    them — general (company-wide) and project items alike, read through ListMyTodoItems (the
+    server stamps the roles and email from the session). Rows show only the title;
     clicking one opens the detail modal (TodoDetailModal) with the full detail, the item's linked
     emails, and the Mark done action — the API allows a role-holder to update their role's items
     even outside the manage-todos gate. Completing removes the item from this open-only panel.
@@ -25,8 +27,8 @@
         <a href="/todos" class="text-xs font-medium text-accent hover:underline">View all</a>
     </div>
     <p class="text-xs text-content-subtle mb-4">
-        Items assigned to your role — general and project to-dos alike. Click one for its detail,
-        linked emails and to mark it done.
+        Items assigned to your roles or to you by name — general and project to-dos alike. Click
+        one for its detail, linked emails and to mark it done.
     </p>
 
     @if (error is not null)
@@ -59,9 +61,9 @@
                         {
                             <span class="whitespace-nowrap @(IsOverdue(item) ? "text-negative font-medium" : "")">Due @item.DueAt.Value.LocalDateTime.ToString("d MMM yyyy")</span>
                         }
-                        @if (item.AssigneeRole is Role assignedRole)
+                        @if (TodoAssigneePicker.Label(item) is string assigneeLabel)
                         {
-                            <span class="whitespace-nowrap">Assigned to @assignedRole.DisplayName()</span>
+                            <span class="whitespace-nowrap">Assigned to @assigneeLabel</span>
                         }
                     </div>
                 </button>
@@ -128,9 +130,9 @@
     {
         try
         {
-            assigneeOptions = (await Todos.ListAssignableRolesAsync())
-                .Select(role => new SearchSelect.Option(((int)role).ToString(), role.DisplayName()))
-                .ToList();
+            var rolesTask = Todos.ListAssignableRolesAsync();
+            var peopleTask = Todos.ListAssignablePeopleAsync();
+            assigneeOptions = TodoAssigneePicker.BuildOptions(await rolesTask, await peopleTask);
         }
         catch { }
     }
@@ -159,6 +161,7 @@
                 item.Title,
                 NullIfBlank(item.Notes),
                 item.AssigneeRole,
+                item.AssigneePersonEmail,
                 item.DueAt,
                 IsComplete: true));
             openItems = openItems.Where(open => open.TodoItemId != item.TodoItemId).ToList();
@@ -170,14 +173,15 @@
         finally { busy = false; }
     }
 
-    // Hand the item to a different role. This panel is "items assigned to MY role", so passing one
-    // on usually means it leaves the panel — reload and re-find, and close the modal when it has
-    // gone rather than leaving a record on screen that is no longer this reader's.
-    private async Task Reassign(Role? role)
+    // Hand the item to a different assignee (a role, optionally pinned to a person). This panel is
+    // "items assigned to ME", so passing one on usually means it leaves the panel — reload and
+    // re-find, and close the modal when it has gone rather than leaving a record on screen that is
+    // no longer this reader's.
+    private async Task Reassign(TodoAssignee? assignee)
     {
         if (busy || selected is null) return;
         var item = selected;
-        if (role == item.AssigneeRole) return;
+        if (TodoAssigneePicker.Value(assignee) == TodoAssigneePicker.ValueFor(item)) return;
         error = null;
         try
         {
@@ -186,7 +190,8 @@
                 item.TodoItemId,
                 item.Title,
                 NullIfBlank(item.Notes),
-                role,
+                assignee?.Role,
+                assignee?.PersonEmail,
                 item.DueAt,
                 item.IsComplete));
             openItems = (await Todos.ListMineAsync()).Where(open => !open.IsComplete).ToList();

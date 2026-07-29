@@ -31,6 +31,16 @@ public sealed class RemoveDirectoryUserHandler
         if (entity is not null) context.DirectoryUsers.Remove(entity);
 
         await context.SaveChangesAsync(cancellationToken);
+
+        // The to-do fall-back rule: any to-do pinned to this person falls back to its assigned
+        // role — whoever holds the role now sees it — rather than following someone who has left.
+        // This is what keeps person-pinning safe: the pin never outlives the person.
+        await context.TodoItems
+            .Where(t => t.AssigneePersonEmail != null
+                && t.AssigneePersonEmail.ToLower() == command.Email.ToLower())
+            .ExecuteUpdateAsync(set => set.SetProperty(t => t.AssigneePersonEmail, (string?)null),
+                cancellationToken);
+
         // They no longer exist in the directory — drop any cached copy immediately rather than
         // letting a warm instance keep honouring their old permissions until the TTL lapses.
         userCache.InvalidateEmail(command.Email);

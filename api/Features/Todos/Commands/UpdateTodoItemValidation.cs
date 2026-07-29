@@ -13,6 +13,10 @@ public sealed class UpdateTodoItemValidation
         if (string.IsNullOrWhiteSpace(command.Title)) errors.Add("Title is required.");
         if (command.AssigneeRole is Role role && !TodoRoles.AssignableAsTodoAssignee.Includes(role))
             errors.Add("To-do items can't be assigned to that role.");
+        // A person is only ever pinned WITH a role (see TodoAssignee) — that the person actually
+        // holds the role is the handler's directory check; this is the shape rule.
+        if (!string.IsNullOrWhiteSpace(command.AssigneePersonEmail) && command.AssigneeRole is null)
+            errors.Add("A to-do can only be pinned to a person together with their role.");
         if (errors.Count == 0) return ValidationOutcome.Passed;
         return new ValidationOutcome(errors);
     }

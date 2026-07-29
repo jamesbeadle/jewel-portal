@@ -1,4 +1,5 @@
 @using Jewel.JPMS.Contracts.Todos
+@using Jewel.JPMS.Features.Todos
 @inject ITodoStore Todos
 
 @*
@@ -44,12 +45,13 @@
                             <dd class="text-content mt-0.5">@ScopeLabel</dd>
                         </div>
                     }
-                    @* Assignment is to a ROLE, so reassigning is picking a different role — whoever
-                       holds it inherits the item, which is the whole point of not naming a person.
+                    @* Assignment is to a ROLE, optionally pinned to a named holder of it — the
+                       picker offers both as sibling rows ("Project Manager" and
+                       "Project Manager — Jane Doe"), so reassigning and pinning are one pick.
                        Two steps on purpose (Reassign, then Save): a single-click picker sitting in a
                        detail panel is one stray click away from handing someone else's work away. *@
                     <div>
-                        <dt class="text-[11px] uppercase tracking-wider text-content-subtle font-semibold">Assigned role</dt>
+                        <dt class="text-[11px] uppercase tracking-wider text-content-subtle font-semibold">Assigned to</dt>
                         @if (reassigning)
                         {
                             <dd class="mt-1 space-y-2">
@@ -62,18 +64,19 @@
                                     <button type="button" class="btn-secondary text-xs px-2 py-1" disabled="@Busy" @onclick="CancelReassign">Cancel</button>
                                 </div>
                                 <p class="text-[11px] text-content-subtle">
-                                    Everyone holding the new role sees this item; it leaves the old role's list.
+                                    A role puts this item on the list of everyone holding it; a named person keeps
+                                    it to their list alone. Either way it leaves the old assignee's list.
                                 </p>
                             </dd>
                         }
                         else
                         {
                             <dd class="text-content mt-0.5 flex flex-wrap items-center gap-2">
-                                <span>@(Item.AssigneeRole is Role role ? role.DisplayName() : "Unassigned")</span>
+                                <span>@(TodoAssigneePicker.Label(Item) ?? "Unassigned")</span>
                                 @if (ShowReassign)
                                 {
                                     <button type="button" class="btn-ghost text-[11px] px-1.5 py-0.5" disabled="@Busy"
-                                            title="Assign this item to a different role" @onclick="StartReassign">Reassign</button>
+                                            title="Assign this item to a different role or person" @onclick="StartReassign">Reassign</button>
                                 }
                             </dd>
                         }
@@ -185,16 +188,18 @@
     [Parameter] public string? ScopeLabel { get; set; }
     [Parameter] public bool CanComplete { get; set; }
     [Parameter] public bool CanDelete { get; set; }
-    /// <summary>Whether the signed-in user may move this item to a different role — the API's
-    /// TodoRoles.AllowedToManageTodos gate, mirrored by the parent.</summary>
+    /// <summary>Whether the signed-in user may move this item to a different role or person — the
+    /// API's TodoRoles.AllowedToManageTodos gate, mirrored by the parent.</summary>
     [Parameter] public bool CanReassign { get; set; }
-    /// <summary>The role pool for the reassign picker (ListTodoAssignableRoles), already shaped as
-    /// options by the parent that loaded it. Empty hides the control rather than offering a picker
-    /// with nothing in it.</summary>
+    /// <summary>The assignee pool for the reassign picker — roles and their pinnable holders
+    /// (ListTodoAssignableRoles + ListTodoAssignablePeople), already shaped as options by the
+    /// parent via TodoAssigneePicker.BuildOptions. Empty hides the control rather than offering a
+    /// picker with nothing in it.</summary>
     [Parameter] public IReadOnlyList<SearchSelect.Option> AssigneeOptions { get; set; } = Array.Empty<SearchSelect.Option>();
-    /// <summary>Raised with the chosen role (null = unassigned). Like complete/delete, the write
-    /// itself belongs to the parent, which owns the reload.</summary>
-    [Parameter] public EventCallback<Role?> OnReassign { get; set; }
+    /// <summary>Raised with the chosen assignee — a role, optionally pinned to a person (null =
+    /// unassigned). Like complete/delete, the write itself belongs to the parent, which owns the
+    /// reload.</summary>
+    [Parameter] public EventCallback<TodoAssignee?> OnReassign { get; set; }
     /// <summary>The parent's in-flight-action flag — disables the action buttons while a
     /// complete/reopen/delete round-trip runs.</summary>
     [Parameter] public bool Busy { get; set; }
@@ -216,7 +221,7 @@
 
     // Reassign editor state. `submittedReassignTo` holds the pick that has been sent but not yet
     // seen coming back: the editor closes only when the refreshed Item actually carries the new
-    // role, so a failed save leaves the pick on screen to retry rather than silently reverting.
+    // assignee, so a failed save leaves the pick on screen to retry rather than silently reverting.
     private bool reassigning;
     private string reassignTo = "";
     private string? submittedReassignTo;
@@ -245,9 +250,9 @@
         if (Item.TodoItemId == loadedForItemId)
         {
             // The same item, re-supplied after a save: close the editor once the record itself
-            // shows the role that was picked. Anything else (a failed save, an unrelated reload)
-            // leaves it open with the pick intact.
-            if (submittedReassignTo is not null && RoleValue(Item.AssigneeRole) == submittedReassignTo) ResetReassign();
+            // shows the assignee that was picked. Anything else (a failed save, an unrelated
+            // reload) leaves it open with the pick intact.
+            if (submittedReassignTo is not null && TodoAssigneePicker.ValueFor(Item) == submittedReassignTo) ResetReassign();
             return;
         }
 
@@ -286,9 +291,10 @@
 
     private void StartReassign()
     {
-        // Start from the current role when it is one the picker actually offers; a legacy role
-        // outside the pool starts blank rather than silently pre-selecting something else.
-        var current = RoleValue(Item?.AssigneeRole);
+        // Start from the current assignee when it is one the picker actually offers; a legacy role
+        // outside the pool (or a pin whose person has left the pool) starts blank rather than
+        // silently pre-selecting something else.
+        var current = Item is null ? "" : TodoAssigneePicker.ValueFor(Item);
         reassignTo = AssigneeOptions.Any(option => option.Value == current) ? current : "";
         submittedReassignTo = null;
         deleteArmed = false;
@@ -308,14 +314,8 @@
     {
         if (Item is null) return;
         submittedReassignTo = reassignTo;
-        await OnReassign.InvokeAsync(ParseRole(reassignTo));
+        await OnReassign.InvokeAsync(TodoAssigneePicker.Parse(reassignTo));
     }
-
-    // Role <-> picker value plumbing, matching the add-item forms: the role's int as a string
-    // ("" = unassigned).
-    private static string RoleValue(Role? role) => role is null ? "" : ((int)role).ToString();
-
-    private static Role? ParseRole(string value) => int.TryParse(value, out var parsed) ? (Role)parsed : null;
 
     private async Task HandleToggleComplete()
     {

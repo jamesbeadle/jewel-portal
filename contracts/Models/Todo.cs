@@ -7,9 +7,12 @@ namespace Jewel.JPMS.Models;
 // tagged "JPMS/TODO-0001" is the item's linked mail — the same live-read link mechanism the
 // Request / Bid Package families use.
 //
-// Items are assigned to a ROLE, not a person (null = unassigned). Everyone currently holding the
-// role sees the item on their list and may tick it off; when someone leaves and a new starter
-// takes over the role, the open items are simply theirs — nothing needs re-assigning.
+// Items are assigned to a ROLE first (null = unassigned), and OPTIONALLY pinned to a named person
+// who holds that role. The role is what makes assignments survive staff changes: everyone holding
+// the role sees an unpinned item and may tick it off, and when someone leaves, a new starter
+// taking over the role simply inherits the open items. A pin narrows the item to one person's list
+// without giving up that safety — a person can only be pinned WITH their role, and if they leave
+// the directory (or lose the role) the pin is cleared and the item falls back to the role.
 public sealed record TodoItem(
     string TodoItemId,
     string ProjectId,        // "" = general (company-wide) item with no project
@@ -17,46 +20,71 @@ public sealed record TodoItem(
     string Title,
     string Notes,
     Role? AssigneeRole,      // null = unassigned; otherwise a TodoRoles.AssignableAsTodoAssignee role
+    string? AssigneePersonEmail, // optional pin to one holder of AssigneeRole; null = the whole role
+    string? AssigneePersonName,  // the pinned person's directory display name, resolved server-side
     string CreatedByEmail,
     bool IsComplete,
     DateTimeOffset CreatedAt,
     DateTimeOffset? DueAt,
     DateTimeOffset? CompletedAt);
 
+// One assignee a to-do can be raised for (or moved to): a ROLE, optionally pinned to a named
+// person who holds it. There is deliberately no person-without-role shape — the role is what an
+// assignment falls back to when the person moves on.
+public sealed record TodoAssignee(Role Role, string? PersonEmail = null);
+
+// One pickable pin for the assignee pickers: a directory user under one of the assignable roles
+// they hold, one row per (role, holder) pair. Served by ListTodoAssignablePeople.
+public sealed record TodoAssignablePerson(Role Role, string Email, string DisplayName);
+
 // One row of the triage "create to-dos from this email" form. The command carries a list of these
 // so several items can be captured from a single email in one action.
 //
-// AssigneeRoles names EVERY role the row is meant for, and the row FANS OUT into one TodoItem per
-// role — same title, detail and due date, but its own TODO-#### reference, its own mail tag and its
-// own tick-box. One internal email that needs the QS to price something and the site manager to
-// book access is therefore two independent to-dos raised in one action, either completable without
-// closing the other. Empty or null = a single unassigned item. Duplicates are collapsed.
+// Assignees names EVERY role (each optionally pinned to a person) the row is meant for, and the
+// row FANS OUT into one TodoItem per assignee — same title, detail and due date, but its own
+// TODO-#### reference, its own mail tag and its own tick-box. One internal email that needs the QS
+// to price something and the site manager to book access is therefore two independent to-dos
+// raised in one action, either completable without closing the other. Empty or null = a single
+// unassigned item. Duplicates are collapsed.
 public sealed record TodoItemDraft(
     string Title,
     string? Notes = null,
-    IReadOnlyList<Role>? AssigneeRoles = null,
+    IReadOnlyList<TodoAssignee>? Assignees = null,
     DateTimeOffset? DueAt = null);
 
-// One item the fan-out will create: the row it came from and the single role it lands on.
-public sealed record TodoItemFanOut(TodoItemDraft Draft, Role? AssigneeRole);
+// One item the fan-out will create: the row it came from and the single assignee it lands on.
+public sealed record TodoItemFanOut(TodoItemDraft Draft, TodoAssignee? Assignee)
+{
+    public Role? AssigneeRole => Assignee?.Role;
+    public string? AssigneePersonEmail => Assignee?.PersonEmail;
+}
 
 // The fan-out rule itself, deliberately shared by the triage form — which promises a count on its
 // "Create N to-do items from email" button — and the server, which actually creates the rows. Both
 // call this, so the promise and the outcome cannot drift apart.
 //
-// Order is stable (drafts as given, roles as picked) because the items are numbered TODO-#### in
-// exactly this sequence, and a triager reading the new references back should find them in the order
-// they filled the form in.
+// Order is stable (drafts as given, assignees as picked) because the items are numbered TODO-####
+// in exactly this sequence, and a triager reading the new references back should find them in the
+// order they filled the form in.
 public static class TodoItemDrafts
 {
-    public static IReadOnlyList<TodoItemFanOut> FanOutByRole(IEnumerable<TodoItemDraft> drafts) =>
+    public static IReadOnlyList<TodoItemFanOut> FanOutByAssignee(IEnumerable<TodoItemDraft> drafts) =>
         drafts.SelectMany(draft =>
         {
-            // Distinct: the picker already stops a role being added twice, but a hand-rolled request
-            // must not be able to raise the same item twice either.
-            var roles = (draft.AssigneeRoles ?? Array.Empty<Role>()).Distinct().ToList();
-            return roles.Count == 0
+            // Distinct: the picker already stops an assignee being added twice, but a hand-rolled
+            // request must not be able to raise the same item twice either. "Same" ignores email
+            // case — jane@ and Jane@ are one person — but a role alone and the same role pinned to
+            // a person are two different items on purpose (one for the pool, one for the person).
+            var assignees = (draft.Assignees ?? Array.Empty<TodoAssignee>())
+                .Aggregate(new List<TodoAssignee>(), (kept, next) =>
+                {
+                    if (!kept.Any(seen => seen.Role == next.Role
+                            && string.Equals(seen.PersonEmail, next.PersonEmail, StringComparison.OrdinalIgnoreCase)))
+                        kept.Add(next);
+                    return kept;
+                });
+            return assignees.Count == 0
                 ? new[] { new TodoItemFanOut(draft, null) }
-                : roles.Select(role => new TodoItemFanOut(draft, role)).ToArray();
+                : assignees.Select(assignee => new TodoItemFanOut(draft, assignee)).ToArray();
         }).ToList();
 }

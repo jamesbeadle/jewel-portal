@@ -19,6 +19,11 @@ public static class TodosRouteRegistration
         queries.Register<ListTodoAssignableRoles, IReadOnlyList<Role>>(
             QueryRoute.Static("/api/todo-assignable-roles"));
 
+        // The person half of the assignee pickers: directory holders of the assignable roles, one
+        // row per (role, holder) pair, for the optional pin-to-a-person on an assignment.
+        queries.Register<ListTodoAssignablePeople, IReadOnlyList<TodoAssignablePerson>>(
+            QueryRoute.Static("/api/todo-assignable-people"));
+
         // The signed-in user's own items (their roles stamped server-side) — dashboard panel + the
         // browser for non-admin roles.
         queries.Register<ListMyTodoItems, IReadOnlyList<TodoItem>>(

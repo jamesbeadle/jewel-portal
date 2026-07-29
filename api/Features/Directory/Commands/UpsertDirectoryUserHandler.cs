@@ -33,6 +33,19 @@ public sealed class UpsertDirectoryUserHandler
 
         await ReplaceRolesAsync(command, cancellationToken);
         await context.SaveChangesAsync(cancellationToken);
+
+        // The to-do fall-back rule: a to-do pinned to this person is only pinned WITH a role they
+        // hold, so losing a role clears the pin on that role's items and they fall back to the
+        // role — whoever holds it now sees them, instead of the items following an assignment the
+        // person no longer has.
+        var keptRoleValues = command.Roles.Select(role => (int)role).ToList();
+        await context.TodoItems
+            .Where(t => t.AssigneePersonEmail != null
+                && t.AssigneePersonEmail.ToLower() == command.Email.ToLower()
+                && (t.AssigneeRole == null || !keptRoleValues.Contains(t.AssigneeRole.Value)))
+            .ExecuteUpdateAsync(set => set.SetProperty(t => t.AssigneePersonEmail, (string?)null),
+                cancellationToken);
+
         // Their permissions just changed — drop any cached copy so the next request re-reads them
         // rather than waiting out the cache TTL.
         userCache.InvalidateEmail(command.Email);

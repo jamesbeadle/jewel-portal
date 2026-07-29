@@ -15,9 +15,14 @@ public sealed class UpdateTodoItemHandler : ICommandHandler<UpdateTodoItem, Todo
         var entity = await context.TodoItems.FindAsync(new object[] { command.TodoItemId }, cancellationToken);
         if (entity is null) throw new InvalidOperationException($"To-do item {command.TodoItemId} not found.");
 
+        // A pinned person must currently hold the assigned role in the directory.
+        await TodoAssigneeGuard.EnsurePersonHoldsRoleAsync(
+            context, command.AssigneeRole, command.AssigneePersonEmail, cancellationToken);
+
         entity.Title = Clamp(command.Title.Trim(), 256);
         entity.Notes = Clamp(command.Notes?.Trim() ?? "", 2048);
         entity.AssigneeRole = (int?)command.AssigneeRole;
+        entity.AssigneePersonEmail = TodoAssigneeGuard.NormalisePersonEmail(command.AssigneePersonEmail);
         entity.DueAt = command.DueAt;
 
         var wasComplete = entity.IsComplete;
@@ -26,7 +31,7 @@ public sealed class UpdateTodoItemHandler : ICommandHandler<UpdateTodoItem, Todo
         if (wasComplete && !command.IsComplete) entity.CompletedAt = null;
 
         await context.SaveChangesAsync(cancellationToken);
-        return entity.ToModel();
+        return entity.ToModel(await context.PersonNamesForAsync(new[] { entity }, cancellationToken));
     }
 
     private static string Clamp(string value, int maxLength) =>

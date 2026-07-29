@@ -7,8 +7,9 @@ namespace Jewel.JPMS.Services;
 // To-do items: listed and managed on the project's To-do tab, the /todos browser page, and the
 // "My to-dos" dashboard panel. Items created from an email at the triage stage arrive through
 // IIntakeQueue.CreateTodoItemsFromMessageAsync and show up here. General (company-wide) items
-// carry a blank ProjectId. Items are assigned to a ROLE, not a person — whoever holds the role
-// sees them, so assignments survive staff changes.
+// carry a blank ProjectId. Items are assigned to a ROLE — whoever holds the role sees them, so
+// assignments survive staff changes — optionally pinned to a named holder of that role, which
+// narrows the item to that one person's list (and falls back to the role if they move on).
 public interface ITodoStore
 {
     Task<IReadOnlyList<TodoItem>> ListForProjectAsync(string projectId, CancellationToken cancellationToken = default);
@@ -20,6 +21,9 @@ public interface ITodoStore
     Task<IReadOnlyList<TodoItem>> ListAllAsync(CancellationToken cancellationToken = default);
     /// <summary>The roles a to-do can be assigned to — feeds the assignee role pickers.</summary>
     Task<IReadOnlyList<Role>> ListAssignableRolesAsync(CancellationToken cancellationToken = default);
+    /// <summary>The people a to-do can be pinned to — directory holders of the assignable roles,
+    /// one row per (role, holder) pair. Feeds the same pickers, under each role.</summary>
+    Task<IReadOnlyList<TodoAssignablePerson>> ListAssignablePeopleAsync(CancellationToken cancellationToken = default);
     /// <summary>The emails currently tagged to one item ("JPMS/TODO-####"), read live from the
     /// mailbox — the linked-mail list in the to-do detail modal.</summary>
     Task<IReadOnlyList<MailboxMessage>> ListEmailsAsync(string todoItemId, CancellationToken cancellationToken = default);

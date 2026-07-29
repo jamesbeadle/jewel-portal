@@ -19,9 +19,10 @@ public sealed class ListAllTodoItemsHandler : IQueryHandler<ListAllTodoItems, IR
         var entities = await context.TodoItems.AsNoTracking()
             .ToListAsync(cancellationToken);
 
+        var personNames = await context.PersonNamesForAsync(entities, cancellationToken);
         return entities
             .InListOrder()
-            .Select(t => t.ToModel())
+            .Select(t => t.ToModel(personNames))
             .ToList()
             .AsReadOnly();
     }

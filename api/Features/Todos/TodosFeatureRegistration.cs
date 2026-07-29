@@ -15,6 +15,10 @@ public static class TodosFeatureRegistration
         services.AddScoped<IQueryHandler<ListTodoItemsForProject, IReadOnlyList<TodoItem>>, ListTodoItemsForProjectHandler>();
         services.AddScoped<IQueryHandler<ListTodoAssignableRoles, IReadOnlyList<Role>>, ListTodoAssignableRolesHandler>();
 
+        // The person half of the assignee pickers: directory holders of the assignable roles, one
+        // row per (role, holder) pair, for the optional pin-to-a-person on an assignment.
+        services.AddScoped<IQueryHandler<ListTodoAssignablePeople, IReadOnlyList<TodoAssignablePerson>>, ListTodoAssignablePeopleHandler>();
+
         // The To-dos browser + "My to-dos" dashboard panel: the MD / administrators read everything,
         // everyone else reads the items assigned to them.
         services.AddScoped<IQueryHandler<ListMyTodoItems, IReadOnlyList<TodoItem>>, ListMyTodoItemsHandler>();

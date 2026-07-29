@@ -79,13 +79,25 @@ public sealed class CreateTodoItemsFromMessageHandler : ICommandHandler<CreateTo
                 throw new InvalidOperationException("The email couldn't be tagged to the request. Please try again.");
         }
 
-        // FAN-OUT: a row may name several roles, and each one becomes its own item — same title,
-        // detail and due date, but its own TODO-#### reference, its own tag on this email and its own
-        // tick-box. An internal email that needs the QS to price something and the site manager to
-        // book the access is two to-dos raised in one action, and either can be completed without
-        // closing the other. A row with no roles stays a single unassigned item. Duplicate roles on
-        // one row collapse, so the triager can't accidentally raise the same item twice.
-        var expanded = TodoItemDrafts.FanOutByRole(drafts);
+        // FAN-OUT: a row may name several assignees — roles, each optionally pinned to a named
+        // holder — and each one becomes its own item: same title, detail and due date, but its own
+        // TODO-#### reference, its own tag on this email and its own tick-box. An internal email
+        // that needs the QS to price something and the site manager to book the access is two
+        // to-dos raised in one action, and either can be completed without closing the other. A row
+        // with no assignees stays a single unassigned item. Duplicate assignees on one row
+        // collapse, so the triager can't accidentally raise the same item twice.
+        var expanded = TodoItemDrafts.FanOutByAssignee(drafts);
+
+        // Every pinned person must currently hold the role they are pinned with — checked before
+        // any email is tagged, so a bad pin creates nothing.
+        foreach (var assignee in expanded
+                     .Where(item => item.AssigneePersonEmail is not null)
+                     .Select(item => item.Assignee!)
+                     .DistinctBy(a => (a.Role, a.PersonEmail!.ToLowerInvariant())))
+        {
+            await TodoAssigneeGuard.EnsurePersonHoldsRoleAsync(
+                context, assignee.Role, assignee.PersonEmail, cancellationToken);
+        }
 
         var nextNumber = (await context.TodoItems.MaxAsync(t => (int?)t.Number, cancellationToken) ?? 0) + 1;
 
@@ -97,6 +109,7 @@ public sealed class CreateTodoItemsFromMessageHandler : ICommandHandler<CreateTo
             Title = Clamp(item.Draft.Title.Trim(), 256),
             Notes = Clamp(item.Draft.Notes?.Trim() ?? "", 2048),
             AssigneeRole = (int?)item.AssigneeRole,
+            AssigneePersonEmail = TodoAssigneeGuard.NormalisePersonEmail(item.AssigneePersonEmail),
             CreatedByEmail = command.CreatedByEmail,
             IsComplete = false,
             CreatedAt = snapshot.ReceivedAt,
@@ -147,7 +160,8 @@ public sealed class CreateTodoItemsFromMessageHandler : ICommandHandler<CreateTo
             catch (Exception ex) when (ex is not OperationCanceledException) { /* best-effort */ }
         }
 
-        return entities.Select(e => e.ToModel()).ToList().AsReadOnly();
+        var personNames = await context.PersonNamesForAsync(entities, cancellationToken);
+        return entities.Select(e => e.ToModel(personNames)).ToList().AsReadOnly();
     }
 
     // Email subjects/bodies can exceed the column limits; clamp so a long email can't throw on save.

@@ -19,12 +19,13 @@ public sealed class ListTodoItemsForProjectHandler : IQueryHandler<ListTodoItems
             .Where(t => t.ProjectId == query.ProjectId)
             .ToListAsync(cancellationToken);
 
+        var personNames = await context.PersonNamesForAsync(entities, cancellationToken);
         return entities
             .OrderBy(t => t.IsComplete)
             .ThenBy(t => t.IsComplete ? DateTimeOffset.MaxValue : (t.DueAt ?? DateTimeOffset.MaxValue))
             .ThenByDescending(t => t.IsComplete ? (t.CompletedAt ?? DateTimeOffset.MinValue) : DateTimeOffset.MinValue)
             .ThenBy(t => t.Number)
-            .Select(t => t.ToModel())
+            .Select(t => t.ToModel(personNames))
             .ToList()
             .AsReadOnly();
     }

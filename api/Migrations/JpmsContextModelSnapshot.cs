@@ -3325,10 +3325,12 @@ namespace Jewel.JPMS.Api.Migrations
                         .HasMaxLength(64)
                         .HasColumnType("nvarchar(64)");
 
-                    b.Property<string>("AssigneeEmail")
-                        .IsRequired()
+                    b.Property<string>("AssigneePersonEmail")
                         .HasMaxLength(256)
                         .HasColumnType("nvarchar(256)");
+
+                    b.Property<int?>("AssigneeRole")
+                        .HasColumnType("int");
 
                     b.Property<DateTimeOffset?>("CompletedAt")
                         .HasColumnType("datetimeoffset");

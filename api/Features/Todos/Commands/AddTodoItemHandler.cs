@@ -17,6 +17,10 @@ public sealed class AddTodoItemHandler : ICommandHandler<AddTodoItem, TodoItem>
         var projectExists = await context.Projects.AnyAsync(p => p.ProjectId == command.ProjectId, cancellationToken);
         if (!projectExists) throw new InvalidOperationException($"Project '{command.ProjectId}' not found.");
 
+        // A pinned person must currently hold the assigned role in the directory.
+        await TodoAssigneeGuard.EnsurePersonHoldsRoleAsync(
+            context, command.AssigneeRole, command.AssigneePersonEmail, cancellationToken);
+
         var nextNumber = (await context.TodoItems.MaxAsync(t => (int?)t.Number, cancellationToken) ?? 0) + 1;
 
         var entity = new TodoItemEntity
@@ -27,6 +31,7 @@ public sealed class AddTodoItemHandler : ICommandHandler<AddTodoItem, TodoItem>
             Title = Clamp(command.Title.Trim(), 256),
             Notes = Clamp(command.Notes?.Trim() ?? "", 2048),
             AssigneeRole = (int?)command.AssigneeRole,
+            AssigneePersonEmail = TodoAssigneeGuard.NormalisePersonEmail(command.AssigneePersonEmail),
             CreatedByEmail = command.CreatedByEmail,
             IsComplete = false,
             CreatedAt = DateTimeOffset.UtcNow,
@@ -35,7 +40,7 @@ public sealed class AddTodoItemHandler : ICommandHandler<AddTodoItem, TodoItem>
 
         context.TodoItems.Add(entity);
         await context.SaveChangesAsync(cancellationToken);
-        return entity.ToModel();
+        return entity.ToModel(await context.PersonNamesForAsync(new[] { entity }, cancellationToken));
     }
 
     private static string Clamp(string value, int maxLength) =>

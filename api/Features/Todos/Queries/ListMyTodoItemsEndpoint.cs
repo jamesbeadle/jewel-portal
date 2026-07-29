@@ -25,6 +25,6 @@ public sealed class ListMyTodoItemsEndpoint
         var signedInUser = await users.ResolveAsync(request, request.HttpContext.RequestAborted);
         if (signedInUser is null) return new UnauthorizedResult();
         if (!RolesThatMayReadOwnTodos.IncludesAny(signedInUser.Roles)) return new StatusCodeResult(403);
-        return new OkObjectResult(await handler.HandleAsync(new ListMyTodoItems(signedInUser.Roles), request.HttpContext.RequestAborted));
+        return new OkObjectResult(await handler.HandleAsync(new ListMyTodoItems(signedInUser.Roles, signedInUser.Email), request.HttpContext.RequestAborted));
     }
 }

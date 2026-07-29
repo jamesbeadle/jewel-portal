@@ -274,6 +274,7 @@ human judges the commentary.
 3. **Which clause set is authoritative.** §2.2 is written against JCT MWD 2016. The programme agent's
    existing code cites JCT ICD 2024 (`SchedulingAgent`). Which forms are actually in use across live
    projects — that determines how many clause tables need pinning.
-4. **Risk register ownership.** The pack assigns each risk a named individual, but to-dos in this
-   system are assigned to a **role**, not a person (`TodoItemEntity`). Follow the house convention
-   or make risks the exception?
+4. **Risk register ownership.** The pack assigns each risk a named individual. To-dos in this
+   system are assigned to a **role** first, optionally pinned to a named holder of it
+   (`TodoItemEntity.AssigneeRole` + `AssigneePersonEmail`) — the pin falls back to the role if the
+   person leaves. Risks could follow the same role-plus-optional-person convention.

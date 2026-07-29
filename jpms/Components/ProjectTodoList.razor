@@ -1,4 +1,5 @@
 @using Jewel.JPMS.Contracts.Todos
+@using Jewel.JPMS.Features.Todos
 @inject ITodoStore Todos
 @inject IRequestRegister Requests
 @inject IVariationStore Variations
@@ -100,9 +101,9 @@
                                 {
                                     <span class="whitespace-nowrap @(IsOverdue(item) ? "text-negative font-medium" : "")">Due @item.DueAt.Value.LocalDateTime.ToString("d MMM yyyy")</span>
                                 }
-                                @if (item.AssigneeRole is Role assignedRole)
+                                @if (TodoAssigneePicker.Label(item) is string assigneeLabel)
                                 {
-                                    <span class="whitespace-nowrap">Assigned to @assignedRole.DisplayName()</span>
+                                    <span class="whitespace-nowrap">Assigned to @assigneeLabel</span>
                                 }
                                 @if (!string.IsNullOrWhiteSpace(item.CreatedByEmail))
                                 {
@@ -131,9 +132,9 @@
                                 {
                                     <span class="whitespace-nowrap">Done @item.CompletedAt.Value.LocalDateTime.ToString("d MMM yyyy")</span>
                                 }
-                                @if (item.AssigneeRole is Role assignedRole)
+                                @if (TodoAssigneePicker.Label(item) is string assigneeLabel)
                                 {
-                                    <span class="whitespace-nowrap">Assigned to @assignedRole.DisplayName()</span>
+                                    <span class="whitespace-nowrap">Assigned to @assigneeLabel</span>
                                 }
                                 @if (!string.IsNullOrWhiteSpace(item.CreatedByEmail))
                                 {
@@ -268,7 +269,7 @@
 
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Assigned role</label>
+                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Assigned to</label>
                 <SearchSelect Options="@AssigneeOptions" Value="@newAssignee" ValueChanged="v => newAssignee = v"
                               Placeholder="Unassigned" WidthClass="w-full" />
             </div>
@@ -289,8 +290,9 @@
 
     // The assignee picker's option pool: the ROLES a to-do can be assigned to (internal
     // office/management roles — TodoRoles.AssignableAsTodoAssignee, served by
-    // ListTodoAssignableRoles), fetched once when the tab loads. Items are assigned to a role,
-    // not a person, so they survive staff changes. Assignment is picker-only.
+    // ListTodoAssignableRoles) and, under each role, the directory holders it can be pinned to
+    // (ListTodoAssignablePeople), fetched once when the tab loads and shaped by
+    // TodoAssigneePicker.BuildOptions. Assignment is picker-only.
     private IReadOnlyList<SearchSelect.Option> AssigneeOptions = Array.Empty<SearchSelect.Option>();
     private bool loading = true;
     private bool busy;
@@ -371,9 +373,9 @@
         // modal still works, the item just goes in unassigned.
         try
         {
-            AssigneeOptions = (await Todos.ListAssignableRolesAsync())
-                .Select(role => new SearchSelect.Option(RoleValue(role), role.DisplayName()))
-                .ToList();
+            var rolesTask = Todos.ListAssignableRolesAsync();
+            var peopleTask = Todos.ListAssignablePeopleAsync();
+            AssigneeOptions = TodoAssigneePicker.BuildOptions(await rolesTask, await peopleTask);
         }
         catch { }
     }
@@ -406,13 +408,15 @@
         if (busy) return;
         if (string.IsNullOrWhiteSpace(newTitle)) { addError = "A title is required."; return; }
         addError = null;
+        var assignee = TodoAssigneePicker.Parse(newAssignee);
         await Run(async () =>
         {
             await Todos.AddAsync(new AddTodoItem(
                 ProjectId,
                 newTitle.Trim(),
                 NullIfBlank(newNotes),
-                ParseRole(newAssignee),
+                assignee?.Role,
+                assignee?.PersonEmail,
                 ParseDate(newDue)));
             CloseAdd();
         });
@@ -428,6 +432,7 @@
             item.Title,
             NullIfBlank(item.Notes),
             item.AssigneeRole,
+            item.AssigneePersonEmail,
             item.DueAt,
             !item.IsComplete)));
         // Success closes the detail modal — the reloaded list shows the item in its new section.
@@ -435,18 +440,20 @@
         if (error is null) selected = null;
     }
 
-    // Move the item to a different role — everything else about it stays put. The modal stays
-    // open on the refreshed item so the new assignee is read back where it was changed.
-    private async Task Reassign(Role? role)
+    // Move the item to a different assignee (a role, optionally pinned to a person) — everything
+    // else about it stays put. The modal stays open on the refreshed item so the new assignee is
+    // read back where it was changed.
+    private async Task Reassign(TodoAssignee? assignee)
     {
         if (busy || selected is null) return;
         var item = selected;
-        if (role == item.AssigneeRole) return;
+        if (TodoAssigneePicker.Value(assignee) == TodoAssigneePicker.ValueFor(item)) return;
         await Run(() => Todos.UpdateAsync(new UpdateTodoItem(
             item.TodoItemId,
             item.Title,
             NullIfBlank(item.Notes),
-            role,
+            assignee?.Role,
+            assignee?.PersonEmail,
             item.DueAt,
             item.IsComplete)));
         if (error is null) selected = items.FirstOrDefault(i => i.TodoItemId == item.TodoItemId);
@@ -526,10 +533,4 @@
 
     private static DateTimeOffset? ParseDate(string value) =>
         DateTimeOffset.TryParse(value, out var parsed) ? parsed : null;
-
-    // Role <-> SearchSelect value plumbing: options carry the role's int as a string ("" = unassigned).
-    private static string RoleValue(Role role) => ((int)role).ToString();
-
-    private static Role? ParseRole(string value) =>
-        int.TryParse(value, out var parsed) ? (Role)parsed : null;
 }
