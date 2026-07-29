@@ -48,21 +48,34 @@ else if (Session.ActiveRole is not null)
         // and back. (Other roles' home views load their own data.)
         if (Session.ActiveRole == Role.Admin)
         {
-            // A failed panel load must never take down the whole page: catch and render the
-            // home with empty panels instead of tripping the global error UI (the admin home
-            // re-fetches on navigation anyway).
-            try
-            {
-                if (Directory.Current is null) await Directory.RefreshAsync(CancellationToken.None);
-                if (AccessRequests.Current is null) await AccessRequests.RefreshAsync(CancellationToken.None);
-            }
-            catch (Exception ex)
-            {
-                Console.Error.WriteLine($"Dashboard: admin panels failed to load: {ex.Message}");
-            }
+            // The two panels are independent, so load them together — and catch per panel, so a
+            // failing directory no longer costs the access requests too (and vice versa).
+            await Task.WhenAll(
+                LoadPanelAsync("directory", async () =>
+                {
+                    if (Directory.Current is null) await Directory.RefreshAsync(CancellationToken.None);
+                }),
+                LoadPanelAsync("access requests", async () =>
+                {
+                    if (AccessRequests.Current is null) await AccessRequests.RefreshAsync(CancellationToken.None);
+                }));
         }
 
         isLoaded = true;
+    }
+
+    // Runs one admin panel's load and swallows its failure, so a panel that cannot load leaves
+    // itself empty rather than taking its neighbour — or the page — down with it.
+    private static async Task LoadPanelAsync(string panel, Func<Task> load)
+    {
+        try
+        {
+            await load();
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"Dashboard: {panel} failed to load: {ex.Message}");
+        }
     }
 
     public void Dispose() => Session.OnChange -= StateHasChanged;

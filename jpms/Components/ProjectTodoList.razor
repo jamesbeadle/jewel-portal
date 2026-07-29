@@ -336,8 +336,9 @@
         Drawings.Refresh(ProjectId);
         _ = LoadVariationsAsync();
 
-        await LoadAsync();
-        if (CanManage) await LoadAssignableRolesAsync();
+        // The list and the assignable-role pool are independent reads — run them together.
+        if (CanManage) await Task.WhenAll(LoadAsync(), LoadAssignableRolesAsync());
+        else await LoadAsync();
     }
 
     public void Dispose()

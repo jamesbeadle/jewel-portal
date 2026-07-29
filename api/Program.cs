@@ -47,7 +47,6 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
 
 var host = new HostBuilder()
     .ConfigureFunctionsWebApplication()
@@ -117,8 +116,20 @@ var host = new HostBuilder()
     })
     .Build();
 
-await ApplyDatabaseMigrations(host.Services);
-
+// No automatic migration on start-up, deliberately. Schema changes are applied by hand from a
+// reviewed script (see docs/09-operations/applying-migrations.md) — the API only ever reads and
+// writes rows, never alters the schema. Two reasons this is not a convenience worth having:
+//
+//   1. Safety. Migrating from here means whichever managed-function instance happens to cold-start
+//      first after a deploy applies the schema change, unreviewed and unwatched, and the old catch
+//      block swallowed any failure. EF Core 8 has no migration lock (that arrived in EF Core 9), so
+//      two instances scaling up together could both attempt it.
+//   2. Speed. It sat in front of host.RunAsync(), so every cold start built the full 117-entity
+//      model and made a round trip to SQL before a single endpoint would answer — and with
+//      EnableRetryOnFailure() a momentarily slow database turned that into minutes of dead API.
+//
+// If the schema is behind the code, endpoints touching the new columns will fail loudly, which is
+// the intended behaviour: a visible error beats a silent self-modifying database.
 await host.RunAsync();
 
 static void RegisterInviteNotifier(IServiceCollection services, IConfiguration configuration)
@@ -134,20 +145,4 @@ static void RegisterInviteNotifier(IServiceCollection services, IConfiguration c
     services.AddSingleton(new EmailClient(connectionString));
     services.AddScoped<IInviteNotifier>(provider =>
         new AzureEmailInviteNotifier(provider.GetRequiredService<EmailClient>(), senderAddress));
-}
-
-static async Task ApplyDatabaseMigrations(IServiceProvider services)
-{
-    await using var scope = services.CreateAsyncScope();
-    try
-    {
-        var context = scope.ServiceProvider.GetRequiredService<JpmsContext>();
-        await context.Database.MigrateAsync();
-    }
-    catch (Exception migrationError)
-    {
-        scope.ServiceProvider.GetRequiredService<ILoggerFactory>()
-            .CreateLogger("DatabaseMigration")
-            .LogError(migrationError, "Startup database migration failed; the host will continue and retry on the next start.");
-    }
 }

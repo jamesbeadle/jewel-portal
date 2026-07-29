@@ -244,10 +244,19 @@ else
         StateHasChanged();
         if (!Session.IsApproved || !CanAccess) { loaded = true; projectOptionsReady = true; return; }
 
-        // Project labels for the filter dropdown; failing only degrades the filter, never the list.
+        // The audit query is the page; the project list only labels a filter dropdown. Neither
+        // needs the other, so they run together — the register no longer waits on the labels.
+        await Task.WhenAll(LoadProjectLabelsAsync(), LoadAsync(reset: true));
+    }
+
+    // Project labels for the filter dropdown; failing only degrades the filter, never the list.
+    // Flips projectOptionsReady either way — an unlabelled filter beats one stuck on
+    // "Loading projects…" — and repaints, since the audit query may still be in flight.
+    private async Task LoadProjectLabelsAsync()
+    {
         try { if (Projects.Current is null) await Projects.RefreshAsync(CancellationToken.None); } catch { }
         projectOptionsReady = true;
-        await LoadAsync(reset: true);
+        StateHasChanged();
     }
 
     private async Task OnPathwayChanged(string? pathway)

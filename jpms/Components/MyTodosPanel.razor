@@ -108,21 +108,31 @@
 
     protected override async Task OnInitializedAsync()
     {
-        await LoadAsync();
-        // Project labels for the modal's scope line — a failed load degrades the label, never the list.
+        // Three independent reads — the list is the panel, the labels dress the modal's scope
+        // line, the role pool feeds the reassign picker. None needs another, so they run together
+        // instead of each waiting its turn behind the last.
+        var loads = new List<Task> { LoadAsync(), LoadProjectLabelsAsync() };
+        if (CanManage) loads.Add(LoadAssigneeOptionsAsync());
+        await Task.WhenAll(loads);
+    }
+
+    // Project labels for the modal's scope line — a failed load degrades the label, never the list.
+    private async Task LoadProjectLabelsAsync()
+    {
         try { if (Projects.Current is null) await Projects.RefreshAsync(CancellationToken.None); } catch { }
-        // A failed load leaves the reassign picker with no options, which hides the control — the
-        // panel's own job (read and tick off) is untouched.
-        if (CanManage)
+    }
+
+    // A failed load leaves the reassign picker with no options, which hides the control — the
+    // panel's own job (read and tick off) is untouched.
+    private async Task LoadAssigneeOptionsAsync()
+    {
+        try
         {
-            try
-            {
-                assigneeOptions = (await Todos.ListAssignableRolesAsync())
-                    .Select(role => new SearchSelect.Option(((int)role).ToString(), role.DisplayName()))
-                    .ToList();
-            }
-            catch { }
+            assigneeOptions = (await Todos.ListAssignableRolesAsync())
+                .Select(role => new SearchSelect.Option(((int)role).ToString(), role.DisplayName()))
+                .ToList();
         }
+        catch { }
     }
 
     private async Task LoadAsync()

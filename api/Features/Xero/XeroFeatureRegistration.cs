@@ -34,7 +34,15 @@ public static class XeroFeatureRegistration
                     new HttpClient(new HttpClientHandler
                     {
                         AutomaticDecompression = System.Net.DecompressionMethods.All
-                    }),
+                    })
+                    {
+                        // Explicit, and well under the Static Web Apps gateway's ~45s: the default
+                        // is 100s, so a Xero call that stopped answering would hold a request open
+                        // long past the point the gateway had already given the user a 504. Fail
+                        // fast instead and let the snapshot report the failure. Paged reads make
+                        // several calls, so this is per call, not per page-through.
+                        Timeout = TimeSpan.FromSeconds(20)
+                    },
                     options,
                     sp.GetRequiredService<ILogger<XeroClient>>()));
         }
