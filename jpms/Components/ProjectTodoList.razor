@@ -318,12 +318,12 @@
     private string newAssignee = "";
     private string newDue = "";
 
-    // Managing the list mirrors the server-side TodoRoles.AllowedToManageTodos gate: directors,
-    // project managers, site managers and accounts (administrators carry every role). Everyone else
-    // sees the list read-only.
+    // Managing the list mirrors the server-side TodoRoles.AllowedToManageTodos gate: directors
+    // (managing and finance), project managers, site managers and accounts (administrators carry
+    // every role). Everyone else sees the list read-only.
     private bool CanManage =>
-        Session.AvailableRoles.Any(role => role is Role.Admin or Role.ManagingDirector or Role.ProjectManager
-            or Role.SiteManager or Role.Accounts);
+        Session.AvailableRoles.Any(role => role is Role.Admin or Role.ManagingDirector or Role.FinanceDirector
+            or Role.ProjectManager or Role.SiteManager or Role.Accounts);
 
     protected override async Task OnInitializedAsync()
     {

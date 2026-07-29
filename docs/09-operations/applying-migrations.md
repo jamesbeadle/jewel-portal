@@ -17,6 +17,11 @@ Two reasons, worth restating because they are the reasons this file exists:
    full EF model and made a round trip to SQL before a single endpoint would answer. Removing it is
    part of the fix for the twice-daily portal hangs.
 
+The admin login (`jpmsadmin`) is for a person at a keyboard, running these steps. The API's own
+login — whatever `SqlConnectionString` in the Static Web App's settings uses — should hold only
+`db_datareader`, `db_datawriter` and execute. While it can `ALTER`, the guarantee above is only as
+deep as the code; narrowing the login makes it structural.
+
 ## The procedure
 
 **1. Generate the script — idempotent, always.**
@@ -56,16 +61,18 @@ leftover `jpms-restore-20260722` was.)
 **4. Run it.**
 
 ```bash
-sqlcmd -S sql-jpms-prod-54cf9e.database.windows.net -d jpms -G -i migrate.sql -b -o migrate.log
+sqlcmd -S sql-jpms-prod-54cf9e.database.windows.net -d jpms -U jpmsadmin -i migrate.sql -b -o migrate.log
 ```
 
-`-G` is Entra ID auth, `-b` makes sqlcmd stop and exit non-zero on the first error rather than
-carrying on, `-o` keeps the log. Read `migrate.log` even on success.
+`-b` is not decoration: without it sqlcmd carries on past a failed statement and exits 0, so a
+half-applied script reads as a success. With it the first error stops the run and exits non-zero.
+`-o` keeps the log — read `migrate.log` even on success. (`-G` Entra ID auth works too if the
+login is set up for it.)
 
 **5. Confirm it landed.**
 
 ```bash
-sqlcmd -S sql-jpms-prod-54cf9e.database.windows.net -d jpms -G \
+sqlcmd -S sql-jpms-prod-54cf9e.database.windows.net -d jpms -U jpmsadmin \
   -Q "SELECT TOP 5 MigrationId FROM __EFMigrationsHistory ORDER BY MigrationId DESC"
 ```
 

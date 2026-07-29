@@ -254,11 +254,11 @@ else
         Session.AvailableRoles.Any(role => role is Role.Admin or Role.ManagingDirector);
 
     // Mirrors the API's TodoRoles.AllowedToManageTodos gate — deliberately WIDER than CanSeeAll:
-    // a PM, site manager or accounts user reads only their own items here but may still hand one
-    // on to another role, exactly as they can on a project's To-do tab.
+    // an FD, PM, site manager or accounts user reads only their own items here but may still hand
+    // one on to another role, exactly as they can on a project's To-do tab.
     private bool CanManage =>
-        Session.AvailableRoles.Any(role => role is Role.Admin or Role.ManagingDirector or Role.ProjectManager
-            or Role.SiteManager or Role.Accounts);
+        Session.AvailableRoles.Any(role => role is Role.Admin or Role.ManagingDirector or Role.FinanceDirector
+            or Role.ProjectManager or Role.SiteManager or Role.Accounts);
 
     // Mirrors the API's JpmsRoleSets.AllInternal — who may read to-dos at all.
     private bool HasInternalRole =>
