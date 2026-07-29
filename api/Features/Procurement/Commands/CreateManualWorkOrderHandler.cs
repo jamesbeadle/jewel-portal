@@ -82,7 +82,7 @@ public sealed class CreateManualWorkOrderHandler
                 WorkOrderLineId = ProcurementIdentifierFactory.NextWorkOrderLineId(),
                 WorkOrderId = entity.WorkOrderId,
                 Title = line.Title.Length > 256 ? line.Title[..256] : line.Title,
-                Description = "",
+                Description = line.Description.Length > 1024 ? line.Description[..1024] : line.Description,
                 CostType = "Subcontractor",
                 CostCode = line.CostCode,
                 Quantity = 1m,

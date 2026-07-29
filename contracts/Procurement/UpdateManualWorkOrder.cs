@@ -38,4 +38,7 @@ public sealed record UpdatedManualWorkOrderLine(
     string? WorkOrderLineId,
     string CostCode,
     string Title,
-    decimal Amount);
+    decimal Amount,
+    // The longer detail printed in the purchase order's Description column — optional,
+    // so the title can stay a short label instead of carrying the whole scope.
+    string Description = "");

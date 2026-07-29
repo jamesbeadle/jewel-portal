@@ -86,7 +86,8 @@
                 {
                     var lineIndex = index;
                     var line = lines[lineIndex];
-                    <div class="flex items-center gap-2">
+                    <div>
+                    <div class="flex items-center gap-2 mb-1">
                         @* Typed-to-find, like every other cost-centre picker (valuation lines,
                            variation approval, Xero allocation): the master runs to hundreds of
                            codes, so scrolling a native select is the wrong instrument. *@
@@ -111,6 +112,15 @@
                             <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                                  stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6L6 18" /></svg>
                         </button>
+                    </div>
+                    @* The longer detail printed in the PO items table's Description column — optional,
+                       so the title above can stay a short label instead of carrying the whole scope
+                       (titles cap at 256 characters and are cut off beyond that). *@
+                    <textarea rows="2" maxlength="1024" placeholder="Description — the full detail printed on the purchase order (optional)"
+                              disabled="@busy"
+                              class="w-full bg-surface border border-line rounded-lg px-2 py-1.5 text-content text-sm placeholder:text-content-subtle"
+                              value="@line.Description"
+                              @onchange="e => SetLineDescription(line, e.Value?.ToString())"></textarea>
                     </div>
                 }
             </div>
@@ -263,6 +273,7 @@
         public decimal PaidToDate { get; set; }
         public string CostCode { get; set; } = "";
         public string Title { get; set; } = "";
+        public string Description { get; set; } = "";
         public string AmountText { get; set; } = "";
     }
 
@@ -319,6 +330,7 @@
                     PaidToDate = line.PaidToDate,
                     CostCode = line.CostCode,
                     Title = line.Title,
+                    Description = line.Description,
                     AmountText = line.LineTotal.ToString(System.Globalization.CultureInfo.InvariantCulture)
                 })
                 .ToList();
@@ -445,6 +457,7 @@
     private void SetSubcontractor(string? value) => subcontractorId = value ?? "";
     private static void SetLineCode(LineRow line, string? value) => line.CostCode = value ?? "";
     private static void SetLineTitle(LineRow line, string? value) => line.Title = value ?? "";
+    private static void SetLineDescription(LineRow line, string? value) => line.Description = value ?? "";
     private static void SetLineAmount(LineRow line, string? value) => line.AmountText = value ?? "";
     private void SetSalesAmount(string lineItemId, string? value) => pickedAmounts[lineItemId] = value ?? "";
     private void SetDepositPercent(string? value) => depositPercentText = value ?? "";
@@ -527,7 +540,8 @@
                 var editedLines = lines
                     .Where(line => line.CostCode != "" && Parse(line.AmountText) is { } amount && amount != 0m)
                     .Select(line => new UpdatedManualWorkOrderLine(
-                        line.WorkOrderLineId, line.CostCode, line.Title.Trim(), Parse(line.AmountText)!.Value))
+                        line.WorkOrderLineId, line.CostCode, line.Title.Trim(), Parse(line.AmountText)!.Value,
+                        line.Description.Trim()))
                     .ToList();
                 await Commands.SendAsync(new UpdateManualWorkOrder(
                     ProjectId, Editing.Order.WorkOrderId, subcontractorId,
@@ -546,7 +560,8 @@
             {
                 var orderLines = lines
                     .Where(line => line.CostCode != "" && Parse(line.AmountText) is { } amount && amount != 0m)
-                    .Select(line => new ManualWorkOrderLine(line.CostCode, line.Title.Trim(), Parse(line.AmountText)!.Value))
+                    .Select(line => new ManualWorkOrderLine(
+                        line.CostCode, line.Title.Trim(), Parse(line.AmountText)!.Value, line.Description.Trim()))
                     .ToList();
                 createdOrder = await Commands.SendAsync(new CreateManualWorkOrder(
                     ProjectId, subcontractorId, title.Trim(), scope.Trim(),

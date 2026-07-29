@@ -47,6 +47,12 @@
         <div>
             <p class="po-label">Job</p>
             <p class="po-strong">@ProjectName</p>
+            @* The site address, resolved from the project record (AddressLine / Town / Postcode —
+               edited in Project Details). Absent until the project has one filled in. *@
+            @if (!string.IsNullOrWhiteSpace(SiteAddress))
+            {
+                <p>@SiteAddress</p>
+            }
         </div>
     </div>
 
@@ -178,14 +184,6 @@
         <p class="po-remaining"><strong>Remaining Balance:</strong> @Money(Order.Value - TotalPaid)</p>
     }
 
-    @if (!string.IsNullOrWhiteSpace(SiteAddress))
-    {
-        <table class="po-table po-custom">
-            <thead><tr><th>Custom fields</th></tr></thead>
-            <tbody><tr><td><strong>Site Address:</strong> @SiteAddress</td></tr></tbody>
-        </table>
-    }
-
     <p class="po-legal">
         A signature of Approval or Electronic Acceptance is required before this purchase order is effective. This purchase
         order then becomes part of the existing contract and is binding and subject to our terms and conditions detailed in
@@ -256,7 +254,6 @@
     .po-prewrap { white-space: pre-wrap; }
     .po-totals td { font-weight: 700; color: #0f172a; }
     .po-remaining { text-align: right; margin: -6px 2px 16px; color: #0f172a; }
-    .po-custom td strong { color: #0f172a; }
     .po-legal { color: #334155; margin-bottom: 14px; }
     .po-dim { color: #64748b; }
     .po-signatures { display: flex; gap: 32px; border: 1px solid #cbd5e1; border-radius: 2px; padding: 18px 16px 12px; }
@@ -287,6 +284,9 @@
     /// record's AddressLines; blanks are skipped.</summary>
     [Parameter] public IReadOnlyList<string> SupplierAddressLines { get; set; } = Array.Empty<string>();
     [Parameter] public string ProjectName { get; set; } = "";
+
+    /// <summary>The site address printed under the job name — resolved by hosts from the
+    /// project record (AddressLine / Town / Postcode joined with commas). Empty hides it.</summary>
     [Parameter] public string SiteAddress { get; set; } = "";
 
     /// <summary>Display name of whoever raised/approved the order in the system

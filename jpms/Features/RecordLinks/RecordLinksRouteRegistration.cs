@@ -24,6 +24,16 @@ public static class RecordLinksRouteRegistration
             new QueryRoute("/api/projects/{projectId}/scheduling/emails",
                 query => $"/api/projects/{((ListSchedulingEmails)query).ProjectId}/scheduling/emails"));
 
+        queries.Register<GetProgrammeEmailDetail, MailboxMessageDetail>(
+            new QueryRoute("/api/projects/{projectId}/programme/emails/detail",
+                query =>
+                {
+                    var q = (GetProgrammeEmailDetail)query;
+                    var url = $"/api/projects/{q.ProjectId}/programme/emails/detail?id={Uri.EscapeDataString(q.MessageId)}";
+                    if (!string.IsNullOrWhiteSpace(q.InternetMessageId)) url += $"&imid={Uri.EscapeDataString(q.InternetMessageId)}";
+                    return url;
+                }));
+
         queries.Register<ListRecordEmails, IReadOnlyList<MailboxMessage>>(
             new QueryRoute("/api/records/{type}/{recordId}/emails",
                 query =>
@@ -46,5 +56,9 @@ public static class RecordLinksRouteRegistration
 
         commands.Register<LinkMessageToRecord, Acknowledgement>(
             new CommandRoute("POST", "/api/mailbox/message/link", _ => "/api/mailbox/message/link"));
+
+        commands.Register<PrepareProgrammeReplyDraft, ProgrammeReplyDraft>(
+            new CommandRoute("POST", "/api/projects/{projectId}/programme/emails/reply-draft",
+                command => $"/api/projects/{((PrepareProgrammeReplyDraft)command).ProjectId}/programme/emails/reply-draft"));
     }
 }

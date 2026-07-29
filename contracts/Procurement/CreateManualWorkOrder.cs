@@ -34,5 +34,7 @@ public sealed record CreateManualWorkOrder(
     bool DepositRequired = false,
     decimal? DepositPercent = null) : ICommand<WorkOrder>;
 
-/// <summary>One priced line: its cost centre, what it covers, and its £ amount.</summary>
-public sealed record ManualWorkOrderLine(string CostCode, string Title, decimal Amount);
+/// <summary>One priced line: its cost centre, what it covers, and its £ amount. Description
+/// is the longer detail printed in the purchase order's Description column — optional, so the
+/// title can stay a short label instead of carrying the whole scope (titles cap at 256).</summary>
+public sealed record ManualWorkOrderLine(string CostCode, string Title, decimal Amount, string Description = "");

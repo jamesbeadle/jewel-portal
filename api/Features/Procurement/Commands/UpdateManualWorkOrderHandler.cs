@@ -88,6 +88,7 @@ public sealed class UpdateManualWorkOrderHandler
                         $"\"{existing.Title}\" has {existing.PaidToDate:0.00} paid against it — the amount can't drop below that.");
 
                 existing.Title = line.Title.Length > 256 ? line.Title[..256] : line.Title;
+                existing.Description = line.Description.Length > 1024 ? line.Description[..1024] : line.Description;
                 existing.CostCode = line.CostCode;
                 existing.Quantity = 1m;
                 existing.Unit = "item";
@@ -102,7 +103,7 @@ public sealed class UpdateManualWorkOrderHandler
                     WorkOrderLineId = ProcurementIdentifierFactory.NextWorkOrderLineId(),
                     WorkOrderId = entity.WorkOrderId,
                     Title = line.Title.Length > 256 ? line.Title[..256] : line.Title,
-                    Description = "",
+                    Description = line.Description.Length > 1024 ? line.Description[..1024] : line.Description,
                     CostType = "Subcontractor",
                     CostCode = line.CostCode,
                     Quantity = 1m,
