@@ -219,6 +219,12 @@ else
                     }
                 </select>
             </div>
+            @* The live result count sits with the filters that produce it. Rendered only once the
+               store has loaded — a line of text simply doesn't appear until the figure is known. *@
+            @if (SubcontractorStore.IsLoaded)
+            {
+                <p class="text-sm text-content-muted pb-2.5 whitespace-nowrap">@CountSummary</p>
+            }
             @if (CanManage)
             {
                 <div class="flex items-center gap-2">
@@ -639,8 +645,27 @@ else
         DirectoryGroup.Staff => staffLoaded
             ? $"{StaffUsers.Count} internal staff."
             : "Internal staff.",
-        _ => $"{Filtered().Count} of {SubcontractorStore.All().Count} companies."
+        // The companies count lives beside the filters (CountSummary) — one figure per screen,
+        // and no "0 of 0" here before the store has loaded.
+        _ => "The company directory."
     };
+
+    private bool FiltersActive =>
+        !string.IsNullOrWhiteSpace(search) || !string.IsNullOrWhiteSpace(categoryFilter);
+
+    // "12 of 118 companies" while the search or Type filter is narrowing the table; the plain
+    // total otherwise. Only rendered once SubcontractorStore.IsLoaded, so the figure is real.
+    private string CountSummary
+    {
+        get
+        {
+            var total = SubcontractorStore.All().Count;
+            var noun = total == 1 ? "company" : "companies";
+            return FiltersActive
+                ? $"{Filtered().Count} of {total} {noun}"
+                : $"{total} {noun}";
+        }
+    }
 
     // Each group loads on first selection, best-effort: the groups keep their own API gates
     // (clients: Admin/MD/PM; staff: Admin/FD), so a 403 for this user's roles shows a quiet
