@@ -134,6 +134,10 @@ public static class CommercialRouteRegistration
             new QueryRoute("/api/projects/{projectId}/cost-of-sales-lines",
                 query => $"/api/projects/{((ListProjectCostOfSalesLines)query).ProjectId}/cost-of-sales-lines"));
 
+        queries.Register<ListUnallocatedSiteBills, IReadOnlyList<UnallocatedSiteBill>>(
+            new QueryRoute("/api/projects/{projectId}/unallocated-site-bills",
+                query => $"/api/projects/{((ListUnallocatedSiteBills)query).ProjectId}/unallocated-site-bills"));
+
         queries.Register<ListValuationClaimsForProject, IReadOnlyList<ValuationClaim>>(
             new QueryRoute("/api/projects/{projectId}/valuation-claims",
                 query => $"/api/projects/{((ListValuationClaimsForProject)query).ProjectId}/valuation-claims"));

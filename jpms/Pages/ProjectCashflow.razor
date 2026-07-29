@@ -107,7 +107,18 @@ else
                 <div class="flex items-baseline justify-between gap-4 px-4 py-3 border-t border-line">
                     <div>
                         <p class="text-sm text-content"
-                           title="Cost of sales on bills received but not yet paid in Xero — due now; moves when bills are paid in Xero and re-synced">Unpaid Xero purchase invoices</p>
+                           title="The net still owed on allocated purchase lines, part-payment aware: a bill Xero has partly settled counts only its remainder, from the bill's AmountDue as last synced">Unpaid Xero purchase invoices</p>
+                        @if (BillsSettledOnPartPaid != 0m)
+                        {
+                            <p class="text-xs text-content-subtle mt-0.5">@Money(BillsSettledOnPartPaid) on part-paid bills already settled</p>
+                        }
+                        @if (UnallocatedOutstandingNet != 0m)
+                        {
+                            <p class="text-xs text-negative mt-0.5"
+                               title="Unpaid bills whose Xero Sites tracking points at this project but which nobody has allocated in JPMS — not counted in this figure. The magnifier lists them; allocate them on the Xero allocation screen.">
+                                ⚠ @Money(UnallocatedOutstandingNet) tracked to this site in Xero is not yet allocated
+                            </p>
+                        }
                     </div>
                     <span class="inline-flex items-center gap-1.5">
                         <span class="text-base font-semibold @(BillsUnpaid == 0m ? "text-content" : "text-negative") whitespace-nowrap">@Money(-BillsUnpaid)</span>
@@ -183,8 +194,11 @@ else
                 <span class="font-semibold text-content">Uninvoiced work orders</span> are
                 committed order value suppliers haven't billed yet, from the invoice links managed
                 on the WO Allocation tab. <span class="font-semibold text-content">Unpaid Xero
-                purchase invoices</span> read each allocated purchase line's payment status, so
-                that line moves when bills are paid in Xero and re-synced.
+                purchase invoices</span> is the net still owed on allocated purchase lines,
+                part-payment aware: each bill's outstanding amount is read from Xero on every
+                sync, so a part-paid bill counts only its remainder and the figure tracks the
+                aged payables. Bills tracked to this site in Xero but not yet allocated in JPMS
+                are warned about on the row rather than silently missed.
             </p>
             <p class="text-xs text-content-subtle">
                 <span class="font-semibold text-content">The retention releases</span> are forecast
@@ -197,6 +211,7 @@ else
 
         <UnpaidXeroInvoicesModal IsOpen="showUnpaidInvoices"
                                  Lines="UnpaidCostLines"
+                                 UnallocatedBills="@(unallocatedBills ?? Array.Empty<UnallocatedSiteBill>())"
                                  OnClose="() => showUnpaidInvoices = false" />
     </ProjectPageShell>
 }
@@ -219,6 +234,7 @@ else
     private IReadOnlyList<WorkOrderInvoiceSummary>? woSummaries;
     private IReadOnlyList<ProjectCostOfSalesLine>? costLines;
     private IReadOnlyList<PackageReconciliationRow>? packageRows;
+    private IReadOnlyList<UnallocatedSiteBill>? unallocatedBills;
 
     private IReadOnlyList<WorkOrderInvoiceSummary> WoSummaries => woSummaries ?? Array.Empty<WorkOrderInvoiceSummary>();
     private IReadOnlyList<ProjectCostOfSalesLine> CostLines => costLines ?? Array.Empty<ProjectCostOfSalesLine>();
@@ -238,7 +254,8 @@ else
         && WorkOrders.LoadedFor(ProjectId)
         && woSummaries is not null
         && costLines is not null
-        && packageRows is not null;
+        && packageRows is not null
+        && unallocatedBills is not null;
 
     // ── The claim — the valuation report's counting lines ──
     private decimal ContractSales => Summary.Current(ProjectId).Sum(row => row.BudgetedSales);
@@ -283,11 +300,25 @@ else
     private decimal WoLeftToInvoice => WoCommitted - WoInvoiced;
 
     // The statement's figure and the modal's rows come from the same filter, so the
-    // modal's total can never disagree with the row it explains.
+    // modal's total can never disagree with the row it explains. OutstandingNet is
+    // part-payment aware (XeroPaymentMaths): a settled bill contributes 0, a part-paid
+    // one only its remainder — so the figure tracks Xero's aged payables, not just the
+    // bill's binary status.
     private IReadOnlyList<ProjectCostOfSalesLine> UnpaidCostLines =>
-        CostLines.Where(line => !line.IsPaid).ToList();
+        CostLines.Where(line => line.OutstandingNet != 0m).ToList();
 
-    private decimal BillsUnpaid => UnpaidCostLines.Sum(line => line.Net);
+    private decimal BillsUnpaid => CostLines.Sum(line => line.OutstandingNet);
+
+    // What has already been settled on bills that are only part-paid — the face-of-the-
+    // statement explanation for why this figure is lower than the sum of open bills.
+    private decimal BillsSettledOnPartPaid =>
+        CostLines.Where(line => line.SettledFraction is > 0m and < 1m).Sum(line => line.PaidNet);
+
+    // The unallocated guard: unpaid site-tracked lines nobody has allocated. Not part of
+    // BillsUnpaid (allocation is what distributes cost to centres) — surfaced as a warning
+    // here and a section in the modal so the gap is never silent.
+    private decimal UnallocatedOutstandingNet =>
+        (unallocatedBills ?? Array.Empty<UnallocatedSiteBill>()).Sum(bill => bill.OutstandingNet);
 
     // Whether the unpaid-invoices breakdown modal is open (the magnifier on its row).
     private bool showUnpaidInvoices;
@@ -362,10 +393,12 @@ else
             var woSummariesTask = Queries.AskAsync(new ListWorkOrderInvoiceSummaries(ProjectId), CancellationToken.None);
             var costLinesTask = Queries.AskAsync(new ListProjectCostOfSalesLines(ProjectId), CancellationToken.None);
             var packageRowsTask = Queries.AskAsync(new ListPackageReconciliation(ProjectId), CancellationToken.None);
+            var unallocatedBillsTask = Queries.AskAsync(new ListUnallocatedSiteBills(ProjectId), CancellationToken.None);
             invoiceSummary = await invoiceSummaryTask;
             woSummaries = await woSummariesTask;
             costLines = await costLinesTask;
             packageRows = await packageRowsTask;
+            unallocatedBills = await unallocatedBillsTask;
         }
         catch
         {

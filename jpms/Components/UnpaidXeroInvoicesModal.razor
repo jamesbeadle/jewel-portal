@@ -2,76 +2,129 @@
 @using Jewel.JPMS.Services.Excel
 
 @* The transactions behind the Cashflow statement's "Unpaid Xero purchase invoices" figure:
-   every allocated Xero purchase line whose bill is not yet marked paid in Xero, exactly the
-   rows the statement sums — so the modal's total always equals the figure it explains.
-   Read-only by design: linking, moving and splitting live on the Financials tab and the
-   cost allocation screen; this view exists to reconcile against Xero's Awaiting Payment. *@
+   every allocated Xero purchase line with net still owed, part-payment aware — a bill Xero
+   has partly settled shows only its remainder, so the Outstanding gross column ties
+   line-for-line to an Aged Payables Detail run for this site (to within Xero's per-line
+   VAT rounding). Below it, the unallocated guard: unpaid bills tracked to this site in
+   Xero that nobody has allocated in JPMS yet. Read-only by design: linking, moving and
+   splitting live on the Financials tab and the cost allocation screen. *@
 <Modal IsOpen="IsOpen"
        Title="Unpaid Xero purchase invoices"
        ShowFooter="false"
        OnCancel="OnClose"
-       Class="max-w-5xl">
-    @if (Lines.Count == 0)
+       Class="max-w-6xl">
+    @if (Lines.Count == 0 && UnallocatedBills.Count == 0)
     {
         <p class="text-sm text-content-subtle italic">
-            Every allocated Xero purchase line on this project is showing as paid in Xero.
+            Nothing is owed on this project's allocated Xero purchase lines, and no unpaid
+            bills are tracked to its site awaiting allocation.
         </p>
     }
     else
     {
-        <div class="space-y-3">
+        <div class="space-y-4">
             <div class="flex items-start justify-between gap-3">
                 <p class="text-xs text-content-subtle max-w-xl">
-                    Allocated Xero purchase lines whose bill Xero last showed as unpaid — the rows
-                    behind the statement's figure, for reconciling against Awaiting Payment in
-                    Xero. Split lines show this project's share; credit notes are negative. The
-                    list moves when bills are paid in Xero and re-synced.
+                    Allocated Xero purchase lines with net still owed, for reconciling against
+                    Awaiting Payment in Xero. Part-paid bills show only their remainder;
+                    split lines show this project's share; credit notes are negative. The
+                    Outstanding gross total is the figure to hold against an Aged Payables
+                    Detail run for this site. Everything moves when bills are paid in Xero
+                    and re-synced.
                 </p>
                 <ExportToExcelButton FileName="unpaid-xero-purchase-invoices" BuildWorkbook="BuildWorkbook" />
             </div>
 
-            <div class="rounded-lg border border-line overflow-x-auto overflow-y-auto max-h-[60vh]">
+            @if (Lines.Count > 0)
+            {
+            <div class="rounded-lg border border-line overflow-x-auto overflow-y-auto max-h-[55vh]">
                 <table class="w-full text-sm border-collapse">
                     <thead class="bg-surface-raised border-b border-line">
                         <tr class="text-left text-[11px] uppercase tracking-wider text-content-subtle font-semibold">
                             <th class="sticky top-0 z-20 bg-surface-raised px-4 py-2.5 whitespace-nowrap">Date</th>
                             <th class="sticky top-0 z-20 bg-surface-raised px-4 py-2.5">Supplier</th>
                             <th class="sticky top-0 z-20 bg-surface-raised px-4 py-2.5 whitespace-nowrap">Invoice</th>
-                            <th class="sticky top-0 z-20 bg-surface-raised px-4 py-2.5">Description</th>
                             <th class="sticky top-0 z-20 bg-surface-raised px-4 py-2.5 whitespace-nowrap">Centre</th>
                             <th class="sticky top-0 z-20 bg-surface-raised px-4 py-2.5 whitespace-nowrap">Xero status</th>
-                            <th class="sticky top-0 z-20 bg-surface-raised px-4 py-2.5 text-right whitespace-nowrap">Net £</th>
+                            <th class="sticky top-0 z-20 bg-surface-raised px-4 py-2.5 text-right whitespace-nowrap">Line net £</th>
+                            <th class="sticky top-0 z-20 bg-surface-raised px-4 py-2.5 text-right whitespace-nowrap">Settled £</th>
+                            <th class="sticky top-0 z-20 bg-surface-raised px-4 py-2.5 text-right whitespace-nowrap">Outstanding net £</th>
+                            <th class="sticky top-0 z-20 bg-surface-raised px-4 py-2.5 text-right whitespace-nowrap"
+                                title="This line's share of the bill's gross still owed — ties to the Aged Payables Detail TOTAL column">Outstanding gross £</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-line">
                         @foreach (var line in Ordered)
                         {
-                            <tr>
+                            <tr title="@line.Description">
                                 <td class="px-4 py-2.5 whitespace-nowrap text-content-muted">@(line.Date?.ToString("dd MMM yyyy") ?? "—")</td>
-                                <td class="px-4 py-2.5 text-content">@line.Supplier</td>
-                                <td class="px-4 py-2.5 whitespace-nowrap text-content-muted">@line.InvoiceNumber</td>
-                                <td class="px-4 py-2.5 text-content-muted">
-                                    @line.Description
+                                <td class="px-4 py-2.5 text-content">
+                                    @line.Supplier
                                     @if (line.IsSplit)
                                     {
                                         <span class="ml-1.5 text-[10px] uppercase tracking-wider font-semibold border border-line rounded px-1 py-0.5"
                                               title="This project's share of a line split across several cost centres">Split</span>
                                     }
                                 </td>
+                                <td class="px-4 py-2.5 whitespace-nowrap text-content-muted">@line.InvoiceNumber</td>
                                 <td class="px-4 py-2.5 font-mono text-[11px] text-content-subtle whitespace-nowrap">@line.CostCode</td>
-                                <td class="px-4 py-2.5 whitespace-nowrap text-[11px] uppercase tracking-wider text-content-subtle">@(string.IsNullOrEmpty(line.InvoiceStatus) ? "—" : line.InvoiceStatus)</td>
-                                <td class="px-4 py-2.5 text-right whitespace-nowrap @(line.Net < 0 ? "text-negative" : "text-content")">@MoneyExact(line.Net)</td>
+                                <td class="px-4 py-2.5 whitespace-nowrap text-[11px] uppercase tracking-wider text-content-subtle">
+                                    @(string.IsNullOrEmpty(line.InvoiceStatus) ? "—" : line.InvoiceStatus)@(line.SettledFraction is > 0m and < 1m ? " · part-paid" : "")
+                                </td>
+                                <td class="px-4 py-2.5 text-right whitespace-nowrap text-content-muted">@MoneyExact(line.Net)</td>
+                                <td class="px-4 py-2.5 text-right whitespace-nowrap text-content-muted">@MoneyExact(line.PaidNet)</td>
+                                <td class="px-4 py-2.5 text-right whitespace-nowrap @(line.OutstandingNet < 0 ? "text-negative" : "text-content")">@MoneyExact(line.OutstandingNet)</td>
+                                <td class="px-4 py-2.5 text-right whitespace-nowrap @(line.OutstandingGross < 0 ? "text-negative" : "text-content")">@MoneyExact(line.OutstandingGross)</td>
                             </tr>
                         }
                     </tbody>
                     <tfoot class="border-t-2 border-line-strong bg-surface-raised">
                         <tr class="font-semibold text-content">
-                            <td class="px-4 py-2.5" colspan="6">Total — unpaid Xero purchase invoices</td>
+                            <td class="px-4 py-2.5" colspan="5">Total — allocated to this project</td>
                             <td class="px-4 py-2.5 text-right whitespace-nowrap">@MoneyExact(Lines.Sum(line => line.Net))</td>
+                            <td class="px-4 py-2.5 text-right whitespace-nowrap">@MoneyExact(Lines.Sum(line => line.PaidNet))</td>
+                            <td class="px-4 py-2.5 text-right whitespace-nowrap">@MoneyExact(Lines.Sum(line => line.OutstandingNet))</td>
+                            <td class="px-4 py-2.5 text-right whitespace-nowrap">@MoneyExact(Lines.Sum(line => line.OutstandingGross))</td>
                         </tr>
                     </tfoot>
                 </table>
             </div>
+            }
+
+            @if (UnallocatedBills.Count > 0)
+            {
+                @* The guard section: money Xero tracks to this site that no project view is
+                   counting. Deliberately outside the totals above — allocation is what
+                   distributes cost to centres, and it happens on the Xero allocation screen. *@
+                <div class="rounded-lg border border-negative/40 overflow-x-auto">
+                    <p class="px-4 pt-3 pb-1 text-[11px] uppercase tracking-wider text-negative font-semibold">
+                        In Xero for this site but not yet allocated in JPMS — not counted above
+                    </p>
+                    <p class="px-4 pb-2 text-xs text-content-subtle">
+                        Allocate these on the Xero allocation screen and they move into the table above on the next load.
+                    </p>
+                    <table class="w-full text-sm border-collapse">
+                        <tbody class="divide-y divide-line">
+                            @foreach (var bill in OrderedUnallocated)
+                            {
+                                <tr title="@bill.Description">
+                                    <td class="px-4 py-2.5 whitespace-nowrap text-content-muted">@(bill.Date?.ToString("dd MMM yyyy") ?? "—")</td>
+                                    <td class="px-4 py-2.5 text-content">@bill.Supplier</td>
+                                    <td class="px-4 py-2.5 whitespace-nowrap text-content-muted">@bill.InvoiceNumber</td>
+                                    <td class="px-4 py-2.5 whitespace-nowrap text-[11px] uppercase tracking-wider text-content-subtle">@(string.IsNullOrEmpty(bill.InvoiceStatus) ? "—" : bill.InvoiceStatus)</td>
+                                    <td class="px-4 py-2.5 text-right whitespace-nowrap @(bill.OutstandingNet < 0 ? "text-negative" : "text-content")">@MoneyExact(bill.OutstandingNet)</td>
+                                    <td class="px-4 py-2.5 text-right whitespace-nowrap @(bill.OutstandingGross < 0 ? "text-negative" : "text-content")">@MoneyExact(bill.OutstandingGross) gross</td>
+                                </tr>
+                            }
+                            <tr class="border-t-2 border-line-strong bg-surface-raised font-semibold text-content">
+                                <td class="px-4 py-2.5" colspan="4">Total — awaiting allocation</td>
+                                <td class="px-4 py-2.5 text-right whitespace-nowrap">@MoneyExact(UnallocatedBills.Sum(bill => bill.OutstandingNet))</td>
+                                <td class="px-4 py-2.5 text-right whitespace-nowrap">@MoneyExact(UnallocatedBills.Sum(bill => bill.OutstandingGross)) gross</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            }
         </div>
     }
 </Modal>
@@ -79,10 +132,14 @@
 @code {
     [Parameter] public bool IsOpen { get; set; }
 
-    /// <summary>The unpaid cost-of-sales lines the statement summed — passed in by the
-    /// Cashflow page from data it already holds, so opening the modal fetches nothing
-    /// and the total here can never disagree with the figure on the row.</summary>
+    /// <summary>The cost-of-sales lines with net still owed, as the statement summed them —
+    /// passed in by the Cashflow page from data it already holds, so opening the modal
+    /// fetches nothing and the total here can never disagree with the figure on the row.</summary>
     [Parameter] public IReadOnlyList<ProjectCostOfSalesLine> Lines { get; set; } = Array.Empty<ProjectCostOfSalesLine>();
+
+    /// <summary>The unallocated guard: unpaid bills whose Xero Sites tracking points at this
+    /// project but which nobody has allocated in JPMS yet.</summary>
+    [Parameter] public IReadOnlyList<UnallocatedSiteBill> UnallocatedBills { get; set; } = Array.Empty<UnallocatedSiteBill>();
 
     [Parameter] public EventCallback OnClose { get; set; }
 
@@ -92,27 +149,61 @@
              .ThenBy(line => line.Date ?? DateTime.MaxValue)
              .ThenBy(line => line.InvoiceNumber, StringComparer.OrdinalIgnoreCase);
 
+    private IEnumerable<UnallocatedSiteBill> OrderedUnallocated =>
+        UnallocatedBills.OrderBy(bill => bill.Supplier, StringComparer.OrdinalIgnoreCase)
+                        .ThenBy(bill => bill.Date ?? DateTime.MaxValue);
+
     private ExcelWorkbook? BuildWorkbook(bool _)
     {
-        if (Lines.Count == 0) return null;
+        if (Lines.Count == 0 && UnallocatedBills.Count == 0) return null;
 
         var workbook = new ExcelWorkbook();
-        var sheet = workbook.AddSheet("Unpaid Xero invoices",
-            new ExcelColumn("Date", ExcelFormat.Date),
-            new ExcelColumn("Supplier"),
-            new ExcelColumn("Invoice"),
-            new ExcelColumn("Description"),
-            new ExcelColumn("Cost centre"),
-            new ExcelColumn("Xero status"),
-            new ExcelColumn("Split line"),
-            new ExcelColumn("Net", ExcelFormat.Currency));
-
-        foreach (var line in Ordered)
+        if (Lines.Count > 0)
         {
-            sheet.AddRow(line.Date, line.Supplier, line.InvoiceNumber, line.Description,
-                line.CostCode, line.InvoiceStatus, line.IsSplit ? "Yes" : "", line.Net);
+            var sheet = workbook.AddSheet("Unpaid Xero invoices",
+                new ExcelColumn("Date", ExcelFormat.Date),
+                new ExcelColumn("Supplier"),
+                new ExcelColumn("Invoice"),
+                new ExcelColumn("Description"),
+                new ExcelColumn("Cost centre"),
+                new ExcelColumn("Xero status"),
+                new ExcelColumn("Split line"),
+                new ExcelColumn("Line net", ExcelFormat.Currency),
+                new ExcelColumn("Settled", ExcelFormat.Currency),
+                new ExcelColumn("Outstanding net", ExcelFormat.Currency),
+                new ExcelColumn("Outstanding gross", ExcelFormat.Currency));
+
+            foreach (var line in Ordered)
+            {
+                sheet.AddRow(line.Date, line.Supplier, line.InvoiceNumber, line.Description,
+                    line.CostCode, line.InvoiceStatus, line.IsSplit ? "Yes" : "",
+                    line.Net, line.PaidNet, line.OutstandingNet, line.OutstandingGross);
+            }
+            sheet.AddRow("Total", null, null, null, null, null, null,
+                Lines.Sum(line => line.Net), Lines.Sum(line => line.PaidNet),
+                Lines.Sum(line => line.OutstandingNet), Lines.Sum(line => line.OutstandingGross));
         }
-        sheet.AddRow("Total", null, null, null, null, null, null, Lines.Sum(line => line.Net));
+
+        if (UnallocatedBills.Count > 0)
+        {
+            var guard = workbook.AddSheet("Awaiting allocation",
+                new ExcelColumn("Date", ExcelFormat.Date),
+                new ExcelColumn("Supplier"),
+                new ExcelColumn("Invoice"),
+                new ExcelColumn("Description"),
+                new ExcelColumn("Xero status"),
+                new ExcelColumn("Outstanding net", ExcelFormat.Currency),
+                new ExcelColumn("Outstanding gross", ExcelFormat.Currency));
+
+            foreach (var bill in OrderedUnallocated)
+            {
+                guard.AddRow(bill.Date, bill.Supplier, bill.InvoiceNumber, bill.Description,
+                    bill.InvoiceStatus, bill.OutstandingNet, bill.OutstandingGross);
+            }
+            guard.AddRow("Total", null, null, null, null,
+                UnallocatedBills.Sum(bill => bill.OutstandingNet),
+                UnallocatedBills.Sum(bill => bill.OutstandingGross));
+        }
         return workbook;
     }
 

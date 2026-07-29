@@ -54,7 +54,13 @@ public sealed class ListProjectCostOfSalesLinesHandler
             line.Type == "ACCPAYCREDIT" ? -line.Net : line.Net,
             IsSplit: false,
             linksByLine.TryGetValue(line.XeroLedgerLineId, out var links) ? links : Array.Empty<XeroWorkOrderLinkSlice>(),
-            line.InvoiceStatus));
+            line.InvoiceStatus,
+            // The bill's payment state, per line: Tax follows Net's credit-note sign;
+            // InvoiceTotal/AmountDue pass through untouched so XeroPaymentMaths can
+            // derive the settled fraction (they stay bill-level gross either way).
+            Tax: line.Type == "ACCPAYCREDIT" ? -line.Tax : line.Tax,
+            InvoiceTotal: line.InvoiceTotal,
+            AmountDue: line.AmountDue));
 
         var shares = splitShares.Select(joined => new ProjectCostOfSalesLine(
             joined.Line.XeroLedgerLineId,
@@ -66,10 +72,18 @@ public sealed class ListProjectCostOfSalesLinesHandler
             joined.Line.Type == "ACCPAYCREDIT" ? -joined.Split.Net : joined.Split.Net,
             IsSplit: true,
             Array.Empty<XeroWorkOrderLinkSlice>(), // centre-split lines can't carry links
-            joined.Line.InvoiceStatus));
+            joined.Line.InvoiceStatus,
+            // A share carries its pro-rata slice of the line's VAT, same sign rule as Net.
+            Tax: TaxShare(joined.Line.Net, joined.Line.Tax, joined.Split.Net)
+                 * (joined.Line.Type == "ACCPAYCREDIT" ? -1m : 1m),
+            InvoiceTotal: joined.Line.InvoiceTotal,
+            AmountDue: joined.Line.AmountDue));
 
         return whole.Concat(shares)
             .OrderByDescending(line => line.Date ?? DateTime.MinValue)
             .ToList();
     }
+
+    private static decimal TaxShare(decimal lineNet, decimal lineTax, decimal shareNet) =>
+        lineNet == 0m ? 0m : Math.Round(lineTax * (shareNet / lineNet), 2, MidpointRounding.AwayFromZero);
 }

@@ -1,6 +1,6 @@
 # Aligning the portal's unpaid purchase figures with Xero — spec
 
-**Status:** Draft for discussion (scope agreed against the 28 Jul reconciliation)
+**Status:** Built 28 Jul 2026 (§3.1–3.5 implemented; §3.6 data fixes outstanding)
 **Author:** Cowork (for Nigel Reilly)
 **Date:** 28 July 2026
 
