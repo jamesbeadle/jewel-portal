@@ -102,6 +102,12 @@ public static class DesktopNavigation
         Role.ProjectManager
     };
 
+    // Nobody by role — combined with the CanSee bypass this reads as "administrators only".
+    // Used for the Admin folder (user administration): FDs hold the same PERMISSIONS on the API
+    // (AdminGate), but the Admin area is the administrator's home turf, deliberately kept off
+    // every ordinary role's sidebar — exactly as the old dashboard panels were.
+    internal static readonly Role[] AdministratorOnly = Array.Empty<Role>();
+
     // Directors only — reserved for the company's most sensitive figures (Cash Summary).
     internal static readonly Role[] DirectorRoles =
     {

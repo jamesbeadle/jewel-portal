@@ -124,6 +124,7 @@ builder.Services.AddScoped<ICostCenterStore, HttpCostCenterStore>();
 builder.Services.AddScoped<IAgentDesk, HttpAgentDesk>();
 builder.Services.AddScoped<IXeroTransactionStore, HttpXeroTransactionStore>();
 builder.Services.AddScoped<IXeroCashSummaryStore, HttpXeroCashSummaryStore>();
+builder.Services.AddScoped<IXeroAgedPayablesStore, HttpXeroAgedPayablesStore>();
 builder.Services.AddScoped<IXeroLedgerStore, HttpXeroLedgerStore>();
 
 builder.Services.AddScoped<StoreChangeHub>();

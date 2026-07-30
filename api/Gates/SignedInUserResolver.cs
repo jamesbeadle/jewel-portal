@@ -41,6 +41,10 @@ public sealed class SignedInUserResolver
         var directoryUser = await context.DirectoryUsers
             .AsNoTracking()
             .FirstOrDefaultAsync(row => row.Email == email, cancellationToken);
+        // Belt-and-braces: revocation already revokes every session and disables the credential,
+        // but if a session somehow survives (e.g. created on another instance in the same
+        // moment), a revoked directory row must still read as "not signed in".
+        if (directoryUser?.RevokedAt is not null) return null;
         var displayName = string.IsNullOrWhiteSpace(directoryUser?.DisplayName) ? email : directoryUser!.DisplayName;
         var roles = await ResolveRolesAsync(email, cancellationToken);
 
@@ -51,12 +55,15 @@ public sealed class SignedInUserResolver
 
     private async Task<IReadOnlyList<Role>> ResolveRolesAsync(string email, CancellationToken cancellationToken)
     {
-        if (JpmsAdministrators.Contains(email)) return Enum.GetValues<Role>();
         var roles = await context.DirectoryUserRoles
             .AsNoTracking()
             .Where(row => row.DirectoryUserEmail == email)
             .Select(row => (Role)row.Role)
             .ToListAsync(cancellationToken);
+        // A directory Admin role expands to EVERY role — administrators are administered in the
+        // directory like anyone else (the old hard-coded JpmsAdministrators list is gone), but
+        // Admin keeps its carries-every-role meaning that gates across the app rely on.
+        if (roles.Contains(Role.Admin)) return Enum.GetValues<Role>();
         // Finance Directors keep their own identity: their role list stays exactly what the
         // directory assigns. Admin-equivalent permissions are granted where they matter via
         // AdminGate, not by rewriting the role list (which made the client treat FDs as

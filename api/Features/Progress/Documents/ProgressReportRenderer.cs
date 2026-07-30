@@ -89,11 +89,9 @@ public static class ProgressReportRenderer
         row.Cells[0].VerticalAlignment = VerticalAlignment.Center;
         row.Cells[1].VerticalAlignment = VerticalAlignment.Center;
 
-        var eyebrow = row.Cells[0].AddParagraph("JEWEL BESPOKE BUILD");
-        eyebrow.Format.Font.Size = 7.5;
-        eyebrow.Format.Font.Bold = true;
-        eyebrow.Format.Font.Color = Orange;
-        SpaceAfter(eyebrow, 1.5);
+        // The official Jewel Bespoke Build logo leads the band — the gold/orange registered
+        // artwork reads directly on the navy ground (embedded once in DocumentBranding).
+        DocumentBranding.AddLogo(row.Cells[0], Unit.FromCentimeter(3.4), Unit.FromMillimeter(1.5));
 
         var heading = row.Cells[0].AddParagraph("PROGRESS REPORT");
         heading.Format.Font.Size = 17;

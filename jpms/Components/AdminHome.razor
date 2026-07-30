@@ -11,10 +11,9 @@
 
     <AdminStatsRow />
 
-    @* An admin carries every role server-side, so this page shows both halves of the job: the real
-       project work first, then the user-administration panels. It used to end on WhatsNextPanel —
-       a hard-coded engineering backlog with no data behind it, which is not something anybody
-       administering the system can act on. *@
+    @* An admin carries every role server-side, so this page leads with the real project work.
+       It used to end on WhatsNextPanel — a hard-coded engineering backlog with no data behind
+       it, which is not something anybody administering the system can act on. *@
     <div class="space-y-6 mb-6">
         @* Open to-do items assigned to this administrator — general and project items alike. *@
         <MyTodosPanel />
@@ -22,8 +21,10 @@
         <NextValuationsPanel />
     </div>
 
+    @* Pending access requests stay on the homepage: they are the one admin duty that is
+       time-sensitive enough to belong here. The user list itself (and revoked users) moved to
+       Admin → Users (2026-07-30) — administration outgrew a homepage panel. *@
     <PendingRequestsPanel />
-    <ApprovedUsersPanel CurrentUserEmail="@CurrentUser.Email" />
 
 </section>
 

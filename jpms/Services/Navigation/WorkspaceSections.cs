@@ -57,8 +57,18 @@ public static class WorkspaceSections
                 new[] { Role.ManagingDirector, Role.ProjectManager, Role.QuantitySurveyor })
         });
 
+    public static readonly WorkspaceSectionInfo Admin = new(
+        "Admin",
+        new[]
+        {
+            // Administrators only (empty role lists + the Role.Admin bypass in IsVisibleTo) —
+            // mirrors the API's AdminGate on the revoked read and the directory commands.
+            new WorkspaceTab("Users", "/admin/users", Array.Empty<Role>()),
+            new WorkspaceTab("Revoked", "/admin/users/revoked", Array.Empty<Role>())
+        });
+
     public static readonly IReadOnlyList<WorkspaceSectionInfo> All =
-        new[] { Xero, FinanceSetup };
+        new[] { Xero, FinanceSetup, Admin };
 
     public static WorkspaceSectionInfo? SectionOwning(string path) =>
         All.FirstOrDefault(section => section.Owns(path));

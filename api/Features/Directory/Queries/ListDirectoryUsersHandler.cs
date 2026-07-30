@@ -17,7 +17,11 @@ public sealed class ListDirectoryUsersHandler
     public async Task<IReadOnlyList<DirectoryUser>> HandleAsync(
         ListDirectoryUsers query, CancellationToken cancellationToken)
     {
-        var users = await context.DirectoryUsers.AsNoTracking().ToListAsync(cancellationToken);
+        // Revoked users are not listed here — they have their own read (ListRevokedDirectoryUsers)
+        // behind the admin gate, so "the users" always means people who can actually sign in.
+        var users = await context.DirectoryUsers.AsNoTracking()
+            .Where(user => user.RevokedAt == null)
+            .ToListAsync(cancellationToken);
         var roleRows = await context.DirectoryUserRoles.AsNoTracking().ToListAsync(cancellationToken);
         return users
             .Select(user => user.ToModel(RolesFor(user.Email, roleRows)))

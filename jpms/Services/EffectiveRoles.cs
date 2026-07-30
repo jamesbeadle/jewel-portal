@@ -8,8 +8,10 @@ public static class EffectiveRoles
 
     public static IReadOnlyList<Role> For(string email, DirectoryUser? directoryEntry)
     {
-        if (JpmsAdministrators.Contains(email)) return AllRoles;
+        // Mirrors the server's UserRoles/SignedInUserResolver: roles come from the directory,
+        // and the Admin role expands to every role.
         if (directoryEntry is null) return Array.Empty<Role>();
+        if (directoryEntry.Roles.Contains(Role.Admin)) return AllRoles;
         return directoryEntry.Roles;
     }
 }

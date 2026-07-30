@@ -10,6 +10,7 @@ public static class XeroRouteRegistration
     {
         services.AddScoped<XeroTransactionsReadModel>();
         services.AddScoped<XeroCashSummaryReadModel>();
+        services.AddScoped<XeroAgedPayablesReadModel>();
         services.AddScoped<XeroLedgerReadModel>();
         return services;
     }
@@ -27,6 +28,10 @@ public static class XeroRouteRegistration
         queries.Register<GetXeroCashSummary, XeroCashSummarySnapshot>(
             new QueryRoute("/api/xero/cash-summary",
                 query => ((GetXeroCashSummary)query).Force ? "/api/xero/cash-summary?force=true" : "/api/xero/cash-summary"));
+
+        queries.Register<GetXeroAgedPayables, XeroAgedPayablesSnapshot>(
+            new QueryRoute("/api/xero/aged-payables",
+                query => ((GetXeroAgedPayables)query).Force ? "/api/xero/aged-payables?force=true" : "/api/xero/aged-payables"));
 
         // The allocation page reads one status at a time; ?status= is what keeps it from
         // downloading the whole ledger to render one tab.

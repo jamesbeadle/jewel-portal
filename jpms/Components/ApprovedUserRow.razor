@@ -11,11 +11,10 @@
     UpsertDirectoryUser (the command replaces roles wholesale), so the row optimistically shows the
     new set, then reconciles with whatever the server confirms.
 
-    Two edits are deliberately impossible here:
-      · your own roles — the same reason you cannot revoke yourself, one misclick from locking
-        yourself out of the only screen that could undo it;
-      · the Admin badge of a master administrator — that comes from JpmsAdministrators in code, not
-        the directory, so removing it here would silently do nothing.
+    One edit is deliberately impossible here: your own roles — the same reason you cannot revoke
+    yourself, one misclick from locking yourself out of the only screen that could undo it.
+    Administrator is an ordinary directory role like any other (the old in-code master-admin list
+    is gone); role resolution expands it to every role server-side.
 *@
 
 <li class="px-5 py-3">
@@ -45,16 +44,6 @@
     </div>
 
     <div class="mt-2 flex flex-wrap items-center gap-1.5">
-        @if (IsMasterAdministrator)
-        {
-            <span title="Permanent administrator — set in code, not here."
-                  class="inline-flex items-center gap-1 rounded-full border border-line-strong bg-surface-field px-2 py-0.5 text-[11px] text-content-muted">
-                <span class="w-1.5 h-1.5 rounded-full bg-slate-300"></span>
-                Administrator
-                <span class="text-content-faint">· permanent</span>
-            </span>
-        }
-
         @foreach (var role in EditableRoles)
         {
             <span class="inline-flex items-center gap-1 rounded-full border border-line-strong bg-surface-field pl-2 pr-1 py-0.5 text-[11px] text-content-muted">
@@ -73,7 +62,7 @@
             </span>
         }
 
-        @if (!IsMasterAdministrator && EditableRoles.Count == 0)
+        @if (EditableRoles.Count == 0)
         {
             <span class="text-[11px] text-content-faint italic">No roles — they can sign in but will see nothing.</span>
         }
@@ -159,19 +148,15 @@
         }
     }
 
-    private bool IsMasterAdministrator => JpmsAdministrators.Contains(User.Email);
-
     private bool CanEdit => !IsCurrentUser;
 
-    /// <summary>The roles that actually live in the directory. A master administrator's Admin badge
-    /// is rendered separately and never appears here, so it cannot be "removed" into a no-op.</summary>
-    private IReadOnlyList<Role> EditableRoles =>
-        roles.Where(role => !(role == Role.Admin && IsMasterAdministrator)).ToList();
+    /// <summary>The roles that live in the directory — Administrator included, an ordinary
+    /// removable chip like any other now that the in-code master-admin list is gone.</summary>
+    private IReadOnlyList<Role> EditableRoles => roles;
 
     private IReadOnlyList<Role> AddableRoles =>
         Enum.GetValues<Role>()
             .Where(role => !roles.Contains(role))
-            .Where(role => !(role == Role.Admin && IsMasterAdministrator))
             .ToList();
 
     private Task AddRole(ChangeEventArgs args)
@@ -252,6 +237,7 @@
         busy = true;
         error = null;
         try { await UserDirectory.RemoveAsync(User.Email, CancellationToken.None); }
+        catch (CommandFailedException failure) { error = failure.Message; } // e.g. the last active administrator
         catch { error = "Couldn't revoke that user. Please try again."; }
         finally { busy = false; }
     }

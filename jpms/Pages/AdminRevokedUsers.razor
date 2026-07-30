@@ -1,0 +1,105 @@
+@page "/admin/users/revoked"
+@using Jewel.JPMS.Features.Directory
+@inject AuthService Auth
+@inject SessionService Session
+@inject RevokedDirectoryReadModel Revoked
+@inject IUserDirectory UserDirectory
+@inject NavigationManager Nav
+@implements IDisposable
+
+<PageTitle>Revoked users · JPMS</PageTitle>
+
+@*
+    Admin → Users → Revoked: the people who have been shut out. Revocation keeps the record —
+    and the roles it held — so everything here can go two ways: Restore puts the user back
+    exactly as they were; Delete permanently removes the record and is only offered here,
+    never on a live account.
+*@
+
+@if (!sessionReady)
+{
+    <section class="px-6 md:px-8 py-12">
+        <LoadGate IsLoading="true" Prominent="true" Label="Loading" />
+    </section>
+}
+else if (!Session.IsApproved)
+{
+    <RequestAccessView Email="@Auth.CurrentUser!.Email" DisplayName="@Auth.CurrentUser.DisplayName" />
+}
+else if (Session.ActiveRole != Role.Admin)
+{
+    <section class="px-6 md:px-8 py-12 max-w-2xl">
+        <div class="panel p-6">
+            <p class="text-sm text-content-muted">
+                This area is for administrators. If you hold the Administrator role, switch to it to manage users.
+            </p>
+        </div>
+    </section>
+}
+else
+{
+    <section class="px-6 md:px-8 py-8 md:py-12 max-w-4xl">
+        <WorkspaceSectionNav />
+        <header class="mb-6 md:mb-8">
+            <p class="text-xs uppercase tracking-wider text-content-subtle font-medium mb-1">JPMS · Admin</p>
+            <h1 class="text-2xl md:text-3xl font-semibold text-content leading-tight">Revoked users</h1>
+            <p class="text-sm text-content-muted mt-1">
+                People whose access has been revoked. They can't sign in, but their record and old roles are kept —
+                restore brings them back exactly as they were; permanent deletion removes the record for good.
+            </p>
+        </header>
+
+        @if (dataFailed && !UserDirectory.IsRevokedLoaded)
+        {
+            <div class="panel p-5">
+                <p class="text-sm text-negative">
+                    The revoked-users list couldn't be loaded. The error banner above has the detail — fix or retry, then reload this page.
+                </p>
+            </div>
+        }
+        else
+        {
+            <RevokedUsersPanel />
+        }
+    </section>
+}
+
+@code {
+    private bool sessionReady;
+    private bool dataFailed;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Session.EnsureLoadedAsync();
+        if (!Auth.IsSignedIn)
+        {
+            Nav.NavigateTo("/login", forceLoad: true);
+            return;
+        }
+        Session.OnChange += StateHasChanged;
+        sessionReady = true;
+
+        if (Session.ActiveRole == Role.Admin)
+        {
+            // Stale-while-revalidate: an already-loaded list paints immediately and refreshes
+            // behind itself; a cold one is awaited so the panel's gate opens onto real data.
+            if (Revoked.Current is null)
+            {
+                try { await Revoked.RefreshAsync(CancellationToken.None); }
+                catch { dataFailed = true; }
+            }
+            else
+            {
+                _ = RevalidateAsync();
+            }
+        }
+    }
+
+    private async Task RevalidateAsync()
+    {
+        try { await Revoked.RefreshAsync(CancellationToken.None); }
+        catch { /* background revalidation — the toast already reported it and the stale list stands */ }
+    }
+
+    public void Dispose() => Session.OnChange -= StateHasChanged;
+}

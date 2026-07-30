@@ -56,6 +56,10 @@ public static class XeroFeatureRegistration
         // Cash summary: bank balances + outstanding sales invoices for the company Cash Summary page.
         services.AddScoped<IQueryHandler<GetXeroCashSummary, XeroCashSummarySnapshot>, GetXeroCashSummaryHandler>();
 
+        // Aged payables: outstanding supplier bills aged like Xero's report, drafts included —
+        // the report Xero itself cannot show while bills wait in draft for portal coding.
+        services.AddScoped<IQueryHandler<GetXeroAgedPayables, XeroAgedPayablesSnapshot>, GetXeroAgedPayablesHandler>();
+
         // Suppliers: the contact list behind the directory's "Import from Xero" modal.
         services.AddScoped<IQueryHandler<ListXeroSuppliers, XeroSuppliersSnapshot>, ListXeroSuppliersHandler>();
 

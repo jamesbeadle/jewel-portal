@@ -25,7 +25,10 @@ public sealed class ListTodoAssignablePeopleHandler
         var roleRows = await context.DirectoryUserRoles.AsNoTracking()
             .Where(row => assignableValues.Contains(row.Role))
             .ToListAsync(cancellationToken);
+        // Revoked users keep their role rows (so a restore puts them back as they were), but a
+        // person who cannot sign in must not be offered as a pin target.
         var users = await context.DirectoryUsers.AsNoTracking()
+            .Where(user => user.RevokedAt == null)
             .ToListAsync(cancellationToken);
         var usersByEmail = users.ToDictionary(user => user.Email, StringComparer.OrdinalIgnoreCase);
 

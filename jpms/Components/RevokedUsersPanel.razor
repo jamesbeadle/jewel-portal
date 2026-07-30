@@ -1,0 +1,42 @@
+@inject IUserDirectory UserDirectory
+@implements IDisposable
+
+<section class="panel overflow-hidden mb-6">
+    <header class="panel-header flex items-center justify-between">
+        <h2 class="text-sm font-medium text-content">Revoked users</h2>
+        @if (UserDirectory.IsRevokedLoaded)
+        {
+            <span class="text-xs text-content-subtle">@RevokedUsers.Count</span>
+        }
+    </header>
+
+    @* The count in the header is held back with the list: "0" next to a spinner is a contradiction. *@
+    <LoadGate IsLoading="@(!UserDirectory.IsRevokedLoaded)" Prominent="true" Label="Loading revoked users">
+        @if (RevokedUsers.Count == 0)
+        {
+            <div class="p-5">
+                <p class="text-content-subtle italic text-sm">
+                    Nobody is revoked. Users revoked from the Users tab appear here, where they can be
+                    restored or permanently deleted.
+                </p>
+            </div>
+        }
+        else
+        {
+            <ul class="divide-y divide-line">
+                @foreach (var user in RevokedUsers)
+                {
+                    <RevokedUserRow @key="user.Email" User="user" />
+                }
+            </ul>
+        }
+    </LoadGate>
+</section>
+
+@code {
+    private IReadOnlyList<RevokedDirectoryUser> RevokedUsers => UserDirectory.Revoked();
+
+    protected override void OnInitialized() => UserDirectory.OnChange += StateHasChanged;
+
+    public void Dispose() => UserDirectory.OnChange -= StateHasChanged;
+}

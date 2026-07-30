@@ -29,8 +29,26 @@ public interface IUserDirectory
     bool Remove(string email);
 
     /// <summary>Awaitable counterpart to <see cref="Remove"/>, for callers that need to know it
-    /// actually succeeded.</summary>
+    /// actually succeeded. Removal is a REVOCATION: the user drops off <see cref="All"/> and can
+    /// no longer sign in, but their record survives on <see cref="Revoked"/> until restored or
+    /// permanently deleted.</summary>
     Task RemoveAsync(string email, CancellationToken cancellationToken);
+
+    /// <summary>The users whose access has been revoked, most recently revoked first. Same
+    /// lazy-fetch contract as <see cref="All"/>: empty until the first fetch lands, so check
+    /// <see cref="IsRevokedLoaded"/> before rendering a count, a table or an empty state.</summary>
+    IReadOnlyList<RevokedDirectoryUser> Revoked();
+
+    /// <summary>False until the first fetch of the revoked list has landed.</summary>
+    bool IsRevokedLoaded { get; }
+
+    /// <summary>Reinstates a revoked user — their roles were kept, so they come back exactly as
+    /// they were (with their old password if they had set one).</summary>
+    Task RestoreAsync(string email, CancellationToken cancellationToken);
+
+    /// <summary>Permanently deletes a REVOKED user's record. The API refuses this for users who
+    /// are still active — revoke first, delete second, always two deliberate steps.</summary>
+    Task DeleteAsync(string email, CancellationToken cancellationToken);
 
     event Action? OnChange;
 }

@@ -10,9 +10,10 @@ namespace Jewel.JPMS.Api.Features.Labour;
 /// app follows (Drawings, Variations, Xero, Commercial, Clients). Labour predated that convention
 /// and omitted it, so a directory Administrator — who sees the Labour tab and the Workers page,
 /// because DesktopNavigation.CanSee bypasses every navigation gate for admins — was met with a
-/// 403 on every write. Master admins (JpmsAdministrators) were unaffected: role resolution hands
-/// them the whole enum. A gate the navigation does not mirror is a gate the user only meets after
-/// they have filled the form in.</summary>
+/// 403 on every write. (Role resolution has since been changed to hand anyone with a directory
+/// Admin role the whole enum, but the convention of naming Role.Admin explicitly stands.) A gate
+/// the navigation does not mirror is a gate the user only meets after they have filled the form
+/// in.</summary>
 internal static class LabourRoleSets
 {
     /// <summary>May create/edit workers, rates, project assignments, and rotate site tokens.</summary>

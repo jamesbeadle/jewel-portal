@@ -1,0 +1,118 @@
+@inject IUserDirectory UserDirectory
+
+@*
+    One row of the Revoked users list. Two ways out, deliberately unequal:
+      · Restore — safe and instant, so it is a plain action. Their roles were kept at
+        revocation, so they come back exactly as they were (and their old password still works
+        if they had one).
+      · Delete permanently — destructive and irreversible, so it sits behind a confirmation
+        modal that spells out what is lost. The API refuses it for anyone still active, which
+        keeps deletion a second, deliberate step by construction.
+*@
+
+<li class="px-5 py-3">
+    <div class="flex items-start justify-between gap-4">
+        <div class="min-w-0">
+            <p class="text-content font-medium leading-snug truncate">@User.DisplayName</p>
+            <p class="text-sm text-content-muted break-all">@User.Email</p>
+        </div>
+        <div class="flex items-center gap-3 shrink-0">
+            @if (busy)
+            {
+                <span class="inline-flex items-center gap-1.5 text-[11px] text-content-subtle">
+                    <JewelIcon Class="w-3 h-3 animate-jewel-pulse" />
+                    @(restoring ? "Restoring" : "Deleting")
+                </span>
+            }
+            else
+            {
+                <button type="button" @onclick="Restore" disabled="@busy"
+                        title="Reinstate this user with the roles they held when they were revoked"
+                        class="text-xs font-medium text-content-subtle hover:text-content underline underline-offset-4 disabled:opacity-50">
+                    Restore
+                </button>
+                <button type="button" @onclick="() => confirmingDelete = true" disabled="@busy"
+                        title="Permanently delete this user's record — this cannot be undone"
+                        class="text-xs font-medium text-content-subtle hover:text-negative underline underline-offset-4 disabled:opacity-50">
+                    Delete permanently
+                </button>
+            }
+        </div>
+    </div>
+
+    <div class="mt-2 flex flex-wrap items-center gap-1.5">
+        @foreach (var role in User.Roles)
+        {
+            <span class="inline-flex items-center gap-1 rounded-full border border-line bg-surface-field px-2 py-0.5 text-[11px] text-content-faint">
+                <span class="w-1.5 h-1.5 rounded-full bg-slate-400/50"></span>
+                @role.DisplayName()
+            </span>
+        }
+        <span class="text-[11px] text-content-faint">
+            Revoked @User.RevokedAt.ToLocalTime().ToString("d MMM yyyy, HH:mm")@(string.IsNullOrEmpty(User.RevokedBy) ? "" : $" by {User.RevokedBy}")
+        </span>
+    </div>
+
+    @if (error is not null)
+    {
+        <p class="mt-2 text-xs text-negative">@error</p>
+    }
+
+    <Modal IsOpen="confirmingDelete"
+       Title="Permanently delete this user?"
+       ConfirmLabel="@(busy ? "Deleting…" : "Delete permanently")"
+       ConfirmDisabled="@busy"
+       OnCancel="() => confirmingDelete = false"
+       OnConfirm="Delete">
+    <p class="text-sm text-content">
+        This will permanently remove <span class="font-medium">@User.DisplayName</span>
+        (<span class="break-all">@User.Email</span>) — their record, roles and sign-in credential.
+        This cannot be undone. If they might ever come back, use <em>Restore</em> instead, or simply
+        leave them here.
+    </p>
+    </Modal>
+</li>
+
+@code {
+    [Parameter, EditorRequired] public RevokedDirectoryUser User { get; set; } = default!;
+
+    private bool busy;
+    private bool restoring;
+    private bool confirmingDelete;
+    private string? error;
+
+    private async Task Restore()
+    {
+        if (busy) return;
+        busy = true;
+        restoring = true;
+        error = null;
+        try { await UserDirectory.RestoreAsync(User.Email, CancellationToken.None); }
+        catch (CommandFailedException failure) { error = failure.Message; }
+        catch { error = "Couldn't restore that user. Please try again."; }
+        finally { busy = false; restoring = false; }
+    }
+
+    private async Task Delete()
+    {
+        if (busy) return;
+        busy = true;
+        error = null;
+        try
+        {
+            await UserDirectory.DeleteAsync(User.Email, CancellationToken.None);
+            confirmingDelete = false;
+        }
+        catch (CommandFailedException failure)
+        {
+            confirmingDelete = false;
+            error = failure.Message;
+        }
+        catch
+        {
+            confirmingDelete = false;
+            error = "Couldn't delete that user. Please try again.";
+        }
+        finally { busy = false; }
+    }
+}

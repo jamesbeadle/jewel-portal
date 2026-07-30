@@ -33,6 +33,16 @@ public interface IXeroClient
     Task<XeroCashSummarySnapshot> GetCashSummaryAsync(bool force, CancellationToken ct);
 
     /// <summary>
+    /// Reads the aged payables position: every ACCPAY bill with money still due — DRAFT and
+    /// SUBMITTED included, because the accounting procedure leaves bills in draft until they are
+    /// coded through the portal and Xero's own aged payables report cannot see them — plus every
+    /// ACCPAYCREDIT credit note with credit still unapplied. Deliberately no date floor (unlike
+    /// the ledger's reporting window): an old unpaid bill still belongs on the report. Serves
+    /// the cached snapshot when fresh enough unless <paramref name="force"/> is set.
+    /// </summary>
+    Task<XeroAgedPayablesSnapshot> GetAgedPayablesAsync(bool force, CancellationToken ct);
+
+    /// <summary>
     /// Lists the suppliers held in Xero (contacts flagged IsSupplier), A–Z by name, for the
     /// directory's "Import from Xero" modal. Serves the cached snapshot when fresh enough unless
     /// <paramref name="force"/> is set. The AlreadyImported/LinkedSubcontractorId stamps are left
@@ -95,6 +105,9 @@ public sealed class NullXeroClient : IXeroClient
     public Task<XeroCashSummarySnapshot> GetCashSummaryAsync(bool force, CancellationToken ct) =>
         Task.FromResult(XeroCashSummarySnapshot.NotConfigured());
 
+    public Task<XeroAgedPayablesSnapshot> GetAgedPayablesAsync(bool force, CancellationToken ct) =>
+        Task.FromResult(XeroAgedPayablesSnapshot.NotConfigured());
+
     public Task<XeroSuppliersSnapshot> GetSuppliersAsync(bool force, CancellationToken ct) =>
         Task.FromResult(XeroSuppliersSnapshot.NotConfigured());
 
@@ -147,6 +160,12 @@ public sealed class XeroClient : IXeroClient
     private readonly SemaphoreSlim _cashSummaryLock = new(1, 1);
     private XeroCashSummarySnapshot? _cachedCashSummary;
     private DateTimeOffset _cachedCashSummaryAt = DateTimeOffset.MinValue;
+
+    // Aged payables cache — separate from the transactions snapshot (that one is windowed by
+    // FromDate and carries line items; this one is outstanding-only, unwindowed and line-free).
+    private readonly SemaphoreSlim _agedPayablesLock = new(1, 1);
+    private XeroAgedPayablesSnapshot? _cachedAgedPayables;
+    private DateTimeOffset _cachedAgedPayablesAt = DateTimeOffset.MinValue;
 
     // Supplier list cache — same rationale as the snapshots above (the contact list costs several
     // paged calls against the 60/min limit, and one fetch serves every user for CacheMinutes).
@@ -232,6 +251,40 @@ public sealed class XeroClient : IXeroClient
     private bool CachedCashSummaryIsFresh =>
         _cachedCashSummary is not null
         && DateTimeOffset.UtcNow < _cachedCashSummaryAt.AddMinutes(_options.CacheMinutes);
+
+    // -- aged payables: outstanding supplier bills, drafts included ---------------------
+
+    public async Task<XeroAgedPayablesSnapshot> GetAgedPayablesAsync(bool force, CancellationToken ct)
+    {
+        if (!_options.IsConfigured)
+            return XeroAgedPayablesSnapshot.NotConfigured();
+
+        await _agedPayablesLock.WaitAsync(ct);
+        try
+        {
+            if (!force && CachedAgedPayablesAreFresh)
+                return _cachedAgedPayables!;
+
+            var snapshot = await FetchAgedPayablesAsync(ct);
+
+            // Only successful reads replace the cache — a transient failure shouldn't evict
+            // good data, but it is still returned so the user sees what went wrong.
+            if (snapshot.Error is null)
+            {
+                _cachedAgedPayables = snapshot;
+                _cachedAgedPayablesAt = DateTimeOffset.UtcNow;
+            }
+            return snapshot;
+        }
+        finally
+        {
+            _agedPayablesLock.Release();
+        }
+    }
+
+    private bool CachedAgedPayablesAreFresh =>
+        _cachedAgedPayables is not null
+        && DateTimeOffset.UtcNow < _cachedAgedPayablesAt.AddMinutes(_options.CacheMinutes);
 
     // -- suppliers: the contact list behind the directory's "Import from Xero" ----------
 
@@ -559,6 +612,91 @@ public sealed class XeroClient : IXeroClient
         }
 
         return invoices;
+    }
+
+    private async Task<XeroAgedPayablesSnapshot> FetchAgedPayablesAsync(CancellationToken ct)
+    {
+        string token;
+        try
+        {
+            token = await GetAccessTokenAsync(ct);
+        }
+        catch (XeroCallFailedException tokenFailure)
+        {
+            return XeroAgedPayablesSnapshot.Failed(tokenFailure.Message);
+        }
+
+        try
+        {
+            var bills = new List<XeroPayableBill>();
+            // Bills first, then supplier credit notes so unapplied credit nets off the position —
+            // the same pairing the ledger sync uses. Statuses are filtered in the where clause
+            // (PAID and VOIDED/DELETED never belong on a payables report); AmountDue is filtered
+            // portal-side because it's a calculated field Xero's where clause doesn't index.
+            var truncated = await FetchOutstandingPayablesAsync(
+                token, InvoicesUrl, "Invoices", "ACCPAY", "DueDate ASC", bills, ct);
+            truncated |= await FetchOutstandingPayablesAsync(
+                token, CreditNotesUrl, "CreditNotes", "ACCPAYCREDIT", "Date DESC", bills, ct);
+
+            return new XeroAgedPayablesSnapshot(true, null, DateTimeOffset.UtcNow, truncated, bills);
+        }
+        catch (XeroCallFailedException callFailure)
+        {
+            return XeroAgedPayablesSnapshot.Failed(callFailure.Message);
+        }
+    }
+
+    /// <summary>
+    /// Pages through one collection of outstanding purchase-side documents into
+    /// <paramref name="into"/>; true = page cap hit with data left. DRAFT and SUBMITTED are
+    /// requested alongside AUTHORISED — the whole point of the report is the drafts Dext has
+    /// published that are still being coded, which Xero's own aged payables cannot show.
+    /// Deliberately NOT summaryOnly (Xero's lightweight mode rejects where/order with an HTTP
+    /// 400 — see the sales-side read); the line items on the full shape are simply ignored.
+    /// </summary>
+    private async Task<bool> FetchOutstandingPayablesAsync(
+        string token, string baseUrl, string collectionProperty, string xeroType, string order,
+        List<XeroPayableBill> into, CancellationToken ct)
+    {
+        var where = $"Type==\"{xeroType}\" AND "
+                    + "(Status==\"DRAFT\" OR Status==\"SUBMITTED\" OR Status==\"AUTHORISED\")";
+
+        for (var page = 1; page <= _options.MaxPages; page++)
+        {
+            var url = $"{baseUrl}?page={page}"
+                      + $"&where={Uri.EscapeDataString(where)}&order={Uri.EscapeDataString(order)}";
+            using var doc = await GetJsonAsync(token, url, collectionProperty.ToLowerInvariant(), ct);
+
+            if (!doc.RootElement.TryGetProperty(collectionProperty, out var items)
+                || items.ValueKind != JsonValueKind.Array)
+                return false;
+
+            foreach (var item in items.EnumerateArray())
+            {
+                // AmountDue for bills, RemainingCredit for credit notes — both mean "still
+                // outstanding". Zero means settled (or an empty draft): nothing to age.
+                var amountDue = item.TryGetProperty("AmountDue", out _)
+                    ? DecimalOf(item, "AmountDue")
+                    : DecimalOf(item, "RemainingCredit");
+                if (amountDue == 0m) continue;
+
+                into.Add(new XeroPayableBill(
+                    InvoiceId: StringOf(item, "InvoiceID") ?? StringOf(item, "CreditNoteID") ?? Guid.NewGuid().ToString(),
+                    Type: StringOf(item, "Type") ?? xeroType,
+                    Number: StringOf(item, "InvoiceNumber") ?? StringOf(item, "CreditNoteNumber"),
+                    Reference: StringOf(item, "Reference"),
+                    ContactName: item.TryGetProperty("Contact", out var contact) ? StringOf(contact, "Name") : null,
+                    Date: DateOf(item, "DateString", "Date"),
+                    DueDate: DateOf(item, "DueDateString", "DueDate"),
+                    Status: StringOf(item, "Status") ?? "UNKNOWN",
+                    Total: DecimalOf(item, "Total"),
+                    AmountDue: amountDue,
+                    CurrencyCode: StringOf(item, "CurrencyCode")));
+            }
+
+            if (items.GetArrayLength() < PageSize) return false; // Short page — no more to fetch.
+        }
+        return true;
     }
 
     // -- write-back: tracking confirmation + approval ---------------------------------

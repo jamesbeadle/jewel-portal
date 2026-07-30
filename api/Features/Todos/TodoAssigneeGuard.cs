@@ -32,5 +32,15 @@ internal static class TodoAssigneeGuard
         if (!holdsRole)
             throw new InvalidOperationException(
                 $"{email} doesn't hold the {role} role in the directory, so this item can't be pinned to them.");
+
+        // A revoked user KEEPS their role rows (so a restore puts them back as they were), but a
+        // person who cannot sign in must not become a pin target — revocation unpins their items,
+        // and this is what stops a new pin from being created a moment later.
+        var isActive = await context.DirectoryUsers.AsNoTracking()
+            .AnyAsync(row => row.Email.ToLower() == email.ToLower() && row.RevokedAt == null,
+                cancellationToken);
+        if (!isActive)
+            throw new InvalidOperationException(
+                $"{email} no longer has access (revoked), so this item can't be pinned to them.");
     }
 }

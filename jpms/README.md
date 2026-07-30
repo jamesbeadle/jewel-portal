@@ -174,7 +174,6 @@ jpms/
 │   ├── Role.cs                    Role enum + display / RBAC helpers
 │   ├── User.cs                    AuthProvider, AuthenticatedUser, DirectoryUser records
 │   ├── AccessRequest.cs           Pending-request record
-│   ├── JpmsAdministrators.cs      Hardcoded admin email allowlist
 │   ├── Project.cs                 Project record
 │   ├── ProjectStage.cs            Project lifecycle stage enum + display
 │   └── Organisation.cs            Jewel entity enum (JBB / JPS / JPF)

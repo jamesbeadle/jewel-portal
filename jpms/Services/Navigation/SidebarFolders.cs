@@ -17,7 +17,8 @@ public enum SidebarFolder
     Subcontractor,
     Internal,
     Project,
-    Financials
+    Financials,
+    Admin
 }
 
 /// <summary>One sidebar row: a destination plus the roles that may see it. Per-row gates
@@ -157,7 +158,7 @@ public static class SidebarFolders
                 new SidebarRow(new NavigationItem("Cashflow", "/projects/{project}/cashflow"),
                     DesktopNavigation.FinanceRoles),
                 // One row per active project plus the total. Exact-only: /finance/* belongs to
-                // the Xero and Cash Summary rows.
+                // the Xero, Cash Summary and Aged Payables rows.
                 new SidebarRow(new NavigationItem("Financial Summary", "/finance", ExactMatch: true),
                     DesktopNavigation.FinanceRoles),
                 // Live cash position from Xero. Bank balances are the company's most sensitive
@@ -165,12 +166,34 @@ public static class SidebarFolders
                 // API's authorisation (GetXeroCashSummaryEndpoint).
                 new SidebarRow(new NavigationItem("Cash Summary", "/finance/cash-summary"),
                     DesktopNavigation.DirectorRoles),
+                // Outstanding supplier bills aged as in Xero but including drafts — the invoices
+                // the accounting procedure leaves in DRAFT until coded through the portal, which
+                // Xero's own aged payables report cannot see. Finance roles, like the Xero row:
+                // the allocation queue already shows this audience every bill and its amount due;
+                // mirrors the API's authorisation (GetXeroAgedPayablesEndpoint).
+                new SidebarRow(new NavigationItem("Aged Payables", "/finance/aged-payables"),
+                    DesktopNavigation.FinanceRoles),
                 // Allocation + Transactions as tabs of one page — Allocation leads (the working
                 // screen); the match prefix keeps the row lit on the Transactions tab.
                 new SidebarRow(new NavigationItem("Xero", "/finance/allocation", new[] { "/finance/xero" }),
                     DesktopNavigation.FinanceRoles),
                 new SidebarRow(new NavigationItem("Cost Codes & Rates", "/cost-codes", new[] { "/rate-library" }),
                     DesktopNavigation.FinanceRoles)
+            }),
+
+        // ---- Admin: running the system itself, not any project — administrators only (the
+        // empty role list + CanSee bypass). Users carries the active/revoked tabs
+        // (WorkspaceSections.Admin); the panels lived on the admin home until 2026-07-30, when
+        // user administration outgrew a homepage. Last folder deliberately: it is the least
+        // day-to-day thing on the rail. ----
+        new SidebarFolderInfo(
+            SidebarFolder.Admin,
+            "Admin",
+            "#admin",
+            new[]
+            {
+                new SidebarRow(new NavigationItem("Users", "/admin/users"),
+                    DesktopNavigation.AdministratorOnly)
             })
     };
 

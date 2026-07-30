@@ -11,8 +11,8 @@
 <div class="po-sheet">
     <header class="po-head">
         <div>
-            <div class="po-wordmark">JEWEL</div>
-            <div class="po-wordmark-sub">Bespoke Build Ltd</div>
+            @* The official Jewel Bespoke Build logo (wwwroot/branding — master in assets/branding). *@
+            <img class="po-logo" src="/branding/jewel-bespoke-build-logo.svg" alt="Jewel Bespoke Build Ltd" />
             <h1 class="po-title">Purchase Order</h1>
             <dl class="po-meta">
                 <dt>Date Created</dt><dd>@Order.CreatedAt.LocalDateTime.ToString("d MMM yyyy")</dd>
@@ -227,8 +227,9 @@
         box-shadow: 0 1px 3px rgba(0, 0, 0, .3);
     }
     .po-head { display: flex; justify-content: space-between; gap: 24px; }
-    .po-wordmark { font-size: 30px; font-weight: 800; letter-spacing: .18em; color: #e8912a; }
-    .po-wordmark-sub { font-size: 10px; letter-spacing: .32em; text-transform: uppercase; color: #b45309; margin-top: 2px; }
+    /* The official logo artwork carries some built-in whitespace; the negative margins pull its
+       visible left/top edges into line with the title and meta block beneath it. */
+    .po-logo { width: 230px; height: auto; display: block; margin: -10px 0 2px -12px; }
     .po-title { font-size: 19px; font-weight: 700; margin: 14px 0 10px; color: #0f172a; }
     .po-meta { margin: 0; }
     .po-meta dt { font-weight: 700; font-size: 12px; color: #0f172a; }

@@ -18,7 +18,9 @@ public sealed class GetDirectoryUserHandler
     {
         var entity = await context.DirectoryUsers.AsNoTracking()
             .FirstOrDefaultAsync(user => user.Email == query.Email, cancellationToken);
-        if (entity is null) return null;
+        // A revoked user reads as absent: everywhere this query feeds (approval checks, people
+        // pickers) "revoked" and "not in the directory" must mean the same thing.
+        if (entity is null || entity.RevokedAt is not null) return null;
 
         var roles = await context.DirectoryUserRoles.AsNoTracking()
             .Where(row => row.DirectoryUserEmail == query.Email)

@@ -8,7 +8,7 @@ from the sign-in token — see `SignedInUserResolver`. Queries authenticate only
 additionally authorise and validate.
 
 Persona codes follow the README (P01 Director … P11 Foreman). "Admin" is the application
-administrator allow-list (`JpmsAdministrators`), distinct from the eleven personas; admins
+administrator role (an ordinary directory role — the in-code `JpmsAdministrators` allow-list is gone), distinct from the eleven personas; admins
 resolve to every role.
 
 ## Commands (authorise → validate → handle)
@@ -47,6 +47,8 @@ resolve to every role.
 | UpdateDefect | PUT /api/defects/{id} | Director, ProjectManager, SiteManager |
 | AgreeSettlement / AgreeVatAnalysis / ReleaseRetention | POST /api/…settlement·vat·retention | Director, FinanceDirector |
 | UpsertDirectoryUser / RemoveDirectoryUser | POST·DELETE /api/directory… | Admin |
+| RestoreDirectoryUser | POST /api/directory/{email}/restore | Admin |
+| DeleteDirectoryUser (revoked rows only) | DELETE /api/directory/{email}/permanent | Admin |
 | SubmitAccessRequest | POST /api/access-requests | the requester (own email) |
 | ResolveAccessRequest | POST /api/access-requests/{email}/resolve | Admin |
 
@@ -58,7 +60,7 @@ work-orders, subcontractors (+ compliance), hs-records (+ attendance), mobilisat
 site-reports, programme, valuations, cost-code-budgets, timesheets, cvr-snapshots,
 forecast-components, qs-accruals, prelim-items (+ entries), eots, defects, settlement, vat.
 
-Admin-only queries: `GET /api/directory`, `GET /api/access-requests`.
+Admin-only queries: `GET /api/directory`, `GET /api/directory/revoked`, `GET /api/access-requests`.
 Self-or-admin: `GET /api/directory/{email}`.
 
 ## Notes

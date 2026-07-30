@@ -13,6 +13,7 @@ public static class DirectoryFeatureRegistration
     public static IServiceCollection AddDirectoryFeature(this IServiceCollection services)
     {
         services.AddScoped<IQueryHandler<ListDirectoryUsers, IReadOnlyList<DirectoryUser>>, ListDirectoryUsersHandler>();
+        services.AddScoped<IQueryHandler<ListRevokedDirectoryUsers, IReadOnlyList<RevokedDirectoryUser>>, ListRevokedDirectoryUsersHandler>();
         services.AddScoped<IQueryHandler<GetDirectoryUser, DirectoryUser?>, GetDirectoryUserHandler>();
 
         services.AddScoped<ICommandHandler<UpsertDirectoryUser, DirectoryUser>, UpsertDirectoryUserHandler>();
@@ -22,6 +23,14 @@ public static class DirectoryFeatureRegistration
         services.AddScoped<ICommandHandler<RemoveDirectoryUser, Acknowledgement>, RemoveDirectoryUserHandler>();
         services.AddScoped<RemoveDirectoryUserAuthorisation>();
         services.AddScoped<RemoveDirectoryUserValidation>();
+
+        services.AddScoped<ICommandHandler<RestoreDirectoryUser, Acknowledgement>, RestoreDirectoryUserHandler>();
+        services.AddScoped<RestoreDirectoryUserAuthorisation>();
+        services.AddScoped<RestoreDirectoryUserValidation>();
+
+        services.AddScoped<ICommandHandler<DeleteDirectoryUser, Acknowledgement>, DeleteDirectoryUserHandler>();
+        services.AddScoped<DeleteDirectoryUserAuthorisation>();
+        services.AddScoped<DeleteDirectoryUserValidation>();
 
         return services;
     }

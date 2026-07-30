@@ -92,12 +92,10 @@ public static class RequestDocumentRenderer
         row.Cells[0].VerticalAlignment = VerticalAlignment.Center;
         row.Cells[1].VerticalAlignment = VerticalAlignment.Center;
 
-        // Left: orange eyebrow, white type name, gold reference line.
-        var eyebrow = row.Cells[0].AddParagraph("JEWEL BESPOKE BUILD");
-        eyebrow.Format.Font.Size = 7.5;
-        eyebrow.Format.Font.Bold = true;
-        eyebrow.Format.Font.Color = Orange;
-        SpaceAfter(eyebrow, 1.5);
+        // Left: official logo, white type name, gold reference line.
+        // The official Jewel Bespoke Build logo leads the band — the gold/orange registered
+        // artwork reads directly on the navy ground (embedded once in DocumentBranding).
+        DocumentBranding.AddLogo(row.Cells[0], Unit.FromCentimeter(3.4), Unit.FromMillimeter(1.5));
 
         var heading = row.Cells[0].AddParagraph(model.TypeLong.ToUpperInvariant());
         heading.Format.Font.Size = 17;

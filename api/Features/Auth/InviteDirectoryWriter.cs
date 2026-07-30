@@ -42,6 +42,10 @@ public sealed class InviteDirectoryWriter
             context.DirectoryUsers.Add(directoryUser);
         }
         directoryUser.DisplayName = displayName;
+        // Inviting an email that was revoked is a deliberate decision to bring them back — clear
+        // the revocation rather than minting a link for an account that still cannot sign in.
+        directoryUser.RevokedAt = null;
+        directoryUser.RevokedBy = null;
 
         var existingRoles = await context.DirectoryUserRoles
             .Where(row => row.DirectoryUserEmail == email)
@@ -59,7 +63,14 @@ public sealed class InviteDirectoryWriter
     {
         var credential = await context.UserCredentials
             .FirstOrDefaultAsync(row => row.Email == email, cancellationToken);
-        if (credential is not null) return;
+        if (credential is not null)
+        {
+            // A revoked-then-reinvited credential comes back as Invited: the fresh link (whose
+            // completion sets it Active) is now the only way in, exactly like a first invite.
+            if (credential.Status == (int)CredentialStatus.Disabled)
+                credential.Status = (int)CredentialStatus.Invited;
+            return;
+        }
         context.UserCredentials.Add(new UserCredentialEntity
         {
             Email = email,

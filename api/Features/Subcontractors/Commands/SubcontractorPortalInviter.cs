@@ -48,6 +48,14 @@ public sealed class SubcontractorPortalInviter
             && !string.Equals(linked, subcontractorId, StringComparison.OrdinalIgnoreCase))
             return new Outcome(null, "That email is already linked to a different subcontractor.", StatusCodes.Status409Conflict);
 
+        // A revoked user's roles survive for the admin-only Restore. This path is NOT admin-gated,
+        // and UserInviter would clear the revocation and re-apply every surviving role — a portal
+        // invite must never quietly resurrect a revoked internal account.
+        if (existing?.RevokedAt is not null)
+            return new Outcome(null,
+                "That email belongs to a user whose access was revoked. An administrator must restore (or permanently delete) them first.",
+                StatusCodes.Status409Conflict);
+
         // UserInviter replaces the directory user's roles, so preserve any the user already holds.
         var roles = (await context.DirectoryUserRoles
                 .Where(row => row.DirectoryUserEmail == email)

@@ -35,13 +35,22 @@ public sealed class RemoveDirectoryUserEndpoint
         var signedInUser = await users.ResolveAsync(request, request.HttpContext.RequestAborted);
         if (signedInUser is null) return new UnauthorizedResult();
 
-        var command = new RemoveDirectoryUser(email);
+        // RevokedBy is stamped here from the resolved caller — never trusted from the client.
+        var command = new RemoveDirectoryUser(email, signedInUser.Email);
         if (!authorisation.Allows(signedInUser, command)) return new StatusCodeResult(403);
 
         var validationOutcome = validation.Check(command);
         if (validationOutcome.HasFailed) return new BadRequestObjectResult(validationOutcome.Errors);
 
-        var acknowledgement = await handler.HandleAsync(command, request.HttpContext.RequestAborted);
-        return new OkObjectResult(acknowledgement);
+        try
+        {
+            var acknowledgement = await handler.HandleAsync(command, request.HttpContext.RequestAborted);
+            return new OkObjectResult(acknowledgement);
+        }
+        catch (InvalidOperationException ex)
+        {
+            // e.g. revoking the last active administrator.
+            return new BadRequestObjectResult(ex.Message);
+        }
     }
 }
