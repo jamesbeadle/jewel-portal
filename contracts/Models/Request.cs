@@ -43,7 +43,7 @@ public sealed record Request(
     RequestStatus Status,
     decimal? Value,
     string RaisedByEmail,
-    DateTimeOffset RaisedAt,          // internal created-on audit stamp — never shown; IssuedAt is the one visible date
+    DateTimeOffset RaisedAt,          // system created-on stamp — shown only as the secondary "Created" fact on the detail page; IssuedAt is the official date lists lead with
     DateTimeOffset? RespondedAt,
     string? ResponseText = null,
     string? RespondedByEmail = null,

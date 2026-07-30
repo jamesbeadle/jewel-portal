@@ -29,12 +29,15 @@
         {
             <span>@Label</span>
         }
-        <span class="text-[9px]" aria-hidden="true">@(open ? "▲" : "▼")</span>
+        @if (ShowCaret)
+        {
+            <span class="text-[9px]" aria-hidden="true">@(open ? "▲" : "▼")</span>
+        }
     </button>
 
     @if (open)
     {
-        <div class="absolute @AlignClass mt-2 @WidthClass rounded-lg border border-line bg-surface shadow-lg z-20 overflow-hidden"
+        <div class="absolute @AlignClass mt-2 @WidthClass rounded-lg border border-line bg-surface shadow-lg z-30 overflow-hidden"
              role="menu">
             @if (ChildContent is not null)
             {
@@ -102,6 +105,10 @@
     [Parameter] public RenderFragment? ChildContent { get; set; }
 
     [Parameter] public string ToggleClass { get; set; } = "btn-secondary";
+
+    /// <summary>Hide the ▲/▼ caret — for icon-only toggles (a Toolbar button), where the caret
+    /// would crowd the glyph and the hover text already says a menu opens.</summary>
+    [Parameter] public bool ShowCaret { get; set; } = true;
     [Parameter] public string ToggleTitle { get; set; } = "";
     [Parameter] public string Class { get; set; } = "";
     [Parameter] public string WidthClass { get; set; } = "w-60";

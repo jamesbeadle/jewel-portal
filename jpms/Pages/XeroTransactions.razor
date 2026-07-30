@@ -30,17 +30,16 @@ else
                     Purchase invoices read live from Xero since @FromDateText — with each line's site and cost code, ready for reconciliation.
                 </p>
             </div>
-            <div class="flex items-center gap-4 whitespace-nowrap">
+            <Toolbar>
                 <ExportToExcelButton FileName="Xero transactions"
                                      Disabled="@(VisibleTransactions.Count == 0 && Breakdown.Count == 0)"
                                      ShowIncludeAllRows="@(statusFilter is not null || !string.IsNullOrWhiteSpace(search))"
                                      IncludeAllLabel="Ignore search & status"
                                      BuildWorkbook="BuildExportWorkbook" />
-                <button class="text-sm font-medium text-content-muted hover:text-content underline underline-offset-4 disabled:opacity-50"
-                        disabled="@isRefreshing" @onclick="ForceRefreshAsync">
-                    @(isRefreshing ? "Refreshing…" : "Refresh from Xero")
-                </button>
-            </div>
+                <ToolbarDivider />
+                <ToolbarButton Icon="refresh" Label="Refresh from Xero"
+                               Busy="@isRefreshing" OnClick="ForceRefreshAsync" />
+            </Toolbar>
         </header>
 
         @* Both views — the transaction list and the site × cost code pivot — are computed off the

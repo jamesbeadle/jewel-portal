@@ -1,0 +1,53 @@
+@namespace Jewel.JPMS.Components.Icons
+
+@*
+    The action-glyph library for toolbars, tab bars and icon buttons — NavIcon's pattern (one
+    component, a name switch, no new file per glyph) applied to in-view actions rather than routes.
+    Same outline weight and conventions as NavIcon: 24-box, stroke 1.6, currentColor, aria-hidden —
+    the caller supplies the accessible name (title/aria-label) on the control that hosts the icon.
+*@
+
+<svg class="@Class" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+     stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+    @((MarkupString)PathFor(Name))
+</svg>
+
+@code {
+    /// <summary>Which glyph to draw — see PathFor for the set. Unknown names draw a plain circle
+    /// rather than nothing, so a typo is visible instead of invisible.</summary>
+    [Parameter, EditorRequired] public string Name { get; set; } = "";
+
+    [Parameter] public string Class { get; set; } = "w-4 h-4";
+
+    private static string PathFor(string name) => name switch
+    {
+        // A spreadsheet: the document outline with a row/column grid — the Excel export mark.
+        "excel" => "<path d='M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z'/><path d='M14 3v5h5'/><path d='M8.5 12.5h7M8.5 15.5h7M12 12.5v6M8.5 18.5h7M8.5 12.5v6h7v-6z'/>",
+
+        // A document with the fold — the generic record/container mark.
+        "document" => "<path d='M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z'/><path d='M14 3v5h5'/><path d='M8.5 13h7M8.5 16.5h4.5'/>",
+
+        // A document with a question mark — the RFI / official-query mark.
+        "document-question" => "<path d='M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z'/><path d='M14 3v5h5'/><path d='M10.4 12.4a1.7 1.7 0 1 1 2.4 1.55c-.55.25-.8.6-.8 1.15'/><path d='M12 17.4h.01'/>",
+
+        // A document with a down arrow — download (the PDF of the official document).
+        "download" => "<path d='M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z'/><path d='M14 3v5h5'/><path d='M12 11.5v6M9.5 15l2.5 2.5L14.5 15'/>",
+
+        // A pound sign in a circle — the variation / priced-change mark.
+        "pound" => "<circle cx='12' cy='12' r='8.5'/><path d='M14.6 9.3a2.3 2.3 0 0 0-4 1.55c0 1.05.35 1.6.35 2.65 0 .8-.3 1.6-.75 2.2h4.6'/><path d='M9.3 13.1h3.6'/>",
+
+        // A parcel — the bid package mark.
+        "package" => "<path d='M21 8.2 12 3.5 3 8.2v7.6l9 4.7 9-4.7z'/><path d='M3 8.2l9 4.7 9-4.7'/><path d='M12 12.9v7.6'/>",
+
+        // Circular arrow — refresh / re-read from the source system.
+        "refresh" => "<path d='M20.5 12a8.5 8.5 0 1 1-2.5-6M20.5 4.5V10h-5.5'/>",
+
+        // Envelope — draft an email.
+        "email" => "<rect x='3.5' y='5.5' width='17' height='13' rx='2'/><path d='m4.5 7.5 7.5 5.5 7.5-5.5'/>",
+
+        // Plus — add / create.
+        "plus" => "<path d='M12 5v14M5 12h14'/>",
+
+        _ => "<circle cx='12' cy='12' r='8'/>"
+    };
+}

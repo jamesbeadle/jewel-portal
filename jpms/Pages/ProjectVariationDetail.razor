@@ -143,8 +143,11 @@ else
             </div>
         }
 
-        <RecordLineage ProjectId="@ProjectId" ActiveId="variation"
-                       Request="request" Variation="order" BidPackages="packages" />
+        @* The same tab bar as the request page: the chain's documents as tabs, this record active.
+           The Request / RFI tabs land back on the containing request page (the RFI tab straight
+           onto its official pane). *@
+        <RecordTabBar ProjectId="@ProjectId" ActiveId="variation"
+                      Request="request" Variation="order" BidPackages="packages" />
 
         @if (error is not null)
         {
@@ -391,6 +394,19 @@ else
                     <div class="flex justify-between"><span class="text-content-subtle">Status</span><span>@order.Status.DisplayName()</span></div>
                     <div class="flex justify-between"><span class="text-content-subtle">Estimated value</span><span>@(order.EstimatedValue is null ? "—" : Money(order.EstimatedValue.Value))</span></div>
                     <div class="flex justify-between"><span class="text-content-subtle">Selected sub</span><span>@SelectedSubName()</span></div>
+                    @* Issued is the official date the client was notified (stamped when the status
+                       enters Issued); Created is the system's own stamp for when the record was
+                       raised. Both shown here — the register lists lead with Issued. *@
+                    <div class="flex justify-between"><span class="text-content-subtle">Issued</span><span>@(order.IssuedAt is null ? "—" : order.IssuedAt.Value.LocalDateTime.ToString("d MMM yyyy"))</span></div>
+                    @if (order.ApprovedAt is not null)
+                    {
+                        <div class="flex justify-between"><span class="text-content-subtle">Approved</span><span>@order.ApprovedAt.Value.LocalDateTime.ToString("d MMM yyyy")</span></div>
+                    }
+                    @if (order.RejectedAt is not null)
+                    {
+                        <div class="flex justify-between"><span class="text-content-subtle">Rejected</span><span>@order.RejectedAt.Value.LocalDateTime.ToString("d MMM yyyy")</span></div>
+                    }
+                    <div class="flex justify-between"><span class="text-content-subtle">Created</span><span>@order.CreatedAt.LocalDateTime.ToString("d MMM yyyy")</span></div>
                     </LoadGate>
                 </div>
 

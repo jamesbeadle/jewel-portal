@@ -38,6 +38,7 @@ For the common repeated idioms, use the class instead of re-typing utilities:
 | `panel-header` | `px-5 py-3 border-b border-slate-200 bg-slate-50` |
 | `field` | input border + bg + placeholder |
 | `btn-primary` / `btn-secondary` / `btn-ghost` | bespoke button class strings |
+| `btn-icon` | a Toolbar's square icon button (fixed 8×8, bordered, disabled styling built in) |
 | `data-table` | the `<table>` + thead/tbody/td/row classes |
 | `modal-overlay` / `modal-panel` | full-screen overlay + dialog surface |
 
@@ -47,6 +48,10 @@ For the common repeated idioms, use the class instead of re-typing utilities:
 |---|---|
 | `JewelIcon` | The brand mark (exact Figma path, `currentColor`) |
 | `NavIcon` | Route → outline nav icon for the rail |
+| `ActionIcon` | Name → outline action glyph (excel, download, refresh, email, document…) for toolbars and tab bars |
+| `Toolbar` / `ToolbarButton` / `ToolbarDivider` | THE in-view menu: a row of compact icon buttons with hover text for a component's view operations (export, refresh, download, email), grouped by related functionality with dividers. Labelled `btn-primary` stays reserved for the one primary act of creation |
+| `ExportToExcelButton` | The Excel export as a Toolbar icon button; with `ShowIncludeAllRows` it opens a current-view / include-all menu |
+| `RecordTabBar` | The request chain (Request → RFI → Variation, bid packages branching off) as document tabs — only existing records get a tab |
 | `Panel` | Card with optional title + header actions |
 | `Stat` | Small label/value tile |
 | `MetricStat` | Big figure with positive/negative delta + caption (the Total/Pending pattern) |

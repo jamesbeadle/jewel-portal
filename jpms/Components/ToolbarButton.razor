@@ -1,0 +1,64 @@
+@*
+    One icon button in a Toolbar: a glyph, a border, and hover text. The Label is mandatory and is
+    both the tooltip and the accessible name — an icon button without one is a guessing game.
+    Pass Href for a link (downloads, PDFs); OnClick for an action. Busy pulses the glyph and
+    disables the button, so an in-flight export/refresh reads as such without shifting the layout.
+*@
+
+@if (Href is not null && !Disabled && !Busy)
+{
+    <a class="btn-icon @Class"
+       href="@Href"
+       target="@Target"
+       rel="@(Target == "_blank" ? "noopener" : null)"
+       download="@(Download ? "" : null)"
+       title="@Label"
+       aria-label="@Label">
+        <ActionIcon Name="@Icon" Class="w-4 h-4" />
+    </a>
+}
+else if (Href is not null)
+{
+    @* Anchors can't take disabled — a disabled link renders as an inert lookalike instead. *@
+    <span class="btn-icon opacity-50 cursor-not-allowed @Class" title="@Label" aria-disabled="true">
+        <ActionIcon Name="@Icon" Class="@(Busy ? "w-4 h-4 animate-pulse" : "w-4 h-4")" />
+    </span>
+}
+else
+{
+    <button type="button"
+            class="btn-icon @Class"
+            title="@Label"
+            aria-label="@Label"
+            disabled="@(Disabled || Busy)"
+            @onclick="OnClick">
+        <ActionIcon Name="@Icon" Class="@(Busy ? "w-4 h-4 animate-pulse" : "w-4 h-4")" />
+    </button>
+}
+
+@code {
+    /// <summary>The ActionIcon glyph name.</summary>
+    [Parameter, EditorRequired] public string Icon { get; set; } = "";
+
+    /// <summary>The hover text AND the accessible name. Say what pressing it does — "Export to
+    /// Excel", "Refresh from Xero" — not what the picture is.</summary>
+    [Parameter, EditorRequired] public string Label { get; set; } = "";
+
+    [Parameter] public EventCallback OnClick { get; set; }
+
+    /// <summary>Render as a link instead of a button (downloads, PDFs, mailto).</summary>
+    [Parameter] public string? Href { get; set; }
+
+    /// <summary>Link target — "_blank" also gains rel="noopener".</summary>
+    [Parameter] public string? Target { get; set; }
+
+    /// <summary>Mark the link as a download.</summary>
+    [Parameter] public bool Download { get; set; }
+
+    [Parameter] public bool Disabled { get; set; }
+
+    /// <summary>The action is in flight: glyph pulses, button disables.</summary>
+    [Parameter] public bool Busy { get; set; }
+
+    [Parameter] public string Class { get; set; } = "";
+}

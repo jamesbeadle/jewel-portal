@@ -232,7 +232,7 @@ else
 
     private ExcelWorkbook? BuildExportWorkbook(bool includeAllStatuses)
     {
-        // Ticked "Include all statuses" exports the whole register regardless of the
+        // Picking "Include all statuses" from the export menu exports the whole register regardless of the
         // on-screen Open/Closed view — the Status column carries the distinction.
         var records = includeAllStatuses ? InRegisterOrder(AllRecords) : FilteredRecords;
         if (records.Count == 0) return null;

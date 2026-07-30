@@ -35,15 +35,14 @@ else
                     Cash in the bank and outstanding sales invoices, read live from Xero.
                 </p>
             </div>
-            <div class="flex items-center gap-4 whitespace-nowrap">
+            <Toolbar>
                 <ExportToExcelButton FileName="Cash summary"
                                      Disabled="@(Snapshot?.Error is not null || (BankAccounts.Count == 0 && Outstanding.Count == 0))"
                                      BuildWorkbook="BuildExportWorkbook" />
-                <button class="text-sm font-medium text-content-muted hover:text-content underline underline-offset-4 disabled:opacity-50"
-                        disabled="@isRefreshing" @onclick="ForceRefreshAsync">
-                    @(isRefreshing ? "Refreshing…" : "Refresh from Xero")
-                </button>
-            </div>
+                <ToolbarDivider />
+                <ToolbarButton Icon="refresh" Label="Refresh from Xero"
+                               Busy="@isRefreshing" OnClick="ForceRefreshAsync" />
+            </Toolbar>
         </header>
 
         @* The whole page is one panel: cash, outstanding and overdue are read off a single

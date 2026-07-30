@@ -125,17 +125,21 @@ else
             </div>
         </header>
 
-        <RecordLineage ProjectId="@ProjectId" ActiveId="request"
-                       Request="record" Variation="variation" BidPackages="bidPackages" />
+        @* The request is the containing object; its related documents sit behind tabs. Request and
+           the official stage are panes of THIS page; the variation and bid package tabs carry on
+           to those records' own pages, which render the same bar. *@
+        <RecordTabBar ProjectId="@ProjectId" ActiveId="@ActiveTabId"
+                      Request="record" Variation="variation" BidPackages="bidPackages"
+                      LocalRequestTabs="true" OnSelect="SetActiveTab" />
 
         @* At-a-glance facts run across the top rather than down a rail, so the columns below are
            left for the substance: the request itself on the left, actions on the right. *@
         <div class="panel px-5 py-4 mb-5">
             <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-x-6 gap-y-3 text-sm">
                 <MetaCell Label="Raised by" Value="@record.RaisedByEmail" />
-                @* The one visible date. Rows predating the IssuedAt backfill fall back to the
-                   internal created-on stamp rather than showing a dash. *@
-                <MetaCell Label="Date issued" Value="@Date(record.IssuedAt ?? record.RaisedAt)" />
+                @* Issued is the official date the correspondent was notified. Rows predating the
+                   IssuedAt backfill fall back to the internal created-on stamp rather than a dash. *@
+                <MetaCell Label="Issued" Value="@Date(record.IssuedAt ?? record.RaisedAt)" />
                 <MetaCell Label="Raised to" Value="@Dash(record.RaisedTo)" />
                 <MetaCell Label="Response due" Value="@Date(record.ResponseDue)" />
                 <div>
@@ -144,7 +148,7 @@ else
                 </div>
                 @if (record.ClosedAt is not null)
                 {
-                    <MetaCell Label="Date closed" Value="@Date(record.ClosedAt)" />
+                    <MetaCell Label="Closed" Value="@Date(record.ClosedAt)" />
                 }
                 <MetaCell Label="Drawing / detail" Value="@Dash(record.DrawingRef)" />
                 <MetaCell Label="Related drawing / spec" Value="@Dash(record.RelatedDrawingSpec)" />
@@ -152,6 +156,9 @@ else
                 {
                     <MetaCell Label="Value" Value="@(record.Value is null ? "—" : Money(record.Value.Value))" />
                 }
+                @* The system's own stamp, distinct from the official Issued date — when this record
+                   was created in the register. Not editable; Issued is the date that is. *@
+                <MetaCell Label="Created" Value="@Date(record.RaisedAt)" />
             </div>
         </div>
 
@@ -177,10 +184,19 @@ else
 
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
             <div class="lg:col-span-2 space-y-5">
+                @* ---- Request (container) pane: the request's own detail and correspondence ---- *@
+                @if (ShowContainerPane)
+                {
                 <Panel Title="Detail">
                     <p class="text-sm text-content-muted whitespace-pre-wrap leading-relaxed">@(string.IsNullOrWhiteSpace(record.Description) ? "—" : record.Description)</p>
                 </Panel>
+                }
 
+                @* ---- Official-document pane: the form, the response, and the document's own
+                       actions. For an unpromoted General request there is no official tab yet, so
+                       the prepared-ahead form simply sits on the container pane as before. ---- *@
+                @if (ShowOfficialContent)
+                {
                 <div class="panel p-5">
                     <div class="flex items-start justify-between gap-3 mb-3">
                         <div>
@@ -189,6 +205,19 @@ else
                                 ? "The itemised queries and sections rendered on the issued document."
                                 : "Prepared ahead: these sections are carried onto the official document when the request is promoted to an RFI.")</p>
                         </div>
+                        @* The document's own actions, grouped: get it out (PDF, email). *@
+                        @if (record.Kind.IsEmailable())
+                        {
+                            <Toolbar>
+                                <ToolbarButton Icon="download" Label="@($"Download the {record.Kind.DisplayName()} PDF")"
+                                               Href="@DocumentHref" Download="true" />
+                                @if (CanDraftEmail)
+                                {
+                                    <ToolbarButton Icon="email" Label="@($"Email this {record.Kind.DisplayName()}")"
+                                                   OnClick="OpenEmailModal" Disabled="@busy" Busy="@preparingDraft" />
+                                }
+                            </Toolbar>
+                        }
                     </div>
 
                     @if (formError is not null)
@@ -340,7 +369,10 @@ else
                         }
                     </div>
                 }
+                }
 
+                @if (ShowContainerPane)
+                {
                 @* Per-message reply drafting is off: emailing the document (fresh or into a tagged
                    chain) is consolidated behind the single Email button in the page header. *@
                 @* Drawings linked from the register and photos taken on site. Uploaded files ride
@@ -350,6 +382,8 @@ else
 
                 <RequestConversation RequestId="@RequestId" CanDraftReply="false" />
 
+                @if (!HasOfficialTab)
+                {
                 @* The record's own audit slice. Its main job here is answering "did the document go
                    out?" — every draft the portal creates writes a row the moment it lands in the
                    projects mailbox, with a link that opens that draft in Outlook. Sent is never
@@ -357,13 +391,26 @@ else
                 <RecordAuditHistory RecordId="@RequestId"
                                     RecordType="Jewel.JPMS.Models.RecordType.Request"
                                     Title="History" />
+                }
+                }
 
                 @* Agents are parked for now — the workspace is hidden until we settle on whether
                    attaching agents to requests is the right model. Re-add <AgentWorkspace> here. *@
             </div>
 
             <div class="space-y-5">
-                @* Document + email actions live in the page header; this rail panel is just the
+                @if (ShowContainerPane && HasOfficialTab)
+                {
+                    @* On a promoted record the container pane's rail carries the audit slice; the
+                       issue machinery (recipients, variation) lives with the official document. *@
+                    <RecordAuditHistory RecordId="@RequestId"
+                                        RecordType="Jewel.JPMS.Models.RecordType.Request"
+                                        Title="History" />
+                }
+
+                @if (ShowOfficialContent)
+                {
+                @* Document + email actions live with the official form; this rail panel is just the
                    record's shape — its type (with promotion) and who it corresponds with. Hidden
                    entirely when there is nothing to show (official kind, no edit rights). *@
                 @if (!record.Kind.IsEmailable() || CanEditDetails)
@@ -510,6 +557,7 @@ else
                             }
                         }
                     </div>
+                }
                 }
 
             </div>
@@ -849,6 +897,35 @@ else
     private bool sessionReady;
     private bool dataLoaded;
     private Request? record;
+
+    // ---- Panes ------------------------------------------------------------------------------
+    // The request is the containing object; once promoted, the official document (RFI / NOD / EOT)
+    // is its own tab. "request" or "official" — the variation tab navigates to that record's page.
+    private string activeTab = "request";
+
+    // An unpromoted request (General or any pre-official kind) has no official tab: there is no
+    // official document yet, so the prepared-ahead form and the issue machinery sit on the
+    // container pane, exactly as they always did. IsEmailable is what "official" means here —
+    // the same test the form panel and the tab bar use.
+    private bool HasOfficialTab => record is not null && record.Kind.IsEmailable();
+
+    private bool ShowContainerPane => !HasOfficialTab || activeTab != "official";
+    private bool ShowOfficialContent => !HasOfficialTab || activeTab == "official";
+
+    private string ActiveTabId => HasOfficialTab && activeTab == "official" ? "official" : "request";
+
+    private void SetActiveTab(string tab) =>
+        activeTab = tab == "official" && HasOfficialTab ? "official" : "request";
+
+    // Deep links (the variation page's RFI tab, forwarded links) land on the official pane with
+    // ?tab=official. Read once at load; the address bar is not the source of truth thereafter.
+    private void HonourRequestedTabFromRoute()
+    {
+        var query = new Uri(Nav.Uri).Query;
+        if (query.Contains("?tab=official", StringComparison.OrdinalIgnoreCase)
+            || query.Contains("&tab=official", StringComparison.OrdinalIgnoreCase))
+            SetActiveTab("official");
+    }
     private string responseDraft = "";
     private bool busy;
     private string? actionError;
@@ -870,7 +947,7 @@ else
     private string? ladderError;
     private VariationOrder? variation;
     private string? variationError;
-    // Bid packages hang off the variation; the RecordLineage bar branches them off its chip.
+    // Bid packages hang off the variation; the RecordTabBar branches them off after a divider.
     private IReadOnlyList<BidPackage> bidPackages = Array.Empty<BidPackage>();
 
     // Official document form editor (the itemised queries + narrative sections).
@@ -1005,6 +1082,7 @@ else
         await Task.WhenAll(firstWave);
 
         await LoadRecipientPreviewAsync();
+        HonourRequestedTabFromRoute();
         dataLoaded = true;
 
         await HonourRequestedModalAsync();
@@ -2305,6 +2383,9 @@ else
     private void OpenFormEditor()
     {
         if (record is null) return;
+        // The form lives on the official pane; opening its editor from the Actions menu must land
+        // the user in front of it rather than editing a panel on the tab they are not looking at.
+        if (HasOfficialTab) activeTab = "official";
         formItems = record.ItemList
             .OrderBy(item => item.Position)
             .Select(item => new FormItemRow

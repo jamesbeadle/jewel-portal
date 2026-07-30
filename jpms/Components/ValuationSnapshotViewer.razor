@@ -32,20 +32,20 @@ else
         <span class="text-content-subtle"> Read-only: this is the report exactly as it stood; live changes never alter it.</span>
     </div>
 
-    <div class="mb-4 flex flex-wrap items-center gap-4">
-        <a class="text-sm font-medium text-content-muted hover:text-content underline underline-offset-4"
-           href="@($"/api/valuation-report-snapshots/{snapshot.ValuationReportSnapshotId}/pdf")" target="_blank" rel="noopener">
-            Download PDF
-        </a>
-        <ExportToExcelButton FileName="@($"Valuation report {snapshot.Label}")" BuildWorkbook="BuildExportWorkbook" />
-        @if (OnEmailRequested.HasDelegate)
-        {
-            <button type="button" @onclick="() => OnEmailRequested.InvokeAsync(snapshot.ValuationReportSnapshotId)"
-                    title="Draft the report to the client in the shared mailbox — nothing sends from here"
-                    class="text-sm font-medium text-content-muted hover:text-content underline underline-offset-4">
-                Email to client…
-            </button>
-        }
+    <div class="mb-4">
+        <Toolbar>
+            @* Document group: the report as a file, out of the system. *@
+            <ToolbarButton Icon="download" Label="Download PDF" Target="_blank"
+                           Href="@($"/api/valuation-report-snapshots/{snapshot.ValuationReportSnapshotId}/pdf")" />
+            <ExportToExcelButton FileName="@($"Valuation report {snapshot.Label}")" BuildWorkbook="BuildExportWorkbook" />
+            @if (OnEmailRequested.HasDelegate)
+            {
+                <ToolbarDivider />
+                @* Correspondence group: draft it to the client — nothing sends from here. *@
+                <ToolbarButton Icon="email" Label="Email to client — drafts in the shared mailbox, nothing sends from here"
+                               OnClick="() => OnEmailRequested.InvokeAsync(snapshot.ValuationReportSnapshotId)" />
+            }
+        </Toolbar>
     </div>
 
     <div class="space-y-3">

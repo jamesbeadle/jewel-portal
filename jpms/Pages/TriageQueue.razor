@@ -1,4 +1,5 @@
 @page "/requests/triage"
+@using Jewel.JPMS.Contracts.Audit
 @using Jewel.JPMS.Contracts.Drawings
 @using Jewel.JPMS.Contracts.Procurement
 @using Jewel.JPMS.Contracts.Requests
@@ -13,6 +14,7 @@
 @inject IRequestRegister RequestRegister
 @inject IDrawingStore DrawingStore
 @inject ICommandSender Commands
+@inject IQueryClient Queries
 @inject Jewel.JPMS.Features.Projects.ProjectListReadModel Projects
 @implements IDisposable
 
@@ -549,7 +551,7 @@ else
                                     discarding is pathway-less.
                                 *@
                                 <div class="mb-4">
-                                    <p class="text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1.5">Who is this correspondence with?</p>
+                                    <p class="text-sm font-semibold text-content mb-2">Who is this correspondence with?</p>
                                     @if (FixedPathway is { } filedPathway)
                                     {
                                         <span class="inline-flex items-center rounded-full @PathwayChipColour(filedPathway) text-xs font-medium px-2.5 py-1">Filed under @PathwayLabel(filedPathway)</span>
@@ -557,10 +559,16 @@ else
                                     }
                                     else
                                     {
-                                        <div class="inline-flex rounded-lg border border-line-strong p-0.5 gap-0.5">
+                                        @* The first triage decision, rendered as the panel's main event: one of these
+                                           MUST be taken (or Discard) before any action is offered, so the choices are
+                                           full-size cards rather than the small segmented toggle the sort control uses. *@
+                                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
                                             @foreach (var option in PathwayOptions)
                                             {
-                                                <button type="button" @onclick="() => SetPathway(option)" class="@PathwaySegmentClass(option)">@PathwayLabel(option)</button>
+                                                <button type="button" @onclick="() => SetPathway(option)" class="@PathwayCardClass(option)">
+                                                    <span class="block text-sm font-semibold">@PathwayLabel(option)</span>
+                                                    <span class="block text-xs mt-0.5 opacity-80">@PathwayDescription(option)</span>
+                                                </button>
                                             }
                                         </div>
                                         @if (pathway is null)
@@ -929,6 +937,40 @@ else
             </div>
         }
         </LoadGate>
+
+        @* Recently triaged — the audit register's latest link/create decisions, newest first, so
+           the triager can jump straight to the document an email was just filed against. Same
+           no-gate pattern as the unassigned panel above: it renders if and when there is something
+           to show. (The register records client-pathway triage today; subcontractor/internal rows
+           appear here automatically once the audit scope widens.) *@
+        @if (RecentTriage.Count > 0)
+        {
+            <div class="panel p-5 mt-6">
+                <div class="flex items-baseline justify-between gap-3 mb-3">
+                    <h2 class="text-sm font-semibold text-content">Recently triaged</h2>
+                    <a href="/audit" class="text-xs text-content-muted hover:text-content underline underline-offset-2">Full audit trail</a>
+                </div>
+                <div class="divide-y divide-line">
+                    @foreach (var entry in RecentTriage)
+                    {
+                        <div @key="entry.AuditEventId" class="flex items-center gap-3 py-2">
+                            <span class="text-[11px] text-content-subtle whitespace-nowrap w-16 shrink-0"
+                                  title="@entry.OccurredAt.LocalDateTime.ToString("d MMM yyyy, HH:mm")">@Ago(entry.OccurredAt)</span>
+                            @if (RecentHref(entry) is { } href)
+                            {
+                                <a class="font-mono text-xs text-content underline underline-offset-2 hover:text-accent whitespace-nowrap" href="@href">@Dash(entry.RecordReference)</a>
+                            }
+                            else
+                            {
+                                <span class="font-mono text-xs text-content-muted whitespace-nowrap">@Dash(entry.RecordReference)</span>
+                            }
+                            <span class="text-xs text-content-muted truncate">@entry.Detail</span>
+                            <span class="text-[11px] text-content-subtle whitespace-nowrap ml-auto hidden md:inline">@RecentMeta(entry)</span>
+                        </div>
+                    }
+                </div>
+            </div>
+        }
         }
         else if (view == QueueView.Discarded)
         {
@@ -1586,6 +1628,74 @@ else
     private IReadOnlyList<Request> unassigned = Array.Empty<Request>();
     private string? unassignedError;
 
+    // The audit register's latest triage decisions, for the "Recently triaged" panel at the foot of
+    // the queue. Nullable backing field: null is the honest "not fetched yet" (the panel simply
+    // doesn't render), an empty list is a real answer that keeps it hidden either way.
+    private IReadOnlyList<AuditEvent>? recentTriage;
+    private IReadOnlyList<AuditEvent> RecentTriage => recentTriage ?? Array.Empty<AuditEvent>();
+    private const int RecentTriageCount = 8;
+
+    // Which register rows count as "triaged into a document": an email linked to an existing record,
+    // or a record created from one. EmailTriaged/DraftCreated rows describe the same actions from
+    // another angle, so listing them too would double every entry.
+    private static bool IsRecentTriageEvent(AuditEvent entry) =>
+        entry.EventType is AuditEventType.RecordLinked or AuditEventType.RecordCreatedFromEmail;
+
+    // Refreshed alongside the queue after every consuming action, so the row for the email just
+    // triaged appears as its selection clears. A failed read leaves the panel absent rather than
+    // blocking triage — the query client has already reported the failure to the error toast.
+    private async Task LoadRecentTriageAsync()
+    {
+        try
+        {
+            var page = await Queries.AskAsync(new ListAuditEvents(Take: 25), CancellationToken.None);
+            recentTriage = page.Items.Where(IsRecentTriageEvent).Take(RecentTriageCount).ToList();
+        }
+        catch { /* reported by the query client; the panel stays absent */ }
+    }
+
+    // Where each record family's page lives — the click-through from a recently-triaged row to the
+    // document the email was filed against. Families without a per-record page land on the closest
+    // project tab (work orders, programme, financials, to-dos); anything unresolvable reads as text.
+    private static string? RecentHref(AuditEvent entry)
+    {
+        if (string.IsNullOrEmpty(entry.ProjectId))
+            return entry.RecordType == RecordType.Todo ? "/todos" : null;
+        var projectId = entry.ProjectId;
+        var recordId = entry.RecordId;
+        return entry.RecordType switch
+        {
+            RecordType.Request => string.IsNullOrEmpty(recordId) ? null : $"/projects/{projectId}/requests/view/{recordId}",
+            RecordType.Variation or RecordType.VariationQuote => string.IsNullOrEmpty(recordId) ? null : $"/projects/{projectId}/variations/{recordId}",
+            RecordType.BidPackageInvite => string.IsNullOrEmpty(recordId) ? null : $"/projects/{projectId}/bid-package-invites/{recordId}",
+            RecordType.WorkOrder  => $"/projects/{projectId}/work-orders",
+            RecordType.Scheduling or RecordType.Lad => $"/projects/{projectId}/programme",
+            RecordType.CostCentre => $"/projects/{projectId}/financials",
+            RecordType.Todo       => $"/projects/{projectId}/todos",
+            _ => null
+        };
+    }
+
+    // The right-hand meta on a recently-triaged row: project reference (when the project is known)
+    // and who did it. Reads AllProjects so a completed project's reference still resolves.
+    private string RecentMeta(AuditEvent entry)
+    {
+        var project = AllProjects.FirstOrDefault(p => p.ProjectId == entry.ProjectId);
+        return project is null ? entry.ActorEmail : $"{project.Reference} · {entry.ActorEmail}";
+    }
+
+    // Compact relative stamp for scanning (mirrors the audit trail page); the exact moment sits in
+    // the row's hover title.
+    private static string Ago(DateTimeOffset at)
+    {
+        var span = DateTimeOffset.UtcNow - at;
+        if (span < TimeSpan.FromMinutes(1)) return "just now";
+        if (span < TimeSpan.FromHours(1)) return $"{(int)span.TotalMinutes}m ago";
+        if (span < TimeSpan.FromHours(24)) return $"{(int)span.TotalHours}h ago";
+        if (span < TimeSpan.FromDays(30)) return $"{(int)span.TotalDays}d ago";
+        return at.LocalDateTime.ToString("d MMM yyyy");
+    }
+
     // Triage is restricted to administrators, project managers, and the finance director.
     // Administrators are granted every role server-side, so they always carry Role.ProjectManager too.
     private bool CanTriage =>
@@ -1775,7 +1885,14 @@ else
             LoadProjectsAsync(),
             LoadAsync(),
             LoadUnassignedAsync(),
-            LoadTodoAssignableRolesAsync());
+            LoadTodoAssignableRolesAsync(),
+            LoadRecentTriageAsync());
+
+        // Land straight in the first email: opening the top of the queue is what a triager does
+        // first every time, so the page does it for them. Initial load only — after an action the
+        // deliberately-cleared pane is where the outcome banners (reply draft, partial link) show.
+        if (view == QueueView.Active && selected is null && items.Count > 0)
+            await Select(items[0]);
     }
 
     // The project list only feeds the "file this email against a project" pickers. Losing it should
@@ -1800,7 +1917,7 @@ else
         crossFilePicks.Clear();
         if (next == QueueView.Discarded) { ResetDiscardedPaging(); await LoadDiscardedAsync(); }
         else if (next == QueueView.Tagged) { selectedTags.Clear(); pathwayBucketFilter = null; filterOpen = false; ResetTaggedPaging(); await LoadTaggedAsync(); }
-        else { ResetQueuePaging(); await LoadAsync(); }
+        else { ResetQueuePaging(); await Task.WhenAll(LoadAsync(), LoadRecentTriageAsync()); }
     }
 
     // Flip the sort order, remember the choice, and re-read the visible list from page one (an
@@ -2089,6 +2206,9 @@ else
         ApplySelection(item);
         // Body and thread are independent live reads — fetch them side by side.
         await Task.WhenAll(LoadDetailAsync(item), LoadThreadAsync(item, jumpToLatest));
+        // Both reads have landed (including any jump onto the thread's latest reply), so the whole
+        // chain is available to search for a project name to pre-fill the pickers with.
+        await TryPrefillProjectFromEmailAsync();
     }
 
     // Fetch the full body + attachment names on demand when an email is opened. Cancels any in-flight
@@ -2161,6 +2281,58 @@ else
         }
     }
 
+    // ---- Project auto-match ----
+    // A simple lower-case search of the email chain for a project's name: when exactly one live
+    // project's name appears verbatim (case-insensitive) in the selected email's subject, body or
+    // thread, the project pickers are pre-filled with it. The triager still sees — and can change —
+    // the choice; an ambiguous chain (two project names in one thread) pre-fills nothing, and a
+    // choice already made is never overridden.
+    private async Task TryPrefillProjectFromEmailAsync()
+    {
+        if (view != QueueView.Active || selected is null) return;
+        if (!string.IsNullOrWhiteSpace(linkProjectId)
+            || !string.IsNullOrWhiteSpace(createProjectId)
+            || !string.IsNullOrWhiteSpace(replyProjectId)) return;
+
+        var haystack = BuildEmailSearchText();
+        if (haystack.Length == 0) return;
+
+        // Live projects only (the pickers hide completed ones by default), and names under four
+        // characters are skipped — too short to be an honest match rather than a coincidence.
+        var matches = AllProjects
+            .Where(project => project.Stage != ProjectStage.Completed)
+            .Where(project => project.Name.Trim() is { Length: >= 4 } name
+                && haystack.Contains(name.ToLowerInvariant(), StringComparison.Ordinal))
+            .ToList();
+        if (matches.Count != 1) return;
+
+        var projectId = matches[0].ProjectId;
+        linkProjectId = projectId;
+        createProjectId = projectId;
+        replyProjectId = projectId;
+        // The link panel shows records for its chosen project, so the pre-fill loads them too —
+        // otherwise it would claim "no records on this project yet" without having looked.
+        await LoadLinkRecordsAsync();
+    }
+
+    // Everything searchable about the selected email's chain, joined and lower-cased once: subject,
+    // preview, the fetched body (tags stripped when HTML) and every thread member's subject/preview.
+    private string BuildEmailSearchText()
+    {
+        var parts = new List<string?> { selected?.Subject, selected?.BodyPreview };
+        if (detail is not null)
+            parts.Add(detail.BodyIsHtml ? StripHtml(detail.BodyHtml) : detail.BodyHtml);
+        foreach (var member in thread)
+        {
+            parts.Add(member.Subject);
+            parts.Add(member.BodyPreview);
+        }
+        return string.Join("\n", parts.Where(part => !string.IsNullOrWhiteSpace(part))).ToLowerInvariant();
+    }
+
+    private static string StripHtml(string html) =>
+        System.Text.RegularExpressions.Regex.Replace(html ?? "", "<[^>]*>", " ");
+
     private static string ThreadRowClass(bool current)
     {
         var baseClass = "w-full text-left rounded-lg border px-3 py-2 transition";
@@ -2201,11 +2373,21 @@ else
         ResetLinkState();
     }
 
-    // Segmented-selector styling, mirroring the sort toggle's active/inactive treatment.
-    private string PathwaySegmentClass(TriagePathway p) =>
+    // The pathway choice cards: the mandatory first decision, so full-size and impossible to miss —
+    // the chosen card fills with the accent, the rest invite the click.
+    private string PathwayCardClass(TriagePathway p) =>
         pathway == p
-            ? "rounded-md text-xs px-2.5 py-1.5 transition bg-accent text-accent-ink font-medium"
-            : "rounded-md text-xs px-2.5 py-1.5 transition text-content-muted hover:bg-surface-raised";
+            ? "rounded-xl border-2 border-accent bg-accent text-accent-ink px-4 py-3 text-left transition shadow-sm"
+            : "rounded-xl border-2 border-line-strong bg-surface-raised text-content px-4 py-3 text-left transition hover:border-accent hover:bg-surface";
+
+    // One line under each pathway name saying who that side of the wall actually is.
+    private static string PathwayDescription(TriagePathway p) => p switch
+    {
+        TriagePathway.Client        => "The client, or their architect and team",
+        TriagePathway.Subcontractor => "A subcontractor or supplier",
+        TriagePathway.Internal      => "Jewel staff — company admin",
+        _                           => ""
+    };
 
     private async Task OnLinkRecordTypeChanged(ChangeEventArgs e)
     {
@@ -2407,7 +2589,9 @@ else
             // At least one tag stuck, so the email (thread) has left the Inbox queue: refresh and
             // clear the selection, mirroring RunAction's success path.
             ResetQueuePaging();
-            await LoadAsync();
+            // The queue and the recently-triaged panel move together: the action that consumed
+            // this email is the newest row of the panel.
+            await Task.WhenAll(LoadAsync(), LoadRecentTriageAsync());
             selected = null;
             detail = null;
             detailLoading = false;
@@ -2693,7 +2877,9 @@ else
             busy = true;
             await action();
             ResetQueuePaging();
-            await LoadAsync();
+            // The queue and the recently-triaged panel move together: the action that consumed
+            // this email is the newest row of the panel.
+            await Task.WhenAll(LoadAsync(), LoadRecentTriageAsync());
             selected = null;
             detail = null;
             detailLoading = false;

@@ -1,51 +1,85 @@
+@*
+    The Excel export, as a Toolbar icon button: a spreadsheet glyph with "Export to Excel" hover
+    text. Drop it in a <Toolbar> beside a page's other view actions, or stand it alone — it is the
+    same control either way, so every table's export looks identical.
+
+    When ShowIncludeAllRows is set (paginated / filtered tables), the button opens a two-row menu —
+    export exactly what the table shows, or the wider set the IncludeAllLabel names — replacing the
+    old tickbox-plus-underlined-link pairing.
+*@
+
 @using Jewel.JPMS.Services.Excel
 @inject ExcelExportService ExcelExport
 
-<div class="flex items-center gap-3 shrink-0">
-    @if (ShowIncludeAllRows)
-    {
-        <label class="flex items-center gap-1.5 text-xs text-content-muted select-none cursor-pointer">
-            <input type="checkbox" @bind="includeAllRows" />
-            @IncludeAllLabel
-        </label>
-    }
+@if (ShowIncludeAllRows)
+{
+    <DropdownMenu ToggleClass="btn-icon"
+                  ToggleTitle="Export to Excel"
+                  ShowCaret="false"
+                  WidthClass="w-64"
+                  Class="@($"shrink-0 {Class}")"
+                  Disabled="@(isExporting || Disabled)"
+                  Items="MenuItems">
+        <ToggleContent>
+            <ActionIcon Name="excel" Class="@GlyphClass" />
+            <span class="sr-only">Export to Excel</span>
+        </ToggleContent>
+    </DropdownMenu>
+}
+else
+{
     <button type="button"
-            class="text-sm font-medium text-content-muted hover:text-content underline underline-offset-4 disabled:opacity-50 shrink-0"
+            class="btn-icon @Class"
+            title="Export to Excel"
+            aria-label="Export to Excel"
             disabled="@(isExporting || Disabled)"
-            @onclick="ExportAsync">
-        @(isExporting ? "Exporting…" : "Export to Excel")
+            @onclick="() => ExportAsync(false)">
+        <ActionIcon Name="excel" Class="@GlyphClass" />
     </button>
-</div>
+}
 
 @code {
     /// <summary>Base filename without extension; the export date and .xlsx are appended.</summary>
     [Parameter, EditorRequired] public string FileName { get; set; } = "export";
 
     /// <summary>
-    /// Builds the workbook to download. The bool argument is true when the user has
-    /// ticked "Include all rows" (only shown when <see cref="ShowIncludeAllRows"/> is set);
+    /// Builds the workbook to download. The bool argument is true when the user picked the
+    /// include-all menu row (only offered when <see cref="ShowIncludeAllRows"/> is set);
     /// otherwise export exactly what the table currently shows. Return null to skip the export.
     /// </summary>
     [Parameter, EditorRequired] public Func<bool, ExcelWorkbook?> BuildWorkbook { get; set; } = default!;
 
     /// <summary>
-    /// Show the include-all tickbox — set this on paginated or row-capped tables, and on tables
+    /// Offer the include-all choice — set this on paginated or row-capped tables, and on tables
     /// whose export follows an on-screen filter (status tabs, search, hide-completed toggles).
     /// </summary>
     [Parameter] public bool ShowIncludeAllRows { get; set; }
 
     /// <summary>
-    /// Label for the include-all tickbox. Override to say what "all" means on this table —
+    /// Label for the include-all menu row. Override to say what "all" means on this table —
     /// e.g. "Include closed", "Include retired", "Include all statuses".
     /// </summary>
     [Parameter] public string IncludeAllLabel { get; set; } = "Include all rows";
 
     [Parameter] public bool Disabled { get; set; }
 
-    private bool includeAllRows;
+    [Parameter] public string Class { get; set; } = "";
+
     private bool isExporting;
 
-    private async Task ExportAsync()
+    private string GlyphClass => isExporting ? "w-4 h-4 animate-pulse" : "w-4 h-4";
+
+    private List<DropdownMenu.Item> MenuItems => new()
+    {
+        new(Label: "Export current view",
+            OnSelect: EventCallback.Factory.Create(this, () => ExportAsync(false)),
+            Hint: "Exactly the rows the table shows now"),
+        new(Label: IncludeAllLabel,
+            OnSelect: EventCallback.Factory.Create(this, () => ExportAsync(true)),
+            Hint: "Export beyond the current view's filters"),
+    };
+
+    private async Task ExportAsync(bool includeAllRows)
     {
         if (isExporting)
         {

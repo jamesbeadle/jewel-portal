@@ -1,0 +1,23 @@
+@*
+    The in-view toolbar: a row of compact icon buttons for a component's own menu of view
+    operations — export, refresh, download, email. This is THE way a panel, table or page header
+    carries its secondary actions; the labelled btn-primary next to it stays reserved for the one
+    primary act of creation ("Raise request", "New client").
+
+    Group buttons by related functionality and put a <ToolbarDivider /> between groups — e.g.
+    document actions (download, email) | data actions (export, refresh). Every button in it is a
+    <ToolbarButton> (or an <ExportToExcelButton>, which renders one), each carrying its own hover
+    text — the toolbar itself is just the row.
+
+    Never wrap a toolbar in a LoadGate (CLAUDE.md: never gate a control) — pass Disabled to the
+    buttons instead.
+*@
+
+<div role="toolbar" class="flex items-center gap-1.5 shrink-0 @Class">
+    @ChildContent
+</div>
+
+@code {
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+    [Parameter] public string Class { get; set; } = "";
+}

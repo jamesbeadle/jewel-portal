@@ -14,7 +14,7 @@
     <div class="max-w-md">
         <div class="flex items-center justify-between mb-1">
             <h2 class="text-lg font-semibold text-content">My day</h2>
-            <button type="button" class="btn-ghost" disabled="@isBusy" @onclick="RefreshSafelyAsync">Refresh</button>
+            <ToolbarButton Icon="refresh" Label="Refresh" Busy="@isBusy" OnClick="RefreshSafelyAsync" />
         </div>
 
         @if (actionError is not null)

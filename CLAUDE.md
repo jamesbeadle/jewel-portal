@@ -6,6 +6,29 @@
 - **Valuation invoice** is the canonical term for an amount of money Jewel has claimed for the client to pay (raised against the current valuation; lifecycle Raised → Issued → Paid). Never introduce "cash call", "payment application", "application for payment", or "client invoice" for this concept in UI copy, code identifiers, or docs. "Cash call" survives only in historical meeting notes and immutable EF migrations. See `docs/00-business-context/glossary.md`.
 - **Variation** is the canonical term for the priced change item, and it is **one document with one number through every stage** — its `VariationOrderStatus` (Quoting → Issued → Awaiting AI → Approved / Rejected) is what says where it has got to. Never present "VOQ" and "VO" as two records or two ladder steps: the 2026-07-23 `UnifyVariationOrders` migration folded them into one row, and the UI followed. The record lineage is **three** stages — Request → RFI → Variation — with bid packages branching off the variation. A user always reads the number as `V72` (`VariationOrder.DisplayNumber`, and the `VariationRef` minted at approval, which is the same number). "VOQ" survives only in persisted identifiers and API surface: the `VariationOrderQuotes` table and its `VariationOrderQuoteId` column, the stored `Reference` (`VOQ-0072`), the `JPMS/VOQ-…` mail tags, the `/api/…/voq(s)/…` routes, `RecordType.VariationQuote`, and command names like `CreateVoqFromRfq`. The page route is `/projects/{id}/variations/{id}`; the old `/voq/{id}` route is kept on the same page so links already sent out still land.
 
+## Record tabs & the in-view toolbar (jpms)
+
+- **The request chain renders as document tabs, not chips.** `RecordTabBar` (Components) is on
+  every page in the chain — Request → official stage (RFI/NOD/EOT) → Variation, bid packages after
+  a divider. Only records that EXIST get a tab; the action that creates the next stage lives on the
+  current stage's tab, never on a placeholder. On the request page the Request and official tabs
+  are local panes (`LocalRequestTabs` + `OnSelect`); the variation and bid-package tabs navigate to
+  those records' own pages, which render the same bar — moving along the chain reads as switching
+  tabs. Deep-link the official pane with `?tab=official`.
+- **Two dates, two meanings.** `Issued` is the official date the correspondent/client was notified
+  — it is what lists lead with, and it is user-editable (requests) or stamped by the status
+  transition (variations). `Created` is the system's own stamp (`Request.RaisedAt`,
+  `VariationOrder.CreatedAt`) — shown only as a secondary fact on detail pages, and never as a
+  list's lead date. Don't label `CreatedAt` "Raised".
+- **In-view menu options are a `Toolbar` of icon buttons** (`ToolbarButton`, glyphs from
+  `ActionIcon`, hover text mandatory), grouped by related functionality with `ToolbarDivider` —
+  e.g. document actions (download PDF, email) | data actions (export, refresh). Underlined text
+  links and one-off `btn-secondary`s are not the way to add a view action any more. The labelled
+  `btn-primary` next to a toolbar stays reserved for the view's one primary act of creation
+  ("Raise request"). `ExportToExcelButton` already renders as a toolbar button — keep passing
+  `ShowIncludeAllRows`/`IncludeAllLabel` and it offers the current-view / include-all choice as a
+  menu. Never wrap a toolbar in a LoadGate; pass `Disabled`/`Busy` to the buttons instead.
+
 ## Loading states (jpms)
 
 - **Never render a figure, a row count or an empty state from a store that has not loaded.** A `0`

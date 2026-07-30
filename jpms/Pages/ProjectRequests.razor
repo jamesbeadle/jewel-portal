@@ -465,7 +465,10 @@ else
                                 <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3">Request</th>
                                 <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3">Status</th>
                                 <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 text-right">Value</th>
-                                <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 hidden lg:table-cell">Raised</th>
+                                @* Issued is the official date the client was notified (stamped when
+                                   the variation enters Issued) — a dash while it is still being
+                                   quoted. The system's Created stamp travels on the export only. *@
+                                <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 hidden lg:table-cell">Issued</th>
                                 <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 hidden lg:table-cell">Approved</th>
                                 <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3">Work order</th>
                             </tr>
@@ -546,7 +549,7 @@ else
                                     <td class="px-4 py-3 text-right whitespace-nowrap @(order.Status == VariationOrderStatus.Rejected ? "text-content-subtle line-through" : "text-content")">
                                         @(RowValue(order) is { } v ? Money(v) : "—")
                                     </td>
-                                    <td class="px-4 py-3 text-content-subtle hidden lg:table-cell whitespace-nowrap">@order.CreatedAt.LocalDateTime.ToString("d MMM yyyy")</td>
+                                    <td class="px-4 py-3 text-content-subtle hidden lg:table-cell whitespace-nowrap">@(order.IssuedAt?.LocalDateTime.ToString("d MMM yyyy") ?? "—")</td>
                                     <td class="px-4 py-3 text-content-subtle hidden lg:table-cell whitespace-nowrap">
                                         @(order.Status == VariationOrderStatus.Approved ? order.ApprovedAt?.LocalDateTime.ToString("d MMM yyyy") ?? "—" : "—")
                                     </td>
@@ -1345,7 +1348,7 @@ else
     // ---- Excel export ----------------------------------------------------------------------
     // One workbook, one sheet per register currently shown — following the active document-type
     // filter (ShowsRequestRows / ShowsVariationRows), same as the register's on-screen sections.
-    // Ticking "Include entire register" overrides the document-type, status and search filters:
+    // Picking "Include entire register" from the export menu overrides the document-type, status and search filters:
     // every request (all kinds, open and closed) plus the full Variations sheet — the Kind and
     // Status columns carry the distinctions the on-screen filters make.
 
@@ -1395,8 +1398,9 @@ else
                 new ExcelColumn("Request"),
                 new ExcelColumn("Status"),
                 new ExcelColumn("Value", ExcelFormat.Currency),
-                new ExcelColumn("Raised", ExcelFormat.Date),
+                new ExcelColumn("Issued", ExcelFormat.Date),
                 new ExcelColumn("Approved", ExcelFormat.Date),
+                new ExcelColumn("Created", ExcelFormat.Date),
                 new ExcelColumn("Work order"));
 
             foreach (var order in variationRows)
@@ -1409,8 +1413,9 @@ else
                     sourceRequest is null ? null : RefLabel(sourceRequest),
                     VariationStatusLabel(order),
                     RowValue(order),
-                    order.CreatedAt.LocalDateTime,
+                    order.IssuedAt?.LocalDateTime,
                     order.Status == VariationOrderStatus.Approved ? order.ApprovedAt?.LocalDateTime : null,
+                    order.CreatedAt.LocalDateTime,
                     issued.Count == 0 ? null : string.Join(", ", issued.Select(wo => $"WO-{wo.Number:0000}")));
             }
         }

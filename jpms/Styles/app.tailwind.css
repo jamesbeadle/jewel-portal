@@ -71,6 +71,13 @@
         @apply btn text-content-muted hover:text-content hover:bg-surface-raised;
     }
 
+    /* A Toolbar's icon button: fixed square, glyph inherits currentColor. Disabled styling lives
+       here (unlike btn-secondary) because toolbars are exactly where "can't right now" is common —
+       an export with no rows, a refresh already in flight. */
+    .btn-icon {
+        @apply inline-flex items-center justify-center w-8 h-8 rounded-md border border-line bg-surface-raised text-content-muted transition hover:text-content hover:border-line-strong disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:text-content-muted disabled:hover:border-line shrink-0;
+    }
+
     .data-table {
         @apply w-full text-sm text-left;
     }
