@@ -64,7 +64,7 @@ else
         }
 
         @* One card per selected claim: where it is in its life, the ONE next action as the
-           primary button, and everything else demoted to quiet text links. *@
+           primary button beside the stepper, and everything else behind the Actions menu. *@
         @* The stage, the hint and the stepper are read off the claim AND the invoices drawn
            against it, so the card waits for both — half the picture names the wrong next action,
            and "No claim selected" is a real answer that must not be shown as a guess. *@
@@ -78,27 +78,35 @@ else
                             <span class="font-semibold text-content">@s.DisplayName</span>
                             <span class="@ClaimBadgeClass(s.Status)"
                                   title="@(s.Status == ValuationClaimStatus.Preapproved && s.PreapprovedAt is { } pa ? $"Preapproved {pa:dd MMM yyyy}" : "")">@s.Status</span>
-                            <span class="flex items-center gap-3 text-xs ml-1">
-                                <button @onclick="OpenRename" class="text-content-subtle hover:text-content underline underline-offset-2">Rename</button>
-                                @if (s.Status == ValuationClaimStatus.Preapproved)
-                                {
-                                    <button @onclick="ReopenAsync" disabled="@busy"
-                                            title="Undo the preapproval — back to Draft, % complete editable again"
-                                            class="text-content-subtle hover:text-content underline underline-offset-2">Reopen as draft</button>
-                                    @if (StageFor(s) != ClaimStage.ReadyToConfirm)
-                                    {
-                                        <button @onclick="ConfirmClickedAsync" disabled="@busy"
-                                                title="Normally done once the claim's invoice is paid — confirming now will ask first"
-                                                class="text-content-subtle hover:text-content underline underline-offset-2">Confirm payment received</button>
-                                    }
-                                }
-                                <button @onclick="@(() => showDeleteClaim = true)"
-                                        title="Delete this claim and its entries — invoices and snapshots survive with the link cleared"
-                                        class="text-negative/70 hover:text-negative underline underline-offset-2">Delete</button>
-                            </span>
                         </div>
                         <p class="text-sm text-content-muted mt-1.5">@StageHint(s)</p>
                     </div>
+                    @* Secondary claim actions (rename, reopen, early confirm, delete) live behind one
+                       menu — two clicks away, so nothing destructive sits raw on the title bar — and
+                       only for the roles that run the report, never the client. *@
+                    @if (CanManageClaims)
+                    {
+                        <DropdownMenu Label="Actions" WidthClass="w-72" Items="ClaimMenuItems" Class="shrink-0" />
+                    }
+                </div>
+                <div class="mt-3 flex items-center justify-between gap-4 flex-wrap">
+                    <ol class="flex items-center gap-1.5 text-xs flex-wrap">
+                        @foreach (var step in StepsFor(s))
+                        {
+                            <li class="flex items-center gap-1.5">
+                                <span class="w-4 h-4 rounded-full inline-flex items-center justify-center text-[10px] @(step.Done ? "bg-accent text-accent-ink" : step.Current ? "border border-accent text-accent" : "border border-line text-content-subtle")">
+                                    @(step.Done ? "✓" : step.Index.ToString())
+                                </span>
+                                <span class="@(step.Current ? "text-content font-medium" : step.Done ? "text-content-muted" : "text-content-subtle")">@step.Label</span>
+                                @if (step.Index < 4)
+                                {
+                                    <span class="w-6 h-px bg-line mx-1" aria-hidden="true"></span>
+                                }
+                            </li>
+                        }
+                    </ol>
+                    @* The ONE next action sits at the end of the stage stepper it advances —
+                       the stepper says where the claim is, the button says what moves it on. *@
                     @switch (StageFor(s))
                     {
                         case ClaimStage.Draft:
@@ -143,21 +151,6 @@ else
                             break;
                     }
                 </div>
-                <ol class="mt-3 flex items-center gap-1.5 text-xs flex-wrap">
-                    @foreach (var step in StepsFor(s))
-                    {
-                        <li class="flex items-center gap-1.5">
-                            <span class="w-4 h-4 rounded-full inline-flex items-center justify-center text-[10px] @(step.Done ? "bg-accent text-accent-ink" : step.Current ? "border border-accent text-accent" : "border border-line text-content-subtle")">
-                                @(step.Done ? "✓" : step.Index.ToString())
-                            </span>
-                            <span class="@(step.Current ? "text-content font-medium" : step.Done ? "text-content-muted" : "text-content-subtle")">@step.Label</span>
-                            @if (step.Index < 4)
-                            {
-                                <span class="w-6 h-px bg-line mx-1" aria-hidden="true"></span>
-                            }
-                        </li>
-                    }
-                </ol>
             </section>
         }
         else
@@ -165,65 +158,6 @@ else
             <p class="text-sm text-content-subtle italic mb-4">No claim selected. Build the bill below, then start a claim to value works complete.</p>
         }
         </LoadGate>
-
-        @if (showStartClaim)
-        {
-            <section class="rounded-xl border border-line bg-surface p-5 mb-4">
-                <h3 class="text-sm font-medium text-content-muted mb-3">Start claim @NextClaimNumber</h3>
-                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                    <div>
-                        <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Period name</label>
-                        <input type="text" @bind="newClaimName" placeholder="e.g. June 2026"
-                               class="w-full rounded-lg border border-line-strong bg-surface-field px-3 py-2 text-sm text-content focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent" />
-                    </div>
-                    <div>
-                        <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Claim date</label>
-                        <input type="date" @bind="newClaimDate"
-                               class="w-full rounded-lg border border-line-strong bg-surface-field px-3 py-2 text-sm text-content focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent" />
-                    </div>
-                    <div>
-                        <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Retention</label>
-                        @* Read-only: the claim stamps its retention from the project's terms when it
-                           starts — the completion date decides whether the release % applies. *@
-                        @* "No terms recorded" is advice to go and record some, so it waits until the
-                           terms have actually been looked for. *@
-                        <LoadGate IsLoading="@(!Retention.RetentionLoadedFor(ProjectId))" Height="min-h-[44px]" Label="Loading retention terms">
-                        @if (Retention.RetentionFor(ProjectId) is { } terms)
-                        {
-                            <p class="text-sm text-content-muted py-2">
-                                @PctText(terms.RetentionPercent) held · @PctText(terms.CompletionReleasePercent) releases at
-                                practical completion@(terms.PracticalCompletionAt is { } pc ? $" ({pc:dd MMM yyyy})" : " — date not set")
-                            </p>
-                        }
-                        else
-                        {
-                            <p class="text-sm text-warning py-2">
-                                No retention terms recorded — this claim will hold 0%. Record them in project setup first.
-                            </p>
-                        }
-                        </LoadGate>
-                    </div>
-                </div>
-                @if (LatestClaim is not null)
-                {
-                    <label class="flex items-center gap-2 mt-3 text-sm text-content-muted cursor-pointer select-none"
-                           title="Copies each line's cumulative % complete from @LatestClaim.DisplayName, so this period starts where the last one left off and only movement needs entering.">
-                        <input type="checkbox" class="cursor-pointer align-middle" @bind="newSeedFromLatest" />
-                        Start from @(LatestClaim.DisplayName)'s percentages
-                    </label>
-                }
-                <div class="flex items-center gap-2 mt-3">
-                    <button @onclick="StartClaimAsync" disabled="@busy"
-                            class="rounded-lg bg-accent text-accent-ink font-medium text-sm px-4 py-2 hover:bg-accent-hover disabled:bg-surface-field transition">
-                        Start claim
-                    </button>
-                    <button @onclick="@(() => showStartClaim = false)"
-                            class="rounded-lg border border-line bg-surface text-content-muted font-medium text-sm px-3 py-2 hover:border-line-strong transition">
-                        Cancel
-                    </button>
-                </div>
-            </section>
-        }
 
         @* Whether lines can still be added is the selected claim's status — offer this before the
            claims land and it appears on a locked claim, then vanishes. *@
@@ -277,6 +211,58 @@ else
         </Modal>
 
         <ValuationSnapshotEmailModal Snapshot="@emailingSnapshot" OnClose="@(() => emailingSnapshot = null)" />
+
+        <Modal IsOpen="@showStartClaim"
+               Title="@($"Start claim {NextClaimNumber}")"
+               ConfirmLabel="@(busy ? "Starting…" : "Start claim")"
+               ConfirmDisabled="@busy"
+               OnCancel="@(() => showStartClaim = false)"
+               OnConfirm="StartClaimAsync"
+               Class="max-w-lg">
+            <div class="space-y-3">
+                <div>
+                    <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Period name</label>
+                    <input type="text" @bind="newClaimName" placeholder="e.g. June 2026"
+                           class="w-full rounded-lg border border-line-strong bg-surface-field px-3 py-2 text-sm text-content focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent" />
+                </div>
+                <div>
+                    <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Claim date</label>
+                    <input type="date" @bind="newClaimDate"
+                           class="w-full rounded-lg border border-line-strong bg-surface-field px-3 py-2 text-sm text-content focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent" />
+                </div>
+                <div>
+                    <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Retention</label>
+                    @* Read-only: the claim stamps its retention from the project's terms when it
+                       starts — the completion date decides whether the release % applies. *@
+                    @* "No terms recorded" is advice to go and record some, so it waits until the
+                       terms have actually been looked for. *@
+                    <LoadGate IsLoading="@(!Retention.RetentionLoadedFor(ProjectId))" Height="min-h-[44px]" Label="Loading retention terms">
+                    @if (Retention.RetentionFor(ProjectId) is { } terms)
+                    {
+                        <p class="text-sm text-content-muted py-2">
+                            @PctText(terms.RetentionPercent) held · @PctText(terms.CompletionReleasePercent) releases at
+                            practical completion@(terms.PracticalCompletionAt is { } pc ? $" ({pc:dd MMM yyyy})" : " — date not set")
+                        </p>
+                    }
+                    else
+                    {
+                        <p class="text-sm text-warning py-2">
+                            No retention terms recorded — this claim will hold 0%. Record them in project setup first.
+                        </p>
+                    }
+                    </LoadGate>
+                </div>
+                @* Valuations stack month on month, so the new period ALWAYS starts from the last
+                   claim's cumulative percentages — stated as fact, not offered as a choice. *@
+                @if (LatestClaim is not null)
+                {
+                    <p class="text-sm text-content-muted"
+                       title="Copies each line's cumulative % complete from @LatestClaim.DisplayName, so this period starts where the last one left off and only movement needs entering.">
+                        Starts from @(LatestClaim.DisplayName)'s percentages — only movement needs entering.
+                    </p>
+                }
+            </div>
+        </Modal>
 
         <Modal IsOpen="@showRename"
                Title="Rename claim"
@@ -462,6 +448,48 @@ else
     private bool CanEmailSnapshot => Session.AvailableRoles.Any(role =>
         role is Role.Admin or Role.ManagingDirector or Role.FinanceDirector or Role.ProjectManager);
 
+    // Who may manage the claim itself (rename, reopen, early confirm, delete): the roles
+    // that run the report — Admin, MD, FD, PM — never the client, who only reads it.
+    private bool CanManageClaims => Session.AvailableRoles.Any(role =>
+        role is Role.Admin or Role.ManagingDirector or Role.FinanceDirector or Role.ProjectManager);
+
+    // The claim card's Actions menu. Everything secondary or destructive for the selected
+    // claim reads as one list here — the card itself only ever shows the ONE next action.
+    private List<DropdownMenu.Item> ClaimMenuItems
+    {
+        get
+        {
+            var items = new List<DropdownMenu.Item>();
+            if (Selected is not { } claim) return items;
+
+            // Group 0 — naming.
+            items.Add(new(Label: "Rename claim…",
+                OnSelect: EventCallback.Factory.Create(this, OpenRename),
+                Hint: "Name the period this claim values — it shows everywhere the claim does"));
+
+            // Group 1 — walking the stage back (or jumping it forward) on a preapproved claim.
+            if (claim.Status == ValuationClaimStatus.Preapproved)
+            {
+                items.Add(new(Label: "Reopen as draft",
+                    OnSelect: EventCallback.Factory.Create(this, ReopenAsync),
+                    Hint: "Undo the preapproval — back to Draft, % complete editable again",
+                    Disabled: busy, Group: 1));
+                if (StageFor(claim) != ClaimStage.ReadyToConfirm)
+                    items.Add(new(Label: "Confirm payment received",
+                        OnSelect: EventCallback.Factory.Create(this, ConfirmClickedAsync),
+                        Hint: "Normally done once the claim's invoice is paid — confirming now will ask first",
+                        Disabled: busy, Group: 1));
+            }
+
+            // Group 2 — the destructive tail.
+            items.Add(new(Label: "Delete claim…",
+                OnSelect: EventCallback.Factory.Create(this, () => showDeleteClaim = true),
+                Hint: "Delete this claim and its entries — invoices and snapshots survive with the link cleared",
+                Destructive: true, Group: 2));
+            return items;
+        }
+    }
+
     private void OpenSnapshotEmail(string snapshotId)
     {
         viewingSnapshotId = null;
@@ -479,8 +507,6 @@ else
 
     private DateTime newClaimDate = DateTime.Today;
     private string newClaimName = "";
-    // Rollover default: copy the latest claim's percentages into the new one.
-    private bool newSeedFromLatest;
 
     private bool showRename;
     private string renameValue = "";
@@ -544,13 +570,7 @@ else
         StateHasChanged();
     }
 
-    private void ToggleStartClaim()
-    {
-        showStartClaim = !showStartClaim;
-        if (!showStartClaim) return;
-        // Rolling over is the norm once a claim exists — default the seed on.
-        newSeedFromLatest = LatestClaim is not null;
-    }
+    private void ToggleStartClaim() => showStartClaim = !showStartClaim;
 
     private Task StartClaimAsync() => GuardAsync(async () =>
     {
@@ -559,10 +579,12 @@ else
         var date = new DateTimeOffset(DateTime.SpecifyKind(newClaimDate.Date, DateTimeKind.Unspecified), TimeSpan.Zero);
         // Retention percents are omitted deliberately: the server stamps them from the
         // project's retention terms, with the completion date gating the release %.
+        // Always seeded from the latest claim: valuations stack month to month, so a new
+        // period never starts from zero once a claim exists (null for Claim 1).
         var claim = await Store.StartClaimAsync(new StartValuationClaim(
             ProjectId, NextClaimNumber, date,
             Name: newClaimName.Trim(),
-            SeedFromClaimId: newSeedFromLatest ? LatestClaim?.ValuationClaimId : null));
+            SeedFromClaimId: LatestClaim?.ValuationClaimId));
         selectedClaimId = claim.ValuationClaimId;
         showStartClaim = false;
         newClaimName = "";
@@ -665,12 +687,11 @@ else
     private bool IsLatestClaim(ValuationClaim claim) =>
         LatestClaim?.ValuationClaimId == claim.ValuationClaimId;
 
-    // Opens the start-claim form seeded from the given claim, with the following month
-    // suggested as the new period's name. Used after Confirm and by the card's
-    // "Start next claim" button on an already-confirmed claim.
+    // Opens the start-claim modal with the following month suggested as the new period's
+    // name. Used after Confirm and by the card's "Start next claim" button on an
+    // already-confirmed claim. Seeding from the latest claim is automatic.
     private void OpenNextClaimForm(ValuationClaim baseline)
     {
-        newSeedFromLatest = true;
         newClaimName = baseline.ClaimDate.AddMonths(1).ToString("MMMM yyyy", Gb);
         newClaimDate = DateTime.Today;
         showStartClaim = true;

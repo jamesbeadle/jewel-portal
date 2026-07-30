@@ -70,7 +70,7 @@
                             <th class="sticky top-0 z-20 bg-surface-raised px-3 py-3 whitespace-nowrap">Report</th>
                             @if (CanManage)
                             {
-                                <th class="sticky top-0 z-20 bg-surface-raised px-3 py-3 text-right w-[210px]"></th>
+                                <th class="sticky top-0 z-20 bg-surface-raised px-3 py-3 text-right w-[110px]"></th>
                             }
                         </tr>
                     </thead>
@@ -107,60 +107,23 @@
                                 @if (CanManage)
                                 {
                                     <td class="px-3 py-2 text-right whitespace-nowrap">
-                                        @if (!invoice.IsManual && invoice.Status == ValuationInvoiceStatus.Raised)
-                                        {
-                                            <button type="button" disabled="@busy" @onclick="() => SubmitAsync(invoice)"
-                                                    title="Send to the architect/client for approval — freezes a report snapshot"
-                                                    class="text-content-subtle hover:text-content underline underline-offset-2 text-xs">Submit</button>
-                                            <button type="button" disabled="@busy" @onclick="() => IssueAsync(invoice)"
-                                                    title="Issue without the approval loop — counts toward certified to date"
-                                                    class="ml-2 text-content-subtle hover:text-content underline underline-offset-2 text-xs">Issue</button>
-                                        }
-                                        else if (invoice.Status == ValuationInvoiceStatus.Submitted)
-                                        {
-                                            <button type="button" disabled="@busy" @onclick="() => ApproveAsync(invoice)"
-                                                    class="text-content-subtle hover:text-content underline underline-offset-2 text-xs">Approve</button>
-                                            <button type="button" disabled="@busy" @onclick="() => OpenReject(invoice)"
-                                                    class="ml-2 text-content-subtle hover:text-negative underline underline-offset-2 text-xs">Reject</button>
-                                        }
-                                        else if (invoice.Status == ValuationInvoiceStatus.Approved)
-                                        {
-                                            <button type="button" disabled="@busy" @onclick="() => IssueAsync(invoice)"
-                                                    class="text-content-subtle hover:text-content underline underline-offset-2 text-xs">Issue invoice</button>
-                                        }
-                                        else if (invoice.Status == ValuationInvoiceStatus.Issued)
-                                        {
-                                            <button type="button" disabled="@busy" @onclick="() => OpenPayment(invoice)"
-                                                    class="text-content-subtle hover:text-content underline underline-offset-2 text-xs">Record payment</button>
-                                        }
-                                        @if (invoice.IsEditable && invoice.Status != ValuationInvoiceStatus.Cancelled)
-                                        {
-                                            <button type="button" disabled="@busy" @onclick="() => OpenEdit(invoice)"
-                                                    title="@(invoice.Status == ValuationInvoiceStatus.Rejected ? "Amend and return to Raised, ready to resubmit" : "Amend period/amount")"
-                                                    class="ml-2 text-content-subtle hover:text-content underline underline-offset-2 text-xs">@(invoice.Status == ValuationInvoiceStatus.Rejected ? "Amend" : "Edit")</button>
-                                        }
-                                        @if (!invoice.IsManual && invoice.Status is ValuationInvoiceStatus.Raised or ValuationInvoiceStatus.Rejected)
-                                        {
-                                            <button type="button" disabled="@busy" @onclick="() => CancelAsync(invoice)"
-                                                    title="Withdraw — kept for the audit trail, excluded from every total"
-                                                    class="ml-2 text-content-subtle hover:text-negative underline underline-offset-2 text-xs">Cancel</button>
-                                        }
-                                        <button type="button" disabled="@busy" @onclick="() => ToggleHistoryAsync(invoice)"
-                                                class="ml-2 text-content-subtle hover:text-content underline underline-offset-2 text-xs">History</button>
+                                        @* One menu per row instead of a run of text links — the
+                                           stage decides which moves it offers. Delete keeps its
+                                           two-step confirm: choosing it swaps the menu for an
+                                           inline Confirm delete / Keep pair. *@
                                         @if (pendingDeleteId == invoice.ValuationInvoiceId)
                                         {
                                             <button type="button" disabled="@busy" @onclick="() => DeleteAsync(invoice)"
-                                                    class="ml-2 text-negative underline underline-offset-2 text-xs font-medium">Confirm delete</button>
+                                                    class="text-negative underline underline-offset-2 text-xs font-medium">Confirm delete</button>
                                             <button type="button" disabled="@busy" @onclick="() => pendingDeleteId = null"
                                                     class="ml-1.5 text-content-subtle hover:text-content underline underline-offset-2 text-xs">Keep</button>
                                         }
                                         else
                                         {
-                                            <button type="button" disabled="@busy" @onclick="() => pendingDeleteId = invoice.ValuationInvoiceId"
-                                                    title="@(invoice.Status is ValuationInvoiceStatus.Issued or ValuationInvoiceStatus.Paid
-                                                              ? "Delete this invoice — certified to date (and a paid one's receipts) roll back"
-                                                              : "Delete this invoice")"
-                                                    class="ml-2 text-content-subtle hover:text-negative underline underline-offset-2 text-xs">Delete</button>
+                                            <DropdownMenu Label="Actions" WidthClass="w-64" Disabled="@busy"
+                                                          ToggleClass="inline-flex items-center gap-1 rounded-lg border border-line bg-surface px-2.5 py-1 text-xs text-content-muted hover:border-line-strong transition"
+                                                          Class="inline-block text-left"
+                                                          Items="InvoiceMenuItems(invoice)" />
                                         }
                                     </td>
                                 }
@@ -374,6 +337,72 @@
     private IReadOnlyList<ValuationInvoiceEvent>? historyEvents;
 
     private int ColumnCount => CanManage ? 7 : 6;
+
+    // The row's Actions menu: the stage's own moves first, then amending/withdrawing, then the
+    // record (history, delete). Same gates and hover text as the old inline links, one list.
+    private List<DropdownMenu.Item> InvoiceMenuItems(ValuationInvoice invoice)
+    {
+        var items = new List<DropdownMenu.Item>();
+
+        // Group 0 — moving the invoice along its lifecycle.
+        if (!invoice.IsManual && invoice.Status == ValuationInvoiceStatus.Raised)
+        {
+            items.Add(new(Label: "Submit for approval",
+                OnSelect: EventCallback.Factory.Create(this, () => SubmitAsync(invoice)),
+                Hint: "Send to the architect/client for approval — freezes a report snapshot"));
+            items.Add(new(Label: "Issue",
+                OnSelect: EventCallback.Factory.Create(this, () => IssueAsync(invoice)),
+                Hint: "Issue without the approval loop — counts toward certified to date"));
+        }
+        else if (invoice.Status == ValuationInvoiceStatus.Submitted)
+        {
+            items.Add(new(Label: "Approve",
+                OnSelect: EventCallback.Factory.Create(this, () => ApproveAsync(invoice)),
+                Hint: "Record the client's approval — issue next to count toward certified to date"));
+            items.Add(new(Label: "Reject…",
+                OnSelect: EventCallback.Factory.Create(this, () => OpenReject(invoice)),
+                Hint: "Record the client's rejection — the invoice unlocks for amendment or cancellation"));
+        }
+        else if (invoice.Status == ValuationInvoiceStatus.Approved)
+        {
+            items.Add(new(Label: "Issue invoice",
+                OnSelect: EventCallback.Factory.Create(this, () => IssueAsync(invoice)),
+                Hint: "Counts toward certified to date"));
+        }
+        else if (invoice.Status == ValuationInvoiceStatus.Issued)
+        {
+            items.Add(new(Label: "Record payment…",
+                OnSelect: EventCallback.Factory.Create(this, () => OpenPayment(invoice)),
+                Hint: "Record the client's payment when the cash lands"));
+        }
+
+        // Group 1 — amending and withdrawing.
+        if (invoice.IsEditable && invoice.Status != ValuationInvoiceStatus.Cancelled)
+            items.Add(new(Label: invoice.Status == ValuationInvoiceStatus.Rejected ? "Amend…" : "Edit…",
+                OnSelect: EventCallback.Factory.Create(this, () => OpenEdit(invoice)),
+                Hint: invoice.Status == ValuationInvoiceStatus.Rejected
+                    ? "Amend and return to Raised, ready to resubmit"
+                    : "Amend period/amount",
+                Group: 1));
+        if (!invoice.IsManual && invoice.Status is ValuationInvoiceStatus.Raised or ValuationInvoiceStatus.Rejected)
+            items.Add(new(Label: "Cancel invoice",
+                OnSelect: EventCallback.Factory.Create(this, () => CancelAsync(invoice)),
+                Hint: "Withdraw — kept for the audit trail, excluded from every total",
+                Destructive: true, Group: 1));
+
+        // Group 2 — the record.
+        items.Add(new(Label: historyOpenId == invoice.ValuationInvoiceId ? "Hide history" : "History",
+            OnSelect: EventCallback.Factory.Create(this, () => ToggleHistoryAsync(invoice)),
+            Group: 2));
+        items.Add(new(Label: "Delete…",
+            OnSelect: EventCallback.Factory.Create(this, () => pendingDeleteId = invoice.ValuationInvoiceId),
+            Hint: invoice.Status is ValuationInvoiceStatus.Issued or ValuationInvoiceStatus.Paid
+                ? "Delete this invoice — certified to date (and a paid one's receipts) roll back"
+                : "Delete this invoice",
+            Destructive: true, Group: 2));
+
+        return items;
+    }
 
     private bool CanManage => Session.AvailableRoles.Any(role =>
         role is Role.Admin or Role.ManagingDirector or Role.FinanceDirector or Role.ProjectManager);

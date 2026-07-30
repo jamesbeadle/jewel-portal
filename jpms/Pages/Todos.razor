@@ -76,9 +76,9 @@ else
             <button type="button" class="@StatusTabClass(StatusFilter.Done)" @onclick="() => statusFilter = StatusFilter.Done">Done</button>
             <button type="button" class="@StatusTabClass(StatusFilter.All)" @onclick="() => statusFilter = StatusFilter.All">All</button>
 
-            @* Both selects are built from data — the scope filter from the projects that have
-               items, the role filter from the assignable-role pool — so they wait with the list.
-               A short list of options that quietly grows misleads exactly as a 0 count does. *@
+            @* The selects are built from data — the scope filter from the projects that have
+               items, the role and person filters from the assignable pool — so they wait with the
+               list. A short list of options that quietly grows misleads exactly as a 0 count does. *@
             @* The project filter: every project with items, plus company-wide (no-project) only.
                Disabled until the options land — a short list that quietly grows misleads as a 0
                count does — but a filter is a control, so it says so in its own placeholder. *@
@@ -96,13 +96,26 @@ else
             {
                 @* Disabled until the pool lands, never absent: a filter that pops into the row a
                    second late is a control the reader has already decided isn't there. *@
-                <select class="field !w-auto text-xs" value="@assigneeFilter" @onchange="e => assigneeFilter = e.Value?.ToString() ?? string.Empty"
+                @* Two filters, not one combined list: pick a role to narrow the person list to its
+                   holders, pick a person straight away (no role = every assignable user) to see
+                   everything pinned to them, or both to intersect. Unassigned is a role-slot
+                   answer, so it lives in the role filter — and empties the person one. *@
+                <select class="field !w-auto text-xs" value="@roleFilter" @onchange="OnRoleFilterChange"
                         disabled="@(!filtersReady)">
-                    <option value="">@(filtersReady ? "Any assignee" : "Loading…")</option>
+                    <option value="">@(filtersReady ? "Any role" : "Loading…")</option>
                     <option value="@Unassigned">Unassigned</option>
-                    @foreach (var option in assigneeOptions)
+                    @foreach (var role in assignableRoles)
                     {
-                        <option value="@option.Value">@option.Label</option>
+                        <option value="@((int)role)">@role.DisplayName()</option>
+                    }
+                </select>
+
+                <select class="field !w-auto text-xs" value="@personFilter" @onchange="e => personFilter = e.Value?.ToString() ?? string.Empty"
+                        disabled="@(!filtersReady || roleFilter == Unassigned)">
+                    <option value="">@(filtersReady ? "Anyone" : "Loading…")</option>
+                    @foreach (var person in FilterablePeople)
+                    {
+                        <option value="@person.Email">@person.DisplayName</option>
                     }
                 </select>
             }
@@ -232,11 +245,18 @@ else
     private string? error;
 
     private IReadOnlyList<TodoItem> items = Array.Empty<TodoItem>();
+    // The flattened role/"Role — Person" pool still feeds the ASSIGNMENT pickers (the add modal
+    // and the detail modal's reassign); the filter row reads the raw lists below instead.
     private IReadOnlyList<SearchSelect.Option> assigneeOptions = Array.Empty<SearchSelect.Option>();
+    private IReadOnlyList<Role> assignableRoles = Array.Empty<Role>();
+    private IReadOnlyList<TodoAssignablePerson> assignablePeople = Array.Empty<TodoAssignablePerson>();
 
     private StatusFilter statusFilter = StatusFilter.Open;
     private string scopeFilter = ScopeAll;
-    private string assigneeFilter = "";
+    // The two assignee filters: a role (its int as a string, or Unassigned, "" = any) and a
+    // person's email ("" = anyone). Independent — see MatchesAssigneeFilter.
+    private string roleFilter = "";
+    private string personFilter = "";
 
     // The item open in the detail modal (null = closed). Complete/reopen and delete happen there;
     // a successful action closes it, and the refreshed list re-files the item under its new status.
@@ -301,7 +321,9 @@ else
         {
             var rolesTask = TodoStore.ListAssignableRolesAsync();
             var peopleTask = TodoStore.ListAssignablePeopleAsync();
-            assigneeOptions = TodoAssigneePicker.BuildOptions(await rolesTask, await peopleTask);
+            assignableRoles = await rolesTask;
+            assignablePeople = await peopleTask;
+            assigneeOptions = TodoAssigneePicker.BuildOptions(assignableRoles, assignablePeople);
         }
         catch { }
     }
@@ -331,16 +353,43 @@ else
             .Where(item => MatchesAssigneeFilter(item))
             .ToList();
 
-    // The assignee filter offers the same rows as the picker: a role alone matches every item
-    // assigned to it — pinned or not — while "Role — Person" narrows to that person's items.
+    // Role and person are independent narrowings: a role alone matches every item assigned to it
+    // — pinned or not — a person alone matches everything pinned to them under ANY role they
+    // hold, and both together intersect. Unassigned means the role slot is empty, so no person
+    // filter can apply with it (the select is disabled and cleared while it's picked).
     private bool MatchesAssigneeFilter(TodoItem item)
     {
-        if (assigneeFilter == "") return true;
-        if (assigneeFilter == Unassigned) return item.AssigneeRole is null;
-        if (TodoAssigneePicker.Parse(assigneeFilter) is not TodoAssignee filter) return true;
-        if (item.AssigneeRole != filter.Role) return false;
-        return filter.PersonEmail is null
-            || string.Equals(item.AssigneePersonEmail, filter.PersonEmail, StringComparison.OrdinalIgnoreCase);
+        if (roleFilter == Unassigned) return item.AssigneeRole is null;
+        if (SelectedRoleFilter is Role role && item.AssigneeRole != role) return false;
+        return personFilter == ""
+            || string.Equals(item.AssigneePersonEmail, personFilter, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private Role? SelectedRoleFilter =>
+        roleFilter != "" && roleFilter != Unassigned && int.TryParse(roleFilter, out var value)
+            ? (Role)value
+            : null;
+
+    // The person filter's pool: holders of the selected role, or — with no role picked — every
+    // assignable user once (a person holding two roles is still one person), A–Z by name.
+    private IReadOnlyList<TodoAssignablePerson> FilterablePeople =>
+        SelectedRoleFilter is Role role
+            ? assignablePeople.Where(person => person.Role == role).ToList()
+            : assignablePeople
+                .GroupBy(person => person.Email, StringComparer.OrdinalIgnoreCase)
+                .Select(group => group.First())
+                .OrderBy(person => person.DisplayName, StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+    private void OnRoleFilterChange(ChangeEventArgs e)
+    {
+        roleFilter = e.Value?.ToString() ?? "";
+        // An unassigned item has no person, and a person picked under the old role may not hold
+        // the new one — either way the person filter resets rather than silently matching nothing.
+        if (personFilter != ""
+            && (roleFilter == Unassigned
+                || !FilterablePeople.Any(person => string.Equals(person.Email, personFilter, StringComparison.OrdinalIgnoreCase))))
+            personFilter = "";
     }
 
     // Only projects that actually have items on the current list appear in the scope filter.
