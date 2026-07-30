@@ -11,6 +11,11 @@
        that gets reported as "it just doesn't work". *@
     <ErrorToast />
 
+    @* The informative one: a newer JPMS has been deployed than the build this tab is running.
+       Sits under ErrorToast in the stack, because something being broken outranks something
+       being newer. *@
+    <UpdateToast />
+
 
     @if (CanSeeNavigation)
     {
@@ -51,7 +56,9 @@
         <footer class="border-t border-line">
             <div class="px-4 py-3 text-xs text-content-subtle flex items-center justify-between">
                 <span>Jewel Bespoke Build</span>
-                <span>JPMS v0.1</span>
+                @* The deploy's run number ("v473"), stamped by the workflow; "dev" locally. The
+                   footer is the first place to look when asking "which build is this user on?" *@
+                <span>JPMS @BuildVersion.Display</span>
             </div>
         </footer>
     </div>

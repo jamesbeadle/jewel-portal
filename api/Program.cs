@@ -28,6 +28,7 @@ using Jewel.JPMS.Api.Features.Leads;
 using Jewel.JPMS.Api.Features.MailboxIntake;
 using Jewel.JPMS.Api.Features.Mobilisation;
 using Jewel.JPMS.Api.Features.Places;
+using Jewel.JPMS.Api.Features.Platform;
 using Jewel.JPMS.Api.Features.Portal;
 using Jewel.JPMS.Api.Features.Procurement;
 using Jewel.JPMS.Api.Features.Progress;
@@ -49,7 +50,12 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 
 var host = new HostBuilder()
-    .ConfigureFunctionsWebApplication()
+    .ConfigureFunctionsWebApplication(worker =>
+    {
+        // Every HTTP response carries the deploy's build number, so an open tab built by an
+        // earlier deploy finds out from its next data fetch — see VersionStampMiddleware.
+        worker.UseMiddleware<VersionStampMiddleware>();
+    })
     .ConfigureServices((context, services) =>
     {
         var connectionString = context.Configuration["SqlConnectionString"]

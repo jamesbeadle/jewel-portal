@@ -128,6 +128,9 @@ builder.Services.AddScoped<IXeroAgedPayablesStore, HttpXeroAgedPayablesStore>();
 builder.Services.AddScoped<IXeroLedgerStore, HttpXeroLedgerStore>();
 
 builder.Services.AddScoped<StoreChangeHub>();
+// Watches the build number the API stamps on every response; the CQRS transport reports each
+// sighting and the UpdateToast renders the "new version available" prompt it raises.
+builder.Services.AddScoped<AppVersionService>();
 builder.Services.AddScoped<AuthService>();
 builder.Services.AddScoped<UserInviteService>();
 builder.Services.AddScoped<ActiveRoleStorage>();

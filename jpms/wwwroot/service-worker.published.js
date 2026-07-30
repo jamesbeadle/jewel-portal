@@ -2,6 +2,12 @@
 
 self.importScripts('./service-worker-assets.js');
 self.addEventListener('install', event => event.waitUntil(onInstall(event)));
+// The UpdateToast's Refresh button posts this (via app-update.js): activate the freshly-installed
+// worker now, instead of waiting for every JPMS tab to close, so the reload that follows is
+// served the NEW cache rather than the build the user is trying to leave.
+self.addEventListener('message', event => {
+    if (event.data === 'SKIP_WAITING') self.skipWaiting();
+});
 self.addEventListener('activate', event => event.waitUntil(onActivate(event)));
 self.addEventListener('fetch', event => event.respondWith(onFetch(event)));
 

@@ -1,6 +1,7 @@
 using System.Net;
 using System.Text.Json;
 using Jewel.JPMS.Contracts.Cqrs;
+using Jewel.JPMS.Services;
 
 namespace Jewel.JPMS.Cqrs;
 
@@ -9,12 +10,14 @@ public sealed class HttpQueryClient : IQueryClient
     private readonly HttpClient httpClient;
     private readonly QueryRouteTable routes;
     private readonly IErrorSink errors;
+    private readonly AppVersionService versions;
 
-    public HttpQueryClient(HttpClient httpClient, QueryRouteTable routes, IErrorSink errors)
+    public HttpQueryClient(HttpClient httpClient, QueryRouteTable routes, IErrorSink errors, AppVersionService versions)
     {
         this.httpClient = httpClient;
         this.routes = routes;
         this.errors = errors;
+        this.versions = versions;
     }
 
     public async Task<TResult> AskAsync<TResult>(IQuery<TResult> query, CancellationToken cancellationToken)
@@ -26,6 +29,12 @@ public sealed class HttpQueryClient : IQueryClient
         try
         {
             using var response = await httpClient.GetAsync(path, cancellationToken);
+
+            // Every response carries the API's build number; noticing it here — before the status
+            // check, so a stale tab's 401s still count — is what makes "each route load checks the
+            // version" true without a single extra request. See AppVersionService.
+            versions.ObserveResponse(response);
+
             response.EnsureSuccessStatusCode();
 
             // "Nothing recorded yet" is a legitimate answer to the nullable queries — a project with

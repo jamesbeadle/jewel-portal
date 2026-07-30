@@ -1,6 +1,7 @@
 using System.Net.Http.Json;
 using System.Text.Json;
 using Jewel.JPMS.Contracts.Cqrs;
+using Jewel.JPMS.Services;
 
 namespace Jewel.JPMS.Cqrs;
 
@@ -9,12 +10,14 @@ public sealed class HttpCommandSender : ICommandSender
     private readonly HttpClient httpClient;
     private readonly CommandRouteTable routes;
     private readonly IErrorSink errors;
+    private readonly AppVersionService versions;
 
-    public HttpCommandSender(HttpClient httpClient, CommandRouteTable routes, IErrorSink errors)
+    public HttpCommandSender(HttpClient httpClient, CommandRouteTable routes, IErrorSink errors, AppVersionService versions)
     {
         this.httpClient = httpClient;
         this.routes = routes;
         this.errors = errors;
+        this.versions = versions;
     }
 
     public async Task<TResult> SendAsync<TResult>(ICommand<TResult> command, CancellationToken cancellationToken)
@@ -35,6 +38,10 @@ public sealed class HttpCommandSender : ICommandSender
             errors.ReportRequestFailure(operation, route.HttpMethod, path, null, null, transportFailure);
             throw;
         }
+
+        // The API stamps its build number on every response — see AppVersionService. Observed
+        // before the status check so a failing command still counts as a sighting.
+        versions.ObserveResponse(response);
 
         if (!response.IsSuccessStatusCode)
         {

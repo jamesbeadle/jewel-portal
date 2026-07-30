@@ -4,5 +4,8 @@
     @* Sign-in, set-password and forgot-password get the same error surface as the rest of the app:
        a failure here is exactly the kind a user needs to be able to forward. *@
     <ErrorToast />
+    @* Sign-in gets the update prompt too: a stale cached bundle on the landing page is exactly
+       what makes "sign-in is broken" reports out of a deploy that changed the auth flow. *@
+    <UpdateToast />
     @Body
 </div>

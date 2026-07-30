@@ -1,0 +1,105 @@
+@inject AppVersionService Versions
+@inject HttpClient Http
+@inject IJSRuntime Js
+@implements IDisposable
+
+@*
+    The informative sibling of ErrorToast: full width along the top, but a calm raised surface
+    rather than a red one — nothing is wrong, there is simply a newer JPMS than the one this tab
+    is running. Deliberately persistent, with no dismiss: the prompt only exists because updates
+    matter, and everyone ends up on the current build. It sits UNDER ErrorToast (z-50 vs z-[60]),
+    so if something is actually broken the error wins the top of the screen.
+
+    Refresh is not a bare location.reload(): the production service worker serves the app from its
+    cache, so a bare reload would hand back the very build the toast is complaining about. The JS
+    side (app-update.js) asks the registration to update, waits for the new worker to finish
+    installing, tells it to take over, and only then reloads — hence the "Updating…" state, which
+    can take a few seconds while the new bundle downloads.
+
+    This component also owns the one version check the response-header route can't provide: a
+    backgrounded tab sends no traffic, so when it becomes visible again it asks /api/version
+    directly. That is what lets a tab that has sat open overnight offer the refresh the moment
+    someone comes back to it, before they touch anything.
+*@
+
+@if (Versions.UpdateAvailable)
+{
+    <div class="fixed top-0 left-0 right-0 z-50 bg-surface-raised border-b border-line-strong shadow-lg shadow-black/40"
+         role="status" aria-live="polite">
+        <div class="px-4 py-2.5 flex items-center gap-3">
+
+            <svg class="w-5 h-5 shrink-0 text-info" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                 stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <circle cx="12" cy="12" r="10" />
+                <path d="M12 16v-4" /><path d="M12 8h.01" />
+            </svg>
+
+            <p class="text-sm text-content leading-snug flex-1 min-w-0">
+                A new version of JPMS is available.
+                <span class="text-content-subtle">Refresh to switch over — it only takes a moment.</span>
+            </p>
+
+            <span class="hidden sm:inline shrink-0 text-[11px] font-mono text-content-subtle">
+                @BuildVersion.Display → v@(Versions.LatestVersion)
+            </span>
+
+            <button type="button" @onclick="Refresh" disabled="@refreshing"
+                    class="shrink-0 rounded-lg bg-accent hover:bg-accent-hover text-accent-ink px-3.5 py-1.5 text-xs font-semibold transition disabled:opacity-60 disabled:pointer-events-none">
+                @(refreshing ? "Updating…" : "Refresh")
+            </button>
+
+        </div>
+    </div>
+}
+
+@code {
+    private bool refreshing;
+    private DotNetObjectReference<UpdateToast>? selfRef;
+
+    protected override void OnInitialized() => Versions.OnChange += OnVersionChange;
+
+    private void OnVersionChange() => InvokeAsync(StateHasChanged);
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender) return;
+        selfRef = DotNetObjectReference.Create(this);
+        await Js.InvokeVoidAsync("jpmsUpdate.watchVisibility", selfRef);
+    }
+
+    [JSInvokable]
+    public async Task OnTabVisible()
+    {
+        if (Versions.UpdateAvailable) return;
+        try
+        {
+            // OkObjectResult(string) arrives as text/plain, but trim quotes anyway in case the
+            // serialisation ever changes — a version wrapped in quotes must not fail the parse.
+            var reported = await Http.GetStringAsync("api/version");
+            Versions.Observe(reported.Trim().Trim('"'));
+        }
+        catch
+        {
+            // Offline, or the API is mid-deploy. Not worth a toast of its own: the next data
+            // fetch goes through the error-reporting transport and carries the header anyway.
+        }
+    }
+
+    private async Task Refresh()
+    {
+        refreshing = true;
+        StateHasChanged();
+        await Js.InvokeVoidAsync("jpmsUpdate.refresh");
+    }
+
+    public void Dispose()
+    {
+        Versions.OnChange -= OnVersionChange;
+        if (selfRef is not null)
+        {
+            // Fire-and-forget: the listener must go, but disposal can't await it.
+            _ = Js.InvokeVoidAsync("jpmsUpdate.unwatchVisibility", selfRef);
+            selfRef.Dispose();
+        }
+    }
+}
