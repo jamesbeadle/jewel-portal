@@ -110,3 +110,26 @@
 - `SearchSelect` already leads its unfiltered list with a blank entry labelled with its
   `Placeholder`, which *is* the clear/"All …" row. Do not prepend another one — that is what put
   "All projects" in the Xero allocation filter twice.
+
+## Database migrations (prod)
+
+- **Every schema change ships with its apply commands, immediately.** When work adds an EF
+  migration, hand the user the exact ready-to-run commands in the same reply as the code — never
+  leave the database update as a follow-up. The database is updated *before or with* the deploy
+  (additive/expand first), because people are using the system and the deployed code must never
+  query columns that don't exist yet. That is exactly what broke sign-in on 2026-07-30.
+- **Scoped scripts only — the full idempotent script is permanently broken against prod.**
+  `20260702170000_SeparateArchitectsFromClients` embeds raw SQL reading `Clients.ArchitectEmail`,
+  which a later step drops; SQL Server fails that batch at *compile time* on any database where
+  the column is already gone, so `dotnet ef migrations script --idempotent` (unscoped) can never
+  run again. Always generate from the last applied migration:
+  1. `sqlcmd -S sql-jpms-prod-54cf9e.database.windows.net -d jpms -U jpmsadmin -Q "SELECT TOP 1 MigrationId FROM __EFMigrationsHistory ORDER BY MigrationId DESC"`
+  2. `cd api && dotnet ef migrations script <that-id> --idempotent -o migrate.sql`
+  3. `sqlcmd -S sql-jpms-prod-54cf9e.database.windows.net -d jpms -U jpmsadmin -i migrate.sql -b -o migrate.log`
+  4. Read `migrate.log` — `-b` stops at the first error, and "completed" printed by an *earlier*
+     script run proves nothing about the current one.
+- **Raw SQL inside migrations must survive the column being dropped later.** Wrap data-moving SQL
+  in `EXEC sp_executesql N'...'` so it compiles only when the guard actually runs; inline raw SQL
+  referencing columns that a later migration drops is what poisoned the full script.
+- One-off data fixes (seeds, role grants, remaps) stay as reviewed scripts under `infra/` /
+  `scripts/` run via sqlcmd — they are not EF migrations and must never touch schema.
