@@ -52,9 +52,19 @@ public sealed class HttpCommandSender : ICommandSender
                 : detail);
         }
 
-        var result = await response.Content.ReadFromJsonAsync<TResult>(cancellationToken: cancellationToken);
-        if (result is null) throw new InvalidOperationException($"Command {command.GetType().Name} returned no body.");
-        return result;
+        // A 200 whose body can't be read is still a failure the user can do nothing about where
+        // they stand — report it like any other, or the only trace is a generic fallback banner.
+        try
+        {
+            var result = await response.Content.ReadFromJsonAsync<TResult>(cancellationToken: cancellationToken);
+            if (result is null) throw new InvalidOperationException($"Command {command.GetType().Name} returned no body.");
+            return result;
+        }
+        catch (Exception readFailure) when (readFailure is not OperationCanceledException)
+        {
+            errors.ReportRequestFailure(operation, route.HttpMethod, path, (int)response.StatusCode, null, readFailure);
+            throw;
+        }
     }
 
     /// <summary>

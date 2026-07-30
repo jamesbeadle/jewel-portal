@@ -8,6 +8,7 @@
 @inject IProjectRetentionStore Retention
 @inject ICostCenterStore CostCenters
 @inject NavigationManager Nav
+@inject ErrorReporter Errors
 @implements IDisposable
 
 <PageTitle>Valuation Report · JPMS</PageTitle>
@@ -618,7 +619,16 @@ else
         busy = true;
         try { await action(); }
         catch (CommandFailedException failure) { actionError = failure.Message; }
-        catch { actionError = failureMessage; }
+        catch (Exception unexpected)
+        {
+            // Anything HTTP-shaped becomes a CommandFailedException in HttpCommandSender, so
+            // landing here means the failure never came back as a response: a client-side throw
+            // (route lookup, serialisation, a bug in the action itself) or a request that never
+            // left. Raise a full report with a reference instead of swallowing it, and put the
+            // exception type on the banner so a screenshot alone identifies the fault.
+            Errors.ReportUnhandled(unexpected, failureMessage);
+            actionError = $"{failureMessage} [{unexpected.GetType().Name}: {unexpected.Message}]";
+        }
         finally { busy = false; }
     }
 

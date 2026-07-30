@@ -127,7 +127,12 @@ public sealed class HttpValuationReportStore : IValuationReportStore
     public async Task<ValuationClaim> StartClaimAsync(StartValuationClaim command)
     {
         var result = await commands.SendAsync(command, CancellationToken.None);
-        await claimsReadModel.RefreshAsync(command.ProjectId, CancellationToken.None);
+        // The claim exists server-side from here on. A failed refresh of the claims list must
+        // not surface as "couldn't start the claim" — the user would retry and mint a duplicate
+        // claim number. HttpQueryClient has already raised its own toast for the failed read;
+        // swallow it here and let the list catch up on the next refresh.
+        try { await claimsReadModel.RefreshAsync(command.ProjectId, CancellationToken.None); }
+        catch { /* reported by HttpQueryClient; the created claim is still returned */ }
         return result;
     }
 
