@@ -50,6 +50,7 @@
     <Compile Include="..\api\Features\Requests\Documents\RequestDocumentBuilder.cs" Link="Shared\Documents\RequestDocumentBuilder.cs" />
     <Compile Include="..\api\Features\Requests\Documents\RequestDocumentRenderer.cs" Link="Shared\Documents\RequestDocumentRenderer.cs" />
     <Compile Include="..\api\Features\Requests\Documents\DocumentFontResolver.cs" Link="Shared\Documents\DocumentFontResolver.cs" />
+    <Compile Include="..\api\Features\Requests\Documents\DocumentBranding.cs" Link="Shared\Documents\DocumentBranding.cs" />
     <!-- Shared recipient resolution: the worker send, the Outlook draft, and the recipients
          preview all resolve To/CC/BCC through the same code so the paths can never drift. -->
     <Compile Include="..\api\Features\Requests\Recipients\RequestRecipientResolver.cs" Link="Shared\RequestRecipientResolver.cs" />
