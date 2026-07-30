@@ -204,7 +204,7 @@
         error = null;
     }
 
-    private Task Save() => SendAsync(Result is { } result ? new DateTimeOffset(result.Date, TimeSpan.Zero) : null);
+    private Task Save() => SendAsync(Result is { } result ? new DateTimeOffset(DateTime.SpecifyKind(result.Date, DateTimeKind.Unspecified), TimeSpan.Zero) : null);
 
     private Task ClearAsync() => SendAsync(null);
 

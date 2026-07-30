@@ -8,7 +8,6 @@
 @inject IProjectRetentionStore Retention
 @inject ICostCenterStore CostCenters
 @inject NavigationManager Nav
-@inject ErrorReporter Errors
 @implements IDisposable
 
 <PageTitle>Valuation Report · JPMS</PageTitle>
@@ -555,7 +554,9 @@ else
 
     private Task StartClaimAsync() => GuardAsync(async () =>
     {
-        var date = new DateTimeOffset(newClaimDate.Date, TimeSpan.Zero);
+        // SpecifyKind: the bound date can arrive as Kind.Local (DateTime.Today default), and the
+        // DateTimeOffset ctor rejects a Local value with a zero offset whenever the UK is on BST.
+        var date = new DateTimeOffset(DateTime.SpecifyKind(newClaimDate.Date, DateTimeKind.Unspecified), TimeSpan.Zero);
         // Retention percents are omitted deliberately: the server stamps them from the
         // project's retention terms, with the completion date gating the release %.
         var claim = await Store.StartClaimAsync(new StartValuationClaim(
@@ -619,16 +620,7 @@ else
         busy = true;
         try { await action(); }
         catch (CommandFailedException failure) { actionError = failure.Message; }
-        catch (Exception unexpected)
-        {
-            // Anything HTTP-shaped becomes a CommandFailedException in HttpCommandSender, so
-            // landing here means the failure never came back as a response: a client-side throw
-            // (route lookup, serialisation, a bug in the action itself) or a request that never
-            // left. Raise a full report with a reference instead of swallowing it, and put the
-            // exception type on the banner so a screenshot alone identifies the fault.
-            Errors.ReportUnhandled(unexpected, failureMessage);
-            actionError = $"{failureMessage} [{unexpected.GetType().Name}: {unexpected.Message}]";
-        }
+        catch { actionError = failureMessage; }
         finally { busy = false; }
     }
 
