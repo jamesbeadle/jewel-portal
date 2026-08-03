@@ -157,17 +157,26 @@ public static class SidebarFolders
                     DesktopNavigation.FinanceRoles),
                 new SidebarRow(new NavigationItem("Cashflow", "/projects/{project}/cashflow"),
                     DesktopNavigation.FinanceRoles),
-                // The consolidated valuation report: one row per selected project (live jobs by
-                // default) plus the total. Replaced the old Financial Summary on the same slug
-                // (2026-08-03) — slugs don't move. Exact-only: /finance/* belongs to the Xero,
-                // Cash Summary and Aged Payables rows.
-                new SidebarRow(new NavigationItem("Valuation Summary", "/finance", ExactMatch: true),
+                // The by-project cash summary: every project's Cashflow statement collapsed to a
+                // line, plus the total cash position (bank tiles inside the page are directors
+                // only, mirroring the API's GetXeroCashSummaryEndpoint gate). Replaced the
+                // consolidated Valuation Summary on the same slug (finance meeting 2026-08-03) —
+                // slugs don't move, and the retired company Cash Summary's /finance/cash-summary
+                // route lands here too so old bookmarks keep working. Exact-only matching:
+                // /finance/* otherwise belongs to the Xero and aged rows.
+                new SidebarRow(new NavigationItem("Cash Summary", "/finance", new[] { "/finance/cash-summary" }, ExactMatch: true),
                     DesktopNavigation.FinanceRoles),
-                // Live cash position from Xero. Bank balances are the company's most sensitive
-                // figures — directors only, deliberately tighter than FinanceRoles; mirrors the
-                // API's authorisation (GetXeroCashSummaryEndpoint).
-                new SidebarRow(new NavigationItem("Cash Summary", "/finance/cash-summary"),
-                    DesktopNavigation.DirectorRoles),
+                // Gross profit by project: budgeted (initial contract), current (certified less
+                // actual cost) and forecasted profit per project, one row each (finance meeting
+                // 2026-08-03). Same audience as the per-project Financials tab it reads from.
+                new SidebarRow(new NavigationItem("Profit Summary", "/finance/profit-summary"),
+                    DesktopNavigation.FinanceRoles),
+                // Outstanding sales invoices aged as in Xero but including drafts still being
+                // prepared — the sales-side mirror of Aged Payables (finance meeting 2026-08-03).
+                // Finance roles: receivables are the valuation invoices this audience already
+                // raises and tracks; mirrors the API's authorisation (GetXeroAgedReceivablesEndpoint).
+                new SidebarRow(new NavigationItem("Aged Receivables", "/finance/aged-receivables"),
+                    DesktopNavigation.FinanceRoles),
                 // Outstanding supplier bills aged as in Xero but including drafts — the invoices
                 // the accounting procedure leaves in DRAFT until coded through the portal, which
                 // Xero's own aged payables report cannot see. Finance roles, like the Xero row:

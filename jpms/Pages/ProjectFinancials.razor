@@ -90,9 +90,14 @@ else
                 order's lines) rather than the centre the invoice was coded to in Xero, so it lines up
                 with the Work Orders column; the click-through shows those moves as ± rows.
                 Non-WO cost of sales is the share of that spend not linked to any work order and stays
-                on the invoice's own centre. Drawdown
-                is what's left of the target cost after work orders and non-WO cost of sales — the
-                funds still available on the line; negative means overspent. Lock a line when no more
+                on the invoice's own centre. Committed cost of sales is work orders plus non-WO cost
+                of sales — what is already committed against the line. What's left of the target cost
+                after that splits by sign: drawdown is the remainder where positive (funds still
+                available), overspend where negative (committed cost past the target) — split per
+                centre, so a roll-up shows both sides rather than netting one against the other.
+                Forecasted cost of sales is committed plus drawdown — the line's expected total cost:
+                an underspent line is forecast to spend its full target, an overspent one what is
+                already committed. Lock a line when no more
                 is to be spent on it: its remaining drawdown moves to profit / loss, realising what was
                 made (or lost) buying against that centre. Cost % complete is the cost-side
                 completion — edit it directly in the table. Tick two or more rows to roll them up into

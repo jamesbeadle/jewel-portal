@@ -93,6 +93,80 @@ public sealed class ProjectDrawdownTests
     }
 
     [Fact]
+    public void Split_separates_underspent_and_overspent_centres_per_centre()
+    {
+        var rows = new[]
+        {
+            Centre("A", budgetedSales: 110_000m),   // target 100,000; committed 40,000 -> +60,000
+            Centre("B", budgetedSales: 11_000m),    // target 10,000; committed 25,000 -> −15,000
+        };
+        var committed = new Dictionary<string, decimal>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["A"] = 40_000m, ["B"] = 25_000m,
+        };
+
+        var split = ProjectDrawdown.SplitForProject(rows, committed, Array.Empty<PackageReconciliationRow>());
+
+        // Split per centre: B's overspend must not be swallowed by A's drawdown.
+        Assert.Equal(60_000m, split.Drawdown);
+        Assert.Equal(-15_000m, split.Overspend);
+        Assert.Equal(45_000m, split.Net);
+        Assert.Equal(split.Net, ProjectDrawdown.ForProject(rows, committed, Array.Empty<PackageReconciliationRow>()));
+    }
+
+    [Fact]
+    public void Split_signs_unlocked_package_drawdowns_and_skips_locked_ones()
+    {
+        var packages = new[]
+        {
+            Package(1_500m, locked: false),
+            Package(-700m, locked: false),
+            Package(9_999m, locked: true),
+        };
+
+        var split = ProjectDrawdown.SplitForProject(
+            Array.Empty<ProjectFinancialSummaryRow>(),
+            new Dictionary<string, decimal>(StringComparer.OrdinalIgnoreCase),
+            packages);
+
+        Assert.Equal(1_500m, split.Drawdown);
+        Assert.Equal(-700m, split.Overspend);
+    }
+
+    [Fact]
+    public void Forecast_is_committed_plus_positive_drawdown_only()
+    {
+        var rows = new[]
+        {
+            Centre("A", budgetedSales: 110_000m),   // target 100,000; committed 40,000 -> forecast 100,000
+            Centre("B", budgetedSales: 11_000m),    // target 10,000; committed 25,000 -> forecast 25,000
+        };
+        var committed = new Dictionary<string, decimal>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["A"] = 40_000m, ["B"] = 25_000m,
+        };
+
+        var forecast = ProjectDrawdown.ForecastCostOfSales(rows, committed, Array.Empty<PackageReconciliationRow>());
+
+        // Committed 65,000 + drawdown 60,000: A forecasts its full target, B its committed cost.
+        Assert.Equal(125_000m, forecast);
+    }
+
+    [Fact]
+    public void Forecast_counts_unlocked_packages_at_their_committed_figure_plus_drawdown()
+    {
+        // One unlocked package: target 10,000, drawdown 1,500 -> committed 8,500, forecast 10,000.
+        var package = Package(1_500m, locked: false) with { TargetCost = 10_000m };
+
+        var forecast = ProjectDrawdown.ForecastCostOfSales(
+            Array.Empty<ProjectFinancialSummaryRow>(),
+            new Dictionary<string, decimal>(StringComparer.OrdinalIgnoreCase),
+            new[] { package });
+
+        Assert.Equal(10_000m, forecast);
+    }
+
+    [Fact]
     public void CommittedByCostCode_sums_cost_coded_lines_and_ignores_blank_codes()
     {
         var detail = new ProjectWorkOrderDetail(

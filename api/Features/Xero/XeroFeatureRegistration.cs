@@ -60,6 +60,10 @@ public static class XeroFeatureRegistration
         // the report Xero itself cannot show while bills wait in draft for portal coding.
         services.AddScoped<IQueryHandler<GetXeroAgedPayables, XeroAgedPayablesSnapshot>, GetXeroAgedPayablesHandler>();
 
+        // Aged receivables: the sales-side mirror — outstanding client invoices aged like
+        // Xero's report, drafts included.
+        services.AddScoped<IQueryHandler<GetXeroAgedReceivables, XeroAgedReceivablesSnapshot>, GetXeroAgedReceivablesHandler>();
+
         // Suppliers: the contact list behind the directory's "Import from Xero" modal.
         services.AddScoped<IQueryHandler<ListXeroSuppliers, XeroSuppliersSnapshot>, ListXeroSuppliersHandler>();
 

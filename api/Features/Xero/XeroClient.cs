@@ -43,6 +43,16 @@ public interface IXeroClient
     Task<XeroAgedPayablesSnapshot> GetAgedPayablesAsync(bool force, CancellationToken ct);
 
     /// <summary>
+    /// Reads the aged receivables position: every ACCREC sales invoice with money still due —
+    /// DRAFT and SUBMITTED included, mirroring the payables read, so an invoice still being
+    /// prepared is visible before Xero's own aged receivables can see it — plus every
+    /// ACCRECCREDIT credit note with credit still unapplied. Deliberately no date floor (unlike
+    /// the ledger's reporting window): an old unpaid invoice still belongs on the report. Serves
+    /// the cached snapshot when fresh enough unless <paramref name="force"/> is set.
+    /// </summary>
+    Task<XeroAgedReceivablesSnapshot> GetAgedReceivablesAsync(bool force, CancellationToken ct);
+
+    /// <summary>
     /// Lists the suppliers held in Xero (contacts flagged IsSupplier), A–Z by name, for the
     /// directory's "Import from Xero" modal. Serves the cached snapshot when fresh enough unless
     /// <paramref name="force"/> is set. The AlreadyImported/LinkedSubcontractorId stamps are left
@@ -108,6 +118,9 @@ public sealed class NullXeroClient : IXeroClient
     public Task<XeroAgedPayablesSnapshot> GetAgedPayablesAsync(bool force, CancellationToken ct) =>
         Task.FromResult(XeroAgedPayablesSnapshot.NotConfigured());
 
+    public Task<XeroAgedReceivablesSnapshot> GetAgedReceivablesAsync(bool force, CancellationToken ct) =>
+        Task.FromResult(XeroAgedReceivablesSnapshot.NotConfigured());
+
     public Task<XeroSuppliersSnapshot> GetSuppliersAsync(bool force, CancellationToken ct) =>
         Task.FromResult(XeroSuppliersSnapshot.NotConfigured());
 
@@ -166,6 +179,11 @@ public sealed class XeroClient : IXeroClient
     private readonly SemaphoreSlim _agedPayablesLock = new(1, 1);
     private XeroAgedPayablesSnapshot? _cachedAgedPayables;
     private DateTimeOffset _cachedAgedPayablesAt = DateTimeOffset.MinValue;
+
+    // Aged receivables cache — the sales-side mirror of the payables cache above.
+    private readonly SemaphoreSlim _agedReceivablesLock = new(1, 1);
+    private XeroAgedReceivablesSnapshot? _cachedAgedReceivables;
+    private DateTimeOffset _cachedAgedReceivablesAt = DateTimeOffset.MinValue;
 
     // Supplier list cache — same rationale as the snapshots above (the contact list costs several
     // paged calls against the 60/min limit, and one fetch serves every user for CacheMinutes).
@@ -285,6 +303,40 @@ public sealed class XeroClient : IXeroClient
     private bool CachedAgedPayablesAreFresh =>
         _cachedAgedPayables is not null
         && DateTimeOffset.UtcNow < _cachedAgedPayablesAt.AddMinutes(_options.CacheMinutes);
+
+    // -- aged receivables: outstanding sales invoices, drafts included ------------------
+
+    public async Task<XeroAgedReceivablesSnapshot> GetAgedReceivablesAsync(bool force, CancellationToken ct)
+    {
+        if (!_options.IsConfigured)
+            return XeroAgedReceivablesSnapshot.NotConfigured();
+
+        await _agedReceivablesLock.WaitAsync(ct);
+        try
+        {
+            if (!force && CachedAgedReceivablesAreFresh)
+                return _cachedAgedReceivables!;
+
+            var snapshot = await FetchAgedReceivablesAsync(ct);
+
+            // Only successful reads replace the cache — a transient failure shouldn't evict
+            // good data, but it is still returned so the user sees what went wrong.
+            if (snapshot.Error is null)
+            {
+                _cachedAgedReceivables = snapshot;
+                _cachedAgedReceivablesAt = DateTimeOffset.UtcNow;
+            }
+            return snapshot;
+        }
+        finally
+        {
+            _agedReceivablesLock.Release();
+        }
+    }
+
+    private bool CachedAgedReceivablesAreFresh =>
+        _cachedAgedReceivables is not null
+        && DateTimeOffset.UtcNow < _cachedAgedReceivablesAt.AddMinutes(_options.CacheMinutes);
 
     // -- suppliers: the contact list behind the directory's "Import from Xero" ----------
 
@@ -681,6 +733,92 @@ public sealed class XeroClient : IXeroClient
                 if (amountDue == 0m) continue;
 
                 into.Add(new XeroPayableBill(
+                    InvoiceId: StringOf(item, "InvoiceID") ?? StringOf(item, "CreditNoteID") ?? Guid.NewGuid().ToString(),
+                    Type: StringOf(item, "Type") ?? xeroType,
+                    Number: StringOf(item, "InvoiceNumber") ?? StringOf(item, "CreditNoteNumber"),
+                    Reference: StringOf(item, "Reference"),
+                    ContactName: item.TryGetProperty("Contact", out var contact) ? StringOf(contact, "Name") : null,
+                    Date: DateOf(item, "DateString", "Date"),
+                    DueDate: DateOf(item, "DueDateString", "DueDate"),
+                    Status: StringOf(item, "Status") ?? "UNKNOWN",
+                    Total: DecimalOf(item, "Total"),
+                    AmountDue: amountDue,
+                    CurrencyCode: StringOf(item, "CurrencyCode")));
+            }
+
+            if (items.GetArrayLength() < PageSize) return false; // Short page — no more to fetch.
+        }
+        return true;
+    }
+
+    private async Task<XeroAgedReceivablesSnapshot> FetchAgedReceivablesAsync(CancellationToken ct)
+    {
+        string token;
+        try
+        {
+            token = await GetAccessTokenAsync(ct);
+        }
+        catch (XeroCallFailedException tokenFailure)
+        {
+            return XeroAgedReceivablesSnapshot.Failed(tokenFailure.Message);
+        }
+
+        try
+        {
+            var invoices = new List<XeroReceivableInvoice>();
+            // Invoices first, then client credit notes so unapplied credit nets off the position —
+            // mirroring the payables read. Statuses are filtered in the where clause (PAID and
+            // VOIDED/DELETED never belong on a receivables report); AmountDue is filtered
+            // portal-side because it's a calculated field Xero's where clause doesn't index.
+            var truncated = await FetchOutstandingReceivablesAsync(
+                token, InvoicesUrl, "Invoices", "ACCREC", "DueDate ASC", invoices, ct);
+            truncated |= await FetchOutstandingReceivablesAsync(
+                token, CreditNotesUrl, "CreditNotes", "ACCRECCREDIT", "Date DESC", invoices, ct);
+
+            return new XeroAgedReceivablesSnapshot(true, null, DateTimeOffset.UtcNow, truncated, invoices);
+        }
+        catch (XeroCallFailedException callFailure)
+        {
+            return XeroAgedReceivablesSnapshot.Failed(callFailure.Message);
+        }
+    }
+
+    /// <summary>
+    /// Pages through one collection of outstanding sales-side documents into
+    /// <paramref name="into"/>; true = page cap hit with data left. DRAFT and SUBMITTED are
+    /// requested alongside AUTHORISED, mirroring the payables read — an invoice still being
+    /// prepared is part of the honest receivables picture even though Xero's own report
+    /// cannot see it. Deliberately NOT summaryOnly (Xero's lightweight mode rejects
+    /// where/order with an HTTP 400 — see the sales-side read); the line items on the full
+    /// shape are simply ignored.
+    /// </summary>
+    private async Task<bool> FetchOutstandingReceivablesAsync(
+        string token, string baseUrl, string collectionProperty, string xeroType, string order,
+        List<XeroReceivableInvoice> into, CancellationToken ct)
+    {
+        var where = $"Type==\"{xeroType}\" AND "
+                    + "(Status==\"DRAFT\" OR Status==\"SUBMITTED\" OR Status==\"AUTHORISED\")";
+
+        for (var page = 1; page <= _options.MaxPages; page++)
+        {
+            var url = $"{baseUrl}?page={page}"
+                      + $"&where={Uri.EscapeDataString(where)}&order={Uri.EscapeDataString(order)}";
+            using var doc = await GetJsonAsync(token, url, collectionProperty.ToLowerInvariant(), ct);
+
+            if (!doc.RootElement.TryGetProperty(collectionProperty, out var items)
+                || items.ValueKind != JsonValueKind.Array)
+                return false;
+
+            foreach (var item in items.EnumerateArray())
+            {
+                // AmountDue for invoices, RemainingCredit for credit notes — both mean "still
+                // outstanding". Zero means settled (or an empty draft): nothing to age.
+                var amountDue = item.TryGetProperty("AmountDue", out _)
+                    ? DecimalOf(item, "AmountDue")
+                    : DecimalOf(item, "RemainingCredit");
+                if (amountDue == 0m) continue;
+
+                into.Add(new XeroReceivableInvoice(
                     InvoiceId: StringOf(item, "InvoiceID") ?? StringOf(item, "CreditNoteID") ?? Guid.NewGuid().ToString(),
                     Type: StringOf(item, "Type") ?? xeroType,
                     Number: StringOf(item, "InvoiceNumber") ?? StringOf(item, "CreditNoteNumber"),

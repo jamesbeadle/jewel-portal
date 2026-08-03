@@ -1,0 +1,448 @@
+@page "/finance/profit-summary"
+@using Jewel.JPMS.Commercial
+@using Jewel.JPMS.Contracts.Commercial
+@using Jewel.JPMS.Features.Commercial
+@using Jewel.JPMS.Features.Procurement
+@using Jewel.JPMS.Features.Projects
+@inject AuthService Auth
+@inject SessionService Session
+@inject ProjectListReadModel Projects
+@inject ProjectFinancialSummaryReadModel Summary
+@inject ProjectWorkOrdersReadModel WorkOrders
+@inject ValuationLinesReadModel Lines
+@inject ValuationClaimsReadModel Claims
+@inject ClaimLinesReadModel ClaimEntries
+@inject IValuationInvoiceStore Invoices
+@inject IQueryClient Queries
+@inject NavigationManager Nav
+@implements IDisposable
+
+<PageTitle>Profit Summary · JPMS</PageTitle>
+
+@*
+    The company Profit Summary (the sidebar's Financials folder, finance roles): gross profit by
+    project, three ways (finance meeting 2026-08-03) —
+
+      Budgeted Profit   = Initial Contract Sum − Initial Contract Costs (the contract sum with
+                          the assumed markup backed out — FinancialSummaryAssumptions, the same
+                          target-cost rule as the Financials tab);
+      Current Profit    = Certified to Date − Actual Cost of Sales (issued/paid valuation
+                          invoices against allocated Xero purchase spend);
+      Forecasted Profit = Contract Value − Forecasted Cost of Sales (the revised contract sum
+                          including variations, against committed cost plus remaining drawdown —
+                          ProjectDrawdown.ForecastCostOfSales, the Financials tab's subtotal).
+
+    Every figure reads from the same sources as the per-project tabs, so the two can never
+    disagree. The project filter defaults to live jobs and offers every project.
+*@
+
+@if (!sessionReady)
+{
+    <section class="px-6 md:px-8 py-12">
+        <LoadGate IsLoading="true" Prominent="true" Label="Loading" />
+    </section>
+}
+else if (!Session.IsApproved)
+{
+    <RequestAccessView Email="@Auth.CurrentUser!.Email" DisplayName="@Auth.CurrentUser.DisplayName" />
+}
+else
+{
+    <section class="px-6 md:px-8 py-8 md:py-12">
+        <header class="mb-6">
+            <p class="eyebrow mb-1">JPMS · Company</p>
+            <h1 class="text-2xl md:text-3xl font-semibold text-content leading-tight">Profit Summary</h1>
+            <p class="text-sm text-content-muted mt-1">
+                Gross profit by project — as budgeted at contract, as it stands today, and as forecast.
+            </p>
+        </header>
+
+        @if (projectsFailed)
+        {
+            <p class="text-sm text-negative">Couldn't load the project list. The details are in the red bar at the top — reload to try again.</p>
+        }
+        else
+        {
+            <div class="mb-3 flex items-center justify-between gap-3 flex-wrap">
+                @* The filter is a control, so it is never gated: it renders disabled with a
+                   loading label until the project list lands (the loading-states convention). *@
+                @if (Projects.Current is null)
+                {
+                    <select disabled
+                            class="rounded-lg border border-line-strong bg-surface-field px-3 py-2 text-sm text-content-subtle">
+                        <option>Loading projects…</option>
+                    </select>
+                }
+                else
+                {
+                    <ProjectMultiSelect Projects="@(Projects.Current!)"
+                                        Selected="@selectedIds"
+                                        SelectedChanged="OnSelectionChangedAsync" />
+                }
+                @* Disabled while any selected row failed to load: the on-screen banner discloses
+                   the zeros, but a workbook travels without it — retry first, then export. *@
+                <ExportToExcelButton FileName="Profit summary"
+                                     Disabled="@(!TableReady || SelectedProjects.Count == 0 || FailedSelectedProjects.Count > 0)"
+                                     BuildWorkbook="BuildExportWorkbook" />
+            </div>
+
+            @* One panel: every row and the total are the same arithmetic over the same sources,
+               so the table waits for every selected project before showing any of it. *@
+            <LoadGate IsLoading="@(!TableReady)" Prominent="true" Label="Loading profit figures">
+            @if (SelectedProjects.Count == 0)
+            {
+                <div class="panel p-8 text-center">
+                    <p class="text-sm text-content">No projects selected — pick some in the filter above.</p>
+                </div>
+            }
+            else
+            {
+                @if (FailedSelectedProjects.Count > 0)
+                {
+                    <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-4">
+                        The profit figures could not be loaded for @string.Join(", ", FailedSelectedProjects.Select(p => p.Reference)) — those rows show zeros.
+                        <button type="button" class="underline underline-offset-2 ml-1" @onclick="RetryFailedAsync">Retry</button>
+                    </p>
+                }
+
+                <div class="rounded-xl border border-line bg-surface overflow-x-auto">
+                    <table class="w-full text-sm border-collapse">
+                        <thead class="bg-surface-raised border-b border-line">
+                            <tr class="text-left text-[11px] uppercase tracking-wider text-content-subtle font-semibold">
+                                <th class="px-4 py-3 min-w-[220px]">Project</th>
+                                @* Budgeted: the deal as signed. *@
+                                <th class="px-4 py-3 text-right whitespace-nowrap border-l border-line" title="The initial contract sum — the valuation report's contract lines, before variations.">Initial Contract Sum</th>
+                                <th class="px-4 py-3 text-right whitespace-nowrap" title="The initial contract sum with the assumed markup backed out — the target-cost rule the Financials tab uses.">Initial Contract Costs</th>
+                                <th class="px-4 py-3 text-right whitespace-nowrap" title="Initial contract sum less initial contract costs.">Budgeted Profit</th>
+                                @* Current: money actually certified against money actually spent. *@
+                                <th class="px-4 py-3 text-right whitespace-nowrap border-l border-line" title="Issued and paid valuation invoices to date.">Certified To Date</th>
+                                <th class="px-4 py-3 text-right whitespace-nowrap" title="Allocated Xero purchase spend, net of credit notes — the Financials tab's Actual Cost of Sales.">Actual Cost of Sales</th>
+                                <th class="px-4 py-3 text-right whitespace-nowrap" title="Certified to date less actual cost of sales.">Current Profit</th>
+                                @* Forecast: where the job lands. *@
+                                <th class="px-4 py-3 text-right whitespace-nowrap border-l border-line" title="The revised contract sum — initial contract plus net variations.">Contract Value</th>
+                                <th class="px-4 py-3 text-right whitespace-nowrap" title="Committed cost of sales plus remaining drawdown — the Financials tab's Forecasted Cost of Sales total.">Forecasted Cost of Sales</th>
+                                <th class="px-4 py-3 text-right whitespace-nowrap" title="Contract value less forecasted cost of sales.">Forecasted Profit</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-line">
+                            @foreach (var project in SelectedProjects)
+                            {
+                                var row = RowFor(project.ProjectId);
+                                <tr>
+                                    <td class="px-4 py-3 whitespace-nowrap">
+                                        <a href="@($"/projects/{project.ProjectId}/financials")" class="hover:underline underline-offset-4">
+                                            <span class="font-mono text-[11px] text-content-subtle mr-2">@project.Reference</span>
+                                            <span class="text-content font-medium">@project.Name</span>
+                                        </a>
+                                    </td>
+                                    <td class="px-4 py-3 text-right whitespace-nowrap text-content border-l border-line">@Money(row.InitialContractSum)</td>
+                                    <td class="px-4 py-3 text-right whitespace-nowrap text-content">@Money(row.InitialContractCosts)</td>
+                                    <td class="px-4 py-3 text-right whitespace-nowrap font-medium @ProfitClass(row.BudgetedProfit)">@Money(row.BudgetedProfit)</td>
+                                    <td class="px-4 py-3 text-right whitespace-nowrap text-content border-l border-line">@Money(row.CertifiedToDate)</td>
+                                    <td class="px-4 py-3 text-right whitespace-nowrap text-content">@Money(row.ActualCostOfSales)</td>
+                                    <td class="px-4 py-3 text-right whitespace-nowrap font-medium @ProfitClass(row.CurrentProfit)">@Money(row.CurrentProfit)</td>
+                                    <td class="px-4 py-3 text-right whitespace-nowrap text-content border-l border-line">@Money(row.ContractValue)</td>
+                                    <td class="px-4 py-3 text-right whitespace-nowrap text-content">@Money(row.ForecastCostOfSales)</td>
+                                    <td class="px-4 py-3 text-right whitespace-nowrap font-medium @ProfitClass(row.ForecastedProfit)">@Money(row.ForecastedProfit)</td>
+                                </tr>
+                            }
+                        </tbody>
+                        @if (SelectedProjects.Count > 1)
+                        {
+                            var total = Totals();
+                            <tfoot class="border-t border-line bg-surface-raised">
+                                <tr class="font-semibold">
+                                    <td class="px-4 py-3 text-content">All projects</td>
+                                    <td class="px-4 py-3 text-right whitespace-nowrap text-content border-l border-line">@Money(total.InitialContractSum)</td>
+                                    <td class="px-4 py-3 text-right whitespace-nowrap text-content">@Money(total.InitialContractCosts)</td>
+                                    <td class="px-4 py-3 text-right whitespace-nowrap @ProfitClass(total.BudgetedProfit)">@Money(total.BudgetedProfit)</td>
+                                    <td class="px-4 py-3 text-right whitespace-nowrap text-content border-l border-line">@Money(total.CertifiedToDate)</td>
+                                    <td class="px-4 py-3 text-right whitespace-nowrap text-content">@Money(total.ActualCostOfSales)</td>
+                                    <td class="px-4 py-3 text-right whitespace-nowrap @ProfitClass(total.CurrentProfit)">@Money(total.CurrentProfit)</td>
+                                    <td class="px-4 py-3 text-right whitespace-nowrap text-content border-l border-line">@Money(total.ContractValue)</td>
+                                    <td class="px-4 py-3 text-right whitespace-nowrap text-content">@Money(total.ForecastCostOfSales)</td>
+                                    <td class="px-4 py-3 text-right whitespace-nowrap @ProfitClass(total.ForecastedProfit)">@Money(total.ForecastedProfit)</td>
+                                </tr>
+                            </tfoot>
+                        }
+                    </table>
+                </div>
+                <p class="text-xs text-content-subtle mt-3 max-w-3xl">
+                    Budgeted profit is the deal as signed: the initial contract sum against its
+                    target cost (the sum with our assumed
+                    @($"{FinancialSummaryAssumptions.MarkupPercent:0.#}%") markup backed out).
+                    Current profit is money actually certified — issued and paid valuation
+                    invoices — against allocated Xero purchase spend to date. Forecasted profit is
+                    where the job lands: the revised contract sum including variations, against the
+                    Financials tab's forecasted cost of sales (committed cost plus remaining
+                    drawdown). Click a project for its Financials tab.
+                </p>
+            }
+            </LoadGate>
+        }
+    </section>
+}
+
+@code {
+    // Session checked and the user is signed in. This is NOT "the figures are here": the heading
+    // and filter show at once, the table waits behind its own gate.
+    private bool sessionReady;
+    // The project list is what the filter and every row are built from, and its fetch throws
+    // rather than recording per-project failure — so a failure here opens the gate with a message.
+    private bool projectsFailed;
+    // True once the default (live jobs) selection has been seeded from the loaded project list —
+    // before that the table has no honest answer, not even "no projects selected".
+    private bool selectionInitialised;
+
+    // How many per-project loads run at once — see the Cash Summary page; same reasoning.
+    private const int ProjectRefreshConcurrency = 4;
+
+    private IReadOnlyCollection<string> selectedIds = Array.Empty<string>();
+
+    // Per-project load state. A project is in exactly one of these once selected: loading (fetch
+    // in flight), loaded (every read landed), or failed (any read threw — its row shows zeros
+    // behind the banner). Ids, matched case-insensitively like every project id comparison.
+    private readonly HashSet<string> loadedProjects = new(StringComparer.OrdinalIgnoreCase);
+    private readonly HashSet<string> failedProjects = new(StringComparer.OrdinalIgnoreCase);
+    private readonly HashSet<string> loadingProjects = new(StringComparer.OrdinalIgnoreCase);
+
+    // Per-project answers to the reads the shared read models don't cache for us.
+    private readonly Dictionary<string, decimal> invoicedByProject = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, IReadOnlyList<PackageReconciliationRow>> packagesByProject = new(StringComparer.OrdinalIgnoreCase);
+
+    // ONE throttle for the page's lifetime, not one per LoadSelectedAsync call — a filter change
+    // or retry while the first batch is still in flight must share the same ceiling.
+    private readonly SemaphoreSlim throttle = new(ProjectRefreshConcurrency);
+
+    // The selected projects in the canonical work order (re-applied after the filter, per the
+    // project-ordering convention) — the rows the table renders.
+    private List<Project> SelectedProjects =>
+        (Projects.Current ?? (IReadOnlyList<Project>)Array.Empty<Project>())
+            .Where(project => selectedIds.Contains(project.ProjectId, StringComparer.OrdinalIgnoreCase))
+            .InWorkOrder()
+            .ToList();
+
+    private List<Project> FailedSelectedProjects =>
+        SelectedProjects.Where(project => failedProjects.Contains(project.ProjectId)).ToList();
+
+    private bool TableReady =>
+        selectionInitialised
+        && SelectedProjects.All(project =>
+            loadedProjects.Contains(project.ProjectId) || failedProjects.Contains(project.ProjectId));
+
+    // ---- Figures ------------------------------------------------------------
+
+    private sealed record ProfitRow(
+        decimal InitialContractSum,
+        decimal InitialContractCosts,
+        decimal CertifiedToDate,
+        decimal ActualCostOfSales,
+        decimal ContractValue,
+        decimal ForecastCostOfSales)
+    {
+        public decimal BudgetedProfit => InitialContractSum - InitialContractCosts;
+        public decimal CurrentProfit => CertifiedToDate - ActualCostOfSales;
+        public decimal ForecastedProfit => ContractValue - ForecastCostOfSales;
+    }
+
+    private ValuationClaim? LatestClaimFor(string projectId) =>
+        Claims.Current(projectId)
+            .OrderByDescending(claim => claim.ClaimNumber)
+            .FirstOrDefault();
+
+    private ProfitRow RowFor(string projectId)
+    {
+        var latest = LatestClaimFor(projectId);
+        var entries = latest is { Status: ValuationClaimStatus.Draft }
+            ? ClaimEntries.Current(latest.ValuationClaimId)
+            : Array.Empty<ClaimLine>();
+        var figures = ValuationSummaryFigures.For(
+            Lines.Current(projectId), entries, latest,
+            invoicedByProject.TryGetValue(projectId, out var invoiced) ? invoiced : 0m);
+
+        var summaryRows = Summary.Current(projectId);
+        var packages = packagesByProject.TryGetValue(projectId, out var packageRows)
+            ? packageRows
+            : Array.Empty<PackageReconciliationRow>();
+
+        // Actual cost of sales is the gross allocated spend — the Financials tab's total, which
+        // adds packaged invoiced cost back in via the package rows (RowActual + InvoicedToDate).
+        var actualCost = summaryRows.Sum(row => row.ActualCost - row.PackagedActualCost)
+                         + packages.Sum(package => package.InvoicedToDate);
+
+        return new ProfitRow(
+            InitialContractSum: figures.ContractSum,
+            // The same target-cost rule as the Financials tab, applied to the initial sum: what
+            // the contract should cost us with the assumed markup backed out.
+            InitialContractCosts: Math.Round(figures.ContractSum * FinancialSummaryAssumptions.CostFactor, 2),
+            CertifiedToDate: figures.CertifiedToDate,
+            ActualCostOfSales: actualCost,
+            ContractValue: figures.RevisedContractSum,
+            ForecastCostOfSales: ProjectDrawdown.ForecastCostOfSales(
+                summaryRows, ProjectDrawdown.CommittedByCostCode(WorkOrders.Current(projectId)), packages));
+    }
+
+    private ProfitRow Totals()
+    {
+        var rows = SelectedProjects.Select(project => RowFor(project.ProjectId)).ToList();
+        return new ProfitRow(
+            rows.Sum(row => row.InitialContractSum),
+            rows.Sum(row => row.InitialContractCosts),
+            rows.Sum(row => row.CertifiedToDate),
+            rows.Sum(row => row.ActualCostOfSales),
+            rows.Sum(row => row.ContractValue),
+            rows.Sum(row => row.ForecastCostOfSales));
+    }
+
+    private static string ProfitClass(decimal value) =>
+        value == 0m ? "text-content-muted" : value > 0m ? "text-positive" : "text-negative";
+
+    private static string Money(decimal value) => $"£{value:N0}";
+
+    // ---- Loading ------------------------------------------------------------
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Session.EnsureLoadedAsync();
+        if (!Auth.IsSignedIn) { Nav.NavigateTo("/login", forceLoad: true); return; }
+        Projects.OnChanged += StateHasChanged;
+        Summary.OnChanged += StateHasChanged;
+        WorkOrders.OnChanged += StateHasChanged;
+        Lines.OnChanged += StateHasChanged;
+        Claims.OnChanged += StateHasChanged;
+        ClaimEntries.OnChanged += StateHasChanged;
+        sessionReady = true;
+        try
+        {
+            if (Projects.Current is null) await Projects.RefreshAsync(CancellationToken.None);
+        }
+        catch
+        {
+            // HttpQueryClient has already reported this to the error toast with a reference; here
+            // we only need to stop the table waiting on a list that is not coming.
+            projectsFailed = true;
+            return;
+        }
+        selectedIds = ProjectMultiSelect.LiveJobIds(Projects.Current ?? Array.Empty<Project>());
+        selectionInitialised = true;
+        await LoadSelectedAsync();
+    }
+
+    private async Task OnSelectionChangedAsync(IReadOnlyCollection<string> ids)
+    {
+        selectedIds = ids;
+        await LoadSelectedAsync();
+    }
+
+    private async Task RetryFailedAsync()
+    {
+        failedProjects.Clear();
+        await LoadSelectedAsync();
+    }
+
+    // Loads every selected project that hasn't been loaded yet, a few at a time — not all at
+    // once (see the Cash Summary page; same reasoning and same ceiling).
+    private async Task LoadSelectedAsync()
+    {
+        var toLoad = SelectedProjects
+            .Where(project => !loadedProjects.Contains(project.ProjectId)
+                              && !failedProjects.Contains(project.ProjectId)
+                              && !loadingProjects.Contains(project.ProjectId))
+            .ToList();
+        if (toLoad.Count == 0) return;
+        foreach (var project in toLoad) loadingProjects.Add(project.ProjectId);
+        await Task.WhenAll(toLoad.Select(async project =>
+        {
+            await throttle.WaitAsync();
+            try
+            {
+                await LoadProjectAsync(project.ProjectId);
+                loadedProjects.Add(project.ProjectId);
+            }
+            catch
+            {
+                // The read model / query client has already raised the error toast; the row
+                // degrades to zeros behind the banner rather than a blank page.
+                failedProjects.Add(project.ProjectId);
+            }
+            finally
+            {
+                loadingProjects.Remove(project.ProjectId);
+                throttle.Release();
+            }
+        }));
+        StateHasChanged();
+    }
+
+    private async Task LoadProjectAsync(string projectId)
+    {
+        // Sequential on purpose — see LoadSelectedAsync. Claims must land before the entries
+        // read anyway, because only a Draft latest claim needs its per-line % entries.
+        await Summary.RefreshAsync(projectId, CancellationToken.None);
+        // The summary read model records failure rather than throwing (its page fires it
+        // fire-and-forget); here a silent all-zero row would be a lie, so failure fails the row.
+        if (Summary.LastRefreshFailed(projectId))
+            throw new InvalidOperationException("The financial summary could not be loaded.");
+        await WorkOrders.RefreshAsync(projectId, CancellationToken.None);
+        await Lines.RefreshAsync(projectId, CancellationToken.None);
+        await Claims.RefreshAsync(projectId, CancellationToken.None);
+        invoicedByProject[projectId] = (await Invoices.GetSummaryAsync(projectId)).TotalInvoiced;
+        if (LatestClaimFor(projectId) is { Status: ValuationClaimStatus.Draft } draft)
+            await ClaimEntries.RefreshAsync(draft.ValuationClaimId, CancellationToken.None);
+        packagesByProject[projectId] = await Queries.AskAsync(new ListPackageReconciliation(projectId), CancellationToken.None);
+    }
+
+    // ---- Excel export -------------------------------------------------------
+    // Same rows the table renders plus the "All projects" total row when there's more than one.
+    private ExcelWorkbook? BuildExportWorkbook(bool _)
+    {
+        var projects = SelectedProjects;
+        if (projects.Count == 0) return null;
+
+        var workbook = new ExcelWorkbook();
+        var sheet = workbook.AddSheet("Profit summary",
+            new ExcelColumn("Project"),
+            new ExcelColumn("Initial contract sum", ExcelFormat.Currency),
+            new ExcelColumn("Initial contract costs", ExcelFormat.Currency),
+            new ExcelColumn("Budgeted profit", ExcelFormat.Currency),
+            new ExcelColumn("Certified to date", ExcelFormat.Currency),
+            new ExcelColumn("Actual cost of sales", ExcelFormat.Currency),
+            new ExcelColumn("Current profit", ExcelFormat.Currency),
+            new ExcelColumn("Contract value", ExcelFormat.Currency),
+            new ExcelColumn("Forecasted cost of sales", ExcelFormat.Currency),
+            new ExcelColumn("Forecasted profit", ExcelFormat.Currency));
+
+        void AddRow(string name, ProfitRow row) => sheet.AddRow(
+            name,
+            row.InitialContractSum,
+            row.InitialContractCosts,
+            row.BudgetedProfit,
+            row.CertifiedToDate,
+            row.ActualCostOfSales,
+            row.CurrentProfit,
+            row.ContractValue,
+            row.ForecastCostOfSales,
+            row.ForecastedProfit);
+
+        foreach (var project in projects)
+            AddRow(project.Name, RowFor(project.ProjectId));
+
+        if (projects.Count > 1)
+            AddRow("All projects", Totals());
+
+        return workbook;
+    }
+
+    public void Dispose()
+    {
+        Projects.OnChanged -= StateHasChanged;
+        Summary.OnChanged -= StateHasChanged;
+        WorkOrders.OnChanged -= StateHasChanged;
+        Lines.OnChanged -= StateHasChanged;
+        Claims.OnChanged -= StateHasChanged;
+        ClaimEntries.OnChanged -= StateHasChanged;
+        // The throttle is deliberately NOT disposed: a load still in flight when the user
+        // navigates away would Release() a disposed semaphore and fault the abandoned task.
+        // An undisposed SemaphoreSlim (no wait-handle use) holds nothing worth reclaiming.
+    }
+}

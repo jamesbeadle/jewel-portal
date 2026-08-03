@@ -37,10 +37,23 @@ public static class ProjectDrawdown
                           group => group.Sum(line => line.LineTotal),
                           StringComparer.OrdinalIgnoreCase);
 
-    // The whole-project drawdown. summaryRows is the per-cost-centre financial summary;
-    // committedByCostCode is CommittedByCostCode(...) for the project's work orders; packages
-    // are the reconciliation-package rows (from ListPackageReconciliation).
+    // The whole-project drawdown, netted: drawdown less overspend. Kept for the Cashflow tab's
+    // single "Cost centre drawdowns" row; the Financials tab shows the two sides separately
+    // (SplitForProject), and the two agree by construction: ForProject == Split.Net.
     public static decimal ForProject(
+        IEnumerable<ProjectFinancialSummaryRow> summaryRows,
+        IReadOnlyDictionary<string, decimal> committedByCostCode,
+        IEnumerable<PackageReconciliationRow> packages) =>
+        SplitForProject(summaryRows, committedByCostCode, packages).Net;
+
+    // The same remainders split by sign, per cost centre (finance meeting 2026-08-03): a centre
+    // with target cost still unspent contributes to Drawdown (positive only); a centre whose
+    // committed cost of sales has passed its target contributes to Overspend (negative only).
+    // Split PER CENTRE, not on the netted total — one underspent centre must not hide another's
+    // overspend. summaryRows is the per-cost-centre financial summary; committedByCostCode is
+    // CommittedByCostCode(...) for the project's work orders; packages are the
+    // reconciliation-package rows (from ListPackageReconciliation).
+    public static DrawdownSplit SplitForProject(
         IEnumerable<ProjectFinancialSummaryRow> summaryRows,
         IReadOnlyDictionary<string, decimal> committedByCostCode,
         IEnumerable<PackageReconciliationRow> packages)
@@ -50,7 +63,8 @@ public static class ProjectDrawdown
         // Every code with a figure on either side — summary centres plus work-order-only codes.
         var codes = byCode.Keys.Union(committedByCostCode.Keys, StringComparer.OrdinalIgnoreCase);
 
-        var centres = 0m;
+        var drawdown = 0m;
+        var overspend = 0m;
         foreach (var code in codes)
         {
             var hasRow = byCode.TryGetValue(code, out var row);
@@ -70,13 +84,51 @@ public static class ProjectDrawdown
 
             // Committed includes packaged orders' value; add the packaged slice back, because
             // the package row already accounts for it.
-            centres += target - nonWoSpend - committed + packagedWo;
+            var remainder = target - nonWoSpend - committed + packagedWo;
+            if (remainder > 0m) drawdown += remainder; else overspend += remainder;
         }
 
-        // Each unlocked package's own drawdown (target cost less committed). Locked packages
-        // froze their figures into profit / loss at lock, so they add nothing here.
-        var packageDrawdown = packages.Where(package => !package.IsLocked).Sum(package => package.Drawdown);
+        // Each unlocked package's own drawdown (target cost less committed), sign-split like a
+        // centre. Locked packages froze their figures into profit / loss at lock, so they add
+        // nothing here.
+        foreach (var package in packages.Where(package => !package.IsLocked))
+        {
+            if (package.Drawdown > 0m) drawdown += package.Drawdown; else overspend += package.Drawdown;
+        }
 
-        return centres + packageDrawdown;
+        return new DrawdownSplit(drawdown, overspend);
     }
+
+    // Forecasted Cost of Sales for the whole project: committed cost of sales (work orders +
+    // non-WO spend, packaged scope on the packages) plus the drawdown still to be spent —
+    // an underspent line is forecast to spend its full target cost, an overspent one its
+    // committed cost. Mirrors the Financials tab's Forecasted Cost of Sales total (packaged
+    // scope netted, the displayed default) so the Profit Summary reads the same number.
+    public static decimal ForecastCostOfSales(
+        IEnumerable<ProjectFinancialSummaryRow> summaryRows,
+        IReadOnlyDictionary<string, decimal> committedByCostCode,
+        IEnumerable<PackageReconciliationRow> packages)
+    {
+        var rows = summaryRows as IReadOnlyList<ProjectFinancialSummaryRow> ?? summaryRows.ToList();
+        var packageRows = packages as IReadOnlyList<PackageReconciliationRow> ?? packages.ToList();
+
+        var committed =
+            committedByCostCode.Values.Sum()
+            - rows.Sum(row => row.PackagedWoCommitted)
+            + rows.Sum(row => row.NonWorkOrderActualCost - row.PackagedNonWoCost)
+            + packageRows.Where(package => !package.IsLocked).Sum(package => package.TargetCost - package.Drawdown);
+
+        return committed + SplitForProject(rows, committedByCostCode, packageRows).Drawdown;
+    }
+}
+
+/// <summary>
+/// The project's target-cost remainders split by sign: <see cref="Drawdown"/> is the budget
+/// still available to spend (positive only, summed per centre), <see cref="Overspend"/> what
+/// committed cost has already passed target (negative only). <see cref="Net"/> is the old
+/// netted drawdown figure — the Cashflow tab's row.
+/// </summary>
+public sealed record DrawdownSplit(decimal Drawdown, decimal Overspend)
+{
+    public decimal Net => Drawdown + Overspend;
 }
