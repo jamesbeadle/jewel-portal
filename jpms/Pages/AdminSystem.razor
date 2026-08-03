@@ -1,0 +1,203 @@
+@page "/admin/system"
+@inject AuthService Auth
+@inject SessionService Session
+@inject ISystemStore Store
+@inject NavigationManager Nav
+@implements IDisposable
+
+<PageTitle>System · JPMS</PageTitle>
+
+@*
+    Admin → System: the announced app version — the version every signed-in tab is being asked to
+    run. Publishing bumps the AppVersions row on the API; every open tab then sees a number higher
+    than the one it loaded under (response header on its next fetch, /api/version on regaining
+    focus) and the UpdateToast offers the refresh. One click, one increment: after a deploy has
+    finished, publish here so nobody keeps working on the old build.
+*@
+
+@if (!sessionReady)
+{
+    <section class="px-6 md:px-8 py-12">
+        <LoadGate IsLoading="true" Prominent="true" Label="Loading" />
+    </section>
+}
+else if (!Session.IsApproved)
+{
+    <RequestAccessView Email="@Auth.CurrentUser!.Email" DisplayName="@Auth.CurrentUser.DisplayName" />
+}
+else if (Session.ActiveRole != Role.Admin)
+{
+    <section class="px-6 md:px-8 py-12 max-w-2xl">
+        <div class="panel p-6">
+            <p class="text-sm text-content-muted">
+                This area is for administrators. If you hold the Administrator role, switch to it to manage the system.
+            </p>
+        </div>
+    </section>
+}
+else
+{
+    <section class="px-6 md:px-8 py-8 md:py-12">
+        <WorkspaceSectionNav />
+        <header class="mb-6 md:mb-8">
+            <p class="text-xs uppercase tracking-wider text-content-subtle font-medium mb-1">JPMS · Admin</p>
+            <h1 class="text-2xl md:text-3xl font-semibold text-content leading-tight">System</h1>
+            <p class="text-sm text-content-muted mt-1">
+                The version every signed-in tab is asked to run. Publishing an update raises the
+                refresh bar on every open tab — use it once a deploy has finished, so nobody keeps
+                working on the old build.
+            </p>
+        </header>
+
+        @if (dataFailed && !Store.IsLoaded)
+        {
+            <div class="panel p-5 max-w-2xl">
+                <p class="text-sm text-negative">
+                    The announced version couldn't be loaded. The error banner above has the detail — fix or retry, then reload this page.
+                </p>
+            </div>
+        }
+        else
+        {
+            <div class="max-w-2xl">
+                <Panel Title="Announced version" IsLoading="@(!Store.IsLoaded)" LoadingLabel="Loading version">
+                    @if (Store.Current is { } announced)
+                    {
+                        <div class="flex items-baseline gap-3">
+                            <p class="text-3xl font-semibold text-content font-mono leading-none">v@(announced.Version)</p>
+                            <p class="text-xs text-content-subtle">what every tab is currently asked to run</p>
+                        </div>
+                        @if (!string.IsNullOrWhiteSpace(announced.PublishedBy))
+                        {
+                            <p class="text-xs text-content-subtle mt-2">
+                                Published @announced.PublishedAt.ToLocalTime().ToString("d MMM yyyy, HH:mm") by @announced.PublishedBy
+                            </p>
+                        }
+
+                        <div class="border-t border-line mt-5 pt-5">
+                            @if (publishedMessage is not null)
+                            {
+                                <p class="text-sm text-content mb-4">@publishedMessage</p>
+                            }
+
+                            @if (!confirming)
+                            {
+                                <button type="button" class="btn-primary" @onclick="() => { confirming = true; publishedMessage = null; }">
+                                    Publish update
+                                </button>
+                                <p class="text-xs text-content-subtle mt-2">
+                                    Announces v@(announced.Version + 1) and asks every open tab to refresh.
+                                </p>
+                            }
+                            else
+                            {
+                                <p class="text-sm text-content mb-3">
+                                    Publish <span class="font-mono font-semibold">v@(announced.Version + 1)</span>?
+                                    Everyone signed in — on every open tab — will see the refresh bar until they switch over.
+                                </p>
+                                <div class="flex items-center gap-2">
+                                    <button type="button" class="btn-primary" disabled="@publishing" @onclick="PublishAsync">
+                                        @(publishing ? "Publishing…" : "Publish now")
+                                    </button>
+                                    <button type="button" class="btn-secondary" disabled="@publishing" @onclick="() => confirming = false">
+                                        Cancel
+                                    </button>
+                                </div>
+                            }
+                        </div>
+                    }
+                </Panel>
+            </div>
+        }
+    </section>
+}
+
+@code {
+    private bool sessionReady;
+    private bool dataFailed;
+    private bool fetchStarted;
+    private bool confirming;
+    private bool publishing;
+    private string? publishedMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Session.EnsureLoadedAsync();
+        if (!Auth.IsSignedIn)
+        {
+            Nav.NavigateTo("/login", forceLoad: true);
+            return;
+        }
+        Session.OnChange += OnSessionChanged;
+        Store.OnChange += StateHasChanged;
+        sessionReady = true;
+
+        if (Session.ActiveRole == Role.Admin)
+        {
+            // Stale-while-revalidate: an already-loaded version paints immediately and refreshes
+            // behind itself; a cold one is awaited so the panel's gate opens onto real data.
+            if (!Store.IsLoaded)
+            {
+                fetchStarted = true;
+                try { await Store.RefreshAsync(CancellationToken.None); }
+                catch { dataFailed = true; }
+            }
+            else
+            {
+                _ = RevalidateAsync();
+            }
+        }
+    }
+
+    private void OnSessionChanged()
+    {
+        // Switching to the Administrator role happens in place (no navigation), so the fetch the
+        // admin branch gates on may never have started — start it now or the gate pulses forever.
+        if (Session.ActiveRole == Role.Admin && !Store.IsLoaded && !fetchStarted)
+        {
+            fetchStarted = true;
+            _ = FetchAfterRoleSwitchAsync();
+        }
+        StateHasChanged();
+    }
+
+    private async Task FetchAfterRoleSwitchAsync()
+    {
+        try { await Store.RefreshAsync(CancellationToken.None); }
+        catch { dataFailed = true; }
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task RevalidateAsync()
+    {
+        try { await Store.RefreshAsync(CancellationToken.None); }
+        catch { /* background revalidation — the toast already reported it and the stale figure stands */ }
+    }
+
+    private async Task PublishAsync()
+    {
+        publishing = true;
+        try
+        {
+            await Store.PublishAsync(CancellationToken.None);
+            confirming = false;
+            publishedMessage = $"v{Store.Current!.Version} published — every open tab is now being offered the refresh. " +
+                               "The bar will appear at the top of this tab too: that's it working.";
+        }
+        catch
+        {
+            // The error toast already carries the reference and the detail; the button simply
+            // re-enables so the publish can be retried.
+        }
+        finally
+        {
+            publishing = false;
+        }
+    }
+
+    public void Dispose()
+    {
+        Session.OnChange -= OnSessionChanged;
+        Store.OnChange -= StateHasChanged;
+    }
+}

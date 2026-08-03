@@ -204,6 +204,11 @@ public static class SidebarFolders
             new[]
             {
                 new SidebarRow(new NavigationItem("Users", "/admin/users"),
+                    DesktopNavigation.AdministratorOnly),
+                // The announced app version: publishing an update here raises the refresh bar
+                // (UpdateToast) on every signed-in tab. Mirrors the API's AdminGate on the
+                // system/version endpoints.
+                new SidebarRow(new NavigationItem("System", "/admin/system"),
                     DesktopNavigation.AdministratorOnly)
             })
     };

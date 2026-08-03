@@ -145,6 +145,10 @@ public sealed class JpmsContext : DbContext
     // docs/Pathway-Split-Platform-Flow-Plan.md §4).
     public DbSet<AuditEventEntity> AuditEvents => Set<AuditEventEntity>();
 
+    // The announced app version — one row ("current") that Admin → System publishes and every
+    // HTTP response header reports; see Features/Platform.
+    public DbSet<AppVersionEntity> AppVersions => Set<AppVersionEntity>();
+
     // Architect's Instructions — the formal instructions that authorise varied work — plus the
     // many-to-many between them and the variations they cover.
     public DbSet<ArchitectInstructionEntity> ArchitectInstructions => Set<ArchitectInstructionEntity>();

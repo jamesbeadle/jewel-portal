@@ -62,9 +62,11 @@ public static class WorkspaceSections
         new[]
         {
             // Administrators only (empty role lists + the Role.Admin bypass in IsVisibleTo) —
-            // mirrors the API's AdminGate on the revoked read and the directory commands.
+            // mirrors the API's AdminGate on the revoked read, the directory commands and the
+            // system/version endpoints.
             new WorkspaceTab("Users", "/admin/users", Array.Empty<Role>()),
-            new WorkspaceTab("Revoked", "/admin/users/revoked", Array.Empty<Role>())
+            new WorkspaceTab("Revoked", "/admin/users/revoked", Array.Empty<Role>()),
+            new WorkspaceTab("System", "/admin/system", Array.Empty<Role>())
         });
 
     public static readonly IReadOnlyList<WorkspaceSectionInfo> All =

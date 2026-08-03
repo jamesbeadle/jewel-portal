@@ -23,6 +23,7 @@ using Jewel.JPMS.Features.Lads;
 using Jewel.JPMS.Features.Leads;
 using Jewel.JPMS.Features.Mobilisation;
 using Jewel.JPMS.Features.Parties;
+using Jewel.JPMS.Features.Platform;
 using Jewel.JPMS.Features.Portal;
 using Jewel.JPMS.Features.Procurement;
 using Jewel.JPMS.Features.Progress;
@@ -127,6 +128,8 @@ builder.Services.AddScoped<IXeroCashSummaryStore, HttpXeroCashSummaryStore>();
 builder.Services.AddScoped<IXeroAgedPayablesStore, HttpXeroAgedPayablesStore>();
 builder.Services.AddScoped<IXeroAgedReceivablesStore, HttpXeroAgedReceivablesStore>();
 builder.Services.AddScoped<IXeroLedgerStore, HttpXeroLedgerStore>();
+// Admin → System: the announced app version and its publish button.
+builder.Services.AddScoped<ISystemStore, HttpSystemStore>();
 
 builder.Services.AddScoped<StoreChangeHub>();
 // Watches the build number the API stamps on every response; the CQRS transport reports each
@@ -188,6 +191,7 @@ using (var routeScope = app.Services.CreateScope())
     CostCentersRouteRegistration.RegisterCostCentersRoutes(queryRoutes, commandRoutes);
     AgentsRouteRegistration.RegisterAgentsRoutes(queryRoutes, commandRoutes);
     XeroRouteRegistration.RegisterXeroRoutes(queryRoutes, commandRoutes);
+    PlatformRouteRegistration.RegisterPlatformRoutes(queryRoutes, commandRoutes);
 }
 
 await app.RunAsync();

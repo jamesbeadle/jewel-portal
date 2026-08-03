@@ -1,27 +1,21 @@
 namespace Jewel.JPMS.Models;
 
 /// <summary>
-/// The number of the deploy this assembly was compiled from.
+/// The number compiled into this assembly — and, since 2026-08-03, only the FALLBACK for the
+/// version conversation. The version the API actually announces is the AppVersions database row
+/// that an administrator bumps from Admin → System (see api Features/Platform): the API stamps it
+/// on every HTTP response (<see cref="Header"/>, via VersionStampMiddleware) and the client
+/// (<see cref="AppVersionService"/> in jpms) raises the UpdateToast when the announced number
+/// rises above the one the tab baselined on. Nothing stamps this constant at deploy any more —
+/// that is exactly why the announced row exists — but the client still prefers it when it parses,
+/// so the original stamped-build design keeps working if a workflow ever rewrites it again.
 ///
-/// "dev" outside a deploy. The deploy workflow (jpms-swa.yml) rewrites <see cref="Value"/> with
-/// the GitHub run number BEFORE either side is built, so the Blazor bundle and the API always
-/// carry the same number for a given deploy — no table to bump, nothing to remember. The API
-/// stamps its number on every HTTP response (<see cref="Header"/>, via VersionStampMiddleware)
-/// and the client transport compares it to its own (<see cref="AppVersionService"/> in jpms): a
-/// HIGHER number from the API means this tab was built by an earlier deploy, and the UpdateToast
-/// offers a refresh.
-///
-/// The comparison is numeric and one-directional on purpose. "dev" never prompts — a local client
-/// against the deployed API, or vice versa, is a build difference, not an update. And a client
-/// momentarily NEWER than the API (the seconds mid-deploy where the app has swapped but the
-/// functions have not) must not prompt either: the refresh would land on the same build it came
-/// from and prompt again, forever.
+/// The comparison is numeric and one-directional on purpose: only a higher announcement prompts,
+/// so a publish can never loop a tab that has already refreshed onto it.
 /// </summary>
 public static class BuildVersion
 {
-    /// <summary>Rewritten at deploy — the workflow's sed matches this exact text, and greps for
-    /// the stamped value afterwards so a drift here fails the build instead of silently shipping
-    /// "dev".</summary>
+    /// <summary>"dev" unless a deploy workflow ever stamps a build number over this exact text.</summary>
     public const string Value = "dev";
 
     /// <summary>The response header the API stamps and the client transport watches.</summary>

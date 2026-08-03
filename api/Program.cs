@@ -119,6 +119,7 @@ var host = new HostBuilder()
         services.AddMailboxIntakeFeature(context.Configuration);
         services.AddAiFeature(context.Configuration);
         services.AddXeroFeature(context.Configuration);
+        services.AddPlatformFeature();
     })
     .Build();
 

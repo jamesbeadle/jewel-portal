@@ -41,6 +41,28 @@ namespace Jewel.JPMS.Api.Migrations
                     b.ToTable("AccessRequests");
                 });
 
+            modelBuilder.Entity("Jewel.JPMS.Api.Data.Entities.AppVersionEntity", b =>
+                {
+                    b.Property<string>("AppVersionId")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<DateTimeOffset>("PublishedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("PublishedBy")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<long>("Version")
+                        .HasColumnType("bigint");
+
+                    b.HasKey("AppVersionId");
+
+                    b.ToTable("AppVersions");
+                });
+
             modelBuilder.Entity("Jewel.JPMS.Api.Data.Entities.BidDecisionEntity", b =>
                 {
                     b.Property<string>("LeadId")
