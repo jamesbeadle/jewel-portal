@@ -157,9 +157,11 @@ public static class SidebarFolders
                     DesktopNavigation.FinanceRoles),
                 new SidebarRow(new NavigationItem("Cashflow", "/projects/{project}/cashflow"),
                     DesktopNavigation.FinanceRoles),
-                // One row per active project plus the total. Exact-only: /finance/* belongs to
-                // the Xero, Cash Summary and Aged Payables rows.
-                new SidebarRow(new NavigationItem("Financial Summary", "/finance", ExactMatch: true),
+                // The consolidated valuation report: one row per selected project (live jobs by
+                // default) plus the total. Replaced the old Financial Summary on the same slug
+                // (2026-08-03) — slugs don't move. Exact-only: /finance/* belongs to the Xero,
+                // Cash Summary and Aged Payables rows.
+                new SidebarRow(new NavigationItem("Valuation Summary", "/finance", ExactMatch: true),
                     DesktopNavigation.FinanceRoles),
                 // Live cash position from Xero. Bank balances are the company's most sensitive
                 // figures — directors only, deliberately tighter than FinanceRoles; mirrors the

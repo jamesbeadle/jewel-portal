@@ -1276,11 +1276,35 @@ else
 
     private void OnSplitCodeChanged(SplitRow row, string? code) => row.Code = code ?? "";
 
-    private void OnSplitAmountChanged(SplitRow row, string? raw) =>
+    private void OnSplitAmountChanged(SplitRow row, string? raw)
+    {
         row.Amount = decimal.TryParse(raw, System.Globalization.NumberStyles.Number,
             System.Globalization.CultureInfo.InvariantCulture, out var amount)
             ? amount
             : null;
+        AutoBalance(row);
+    }
+
+    // Keying an amount drops the outstanding remainder into another row, so a
+    // two-way split needs only one number typed. The target is the first row
+    // BELOW the edited one whose amount is still empty or zero (wrapping to
+    // earlier rows if none below qualifies). A row already holding a non-zero
+    // amount is never overwritten — if the user has keyed every other row,
+    // nothing moves and the tally line reports any mismatch instead, keeping
+    // the allocation right without clobbering deliberate figures.
+    private void AutoBalance(SplitRow edited)
+    {
+        if (splitLine is null || edited.Amount is null) return;
+        var index = splitRows.IndexOf(edited);
+        if (index < 0) return;
+
+        var target = splitRows.Skip(index + 1).FirstOrDefault(row => (row.Amount ?? 0m) == 0m)
+                     ?? splitRows.Take(index).FirstOrDefault(row => (row.Amount ?? 0m) == 0m);
+        if (target is null) return;
+
+        var remaining = splitLine.Net - splitRows.Where(row => row != target).Sum(row => row.Amount ?? 0m);
+        if (remaining > 0m) target.Amount = remaining;
+    }
 
     private decimal SplitAssigned => splitRows.Sum(row => row.Amount ?? 0m);
     private decimal SplitRemaining => (splitLine?.Net ?? 0m) - SplitAssigned;

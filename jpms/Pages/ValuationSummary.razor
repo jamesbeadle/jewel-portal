@@ -1,0 +1,435 @@
+@page "/finance"
+@using Jewel.JPMS.Commercial
+@using Jewel.JPMS.Contracts.Commercial
+@using Jewel.JPMS.Features.Commercial
+@using Jewel.JPMS.Features.Projects
+@inject AuthService Auth
+@inject SessionService Session
+@inject ProjectListReadModel Projects
+@inject ValuationLinesReadModel Lines
+@inject ValuationClaimsReadModel Claims
+@inject ClaimLinesReadModel ClaimEntries
+@inject IValuationInvoiceStore Invoices
+@inject NavigationManager Nav
+@implements IDisposable
+
+<PageTitle>Valuation Summary · JPMS</PageTitle>
+
+@*
+    The company-wide consolidated valuation report (the sidebar's Financials folder). One row per
+    selected project — that project's valuation summary footer collapsed to a line — plus the
+    all-projects total. Figures come from each project's LATEST claim through the same
+    ValuationSummaryFigures the Valuation Report tab uses, so this page and the per-project report
+    can never disagree: a Draft claim reads live from its % entries, a locked claim reads its
+    frozen totals, and certified to date tracks issued/paid valuation invoices.
+
+    Replaced the old Financial Summary (FinanceOverview) on this slug on 2026-08-03 — nobody used
+    the cost-side overview, and the slug stays so bookmarks keep landing.
+
+    The project filter defaults to live jobs (everything except Leads and Completed) and offers
+    every project, so historic valuations stay one tick away.
+*@
+
+@if (!sessionReady)
+{
+    <section class="px-6 md:px-8 py-12">
+        <LoadGate IsLoading="true" Prominent="true" Label="Loading" />
+    </section>
+}
+else if (!Session.IsApproved)
+{
+    <RequestAccessView Email="@Auth.CurrentUser!.Email" DisplayName="@Auth.CurrentUser.DisplayName" />
+}
+else
+{
+    <section class="px-6 md:px-8 py-8 md:py-12">
+        <header class="mb-6">
+            <p class="eyebrow mb-1">JPMS · Company</p>
+            <h1 class="text-2xl md:text-3xl font-semibold text-content leading-tight">Valuation Summary</h1>
+            <p class="text-sm text-content-muted mt-1">
+                Every project's valuation report rolled up to one line — the latest claim's figures,
+                exactly as each project's Valuation Report computes them.
+            </p>
+        </header>
+
+        @if (projectsFailed)
+        {
+            <p class="text-sm text-negative">Couldn't load the project list. The details are in the red bar at the top — reload to try again.</p>
+        }
+        else
+        {
+            <div class="mb-3 flex items-center justify-between gap-3 flex-wrap">
+                @* The filter is a control, so it is never gated: it renders disabled with a
+                   loading label until the project list lands (the loading-states convention). *@
+                @if (Projects.Current is null)
+                {
+                    <select disabled
+                            class="rounded-lg border border-line-strong bg-surface-field px-3 py-2 text-sm text-content-subtle">
+                        <option>Loading projects…</option>
+                    </select>
+                }
+                else
+                {
+                    <ProjectMultiSelect Projects="@(Projects.Current!)"
+                                        Selected="@selectedIds"
+                                        SelectedChanged="OnSelectionChangedAsync" />
+                }
+                @* Disabled while any selected row failed to load: the on-screen banner discloses
+                   the zeros, but a workbook travels without it — retry first, then export. *@
+                <ExportToExcelButton FileName="Valuation summary"
+                                     Disabled="@(!TableReady || SelectedProjects.Count == 0 || FailedSelectedProjects.Count > 0)"
+                                     BuildWorkbook="BuildExportWorkbook" />
+            </div>
+
+            @* One panel: every row and the total are the same arithmetic, so the table waits for
+               every selected project's report before showing any of it — including projects just
+               ticked in the filter, whose rows would otherwise appear as confident zeros. *@
+            <LoadGate IsLoading="@(!TableReady)" Prominent="true" Label="Loading valuation reports">
+            @if (SelectedProjects.Count == 0)
+            {
+                <div class="panel p-8 text-center">
+                    <p class="text-sm text-content">No projects selected — pick some in the filter above.</p>
+                </div>
+            }
+            else
+            {
+                @if (FailedSelectedProjects.Count > 0)
+                {
+                    <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-4">
+                        The valuation report could not be loaded for @string.Join(", ", FailedSelectedProjects.Select(p => p.Reference)) — those rows show zeros.
+                        <button type="button" class="underline underline-offset-2 ml-1" @onclick="RetryFailedAsync">Retry</button>
+                    </p>
+                }
+
+                <div class="rounded-xl border border-line bg-surface overflow-x-auto">
+                    <table class="w-full text-sm border-collapse">
+                        <thead class="bg-surface-raised border-b border-line">
+                            <tr class="text-left text-[11px] uppercase tracking-wider text-content-subtle font-semibold">
+                                <th class="px-4 py-3 min-w-[220px]">Project</th>
+                                <th class="px-4 py-3 text-right whitespace-nowrap">Contract Sum</th>
+                                <th class="px-4 py-3 text-right whitespace-nowrap">Net Variations</th>
+                                <th class="px-4 py-3 text-right whitespace-nowrap">Revised Sum</th>
+                                <th class="px-4 py-3 text-right whitespace-nowrap border-l border-line">Works Complete</th>
+                                <th class="px-4 py-3 text-right whitespace-nowrap" title="Works complete as a share of the revised contract sum.">%</th>
+                                <th class="px-4 py-3 text-right whitespace-nowrap border-l border-line" title="Retention held less retention released — what the client still holds.">Retention O/S</th>
+                                <th class="px-4 py-3 text-right whitespace-nowrap" title="Issued and paid valuation invoices to date.">Certified To Date</th>
+                                <th class="px-4 py-3 text-right whitespace-nowrap" title="Works complete less retention outstanding, less certified to date.">Payment Due</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-line">
+                            @foreach (var project in SelectedProjects)
+                            {
+                                var figures = FiguresFor(project.ProjectId);
+                                <tr>
+                                    <td class="px-4 py-3 whitespace-nowrap">
+                                        <a href="@($"/projects/{project.ProjectId}/valuation")" class="hover:underline underline-offset-4">
+                                            <span class="font-mono text-[11px] text-content-subtle mr-2">@project.Reference</span>
+                                            <span class="text-content font-medium">@project.Name</span>
+                                        </a>
+                                        <div class="text-[11px] text-content-subtle mt-0.5">@ClaimLabelFor(project.ProjectId)</div>
+                                    </td>
+                                    <td class="px-4 py-3 text-right whitespace-nowrap text-content">@Money(figures.ContractSum)</td>
+                                    <td class="px-4 py-3 text-right whitespace-nowrap text-content">@Money(figures.NetVariations)</td>
+                                    <td class="px-4 py-3 text-right whitespace-nowrap text-content">@Money(figures.RevisedContractSum)</td>
+                                    <td class="px-4 py-3 text-right whitespace-nowrap text-content border-l border-line">@Money(figures.TotalWorksComplete)</td>
+                                    <td class="px-4 py-3 text-right whitespace-nowrap text-content-muted">@Pct(PercentComplete(figures))</td>
+                                    <td class="px-4 py-3 text-right whitespace-nowrap text-content border-l border-line">@Money(figures.RetentionOutstanding)</td>
+                                    <td class="px-4 py-3 text-right whitespace-nowrap text-content">@Money(figures.CertifiedToDate)</td>
+                                    <td class="px-4 py-3 text-right whitespace-nowrap @(figures.PaymentDueExVat < 0m ? "text-negative" : "text-content")">@Money(figures.PaymentDueExVat)</td>
+                                </tr>
+                            }
+                        </tbody>
+                        @if (SelectedProjects.Count > 1)
+                        {
+                            var total = Totals();
+                            <tfoot class="border-t border-line bg-surface-raised">
+                                <tr class="font-semibold">
+                                    <td class="px-4 py-3 text-content">All projects</td>
+                                    <td class="px-4 py-3 text-right whitespace-nowrap text-content">@Money(total.ContractSum)</td>
+                                    <td class="px-4 py-3 text-right whitespace-nowrap text-content">@Money(total.NetVariations)</td>
+                                    <td class="px-4 py-3 text-right whitespace-nowrap text-content">@Money(total.RevisedContractSum)</td>
+                                    <td class="px-4 py-3 text-right whitespace-nowrap text-content border-l border-line">@Money(total.TotalWorksComplete)</td>
+                                    <td class="px-4 py-3 text-right whitespace-nowrap text-content-muted">@Pct(PercentComplete(total))</td>
+                                    <td class="px-4 py-3 text-right whitespace-nowrap text-content border-l border-line">@Money(total.RetentionOutstanding)</td>
+                                    <td class="px-4 py-3 text-right whitespace-nowrap text-content">@Money(total.CertifiedToDate)</td>
+                                    <td class="px-4 py-3 text-right whitespace-nowrap @(total.PaymentDueExVat < 0m ? "text-negative" : "text-content")">@Money(total.PaymentDueExVat)</td>
+                                </tr>
+                            </tfoot>
+                        }
+                    </table>
+                </div>
+            }
+            </LoadGate>
+        }
+    </section>
+}
+
+@code {
+    // Session checked and the user is signed in. This is NOT "the figures are here": the heading,
+    // filter and description show at once, the table waits behind its own gate.
+    private bool sessionReady;
+    // The project list is what the filter and every row are built from, and its fetch throws
+    // rather than recording per-project failure — so a failure here opens the gate with a message.
+    private bool projectsFailed;
+    // True once the default (live jobs) selection has been seeded from the loaded project list —
+    // before that the table has no honest answer, not even "no projects selected".
+    private bool selectionInitialised;
+
+    // How many per-project report loads run at once. Each load's queries run sequentially, so
+    // this is also the total concurrent-query ceiling — the same four the old Financial Summary
+    // used, well inside what the serverless SQL tier serves comfortably.
+    private const int ProjectRefreshConcurrency = 4;
+
+    private IReadOnlyCollection<string> selectedIds = Array.Empty<string>();
+
+    // Per-project load state. A project is in exactly one of these once selected: loading (fetch
+    // in flight), loaded (all four reads landed), or failed (any read threw — its row shows zeros
+    // behind the banner). Ids, matched case-insensitively like every project id comparison.
+    private readonly HashSet<string> loadedProjects = new(StringComparer.OrdinalIgnoreCase);
+    private readonly HashSet<string> failedProjects = new(StringComparer.OrdinalIgnoreCase);
+    private readonly HashSet<string> loadingProjects = new(StringComparer.OrdinalIgnoreCase);
+
+    // Issued + paid valuation invoices per project (TotalInvoiced) — feeds "Certified to date"
+    // exactly as the Valuation Report tab's invoices section does.
+    private readonly Dictionary<string, decimal> invoicedByProject = new(StringComparer.OrdinalIgnoreCase);
+
+    // ONE throttle for the page's lifetime, not one per LoadSelectedAsync call — a filter change
+    // or retry while the first batch is still in flight must share the same ceiling, or two
+    // batches of four stampede the serverless database with eight.
+    private readonly SemaphoreSlim throttle = new(ProjectRefreshConcurrency);
+
+    private static readonly System.Globalization.CultureInfo Gb = System.Globalization.CultureInfo.GetCultureInfo("en-GB");
+
+    // The selected projects in the canonical work order (re-applied after the filter, per the
+    // project-ordering convention) — the rows the table renders.
+    private List<Project> SelectedProjects =>
+        (Projects.Current ?? (IReadOnlyList<Project>)Array.Empty<Project>())
+            .Where(project => selectedIds.Contains(project.ProjectId, StringComparer.OrdinalIgnoreCase))
+            .InWorkOrder()
+            .ToList();
+
+    private List<Project> FailedSelectedProjects =>
+        SelectedProjects.Where(project => failedProjects.Contains(project.ProjectId)).ToList();
+
+    // Every row and the total read that project's lines, claims, entries and invoiced total;
+    // nothing shows until every selected project has loaded (or failed into the banner), or a
+    // row would appear with a plausible zero in every column.
+    private bool TableReady =>
+        selectionInitialised
+        && SelectedProjects.All(project =>
+            loadedProjects.Contains(project.ProjectId) || failedProjects.Contains(project.ProjectId));
+
+    // ---- Figures ------------------------------------------------------------
+    // One rule for "the" claim everywhere on this page: the highest-numbered claim the project
+    // has. A Draft reads live from its % entries; Preapproved/Confirmed read their frozen totals
+    // (the server re-freezes a Preapproved claim when certified moves, so frozen is current).
+    private ValuationClaim? LatestClaimFor(string projectId) =>
+        Claims.Current(projectId)
+            .OrderByDescending(claim => claim.ClaimNumber)
+            .FirstOrDefault();
+
+    private ValuationSummaryFigures FiguresFor(string projectId)
+    {
+        var latest = LatestClaimFor(projectId);
+        var entries = latest is { Status: ValuationClaimStatus.Draft }
+            ? ClaimEntries.Current(latest.ValuationClaimId)
+            : Array.Empty<ClaimLine>();
+        return ValuationSummaryFigures.For(
+            Lines.Current(projectId),
+            entries,
+            latest,
+            invoicedByProject.TryGetValue(projectId, out var invoiced) ? invoiced : 0m);
+    }
+
+    private ValuationSummaryFigures Totals()
+    {
+        var all = SelectedProjects.Select(project => FiguresFor(project.ProjectId)).ToList();
+        return new ValuationSummaryFigures(
+            all.Sum(f => f.ContractSum),
+            all.Sum(f => f.NetVariations),
+            all.Sum(f => f.RevisedContractSum),
+            all.Sum(f => f.TotalWorksComplete),
+            0m,
+            all.Sum(f => f.RetentionHeld),
+            0m,
+            all.Sum(f => f.RetentionReleased),
+            all.Sum(f => f.CertifiedToDate),
+            all.Sum(f => f.PaymentDueExVat));
+    }
+
+    private static decimal PercentComplete(ValuationSummaryFigures figures) =>
+        figures.RevisedContractSum == 0m
+            ? 0m
+            : Math.Round(figures.TotalWorksComplete / figures.RevisedContractSum * 100m, 1);
+
+    private string ClaimLabelFor(string projectId) =>
+        LatestClaimFor(projectId) is { } claim
+            ? $"{claim.DisplayName} · {claim.Status}"
+            : "No claims yet";
+
+    private static string Money(decimal value) => $"£{value:N0}";
+    private static string Pct(decimal value) => value.ToString("0.#", Gb) + "%";
+
+    // ---- Loading ------------------------------------------------------------
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Session.EnsureLoadedAsync();
+        if (!Auth.IsSignedIn) { Nav.NavigateTo("/login", forceLoad: true); return; }
+        Projects.OnChanged += StateHasChanged;
+        Lines.OnChanged += StateHasChanged;
+        Claims.OnChanged += StateHasChanged;
+        ClaimEntries.OnChanged += StateHasChanged;
+        sessionReady = true;
+        try
+        {
+            if (Projects.Current is null) await Projects.RefreshAsync(CancellationToken.None);
+        }
+        catch
+        {
+            // HttpQueryClient has already reported this to the error toast with a reference; here
+            // we only need to stop the table waiting on a list that is not coming.
+            projectsFailed = true;
+            return;
+        }
+        selectedIds = ProjectMultiSelect.LiveJobIds(Projects.Current ?? Array.Empty<Project>());
+        selectionInitialised = true;
+        await LoadSelectedAsync();
+    }
+
+    private async Task OnSelectionChangedAsync(IReadOnlyCollection<string> ids)
+    {
+        selectedIds = ids;
+        await LoadSelectedAsync();
+    }
+
+    private async Task RetryFailedAsync()
+    {
+        failedProjects.Clear();
+        await LoadSelectedAsync();
+    }
+
+    // Loads every selected project that hasn't been loaded yet, a few at a time — not all at
+    // once. Firing every project's four reads together stampedes the serverless database (which
+    // may also be mid-resume); each project inside the throttle runs its reads sequentially, so
+    // the ceiling is ProjectRefreshConcurrency queries in flight, same as the old overview.
+    // Already-loaded projects are simply re-shown (fetch-once, like the read models beneath) —
+    // re-entering the page recreates it (KeyedPageRouteView) and reloads fresh.
+    private async Task LoadSelectedAsync()
+    {
+        var toLoad = SelectedProjects
+            .Where(project => !loadedProjects.Contains(project.ProjectId)
+                              && !failedProjects.Contains(project.ProjectId)
+                              && !loadingProjects.Contains(project.ProjectId))
+            .ToList();
+        if (toLoad.Count == 0) return;
+        foreach (var project in toLoad) loadingProjects.Add(project.ProjectId);
+        await Task.WhenAll(toLoad.Select(async project =>
+        {
+            await throttle.WaitAsync();
+            try
+            {
+                await LoadProjectAsync(project.ProjectId);
+                loadedProjects.Add(project.ProjectId);
+            }
+            catch
+            {
+                // The read model / query client has already raised the error toast; the row
+                // degrades to zeros behind the banner rather than a blank page.
+                failedProjects.Add(project.ProjectId);
+            }
+            finally
+            {
+                loadingProjects.Remove(project.ProjectId);
+                throttle.Release();
+            }
+        }));
+        StateHasChanged();
+    }
+
+    private async Task LoadProjectAsync(string projectId)
+    {
+        // Sequential on purpose — see LoadSelectedAsync. Claims must land before the entries
+        // read anyway, because only a Draft latest claim needs its per-line % entries.
+        await Lines.RefreshAsync(projectId, CancellationToken.None);
+        await Claims.RefreshAsync(projectId, CancellationToken.None);
+        invoicedByProject[projectId] = (await Invoices.GetSummaryAsync(projectId)).TotalInvoiced;
+        if (LatestClaimFor(projectId) is { Status: ValuationClaimStatus.Draft } draft)
+            await ClaimEntries.RefreshAsync(draft.ValuationClaimId, CancellationToken.None);
+    }
+
+    // ---- Excel export -------------------------------------------------------
+    // Same rows the table renders plus the retention held/released split behind the on-screen
+    // outstanding figure, and the "All projects" total row when there's more than one project.
+    private ExcelWorkbook? BuildExportWorkbook(bool _)
+    {
+        var projects = SelectedProjects;
+        if (projects.Count == 0) return null;
+
+        var workbook = new ExcelWorkbook();
+        var sheet = workbook.AddSheet("Valuation summary",
+            new ExcelColumn("Project"),
+            new ExcelColumn("Latest claim"),
+            new ExcelColumn("Claim status"),
+            new ExcelColumn("Contract sum", ExcelFormat.Currency),
+            new ExcelColumn("Net variations", ExcelFormat.Currency),
+            new ExcelColumn("Revised contract sum", ExcelFormat.Currency),
+            new ExcelColumn("Works complete", ExcelFormat.Currency),
+            new ExcelColumn("% complete", ExcelFormat.Percent),
+            new ExcelColumn("Retention held", ExcelFormat.Currency),
+            new ExcelColumn("Retention released", ExcelFormat.Currency),
+            new ExcelColumn("Retention outstanding", ExcelFormat.Currency),
+            new ExcelColumn("Certified to date", ExcelFormat.Currency),
+            new ExcelColumn("Payment due (ex VAT)", ExcelFormat.Currency));
+
+        foreach (var project in projects)
+        {
+            var figures = FiguresFor(project.ProjectId);
+            var claim = LatestClaimFor(project.ProjectId);
+            sheet.AddRow(
+                project.Name,
+                claim?.DisplayName,
+                claim?.Status.ToString() ?? "No claims yet",
+                figures.ContractSum,
+                figures.NetVariations,
+                figures.RevisedContractSum,
+                figures.TotalWorksComplete,
+                PercentComplete(figures) / 100m,
+                figures.RetentionHeld,
+                figures.RetentionReleased,
+                figures.RetentionOutstanding,
+                figures.CertifiedToDate,
+                figures.PaymentDueExVat);
+        }
+
+        if (projects.Count > 1)
+        {
+            var total = Totals();
+            sheet.AddRow(
+                "All projects", null, null,
+                total.ContractSum,
+                total.NetVariations,
+                total.RevisedContractSum,
+                total.TotalWorksComplete,
+                PercentComplete(total) / 100m,
+                total.RetentionHeld,
+                total.RetentionReleased,
+                total.RetentionOutstanding,
+                total.CertifiedToDate,
+                total.PaymentDueExVat);
+        }
+
+        return workbook;
+    }
+
+    public void Dispose()
+    {
+        Projects.OnChanged -= StateHasChanged;
+        Lines.OnChanged -= StateHasChanged;
+        Claims.OnChanged -= StateHasChanged;
+        ClaimEntries.OnChanged -= StateHasChanged;
+        // The throttle is deliberately NOT disposed: a load still in flight when the user
+        // navigates away would Release() a disposed semaphore and fault the abandoned task.
+        // An undisposed SemaphoreSlim (no wait-handle use) holds nothing worth reclaiming.
+    }
+}

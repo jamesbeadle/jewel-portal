@@ -4,6 +4,7 @@
 @inject NavigationManager Nav
 @inject ProjectListReadModel Projects
 @inject CurrentProjectService CurrentProject
+@inject ProjectStageFilter StageFilter
 @implements IDisposable
 
 @*
@@ -93,6 +94,28 @@
                                 @foreach (var candidate in ActiveProjects)
                                 {
                                     @ProjectOption(candidate)
+                                }
+                                @if (CompletedProjects.Count > 0)
+                                {
+                                    @* The status filter (decision 2026-08-03): completed projects
+                                       stay out of the switcher until asked for, but their records
+                                       (valuation report, financials) must stay reachable after
+                                       handover. The toggle persists per user (ProjectStageFilter)
+                                       and the header's prev/next arrows follow it. *@
+                                    <div class="border-t border-line mt-1"></div>
+                                    <label class="flex items-center gap-2 px-3 py-2 text-xs text-content-subtle hover:text-content cursor-pointer transition">
+                                        <input type="checkbox" checked="@StageFilter.IncludeCompleted"
+                                               @onchange="e => StageFilter.SetAsync((bool)e.Value!)" />
+                                        Show completed (@CompletedProjects.Count)
+                                    </label>
+                                    @if (StageFilter.IncludeCompleted)
+                                    {
+                                        <p class="eyebrow px-3 pt-1 pb-1">Completed</p>
+                                        @foreach (var candidate in CompletedProjects)
+                                        {
+                                            @ProjectOption(candidate)
+                                        }
+                                    }
                                 }
                                 <div class="border-t border-line mt-1 pt-1">
                                     <a href="/projects" class="block px-3 py-2 text-xs text-content-subtle hover:text-content hover:bg-surface-raised transition"
@@ -276,20 +299,35 @@
             .InWorkOrder()
             .ToList();
 
+    // The picker's Completed group, listed after the active projects when the "Show completed"
+    // toggle (ProjectStageFilter) is on — same canonical order within the band.
+    private List<Project> CompletedProjects =>
+        (Projects.Current ?? (IReadOnlyList<Project>)Array.Empty<Project>())
+            .Where(project => project.Stage == ProjectStage.Completed)
+            .InWorkOrder()
+            .ToList();
+
+    // The pool the picker can currently reach — what Recent and ResolveFor validate against.
+    private List<Project> PickableProjects =>
+        StageFilter.IncludeCompleted
+            ? ActiveProjects.Concat(CompletedProjects).ToList()
+            : ActiveProjects;
+
     // The picker's Recent group: the last few projects this user actually opened
     // (CurrentProjectService), most recently opened first — the one place recency, not
     // ProjectOrdering, sets the order, because "what was I just in?" is the question the group
-    // answers. Active projects only, without the current one (it is the picker button itself).
+    // answers. Pickable projects only (completed ones join when the toggle is on), without the
+    // current one (it is the picker button itself).
     // Deliberately NOT removed from the full list below: that list stays complete and in the
     // canonical work order, so every project keeps one predictable place to be found.
     private List<Project> RecentlyOpened
     {
         get
         {
-            var active = ActiveProjects;
+            var pool = PickableProjects;
             return CurrentProject.RecentProjectIds
                 .Where(id => !string.Equals(id, EffectiveProjectId, StringComparison.OrdinalIgnoreCase))
-                .Select(id => active.Find(project =>
+                .Select(id => pool.Find(project =>
                     string.Equals(project.ProjectId, id, StringComparison.OrdinalIgnoreCase)))
                 .OfType<Project>()
                 .Take(4)
@@ -309,8 +347,10 @@
     private bool IsCurrent(Project candidate) =>
         string.Equals(candidate.ProjectId, EffectiveProjectId, StringComparison.OrdinalIgnoreCase);
 
-    // The workspace's project: last viewed while still active, else the first active project.
-    private string? EffectiveProjectId => CurrentProject.ResolveFor(Projects.Current);
+    // The workspace's project: last viewed while still in the pickable pool, else the first
+    // project of that pool (the "Show completed" toggle widens it to completed projects).
+    private string? EffectiveProjectId =>
+        CurrentProject.ResolveFor(Projects.Current, StageFilter.IncludeCompleted);
 
     private Project? PickedProject =>
         EffectiveProjectId is { } id ? Projects.Find(id) : null;
@@ -363,8 +403,10 @@
         Session.OnChange += HandleSessionChange;
         Projects.OnChanged += StateHasChanged;
         CurrentProject.OnChange += StateHasChanged;
+        StageFilter.OnChange += StateHasChanged;
         Nav.LocationChanged += HandleLocationChanged;
         _ = CurrentProject.EnsureLoadedAsync();
+        _ = StageFilter.EnsureLoadedAsync();
         EnsureProjectsLoaded();
     }
 
@@ -435,6 +477,7 @@
         Session.OnChange -= HandleSessionChange;
         Projects.OnChanged -= StateHasChanged;
         CurrentProject.OnChange -= StateHasChanged;
+        StageFilter.OnChange -= StateHasChanged;
         Nav.LocationChanged -= HandleLocationChanged;
     }
 }

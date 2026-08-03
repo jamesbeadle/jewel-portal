@@ -12,7 +12,8 @@ namespace Jewel.JPMS.Services;
 /// group, so the two or three jobs someone is actually working across sit at the top of the
 /// dropdown (decision 2026-07-29). Every project page records itself here via ProjectPageShell;
 /// falls back to the first active project in the canonical work order when nothing is stored or
-/// the stored project has completed.
+/// the stored project has completed (unless the picker's "Show completed" toggle keeps completed
+/// projects in the pool — see <see cref="ResolveFor"/>).
 /// </summary>
 public sealed class CurrentProjectService
 {
@@ -75,24 +76,28 @@ public sealed class CurrentProjectService
 
     /// <summary>
     /// The project that project-scoped navigation should target: the remembered project while it
-    /// is still active, otherwise the first active project in the canonical work order (live sites
-    /// before Defects Period before Leads — the same order the side-nav switcher lists, so the
-    /// fallback lands on the top entry the user sees), otherwise whatever was remembered (a
-    /// completed project beats nowhere), otherwise null (no projects loaded yet).
+    /// is still in the navigable pool, otherwise the first project of that pool in the canonical
+    /// work order (live sites before Defects Period before Leads — the same order the side-nav
+    /// switcher lists, so the fallback lands on the top entry the user sees), otherwise whatever
+    /// was remembered (a completed project beats nowhere), otherwise null (no projects loaded
+    /// yet). The pool is active projects only by default; with
+    /// <paramref name="includeCompleted"/> (the picker's "Show completed" toggle,
+    /// <see cref="ProjectStageFilter"/>) completed projects join it, so picking one sticks
+    /// instead of snapping back to the first active project.
     /// </summary>
-    public string? ResolveFor(IReadOnlyList<Project>? projects)
+    public string? ResolveFor(IReadOnlyList<Project>? projects, bool includeCompleted = false)
     {
-        var active = projects?
-            .Where(project => project.Stage != ProjectStage.Completed)
+        var pool = projects?
+            .Where(project => includeCompleted || project.Stage != ProjectStage.Completed)
             .InWorkOrder()
             .ToList();
-        if (active is null || active.Count == 0) return CurrentProjectId;
+        if (pool is null || pool.Count == 0) return CurrentProjectId;
         if (CurrentProjectId is { } current
-            && active.Any(project => string.Equals(project.ProjectId, current, StringComparison.OrdinalIgnoreCase)))
+            && pool.Any(project => string.Equals(project.ProjectId, current, StringComparison.OrdinalIgnoreCase)))
         {
             return current;
         }
-        return active[0].ProjectId;
+        return pool[0].ProjectId;
     }
 
     private static List<string> Parse(string? stored)

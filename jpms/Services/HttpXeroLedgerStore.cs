@@ -77,6 +77,14 @@ public sealed class HttpXeroLedgerStore : IXeroLedgerStore
     /// Unallocated and puts it in Allocated — so every status already in hand is reloaded, along
     /// with the counts. That is at most the two or three tabs this session has actually opened,
     /// never the whole ledger.
+    ///
+    /// A refresh that fails here must NOT fail the write's task. By this point the command has
+    /// already succeeded — the allocation is saved — and the callers' catch blocks only expect
+    /// <see cref="Cqrs.CommandFailedException"/>, so a transient 502 on the re-query used to
+    /// escape the handler and take the whole page down via the error boundary (JPMS-668D10).
+    /// HttpQueryClient has already put the failure in the error toast, reference and all; the
+    /// worst that remains is a stale figure, which the next visit's stale-while-revalidate
+    /// refresh corrects. Cancellation still propagates — navigating away is not a fault.
     /// </summary>
     private async Task ReloadAfterWriteAsync(CancellationToken cancellationToken)
     {
@@ -85,7 +93,18 @@ public sealed class HttpXeroLedgerStore : IXeroLedgerStore
             .Select(status => readModel.RefreshAsync(status, cancellationToken))
             .ToList();
         reloads.Add(readModel.RefreshCountsAsync(cancellationToken));
-        await Task.WhenAll(reloads);
+        try
+        {
+            await Task.WhenAll(reloads);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch
+        {
+            // Already reported by HttpQueryClient; the write itself succeeded.
+        }
     }
 
     private void EnsureRequested(XeroAllocationStatus status)

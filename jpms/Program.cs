@@ -138,6 +138,7 @@ builder.Services.AddScoped<AllocationTabStorage>();
 builder.Services.AddScoped<WorkOrderGroupingStorage>();
 builder.Services.AddScoped<TriageSortStorage>();
 builder.Services.AddScoped<CurrentProjectService>();
+builder.Services.AddScoped<ProjectStageFilter>();
 builder.Services.AddScoped<ChatPanelState>();
 // The pipe between a task dialog on a page and the assistant panel in MainLayout.
 builder.Services.AddScoped<AiTaskState>();

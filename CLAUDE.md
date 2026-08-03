@@ -105,8 +105,13 @@
   re-apply `.InWorkOrder()` after the filter; nothing sorts projects by its own rule. If a list
   needs a different order, it needs a reason written next to it.
 - **Completed projects are ordered last, not hidden** — except from the side-nav switcher, the
-  header's prev/next cycle and the finance overview, which are about work in progress. Anywhere
-  costs or history are recoded (Xero allocation, audit trail) the full list stays available.
+  header's prev/next cycle and the finance overview, which are about work in progress. The
+  switcher carries a per-user "Show completed" toggle (`ProjectStageFilter`, decision 2026-08-03)
+  that adds completed projects back into the picker, the prev/next cycle and project-scoped
+  navigation (`CurrentProjectService.ResolveFor(projects, includeCompleted)`) so their records —
+  the valuation report above all — stay reachable after handover; the finance overview ignores
+  the toggle. Anywhere costs or history are recoded (Xero allocation, audit trail) the full list
+  stays available.
 - `SearchSelect` already leads its unfiltered list with a blank entry labelled with its
   `Placeholder`, which *is* the clear/"All …" row. Do not prepend another one — that is what put
   "All projects" in the Xero allocation filter twice.

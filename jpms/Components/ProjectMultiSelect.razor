@@ -1,0 +1,122 @@
+@*
+    The project filter for company-wide financial views: a dropdown of every project with a
+    checkbox each, so the reader picks exactly which jobs a consolidated report covers.
+
+    Built on DropdownMenu's ChildContent so ticking a box does NOT close the panel — picking
+    three projects is one open, three ticks, one dismiss. The quick-pick row ("Live jobs" /
+    "All" / "None") stays open too, so the effect of a pick is visible in the list.
+
+    "Live jobs" is the default consumers seed themselves with (LiveJobIds): everything except
+    Leads (no costs, no programme yet) and Completed (history, reachable by ticking it back on).
+    The list itself always carries EVERY project, in the canonical work order, so historic
+    valuations stay reachable — the same stance as the Xero allocation filter.
+*@
+
+<DropdownMenu AlignLeft="true"
+              WidthClass="w-96 max-w-[90vw]"
+              Disabled="@Disabled"
+              ToggleTitle="Choose which projects the report covers"
+              ToggleClass="inline-flex items-center gap-2 rounded-lg border border-line-strong bg-surface-field px-3 py-2 text-sm text-content hover:border-line-strong focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent transition">
+    <ToggleContent>
+        <span>@ToggleLabel</span>
+    </ToggleContent>
+    <ChildContent>
+        <div class="flex items-center gap-1 px-3 py-2 border-b border-line text-xs">
+            <span class="text-content-subtle mr-auto">Show</span>
+            <button type="button"
+                    title="Everything except Leads and Completed"
+                    class="rounded-md px-2 py-1 text-content-muted hover:text-content hover:bg-surface-raised transition"
+                    @onclick="SelectLive">
+                Live jobs
+            </button>
+            <button type="button"
+                    class="rounded-md px-2 py-1 text-content-muted hover:text-content hover:bg-surface-raised transition"
+                    @onclick="SelectAll">
+                All
+            </button>
+            <button type="button"
+                    class="rounded-md px-2 py-1 text-content-muted hover:text-content hover:bg-surface-raised transition"
+                    @onclick="SelectNone">
+                None
+            </button>
+        </div>
+        <ul class="max-h-80 overflow-y-auto divide-y divide-line">
+            @foreach (var project in Ordered)
+            {
+                var id = project.ProjectId;
+                <li>
+                    <label class="flex items-center gap-2.5 px-3 py-2 text-sm cursor-pointer hover:bg-surface-raised transition">
+                        <input type="checkbox"
+                               checked="@IsSelected(id)"
+                               @onchange="() => ToggleProject(id)" />
+                        <span class="w-1.5 h-1.5 rounded-full shrink-0 @project.Stage.AccentDotClass()"
+                              title="@project.Stage.DisplayName()" aria-hidden="true"></span>
+                        <span class="font-mono text-[11px] text-content-subtle shrink-0">@project.Reference</span>
+                        <span class="text-content truncate">@project.Name</span>
+                        <span class="ml-auto pl-2 text-[11px] text-content-subtle whitespace-nowrap shrink-0">@project.Stage.DisplayName()</span>
+                    </label>
+                </li>
+            }
+        </ul>
+    </ChildContent>
+</DropdownMenu>
+
+@code {
+    /// <summary>Every project the filter offers — the full visible list, not a pre-narrowed one;
+    /// the component orders it itself (InWorkOrder) so callers can pass the read model's list raw.</summary>
+    [Parameter, EditorRequired] public IReadOnlyList<Project> Projects { get; set; } = Array.Empty<Project>();
+
+    /// <summary>The ticked project ids. Bind with @bind-Selected; the component never mutates the
+    /// collection it was handed — every change comes back as a fresh set via SelectedChanged.</summary>
+    [Parameter] public IReadOnlyCollection<string> Selected { get; set; } = Array.Empty<string>();
+
+    [Parameter] public EventCallback<IReadOnlyCollection<string>> SelectedChanged { get; set; }
+
+    [Parameter] public bool Disabled { get; set; }
+
+    /// <summary>The default filter: everything except Leads and Completed. One definition here so
+    /// the page seeding its default and the quick-pick button can never disagree.</summary>
+    public static bool IsLiveJob(Project project) =>
+        project.Stage is not (ProjectStage.Lead or ProjectStage.Completed);
+
+    /// <summary>The ids <see cref="IsLiveJob"/> admits — what consumers seed Selected with.</summary>
+    public static IReadOnlyCollection<string> LiveJobIds(IEnumerable<Project> projects) =>
+        projects.Where(IsLiveJob)
+                .Select(project => project.ProjectId)
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+    private IEnumerable<Project> Ordered => Projects.InWorkOrder();
+
+    private bool IsSelected(string projectId) =>
+        Selected.Contains(projectId, StringComparer.OrdinalIgnoreCase);
+
+    // Counted against the actual project list, so a stale id lingering in Selected (a project
+    // removed from the user's visible set) can't make "9 of 8" appear on the toggle.
+    private string ToggleLabel
+    {
+        get
+        {
+            var count = Projects.Count(project => IsSelected(project.ProjectId));
+            if (count == 0) return "No projects selected";
+            if (count == Projects.Count) return $"All projects ({count})";
+            var live = Projects.Where(IsLiveJob).ToList();
+            if (count == live.Count && live.All(project => IsSelected(project.ProjectId)))
+                return $"Live jobs ({count})";
+            return $"{count} of {Projects.Count} projects";
+        }
+    }
+
+    private Task ToggleProject(string projectId)
+    {
+        var next = new HashSet<string>(Selected, StringComparer.OrdinalIgnoreCase);
+        if (!next.Add(projectId)) next.Remove(projectId);
+        return SelectedChanged.InvokeAsync(next);
+    }
+
+    private Task SelectLive() => SelectedChanged.InvokeAsync(LiveJobIds(Projects));
+
+    private Task SelectAll() => SelectedChanged.InvokeAsync(
+        Projects.Select(project => project.ProjectId).ToHashSet(StringComparer.OrdinalIgnoreCase));
+
+    private Task SelectNone() => SelectedChanged.InvokeAsync(Array.Empty<string>());
+}
