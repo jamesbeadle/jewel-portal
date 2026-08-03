@@ -123,7 +123,15 @@ else
                             No file to preview yet.
                         </div>
                     }
-                    else if (IsPreviewable(PreviewRevision))
+                    else if (IsPdf(PreviewRevision))
+                    {
+                        @* The in-app pdf.js viewer (zoom, pan, fit, rotate, fullscreen) — the old
+                           bare <iframe> left drawings at the mercy of the browser's own viewer. *@
+                        <PdfViewer FileUrl="@FileUrl(PreviewRevision, inline: true)"
+                                   DownloadUrl="@FileUrl(PreviewRevision, inline: false)"
+                                   Caption="@($"Showing Rev {PreviewRevision.RevisionLabel} · {PreviewRevision.FileName}")" />
+                    }
+                    else if (IsImage(PreviewRevision))
                     {
                         <div class="rounded-xl border border-line bg-surface overflow-hidden">
                             <header class="px-4 py-2.5 border-b border-line bg-surface-raised flex items-center justify-between gap-3">
@@ -133,8 +141,8 @@ else
                                 <a href="@FileUrl(PreviewRevision, inline: false)" target="_blank" rel="noopener"
                                    class="text-xs text-accent hover:underline underline-offset-2 shrink-0">Open / download</a>
                             </header>
-                            <iframe src="@FileUrl(PreviewRevision, inline: true)"
-                                    class="w-full h-[70vh] bg-white" title="Drawing preview"></iframe>
+                            <img src="@FileUrl(PreviewRevision, inline: true)" alt="Drawing preview"
+                                 class="w-full max-h-[70vh] object-contain bg-surface-raised" />
                         </div>
                     }
                     else
@@ -227,12 +235,11 @@ else
             .ThenByDescending(revision => revision.ReceivedAt)
             .FirstOrDefault();
 
-    private static bool IsPreviewable(DrawingRevision revision)
-    {
-        var type = revision.ContentType ?? "";
-        return type.Contains("pdf", StringComparison.OrdinalIgnoreCase)
-            || type.StartsWith("image/", StringComparison.OrdinalIgnoreCase);
-    }
+    private static bool IsPdf(DrawingRevision revision) =>
+        (revision.ContentType ?? "").Contains("pdf", StringComparison.OrdinalIgnoreCase);
+
+    private static bool IsImage(DrawingRevision revision) =>
+        (revision.ContentType ?? "").StartsWith("image/", StringComparison.OrdinalIgnoreCase);
 
     private string FileUrl(DrawingRevision revision, bool inline) =>
         $"/api/drawings/revisions/{revision.DrawingRevisionId}/file{(inline ? "?inline=1" : "")}";

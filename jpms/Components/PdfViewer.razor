@@ -1,0 +1,156 @@
+@using Microsoft.JSInterop
+@inject IJSRuntime JS
+@implements IAsyncDisposable
+
+@*
+    The in-app PDF viewer — pdf.js rendered to canvas (wwwroot/js/pdf-viewer.js), replacing the
+    bare <iframe> whose browser-native viewer we couldn't control: its page-thumbnail rail and
+    toolbar chrome, no drag-to-pan, and fit-to-width behaviour that made wide landscape drawing
+    sheets a horizontal-scrollbar fight.
+
+    What the surface itself does: Ctrl/Cmd+wheel (or trackpad pinch) zooms around the cursor,
+    click-drag pans, touch pans with one finger and pinches with two. The toolbar carries the rest
+    per the house convention — icon buttons with hover text, grouped by function.
+
+    The pdf.js library is loaded on demand from the pinned CDN build the first time a viewer
+    mounts; if that fails (offline, CDN blocked) the component degrades to the caption, the error
+    and the Open/download link — the file is never unreachable just because the preview is.
+*@
+
+<div @ref="root" class="rounded-xl border border-line bg-surface overflow-hidden flex flex-col">
+    <header class="px-3 py-2 border-b border-line bg-surface-raised flex items-center justify-between gap-3 flex-wrap">
+        <span class="text-xs text-content-muted font-medium truncate min-w-0">@Caption</span>
+        <Toolbar>
+            @if (pageCount > 1)
+            {
+                <ToolbarButton Icon="chevron-left" Label="Previous page" Disabled="@(!ready || page <= 1)"
+                               OnClick="() => Go(-1)" />
+                <span class="text-xs text-content-subtle tabular-nums whitespace-nowrap px-0.5">@page / @pageCount</span>
+                <ToolbarButton Icon="chevron-right" Label="Next page" Disabled="@(!ready || page >= pageCount)"
+                               OnClick="() => Go(1)" />
+                <ToolbarDivider />
+            }
+            <ToolbarButton Icon="zoom-out" Label="Zoom out" Disabled="@(!ready)" OnClick="ZoomOut" />
+            <span class="text-xs text-content-subtle tabular-nums whitespace-nowrap px-0.5 min-w-[2.75rem] text-center">@(ready ? $"{zoom}%" : "—")</span>
+            <ToolbarButton Icon="zoom-in" Label="Zoom in" Disabled="@(!ready)" OnClick="ZoomIn" />
+            <ToolbarButton Icon="fit-width" Label="Fit width" Disabled="@(!ready)" OnClick="FitWidth" />
+            <ToolbarButton Icon="fit-page" Label="Fit whole page" Disabled="@(!ready)" OnClick="FitPage" />
+            <ToolbarDivider />
+            <ToolbarButton Icon="rotate" Label="Rotate 90°" Disabled="@(!ready)" OnClick="Rotate" />
+            <ToolbarButton Icon="fullscreen" Label="@(fullscreen ? "Exit fullscreen" : "Fullscreen")"
+                           Disabled="@(!ready)" OnClick="ToggleFullscreen" />
+            @if (DownloadUrl is not null)
+            {
+                <ToolbarDivider />
+                <ToolbarButton Icon="download" Label="Open / download" Href="@DownloadUrl" Target="_blank" />
+            }
+        </Toolbar>
+    </header>
+
+    @if (error is not null)
+    {
+        <div class="p-8 text-center text-sm text-content-subtle">
+            The preview couldn't be shown (@error).
+            @if (DownloadUrl is not null)
+            {
+                <a href="@DownloadUrl" target="_blank" rel="noopener"
+                   class="text-accent hover:underline underline-offset-2">Open the file directly</a>
+            }
+        </div>
+    }
+    else
+    {
+        @* The viewport must exist before the JS can draw into it, so the jewel floats over it
+           (Overlay) rather than replacing it. touch-action:none hands touch to the pan/pinch
+           handlers instead of the page scroller. *@
+        <LoadGate IsLoading="@(!ready)" Overlay="true" Label="Loading preview">
+            <div @ref="viewport"
+                 class="@HeightClass overflow-auto bg-canvas/60 cursor-grab select-none overscroll-contain"
+                 style="touch-action: none;">
+                <div @ref="pages" class="relative" style="padding: 12px;"></div>
+            </div>
+        </LoadGate>
+    }
+</div>
+
+@code {
+    /// <summary>The inline file URL the viewer renders.</summary>
+    [Parameter, EditorRequired] public string FileUrl { get; set; } = "";
+
+    /// <summary>The attachment-disposition URL for the Open / download toolbar button.</summary>
+    [Parameter] public string? DownloadUrl { get; set; }
+
+    /// <summary>Header text — say which revision/file is being shown.</summary>
+    [Parameter] public string? Caption { get; set; }
+
+    /// <summary>Height of the preview surface outside fullscreen.</summary>
+    [Parameter] public string HeightClass { get; set; } = "h-[70vh]";
+
+    private ElementReference root;
+    private ElementReference viewport;
+    private ElementReference pages;
+
+    private DotNetObjectReference<PdfViewer>? selfRef;
+    private string? loadedUrl;
+    private bool ready;
+    private bool fullscreen;
+    private int page = 1;
+    private int pageCount;
+    private int zoom = 100;
+    private string? error;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        // Init when the URL first arrives, and re-init if the previewed revision changes under
+        // the same component instance (a new upload landing while the page is open).
+        if (loadedUrl == FileUrl || string.IsNullOrEmpty(FileUrl) || error is not null) return;
+        var previous = loadedUrl;
+        loadedUrl = FileUrl;
+        if (previous is not null)
+        {
+            await JS.InvokeVoidAsync("jpmsPdfViewer.dispose", root);
+            ready = false;
+            StateHasChanged();
+        }
+        selfRef ??= DotNetObjectReference.Create(this);
+        await JS.InvokeVoidAsync("jpmsPdfViewer.init", root, viewport, pages, FileUrl, selfRef);
+    }
+
+    [JSInvokable]
+    public void ViewerState(int currentPage, int totalPages, int zoomPercent, bool isFullscreen)
+    {
+        ready = true;
+        page = currentPage;
+        pageCount = totalPages;
+        zoom = zoomPercent;
+        fullscreen = isFullscreen;
+        StateHasChanged();
+    }
+
+    [JSInvokable]
+    public void ViewerFailed(string message)
+    {
+        error = message;
+        ready = false;
+        StateHasChanged();
+    }
+
+    private Task Go(int delta) => JS.InvokeVoidAsync("jpmsPdfViewer.goToPage", root, delta).AsTask();
+    private Task ZoomIn() => JS.InvokeVoidAsync("jpmsPdfViewer.zoomIn", root).AsTask();
+    private Task ZoomOut() => JS.InvokeVoidAsync("jpmsPdfViewer.zoomOut", root).AsTask();
+    private Task FitWidth() => JS.InvokeVoidAsync("jpmsPdfViewer.fitWidth", root).AsTask();
+    private Task FitPage() => JS.InvokeVoidAsync("jpmsPdfViewer.fitPage", root).AsTask();
+    private Task Rotate() => JS.InvokeVoidAsync("jpmsPdfViewer.rotate", root).AsTask();
+    private Task ToggleFullscreen() => JS.InvokeVoidAsync("jpmsPdfViewer.toggleFullscreen", root).AsTask();
+
+    public async ValueTask DisposeAsync()
+    {
+        try
+        {
+            if (loadedUrl is not null) await JS.InvokeVoidAsync("jpmsPdfViewer.dispose", root);
+        }
+        catch (JSDisconnectedException) { }
+        catch (InvalidOperationException) { }
+        selfRef?.Dispose();
+    }
+}
