@@ -25,7 +25,8 @@
             {
                 <ToolbarButton Icon="chevron-left" Label="Previous page" Disabled="@(!ready || page <= 1)"
                                OnClick="() => Go(-1)" />
-                <span class="text-xs text-content-subtle tabular-nums whitespace-nowrap px-0.5">@page / @pageCount</span>
+                @* @(page) not @page — a bare @page in markup parses as the routing directive. *@
+                <span class="text-xs text-content-subtle tabular-nums whitespace-nowrap px-0.5">@(page) / @pageCount</span>
                 <ToolbarButton Icon="chevron-right" Label="Next page" Disabled="@(!ready || page >= pageCount)"
                                OnClick="() => Go(1)" />
                 <ToolbarDivider />
