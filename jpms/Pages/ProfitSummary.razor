@@ -387,7 +387,7 @@ else
                                             class="flex items-center gap-1.5 rounded border border-line px-2 py-1 text-[11px] hover:border-line-strong @(dimmed ? "text-content-faint" : "text-content-muted")"
                                             title="Click to isolate this project; click again to show all"
                                             @onclick="() => ToggleChartIsolation(series.Project.ProjectId)">
-                                        <span class="inline-block w-2 h-2 rounded-full" style="background:@series.Color@(dimmed ? ";opacity:.35" : "")"></span>
+                                        <span class="inline-block w-2 h-2 rounded-full" style="@($"background:{series.Color}{(dimmed ? ";opacity:.35" : "")}")"></span>
                                         @series.Project.Name
                                     </button>
                                 }
