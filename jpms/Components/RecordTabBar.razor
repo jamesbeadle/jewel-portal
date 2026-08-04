@@ -37,6 +37,7 @@
                 <ActionIcon Name="@current.Icon" Class="w-4 h-4 shrink-0" />
                 <span>@current.Eyebrow</span>
                 <span class="font-mono text-xs">@current.Label</span>
+                <ActivityBadge Activity="current.Activity" DotOnly="true" />
             </button>
         }
         else
@@ -45,6 +46,7 @@
                 <ActionIcon Name="@current.Icon" Class="w-4 h-4 shrink-0" />
                 <span>@current.Eyebrow</span>
                 <span class="font-mono text-xs">@current.Label</span>
+                <ActivityBadge Activity="current.Activity" DotOnly="true" />
             </a>
         }
     }
@@ -68,6 +70,7 @@
                 <a href="@PackageHref(current.BidPackageId)" class="@InactiveClass" title="@PackageTitle(current)">
                     <ActionIcon Name="package" Class="w-4 h-4 shrink-0" />
                     <span class="font-mono text-xs">@PackageLabel(current)</span>
+                    <ActivityBadge Activity="@ActivityOf(RecordType.BidPackageInvite, current.BidPackageId)" DotOnly="true" />
                 </a>
             }
         }
@@ -95,10 +98,20 @@
     /// <summary>Receives "request" or "official" when a local pane tab is clicked.</summary>
     [Parameter] public EventCallback<string> OnSelect { get; set; }
 
+    /// <summary>Optional activity lookup (RecordActivityReadModel.For on the page): each tab shows
+    /// a small heat dot when ITS record has had emails linked recently, so moving along the chain
+    /// shows where the correspondence is landing. Dots render on inactive tabs only — the active
+    /// record's own page says more than a dot could, and the accent background would swallow it.</summary>
+    [Parameter] public Func<RecordType, string, RecordActivitySummary?>? ActivityFor { get; set; }
+
     private const string InactiveClass =
         "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-content-muted hover:text-content hover:bg-surface-raised";
 
-    private sealed record TabDef(string Id, string Icon, string Eyebrow, string Label, string Href, string Title);
+    private RecordActivitySummary? ActivityOf(RecordType type, string recordId) =>
+        ActivityFor?.Invoke(type, recordId);
+
+    private sealed record TabDef(string Id, string Icon, string Eyebrow, string Label, string Href, string Title,
+        RecordActivitySummary? Activity = null);
 
     private IEnumerable<TabDef> MainTabs
     {
@@ -106,8 +119,11 @@
         {
             if (Request is not null)
             {
+                // The request and its official stage are ONE record with one set of linked mail,
+                // so the activity dot rides the container tab only — twice would double-count it.
                 yield return new TabDef("request", "document", "Request", ContainerReference(Request), RequestHref,
-                    $"{Request.Title} — the containing request and its correspondence");
+                    $"{Request.Title} — the containing request and its correspondence",
+                    ActivityOf(RecordType.Request, Request.RequestId));
 
                 // The official stage exists once promoted: the same record, minted as its
                 // instrument (RFI / NOD / EOT). Pre-official kinds have no official document yet
@@ -122,7 +138,8 @@
             if (Variation is not null)
             {
                 yield return new TabDef("variation", "pound", "Variation", VariationLabel(Variation), VariationHref,
-                    $"{Variation.Title} — {Variation.Status.DisplayName()}");
+                    $"{Variation.Title} — {Variation.Status.DisplayName()}",
+                    ActivityOf(RecordType.Variation, Variation.VariationOrderId));
             }
         }
     }

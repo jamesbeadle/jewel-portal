@@ -2,6 +2,7 @@ using Jewel.JPMS.Contracts.Cqrs;
 using Jewel.JPMS.Contracts.RecordLinks;
 using Jewel.JPMS.Cqrs;
 using Jewel.JPMS.Models;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Jewel.JPMS.Features.RecordLinks;
 
@@ -10,6 +11,12 @@ namespace Jewel.JPMS.Features.RecordLinks;
 // RecordLinksEndpoints. The record type goes in the query string; the message id travels in the body.
 public static class RecordLinksRouteRegistration
 {
+    public static IServiceCollection AddRecordLinksReadModels(this IServiceCollection services)
+    {
+        services.AddScoped<RecordActivityReadModel>();
+        return services;
+    }
+
     public static void RegisterRecordLinksRoutes(QueryRouteTable queries, CommandRouteTable commands)
     {
         queries.Register<ListLinkableRecords, IReadOnlyList<LinkableRecord>>(
@@ -41,6 +48,12 @@ public static class RecordLinksRouteRegistration
                     var q = (ListRecordEmails)query;
                     return $"/api/records/{q.Type}/{Uri.EscapeDataString(q.RecordId)}/emails";
                 }));
+
+        // One call per project page view feeds every activity badge on it (register rows, record
+        // tab dots) — derived server-side from the audit trail's link events, never the mailbox.
+        queries.Register<ListRecordActivity, IReadOnlyList<RecordActivitySummary>>(
+            new QueryRoute("/api/projects/{projectId}/records/activity",
+                query => $"/api/projects/{((ListRecordActivity)query).ProjectId}/records/activity"));
 
         queries.Register<ListProjectCommunications, ProjectCommunicationsPage>(
             new QueryRoute("/api/projects/{projectId}/communications",

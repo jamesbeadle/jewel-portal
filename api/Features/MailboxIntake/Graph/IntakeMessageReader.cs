@@ -6,8 +6,19 @@ using Microsoft.Extensions.Logging;
 namespace Jewel.JPMS.Api.Features.MailboxIntake.Graph;
 
 /// <summary>Full on-demand content of one mailbox message: the (raw, unsanitised) HTML or text
-/// body plus its real, non-inline attachments. Sanitisation happens in the handler, not here.</summary>
-public sealed record IntakeMessageContent(string Body, bool IsHtml, IReadOnlyList<IntakeMessageAttachment> Attachments);
+/// body plus its real, non-inline attachments. Sanitisation happens in the handler, not here.
+/// The envelope fields (From/To/Cc/ReplyTo/Subject) feed the composer's reply prefill; all optional
+/// so existing callers are unchanged.</summary>
+public sealed record IntakeMessageContent(
+    string Body,
+    bool IsHtml,
+    IReadOnlyList<IntakeMessageAttachment> Attachments,
+    string? FromEmail = null,
+    string? FromName = null,
+    IReadOnlyList<string>? To = null,
+    IReadOnlyList<string>? Cc = null,
+    string? ReplyTo = null,
+    string? Subject = null);
 
 // Id is the Graph attachment id, used to download the attachment's bytes on demand (e.g. saving a
 // drawing out of a triaged email). Optional so existing metadata-only callers are unchanged.
@@ -67,9 +78,10 @@ public sealed class GraphIntakeMessageReader : IIntakeMessageReader
         if (string.IsNullOrEmpty(graphMessageId))
             return null;
 
-        // Pull the full body plus non-inline attachment metadata in a single round trip.
+        // Pull the full body, the envelope (for the composer's reply prefill) and non-inline
+        // attachment metadata in a single round trip.
         var url = $"{GraphBase}/users/{Mailbox}/messages/{Uri.EscapeDataString(graphMessageId)}"
-            + "?$select=body,hasAttachments"
+            + "?$select=body,hasAttachments,subject,from,toRecipients,ccRecipients,replyTo"
             + "&$expand=attachments($select=id,name,size,contentType,isInline)";
 
         try
@@ -121,7 +133,31 @@ public sealed class GraphIntakeMessageReader : IIntakeMessageReader
                 }
             }
 
-            return new IntakeMessageContent(body, isHtml, attachments);
+            string? fromEmail = null, fromName = null;
+            if (root.TryGetProperty("from", out var from) && from.ValueKind == JsonValueKind.Object
+                && from.TryGetProperty("emailAddress", out var fromAddr) && fromAddr.ValueKind == JsonValueKind.Object)
+            {
+                fromEmail = fromAddr.TryGetProperty("address", out var a) ? a.GetString() : null;
+                fromName = fromAddr.TryGetProperty("name", out var nm) ? nm.GetString() : null;
+            }
+
+            static List<string> Addresses(JsonElement parent, string property)
+            {
+                var result = new List<string>();
+                if (parent.TryGetProperty(property, out var recipients) && recipients.ValueKind == JsonValueKind.Array)
+                    foreach (var r in recipients.EnumerateArray())
+                        if (r.TryGetProperty("emailAddress", out var addr) && addr.ValueKind == JsonValueKind.Object
+                            && addr.TryGetProperty("address", out var a) && a.GetString() is { Length: > 0 } email)
+                            result.Add(email);
+                return result;
+            }
+
+            var to = Addresses(root, "toRecipients");
+            var cc = Addresses(root, "ccRecipients");
+            var replyTo = Addresses(root, "replyTo").FirstOrDefault();
+            var subject = root.TryGetProperty("subject", out var subj) ? subj.GetString() : null;
+
+            return new IntakeMessageContent(body, isHtml, attachments, fromEmail, fromName, to, cc, replyTo, subject);
         }
         catch (Exception ex)
         {

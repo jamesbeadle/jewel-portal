@@ -83,8 +83,12 @@ public interface IMailboxGraphClient
     /// <summary>Message ids in the given conversation that do NOT yet carry the category — i.e. the
     /// thread members still to be tagged (e.g. replies that arrived after the original link).
     /// Mailbox-wide; unsent drafts are skipped. The category test is applied client-side: the
-    /// all-mailbox view only reliably supports the plain conversationId filter.</summary>
-    Task<IReadOnlyList<string>> ListUntaggedIdsInConversationAsync(string conversationId, string category, CancellationToken ct);
+    /// all-mailbox view only reliably supports the plain conversationId filter.
+    /// receivedOnOrBefore (when given) restricts the sweep to members received at or before that
+    /// moment — a triage decision covers the thread UP TO the email it was made on; anything that
+    /// arrived after it queues for its own decision, even when it was already sitting in the
+    /// mailbox when the decision landed.</summary>
+    Task<IReadOnlyList<string>> ListUntaggedIdsInConversationAsync(string conversationId, string category, CancellationToken ct, DateTimeOffset? receivedOnOrBefore = null);
 
     /// <summary>Message ids in the given conversation that currently carry the category — i.e. the
     /// thread members to un-tag when reversing a thread-wide tag (e.g. restoring a discarded thread).
@@ -109,8 +113,36 @@ public interface IMailboxGraphClient
     /// </summary>
     Task<MailboxReplyDraft?> CreateReplyDraftAsync(MailboxReplyDraftMessage reply, CancellationToken ct);
 
-    // NOTE: there is deliberately NO send method on this interface. Every outbound email is created
-    // as a draft for a human to review and send from the mailbox itself — code never sends.
+    /// <summary>
+    /// Replace a staged draft's envelope — To/Cc/Bcc/Subject — with exactly what the composer
+    /// submitted. The visible envelope is authoritative: Graph's createReplyAll recipients are only
+    /// scaffolding for the threading headers and quoted history. The projects mailbox is re-added
+    /// to Cc if the new envelope dropped it (same rule as WithProjectsMailboxCopy). Verified by
+    /// response status; returns false on failure (the draft is left as it was).
+    /// </summary>
+    Task<bool> UpdateDraftEnvelopeAsync(
+        string draftMessageId,
+        IReadOnlyList<MailboxDraftRecipient> to,
+        IReadOnlyList<MailboxDraftRecipient> cc,
+        IReadOnlyList<MailboxDraftRecipient> bcc,
+        string subject,
+        CancellationToken ct);
+
+    /// <summary>
+    /// SEND a staged draft (<c>POST …/messages/{id}/send</c>). This is the single send chokepoint
+    /// in the whole system — every outbound email still passes through the draft plumbing above
+    /// (projects-mailbox auto-Cc, category stamping, large-attachment upload sessions), and only
+    /// this one call, made on an explicit human "Send" in the portal, moves it to Sent Items.
+    /// No agent tool is wired to it. Needs the Mail.Send application permission (decision
+    /// 2026-08-04, reversing ADR-006's draft-only rule); without consent Graph returns 403 and the
+    /// caller degrades to "draft saved". Retries once on 429 honouring Retry-After. Because every
+    /// call requests immutable ids, the draft's id remains valid on the sent message.
+    /// </summary>
+    Task<bool> SendDraftAsync(string draftMessageId, CancellationToken ct);
+
+    /// <summary>Read one message's webLink (e.g. re-reading a just-sent message so the audit row
+    /// can link to the sent copy), or null if unavailable.</summary>
+    Task<string?> GetWebLinkAsync(string messageId, CancellationToken ct);
 }
 
 /// <summary>A new message for the mailbox, placed in Drafts via CreateDraftAsync. Cc, Bcc and
@@ -128,8 +160,12 @@ public sealed record MailboxDraftMessage(
 /// <summary>A draft recipient (address plus optional display name).</summary>
 public sealed record MailboxDraftRecipient(string Email, string? Name = null);
 
-/// <summary>A file attached to a draft, sent as a Graph fileAttachment (base64 contentBytes).</summary>
-public sealed record MailboxDraftAttachment(string FileName, string ContentType, byte[] Content);
+/// <summary>A file attached to a draft, sent as a Graph fileAttachment (base64 contentBytes).
+/// IsInline + ContentId mark an image embedded in the HTML body (referenced as
+/// <c>src="cid:{ContentId}"</c> — how pasted screenshots travel); both default off so every
+/// existing caller is unchanged.</summary>
+public sealed record MailboxDraftAttachment(
+    string FileName, string ContentType, byte[] Content, bool IsInline = false, string? ContentId = null);
 
 /// <summary>A created draft: its Graph id and (usually) a webLink that opens it in Outlook on the web.</summary>
 public sealed record MailboxDraft(string Id, string? WebLink);
@@ -189,7 +225,7 @@ public sealed class NullMailboxGraphClient : IMailboxGraphClient
     public Task<int> RetagAsync(string oldCategory, string newCategory, CancellationToken ct) => Task.FromResult(0);
     public Task<int> AddAliasTagAsync(string existingCategory, string aliasCategory, CancellationToken ct) => Task.FromResult(0);
     public Task<MailboxSnapshot?> GetSnapshotAsync(string messageId, string? internetMessageId, CancellationToken ct) => Task.FromResult<MailboxSnapshot?>(null);
-    public Task<IReadOnlyList<string>> ListUntaggedIdsInConversationAsync(string conversationId, string category, CancellationToken ct) =>
+    public Task<IReadOnlyList<string>> ListUntaggedIdsInConversationAsync(string conversationId, string category, CancellationToken ct, DateTimeOffset? receivedOnOrBefore = null) =>
         Task.FromResult<IReadOnlyList<string>>(Array.Empty<string>());
     public Task<IReadOnlyList<string>> ListTaggedIdsInConversationAsync(string conversationId, string category, CancellationToken ct) =>
         Task.FromResult<IReadOnlyList<string>>(Array.Empty<string>());
@@ -197,6 +233,11 @@ public sealed class NullMailboxGraphClient : IMailboxGraphClient
         Task.FromResult<MailboxDraft?>(null);
     public Task<MailboxReplyDraft?> CreateReplyDraftAsync(MailboxReplyDraftMessage reply, CancellationToken ct) =>
         Task.FromResult<MailboxReplyDraft?>(null);
+    public Task<bool> UpdateDraftEnvelopeAsync(string draftMessageId, IReadOnlyList<MailboxDraftRecipient> to,
+        IReadOnlyList<MailboxDraftRecipient> cc, IReadOnlyList<MailboxDraftRecipient> bcc, string subject, CancellationToken ct) =>
+        Task.FromResult(false);
+    public Task<bool> SendDraftAsync(string draftMessageId, CancellationToken ct) => Task.FromResult(false);
+    public Task<string?> GetWebLinkAsync(string messageId, CancellationToken ct) => Task.FromResult<string?>(null);
 }
 
 /// <summary>Graph REST implementation (HttpClient + app-only token).</summary>
@@ -572,11 +613,12 @@ public sealed class MailboxGraphClient : IMailboxGraphClient
         }
     }
 
-    // Outlook category colour presets: marker grey, discarded red, pathways distinct (Client green,
-    // Subcontractor orange, Internal purple), record tags blue.
+    // Outlook category colour presets: marker grey, discarded red, replied teal, pathways distinct
+    // (Client green, Subcontractor orange, Internal purple), record tags blue.
     private static string ColourFor(string name) =>
         name.Equals(TriageCategories.Marker, StringComparison.OrdinalIgnoreCase) ? "preset8"
         : name.Equals(TriageCategories.Discarded, StringComparison.OrdinalIgnoreCase) ? "preset0"
+        : name.Equals(TriageCategories.Replied, StringComparison.OrdinalIgnoreCase) ? "preset6"
         : name.Equals(TriageCategories.Client, StringComparison.OrdinalIgnoreCase) ? "preset4"
         : name.Equals(TriageCategories.Subcontractor, StringComparison.OrdinalIgnoreCase) ? "preset1"
         : name.Equals(TriageCategories.Internal, StringComparison.OrdinalIgnoreCase) ? "preset9"
@@ -647,13 +689,17 @@ public sealed class MailboxGraphClient : IMailboxGraphClient
     // NB: MailboxMessage.Categories carries exactly the JPMS workflow tags (Parse strips the marker
     // and user categories), and both callers pass workflow tags, so Contains is a faithful test.
 
-    public async Task<IReadOnlyList<string>> ListUntaggedIdsInConversationAsync(string conversationId, string category, CancellationToken ct)
+    public async Task<IReadOnlyList<string>> ListUntaggedIdsInConversationAsync(string conversationId, string category, CancellationToken ct, DateTimeOffset? receivedOnOrBefore = null)
     {
         // Thread members that don't yet carry the tag → still to be tagged. Drafts never surface
         // from ListConversationAsync: an unsent draft is tagged by its drafting flow, not swept.
+        // When receivedOnOrBefore is given, members received after the anchor stay out of the sweep
+        // — they queue for their own triage decision (client-side, like the category test: the
+        // thread is already read whole).
         var thread = await ListConversationAsync(conversationId, ct);
         return thread.Items
             .Where(m => !m.Categories.Contains(category, StringComparer.OrdinalIgnoreCase))
+            .Where(m => receivedOnOrBefore is null || m.ReceivedAt <= receivedOnOrBefore)
             .Select(m => m.Id)
             .ToList();
     }
@@ -927,13 +973,7 @@ public sealed class MailboxGraphClient : IMailboxGraphClient
                 if (!await UploadLargeAttachmentAsync(id, attachment, ct)) return null;
                 continue;
             }
-            var attachPayload = new Dictionary<string, object?>
-            {
-                ["@odata.type"] = "#microsoft.graph.fileAttachment",
-                ["name"] = attachment.FileName,
-                ["contentType"] = attachment.ContentType,
-                ["contentBytes"] = Convert.ToBase64String(attachment.Content)
-            };
+            var attachPayload = AttachmentPayload(attachment);
             using var attachContent = JsonContent.Create(attachPayload);
             using var attachResponse = await SendAsync(
                 HttpMethod.Post, $"{GraphBase}/users/{Mailbox}/messages/{Uri.EscapeDataString(id)}/attachments", attachContent, ct);
@@ -1018,6 +1058,26 @@ public sealed class MailboxGraphClient : IMailboxGraphClient
         return true;
     }
 
+    // One Graph fileAttachment payload, inline images carrying their contentId so the body's
+    // cid: references resolve in the recipient's mail client.
+    private static Dictionary<string, object?> AttachmentPayload(MailboxDraftAttachment a)
+    {
+        var payload = new Dictionary<string, object?>
+        {
+            ["@odata.type"] = "#microsoft.graph.fileAttachment",
+            ["name"] = a.FileName,
+            ["contentType"] = a.ContentType,
+            ["contentBytes"] = Convert.ToBase64String(a.Content)
+        };
+        if (a.IsInline)
+        {
+            payload["isInline"] = true;
+            if (!string.IsNullOrEmpty(a.ContentId))
+                payload["contentId"] = a.ContentId;
+        }
+        return payload;
+    }
+
     // The Graph message shape used by draft-create.
     private static Dictionary<string, object?> BuildMessagePayload(MailboxDraftMessage message)
     {
@@ -1037,13 +1097,7 @@ public sealed class MailboxGraphClient : IMailboxGraphClient
                 ["content"] = message.HtmlBody
             },
             ["toRecipients"] = message.To.Select(Recipient).ToArray(),
-            ["attachments"] = message.Attachments.Select(a => new Dictionary<string, object?>
-            {
-                ["@odata.type"] = "#microsoft.graph.fileAttachment",
-                ["name"] = a.FileName,
-                ["contentType"] = a.ContentType,
-                ["contentBytes"] = Convert.ToBase64String(a.Content)
-            }).ToArray()
+            ["attachments"] = message.Attachments.Select(AttachmentPayload).ToArray()
         };
 
         if (message.Cc is { Count: > 0 } cc)
@@ -1054,6 +1108,85 @@ public sealed class MailboxGraphClient : IMailboxGraphClient
             payload["categories"] = categories.ToArray();
 
         return payload;
+    }
+
+    public async Task<bool> UpdateDraftEnvelopeAsync(
+        string draftMessageId,
+        IReadOnlyList<MailboxDraftRecipient> to,
+        IReadOnlyList<MailboxDraftRecipient> cc,
+        IReadOnlyList<MailboxDraftRecipient> bcc,
+        string subject,
+        CancellationToken ct)
+    {
+        // The composer's envelope replaces Graph's scaffolding wholesale — but the projects mailbox
+        // keeps its copy: if the new envelope dropped it everywhere, it goes back on Cc (the same
+        // invariant WithProjectsMailboxCopy applies to fresh drafts).
+        var mailbox = _options.Mailbox?.Trim();
+        bool Has(IReadOnlyList<MailboxDraftRecipient> list) =>
+            !string.IsNullOrWhiteSpace(mailbox)
+            && list.Any(r => string.Equals(r.Email?.Trim(), mailbox, StringComparison.OrdinalIgnoreCase));
+        var ccFinal = cc;
+        if (!string.IsNullOrWhiteSpace(mailbox) && !Has(to) && !Has(cc) && !Has(bcc))
+            ccFinal = cc.Concat(new[] { new MailboxDraftRecipient(mailbox!) }).ToList();
+
+        static Dictionary<string, object?> Recipient(MailboxDraftRecipient r) => new()
+        {
+            ["emailAddress"] = string.IsNullOrWhiteSpace(r.Name)
+                ? new Dictionary<string, object?> { ["address"] = r.Email }
+                : new Dictionary<string, object?> { ["address"] = r.Email, ["name"] = r.Name }
+        };
+
+        var payload = new Dictionary<string, object?>
+        {
+            ["subject"] = subject,
+            ["toRecipients"] = to.Select(Recipient).ToArray(),
+            ["ccRecipients"] = ccFinal.Select(Recipient).ToArray(),
+            ["bccRecipients"] = bcc.Select(Recipient).ToArray()
+        };
+
+        var url = $"{GraphBase}/users/{Mailbox}/messages/{Uri.EscapeDataString(draftMessageId)}";
+        using var content = JsonContent.Create(payload);
+        using var response = await SendAsync(HttpMethod.Patch, url, content, ct);
+        if (!response.IsSuccessStatusCode)
+            _logger.LogWarning("Draft envelope PATCH failed for {MessageId}: {Status}. {Detail}",
+                draftMessageId, (int)response.StatusCode, await SafeBodyAsync(response, ct));
+        return response.IsSuccessStatusCode;
+    }
+
+    public async Task<bool> SendDraftAsync(string draftMessageId, CancellationToken ct)
+    {
+        // The one send call in the system (see the interface note). Graph answers 202 with an empty
+        // body on success. One retry on 429, honouring Retry-After — a send is a user-facing click,
+        // so a long backoff loop is worse than an honest failure (the draft survives either way).
+        var url = $"{GraphBase}/users/{Mailbox}/messages/{Uri.EscapeDataString(draftMessageId)}/send";
+        for (var attempt = 0; ; attempt++)
+        {
+            using var response = await SendAsync(HttpMethod.Post, url, content: null, ct);
+            if (response.IsSuccessStatusCode)
+                return true;
+
+            if (response.StatusCode == (HttpStatusCode)429 && attempt == 0)
+            {
+                var delay = response.Headers.RetryAfter?.Delta ?? TimeSpan.FromSeconds(2);
+                if (delay > TimeSpan.FromSeconds(15)) delay = TimeSpan.FromSeconds(15);
+                await Task.Delay(delay, ct);
+                continue;
+            }
+
+            _logger.LogWarning("Draft send failed for {MessageId}: {Status}. {Detail}",
+                draftMessageId, (int)response.StatusCode, await SafeBodyAsync(response, ct));
+            return false;
+        }
+    }
+
+    public async Task<string?> GetWebLinkAsync(string messageId, CancellationToken ct)
+    {
+        var url = $"{GraphBase}/users/{Mailbox}/messages/{Uri.EscapeDataString(messageId)}?$select=webLink";
+        using var response = await SendAsync(HttpMethod.Get, url, content: null, ct, allowNotFound: true);
+        if (!response.IsSuccessStatusCode) return null;
+        await using var stream = await response.Content.ReadAsStreamAsync(ct);
+        using var doc = await JsonDocument.ParseAsync(stream, cancellationToken: ct);
+        return doc.RootElement.TryGetProperty("webLink", out var wl) ? wl.GetString() : null;
     }
 
     private async Task<HttpResponseMessage> SendAsync(

@@ -27,14 +27,24 @@ public sealed class RecordThreadTagger
     // Tag the anchor message (verified by read-back — this is the association the caller depends on),
     // then tag every other mailbox message in the same conversation. Returns false only if the anchor
     // itself couldn't be tagged; sibling failures don't fail the operation.
+    //
+    // anchorReceivedAt (when the caller has it — every triage decision does, via its snapshot)
+    // restricts the sibling sweep to messages received AT OR BEFORE the anchor: a decision made on
+    // an email covers that email and the thread behind it ("triage the lot"), never a newer reply —
+    // even one that was already sitting in the queue when the decision landed. The queue's
+    // jump-to-latest keeps this invisible in the normal flow (the anchor IS the newest member); it
+    // matters when acting from an older thread-panel member, and it closes the race where a reply
+    // arriving between opening and acting would otherwise be triaged unseen. Null sweeps the whole
+    // current thread (the pre-2026-08 behaviour, kept for maintenance callers like the backfill).
     public async Task<bool> TagThreadAsync(
-        string anchorMessageId, string? internetMessageId, string? conversationId, string category, CancellationToken ct)
+        string anchorMessageId, string? internetMessageId, string? conversationId, string category, CancellationToken ct,
+        DateTimeOffset? anchorReceivedAt = null)
     {
         var anchored = await graph.AssignAsync(anchorMessageId, internetMessageId, category, ct);
         if (!anchored)
             return false;
 
-        await TagConversationSiblingsAsync(conversationId, category, ct);
+        await TagConversationSiblingsAsync(conversationId, category, ct, anchorReceivedAt);
         return true;
     }
 
@@ -105,12 +115,13 @@ public sealed class RecordThreadTagger
     private static readonly ConcurrentDictionary<string, (DateTimeOffset At, IReadOnlyList<string> Tags)> recentlyLookedUp = new(StringComparer.Ordinal);
     private static readonly TimeSpan RelookupAfter = TimeSpan.FromMinutes(2);
 
-    private async Task<int> TagConversationSiblingsAsync(string? conversationId, string category, CancellationToken ct)
+    private async Task<int> TagConversationSiblingsAsync(
+        string? conversationId, string category, CancellationToken ct, DateTimeOffset? receivedOnOrBefore = null)
     {
         if (string.IsNullOrWhiteSpace(conversationId))
             return 0;
 
-        var ids = await graph.ListUntaggedIdsInConversationAsync(conversationId, category, ct);
+        var ids = await graph.ListUntaggedIdsInConversationAsync(conversationId, category, ct, receivedOnOrBefore);
         var tagged = 0;
         foreach (var id in ids)
             if (await graph.AssignAsync(id, null, category, ct))

@@ -28,7 +28,8 @@ public sealed class DiscardMessageHandler : ICommandHandler<DiscardMessage, Ackn
         // error rather than a false "done".
         var snapshot = await graph.GetSnapshotAsync(command.MessageId, command.InternetMessageId, cancellationToken);
         var ok = await threadTagger.TagThreadAsync(
-            command.MessageId, command.InternetMessageId, snapshot?.ConversationId, TriageCategories.Discarded, cancellationToken);
+            command.MessageId, command.InternetMessageId, snapshot?.ConversationId, TriageCategories.Discarded, cancellationToken,
+            anchorReceivedAt: snapshot?.ReceivedAt);
         if (!ok) throw new InvalidOperationException("The email couldn't be tagged as discarded. Please try again.");
 
         if (HasClientBucket(snapshot))

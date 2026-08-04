@@ -14,7 +14,7 @@
        ConfirmDisabled="@(busy || !CanSave)"
        OnConfirm="SaveAsync"
        OnCancel="OnClose"
-       Class="max-w-2xl">
+       Class="max-w-4xl w-full">
     <div class="space-y-3">
         <p class="text-sm text-content-subtle">
             Invoice line total <span class="text-content font-medium">@MoneyExact(LineNet)</span>.
@@ -42,7 +42,7 @@
                     <input type="number" step="any" placeholder="Amount £" disabled="@busy"
                            class="bg-surface border border-line rounded-lg px-2 py-1.5 text-right text-content text-sm w-36"
                            value="@row.AmountText"
-                           @onchange="e => SetRowAmount(rowIndex, e.Value?.ToString())" />
+                           @oninput="e => SetRowAmount(rowIndex, e.Value?.ToString())" />
                     <button type="button" aria-label="Remove this slice" disabled="@busy"
                             class="inline-flex items-center justify-center w-7 h-7 rounded-md text-content-subtle hover:text-negative hover:bg-surface-raised"
                             @onclick="() => rows.RemoveAt(rowIndex)">

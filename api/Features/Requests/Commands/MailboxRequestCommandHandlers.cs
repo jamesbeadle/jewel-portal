@@ -136,7 +136,8 @@ public sealed class CreateRequestFromMessageHandler : ICommandHandler<CreateRequ
         var tag = TriageCategories.ForRequest(
             RequestTags.Stem(await RequestTags.ProjectRefAsync(context, command.ProjectId, cancellationToken), command.ProjectId, request.TagReference));
         var tagged = await threadTagger.TagThreadAsync(
-            command.MessageId, snapshot.InternetMessageId, snapshot.ConversationId, tag, cancellationToken);
+            command.MessageId, snapshot.InternetMessageId, snapshot.ConversationId, tag, cancellationToken,
+            anchorReceivedAt: snapshot.ReceivedAt);
         if (!tagged)
             throw new InvalidOperationException("The email couldn't be tagged to the new request. Please try again.");
 
@@ -166,7 +167,7 @@ public sealed class CreateRequestFromMessageHandler : ICommandHandler<CreateRequ
             {
                 stampedClient = await threadTagger.TagThreadAsync(
                     command.MessageId, snapshot.InternetMessageId, snapshot.ConversationId,
-                    TriageCategories.Client, cancellationToken);
+                    TriageCategories.Client, cancellationToken, anchorReceivedAt: snapshot.ReceivedAt);
             }
             catch (Exception ex) when (ex is not OperationCanceledException) { /* best-effort */ }
         }

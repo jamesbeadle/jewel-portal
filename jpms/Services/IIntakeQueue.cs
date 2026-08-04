@@ -30,12 +30,26 @@ public interface IIntakeQueue
     Task<Acknowledgement> AssignMessageAsync(string messageId, string? internetMessageId, string requestId, CancellationToken cancellationToken = default);
     Task<Request> CreateRequestFromMessageAsync(CreateRequestFromMessage command, CancellationToken cancellationToken = default);
 
-    // Triage "Reply in thread": the reply written in the portal is staged as an Outlook draft on
-    // the email (projects mailbox, whole thread quoted behind it) and doubles as the description of
-    // a General request created from the email in the background — replying IS the triage. The
-    // outcome carries the created request and the draft's weblink so the triager can open the
-    // pre-filled draft in Outlook, review it and send it themselves.
+    // Triage "Reply in thread" (legacy): stages an Outlook draft + background General request.
+    // Superseded by SendComposedEmailAsync; kept while the endpoint remains for older tabs.
     Task<ReplyInThreadOutcome> ReplyInThreadFromMessageAsync(ReplyInThreadFromMessage command, CancellationToken cancellationToken = default);
+
+    // Triage compose: SEND an email from the projects mailbox (or stage it as a draft with
+    // SaveAsDraftOnly) — a reply in an existing thread or a brand-new outbound email. The visible
+    // envelope (To/Cc/Bcc/Subject) is exactly what goes on the wire; a successful reply send also
+    // triages the thread (JPMS/Replied + pathway, or the record it was filed to). The outcome says
+    // what happened — Sent, or staged-in-Drafts with a webLink to finish in Outlook.
+    Task<Jewel.JPMS.Contracts.MailboxCompose.ComposeOutcome> SendComposedEmailAsync(
+        Jewel.JPMS.Contracts.MailboxCompose.SendMailboxEmail command, CancellationToken cancellationToken = default);
+
+    // The multipart variant of SendComposedEmailAsync, for a compose that carries files from this
+    // computer: the command travels as a "command" JSON part, each file as a part named by its
+    // ComposeAttachmentRef.Id (same transport shape as the progress-photo upload). Failures throw
+    // CommandFailedException with the server's message, exactly like the JSON path.
+    Task<Jewel.JPMS.Contracts.MailboxCompose.ComposeOutcome> SendComposedEmailAsync(
+        Jewel.JPMS.Contracts.MailboxCompose.SendMailboxEmail command,
+        IReadOnlyList<(string PartName, Microsoft.AspNetCore.Components.Forms.IBrowserFile File)> files,
+        CancellationToken cancellationToken = default);
 
     // Record-agnostic linking: list the records of a type on a project (for the category-first picker),
     // and link a message to one. The link tags "JPMS/<ref>" identically for every record type, and the

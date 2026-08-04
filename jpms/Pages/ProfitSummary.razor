@@ -21,19 +21,33 @@
 
 @*
     The company Profit Summary (the sidebar's Financials folder, finance roles): gross profit by
-    project, three ways (finance meeting 2026-08-03) —
+    project, three ways (finance meeting 2026-08-03), laid out to the accountant's board format
+    (2026-08-04) — a summary strip, the budget → forecast bridge, then the table in three bands:
 
-      Budgeted Profit   = Initial Contract Sum − Initial Contract Costs (the contract sum with
-                          the assumed markup backed out — FinancialSummaryAssumptions, the same
-                          target-cost rule as the Financials tab);
-      Current Profit    = Certified to Date − Actual Cost of Sales (issued/paid valuation
-                          invoices against allocated Xero purchase spend);
-      Forecasted Profit = Contract Value − Forecasted Cost of Sales (the revised contract sum
-                          including variations, against committed cost plus remaining drawdown —
-                          ProjectDrawdown.ForecastCostOfSales, the Financials tab's subtotal).
+      The deal            — the revised contract sum (variations as a memo line) against its
+                            target cost, giving Budgeted Profit (Initial Contract Sum − Initial
+                            Contract Costs, the FinancialSummaryAssumptions target-cost rule);
+      Current position    — Certified to Date (issued/paid valuation invoices, retention the
+                            client holds as a memo) against allocated Xero purchase spend, plus
+                            Billing ± (certified less value of work done — negative means work
+                            is running ahead of billing);
+      To finish           — what is left in the job from today (added 2026-08-04): the revised
+                            contract sum not yet certified, against the cost still to come
+                            (forecasted cost of sales less cost to date). Derived, so the three
+                            positions reconcile: Current Profit + Profit to Finish = Forecast
+                            Profit, to the penny — a job at 10% today finishing at 5% shows the
+                            0% still to come;
+      Forecast at completion — the revised contract sum against the Financials tab's forecasted
+                            cost of sales (committed cost plus remaining drawdown).
 
     Every figure reads from the same sources as the per-project tabs, so the two can never
-    disagree. The project filter defaults to live jobs and offers every project.
+    disagree. The bridge reconciles by construction: Budgeted Profit + Variations + Cost
+    movement = Forecast Profit, because Cost movement is defined as Initial Contract Costs −
+    Forecasted Cost of Sales. The project filter defaults to live jobs and offers every project.
+
+    Month-on-month movement ("vs the June pack"), the margin trend chart and the excluded-jobs
+    banner from the accountant's mock need a locked monthly snapshot / new API queries — agreed
+    out of scope for now (2026-08-04); the layout leaves room for them.
 *@
 
 @if (!sessionReady)
@@ -53,7 +67,7 @@ else
             <p class="eyebrow mb-1">JPMS · Company</p>
             <h1 class="text-2xl md:text-3xl font-semibold text-content leading-tight">Profit Summary</h1>
             <p class="text-sm text-content-muted mt-1">
-                Gross profit by project — as budgeted at contract, as it stands today, and as forecast.
+                Gross profit by project — the deal as signed, where each job stands today, and where it lands.
             </p>
         </header>
 
@@ -63,7 +77,7 @@ else
         }
         else
         {
-            <div class="mb-3 flex items-center justify-between gap-3 flex-wrap">
+            <div class="mb-4 flex items-center justify-between gap-3 flex-wrap">
                 @* The filter is a control, so it is never gated: it renders disabled with a
                    loading label until the project list lands (the loading-states convention). *@
                 @if (Projects.Current is null)
@@ -86,8 +100,96 @@ else
                                      BuildWorkbook="BuildExportWorkbook" />
             </div>
 
-            @* One panel: every row and the total are the same arithmetic over the same sources,
-               so the table waits for every selected project before showing any of it. *@
+            @* ── Summary strip. Stat-tile pattern (the loading-states convention): each tile keeps
+               its label and pulses until every selected project has landed, because every figure
+               here is a total over the whole selection. The strip is a conditional region: once
+               the selection is seeded it only exists while something is selected, so an empty
+               selection never shows tiles pulsing for figures that are not coming. ── *@
+            @if (!selectionInitialised || SelectedProjects.Count > 0)
+            {
+                var stats = TableReady && SelectedProjects.Count > 0 ? LoadedRows() : null;
+                var statTotal = stats is not null ? TotalsOf(stats) : null;
+                var swing = stats?.OrderByDescending(entry => Math.Abs(entry.Row.ForecastSwing)).First();
+
+                <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4 mb-4">
+                    <div class="rounded-xl border border-line bg-surface px-5 py-4"
+                         title="The deal as signed: every selected project's initial contract sum less its target cost.">
+                        <p class="text-[11px] uppercase tracking-wider text-content-subtle font-semibold mb-1">Budgeted profit</p>
+                        @if (statTotal is null)
+                        {
+                            <p class="text-2xl font-semibold text-content flex items-center h-8" role="status" aria-live="polite" aria-busy="true">
+                                <JewelIcon Class="w-4 h-4 animate-jewel-pulse" />
+                                <span class="sr-only">Loading budgeted profit</span>
+                            </p>
+                        }
+                        else
+                        {
+                            <p class="text-2xl font-semibold @ProfitClass(statTotal.BudgetedProfit)">@Money(statTotal.BudgetedProfit)</p>
+                            <p class="text-xs text-content-subtle mt-1">
+                                @(statTotal.BudgetedMargin is decimal bm ? $"{Pct(bm)} on " : "")@MoneyCompact(statTotal.InitialContractSum) as signed
+                            </p>
+                        }
+                    </div>
+                    <div class="rounded-xl border border-line bg-surface px-5 py-4"
+                         title="Where the selected jobs land: revised contract sums against forecasted cost of sales.">
+                        <p class="text-[11px] uppercase tracking-wider text-content-subtle font-semibold mb-1">Forecast profit</p>
+                        @if (statTotal is null)
+                        {
+                            <p class="text-2xl font-semibold text-content flex items-center h-8" role="status" aria-live="polite" aria-busy="true">
+                                <JewelIcon Class="w-4 h-4 animate-jewel-pulse" />
+                                <span class="sr-only">Loading forecast profit</span>
+                            </p>
+                        }
+                        else
+                        {
+                            <p class="text-2xl font-semibold @ProfitClass(statTotal.ForecastedProfit)">@Money(statTotal.ForecastedProfit)</p>
+                            <p class="text-xs text-content-subtle mt-1">
+                                @(statTotal.ForecastedMargin is decimal fm ? $"{Pct(fm)} on " : "")@MoneyCompact(statTotal.ContractValue) incl. variations
+                            </p>
+                        }
+                    </div>
+                    <div class="rounded-xl border border-line bg-surface px-5 py-4"
+                         title="The project whose forecast profit sits furthest from its budgeted profit — the number to ask about first.">
+                        <p class="text-[11px] uppercase tracking-wider text-content-subtle font-semibold mb-1">Biggest swing vs the deal</p>
+                        @if (swing is null)
+                        {
+                            <p class="text-2xl font-semibold text-content flex items-center h-8" role="status" aria-live="polite" aria-busy="true">
+                                <JewelIcon Class="w-4 h-4 animate-jewel-pulse" />
+                                <span class="sr-only">Loading biggest swing</span>
+                            </p>
+                        }
+                        else
+                        {
+                            <p class="text-2xl font-semibold @ProfitClass(swing.Value.Row.ForecastSwing)">@swing.Value.Project.Name</p>
+                            <p class="text-xs mt-1 @(swing.Value.Row.ForecastSwing < 0m ? "text-negative" : "text-positive")">
+                                @(swing.Value.Row.ForecastSwing < 0m ? "▼" : "▲") @MoneyCompact(Math.Abs(swing.Value.Row.ForecastSwing)) forecast vs budgeted profit
+                            </p>
+                        }
+                    </div>
+                    <div class="rounded-xl border border-line bg-surface px-5 py-4"
+                         title="Certified value less value of work done across the selection — negative means work is running ahead of billing.">
+                        <p class="text-[11px] uppercase tracking-wider text-content-subtle font-semibold mb-1">Billing position</p>
+                        @if (statTotal is null)
+                        {
+                            <p class="text-2xl font-semibold text-content flex items-center h-8" role="status" aria-live="polite" aria-busy="true">
+                                <JewelIcon Class="w-4 h-4 animate-jewel-pulse" />
+                                <span class="sr-only">Loading billing position</span>
+                            </p>
+                        }
+                        else
+                        {
+                            <p class="text-2xl font-semibold @ProfitClass(statTotal.BillingDelta)">@SignedMoney(statTotal.BillingDelta)</p>
+                            <p class="text-xs text-content-subtle mt-1">
+                                @(statTotal.BillingDelta < 0m ? "under-billed" : statTotal.BillingDelta > 0m ? "billed ahead of work done" : "billed level with work done")@(statTotal.RetentionOutstanding > 0m ? $" · {MoneyCompact(statTotal.RetentionOutstanding)} retention held by clients" : "")
+                            </p>
+                        }
+                    </div>
+                </div>
+            }
+
+            @* One gate for the bridge and the table together: every bar, row and total is the same
+               arithmetic over the same sources, so the region waits for every selected project
+               before showing any of it. *@
             <LoadGate IsLoading="@(!TableReady)" Prominent="true" Label="Loading profit figures">
             @if (SelectedProjects.Count == 0)
             {
@@ -97,6 +199,10 @@ else
             }
             else
             {
+                var rows = LoadedRows();
+                var total = TotalsOf(rows);
+                var bridge = BridgeFor(rows, total);
+
                 @if (FailedSelectedProjects.Count > 0)
                 {
                     <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-4">
@@ -105,78 +211,168 @@ else
                     </p>
                 }
 
+                @* ── Budget → forecast bridge. Reconciles by construction: the two floating bars
+                   are Variations and (Initial Contract Costs − Forecasted Cost of Sales), which
+                   sum exactly to Forecast − Budgeted. Skipped while every figure is zero — a
+                   chart of nothing is a conditional region, not a gate. ── *@
+                @if (bridge is not null)
+                {
+                    <div class="rounded-xl border border-line bg-surface p-5 mb-6">
+                        <p class="text-[11px] uppercase tracking-wider text-content-subtle font-semibold">
+                            Budget → forecast bridge
+                            <span class="normal-case tracking-normal font-normal text-content-faint ml-2">— @bridge.Note</span>
+                        </p>
+                        <div class="relative h-[210px] mt-3" aria-hidden="true">
+                            <div class="absolute inset-x-0 border-t border-line" style="top:@(Pc(bridge.ZeroY))%"></div>
+                            <div class="absolute inset-0 grid grid-cols-4">
+                                @foreach (var bar in bridge.Bars)
+                                {
+                                    <div class="relative">
+                                        @if (bar.ConnectorY is double connector)
+                                        {
+                                            <div class="absolute border-t border-dashed border-line-strong" style="top:@(Pc(connector))%;left:-25%;width:50%"></div>
+                                        }
+                                        <div class="absolute left-1/2 -translate-x-1/2 w-16 rounded @bar.BarClass" style="top:@(Pc(bar.Top))%;height:@(Pc(bar.Height))%"></div>
+                                        <div class="absolute inset-x-0 text-center text-xs font-semibold @bar.LabelClass" style="top:calc(@(Pc(bar.Top))% - 22px)">@bar.Amount</div>
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-4 mt-2">
+                            @foreach (var bar in bridge.Bars)
+                            {
+                                <div class="text-center">
+                                    <p class="text-[10px] uppercase tracking-wider text-content-muted font-medium">@bar.Label</p>
+                                    <p class="text-[10px] text-content-subtle">@bar.Sub</p>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                }
+
                 <div class="rounded-xl border border-line bg-surface overflow-x-auto">
                     <table class="w-full text-sm border-collapse">
                         <thead class="bg-surface-raised border-b border-line">
+                            @* The three bands, each with where its figures come from — the
+                               accountant reads the provenance before the numbers. *@
+                            <tr class="text-left text-[10px] uppercase tracking-widest text-content-subtle font-semibold border-b border-line">
+                                <th class="px-4 pt-3 pb-2"></th>
+                                <th class="px-4 pt-3 pb-2 border-l border-line" colspan="2">The deal <span class="normal-case tracking-normal font-normal text-content-faint ml-1">contract + variations</span></th>
+                                <th class="px-4 pt-3 pb-2 border-l border-line" colspan="4">Current position <span class="normal-case tracking-normal font-normal text-content-faint ml-1">valuations + Xero</span></th>
+                                <th class="px-4 pt-3 pb-2 border-l border-line" colspan="3">To finish <span class="normal-case tracking-normal font-normal text-content-faint ml-1">today → completion</span></th>
+                                <th class="px-4 pt-3 pb-2 border-l border-line" colspan="2">Forecast at completion <span class="normal-case tracking-normal font-normal text-content-faint ml-1">Financials tab</span></th>
+                            </tr>
                             <tr class="text-left text-[11px] uppercase tracking-wider text-content-subtle font-semibold">
-                                <th class="px-4 py-3 min-w-[220px]">Project</th>
-                                @* Budgeted: the deal as signed. *@
-                                <th class="px-4 py-3 text-right whitespace-nowrap border-l border-line" title="The initial contract sum — the valuation report's contract lines, before variations.">Initial Contract Sum</th>
-                                <th class="px-4 py-3 text-right whitespace-nowrap" title="The initial contract sum with the assumed markup backed out — the target-cost rule the Financials tab uses.">Initial Contract Costs</th>
-                                <th class="px-4 py-3 text-right whitespace-nowrap" title="Initial contract sum less initial contract costs; the percentage is the margin on the initial contract sum.">Budgeted Profit</th>
-                                @* Current: money actually certified against money actually spent. *@
-                                <th class="px-4 py-3 text-right whitespace-nowrap border-l border-line" title="Issued and paid valuation invoices to date.">Certified To Date</th>
-                                <th class="px-4 py-3 text-right whitespace-nowrap" title="Allocated Xero purchase spend, net of credit notes — the Financials tab's Actual Cost of Sales.">Actual Cost of Sales</th>
-                                <th class="px-4 py-3 text-right whitespace-nowrap" title="Certified to date less actual cost of sales; the percentage is the margin on certified to date.">Current Profit</th>
-                                @* Forecast: where the job lands. *@
-                                <th class="px-4 py-3 text-right whitespace-nowrap border-l border-line" title="The revised contract sum — initial contract plus net variations.">Contract Value</th>
-                                <th class="px-4 py-3 text-right whitespace-nowrap" title="Committed cost of sales plus remaining drawdown — the Financials tab's Forecasted Cost of Sales total.">Forecasted Cost of Sales</th>
-                                <th class="px-4 py-3 text-right whitespace-nowrap" title="Contract value less forecasted cost of sales; the percentage is the margin on contract value.">Forecasted Profit</th>
+                                <th class="px-4 py-3 min-w-[240px]">Project</th>
+                                <th class="px-4 py-3 text-right whitespace-nowrap border-l border-line" title="The revised contract sum — initial contract plus net approved variations (the memo line).">Contract value</th>
+                                <th class="px-4 py-3 text-right whitespace-nowrap" title="Initial contract sum less its target cost — the sum with the assumed markup backed out, the same rule as the Financials tab. The percentage is the margin on the initial sum.">Budgeted profit</th>
+                                <th class="px-4 py-3 text-right whitespace-nowrap border-l border-line" title="Issued and paid valuation invoices to date. The memo shows the retention the client still holds — earned once certified, released on the cash pages.">Certified</th>
+                                <th class="px-4 py-3 text-right whitespace-nowrap" title="Allocated Xero purchase spend, net of credit notes — the Financials tab's Actual Cost of Sales.">Cost to date</th>
+                                <th class="px-4 py-3 text-right whitespace-nowrap" title="Certified less cost to date; the percentage is the margin on certified.">Current profit</th>
+                                <th class="px-4 py-3 text-right whitespace-nowrap" title="Certified less value of work done — negative means work is running ahead of billing.">Billing ±</th>
+                                <th class="px-4 py-3 text-right whitespace-nowrap border-l border-line" title="The revised contract sum not yet certified — the revenue still to come.">Left to certify</th>
+                                <th class="px-4 py-3 text-right whitespace-nowrap" title="Final cost less cost to date — the spend still to come. Negative means the job has already spent past its forecast.">Cost to complete</th>
+                                <th class="px-4 py-3 text-right whitespace-nowrap" title="Left to certify less cost to complete; the percentage is the margin on what is left. Current profit plus profit to finish equals the forecast, to the penny.">Profit to finish</th>
+                                <th class="px-4 py-3 text-right whitespace-nowrap border-l border-line" title="Committed cost of sales plus remaining drawdown — the Financials tab's Forecasted Cost of Sales total.">Final cost</th>
+                                <th class="px-4 py-3 text-right whitespace-nowrap" title="Contract value less final cost; the percentage is the margin on contract value.">Forecast profit</th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-line">
-                            @foreach (var project in SelectedProjects)
+                            @foreach (var (project, row) in rows)
                             {
-                                var row = RowFor(project.ProjectId);
                                 <tr>
-                                    <td class="px-4 py-3 whitespace-nowrap">
-                                        <a href="@($"/projects/{project.ProjectId}/financials")" class="hover:underline underline-offset-4">
-                                            <span class="font-mono text-[11px] text-content-subtle mr-2">@project.Reference</span>
-                                            <span class="text-content font-medium">@project.Name</span>
-                                        </a>
+                                    <td class="px-4 py-3 align-top">
+                                        <div class="flex flex-col gap-1.5">
+                                            <div class="flex items-center gap-2 whitespace-nowrap">
+                                                <a href="@($"/projects/{project.ProjectId}/financials")" class="hover:underline underline-offset-4">
+                                                    <span class="font-mono text-[11px] text-content-subtle mr-2">@project.Reference</span>
+                                                    <span class="text-content font-medium">@project.Name</span>
+                                                </a>
+                                                <ProjectStageBadge Stage="project.Stage" />
+                                            </div>
+                                            @if (row.PercentComplete is decimal complete)
+                                            {
+                                                <div class="flex items-center gap-2">
+                                                    <div class="h-1 w-32 rounded-full bg-line overflow-hidden">
+                                                        <div class="h-full rounded-full bg-content-faint" style="width:@(Pc(Math.Clamp((double)complete * 100d, 0d, 100d)))%"></div>
+                                                    </div>
+                                                    <span class="text-[10px] text-content-subtle">@($"{complete * 100m:0}%") complete</span>
+                                                </div>
+                                            }
+                                            @if (row.CertifiedToDate == 0m && row.ActualCostOfSales > 0m)
+                                            {
+                                                <span class="inline-flex w-fit items-center gap-1.5 rounded border border-amber-400/25 bg-amber-400/10 px-1.5 py-0.5 text-[10px] text-amber-400">
+                                                    ⚠ No certifications against @MoneyCompact(row.ActualCostOfSales) cost
+                                                </span>
+                                            }
+                                        </div>
                                     </td>
-                                    <td class="px-4 py-3 text-right whitespace-nowrap text-content border-l border-line">@Money(row.InitialContractSum)</td>
-                                    <td class="px-4 py-3 text-right whitespace-nowrap text-content">@Money(row.InitialContractCosts)</td>
-                                    <td class="px-4 py-3 text-right whitespace-nowrap font-medium @ProfitClass(row.BudgetedProfit)">
+                                    <td class="px-4 py-3 text-right whitespace-nowrap align-top text-content border-l border-line">
+                                        @Money(row.ContractValue)
+                                        @Memo(row.NetVariations == 0m ? "no variations" : $"{SignedMoney(row.NetVariations)} variations")
+                                    </td>
+                                    <td class="px-4 py-3 text-right whitespace-nowrap align-top font-medium @ProfitClass(row.BudgetedProfit)">
                                         @Money(row.BudgetedProfit)
                                         @MarginLine(row.BudgetedMargin)
                                     </td>
-                                    <td class="px-4 py-3 text-right whitespace-nowrap text-content border-l border-line">@Money(row.CertifiedToDate)</td>
-                                    <td class="px-4 py-3 text-right whitespace-nowrap text-content">@Money(row.ActualCostOfSales)</td>
-                                    <td class="px-4 py-3 text-right whitespace-nowrap font-medium @ProfitClass(row.CurrentProfit)">
+                                    <td class="px-4 py-3 text-right whitespace-nowrap align-top text-content border-l border-line">
+                                        @Money(row.CertifiedToDate)
+                                        @Memo(row.RetentionOutstanding > 0m ? $"{Money(row.RetentionOutstanding)} retention held" : null)
+                                    </td>
+                                    <td class="px-4 py-3 text-right whitespace-nowrap align-top text-content">@Money(row.ActualCostOfSales)</td>
+                                    <td class="px-4 py-3 text-right whitespace-nowrap align-top font-medium @ProfitClass(row.CurrentProfit)">
                                         @Money(row.CurrentProfit)
                                         @MarginLine(row.CurrentMargin)
                                     </td>
-                                    <td class="px-4 py-3 text-right whitespace-nowrap text-content border-l border-line">@Money(row.ContractValue)</td>
-                                    <td class="px-4 py-3 text-right whitespace-nowrap text-content">@Money(row.ForecastCostOfSales)</td>
-                                    <td class="px-4 py-3 text-right whitespace-nowrap font-medium @ProfitClass(row.ForecastedProfit)">
+                                    <td class="px-4 py-3 text-right whitespace-nowrap align-top @ProfitClass(row.BillingDelta)">@SignedMoney(row.BillingDelta)</td>
+                                    <td class="px-4 py-3 text-right whitespace-nowrap align-top text-content border-l border-line">@Money(row.LeftToCertify)</td>
+                                    <td class="px-4 py-3 text-right whitespace-nowrap align-top text-content">@Money(row.CostToComplete)</td>
+                                    <td class="px-4 py-3 text-right whitespace-nowrap align-top font-medium @ProfitClass(row.ToFinishProfit)">
+                                        @Money(row.ToFinishProfit)
+                                        @MarginLine(row.ToFinishMargin)
+                                    </td>
+                                    <td class="px-4 py-3 text-right whitespace-nowrap align-top text-content border-l border-line">@Money(row.ForecastCostOfSales)</td>
+                                    <td class="px-4 py-3 text-right whitespace-nowrap align-top font-medium @ProfitClass(row.ForecastedProfit)">
                                         @Money(row.ForecastedProfit)
                                         @MarginLine(row.ForecastedMargin)
                                     </td>
                                 </tr>
                             }
                         </tbody>
-                        @if (SelectedProjects.Count > 1)
+                        @if (rows.Count > 1)
                         {
-                            var total = Totals();
                             <tfoot class="border-t border-line bg-surface-raised">
                                 <tr class="font-semibold">
-                                    <td class="px-4 py-3 text-content">All projects</td>
-                                    <td class="px-4 py-3 text-right whitespace-nowrap text-content border-l border-line">@Money(total.InitialContractSum)</td>
-                                    <td class="px-4 py-3 text-right whitespace-nowrap text-content">@Money(total.InitialContractCosts)</td>
-                                    <td class="px-4 py-3 text-right whitespace-nowrap @ProfitClass(total.BudgetedProfit)">
+                                    <td class="px-4 py-3 align-top text-content">@rows.Count projects</td>
+                                    <td class="px-4 py-3 text-right whitespace-nowrap align-top text-content border-l border-line">
+                                        @Money(total.ContractValue)
+                                        @Memo(total.NetVariations == 0m ? null : $"{SignedMoney(total.NetVariations)} variations")
+                                    </td>
+                                    <td class="px-4 py-3 text-right whitespace-nowrap align-top @ProfitClass(total.BudgetedProfit)">
                                         @Money(total.BudgetedProfit)
                                         @MarginLine(total.BudgetedMargin)
                                     </td>
-                                    <td class="px-4 py-3 text-right whitespace-nowrap text-content border-l border-line">@Money(total.CertifiedToDate)</td>
-                                    <td class="px-4 py-3 text-right whitespace-nowrap text-content">@Money(total.ActualCostOfSales)</td>
-                                    <td class="px-4 py-3 text-right whitespace-nowrap @ProfitClass(total.CurrentProfit)">
+                                    <td class="px-4 py-3 text-right whitespace-nowrap align-top text-content border-l border-line">
+                                        @Money(total.CertifiedToDate)
+                                        @Memo(total.RetentionOutstanding > 0m ? $"{Money(total.RetentionOutstanding)} retention held" : null)
+                                    </td>
+                                    <td class="px-4 py-3 text-right whitespace-nowrap align-top text-content">@Money(total.ActualCostOfSales)</td>
+                                    <td class="px-4 py-3 text-right whitespace-nowrap align-top @ProfitClass(total.CurrentProfit)">
                                         @Money(total.CurrentProfit)
                                         @MarginLine(total.CurrentMargin)
                                     </td>
-                                    <td class="px-4 py-3 text-right whitespace-nowrap text-content border-l border-line">@Money(total.ContractValue)</td>
-                                    <td class="px-4 py-3 text-right whitespace-nowrap text-content">@Money(total.ForecastCostOfSales)</td>
-                                    <td class="px-4 py-3 text-right whitespace-nowrap @ProfitClass(total.ForecastedProfit)">
+                                    <td class="px-4 py-3 text-right whitespace-nowrap align-top @ProfitClass(total.BillingDelta)">@SignedMoney(total.BillingDelta)</td>
+                                    <td class="px-4 py-3 text-right whitespace-nowrap align-top text-content border-l border-line">@Money(total.LeftToCertify)</td>
+                                    <td class="px-4 py-3 text-right whitespace-nowrap align-top text-content">@Money(total.CostToComplete)</td>
+                                    <td class="px-4 py-3 text-right whitespace-nowrap align-top @ProfitClass(total.ToFinishProfit)">
+                                        @Money(total.ToFinishProfit)
+                                        @MarginLine(total.ToFinishMargin)
+                                    </td>
+                                    <td class="px-4 py-3 text-right whitespace-nowrap align-top text-content border-l border-line">
+                                        @Money(total.ForecastCostOfSales)
+                                        @Memo(total.CostMovement < 0m ? $"{SignedMoney(-total.CostMovement)} vs target" : null)
+                                    </td>
+                                    <td class="px-4 py-3 text-right whitespace-nowrap align-top @ProfitClass(total.ForecastedProfit)">
                                         @Money(total.ForecastedProfit)
                                         @MarginLine(total.ForecastedMargin)
                                     </td>
@@ -186,18 +382,38 @@ else
                     </table>
                 </div>
                 <p class="text-xs text-content-subtle mt-3 max-w-3xl">
-                    Budgeted profit is the deal as signed: the initial contract sum against its
-                    target cost (the sum with our assumed
-                    @($"{FinancialSummaryAssumptions.MarkupPercent:0.#}%") markup backed out).
-                    Current profit is money actually certified — issued and paid valuation
-                    invoices — against allocated Xero purchase spend to date. Forecasted profit is
-                    where the job lands: the revised contract sum including variations, against the
-                    Financials tab's forecasted cost of sales (committed cost plus remaining
-                    drawdown). Percentages are margins on value — each profit against its own
-                    revenue column — so the budgeted margin reads
-                    @($"{100m - FinancialSummaryAssumptions.CostFactor * 100m:0.0}%"), not the
-                    @($"{FinancialSummaryAssumptions.MarkupPercent:0.#}%") markup on cost it comes
-                    from. Click a project for its Financials tab.
+                    <span class="text-content-muted font-medium">The deal</span> is the revised
+                    contract sum including approved variations, against its target cost — the
+                    initial sum with our assumed
+                    @($"{FinancialSummaryAssumptions.MarkupPercent:0.#}%") markup backed out, so
+                    the budgeted margin reads
+                    @($"{100m - FinancialSummaryAssumptions.CostFactor * 100m:0.0}%") on value.
+                    <span class="text-content-muted font-medium">Current position</span> is money
+                    actually certified — issued and paid valuation invoices — against allocated
+                    Xero purchase spend to date; <span class="text-content-muted font-medium">Billing&nbsp;±</span>
+                    compares certified with the value of work done, so a negative figure means work
+                    is running ahead of billing. Retention is earned once the work is certified, so
+                    it stays inside profit — the memo shows what the client still holds, and it
+                    lives on the cash pages until released.
+                    <span class="text-content-muted font-medium">To finish</span> is what's left in
+                    the job from today: the revised contract sum not yet certified, against the cost
+                    still to come — current profit plus profit to finish equals the forecast, to the
+                    penny, so a job sitting at 10% today and landing at 5% shows the thin margin
+                    still to come.
+                    <span class="text-content-muted font-medium">Forecast at completion</span> is
+                    where the job lands: the revised contract sum against the Financials tab's
+                    forecasted cost of sales (committed cost plus remaining drawdown). Percentages
+                    are margins on value — each profit against its own revenue column. Click a
+                    project for its Financials tab.
+                </p>
+                <p class="text-xs text-content-subtle mt-2 max-w-3xl">
+                    One ladder, one word per rung:
+                    <span class="text-content-muted">claimed</span> <span class="text-content-faint mx-0.5">→</span>
+                    <span class="text-content-muted">certified</span> <span class="text-content-faint mx-0.5">→</span>
+                    <span class="text-content-muted">invoiced</span> <span class="text-content-faint mx-0.5">→</span>
+                    <span class="text-content-muted">paid</span>.
+                    This page reports the <span class="text-content-muted">certified</span> rung;
+                    the Cash Summary reports what has actually been paid.
                 </p>
             }
             </LoadGate>
@@ -207,7 +423,7 @@ else
 
 @code {
     // Session checked and the user is signed in. This is NOT "the figures are here": the heading
-    // and filter show at once, the table waits behind its own gate.
+    // and filter show at once; the tiles, bridge and table wait behind their own signals.
     private bool sessionReady;
     // The project list is what the filter and every row are built from, and its fetch throws
     // rather than recording per-project failure — so a failure here opens the gate with a message.
@@ -257,14 +473,40 @@ else
     private sealed record ProfitRow(
         decimal InitialContractSum,
         decimal InitialContractCosts,
+        decimal NetVariations,
         decimal CertifiedToDate,
         decimal ActualCostOfSales,
         decimal ContractValue,
-        decimal ForecastCostOfSales)
+        decimal ForecastCostOfSales,
+        decimal WorksComplete,
+        decimal RetentionOutstanding)
     {
         public decimal BudgetedProfit => InitialContractSum - InitialContractCosts;
         public decimal CurrentProfit => CertifiedToDate - ActualCostOfSales;
         public decimal ForecastedProfit => ContractValue - ForecastCostOfSales;
+
+        // Certified less value of work done — negative means work is running ahead of billing.
+        public decimal BillingDelta => CertifiedToDate - WorksComplete;
+
+        // The "To finish" band: what is left in the job from today. Revenue still to certify,
+        // cost still to come, and the profit between them — defined so that
+        // CurrentProfit + ToFinishProfit = ForecastedProfit exactly.
+        public decimal LeftToCertify => ContractValue - CertifiedToDate;
+        public decimal CostToComplete => ForecastCostOfSales - ActualCostOfSales;
+        public decimal ToFinishProfit => LeftToCertify - CostToComplete;
+        public decimal? ToFinishMargin => MarginOn(ToFinishProfit, LeftToCertify);
+
+        // The bridge's third bar, defined so Budgeted + Variations + CostMovement = Forecast
+        // exactly (ContractValue = InitialContractSum + NetVariations makes the algebra close).
+        // Negative means the job is forecast to cost more than the deal's target.
+        public decimal CostMovement => InitialContractCosts - ForecastCostOfSales;
+
+        // How far the landing has moved from the deal — the "biggest swing" tile.
+        public decimal ForecastSwing => ForecastedProfit - BudgetedProfit;
+
+        // Value of work done against the revised sum — the project cell's progress bar. Null
+        // when there is no contract value yet: no base, no honest percentage.
+        public decimal? PercentComplete => ContractValue == 0m ? null : WorksComplete / ContractValue;
 
         // Margins on value: each profit against its own revenue column — NOT markup on cost —
         // so the budgeted margin reads ≈9.1% for the assumed 10% markup, by design (see
@@ -309,31 +551,123 @@ else
             // The same target-cost rule as the Financials tab, applied to the initial sum: what
             // the contract should cost us with the assumed markup backed out.
             InitialContractCosts: Math.Round(figures.ContractSum * FinancialSummaryAssumptions.CostFactor, 2),
+            NetVariations: figures.NetVariations,
             CertifiedToDate: figures.CertifiedToDate,
             ActualCostOfSales: actualCost,
             ContractValue: figures.RevisedContractSum,
             ForecastCostOfSales: ProjectDrawdown.ForecastCostOfSales(
-                summaryRows, ProjectDrawdown.CommittedByCostCode(WorkOrders.Current(projectId)), packages));
+                summaryRows, ProjectDrawdown.CommittedByCostCode(WorkOrders.Current(projectId)), packages),
+            WorksComplete: figures.TotalWorksComplete,
+            RetentionOutstanding: figures.RetentionOutstanding);
     }
 
-    private ProfitRow Totals()
+    // Every region (the strip; the bridge + table + totals together; the export) builds this
+    // list once and reads rows from it, rather than each cell calling RowFor for itself.
+    private List<(Project Project, ProfitRow Row)> LoadedRows() =>
+        SelectedProjects.Select(project => (project, RowFor(project.ProjectId))).ToList();
+
+    private static ProfitRow TotalsOf(IReadOnlyList<(Project Project, ProfitRow Row)> rows) =>
+        new(
+            rows.Sum(entry => entry.Row.InitialContractSum),
+            rows.Sum(entry => entry.Row.InitialContractCosts),
+            rows.Sum(entry => entry.Row.NetVariations),
+            rows.Sum(entry => entry.Row.CertifiedToDate),
+            rows.Sum(entry => entry.Row.ActualCostOfSales),
+            rows.Sum(entry => entry.Row.ContractValue),
+            rows.Sum(entry => entry.Row.ForecastCostOfSales),
+            rows.Sum(entry => entry.Row.WorksComplete),
+            rows.Sum(entry => entry.Row.RetentionOutstanding));
+
+    // ---- Bridge -------------------------------------------------------------
+    // Waterfall geometry precomputed here so the markup only places rectangles. Values are
+    // mapped into a 12%–100% vertical band (the top 12% is reserved for the amount labels).
+
+    private sealed record BridgeBar(
+        string Label, string Sub, string Amount, string BarClass, string LabelClass,
+        double Top, double Height, double? ConnectorY);
+
+    private sealed record BridgeModel(string Note, double ZeroY, IReadOnlyList<BridgeBar> Bars);
+
+    private BridgeModel? BridgeFor(IReadOnlyList<(Project Project, ProfitRow Row)> rows, ProfitRow total)
     {
-        var rows = SelectedProjects.Select(project => RowFor(project.ProjectId)).ToList();
-        return new ProfitRow(
-            rows.Sum(row => row.InitialContractSum),
-            rows.Sum(row => row.InitialContractCosts),
-            rows.Sum(row => row.CertifiedToDate),
-            rows.Sum(row => row.ActualCostOfSales),
-            rows.Sum(row => row.ContractValue),
-            rows.Sum(row => row.ForecastCostOfSales));
+        var budgeted = total.BudgetedProfit;
+        var variations = total.NetVariations;
+        var forecast = total.ForecastedProfit;
+        var afterVariations = budgeted + variations;
+
+        // The worst cost mover names the third bar — the board's first question is "who".
+        var worstCost = rows.OrderBy(entry => entry.Row.CostMovement).FirstOrDefault();
+        var costSub = worstCost.Project is not null && worstCost.Row.CostMovement < 0m && total.CostMovement < 0m
+            ? $"{MoneyCompact(-worstCost.Row.CostMovement)} of this is {worstCost.Project.Name}"
+            : "vs target cost";
+
+        var segments = new (string Label, string Sub, decimal From, decimal To, bool Endpoint)[]
+        {
+            ("Budgeted profit", "as signed", 0m, budgeted, true),
+            ("Variations", "approved only", budgeted, afterVariations, false),
+            ("Cost movement", costSub, afterVariations, forecast, false),
+            ("Forecast profit", "at completion", 0m, forecast, true),
+        };
+
+        var low = Math.Min(0m, segments.Min(segment => Math.Min(segment.From, segment.To)));
+        var high = Math.Max(0m, segments.Max(segment => Math.Max(segment.From, segment.To)));
+        if (high == low) return null; // nothing to plot — every figure is zero
+
+        // Map a value into the band: 12% at the top of the range, 100% at the bottom.
+        double Y(decimal value) => 12d + (double)((high - value) / (high - low)) * 88d;
+
+        var bars = new List<BridgeBar>();
+        for (var index = 0; index < segments.Length; index++)
+        {
+            var segment = segments[index];
+            var delta = segment.To - segment.From;
+            var top = Y(Math.Max(segment.From, segment.To));
+            var height = Math.Max(Y(Math.Min(segment.From, segment.To)) - top, 0.75d);
+            var barClass = segment.Endpoint
+                ? "bg-content-faint"
+                : delta >= 0m ? "bg-positive/80" : "bg-negative/80";
+            var labelClass = segment.Endpoint
+                ? segment.To < 0m ? "text-negative" : "text-content"
+                : delta >= 0m ? "text-positive" : "text-negative";
+            var amount = segment.Endpoint ? Money(segment.To) : SignedMoney(delta);
+            // The dashed hand-over line from the previous column, at the level it left off.
+            double? connector = index == 0 ? null : Y(segments[index - 1].To);
+            bars.Add(new BridgeBar(segment.Label, segment.Sub, amount, barClass, labelClass, top, height, connector));
+        }
+
+        var note = forecast < budgeted
+            ? $"where {MoneyCompact(budgeted - forecast)} of margin went"
+            : "how the deal improves by completion";
+        return new BridgeModel(note, Y(0m), bars);
     }
+
+    // ---- Formatting ---------------------------------------------------------
 
     private static string ProfitClass(decimal value) =>
         value == 0m ? "text-content-muted" : value > 0m ? "text-positive" : "text-negative";
 
-    private static string Money(decimal value) => $"£{value:N0}";
+    private static string Money(decimal value) =>
+        value < 0m ? $"-£{Math.Abs(value):N0}" : $"£{value:N0}";
+
+    private static string SignedMoney(decimal value) =>
+        value == 0m ? "—" : value > 0m ? $"+£{value:N0}" : $"-£{Math.Abs(value):N0}";
+
+    private static string MoneyCompact(decimal value)
+    {
+        var sign = value < 0m ? "-" : "";
+        var abs = Math.Abs(value);
+        return abs >= 1_000_000m ? $"{sign}£{abs / 1_000_000m:0.00}m"
+            : abs >= 10_000m ? $"{sign}£{abs / 1_000m:0}k"
+            : abs >= 1_000m ? $"{sign}£{abs / 1_000m:0.0}k"
+            : $"{sign}£{abs:N0}";
+    }
 
     private static string Pct(decimal fraction) => $"{fraction * 100m:0.0}%";
+
+    // Inline-style percentages must be culture-invariant — a comma decimal separator would
+    // silently break the CSS.
+    private static string Pc(double value) =>
+        value.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture);
 
     // The muted % line under a profit figure. Null (no revenue base yet) renders nothing at all —
     // not a dash, not a gate: a percentage that cannot be computed is simply not shown, the same
@@ -345,6 +679,29 @@ else
             <span class="block text-[11px] font-normal text-content-subtle">@Pct(margin)</span>
         }
     };
+
+    // The muted memo line under a money figure ("+£205,958 variations", "£78,195 retention
+    // held"). Null renders nothing — same rule as MarginLine.
+    private readonly RenderFragment<string?> Memo = text => __builder =>
+    {
+        if (text is not null)
+        {
+            <span class="block text-[11px] font-normal text-content-subtle">@text</span>
+        }
+    };
+
+    public void Dispose()
+    {
+        Projects.OnChanged -= StateHasChanged;
+        Summary.OnChanged -= StateHasChanged;
+        WorkOrders.OnChanged -= StateHasChanged;
+        Lines.OnChanged -= StateHasChanged;
+        Claims.OnChanged -= StateHasChanged;
+        ClaimEntries.OnChanged -= StateHasChanged;
+        // The throttle is deliberately NOT disposed: a load still in flight when the user
+        // navigates away would Release() a disposed semaphore and fault the abandoned task.
+        // An undisposed SemaphoreSlim (no wait-handle use) holds nothing worth reclaiming.
+    }
 
     // ---- Loading ------------------------------------------------------------
 
@@ -440,64 +797,66 @@ else
     }
 
     // ---- Excel export -------------------------------------------------------
-    // Same rows the table renders plus the "All projects" total row when there's more than one.
+    // Same rows the table renders — memo columns broken out so the workbook reconciles without
+    // the on-screen memo lines — plus the total row when there's more than one project.
     private ExcelWorkbook? BuildExportWorkbook(bool _)
     {
-        var projects = SelectedProjects;
-        if (projects.Count == 0) return null;
+        var rows = LoadedRows();
+        if (rows.Count == 0) return null;
 
         var workbook = new ExcelWorkbook();
         var sheet = workbook.AddSheet("Profit summary",
             new ExcelColumn("Project"),
-            new ExcelColumn("Initial contract sum", ExcelFormat.Currency),
-            new ExcelColumn("Initial contract costs", ExcelFormat.Currency),
+            new ExcelColumn("Stage"),
+            new ExcelColumn("% complete", ExcelFormat.Percent),
+            new ExcelColumn("Contract value", ExcelFormat.Currency),
+            new ExcelColumn("Net variations", ExcelFormat.Currency),
             new ExcelColumn("Budgeted profit", ExcelFormat.Currency),
             new ExcelColumn("Budgeted margin", ExcelFormat.Percent),
             new ExcelColumn("Certified to date", ExcelFormat.Currency),
-            new ExcelColumn("Actual cost of sales", ExcelFormat.Currency),
+            new ExcelColumn("Retention held", ExcelFormat.Currency),
+            new ExcelColumn("Cost to date", ExcelFormat.Currency),
             new ExcelColumn("Current profit", ExcelFormat.Currency),
             new ExcelColumn("Current margin", ExcelFormat.Percent),
-            new ExcelColumn("Contract value", ExcelFormat.Currency),
-            new ExcelColumn("Forecasted cost of sales", ExcelFormat.Currency),
-            new ExcelColumn("Forecasted profit", ExcelFormat.Currency),
-            new ExcelColumn("Forecasted margin", ExcelFormat.Percent));
+            new ExcelColumn("Billing ±", ExcelFormat.Currency),
+            new ExcelColumn("Left to certify", ExcelFormat.Currency),
+            new ExcelColumn("Cost to complete", ExcelFormat.Currency),
+            new ExcelColumn("Profit to finish", ExcelFormat.Currency),
+            new ExcelColumn("To-finish margin", ExcelFormat.Percent),
+            new ExcelColumn("Final cost", ExcelFormat.Currency),
+            new ExcelColumn("Forecast profit", ExcelFormat.Currency),
+            new ExcelColumn("Forecast margin", ExcelFormat.Percent));
 
-        // The margins go out as fractions (ExcelFormat.Percent's contract) and as nulls when
-        // there is no revenue base — a blank cell, matching the table's absent % line.
-        void AddRow(string name, ProfitRow row) => sheet.AddRow(
+        // The margins and % complete go out as fractions (ExcelFormat.Percent's contract) and
+        // as nulls when there is no base — a blank cell, matching the table's absent lines.
+        void AddRow(string name, string stage, ProfitRow row, decimal? percentComplete) => sheet.AddRow(
             name,
-            row.InitialContractSum,
-            row.InitialContractCosts,
+            stage,
+            percentComplete,
+            row.ContractValue,
+            row.NetVariations,
             row.BudgetedProfit,
             row.BudgetedMargin,
             row.CertifiedToDate,
+            row.RetentionOutstanding,
             row.ActualCostOfSales,
             row.CurrentProfit,
             row.CurrentMargin,
-            row.ContractValue,
+            row.BillingDelta,
+            row.LeftToCertify,
+            row.CostToComplete,
+            row.ToFinishProfit,
+            row.ToFinishMargin,
             row.ForecastCostOfSales,
             row.ForecastedProfit,
             row.ForecastedMargin);
 
-        foreach (var project in projects)
-            AddRow(project.Name, RowFor(project.ProjectId));
+        foreach (var (project, row) in rows)
+            AddRow(project.Name, project.Stage.DisplayName(), row, row.PercentComplete);
 
-        if (projects.Count > 1)
-            AddRow("All projects", Totals());
+        if (rows.Count > 1)
+            AddRow("All projects", "", TotalsOf(rows), null);
 
         return workbook;
-    }
-
-    public void Dispose()
-    {
-        Projects.OnChanged -= StateHasChanged;
-        Summary.OnChanged -= StateHasChanged;
-        WorkOrders.OnChanged -= StateHasChanged;
-        Lines.OnChanged -= StateHasChanged;
-        Claims.OnChanged -= StateHasChanged;
-        ClaimEntries.OnChanged -= StateHasChanged;
-        // The throttle is deliberately NOT disposed: a load still in flight when the user
-        // navigates away would Release() a disposed semaphore and fault the abandoned task.
-        // An undisposed SemaphoreSlim (no wait-handle use) holds nothing worth reclaiming.
     }
 }

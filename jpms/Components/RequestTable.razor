@@ -55,6 +55,9 @@
                             <span class="ml-1.5 inline-flex items-center rounded bg-surface-raised border border-line px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-content-muted"
                                   title="Merged into another request — its conversation, queries and emails live there now">Merged</span>
                         }
+                        @* Recent triage activity — emails linked to this record lately. Renders
+                           nothing while quiet or before the activity store has loaded. *@
+                        <ActivityBadge Activity="@ActivityFor?.Invoke(record)" Class="ml-1.5" />
                     </td>
                     <td class="px-4 py-3 text-content-muted hidden lg:table-cell whitespace-nowrap">@Dash(record.RaisedTo)</td>
                     <td class="px-4 py-3 text-content-subtle hidden xl:table-cell font-mono text-xs">@Dash(record.DrawingRef)</td>
@@ -147,6 +150,11 @@
     [Parameter] public IReadOnlyCollection<string> SelectedIds { get; set; } = Array.Empty<string>();
     [Parameter] public EventCallback<Request> OnToggleSelect { get; set; }
     [Parameter] public EventCallback<bool> OnToggleSelectAll { get; set; }
+
+    // Optional activity lookup: the record's recent triage activity for the Subject cell's badge
+    // (RecordActivityReadModel.For on the parent). Null — a page that hasn't opted in, or a store
+    // that hasn't loaded — simply renders no badge.
+    [Parameter] public Func<Request, RecordActivitySummary?>? ActivityFor { get; set; }
 
     // Optional in-row status changes: the parent owns the actual command (and its safeguards —
     // closing still goes through the agent gate there); this component only renders the picker.

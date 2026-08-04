@@ -1,0 +1,90 @@
+@namespace Jewel.JPMS.Features.Triage
+@implements IAsyncDisposable
+@inject IJSRuntime Js
+
+@* Rich-lite compose editor: contenteditable body with a small formatting bar, backed by
+   wwwroot/js/rich-compose.js. Pasted screenshots land inline as data: images (the server turns
+   each into a proper cid attachment before sending); pasted HTML is flattened to a small tag set.
+   Value is the editor's HTML — send it with BodyIsHtml=true so the server runs the outbound
+   sanitiser + inline-image extraction over it. *@
+
+<div class="rounded-lg border border-line bg-surface overflow-hidden">
+    <div class="flex items-center gap-1 border-b border-line bg-surface-raised px-2 py-1">
+        <button type="button" tabindex="-1" class="px-2 py-0.5 rounded text-sm font-semibold text-content-muted hover:text-content hover:bg-surface"
+                title="Bold" @onclick='() => ExecAsync("bold")' @onmousedown:preventDefault>B</button>
+        <button type="button" tabindex="-1" class="px-2 py-0.5 rounded text-sm italic text-content-muted hover:text-content hover:bg-surface"
+                title="Italic" @onclick='() => ExecAsync("italic")' @onmousedown:preventDefault>I</button>
+        <button type="button" tabindex="-1" class="px-2 py-0.5 rounded text-sm underline text-content-muted hover:text-content hover:bg-surface"
+                title="Underline" @onclick='() => ExecAsync("underline")' @onmousedown:preventDefault>U</button>
+        <span class="mx-1 h-4 w-px bg-line"></span>
+        <button type="button" tabindex="-1" class="px-2 py-0.5 rounded text-sm text-content-muted hover:text-content hover:bg-surface"
+                title="Bulleted list" @onclick='() => ExecAsync("insertUnorderedList")' @onmousedown:preventDefault>•&nbsp;List</button>
+        <button type="button" tabindex="-1" class="px-2 py-0.5 rounded text-sm text-content-muted hover:text-content hover:bg-surface"
+                title="Numbered list" @onclick='() => ExecAsync("insertOrderedList")' @onmousedown:preventDefault>1.&nbsp;List</button>
+        <span class="ml-auto text-[11px] text-content-faint pr-1">Paste images straight into the text</span>
+    </div>
+    <div @ref="editor" contenteditable="true" data-placeholder="@Placeholder"
+         class="jpms-rich-editor px-3 py-2 text-sm text-content focus:outline-none overflow-y-auto"
+         style="min-height:@(MinHeight)px; max-height:60vh;"></div>
+</div>
+
+@code {
+    /// <summary>The editor's current HTML. Set-once seeding: the component pushes the parameter
+    /// into the DOM only while the editor is empty/untouched, so a re-render can never stamp over
+    /// what the user is typing.</summary>
+    [Parameter] public string Value { get; set; } = "";
+    [Parameter] public EventCallback<string> ValueChanged { get; set; }
+    [Parameter] public string Placeholder { get; set; } = "";
+    [Parameter] public int MinHeight { get; set; } = 160;
+
+    private ElementReference editor;
+    private DotNetObjectReference<RichTextEditor>? selfRef;
+    private bool initialised;
+    private string lastPushed = "";
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            selfRef = DotNetObjectReference.Create(this);
+            await Js.InvokeVoidAsync("jpmsRichCompose.init", editor, selfRef);
+            initialised = true;
+            if (!string.IsNullOrEmpty(Value))
+            {
+                lastPushed = Value;
+                await Js.InvokeVoidAsync("jpmsRichCompose.setHtml", editor, Value);
+            }
+        }
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        // External reset (e.g. the form was cleared after a send): when the bound value changes to
+        // something the editor didn't produce, push it into the DOM.
+        if (initialised && Value != lastPushed)
+        {
+            lastPushed = Value;
+            await Js.InvokeVoidAsync("jpmsRichCompose.setHtml", editor, Value ?? "");
+        }
+    }
+
+    [JSInvokable]
+    public async Task OnEditorHtmlChanged(string html)
+    {
+        lastPushed = html;
+        await ValueChanged.InvokeAsync(html);
+    }
+
+    private Task ExecAsync(string command) =>
+        initialised ? Js.InvokeVoidAsync("jpmsRichCompose.exec", editor, command).AsTask() : Task.CompletedTask;
+
+    public async ValueTask DisposeAsync()
+    {
+        if (initialised)
+        {
+            try { await Js.InvokeVoidAsync("jpmsRichCompose.dispose", editor); }
+            catch { /* page teardown */ }
+        }
+        selfRef?.Dispose();
+    }
+}

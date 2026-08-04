@@ -5,12 +5,14 @@
 @using Jewel.JPMS.Contracts.Procurement
 @using Jewel.JPMS.Contracts.Variations
 @using Jewel.JPMS.Features.CostCenters
+@using Jewel.JPMS.Features.RecordLinks
 @implements IDisposable
 @inject AuthService Auth
 @inject ICommandSender Commands
 @inject CostCentersReadModel CostCenters
 @inject SessionService Session
 @inject IRequestRegister RequestRegister
+@inject RecordActivityReadModel Activity
 @inject IClientStore ClientStore
 @inject IArchitectStore ArchitectStore
 @inject ICorrespondenceStore Correspondence
@@ -130,7 +132,8 @@ else
            to those records' own pages, which render the same bar. *@
         <RecordTabBar ProjectId="@ProjectId" ActiveId="@ActiveTabId"
                       Request="record" Variation="variation" BidPackages="bidPackages"
-                      LocalRequestTabs="true" OnSelect="SetActiveTab" />
+                      LocalRequestTabs="true" OnSelect="SetActiveTab"
+                      ActivityFor="TabActivity" />
 
         @* At-a-glance facts run across the top rather than down a rail, so the columns below are
            left for the substance: the request itself on the left, actions on the right. *@
@@ -1063,10 +1066,13 @@ else
         AiTasks.OnDraftApplied += HandleAssistantDraft;
         AiTasks.OnAssistantUnavailable += HandleAssistantUnavailable;
         CostCenters.OnChanged += Repaint;
+        Activity.OnChanged += Repaint;
 
         await Session.EnsureLoadedAsync();
         if (!Auth.IsSignedIn) { Nav.NavigateTo("/login", forceLoad: true); return; }
         sessionReady = true;
+        // Activity dots on the tab bar land in the background — absent until then (never gated).
+        Activity.Refresh(ProjectId);
         // Two waves instead of six sequential round-trips. Everything in the first wave is
         // independent — the record, the pickers and the variation all key off the route values,
         // not off each other — so they go out together and the page waits once for the slowest
@@ -1129,11 +1135,17 @@ else
 
     private void Repaint() => InvokeAsync(StateHasChanged);
 
+    // The tab bar's per-record activity dots (the request's own linked mail, the variation's, each
+    // bid package's) — one lookup shared by every tab.
+    private RecordActivitySummary? TabActivity(RecordType type, string recordId) =>
+        Activity.For(ProjectId, type, recordId);
+
     public void Dispose()
     {
         AiTasks.OnDraftApplied -= HandleAssistantDraft;
         AiTasks.OnAssistantUnavailable -= HandleAssistantUnavailable;
         CostCenters.OnChanged -= Repaint;
+        Activity.OnChanged -= Repaint;
         flashTimer?.Dispose();
 
         // The dialog goes with the page, so the panel must not stay lifted above an overlay that no

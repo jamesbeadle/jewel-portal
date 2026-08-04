@@ -4,12 +4,14 @@
 @page "/projects/{ProjectId}/voq/{VariationOrderId}"
 @using Jewel.JPMS.Contracts.RecordLinks
 @using Jewel.JPMS.Contracts.Variations
+@using Jewel.JPMS.Features.RecordLinks
 @inject AuthService Auth
 @inject SessionService Session
 @inject IVariationStore Variations
 @inject IArchitectInstructionStore Instructions
 @inject ISubcontractorStore Subcontractors
 @inject IRequestRegister RequestRegister
+@inject RecordActivityReadModel Activity
 @inject IQueryClient Queries
 @inject NavigationManager Nav
 @inject IJSRuntime Js
@@ -147,7 +149,8 @@ else
            The Request / RFI tabs land back on the containing request page (the RFI tab straight
            onto its official pane). *@
         <RecordTabBar ProjectId="@ProjectId" ActiveId="variation"
-                      Request="request" Variation="order" BidPackages="packages" />
+                      Request="request" Variation="order" BidPackages="packages"
+                      ActivityFor="TabActivity" />
 
         @if (error is not null)
         {
@@ -801,6 +804,9 @@ else
         // and re-render when the lines land (stale-while-revalidate).
         Valuation.OnChange += StateHasChanged;
         Valuation.Refresh(ProjectId);
+        // Activity dots on the tab bar land in the background — absent until then (never gated).
+        Activity.OnChanged += StateHasChanged;
+        Activity.Refresh(ProjectId);
         sessionReady = true;
         await ReloadAsync();
     }
@@ -821,7 +827,13 @@ else
         Subcontractors.OnChange -= StateHasChanged;
         RequestRegister.OnChange -= StateHasChanged;
         Valuation.OnChange -= StateHasChanged;
+        Activity.OnChanged -= StateHasChanged;
     }
+
+    // The tab bar's per-record activity dots (the containing request's linked mail, this
+    // variation's, each bid package's) — one lookup shared by every tab.
+    private RecordActivitySummary? TabActivity(RecordType type, string recordId) =>
+        Activity.For(ProjectId, type, recordId);
 
     // Best-effort: the instruction register is context on this page, never the point of it, so a
     // failure (or a role without access to it) leaves the banner off rather than the page broken.

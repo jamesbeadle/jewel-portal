@@ -10,6 +10,13 @@ namespace Jewel.JPMS.Models;
 // valuation report line between cost centres recodes where money sits in the cost-centre master,
 // so each move is recorded (who, when, which line, from → to, the value carried). Not a
 // client-facing event: Pathway is "", and the register's client filters simply never match it.
+//
+// Second widening, 2026-08-04: the link events (EmailTriaged / RecordLinked) are now written for
+// EVERY pathway, not just Client — the record activity indicator derives each record's
+// recent-communications score from these rows (ListRecordActivity), so links to bid packages,
+// work orders and pathway-neutral records must leave a trace too. Pathway carries the thread's
+// side ("Subcontractor", "Internal", or "" for neutral links); client-facing views keep filtering
+// on it, which is the filter-change-not-schema-change this enum's reserved values planned for.
 public enum AuditEventType
 {
     EmailTriaged = 0,           // a thread was filed under a pathway via its first link/create
@@ -26,7 +33,12 @@ public enum AuditEventType
     CrossPathwayOverride = 10,  // a deliberate Subcontractor↔Internal dual filing
     ThreadSwept = 11,           // the queue sweep propagated tags to a late reply
     // Finance reconciliation (written since 2026-07-28):
-    CostCentreRecoded = 12      // a valuation report line moved to a different cost centre
+    CostCentreRecoded = 12,     // a valuation report line moved to a different cost centre
+    // Outbound mail (written since the triage compose work, 2026-08-04). EmailSent is always
+    // material whatever the pathway — the portal put words in front of a correspondent — so it is
+    // written for every send, with Pathway carrying the thread's side ("" when none was chosen).
+    EmailSent = 13,             // the portal sent an email from the projects mailbox
+    EmailSendFailed = 14        // a send attempt failed after the draft was staged (draft kept)
 }
 
 // One append-only audit event. WebLink (when present) opens the email or draft in Outlook on the

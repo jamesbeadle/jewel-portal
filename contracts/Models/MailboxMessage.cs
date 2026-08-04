@@ -33,12 +33,21 @@ public sealed record MailboxMessage(
     IReadOnlyList<string>? ThreadTags = null);
 
 // The full, on-demand content of one mailbox message (sanitised HTML body + non-inline attachment
-// metadata), fetched live when a triager opens it. Keyed by the live message id.
+// metadata), fetched live when a triager opens it. Keyed by the live message id. The envelope
+// fields (From/To/Cc/ReplyTo/Subject) feed the composer's reply prefill — the UI computes the
+// reply-all set for display, and the server re-applies whatever the user finally submits. All
+// optional so existing callers and cached JSON stay compatible.
 public sealed record MailboxMessageDetail(
     string MessageId,
     string BodyHtml,
     bool BodyIsHtml,
-    IReadOnlyList<IntakeAttachment> Attachments);
+    IReadOnlyList<IntakeAttachment> Attachments,
+    string? FromEmail = null,
+    string? FromName = null,
+    IReadOnlyList<string>? To = null,
+    IReadOnlyList<string>? Cc = null,
+    string? ReplyTo = null,
+    string? Subject = null);
 
 // One page of a live, server-side-filtered mailbox read. Graph pages these with an opaque cursor
 // (its own nextLink) rather than an offset, so NextCursor — when non-null — is passed straight back

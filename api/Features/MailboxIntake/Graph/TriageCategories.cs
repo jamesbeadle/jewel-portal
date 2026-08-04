@@ -23,6 +23,12 @@ public static class TriageCategories
     /// <summary>Present on a discarded ("not a request") email.</summary>
     public const string Discarded = "JPMS/Discarded";
 
+    /// <summary>Present on a thread dealt with by REPLYING from the portal (triage compose) without
+    /// filing it to a record — answering an email is as real a triage decision as linking it. An
+    /// ordinary workflow tag (not a bucket): it carries the marker, removing it returns the thread
+    /// to the queue, and later replies surface it as a "Thread:" hint like any record tag.</summary>
+    public const string Replied = "JPMS/Replied";
+
     // --- Communication pathways (buckets) ---
     // Every triaged thread is filed under exactly one pathway: who the correspondence is with.
     // The pathway is a category tag stamped thread-wide alongside the record tag, so each pathway

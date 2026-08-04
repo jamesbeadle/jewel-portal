@@ -192,7 +192,7 @@ else
                                 <th class="px-4 py-3 min-w-[220px]">Project</th>
                                 <th class="px-4 py-3 text-right whitespace-nowrap" title="The valuation report's counting lines — the full value of the works as currently valued.">Project Claim</th>
                                 <th class="px-4 py-3 text-right whitespace-nowrap" title="Valuation invoices the client has paid, plus retention withheld on works complete.">Cash Allocated</th>
-                                <th class="px-4 py-3 text-right whitespace-nowrap border-l border-line" title="Project claim less cash allocated — the value of works still to be claimed from the client.">Left to Claim</th>
+                                <th class="px-4 py-3 text-right whitespace-nowrap border-l border-line" title="Project claim less cash allocated, less the retention that will be withheld on the works still to value — what can actually be invoiced before the releases.">Left to Claim</th>
                                 <th class="px-4 py-3 text-right whitespace-nowrap" title="The Financials tab's drawdown to the penny — budget still expected to be spent, on top of orders and bills. Netted: an overspent centre reduces it.">Drawdowns</th>
                                 <th class="px-4 py-3 text-right whitespace-nowrap" title="Work-order value not yet invoiced by suppliers — committed spend still to bill.">Uninvoiced WOs</th>
                                 <th class="px-4 py-3 text-right whitespace-nowrap" title="The net still owed on allocated purchase lines, part-payment aware: a part-paid bill counts only its remainder.">Unpaid Bills</th>
@@ -250,10 +250,11 @@ else
                 <p class="text-xs text-content-subtle mt-3 max-w-3xl">
                     Each row is that project's Cashflow tab collapsed to a line — the same sources,
                     the same arithmetic, to the penny. Cash allocated counts valuation invoices the
-                    client has paid plus retention withheld on works complete; drawdowns reuse the
-                    Financials tab's netted figure; unpaid bills are part-payment aware; a retention
-                    release is only added back while it is still forecast. Click a project for the
-                    full statement.
+                    client has paid plus retention withheld on works complete; left to claim is net
+                    of the retention still to be withheld on works left to value; drawdowns reuse
+                    the Financials tab's netted figure; unpaid bills are part-payment aware; a
+                    retention release is only added back while it is still forecast. Click a
+                    project for the full statement.
                 </p>
             }
             </LoadGate>
@@ -394,11 +395,17 @@ else
         var projectClaim = summaryRows.Sum(row => row.BudgetedSales);
         var cashReceived = invoiceSummary?.TotalPaid ?? 0m;
 
+        // Left to claim is net of the retention future valuations will withhold — the same
+        // CashflowMaths the project Cashflow tab uses, so the two agree to the penny.
+        var retentionStillToWithhold = CashflowMaths.RetentionStillToWithhold(
+            projectClaim, figures.TotalWorksComplete, terms?.RetentionPercent ?? 0m);
+
         return new CashRow(
             ProjectClaim: projectClaim,
             CashReceived: cashReceived,
             RetentionOutstanding: retentionOutstanding,
-            LeftToClaim: projectClaim - cashReceived - retentionOutstanding,
+            LeftToClaim: CashflowMaths.LeftToClaim(
+                projectClaim, cashReceived, retentionOutstanding, retentionStillToWithhold),
             Drawdown: drawdown,
             WoLeftToInvoice: woCommitted - woInvoiced,
             BillsUnpaid: billsUnpaid,

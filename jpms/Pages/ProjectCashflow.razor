@@ -3,6 +3,7 @@
 @using Jewel.JPMS.Contracts.Commercial
 @using Jewel.JPMS.Contracts.Procurement
 @using Jewel.JPMS.Contracts.ValuationInvoices
+@using Jewel.JPMS.Contracts.Variations
 @using Jewel.JPMS.Features.Commercial
 @using Jewel.JPMS.Features.Procurement
 @using Jewel.JPMS.Models
@@ -76,7 +77,14 @@ else
                 <div class="flex items-baseline justify-between gap-4 px-4 py-3 border-t-2 border-line">
                     <div>
                         <p class="text-sm font-semibold text-content"
-                           title="Project claim less cash allocated — the value of works still to be claimed from the client">Left to claim</p>
+                           title="Project claim less cash allocated, less the retention that will be withheld on the works still to value — what can actually be invoiced to the client before the releases">Left to claim</p>
+                        @if (RetentionStillToWithhold != 0m)
+                        {
+                            <p class="text-xs text-content-subtle mt-0.5"
+                               title="Valuation invoices are raised net of retention, so this slice of the remainder is never invoiceable on a valuation — it comes back through the release rows below instead">
+                                less @Money(RetentionStillToWithhold) retention to be withheld (@Pct(RetentionPercent) of works left to value)
+                            </p>
+                        }
                         @if (InvoicedAwaitingPayment != 0m)
                         {
                             <p class="text-xs text-content-subtle mt-0.5">of which @Money(InvoicedAwaitingPayment) already invoiced &amp; awaiting payment</p>
@@ -164,6 +172,43 @@ else
                     <p class="text-xl font-semibold @(ProjectCompletionCashflow < 0m ? "text-negative" : "text-positive") whitespace-nowrap">@Money(ProjectCompletionCashflow)</p>
                 </div>
             </div>
+
+            @* ── Potential — unapproved variations. A separate, dashed card BELOW the statement:
+               nothing in it is confirmed, so it must never read as part of the position above. ── *@
+            @if (PendingVariations.Count > 0)
+            {
+            <div class="rounded-xl border border-dashed border-line bg-surface mb-4">
+                <div class="px-4 py-3">
+                    <p class="text-sm font-semibold text-content"
+                       title="Variation orders not yet decided — quoting, issued, or awaiting an Architect's Instruction — at their estimated values. Approved variations are already inside the project claim; rejected ones are gone.">Potential — unapproved variations</p>
+                    <p class="text-xs text-content-subtle mt-0.5">Not confirmed — no commercial effect until approved. Kept apart from the statement above on purpose.</p>
+                </div>
+                @foreach (var vo in PendingVariations)
+                {
+                    <div class="flex items-baseline justify-between gap-4 px-4 py-2.5 border-t border-line">
+                        <div>
+                            <p class="text-sm text-content">
+                                @(string.IsNullOrEmpty(vo.DisplayNumber) ? vo.Reference : vo.DisplayNumber) · @vo.Title
+                            </p>
+                            <p class="text-xs text-content-subtle mt-0.5" title="@vo.Status.Hint()">@vo.Status.DisplayName()</p>
+                        </div>
+                        <p class="text-sm font-medium text-content whitespace-nowrap">
+                            @(vo.EstimatedValue is { } estimate ? Money(estimate) : "no estimate yet")
+                        </p>
+                    </div>
+                }
+                <div class="flex items-baseline justify-between gap-4 px-4 py-3 border-t-2 border-line">
+                    <p class="text-sm font-semibold text-content"
+                       title="The sum of the estimated values above — claim value that may yet be added to the project">Potential additional claim</p>
+                    <p class="text-base font-semibold text-content whitespace-nowrap">@AddBack(PotentialVariationValue)</p>
+                </div>
+                <div class="flex items-baseline justify-between gap-4 px-4 py-3 border-t border-line">
+                    <p class="text-sm font-semibold text-content"
+                       title="Project completion cashflow plus every unapproved variation at its estimate — if all of them are approved and claimed. The costs to deliver them are not yet in the drawdowns, so treat this as the upper bound of the upside.">Potential project completion cashflow</p>
+                    <p class="text-lg font-semibold @(PotentialProjectCompletionCashflow < 0m ? "text-negative" : "text-positive") whitespace-nowrap">@Money(PotentialProjectCompletionCashflow)</p>
+                </div>
+            </div>
+            }
             }
         </LoadGate>
         </div>
@@ -183,6 +228,13 @@ else
                 confirmed releases, from the retention terms on the Setup tab). Valuation invoices
                 are raised net of retention, so retention held is money earned but not invoiceable
                 until released.
+            </p>
+            <p class="text-xs text-content-subtle">
+                <span class="font-semibold text-content">Left to claim</span> is the project claim
+                less cash allocated, and also less the retention that will be withheld on the works
+                still to value — that slice of the remainder is never invoiceable on a valuation,
+                and comes back through the two release rows instead. Deducting it here is what
+                stops the statement counting it twice.
             </p>
             <p class="text-xs text-content-subtle">
                 <span class="font-semibold text-content">Cost centre drawdowns</span> reuse the
@@ -205,6 +257,14 @@ else
                 against the revised contract sum with due dates anchored to practical completion. A
                 confirmed release is no longer added back because it has moved into the claim —
                 and, once paid, into cash allocated.
+            </p>
+            <p class="text-xs text-content-subtle">
+                <span class="font-semibold text-content">Potential — unapproved variations</span>
+                sits in its own dashed card below the statement because nothing in it is
+                confirmed: variations still quoting, issued, or awaiting an Architect's
+                Instruction, at their estimated values. Approved variations are already inside
+                the project claim; rejected ones are gone. The costs to deliver them are not yet
+                in the drawdowns, so the potential figure is the upper bound of the upside.
             </p>
         </aside>
         </div>
@@ -235,6 +295,7 @@ else
     private IReadOnlyList<ProjectCostOfSalesLine>? costLines;
     private IReadOnlyList<PackageReconciliationRow>? packageRows;
     private IReadOnlyList<UnallocatedSiteBill>? unallocatedBills;
+    private IReadOnlyList<VariationOrder>? variationOrders;
 
     private IReadOnlyList<WorkOrderInvoiceSummary> WoSummaries => woSummaries ?? Array.Empty<WorkOrderInvoiceSummary>();
     private IReadOnlyList<ProjectCostOfSalesLine> CostLines => costLines ?? Array.Empty<ProjectCostOfSalesLine>();
@@ -255,7 +316,8 @@ else
         && woSummaries is not null
         && costLines is not null
         && packageRows is not null
-        && unallocatedBills is not null;
+        && unallocatedBills is not null
+        && variationOrders is not null;
 
     // ── The claim — the valuation report's counting lines ──
     private decimal ContractSales => Summary.Current(ProjectId).Sum(row => row.BudgetedSales);
@@ -289,7 +351,19 @@ else
     private decimal CashReceived => invoiceSummary?.TotalPaid ?? 0m;
     private decimal InvoicedAwaitingPayment => invoiceSummary?.Outstanding ?? 0m;
     private decimal CashAllocated => CashReceived + RetentionOutstanding;
-    private decimal LeftToClaim => ContractSales - CashAllocated;
+
+    // Left to claim is NET of the retention that future valuations will withhold: valuation
+    // invoices are raised net of retention, so that slice of the remainder is never
+    // invoiceable on a valuation — it comes back through the release rows instead. Without
+    // this deduction the statement counts it twice (here and in the forecast releases).
+    // Shared with CashSummary.razor via CashflowMaths so the two pages agree to the penny.
+    private decimal RetentionPercent => RetentionTerms?.RetentionPercent ?? 0m;
+
+    private decimal RetentionStillToWithhold => CashflowMaths.RetentionStillToWithhold(
+        ContractSales, ValuationFigures.TotalWorksComplete, RetentionPercent);
+
+    private decimal LeftToClaim => CashflowMaths.LeftToClaim(
+        ContractSales, CashReceived, RetentionOutstanding, RetentionStillToWithhold);
 
     // ── The cash still to go out — work orders committed and Xero purchase spend ──
     // Drafts count (an intended commitment being written up); rejected drafts don't —
@@ -361,6 +435,22 @@ else
 
     private decimal ProjectCompletionCashflow => PracticalCompletionCashflow + Release2AddBack;
 
+    // ── Potential — unapproved variations, kept apart from the statement above ──
+    // Pre-approval only (quoting / issued / awaiting AI): approved variations are already
+    // inside the project claim, rejected ones are gone. Ordered as the Variations tab lists
+    // them so the same document reads in the same place on both screens.
+    private IReadOnlyList<VariationOrder> PendingVariations =>
+        (variationOrders ?? Array.Empty<VariationOrder>())
+            .Where(order => order.Status.IsPreApproval())
+            .OrderBy(order => order.Number)
+            .ToList();
+
+    private decimal PotentialVariationValue =>
+        CashflowMaths.PotentialVariationValue(variationOrders ?? Array.Empty<VariationOrder>());
+
+    private decimal PotentialProjectCompletionCashflow =>
+        ProjectCompletionCashflow + PotentialVariationValue;
+
     private static string AddBack(decimal value) => value == 0m ? "—" : $"+ {Money(value)}";
 
     private static string Money(decimal value) =>
@@ -394,11 +484,13 @@ else
             var costLinesTask = Queries.AskAsync(new ListProjectCostOfSalesLines(ProjectId), CancellationToken.None);
             var packageRowsTask = Queries.AskAsync(new ListPackageReconciliation(ProjectId), CancellationToken.None);
             var unallocatedBillsTask = Queries.AskAsync(new ListUnallocatedSiteBills(ProjectId), CancellationToken.None);
+            var variationOrdersTask = Queries.AskAsync(new ListVariationOrdersForProject(ProjectId), CancellationToken.None);
             invoiceSummary = await invoiceSummaryTask;
             woSummaries = await woSummariesTask;
             costLines = await costLinesTask;
             packageRows = await packageRowsTask;
             unallocatedBills = await unallocatedBillsTask;
+            variationOrders = await variationOrdersTask;
         }
         catch
         {

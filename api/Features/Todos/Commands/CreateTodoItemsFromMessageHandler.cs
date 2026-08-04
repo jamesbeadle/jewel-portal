@@ -74,7 +74,8 @@ public sealed class CreateTodoItemsFromMessageHandler : ICommandHandler<CreateTo
 
             var requestTagged = await threadTagger.TagThreadAsync(
                 command.MessageId, snapshot.InternetMessageId, snapshot.ConversationId,
-                TriageCategories.ForRecord(request.TagReference), cancellationToken);
+                TriageCategories.ForRecord(request.TagReference), cancellationToken,
+                anchorReceivedAt: snapshot.ReceivedAt);
             if (!requestTagged)
                 throw new InvalidOperationException("The email couldn't be tagged to the request. Please try again.");
         }
@@ -125,7 +126,8 @@ public sealed class CreateTodoItemsFromMessageHandler : ICommandHandler<CreateTo
         {
             var tagged = await threadTagger.TagThreadAsync(
                 command.MessageId, snapshot.InternetMessageId, snapshot.ConversationId,
-                TriageCategories.ForRecord(entity.Reference), cancellationToken);
+                TriageCategories.ForRecord(entity.Reference), cancellationToken,
+                anchorReceivedAt: snapshot.ReceivedAt);
             if (!tagged)
                 throw new InvalidOperationException("The email couldn't be tagged to the new to-do items. Please try again.");
         }
@@ -155,7 +157,7 @@ public sealed class CreateTodoItemsFromMessageHandler : ICommandHandler<CreateTo
             {
                 await threadTagger.TagThreadAsync(
                     command.MessageId, snapshot.InternetMessageId, snapshot.ConversationId,
-                    bucket, cancellationToken);
+                    bucket, cancellationToken, anchorReceivedAt: snapshot.ReceivedAt);
             }
             catch (Exception ex) when (ex is not OperationCanceledException) { /* best-effort */ }
         }

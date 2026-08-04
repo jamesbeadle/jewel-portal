@@ -1,9 +1,11 @@
 @page "/projects/{ProjectId}/requests"
 @page "/projects/{ProjectId}/requests/{Kind}"
 @using Jewel.JPMS.Contracts.Requests
+@using Jewel.JPMS.Features.RecordLinks
 @inject AuthService Auth
 @inject SessionService Session
 @inject IRequestRegister RequestRegister
+@inject RecordActivityReadModel Activity
 @inject IVariationStore Variations
 @inject IProcurementStore Procurement
 @inject IAgentDesk Agents
@@ -306,7 +308,8 @@ else
                                   OnToggleSelectAll="ToggleSelectAll"
                                   CanChangeStatus="CanChangeStatus"
                                   OnStatusChange="ChangeRequestStatus"
-                                  StatusBusyRequestId="@statusBusyRequestId" />
+                                  StatusBusyRequestId="@statusBusyRequestId"
+                                  ActivityFor="record => Activity.For(ProjectId, RecordType.Request, record.RequestId)" />
                 </div>
             }
         }
@@ -484,6 +487,10 @@ else
                                     <td class="px-4 py-3">
                                         <a class="text-content font-medium hover:underline underline-offset-4"
                                            href="@($"/projects/{ProjectId}/variations/{order.VariationOrderId}")">@order.Title</a>
+                                        @* Recent triage activity — the api coalesces the historic
+                                           VOQ-typed rows onto Variation, so one lookup covers the
+                                           variation's whole correspondence. *@
+                                        <ActivityBadge Activity="@Activity.For(ProjectId, RecordType.Variation, order.VariationOrderId)" Class="ml-1.5" />
                                     </td>
                                     <td class="px-4 py-3 whitespace-nowrap">
                                         @{ var sourceRequest = RequestFor(order); }
@@ -1443,13 +1450,19 @@ else
         await Session.EnsureLoadedAsync();
         if (!Auth.IsSignedIn) { Nav.NavigateTo("/login", forceLoad: true); return; }
         RequestRegister.OnChange += StateHasChanged;
+        Activity.OnChanged += StateHasChanged;
         // Refresh on entry: cached requests render immediately, then update when the
         // background reload lands — so navigating back to this tab never shows stale data.
         RequestRegister.Refresh(ProjectId);
         Procurement.Refresh(ProjectId); // Background revalidation of work orders (issued-WO column).
+        Activity.Refresh(ProjectId);    // Activity badges land in the background — absent until then.
         await LoadVariationsAsync();
         isLoaded = true;
     }
 
-    public void Dispose() => RequestRegister.OnChange -= StateHasChanged;
+    public void Dispose()
+    {
+        RequestRegister.OnChange -= StateHasChanged;
+        Activity.OnChanged -= StateHasChanged;
+    }
 }

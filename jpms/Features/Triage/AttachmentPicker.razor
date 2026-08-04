@@ -1,0 +1,295 @@
+@namespace Jewel.JPMS.Features.Triage
+@using Jewel.JPMS.Contracts.MailboxCompose
+@implements IDisposable
+@inject IDrawingStore Drawings
+@inject IProgressStore Progress
+
+@* The composer's attachment tray: what's attached so far (chips with remove), plus four ways to
+   add — files from this computer, drawings from a project's register, progress photos, and the
+   opened email's own attachments (forwarding them on). Drawings and photos are attached by id and
+   resolved server-side from blob storage, so nothing round-trips through the browser. *@
+
+<div class="space-y-2">
+    @if (Attachments.Count > 0)
+    {
+        <div class="flex flex-wrap gap-1.5">
+            @foreach (var attachment in Attachments)
+            {
+                <span @key="attachment.Key" class="inline-flex items-center gap-1.5 rounded-full bg-surface-raised border border-line px-2.5 py-1 text-xs text-content">
+                    <span>@AttachmentGlyph(attachment.Source)</span>
+                    <span class="max-w-[16rem] truncate">@attachment.FileName</span>
+                    <span class="text-content-faint">@SizeLabel(attachment.SizeBytes)</span>
+                    <button type="button" class="text-content-subtle hover:text-negative" title="Remove"
+                            @onclick="() => RemoveAsync(attachment)">✕</button>
+                </span>
+            }
+        </div>
+    }
+
+    <div class="flex flex-wrap items-center gap-2 text-xs">
+        <label class="inline-flex items-center gap-1 rounded-lg border border-line px-2.5 py-1.5 text-content-muted hover:text-content hover:border-line-strong cursor-pointer">
+            📎 Attach files
+            <InputFile OnChange="OnFilesPicked" multiple class="hidden" />
+        </label>
+        <button type="button" class="@SourceButtonClass(Panel.Drawings)" @onclick="() => TogglePanel(Panel.Drawings)">📐 Project drawings</button>
+        <button type="button" class="@SourceButtonClass(Panel.Photos)" @onclick="() => TogglePanel(Panel.Photos)">📷 Progress photos</button>
+        @if (OriginalAttachments is { Count: > 0 })
+        {
+            <button type="button" class="@SourceButtonClass(Panel.Original)" @onclick="() => TogglePanel(Panel.Original)">✉️ This email's attachments</button>
+        }
+        @if (oversizeNote is not null)
+        {
+            <span class="text-negative">@oversizeNote</span>
+        }
+    </div>
+
+    @if (openPanel != Panel.None)
+    {
+        <div class="rounded-lg border border-line bg-surface-raised p-3 space-y-2">
+            @if (openPanel is Panel.Drawings or Panel.Photos)
+            {
+                <div>
+                    <label class="block text-[11px] uppercase tracking-wider text-content-subtle font-semibold mb-1">Project</label>
+                    <select class="field" value="@panelProjectId" @onchange="OnPanelProjectChanged">
+                        <option value="">Select a project…</option>
+                        @foreach (var project in Projects)
+                        {
+                            <option value="@project.ProjectId">@project.Reference — @project.Name</option>
+                        }
+                    </select>
+                </div>
+            }
+
+            @if (openPanel == Panel.Drawings)
+            {
+                @if (string.IsNullOrEmpty(panelProjectId))
+                {
+                    <p class="text-xs text-content-subtle">Choose a project to list its drawing register.</p>
+                }
+                else if (!Drawings.DrawingsLoadedFor(panelProjectId))
+                {
+                    <p class="text-xs text-content-subtle">Loading drawings…</p>
+                }
+                else if (Drawings.DrawingsFor(panelProjectId).Count == 0)
+                {
+                    <p class="text-xs text-content-subtle">No drawings on this project yet.</p>
+                }
+                else
+                {
+                    <div class="max-h-56 overflow-y-auto divide-y divide-line">
+                        @foreach (var drawing in Drawings.DrawingsFor(panelProjectId))
+                        {
+                            <div @key="drawing.DrawingId" class="py-1.5">
+                                <button type="button" class="w-full text-left text-xs text-content hover:text-accent flex items-center gap-2"
+                                        @onclick="() => ToggleDrawing(drawing.DrawingId)">
+                                    <span class="font-mono">@drawing.DrawingCode</span>
+                                    <span class="truncate flex-1">@drawing.Title</span>
+                                    <span class="text-content-faint">@(expandedDrawingId == drawing.DrawingId ? "▾" : "▸")</span>
+                                </button>
+                                @if (expandedDrawingId == drawing.DrawingId)
+                                {
+                                    @if (!Drawings.RevisionsLoadedFor(drawing.DrawingId))
+                                    {
+                                        <p class="text-[11px] text-content-subtle pl-4 pt-1">Loading revisions…</p>
+                                    }
+                                    else
+                                    {
+                                        <div class="pl-4 pt-1 space-y-1">
+                                            @foreach (var revision in Drawings.RevisionsFor(drawing.DrawingId))
+                                            {
+                                                <button type="button" @key="revision.DrawingRevisionId"
+                                                        class="w-full text-left text-[11px] text-content-muted hover:text-accent flex items-center gap-2"
+                                                        @onclick="() => AddDrawingAsync(revision)">
+                                                    <span class="font-medium">Rev @revision.RevisionLabel</span>
+                                                    <span class="truncate flex-1">@revision.FileName</span>
+                                                    <span>@(revision.ApprovalStatus == DrawingApprovalStatus.Approved ? "Approved" : revision.ApprovalStatus == DrawingApprovalStatus.Archived ? "Archived" : "Unapproved")</span>
+                                                    <span class="text-content-faint">@SizeLabel(revision.FileSizeBytes ?? 0)</span>
+                                                </button>
+                                            }
+                                        </div>
+                                    }
+                                }
+                            </div>
+                        }
+                    </div>
+                }
+            }
+            else if (openPanel == Panel.Photos)
+            {
+                @if (string.IsNullOrEmpty(panelProjectId))
+                {
+                    <p class="text-xs text-content-subtle">Choose a project to list its progress photos.</p>
+                }
+                else if (!Progress.UpdatesLoadedFor(panelProjectId))
+                {
+                    <p class="text-xs text-content-subtle">Loading progress updates…</p>
+                }
+                else if (Progress.UpdatesFor(panelProjectId).Count == 0)
+                {
+                    <p class="text-xs text-content-subtle">No progress updates on this project yet.</p>
+                }
+                else
+                {
+                    <div class="max-h-64 overflow-y-auto space-y-2">
+                        @foreach (var update in Progress.UpdatesFor(panelProjectId))
+                        {
+                            <div @key="update.ProgressUpdateId">
+                                <p class="text-[11px] uppercase tracking-wider text-content-subtle font-semibold">
+                                    @update.Title@(update.WorkDate is { } wd ? $" — {wd:d MMM yyyy}" : "")
+                                </p>
+                                <div class="flex flex-wrap gap-1.5 pt-1">
+                                    @foreach (var photo in update.Photos)
+                                    {
+                                        <button type="button" @key="photo.ProgressPhotoId" title="@photo.FileName — attach"
+                                                class="relative rounded border border-line overflow-hidden hover:border-accent"
+                                                @onclick="() => AddPhotoAsync(photo)">
+                                            <img src="/api/progress-photos/@photo.ProgressPhotoId/file?inline=1" alt="@photo.FileName"
+                                                 class="h-14 w-14 object-cover" loading="lazy" />
+                                        </button>
+                                    }
+                                </div>
+                            </div>
+                        }
+                    </div>
+                }
+            }
+            else if (openPanel == Panel.Original && OriginalAttachments is not null)
+            {
+                <div class="space-y-1">
+                    @foreach (var attachment in OriginalAttachments)
+                    {
+                        <button type="button" @key="attachment.Id"
+                                class="w-full text-left text-xs text-content-muted hover:text-accent flex items-center gap-2"
+                                @onclick="() => AddOriginalAsync(attachment)">
+                            <span>📎</span>
+                            <span class="truncate flex-1">@attachment.Name</span>
+                            <span class="text-content-faint">@SizeLabel(attachment.Size)</span>
+                        </button>
+                    }
+                </div>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    /// <summary>The attachments currently on the composed email. Owned by the parent; this
+    /// component only proposes additions/removals through <see cref="AttachmentsChanged"/>.</summary>
+    [Parameter] public IReadOnlyList<ComposeDraftAttachment> Attachments { get; set; } = Array.Empty<ComposeDraftAttachment>();
+    [Parameter] public EventCallback<IReadOnlyList<ComposeDraftAttachment>> AttachmentsChanged { get; set; }
+
+    /// <summary>Projects offered by the drawings/photos panels' project select.</summary>
+    [Parameter] public IReadOnlyList<Project> Projects { get; set; } = Array.Empty<Project>();
+
+    /// <summary>Pre-seeds the panels' project select (e.g. the reply form's chosen project).</summary>
+    [Parameter] public string? ProjectId { get; set; }
+
+    /// <summary>The opened email's own attachments, offered for forwarding; null hides the tab.</summary>
+    [Parameter] public IReadOnlyList<IntakeAttachment>? OriginalAttachments { get; set; }
+    [Parameter] public string? OriginalMessageId { get; set; }
+
+    private const long MaxFileBytes = 25_000_000;
+
+    private enum Panel { None, Drawings, Photos, Original }
+    private Panel openPanel = Panel.None;
+    private string panelProjectId = "";
+    private string? expandedDrawingId;
+    private string? oversizeNote;
+
+    protected override void OnInitialized()
+    {
+        Drawings.OnChange += StoreChanged;
+        Progress.OnChange += StoreChanged;
+    }
+
+    protected override void OnParametersSet()
+    {
+        if (string.IsNullOrEmpty(panelProjectId) && !string.IsNullOrEmpty(ProjectId))
+            panelProjectId = ProjectId!;
+    }
+
+    private void StoreChanged() => InvokeAsync(StateHasChanged);
+
+    private void TogglePanel(Panel panel)
+    {
+        openPanel = openPanel == panel ? Panel.None : panel;
+        oversizeNote = null;
+        if (openPanel is Panel.Drawings && !string.IsNullOrEmpty(panelProjectId))
+            Drawings.Refresh(panelProjectId);
+        if (openPanel is Panel.Photos && !string.IsNullOrEmpty(panelProjectId))
+            Progress.Refresh(panelProjectId);
+    }
+
+    private void OnPanelProjectChanged(ChangeEventArgs e)
+    {
+        panelProjectId = e.Value?.ToString() ?? "";
+        expandedDrawingId = null;
+        if (string.IsNullOrEmpty(panelProjectId)) return;
+        if (openPanel == Panel.Drawings) Drawings.Refresh(panelProjectId);
+        if (openPanel == Panel.Photos) Progress.Refresh(panelProjectId);
+    }
+
+    private void ToggleDrawing(string drawingId) =>
+        expandedDrawingId = expandedDrawingId == drawingId ? null : drawingId;
+
+    private async Task OnFilesPicked(InputFileChangeEventArgs e)
+    {
+        oversizeNote = null;
+        var added = new List<ComposeDraftAttachment>(Attachments);
+        foreach (var file in e.GetMultipleFiles(20))
+        {
+            if (file.Size > MaxFileBytes)
+            {
+                oversizeNote = $"{file.Name} is over 25 MB — attach a smaller file.";
+                continue;
+            }
+            added.Add(ComposeDraftAttachment.FromUpload(file));
+        }
+        await AttachmentsChanged.InvokeAsync(added);
+    }
+
+    private Task AddDrawingAsync(DrawingRevision revision) =>
+        AddAsync(ComposeDraftAttachment.FromDrawing(revision.DrawingRevisionId, revision.FileName, revision.FileSizeBytes ?? 0));
+
+    private Task AddPhotoAsync(ProgressPhoto photo) =>
+        AddAsync(ComposeDraftAttachment.FromProgressPhoto(photo.ProgressPhotoId, photo.FileName, photo.FileSizeBytes));
+
+    private Task AddOriginalAsync(IntakeAttachment attachment) =>
+        AddAsync(ComposeDraftAttachment.FromOriginal(OriginalMessageId ?? "", attachment.Id, attachment.Name, attachment.Size));
+
+    private async Task AddAsync(ComposeDraftAttachment attachment)
+    {
+        // The same file attached twice is a mistake, not a request for two copies.
+        if (Attachments.Any(a => a.Source == attachment.Source && a.Source != ComposeAttachmentSource.Upload && a.Id == attachment.Id))
+            return;
+        await AttachmentsChanged.InvokeAsync(Attachments.Append(attachment).ToList());
+    }
+
+    private Task RemoveAsync(ComposeDraftAttachment attachment) =>
+        AttachmentsChanged.InvokeAsync(Attachments.Where(a => a.Key != attachment.Key).ToList());
+
+    private string SourceButtonClass(Panel panel) =>
+        "inline-flex items-center gap-1 rounded-lg border px-2.5 py-1.5 "
+        + (openPanel == panel
+            ? "border-accent text-accent bg-accent/5"
+            : "border-line text-content-muted hover:text-content hover:border-line-strong");
+
+    private static string AttachmentGlyph(ComposeAttachmentSource source) => source switch
+    {
+        ComposeAttachmentSource.Drawing => "📐",
+        ComposeAttachmentSource.ProgressPhoto => "📷",
+        ComposeAttachmentSource.OriginalMessage => "✉️",
+        _ => "📎"
+    };
+
+    private static string SizeLabel(long bytes) =>
+        bytes >= 1_048_576 ? $"{bytes / 1_048_576.0:0.#} MB"
+        : bytes >= 1024 ? $"{bytes / 1024.0:0.#} KB"
+        : bytes > 0 ? $"{bytes} B" : "";
+
+    public void Dispose()
+    {
+        Drawings.OnChange -= StoreChanged;
+        Progress.OnChange -= StoreChanged;
+    }
+}

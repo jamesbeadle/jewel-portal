@@ -101,7 +101,8 @@ public sealed class LinkMessageToRecordHandler : ICommandHandler<LinkMessageToRe
         // (reply/forward) tagging is best-effort.
         var tagged = await threadTagger.TagThreadAsync(
             command.MessageId, snapshot.InternetMessageId, snapshot.ConversationId,
-            TriageCategories.ForRecord(record.TagReference), cancellationToken);
+            TriageCategories.ForRecord(record.TagReference), cancellationToken,
+            anchorReceivedAt: snapshot.ReceivedAt);
         if (!tagged)
             throw new InvalidOperationException("The email couldn't be tagged to the record. Please try again.");
 
@@ -113,29 +114,34 @@ public sealed class LinkMessageToRecordHandler : ICommandHandler<LinkMessageToRe
             try
             {
                 stampedBucket = await threadTagger.TagThreadAsync(
-                    command.MessageId, snapshot.InternetMessageId, snapshot.ConversationId, bucket, cancellationToken);
+                    command.MessageId, snapshot.InternetMessageId, snapshot.ConversationId, bucket, cancellationToken,
+                    anchorReceivedAt: snapshot.ReceivedAt);
             }
             catch (Exception ex) when (ex is not OperationCanceledException) { /* best-effort */ }
         }
 
-        // Audit — client-facing scope only (docs/Pathway-Split-Platform-Flow-Plan.md §4.1): the
-        // trail records interactions on the client side of the wall.
+        // Audit — every successful link is recorded, whatever the pathway (scope widened
+        // 2026-08-04 along the route the event model reserved: see AuditEventType). The record
+        // activity indicator derives each record's recent-communications score from these rows,
+        // so a bid package or work order link matters as much as a client one. Pathway carries
+        // the thread's side ("" for pathway-neutral links like a Todo), and the client-facing
+        // views keep filtering on it — exactly as the 2026-07-22 scope decision anticipated.
         var resultingBucket = bucket ?? existingBuckets.FirstOrDefault();
-        if (string.Equals(resultingBucket, TriageCategories.Client, StringComparison.OrdinalIgnoreCase))
-            await audit.WriteAsync(
-                !hadBucket && stampedBucket ? AuditEventType.EmailTriaged : AuditEventType.RecordLinked,
-                !hadBucket && stampedBucket
-                    ? $"Email filed under Client and linked to {record.Reference}."
-                    : $"Email linked to {record.Reference}.",
-                pathway: AuditTrail.PathwayLabel(TriageCategories.Client),
-                projectId: NullIfEmpty(record.ProjectId),
-                recordType: record.Type,
-                recordId: record.RecordId,
-                recordReference: record.Reference,
-                conversationId: snapshot.ConversationId,
-                emailMessageId: command.MessageId,
-                internetMessageId: snapshot.InternetMessageId,
-                cancellationToken: cancellationToken);
+        var pathwayLabel = AuditTrail.PathwayLabel(resultingBucket);
+        await audit.WriteAsync(
+            !hadBucket && stampedBucket ? AuditEventType.EmailTriaged : AuditEventType.RecordLinked,
+            !hadBucket && stampedBucket
+                ? $"Email filed under {pathwayLabel} and linked to {record.Reference}."
+                : $"Email linked to {record.Reference}.",
+            pathway: pathwayLabel,
+            projectId: NullIfEmpty(record.ProjectId),
+            recordType: record.Type,
+            recordId: record.RecordId,
+            recordReference: record.Reference,
+            conversationId: snapshot.ConversationId,
+            emailMessageId: command.MessageId,
+            internetMessageId: snapshot.InternetMessageId,
+            cancellationToken: cancellationToken);
 
         return new Acknowledgement(record.RecordId);
     }

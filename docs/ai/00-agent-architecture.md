@@ -77,9 +77,12 @@ six round trips at 5–15s each does not fit, and there is no streaming escape h
 `HttpRequest` and reads the `jpms_session` cookie. There is no service-principal, API-key or
 system-user path into the API. Any server-side agent has to invent one.
 
-**C3 — The system cannot send email.** Graph permission is `Mail.ReadWrite`; `Mail.Send` is
-deliberately not granted, and `IMailboxGraphClient` carries the comment *"there is deliberately NO
-send method on this interface"*. Everything outbound is an Outlook **draft** a human opens and sends.
+**C3 — Agents cannot send email; the portal can (revised 2026-08-04).** Graph now carries
+`Mail.Send` (admin-consented, scoped to the projects mailbox by ApplicationAccessPolicy) for the
+triage compose feature: a HUMAN pressing Send in the portal sends through the single
+`IMailboxGraphClient.SendDraftAsync` chokepoint, behind the triage-role gate, with an `EmailSent`
+audit row carrying the recipients snapshot. Everything agent-authored remains an Outlook **draft**
+— no agent tool is (or may be) wired to `SendDraftAsync`; ADR-006 (§9) records the revised rule.
 
 **C4 — There are no foreign keys and no transactions across features.** Every link is a loose
 `string` id (`JpmsContext.cs:150-162`). There is no outbox and no event bus; cross-feature effects
@@ -473,10 +476,20 @@ the tool descriptor as the map. Without this the human-in-the-loop model is deco
 
 ---
 
-## 9. ADR-006 — Email stays draft-only
+## 9. ADR-006 — Agent email stays draft-only (revised 2026-08-04: humans send from the portal)
 
-C3 is not a limitation to work around. It is the correct behaviour, enforced by a permission that
-cannot be bypassed by a bug or a prompt injection.
+**Revision 2026-08-04.** The blanket "the app cannot send" rule is retired: the PM team's actual
+job in triage is answering email, and staging a draft they then had to find in Outlook was the
+reason triage went unused. `Mail.Send` is now granted (scoped to `projects@jewelbb.co.uk` by
+ApplicationAccessPolicy), and the triage composer sends for real. The mitigations move from
+"permission withheld" to structure: ONE send call in the codebase (`SendDraftAsync`), reached only
+from the triage-gated compose endpoint on an explicit human click; every send passes through the
+existing draft plumbing first (projects-mailbox auto-Cc, category stamping, sanitised body); a
+failed send degrades to the old behaviour (draft saved, nothing triaged); and every send writes an
+`EmailSent` audit row with the recipients snapshot and the sent copy's webLink.
+
+**For agents, nothing changes** — the paragraphs below stand, enforced now by wiring rather than
+permission: no agent tool calls `SendDraftAsync`, and none may be added.
 
 Every agent-authored email becomes an Outlook draft via the existing `CreateDraftAsync` /
 `CreateReplyDraftAsync` path, tagged to the record, CC'd to the projects mailbox, with a

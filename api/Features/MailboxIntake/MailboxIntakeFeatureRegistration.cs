@@ -64,6 +64,17 @@ public static class MailboxIntakeFeatureRegistration
             services.AddSingleton<IMailboxGraphClient, NullMailboxGraphClient>();
         }
 
+        // Triage compose (POST mailbox/compose): send — or stage — an email from the projects
+        // mailbox. The handler is registered by concrete type too so the multipart endpoint can
+        // pass uploaded file bytes alongside the command.
+        services.AddSingleton<Compose.ComposeHtmlPipeline>();
+        services.AddScoped<Compose.SendMailboxEmailHandler>();
+        services.AddScoped<
+            Jewel.JPMS.Api.Cqrs.ICommandHandler<
+                Jewel.JPMS.Contracts.MailboxCompose.SendMailboxEmail,
+                Jewel.JPMS.Contracts.MailboxCompose.ComposeOutcome>>(
+            sp => sp.GetRequiredService<Compose.SendMailboxEmailHandler>());
+
         return services;
     }
 }

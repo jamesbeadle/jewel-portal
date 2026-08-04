@@ -88,6 +88,7 @@ builder.Services.AddArchitectsReadModels();
 builder.Services.AddCostCentersReadModels();
 builder.Services.AddAgentsReadModels();
 builder.Services.AddXeroReadModels();
+builder.Services.AddRecordLinksReadModels();
 
 builder.Services.AddScoped<IUserDirectory, HttpUserDirectory>();
 builder.Services.AddScoped<IAccessRequestStore, HttpAccessRequestStore>();

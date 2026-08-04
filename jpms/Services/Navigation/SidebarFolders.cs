@@ -178,12 +178,6 @@ public static class SidebarFolders
             {
                 new SidebarRow(new NavigationItem("Valuation Report", "/projects/{project}/valuation"),
                     DesktopNavigation.FinanceRoles),
-                // The finance reconciliation trail (new page): every cost-centre move on the
-                // valuation report — who moved which line, from where to where, when. Sits under
-                // the report it audits; mirrors the API's CommercialTeam gate on the filtered
-                // audit read (AuditEndpoints).
-                new SidebarRow(new NavigationItem("Reconciliation Audit", "/projects/{project}/reconciliation-audit"),
-                    DesktopNavigation.FinanceRoles),
                 new SidebarRow(new NavigationItem("Cashflow", "/projects/{project}/cashflow"),
                     DesktopNavigation.FinanceRoles),
                 // The by-project cash summary: every project's Cashflow statement collapsed to a
@@ -223,6 +217,14 @@ public static class SidebarFolders
             "#audit",
             new[]
             {
+                // The finance reconciliation trail (new page): every cost-centre move on the
+                // valuation report — who moved which line, from where to where, when. Project-
+                // scoped, so it leads the folder (the house pattern: the picked project first,
+                // then company rows). Moved in from Financial Reports (decision 2026-08-04) —
+                // it is a register of who-did-what, not a statement. Mirrors the API's
+                // CommercialTeam gate on the filtered audit read (AuditEndpoints).
+                new SidebarRow(new NavigationItem("Reconciliation Audit", "/projects/{project}/reconciliation-audit"),
+                    DesktopNavigation.FinanceRoles),
                 // The append-only audit register (new page) — who routed, linked and filed what.
                 // Same gate as Triage (Standalone below): the people who make routing decisions
                 // review them.

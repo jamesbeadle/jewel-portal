@@ -179,8 +179,15 @@ public static class RequestsRouteRegistration
 
         // Triage "Reply in thread": an Outlook reply draft staged on the email (projects mailbox,
         // thread quoted behind it) plus a background General request created from the same email.
+        // Superseded by SendMailboxEmail (mailbox/compose) — kept while older open tabs still call it.
         commands.Register<ReplyInThreadFromMessage, ReplyInThreadOutcome>(
             new CommandRoute("POST", "/api/mailbox/message/reply-in-thread", _ => "/api/mailbox/message/reply-in-thread"));
+
+        // Triage compose: send (or stage) an email from the projects mailbox — replies and new
+        // outbound emails alike. JSON path only here; sends with uploaded files go multipart,
+        // posted directly by HttpIntakeQueue (same pattern as the progress-photo upload).
+        commands.Register<Jewel.JPMS.Contracts.MailboxCompose.SendMailboxEmail, Jewel.JPMS.Contracts.MailboxCompose.ComposeOutcome>(
+            new CommandRoute("POST", "/api/mailbox/compose", _ => "/api/mailbox/compose"));
 
         // Attachments: drawing revisions linked from the project register, and site photos. The
         // photo UPLOAD is multipart and posted directly by HttpRequestAttachmentStore, so — like

@@ -99,7 +99,9 @@ public sealed class GetMailboxMessageDetailHandler : IQueryHandler<GetMailboxMes
             .ToList()
             .AsReadOnly();
 
-        return new MailboxMessageDetail(query.MessageId, body, content.IsHtml, attachments);
+        return new MailboxMessageDetail(
+            query.MessageId, body, content.IsHtml, attachments,
+            content.FromEmail, content.FromName, content.To, content.Cc, content.ReplyTo, content.Subject);
     }
 
     private static string Sanitise(string html) => new HtmlSanitizer().Sanitize(html);

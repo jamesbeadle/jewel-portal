@@ -85,10 +85,12 @@ closed request, which returns to `Needs action`.
 
 ## Deployment prerequisites
 
-1. **Graph permission — `Mail.ReadWrite` (application).** The app registration used by the worker
-   needs the application permission `Mail.ReadWrite` with admin consent, scoped (ideally via an
-   ApplicationAccessPolicy) to the `projects@jewelbb.co.uk` mailbox. `Mail.Send` is deliberately
-   NOT granted: JPMS only creates drafts, so withholding it guarantees the app cannot send.
+1. **Graph permissions — `Mail.ReadWrite` + `Mail.Send` (application).** The app registration
+   (shared by the API and worker) needs both application permissions with admin consent, scoped
+   (via an ApplicationAccessPolicy) to the `projects@jewelbb.co.uk` mailbox. `Mail.Send` was
+   deliberately withheld until 2026-08-04; it is now granted for the triage compose feature —
+   the ONE code path that sends (`IMailboxGraphClient.SendDraftAsync`, human-triggered, audited).
+   Request documents themselves remain draft-only: a human reviews and sends them from Outlook.
    Drafting uses the existing client-credentials flow; no new secret beyond the mailbox
    credentials already configured.
 2. **The client secret stays out of source control.** It lives in app settings / Key Vault only
