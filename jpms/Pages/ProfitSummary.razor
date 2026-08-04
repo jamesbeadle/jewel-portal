@@ -113,15 +113,15 @@ else
                                 @* Budgeted: the deal as signed. *@
                                 <th class="px-4 py-3 text-right whitespace-nowrap border-l border-line" title="The initial contract sum — the valuation report's contract lines, before variations.">Initial Contract Sum</th>
                                 <th class="px-4 py-3 text-right whitespace-nowrap" title="The initial contract sum with the assumed markup backed out — the target-cost rule the Financials tab uses.">Initial Contract Costs</th>
-                                <th class="px-4 py-3 text-right whitespace-nowrap" title="Initial contract sum less initial contract costs.">Budgeted Profit</th>
+                                <th class="px-4 py-3 text-right whitespace-nowrap" title="Initial contract sum less initial contract costs; the percentage is the margin on the initial contract sum.">Budgeted Profit</th>
                                 @* Current: money actually certified against money actually spent. *@
                                 <th class="px-4 py-3 text-right whitespace-nowrap border-l border-line" title="Issued and paid valuation invoices to date.">Certified To Date</th>
                                 <th class="px-4 py-3 text-right whitespace-nowrap" title="Allocated Xero purchase spend, net of credit notes — the Financials tab's Actual Cost of Sales.">Actual Cost of Sales</th>
-                                <th class="px-4 py-3 text-right whitespace-nowrap" title="Certified to date less actual cost of sales.">Current Profit</th>
+                                <th class="px-4 py-3 text-right whitespace-nowrap" title="Certified to date less actual cost of sales; the percentage is the margin on certified to date.">Current Profit</th>
                                 @* Forecast: where the job lands. *@
                                 <th class="px-4 py-3 text-right whitespace-nowrap border-l border-line" title="The revised contract sum — initial contract plus net variations.">Contract Value</th>
                                 <th class="px-4 py-3 text-right whitespace-nowrap" title="Committed cost of sales plus remaining drawdown — the Financials tab's Forecasted Cost of Sales total.">Forecasted Cost of Sales</th>
-                                <th class="px-4 py-3 text-right whitespace-nowrap" title="Contract value less forecasted cost of sales.">Forecasted Profit</th>
+                                <th class="px-4 py-3 text-right whitespace-nowrap" title="Contract value less forecasted cost of sales; the percentage is the margin on contract value.">Forecasted Profit</th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-line">
@@ -137,13 +137,22 @@ else
                                     </td>
                                     <td class="px-4 py-3 text-right whitespace-nowrap text-content border-l border-line">@Money(row.InitialContractSum)</td>
                                     <td class="px-4 py-3 text-right whitespace-nowrap text-content">@Money(row.InitialContractCosts)</td>
-                                    <td class="px-4 py-3 text-right whitespace-nowrap font-medium @ProfitClass(row.BudgetedProfit)">@Money(row.BudgetedProfit)</td>
+                                    <td class="px-4 py-3 text-right whitespace-nowrap font-medium @ProfitClass(row.BudgetedProfit)">
+                                        @Money(row.BudgetedProfit)
+                                        @MarginLine(row.BudgetedMargin)
+                                    </td>
                                     <td class="px-4 py-3 text-right whitespace-nowrap text-content border-l border-line">@Money(row.CertifiedToDate)</td>
                                     <td class="px-4 py-3 text-right whitespace-nowrap text-content">@Money(row.ActualCostOfSales)</td>
-                                    <td class="px-4 py-3 text-right whitespace-nowrap font-medium @ProfitClass(row.CurrentProfit)">@Money(row.CurrentProfit)</td>
+                                    <td class="px-4 py-3 text-right whitespace-nowrap font-medium @ProfitClass(row.CurrentProfit)">
+                                        @Money(row.CurrentProfit)
+                                        @MarginLine(row.CurrentMargin)
+                                    </td>
                                     <td class="px-4 py-3 text-right whitespace-nowrap text-content border-l border-line">@Money(row.ContractValue)</td>
                                     <td class="px-4 py-3 text-right whitespace-nowrap text-content">@Money(row.ForecastCostOfSales)</td>
-                                    <td class="px-4 py-3 text-right whitespace-nowrap font-medium @ProfitClass(row.ForecastedProfit)">@Money(row.ForecastedProfit)</td>
+                                    <td class="px-4 py-3 text-right whitespace-nowrap font-medium @ProfitClass(row.ForecastedProfit)">
+                                        @Money(row.ForecastedProfit)
+                                        @MarginLine(row.ForecastedMargin)
+                                    </td>
                                 </tr>
                             }
                         </tbody>
@@ -155,13 +164,22 @@ else
                                     <td class="px-4 py-3 text-content">All projects</td>
                                     <td class="px-4 py-3 text-right whitespace-nowrap text-content border-l border-line">@Money(total.InitialContractSum)</td>
                                     <td class="px-4 py-3 text-right whitespace-nowrap text-content">@Money(total.InitialContractCosts)</td>
-                                    <td class="px-4 py-3 text-right whitespace-nowrap @ProfitClass(total.BudgetedProfit)">@Money(total.BudgetedProfit)</td>
+                                    <td class="px-4 py-3 text-right whitespace-nowrap @ProfitClass(total.BudgetedProfit)">
+                                        @Money(total.BudgetedProfit)
+                                        @MarginLine(total.BudgetedMargin)
+                                    </td>
                                     <td class="px-4 py-3 text-right whitespace-nowrap text-content border-l border-line">@Money(total.CertifiedToDate)</td>
                                     <td class="px-4 py-3 text-right whitespace-nowrap text-content">@Money(total.ActualCostOfSales)</td>
-                                    <td class="px-4 py-3 text-right whitespace-nowrap @ProfitClass(total.CurrentProfit)">@Money(total.CurrentProfit)</td>
+                                    <td class="px-4 py-3 text-right whitespace-nowrap @ProfitClass(total.CurrentProfit)">
+                                        @Money(total.CurrentProfit)
+                                        @MarginLine(total.CurrentMargin)
+                                    </td>
                                     <td class="px-4 py-3 text-right whitespace-nowrap text-content border-l border-line">@Money(total.ContractValue)</td>
                                     <td class="px-4 py-3 text-right whitespace-nowrap text-content">@Money(total.ForecastCostOfSales)</td>
-                                    <td class="px-4 py-3 text-right whitespace-nowrap @ProfitClass(total.ForecastedProfit)">@Money(total.ForecastedProfit)</td>
+                                    <td class="px-4 py-3 text-right whitespace-nowrap @ProfitClass(total.ForecastedProfit)">
+                                        @Money(total.ForecastedProfit)
+                                        @MarginLine(total.ForecastedMargin)
+                                    </td>
                                 </tr>
                             </tfoot>
                         }
@@ -175,7 +193,11 @@ else
                     invoices — against allocated Xero purchase spend to date. Forecasted profit is
                     where the job lands: the revised contract sum including variations, against the
                     Financials tab's forecasted cost of sales (committed cost plus remaining
-                    drawdown). Click a project for its Financials tab.
+                    drawdown). Percentages are margins on value — each profit against its own
+                    revenue column — so the budgeted margin reads
+                    @($"{100m - FinancialSummaryAssumptions.CostFactor * 100m:0.0}%"), not the
+                    @($"{FinancialSummaryAssumptions.MarkupPercent:0.#}%") markup on cost it comes
+                    from. Click a project for its Financials tab.
                 </p>
             }
             </LoadGate>
@@ -243,6 +265,18 @@ else
         public decimal BudgetedProfit => InitialContractSum - InitialContractCosts;
         public decimal CurrentProfit => CertifiedToDate - ActualCostOfSales;
         public decimal ForecastedProfit => ContractValue - ForecastCostOfSales;
+
+        // Margins on value: each profit against its own revenue column — NOT markup on cost —
+        // so the budgeted margin reads ≈9.1% for the assumed 10% markup, by design (see
+        // FinancialSummaryAssumptions.CostFactor's remark on the distinction). Null when the
+        // revenue base is zero: no base, no honest percentage — the cell's % line simply
+        // doesn't render, like any figure that isn't known.
+        public decimal? BudgetedMargin => MarginOn(BudgetedProfit, InitialContractSum);
+        public decimal? CurrentMargin => MarginOn(CurrentProfit, CertifiedToDate);
+        public decimal? ForecastedMargin => MarginOn(ForecastedProfit, ContractValue);
+
+        private static decimal? MarginOn(decimal profit, decimal revenue) =>
+            revenue == 0m ? null : profit / revenue;
     }
 
     private ValuationClaim? LatestClaimFor(string projectId) =>
@@ -298,6 +332,19 @@ else
         value == 0m ? "text-content-muted" : value > 0m ? "text-positive" : "text-negative";
 
     private static string Money(decimal value) => $"£{value:N0}";
+
+    private static string Pct(decimal fraction) => $"{fraction * 100m:0.0}%";
+
+    // The muted % line under a profit figure. Null (no revenue base yet) renders nothing at all —
+    // not a dash, not a gate: a percentage that cannot be computed is simply not shown, the same
+    // rule as any other line of text that isn't known (the loading-states convention).
+    private readonly RenderFragment<decimal?> MarginLine = value => __builder =>
+    {
+        if (value is decimal margin)
+        {
+            <span class="block text-[11px] font-normal text-content-subtle">@Pct(margin)</span>
+        }
+    };
 
     // ---- Loading ------------------------------------------------------------
 
@@ -405,24 +452,32 @@ else
             new ExcelColumn("Initial contract sum", ExcelFormat.Currency),
             new ExcelColumn("Initial contract costs", ExcelFormat.Currency),
             new ExcelColumn("Budgeted profit", ExcelFormat.Currency),
+            new ExcelColumn("Budgeted margin", ExcelFormat.Percent),
             new ExcelColumn("Certified to date", ExcelFormat.Currency),
             new ExcelColumn("Actual cost of sales", ExcelFormat.Currency),
             new ExcelColumn("Current profit", ExcelFormat.Currency),
+            new ExcelColumn("Current margin", ExcelFormat.Percent),
             new ExcelColumn("Contract value", ExcelFormat.Currency),
             new ExcelColumn("Forecasted cost of sales", ExcelFormat.Currency),
-            new ExcelColumn("Forecasted profit", ExcelFormat.Currency));
+            new ExcelColumn("Forecasted profit", ExcelFormat.Currency),
+            new ExcelColumn("Forecasted margin", ExcelFormat.Percent));
 
+        // The margins go out as fractions (ExcelFormat.Percent's contract) and as nulls when
+        // there is no revenue base — a blank cell, matching the table's absent % line.
         void AddRow(string name, ProfitRow row) => sheet.AddRow(
             name,
             row.InitialContractSum,
             row.InitialContractCosts,
             row.BudgetedProfit,
+            row.BudgetedMargin,
             row.CertifiedToDate,
             row.ActualCostOfSales,
             row.CurrentProfit,
+            row.CurrentMargin,
             row.ContractValue,
             row.ForecastCostOfSales,
-            row.ForecastedProfit);
+            row.ForecastedProfit,
+            row.ForecastedMargin);
 
         foreach (var project in projects)
             AddRow(project.Name, RowFor(project.ProjectId));
