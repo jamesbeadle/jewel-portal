@@ -1744,9 +1744,7 @@ else
         _                     => RecordTypeLabel(type).ToLowerInvariant()
     };
 
-    // 25 rows per page (was 5): the queue now reads like a mail client's message list, and the
-    // store's default page size matches, so one read fills the visible list.
-    private const int PageSize = 25;
+    private const int PageSize = 5;
 
     // Session checked and the user signed in. This is NOT "the mailbox is here" — keeping the two
     // apart is what lets the heaviest page in the app show its chrome while four fetches are still

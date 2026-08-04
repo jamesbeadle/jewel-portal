@@ -193,19 +193,35 @@ public sealed class SendMailboxEmailHandler : ICommandHandler<SendMailboxEmail, 
         }
 
         // ---- 6. Stage the draft -------------------------------------------------------------------
-        // Categories on the draft = what the SENT COPY should carry, so it self-files: the marker +
-        // record tag (or Replied for a record-less handled reply) + pathway. A brand-new email with
-        // no record chosen carries none — its sent copy simply lives in Sent Items, like any mail
-        // sent from Outlook, and replies to it queue as fresh correspondence.
+        // Categories on the draft = what the SENT COPY should carry, so it self-files. A reply is
+        // part of the same correspondence as the email it answers, so it INHERITS every record and
+        // to-do tag the inbound thread carries at send time (the triage apply files the thread
+        // BEFORE sending, so tags applied in the same action are already on the anchor). That is
+        // what makes the outbound leg appear in a linked record's communications and in a to-do's
+        // linked-emails list — those views read the mailbox live by tag, and thread-tagging never
+        // sweeps messages that arrive after the decision, which the sent copy always does.
+        // With no record involvement, a handled reply carries Replied; a brand-new email with no
+        // record chosen carries no categories at all (a pathway tag without a workflow tag would
+        // violate the bucket invariant, and Sent Items never queues anyway).
+        var inheritedTags = (snapshot?.Categories ?? Array.Empty<string>())
+            .Where(c => TriageCategories.IsWorkflowTag(c)
+                && !TriageCategories.IsBucketTag(c)
+                && !c.Equals(TriageCategories.Discarded, StringComparison.OrdinalIgnoreCase))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        var workflowStamp = new List<string>();
+        if (recordTag is not null) workflowStamp.Add(recordTag);
+        workflowStamp.AddRange(inheritedTags.Where(t => !workflowStamp.Contains(t, StringComparer.OrdinalIgnoreCase)));
+        if (workflowStamp.Count == 0 && willHandleThread) workflowStamp.Add(TriageCategories.Replied);
+
         var draftCategories = new List<string>();
-        if (recordTag is not null || willHandleThread)
+        if (workflowStamp.Count > 0)
         {
             draftCategories.Add(TriageCategories.Marker);
-            draftCategories.Add(recordTag ?? TriageCategories.Replied);
+            draftCategories.AddRange(workflowStamp);
             if (effectiveBucket is not null) draftCategories.Add(effectiveBucket);
         }
-        // (A new email with no record chosen carries no categories at all — a pathway tag without a
-        // workflow tag would violate the bucket invariant, and Sent Items never queues anyway.)
 
         string draftId;
         string? webLink;
