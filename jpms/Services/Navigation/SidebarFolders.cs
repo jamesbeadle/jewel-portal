@@ -3,21 +3,27 @@ using Jewel.JPMS.Models;
 namespace Jewel.JPMS.Services.Navigation;
 
 /// <summary>
-/// The sidebar's five folders (docs/Pathway-Split-Platform-Flow-Plan.md §6) — the successor to
-/// the old three workspace blocks + flat Company list. Grouping follows how the business thinks:
-/// who the correspondence is with (Client, Subcontractor, Internal), then the job (Project),
-/// then the money (Financials); the people directory lives under Internal. Folders mix scopes
-/// deliberately — project-scoped rows ("/projects/{project}/…" templates) and company rows sit
-/// side by side where the work does (e.g. Workers lives with Labour under Internal). A row that
-/// belongs to no project at all belongs to no folder either: see SidebarFolders.Standalone.
+/// The sidebar's folders (docs/Pathway-Split-Platform-Flow-Plan.md §6) — the successor to the
+/// old three workspace blocks + flat Company list. Grouping follows what the rows are FOR
+/// (decision 2026-08-04, replacing the earlier who-is-it-with split): the external parties first
+/// (Client, Subcontractor — only what each relationship actually needs), then the job (Project),
+/// then the company's own machinery (Internal), time on site (Time), the working money
+/// (Finance), the read-only money (Financial Reports), oversight (Audit) and finally the system
+/// itself (Admin). Folders mix scopes deliberately — project-scoped rows
+/// ("/projects/{project}/…" templates) and company rows sit side by side where the work does
+/// (e.g. Workers lives with Labour under Time). A row that belongs to no project at all belongs
+/// to no folder either: see SidebarFolders.Standalone.
 /// </summary>
 public enum SidebarFolder
 {
     Client,
     Subcontractor,
-    Internal,
     Project,
-    Financials,
+    Internal,
+    Time,
+    Finance,
+    FinancialReports,
+    Audit,
     Admin
 }
 
@@ -65,8 +71,10 @@ public static class SidebarFolders
                     DesktopNavigation.FinanceRoles)
             }),
 
-        // ---- Subcontractor: getting the work bought and delivered, in lifecycle order —
-        // invite bids, place work orders, allocate their invoices. ----
+        // ---- Subcontractor: what the subcontractor relationship needs — inviting bids, and
+        // nothing more. Work Orders and WO Allocation looked at home here but are things WE do
+        // with subcontractor money, not things done with subcontractors, so they live under
+        // Finance (decision 2026-08-04). ----
         new SidebarFolderInfo(
             SidebarFolder.Subcontractor,
             "Subcontractor",
@@ -74,46 +82,7 @@ public static class SidebarFolders
             new[]
             {
                 new SidebarRow(new NavigationItem("Bid Package Invites", "/projects/{project}/bid-package-invites"),
-                    DesktopNavigation.ProjectRoles),
-                new SidebarRow(new NavigationItem("Work Orders", "/projects/{project}/work-orders"),
-                    DesktopNavigation.ProjectRoles),
-                new SidebarRow(new NavigationItem("WO Allocation", "/projects/{project}/work-order-allocation"),
                     DesktopNavigation.ProjectRoles)
-            }),
-
-        // ---- Internal: the company's own machinery — the master to-do list, labour on site and
-        // the worker registry, the audit register, and the people directory. ----
-        new SidebarFolderInfo(
-            SidebarFolder.Internal,
-            "Internal",
-            "#internal",
-            new[]
-            {
-                // The master to-do list: all projects plus company-wide items, with a project
-                // filter (revived page). TodoListRoles, not ProjectRoles — Accounts holds no
-                // project rows but this is the page its work lives on.
-                new SidebarRow(new NavigationItem("Todo", "/todos"),
-                    DesktopNavigation.TodoListRoles),
-                new SidebarRow(new NavigationItem("Labour", "/projects/{project}/labour"),
-                    DesktopNavigation.ProjectRoles),
-                // Mirrors the API's labour registry authorisation (LabourRoleSets.ManageWorkers).
-                new SidebarRow(new NavigationItem("Workers", "/labour/workers"),
-                    DesktopNavigation.WorkerRegistryRoles),
-                // The append-only audit register (new page) — who routed, linked and filed what.
-                // Same gate as Triage (Standalone below): the people who make routing decisions
-                // review them.
-                new SidebarRow(new NavigationItem("Audit Trail", "/audit"),
-                    DesktopNavigation.TriageRoles),
-                // What the assistant has done, on whose behalf, and what it cost. Directors only —
-                // the log carries spend, and the people who authorise it are the people who see it.
-                // Mirrors the API's AiRoles.AllowedToUseAssistant.
-                new SidebarRow(new NavigationItem("Agent Activity", "/agents/activity"),
-                    DesktopNavigation.DirectorRoles),
-                // Everyone the company deals with — the unified page replaces the old separate
-                // Clients and Architects entries (their routes survive; the page filters by
-                // Clients · Architects · Subcontractors · Internal staff).
-                new SidebarRow(new NavigationItem("Directory", "/directory"),
-                    DesktopNavigation.DirectoryRoles)
             }),
 
         // ---- Project: the day-to-day running of the picked job. ----
@@ -138,15 +107,75 @@ public static class SidebarFolders
                     DesktopNavigation.ProjectRoles)
             }),
 
-        // ---- Financials: the picked project's money first, then the company-wide views. ----
+        // ---- Internal: the company's own running lists — the master to-do and the people
+        // directory. Labour/Workers moved to Time and the audit registers to Audit
+        // (decision 2026-08-04). ----
         new SidebarFolderInfo(
-            SidebarFolder.Financials,
-            "Financials",
-            "#financials",
+            SidebarFolder.Internal,
+            "Internal",
+            "#internal",
+            new[]
+            {
+                // The master to-do list: all projects plus company-wide items, with a project
+                // filter (revived page). TodoListRoles, not ProjectRoles — Accounts holds no
+                // project rows but this is the page its work lives on.
+                new SidebarRow(new NavigationItem("Todo", "/todos"),
+                    DesktopNavigation.TodoListRoles),
+                // Everyone the company deals with — the unified page replaces the old separate
+                // Clients and Architects entries (their routes survive; the page filters by
+                // Clients · Architects · Subcontractors · Internal staff).
+                new SidebarRow(new NavigationItem("Directory", "/directory"),
+                    DesktopNavigation.DirectoryRoles)
+            }),
+
+        // ---- Time: timesheets — labour recorded on the picked site, and the company-wide
+        // worker registry it draws from. ----
+        new SidebarFolderInfo(
+            SidebarFolder.Time,
+            "Time",
+            "#time",
+            new[]
+            {
+                new SidebarRow(new NavigationItem("Labour", "/projects/{project}/labour"),
+                    DesktopNavigation.ProjectRoles),
+                // Mirrors the API's labour registry authorisation (LabourRoleSets.ManageWorkers).
+                new SidebarRow(new NavigationItem("Workers", "/labour/workers"),
+                    DesktopNavigation.WorkerRegistryRoles)
+            }),
+
+        // ---- Finance: the money that is worked, not read — the picked project's cost ledger
+        // and the subcontractor spend that feeds it, then the company-wide coding screens.
+        // The read-only statements live next door in Financial Reports. ----
+        new SidebarFolderInfo(
+            SidebarFolder.Finance,
+            "Finance",
+            "#finance",
             new[]
             {
                 new SidebarRow(new NavigationItem("Financials", "/projects/{project}/financials"),
                     DesktopNavigation.FinanceRoles),
+                // Placing and paying for subcontract work — internal money-handling, which is why
+                // these sit here and not under Subcontractor (decision 2026-08-04).
+                new SidebarRow(new NavigationItem("Work Orders", "/projects/{project}/work-orders"),
+                    DesktopNavigation.ProjectRoles),
+                new SidebarRow(new NavigationItem("WO Allocation", "/projects/{project}/work-order-allocation"),
+                    DesktopNavigation.ProjectRoles),
+                // Allocation + Transactions as tabs of one page — Allocation leads (the working
+                // screen); the match prefix keeps the row lit on the Transactions tab.
+                new SidebarRow(new NavigationItem("Xero", "/finance/allocation", new[] { "/finance/xero" }),
+                    DesktopNavigation.FinanceRoles),
+                new SidebarRow(new NavigationItem("Cost Codes & Rates", "/cost-codes", new[] { "/rate-library" }),
+                    DesktopNavigation.FinanceRoles)
+            }),
+
+        // ---- Financial Reports: the money that is read — the picked project's statements
+        // first, then the company-wide views. ----
+        new SidebarFolderInfo(
+            SidebarFolder.FinancialReports,
+            "Financial Reports",
+            "#financial-reports",
+            new[]
+            {
                 new SidebarRow(new NavigationItem("Valuation Report", "/projects/{project}/valuation"),
                     DesktopNavigation.FinanceRoles),
                 // The finance reconciliation trail (new page): every cost-centre move on the
@@ -183,13 +212,27 @@ public static class SidebarFolders
                 // the allocation queue already shows this audience every bill and its amount due;
                 // mirrors the API's authorisation (GetXeroAgedPayablesEndpoint).
                 new SidebarRow(new NavigationItem("Aged Payables", "/finance/aged-payables"),
-                    DesktopNavigation.FinanceRoles),
-                // Allocation + Transactions as tabs of one page — Allocation leads (the working
-                // screen); the match prefix keeps the row lit on the Transactions tab.
-                new SidebarRow(new NavigationItem("Xero", "/finance/allocation", new[] { "/finance/xero" }),
-                    DesktopNavigation.FinanceRoles),
-                new SidebarRow(new NavigationItem("Cost Codes & Rates", "/cost-codes", new[] { "/rate-library" }),
                     DesktopNavigation.FinanceRoles)
+            }),
+
+        // ---- Audit: who did what — the correspondence audit register and the assistant's
+        // activity log. Near the foot deliberately: review, not day-to-day work. ----
+        new SidebarFolderInfo(
+            SidebarFolder.Audit,
+            "Audit",
+            "#audit",
+            new[]
+            {
+                // The append-only audit register (new page) — who routed, linked and filed what.
+                // Same gate as Triage (Standalone below): the people who make routing decisions
+                // review them.
+                new SidebarRow(new NavigationItem("Audit Trail", "/audit"),
+                    DesktopNavigation.TriageRoles),
+                // What the assistant has done, on whose behalf, and what it cost. Directors only —
+                // the log carries spend, and the people who authorise it are the people who see it.
+                // Mirrors the API's AiRoles.AllowedToUseAssistant.
+                new SidebarRow(new NavigationItem("Agent Activity", "/agents/activity"),
+                    DesktopNavigation.DirectorRoles)
             }),
 
         // ---- Admin: running the system itself, not any project — administrators only (the

@@ -7,7 +7,7 @@ namespace Jewel.JPMS.Services.Navigation;
 /// - plain routes ("/directory") — navigate and match as-is;
 /// - project-scoped templates ("/projects/{project}/financials") — the token is filled with the
 ///   last-viewed project on navigation, and matches ANY project id when deciding active state;
-/// - group keys ("#financials") — never navigated to, they identify accordion groups (and pick
+/// - group keys ("#finance") — never navigated to, they identify accordion groups (and pick
 ///   the group's icon).
 /// MatchPrefixes extend active-state matching to sibling routes an entry spans (templates and a
 /// trailing "$" for exact-only are allowed there too). ShallowMatch limits a plain route to

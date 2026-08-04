@@ -3,7 +3,7 @@ using Jewel.JPMS.Models;
 namespace Jewel.JPMS.Services.Navigation;
 
 /// <summary>
-/// The sidebar catalog — the app's single navigation plane. One list of five collapsible folders
+/// The sidebar catalog — the app's single navigation plane. One list of collapsible folders
 /// (SidebarFolders, docs/Pathway-Split-Platform-Flow-Plan.md §6) under the project picker, with
 /// Home above everything and any folderless rows (SidebarFolders.Standalone — destinations that
 /// are not about the picked project) as top-level links at the foot. Folders mix project-scoped
