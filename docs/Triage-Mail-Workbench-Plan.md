@@ -85,6 +85,15 @@ pretend transaction. Fan-out per assignee and pathway-neutrality unchanged. The 
 own project pick (`todoProjectId`, independent of the filing section) plus the optional
 open-request link.
 
+### The triage journey (2026-08-04 v5)
+Project first: ONE page-level **Project** select (auto-matched from the email/thread text when a
+single live project's name appears, with a "matched from the email" hint) feeds everything —
+to-dos, the record pickers, the attachment tray. The per-pane project selects are gone. Reply and
+Add-a-to-do live on the email's subject row (no separate strip). The THREAD renders as a numbered
+tab strip ("Thread · email 7 of 11") — click a chip and the content above switches. **Discard is
+one standalone button** beside the filing tabs (it is pathway-less, so it is no longer repeated
+under every pathway), armed like a tab and carried out by the action bar.
+
 ### Mail-client look (same-day polish)
 List rows are Outlook-shaped: sender in semibold with a compact right-aligned time (time today,
 "Yesterday 14:21", day names this week, then dates), subject + paperclip, and the email's opening
