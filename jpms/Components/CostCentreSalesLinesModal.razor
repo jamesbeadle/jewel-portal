@@ -214,7 +214,7 @@
     };
 
     private static string Money(decimal value) =>
-        value.ToString(value == Math.Truncate(value) ? "C0" : "C2",
+        value.ToString("C2",
             System.Globalization.CultureInfo.GetCultureInfo("en-GB"));
 
     // ---- Export to Excel ---------------------------------------------------

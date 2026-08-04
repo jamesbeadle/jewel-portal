@@ -31,14 +31,19 @@ discard it (spam). Sender is always the shared `projects@jewelbb.co.uk` mailbox.
   Tagged tab to send the thread back to the queue. The old forced request creation is retired
   (`AlsoRaiseRequest` remains on the command for API callers, unused by the UI).
 - Reply is available on **all three pathways** now, not just Client.
-- **Reply is NOT a filing tab** (reworked same day on Nigel's feedback): the tabs stay purely
-  about filing — Link / Create / To-dos / Discard — and the composer is its own section
-  underneath, open on demand. The two combine: set up any filing above, write the reply below,
-  and ONE **Send reply & file** button applies the lot (filing first, tag-verified; send last).
-  While a reply is drafted the panes' own tag-only buttons stand down so a written reply can't be
-  left behind by accident; "Discard draft" clears it. A reply alone still triages the thread as
-  Replied + pathway; a reply sent alongside a filing skips the Replied stamp (the record tag says
-  more). The old "Also raise a request" checkbox is gone — Create-new + reply covers it.
+- **The three-section pane** (Nigel's model, 2026-08-04 v3): the detail pane is now
+  **1 · Email & reply** (the message, Outlook-style header, Discard on the email itself with a
+  confirm, and the reply composer), **2 · To-dos** (the row editor, always present, its own
+  project pick + optional request link), **3 · File to a record** (pathway cards, then a
+  Link-to-existing / Create-new toggle — clicking the active tab deselects it). ONE action bar at
+  the bottom states exactly what it will do ("This will send your reply, raise 2 to-dos and link
+  this email to the selected record") and applies it all in one click — to-dos first, then the
+  record filing, then the send, every tag verified before anything saves. "Save reply as draft"
+  applies the filing but stages the reply in Outlook Drafts instead of sending. A reply alone
+  still triages the thread as Replied + pathway (pathway required for that case); with any filing
+  alongside, the record tag speaks and the Replied stamp is skipped. The Subcontractor↔Internal
+  cross-filing confirm interrupts the apply and re-runs it with consent. The old "Also raise a
+  request" checkbox and the ride-along to-dos checkboxes are gone — the sections compose instead.
 - The reply-all Cc prefill filters out the projects mailbox itself (`MailboxMessageDetail.MailboxAddress`)
   — the server auto-Cc's it on every send, so showing it was noise.
 - Audit: `EmailSent` (always written, whatever the pathway — recipients snapshot in Detail,
@@ -69,13 +74,19 @@ whole threads.
 - Multipart transport: `HttpIntakeQueue.SendComposedEmailAsync(command, files)` — same shape as
   the progress-photo upload; JSON-only when there are no files.
 
-### To-dos alongside everything (Phase 4)
-The to-do row editor is a shared fragment, and every filing pane — Link, Create (request and bid
-package) and Discard — carries a collapsible **"Also add to-dos from this email"** section (the
-To-dos pane IS the editor). Ride-along to-dos are created FIRST (their command verifies every tag
-before saving), then the primary action — or the combined Send — runs; if the primary action then fails, the items exist and the email sits in the
-Tagged view under its TODO chips — per-step honesty rather than a pretend transaction. Fan-out per
-assignee and pathway-neutrality unchanged. The standalone To-dos action remains.
+### To-dos alongside everything (Phase 4, superseded by the three-section pane)
+To-dos are section 2 of the pane — always present, created FIRST when the action bar applies
+(their command verifies every tag before saving), so a later failure leaves the items existing and
+the email findable in the Tagged view under its TODO chips — per-step honesty rather than a
+pretend transaction. Fan-out per assignee and pathway-neutrality unchanged. Section 2 has its own
+project pick (`todoProjectId`) independent of section 3's.
+
+### Mail-client look (same-day polish)
+List rows are Outlook-shaped: sender in semibold with a compact right-aligned time (time today,
+"Yesterday 14:21", day names this week, then dates), subject + paperclip, and the email's opening
+line as a preview — under Today / Yesterday / day-name group headers in the queue. The detail pane
+opens with an Outlook-style header: subject, sender avatar + name + address, To/Cc (once the
+detail read lands) and the full date.
 
 ## Phase 0 — Azure (manual, do before expecting sends to work)
 

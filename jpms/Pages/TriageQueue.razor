@@ -66,7 +66,7 @@
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             @* Assignees: pick as many as the item needs — a role, or a named person
                                within one. Each pick becomes its own TODO-#### on save (see
-                               DoCreateTodos), so two assignees here means two independent items
+                               the apply action), so two assignees here means two independent items
                                rather than one shared between them. Picked assignees show as
                                removable chips and drop out of the picker so they can't be added
                                twice. *@
@@ -111,20 +111,32 @@
                 <button type="button" class="btn-secondary text-xs" @onclick="AddTodoRow">+ Add another item</button>
     </text>;
 
-    // The collapsible "Also add to-dos" section carried by the Link / Create / Reply / Discard
-    // panes: whatever else this action does, follow-up items can be captured in the same click.
-    // The to-dos are created FIRST (their command verifies its tags before saving), then the
-    // primary action runs — per-step feedback rather than a pretend transaction.
-    RenderFragment RideAlongTodos =@<div class="rounded-lg border border-line p-3 space-y-3">
-        <label class="flex items-center gap-2 text-sm text-content cursor-pointer select-none">
-            <input type="checkbox" checked="@alsoTodos" @onchange="e => alsoTodos = e.Value is true" />
-            Also add to-dos from this email
-            <span class="text-xs text-content-subtle">— created first, then the action above runs</span>
-        </label>
-        @if (alsoTodos)
-        {
-            @TodoRowsEditor
-        }
+    RenderFragment MessageHeader =@<div>
+        <h2 class="text-lg font-semibold text-content">@Dash(selected!.Subject)</h2>
+        <div class="flex items-start gap-3 mt-3">
+            <div class="h-9 w-9 shrink-0 rounded-full bg-accent/15 text-accent flex items-center justify-center text-sm font-semibold select-none"
+                 aria-hidden="true">@SenderInitials(selected)</div>
+            <div class="min-w-0 flex-1">
+                <div class="flex items-baseline justify-between gap-3">
+                    <p class="text-sm text-content truncate">
+                        <span class="font-semibold">@DisplayFrom(selected)</span>
+                        @if (!string.IsNullOrWhiteSpace(selected.FromName) && !string.IsNullOrWhiteSpace(selected.FromEmail))
+                        {
+                            <span class="text-content-subtle"> &lt;@selected.FromEmail&gt;</span>
+                        }
+                    </p>
+                    <span class="text-xs text-content-subtle shrink-0">@Date(selected.ReceivedAt)</span>
+                </div>
+                @if (detail?.To is { Count: > 0 } headerTo)
+                {
+                    <p class="text-xs text-content-subtle truncate mt-0.5">To: @string.Join("; ", headerTo)</p>
+                }
+                @if (detail?.Cc is { Count: > 0 } headerCc)
+                {
+                    <p class="text-xs text-content-subtle truncate mt-0.5">Cc: @string.Join("; ", headerCc)</p>
+                }
+            </div>
+        </div>
     </div>;
 
     RenderFragment MessageBody =@<text>
@@ -514,14 +526,35 @@ else
                     {
                         <JewelSpinner Overlay="true" Label="Loading" />
                     }
+                    @{ string? lastQueueGroup = null; }
                     @foreach (var item in items)
                     {
+                        @* Outlook-style date group headers — Today / Yesterday / day names / dates. *@
+                        var queueGroup = DateGroupLabel(item.ReceivedAt);
+                        @if (queueGroup != lastQueueGroup)
+                        {
+                            lastQueueGroup = queueGroup;
+                            <p class="text-xs font-semibold text-content-muted uppercase tracking-wider pt-2 pb-0.5 px-1">@queueGroup</p>
+                        }
                         <button type="button" @key="item.Id" @onclick="() => Select(item)"
                                 class="@RowClass(item)">
-                            <div class="flex items-center justify-between gap-2">
-                                <span class="text-sm font-medium text-content truncate">@DisplayFrom(item)</span>
+                            <div class="flex items-baseline justify-between gap-2">
+                                <span class="text-sm font-semibold text-content truncate">@DisplayFrom(item)</span>
+                                <span class="text-[11px] text-content-subtle shrink-0">@ListDate(item.ReceivedAt)</span>
                             </div>
-                            <p class="text-sm text-content-muted truncate mt-0.5">@Dash(item.Subject)</p>
+                            <div class="flex items-center gap-1.5 mt-0.5">
+                                <p class="text-sm text-content-muted truncate flex-1">@Dash(item.Subject)</p>
+                                @if (item.HasAttachments)
+                                {
+                                    <span title="Has attachments" class="inline-flex items-center text-content-subtle shrink-0">@PaperclipIcon</span>
+                                }
+                            </div>
+                            @* The opening line of the email — the Outlook-style preview that lets the
+                               list be scanned without opening anything. *@
+                            @if (!string.IsNullOrWhiteSpace(item.BodyPreview))
+                            {
+                                <p class="text-xs text-content-subtle truncate mt-0.5">@FirstLineOf(item.BodyPreview)</p>
+                            }
                             @* Thread hint: this email is untriaged, but other messages in its
                                conversation already carry record tags. Surfacing them here tells the
                                triager it's a reply to an already-linked thread, so re-linking is one
@@ -536,13 +569,6 @@ else
                                     }
                                 </div>
                             }
-                            <div class="flex items-center gap-2 mt-1 text-[11px] text-content-subtle">
-                                <span>@Date(item.ReceivedAt)</span>
-                                @if (item.HasAttachments)
-                                {
-                                    <span title="Has attachments" class="inline-flex items-center">@PaperclipIcon</span>
-                                }
-                            </div>
                         </button>
                     }
 
@@ -628,16 +654,153 @@ else
                                 <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@actionError</p>
                             }
 
-                            <div>
-                                <h2 class="text-lg font-semibold text-content">@Dash(selected.Subject)</h2>
-                                <p class="text-sm text-content-muted mt-1">
-                                    From @DisplayFrom(selected) · @Date(selected.ReceivedAt)
-                                </p>
+                            <div class="flex items-center justify-between">
+                                <p class="eyebrow">1 · Email &amp; reply</p>
+                                @* Discard belongs to the EMAIL, not to filing: spam and auto-replies
+                                   are dealt with here, like Outlook's delete — with a confirm, because
+                                   it removes the whole thread from the queue. *@
+                                @if (!discardConfirming)
+                                {
+                                    <button type="button" class="text-xs text-content-subtle hover:text-negative inline-flex items-center gap-1"
+                                            title="Discard this email (spam, auto-replies, wrong mailbox)" @onclick="() => discardConfirming = true">
+                                        🗑 Discard
+                                    </button>
+                                }
                             </div>
+                            @if (discardConfirming)
+                            {
+                                <div class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 flex flex-wrap items-center gap-2">
+                                    <p class="text-sm text-content flex-1">
+                                        Discard this email and its thread? It leaves the queue (restorable from the Tagged tab)@(ReplyDraftPending ? " — your unsent reply draft here is abandoned" : "")@(CurrentTodoDrafts().Count > 0 ? ", and the to-dos drafted below are not created" : "").
+                                    </p>
+                                    <button type="button" class="btn-secondary text-xs border-negative/40 text-negative hover:border-negative" disabled="@busy" @onclick="DoDiscard">Discard email</button>
+                                    <button type="button" class="btn-ghost text-xs" @onclick="() => discardConfirming = false">Keep it</button>
+                                </div>
+                            }
+
+                            @MessageHeader
 
                             @MessageBody
 
+                            <div class="mt-1">
+                                    @if (!replyOpen)
+                                    {
+                                        <div class="flex items-center gap-3">
+                                            <button type="button" class="btn-secondary" @onclick="() => replyOpen = true">↩ Reply</button>
+                                            <p class="text-xs text-content-subtle">Reply-all is prefilled. Replying on its own deals with the email — or combine it with to-dos and record filing below.</p>
+                                        </div>
+                                    }
+                                    else
+                                    {
+                                        <div class="space-y-3">
+                                            <div class="flex items-center justify-between">
+                                                <p class="text-xs uppercase tracking-wider text-content-subtle font-semibold">Reply — sends from the projects mailbox</p>
+                                                <button type="button" class="text-xs text-content-subtle hover:text-negative underline" @onclick="DiscardReplyDraft">Discard draft</button>
+                                            </div>
+
+                                            <div>
+                                                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">To *</label>
+                                                <input class="field" type="text" placeholder="name@example.com; other@example.com"
+                                                       value="@replyToField" @oninput="OnReplyToInput" />
+                                            </div>
+                                            <div>
+                                                <div class="flex items-center justify-between">
+                                                    <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Cc</label>
+                                                    @if (!replyShowBcc)
+                                                    {
+                                                        <button type="button" class="text-xs text-content-subtle hover:text-content underline" @onclick="() => replyShowBcc = true">Bcc</button>
+                                                    }
+                                                </div>
+                                                <input class="field" type="text" placeholder="Copied recipients — separated by ;"
+                                                       value="@replyCcField" @oninput="OnReplyCcInput" />
+                                            </div>
+                                            @if (replyShowBcc)
+                                            {
+                                                <div>
+                                                    <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Bcc</label>
+                                                    <input class="field" type="text" placeholder="Blind-copied recipients — separated by ;"
+                                                           value="@replyBccField" @oninput="OnReplyBccInput" />
+                                                </div>
+                                            }
+                                            <div>
+                                                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Subject *</label>
+                                                <input class="field" type="text" value="@replySubject" @oninput="OnReplySubjectInput" />
+                                            </div>
+                                            <div>
+                                                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Your reply *</label>
+                                                <RichTextEditor @bind-Value="replyBody" MinHeight="180"
+                                                                Placeholder="Write the reply — the whole thread is quoted behind it…" />
+                                            </div>
+
+                                            <AttachmentPicker Attachments="replyAttachments" AttachmentsChanged="OnReplyAttachmentsChanged"
+                                                              Projects="ProjectOptionsFor(ComposeContextProjectId)" ProjectId="@ComposeContextProjectId"
+                                                              OriginalAttachments="detail?.Attachments" OriginalMessageId="@selected?.Id" />
+
+                                        </div>
+                                    }
+                                </div>
+
                             <div class="pt-3 border-t border-line">
+                                <p class="eyebrow mb-3">2 · To-dos</p>
+                                    @* To-dos (Internal, and Subcontractor for "chase them for X"): capture the email as one or
+                                       more to-do items. The project is
+                                       OPTIONAL — chosen, the items land on that project's To-do tab (and the email can
+                                       also feed one of its open requests); left blank they are GENERAL (company-wide)
+                                       items that live on the To-dos browser page and the dashboards of everyone
+                                       holding the assigned role. One row editor serves both. *@
+                                    <div class="space-y-4">
+                                        <p class="rounded-lg bg-surface-raised border border-line px-3 py-2 text-xs text-content-subtle">
+                                            Each item is numbered TODO-#### and this email is tagged to <span class="font-medium text-content">every item</span> you add here, so one email can feed several to-dos. An item is assigned to a role — or to a <span class="font-medium text-content">named person</span> within one — and giving it <span class="font-medium text-content">more than one assignee</span> raises it once per assignee: separate items, each ticked off on its own. Choose a project to put the items on its To-do tab, or leave it blank for <span class="font-medium text-content">company-wide</span> items that appear on the To-dos page and the dashboard of everyone holding the assigned role.
+                                        </p>
+
+                                        <div>
+                                            <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Project (optional)</label>
+                                            <select class="field" value="@todoProjectId" @onchange="OnTodoProjectChanged">
+                                                <option value="">No project — company-wide</option>
+                                                @foreach (var project in ProjectOptionsFor(todoProjectId))
+                                                {
+                                                    <option value="@project.ProjectId">@project.Reference — @project.Name</option>
+                                                }
+                                            </select>
+                                        </div>
+
+                                        @if (!string.IsNullOrWhiteSpace(todoProjectId) && TodoRequestLinkOffered)
+                                        {
+                                            <div>
+                                                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Link to an open request (optional)</label>
+                                                @if (createTodoLinkRequestsLoading)
+                                                {
+                                                    <p class="text-sm text-content-subtle italic">Loading requests…</p>
+                                                }
+                                                else if (createTodoLinkRequests.Count == 0)
+                                                {
+                                                    <p class="text-xs text-content-subtle italic">No open requests on this project.</p>
+                                                }
+                                                else
+                                                {
+                                                    <select class="field" value="@createTodoLinkRequestId" @onchange="OnCreateTodoLinkRequestChanged">
+                                                        <option value="">No request link</option>
+                                                        @foreach (var record in createTodoLinkRequests)
+                                                        {
+                                                            <option value="@record.RecordId">@record.Reference — @record.Title</option>
+                                                        }
+                                                    </select>
+                                                    @if (!string.IsNullOrWhiteSpace(createTodoLinkRequestId))
+                                                    {
+                                                        <p class="text-xs text-content-subtle mt-1">
+                                                            This email is tagged to the request as well as to every item below, so it appears in the request's conversation too — and because a request is a client record, the thread's filing follows the request rather than Internal.
+                                                        </p>
+                                                    }
+                                                }
+                                            </div>
+                                        }
+
+                                        @TodoRowsEditor
+                                    </div>
+                            </div>
+
+                            <div class="pt-3 border-t border-line">
+                                <p class="eyebrow mb-3">3 · File to a record</p>
                                 @*
                                     PATHWAY FIRST (docs/Pathway-Split-Platform-Flow-Plan.md §2.2): the first triage
                                     decision is who the correspondence is with — the chosen pathway then decides which
@@ -671,7 +834,7 @@ else
                                         {
                                             <p class="text-xs text-content-subtle mt-2">Choose who this correspondence is with to see the actions.</p>
                                         }
-                                        else if (mode != TriageMode.Discard)
+                                        else
                                         {
                                             @* The quiet consequence line: what the pending action does to the thread's
                                                filing. A to-do LINK is the one neutral case — it never files a thread. *@
@@ -794,13 +957,6 @@ else
                                         <p class="text-xs text-content-subtle">
                                             Pick one or more records — the email is tagged to each of them, so it feeds every record it belongs to. Click a record again to unpick it.
                                         </p>
-
-                                        @RideAlongTodos
-
-                                        <button type="button" class="btn-primary" disabled="@(busy || linkRecordIds.Count == 0 || ReplyDraftPending)" title="@(ReplyDraftPending ? "You have written a reply — press Send reply below and this is applied with it" : null)" @onclick="DoLink">
-                                            @(linkRecordIds.Count <= 1 ? "Link email to selected record" : $"Link email to {linkRecordIds.Count} selected records")
-                                        </button>
-
                                         @* The lane confirm: the server asked for explicit consent to a Subcontractor↔
                                            Internal dual filing. Wall rejections never reach here — they surface as a
                                            plain error above, with no retry. *@
@@ -808,7 +964,7 @@ else
                                         {
                                             <div class="rounded-lg bg-amber-500/10 border border-amber-500/40 px-3 py-2 space-y-2">
                                                 <p class="text-sm text-content">@crossFileMessage</p>
-                                                <button type="button" class="btn-secondary text-xs" disabled="@busy" @onclick="DoLinkConfirmCross">File under both anyway</button>
+                                                <button type="button" class="btn-secondary text-xs" disabled="@busy" @onclick="() => DoApplyAll(pendingSaveDraft, allowCrossPathway: true)">File under both anyway</button>
                                             </div>
                                         }
                                     </div>
@@ -857,10 +1013,6 @@ else
                                                     <span class="block text-xs text-content-subtle">The email (and its thread) is also tagged to the project's <span class="font-medium">programme communications</span>, so it appears under the Programme tab as well as on the new request.</span>
                                                 </span>
                                             </label>
-
-                                            @RideAlongTodos
-
-                                            <button type="button" class="btn-primary" disabled="@(busy || string.IsNullOrWhiteSpace(createProjectId) || ReplyDraftPending)" title="@(ReplyDraftPending ? "You have written a reply — press Send reply below and this is applied with it" : null)" @onclick="DoCreate">Create request from email</button>
                                         }
                                         else
                                         {
@@ -868,162 +1020,33 @@ else
                                             <FormField Label="Trade" Value="@createTrade" OnChange="v => createTrade = v" />
 
                                             <p class="text-xs text-content-subtle">A draft bid package is created and this email is linked to it. Invite subcontractors and add line items from the bid package page.</p>
-
-                                            @RideAlongTodos
-
-                                            <button type="button" class="btn-primary" disabled="@(busy || string.IsNullOrWhiteSpace(createProjectId) || string.IsNullOrWhiteSpace(createTitle) || ReplyDraftPending)" title="@(ReplyDraftPending ? "You have written a reply — press Send reply below and this is applied with it" : null)" @onclick="DoCreateBidPackage">Create bid package from email</button>
                                         }
                                     </div>
                                 }
-                                else if (mode == TriageMode.GeneralTodo)
+                            </div>
+
+                            @* ---- The one action bar: whatever is set up above — a reply, to-dos, a
+                                   record filing — is applied together, in one click, in that order.
+                                   Nothing happens to the email until this is pressed. *@
+                            <div class="pt-3 border-t border-line space-y-2">
+                                @if (PendingSummary is { } pending)
                                 {
-                                    @* To-dos (Internal, and Subcontractor for "chase them for X"): capture the email as one or
-                                       more to-do items. The project is
-                                       OPTIONAL — chosen, the items land on that project's To-do tab (and the email can
-                                       also feed one of its open requests); left blank they are GENERAL (company-wide)
-                                       items that live on the To-dos browser page and the dashboards of everyone
-                                       holding the assigned role. One row editor serves both. *@
-                                    <div class="space-y-4">
-                                        <p class="rounded-lg bg-surface-raised border border-line px-3 py-2 text-xs text-content-subtle">
-                                            Each item is numbered TODO-#### and this email is tagged to <span class="font-medium text-content">every item</span> you add here, so one email can feed several to-dos. An item is assigned to a role — or to a <span class="font-medium text-content">named person</span> within one — and giving it <span class="font-medium text-content">more than one assignee</span> raises it once per assignee: separate items, each ticked off on its own. Choose a project to put the items on its To-do tab, or leave it blank for <span class="font-medium text-content">company-wide</span> items that appear on the To-dos page and the dashboard of everyone holding the assigned role.
-                                        </p>
-
-                                        <div>
-                                            <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Project (optional)</label>
-                                            <select class="field" value="@createProjectId" @onchange="OnCreateProjectChanged">
-                                                <option value="">No project — company-wide</option>
-                                                @foreach (var project in ProjectOptionsFor(createProjectId))
-                                                {
-                                                    <option value="@project.ProjectId">@project.Reference — @project.Name</option>
-                                                }
-                                            </select>
-                                        </div>
-
-                                        @if (!string.IsNullOrWhiteSpace(createProjectId) && TodoRequestLinkOffered)
-                                        {
-                                            <div>
-                                                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Link to an open request (optional)</label>
-                                                @if (createTodoLinkRequestsLoading)
-                                                {
-                                                    <p class="text-sm text-content-subtle italic">Loading requests…</p>
-                                                }
-                                                else if (createTodoLinkRequests.Count == 0)
-                                                {
-                                                    <p class="text-xs text-content-subtle italic">No open requests on this project.</p>
-                                                }
-                                                else
-                                                {
-                                                    <select class="field" value="@createTodoLinkRequestId" @onchange="OnCreateTodoLinkRequestChanged">
-                                                        <option value="">No request link</option>
-                                                        @foreach (var record in createTodoLinkRequests)
-                                                        {
-                                                            <option value="@record.RecordId">@record.Reference — @record.Title</option>
-                                                        }
-                                                    </select>
-                                                    @if (!string.IsNullOrWhiteSpace(createTodoLinkRequestId))
-                                                    {
-                                                        <p class="text-xs text-content-subtle mt-1">
-                                                            This email is tagged to the request as well as to every item below, so it appears in the request's conversation too — and because a request is a client record, the thread's filing follows the request rather than Internal.
-                                                        </p>
-                                                    }
-                                                }
-                                            </div>
-                                        }
-
-                                        @TodoRowsEditor
-
-
-                                        <button type="button" class="btn-primary" disabled="@(busy || !createTodoRows.Any(r => !string.IsNullOrWhiteSpace(r.Title)) || ReplyDraftPending)" title="@(ReplyDraftPending ? "You have written a reply — press Send reply below and this is applied with it" : null)" @onclick="DoCreateTodos">
-                                            Create @(TodoRowCountLabel) from email
+                                    <p class="text-sm text-content">This will @pending.</p>
+                                }
+                                else
+                                {
+                                    <p class="text-sm text-content-subtle">Write a reply, add a to-do or choose a record above — then apply it all in one go here.</p>
+                                }
+                                <div class="flex items-center gap-2">
+                                    <button type="button" class="btn-primary" disabled="@(busy || PendingSummary is null)" @onclick="() => DoApplyAll(saveAsDraftOnly: false)">
+                                        @ApplyButtonLabel
+                                    </button>
+                                    @if (ReplyDraftPending)
+                                    {
+                                        <button type="button" class="btn-secondary" disabled="@busy" @onclick="() => DoApplyAll(saveAsDraftOnly: true)"
+                                                title="Applies the to-dos and filing above, but stages the reply as an Outlook draft instead of sending it">
+                                            Save reply as draft
                                         </button>
-                                    </div>
-                                }
-                                else if (mode == TriageMode.Discard)
-                                {
-                                    <div class="space-y-3">
-                                        <p class="text-sm text-content-muted">Discard this email if it isn’t a request (spam, an auto-reply, or sent to the wrong place). This adds a “discarded” category tag to it — the email stays put in the mailbox — and removes it from the queue. You can restore it from the Discarded tab.</p>
-
-                                        @RideAlongTodos
-
-                                        <button type="button" class="btn-secondary border-negative/40 text-negative hover:border-negative" disabled="@(busy || ReplyDraftPending)" title="@(ReplyDraftPending ? "You've written a reply — send it below, or discard the draft first" : null)" @onclick="DoDiscard">Discard email</button>
-                                    </div>
-                                }
-
-                                @* ---- Reply — its own section, deliberately OUTSIDE the filing tabs above. Filing an
-                                       email and answering it are two different halves of dealing with it, and the team
-                                       usually does both: pick records / a new record / to-dos above, write the reply
-                                       here, and ONE Send applies the lot. A reply on its own is also a complete triage
-                                       decision (the thread leaves the queue as Replied). *@
-                                <div class="mt-5 border-t border-line pt-4">
-                                    @if (!replyOpen)
-                                    {
-                                        <div class="flex items-center gap-3">
-                                            <button type="button" class="btn-secondary" @onclick="() => replyOpen = true">↩ Reply</button>
-                                            <p class="text-xs text-content-subtle">Reply-all is prefilled. You can reply on its own, or alongside anything selected above — one Send does both.</p>
-                                        </div>
-                                    }
-                                    else
-                                    {
-                                        <div class="space-y-3">
-                                            <div class="flex items-center justify-between">
-                                                <p class="text-xs uppercase tracking-wider text-content-subtle font-semibold">Reply — sends from the projects mailbox</p>
-                                                <button type="button" class="text-xs text-content-subtle hover:text-negative underline" @onclick="DiscardReplyDraft">Discard draft</button>
-                                            </div>
-
-                                            <div>
-                                                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">To *</label>
-                                                <input class="field" type="text" placeholder="name@example.com; other@example.com"
-                                                       value="@replyToField" @oninput="OnReplyToInput" />
-                                            </div>
-                                            <div>
-                                                <div class="flex items-center justify-between">
-                                                    <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Cc</label>
-                                                    @if (!replyShowBcc)
-                                                    {
-                                                        <button type="button" class="text-xs text-content-subtle hover:text-content underline" @onclick="() => replyShowBcc = true">Bcc</button>
-                                                    }
-                                                </div>
-                                                <input class="field" type="text" placeholder="Copied recipients — separated by ;"
-                                                       value="@replyCcField" @oninput="OnReplyCcInput" />
-                                            </div>
-                                            @if (replyShowBcc)
-                                            {
-                                                <div>
-                                                    <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Bcc</label>
-                                                    <input class="field" type="text" placeholder="Blind-copied recipients — separated by ;"
-                                                           value="@replyBccField" @oninput="OnReplyBccInput" />
-                                                </div>
-                                            }
-                                            <div>
-                                                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Subject *</label>
-                                                <input class="field" type="text" value="@replySubject" @oninput="OnReplySubjectInput" />
-                                            </div>
-                                            <div>
-                                                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Your reply *</label>
-                                                <RichTextEditor @bind-Value="replyBody" MinHeight="180"
-                                                                Placeholder="Write the reply — the whole thread is quoted behind it…" />
-                                            </div>
-
-                                            <AttachmentPicker Attachments="replyAttachments" AttachmentsChanged="OnReplyAttachmentsChanged"
-                                                              Projects="ProjectOptionsFor(ComposeContextProjectId)" ProjectId="@ComposeContextProjectId"
-                                                              OriginalAttachments="detail?.Attachments" OriginalMessageId="@selected?.Id" />
-
-                                            @if (PendingFilingSummary is { } pendingSummary)
-                                            {
-                                                <p class="rounded-lg bg-accent/10 border border-accent/30 px-3 py-2 text-xs text-content">
-                                                    Send will also @pendingSummary — one action does both.
-                                                </p>
-                                            }
-
-                                            <div class="flex items-center gap-2">
-                                                <button type="button" class="btn-primary" disabled="@(busy || !ReplyIsSendable)" @onclick="() => DoSendReply(saveAsDraftOnly: false)">
-                                                    @SendButtonLabel
-                                                </button>
-                                                <button type="button" class="btn-secondary" disabled="@(busy || !ReplyIsSendable)" @onclick="() => DoSendReply(saveAsDraftOnly: true)">
-                                                    Save as draft
-                                                </button>
-                                            </div>
-                                        </div>
                                     }
                                 </div>
                             </div>
@@ -1094,17 +1117,21 @@ else
                         @foreach (var item in discardedItems)
                         {
                             <button type="button" @key="item.Id" @onclick="() => Select(item)" class="@RowClass(item)">
-                                <div class="flex items-center justify-between gap-2">
-                                    <span class="text-sm font-medium text-content truncate">@DisplayFrom(item)</span>
+                                <div class="flex items-baseline justify-between gap-2">
+                                    <span class="text-sm font-semibold text-content truncate">@DisplayFrom(item)</span>
+                                    <span class="text-[11px] text-content-subtle shrink-0">@ListDate(item.ReceivedAt)</span>
                                 </div>
-                                <p class="text-sm text-content-muted truncate mt-0.5">@Dash(item.Subject)</p>
-                                <div class="flex items-center gap-2 mt-1 text-[11px] text-content-subtle">
-                                    <span>@Date(item.ReceivedAt)</span>
+                                <div class="flex items-center gap-1.5 mt-0.5">
+                                    <p class="text-sm text-content-muted truncate flex-1">@Dash(item.Subject)</p>
                                     @if (item.HasAttachments)
                                     {
-                                        <span title="Has attachments" class="inline-flex items-center">@PaperclipIcon</span>
+                                        <span title="Has attachments" class="inline-flex items-center text-content-subtle shrink-0">@PaperclipIcon</span>
                                     }
                                 </div>
+                                @if (!string.IsNullOrWhiteSpace(item.BodyPreview))
+                                {
+                                    <p class="text-xs text-content-subtle truncate mt-0.5">@FirstLineOf(item.BodyPreview)</p>
+                                }
                             </button>
                         }
 
@@ -1151,12 +1178,7 @@ else
                                     <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@actionError</p>
                                 }
 
-                                <div>
-                                    <h2 class="text-lg font-semibold text-content">@Dash(selected.Subject)</h2>
-                                    <p class="text-sm text-content-muted mt-1">
-                                        From @DisplayFrom(selected) · @Date(selected.ReceivedAt)
-                                    </p>
-                                </div>
+                                @MessageHeader
 
                                 @MessageBody
 
@@ -1253,10 +1275,21 @@ else
                         @foreach (var item in taggedItems)
                         {
                             <button type="button" @key="item.Id" @onclick="() => Select(item)" class="@RowClass(item)">
-                                <div class="flex items-center justify-between gap-2">
-                                    <span class="text-sm font-medium text-content truncate">@DisplayFrom(item)</span>
+                                <div class="flex items-baseline justify-between gap-2">
+                                    <span class="text-sm font-semibold text-content truncate">@DisplayFrom(item)</span>
+                                    <span class="text-[11px] text-content-subtle shrink-0">@ListDate(item.ReceivedAt)</span>
                                 </div>
-                                <p class="text-sm text-content-muted truncate mt-0.5">@Dash(item.Subject)</p>
+                                <div class="flex items-center gap-1.5 mt-0.5">
+                                    <p class="text-sm text-content-muted truncate flex-1">@Dash(item.Subject)</p>
+                                    @if (item.HasAttachments)
+                                    {
+                                        <span title="Has attachments" class="inline-flex items-center text-content-subtle shrink-0">@PaperclipIcon</span>
+                                    }
+                                </div>
+                                @if (!string.IsNullOrWhiteSpace(item.BodyPreview))
+                                {
+                                    <p class="text-xs text-content-subtle truncate mt-0.5">@FirstLineOf(item.BodyPreview)</p>
+                                }
                                 @if (item.Bucket is not null || item.Categories.Count > 0)
                                 {
                                     <div class="flex flex-wrap items-center gap-1 mt-1">
@@ -1272,13 +1305,6 @@ else
                                         }
                                     </div>
                                 }
-                                <div class="flex items-center gap-2 mt-1 text-[11px] text-content-subtle">
-                                    <span>@Date(item.ReceivedAt)</span>
-                                    @if (item.HasAttachments)
-                                    {
-                                        <span title="Has attachments" class="inline-flex items-center">@PaperclipIcon</span>
-                                    }
-                                </div>
                             </button>
                         }
 
@@ -1325,12 +1351,7 @@ else
                                     <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@actionError</p>
                                 }
 
-                                <div>
-                                    <h2 class="text-lg font-semibold text-content">@Dash(selected.Subject)</h2>
-                                    <p class="text-sm text-content-muted mt-1">
-                                        From @DisplayFrom(selected) · @Date(selected.ReceivedAt)
-                                    </p>
-                                </div>
+                                @MessageHeader
 
                                 @MessageBody
 
@@ -1518,7 +1539,9 @@ else
 </Modal>
 
 @code {
-    private enum TriageMode { None, Link, Create, GeneralTodo, Discard }
+    // Section 3's record action: link the email to existing records, or create a new one from it.
+    // (To-dos and Discard are no longer modes — to-dos are their own section, discard is on the email.)
+    private enum TriageMode { None, Link, Create }
 
     // The communication pathway — WHO the correspondence is with (docs/Pathway-Split-Platform-Flow-
     // Plan.md §2). Triage is pathway-FIRST: the pathway is chosen (or already fixed on the thread)
@@ -1653,17 +1676,17 @@ else
     // selector so it never promises a filing that won't happen.
     private bool PendingActionIsNeutral =>
         (mode == TriageMode.Link && linkRecordType == RecordType.Todo)
-        || (mode == TriageMode.GeneralTodo && string.IsNullOrWhiteSpace(createTodoLinkRequestId));
+        || (mode == TriageMode.None && CurrentTodoDrafts().Count > 0 && string.IsNullOrWhiteSpace(createTodoLinkRequestId) && !ReplyDraftPending);
 
-    // The action tabs each pathway offers — the router's whole point (plan §2.2). Discard is in
-    // every set: discarding is pathway-less, and it is ALL that's offered before a pathway is chosen.
-    private static readonly TriageMode[] ClientModes = { TriageMode.Link, TriageMode.Create, TriageMode.Discard };
+    // The record actions each pathway offers in section 3 — the pathway filters what an email can
+    // be filed to; nothing is offered until a pathway is chosen (or fixed on the thread).
+    private static readonly TriageMode[] ClientModes = { TriageMode.Link, TriageMode.Create };
     // Subcontractor gets To-dos as well as Link/Create: "chase this subbie for their H&S file" is a
     // to-do, not a bid package, and to-do links are pathway-neutral so raising one from a subcontract
     // email files nothing — exactly the "copy, don't share" pattern the wall wants (plan §2.1).
-    private static readonly TriageMode[] SubcontractorModes = { TriageMode.Link, TriageMode.Create, TriageMode.GeneralTodo, TriageMode.Discard };
-    private static readonly TriageMode[] InternalModes = { TriageMode.GeneralTodo, TriageMode.Link, TriageMode.Discard };
-    private static readonly TriageMode[] NoPathwayModes = { TriageMode.Discard };
+    private static readonly TriageMode[] SubcontractorModes = { TriageMode.Link, TriageMode.Create };
+    private static readonly TriageMode[] InternalModes = { TriageMode.Link };
+    private static readonly TriageMode[] NoPathwayModes = Array.Empty<TriageMode>();
 
     private IReadOnlyList<TriageMode> AvailableModes => pathway switch
     {
@@ -1675,10 +1698,8 @@ else
 
     private static string ModeLabel(TriageMode m) => m switch
     {
-        TriageMode.Link        => "Link to existing",
-        TriageMode.Create      => "Create new",
-        TriageMode.GeneralTodo => "To-dos",
-        TriageMode.Discard     => "Discard",
+        TriageMode.Link   => "Link to existing",
+        TriageMode.Create => "Create new",
         _ => m.ToString()
     };
 
@@ -1986,11 +2007,12 @@ else
     }
     private List<TodoDraftRow> createTodoRows = new() { new TodoDraftRow() };
 
-    // "Also add to-dos" on the Link / Create / Reply / Discard panes: to-dos are generic — the team
-    // raises any number of them whatever the request is, so every way of dealing with an email can
-    // capture its follow-ups in the same click. Shares the row editor (and createTodoRows) with the
-    // standalone To-dos action; the ride-along command runs FIRST, then the pane's own action.
-    private bool alsoTodos;
+    // Section 2's own project pick (independent of section 3's createProjectId — both sections are
+    // on screen at once now, so they can no longer share state). Blank = company-wide items.
+    private string todoProjectId = "";
+
+    // Two-step discard on the email header (section 1) — the first click only opens the confirm.
+    private bool discardConfirming;
 
     // Optional "also link to an open request" for the To-do create form: one request for the whole
     // batch — the email gets the request's tag as well as one tag per created item, so a single
@@ -2010,7 +2032,7 @@ else
     private IReadOnlyList<SearchSelect.Option> todoAssigneeOptions = Array.Empty<SearchSelect.Option>();
 
     // The drafts exactly as they will be posted. Built in one place so the count promised on the
-    // button and the batch DoCreateTodos actually sends can never disagree.
+    // summary and the batch the apply actually sends can never disagree.
     private List<TodoItemDraft> CurrentTodoDrafts() => createTodoRows
         .Where(row => !string.IsNullOrWhiteSpace(row.Title))
         .Select(row => new TodoItemDraft(
@@ -2414,7 +2436,8 @@ else
         createTodoRows = new List<TodoDraftRow> { new() };
         createTodoLinkRequestId = "";
         createTodoLinkRequests = Array.Empty<LinkableRecord>();
-        alsoTodos = false;
+        todoProjectId = "";
+        discardConfirming = false;
     }
 
     // jumpToLatest: clicking an email in the QUEUE list triages its thread from the newest member —
@@ -2514,7 +2537,8 @@ else
     {
         if (view != QueueView.Active || selected is null) return;
         if (!string.IsNullOrWhiteSpace(linkProjectId)
-            || !string.IsNullOrWhiteSpace(createProjectId)) return;
+            || !string.IsNullOrWhiteSpace(createProjectId)
+            || !string.IsNullOrWhiteSpace(todoProjectId)) return;
 
         var haystack = BuildEmailSearchText();
         if (haystack.Length == 0) return;
@@ -2569,15 +2593,14 @@ else
         return $"{bytes} B";
     }
 
-    private async Task SetMode(TriageMode next)
+    private void SetMode(TriageMode next)
     {
-        mode = next;
+        // Clicking the active tab deselects it — "no record action" is a legitimate state now that
+        // the action bar applies whatever combination is set up.
+        mode = mode == next ? TriageMode.None : next;
         actionError = null;
         crossFileMessage = null;
         crossFilePicks.Clear();
-        // Entering the to-do form with a project already chosen loads its open requests for the
-        // optional request link; leaving it clears the pick (the loader guards on the mode).
-        await LoadCreateTodoLinkRequestsAsync();
     }
 
     // Choose the pathway for a not-yet-filed thread. Resets the action state so nothing chosen under
@@ -2671,9 +2694,11 @@ else
         linkRecords = Array.Empty<LinkableRecord>();
     }
 
-    private async Task OnCreateProjectChanged(ChangeEventArgs e)
+    private void OnCreateProjectChanged(ChangeEventArgs e) => createProjectId = e.Value?.ToString() ?? "";
+
+    private async Task OnTodoProjectChanged(ChangeEventArgs e)
     {
-        createProjectId = e.Value?.ToString() ?? "";
+        todoProjectId = e.Value?.ToString() ?? "";
         await LoadCreateTodoLinkRequestsAsync();
     }
 
@@ -2689,7 +2714,7 @@ else
         // Never offered on the Subcontractor pathway: a request is a client record, so tagging one
         // would file a subcontract thread under Client — the wall crossing the whole design forbids.
         // To-dos raised from subcontract mail stay pathway-neutral (see TodoRequestLinkOffered).
-        if (mode != TriageMode.GeneralTodo || !TodoRequestLinkOffered || string.IsNullOrWhiteSpace(createProjectId))
+        if (!TodoRequestLinkOffered || string.IsNullOrWhiteSpace(todoProjectId))
         {
             createTodoLinkRequests = Array.Empty<LinkableRecord>();
             return;
@@ -2698,7 +2723,7 @@ else
         {
             createTodoLinkRequestsLoading = true;
             StateHasChanged(); // show the loading state while the fetch is in flight
-            createTodoLinkRequests = await Intake.ListLinkableRecordsAsync(createProjectId, RecordType.Request);
+            createTodoLinkRequests = await Intake.ListLinkableRecordsAsync(todoProjectId, RecordType.Request);
         }
         catch
         {
@@ -2718,121 +2743,6 @@ else
         if (!linkRecordIds.Add(recordId)) linkRecordIds.Remove(recordId);
     }
 
-    // Link the email to EVERY picked record — one LinkMessageToRecord per pick, applied sequentially
-    // (each tags the whole conversation, verified server-side; the mailbox message never moves, so
-    // the same message id keeps working for the second and later tags). Not routed through RunAction
-    // because partial failure needs its own handling: once the first tag sticks the email has left
-    // the queue, so the queue must refresh regardless, and any picks that didn't take are reported
-    // via linkNote with a pointer to the Tagged view, where "add another tag" finishes the job.
-    private async Task DoLink() => await DoLinkCore(allowCrossPathway: false);
-
-    // "File under both anyway": retry just the picks the server asked to confirm, consenting to the
-    // Subcontractor↔Internal dual filing (the lane, never the wall — see crossFileMessage).
-    private async Task DoLinkConfirmCross() => await DoLinkCore(allowCrossPathway: true);
-
-    private async Task DoLinkCore(bool allowCrossPathway)
-    {
-        if (selected is null || busy) return;
-        var picks = allowCrossPathway
-            ? crossFilePicks.ToList()
-            : linkRecords.Where(r => linkRecordIds.Contains(r.RecordId)).ToList();
-        if (picks.Count == 0) return;
-
-        actionError = null;
-        linkNote = null;
-        crossFileMessage = null;
-        busyLabel = "Linking";
-        busy = true;
-        var succeeded = new List<LinkableRecord>();
-        var failed = new List<LinkableRecord>();
-        var needsConfirm = new List<LinkableRecord>();
-        string? confirmMessage = null;
-        string? firstFailure = null;
-        try
-        {
-            // Ride-along to-dos first (same order as every pane): their command verifies its tags
-            // before saving, so a failure here stops the whole action with the email still queued.
-            try
-            {
-                await CreateRideAlongTodosAsync(linkProjectId);
-            }
-            catch (CommandFailedException ex)
-            {
-                actionError = ex.Message;
-                return;
-            }
-
-            foreach (var record in picks)
-            {
-                try
-                {
-                    // The type to link as is the picked RECORD's own type, not the dropdown's: the
-                    // Scheduling picker lists the bucket alongside the programme's claims documents
-                    // (NOD/EOT requests, LADs claims), and each of those must link through its owning
-                    // provider so the tag stem resolves correctly. Cost-centre links carry the
-                    // triager's pathway choice — the record type alone can't say which side of the
-                    // wall a cost centre's mail belongs to.
-                    await Intake.LinkMessageToRecordAsync(
-                        selected.Id, selected.InternetMessageId, record.Type, record.RecordId,
-                        pathway: CostCentrePathwayFor(record),
-                        allowCrossPathway: allowCrossPathway);
-                    succeeded.Add(record);
-                }
-                catch (CommandFailedException ex) when (!allowCrossPathway && IsCrossFilePrompt(ex.Message))
-                {
-                    // The lane, not the wall: the server wants explicit consent to file the thread
-                    // under both non-client pathways. Held back for the inline confirm button.
-                    needsConfirm.Add(record);
-                    confirmMessage ??= ex.Message;
-                }
-                catch (CommandFailedException ex)
-                {
-                    failed.Add(record);
-                    firstFailure ??= ex.Message;
-                }
-                catch
-                {
-                    failed.Add(record);
-                    firstFailure ??= "That action didn't complete. Please try again.";
-                }
-            }
-
-            if (succeeded.Count == 0)
-            {
-                // Nothing stuck — the email is still in the queue, so keep the selection and the
-                // picks. Confirmable rejections surface as the inline confirm; anything else shows
-                // the first error in place, exactly like a single-link failure.
-                if (needsConfirm.Count > 0)
-                {
-                    crossFilePicks.Clear();
-                    crossFilePicks.AddRange(needsConfirm);
-                    crossFileMessage = confirmMessage;
-                }
-                actionError = firstFailure;
-                return;
-            }
-
-            var unfinished = failed.Concat(needsConfirm).ToList();
-            if (unfinished.Count > 0)
-            {
-                linkNote = $"The email was linked to {References(succeeded)}, but couldn't be linked to {References(unfinished)}. "
-                    + "It has left the queue — open it on the Tagged tab and use “add another tag” to finish.";
-            }
-
-            // At least one tag stuck, so the email (thread) has left the Inbox queue: refresh and
-            // clear the selection, mirroring RunAction's success path.
-            ResetQueuePaging();
-            // The queue and the recently-triaged panel move together: the action that consumed
-            // this email is the newest row of the panel.
-            await Task.WhenAll(LoadAsync(), LoadRecentTriageAsync());
-            selected = null;
-            detail = null;
-            detailLoading = false;
-            mode = TriageMode.None;
-        }
-        finally { busy = false; }
-    }
-
     private static string References(IReadOnlyList<LinkableRecord> records) =>
         string.Join(", ", records.Select(r => r.Reference));
 
@@ -2846,109 +2756,6 @@ else
         if (record.Type != RecordType.CostCentre) return null;
         var side = view == QueueView.Tagged ? FixedPathway : pathway;
         return side is TriagePathway.Client or TriagePathway.Subcontractor ? PathwayLabel(side.Value) : null;
-    }
-
-    private async Task DoCreate()
-    {
-        if (selected is null || busy) return;
-        if (string.IsNullOrWhiteSpace(createProjectId)) { actionError = "Choose a project."; return; }
-        if (string.IsNullOrWhiteSpace(createTitle)) { actionError = "A subject is required."; return; }
-
-        // Blank reference: a General request is auto-numbered REQ-#### server-side.
-        var command = new CreateRequestFromMessage(
-            selected.Id,
-            createProjectId,
-            createKind,
-            "",
-            createTitle.Trim(),
-            createDescription?.Trim() ?? "",
-            RaisedTo: NullIfBlank(createRaisedTo),
-            DrawingRef: NullIfBlank(createDrawingRef),
-            ResponseDue: ParseDate(createResponseDue),
-            InternetMessageId: selected.InternetMessageId,
-            AddToProgramme: createAddToProgramme);
-
-        await RunAction("Creating request", async () =>
-        {
-            await CreateRideAlongTodosAsync(createProjectId);
-            await Intake.CreateRequestFromMessageAsync(command);
-        });
-    }
-
-    private async Task DoCreateBidPackage()
-    {
-        if (selected is null || busy) return;
-        if (string.IsNullOrWhiteSpace(createProjectId)) { actionError = "Choose a project."; return; }
-        if (string.IsNullOrWhiteSpace(createTitle)) { actionError = "A title is required."; return; }
-
-        var command = new CreateBidPackageFromMessage(
-            selected.Id,
-            createProjectId,
-            createTitle.Trim(),
-            createTrade?.Trim() ?? "",
-            InternetMessageId: selected.InternetMessageId);
-
-        await RunAction("Creating bid package", async () =>
-        {
-            await CreateRideAlongTodosAsync(createProjectId);
-            await Intake.CreateBidPackageFromMessageAsync(command);
-        });
-    }
-
-    // Internal → "To-dos": create every row with a title in one command. With a project chosen the
-    // items land on that project's To-do tab — and an open request on it can optionally be tagged too
-    // (server-verified before anything is created), so one action feeds the request's conversation
-    // AND captures its follow-up to-dos. With no project the items are GENERAL (company-wide)
-    // entries for mail that belongs to no project, surfacing on the /todos browser and the assigned
-    // roles' dashboards. Either way the email is tagged "JPMS/TODO-####" once per created item, so
-    // each item reads this email back live by its own tag — one email can feed several to-dos.
-    //
-    // Pathway: the pathway the triager actually chose rides along, so a not-yet-filed thread is filed
-    // where they said — Internal for company admin, Subcontractor for a supplier chase. EXCEPT when a
-    // request link is picked: the request tag makes the thread feed a client-side record, so the
-    // pathway is withheld and the thread's filing follows the request instead. (The request picker is
-    // hidden on Subcontractor, so that exception only ever applies to an Internal batch.)
-    // Creates the ride-along to-dos (if the section is open and any row has a title) BEFORE the
-    // pane's primary action. Their command verifies every tag before saving, so a failure here
-    // stops the whole action with nothing half-done; if the primary action fails afterwards, the
-    // items exist and the email is findable in the Tagged view under its TODO chips — per-step
-    // honesty over a pretend transaction. Returns how many items were raised.
-    private async Task<int> CreateRideAlongTodosAsync(string? projectId)
-    {
-        if (!alsoTodos || selected is null) return 0;
-        var drafts = CurrentTodoDrafts();
-        if (drafts.Count == 0) return 0;
-
-        var created = await Intake.CreateTodoItemsFromMessageAsync(new CreateTodoItemsFromMessage(
-            selected.Id,
-            NullIfBlank(projectId ?? ""),
-            drafts,
-            LinkRequestId: null,
-            InternetMessageId: selected.InternetMessageId,
-            Pathway: pathway is { } chosen ? PathwayLabel(chosen) : null));
-        // One batch per action: clear the rows so a retry of the primary action can't double-raise.
-        createTodoRows = new List<TodoDraftRow> { new() };
-        alsoTodos = false;
-        return created.Count;
-    }
-
-    private async Task DoCreateTodos()
-    {
-        if (selected is null || busy) return;
-
-        var drafts = CurrentTodoDrafts();
-        if (drafts.Count == 0) { actionError = "At least one to-do item needs a title."; return; }
-
-        var linkRequestId = string.IsNullOrWhiteSpace(createProjectId) ? null : NullIfBlank(createTodoLinkRequestId);
-        var command = new CreateTodoItemsFromMessage(
-            selected.Id,
-            NullIfBlank(createProjectId),
-            drafts,
-            LinkRequestId: linkRequestId,
-            InternetMessageId: selected.InternetMessageId,
-            Pathway: linkRequestId is null && pathway is { } chosen ? PathwayLabel(chosen) : null);
-
-        await RunAction("Creating to-dos", async () => await Intake.CreateTodoItemsFromMessageAsync(command));
     }
 
     // "Reply in thread": the reply written here is staged as an Outlook draft on the email
@@ -3000,28 +2807,48 @@ else
     private string ComposeContextProjectId => mode switch
     {
         TriageMode.Link => linkProjectId,
-        TriageMode.Create or TriageMode.GeneralTodo => createProjectId,
-        _ => ""
+        TriageMode.Create => createProjectId,
+        _ => todoProjectId
     };
 
     // What Send will do besides sending, phrased for the note above the button. Null = nothing.
-    private string? PendingFilingSummary
+    // Everything the action bar will do, phrased as one sentence ("send your reply, raise 2
+    // to-dos and link this email to the selected record"). Null = nothing pending, button disabled.
+    private string? PendingSummary
     {
         get
         {
             var parts = new List<string>();
+            if (ReplyDraftPending)
+                parts.Add("send your reply");
+            var todoCount = CurrentTodoDrafts().Count;
+            if (todoCount > 0)
+                parts.Add(todoCount == 1 ? "raise the to-do" : $"raise {todoCount} to-dos");
             if (mode == TriageMode.Link && linkRecordIds.Count > 0)
                 parts.Add(linkRecordIds.Count == 1 ? "link this email to the selected record" : $"link this email to {linkRecordIds.Count} records");
             if (mode == TriageMode.Create && !string.IsNullOrWhiteSpace(createProjectId) && !string.IsNullOrWhiteSpace(createTitle))
-                parts.Add(pathway == TriagePathway.Subcontractor ? "create the bid package" : "create the request");
-            var todoCount = CurrentTodoDrafts().Count;
-            if (todoCount > 0 && (mode == TriageMode.GeneralTodo || alsoTodos))
-                parts.Add(todoCount == 1 ? "raise the to-do" : $"raise {todoCount} to-dos");
-            return parts.Count == 0 ? null : string.Join(" and ", parts);
+                parts.Add(pathway == TriagePathway.Subcontractor ? "create the bid package from this email" : "create the request from this email");
+            if (parts.Count == 0) return null;
+            return parts.Count == 1 ? parts[0] : string.Join(", ", parts.Take(parts.Count - 1)) + " and " + parts[^1];
         }
     }
 
-    private string SendButtonLabel => PendingFilingSummary is null ? "Send reply" : "Send reply & file";
+    private string ApplyButtonLabel
+    {
+        get
+        {
+            var filing = CurrentTodoDrafts().Count > 0
+                || (mode == TriageMode.Link && linkRecordIds.Count > 0)
+                || (mode == TriageMode.Create && !string.IsNullOrWhiteSpace(createProjectId) && !string.IsNullOrWhiteSpace(createTitle));
+            return ReplyDraftPending
+                ? (filing ? "Send reply & file" : "Send reply")
+                : "Apply";
+        }
+    }
+
+    // The save-as-draft flag the cross-filing confirm re-runs with, so "File under both anyway"
+    // finishes exactly what was originally asked.
+    private bool pendingSaveDraft;
 
     private void DiscardReplyDraft()
     {
@@ -3070,69 +2897,99 @@ else
     // verifies its tags before saving); the send comes last so a filing failure stops everything
     // with the email still queued, and a send failure leaves the thread filed with the reply
     // safe in Drafts (the outcome banner says exactly which).
-    private async Task DoSendReply(bool saveAsDraftOnly)
+    // THE action: applies everything the three sections have set up — the reply (section 1),
+    // the to-do drafts (section 2) and the record filing (section 3) — in one click, in that
+    // order. Filing runs first (every tag verified before anything saves); the send comes last so
+    // a filing failure stops everything with the email still queued, and a send failure leaves the
+    // thread filed with the reply safe in Drafts (the outcome banner says exactly which).
+    // allowCrossPathway re-runs after the Subcontractor↔Internal cross-filing confirm.
+    private async Task DoApplyAll(bool saveAsDraftOnly, bool allowCrossPathway = false)
     {
         if (selected is null || busy) return;
-        var to = ParseRecipients(replyToField);
-        if (to.Count == 0) { actionError = "Add a To recipient."; return; }
-        if (string.IsNullOrWhiteSpace(replySubject)) { actionError = "Write a subject."; return; }
-        if (!HtmlHasContent(replyBody)) { actionError = "Write the reply first."; return; }
+
+        var replying = ReplyDraftPending;
+        var drafts = CurrentTodoDrafts();
+        var picks = mode == TriageMode.Link
+            ? linkRecords.Where(r => linkRecordIds.Contains(r.RecordId)).ToList()
+            : new List<LinkableRecord>();
+        var createReady = mode == TriageMode.Create
+            && !string.IsNullOrWhiteSpace(createProjectId) && !string.IsNullOrWhiteSpace(createTitle);
+        if (!replying && drafts.Count == 0 && picks.Count == 0 && !createReady) return;
+
         // A half-filled Create form is a decision not yet made — finish it or clear it, rather
-        // than have Send quietly skip it.
-        if (mode == TriageMode.Create
-            && (!string.IsNullOrWhiteSpace(createTitle) || !string.IsNullOrWhiteSpace(createProjectId))
-            && (string.IsNullOrWhiteSpace(createTitle) || string.IsNullOrWhiteSpace(createProjectId)))
+        // than have Apply quietly skip it.
+        if (mode == TriageMode.Create && !createReady
+            && (!string.IsNullOrWhiteSpace(createTitle) || !string.IsNullOrWhiteSpace(createProjectId)))
         {
-            actionError = "Finish the new-record form above (project and subject/title) or clear it, then Send.";
+            actionError = "Finish the new-record form in section 3 (project and subject/title) or clear it, then apply.";
             return;
+        }
+        if (replying)
+        {
+            if (ParseRecipients(replyToField).Count == 0) { actionError = "Add a To recipient to the reply."; return; }
+            if (string.IsNullOrWhiteSpace(replySubject)) { actionError = "Write a subject for the reply."; return; }
+            // A reply ALONE is what triages the thread as Replied, and that files it under a
+            // pathway — so the pathway has to be chosen. With any filing alongside, the filing
+            // decides the pathway instead.
+            if (drafts.Count == 0 && picks.Count == 0 && !createReady && pathway is null)
+            {
+                actionError = "Choose who this correspondence is with (section 3) before sending a reply on its own.";
+                return;
+            }
         }
 
         var anchor = selected;
         var uploadParts = UploadPartsOf(replyAttachments);
-
-        await RunAction(saveAsDraftOnly ? "Saving draft" : "Sending reply", async () =>
+        actionError = null;
+        if (allowCrossPathway) crossFileMessage = null;
+        busy = true;
+        try
         {
             var filed = false;
 
-            // 1. To-dos — the To-dos pane's own batch (with its project / request link), or the
-            //    "Also add to-dos" section another pane opened.
-            if (mode == TriageMode.GeneralTodo)
+            // ---- Section 2: to-dos (their command verifies every tag before saving) ----
+            if (drafts.Count > 0)
             {
-                var drafts = CurrentTodoDrafts();
-                if (drafts.Count > 0)
-                {
-                    busyLabel = "Creating to-dos";
-                    var linkRequestId = string.IsNullOrWhiteSpace(createProjectId) ? null : NullIfBlank(createTodoLinkRequestId);
-                    await Intake.CreateTodoItemsFromMessageAsync(new CreateTodoItemsFromMessage(
-                        anchor.Id,
-                        NullIfBlank(createProjectId),
-                        drafts,
-                        LinkRequestId: linkRequestId,
-                        InternetMessageId: anchor.InternetMessageId,
-                        Pathway: linkRequestId is null && pathway is { } chosenForTodos ? PathwayLabel(chosenForTodos) : null));
-                    createTodoRows = new List<TodoDraftRow> { new() };
-                    filed = true;
-                }
-            }
-            else
-            {
-                filed |= await CreateRideAlongTodosAsync(ComposeContextProjectId) > 0;
+                busyLabel = "Creating to-dos";
+                var linkRequestId = string.IsNullOrWhiteSpace(todoProjectId) ? null : NullIfBlank(createTodoLinkRequestId);
+                await Intake.CreateTodoItemsFromMessageAsync(new CreateTodoItemsFromMessage(
+                    anchor.Id,
+                    NullIfBlank(todoProjectId),
+                    drafts,
+                    LinkRequestId: linkRequestId,
+                    InternetMessageId: anchor.InternetMessageId,
+                    Pathway: linkRequestId is null && pathway is { } chosenForTodos ? PathwayLabel(chosenForTodos) : null));
+                // One batch per apply: clear the rows so a cross-filing re-run can't double-raise.
+                createTodoRows = new List<TodoDraftRow> { new() };
+                filed = true;
             }
 
-            // 2. Record filing chosen above: link every pick / create the new record, tag-first.
-            if (mode == TriageMode.Link && linkRecordIds.Count > 0)
+            // ---- Section 3: record filing (link picks, or create the new record) ----
+            if (picks.Count > 0)
             {
                 busyLabel = "Linking";
-                foreach (var record in linkRecords.Where(r => linkRecordIds.Contains(r.RecordId)).ToList())
+                foreach (var record in picks)
                 {
-                    await Intake.LinkMessageToRecordAsync(
-                        anchor.Id, anchor.InternetMessageId, record.Type, record.RecordId,
-                        pathway: CostCentrePathwayFor(record));
+                    try
+                    {
+                        await Intake.LinkMessageToRecordAsync(
+                            anchor.Id, anchor.InternetMessageId, record.Type, record.RecordId,
+                            pathway: CostCentrePathwayFor(record),
+                            allowCrossPathway: allowCrossPathway);
+                    }
+                    catch (CommandFailedException ex) when (!allowCrossPathway && IsCrossFilePrompt(ex.Message))
+                    {
+                        // The lane confirm: keep the selection and everything still pending, show
+                        // the amber confirm in section 3 — "File under both anyway" re-runs this
+                        // apply with consent (to-dos already raised won't double: rows are cleared).
+                        crossFileMessage = ex.Message;
+                        pendingSaveDraft = saveAsDraftOnly;
+                        return;
+                    }
                     filed = true;
                 }
             }
-            else if (mode == TriageMode.Create
-                && !string.IsNullOrWhiteSpace(createProjectId) && !string.IsNullOrWhiteSpace(createTitle))
+            else if (createReady)
             {
                 if (pathway == TriagePathway.Subcontractor)
                 {
@@ -3156,27 +3013,48 @@ else
                 filed = true;
             }
 
-            // 3. Send — last, so nothing above can be lost to a send failure. When a filing already
-            //    dealt with the thread its record tag says more than Replied, so skip the stamp.
-            busyLabel = saveAsDraftOnly ? "Saving draft" : "Sending reply";
-            var command = new SendMailboxEmail(
-                ReplyToMessageId: anchor.Id,
-                ReplyToInternetMessageId: anchor.InternetMessageId,
-                To: to,
-                Cc: ParseRecipients(replyCcField),
-                Bcc: ParseRecipients(replyBccField),
-                Subject: replySubject.Trim(),
-                Body: replyBody,
-                BodyIsHtml: true,
-                Attachments: replyAttachments.Select(a => a.ToRef()).ToList(),
-                SaveAsDraftOnly: saveAsDraftOnly,
-                Pathway: pathway?.ToString(),
-                MarkThreadHandled: !filed);
-            composeOutcome = await Intake.SendComposedEmailAsync(command, uploadParts);
-            replyBody = "";
-            replyOpen = false;
-            replyAttachments = Array.Empty<ComposeDraftAttachment>();
-        });
+            // ---- Section 1: the reply — last, so nothing above can be lost to a send failure.
+            //      When a filing already dealt with the thread its record tag says more than
+            //      Replied, so the stamp is skipped. ----
+            if (replying)
+            {
+                busyLabel = saveAsDraftOnly ? "Saving draft" : "Sending reply";
+                var command = new SendMailboxEmail(
+                    ReplyToMessageId: anchor.Id,
+                    ReplyToInternetMessageId: anchor.InternetMessageId,
+                    To: ParseRecipients(replyToField),
+                    Cc: ParseRecipients(replyCcField),
+                    Bcc: ParseRecipients(replyBccField),
+                    Subject: replySubject.Trim(),
+                    Body: replyBody,
+                    BodyIsHtml: true,
+                    Attachments: replyAttachments.Select(a => a.ToRef()).ToList(),
+                    SaveAsDraftOnly: saveAsDraftOnly,
+                    Pathway: pathway?.ToString(),
+                    MarkThreadHandled: !filed);
+                composeOutcome = await Intake.SendComposedEmailAsync(command, uploadParts);
+                replyBody = "";
+                replyOpen = false;
+                replyAttachments = Array.Empty<ComposeDraftAttachment>();
+            }
+
+            // Applied in full: refresh the queue and clear the selection (the email has left it).
+            ResetQueuePaging();
+            await Task.WhenAll(LoadAsync(), LoadRecentTriageAsync());
+            selected = null;
+            detail = null;
+            detailLoading = false;
+            mode = TriageMode.None;
+        }
+        catch (CommandFailedException ex)
+        {
+            actionError = ex.Message;
+        }
+        catch
+        {
+            actionError = "That didn't complete. Please try again.";
+        }
+        finally { busy = false; }
     }
 
     private void OnReplyToInput(ChangeEventArgs e) => replyToField = e.Value?.ToString() ?? "";
@@ -3301,11 +3179,7 @@ else
     private async Task DoDiscard()
     {
         if (selected is null || busy) return;
-        await RunAction("Discarding", async () =>
-        {
-            await CreateRideAlongTodosAsync(projectId: null);
-            await Intake.DiscardMessageAsync(selected.Id, selected.InternetMessageId);
-        });
+        await RunAction("Discarding", async () => await Intake.DiscardMessageAsync(selected.Id, selected.InternetMessageId));
     }
 
     private async Task DoRestore()
@@ -3526,7 +3400,7 @@ else
     {
         if (selected is null || busy || string.IsNullOrWhiteSpace(linkRecordId)) return;
         // The type to link as is the picked RECORD's own type, not the dropdown's (the Scheduling
-        // picker lists NOD/EOT/LAD claims documents alongside the bucket — see DoLinkCore).
+        // picker lists NOD/EOT/LAD claims documents alongside the bucket — see DoApplyAll).
         var record = linkRecords.FirstOrDefault(r => r.RecordId == linkRecordId);
         var recordType = record?.Type ?? linkRecordType;
         actionError = null;
@@ -3682,6 +3556,53 @@ else
     private static string Dash(string? value) => string.IsNullOrWhiteSpace(value) ? "—" : value;
 
     private static string Date(DateTimeOffset value) => value.LocalDateTime.ToString("d MMM yyyy, HH:mm");
+
+    // Outlook-style compact date for list rows: time alone today, "Yesterday 14:21", day name
+    // within the week, then the date.
+    private static string ListDate(DateTimeOffset value)
+    {
+        var local = value.LocalDateTime;
+        var today = DateTime.Now.Date;
+        if (local.Date == today) return local.ToString("HH:mm");
+        if (local.Date == today.AddDays(-1)) return $"Yesterday {local:HH:mm}";
+        if (local.Date > today.AddDays(-6)) return local.ToString("ddd HH:mm");
+        return local.ToString("d MMM yyyy");
+    }
+
+    // The group header a list row falls under — Today / Yesterday / day names this week / month.
+    private static string DateGroupLabel(DateTimeOffset value)
+    {
+        var local = value.LocalDateTime;
+        var today = DateTime.Now.Date;
+        if (local.Date == today) return "Today";
+        if (local.Date == today.AddDays(-1)) return "Yesterday";
+        if (local.Date > today.AddDays(-6)) return local.ToString("dddd");
+        return local.ToString("MMMM yyyy");
+    }
+
+    // Graph's bodyPreview can open with boilerplate line breaks; the row preview wants the first
+    // line with any content, whitespace collapsed.
+    private static string FirstLineOf(string preview)
+    {
+        var line = preview.Replace("\r\n", "\n").Split('\n')
+            .Select(l => l.Trim())
+            .FirstOrDefault(l => l.Length > 0) ?? "";
+        return System.Text.RegularExpressions.Regex.Replace(line, "\\s+", " ");
+    }
+
+    // Avatar initials from the sender's display name ("Lorraine Proud" → "LP"), falling back to
+    // the first letter of the address.
+    private static string SenderInitials(MailboxMessage item)
+    {
+        var name = string.IsNullOrWhiteSpace(item.FromName) ? item.FromEmail : item.FromName;
+        if (string.IsNullOrWhiteSpace(name)) return "?";
+        var words = name.Split(new[] { ' ', '|', '.', '_', '-' }, StringSplitOptions.RemoveEmptyEntries)
+            .Where(w => char.IsLetter(w[0]))
+            .Take(2)
+            .Select(w => char.ToUpperInvariant(w[0]))
+            .ToArray();
+        return words.Length == 0 ? char.ToUpperInvariant(name.Trim()[0]).ToString() : new string(words);
+    }
 
     private static string? NullIfBlank(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 

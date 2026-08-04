@@ -431,7 +431,7 @@ else
     private static string AddBack(decimal value) => value == 0m ? "—" : $"+ {Money(value)}";
 
     private static string Money(decimal value) =>
-        value.ToString(value == Math.Truncate(value) ? "C0" : "C2",
+        value.ToString("C2",
             System.Globalization.CultureInfo.GetCultureInfo("en-GB"));
 
     // ---- Loading ------------------------------------------------------------
