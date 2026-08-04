@@ -47,7 +47,10 @@ public sealed record MailboxMessageDetail(
     IReadOnlyList<string>? To = null,
     IReadOnlyList<string>? Cc = null,
     string? ReplyTo = null,
-    string? Subject = null);
+    string? Subject = null,
+    // The shared projects mailbox address. The composer filters it out of the reply-all prefill —
+    // the server auto-Cc's it on every send, so showing it in the visible Cc is pure noise.
+    string? MailboxAddress = null);
 
 // One page of a live, server-side-filtered mailbox read. Graph pages these with an opaque cursor
 // (its own nextLink) rather than an offset, so NextCursor — when non-null — is passed straight back

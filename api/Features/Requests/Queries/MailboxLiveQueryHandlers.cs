@@ -82,7 +82,9 @@ public sealed class ListConversationMessagesHandler : IQueryHandler<ListConversa
 public sealed class GetMailboxMessageDetailHandler : IQueryHandler<GetMailboxMessageDetail, MailboxMessageDetail>
 {
     private readonly IIntakeMessageReader reader;
-    public GetMailboxMessageDetailHandler(IIntakeMessageReader reader) { this.reader = reader; }
+    private readonly Jewel.JPMS.Api.Features.MailboxIntake.MailboxIntakeOptions options;
+    public GetMailboxMessageDetailHandler(IIntakeMessageReader reader, Jewel.JPMS.Api.Features.MailboxIntake.MailboxIntakeOptions options)
+    { this.reader = reader; this.options = options; }
 
     public async Task<MailboxMessageDetail> HandleAsync(GetMailboxMessageDetail query, CancellationToken cancellationToken)
     {
@@ -101,7 +103,8 @@ public sealed class GetMailboxMessageDetailHandler : IQueryHandler<GetMailboxMes
 
         return new MailboxMessageDetail(
             query.MessageId, body, content.IsHtml, attachments,
-            content.FromEmail, content.FromName, content.To, content.Cc, content.ReplyTo, content.Subject);
+            content.FromEmail, content.FromName, content.To, content.Cc, content.ReplyTo, content.Subject,
+            MailboxAddress: string.IsNullOrWhiteSpace(options.Mailbox) ? null : options.Mailbox);
     }
 
     private static string Sanitise(string html) => new HtmlSanitizer().Sanitize(html);

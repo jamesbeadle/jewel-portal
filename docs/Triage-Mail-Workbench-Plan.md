@@ -28,9 +28,19 @@ discard it (spam). Sender is always the shared `projects@jewelbb.co.uk` mailbox.
   staged draft to exactly what was submitted. The projects mailbox keeps its Cc copy server-side.
 - **`JPMS/Replied`** — a reply with no record chosen triages the thread with this ordinary
   workflow tag (+ the chosen pathway): answering an email IS dealing with it. Untag it on the
-  Tagged tab to send the thread back to the queue. The old forced request creation is now the
-  opt-in **"Also raise a request"** checkbox (Client pathway; same tag-first/rollback composite).
-- Reply is offered on **all three pathways** now, not just Client.
+  Tagged tab to send the thread back to the queue. The old forced request creation is retired
+  (`AlsoRaiseRequest` remains on the command for API callers, unused by the UI).
+- Reply is available on **all three pathways** now, not just Client.
+- **Reply is NOT a filing tab** (reworked same day on Nigel's feedback): the tabs stay purely
+  about filing — Link / Create / To-dos / Discard — and the composer is its own section
+  underneath, open on demand. The two combine: set up any filing above, write the reply below,
+  and ONE **Send reply & file** button applies the lot (filing first, tag-verified; send last).
+  While a reply is drafted the panes' own tag-only buttons stand down so a written reply can't be
+  left behind by accident; "Discard draft" clears it. A reply alone still triages the thread as
+  Replied + pathway; a reply sent alongside a filing skips the Replied stamp (the record tag says
+  more). The old "Also raise a request" checkbox is gone — Create-new + reply covers it.
+- The reply-all Cc prefill filters out the projects mailbox itself (`MailboxMessageDetail.MailboxAddress`)
+  — the server auto-Cc's it on every send, so showing it was noise.
 - Audit: `EmailSent` (always written, whatever the pathway — recipients snapshot in Detail,
   webLink = the sent copy) and `EmailSendFailed`. Plain int values 13/14 — **no EF migration**.
 
@@ -60,10 +70,10 @@ whole threads.
   the progress-photo upload; JSON-only when there are no files.
 
 ### To-dos alongside everything (Phase 4)
-The to-do row editor is a shared fragment, and every action pane — Link, Create (request and bid
-package), Reply and Discard — carries a collapsible **"Also add to-dos from this email"** section.
-Ride-along to-dos are created FIRST (their command verifies every tag before saving), then the
-primary action runs; if the primary action then fails, the items exist and the email sits in the
+The to-do row editor is a shared fragment, and every filing pane — Link, Create (request and bid
+package) and Discard — carries a collapsible **"Also add to-dos from this email"** section (the
+To-dos pane IS the editor). Ride-along to-dos are created FIRST (their command verifies every tag
+before saving), then the primary action — or the combined Send — runs; if the primary action then fails, the items exist and the email sits in the
 Tagged view under its TODO chips — per-step honesty rather than a pretend transaction. Fan-out per
 assignee and pathway-neutrality unchanged. The standalone To-dos action remains.
 

@@ -174,10 +174,11 @@ else
             </div>
 
             @* ── Potential — unapproved variations. A separate, dashed card BELOW the statement:
-               nothing in it is confirmed, so it must never read as part of the position above. ── *@
+               nothing in it is confirmed, so it must never read as part of the position above.
+               The generous top margin is deliberate — the gap itself says "not part of the statement". ── *@
             @if (PendingVariations.Count > 0)
             {
-            <div class="rounded-xl border border-dashed border-line bg-surface mb-4">
+            <div class="rounded-xl border border-dashed border-line bg-surface mt-10 mb-4">
                 <div class="px-4 py-3">
                     <p class="text-sm font-semibold text-content"
                        title="Variation orders not yet decided — quoting, issued, or awaiting an Architect's Instruction — at their estimated values. Approved variations are already inside the project claim; rejected ones are gone.">Potential — unapproved variations</p>
