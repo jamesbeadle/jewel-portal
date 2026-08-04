@@ -33,17 +33,20 @@ public sealed class XeroNightlyWorker
 
     private readonly ICommandHandler<SyncXeroLedger, XeroLedgerSyncResult> sync;
     private readonly ICommandHandler<AllocateSuggestedXeroLines, int> allocate;
+    private readonly ICommandHandler<SyncXeroSitePnl, XeroSitePnlSyncResult> sitePnl;
     private readonly IXeroClient xero;
     private readonly ILogger<XeroNightlyWorker> logger;
 
     public XeroNightlyWorker(
         ICommandHandler<SyncXeroLedger, XeroLedgerSyncResult> sync,
         ICommandHandler<AllocateSuggestedXeroLines, int> allocate,
+        ICommandHandler<SyncXeroSitePnl, XeroSitePnlSyncResult> sitePnl,
         IXeroClient xero,
         ILogger<XeroNightlyWorker> logger)
     {
         this.sync = sync;
         this.allocate = allocate;
+        this.sitePnl = sitePnl;
         this.xero = xero;
         this.logger = logger;
     }
@@ -77,5 +80,19 @@ public sealed class XeroNightlyWorker
         logger.LogInformation(
             "Nightly Xero auto-allocation: {Allocated} fully-matched line(s) allocated (write-back attempted per completed draft bill); the rest await a human.",
             allocated);
+
+        // Site P&L (the Profit Summary's cumulative invoiced-vs-cost chart): re-read every
+        // mapped project's monthly figures from Xero's P&L report. A failure here is logged
+        // and left for tomorrow — it must not stop the ledger sync above having landed.
+        var pnl = await sitePnl.HandleAsync(new SyncXeroSitePnl(), ct);
+        if (pnl.Error is not null)
+            logger.LogWarning("Nightly site P&L sync did not complete: {Error}", pnl.Error);
+        else
+            logger.LogInformation(
+                "Nightly site P&L sync: {Projects} project(s) refreshed, {Months} month rows stored{Unmapped}.",
+                pnl.ProjectsSynced, pnl.MonthsStored,
+                pnl.UnmappedProjectNames.Count > 0
+                    ? $" ({pnl.UnmappedProjectNames.Count} project(s) have no Xero site mapping)"
+                    : "");
     }
 }

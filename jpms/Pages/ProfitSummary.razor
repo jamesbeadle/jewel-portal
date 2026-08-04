@@ -1,9 +1,11 @@
 @page "/finance/profit-summary"
 @using Jewel.JPMS.Commercial
 @using Jewel.JPMS.Contracts.Commercial
+@using Jewel.JPMS.Contracts.Xero
 @using Jewel.JPMS.Features.Commercial
 @using Jewel.JPMS.Features.Procurement
 @using Jewel.JPMS.Features.Projects
+@using Jewel.JPMS.Features.Xero
 @inject AuthService Auth
 @inject SessionService Session
 @inject ProjectListReadModel Projects
@@ -13,7 +15,9 @@
 @inject ValuationClaimsReadModel Claims
 @inject ClaimLinesReadModel ClaimEntries
 @inject IValuationInvoiceStore Invoices
+@inject XeroSitePnlReadModel SitePnl
 @inject IQueryClient Queries
+@inject ICommandSender Commands
 @inject NavigationManager Nav
 @implements IDisposable
 
@@ -43,15 +47,18 @@
     movement = Forecast Profit, because Cost movement is defined as Initial Contract Costs −
     Forecasted Cost of Sales. The project filter defaults to live jobs and offers every project.
 
-    The margin trend chart from the accountant's mock is the "Current profit % by month" panel
-    under the table (added 2026-08-04): no locked monthly snapshot exists yet, so each month end
-    is reconstructed from the dated records themselves — cumulative Issued/Paid valuation
-    invoices (bucketed by the month they cover) against cumulative allocated Xero purchase
-    lines (by invoice date). See MarginChartFor for the two deliberate approximations.
+    Under the table sits the "Cumulative position" panel from the accountant's combined mock
+    (2026-08-04, replacing the reconstructed margin-% lines, which sawtoothed because
+    certification arrives in lumps): one mini-chart per job, cumulative invoiced against
+    cumulative cost of sales from the job's first month to now, both straight from Xero's own
+    site P&L (the profit & loss report filtered by each project's Sites tracking option,
+    stored monthly by SyncXeroSitePnl — nightly worker + the panel's Refresh button). The gap
+    between the lines is cumulative gross profit; the panel reports the INVOICED rung of the
+    ladder, so it deliberately sits near, not on, the table's certified figures.
 
-    Month-on-month movement ("vs the June pack") and the excluded-jobs banner from the
-    accountant's mock need a locked monthly snapshot / new API queries — agreed out of scope
-    for now (2026-08-04); the layout leaves room for them.
+    The mock's other two panels (movement grid + forecast trajectory) plot month-end FORECAST
+    history, which needs a locked monthly snapshot store that doesn't exist yet — still out of
+    scope (2026-08-04); the layout leaves room for them.
 *@
 
 @if (!sessionReady)
@@ -365,82 +372,6 @@ else
                     </table>
                 </div>
 
-                @* ── Current profit % by month — the accountant's margin trend chart, rebuilt
-                   from data the page loads per project (see MarginChartFor for how each month
-                   end is reconstructed and the approximations that implies). A conditional
-                   region: skipped entirely until at least one project has certified value,
-                   because a chart with no lines explains nothing. ── *@
-                @if (MarginChartFor(rows) is { } chart)
-                {
-                    <div class="rounded-xl border border-line bg-surface p-5 mt-6">
-                        <div class="flex items-start justify-between gap-x-6 gap-y-2 flex-wrap">
-                            <p class="text-[11px] uppercase tracking-wider text-content-subtle font-semibold">
-                                Current profit % by month
-                                <span class="normal-case tracking-normal font-normal text-content-faint ml-2">— certified value vs cost to date, month end</span>
-                            </p>
-                            <div class="flex items-center gap-2 flex-wrap">
-                                @foreach (var series in chart.Series)
-                                {
-                                    var dimmed = isolatedChartProjectId is not null
-                                        && !series.Project.ProjectId.Equals(isolatedChartProjectId, StringComparison.OrdinalIgnoreCase);
-                                    <button type="button"
-                                            class="flex items-center gap-1.5 rounded border border-line px-2 py-1 text-[11px] hover:border-line-strong @(dimmed ? "text-content-faint" : "text-content-muted")"
-                                            title="Click to isolate this project; click again to show all"
-                                            @onclick="() => ToggleChartIsolation(series.Project.ProjectId)">
-                                        <span class="inline-block w-2 h-2 rounded-full" style="@($"background:{series.Color}{(dimmed ? ";opacity:.35" : "")}")"></span>
-                                        @series.Project.Name
-                                    </button>
-                                }
-                                @foreach (var project in chart.Unplottable)
-                                {
-                                    <span class="flex items-center gap-1.5 rounded border border-line px-2 py-1 text-[11px] text-content-faint"
-                                          title="No certified value yet — margin can't be plotted until the first application is certified.">
-                                        <span class="inline-block w-2 h-2 rounded-full bg-line"></span>
-                                        @project.Name ⚠
-                                    </span>
-                                }
-                            </div>
-                        </div>
-                        <div class="relative h-[240px] mt-4 mb-7 ml-12 mr-40" aria-hidden="true">
-                            @foreach (var tick in chart.Ticks)
-                            {
-                                <div class="absolute inset-x-0 border-t @(tick.Value == 0m ? "border-line-strong" : "border-line")" style="top:@(Pc(tick.Y))%"></div>
-                                <span class="absolute -translate-y-1/2 text-[10px] text-content-subtle" style="top:@(Pc(tick.Y))%;right:calc(100% + 8px)">@tick.Label</span>
-                            }
-                            <div class="absolute inset-x-0 border-t border-dashed border-content-faint" style="top:@(Pc(chart.BudgetY))%"></div>
-                            <span class="absolute text-[10px] text-content-subtle" style="top:calc(@(Pc(chart.BudgetY))% - 15px);left:4px">@chart.BudgetLabel</span>
-                            <svg class="absolute inset-0 w-full h-full overflow-visible" viewBox="0 0 100 100" preserveAspectRatio="none">
-                                @foreach (var series in chart.Series)
-                                {
-                                    <polyline points="@series.PolylinePoints" fill="none" stroke="@series.Color" stroke-width="2"
-                                              vector-effect="non-scaling-stroke" stroke-linejoin="round" stroke-linecap="round"
-                                              opacity="@SeriesOpacity(series)" />
-                                }
-                            </svg>
-                            @foreach (var series in chart.Series)
-                            {
-                                <div class="absolute w-1.5 h-1.5 rounded-full -translate-y-1/2 translate-x-1/2"
-                                     style="background:@series.Color;top:@(Pc(series.EndY))%;right:0;opacity:@SeriesOpacity(series)"></div>
-                                <button type="button"
-                                        class="absolute -translate-y-1/2 text-[10px] text-content-muted whitespace-nowrap text-left"
-                                        style="top:@(Pc(series.LabelY))%;left:calc(100% + 12px);opacity:@SeriesOpacity(series)"
-                                        title="Click to isolate this project; click again to show all"
-                                        @onclick="() => ToggleChartIsolation(series.Project.ProjectId)">@series.Project.Name</button>
-                            }
-                            @foreach (var month in chart.MonthLabels)
-                            {
-                                <span class="absolute -translate-x-1/2 text-[10px] text-content-subtle" style="top:calc(100% + 8px);left:@(Pc(month.X))%">@month.Label</span>
-                            }
-                        </div>
-                        <p class="text-[11px] text-content-subtle mt-2">
-                            @if (chart.Unplottable.Count > 0)
-                            {
-                                <text>⚠ @JoinNames(chart.Unplottable) @(chart.Unplottable.Count == 1 ? "has" : "have") no certified value yet — margin can't be plotted until the first application is certified. </text>
-                            }
-                            Click a project to isolate it; click again to show all.
-                        </p>
-                    </div>
-                }
                 <p class="text-xs text-content-subtle mt-3 max-w-3xl">
                     <span class="text-content-muted font-medium">The deal</span> is the revised
                     contract sum including approved variations, against its target cost — the
@@ -475,6 +406,135 @@ else
                 </p>
             }
             </LoadGate>
+
+            @* ── Cumulative position — invoiced vs cost, job start to date, straight from
+               Xero's site P&L (the accountant's combined mock, 2026-08-04). One card per
+               selected job on its own scale; the gap between the lines is cumulative gross
+               profit. Gated on its own store, not on the table's per-project loads — the two
+               regions load in parallel and reveal independently. ── *@
+            @if (selectionInitialised && SelectedProjects.Count > 0)
+            {
+                <div class="rounded-xl border border-line bg-surface p-5 mt-6">
+                    <div class="flex items-start justify-between gap-x-6 gap-y-2 flex-wrap">
+                        <div>
+                            <p class="text-[11px] uppercase tracking-wider text-content-subtle font-semibold">
+                                Cumulative position
+                                <span class="normal-case tracking-normal font-normal text-content-faint ml-2">— invoiced vs cost, job start to date (Xero)</span>
+                            </p>
+                            <div class="flex items-center gap-4 mt-2 text-[11px] text-content-muted flex-wrap">
+                                <span class="flex items-center gap-1.5"><span class="inline-block w-3.5 h-[3px] rounded-full" style="background:@InvoicedColor"></span>Cumulative invoiced</span>
+                                <span class="flex items-center gap-1.5"><span class="inline-block w-3.5 h-[3px] rounded-full" style="background:@CostColor"></span>Cumulative cost of sales</span>
+                                <span class="text-content-faint">· hover for month values</span>
+                            </div>
+                        </div>
+                        <Toolbar>
+                            <ToolbarButton Icon="refresh" Label="Refresh from Xero" Busy="@pnlSyncing" OnClick="RefreshSitePnlAsync" />
+                        </Toolbar>
+                    </div>
+
+                    @if (pnlSyncError is not null)
+                    {
+                        <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mt-4">@pnlSyncError</p>
+                    }
+
+                    <LoadGate IsLoading="@(SitePnl.Current is null && !pnlFailed)" Label="Loading Xero site figures">
+                        @if (SitePnl.Current is null)
+                        {
+                            <p class="text-sm text-negative mt-4">
+                                The Xero site figures could not be loaded. The details are in the red bar at the top — reload to try again.
+                            </p>
+                        }
+                        else if (!SitePnl.Current.IsConfigured)
+                        {
+                            <p class="text-sm text-content-muted mt-4">
+                                Xero isn't connected — add the Xero credentials to the API's app settings and this panel lights up.
+                            </p>
+                        }
+                        else
+                        {
+                            var cards = CumulativeCardsFor(SelectedProjects);
+
+                            @if (SitePnl.Current.LastSyncedAtUtc is null)
+                            {
+                                <p class="text-sm text-content-muted mt-4">
+                                    No site figures have been pulled from Xero yet — press "Refresh from Xero" above to run the
+                                    first sync; the nightly worker keeps it current from then on.
+                                </p>
+                            }
+
+                            <div class="grid gap-3.5 sm:grid-cols-2 xl:grid-cols-3 mt-4">
+                                @foreach (var card in cards)
+                                {
+                                    <div class="rounded-lg border border-line bg-surface-raised px-4 pt-3.5 pb-3">
+                                        @if (card.Chart is null)
+                                        {
+                                            <div class="flex items-center justify-center min-h-[170px]">
+                                                <p class="text-[11px] text-content-subtle text-center leading-relaxed max-w-[240px]">
+                                                    <span class="block text-amber-400 mb-1">@card.Project.Name ⚠</span>
+                                                    @card.Unavailable
+                                                </p>
+                                            </div>
+                                        }
+                                        else
+                                        {
+                                            var chart = card.Chart!;
+                                            <div class="flex items-baseline justify-between gap-2">
+                                                <span class="text-[12.5px] font-medium text-content">@card.Project.Name</span>
+                                                <span class="text-[10px] text-content-faint whitespace-nowrap">@chart.RangeLabel</span>
+                                            </div>
+                                            <div class="relative h-[110px] mt-2">
+                                                <div class="absolute inset-x-0 bottom-0 border-t border-line"></div>
+                                                <svg class="absolute inset-0 w-full h-full overflow-visible" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+                                                    <polyline points="@chart.CostPoints" fill="none" stroke="@CostColor" stroke-width="2"
+                                                              vector-effect="non-scaling-stroke" stroke-linejoin="round" stroke-linecap="round" />
+                                                    <polyline points="@chart.InvoicedPoints" fill="none" stroke="@InvoicedColor" stroke-width="2"
+                                                              vector-effect="non-scaling-stroke" stroke-linejoin="round" stroke-linecap="round" />
+                                                </svg>
+                                                <div class="absolute w-1.5 h-1.5 rounded-full -translate-y-1/2 translate-x-1/2"
+                                                     style="background:@InvoicedColor;top:@(Pc(chart.InvoicedEndY))%;right:0"></div>
+                                                <div class="absolute w-1.5 h-1.5 rounded-full -translate-y-1/2 translate-x-1/2"
+                                                     style="background:@CostColor;top:@(Pc(chart.CostEndY))%;right:0"></div>
+                                                @* The hover layer the legend promises: one full-height column per month, the
+                                                   month's running figures as its tooltip. *@
+                                                @for (var index = 0; index < chart.Points.Count; index++)
+                                                {
+                                                    var point = chart.Points[index];
+                                                    <div class="absolute inset-y-0"
+                                                         style="left:@(Pc(index * 100d / chart.Points.Count))%;width:@(Pc(100d / chart.Points.Count))%"
+                                                         title="@($"{point.Month:MMM yy} — invoiced {MoneyCompact(point.Invoiced)} · cost {MoneyCompact(point.Cost)} · gross profit {MoneyCompact(point.Invoiced - point.Cost)}")"></div>
+                                                }
+                                            </div>
+                                            <div class="flex items-baseline justify-between gap-2 mt-2 flex-wrap">
+                                                <span class="text-sm font-semibold @ProfitClass(chart.GrossProfit)">
+                                                    @MoneyCompact(chart.GrossProfit)
+                                                    <span class="text-[10.5px] font-normal text-content-faint ml-1">cum. gross profit@(chart.Margin is decimal cumMargin ? $" · {Pct(cumMargin)}" : "")</span>
+                                                </span>
+                                                @if (chart.Warning is not null)
+                                                {
+                                                    <span class="text-[10px] text-amber-400">⚠ @chart.Warning</span>
+                                                }
+                                            </div>
+                                        }
+                                    </div>
+                                }
+                            </div>
+
+                            <p class="text-[11px] text-content-subtle mt-3 max-w-3xl">
+                                Gap between the lines is cumulative gross profit — parallel is healthy, converging is eroding,
+                                crossed is underwater, both flat is stalled or unbilled. Figures are Xero's own site P&L (sales
+                                and cost of sales tracked to each project's site), so this panel reports the
+                                <span class="text-content-muted">invoiced</span> rung of the ladder — it sits near, not on, the
+                                table's <span class="text-content-muted">certified</span> figures, and retention appears only
+                                where it is tracked to the site in Xero.
+                                @if (SitePnl.Current.LastSyncedAtUtc is DateTimeOffset syncedAt)
+                                {
+                                    <text>Synced from Xero @syncedAt.ToLocalTime().ToString("d MMM HH:mm").</text>
+                                }
+                            </p>
+                        }
+                    </LoadGate>
+                </div>
+            }
         }
     </section>
 }
@@ -505,10 +565,6 @@ else
     // Per-project answers to the reads the shared read models don't cache for us.
     private readonly Dictionary<string, decimal> invoicedByProject = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, IReadOnlyList<PackageReconciliationRow>> packagesByProject = new(StringComparer.OrdinalIgnoreCase);
-    // The margin chart's raw material: every valuation invoice and every allocated Xero
-    // purchase line, because month-end positions need the dated records, not the totals.
-    private readonly Dictionary<string, IReadOnlyList<ValuationInvoice>> invoiceListByProject = new(StringComparer.OrdinalIgnoreCase);
-    private readonly Dictionary<string, IReadOnlyList<ProjectCostOfSalesLine>> costLinesByProject = new(StringComparer.OrdinalIgnoreCase);
 
     // ONE throttle for the page's lifetime, not one per LoadSelectedAsync call — a filter change
     // or retry while the first batch is still in flight must share the same ceiling.
@@ -637,154 +693,151 @@ else
             rows.Sum(entry => entry.Row.WorksComplete),
             rows.Sum(entry => entry.Row.RetentionOutstanding));
 
-    // ---- Margin trend chart --------------------------------------------------
-    // The accountant's "current profit % by month", reconstructed client-side because no
-    // locked monthly snapshot exists yet. Two deliberate approximations, both disclosed here
-    // rather than hidden: (1) certified value cumulates Issued/Paid valuation invoices by
-    // PeriodMonth — the month the certificate covers — not the day the invoice was issued,
-    // because a valuation history reads by application month; (2) cost to date cumulates the
-    // allocated Xero purchase lines by invoice date (undated lines count from the start), so
-    // a project whose ActualCostOfSales carries approved timesheet labour reads slightly
-    // higher here than the table's Current profit — labour has no dated £ figure client-side.
+    // ---- Cumulative position (Xero site P&L) --------------------------------
+    // One card per selected job: cumulative invoiced vs cumulative cost of sales, month by
+    // month from the job's first stored month to the current month, each card on its own
+    // scale. The figures are Xero's own site P&L rows (XeroSitePnlReadModel — synced nightly,
+    // re-pulled by the panel's Refresh button); months with no stored row are flat segments,
+    // so a stalled or unbilled job reads as exactly that. Line colours are the accountant's
+    // mock pair, validated for CVD separation and contrast on the card surface.
 
-    private string? isolatedChartProjectId;
+    private const string InvoicedColor = "#3987e5";
+    private const string CostColor = "#d95926";
 
-    private static readonly string[] ChartPalette =
+    private bool pnlFailed;
+    private bool pnlSyncing;
+    private string? pnlSyncError;
+
+    private sealed record CumulativeMonthPoint(DateTime Month, decimal Invoiced, decimal Cost);
+
+    private sealed record CumulativeChart(
+        IReadOnlyList<CumulativeMonthPoint> Points,
+        string InvoicedPoints,
+        string CostPoints,
+        double InvoicedEndY,
+        double CostEndY,
+        decimal GrossProfit,
+        decimal? Margin,
+        string RangeLabel,
+        string? Warning);
+
+    // Chart null means "no line to draw" — Unavailable says why (unmapped vs no activity).
+    private sealed record CumulativeCard(Project Project, CumulativeChart? Chart, string? Unavailable);
+
+    private List<CumulativeCard> CumulativeCardsFor(IReadOnlyList<Project> projects)
     {
-        "#3b82f6", "#f97316", "#10b981", "#eab308", "#8b5cf6", "#06b6d4", "#ec4899", "#f43f5e",
-    };
+        var rowsByProject = (SitePnl.Current?.Rows ?? (IReadOnlyList<XeroSiteMonthlyPnl>)Array.Empty<XeroSiteMonthlyPnl>())
+            .GroupBy(row => row.ProjectId, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(group => group.Key, group => group.OrderBy(row => row.Month).ToList(), StringComparer.OrdinalIgnoreCase);
 
-    private sealed record MarginSeries(Project Project, string Color, string PolylinePoints, double EndY, double LabelY);
-    private sealed record ChartTick(string Label, decimal Value, double Y);
-    private sealed record MonthLabel(string Label, double X);
-    private sealed record MarginChartModel(
-        IReadOnlyList<MarginSeries> Series,
-        IReadOnlyList<Project> Unplottable,
-        IReadOnlyList<MonthLabel> MonthLabels,
-        IReadOnlyList<ChartTick> Ticks,
-        double BudgetY,
-        string BudgetLabel);
+        return projects
+            .Select(project =>
+                rowsByProject.TryGetValue(project.ProjectId, out var rows) && rows.Count > 0
+                    ? new CumulativeCard(project, CumulativeChartFor(rows), null)
+                    : new CumulativeCard(project, null,
+                        string.IsNullOrWhiteSpace(project.XeroSiteName)
+                            ? "Not mapped to a Xero site — set \"Xero site (tracking option)\" in the project's details, then refresh."
+                            : "Nothing invoiced or spent against this site in Xero yet — the chart lights up once activity is tracked to it."))
+            .ToList();
+    }
 
-    private void ToggleChartIsolation(string projectId) =>
-        isolatedChartProjectId =
-            string.Equals(isolatedChartProjectId, projectId, StringComparison.OrdinalIgnoreCase) ? null : projectId;
-
-    private string SeriesOpacity(MarginSeries series) =>
-        isolatedChartProjectId is null
-        || series.Project.ProjectId.Equals(isolatedChartProjectId, StringComparison.OrdinalIgnoreCase) ? "1" : "0.12";
-
-    private static string JoinNames(IReadOnlyList<Project> projects) =>
-        projects.Count == 1
-            ? projects[0].Name
-            : string.Join(", ", projects.Take(projects.Count - 1).Select(project => project.Name)) + " and " + projects[^1].Name;
-
-    private MarginChartModel? MarginChartFor(IReadOnlyList<(Project Project, ProfitRow Row)> rows)
+    private static CumulativeChart CumulativeChartFor(IReadOnlyList<XeroSiteMonthlyPnl> rows)
     {
-        // A job's first weeks can read absurd (£5k certified against £100k of spend); points
-        // are clamped to ±100% so one early month can't flatten every other line's axis.
-        const decimal clampPercent = 100m;
+        // Every month from the job's first stored month to now, cumulated — absent months are
+        // real flat segments, not gaps: "nothing moved" is part of the story.
+        var first = new DateTime(rows[0].Month.Year, rows[0].Month.Month, 1);
+        var last = new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1);
+        if (last < first) last = first;
 
-        var plottable = new List<(Project Project, SortedDictionary<DateOnly, decimal> CertifiedByMonth, IReadOnlyList<ProjectCostOfSalesLine> CostLines)>();
-        var unplottable = new List<Project>();
-        foreach (var (project, _) in rows)
+        var rowByMonth = rows.ToDictionary(row => new DateTime(row.Month.Year, row.Month.Month, 1));
+        var points = new List<CumulativeMonthPoint>();
+        decimal invoiced = 0m, cost = 0m;
+        for (var month = first; month <= last; month = month.AddMonths(1))
         {
-            // A failed row shows zeros behind the banner — the banner already tells that
-            // story, so the chart says nothing about it rather than "not certified yet".
-            if (failedProjects.Contains(project.ProjectId)) continue;
-            var certified = invoiceListByProject.TryGetValue(project.ProjectId, out var invoices)
-                ? invoices.Where(invoice => invoice.Status is ValuationInvoiceStatus.Issued or ValuationInvoiceStatus.Paid).ToList()
-                : new List<ValuationInvoice>();
-            if (certified.Count == 0) { unplottable.Add(project); continue; }
-
-            var certifiedByMonth = new SortedDictionary<DateOnly, decimal>();
-            foreach (var invoice in certified)
+            if (rowByMonth.TryGetValue(month, out var row))
             {
-                var month = new DateOnly(invoice.PeriodMonth.Year, invoice.PeriodMonth.Month, 1);
-                certifiedByMonth[month] = (certifiedByMonth.TryGetValue(month, out var sum) ? sum : 0m) + invoice.Amount;
+                invoiced += row.Income;
+                cost += row.CostOfSales;
             }
-            var costLines = costLinesByProject.TryGetValue(project.ProjectId, out var lines)
-                ? lines
-                : Array.Empty<ProjectCostOfSalesLine>();
-            plottable.Add((project, certifiedByMonth, costLines));
+            points.Add(new CumulativeMonthPoint(month, invoiced, cost));
         }
-        if (plottable.Count == 0) return null;
 
-        // One shared month axis: the earliest certified month across the selection → today.
-        var firstMonth = plottable.Min(entry => entry.CertifiedByMonth.Keys.First());
-        var lastMonth = new DateOnly(DateTime.Today.Year, DateTime.Today.Month, 1);
-        if (lastMonth < firstMonth) lastMonth = firstMonth;
-        var months = new List<DateOnly>();
-        for (var month = firstMonth; month <= lastMonth; month = month.AddMonths(1)) months.Add(month);
+        // Each card on its own scale (the mock's point: one huge job must not squash the
+        // rest flat), with 6% headroom so the top line never kisses the frame.
+        var top = Math.Max(points.Max(point => point.Invoiced), points.Max(point => point.Cost));
+        if (top <= 0m) top = 1m;
+        top *= 1.06m;
 
-        double XFor(int index) => months.Count == 1 ? 100d : index / (double)(months.Count - 1) * 100d;
+        double XFor(int index) => points.Count == 1 ? 100d : index / (double)(points.Count - 1) * 100d;
+        double YFor(decimal value) => (double)((top - value) / top) * 100d;
+        string PointsAttr(Func<CumulativeMonthPoint, decimal> pick) =>
+            string.Join(" ", points.Select((point, index) => $"{Pc(XFor(index))},{Pc(YFor(pick(point)))}"));
 
-        // Each project's margin at each month end, from its first certified month onward:
-        // (certified − cost) / certified — the table's Current margin, historically.
-        var rawSeries = new List<(Project Project, List<(int MonthIndex, decimal Percent)> Points)>();
-        foreach (var (project, certifiedByMonth, costLines) in plottable)
+        var gross = invoiced - cost;
+        decimal? margin = invoiced == 0m ? null : gross / invoiced;
+
+        // The two flags from the accountant's mock. Underwater names the month the lines
+        // crossed — the question a board asks next. Young deposit-led jobs carry absurd
+        // margins until the work catches the money up, so the % is flagged, not hidden.
+        string? warning = null;
+        if (gross < 0m)
         {
-            var points = new List<(int MonthIndex, decimal Percent)>();
-            var certified = 0m;
-            for (var index = 0; index < months.Count; index++)
-            {
-                certified += certifiedByMonth.TryGetValue(months[index], out var amount) ? amount : 0m;
-                if (certified <= 0m) continue;
-                var monthEnd = months[index].AddMonths(1).AddDays(-1);
-                var cost = costLines
-                    .Where(line => line.Date is null || DateOnly.FromDateTime(line.Date.Value) <= monthEnd)
-                    .Sum(line => line.Net);
-                points.Add((index, Math.Clamp((certified - cost) / certified * 100m, -clampPercent, clampPercent)));
-            }
-            if (points.Count > 0) rawSeries.Add((project, points));
+            var crossed = points.FirstOrDefault(point => point.Cost > point.Invoiced);
+            warning = crossed is null ? "cost ahead of invoicing" : $"cost overtook invoicing {crossed.Month:MMM yy}";
         }
-        if (rawSeries.Count == 0) return null;
+        else if (points.Count <= 6 && margin is >= 0.3m)
+        {
+            warning = "deposit-led — margin not meaningful yet";
+        }
 
-        // The Y range fits the data and always includes the budget line. Ticks land on the
-        // smallest standard step that keeps the axis to at most ~6 intervals.
-        var budget = 100m - FinancialSummaryAssumptions.CostFactor * 100m;
-        var low = Math.Min(budget, rawSeries.Min(entry => entry.Points.Min(point => point.Percent)));
-        var high = Math.Max(budget, rawSeries.Max(entry => entry.Points.Max(point => point.Percent)));
-        var step = new[] { 5m, 10m, 20m, 25m, 50m }.First(candidate => (high - low) / candidate <= 6m);
-        low = Math.Floor(low / step) * step;
-        high = Math.Ceiling(high / step) * step;
-        if (high == low) high += step;
+        return new CumulativeChart(
+            points,
+            PointsAttr(point => point.Invoiced),
+            PointsAttr(point => point.Cost),
+            YFor(points[^1].Invoiced),
+            YFor(points[^1].Cost),
+            gross,
+            margin,
+            $"{first:MMM yy} → {last:MMM yy} · {points.Count} mo",
+            warning);
+    }
 
-        double YFor(decimal value) => (double)((high - value) / (high - low)) * 100d;
+    private async Task LoadSitePnlAsync()
+    {
+        try
+        {
+            await SitePnl.RefreshAsync(CancellationToken.None);
+            pnlFailed = false;
+        }
+        catch
+        {
+            // HttpQueryClient has already reported this to the error toast with a reference;
+            // the flag opens the panel's gate so it says what went wrong instead of pulsing.
+            pnlFailed = true;
+        }
+    }
 
-        var series = rawSeries
-            .Select((entry, index) =>
-            {
-                var pointsAttr = string.Join(" ", entry.Points.Select(point =>
-                    $"{Pc(XFor(point.MonthIndex))},{Pc(YFor(point.Percent))}"));
-                var endY = YFor(entry.Points[^1].Percent);
-                return new MarginSeries(entry.Project, ChartPalette[index % ChartPalette.Length], pointsAttr, endY, endY);
-            })
-            .ToList();
-
-        // Nudge the end-of-line name labels apart, top to bottom, so close lines stay legible.
-        const double labelGap = 6d;
-        var byLabel = series.OrderBy(entry => entry.LabelY).ToList();
-        for (var index = 1; index < byLabel.Count; index++)
-            if (byLabel[index].LabelY < byLabel[index - 1].LabelY + labelGap)
-                byLabel[index] = byLabel[index] with { LabelY = byLabel[index - 1].LabelY + labelGap };
-        series = series
-            .Select(entry => byLabel.First(candidate =>
-                candidate.Project.ProjectId.Equals(entry.Project.ProjectId, StringComparison.OrdinalIgnoreCase)))
-            .ToList();
-
-        var ticks = new List<ChartTick>();
-        for (var value = low; value <= high; value += step)
-            ticks.Add(new ChartTick($"{value:0}%", value, YFor(value)));
-
-        // Month labels thinned to ~8 across so a long job never crowds the axis.
-        var every = Math.Max(1, (int)Math.Ceiling(months.Count / 8d));
-        var monthLabels = months
-            .Select((month, index) => (Month: month, Index: index))
-            .Where(entry => entry.Index % every == 0)
-            .Select(entry => new MonthLabel(entry.Month.ToString("MMM yy"), XFor(entry.Index)))
-            .ToList();
-
-        return new MarginChartModel(series, unplottable, monthLabels, ticks, YFor(budget), $"budget {Pct(budget / 100m)}");
+    // The panel's Refresh button: re-pull from Xero (SyncXeroSitePnl reads the P&L report per
+    // mapped project), then re-read the stored rows. A sync that completes but reports an
+    // error (e.g. a renamed tracking option) is shown inline — it is an answer, not a toast.
+    private async Task RefreshSitePnlAsync()
+    {
+        pnlSyncing = true;
+        pnlSyncError = null;
+        try
+        {
+            var result = await Commands.SendAsync(new SyncXeroSitePnl(), CancellationToken.None);
+            if (result.Error is not null) pnlSyncError = result.Error;
+            await LoadSitePnlAsync();
+        }
+        catch
+        {
+            // Command/query failures are already on the error toast with a reference.
+        }
+        finally
+        {
+            pnlSyncing = false;
+        }
     }
 
     // ---- Bridge -------------------------------------------------------------
@@ -907,6 +960,7 @@ else
         Lines.OnChanged -= StateHasChanged;
         Claims.OnChanged -= StateHasChanged;
         ClaimEntries.OnChanged -= StateHasChanged;
+        SitePnl.OnChanged -= StateHasChanged;
         // The throttle is deliberately NOT disposed: a load still in flight when the user
         // navigates away would Release() a disposed semaphore and fault the abandoned task.
         // An undisposed SemaphoreSlim (no wait-handle use) holds nothing worth reclaiming.
@@ -924,6 +978,7 @@ else
         Lines.OnChanged += StateHasChanged;
         Claims.OnChanged += StateHasChanged;
         ClaimEntries.OnChanged += StateHasChanged;
+        SitePnl.OnChanged += StateHasChanged;
         sessionReady = true;
         try
         {
@@ -938,7 +993,9 @@ else
         }
         selectedIds = ProjectMultiSelect.LiveJobIds(Projects.Current ?? Array.Empty<Project>());
         selectionInitialised = true;
-        await LoadSelectedAsync();
+        // The table's per-project loads and the Xero panel's single read are independent
+        // regions with independent gates — load them in parallel.
+        await Task.WhenAll(LoadSelectedAsync(), LoadSitePnlAsync());
     }
 
     private async Task OnSelectionChangedAsync(IReadOnlyCollection<string> ids)
@@ -1000,8 +1057,6 @@ else
         await Lines.RefreshAsync(projectId, CancellationToken.None);
         await Claims.RefreshAsync(projectId, CancellationToken.None);
         invoicedByProject[projectId] = (await Invoices.GetSummaryAsync(projectId)).TotalInvoiced;
-        invoiceListByProject[projectId] = await Invoices.ListAsync(projectId);
-        costLinesByProject[projectId] = await Queries.AskAsync(new ListProjectCostOfSalesLines(projectId), CancellationToken.None);
         if (LatestClaimFor(projectId) is { Status: ValuationClaimStatus.Draft } draft)
             await ClaimEntries.RefreshAsync(draft.ValuationClaimId, CancellationToken.None);
         packagesByProject[projectId] = await Queries.AskAsync(new ListPackageReconciliation(projectId), CancellationToken.None);

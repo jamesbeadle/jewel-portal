@@ -83,6 +83,10 @@ var host = new HostBuilder()
         services.AddScoped<IXeroWriteBackService, XeroWriteBackService>();
         services.AddScoped<ICommandHandler<SyncXeroLedger, XeroLedgerSyncResult>, SyncXeroLedgerHandler>();
         services.AddScoped<ICommandHandler<AllocateSuggestedXeroLines, int>, AllocateSuggestedXeroLinesHandler>();
+        // Site P&L refresh (Profit Summary's cumulative chart) — same handler as the API's
+        // explicit sync endpoint, run nightly after the ledger sync.
+        services.AddScoped<ICommandHandler<SyncXeroSitePnl, XeroSitePnlSyncResult>,
+            Jewel.JPMS.Api.Features.Xero.SitePnl.SyncXeroSitePnlHandler>();
     })
     .Build();
 

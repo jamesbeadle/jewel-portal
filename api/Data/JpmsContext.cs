@@ -76,6 +76,10 @@ public sealed class JpmsContext : DbContext
     public DbSet<XeroCostSplitEntity> XeroCostSplits => Set<XeroCostSplitEntity>();
     public DbSet<XeroLineWorkOrderLinkEntity> XeroLineWorkOrderLinks => Set<XeroLineWorkOrderLinkEntity>();
 
+    // The stored site P&L: per project per month, from Xero's profit & loss report filtered by
+    // the project's Sites tracking option — feeds the Profit Summary's cumulative chart.
+    public DbSet<XeroSitePnlMonthEntity> XeroSitePnlMonths => Set<XeroSitePnlMonthEntity>();
+
     public DbSet<TodoItemEntity> TodoItems => Set<TodoItemEntity>();
 
     public DbSet<LadClaimEntity> LadClaims => Set<LadClaimEntity>();
@@ -321,5 +325,10 @@ public sealed class JpmsContext : DbContext
         modelBuilder.Entity<AuditEventEntity>()
             .HasIndex(row => row.RecordId)
             .HasDatabaseName("IX_AuditEvents_RecordId");
+
+        // ---- Site P&L ------------------------------------------------------------------------------
+        modelBuilder.Entity<XeroSitePnlMonthEntity>()
+            .HasIndex(row => row.ProjectId)
+            .HasDatabaseName("IX_XeroSitePnlMonths_ProjectId");
     }
 }

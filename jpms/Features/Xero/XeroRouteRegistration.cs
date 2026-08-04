@@ -13,6 +13,7 @@ public static class XeroRouteRegistration
         services.AddScoped<XeroAgedPayablesReadModel>();
         services.AddScoped<XeroAgedReceivablesReadModel>();
         services.AddScoped<XeroLedgerReadModel>();
+        services.AddScoped<XeroSitePnlReadModel>();
         return services;
     }
 
@@ -64,7 +65,12 @@ public static class XeroRouteRegistration
                        + (attachments.IsCreditNote ? "&credit=1" : "");
             }));
 
+        // Site P&L: the stored monthly income/cost per project behind the Profit Summary's
+        // cumulative chart, plus the explicit re-pull from Xero.
+        queries.Register<GetXeroSitePnl, XeroSitePnlSnapshot>(QueryRoute.Static("/api/xero/site-pnl"));
+
         commands.Register<SyncXeroLedger, XeroLedgerSyncResult>(CommandRoute.Post("/api/xero/ledger/sync"));
+        commands.Register<SyncXeroSitePnl, XeroSitePnlSyncResult>(CommandRoute.Post("/api/xero/site-pnl/sync"));
         commands.Register<SetXeroAllocation, int>(CommandRoute.Post("/api/xero/allocations"));
         commands.Register<AllocateSuggestedXeroLines, int>(CommandRoute.Post("/api/xero/allocations/suggested"));
         commands.Register<RetryXeroWriteBack, XeroWriteBackOutcome>(CommandRoute.Post("/api/xero/writeback/retry"));

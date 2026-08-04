@@ -69,6 +69,7 @@
     <Compile Include="..\api\Features\Xero\Ledger\AllocateSuggestedXeroLinesHandler.cs" Link="Shared\Xero\AllocateSuggestedXeroLinesHandler.cs" />
     <Compile Include="..\api\Features\Xero\Ledger\XeroAllocationSuggester.cs" Link="Shared\Xero\XeroAllocationSuggester.cs" />
     <Compile Include="..\api\Features\Xero\Ledger\XeroWriteBackService.cs" Link="Shared\Xero\XeroWriteBackService.cs" />
+    <Compile Include="..\api\Features\Xero\SitePnl\SyncXeroSitePnlHandler.cs" Link="Shared\Xero\SyncXeroSitePnlHandler.cs" />
   </ItemGroup>
 
   <ItemGroup>

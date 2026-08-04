@@ -94,6 +94,18 @@ tab strip ("Thread · email 7 of 11") — click a chip and the content above swi
 one standalone button** beside the filing tabs (it is pathway-less, so it is no longer repeated
 under every pathway), armed like a tab and carried out by the action bar.
 
+### The staging area (2026-08-04 v6)
+Reply moved to where reading ends — the ↩ Reply button (and open composer) sit directly under the
+email + thread, not in the header. The bottom section is **"Deal with this email"**: Project first,
+pathway cards, then the STAGING AREA — two rows of chips showing everything the apply will do:
+each drafted to-do (☑ chip; click to edit in the modal, × to remove, "+ Add a to-do") and each
+picked record (🔗 reference chip, × to unpick), with "+ Link a record" / "+ Create new" opening
+bordered, closable pickers and 🗑 Discard apart on the right. Record picks are now whole
+`LinkableRecord`s (`pickedRecords`), so they SURVIVE switching the record-type filter — one email
+can link to a variation AND an RFI in one apply. The link picker gained a free-text search
+(reference/title/summary) and compact single-line rows (summary as tooltip). Discard refuses to
+combine with record picks as well as with a drafted reply.
+
 ### Mail-client look (same-day polish)
 List rows are Outlook-shaped: sender in semibold with a compact right-aligned time (time today,
 "Yesterday 14:21", day names this week, then dates), subject + paperclip, and the email's opening

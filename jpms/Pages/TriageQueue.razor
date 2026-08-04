@@ -44,21 +44,7 @@
         </svg>;
 
     RenderFragment MessageHeader =@<div>
-        <div class="flex items-start justify-between gap-3">
-            <h2 class="text-lg font-semibold text-content">@Dash(selected!.Subject)</h2>
-            @if (view == QueueView.Active)
-            {
-                <div class="flex items-center gap-2 shrink-0">
-                    @if (!replyOpen)
-                    {
-                        <button type="button" class="btn-secondary text-sm" @onclick="() => replyOpen = true">↩ Reply</button>
-                    }
-                    <button type="button" class="@TodoButtonClass" @onclick="OpenTodoModal">
-                        ☑ @(CurrentTodoDrafts().Count > 0 ? $"To-dos · {CurrentTodoDrafts().Count}" : "Add a to-do")
-                    </button>
-                </div>
-            }
-        </div>
+        <h2 class="text-lg font-semibold text-content">@Dash(selected!.Subject)</h2>
         <div class="flex items-start gap-3 mt-3">
             <div class="h-9 w-9 shrink-0 rounded-full bg-accent/15 text-accent flex items-center justify-center text-sm font-semibold select-none"
                  aria-hidden="true">@SenderInitials(selected)</div>
@@ -581,23 +567,14 @@ else
 
                             @MessageBody
 
-                            @* PROJECT — the email's first, easiest triage step, set once and used by
-                               everything below (to-dos, record pickers, attachments). Auto-matched
-                               from the email/thread text when a single live project's name appears. *@
-                            <div class="flex flex-wrap items-center gap-2 pt-3 border-t border-line">
-                                <label class="text-xs uppercase tracking-wider text-content-subtle font-semibold shrink-0">Project</label>
-                                <select class="field max-w-md" value="@triageProjectId" @onchange="OnTriageProjectChanged">
-                                    <option value="">No project…</option>
-                                    @foreach (var project in ProjectOptionsFor(triageProjectId))
-                                    {
-                                        <option value="@project.ProjectId">@project.Reference — @project.Name</option>
-                                    }
-                                </select>
-                                @if (projectAutoMatched && !string.IsNullOrWhiteSpace(triageProjectId))
-                                {
-                                    <span class="text-xs text-accent">Matched from the email — change it if that's wrong.</span>
-                                }
-                            </div>
+                            @* Reply where the reading ends — you get to the bottom of an email and
+                               answer it, so the button (and the open composer) sit right here. *@
+                            @if (!replyOpen)
+                            {
+                                <div>
+                                    <button type="button" class="btn-secondary" @onclick="() => replyOpen = true">↩ Reply</button>
+                                </div>
+                            }
                             <div>
                                     @if (replyOpen)
                                     {
@@ -650,7 +627,25 @@ else
                                 </div>
 
                             <div class="pt-3 border-t border-line">
-                                <p class="eyebrow mb-3">File to a record</p>
+                                <p class="eyebrow mb-3">Deal with this email</p>
+
+                                @* PROJECT — the easiest decision, made first; everything below (to-dos,
+                                   record pickers, attachments) uses it. Auto-matched from the email
+                                   text when a single live project's name appears. *@
+                                <div class="flex flex-wrap items-center gap-2 mb-4">
+                                    <label class="text-xs uppercase tracking-wider text-content-subtle font-semibold shrink-0">Project</label>
+                                    <select class="field max-w-md" value="@triageProjectId" @onchange="OnTriageProjectChanged">
+                                        <option value="">No project…</option>
+                                        @foreach (var project in ProjectOptionsFor(triageProjectId))
+                                        {
+                                            <option value="@project.ProjectId">@project.Reference — @project.Name</option>
+                                        }
+                                    </select>
+                                    @if (projectAutoMatched && !string.IsNullOrWhiteSpace(triageProjectId))
+                                    {
+                                        <span class="text-xs text-accent">Matched from the email — change it if that's wrong.</span>
+                                    }
+                                </div>
                                 @*
                                     PATHWAY FIRST (docs/Pathway-Split-Platform-Flow-Plan.md §2.2): the first triage
                                     decision is who the correspondence is with — the chosen pathway then decides which
@@ -700,21 +695,61 @@ else
                                     }
                                 </div>
 
-                                <div class="flex flex-wrap items-center gap-2 mb-4">
-                                    @foreach (var tab in AvailableModes)
-                                    {
-                                        <button type="button" @key="tab" class="@ModeTabClass(tab)" @onclick="() => SetMode(tab)">@ModeLabel(tab)</button>
-                                    }
-                                    @* Discard is pathway-less, so it is ONE button here — not an option
-                                       repeated under every pathway. Selecting it arms the discard; the
-                                       action bar below carries it out. *@
-                                    <button type="button" class="@DiscardTabClass"
-                                            @onclick="() => SetMode(TriageMode.Discard)">🗑 Discard</button>
+                                @* THE STAGING AREA — everything this email is about to become, in one
+                                   place: each drafted to-do and each picked record is a chip here, so
+                                   what Apply will do is visible at a glance. The + buttons open the
+                                   pickers; Discard sits apart on the right (pathway-less, one button). *@
+                                <div class="space-y-2 mb-4">
+                                    <div class="flex flex-wrap items-center gap-1.5">
+                                        <span class="text-xs uppercase tracking-wider text-content-subtle font-semibold w-16 shrink-0">To-dos</span>
+                                        @for (var i = 0; i < createTodoRows.Count; i++)
+                                        {
+                                            var stagedIndex = i;
+                                            var stagedRow = createTodoRows[i];
+                                            if (string.IsNullOrWhiteSpace(stagedRow.Title)) { continue; }
+                                            <span @key="stagedRow" class="inline-flex items-center gap-1 rounded-full border border-accent/50 bg-accent/5 text-accent pl-2.5 pr-1 py-0.5 text-xs">
+                                                <button type="button" class="hover:underline" title="Edit this to-do"
+                                                        @onclick="() => { todoEditIndex = stagedIndex; todoModalOpen = true; }">☑ @stagedRow.Title</button>
+                                                <button type="button" class="leading-none px-1 text-accent/70 hover:text-negative" title="Remove"
+                                                        @onclick="() => RemoveTodoRow(stagedRow)">&times;</button>
+                                            </span>
+                                        }
+                                        <button type="button" class="rounded-lg border border-line px-2.5 py-1 text-xs text-content-muted hover:text-content hover:border-line-strong"
+                                                @onclick="OpenTodoModal">+ Add a to-do</button>
+                                    </div>
+
+                                    <div class="flex flex-wrap items-center gap-1.5">
+                                        <span class="text-xs uppercase tracking-wider text-content-subtle font-semibold w-16 shrink-0">Records</span>
+                                        @foreach (var picked in pickedRecords)
+                                        {
+                                            <span @key="picked.RecordId" class="inline-flex items-center gap-1 rounded-full border border-accent/50 bg-accent/5 text-accent pl-2.5 pr-1 py-0.5 text-xs"
+                                                  title="@picked.Title">
+                                                <span>🔗 @picked.Reference</span>
+                                                <button type="button" class="leading-none px-1 text-accent/70 hover:text-negative" title="Unpick"
+                                                        @onclick="() => ToggleLinkRecord(picked)">&times;</button>
+                                            </span>
+                                        }
+                                        @if (AvailableModes.Contains(TriageMode.Link))
+                                        {
+                                            <button type="button" class="@ModeTabClass(TriageMode.Link)" @onclick="() => SetMode(TriageMode.Link)">+ Link a record</button>
+                                        }
+                                        @if (AvailableModes.Contains(TriageMode.Create))
+                                        {
+                                            <button type="button" class="@ModeTabClass(TriageMode.Create)" @onclick="() => SetMode(TriageMode.Create)">+ Create new</button>
+                                        }
+                                        <button type="button" class="@DiscardTabClass"
+                                                @onclick="() => SetMode(TriageMode.Discard)">🗑 Discard</button>
+                                    </div>
                                 </div>
 
                                 @if (mode == TriageMode.Link)
                                 {
-                                    <div class="space-y-3">
+                                    <div class="rounded-lg border border-line p-3 space-y-3">
+                                        <div class="flex items-center justify-between">
+                                            <p class="text-xs uppercase tracking-wider text-content-subtle font-semibold">Pick records — click to add, click again to unpick</p>
+                                            <button type="button" class="text-xs text-content-subtle hover:text-content underline" @onclick="() => SetMode(TriageMode.None)">Close</button>
+                                        </div>
+                                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                         <div>
                                             <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Record type</label>
                                             @* Only the chosen pathway's record types are offered — the pathway filters
@@ -727,11 +762,17 @@ else
                                                 }
                                             </select>
                                         </div>
+                                        <div>
+                                            <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Search</label>
+                                            <input class="field" type="text" placeholder="Reference or title…"
+                                                   value="@linkSearch" @oninput="OnLinkSearchInput" />
+                                        </div>
+                                        </div>
 
                                         @if (string.IsNullOrWhiteSpace(triageProjectId))
                                         {
                                             <p class="rounded-lg bg-amber-500/10 border border-amber-500/40 px-3 py-2 text-xs text-content">
-                                                Set the email's <span class="font-medium">Project</span> (top of the actions) to list its records.
+                                                Set the email's <span class="font-medium">Project</span> above to list its records.
                                             </p>
                                         }
                                         else
@@ -742,8 +783,8 @@ else
                                             }
                                             else
                                             {
-                                                var candidates = DuplicateCandidates();
-                                                var others = ProjectRecords().Except(candidates).ToList();
+                                                var candidates = FilterRecords(DuplicateCandidates());
+                                                var others = FilterRecords(ProjectRecords().Except(DuplicateCandidates()).ToList());
 
                                                 @if (candidates.Count > 0)
                                                 {
@@ -752,18 +793,12 @@ else
                                                         <div class="space-y-1">
                                                             @foreach (var record in candidates)
                                                             {
-                                                                <button type="button" @onclick="() => ToggleLinkRecord(record.RecordId)" class="@RecordPickClass(record, true)">
-                                                                    <span class="flex items-center gap-2">
-                                                                        <span class="font-mono text-xs text-content-muted">@record.Reference</span>
-                                                                        @if (!string.IsNullOrWhiteSpace(record.StatusLabel))
-                                                                        {
-                                                                            <span class="text-[10px] uppercase tracking-wider text-content-subtle">@record.StatusLabel</span>
-                                                                        }
-                                                                    </span>
-                                                                    <span class="text-sm text-content">@record.Title</span>
-                                                                    @if (!string.IsNullOrWhiteSpace(record.Summary))
+                                                                <button type="button" @onclick="() => ToggleLinkRecord(record)" class="@RecordPickClass(record, true)">
+                                                                    <span class="font-mono text-xs text-content-muted shrink-0">@record.Reference</span>
+                                                                    <span class="text-sm text-content truncate flex-1" title="@record.Summary">@record.Title</span>
+                                                                    @if (!string.IsNullOrWhiteSpace(record.StatusLabel))
                                                                     {
-                                                                        <span class="text-xs text-content-subtle line-clamp-2">@record.Summary</span>
+                                                                        <span class="text-[10px] uppercase tracking-wider text-content-subtle shrink-0">@record.StatusLabel</span>
                                                                     }
                                                                 </button>
                                                             }
@@ -778,18 +813,12 @@ else
                                                         <div class="space-y-1 max-h-56 overflow-y-auto">
                                                             @foreach (var record in others)
                                                             {
-                                                                <button type="button" @onclick="() => ToggleLinkRecord(record.RecordId)" class="@RecordPickClass(record, false)">
-                                                                    <span class="flex items-center gap-2">
-                                                                        <span class="font-mono text-xs text-content-muted">@record.Reference</span>
-                                                                        @if (!string.IsNullOrWhiteSpace(record.StatusLabel))
-                                                                        {
-                                                                            <span class="text-[10px] uppercase tracking-wider text-content-subtle">@record.StatusLabel</span>
-                                                                        }
-                                                                    </span>
-                                                                    <span class="text-sm text-content">@record.Title</span>
-                                                                    @if (!string.IsNullOrWhiteSpace(record.Summary))
+                                                                <button type="button" @onclick="() => ToggleLinkRecord(record)" class="@RecordPickClass(record, false)">
+                                                                    <span class="font-mono text-xs text-content-muted shrink-0">@record.Reference</span>
+                                                                    <span class="text-sm text-content truncate flex-1" title="@record.Summary">@record.Title</span>
+                                                                    @if (!string.IsNullOrWhiteSpace(record.StatusLabel))
                                                                     {
-                                                                        <span class="text-xs text-content-subtle line-clamp-2">@record.Summary</span>
+                                                                        <span class="text-[10px] uppercase tracking-wider text-content-subtle shrink-0">@record.StatusLabel</span>
                                                                     }
                                                                 </button>
                                                             }
@@ -822,9 +851,13 @@ else
                                 else if (mode == TriageMode.Create)
                                 {
                                     @* The pathway decides WHAT is created — Client → a General request (the client
-                                       pathway's default container), Subcontractor → a bid package — so the old
-                                       record-type picker is gone: the pathway already made that choice. *@
-                                    <div class="space-y-4">
+                                       pathway's default container), Subcontractor → a bid package — so there is no
+                                       record-type picker: the pathway already made that choice. *@
+                                    <div class="rounded-lg border border-line p-3 space-y-4">
+                                        <div class="flex items-center justify-between">
+                                            <p class="text-xs uppercase tracking-wider text-content-subtle font-semibold">Create a new record from this email</p>
+                                            <button type="button" class="text-xs text-content-subtle hover:text-content underline" @onclick="() => SetMode(TriageMode.None)">Close</button>
+                                        </div>
                                         @if (string.IsNullOrWhiteSpace(triageProjectId))
                                         {
                                             <p class="rounded-lg bg-amber-500/10 border border-amber-500/40 px-3 py-2 text-xs text-content">
@@ -1632,8 +1665,9 @@ else
     // email without filing the thread under any pathway. Drives the consequence line under the
     // selector so it never promises a filing that won't happen.
     private bool PendingActionIsNeutral =>
-        (mode == TriageMode.Link && linkRecordType == RecordType.Todo)
-        || (mode == TriageMode.None && CurrentTodoDrafts().Count > 0 && !ReplyDraftPending);
+        pickedRecords.Count > 0
+            ? pickedRecords.All(r => r.Type == RecordType.Todo) && mode != TriageMode.Create
+            : mode != TriageMode.Create && CurrentTodoDrafts().Count > 0 && !ReplyDraftPending;
 
     // The record actions each pathway offers in section 3 — the pathway filters what an email can
     // be filed to; nothing is offered until a pathway is chosen (or fixed on the thread).
@@ -1872,14 +1906,18 @@ else
 
     // Link-to-existing state. The record type is chosen first (Request, Bid Package Invite, …), then a
     // project, then records of that type — linking is record-agnostic (tags "JPMS/<ref>" either way).
-    // The QUEUE panel is a multi-pick (linkRecordIds): one email can feed several records at once
+    // The QUEUE panel is a multi-pick: one email can feed several records at once
     // (one tag per record), so the triager toggles every record the email belongs to and links them
     // in one go. The picks live in one list (same project + type — they're facets of the same
     // problem), so changing project or type clears them. The TAGGED tab's "add another tag" dropdown
     // stays single-pick (linkRecordId): tags are added one at a time there.
     private RecordType linkRecordType = RecordType.Request;
     private string linkRecordId = "";
-    private readonly HashSet<string> linkRecordIds = new();
+    // Free-text filter over the link picker's list (reference/title/summary contains).
+    private string linkSearch = "";
+    // The staged record links — whole LinkableRecords (not ids), so picks survive switching the
+    // record-type filter and one email can be linked to, say, a variation AND an RFI in one apply.
+    private readonly List<LinkableRecord> pickedRecords = new();
     // Set when a multi-pick link partially failed: the email left the queue (first tag stuck) but
     // some picks didn't take, so the notice — shown in place of the cleared selection — says which
     // and points at the Tagged view to finish. Dismissable; cleared on the next selection/link.
@@ -2621,11 +2659,23 @@ else
         _                           => ""
     };
 
+    private void OnLinkSearchInput(ChangeEventArgs e) => linkSearch = e.Value?.ToString() ?? "";
+
+    private List<LinkableRecord> FilterRecords(IEnumerable<LinkableRecord> records) =>
+        string.IsNullOrWhiteSpace(linkSearch)
+            ? records.ToList()
+            : records.Where(r =>
+                    r.Reference.Contains(linkSearch, StringComparison.OrdinalIgnoreCase)
+                    || r.Title.Contains(linkSearch, StringComparison.OrdinalIgnoreCase)
+                    || (r.Summary?.Contains(linkSearch, StringComparison.OrdinalIgnoreCase) ?? false))
+                .ToList();
+
     private async Task OnLinkRecordTypeChanged(ChangeEventArgs e)
     {
         if (Enum.TryParse<RecordType>(e.Value?.ToString(), out var type)) linkRecordType = type;
         linkRecordId = "";
-        linkRecordIds.Clear();
+        // pickedRecords deliberately survive a type switch — that's how one email links to
+        // records of several types in one apply.
         await LoadLinkRecordsAsync();
     }
 
@@ -2634,7 +2684,7 @@ else
         triageProjectId = e.Value?.ToString() ?? "";
         projectAutoMatched = false; // an explicit choice replaces the guess
         linkRecordId = "";
-        linkRecordIds.Clear();
+        pickedRecords.Clear();
         await LoadLinkRecordsAsync();
     }
 
@@ -2651,7 +2701,7 @@ else
         {
             linkRecordsLoading = true;
             linkRecordId = "";
-            linkRecordIds.Clear();
+            pickedRecords.Clear();
             StateHasChanged(); // show the loading state while the fetch is in flight
             linkRecords = await Intake.ListLinkableRecordsAsync(triageProjectId, linkRecordType);
         }
@@ -2680,7 +2730,8 @@ else
     {
         linkRecordType = DefaultLinkRecordType;
         linkRecordId = "";
-        linkRecordIds.Clear();
+        linkSearch = "";
+        pickedRecords.Clear();
         linkRecords = Array.Empty<LinkableRecord>();
     }
 
@@ -2688,9 +2739,11 @@ else
     private void OnCreateDescriptionInput(ChangeEventArgs e) => createDescription = e.Value?.ToString() ?? "";
 
     // Toggle a record in the queue panel's multi-pick — clicking a picked record unpicks it.
-    private void ToggleLinkRecord(string recordId)
+    private void ToggleLinkRecord(LinkableRecord record)
     {
-        if (!linkRecordIds.Add(recordId)) linkRecordIds.Remove(recordId);
+        var existing = pickedRecords.FirstOrDefault(r => r.RecordId == record.RecordId);
+        if (existing is not null) pickedRecords.Remove(existing);
+        else pickedRecords.Add(record);
     }
 
     private static string References(IReadOnlyList<LinkableRecord> records) =>
@@ -2774,8 +2827,10 @@ else
             var todoCount = CurrentTodoDrafts().Count;
             if (todoCount > 0)
                 parts.Add(todoCount == 1 ? "raise the to-do" : $"raise {todoCount} to-dos");
-            if (mode == TriageMode.Link && linkRecordIds.Count > 0)
-                parts.Add(linkRecordIds.Count == 1 ? "link this email to the selected record" : $"link this email to {linkRecordIds.Count} records");
+            if (pickedRecords.Count > 0)
+                parts.Add(pickedRecords.Count == 1
+                    ? $"link this email to {pickedRecords[0].Reference}"
+                    : $"link this email to {string.Join(", ", pickedRecords.Take(3).Select(r => r.Reference))}{(pickedRecords.Count > 3 ? $" +{pickedRecords.Count - 3} more" : "")}");
             if (mode == TriageMode.Create && !string.IsNullOrWhiteSpace(triageProjectId) && !string.IsNullOrWhiteSpace(createTitle))
                 parts.Add(pathway == TriagePathway.Subcontractor ? "create the bid package from this email" : "create the request from this email");
             if (mode == TriageMode.Discard)
@@ -2790,7 +2845,7 @@ else
         get
         {
             var filing = CurrentTodoDrafts().Count > 0
-                || (mode == TriageMode.Link && linkRecordIds.Count > 0)
+                || pickedRecords.Count > 0
                 || (mode == TriageMode.Create && !string.IsNullOrWhiteSpace(triageProjectId) && !string.IsNullOrWhiteSpace(createTitle));
             if (ReplyDraftPending) return filing ? "Send reply & file" : "Send reply";
             return mode == TriageMode.Discard && !filing ? "Discard email" : "Apply";
@@ -2860,9 +2915,7 @@ else
 
         var replying = ReplyDraftPending;
         var drafts = CurrentTodoDrafts();
-        var picks = mode == TriageMode.Link
-            ? linkRecords.Where(r => linkRecordIds.Contains(r.RecordId)).ToList()
-            : new List<LinkableRecord>();
+        var picks = pickedRecords.ToList();
         var createReady = mode == TriageMode.Create
             && !string.IsNullOrWhiteSpace(triageProjectId) && !string.IsNullOrWhiteSpace(createTitle);
         var discarding = mode == TriageMode.Discard;
@@ -2872,6 +2925,11 @@ else
         if (discarding && replying)
         {
             actionError = "Discard and a reply don't mix — send (or discard) the reply draft first.";
+            return;
+        }
+        if (discarding && picks.Count > 0)
+        {
+            actionError = "Discard and record links don't mix — unpick the records first.";
             return;
         }
 
@@ -2923,7 +2981,7 @@ else
                 filed = true;
             }
 
-            // ---- Section 3: record filing (link picks, or create the new record) ----
+            // ---- Record filing: every staged link applies, whatever picker is open ----
             if (picks.Count > 0)
             {
                 busyLabel = "Linking";
@@ -2948,7 +3006,7 @@ else
                     filed = true;
                 }
             }
-            else if (createReady)
+            if (createReady)
             {
                 if (pathway == TriagePathway.Subcontractor)
                 {
@@ -2971,7 +3029,7 @@ else
                 }
                 filed = true;
             }
-            else if (discarding)
+            if (discarding)
             {
                 // "File it as nothing": tag the thread discarded — restorable from the Tagged tab.
                 // Runs after the to-dos so "capture the follow-ups, then bin the email" works.
@@ -3504,8 +3562,8 @@ else
 
     private string RecordPickClass(LinkableRecord record, bool candidate)
     {
-        var baseClass = "w-full text-left rounded-lg border px-3 py-2 flex flex-col gap-0.5 transition";
-        if (linkRecordIds.Contains(record.RecordId)) return $"{baseClass} border-accent bg-surface-raised";
+        var baseClass = "w-full text-left rounded-lg border px-3 py-1.5 flex items-center gap-2 transition";
+        if (pickedRecords.Any(r => r.RecordId == record.RecordId)) return $"{baseClass} border-accent bg-surface-raised";
         return candidate
             ? $"{baseClass} border-amber-500/40 hover:border-amber-500"
             : $"{baseClass} border-line hover:border-line-strong";

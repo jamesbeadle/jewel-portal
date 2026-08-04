@@ -83,6 +83,11 @@ public static class XeroFeatureRegistration
         services.AddScoped<IXeroWriteBackService, XeroWriteBackService>();
         services.AddScoped<ICommandHandler<RetryXeroWriteBack, XeroWriteBackOutcome>, RetryXeroWriteBackHandler>();
 
+        // Site P&L: the stored monthly income/cost per project from Xero's P&L report filtered
+        // by Sites tracking — the Profit Summary's cumulative chart. Synced nightly + on demand.
+        services.AddScoped<IQueryHandler<GetXeroSitePnl, XeroSitePnlSnapshot>, SitePnl.GetXeroSitePnlHandler>();
+        services.AddScoped<ICommandHandler<SyncXeroSitePnl, XeroSitePnlSyncResult>, SitePnl.SyncXeroSitePnlHandler>();
+
         return services;
     }
 }

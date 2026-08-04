@@ -4196,6 +4196,43 @@ namespace Jewel.JPMS.Api.Migrations
                     b.ToTable("XeroLedgerLines");
                 });
 
+            modelBuilder.Entity("Jewel.JPMS.Api.Data.Entities.XeroSitePnlMonthEntity", b =>
+                {
+                    b.Property<string>("XeroSitePnlMonthId")
+                        .HasMaxLength(80)
+                        .HasColumnType("nvarchar(80)");
+
+                    b.Property<decimal>("CostOfSales")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("decimal(18,4)");
+
+                    b.Property<decimal>("Income")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("decimal(18,4)");
+
+                    b.Property<DateTimeOffset>("LastSyncedAtUtc")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<DateTime>("Month")
+                        .HasColumnType("datetime2");
+
+                    b.Property<decimal>("OperatingExpenses")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("decimal(18,4)");
+
+                    b.Property<string>("ProjectId")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.HasKey("XeroSitePnlMonthId");
+
+                    b.HasIndex("ProjectId")
+                        .HasDatabaseName("IX_XeroSitePnlMonths_ProjectId");
+
+                    b.ToTable("XeroSitePnlMonths");
+                });
+
 #pragma warning restore 612, 618
         }
     }
