@@ -43,74 +43,6 @@
             <path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48" />
         </svg>;
 
-    // The to-do drafts editor (rows of Title / assignees / due / detail with per-assignee
-    // fan-out), shared between the standalone To-dos action and the "Also add to-dos" section
-    // every other action pane carries — capturing follow-ups is part of dealing with an email,
-    // whatever else is done with it.
-    RenderFragment TodoRowsEditor =@<text>
-                @for (var i = 0; i < createTodoRows.Count; i++)
-                {
-                    var row = createTodoRows[i];
-                    var rowNumber = i + 1;
-                    <div @key="row" class="rounded-lg border border-line p-3 space-y-3">
-                        <div class="flex items-center justify-between">
-                            <p class="text-xs uppercase tracking-wider text-content-subtle font-semibold">Item @rowNumber</p>
-                            @if (createTodoRows.Count > 1)
-                            {
-                                <button type="button" class="text-xs text-content-subtle hover:text-negative" @onclick="() => RemoveTodoRow(row)">Remove</button>
-                            }
-                        </div>
-
-                        <FormField Label="Title" Value="@row.Title" OnChange="v => row.Title = v" Required="true" />
-
-                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            @* Assignees: pick as many as the item needs — a role, or a named person
-                               within one. Each pick becomes its own TODO-#### on save (see
-                               the apply action), so two assignees here means two independent items
-                               rather than one shared between them. Picked assignees show as
-                               removable chips and drop out of the picker so they can't be added
-                               twice. *@
-                            <div>
-                                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Assigned to</label>
-                                @if (row.Assignees.Count > 0)
-                                {
-                                    <div class="flex flex-wrap gap-1 mb-1.5">
-                                        @foreach (var assigneeValue in row.Assignees.ToList())
-                                        {
-                                            var picked = assigneeValue;
-                                            <span class="inline-flex items-center gap-1 rounded-full border border-line bg-surface-raised pl-2 pr-1 py-0.5 text-xs text-content">
-                                                @TodoRoleLabel(picked)
-                                                <button type="button" title="Remove assignee"
-                                                        class="leading-none px-1 text-content-subtle hover:text-negative"
-                                                        @onclick="() => RemoveTodoRole(row, picked)">&times;</button>
-                                            </span>
-                                        }
-                                    </div>
-                                }
-                                @{ var roleOptions = AvailableTodoRoleOptions(row); }
-                                <SearchSelect Options="@roleOptions" Value=""
-                                              ValueChanged="v => AddTodoRole(row, v)"
-                                              Placeholder="@TodoRolePlaceholder(row)"
-                                              Disabled="@(roleOptions.Count == 0)"
-                                              WidthClass="w-full" />
-                                @if (row.Assignees.Count > 1)
-                                {
-                                    <p class="text-xs text-content-subtle mt-1">Raised as @row.Assignees.Count separate to-dos, one per assignee.</p>
-                                }
-                            </div>
-                            <FormField Label="Due" Value="@row.Due" OnChange="v => row.Due = v" InputType="date" />
-                        </div>
-
-                        <div>
-                            <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Detail</label>
-                            <textarea class="field" rows="6" value="@row.Notes" @oninput="e => OnTodoNotesInput(row, e)"></textarea>
-                        </div>
-                    </div>
-                }
-
-                <button type="button" class="btn-secondary text-xs" @onclick="AddTodoRow">+ Add another item</button>
-    </text>;
-
     RenderFragment MessageHeader =@<div>
         <h2 class="text-lg font-semibold text-content">@Dash(selected!.Subject)</h2>
         <div class="flex items-start gap-3 mt-3">
@@ -654,43 +586,27 @@ else
                                 <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@actionError</p>
                             }
 
-                            <div class="flex items-center justify-between">
-                                <p class="eyebrow">1 · Email &amp; reply</p>
-                                @* Discard belongs to the EMAIL, not to filing: spam and auto-replies
-                                   are dealt with here, like Outlook's delete — with a confirm, because
-                                   it removes the whole thread from the queue. *@
-                                @if (!discardConfirming)
-                                {
-                                    <button type="button" class="text-xs text-content-subtle hover:text-negative inline-flex items-center gap-1"
-                                            title="Discard this email (spam, auto-replies, wrong mailbox)" @onclick="() => discardConfirming = true">
-                                        🗑 Discard
-                                    </button>
-                                }
-                            </div>
-                            @if (discardConfirming)
-                            {
-                                <div class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 flex flex-wrap items-center gap-2">
-                                    <p class="text-sm text-content flex-1">
-                                        Discard this email and its thread? It leaves the queue (restorable from the Tagged tab)@(ReplyDraftPending ? " — your unsent reply draft here is abandoned" : "")@(CurrentTodoDrafts().Count > 0 ? ", and the to-dos drafted below are not created" : "").
-                                    </p>
-                                    <button type="button" class="btn-secondary text-xs border-negative/40 text-negative hover:border-negative" disabled="@busy" @onclick="DoDiscard">Discard email</button>
-                                    <button type="button" class="btn-ghost text-xs" @onclick="() => discardConfirming = false">Keep it</button>
-                                </div>
-                            }
-
                             @MessageHeader
 
                             @MessageBody
 
-                            <div class="mt-1">
-                                    @if (!replyOpen)
-                                    {
-                                        <div class="flex items-center gap-3">
-                                            <button type="button" class="btn-secondary" @onclick="() => replyOpen = true">↩ Reply</button>
-                                            <p class="text-xs text-content-subtle">Reply-all is prefilled. Replying on its own deals with the email — or combine it with to-dos and record filing below.</p>
-                                        </div>
-                                    }
-                                    else
+                            @* The compact action strip: Reply opens the composer in place; To-dos opens the
+                               modal, and its badge shows how many are drafted so nothing is out of sight. *@
+                            <div class="mt-1 flex flex-wrap items-center gap-2">
+                                @if (!replyOpen)
+                                {
+                                    <button type="button" class="btn-secondary" @onclick="() => replyOpen = true">↩ Reply</button>
+                                }
+                                <button type="button" class="@TodoButtonClass" @onclick="OpenTodoModal">
+                                    ☑ @(CurrentTodoDrafts().Count > 0 ? $"To-dos · {CurrentTodoDrafts().Count}" : "Add a to-do")
+                                </button>
+                                @if (!replyOpen)
+                                {
+                                    <p class="text-xs text-content-subtle">Reply-all is prefilled. Reply, raise to-dos, file it below — any combination, applied in one go.</p>
+                                }
+                            </div>
+                            <div>
+                                    @if (replyOpen)
                                     {
                                         <div class="space-y-3">
                                             <div class="flex items-center justify-between">
@@ -741,66 +657,7 @@ else
                                 </div>
 
                             <div class="pt-3 border-t border-line">
-                                <p class="eyebrow mb-3">2 · To-dos</p>
-                                    @* To-dos (Internal, and Subcontractor for "chase them for X"): capture the email as one or
-                                       more to-do items. The project is
-                                       OPTIONAL — chosen, the items land on that project's To-do tab (and the email can
-                                       also feed one of its open requests); left blank they are GENERAL (company-wide)
-                                       items that live on the To-dos browser page and the dashboards of everyone
-                                       holding the assigned role. One row editor serves both. *@
-                                    <div class="space-y-4">
-                                        <p class="rounded-lg bg-surface-raised border border-line px-3 py-2 text-xs text-content-subtle">
-                                            Each item is numbered TODO-#### and this email is tagged to <span class="font-medium text-content">every item</span> you add here, so one email can feed several to-dos. An item is assigned to a role — or to a <span class="font-medium text-content">named person</span> within one — and giving it <span class="font-medium text-content">more than one assignee</span> raises it once per assignee: separate items, each ticked off on its own. Choose a project to put the items on its To-do tab, or leave it blank for <span class="font-medium text-content">company-wide</span> items that appear on the To-dos page and the dashboard of everyone holding the assigned role.
-                                        </p>
-
-                                        <div>
-                                            <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Project (optional)</label>
-                                            <select class="field" value="@todoProjectId" @onchange="OnTodoProjectChanged">
-                                                <option value="">No project — company-wide</option>
-                                                @foreach (var project in ProjectOptionsFor(todoProjectId))
-                                                {
-                                                    <option value="@project.ProjectId">@project.Reference — @project.Name</option>
-                                                }
-                                            </select>
-                                        </div>
-
-                                        @if (!string.IsNullOrWhiteSpace(todoProjectId) && TodoRequestLinkOffered)
-                                        {
-                                            <div>
-                                                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Link to an open request (optional)</label>
-                                                @if (createTodoLinkRequestsLoading)
-                                                {
-                                                    <p class="text-sm text-content-subtle italic">Loading requests…</p>
-                                                }
-                                                else if (createTodoLinkRequests.Count == 0)
-                                                {
-                                                    <p class="text-xs text-content-subtle italic">No open requests on this project.</p>
-                                                }
-                                                else
-                                                {
-                                                    <select class="field" value="@createTodoLinkRequestId" @onchange="OnCreateTodoLinkRequestChanged">
-                                                        <option value="">No request link</option>
-                                                        @foreach (var record in createTodoLinkRequests)
-                                                        {
-                                                            <option value="@record.RecordId">@record.Reference — @record.Title</option>
-                                                        }
-                                                    </select>
-                                                    @if (!string.IsNullOrWhiteSpace(createTodoLinkRequestId))
-                                                    {
-                                                        <p class="text-xs text-content-subtle mt-1">
-                                                            This email is tagged to the request as well as to every item below, so it appears in the request's conversation too — and because a request is a client record, the thread's filing follows the request rather than Internal.
-                                                        </p>
-                                                    }
-                                                }
-                                            </div>
-                                        }
-
-                                        @TodoRowsEditor
-                                    </div>
-                            </div>
-
-                            <div class="pt-3 border-t border-line">
-                                <p class="eyebrow mb-3">3 · File to a record</p>
+                                <p class="eyebrow mb-3">File to a record</p>
                                 @*
                                     PATHWAY FIRST (docs/Pathway-Split-Platform-Flow-Plan.md §2.2): the first triage
                                     decision is who the correspondence is with — the chosen pathway then decides which
@@ -834,7 +691,7 @@ else
                                         {
                                             <p class="text-xs text-content-subtle mt-2">Choose who this correspondence is with to see the actions.</p>
                                         }
-                                        else
+                                        else if (mode != TriageMode.Discard)
                                         {
                                             @* The quiet consequence line: what the pending action does to the thread's
                                                filing. A to-do LINK is the one neutral case — it never files a thread. *@
@@ -1022,6 +879,12 @@ else
                                             <p class="text-xs text-content-subtle">A draft bid package is created and this email is linked to it. Invite subcontractors and add line items from the bid package page.</p>
                                         }
                                     </div>
+                                }
+                                else if (mode == TriageMode.Discard)
+                                {
+                                    <p class="text-sm text-content-muted">
+                                        Discard this email if it isn't for a record at all — spam, an auto-reply, or sent to the wrong place. It (and its thread) gets a "discarded" tag and leaves the queue; nothing moves in the mailbox, and it can be restored from the Tagged tab. Applied when you press the button below.
+                                    </p>
                                 }
                             </div>
 
@@ -1456,6 +1319,143 @@ else
     </section>
 }
 
+@* ---- To-dos modal: one modal, two views. The LIST shows every drafted item at a glance (title,
+       assignees, due) with edit/remove; clicking one — or adding — DRILLS INTO the detail form in
+       the same modal, with Back returning to the list. Items here are drafts: nothing is created
+       until the email's action bar applies them. *@
+<Modal IsOpen="@todoModalOpen" Title="@(todoEditIndex is null ? "To-dos from this email" : "To-do")" Class="max-w-2xl"
+       DismissOnOverlayClick="false" ShowFooter="false" OnCancel="CloseTodoModal">
+    <div class="space-y-4">
+        @if (todoEditIndex is { } editIndex && editIndex < createTodoRows.Count)
+        {
+            var row = createTodoRows[editIndex];
+            <button type="button" class="text-xs text-content-subtle hover:text-content underline" @onclick="() => todoEditIndex = null">← All to-dos</button>
+
+            <FormField Label="Title" Value="@row.Title" OnChange="v => row.Title = v" Required="true" />
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Assigned to</label>
+                    @if (row.Assignees.Count > 0)
+                    {
+                        <div class="flex flex-wrap gap-1 mb-1.5">
+                            @foreach (var assigneeValue in row.Assignees.ToList())
+                            {
+                                var picked = assigneeValue;
+                                <span class="inline-flex items-center gap-1 rounded-full border border-line bg-surface-raised pl-2 pr-1 py-0.5 text-xs text-content">
+                                    @TodoRoleLabel(picked)
+                                    <button type="button" title="Remove assignee"
+                                            class="leading-none px-1 text-content-subtle hover:text-negative"
+                                            @onclick="() => RemoveTodoRole(row, picked)">&times;</button>
+                                </span>
+                            }
+                        </div>
+                    }
+                    @{ var roleOptions = AvailableTodoRoleOptions(row); }
+                    <SearchSelect Options="@roleOptions" Value=""
+                                  ValueChanged="v => AddTodoRole(row, v)"
+                                  Placeholder="@TodoRolePlaceholder(row)"
+                                  Disabled="@(roleOptions.Count == 0)"
+                                  WidthClass="w-full" />
+                    @if (row.Assignees.Count > 1)
+                    {
+                        <p class="text-xs text-content-subtle mt-1">Raised as @row.Assignees.Count separate to-dos, one per assignee.</p>
+                    }
+                </div>
+                <FormField Label="Due" Value="@row.Due" OnChange="v => row.Due = v" InputType="date" />
+            </div>
+
+            <div>
+                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Detail</label>
+                <textarea class="field" rows="5" value="@row.Notes" @oninput="e => OnTodoNotesInput(row, e)"></textarea>
+            </div>
+
+            <div class="flex items-center justify-between pt-1">
+                <button type="button" class="text-xs text-content-subtle hover:text-negative underline" @onclick="() => RemoveTodoRowAndBack(row)">Remove this to-do</button>
+                <button type="button" class="btn-primary" @onclick="() => todoEditIndex = null">Done</button>
+            </div>
+        }
+        else
+        {
+            <p class="text-xs text-content-subtle">
+                Each item is numbered TODO-#### and this email is tagged to every one, so one email can feed several to-dos. More than one assignee raises the item once per assignee. Nothing is created until you apply the email's actions.
+            </p>
+
+            @if (CurrentTodoDrafts().Count == 0 && createTodoRows.All(r => string.IsNullOrWhiteSpace(r.Title)))
+            {
+                <p class="text-sm text-content-subtle italic">No to-dos drafted from this email yet.</p>
+            }
+            else
+            {
+                <div class="divide-y divide-line rounded-lg border border-line">
+                    @for (var i = 0; i < createTodoRows.Count; i++)
+                    {
+                        var listIndex = i;
+                        var row = createTodoRows[i];
+                        if (string.IsNullOrWhiteSpace(row.Title) && createTodoRows.Count > 1) { continue; }
+                        <button type="button" @key="row" class="w-full text-left px-3 py-2 hover:bg-surface-raised flex items-center gap-3"
+                                @onclick="() => todoEditIndex = listIndex">
+                            <span class="text-sm text-content flex-1 truncate">@(string.IsNullOrWhiteSpace(row.Title) ? "(untitled)" : row.Title)</span>
+                            @if (row.Assignees.Count > 0)
+                            {
+                                <span class="text-xs text-content-subtle truncate max-w-[12rem]">@string.Join(", ", row.Assignees.Select(TodoRoleLabel))</span>
+                            }
+                            @if (!string.IsNullOrWhiteSpace(row.Due))
+                            {
+                                <span class="text-xs text-content-subtle shrink-0">due @row.Due</span>
+                            }
+                            <span class="text-content-faint">›</span>
+                        </button>
+                    }
+                </div>
+            }
+
+            <button type="button" class="btn-secondary text-xs" @onclick="AddTodoRowAndEdit">+ Add a to-do</button>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-line">
+                                        <div>
+                                            <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Project (optional)</label>
+                                            <select class="field" value="@todoProjectId" @onchange="OnTodoProjectChanged">
+                                                <option value="">No project — company-wide</option>
+                                                @foreach (var project in ProjectOptionsFor(todoProjectId))
+                                                {
+                                                    <option value="@project.ProjectId">@project.Reference — @project.Name</option>
+                                                }
+                                            </select>
+                                        </div>
+                @if (!string.IsNullOrWhiteSpace(todoProjectId) && TodoRequestLinkOffered)
+                {
+                    <div>
+                        <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Link to an open request (optional)</label>
+                        @if (createTodoLinkRequestsLoading)
+                        {
+                            <p class="text-sm text-content-subtle italic">Loading requests…</p>
+                        }
+                        else if (createTodoLinkRequests.Count == 0)
+                        {
+                            <p class="text-xs text-content-subtle italic">No open requests on this project.</p>
+                        }
+                        else
+                        {
+                            <select class="field" value="@createTodoLinkRequestId" @onchange="OnCreateTodoLinkRequestChanged">
+                                <option value="">No request link</option>
+                                @foreach (var record in createTodoLinkRequests)
+                                {
+                                    <option value="@record.RecordId">@record.Reference — @record.Title</option>
+                                }
+                            </select>
+                        }
+                    </div>
+                }
+            </div>
+
+            <div class="flex items-center justify-end pt-1">
+                <button type="button" class="btn-primary" @onclick="CloseTodoModal">Done</button>
+            </div>
+        }
+    </div>
+</Modal>
+
 @* ---- New email (compose a fresh outbound thread from the projects mailbox) ---- *@
 <Modal IsOpen="@newEmailOpen" Title="New email" Class="max-w-3xl" DismissOnOverlayClick="false"
        ShowFooter="false" OnCancel="CloseNewEmail">
@@ -1539,9 +1539,10 @@ else
 </Modal>
 
 @code {
-    // Section 3's record action: link the email to existing records, or create a new one from it.
-    // (To-dos and Discard are no longer modes — to-dos are their own section, discard is on the email.)
-    private enum TriageMode { None, Link, Create }
+    // The filing decision: link the email to existing records, create a new one from it, or
+    // discard it (spam / auto-replies — "file it as nothing"). To-dos and the reply are separate
+    // concerns and combine with any of these through the one action bar.
+    private enum TriageMode { None, Link, Create, Discard }
 
     // The communication pathway — WHO the correspondence is with (docs/Pathway-Split-Platform-Flow-
     // Plan.md §2). Triage is pathway-FIRST: the pathway is chosen (or already fixed on the thread)
@@ -1680,13 +1681,14 @@ else
 
     // The record actions each pathway offers in section 3 — the pathway filters what an email can
     // be filed to; nothing is offered until a pathway is chosen (or fixed on the thread).
-    private static readonly TriageMode[] ClientModes = { TriageMode.Link, TriageMode.Create };
+    private static readonly TriageMode[] ClientModes = { TriageMode.Link, TriageMode.Create, TriageMode.Discard };
     // Subcontractor gets To-dos as well as Link/Create: "chase this subbie for their H&S file" is a
     // to-do, not a bid package, and to-do links are pathway-neutral so raising one from a subcontract
     // email files nothing — exactly the "copy, don't share" pattern the wall wants (plan §2.1).
-    private static readonly TriageMode[] SubcontractorModes = { TriageMode.Link, TriageMode.Create };
-    private static readonly TriageMode[] InternalModes = { TriageMode.Link };
-    private static readonly TriageMode[] NoPathwayModes = Array.Empty<TriageMode>();
+    private static readonly TriageMode[] SubcontractorModes = { TriageMode.Link, TriageMode.Create, TriageMode.Discard };
+    private static readonly TriageMode[] InternalModes = { TriageMode.Link, TriageMode.Discard };
+    // Discarding is pathway-less, so it is offered before a pathway is chosen too.
+    private static readonly TriageMode[] NoPathwayModes = { TriageMode.Discard };
 
     private IReadOnlyList<TriageMode> AvailableModes => pathway switch
     {
@@ -1698,8 +1700,9 @@ else
 
     private static string ModeLabel(TriageMode m) => m switch
     {
-        TriageMode.Link   => "Link to existing",
-        TriageMode.Create => "Create new",
+        TriageMode.Link    => "Link to existing",
+        TriageMode.Create  => "Create new",
+        TriageMode.Discard => "Discard",
         _ => m.ToString()
     };
 
@@ -2011,8 +2014,9 @@ else
     // on screen at once now, so they can no longer share state). Blank = company-wide items.
     private string todoProjectId = "";
 
-    // Two-step discard on the email header (section 1) — the first click only opens the confirm.
-    private bool discardConfirming;
+    // The to-dos modal: open/closed, and which draft row is being edited (null = the list view).
+    private bool todoModalOpen;
+    private int? todoEditIndex;
 
     // Optional "also link to an open request" for the To-do create form: one request for the whole
     // batch — the email gets the request's tag as well as one tag per created item, so a single
@@ -2076,6 +2080,45 @@ else
     {
         createTodoRows.Remove(row);
         if (createTodoRows.Count == 0) createTodoRows.Add(new TodoDraftRow());
+    }
+
+    // ---- The to-dos modal (list ⇄ detail in one dialog) ----
+
+    private string TodoButtonClass =>
+        "inline-flex items-center gap-1 rounded-lg border px-3 py-1.5 text-sm "
+        + (CurrentTodoDrafts().Count > 0
+            ? "border-accent/50 text-accent bg-accent/5 font-medium"
+            : "border-line-strong text-content-muted hover:text-content hover:border-line-strong");
+
+    private void OpenTodoModal()
+    {
+        // Straight into the form when nothing is drafted yet ("add a to-do" means add one, not
+        // stare at an empty list); the list view once there is something to list.
+        todoEditIndex = CurrentTodoDrafts().Count == 0 && createTodoRows.All(r => string.IsNullOrWhiteSpace(r.Title))
+            ? 0
+            : null;
+        todoModalOpen = true;
+    }
+
+    private void CloseTodoModal()
+    {
+        // Drop trailing empty rows so the badge count and list stay honest.
+        createTodoRows.RemoveAll(r => string.IsNullOrWhiteSpace(r.Title) && string.IsNullOrWhiteSpace(r.Notes) && r.Assignees.Count == 0);
+        if (createTodoRows.Count == 0) createTodoRows.Add(new TodoDraftRow());
+        todoEditIndex = null;
+        todoModalOpen = false;
+    }
+
+    private void AddTodoRowAndEdit()
+    {
+        createTodoRows.Add(new TodoDraftRow());
+        todoEditIndex = createTodoRows.Count - 1;
+    }
+
+    private void RemoveTodoRowAndBack(TodoDraftRow row)
+    {
+        RemoveTodoRow(row);
+        todoEditIndex = null;
     }
 
     private void OnTodoNotesInput(TodoDraftRow row, ChangeEventArgs e) => row.Notes = e.Value?.ToString() ?? "";
@@ -2437,7 +2480,8 @@ else
         createTodoLinkRequestId = "";
         createTodoLinkRequests = Array.Empty<LinkableRecord>();
         todoProjectId = "";
-        discardConfirming = false;
+        todoModalOpen = false;
+        todoEditIndex = null;
     }
 
     // jumpToLatest: clicking an email in the QUEUE list triages its thread from the newest member —
@@ -2828,6 +2872,8 @@ else
                 parts.Add(linkRecordIds.Count == 1 ? "link this email to the selected record" : $"link this email to {linkRecordIds.Count} records");
             if (mode == TriageMode.Create && !string.IsNullOrWhiteSpace(createProjectId) && !string.IsNullOrWhiteSpace(createTitle))
                 parts.Add(pathway == TriagePathway.Subcontractor ? "create the bid package from this email" : "create the request from this email");
+            if (mode == TriageMode.Discard)
+                parts.Add("discard this email and its thread");
             if (parts.Count == 0) return null;
             return parts.Count == 1 ? parts[0] : string.Join(", ", parts.Take(parts.Count - 1)) + " and " + parts[^1];
         }
@@ -2840,9 +2886,8 @@ else
             var filing = CurrentTodoDrafts().Count > 0
                 || (mode == TriageMode.Link && linkRecordIds.Count > 0)
                 || (mode == TriageMode.Create && !string.IsNullOrWhiteSpace(createProjectId) && !string.IsNullOrWhiteSpace(createTitle));
-            return ReplyDraftPending
-                ? (filing ? "Send reply & file" : "Send reply")
-                : "Apply";
+            if (ReplyDraftPending) return filing ? "Send reply & file" : "Send reply";
+            return mode == TriageMode.Discard && !filing ? "Discard email" : "Apply";
         }
     }
 
@@ -2914,7 +2959,15 @@ else
             : new List<LinkableRecord>();
         var createReady = mode == TriageMode.Create
             && !string.IsNullOrWhiteSpace(createProjectId) && !string.IsNullOrWhiteSpace(createTitle);
-        if (!replying && drafts.Count == 0 && picks.Count == 0 && !createReady) return;
+        var discarding = mode == TriageMode.Discard;
+        if (!replying && drafts.Count == 0 && picks.Count == 0 && !createReady && !discarding) return;
+
+        // A reply and a discard contradict each other — an email worth answering isn't spam.
+        if (discarding && replying)
+        {
+            actionError = "Discard and a reply don't mix — send (or discard) the reply draft first.";
+            return;
+        }
 
         // A half-filled Create form is a decision not yet made — finish it or clear it, rather
         // than have Apply quietly skip it.
@@ -3010,6 +3063,14 @@ else
                         InternetMessageId: anchor.InternetMessageId,
                         AddToProgramme: createAddToProgramme));
                 }
+                filed = true;
+            }
+            else if (discarding)
+            {
+                // "File it as nothing": tag the thread discarded — restorable from the Tagged tab.
+                // Runs after the to-dos so "capture the follow-ups, then bin the email" works.
+                busyLabel = "Discarding";
+                await Intake.DiscardMessageAsync(anchor.Id, anchor.InternetMessageId);
                 filed = true;
             }
 
@@ -3175,12 +3236,6 @@ else
     }
 
     private void OnReplyBodyInput(ChangeEventArgs e) => replyBody = e.Value?.ToString() ?? "";
-
-    private async Task DoDiscard()
-    {
-        if (selected is null || busy) return;
-        await RunAction("Discarding", async () => await Intake.DiscardMessageAsync(selected.Id, selected.InternetMessageId));
-    }
 
     private async Task DoRestore()
     {

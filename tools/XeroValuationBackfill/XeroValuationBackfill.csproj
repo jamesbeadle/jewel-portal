@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    One-off generator for the historic valuation-invoice backfill (Aug 2026): reads every ACCREC
+    sales invoice and ACCRECCREDIT credit note from Xero (the accountant confirmed historic
+    receivables are all completed-works sales), groups them by the "Sites" tracking option, and
+    writes a REVIEWED SQL script that inserts them as paid manual valuation invoices — the same
+    shape CreateValuationInvoiceHandler produces for an IsManual entry. It deliberately does NOT
+    touch the database itself: per the repo convention, one-off data fixes are reviewed scripts
+    run via sqlcmd (see infra/run-backfill-valuation-invoices.sh).
+
+    Run it with:  dotnet run ~project tools/XeroValuationBackfill  (~ is a double dash here; XML
+    comments cannot hold one). Credentials come from api/local.settings.json (Xero__ClientId /
+    Xero__ClientSecret), the XERO_CLIENT_ID / XERO_CLIENT_SECRET environment variables, or args —
+    see the header of Program.cs for the full option list.
+  -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>Jewel.JPMS.Tools.XeroValuationBackfill</RootNamespace>
+    <AssemblyName>XeroValuationBackfill</AssemblyName>
+    <InvariantGlobalization>true</InvariantGlobalization>
+  </PropertyGroup>
+
+</Project>
