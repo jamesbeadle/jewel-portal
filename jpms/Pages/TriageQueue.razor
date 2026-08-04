@@ -1423,30 +1423,6 @@ else
                                                 }
                                             </select>
                                         </div>
-                @if (!string.IsNullOrWhiteSpace(todoProjectId) && TodoRequestLinkOffered)
-                {
-                    <div>
-                        <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Link to an open request (optional)</label>
-                        @if (createTodoLinkRequestsLoading)
-                        {
-                            <p class="text-sm text-content-subtle italic">Loading requests…</p>
-                        }
-                        else if (createTodoLinkRequests.Count == 0)
-                        {
-                            <p class="text-xs text-content-subtle italic">No open requests on this project.</p>
-                        }
-                        else
-                        {
-                            <select class="field" value="@createTodoLinkRequestId" @onchange="OnCreateTodoLinkRequestChanged">
-                                <option value="">No request link</option>
-                                @foreach (var record in createTodoLinkRequests)
-                                {
-                                    <option value="@record.RecordId">@record.Reference — @record.Title</option>
-                                }
-                            </select>
-                        }
-                    </div>
-                }
             </div>
 
             <div class="flex items-center justify-end pt-1">
@@ -1670,14 +1646,13 @@ else
     // Subcontractor. A request is a Client record: tagging one files the thread under Client, which is
     // right for an internal thread that turns out to be client business but is a wall crossing for
     // subcontract mail. Hiding the control means the Subcontractor → To-dos action is always neutral.
-    private bool TodoRequestLinkOffered => pathway != TriagePathway.Subcontractor;
 
     // True when the pending action only touches to-do items, which are pathway-neutral — it tags the
     // email without filing the thread under any pathway. Drives the consequence line under the
     // selector so it never promises a filing that won't happen.
     private bool PendingActionIsNeutral =>
         (mode == TriageMode.Link && linkRecordType == RecordType.Todo)
-        || (mode == TriageMode.None && CurrentTodoDrafts().Count > 0 && string.IsNullOrWhiteSpace(createTodoLinkRequestId) && !ReplyDraftPending);
+        || (mode == TriageMode.None && CurrentTodoDrafts().Count > 0 && !ReplyDraftPending);
 
     // The record actions each pathway offers in section 3 — the pathway filters what an email can
     // be filed to; nothing is offered until a pathway is chosen (or fixed on the thread).
@@ -2015,16 +1990,6 @@ else
     // The to-dos modal: open/closed, and which draft row is being edited (null = the list view).
     private bool todoModalOpen;
     private int? todoEditIndex;
-
-    // Optional "also link to an open request" for the To-do create form: one request for the whole
-    // batch — the email gets the request's tag as well as one tag per created item, so a single
-    // triage action can feed a request's conversation and capture its follow-up to-dos. The pool is
-    // the chosen project's open requests (same ListLinkableRecords call as the Link panel; closed
-    // requests are filtered server-side), reloaded whenever the to-dos form gains a project. Project
-    // to-dos only — a company-wide batch (no project) can't link to a request.
-    private string createTodoLinkRequestId = "";
-    private IReadOnlyList<LinkableRecord> createTodoLinkRequests = Array.Empty<LinkableRecord>();
-    private bool createTodoLinkRequestsLoading;
 
     // The assignee picker's option pool: the ROLES a to-do can be assigned to
     // (TodoRoles.AssignableAsTodoAssignee, served by ListTodoAssignableRoles) and, under each
@@ -2475,8 +2440,6 @@ else
         createAddToProgramme = false;
         createTrade = "";
         createTodoRows = new List<TodoDraftRow> { new() };
-        createTodoLinkRequestId = "";
-        createTodoLinkRequests = Array.Empty<LinkableRecord>();
         todoProjectId = "";
         todoModalOpen = false;
         todoEditIndex = null;
@@ -2738,44 +2701,7 @@ else
 
     private void OnCreateProjectChanged(ChangeEventArgs e) => createProjectId = e.Value?.ToString() ?? "";
 
-    private async Task OnTodoProjectChanged(ChangeEventArgs e)
-    {
-        todoProjectId = e.Value?.ToString() ?? "";
-        await LoadCreateTodoLinkRequestsAsync();
-    }
-
-    private void OnCreateTodoLinkRequestChanged(ChangeEventArgs e) => createTodoLinkRequestId = e.Value?.ToString() ?? "";
-
-    // Load the chosen project's open requests for the To-do form's optional request link. A failed
-    // load leaves the picker empty rather than blocking triage — the to-dos can still be created,
-    // the email just isn't linked to a request. Any change of project or record type clears the
-    // current pick: a request selected against one project must never survive into another.
-    private async Task LoadCreateTodoLinkRequestsAsync()
-    {
-        createTodoLinkRequestId = "";
-        // Never offered on the Subcontractor pathway: a request is a client record, so tagging one
-        // would file a subcontract thread under Client — the wall crossing the whole design forbids.
-        // To-dos raised from subcontract mail stay pathway-neutral (see TodoRequestLinkOffered).
-        if (!TodoRequestLinkOffered || string.IsNullOrWhiteSpace(todoProjectId))
-        {
-            createTodoLinkRequests = Array.Empty<LinkableRecord>();
-            return;
-        }
-        try
-        {
-            createTodoLinkRequestsLoading = true;
-            StateHasChanged(); // show the loading state while the fetch is in flight
-            createTodoLinkRequests = await Intake.ListLinkableRecordsAsync(todoProjectId, RecordType.Request);
-        }
-        catch
-        {
-            createTodoLinkRequests = Array.Empty<LinkableRecord>();
-        }
-        finally
-        {
-            createTodoLinkRequestsLoading = false;
-        }
-    }
+    private void OnTodoProjectChanged(ChangeEventArgs e) => todoProjectId = e.Value?.ToString() ?? "";
 
     private void OnCreateDescriptionInput(ChangeEventArgs e) => createDescription = e.Value?.ToString() ?? "";
 
@@ -3002,14 +2928,15 @@ else
             if (drafts.Count > 0)
             {
                 busyLabel = "Creating to-dos";
-                var linkRequestId = string.IsNullOrWhiteSpace(todoProjectId) ? null : NullIfBlank(createTodoLinkRequestId);
+                // No request link here: to-dos are their own concern, and linking the email to a
+                // record — a request included — is the filing section's job.
                 await Intake.CreateTodoItemsFromMessageAsync(new CreateTodoItemsFromMessage(
                     anchor.Id,
                     NullIfBlank(todoProjectId),
                     drafts,
-                    LinkRequestId: linkRequestId,
+                    LinkRequestId: null,
                     InternetMessageId: anchor.InternetMessageId,
-                    Pathway: linkRequestId is null && pathway is { } chosenForTodos ? PathwayLabel(chosenForTodos) : null));
+                    Pathway: pathway is { } chosenForTodos ? PathwayLabel(chosenForTodos) : null));
                 // One batch per apply: clear the rows so a cross-filing re-run can't double-raise.
                 createTodoRows = new List<TodoDraftRow> { new() };
                 filed = true;
