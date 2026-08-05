@@ -124,7 +124,7 @@ The most ambitious pack in the brief and the one furthest from being buildable.
   - `R` `get_bid_package`, `list_bid_packages_for_project`, `list_quotes_for_package`
   - `R` `list_drawings_for_project`, `get_drawing_revision_metadata`
   - `R` `search_subcontractors` — the directory, filtered by trade
-  - `R` `search_local_suppliers` — `BraveLocalBusinessSearch` + `WebsiteContactFinder` (**this exists
+  - `R` `search_local_suppliers` — `ClaudeLocalBusinessSearch` + `WebsiteContactFinder` (**this exists
     and works**)
   - `W` `create_bid_package`, `add_bid_package_lines`, `invite_subcontractors`
   - `W` `draft_bid_package_invite` — `PrepareBidPackageInviteDraft`, already built

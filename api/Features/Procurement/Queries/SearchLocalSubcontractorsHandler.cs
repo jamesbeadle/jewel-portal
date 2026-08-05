@@ -7,7 +7,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Jewel.JPMS.Api.Features.Procurement.Queries;
 
-// Finds companies of a trade near the project's site: a web search (Brave) locates company
+// Finds companies of a trade near the project's site: a Claude web search locates company
 // websites, then each site is visited to discover a contact email and phone. Hits with no findable
 // email are excluded — an invite that can't be emailed is no invite. Failures are returned as a
 // readable Error on the result (not thrown) so the UI can explain: key not configured, project
@@ -18,15 +18,18 @@ public sealed class SearchLocalSubcontractorsHandler
 {
     private static readonly char[] TitleSeparators = { '|', '-', '–', '—', '·' };
 
+    // "Load more" stops offering itself once this many domains have been shown — the token has to
+    // travel back and forth as a query value, and past this point the well is dry anyway.
+    private const int MaxExcludedDomains = 60;
+
     private readonly JpmsContext context;
     private readonly ILocalBusinessSearch search;
-    private readonly BraveSearchOptions options;
     private readonly IWebsiteContactFinder contactFinder;
 
     public SearchLocalSubcontractorsHandler(
-        JpmsContext context, ILocalBusinessSearch search, BraveSearchOptions options, IWebsiteContactFinder contactFinder)
+        JpmsContext context, ILocalBusinessSearch search, IWebsiteContactFinder contactFinder)
     {
-        this.context = context; this.search = search; this.options = options; this.contactFinder = contactFinder;
+        this.context = context; this.search = search; this.contactFinder = contactFinder;
     }
 
     public async Task<LocalSubcontractorSearchResult> HandleAsync(SearchLocalSubcontractors query, CancellationToken cancellationToken)
@@ -34,8 +37,8 @@ public sealed class SearchLocalSubcontractorsHandler
         static LocalSubcontractorSearchResult Fail(string message) =>
             new(Array.Empty<LocalSubcontractor>(), Error: message);
 
-        if (!options.IsConfigured)
-            return Fail("The local search isn't configured yet — add the BraveSearch__ApiKey application setting.");
+        if (!search.IsConfigured)
+            return Fail("The local search isn't configured yet — add the Anthropic__ApiKey application setting.");
 
         if (string.IsNullOrWhiteSpace(query.Trade))
             return Fail("Choose a trade to search for.");
@@ -49,12 +52,16 @@ public sealed class SearchLocalSubcontractorsHandler
         if (location.Length == 0)
             return Fail("This project has no town or postcode yet. Add the site address under Edit details on the project, then search again.");
 
-        // PageToken is simply the page number of the underlying web search.
-        var page = int.TryParse(query.PageToken, out var parsed) && parsed > 0 ? parsed : 0;
+        // PageToken carries the domains already shown, so "Load more" asks the search to find
+        // different companies rather than the same page again.
+        var excludeDomains = (query.PageToken ?? "")
+            .Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
 
-        var found = await search.SearchAsync(query.Trade.Trim(), location, page, cancellationToken);
+        var found = await search.SearchAsync(query.Trade.Trim(), location, excludeDomains, cancellationToken);
         if (found is null)
-            return Fail("The local search failed. Check the Brave Search API key is valid, then try again.");
+            return Fail("The local search failed. Check the Anthropic API key is valid, then try again.");
 
         // Directory matching (by company name or website domain) so known companies aren't duplicated,
         // and their directory email is reused when present.
@@ -103,9 +110,16 @@ public sealed class SearchLocalSubcontractorsHandler
         // Only companies we can actually email make the list.
         var results = mapped.Where(hit => !string.IsNullOrWhiteSpace(hit.Email)).ToList();
 
+        // The next page's exclusion list is everything shown so far — including this page's
+        // email-less rejects, which a re-search should not surface again either.
+        var shown = excludeDomains
+            .Concat(found.Hits.Select(hit => hit.Domain))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
         return new LocalSubcontractorSearchResult(
             results,
-            found.HasMore ? (page + 1).ToString() : null);
+            found.HasMore && shown.Count <= MaxExcludedDomains ? string.Join(",", shown) : null);
     }
 
     // "SilvaTree Landscaping | Garden Design Bromley" → "SilvaTree Landscaping". Falls back through

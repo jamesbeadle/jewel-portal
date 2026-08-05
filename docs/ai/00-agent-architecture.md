@@ -39,7 +39,7 @@ Before designing anything, the honest inventory. Roughly 70% of the plumbing is 
 | Agent CQRS surface | `api/Features/Agents/{Commands,Queries}` | 4 commands, 4 queries, each with the full Endpoint/Handler/Authorisation/Validation convention. |
 | Human-in-the-loop UI | `jpms/Components/AgentWorkspace.razor` | 271 lines, complete: agent list, chat thread, run-analysis, Accept/Reject on proposals. |
 | Draft-to-Outlook | `MailboxGraphClient.CreateDraftAsync:810`, `CreateReplyDraftAsync:849` | Mature. Six live callers. Auto-CCs the projects mailbox, stamps the record tag, writes a `DraftCreated` audit row with the Graph id and `WebLink`. |
-| Supplier search | `BraveLocalBusinessSearch` + `WebsiteContactFinder` | Live when keyed. Google Places was deliberately dropped on licensing grounds. |
+| Supplier search | `ClaudeLocalBusinessSearch` (Anthropic web_search tool) + `WebsiteContactFinder` | Live when the Anthropic key is set. Google Places was deliberately dropped on licensing grounds; Brave Search was replaced by Claude web search so one key covers all AI features. |
 | Deterministic programme analysis | `api/Features/Agents/SchedulingAgent.cs` | 169 lines of real logic — baseline diff, `ProgrammeMovementCalculator`, JCT ICD 2024 cl. 2.19 narrative. **Not LLM-driven**, and currently unreachable. |
 
 ### Built and switched off
@@ -611,7 +611,7 @@ better prioritisation signal than an argument about it.
 **Degradation is designed rather than emergent.** The `message` names the fallback, so the model
 offers the correspondence-based route instead of stalling.
 
-The same pattern covers Xero and Brave when unkeyed — both already have null-object clients that
+The same pattern covers Xero and the local supplier search when unkeyed — both already have null-object clients that
 throw; wrap them to return `not_configured` instead. Note `NullProjectContractBlobStore` follows the
 house convention of throwing with the setting name in the message; the tool layer is where that
 becomes a structured failure.

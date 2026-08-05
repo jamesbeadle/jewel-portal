@@ -186,7 +186,7 @@ token expiry and payload validation are not optional extras here.
   from it.
 - **Two legacy mirrors must be written in step:** `TimesheetEntity.IsApproved` with `Status`, and
   `ProjectContactEntity.ReceivesRequests` with `Routing`.
-- **Anthropic, Xero and Brave keys are in no infra script.** Only SQL, AAD, App Insights, ACS and
+- **Anthropic and Xero keys are in no infra script.** Only SQL, AAD, App Insights, ACS and
   drawings storage are set by `infra/azure-prod-setup-v2.sh`. The rest are manual, and the worker
   Function App is not provisioned by any script at all.
 - **`api/README.md` is stale** — it documents the pre-CQRS pattern. `docs/cqrs/*.md` is accurate,
