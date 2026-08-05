@@ -24,6 +24,10 @@ public static class ProjectsFeatureRegistration
         services.AddScoped<UpdateProjectDetailsAuthorisation>();
         services.AddScoped<UpdateProjectDetailsValidation>();
 
+        services.AddScoped<ICommandHandler<DeleteProject, Acknowledgement>, DeleteProjectHandler>();
+        services.AddScoped<DeleteProjectAuthorisation>();
+        services.AddScoped<DeleteProjectValidation>();
+
         services.AddScoped<ICommandHandler<SetNextValuationDate, Project>, SetNextValuationDateHandler>();
         services.AddScoped<SetNextValuationDateAuthorisation>();
 

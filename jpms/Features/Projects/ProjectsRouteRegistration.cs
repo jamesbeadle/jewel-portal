@@ -33,6 +33,12 @@ public static class ProjectsRouteRegistration
                 "/api/projects/{projectId}",
                 command => $"/api/projects/{((UpdateProjectDetails)command).ProjectId}"));
 
+        commands.Register<DeleteProject, Acknowledgement>(
+            new CommandRoute(
+                "DELETE",
+                "/api/projects/{projectId}",
+                command => $"/api/projects/{((DeleteProject)command).ProjectId}"));
+
         commands.Register<SetNextValuationDate, Project>(
             new CommandRoute(
                 "PUT",

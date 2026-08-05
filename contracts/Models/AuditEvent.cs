@@ -38,7 +38,11 @@ public enum AuditEventType
     // material whatever the pathway — the portal put words in front of a correspondent — so it is
     // written for every send, with Pathway carrying the thread's side ("" when none was chosen).
     EmailSent = 13,             // the portal sent an email from the projects mailbox
-    EmailSendFailed = 14        // a send attempt failed after the draft was staged (draft kept)
+    EmailSendFailed = 14,       // a send attempt failed after the draft was staged (draft kept)
+    // Project lifecycle (written since the settings danger-zone work, 2026-08-05). The project's
+    // own rows are gone by the time this is written, so RecordReference carries the deleted
+    // project's reference and the detail its name — the event is the surviving record.
+    ProjectDeleted = 15         // a project and its records were permanently deleted from settings
 }
 
 // One append-only audit event. WebLink (when present) opens the email or draft in Outlook on the

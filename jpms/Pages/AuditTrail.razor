@@ -214,7 +214,8 @@ else
         (AuditEventType.DraftCreated,           "Draft created"),
         (AuditEventType.SnapshotTaken,          "Snapshot taken"),
         (AuditEventType.BackfillStamped,        "Backfill stamped"),
-        (AuditEventType.CostCentreRecoded,      "Cost centre recoded")
+        (AuditEventType.CostCentreRecoded,      "Cost centre recoded"),
+        (AuditEventType.ProjectDeleted,         "Project deleted")
     };
 
     // Mirrors the API's TriageRoles.AllowedToTriage — the audit trail is a triage-side tool.
@@ -348,6 +349,7 @@ else
         AuditEventType.CrossPathwayOverride   => "Cross-pathway override",
         AuditEventType.ThreadSwept            => "Thread swept",
         AuditEventType.CostCentreRecoded      => "Cost centre recoded",
+        AuditEventType.ProjectDeleted         => "Project deleted",
         _                                     => type.ToString()
     };
 

@@ -5,6 +5,7 @@
 @inject ProjectListReadModel Projects
 @inject IClientStore ClientStore
 @inject IArchitectStore ArchitectStore
+@inject NavigationManager Nav
 
 @*
     "Edit details" button + modal for a project's core details (reference, name, client, entity,
@@ -12,6 +13,12 @@
     project list read model, so the page header, stage badge and Overview stats update in place.
     Server-side the command is gated to directors, the finance director and project managers; the
     button mirrors that.
+
+    The danger zone at the very bottom deletes the project outright (directors and the finance
+    director only, mirroring DeleteProjectAuthorisation). Arming it reveals a type-the-name confirm:
+    the red button stays disabled until the typed text matches the project's SAVED name — the saved
+    one, not the editable Name field above, so half-editing the name can't loosen the check. The
+    server re-checks the same match before deleting anything.
 *@
 
 @if (CanEdit)
@@ -19,7 +26,7 @@
     <button type="button" class="btn-secondary text-xs px-2.5 py-1.5" @onclick="Open">Edit details</button>
 
     <Modal IsOpen="@open" Title="Edit project details" ConfirmLabel="@(busy ? "Saving…" : "Save changes")"
-           CancelLabel="Cancel" OnConfirm="Save" OnCancel="Close">
+           ConfirmDisabled="@deleteBusy" CancelLabel="Cancel" OnConfirm="Save" OnCancel="Close">
         <div class="space-y-3">
             @if (error is not null)
             {
@@ -107,6 +114,46 @@
                 (e.g. "21 Chetwode Road"). Required before allocated draft invoices can be confirmed
                 and approved back into Xero from the cost allocation screen.
             </p>
+
+            @if (CanDelete)
+            {
+                <div class="mt-4 pt-4 border-t border-line">
+                    <p class="text-xs uppercase tracking-wider text-negative font-semibold mb-1.5">Danger zone</p>
+                    @if (!deleteArmed)
+                    {
+                        <div class="flex items-start justify-between gap-3">
+                            <p class="text-xs text-content-subtle">
+                                Permanently delete this project and every record filed under it —
+                                requests, variations, valuations, programme and financial history.
+                                This cannot be undone.
+                            </p>
+                            <button type="button"
+                                    class="btn-secondary text-xs px-2.5 py-1.5 border-negative/40 text-negative hover:border-negative shrink-0"
+                                    disabled="@busy" @onclick="ArmDelete">Delete project…</button>
+                        </div>
+                    }
+                    else
+                    {
+                        <p class="text-xs text-content-subtle mb-2">
+                            This permanently deletes
+                            <span class="font-semibold text-content">@savedName</span>
+                            and every record filed under it. It cannot be undone. Type the project
+                            name below to confirm.
+                        </p>
+                        <FormField Label="Type the project name to confirm"
+                                   Value="@deleteConfirmName" OnChange="v => deleteConfirmName = v" />
+                        <div class="flex items-center justify-end gap-2 mt-2.5">
+                            <button type="button" class="btn-secondary text-xs px-2.5 py-1.5"
+                                    disabled="@deleteBusy" @onclick="DisarmDelete">Keep project</button>
+                            <button type="button"
+                                    class="btn bg-negative-strong text-negative-ink hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed text-xs px-2.5 py-1.5"
+                                    disabled="@(!DeleteNameMatches || deleteBusy)" @onclick="DeleteAsync">
+                                @(deleteBusy ? "Deleting…" : "Delete this project permanently")
+                            </button>
+                        </div>
+                    }
+                </div>
+            }
         </div>
     </Modal>
 }
@@ -142,10 +189,26 @@
     private IReadOnlyList<Client> clients = Array.Empty<Client>();
     private IReadOnlyList<Architect> architects = Array.Empty<Architect>();
 
+    // The delete confirm compares against the name as SAVED, not the editable field above.
+    private string savedName = "";
+    private bool deleteArmed;
+    private bool deleteBusy;
+    private string deleteConfirmName = "";
+
     // Mirrors UpdateProjectDetailsAuthorisation server-side (directors, the finance director and
     // project managers; administrators carry every role).
     private bool CanEdit =>
         Session.AvailableRoles.Any(role => role is Role.Admin or Role.ManagingDirector or Role.FinanceDirector or Role.ProjectManager);
+
+    // Mirrors DeleteProjectAuthorisation server-side — deliberately narrower than CanEdit:
+    // deleting erases the project's records wholesale, so project managers are not on this list.
+    private bool CanDelete =>
+        Session.AvailableRoles.Any(role => role is Role.Admin or Role.ManagingDirector or Role.FinanceDirector);
+
+    // Same rule the server applies: trimmed, case-insensitive.
+    private bool DeleteNameMatches =>
+        !string.IsNullOrWhiteSpace(deleteConfirmName) &&
+        string.Equals(deleteConfirmName.Trim(), savedName.Trim(), StringComparison.OrdinalIgnoreCase);
 
     private void Open()
     {
@@ -165,6 +228,9 @@
             ? ""
             : (project.PartyKind == PartyKind.Architect ? ArchitectPrefix : ClientPrefix) + project.PartyId;
         onBehalfOfClientId = project.OnBehalfOfClientId ?? "";
+        savedName = project.Name;
+        deleteArmed = false;
+        deleteConfirmName = "";
         error = null;
         open = true;
         _ = LoadPartiesAsync();
@@ -190,6 +256,37 @@
     {
         open = false;
         error = null;
+        deleteArmed = false;
+        deleteConfirmName = "";
+    }
+
+    private void ArmDelete() => deleteArmed = true;
+
+    private void DisarmDelete()
+    {
+        deleteArmed = false;
+        deleteConfirmName = "";
+    }
+
+    private async Task DeleteAsync()
+    {
+        if (deleteBusy || !DeleteNameMatches) return;
+
+        error = null;
+        deleteBusy = true;
+        try
+        {
+            await Commands.SendAsync(new DeleteProject(ProjectId, deleteConfirmName.Trim()), CancellationToken.None);
+        }
+        catch (CommandFailedException ex) { error = ex.Message; deleteBusy = false; return; }
+        catch { error = "Couldn't delete the project. Please try again."; deleteBusy = false; return; }
+
+        // The delete has succeeded — a failed list refresh must not read as a failed delete, and
+        // either way this page belongs to a project that no longer exists.
+        try { await Projects.RefreshAsync(CancellationToken.None); } catch { /* list revalidates on the next page */ }
+        deleteBusy = false;
+        Close();
+        Nav.NavigateTo("/projects");
     }
 
     private void OnOrganisationChanged(ChangeEventArgs e) =>
