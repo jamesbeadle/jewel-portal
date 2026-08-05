@@ -16,8 +16,9 @@ namespace Jewel.JPMS.Api.Features.Xero.SitePnl;
 /// rather than left as stale rows, and a missed night self-heals the same way the ledger
 /// sync does. Projects with no Xero site mapping are skipped and named in the result;
 /// leads are skipped silently — they have no site yet, so their absence is not a problem
-/// to report. A Xero failure stops the run and reports the error; whatever saved before
-/// the failure would have saved again next run, so nothing is left half-true.
+/// to report. A Xero failure (usually the 60/min rate limit, despite the client's own
+/// retries) stops the run but keeps the projects that completed — each project's months
+/// are independently true — and the error names the project it stopped at.
 /// </summary>
 public sealed class SyncXeroSitePnlHandler : ICommandHandler<SyncXeroSitePnl, XeroSitePnlSyncResult>
 {
@@ -69,11 +70,13 @@ public sealed class SyncXeroSitePnlHandler : ICommandHandler<SyncXeroSitePnl, Xe
             }
             catch (XeroCallFailedException failure)
             {
-                // Nothing is saved on a failed run: a partial refresh that stamped some
-                // projects and not others would read as "synced" while lying about half
-                // the chart. The error names the project so the mapping fault is findable.
+                // Xero refused mid-run — usually the rate limit, occasionally a renamed
+                // tracking option. Each project's months are independently true, so keep what
+                // completed and report which project stopped the run: the next sync (button
+                // or nightly) finishes the rest from Xero's current state.
+                await context.SaveChangesAsync(cancellationToken);
                 return new XeroSitePnlSyncResult(
-                    true, $"{project.Name}: {failure.Message}", projectsSynced, 0, unmappedNames);
+                    true, $"{project.Name}: {failure.Message}", projectsSynced, monthsStored, unmappedNames);
             }
 
             var stored = storedByProject.TryGetValue(project.ProjectId, out var rows)
