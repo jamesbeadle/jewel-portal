@@ -60,16 +60,25 @@ public sealed record XeroSitePnlMonthFigures(
     decimal OperatingExpenses);
 
 /// <summary>
-/// Re-reads every mapped project's site P&L from Xero (profit &amp; loss report filtered by
-/// the project's Sites tracking option, monthly columns from the reporting window's start)
-/// and replaces the stored months. Projects without a Xero site mapping are skipped and
-/// named in the result so the UI can say why a job has no line.
+/// Re-reads mapped projects' site P&L from Xero (profit &amp; loss report filtered by the
+/// project's Sites tracking option, monthly columns) and upserts the stored months.
+/// <paramref name="FullHistory"/> false — the interactive default — re-reads only the last
+/// twelve months per project (one Xero call each; a job's older months don't change) and
+/// runs under a soft time budget so the request finishes well inside the Static Web Apps
+/// gateway's ~45s limit, reporting a Notice when it parks work for a second press.
+/// FullHistory true — the nightly worker, which faces no gateway — re-reads from the
+/// reporting window's start with no time budget, so a recode deep in a job's past still
+/// self-heals within a day. A project with no stored rows always gets the full backfill,
+/// whichever mode. Projects without a Xero site mapping are skipped and named in the result.
 /// </summary>
-public sealed record SyncXeroSitePnl : ICommand<XeroSitePnlSyncResult>;
+public sealed record SyncXeroSitePnl(bool FullHistory = false) : ICommand<XeroSitePnlSyncResult>;
 
 public sealed record XeroSitePnlSyncResult(
     bool IsConfigured,
     string? Error,
     int ProjectsSynced,
     int MonthsStored,
-    IReadOnlyList<string> UnmappedProjectNames);
+    IReadOnlyList<string> UnmappedProjectNames,
+    // Not an error: the run finished cleanly but parked the remaining projects (time
+    // budget) — "synced N of M, press Refresh again". Null when everything was covered.
+    string? Notice = null);

@@ -82,9 +82,11 @@ public sealed class XeroNightlyWorker
             allocated);
 
         // Site P&L (the Profit Summary's cumulative invoiced-vs-cost chart): re-read every
-        // mapped project's monthly figures from Xero's P&L report. A failure here is logged
-        // and left for tomorrow — it must not stop the ledger sync above having landed.
-        var pnl = await sitePnl.HandleAsync(new SyncXeroSitePnl(), ct);
+        // mapped project's monthly figures from Xero's P&L report — FULL history, because
+        // this run faces no HTTP gateway and is where deep recodes self-heal (the page's
+        // Refresh button only re-reads the recent window). A failure here is logged and
+        // left for tomorrow — it must not stop the ledger sync above having landed.
+        var pnl = await sitePnl.HandleAsync(new SyncXeroSitePnl(FullHistory: true), ct);
         if (pnl.Error is not null)
             logger.LogWarning("Nightly site P&L sync did not complete: {Error}", pnl.Error);
         else

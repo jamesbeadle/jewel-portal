@@ -436,6 +436,10 @@ else
                     {
                         <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mt-4">@pnlSyncError</p>
                     }
+                    @if (pnlSyncNotice is not null)
+                    {
+                        <p class="rounded-lg bg-amber-400/10 border border-amber-400/30 px-3 py-2 text-sm text-amber-400 mt-4">@pnlSyncNotice</p>
+                    }
 
                     <LoadGate IsLoading="@(SitePnl.Current is null && !pnlFailed)" Label="Loading Xero site figures">
                         @if (SitePnl.Current is null)
@@ -707,6 +711,9 @@ else
     private bool pnlFailed;
     private bool pnlSyncing;
     private string? pnlSyncError;
+    // The sync's "finished cleanly but parked some projects for the next press" message —
+    // amber, because it is progress to act on, not a failure to worry about.
+    private string? pnlSyncNotice;
 
     private sealed record CumulativeMonthPoint(DateTime Month, decimal Invoiced, decimal Cost);
 
@@ -824,10 +831,12 @@ else
     {
         pnlSyncing = true;
         pnlSyncError = null;
+        pnlSyncNotice = null;
         try
         {
             var result = await Commands.SendAsync(new SyncXeroSitePnl(), CancellationToken.None);
             if (result.Error is not null) pnlSyncError = result.Error;
+            pnlSyncNotice = result.Notice;
             await LoadSitePnlAsync();
         }
         catch
