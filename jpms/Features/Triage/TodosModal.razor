@@ -1,0 +1,181 @@
+@namespace Jewel.JPMS.Features.Triage
+
+@* The triage to-dos modal: one dialog, two views. The LIST shows every drafted item (title,
+   assignees, due) with edit/remove; clicking one — or adding — drills into the DETAIL form in the
+   same modal, Back returning to the list. Rows are DRAFTS owned by the page: nothing is created
+   until the email's Apply runs, and the page's To-dos button badge reads the same list. *@
+
+<Modal IsOpen="@IsOpen" Title="@(editIndex is null ? "To-dos from this email" : "To-do")" Class="max-w-2xl"
+       DismissOnOverlayClick="false" ShowFooter="false" OnCancel="CloseAsync">
+    <div class="space-y-4">
+        @if (editIndex is { } activeIndex && activeIndex < Rows.Count)
+        {
+            var row = Rows[activeIndex];
+            <button type="button" class="text-xs text-content-subtle hover:text-content underline" @onclick="() => editIndex = null">← All to-dos</button>
+
+            <FormField Label="Title" Value="@row.Title" OnChange="v => { row.Title = v; Notify(); }" Required="true" />
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Assigned to</label>
+                    @if (row.Assignees.Count > 0)
+                    {
+                        <div class="flex flex-wrap gap-1 mb-1.5">
+                            @foreach (var assigneeValue in row.Assignees.ToList())
+                            {
+                                var picked = assigneeValue;
+                                <span class="inline-flex items-center gap-1 rounded-full border border-line bg-surface-raised pl-2 pr-1 py-0.5 text-xs text-content">
+                                    @AssigneeLabel(picked)
+                                    <button type="button" title="Remove assignee"
+                                            class="leading-none px-1 text-content-subtle hover:text-negative"
+                                            @onclick="() => { row.Assignees.Remove(picked); Notify(); }">&times;</button>
+                                </span>
+                            }
+                        </div>
+                    }
+                    @{ var roleOptions = OptionsFor(row); }
+                    <SearchSelect Options="@roleOptions" Value=""
+                                  ValueChanged="v => AddAssignee(row, v)"
+                                  Placeholder="@(row.Assignees.Count == 0 ? "Unassigned" : "Add another…")"
+                                  Disabled="@(roleOptions.Count == 0)"
+                                  WidthClass="w-full" />
+                    @if (row.Assignees.Count > 1)
+                    {
+                        <p class="text-xs text-content-subtle mt-1">Raised as @row.Assignees.Count separate to-dos, one per assignee.</p>
+                    }
+                </div>
+                <FormField Label="Due" Value="@row.Due" OnChange="v => { row.Due = v; Notify(); }" InputType="date" />
+            </div>
+
+            <div>
+                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Detail</label>
+                <textarea class="field" rows="5" value="@row.Notes" @oninput="e => { row.Notes = e.Value?.ToString() ?? string.Empty; Notify(); }"></textarea>
+            </div>
+
+            <div class="flex items-center justify-between pt-1">
+                <button type="button" class="text-xs text-content-subtle hover:text-negative underline" @onclick="() => RemoveRow(row)">Remove this to-do</button>
+                <button type="button" class="btn-primary" @onclick="() => editIndex = null">Done</button>
+            </div>
+        }
+        else
+        {
+            <p class="text-xs text-content-subtle">
+                Each item is numbered TODO-#### and this email is tagged to every one, so one email can feed several to-dos. More than one assignee raises the item once per assignee. Nothing is created until you apply the email's actions.
+            </p>
+
+            @if (TitledRows.Count == 0)
+            {
+                <p class="text-sm text-content-subtle italic">No to-dos drafted from this email yet.</p>
+            }
+            else
+            {
+                <div class="divide-y divide-line rounded-lg border border-line">
+                    @for (var i = 0; i < Rows.Count; i++)
+                    {
+                        var listIndex = i;
+                        var row = Rows[i];
+                        if (string.IsNullOrWhiteSpace(row.Title) && Rows.Count > 1) { continue; }
+                        <button type="button" @key="row" class="w-full text-left px-3 py-2 hover:bg-surface-raised flex items-center gap-3"
+                                @onclick="() => editIndex = listIndex">
+                            <span class="text-sm text-content flex-1 truncate">@(string.IsNullOrWhiteSpace(row.Title) ? "(untitled)" : row.Title)</span>
+                            @if (row.Assignees.Count > 0)
+                            {
+                                <span class="text-xs text-content-subtle truncate max-w-[12rem]">@string.Join(", ", row.Assignees.Select(AssigneeLabel))</span>
+                            }
+                            @if (!string.IsNullOrWhiteSpace(row.Due))
+                            {
+                                <span class="text-xs text-content-subtle shrink-0">due @row.Due</span>
+                            }
+                            <span class="text-content-faint">›</span>
+                        </button>
+                    }
+                </div>
+            }
+
+            <button type="button" class="btn-secondary text-xs" @onclick="AddRowAndEdit">+ Add a to-do</button>
+
+            @if (!string.IsNullOrWhiteSpace(ProjectNote))
+            {
+                <p class="text-xs text-content-subtle pt-2 border-t border-line">@ProjectNote</p>
+            }
+
+            <div class="flex items-center justify-end pt-1">
+                <button type="button" class="btn-primary" @onclick="CloseAsync">Done</button>
+            </div>
+        }
+    </div>
+</Modal>
+
+@code {
+    [Parameter] public bool IsOpen { get; set; }
+    [Parameter] public EventCallback OnClose { get; set; }
+
+    /// <summary>The page-owned draft rows. The modal edits them in place and raises
+    /// <see cref="OnChanged"/> so the page's badge count re-renders.</summary>
+    [Parameter] public List<TodoDraftRow> Rows { get; set; } = new();
+    [Parameter] public EventCallback OnChanged { get; set; }
+
+    /// <summary>Assignee picker options (roles, and named people within them), built once by the
+    /// page from the todo store's assignable roles/people.</summary>
+    [Parameter] public IReadOnlyList<SearchSelect.Option> AssigneeOptions { get; set; } = Array.Empty<SearchSelect.Option>();
+
+    /// <summary>One line saying where the items will land ("Items land on … — the email's project").</summary>
+    [Parameter] public string? ProjectNote { get; set; }
+
+    private int? editIndex;
+    private bool wasOpen;
+
+    private List<TodoDraftRow> TitledRows => Rows.Where(r => !string.IsNullOrWhiteSpace(r.Title)).ToList();
+
+    protected override void OnParametersSet()
+    {
+        if (IsOpen && !wasOpen)
+        {
+            // "Add a to-do" means add one: open straight into the form when nothing is drafted yet;
+            // the list view once there is something to list.
+            editIndex = TitledRows.Count == 0 && Rows.All(r => string.IsNullOrWhiteSpace(r.Title)) ? 0 : null;
+            if (Rows.Count == 0) Rows.Add(new TodoDraftRow());
+        }
+        wasOpen = IsOpen;
+    }
+
+    private IReadOnlyList<SearchSelect.Option> OptionsFor(TodoDraftRow row) =>
+        AssigneeOptions.Where(option => !row.Assignees.Contains(option.Value)).ToList();
+
+    private string AssigneeLabel(string value) =>
+        AssigneeOptions.FirstOrDefault(option => option.Value == value)?.Label ?? value;
+
+    private void AddAssignee(TodoDraftRow row, string value)
+    {
+        if (string.IsNullOrWhiteSpace(value) || row.Assignees.Contains(value)) return;
+        row.Assignees.Add(value);
+        Notify();
+    }
+
+    private void AddRowAndEdit()
+    {
+        Rows.Add(new TodoDraftRow());
+        editIndex = Rows.Count - 1;
+        Notify();
+    }
+
+    private void RemoveRow(TodoDraftRow row)
+    {
+        Rows.Remove(row);
+        if (Rows.Count == 0) Rows.Add(new TodoDraftRow());
+        editIndex = null;
+        Notify();
+    }
+
+    private void Notify() => _ = OnChanged.InvokeAsync();
+
+    private async Task CloseAsync()
+    {
+        // Drop trailing empty rows so the page badge and list stay honest.
+        Rows.RemoveAll(r => string.IsNullOrWhiteSpace(r.Title) && string.IsNullOrWhiteSpace(r.Notes) && r.Assignees.Count == 0);
+        if (Rows.Count == 0) Rows.Add(new TodoDraftRow());
+        editIndex = null;
+        await OnChanged.InvokeAsync();
+        await OnClose.InvokeAsync();
+    }
+}

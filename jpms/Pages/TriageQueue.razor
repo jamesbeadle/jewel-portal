@@ -11,6 +11,7 @@
 @inject SessionService Session
 @inject NavigationManager Nav
 @inject IIntakeQueue Intake
+@inject ProjectStageFilter StageFilter
 @inject TriageSortStorage SortStorage
 @inject ITodoStore Todos
 @inject IRequestRegister RequestRegister
@@ -247,6 +248,23 @@
             <p class="text-xs text-content-subtle italic">This email has attachments, but their names couldn't be retrieved.</p>
         }
 
+        @* Replies already sent from the projects mailbox on this thread — shown right under the
+           email so "did we answer this?" never needs Outlook, and another reply can follow. *@
+        @if (SentReplies.Count > 0)
+        {
+            <div class="rounded-lg border border-positive/30 bg-positive/5 p-3 space-y-1.5">
+                <p class="text-[11px] uppercase tracking-wider text-positive font-semibold">Replies sent · @SentReplies.Count</p>
+                @foreach (var sent in SentReplies)
+                {
+                    <button type="button" @key="sent.Id" class="w-full text-left text-xs hover:bg-surface-raised rounded px-1.5 py-1"
+                            title="Open this reply" @onclick="() => Select(sent, jumpToLatest: false)">
+                        <span class="text-content-subtle">@ListDate(sent.ReceivedAt)</span>
+                        <span class="text-content ml-2">@FirstLineOf(sent.BodyPreview)</span>
+                    </button>
+                }
+            </div>
+        }
+
         @*
             Thread panel: the rest of this email's conversation, read live and regardless of tags.
             Later replies often say how the older messages should be triaged (e.g. "ignore my last —
@@ -345,28 +363,7 @@ else
         <div class="flex items-center gap-2 mb-6 border-b border-line">
             <button type="button" class="@ViewTabClass(QueueView.Active)" @onclick="() => SwitchView(QueueView.Active)">Queue</button>
             <button type="button" class="@ViewTabClass(QueueView.Tagged)" @onclick="() => SwitchView(QueueView.Tagged)">Tagged</button>
-            @* One toggle for the whole page: every project picker below (import a drawing, link to
-               a record, create a request or bid package, raise a to-do, reply in thread) hides
-               completed projects unless this is ticked. No gate — it is a control, not a figure,
-               so it renders straight away and holds the layout; only the count on the label waits
-               until the project list has actually landed. *@
-            <label class="ml-auto mb-1.5 flex items-center gap-2 text-sm text-content-muted cursor-pointer select-none"
-                   title="Completed projects are kept out of the project pickers below until you ask for them">
-                <input type="checkbox" checked="@showCompletedProjects"
-                       @onchange="e => showCompletedProjects = (bool)e.Value!" />
-                <span>Show completed projects@(HiddenCompletedCount > 0 ? $" ({HiddenCompletedCount})" : "")</span>
-            </label>
-            <div class="mb-1.5 inline-flex rounded-lg border border-line-strong p-0.5 gap-0.5"
-                 title="Show the oldest or the newest emails first — your choice is remembered">
-                <button type="button" disabled="@listLoading" @onclick="() => SetSortAsync(newest: false)"
-                        class="rounded-md text-xs px-2.5 py-1.5 transition @(!newestFirst ? "bg-accent text-accent-ink font-medium" : "text-content-muted hover:bg-surface-raised")">
-                    Oldest first
-                </button>
-                <button type="button" disabled="@listLoading" @onclick="() => SetSortAsync(newest: true)"
-                        class="rounded-md text-xs px-2.5 py-1.5 transition @(newestFirst ? "bg-accent text-accent-ink font-medium" : "text-content-muted hover:bg-surface-raised")">
-                    Newest first
-                </button>
-            </div>
+            <span class="ml-auto"></span>
             <button type="button" class="btn-primary mb-1.5" @onclick="OpenNewEmail">New email</button>
         </div>
 
@@ -431,6 +428,12 @@ else
         {
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
                 <div class="relative space-y-2 lg:col-span-1">
+                    @* Sort is a light, rarely-used view preference — small muted text under the
+                       header, not an action button. The choice is remembered per user. *@
+                    <div class="flex items-center gap-3 text-xs px-1">
+                        <button type="button" disabled="@listLoading" @onclick="() => SetSortAsync(newest: false)" class="@SortLinkClass(false)">Oldest first</button>
+                        <button type="button" disabled="@listLoading" @onclick="() => SetSortAsync(newest: true)" class="@SortLinkClass(true)">Newest first</button>
+                    </div>
                     @if (listLoading)
                     {
                         <JewelSpinner Overlay="true" Label="Loading" />
@@ -645,267 +648,40 @@ else
                                     {
                                         <span class="text-xs text-accent">Matched from the email — change it if that's wrong.</span>
                                     }
+                                    <label class="flex items-center gap-1.5 text-xs text-content-subtle cursor-pointer select-none"
+                                           title="Completed projects stay out of the picker until you ask — the same per-user toggle as the project switcher">
+                                        <input type="checkbox" checked="@StageFilter.IncludeCompleted"
+                                               @onchange="e => StageFilter.SetAsync(e.Value is true)" />
+                                        Show completed
+                                    </label>
                                 </div>
-                                @*
-                                    PATHWAY FIRST (docs/Pathway-Split-Platform-Flow-Plan.md §2.2): the first triage
-                                    decision is who the correspondence is with — the chosen pathway then decides which
-                                    action tabs (and record types) are offered. A thread that already carries a pathway
-                                    shows it as a fixed badge: its routing was decided when it was first filed, so the
-                                    triager acts within it rather than re-choosing. Discard is offered regardless —
-                                    discarding is pathway-less.
-                                *@
-                                <div class="mb-4">
-                                    <p class="text-sm font-semibold text-content mb-2">Who is this correspondence with?</p>
-                                    @if (FixedPathway is { } filedPathway)
-                                    {
-                                        <span class="inline-flex items-center rounded-full @PathwayChipColour(filedPathway) text-xs font-medium px-2.5 py-1">Filed under @PathwayLabel(filedPathway)</span>
-                                        <p class="text-xs text-content-subtle mt-2">This thread is already filed — the actions below work within its pathway.</p>
-                                    }
-                                    else
-                                    {
-                                        @* The first triage decision, rendered as the panel's main event: one of these
-                                           MUST be taken (or Discard) before any action is offered, so the choices are
-                                           full-size cards rather than the small segmented toggle the sort control uses. *@
-                                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                                            @foreach (var option in PathwayOptions)
-                                            {
-                                                <button type="button" @onclick="() => SetPathway(option)" class="@PathwayCardClass(option)">
-                                                    <span class="block text-sm font-semibold">@PathwayLabel(option)</span>
-                                                    <span class="block text-xs mt-0.5 opacity-80">@PathwayDescription(option)</span>
-                                                </button>
-                                            }
-                                        </div>
-                                        @if (pathway is null)
-                                        {
-                                            <p class="text-xs text-content-subtle mt-2">Choose who this correspondence is with to see the actions.</p>
-                                        }
-                                        else if (mode != TriageMode.Discard)
-                                        {
-                                            @* The quiet consequence line: what the pending action does to the thread's
-                                               filing. A to-do LINK is the one neutral case — it never files a thread. *@
-                                            @if (PendingActionIsNeutral)
-                                            {
-                                                <p class="text-xs text-content-subtle mt-2">To-dos are neutral — this won't file the thread under a pathway.</p>
-                                            }
-                                            else
-                                            {
-                                                <p class="text-xs text-content-subtle mt-2">This thread will be filed under <span class="font-semibold text-content">@PathwayLabel(pathway.Value)</span>.</p>
-                                            }
-                                        }
-                                    }
+                                @* THREE doors, one apply: System Tags (the modal owns the Client /
+                                   Subcontractor / Internal decision and all linking/creating), To-dos,
+                                   and Discard. The badges show what is staged; nothing happens until
+                                   the Apply below. *@
+                                <div class="flex flex-wrap items-center gap-2">
+                                    <button type="button" class="@TagsButtonClass" @onclick="() => tagsModalOpen = true">
+                                        🏷 System Tags@(StagedTagCount > 0 ? $" · {StagedTagCount}" : "")
+                                    </button>
+                                    <button type="button" class="@TodoButtonClass" @onclick="() => todoModalOpen = true">
+                                        ☑ To-dos@(CurrentTodoDrafts().Count > 0 ? $" · {CurrentTodoDrafts().Count}" : "")
+                                    </button>
+                                    <button type="button" class="@DiscardTabClass" @onclick="() => discardArmed = !discardArmed">🗑 Discard</button>
                                 </div>
 
-                                @* THE STAGING AREA — everything this email is about to become, in one
-                                   place: each drafted to-do and each picked record is a chip here, so
-                                   what Apply will do is visible at a glance. The + buttons open the
-                                   pickers; Discard sits apart on the right (pathway-less, one button). *@
-                                <div class="space-y-2 mb-4">
-                                    <div class="flex flex-wrap items-center gap-1.5">
-                                        <span class="text-xs uppercase tracking-wider text-content-subtle font-semibold w-16 shrink-0">To-dos</span>
-                                        @for (var i = 0; i < createTodoRows.Count; i++)
-                                        {
-                                            var stagedIndex = i;
-                                            var stagedRow = createTodoRows[i];
-                                            if (string.IsNullOrWhiteSpace(stagedRow.Title)) { continue; }
-                                            <span @key="stagedRow" class="inline-flex items-center gap-1 rounded-full border border-accent/50 bg-accent/5 text-accent pl-2.5 pr-1 py-0.5 text-xs">
-                                                <button type="button" class="hover:underline" title="Edit this to-do"
-                                                        @onclick="() => { todoEditIndex = stagedIndex; todoModalOpen = true; }">☑ @stagedRow.Title</button>
-                                                <button type="button" class="leading-none px-1 text-accent/70 hover:text-negative" title="Remove"
-                                                        @onclick="() => RemoveTodoRow(stagedRow)">&times;</button>
-                                            </span>
-                                        }
-                                        <button type="button" class="rounded-lg border border-line px-2.5 py-1 text-xs text-content-muted hover:text-content hover:border-line-strong"
-                                                @onclick="OpenTodoModal">+ Add a to-do</button>
-                                    </div>
-
-                                    <div class="flex flex-wrap items-center gap-1.5">
-                                        <span class="text-xs uppercase tracking-wider text-content-subtle font-semibold w-16 shrink-0">Records</span>
-                                        @foreach (var picked in pickedRecords)
-                                        {
-                                            <span @key="picked.RecordId" class="inline-flex items-center gap-1 rounded-full border border-accent/50 bg-accent/5 text-accent pl-2.5 pr-1 py-0.5 text-xs"
-                                                  title="@picked.Title">
-                                                <span>🔗 @picked.Reference</span>
-                                                <button type="button" class="leading-none px-1 text-accent/70 hover:text-negative" title="Unpick"
-                                                        @onclick="() => ToggleLinkRecord(picked)">&times;</button>
-                                            </span>
-                                        }
-                                        @if (AvailableModes.Contains(TriageMode.Link))
-                                        {
-                                            <button type="button" class="@ModeTabClass(TriageMode.Link)" @onclick="() => SetMode(TriageMode.Link)">+ Link a record</button>
-                                        }
-                                        @if (AvailableModes.Contains(TriageMode.Create))
-                                        {
-                                            <button type="button" class="@ModeTabClass(TriageMode.Create)" @onclick="() => SetMode(TriageMode.Create)">+ Create new</button>
-                                        }
-                                        <button type="button" class="@DiscardTabClass"
-                                                @onclick="() => SetMode(TriageMode.Discard)">🗑 Discard</button>
-                                    </div>
-                                </div>
-
-                                @if (mode == TriageMode.Link)
+                                @if (discardArmed)
                                 {
-                                    <div class="rounded-lg border border-line p-3 space-y-3">
-                                        <div class="flex items-center justify-between">
-                                            <p class="text-xs uppercase tracking-wider text-content-subtle font-semibold">Pick records — click to add, click again to unpick</p>
-                                            <button type="button" class="text-xs text-content-subtle hover:text-content underline" @onclick="() => SetMode(TriageMode.None)">Close</button>
-                                        </div>
-                                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                        <div>
-                                            <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Record type</label>
-                                            @* Only the chosen pathway's record types are offered — the pathway filters
-                                               the actions, so a client record can't be reached from Subcontractor and
-                                               vice versa. Internal narrows to existing to-do items. *@
-                                            <select class="field" value="@((int)linkRecordType)" @onchange="OnLinkRecordTypeChanged">
-                                                @foreach (var recordType in QueueLinkTypeOptions)
-                                                {
-                                                    <option value="@((int)recordType)">@RecordTypeLabel(recordType)</option>
-                                                }
-                                            </select>
-                                        </div>
-                                        <div>
-                                            <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Search</label>
-                                            <input class="field" type="text" placeholder="Reference or title…"
-                                                   value="@linkSearch" @oninput="OnLinkSearchInput" />
-                                        </div>
-                                        </div>
-
-                                        @if (string.IsNullOrWhiteSpace(triageProjectId))
-                                        {
-                                            <p class="rounded-lg bg-amber-500/10 border border-amber-500/40 px-3 py-2 text-xs text-content">
-                                                Set the email's <span class="font-medium">Project</span> above to list its records.
-                                            </p>
-                                        }
-                                        else
-                                        {
-                                            if (linkRecordsLoading)
-                                            {
-                                                <p class="text-sm text-content-subtle italic">Loading @(RecordTypeLabelPlural(linkRecordType))…</p>
-                                            }
-                                            else
-                                            {
-                                                var candidates = FilterRecords(DuplicateCandidates());
-                                                var others = FilterRecords(ProjectRecords().Except(DuplicateCandidates()).ToList());
-
-                                                @if (candidates.Count > 0)
-                                                {
-                                                    <div>
-                                                        <p class="text-xs font-semibold text-amber-600 mb-1">Possible matches for this email</p>
-                                                        <div class="space-y-1">
-                                                            @foreach (var record in candidates)
-                                                            {
-                                                                <button type="button" @onclick="() => ToggleLinkRecord(record)" class="@RecordPickClass(record, true)">
-                                                                    <span class="font-mono text-xs text-content-muted shrink-0">@record.Reference</span>
-                                                                    <span class="text-sm text-content truncate flex-1" title="@record.Summary">@record.Title</span>
-                                                                    @if (!string.IsNullOrWhiteSpace(record.StatusLabel))
-                                                                    {
-                                                                        <span class="text-[10px] uppercase tracking-wider text-content-subtle shrink-0">@record.StatusLabel</span>
-                                                                    }
-                                                                </button>
-                                                            }
-                                                        </div>
-                                                    </div>
-                                                }
-
-                                                @if (others.Count > 0)
-                                                {
-                                                    <div>
-                                                        <p class="text-xs font-semibold text-content-subtle mb-1">Other @(RecordTypeLabelPlural(linkRecordType)) on this project</p>
-                                                        <div class="space-y-1 max-h-56 overflow-y-auto">
-                                                            @foreach (var record in others)
-                                                            {
-                                                                <button type="button" @onclick="() => ToggleLinkRecord(record)" class="@RecordPickClass(record, false)">
-                                                                    <span class="font-mono text-xs text-content-muted shrink-0">@record.Reference</span>
-                                                                    <span class="text-sm text-content truncate flex-1" title="@record.Summary">@record.Title</span>
-                                                                    @if (!string.IsNullOrWhiteSpace(record.StatusLabel))
-                                                                    {
-                                                                        <span class="text-[10px] uppercase tracking-wider text-content-subtle shrink-0">@record.StatusLabel</span>
-                                                                    }
-                                                                </button>
-                                                            }
-                                                        </div>
-                                                    </div>
-                                                }
-
-                                                @if (candidates.Count == 0 && others.Count == 0)
-                                                {
-                                                    <p class="text-sm text-content-subtle italic">No @(RecordTypeLabelPlural(linkRecordType)) on this project yet.</p>
-                                                }
-                                            }
-                                        }
-
-                                        <p class="text-xs text-content-subtle">
-                                            Pick one or more records — the email is tagged to each of them, so it feeds every record it belongs to. Click a record again to unpick it.
-                                        </p>
-                                        @* The lane confirm: the server asked for explicit consent to a Subcontractor↔
-                                           Internal dual filing. Wall rejections never reach here — they surface as a
-                                           plain error above, with no retry. *@
-                                        @if (crossFileMessage is not null)
-                                        {
-                                            <div class="rounded-lg bg-amber-500/10 border border-amber-500/40 px-3 py-2 space-y-2">
-                                                <p class="text-sm text-content">@crossFileMessage</p>
-                                                <button type="button" class="btn-secondary text-xs" disabled="@busy" @onclick="() => DoApplyAll(pendingSaveDraft, allowCrossPathway: true)">File under both anyway</button>
-                                            </div>
-                                        }
-                                    </div>
-                                }
-                                else if (mode == TriageMode.Create)
-                                {
-                                    @* The pathway decides WHAT is created — Client → a General request (the client
-                                       pathway's default container), Subcontractor → a bid package — so there is no
-                                       record-type picker: the pathway already made that choice. *@
-                                    <div class="rounded-lg border border-line p-3 space-y-4">
-                                        <div class="flex items-center justify-between">
-                                            <p class="text-xs uppercase tracking-wider text-content-subtle font-semibold">Create a new record from this email</p>
-                                            <button type="button" class="text-xs text-content-subtle hover:text-content underline" @onclick="() => SetMode(TriageMode.None)">Close</button>
-                                        </div>
-                                        @if (string.IsNullOrWhiteSpace(triageProjectId))
-                                        {
-                                            <p class="rounded-lg bg-amber-500/10 border border-amber-500/40 px-3 py-2 text-xs text-content">
-                                                Set the email's <span class="font-medium">Project</span> (top of the actions) — a new record has to belong to one.
-                                            </p>
-                                        }
-                                        @if (pathway == TriagePathway.Client)
-                                        {
-                                            <p class="rounded-lg bg-surface-raised border border-line px-3 py-2 text-xs text-content-subtle">
-                                                Created as a <span class="font-medium text-content">General</span> request and auto-numbered REQ-####. Promote it to an official RFI from the request page.
-                                            </p>
-
-                                            <FormField Label="Raised to" Value="@createRaisedTo" OnChange="v => createRaisedTo = v" />
-
-                                            <FormField Label="Subject" Value="@createTitle" OnChange="v => createTitle = v" Required="true" />
-
-                                            <div>
-                                                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Detail</label>
-                                                <textarea class="field" rows="4" value="@createDescription" @oninput="OnCreateDescriptionInput"></textarea>
-                                            </div>
-
-                                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                                <FormField Label="Drawing / detail ref" Value="@createDrawingRef" OnChange="v => createDrawingRef = v" />
-                                                <FormField Label="Response due" Value="@createResponseDue" OnChange="v => createResponseDue = v" InputType="date" />
-                                            </div>
-
-                                            <label class="flex items-start gap-2 cursor-pointer">
-                                                <input type="checkbox" class="mt-0.5" @bind="createAddToProgramme" />
-                                                <span class="text-sm text-content">
-                                                    Also add to Programme
-                                                    <span class="block text-xs text-content-subtle">The email (and its thread) is also tagged to the project's <span class="font-medium">programme communications</span>, so it appears under the Programme tab as well as on the new request.</span>
-                                                </span>
-                                            </label>
-                                        }
-                                        else
-                                        {
-                                            <FormField Label="Title" Value="@createTitle" OnChange="v => createTitle = v" Required="true" />
-                                            <FormField Label="Trade" Value="@createTrade" OnChange="v => createTrade = v" />
-
-                                            <p class="text-xs text-content-subtle">A draft bid package is created and this email is linked to it. Invite subcontractors and add line items from the bid package page.</p>
-                                        }
-                                    </div>
-                                }
-                                else if (mode == TriageMode.Discard)
-                                {
-                                    <p class="text-sm text-content-muted">
-                                        Discard this email if it isn't for a record at all — spam, an auto-reply, or sent to the wrong place. It (and its thread) gets a "discarded" tag and leaves the queue; nothing moves in the mailbox, and it can be restored from the Tagged tab. Applied when you press the button below.
+                                    <p class="mt-3 rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-content">
+                                        Discard this email if it isn't for a record at all — spam, an auto-reply, or sent to the wrong place. It (and its thread) gets a "discarded" tag and leaves the queue; nothing moves in the mailbox, and it can be restored from the Tagged tab. Applied by the button below.
                                     </p>
+                                }
+
+                                @if (view == QueueView.Active && crossFileMessage is not null)
+                                {
+                                    <div class="mt-3 rounded-lg bg-amber-500/10 border border-amber-500/40 px-3 py-2 space-y-2">
+                                        <p class="text-sm text-content">@crossFileMessage</p>
+                                        <button type="button" class="btn-secondary text-xs" disabled="@busy" @onclick="() => DoApplyAll(pendingSaveDraft, allowCrossPathway: true)">File under both anyway</button>
+                                    </div>
                                 }
                             </div>
 
@@ -919,7 +695,7 @@ else
                                 }
                                 else
                                 {
-                                    <p class="text-sm text-content-subtle">Write a reply, add a to-do or choose a record above — then apply it all in one go here.</p>
+                                    <p class="text-sm text-content-subtle">Write a reply, or stage system tags and to-dos with the buttons above — then apply it all in one go here.</p>
                                 }
                                 <div class="flex items-center gap-2">
                                     <button type="button" class="btn-primary" disabled="@(busy || PendingSummary is null)" @onclick="() => DoApplyAll(saveAsDraftOnly: false)">
@@ -1340,111 +1116,25 @@ else
     </section>
 }
 
-@* ---- To-dos modal: one modal, two views. The LIST shows every drafted item at a glance (title,
-       assignees, due) with edit/remove; clicking one — or adding — DRILLS INTO the detail form in
-       the same modal, with Back returning to the list. Items here are drafts: nothing is created
-       until the email's action bar applies them. *@
-<Modal IsOpen="@todoModalOpen" Title="@(todoEditIndex is null ? "To-dos from this email" : "To-do")" Class="max-w-2xl"
-       DismissOnOverlayClick="false" ShowFooter="false" OnCancel="CloseTodoModal">
-    <div class="space-y-4">
-        @if (todoEditIndex is { } editIndex && editIndex < createTodoRows.Count)
-        {
-            var row = createTodoRows[editIndex];
-            <button type="button" class="text-xs text-content-subtle hover:text-content underline" @onclick="() => todoEditIndex = null">← All to-dos</button>
+@* The staged-work modals — components, so this page only orchestrates. *@
+<TodosModal IsOpen="@todoModalOpen"
+            Rows="createTodoRows"
+            AssigneeOptions="todoAssigneeOptions"
+            ProjectNote="@TodoProjectNote"
+            OnChanged="StateHasChanged"
+            OnClose="() => todoModalOpen = false" />
 
-            <FormField Label="Title" Value="@row.Title" OnChange="v => row.Title = v" Required="true" />
-
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                    <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Assigned to</label>
-                    @if (row.Assignees.Count > 0)
-                    {
-                        <div class="flex flex-wrap gap-1 mb-1.5">
-                            @foreach (var assigneeValue in row.Assignees.ToList())
-                            {
-                                var picked = assigneeValue;
-                                <span class="inline-flex items-center gap-1 rounded-full border border-line bg-surface-raised pl-2 pr-1 py-0.5 text-xs text-content">
-                                    @TodoRoleLabel(picked)
-                                    <button type="button" title="Remove assignee"
-                                            class="leading-none px-1 text-content-subtle hover:text-negative"
-                                            @onclick="() => RemoveTodoRole(row, picked)">&times;</button>
-                                </span>
-                            }
-                        </div>
-                    }
-                    @{ var roleOptions = AvailableTodoRoleOptions(row); }
-                    <SearchSelect Options="@roleOptions" Value=""
-                                  ValueChanged="v => AddTodoRole(row, v)"
-                                  Placeholder="@TodoRolePlaceholder(row)"
-                                  Disabled="@(roleOptions.Count == 0)"
-                                  WidthClass="w-full" />
-                    @if (row.Assignees.Count > 1)
-                    {
-                        <p class="text-xs text-content-subtle mt-1">Raised as @row.Assignees.Count separate to-dos, one per assignee.</p>
-                    }
-                </div>
-                <FormField Label="Due" Value="@row.Due" OnChange="v => row.Due = v" InputType="date" />
-            </div>
-
-            <div>
-                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Detail</label>
-                <textarea class="field" rows="5" value="@row.Notes" @oninput="e => OnTodoNotesInput(row, e)"></textarea>
-            </div>
-
-            <div class="flex items-center justify-between pt-1">
-                <button type="button" class="text-xs text-content-subtle hover:text-negative underline" @onclick="() => RemoveTodoRowAndBack(row)">Remove this to-do</button>
-                <button type="button" class="btn-primary" @onclick="() => todoEditIndex = null">Done</button>
-            </div>
-        }
-        else
-        {
-            <p class="text-xs text-content-subtle">
-                Each item is numbered TODO-#### and this email is tagged to every one, so one email can feed several to-dos. More than one assignee raises the item once per assignee. Nothing is created until you apply the email's actions.
-            </p>
-
-            @if (CurrentTodoDrafts().Count == 0 && createTodoRows.All(r => string.IsNullOrWhiteSpace(r.Title)))
-            {
-                <p class="text-sm text-content-subtle italic">No to-dos drafted from this email yet.</p>
-            }
-            else
-            {
-                <div class="divide-y divide-line rounded-lg border border-line">
-                    @for (var i = 0; i < createTodoRows.Count; i++)
-                    {
-                        var listIndex = i;
-                        var row = createTodoRows[i];
-                        if (string.IsNullOrWhiteSpace(row.Title) && createTodoRows.Count > 1) { continue; }
-                        <button type="button" @key="row" class="w-full text-left px-3 py-2 hover:bg-surface-raised flex items-center gap-3"
-                                @onclick="() => todoEditIndex = listIndex">
-                            <span class="text-sm text-content flex-1 truncate">@(string.IsNullOrWhiteSpace(row.Title) ? "(untitled)" : row.Title)</span>
-                            @if (row.Assignees.Count > 0)
-                            {
-                                <span class="text-xs text-content-subtle truncate max-w-[12rem]">@string.Join(", ", row.Assignees.Select(TodoRoleLabel))</span>
-                            }
-                            @if (!string.IsNullOrWhiteSpace(row.Due))
-                            {
-                                <span class="text-xs text-content-subtle shrink-0">due @row.Due</span>
-                            }
-                            <span class="text-content-faint">›</span>
-                        </button>
-                    }
-                </div>
-            }
-
-            <button type="button" class="btn-secondary text-xs" @onclick="AddTodoRowAndEdit">+ Add a to-do</button>
-
-            <p class="text-xs text-content-subtle pt-2 border-t border-line">
-                @(string.IsNullOrWhiteSpace(triageProjectId)
-                    ? "No project set on the email — these will be company-wide items. Set the Project on the page to put them on a project's To-do tab."
-                    : $"Items land on the To-do tab of {ProjectLabelFor(triageProjectId)} — the email's project, set on the page.")
-            </p>
-
-            <div class="flex items-center justify-end pt-1">
-                <button type="button" class="btn-primary" @onclick="CloseTodoModal">Done</button>
-            </div>
-        }
-    </div>
-</Modal>
+<SystemTagsModal IsOpen="@tagsModalOpen"
+                 ProjectId="@triageProjectId"
+                 EmailSubject="@(selected?.Subject ?? "")"
+                 LockedPathway="@(FixedPathway is { } fp ? PathwayLabel(fp) : null)"
+                 ActivePathway="@(pathway is { } chosenPathway ? PathwayLabel(chosenPathway) : null)"
+                 ActivePathwayChanged="OnModalPathwayChanged"
+                 Picked="pickedRecords"
+                 OnStagingChanged="StateHasChanged"
+                 StagedCreate="@stagedCreate"
+                 StagedCreateChanged="v => stagedCreate = v"
+                 OnClose="() => tagsModalOpen = false" />
 
 @* ---- New email (compose a fresh outbound thread from the projects mailbox) ---- *@
 <Modal IsOpen="@newEmailOpen" Title="New email" Class="max-w-3xl" DismissOnOverlayClick="false"
@@ -1529,11 +1219,6 @@ else
 </Modal>
 
 @code {
-    // The filing decision: link the email to existing records, create a new one from it, or
-    // discard it (spam / auto-replies — "file it as nothing"). To-dos and the reply are separate
-    // concerns and combine with any of these through the one action bar.
-    private enum TriageMode { None, Link, Create, Discard }
-
     // The communication pathway — WHO the correspondence is with (docs/Pathway-Split-Platform-Flow-
     // Plan.md §2). Triage is pathway-FIRST: the pathway is chosen (or already fixed on the thread)
     // before any action, and it decides which action tabs and record types are offered.
@@ -1593,9 +1278,12 @@ else
     // adding a type here surfaces it once its provider exists. Under the pathway-first UI this full
     // list is only the fallback for a tagged thread that has no pathway yet — the pathway-filtered
     // subsets below are what the pickers normally offer.
+    // Cost Centre was removed as a link target 2026-08-04 (it never earned its place as a filing
+    // destination; existing CC-tagged mail keeps reading fine). VariationQuote is folded into
+    // Variation — one record, one number, per the 2026-07-23 unification.
     private static readonly RecordType[] RecordTypeOptions =
     {
-        RecordType.Request, RecordType.BidPackageInvite, RecordType.WorkOrder, RecordType.CostCentre, RecordType.Scheduling, RecordType.Lad, RecordType.VariationQuote, RecordType.Variation, RecordType.Todo
+        RecordType.Request, RecordType.BidPackageInvite, RecordType.WorkOrder, RecordType.Scheduling, RecordType.Lad, RecordType.Variation, RecordType.Todo
     };
 
     // What each pathway's "Link to existing" offers (the pathway filters the actions — the plan's
@@ -1605,7 +1293,7 @@ else
     // travels with the link command.
     private static readonly RecordType[] ClientLinkTypes =
     {
-        RecordType.Request, RecordType.Variation, RecordType.VariationQuote, RecordType.Scheduling, RecordType.Lad, RecordType.CostCentre
+        RecordType.Request, RecordType.Variation, RecordType.Lad, RecordType.Scheduling
     };
     // Subcontractor covers the whole subcontract lifecycle, not just the tender: an email can land
     // before a package exists (a chase, an H&S request), against the order that followed the award
@@ -1614,7 +1302,7 @@ else
     // never re-files the thread — the same reason the Tagged picker offers it on every pathway.
     private static readonly RecordType[] SubcontractorLinkTypes =
     {
-        RecordType.BidPackageInvite, RecordType.WorkOrder, RecordType.CostCentre, RecordType.Todo
+        RecordType.BidPackageInvite, RecordType.WorkOrder
     };
     private static readonly RecordType[] InternalLinkTypes = { RecordType.Todo };
 
@@ -1625,9 +1313,9 @@ else
     // other non-client side's types (the lane): linking one triggers the cross-filing confirm.
     private static readonly RecordType[] ClientTaggedLinkTypes =
     {
-        RecordType.Request, RecordType.Variation, RecordType.VariationQuote, RecordType.Scheduling, RecordType.Lad, RecordType.CostCentre, RecordType.Todo
+        RecordType.Request, RecordType.Variation, RecordType.Scheduling, RecordType.Lad, RecordType.Todo
     };
-    private static readonly RecordType[] NonClientTaggedLinkTypes = { RecordType.BidPackageInvite, RecordType.WorkOrder, RecordType.CostCentre, RecordType.Todo };
+    private static readonly RecordType[] NonClientTaggedLinkTypes = { RecordType.BidPackageInvite, RecordType.WorkOrder, RecordType.Todo };
 
     private IReadOnlyList<RecordType> QueueLinkTypeOptions => pathway switch
     {
@@ -1660,42 +1348,6 @@ else
     // Subcontractor. A request is a Client record: tagging one files the thread under Client, which is
     // right for an internal thread that turns out to be client business but is a wall crossing for
     // subcontract mail. Hiding the control means the Subcontractor → To-dos action is always neutral.
-
-    // True when the pending action only touches to-do items, which are pathway-neutral — it tags the
-    // email without filing the thread under any pathway. Drives the consequence line under the
-    // selector so it never promises a filing that won't happen.
-    private bool PendingActionIsNeutral =>
-        pickedRecords.Count > 0
-            ? pickedRecords.All(r => r.Type == RecordType.Todo) && mode != TriageMode.Create
-            : mode != TriageMode.Create && CurrentTodoDrafts().Count > 0 && !ReplyDraftPending;
-
-    // The record actions each pathway offers in section 3 — the pathway filters what an email can
-    // be filed to; nothing is offered until a pathway is chosen (or fixed on the thread).
-    private static readonly TriageMode[] ClientModes = { TriageMode.Link, TriageMode.Create };
-    // Subcontractor gets To-dos as well as Link/Create: "chase this subbie for their H&S file" is a
-    // to-do, not a bid package, and to-do links are pathway-neutral so raising one from a subcontract
-    // email files nothing — exactly the "copy, don't share" pattern the wall wants (plan §2.1).
-    private static readonly TriageMode[] SubcontractorModes = { TriageMode.Link, TriageMode.Create };
-    private static readonly TriageMode[] InternalModes = { TriageMode.Link };
-    // Nothing before a pathway is chosen — Discard is its own button, rendered outside these sets
-    // (it is pathway-less, so listing it under each pathway was just repetition).
-    private static readonly TriageMode[] NoPathwayModes = Array.Empty<TriageMode>();
-
-    private IReadOnlyList<TriageMode> AvailableModes => pathway switch
-    {
-        TriagePathway.Client        => ClientModes,
-        TriagePathway.Subcontractor => SubcontractorModes,
-        TriagePathway.Internal      => InternalModes,
-        _                           => NoPathwayModes
-    };
-
-    private static string ModeLabel(TriageMode m) => m switch
-    {
-        TriageMode.Link    => "Link to existing",
-        TriageMode.Create  => "Create new",
-        TriageMode.Discard => "Discard",
-        _ => m.ToString()
-    };
 
     private static string RecordTypeLabel(RecordType type) => type switch
     {
@@ -1793,7 +1445,6 @@ else
     // rejection carries no such marker and surfaces as a plain error — the wall has no override, so
     // no retry is ever offered for it.
     private string? crossFileMessage;
-    private readonly List<LinkableRecord> crossFilePicks = new();
 
     private static bool IsCrossFilePrompt(string message) =>
         message.Contains("Confirm the cross-filing", StringComparison.OrdinalIgnoreCase);
@@ -1902,19 +1553,12 @@ else
     // Caption under the detail-pane spinner while an action is in flight, e.g. "Discarding".
     private string busyLabel = "Working";
     private string? actionError;
-    private TriageMode mode = TriageMode.None;
 
-    // Link-to-existing state. The record type is chosen first (Request, Bid Package Invite, …), then a
-    // project, then records of that type — linking is record-agnostic (tags "JPMS/<ref>" either way).
-    // The QUEUE panel is a multi-pick: one email can feed several records at once
-    // (one tag per record), so the triager toggles every record the email belongs to and links them
-    // in one go. The picks live in one list (same project + type — they're facets of the same
-    // problem), so changing project or type clears them. The TAGGED tab's "add another tag" dropdown
-    // stays single-pick (linkRecordId): tags are added one at a time there.
+    // Link state. The SYSTEM TAGS MODAL is where queue-side picking happens now; these fields back
+    // the TAGGED tab's single-pick "add another tag" dropdown (linkRecordType + linkRecordId +
+    // linkRecords pool), while pickedRecords holds the modal's staged picks for the queue apply.
     private RecordType linkRecordType = RecordType.Request;
     private string linkRecordId = "";
-    // Free-text filter over the link picker's list (reference/title/summary contains).
-    private string linkSearch = "";
     // The staged record links — whole LinkableRecords (not ids), so picks survive switching the
     // record-type filter and one email can be linked to, say, a variation AND an RFI in one apply.
     private readonly List<LinkableRecord> pickedRecords = new();
@@ -1925,25 +1569,10 @@ else
     private IReadOnlyList<LinkableRecord> linkRecords = Array.Empty<LinkableRecord>();
     private bool linkRecordsLoading;
 
-    // Create-new state. The pathway decides WHAT is created (Client → General request, Subcontractor
-    // → bid package), so no record-type picker remains. A request created from an email always starts
-    // as a General container (auto-numbered REQ-#### server-side); it's promoted to an RFI later
-    // from the request page. triageProjectId is shared with the Internal to-dos form.
+    // Create-new state lives in `stagedCreate` (Features.Triage.StagedRecordCreate), drafted in the
+    // System Tags modal. A request created from an email always starts as a General container
+    // (auto-numbered REQ-#### server-side); it's promoted to an RFI later from the request page.
     private const RequestType createKind = RequestType.General;
-    private string createTitle = "";
-    private string createDescription = "";
-    private string createRaisedTo = "";
-    private string createDrawingRef = "";
-    // Pre-filled with the house standard response window rather than left blank: a week is what all
-    // but a handful of requests get, so typing a date is keystrokes spent on the common case. Still
-    // fully editable — the triager overrides it for anything urgent or long-dated.
-    private string createResponseDue = RequestDefaults.ResponseDue();
-    // "Also add to Programme": as well as tagging the email to the new request, the server tags it
-    // to the project's scheduling bucket (the same tag "Tag email to programme" applies) so the
-    // thread appears under the Programme tab too. Reset per selection like the rest of the form.
-    private bool createAddToProgramme;
-    // Bid Package Invite create fields (shares triageProjectId + createTitle with the Request form).
-    private string createTrade = "";
 
     // Reply-in-thread state: the chosen project, the reply written in the portal (it becomes the
     // draft's body AND the background request's description), and the last successful outcome
@@ -1984,21 +1613,8 @@ else
     private bool newEmailRecordsLoading;
     private IReadOnlyList<LinkableRecord> newEmailRecords = Array.Empty<LinkableRecord>();
 
-    // To-do create rows: one per item to capture from this email (the form starts with a single
-    // blank row; "+ Add another item" appends more). Class instances so the Blazor input lambdas
-    // mutate the row in place. `Notes` is the stored field name; the form labels it "Detail".
-    private sealed class TodoDraftRow
-    {
-        public string Title { get; set; } = "";
-        public string Notes { get; set; } = "";
-        // The ASSIGNEES, each held as the SearchSelect's TodoAssigneePicker value — a role,
-        // optionally pinned to a named holder. Empty = unassigned. A row with several assignees is
-        // raised as one to-do PER ASSIGNEE — same title, detail and due date, separate TODO-####
-        // references and separate tick-boxes — so an email that needs two people to act becomes
-        // two items in one triage action.
-        public List<string> Assignees { get; } = new();
-        public string Due { get; set; } = "";
-    }
+    // To-do draft rows (Features.Triage.TodoDraftRow), edited in the TodosModal component; one
+    // to-do is raised PER ASSIGNEE per row when the apply runs.
     private List<TodoDraftRow> createTodoRows = new() { new TodoDraftRow() };
 
     // Section 2's own project pick (independent of section 3's triageProjectId — both sections are
@@ -2011,9 +1627,36 @@ else
     // say so ("matched from the email — change it if that's wrong").
     private bool projectAutoMatched;
 
-    // The to-dos modal: open/closed, and which draft row is being edited (null = the list view).
+    // The staged-work modals + armed discard. The System Tags modal's tab mirrors the page's own
+    // `pathway` field (the pathway decision); stagedCreate is the modal's drafted new record
+    // (null = none) — StagedRecordKind decides whether Apply raises a request or a bid package.
     private bool todoModalOpen;
-    private int? todoEditIndex;
+    private bool tagsModalOpen;
+    private bool discardArmed;
+    private StagedRecordCreate? stagedCreate;
+
+    // The System Tags modal's tab IS the pathway decision — parse the tab label back onto the
+    // page's own pathway state so filing, to-dos and a record-less reply all read one field.
+    private void OnModalPathwayChanged(string tab)
+    {
+        if (Enum.TryParse<TriagePathway>(tab, out var next)) SetPathway(next);
+    }
+
+    private int StagedTagCount => pickedRecords.Count + (StagedCreateReady ? 1 : 0);
+
+    private bool StagedCreateReady =>
+        stagedCreate is { } sc && !string.IsNullOrWhiteSpace(sc.Title);
+
+    private string? TodoProjectNote =>
+        string.IsNullOrWhiteSpace(triageProjectId)
+            ? "No project set on the email — these will be company-wide items. Set the Project on the page to put them on a project's To-do tab."
+            : $"Items land on the To-do tab of {ProjectLabelFor(triageProjectId)} — the email's project, set on the page.";
+
+    private string TagsButtonClass =>
+        "inline-flex items-center gap-1 rounded-lg border px-3 py-1.5 text-sm "
+        + (StagedTagCount > 0
+            ? "border-accent/50 text-accent bg-accent/5 font-medium"
+            : "border-line-strong text-content-muted hover:text-content hover:border-line-strong");
 
     // The assignee picker's option pool: the ROLES a to-do can be assigned to
     // (TodoRoles.AssignableAsTodoAssignee, served by ListTodoAssignableRoles) and, under each
@@ -2033,13 +1676,6 @@ else
             ParseDate(row.Due)))
         .ToList();
 
-    // What the button promises has to be what the server creates, so the count comes from the SAME
-    // fan-out rule the handler runs: a row assigned to two assignees is two items, an unassigned
-    // row is still one.
-    private int TodoItemCount => TodoItemDrafts.FanOutByAssignee(CurrentTodoDrafts()).Count;
-
-    private string TodoRowCountLabel => TodoItemCount == 1 ? "1 to-do item" : $"{TodoItemCount} to-do items";
-
     // The assignees already on a row drop out of its own picker, so the same pick can't be added
     // twice (and the picker disables itself once every option is on the row).
     private IReadOnlyList<SearchSelect.Option> AvailableTodoRoleOptions(TodoDraftRow row) =>
@@ -2053,62 +1689,13 @@ else
 
     // The picker is an ADDER: it is bound to a constant empty Value, so picking an option raises
     // ValueChanged and then re-renders back to its placeholder, ready for the next assignee.
-    private void AddTodoRole(TodoDraftRow row, string value)
-    {
-        if (string.IsNullOrWhiteSpace(value) || row.Assignees.Contains(value)) return;
-        row.Assignees.Add(value);
-    }
-
-    private void RemoveTodoRole(TodoDraftRow row, string value) => row.Assignees.Remove(value);
-
-    private void AddTodoRow() => createTodoRows.Add(new TodoDraftRow());
-
-    private void RemoveTodoRow(TodoDraftRow row)
-    {
-        createTodoRows.Remove(row);
-        if (createTodoRows.Count == 0) createTodoRows.Add(new TodoDraftRow());
-    }
-
-    // ---- The to-dos modal (list ⇄ detail in one dialog) ----
+    // ---- The to-dos button (the modal itself is the TodosModal component) ----
 
     private string TodoButtonClass =>
         "inline-flex items-center gap-1 rounded-lg border px-3 py-1.5 text-sm "
         + (CurrentTodoDrafts().Count > 0
             ? "border-accent/50 text-accent bg-accent/5 font-medium"
             : "border-line-strong text-content-muted hover:text-content hover:border-line-strong");
-
-    private void OpenTodoModal()
-    {
-        // Straight into the form when nothing is drafted yet ("add a to-do" means add one, not
-        // stare at an empty list); the list view once there is something to list.
-        todoEditIndex = CurrentTodoDrafts().Count == 0 && createTodoRows.All(r => string.IsNullOrWhiteSpace(r.Title))
-            ? 0
-            : null;
-        todoModalOpen = true;
-    }
-
-    private void CloseTodoModal()
-    {
-        // Drop trailing empty rows so the badge count and list stay honest.
-        createTodoRows.RemoveAll(r => string.IsNullOrWhiteSpace(r.Title) && string.IsNullOrWhiteSpace(r.Notes) && r.Assignees.Count == 0);
-        if (createTodoRows.Count == 0) createTodoRows.Add(new TodoDraftRow());
-        todoEditIndex = null;
-        todoModalOpen = false;
-    }
-
-    private void AddTodoRowAndEdit()
-    {
-        createTodoRows.Add(new TodoDraftRow());
-        todoEditIndex = createTodoRows.Count - 1;
-    }
-
-    private void RemoveTodoRowAndBack(TodoDraftRow row)
-    {
-        RemoveTodoRow(row);
-        todoEditIndex = null;
-    }
-
-    private void OnTodoNotesInput(TodoDraftRow row, ChangeEventArgs e) => row.Notes = e.Value?.ToString() ?? "";
 
     private async Task LoadTodoAssignableRolesAsync()
     {
@@ -2119,6 +1706,8 @@ else
             var rolesTask = Todos.ListAssignableRolesAsync();
             var peopleTask = Todos.ListAssignablePeopleAsync();
             todoAssigneeOptions = TodoAssigneePicker.BuildOptions(await rolesTask, await peopleTask);
+            await StageFilter.EnsureLoadedAsync();
+            StageFilter.OnChange += StageFilterChanged;
         }
         catch { }
     }
@@ -2177,11 +1766,12 @@ else
         selected = null;
         detail = null;
         detailLoading = false;
-        mode = TriageMode.None;
+        discardArmed = false;
+        stagedCreate = null;
+        pickedRecords.Clear();
         actionError = null;
         composeOutcome = null;
         crossFileMessage = null;
-        crossFilePicks.Clear();
         if (next == QueueView.Discarded) { ResetDiscardedPaging(); await LoadDiscardedAsync(); }
         else if (next == QueueView.Tagged) { selectedTags.Clear(); pathwayBucketFilter = null; filterOpen = false; ResetTaggedPaging(); await LoadTaggedAsync(); }
         else { ResetQueuePaging(); await Task.WhenAll(LoadAsync(), LoadRecentTriageAsync()); }
@@ -2199,11 +1789,12 @@ else
         selected = null;
         detail = null;
         detailLoading = false;
-        mode = TriageMode.None;
+        discardArmed = false;
+        stagedCreate = null;
+        pickedRecords.Clear();
         actionError = null;
         composeOutcome = null;
         crossFileMessage = null;
-        crossFilePicks.Clear();
         if (view == QueueView.Discarded) { ResetDiscardedPaging(); await LoadDiscardedAsync(); }
         else if (view == QueueView.Tagged) { ResetTaggedPaging(); await LoadTaggedAsync(); }
         else { ResetQueuePaging(); await LoadAsync(); }
@@ -2439,10 +2030,8 @@ else
         // Pathway-first: pre-select the thread's own pathway when it already carries one (rendered as
         // a fixed badge); otherwise the triager chooses before any action beyond Discard is offered.
         pathway = PathwayFromBucket(item.Bucket);
-        mode = TriageMode.None;
         actionError = null;
         crossFileMessage = null;
-        crossFilePicks.Clear();
         previewAttachment = null;
         threadNote = null;
         ResetLinkState();
@@ -2456,17 +2045,11 @@ else
         replyAttachments = Array.Empty<ComposeDraftAttachment>();
         triageProjectId = "";
         projectAutoMatched = false;
-        // Deliberately blank rather than copied from the email — the subject/body of the email is
-        // rarely the right subject/detail for the record, so the triager writes their own.
-        createTitle = "";
-        createDescription = "";
-        createRaisedTo = createDrawingRef = "";
-        createResponseDue = RequestDefaults.ResponseDue();
-        createAddToProgramme = false;
-        createTrade = "";
         createTodoRows = new List<TodoDraftRow> { new() };
         todoModalOpen = false;
-        todoEditIndex = null;
+        tagsModalOpen = false;
+        discardArmed = false;
+        stagedCreate = null;
     }
 
     // jumpToLatest: clicking an email in the QUEUE list triages its thread from the newest member —
@@ -2619,56 +2202,17 @@ else
         return $"{bytes} B";
     }
 
-    private void SetMode(TriageMode next)
-    {
-        // Clicking the active tab deselects it — "no record action" is a legitimate state now that
-        // the action bar applies whatever combination is set up.
-        mode = mode == next ? TriageMode.None : next;
-        actionError = null;
-        crossFileMessage = null;
-        crossFilePicks.Clear();
-    }
-
-    // Choose the pathway for a not-yet-filed thread. Resets the action state so nothing chosen under
-    // one pathway (a record type, picked records) can leak into another; a thread that already
-    // carries a pathway ignores this — its routing decision is fixed at first filing.
+    // Choose the pathway for a not-yet-filed thread (the System Tags modal's tab). Staged picks
+    // deliberately SURVIVE the switch — the modal shows its running total across every tab, and a
+    // genuine cross-pathway combination is caught by the cross-filing confirm at apply. A thread
+    // that already carries a pathway ignores this — its routing was decided at first filing.
     private void SetPathway(TriagePathway next)
     {
         if (FixedPathway is not null || pathway == next) return;
         pathway = next;
-        mode = TriageMode.None;
         actionError = null;
         crossFileMessage = null;
-        crossFilePicks.Clear();
-        ResetLinkState();
     }
-
-    // The pathway choice cards: the mandatory first decision, so full-size and impossible to miss —
-    // the chosen card fills with the accent, the rest invite the click.
-    private string PathwayCardClass(TriagePathway p) =>
-        pathway == p
-            ? "rounded-xl border-2 border-accent bg-accent text-accent-ink px-4 py-3 text-left transition shadow-sm"
-            : "rounded-xl border-2 border-line-strong bg-surface-raised text-content px-4 py-3 text-left transition hover:border-accent hover:bg-surface";
-
-    // One line under each pathway name saying who that side of the wall actually is.
-    private static string PathwayDescription(TriagePathway p) => p switch
-    {
-        TriagePathway.Client        => "The client, or their architect and team",
-        TriagePathway.Subcontractor => "A subcontractor or supplier",
-        TriagePathway.Internal      => "Jewel staff — company admin",
-        _                           => ""
-    };
-
-    private void OnLinkSearchInput(ChangeEventArgs e) => linkSearch = e.Value?.ToString() ?? "";
-
-    private List<LinkableRecord> FilterRecords(IEnumerable<LinkableRecord> records) =>
-        string.IsNullOrWhiteSpace(linkSearch)
-            ? records.ToList()
-            : records.Where(r =>
-                    r.Reference.Contains(linkSearch, StringComparison.OrdinalIgnoreCase)
-                    || r.Title.Contains(linkSearch, StringComparison.OrdinalIgnoreCase)
-                    || (r.Summary?.Contains(linkSearch, StringComparison.OrdinalIgnoreCase) ?? false))
-                .ToList();
 
     private async Task OnLinkRecordTypeChanged(ChangeEventArgs e)
     {
@@ -2730,24 +2274,9 @@ else
     {
         linkRecordType = DefaultLinkRecordType;
         linkRecordId = "";
-        linkSearch = "";
         pickedRecords.Clear();
         linkRecords = Array.Empty<LinkableRecord>();
     }
-
-
-    private void OnCreateDescriptionInput(ChangeEventArgs e) => createDescription = e.Value?.ToString() ?? "";
-
-    // Toggle a record in the queue panel's multi-pick — clicking a picked record unpicks it.
-    private void ToggleLinkRecord(LinkableRecord record)
-    {
-        var existing = pickedRecords.FirstOrDefault(r => r.RecordId == record.RecordId);
-        if (existing is not null) pickedRecords.Remove(existing);
-        else pickedRecords.Add(record);
-    }
-
-    private static string References(IReadOnlyList<LinkableRecord> records) =>
-        string.Join(", ", records.Select(r => r.Reference));
 
     // The pathway label sent with a link command. Only pathway-neutral COST-CENTRE links carry one —
     // the record type implies the pathway everywhere else, and a Todo link must stay neutral (sending
@@ -2806,13 +2335,8 @@ else
     // written reply can't be silently left behind by a tag-only action; Send applies both.
     private bool ReplyDraftPending => replyOpen && HtmlHasContent(replyBody);
 
-    // The project the open filing pane is working on, giving the attachment picker its context.
-    private string ComposeContextProjectId => mode switch
-    {
-        TriageMode.Link => triageProjectId,
-        TriageMode.Create => triageProjectId,
-        _ => triageProjectId
-    };
+    // The email's global project, giving the attachment picker its context.
+    private string ComposeContextProjectId => triageProjectId;
 
     // What Send will do besides sending, phrased for the note above the button. Null = nothing.
     // Everything the action bar will do, phrased as one sentence ("send your reply, raise 2
@@ -2831,9 +2355,9 @@ else
                 parts.Add(pickedRecords.Count == 1
                     ? $"link this email to {pickedRecords[0].Reference}"
                     : $"link this email to {string.Join(", ", pickedRecords.Take(3).Select(r => r.Reference))}{(pickedRecords.Count > 3 ? $" +{pickedRecords.Count - 3} more" : "")}");
-            if (mode == TriageMode.Create && !string.IsNullOrWhiteSpace(triageProjectId) && !string.IsNullOrWhiteSpace(createTitle))
-                parts.Add(pathway == TriagePathway.Subcontractor ? "create the bid package from this email" : "create the request from this email");
-            if (mode == TriageMode.Discard)
+            if (StagedCreateReady && !string.IsNullOrWhiteSpace(triageProjectId))
+                parts.Add(stagedCreate!.Kind == StagedRecordKind.BidPackage ? "create the bid package from this email" : "create the request from this email");
+            if (discardArmed)
                 parts.Add("discard this email and its thread");
             if (parts.Count == 0) return null;
             return parts.Count == 1 ? parts[0] : string.Join(", ", parts.Take(parts.Count - 1)) + " and " + parts[^1];
@@ -2846,9 +2370,9 @@ else
         {
             var filing = CurrentTodoDrafts().Count > 0
                 || pickedRecords.Count > 0
-                || (mode == TriageMode.Create && !string.IsNullOrWhiteSpace(triageProjectId) && !string.IsNullOrWhiteSpace(createTitle));
+                || (StagedCreateReady && !string.IsNullOrWhiteSpace(triageProjectId));
             if (ReplyDraftPending) return filing ? "Send reply & file" : "Send reply";
-            return mode == TriageMode.Discard && !filing ? "Discard email" : "Apply";
+            return discardArmed && !filing ? "Discard email" : "Apply";
         }
     }
 
@@ -2916,9 +2440,8 @@ else
         var replying = ReplyDraftPending;
         var drafts = CurrentTodoDrafts();
         var picks = pickedRecords.ToList();
-        var createReady = mode == TriageMode.Create
-            && !string.IsNullOrWhiteSpace(triageProjectId) && !string.IsNullOrWhiteSpace(createTitle);
-        var discarding = mode == TriageMode.Discard;
+        var createReady = StagedCreateReady && !string.IsNullOrWhiteSpace(triageProjectId);
+        var discarding = discardArmed;
         if (!replying && drafts.Count == 0 && picks.Count == 0 && !createReady && !discarding) return;
 
         // A reply and a discard contradict each other — an email worth answering isn't spam.
@@ -2933,25 +2456,19 @@ else
             return;
         }
 
-        // A half-filled Create form is a decision not yet made — finish it or clear it, rather
-        // than have Apply quietly skip it.
-        if (mode == TriageMode.Create && !createReady && !string.IsNullOrWhiteSpace(createTitle))
+        // A staged new record without a project is a decision not yet made — finish it or clear
+        // it, rather than have Apply quietly skip it.
+        if (StagedCreateReady && !createReady)
         {
-            actionError = "To create a record, set the email's Project (top of the actions) and give it a subject/title — or clear the form.";
+            actionError = "To create the record, set the email's Project first — or remove the staged record in System Tags.";
             return;
         }
         if (replying)
         {
             if (ParseRecipients(replyToField).Count == 0) { actionError = "Add a To recipient to the reply."; return; }
             if (string.IsNullOrWhiteSpace(replySubject)) { actionError = "Write a subject for the reply."; return; }
-            // A reply ALONE is what triages the thread as Replied, and that files it under a
-            // pathway — so the pathway has to be chosen. With any filing alongside, the filing
-            // decides the pathway instead.
-            if (drafts.Count == 0 && picks.Count == 0 && !createReady && pathway is null)
-            {
-                actionError = "Choose who this correspondence is with (section 3) before sending a reply on its own.";
-                return;
-            }
+            // A reply alone triages the thread as Replied — pathway-less is fine (answering IS
+            // dealing with it); choosing a tab in System Tags files it under that side as well.
         }
 
         var anchor = selected;
@@ -3006,27 +2523,29 @@ else
                     filed = true;
                 }
             }
-            if (createReady)
+            if (createReady && stagedCreate is { } staged)
             {
-                if (pathway == TriagePathway.Subcontractor)
+                if (staged.Kind == StagedRecordKind.BidPackage)
                 {
                     busyLabel = "Creating bid package";
                     await Intake.CreateBidPackageFromMessageAsync(new CreateBidPackageFromMessage(
-                        anchor.Id, triageProjectId, createTitle.Trim(), createTrade?.Trim() ?? "",
+                        anchor.Id, triageProjectId, staged.Title.Trim(), staged.Trade?.Trim() ?? "",
                         InternetMessageId: anchor.InternetMessageId));
                 }
                 else
                 {
                     busyLabel = "Creating request";
                     await Intake.CreateRequestFromMessageAsync(new CreateRequestFromMessage(
-                        anchor.Id, triageProjectId, createKind, "", createTitle.Trim(),
-                        createDescription?.Trim() ?? "",
-                        RaisedTo: NullIfBlank(createRaisedTo),
-                        DrawingRef: NullIfBlank(createDrawingRef),
-                        ResponseDue: ParseDate(createResponseDue),
+                        anchor.Id, triageProjectId, createKind, "", staged.Title.Trim(),
+                        staged.Description?.Trim() ?? "",
+                        RaisedTo: NullIfBlank(staged.RaisedTo),
+                        DrawingRef: NullIfBlank(staged.DrawingRef),
+                        ResponseDue: ParseDate(staged.ResponseDue),
                         InternetMessageId: anchor.InternetMessageId,
-                        AddToProgramme: createAddToProgramme));
+                        AddToProgramme: staged.AddToProgramme));
                 }
+                // One create per apply: clear it so a cross-filing re-run can't double-create.
+                stagedCreate = null;
                 filed = true;
             }
             if (discarding)
@@ -3069,7 +2588,9 @@ else
             selected = null;
             detail = null;
             detailLoading = false;
-            mode = TriageMode.None;
+            discardArmed = false;
+            stagedCreate = null;
+            pickedRecords.Clear();
         }
         catch (CommandFailedException ex)
         {
@@ -3368,7 +2889,9 @@ else
             selected = null;
             detail = null;
             detailLoading = false;
-            mode = TriageMode.None;
+            discardArmed = false;
+            stagedCreate = null;
+            pickedRecords.Clear();
         }
         catch (CommandFailedException ex)
         {
@@ -3475,31 +2998,24 @@ else
         Projects.Current ?? (IReadOnlyList<Project>)Array.Empty<Project>();
 
     // Completed projects are hidden from every picker on this page by default: triage routes live
-    // work, and a finished job sitting in a long dropdown is mostly a mis-click waiting to happen.
-    // The header checkbox brings them back for the late email that genuinely belongs to one.
-    private bool showCompletedProjects;
-
-    // The options for ONE picker. Always keeps the project that picker has already chosen, even if
-    // it is completed and the toggle is off — otherwise unticking the box would leave a <select>
-    // bound to a value with no matching <option>, which paints as the first option and quietly
-    // changes the project the user is about to file against.
+    // Completed projects follow the per-user ProjectStageFilter toggle (the same one the side-nav
+    // switcher uses — decision 2026-08-03) rather than a page-local checkbox: one preference,
+    // honoured everywhere. The picker keeps an already-chosen completed project visible so the
+    // bound <select> never points at a missing option.
     private IReadOnlyList<Project> ProjectOptionsFor(string? selectedProjectId) =>
         AllProjects
             .Where(project =>
-                showCompletedProjects
+                StageFilter.IncludeCompleted
                 || project.Stage != ProjectStage.Completed
                 || (!string.IsNullOrWhiteSpace(selectedProjectId)
                     && string.Equals(project.ProjectId, selectedProjectId, StringComparison.OrdinalIgnoreCase)))
             .ToList();
 
-    // How many completed projects the toggle is currently holding back — so the label says what
-    // ticking it would actually do rather than offering an empty gesture. Zero once the box is
-    // ticked (nothing is hidden any more) and zero before the project list lands, which is also
-    // why the label needs no load gate: a count that isn't known yet simply doesn't render.
-    private int HiddenCompletedCount =>
-        showCompletedProjects
-            ? 0
-            : AllProjects.Count(project => project.Stage == ProjectStage.Completed);
+    // Subtle text-link styling for the list-sort preference (deliberately not a button pair).
+    private string SortLinkClass(bool newest) =>
+        newestFirst == newest
+            ? "text-content font-medium underline underline-offset-4 decoration-line-strong"
+            : "text-content-subtle hover:text-content";
 
     // The loaded records for the chosen type + project (empty until both are chosen and the load runs).
     private IReadOnlyList<LinkableRecord> ProjectRecords() => linkRecords;
@@ -3552,23 +3068,6 @@ else
             : $"{baseClass} border-transparent text-content-muted hover:text-content";
     }
 
-    private string ModeTabClass(TriageMode tab)
-    {
-        var baseClass = "rounded-lg px-3 py-1.5 text-sm font-medium border transition";
-        return mode == tab
-            ? $"{baseClass} border-accent text-content bg-surface-raised"
-            : $"{baseClass} border-line text-content-muted hover:text-content hover:border-line-strong";
-    }
-
-    private string RecordPickClass(LinkableRecord record, bool candidate)
-    {
-        var baseClass = "w-full text-left rounded-lg border px-3 py-1.5 flex items-center gap-2 transition";
-        if (pickedRecords.Any(r => r.RecordId == record.RecordId)) return $"{baseClass} border-accent bg-surface-raised";
-        return candidate
-            ? $"{baseClass} border-amber-500/40 hover:border-amber-500"
-            : $"{baseClass} border-line hover:border-line-strong";
-    }
-
     private static string DisplayFrom(MailboxMessage item) =>
         string.IsNullOrWhiteSpace(item.FromName) ? item.FromEmail : item.FromName;
 
@@ -3578,6 +3077,13 @@ else
 
     // Outlook-style compact date for list rows: time alone today, "Yesterday 14:21", day name
     // within the week, then the date.
+    // The thread's outbound legs — sent from the projects mailbox itself (address learned from the
+    // detail read). Ordered oldest-first like the thread.
+    private IReadOnlyList<MailboxMessage> SentReplies =>
+        detail?.MailboxAddress is { Length: > 0 } mailbox
+            ? thread.Where(m => m.FromEmail.Equals(mailbox, StringComparison.OrdinalIgnoreCase)).ToList()
+            : Array.Empty<MailboxMessage>();
+
     // 1-based position of the open email within its thread (oldest first), for the tab strip label.
     private int ThreadPositionOfSelected
     {
@@ -3598,7 +3104,7 @@ else
 
     private string DiscardTabClass =>
         "ml-auto rounded-lg px-3 py-1.5 text-sm border transition "
-        + (mode == TriageMode.Discard
+        + (discardArmed
             ? "border-negative text-negative bg-negative/10 font-medium"
             : "border-line text-content-subtle hover:text-negative hover:border-negative/50");
 
@@ -3666,8 +3172,11 @@ else
     private static DateTimeOffset? ParseDate(string value) =>
         DateTimeOffset.TryParse(value, out var parsed) ? parsed : null;
 
+    private void StageFilterChanged() => InvokeAsync(StateHasChanged);
+
     public void Dispose()
     {
+        StageFilter.OnChange -= StageFilterChanged;
         RequestRegister.OnChange -= StateHasChanged;
         DrawingStore.OnChange -= StateHasChanged;
     }

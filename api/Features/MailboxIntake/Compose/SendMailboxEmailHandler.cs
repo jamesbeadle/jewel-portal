@@ -121,10 +121,11 @@ public sealed class SendMailboxEmailHandler : ICommandHandler<SendMailboxEmail, 
         var chosenBucket = MapPathway(command.Pathway);
         var effectiveBucket = existingBucket ?? (command.AlsoRaiseRequest ? TriageCategories.Client : chosenBucket);
 
+        // A pathway-less reply is allowed: answering IS dealing with the email, so the thread is
+        // triaged with JPMS/Replied alone and no bucket — choosing a side in System Tags (or any
+        // record filing) is what files it under a pathway. Step 9 only stamps a bucket when one
+        // was chosen or already fixed on the thread.
         var willHandleThread = isReply && command.MarkThreadHandled;
-        var filesToRecord = command.AlsoRaiseRequest || command.LinkRecordType is not null;
-        if (willHandleThread && !filesToRecord && effectiveBucket is null)
-            throw new InvalidOperationException("Choose who this correspondence is with (Client / Subcontractor / Internal) before sending.");
 
         // ---- 3. Resolve attachments (bytes in hand before anything is created) -------------------
         var attachments = await ResolveAttachmentsAsync(command, uploads, cancellationToken);

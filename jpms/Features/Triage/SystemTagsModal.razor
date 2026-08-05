@@ -1,0 +1,403 @@
+@namespace Jewel.JPMS.Features.Triage
+@inject IIntakeQueue Intake
+
+@* THE tagging surface for triage: one modal, three tabs — Client / Subcontractor / Internal —
+   each offering exactly what that side of the system can do with an email. Everything here is
+   STAGED: picked records and the drafted new record go back to the page as pending work, applied
+   (and tagged, verified) by the page's single Apply. A thread already filed under a pathway opens
+   locked to its own tab — the client wall in tab form. *@
+
+<Modal IsOpen="@IsOpen" Title="System tags" Class="max-w-3xl" DismissOnOverlayClick="false"
+       ShowFooter="false" OnCancel="CloseAsync">
+    <div class="space-y-4">
+
+        @* Who is this correspondence with? The tab IS the pathway decision. *@
+        <div class="flex items-center gap-2 border-b border-line">
+            @foreach (var tab in Tabs)
+            {
+                var locked = LockedPathway is { } fixedTab && fixedTab != tab;
+                <button type="button" @key="tab" disabled="@locked"
+                        title="@(locked ? $"This thread is already filed under {LockedPathway} — its routing was decided at first filing" : TabHint(tab))"
+                        class="@TabClass(tab, locked)" @onclick="() => SwitchTab(tab)">
+                    @tab
+                </button>
+            }
+        </div>
+        @if (LockedPathway is { } lockedPathway)
+        {
+            <p class="text-xs text-content-subtle -mt-2">Already filed under <span class="font-medium text-content">@lockedPathway</span> — tags here work within it.</p>
+        }
+
+        @* What's staged so far, across every tab — the modal's running total. *@
+        @if (Picked.Count > 0 || StagedCreate is not null)
+        {
+            <div class="flex flex-wrap items-center gap-1.5">
+                @foreach (var picked in Picked.ToList())
+                {
+                    <span @key="picked.RecordId" class="inline-flex items-center gap-1 rounded-full border border-accent/50 bg-accent/5 text-accent pl-2.5 pr-1 py-0.5 text-xs" title="@picked.Title">
+                        <span>🔗 @picked.Reference</span>
+                        <button type="button" class="leading-none px-1 text-accent/70 hover:text-negative" title="Unpick"
+                                @onclick="() => TogglePick(picked)">&times;</button>
+                    </span>
+                }
+                @if (StagedCreate is { } staged)
+                {
+                    <span class="inline-flex items-center gap-1 rounded-full border border-accent/50 bg-accent/5 text-accent pl-2.5 pr-1 py-0.5 text-xs">
+                        <span>✚ @staged.Label: @(string.IsNullOrWhiteSpace(staged.Title) ? "(untitled)" : staged.Title)</span>
+                        <button type="button" class="leading-none px-1 text-accent/70 hover:text-negative" title="Remove"
+                                @onclick="ClearStagedCreate">&times;</button>
+                    </span>
+                }
+            </div>
+        }
+
+        @if (string.IsNullOrWhiteSpace(ProjectId))
+        {
+            <p class="rounded-lg bg-amber-500/10 border border-amber-500/40 px-3 py-2 text-xs text-content">
+                Set the email's <span class="font-medium">Project</span> on the page first — tags file the email against a project's records.
+            </p>
+        }
+        else if (activeTab == "Internal")
+        {
+            @* Internal: link the email to existing to-do items (pathway-neutral). New to-dos are
+               drafted in the To-dos modal, not here. *@
+            <p class="text-xs text-content-subtle">Link this email to existing to-do items. New to-dos are raised from the To-dos button on the page.</p>
+            @LinkPicker
+        }
+        else
+        {
+            <div class="flex items-center gap-2">
+                <button type="button" class="@SubTabClass(!createOpen)" @onclick="() => createOpen = false">Link to existing</button>
+                <button type="button" class="@SubTabClass(createOpen)" @onclick="() => createOpen = true">Create new</button>
+            </div>
+
+            @if (!createOpen)
+            {
+                @LinkPicker
+            }
+            else if (activeTab == "Client")
+            {
+                <div class="space-y-3">
+                    <p class="rounded-lg bg-surface-raised border border-line px-3 py-2 text-xs text-content-subtle">
+                        Created as a <span class="font-medium text-content">General</span> request, auto-numbered REQ-#### — promote it to an official RFI (or on to a variation) from the request page. The email is tagged to it on apply.
+                    </p>
+                    <FormField Label="Raised to" Value="@Create.RaisedTo" OnChange="v => { Create.RaisedTo = v; NotifyCreate(); }" />
+                    <FormField Label="Subject" Value="@Create.Title" OnChange="v => { Create.Title = v; NotifyCreate(); }" Required="true" />
+                    <div>
+                        <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Detail</label>
+                        <textarea class="field" rows="4" value="@Create.Description" @oninput="e => { Create.Description = e.Value?.ToString() ?? string.Empty; NotifyCreate(); }"></textarea>
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <FormField Label="Drawing / detail ref" Value="@Create.DrawingRef" OnChange="v => { Create.DrawingRef = v; NotifyCreate(); }" />
+                        <FormField Label="Response due" Value="@Create.ResponseDue" OnChange="v => { Create.ResponseDue = v; NotifyCreate(); }" InputType="date" />
+                    </div>
+                    <label class="flex items-start gap-2 cursor-pointer">
+                        <input type="checkbox" checked="@Create.AddToProgramme" @onchange="e => { Create.AddToProgramme = e.Value is true; NotifyCreate(); }" />
+                        <span class="text-sm text-content">
+                            Also add to Programme
+                            <span class="block text-xs text-content-subtle">The email's thread is also tagged to the project's programme communications.</span>
+                        </span>
+                    </label>
+                </div>
+            }
+            else
+            {
+                <div class="space-y-3">
+                    <p class="text-xs text-content-subtle">A draft bid package is created and this email is tagged to it on apply. Invite subcontractors and add line items from the bid package page.</p>
+                    <FormField Label="Title" Value="@Create.Title" OnChange="v => { Create.Title = v; NotifyCreate(); }" Required="true" />
+                    <FormField Label="Trade" Value="@Create.Trade" OnChange="v => { Create.Trade = v; NotifyCreate(); }" />
+                </div>
+            }
+        }
+
+        <div class="flex items-center justify-end pt-1">
+            <button type="button" class="btn-primary" @onclick="CloseAsync">Done</button>
+        </div>
+    </div>
+</Modal>
+
+@code {
+    private static readonly string[] Tabs = { "Client", "Subcontractor", "Internal" };
+
+    // What each tab can link to. Cost Centre removed as a filing destination (2026-08-04);
+    // VariationQuote folded into Variation (one record, one number).
+    private static readonly RecordType[] ClientTypes = { RecordType.Request, RecordType.Variation, RecordType.Lad, RecordType.Scheduling };
+    private static readonly RecordType[] SubcontractorTypes = { RecordType.BidPackageInvite, RecordType.WorkOrder };
+    private static readonly RecordType[] InternalTypes = { RecordType.Todo };
+
+    [Parameter] public bool IsOpen { get; set; }
+    [Parameter] public EventCallback OnClose { get; set; }
+    [Parameter] public string ProjectId { get; set; } = "";
+    [Parameter] public string EmailSubject { get; set; } = "";
+
+    /// <summary>The thread's fixed pathway label ("Client"/"Subcontractor"/"Internal"), when it is
+    /// already filed — locks the tabs to that side (the wall in tab form). Null = free choice.</summary>
+    [Parameter] public string? LockedPathway { get; set; }
+
+    /// <summary>The tab in use — the pathway decision, reported up so the page files the thread
+    /// (and stamps to-dos / Replied) under it.</summary>
+    [Parameter] public string? ActivePathway { get; set; }
+    [Parameter] public EventCallback<string> ActivePathwayChanged { get; set; }
+
+    /// <summary>Page-owned staged record links; the modal mutates and notifies.</summary>
+    [Parameter] public List<LinkableRecord> Picked { get; set; } = new();
+    [Parameter] public EventCallback OnStagingChanged { get; set; }
+
+    /// <summary>The staged new record (null = none). Owned by the page; edited here.</summary>
+    [Parameter] public StagedRecordCreate? StagedCreate { get; set; }
+    [Parameter] public EventCallback<StagedRecordCreate?> StagedCreateChanged { get; set; }
+
+    private string activeTab = "Client";
+    private bool createOpen;
+    private RecordType linkType = RecordType.Request;
+    private string search = "";
+    private bool loading;
+    private string loadedKey = "";
+    private IReadOnlyList<LinkableRecord> records = Array.Empty<LinkableRecord>();
+    private bool wasOpen;
+
+    // The create form binds to a scratch instance until something is typed, so an empty form never
+    // stages a phantom "new record".
+    private StagedRecordCreate Create => StagedCreate ?? scratchCreate;
+    private StagedRecordCreate scratchCreate = new();
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (IsOpen && !wasOpen)
+        {
+            activeTab = LockedPathway ?? ActivePathway ?? "Client";
+            createOpen = StagedCreate is not null;
+            // The house-standard response window pre-fills the request form — a week is what all
+            // but a handful of requests get, so typing a date is keystrokes spent on the common case.
+            scratchCreate = new StagedRecordCreate { ResponseDue = RequestDefaults.ResponseDue() };
+            linkType = DefaultTypeFor(activeTab);
+            await LoadRecordsAsync();
+        }
+        wasOpen = IsOpen;
+    }
+
+    private IReadOnlyList<RecordType> TypesFor(string tab) => tab switch
+    {
+        "Subcontractor" => SubcontractorTypes,
+        "Internal" => InternalTypes,
+        _ => ClientTypes
+    };
+
+    private static RecordType DefaultTypeFor(string tab) => tab switch
+    {
+        "Subcontractor" => RecordType.BidPackageInvite,
+        "Internal" => RecordType.Todo,
+        _ => RecordType.Request
+    };
+
+    private async Task SwitchTab(string tab)
+    {
+        if (activeTab == tab) return;
+        activeTab = tab;
+        createOpen = false;
+        linkType = DefaultTypeFor(tab);
+        search = "";
+        await ActivePathwayChanged.InvokeAsync(tab);
+        await LoadRecordsAsync();
+    }
+
+    private async Task OnTypeChanged(ChangeEventArgs e)
+    {
+        if (Enum.TryParse<RecordType>(e.Value?.ToString(), out var type)) linkType = type;
+        await LoadRecordsAsync();
+    }
+
+    private async Task LoadRecordsAsync()
+    {
+        if (string.IsNullOrWhiteSpace(ProjectId)) { records = Array.Empty<LinkableRecord>(); return; }
+        var key = $"{ProjectId}|{linkType}";
+        if (key == loadedKey) return;
+        loading = true;
+        try
+        {
+            records = await Intake.ListLinkableRecordsAsync(ProjectId, linkType);
+            loadedKey = key;
+        }
+        catch { records = Array.Empty<LinkableRecord>(); loadedKey = ""; }
+        finally { loading = false; }
+    }
+
+    private async Task TogglePick(LinkableRecord record)
+    {
+        var existing = Picked.FirstOrDefault(r => r.RecordId == record.RecordId);
+        if (existing is not null) Picked.Remove(existing);
+        else Picked.Add(record);
+        await OnStagingChanged.InvokeAsync();
+    }
+
+    private void NotifyCreate()
+    {
+        // First keystroke on the scratch form stages it; a staged form just reports the edit.
+        if (StagedCreate is null)
+        {
+            scratchCreate.Kind = activeTab == "Subcontractor" ? StagedRecordKind.BidPackage : StagedRecordKind.Request;
+            _ = StagedCreateChanged.InvokeAsync(scratchCreate);
+        }
+        else
+        {
+            StagedCreate.Kind = activeTab == "Subcontractor" ? StagedRecordKind.BidPackage : StagedRecordKind.Request;
+            _ = StagedCreateChanged.InvokeAsync(StagedCreate);
+        }
+    }
+
+    private void ClearStagedCreate()
+    {
+        scratchCreate = new StagedRecordCreate();
+        _ = StagedCreateChanged.InvokeAsync(null);
+    }
+
+    private Task CloseAsync() => OnClose.InvokeAsync();
+
+    // ---- link picker (shared by every tab) ----
+
+    private RenderFragment LinkPicker => __builder =>
+    {
+        <div class="space-y-3">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                    <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Record type</label>
+                    <select class="field" value="@((int)linkType)" @onchange="OnTypeChanged" disabled="@(TypesFor(activeTab).Count == 1)">
+                        @foreach (var recordType in TypesFor(activeTab))
+                        {
+                            <option value="@((int)recordType)">@TypeLabel(recordType)</option>
+                        }
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Search</label>
+                    <input class="field" type="text" placeholder="Reference or title…" value="@search"
+                           @oninput="e => search = e.Value?.ToString() ?? string.Empty" />
+                </div>
+            </div>
+
+            @if (loading)
+            {
+                <p class="text-sm text-content-subtle italic">Loading @TypeLabel(linkType) records…</p>
+            }
+            else
+            {
+                var candidates = Filter(Candidates());
+                var others = Filter(records.Except(Candidates()).ToList());
+                @if (candidates.Count > 0)
+                {
+                    <p class="text-xs font-semibold text-amber-600">Possible matches for this email</p>
+                    <div class="space-y-1">
+                        @foreach (var record in candidates) { @RecordRow(record, true) }
+                    </div>
+                }
+                @if (others.Count > 0)
+                {
+                    <p class="text-xs font-semibold text-content-subtle">@(candidates.Count > 0 ? "Others" : "Records") on this project</p>
+                    <div class="space-y-1 max-h-56 overflow-y-auto">
+                        @foreach (var record in others) { @RecordRow(record, false) }
+                    </div>
+                }
+                @if (candidates.Count == 0 && others.Count == 0)
+                {
+                    <p class="text-sm text-content-subtle italic">Nothing matching on this project.</p>
+                }
+                <p class="text-xs text-content-subtle">Click to add, click again to unpick — the email is tagged to every picked record on apply.</p>
+            }
+        </div>
+    };
+
+    private RenderFragment RecordRow(LinkableRecord record, bool candidate) => __builder =>
+    {
+        <button type="button" @key="record.RecordId" @onclick="() => TogglePick(record)" class="@RowClass(record, candidate)">
+            <span class="font-mono text-xs text-content-muted shrink-0">@record.Reference</span>
+            <span class="text-sm text-content truncate flex-1" title="@record.Summary">@record.Title</span>
+            @if (!string.IsNullOrWhiteSpace(record.StatusLabel))
+            {
+                <span class="text-[10px] uppercase tracking-wider text-content-subtle shrink-0">@record.StatusLabel</span>
+            }
+        </button>
+    };
+
+    private string RowClass(LinkableRecord record, bool candidate)
+    {
+        var baseClass = "w-full text-left rounded-lg border px-3 py-1.5 flex items-center gap-2 transition";
+        if (Picked.Any(r => r.RecordId == record.RecordId)) return $"{baseClass} border-accent bg-surface-raised";
+        return candidate
+            ? $"{baseClass} border-amber-500/40 hover:border-amber-500"
+            : $"{baseClass} border-line hover:border-line-strong";
+    }
+
+    private List<LinkableRecord> Filter(IEnumerable<LinkableRecord> source) =>
+        string.IsNullOrWhiteSpace(search)
+            ? source.ToList()
+            : source.Where(r =>
+                    r.Reference.Contains(search, StringComparison.OrdinalIgnoreCase)
+                    || r.Title.Contains(search, StringComparison.OrdinalIgnoreCase)
+                    || (r.Summary?.Contains(search, StringComparison.OrdinalIgnoreCase) ?? false))
+                .ToList();
+
+    // Records whose reference or title overlaps the email subject — surfaced first so a duplicate
+    // record isn't created for something already tracked.
+    private List<LinkableRecord> Candidates()
+    {
+        var tokens = Tokenise(EmailSubject);
+        return records
+            .Select(r => (r, score: Score(r, tokens)))
+            .Where(x => x.score > 0)
+            .OrderByDescending(x => x.score)
+            .Select(x => x.r)
+            .ToList();
+    }
+
+    private int Score(LinkableRecord record, HashSet<string> subjectTokens)
+    {
+        var score = 0;
+        if (!string.IsNullOrWhiteSpace(record.Reference)
+            && EmailSubject.Contains(record.Reference, StringComparison.OrdinalIgnoreCase))
+            score += 10;
+        foreach (var token in Tokenise(record.Title))
+            if (subjectTokens.Contains(token)) score++;
+        return score;
+    }
+
+    private static HashSet<string> Tokenise(string text) =>
+        (text ?? "")
+        .ToLowerInvariant()
+        .Split(new[] { ' ', ',', '.', ';', ':', '-', '—', '/', '(', ')', '[', ']' }, StringSplitOptions.RemoveEmptyEntries)
+        .Where(t => t.Length >= 4)
+        .ToHashSet();
+
+    // UI terminology: Programme (not Scheduling), LADs claim, Variation Order (one record).
+    private static string TypeLabel(RecordType type) => type switch
+    {
+        RecordType.Request => "Request / RFI",
+        RecordType.Variation => "Variation Order",
+        RecordType.Lad => "LADs claim",
+        RecordType.Scheduling => "Programme",
+        RecordType.BidPackageInvite => "Bid Package Invite",
+        RecordType.WorkOrder => "Work Order",
+        RecordType.Todo => "To-do item",
+        _ => type.ToString()
+    };
+
+    private string TabClass(string tab, bool locked) =>
+        "px-4 py-2 text-sm border-b-2 -mb-px transition "
+        + (activeTab == tab
+            ? "border-accent text-content font-semibold"
+            : locked
+                ? "border-transparent text-content-faint cursor-not-allowed"
+                : "border-transparent text-content-muted hover:text-content");
+
+    private string SubTabClass(bool active) =>
+        "rounded-lg px-3 py-1.5 text-sm border transition "
+        + (active
+            ? "border-accent text-accent bg-accent/5 font-medium"
+            : "border-line text-content-muted hover:text-content hover:border-line-strong");
+
+    private static string TabHint(string tab) => tab switch
+    {
+        "Client" => "The client, or their architect and team",
+        "Subcontractor" => "A subcontractor or supplier",
+        _ => "Jewel staff — company admin"
+    };
+}

@@ -27,9 +27,11 @@ discard it (spam). Sender is always the shared `projects@jewelbb.co.uk` mailbox.
   To/Cc/ReplyTo/Subject fields on `MailboxMessageDetail`) is editable, and the server PATCHes the
   staged draft to exactly what was submitted. The projects mailbox keeps its Cc copy server-side.
 - **`JPMS/Replied`** — a reply with no record chosen triages the thread with this ordinary
-  workflow tag (+ the chosen pathway): answering an email IS dealing with it. Untag it on the
-  Tagged tab to send the thread back to the queue. The old forced request creation is retired
-  (`AlsoRaiseRequest` remains on the command for API callers, unused by the UI).
+  workflow tag: answering an email IS dealing with it. A pathway alongside is optional (v7): a
+  chosen System Tags tab (or any record filing) files the thread under that side; a reply alone
+  stamps Replied and no bucket. Untag it on the Tagged tab to send the thread back to the queue.
+  The old forced request creation is retired (`AlsoRaiseRequest` remains on the command for API
+  callers, unused by the UI).
 - Reply is available on **all three pathways** now, not just Client.
 - **The compact pane** (Nigel's model, 2026-08-04 v4): the email (Outlook-style header + body +
   thread) with a small action strip under it — **↩ Reply** opens the composer in place, and
@@ -106,6 +108,36 @@ can link to a variation AND an RFI in one apply. The link picker gained a free-t
 (reference/title/summary) and compact single-line rows (summary as tooltip). Discard refuses to
 combine with record picks as well as with a drafted reply.
 
+### The three doors (2026-08-05 v7)
+The bottom section is now Project + THREE BUTTONS, each a component-owned modal, with the one
+Apply bar underneath — no long scroll, no pathway cards:
+
+- **🏷 System Tags · n** opens `Features/Triage/SystemTagsModal.razor`. Its three tabs — Client /
+  Subcontractor / Internal — ARE the pathway decision (they replace the pathway cards; a thread
+  already filed opens locked to its own tab, the client wall in tab form). Client offers Link to
+  existing / Create new over Request / Variation Order (VOQ folded in — one record, one number) /
+  LADs Claim / Programme; **Cost Centre is removed as a filing destination**. Subcontractor
+  offers Bid Package Invite + Work Order, and its Create makes a draft bid package. Internal
+  links existing to-do items (new ones are the To-dos button's job). Everything is STAGED —
+  picked records and the drafted new record live in page state (`pickedRecords`,
+  `stagedCreate`), shown as chips in the modal and counted on the button badge; picks survive
+  tab and type switches. A search box and subject-matched "possible matches" cut duplicate
+  records at the source.
+- **☑ To-dos · n** opens `Features/Triage/TodosModal.razor` (the v4 list ⇄ detail dialog,
+  now a component owning its own edit state; the page owns the draft rows).
+- **🗑 Discard** is a pathway-less ARM toggle (red strip explains; the Apply carries it out).
+
+The page's superseded machinery is deleted: TriageMode (Link/Create/Discard tabs), the pathway
+cards, the create-form fields (now `Features/Triage/TriageStaging.cs` — `TodoDraftRow`,
+`StagedRecordCreate`/`StagedRecordKind`), the queue-side link picker and its search. The Tagged
+tab's single-pick "add another tag" dropdown stays. Server-side, the "choose a pathway before
+sending" guard is gone — `SendMailboxEmail` accepts a pathway-less reply and stamps
+`JPMS/Replied` alone. Same-day layout polish: the Oldest/Newest sort toggle is a subtle
+underlined link under the Queue/Tagged header (one green button fewer), the completed-projects
+checkbox sits beside the project select and drives the same per-user `ProjectStageFilter` as the
+project switcher, and a **Replies sent · n** strip under the email lists the thread's outbound
+legs from the projects mailbox.
+
 ### Mail-client look (same-day polish)
 List rows are Outlook-shaped: sender in semibold with a compact right-aligned time (time today,
 "Yesterday 14:21", day names this week, then dates), subject + paperclip, and the email's opening
@@ -145,16 +177,20 @@ degrades to "saved as draft".
   Replied all on the thread; Discard + to-dos works the same.
 - Older-thread-member action (via the thread panel) leaves newer members queued.
 - Audit trail shows `EmailSent` rows with recipients and a webLink that opens the sent copy.
+- System Tags modal: picks + the drafted new record survive tab and record-type switches; the
+  button badge equals picks + staged create; a filed thread opens with the other tabs locked;
+  Cost Centre is offered nowhere.
+- Reply alone with NO tab chosen → sends, thread tagged `JPMS/Replied` only (no bucket); the
+  Tagged tab shows it pathway-less and untagging Replied re-queues it.
 
 ## Deferred (Phase 2) — page decomposition
 
-`TriageQueue.razor` is ~3,400 lines and should be decomposed into `jpms/Features/Triage/`
-components (`MessageList`, `MessageViewer`, `ThreadPanel`, `TriageActionBar`, `LinkRecordPanel`,
-`CreateRecordPanel`, `ComposePane`, `TodoDraftsPanel`) with an Outlook-style three-zone layout.
-Deferred as a pure refactor with zero behaviour change — do it component-by-component with a green
-build after each extraction. `RichTextEditor` and `AttachmentPicker` are already components and
-deliberately generic (the Programme reply surface can adopt the editor next). Queue page size is
-already raised to 25.
+`TriageQueue.razor` should be decomposed further into `jpms/Features/Triage/` components
+(`MessageList`, `MessageViewer`, `ThreadPanel`, `TriageActionBar`, `ComposePane`) with an
+Outlook-style three-zone layout. Deferred as a pure refactor with zero behaviour change — do it
+component-by-component with a green build after each extraction. `RichTextEditor`,
+`AttachmentPicker`, `TodosModal` and `SystemTagsModal` are already components; the staging types
+live in `TriageStaging.cs`. Queue page size stays at 5 (Nigel, 2026-08-04).
 
 ## Retirement note
 
