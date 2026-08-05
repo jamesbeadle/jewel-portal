@@ -428,10 +428,10 @@ else
                 <div class="rounded-xl border border-line bg-surface p-5 mt-6">
                     <p class="text-[11px] uppercase tracking-wider text-content-subtle font-semibold">
                         Monthly movement
-                        <span class="normal-case tracking-normal font-normal text-content-faint ml-2">— Δ gross profit vs prior month, £k · Xero site P&L</span>
+                        <span class="normal-case tracking-normal font-normal text-content-faint ml-2">— Δ profit margin vs prior month, percentage points · Xero site P&L</span>
                     </p>
                     <p class="text-xs text-content-muted mt-1 mb-3">
-                        Scan a column for a bad month, a row for a job that bleeds every month, the last column for where it stands today.
+                        Scan a column for a bad month, a row for a job whose margin bleeds every month, the last column for the margin it stands at today.
                     </p>
                     <div class="overflow-x-auto">
                         <table class="w-full text-sm" style="border-collapse:separate;border-spacing:3px">
@@ -454,23 +454,24 @@ else
                                             <span class="text-content">@row.Project.Name</span>
                                             <span class="block font-mono text-[9px] text-content-faint">@row.Project.Reference</span>
                                         </td>
-                                        @foreach (var delta in row.Deltas)
+                                        @foreach (var delta in row.MarginDeltas)
                                         {
-                                            @if (Math.Abs(delta) < MovementZeroThreshold)
+                                            @if (delta is not decimal movementPp || Math.Abs(movementPp) < MarginZeroThresholdPp)
                                             {
                                                 <td class="text-center rounded-md py-2.5 px-2 text-xs text-content-faint" style="background:#12151c">—</td>
                                             }
                                             else
                                             {
                                                 <td class="text-center rounded-md py-2.5 px-2 text-xs text-content tabular-nums"
-                                                    style="@MovementCellStyle(delta, movement.MaxAbsDelta)">@DeltaK(delta)</td>
+                                                    style="@MovementCellStyle(movementPp, movement.ShadeMax)">@DeltaPp(movementPp)</td>
                                             }
                                         }
-                                        <td class="text-center py-2.5 px-2 text-xs font-semibold tabular-nums @ProfitClass(row.SixMonthDelta)">
-                                            @(Math.Abs(row.SixMonthDelta) < MovementZeroThreshold ? "—" : DeltaK(row.SixMonthDelta))
+                                        <td class="text-center py-2.5 px-2 text-xs font-semibold tabular-nums @ProfitClass(row.MarginSixMonthDelta ?? 0m)">
+                                            @(row.MarginSixMonthDelta is decimal windowPp && Math.Abs(windowPp) >= MarginZeroThresholdPp ? DeltaPp(windowPp) : "—")
                                         </td>
-                                        <td class="text-center rounded-md py-2 px-3 text-xs font-semibold whitespace-nowrap border border-line bg-surface-raised @ProfitClass(row.PositionNow)">
-                                            @MoneyCompact(row.PositionNow)
+                                        <td class="text-center rounded-md py-2 px-3 text-xs font-semibold whitespace-nowrap border border-line bg-surface-raised @ProfitClass(row.MarginNow ?? 0m)">
+                                            @(row.MarginNow is decimal marginNow ? $"{marginNow:0.0}%" : "—")
+                                            <span class="block font-normal text-[10px] text-content-subtle mt-0.5">@MoneyCompact(row.PositionMoney)</span>
                                             @if (row.Stale)
                                             {
                                                 <span class="block font-normal text-[10px] text-amber-400 mt-0.5">⚠ no movement 6 mo</span>
@@ -481,21 +482,33 @@ else
                                 @if (movement.Rows.Count > 1)
                                 {
                                     <tr class="font-semibold">
-                                        <td class="text-left py-2.5 pr-3 border-t border-line text-content">All jobs with Xero data</td>
+                                        <td class="text-left py-2.5 pr-3 border-t border-line text-content">
+                                            All jobs with Xero data
+                                            <span class="block font-normal text-[9px] text-content-faint">combined margin — total profit over total invoiced</span>
+                                        </td>
                                         @foreach (var total in movement.ColumnTotals)
                                         {
-                                            <td class="text-center py-2.5 px-2 text-xs border-t border-line tabular-nums @ProfitClass(total)">@DeltaK(total)</td>
+                                            <td class="text-center py-2.5 px-2 text-xs border-t border-line tabular-nums @ProfitClass(total ?? 0m)">
+                                                @(total is decimal totalPp && Math.Abs(totalPp) >= MarginZeroThresholdPp ? DeltaPp(totalPp) : "—")
+                                            </td>
                                         }
-                                        <td class="text-center py-2.5 px-2 text-xs border-t border-line tabular-nums @ProfitClass(movement.TotalDelta)">@DeltaK(movement.TotalDelta)</td>
-                                        <td class="text-center py-2.5 px-2 text-xs border-t border-line whitespace-nowrap @ProfitClass(movement.TotalPosition)">@MoneyCompact(movement.TotalPosition)</td>
+                                        <td class="text-center py-2.5 px-2 text-xs border-t border-line tabular-nums @ProfitClass(movement.TotalDelta ?? 0m)">
+                                            @(movement.TotalDelta is decimal totalDelta && Math.Abs(totalDelta) >= MarginZeroThresholdPp ? DeltaPp(totalDelta) : "—")
+                                        </td>
+                                        <td class="text-center py-2.5 px-2 text-xs border-t border-line whitespace-nowrap @ProfitClass(movement.TotalMarginNow ?? 0m)">
+                                            @(movement.TotalMarginNow is decimal totalMargin ? $"{totalMargin:0.0}%" : "—")
+                                            <span class="block font-normal text-[10px] text-content-subtle mt-0.5">@MoneyCompact(movement.TotalPositionMoney)</span>
+                                        </td>
                                     </tr>
                                 }
                             </tbody>
                         </table>
                     </div>
                     <p class="text-[11px] text-content-subtle mt-3 max-w-3xl">
-                        Each cell is that month's own gross profit movement in Xero — income invoiced to the site less
-                        cost of sales — so the row adds up to the job's position. Cell shade scales with the size of the
+                        Each cell is how much the job's to-date margin — cumulative gross profit as a share of cumulative
+                        invoiced, in Xero — moved that month, in percentage points, so the cells land exactly at the
+                        margin in "Position now" (the £ beneath it is the profit that margin is made of). "—" is a month
+                        with no meaningful movement, or a job not yet invoiced. Cell shade scales with the size of the
                         movement; every cell keeps its number, so colour never carries the meaning alone.
                         @if (movement.Rows.Any(row => row.Stale))
                         {
@@ -961,30 +974,37 @@ else
     }
 
     // ---- Monthly movement + trajectory (same Xero months as the cumulative panel) -------
-    // Cumulative profit to date on Xero figures ONLY (2026-08-05): each grid cell is one
-    // month's own gross profit movement (that month's income less cost of sales), so the
-    // row sums to the job's position, and the trajectory is the running total of exactly
-    // those movements. No forecasts anywhere in these panels — they answer "what actually
-    // moved", the table above answers "what we expect".
+    // Cumulative profit to date on Xero figures ONLY (2026-08-05), and the grid reads in
+    // PERCENTAGE PROFIT (2026-08-05): each cell is how much the job's to-date margin —
+    // cumulative gross profit as a share of cumulative invoiced — moved that month, in
+    // percentage points. Month-by-month margin on its own explodes whenever a month has
+    // cost but no invoice; the movement of the running margin is the stable, honest form,
+    // and the row's cells land exactly at "Position now" (the current margin). The
+    // trajectory stays in £ — the running total the cumulative panel's gap shows.
 
-    // Movements within £50 of zero read as "—": a pennies-sized recode isn't a movement.
+    // Money movements within £50 of zero read as no movement (stale detection, trajectory
+    // "flat"); margin movements within 0.05pp read as "—" in the grid.
     private const decimal MovementZeroThreshold = 50m;
+    private const decimal MarginZeroThresholdPp = 0.05m;
 
     private sealed record MovementRow(
         Project Project,
-        IReadOnlyList<decimal> Deltas,
-        decimal SixMonthDelta,
-        decimal PositionNow,
+        IReadOnlyList<decimal?> MarginDeltas,   // pp per month; null = margin undefined either side
+        decimal? MarginSixMonthDelta,           // pp over the window
+        decimal? MarginNow,                     // current to-date margin %
+        decimal PositionMoney,                  // cumulative gross profit £ (the memo line)
+        decimal MoneySixMonthDelta,             // £ over the window — the trajectory's headline
         bool Stale);
 
     private sealed record MovementModel(
         IReadOnlyList<DateTime> Months,
         IReadOnlyList<MovementRow> Rows,
-        IReadOnlyList<decimal> ColumnTotals,
-        decimal TotalDelta,
-        decimal TotalPosition,
+        IReadOnlyList<decimal?> ColumnTotals,   // portfolio margin movement per month, pp
+        decimal? TotalDelta,
+        decimal? TotalMarginNow,
+        decimal TotalPositionMoney,
         IReadOnlyList<Project> Excluded,
-        decimal MaxAbsDelta);
+        decimal ShadeMax);
 
     private MovementModel? MovementFor(IReadOnlyList<Project> projects)
     {
@@ -994,12 +1014,25 @@ else
             .GroupBy(row => row.ProjectId, StringComparer.OrdinalIgnoreCase)
             .ToDictionary(group => group.Key, group => group.ToList(), StringComparer.OrdinalIgnoreCase);
 
-        // The last six months ending this month — the mock's window.
+        // The last six months ending this month — the mock's window. Each month's cell
+        // compares the margin at its end with the margin at the prior month's end, so the
+        // month before the window is point zero.
         var thisMonth = new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1);
         var months = Enumerable.Range(0, 6).Select(offset => thisMonth.AddMonths(offset - 5)).ToList();
+        var monthEnds = new List<DateTime> { months[0].AddMonths(-1) };
+        monthEnds.AddRange(months);
+
+        static decimal? MarginAt(List<XeroSiteMonthlyPnl> pnl, DateTime monthEnd)
+        {
+            var income = pnl.Where(row => row.Month <= monthEnd).Sum(row => row.Income);
+            if (income == 0m) return null; // nothing invoiced yet — no honest percentage
+            var profit = pnl.Where(row => row.Month <= monthEnd).Sum(row => row.Income - row.CostOfSales);
+            return profit / income * 100m;
+        }
 
         var rows = new List<MovementRow>();
         var excluded = new List<Project>();
+        var included = new List<List<XeroSiteMonthlyPnl>>();
         foreach (var project in projects)
         {
             if (!byProject.TryGetValue(project.ProjectId, out var pnl) || pnl.Count == 0)
@@ -1007,7 +1040,16 @@ else
                 excluded.Add(project);
                 continue;
             }
-            var deltas = months
+            included.Add(pnl);
+
+            var margins = monthEnds.Select(monthEnd => MarginAt(pnl, monthEnd)).ToList();
+            var marginDeltas = Enumerable.Range(0, months.Count)
+                .Select(index => margins[index] is decimal before && margins[index + 1] is decimal after
+                    ? (decimal?)(after - before)
+                    : null)
+                .ToList();
+
+            var moneyDeltas = months
                 .Select(month => pnl
                     .Where(row => row.Month.Year == month.Year && row.Month.Month == month.Month)
                     .Sum(row => row.Income - row.CostOfSales))
@@ -1015,32 +1057,63 @@ else
             var position = pnl.Sum(row => row.Income - row.CostOfSales);
             // Stale needs history: a job whose data only starts inside the window isn't
             // "stalled", it's young — only flag silence on jobs that were already running.
-            var stale = deltas.All(delta => Math.Abs(delta) < MovementZeroThreshold)
+            var stale = moneyDeltas.All(delta => Math.Abs(delta) < MovementZeroThreshold)
                         && pnl.Any(row => row.Month < months[0]);
-            rows.Add(new MovementRow(project, deltas, deltas.Sum(), position, stale));
+
+            rows.Add(new MovementRow(
+                project,
+                marginDeltas,
+                margins[0] is decimal start && margins[^1] is decimal now ? now - start : null,
+                margins[^1],
+                position,
+                moneyDeltas.Sum(),
+                stale));
         }
         if (rows.Count == 0) return null;
 
+        // The portfolio row is the margin of the combined book (total profit over total
+        // invoiced), NOT a sum of the jobs' pp movements — pp don't add across jobs.
+        var combined = included.SelectMany(pnl => pnl).ToList();
+        var portfolioMargins = monthEnds.Select(monthEnd => MarginAt(combined, monthEnd)).ToList();
         var columnTotals = Enumerable.Range(0, months.Count)
-            .Select(index => rows.Sum(row => row.Deltas[index]))
+            .Select(index => portfolioMargins[index] is decimal before && portfolioMargins[index + 1] is decimal after
+                ? (decimal?)(after - before)
+                : null)
             .ToList();
-        var maxAbs = rows.SelectMany(row => row.Deltas).Select(Math.Abs).DefaultIfEmpty(0m).Max();
+
+        // Shade relative to the biggest movement, capped at 15pp so one wild early-job
+        // swing can't wash every other cell out to nothing.
+        var maxAbs = rows.SelectMany(row => row.MarginDeltas)
+            .Where(delta => delta is not null)
+            .Select(delta => Math.Abs(delta!.Value))
+            .DefaultIfEmpty(0m)
+            .Max();
+        var shadeMax = Math.Min(maxAbs, 15m);
+
         return new MovementModel(
-            months, rows, columnTotals, columnTotals.Sum(), rows.Sum(row => row.PositionNow), excluded, maxAbs);
+            months, rows, columnTotals,
+            portfolioMargins[0] is decimal first && portfolioMargins[^1] is decimal last ? last - first : null,
+            portfolioMargins[^1],
+            rows.Sum(row => row.PositionMoney),
+            excluded, shadeMax);
     }
 
-    /// <summary>The mock's cell shading: alpha scales with the movement's share of the biggest.</summary>
-    private static string MovementCellStyle(decimal delta, decimal maxAbs)
+    /// <summary>The mock's cell shading: alpha scales with the movement's share of the biggest (capped).</summary>
+    private static string MovementCellStyle(decimal delta, decimal shadeMax)
     {
-        if (maxAbs <= 0m) return "";
-        var alpha = (0.10m + 0.55m * Math.Abs(delta) / maxAbs)
+        if (shadeMax <= 0m) return "";
+        var alpha = (0.10m + 0.55m * Math.Min(Math.Abs(delta), shadeMax) / shadeMax)
             .ToString("0.00", System.Globalization.CultureInfo.InvariantCulture);
         return delta < 0m
             ? $"background:rgba(194,85,85,{alpha})"
             : $"background:rgba(46,160,101,{alpha})";
     }
 
-    /// <summary>Signed £k with one decimal, the grid's unit ("+4.7", "−12.0").</summary>
+    /// <summary>Signed percentage points with one decimal, the grid's unit ("+0.8", "−2.4").</summary>
+    private static string DeltaPp(decimal value) =>
+        value >= 0m ? $"+{value:0.0}" : $"−{Math.Abs(value):0.0}";
+
+    /// <summary>Signed £k with one decimal — the trajectory's six-month headline ("+4.7", "−12.0").</summary>
     private static string DeltaK(decimal value) =>
         value >= 0m ? $"+{value / 1000m:0.0}" : $"−{Math.Abs(value) / 1000m:0.0}";
 
@@ -1068,9 +1141,9 @@ else
         var cards = new List<TrajectoryCard>();
         foreach (var row in movement.Rows)
         {
-            var pnl = byProject[row.Project.ProjectId];
+            var trajectoryPnl = byProject[row.Project.ProjectId];
             var values = points
-                .Select(month => pnl.Where(entry => entry.Month <= month).Sum(entry => entry.Income - entry.CostOfSales))
+                .Select(month => trajectoryPnl.Where(entry => entry.Month <= month).Sum(entry => entry.Income - entry.CostOfSales))
                 .ToList();
 
             // Budget band from the table's own row — only when that project's reads have
@@ -1103,8 +1176,8 @@ else
                 YFor(values[^1]),
                 budget is decimal band ? YFor(band) : null,
                 underBudget ? "#c25555" : "#2ea065",
-                row.PositionNow,
-                row.SixMonthDelta,
+                row.PositionMoney,
+                row.MoneySixMonthDelta,
                 budget,
                 row.Stale));
         }

@@ -24,12 +24,14 @@
 <PageTitle>Cash Summary · JPMS</PageTitle>
 
 @*
-    The company Cash Summary (the sidebar's Financials folder): every project's cash position —
-    the Cashflow tab's statement collapsed to one line each — plus the all-projects total, so the
-    company's whole cash exposure reads off one screen. Figures come from exactly the same sources
-    and arithmetic as each project's Cashflow tab (ValuationSummaryFigures, RetentionSchedule,
-    ProjectDrawdown, part-payment-aware unpaid bills), so this page and the per-project statement
-    can never disagree.
+    The company Cash Summary (the sidebar's Financials folder): the selected projects' cashflow
+    summed into ONE combined statement — the Cashflow tab's whiteboard over every selected job at
+    once — then every project's cash position collapsed to one line each, so the company's whole
+    cash exposure reads off one screen. Figures come from exactly the same sources and arithmetic
+    as each project's Cashflow tab (ValuationSummaryFigures, RetentionSchedule, ProjectDrawdown,
+    part-payment-aware unpaid bills), so this page and the per-project statement can never
+    disagree. With a single project ticked, the statement IS that project's statement — one page
+    covers both readings.
 
     Replaced the consolidated Valuation Summary on this slug (finance meeting 2026-08-03), which
     itself replaced the old Financial Summary — the slug stays so bookmarks keep landing, and the
@@ -60,8 +62,8 @@ else
             <p class="eyebrow mb-1">JPMS · Company</p>
             <h1 class="text-2xl md:text-3xl font-semibold text-content leading-tight">Cash Summary</h1>
             <p class="text-sm text-content-muted mt-1">
-                Every project's cash position — the Cashflow tab's statement rolled up to one line
-                each@(IsDirector ? ", with the bank position from Xero on top" : "").
+                The selected projects' cashflow combined into one statement, then each project's
+                position one line each@(IsDirector ? ", with the bank position from Xero on top" : "").
             </p>
         </header>
 
@@ -184,6 +186,113 @@ else
                         <button type="button" class="underline underline-offset-2 ml-1" @onclick="RetryFailedAsync">Retry</button>
                     </p>
                 }
+
+                @* ── The combined statement: the selected projects' Cashflow tabs summed into one
+                   whiteboard — the same rows, the same helpers, over the table's own figures, so
+                   the statement and the rows beneath it agree to the penny. With one project
+                   ticked this IS that project's statement. ── *@
+                var combined = Totals();
+                <div class="rounded-xl border border-line bg-surface mb-8 max-w-2xl">
+                    <div class="px-4 py-3 border-b-2 border-line">
+                        <p class="text-[11px] uppercase tracking-wider text-content-subtle font-semibold">Combined statement</p>
+                        <p class="text-sm font-semibold text-content mt-0.5">@SelectionLabel</p>
+                    </div>
+
+                    <div class="flex items-baseline justify-between gap-4 px-4 py-3">
+                        <div>
+                            <p class="text-sm font-semibold text-content"
+                               title="The valuation reports' counting lines — contract works, provisional sums, contingency and variations — summed across the selected projects">Project claim</p>
+                            <p class="text-xs text-content-subtle mt-0.5">The full value of the works as currently valued</p>
+                        </div>
+                        <p class="text-lg font-semibold text-content whitespace-nowrap">@Money(combined.ProjectClaim)</p>
+                    </div>
+
+                    <div class="flex items-baseline justify-between gap-4 px-4 py-3 border-t border-line">
+                        <div>
+                            <p class="text-sm font-semibold text-content"
+                               title="Valuation invoices clients have paid, plus retention withheld on works complete (held less confirmed releases, from each project's retention terms)">Cash allocated</p>
+                            <p class="text-xs text-content-subtle mt-0.5">
+                                @Money(combined.CashReceived) received from clients · @Money(combined.RetentionOutstanding) held in retention
+                            </p>
+                        </div>
+                        <p class="text-lg font-semibold text-content whitespace-nowrap">@Money(-combined.CashAllocated)</p>
+                    </div>
+
+                    <div class="flex items-baseline justify-between gap-4 px-4 py-3 border-t-2 border-line">
+                        <div>
+                            <p class="text-sm font-semibold text-content"
+                               title="Project claim less cash allocated, less the retention that will be withheld on the works still to value — what can actually be invoiced to clients before the releases">Left to claim</p>
+                            @if (combined.RetentionStillToWithhold != 0m)
+                            {
+                                <p class="text-xs text-content-subtle mt-0.5"
+                                   title="Valuation invoices are raised net of retention, so this slice of the remainder is never invoiceable on a valuation — it comes back through the release rows below instead">
+                                    less @Money(combined.RetentionStillToWithhold) retention to be withheld on works left to value
+                                </p>
+                            }
+                            @if (combined.InvoicedAwaitingPayment != 0m)
+                            {
+                                <p class="text-xs text-content-subtle mt-0.5">of which @Money(combined.InvoicedAwaitingPayment) already invoiced &amp; awaiting payment</p>
+                            }
+                        </div>
+                        <p class="text-lg font-semibold text-content whitespace-nowrap">@Money(combined.LeftToClaim)</p>
+                    </div>
+
+                    <div class="flex items-baseline justify-between gap-4 px-4 py-3 border-t border-line">
+                        <div>
+                            <p class="text-sm text-content"
+                               title="Each Financials tab's drawdown to the penny — every cost centre's unspent target cost, with finalised lines realised to profit / loss and reconciliation packages accounted for. Negative means overspent.">Cost centre drawdowns</p>
+                            <p class="text-xs text-content-subtle mt-0.5">Budget still expected to be spent, on top of orders and bills</p>
+                        </div>
+                        <p class="text-base font-semibold text-content whitespace-nowrap">@Money(-combined.Drawdown)</p>
+                    </div>
+
+                    <div class="flex items-baseline justify-between gap-4 px-4 py-3 border-t border-line">
+                        <div>
+                            <p class="text-sm text-content"
+                               title="Work-order value not yet invoiced by suppliers — committed spend still to bill; see each project's WO Allocation tab">Uninvoiced work orders</p>
+                            <p class="text-xs text-content-subtle mt-0.5">@Money(combined.WoCommitted) committed · @Money(combined.WoInvoiced) invoiced to date</p>
+                        </div>
+                        <p class="text-base font-semibold text-content whitespace-nowrap">@Money(-combined.WoLeftToInvoice)</p>
+                    </div>
+
+                    <div class="flex items-baseline justify-between gap-4 px-4 py-3 border-t border-line">
+                        <div>
+                            <p class="text-sm text-content"
+                               title="The net still owed on allocated purchase lines, part-payment aware: a bill Xero has partly settled counts only its remainder, from the bill's AmountDue as last synced">Unpaid Xero purchase invoices</p>
+                        </div>
+                        <p class="text-base font-semibold @(combined.BillsUnpaid == 0m ? "text-content" : "text-negative") whitespace-nowrap">@Money(-combined.BillsUnpaid)</p>
+                    </div>
+
+                    <div class="flex items-baseline justify-between gap-4 px-4 py-3 border-t border-line">
+                        <div>
+                            <p class="text-sm text-content"
+                               title="The first retention releases still forecast, due at each project's practical completion. A confirmed release has moved into the claim, so it is no longer added back here.">Retention release 1</p>
+                            <p class="text-xs text-content-subtle mt-0.5">Still forecast, due at practical completion</p>
+                        </div>
+                        <p class="text-base font-semibold text-content whitespace-nowrap">@AddBack(combined.Release1)</p>
+                    </div>
+
+                    <div class="flex items-baseline justify-between gap-4 px-4 py-3 border-t-2 border-line">
+                        <p class="text-sm font-semibold text-content"
+                           title="Left to claim, less cost centre drawdowns, uninvoiced work orders and unpaid purchase invoices, plus the first retention releases — the net cash movement between now and practical completion">Practical completion cashflow</p>
+                        <p class="text-xl font-semibold @(combined.PracticalCompletionCashflow < 0m ? "text-negative" : "text-positive") whitespace-nowrap">@Money(combined.PracticalCompletionCashflow)</p>
+                    </div>
+
+                    <div class="flex items-baseline justify-between gap-4 px-4 py-3 border-t border-line">
+                        <div>
+                            <p class="text-sm text-content"
+                               title="The final retention releases still forecast, due after each project's defects period. A confirmed release has moved into the claim, so it is no longer added back here.">Retention release 2</p>
+                            <p class="text-xs text-content-subtle mt-0.5">Still forecast, due after the defects period</p>
+                        </div>
+                        <p class="text-base font-semibold text-content whitespace-nowrap">@AddBack(combined.Release2)</p>
+                    </div>
+
+                    <div class="flex items-baseline justify-between gap-4 px-4 py-3 border-t-2 border-line">
+                        <p class="text-sm font-semibold text-content"
+                           title="Practical completion cashflow plus the final retention releases — the selected projects' net cash movement to the end of their defects periods">Project completion cashflow</p>
+                        <p class="text-xl font-semibold @(combined.ProjectCompletionCashflow < 0m ? "text-negative" : "text-positive") whitespace-nowrap">@Money(combined.ProjectCompletionCashflow)</p>
+                    </div>
+                </div>
 
                 <div class="rounded-xl border border-line bg-surface overflow-x-auto">
                     <table class="w-full text-sm border-collapse">
@@ -334,14 +443,19 @@ else
         decimal ProjectClaim,
         decimal CashReceived,
         decimal RetentionOutstanding,
+        decimal InvoicedAwaitingPayment,
+        decimal RetentionStillToWithhold,
         decimal LeftToClaim,
         decimal Drawdown,
-        decimal WoLeftToInvoice,
+        decimal WoCommitted,
+        decimal WoInvoiced,
         decimal BillsUnpaid,
         decimal Release1,
         decimal Release2)
     {
         public decimal CashAllocated => CashReceived + RetentionOutstanding;
+
+        public decimal WoLeftToInvoice => WoCommitted - WoInvoiced;
 
         public decimal PracticalCompletionCashflow =>
             LeftToClaim - Drawdown - WoLeftToInvoice - BillsUnpaid + Release1;
@@ -404,10 +518,13 @@ else
             ProjectClaim: projectClaim,
             CashReceived: cashReceived,
             RetentionOutstanding: retentionOutstanding,
+            InvoicedAwaitingPayment: invoiceSummary?.Outstanding ?? 0m,
+            RetentionStillToWithhold: retentionStillToWithhold,
             LeftToClaim: CashflowMaths.LeftToClaim(
                 projectClaim, cashReceived, retentionOutstanding, retentionStillToWithhold),
             Drawdown: drawdown,
-            WoLeftToInvoice: woCommitted - woInvoiced,
+            WoCommitted: woCommitted,
+            WoInvoiced: woInvoiced,
             BillsUnpaid: billsUnpaid,
             Release1: schedule?.CompletionRelease is { IsConfirmed: false } completion ? completion.Amount : 0m,
             Release2: schedule?.FinalRelease is { IsConfirmed: false } final ? final.Amount : 0m);
@@ -420,12 +537,33 @@ else
             rows.Sum(row => row.ProjectClaim),
             rows.Sum(row => row.CashReceived),
             rows.Sum(row => row.RetentionOutstanding),
+            rows.Sum(row => row.InvoicedAwaitingPayment),
+            rows.Sum(row => row.RetentionStillToWithhold),
             rows.Sum(row => row.LeftToClaim),
             rows.Sum(row => row.Drawdown),
-            rows.Sum(row => row.WoLeftToInvoice),
+            rows.Sum(row => row.WoCommitted),
+            rows.Sum(row => row.WoInvoiced),
             rows.Sum(row => row.BillsUnpaid),
             rows.Sum(row => row.Release1),
             rows.Sum(row => row.Release2));
+    }
+
+    // What the combined statement's header names — mirroring ProjectMultiSelect's own toggle
+    // label rules so the card and the filter always describe the selection in the same words.
+    private string SelectionLabel
+    {
+        get
+        {
+            var all = Projects.Current ?? (IReadOnlyList<Project>)Array.Empty<Project>();
+            var selected = SelectedProjects;
+            if (selected.Count == 1) return $"{selected[0].Reference} · {selected[0].Name}";
+            if (selected.Count == all.Count) return $"All projects ({selected.Count})";
+            var live = all.Where(ProjectMultiSelect.IsLiveJob).ToList();
+            if (selected.Count == live.Count
+                && live.All(project => selectedIds.Contains(project.ProjectId, StringComparer.OrdinalIgnoreCase)))
+                return $"Live jobs ({selected.Count})";
+            return $"{selected.Count} of {all.Count} projects";
+        }
     }
 
     private static string AddBack(decimal value) => value == 0m ? "—" : $"+ {Money(value)}";
