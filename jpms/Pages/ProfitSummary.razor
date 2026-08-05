@@ -47,18 +47,24 @@
     movement = Forecast Profit, because Cost movement is defined as Initial Contract Costs −
     Forecasted Cost of Sales. The project filter defaults to live jobs and offers every project.
 
-    Under the table sits the "Cumulative position" panel from the accountant's combined mock
-    (2026-08-04, replacing the reconstructed margin-% lines, which sawtoothed because
-    certification arrives in lumps): one mini-chart per job, cumulative invoiced against
-    cumulative cost of sales from the job's first month to now, both straight from Xero's own
-    site P&L (the profit & loss report filtered by each project's Sites tracking option,
-    stored monthly by SyncXeroSitePnl — nightly worker + the panel's Refresh button). The gap
-    between the lines is cumulative gross profit; the panel reports the INVOICED rung of the
-    ladder, so it deliberately sits near, not on, the table's certified figures.
+    Under the table sit the three panels from the accountant's combined mock (2026-08-04/05,
+    replacing the reconstructed margin-% lines, which sawtoothed because certification
+    arrives in lumps), ALL driven by the same stored Xero site P&L months (the profit & loss
+    report filtered by each project's Sites tracking option, stored monthly by
+    SyncXeroSitePnl — nightly worker + the cumulative panel's Refresh button), cumulative
+    profit to date on Xero figures only (the accountant's call, 2026-08-05 — no forecast
+    snapshots):
 
-    The mock's other two panels (movement grid + forecast trajectory) plot month-end FORECAST
-    history, which needs a locked monthly snapshot store that doesn't exist yet — still out of
-    scope (2026-08-04); the layout leaves room for them.
+      Monthly movement    — each month's own gross profit movement per job (that month's
+                            income less cost of sales, £k), shaded by size, so a bad month
+                            reads down a column and a bleeding job reads across a row;
+      Trajectory by job   — the running total of exactly those movements, one mini-chart per
+                            job on its own scale against its budgeted-profit band;
+      Cumulative position — the two lines the total is the gap between: cumulative invoiced
+                            vs cumulative cost of sales, job start to date.
+
+    All three report the INVOICED rung of the ladder, so they deliberately sit near, not on,
+    the table's certified figures.
 *@
 
 @if (!sessionReady)
@@ -406,6 +412,151 @@ else
                 </p>
             }
             </LoadGate>
+
+            @* ── Monthly movement + trajectory + cumulative position — the accountant's
+               combined mock (2026-08-05), all three panels driven by the SAME stored Xero
+               site P&L months, cumulative-profit-to-date on Xero figures only (his call,
+               2026-08-05 — no forecast snapshots). The movement grid is each month's own
+               gross profit movement (that month's income less cost of sales); the
+               trajectory is the running total of exactly those movements; the cumulative
+               panel shows the two lines the total is the gap between. Conditional regions:
+               they appear once the store has answered, and the cumulative panel (last)
+               carries the group's loading gate and error states. ── *@
+            @if (selectionInitialised && SelectedProjects.Count > 0
+                 && SitePnl.Current is { IsConfigured: true } && MovementFor(SelectedProjects) is { } movement)
+            {
+                <div class="rounded-xl border border-line bg-surface p-5 mt-6">
+                    <p class="text-[11px] uppercase tracking-wider text-content-subtle font-semibold">
+                        Monthly movement
+                        <span class="normal-case tracking-normal font-normal text-content-faint ml-2">— Δ gross profit vs prior month, £k · Xero site P&L</span>
+                    </p>
+                    <p class="text-xs text-content-muted mt-1 mb-3">
+                        Scan a column for a bad month, a row for a job that bleeds every month, the last column for where it stands today.
+                    </p>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-sm" style="border-collapse:separate;border-spacing:3px">
+                            <thead>
+                                <tr class="text-[10px] uppercase tracking-wider text-content-subtle font-medium">
+                                    <th class="text-left py-1.5 px-2">Project</th>
+                                    @foreach (var month in movement.Months)
+                                    {
+                                        <th class="text-center py-1.5 px-2 whitespace-nowrap">@month.ToString("MMM yy")</th>
+                                    }
+                                    <th class="text-center py-1.5 px-2 whitespace-nowrap">6-mo Δ</th>
+                                    <th class="text-center py-1.5 px-2 whitespace-nowrap">Position now</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var row in movement.Rows)
+                                {
+                                    <tr>
+                                        <td class="text-left whitespace-nowrap py-2 pr-3">
+                                            <span class="text-content">@row.Project.Name</span>
+                                            <span class="block font-mono text-[9px] text-content-faint">@row.Project.Reference</span>
+                                        </td>
+                                        @foreach (var delta in row.Deltas)
+                                        {
+                                            @if (Math.Abs(delta) < MovementZeroThreshold)
+                                            {
+                                                <td class="text-center rounded-md py-2.5 px-2 text-xs text-content-faint" style="background:#12151c">—</td>
+                                            }
+                                            else
+                                            {
+                                                <td class="text-center rounded-md py-2.5 px-2 text-xs text-content tabular-nums"
+                                                    style="@MovementCellStyle(delta, movement.MaxAbsDelta)">@DeltaK(delta)</td>
+                                            }
+                                        }
+                                        <td class="text-center py-2.5 px-2 text-xs font-semibold tabular-nums @ProfitClass(row.SixMonthDelta)">
+                                            @(Math.Abs(row.SixMonthDelta) < MovementZeroThreshold ? "—" : DeltaK(row.SixMonthDelta))
+                                        </td>
+                                        <td class="text-center rounded-md py-2 px-3 text-xs font-semibold whitespace-nowrap border border-line bg-surface-raised @ProfitClass(row.PositionNow)">
+                                            @MoneyCompact(row.PositionNow)
+                                            @if (row.Stale)
+                                            {
+                                                <span class="block font-normal text-[10px] text-amber-400 mt-0.5">⚠ no movement 6 mo</span>
+                                            }
+                                        </td>
+                                    </tr>
+                                }
+                                @if (movement.Rows.Count > 1)
+                                {
+                                    <tr class="font-semibold">
+                                        <td class="text-left py-2.5 pr-3 border-t border-line text-content">All jobs with Xero data</td>
+                                        @foreach (var total in movement.ColumnTotals)
+                                        {
+                                            <td class="text-center py-2.5 px-2 text-xs border-t border-line tabular-nums @ProfitClass(total)">@DeltaK(total)</td>
+                                        }
+                                        <td class="text-center py-2.5 px-2 text-xs border-t border-line tabular-nums @ProfitClass(movement.TotalDelta)">@DeltaK(movement.TotalDelta)</td>
+                                        <td class="text-center py-2.5 px-2 text-xs border-t border-line whitespace-nowrap @ProfitClass(movement.TotalPosition)">@MoneyCompact(movement.TotalPosition)</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                    <p class="text-[11px] text-content-subtle mt-3 max-w-3xl">
+                        Each cell is that month's own gross profit movement in Xero — income invoiced to the site less
+                        cost of sales — so the row adds up to the job's position. Cell shade scales with the size of the
+                        movement; every cell keeps its number, so colour never carries the meaning alone.
+                        @if (movement.Rows.Any(row => row.Stale))
+                        {
+                            <text>⚠ A job with no movement for six months usually means stalled or unbilled, not that nothing is happening on site. </text>
+                        }
+                        @if (movement.Excluded.Count > 0)
+                        {
+                            <text>@string.Join(", ", movement.Excluded.Select(project => project.Name)) @(movement.Excluded.Count == 1 ? "has" : "have") no Xero site data yet — see the cards below.</text>
+                        }
+                    </p>
+                </div>
+
+                <div class="rounded-xl border border-line bg-surface p-5 mt-6">
+                    <p class="text-[11px] uppercase tracking-wider text-content-subtle font-semibold">
+                        Trajectory by job
+                        <span class="normal-case tracking-normal font-normal text-content-faint ml-2">— cumulative gross profit £, each job on its own scale · Xero site P&L</span>
+                    </p>
+                    <p class="text-xs text-content-muted mt-1 mb-3">
+                        One mini-chart per job — shape is comparable, scale is per-job, so one big job can't squash the others flat.
+                    </p>
+                    <div class="grid gap-3.5 sm:grid-cols-2 xl:grid-cols-3">
+                        @foreach (var card in TrajectoriesFor(movement))
+                        {
+                            <div class="rounded-lg border border-line bg-surface-raised px-4 pt-3 pb-2.5">
+                                <div class="flex items-baseline justify-between gap-2">
+                                    <span class="text-xs font-medium text-content">@card.Project.Name</span>
+                                    <span class="text-[11px] font-semibold @ProfitClass(card.SixMonthDelta)">
+                                        @(Math.Abs(card.SixMonthDelta) < MovementZeroThreshold ? "— flat" : $"{DeltaK(card.SixMonthDelta)}k / 6 mo")
+                                    </span>
+                                </div>
+                                <div class="relative h-16 mt-2">
+                                    <svg class="absolute inset-0 w-full h-full overflow-visible" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+                                        @if (card.BudgetY is double budgetY)
+                                        {
+                                            <line x1="0" x2="100" y1="@Pc(budgetY)" y2="@Pc(budgetY)"
+                                                  stroke="#2a3242" stroke-width="4" opacity="0.55" vector-effect="non-scaling-stroke" />
+                                        }
+                                        <polyline points="@card.PathPoints" fill="none" stroke="@card.LineColor" stroke-width="2"
+                                                  vector-effect="non-scaling-stroke" stroke-linejoin="round" stroke-linecap="round" />
+                                    </svg>
+                                    <div class="absolute w-1.5 h-1.5 rounded-full -translate-y-1/2 translate-x-1/2"
+                                         style="background:@card.LineColor;top:@(Pc(card.EndY))%;right:0"></div>
+                                </div>
+                                <p class="text-[15px] font-semibold mt-1.5 @ProfitClass(card.PositionNow)">@MoneyCompact(card.PositionNow)</p>
+                                <p class="text-[10px] text-content-faint mt-0.5">
+                                    @(card.Budget is decimal budget ? $"budget {MoneyCompact(budget)}" : "budget not loaded")
+                                    @if (card.Stale)
+                                    {
+                                        <span class="text-amber-400"> · ⚠ no movement 6 mo</span>
+                                    }
+                                </p>
+                            </div>
+                        }
+                    </div>
+                    <p class="text-[11px] text-content-subtle mt-3 max-w-3xl">
+                        Grey band = budgeted profit for the job — where the deal says it should land. A line short of its
+                        band late in a job is the gap still to close; a line above it is margin in hand. Cumulative Xero
+                        gross profit, so young jobs sit below their band by nature.
+                    </p>
+                </div>
+            }
 
             @* ── Cumulative position — invoiced vs cost, job start to date, straight from
                Xero's site P&L (the accountant's combined mock, 2026-08-04). One card per
@@ -807,6 +958,157 @@ else
             margin,
             $"{first:MMM yy} → {last:MMM yy} · {points.Count} mo",
             warning);
+    }
+
+    // ---- Monthly movement + trajectory (same Xero months as the cumulative panel) -------
+    // Cumulative profit to date on Xero figures ONLY (2026-08-05): each grid cell is one
+    // month's own gross profit movement (that month's income less cost of sales), so the
+    // row sums to the job's position, and the trajectory is the running total of exactly
+    // those movements. No forecasts anywhere in these panels — they answer "what actually
+    // moved", the table above answers "what we expect".
+
+    // Movements within £50 of zero read as "—": a pennies-sized recode isn't a movement.
+    private const decimal MovementZeroThreshold = 50m;
+
+    private sealed record MovementRow(
+        Project Project,
+        IReadOnlyList<decimal> Deltas,
+        decimal SixMonthDelta,
+        decimal PositionNow,
+        bool Stale);
+
+    private sealed record MovementModel(
+        IReadOnlyList<DateTime> Months,
+        IReadOnlyList<MovementRow> Rows,
+        IReadOnlyList<decimal> ColumnTotals,
+        decimal TotalDelta,
+        decimal TotalPosition,
+        IReadOnlyList<Project> Excluded,
+        decimal MaxAbsDelta);
+
+    private MovementModel? MovementFor(IReadOnlyList<Project> projects)
+    {
+        var all = SitePnl.Current?.Rows;
+        if (all is null || all.Count == 0) return null;
+        var byProject = all
+            .GroupBy(row => row.ProjectId, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(group => group.Key, group => group.ToList(), StringComparer.OrdinalIgnoreCase);
+
+        // The last six months ending this month — the mock's window.
+        var thisMonth = new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1);
+        var months = Enumerable.Range(0, 6).Select(offset => thisMonth.AddMonths(offset - 5)).ToList();
+
+        var rows = new List<MovementRow>();
+        var excluded = new List<Project>();
+        foreach (var project in projects)
+        {
+            if (!byProject.TryGetValue(project.ProjectId, out var pnl) || pnl.Count == 0)
+            {
+                excluded.Add(project);
+                continue;
+            }
+            var deltas = months
+                .Select(month => pnl
+                    .Where(row => row.Month.Year == month.Year && row.Month.Month == month.Month)
+                    .Sum(row => row.Income - row.CostOfSales))
+                .ToList();
+            var position = pnl.Sum(row => row.Income - row.CostOfSales);
+            // Stale needs history: a job whose data only starts inside the window isn't
+            // "stalled", it's young — only flag silence on jobs that were already running.
+            var stale = deltas.All(delta => Math.Abs(delta) < MovementZeroThreshold)
+                        && pnl.Any(row => row.Month < months[0]);
+            rows.Add(new MovementRow(project, deltas, deltas.Sum(), position, stale));
+        }
+        if (rows.Count == 0) return null;
+
+        var columnTotals = Enumerable.Range(0, months.Count)
+            .Select(index => rows.Sum(row => row.Deltas[index]))
+            .ToList();
+        var maxAbs = rows.SelectMany(row => row.Deltas).Select(Math.Abs).DefaultIfEmpty(0m).Max();
+        return new MovementModel(
+            months, rows, columnTotals, columnTotals.Sum(), rows.Sum(row => row.PositionNow), excluded, maxAbs);
+    }
+
+    /// <summary>The mock's cell shading: alpha scales with the movement's share of the biggest.</summary>
+    private static string MovementCellStyle(decimal delta, decimal maxAbs)
+    {
+        if (maxAbs <= 0m) return "";
+        var alpha = (0.10m + 0.55m * Math.Abs(delta) / maxAbs)
+            .ToString("0.00", System.Globalization.CultureInfo.InvariantCulture);
+        return delta < 0m
+            ? $"background:rgba(194,85,85,{alpha})"
+            : $"background:rgba(46,160,101,{alpha})";
+    }
+
+    /// <summary>Signed £k with one decimal, the grid's unit ("+4.7", "−12.0").</summary>
+    private static string DeltaK(decimal value) =>
+        value >= 0m ? $"+{value / 1000m:0.0}" : $"−{Math.Abs(value) / 1000m:0.0}";
+
+    private sealed record TrajectoryCard(
+        Project Project,
+        string PathPoints,
+        double EndY,
+        double? BudgetY,
+        string LineColor,
+        decimal PositionNow,
+        decimal SixMonthDelta,
+        decimal? Budget,
+        bool Stale);
+
+    private List<TrajectoryCard> TrajectoriesFor(MovementModel movement)
+    {
+        var all = SitePnl.Current?.Rows ?? (IReadOnlyList<XeroSiteMonthlyPnl>)Array.Empty<XeroSiteMonthlyPnl>();
+        var byProject = all
+            .GroupBy(row => row.ProjectId, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(group => group.Key, group => group.ToList(), StringComparer.OrdinalIgnoreCase);
+
+        // Seven month-end points: the window's six intervals need a starting position.
+        var points = Enumerable.Range(0, 7).Select(offset => movement.Months[0].AddMonths(offset - 1)).ToList();
+
+        var cards = new List<TrajectoryCard>();
+        foreach (var row in movement.Rows)
+        {
+            var pnl = byProject[row.Project.ProjectId];
+            var values = points
+                .Select(month => pnl.Where(entry => entry.Month <= month).Sum(entry => entry.Income - entry.CostOfSales))
+                .ToList();
+
+            // Budget band from the table's own row — only when that project's reads have
+            // landed; a band from unloaded data would be a guess, so it simply isn't drawn.
+            decimal? budget = loadedProjects.Contains(row.Project.ProjectId)
+                ? RowFor(row.Project.ProjectId).BudgetedProfit
+                : null;
+
+            // Each card on its own scale, band included so it is always visible (the mock's
+            // 12% padding keeps the line off the frame).
+            var low = values.Min();
+            var high = values.Max();
+            if (budget is decimal b) { low = Math.Min(low, b); high = Math.Max(high, b); }
+            var pad = (high - low) * 0.12m;
+            if (pad == 0m) pad = 1m;
+            low -= pad;
+            high += pad;
+
+            double YFor(decimal value) => (double)((high - value) / (high - low)) * 100d;
+            double XFor(int index) => index / (double)(points.Count - 1) * 100d;
+            var path = string.Join(" ", values.Select((value, index) => $"{Pc(XFor(index))},{Pc(YFor(value))}"));
+
+            // The mock's rule: red when the job sits under its budget band, green when on
+            // or above it; without a band, the position's own sign colours the line.
+            var underBudget = budget is decimal target ? values[^1] < target : values[^1] < 0m;
+
+            cards.Add(new TrajectoryCard(
+                row.Project,
+                path,
+                YFor(values[^1]),
+                budget is decimal band ? YFor(band) : null,
+                underBudget ? "#c25555" : "#2ea065",
+                row.PositionNow,
+                row.SixMonthDelta,
+                budget,
+                row.Stale));
+        }
+        return cards;
     }
 
     private async Task LoadSitePnlAsync()
