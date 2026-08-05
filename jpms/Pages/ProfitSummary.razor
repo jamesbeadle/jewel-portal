@@ -846,8 +846,20 @@ else
 
     // Every region (the strip; the bridge + table + totals together; the export) builds this
     // list once and reads rows from it, rather than each cell calling RowFor for itself.
+    // The one list on this page that departs from the A–Z convention: a profit table reads as a
+    // league table, so within each work-order band (live work first, then Defects Period, then
+    // Completed — the bands stay, per the project-ordering convention) jobs rank by current
+    // profit, best first. Sorted here rather than in SelectedProjects because the rank needs the
+    // loaded figures — TableReady gates every caller, so the order never shifts mid-load. Name
+    // and reference tie-breaks keep equal-profit rows stable between renders.
     private List<(Project Project, ProfitRow Row)> LoadedRows() =>
-        SelectedProjects.Select(project => (project, RowFor(project.ProjectId))).ToList();
+        SelectedProjects
+            .Select(project => (Project: project, Row: RowFor(project.ProjectId)))
+            .OrderBy(entry => entry.Project.Stage.WorkRank())
+            .ThenByDescending(entry => entry.Row.CurrentProfit)
+            .ThenBy(entry => entry.Project.Name, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(entry => entry.Project.Reference, StringComparer.OrdinalIgnoreCase)
+            .ToList();
 
     private static ProfitRow TotalsOf(IReadOnlyList<(Project Project, ProfitRow Row)> rows) =>
         new(
