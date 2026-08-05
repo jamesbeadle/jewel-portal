@@ -1329,7 +1329,7 @@ else
             showAiConfirmModal = false;
             if (proposal is null)
             {
-                aiNote = "AI generation isn't wired up yet. When enabled, Claude will draft the package — scope and line items — from the related emails and drawings, and the draft will open here for review. Nothing is added to the package until you accept it, and existing content is never changed or removed.";
+                aiNote = "Claude couldn't draft this package just now — check the Anthropic key is configured, then try again. Nothing has been changed: the draft only ever opens here for review, and existing content is never touched.";
                 return;
             }
             aiProposalNotes = proposal.Notes;
@@ -1344,10 +1344,32 @@ else
         finally { aiBusy = false; }
     }
 
-    // The generation seam. When the backend command lands, call it here and map the result to
-    // AiDraftProposal — the confirm → review → apply flow around it stays exactly as is.
-    private Task<AiDraftProposal?> RequestAiProposalAsync() =>
-        Task.FromResult<AiDraftProposal?>(null);
+    // The generation seam: server-side, Claude reads the package's tagged emails and linked
+    // drawings and proposes notes + lines. Null (not configured / no parseable answer / request
+    // failure) surfaces as the aiNote explanation — the confirm → review → apply flow is unchanged.
+    private async Task<AiDraftProposal?> RequestAiProposalAsync()
+    {
+        try
+        {
+            var proposal = await Commands.SendAsync(new GenerateBidPackageDraft(BidPackageId), CancellationToken.None);
+            if (proposal is null || !proposal.Proposed) return null;
+            return new AiDraftProposal
+            {
+                Notes = proposal.Notes,
+                Lines = proposal.Lines
+                    .Select(line => new AiDraftLine
+                    {
+                        Trade = line.Trade,
+                        Description = line.Description,
+                        Unit = line.Unit,
+                        Quantity = line.Quantity,
+                        CostCode = line.CostCode
+                    })
+                    .ToList()
+            };
+        }
+        catch { return null; }
+    }
 
     private bool IsExistingLine(AiDraftLine draft) =>
         lineItems.Any(item =>
