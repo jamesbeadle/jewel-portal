@@ -14,6 +14,7 @@ public static class XeroRouteRegistration
         services.AddScoped<XeroAgedReceivablesReadModel>();
         services.AddScoped<XeroLedgerReadModel>();
         services.AddScoped<XeroSitePnlReadModel>();
+        services.AddScoped<XeroTrackingCategoriesReadModel>();
         return services;
     }
 
@@ -26,6 +27,10 @@ public static class XeroRouteRegistration
         queries.Register<ListXeroSuppliers, XeroSuppliersSnapshot>(
             new QueryRoute("/api/xero/suppliers",
                 query => ((ListXeroSuppliers)query).Force ? "/api/xero/suppliers?force=true" : "/api/xero/suppliers"));
+
+        queries.Register<ListXeroTrackingCategories, XeroTrackingCategoriesSnapshot>(
+            new QueryRoute("/api/xero/tracking-categories",
+                query => ((ListXeroTrackingCategories)query).Force ? "/api/xero/tracking-categories?force=true" : "/api/xero/tracking-categories"));
 
         queries.Register<GetXeroCashSummary, XeroCashSummarySnapshot>(
             new QueryRoute("/api/xero/cash-summary",

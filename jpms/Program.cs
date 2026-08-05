@@ -129,6 +129,7 @@ builder.Services.AddScoped<IXeroCashSummaryStore, HttpXeroCashSummaryStore>();
 builder.Services.AddScoped<IXeroAgedPayablesStore, HttpXeroAgedPayablesStore>();
 builder.Services.AddScoped<IXeroAgedReceivablesStore, HttpXeroAgedReceivablesStore>();
 builder.Services.AddScoped<IXeroLedgerStore, HttpXeroLedgerStore>();
+builder.Services.AddScoped<IXeroTrackingCategoriesStore, HttpXeroTrackingCategoriesStore>();
 // Admin → System: the announced app version and its publish button.
 builder.Services.AddScoped<ISystemStore, HttpSystemStore>();
 

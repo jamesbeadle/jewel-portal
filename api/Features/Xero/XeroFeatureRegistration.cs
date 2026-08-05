@@ -67,6 +67,11 @@ public static class XeroFeatureRegistration
         // Suppliers: the contact list behind the directory's "Import from Xero" modal.
         services.AddScoped<IQueryHandler<ListXeroSuppliers, XeroSuppliersSnapshot>, ListXeroSuppliersHandler>();
 
+        // Tracking categories: Xero's Sites / Cost Code options verbatim, for the Cost codes
+        // page's Xero tabs — reading the exact phrasing when linking projects and codes up.
+        services.AddScoped<IQueryHandler<ListXeroTrackingCategories, XeroTrackingCategoriesSnapshot>,
+            ListXeroTrackingCategoriesHandler>();
+
         // Ledger allocation: stored Xero lines reconciled onto projects + master cost centres.
         services.AddScoped<ICommandHandler<SyncXeroLedger, XeroLedgerSyncResult>, SyncXeroLedgerHandler>();
         services.AddScoped<IQueryHandler<ListXeroLedgerLines, IReadOnlyList<XeroLedgerLine>>, ListXeroLedgerLinesHandler>();

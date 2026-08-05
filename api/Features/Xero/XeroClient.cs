@@ -61,6 +61,18 @@ public interface IXeroClient
     Task<XeroSuppliersSnapshot> GetSuppliersAsync(bool force, CancellationToken ct);
 
     /// <summary>
+    /// Lists the organisation's tracking categories with their options exactly as Xero holds
+    /// them (archived options included and flagged) — the read behind the Cost codes page's
+    /// "Xero sites" / "Xero cost codes" tabs, so the exact phrasing of each option can be
+    /// checked when linking projects and cost codes to Xero. Needs the custom connection's
+    /// accounting.settings scope; a refusal (or a 429) comes back on the snapshot's Error
+    /// rather than throwing. Serves the cached snapshot when fresh enough unless
+    /// <paramref name="force"/> is set — one Xero call, but it shares the 60/min budget
+    /// with everything else.
+    /// </summary>
+    Task<XeroTrackingCategoriesSnapshot> GetTrackingCategoriesSnapshotAsync(bool force, CancellationToken ct);
+
+    /// <summary>
     /// Confirms an allocated draft (or submitted) bill / credit note back into Xero and
     /// approves it: re-reads the invoice fresh, stamps Sites + Cost Code tracking on each
     /// instructed line — physically splitting a line into one Xero line per cost centre
@@ -133,6 +145,9 @@ public sealed class NullXeroClient : IXeroClient
 
     public Task<XeroAgedReceivablesSnapshot> GetAgedReceivablesAsync(bool force, CancellationToken ct) =>
         Task.FromResult(XeroAgedReceivablesSnapshot.NotConfigured());
+
+    public Task<XeroTrackingCategoriesSnapshot> GetTrackingCategoriesSnapshotAsync(bool force, CancellationToken ct) =>
+        Task.FromResult(XeroTrackingCategoriesSnapshot.NotConfigured());
 
     public Task<XeroSuppliersSnapshot> GetSuppliersAsync(bool force, CancellationToken ct) =>
         Task.FromResult(XeroSuppliersSnapshot.NotConfigured());
@@ -208,6 +223,13 @@ public sealed class XeroClient : IXeroClient
     private readonly SemaphoreSlim _suppliersLock = new(1, 1);
     private XeroSuppliersSnapshot? _cachedSuppliers;
     private DateTimeOffset _cachedSuppliersAt = DateTimeOffset.MinValue;
+
+    // Tracking-categories snapshot cache — the Cost codes page's Xero tabs. One cheap call,
+    // but it counts against the same 60/min budget as everything else (the write-back reads
+    // the same endpoint), so a page of users mustn't each cost a call.
+    private readonly SemaphoreSlim _trackingCategoriesLock = new(1, 1);
+    private XeroTrackingCategoriesSnapshot? _cachedTrackingCategories;
+    private DateTimeOffset _cachedTrackingCategoriesAt = DateTimeOffset.MinValue;
 
     // Chart of accounts changes rarely; refresh it hourly at most.
     private IReadOnlyDictionary<string, string>? _accountNamesByCode;
@@ -432,6 +454,102 @@ public sealed class XeroClient : IXeroClient
         }
 
         return new XeroSuppliersSnapshot(true, null, DateTimeOffset.UtcNow, truncated, suppliers);
+    }
+
+    // -- tracking categories: the Cost codes page's Xero sites / Xero cost codes tabs ---
+
+    public async Task<XeroTrackingCategoriesSnapshot> GetTrackingCategoriesSnapshotAsync(bool force, CancellationToken ct)
+    {
+        if (!_options.IsConfigured)
+            return XeroTrackingCategoriesSnapshot.NotConfigured();
+
+        await _trackingCategoriesLock.WaitAsync(ct);
+        try
+        {
+            if (!force && CachedTrackingCategoriesAreFresh)
+                return _cachedTrackingCategories!;
+
+            var snapshot = await FetchTrackingCategoriesSnapshotAsync(ct);
+
+            // Only successful reads replace the cache — a transient failure (429 above all)
+            // shouldn't evict good data, but it is still returned so the user sees what went wrong.
+            if (snapshot.Error is null)
+            {
+                _cachedTrackingCategories = snapshot;
+                _cachedTrackingCategoriesAt = DateTimeOffset.UtcNow;
+            }
+            return snapshot;
+        }
+        finally
+        {
+            _trackingCategoriesLock.Release();
+        }
+    }
+
+    private bool CachedTrackingCategoriesAreFresh =>
+        _cachedTrackingCategories is not null
+        && DateTimeOffset.UtcNow < _cachedTrackingCategoriesAt.AddMinutes(_options.CacheMinutes);
+
+    private async Task<XeroTrackingCategoriesSnapshot> FetchTrackingCategoriesSnapshotAsync(CancellationToken ct)
+    {
+        string token;
+        try
+        {
+            token = await GetAccessTokenAsync(ct);
+        }
+        catch (XeroCallFailedException tokenFailure)
+        {
+            return XeroTrackingCategoriesSnapshot.Failed(tokenFailure.Message);
+        }
+
+        try
+        {
+            // includeArchived: a retired option's exact name still explains historical tracking,
+            // and hiding it here would make "why doesn't this match?" harder, not easier. The
+            // UI flags archived rows instead. Unlike GetTrackingCategoriesAsync (the write-back's
+            // lookup) this read is diagnostic: EVERY category comes back, and a missing Sites /
+            // Cost Code category is the UI's message to render, not an exception.
+            using var doc = await GetJsonAsync(
+                token, $"{TrackingCategoriesUrl}?includeArchived=true", "tracking categories", ct);
+
+            var categories = new List<XeroTrackingCategory>();
+            if (doc.RootElement.TryGetProperty("TrackingCategories", out var trackingCategories)
+                && trackingCategories.ValueKind == JsonValueKind.Array)
+            {
+                foreach (var category in trackingCategories.EnumerateArray())
+                {
+                    var name = StringOf(category, "Name");
+                    var id = StringOf(category, "TrackingCategoryID");
+                    if (name is null || id is null) continue;
+
+                    var options = new List<XeroTrackingOption>();
+                    if (category.TryGetProperty("Options", out var optionElements) && optionElements.ValueKind == JsonValueKind.Array)
+                        foreach (var option in optionElements.EnumerateArray())
+                            if (StringOf(option, "Name") is { } optionName)
+                                options.Add(new XeroTrackingOption(
+                                    StringOf(option, "TrackingOptionID") ?? "",
+                                    optionName,
+                                    StringOf(option, "Status") ?? "ACTIVE"));
+
+                    categories.Add(new XeroTrackingCategory(
+                        id,
+                        name,
+                        StringOf(category, "Status") ?? "ACTIVE",
+                        options,
+                        IsSiteCategory: Normalise(name) == Normalise(_options.SiteTrackingCategory),
+                        IsCostCodeCategory: Normalise(name) == Normalise(_options.CostCodeTrackingCategory)));
+                }
+            }
+
+            return new XeroTrackingCategoriesSnapshot(true, null, DateTimeOffset.UtcNow, categories);
+        }
+        catch (XeroCallFailedException callFailure)
+        {
+            return XeroTrackingCategoriesSnapshot.Failed(
+                "Couldn't read Xero's tracking categories. If Xero answered 403, the custom "
+                + "connection needs the accounting.settings scope; a 429 means Xero's rate "
+                + "limit — wait a minute and refresh. " + callFailure.Message);
+        }
     }
 
     private static XeroSupplier ReadSupplier(JsonElement contact) => new(
