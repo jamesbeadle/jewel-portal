@@ -262,17 +262,17 @@ else
                                 <th class="px-4 pt-3 pb-2 border-l border-line" colspan="2">Forecast at completion <span class="normal-case tracking-normal font-normal text-content-faint ml-1">Financials tab</span></th>
                             </tr>
                             <tr class="text-left text-[11px] uppercase tracking-wider text-content-subtle font-semibold">
-                                <th class="px-4 py-3 min-w-[240px]">Project</th>
-                                <th class="px-4 py-3 text-right whitespace-nowrap border-l border-line" title="The revised contract sum — initial contract plus net approved variations (the memo line).">Contract value</th>
-                                <th class="px-4 py-3 text-right whitespace-nowrap" title="Initial contract sum less its target cost — the sum with the assumed markup backed out, the same rule as the Financials tab. The percentage is the margin on the initial sum.">Budgeted profit</th>
-                                <th class="px-4 py-3 text-right whitespace-nowrap border-l border-line" title="Issued and paid valuation invoices to date. The memo shows the retention the client still holds — earned once certified, released on the cash pages.">Certified</th>
-                                <th class="px-4 py-3 text-right whitespace-nowrap" title="Allocated Xero purchase spend, net of credit notes — the Financials tab's Actual Cost of Sales.">Cost to date</th>
-                                <th class="px-4 py-3 text-right whitespace-nowrap" title="Certified less cost to date; the percentage is the margin on certified.">Current profit</th>
-                                <th class="px-4 py-3 text-right whitespace-nowrap border-l border-line" title="The revised contract sum not yet certified — the revenue still to come.">Left to certify</th>
-                                <th class="px-4 py-3 text-right whitespace-nowrap" title="Final cost less cost to date — the spend still to come. Negative means the job has already spent past its forecast.">Cost to complete</th>
-                                <th class="px-4 py-3 text-right whitespace-nowrap" title="Left to certify less cost to complete; the percentage is the margin on what is left. Current profit plus profit to finish equals the forecast, to the penny.">Profit to finish</th>
-                                <th class="px-4 py-3 text-right whitespace-nowrap border-l border-line" title="Committed cost of sales plus remaining drawdown — the Financials tab's Forecasted Cost of Sales total.">Final cost</th>
-                                <th class="px-4 py-3 text-right whitespace-nowrap" title="Contract value less final cost; the percentage is the margin on contract value.">Forecast profit</th>
+                                <th class="px-4 py-3 min-w-[240px]">@SortHeader("project", "Project")</th>
+                                <th class="px-4 py-3 text-right whitespace-nowrap border-l border-line" title="The revised contract sum — initial contract plus net approved variations (the memo line).">@SortHeader("contract", "Contract value")</th>
+                                <th class="px-4 py-3 text-right whitespace-nowrap" title="Initial contract sum less its target cost — the sum with the assumed markup backed out, the same rule as the Financials tab. The percentage is the margin on the initial sum.">@SortHeader("budgeted", "Budgeted profit")</th>
+                                <th class="px-4 py-3 text-right whitespace-nowrap border-l border-line" title="Issued and paid valuation invoices to date. The memo shows the retention the client still holds — earned once certified, released on the cash pages.">@SortHeader("certified", "Certified")</th>
+                                <th class="px-4 py-3 text-right whitespace-nowrap" title="Allocated Xero purchase spend, net of credit notes — the Financials tab's Actual Cost of Sales.">@SortHeader("cost", "Cost to date")</th>
+                                <th class="px-4 py-3 text-right whitespace-nowrap" title="Certified less cost to date; the percentage is the margin on certified.">@SortHeader("current", "Current profit")</th>
+                                <th class="px-4 py-3 text-right whitespace-nowrap border-l border-line" title="The revised contract sum not yet certified — the revenue still to come.">@SortHeader("left", "Left to certify")</th>
+                                <th class="px-4 py-3 text-right whitespace-nowrap" title="Final cost less cost to date — the spend still to come. Negative means the job has already spent past its forecast.">@SortHeader("ctc", "Cost to complete")</th>
+                                <th class="px-4 py-3 text-right whitespace-nowrap" title="Left to certify less cost to complete; the percentage is the margin on what is left. Current profit plus profit to finish equals the forecast, to the penny.">@SortHeader("tofinish", "Profit to finish")</th>
+                                <th class="px-4 py-3 text-right whitespace-nowrap border-l border-line" title="Committed cost of sales plus remaining drawdown — the Financials tab's Forecasted Cost of Sales total.">@SortHeader("finalcost", "Final cost")</th>
+                                <th class="px-4 py-3 text-right whitespace-nowrap" title="Contract value less final cost; the percentage is the margin on contract value.">@SortHeader("forecast", "Forecast profit")</th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-line">
@@ -846,20 +846,82 @@ else
 
     // Every region (the strip; the bridge + table + totals together; the export) builds this
     // list once and reads rows from it, rather than each cell calling RowFor for itself.
-    // The one list on this page that departs from the A–Z convention: a profit table reads as a
-    // league table, so within each work-order band (live work first, then Defects Period, then
-    // Completed — the bands stay, per the project-ordering convention) jobs rank by current
-    // profit, best first. Sorted here rather than in SelectedProjects because the rank needs the
-    // loaded figures — TableReady gates every caller, so the order never shifts mid-load. Name
-    // and reference tie-breaks keep equal-profit rows stable between renders.
-    private List<(Project Project, ProfitRow Row)> LoadedRows() =>
-        SelectedProjects
-            .Select(project => (Project: project, Row: RowFor(project.ProjectId)))
-            .OrderBy(entry => entry.Project.Stage.WorkRank())
-            .ThenByDescending(entry => entry.Row.CurrentProfit)
+    // Header sorting, the same behaviour as the Financials table: the Project column starts
+    // ascending, every value column starts descending (biggest first — what the numbers are
+    // usually sorted for), and clicking the active column flips the direction. A clicked column
+    // ranks the WHOLE table — completed jobs mix in among live ones, because the point of
+    // clicking is the comparison. Only the default order (no column clicked) keeps the
+    // work-order bands.
+    private string? sortColumn;
+    private bool sortDescending;
+
+    private void SortBy(string column)
+    {
+        if (sortColumn == column)
+        {
+            sortDescending = !sortDescending;
+            return;
+        }
+        sortColumn = column;
+        sortDescending = column != "project";
+    }
+
+    private RenderFragment SortHeader(string column, string label) => __builder =>
+    {
+        <button type="button"
+                class="inline-flex items-center gap-1 uppercase tracking-wider font-semibold hover:text-content"
+                title="Sort by @label"
+                @onclick="() => SortBy(column)">
+            @label
+            @if (sortColumn == column)
+            {
+                <span aria-hidden="true">@(sortDescending ? "▼" : "▲")</span>
+            }
+        </button>
+    };
+
+    private static decimal SortValue(ProfitRow row, string column) => column switch
+    {
+        "contract" => row.ContractValue,
+        "budgeted" => row.BudgetedProfit,
+        "certified" => row.CertifiedToDate,
+        "cost" => row.ActualCostOfSales,
+        "current" => row.CurrentProfit,
+        "left" => row.LeftToCertify,
+        "ctc" => row.CostToComplete,
+        "tofinish" => row.ToFinishProfit,
+        "finalcost" => row.ForecastCostOfSales,
+        "forecast" => row.ForecastedProfit,
+        _ => 0m
+    };
+
+    // The rows the table renders. The default order (no column clicked) is the one departure
+    // from the A–Z convention: a profit table reads as a league table, so within each
+    // work-order band (live work first, then Defects Period, then Completed — the bands stay,
+    // per the project-ordering convention) jobs rank by current profit, best first. Sorted here
+    // rather than in SelectedProjects because the rank needs the loaded figures — TableReady
+    // gates every caller, so the order never shifts mid-load. Name and reference tie-breaks
+    // keep equal-value rows stable between renders.
+    private List<(Project Project, ProfitRow Row)> LoadedRows()
+    {
+        var entries = SelectedProjects.Select(project => (Project: project, Row: RowFor(project.ProjectId)));
+        var ordered = sortColumn switch
+        {
+            null => entries
+                .OrderBy(entry => entry.Project.Stage.WorkRank())
+                .ThenByDescending(entry => entry.Row.CurrentProfit),
+            "project" => sortDescending
+                ? entries.OrderByDescending(entry => entry.Project.Name, StringComparer.OrdinalIgnoreCase)
+                : entries.OrderBy(entry => entry.Project.Name, StringComparer.OrdinalIgnoreCase),
+            _ => sortDescending
+                ? entries.OrderByDescending(entry => SortValue(entry.Row, sortColumn))
+                : entries.OrderBy(entry => SortValue(entry.Row, sortColumn))
+        };
+        return ordered
             .ThenBy(entry => entry.Project.Name, StringComparer.OrdinalIgnoreCase)
             .ThenBy(entry => entry.Project.Reference, StringComparer.OrdinalIgnoreCase)
             .ToList();
+    }
 
     private static ProfitRow TotalsOf(IReadOnlyList<(Project Project, ProfitRow Row)> rows) =>
         new(
