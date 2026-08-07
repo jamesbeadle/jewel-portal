@@ -62,6 +62,7 @@ public sealed class JpmsContext : DbContext
     public DbSet<BidPackageDrawingEntity> BidPackageDrawings => Set<BidPackageDrawingEntity>();
     public DbSet<WorkOrderEntity> WorkOrders => Set<WorkOrderEntity>();
     public DbSet<WorkOrderLineEntity> WorkOrderLines => Set<WorkOrderLineEntity>();
+    public DbSet<WorkOrderAttachmentEntity> WorkOrderAttachments => Set<WorkOrderAttachmentEntity>();
     public DbSet<VariationOrderEntity> VariationOrders => Set<VariationOrderEntity>();
     public DbSet<SubcontractorVariationRequestEntity> SubcontractorVariationRequests => Set<SubcontractorVariationRequestEntity>();
     public DbSet<RequestEntity> Requests => Set<RequestEntity>();
@@ -319,6 +320,11 @@ public sealed class JpmsContext : DbContext
         modelBuilder.Entity<RequestAttachmentEntity>()
             .HasIndex(row => row.RequestId)
             .HasDatabaseName("IX_RequestAttachments_RequestId");
+        // Work-order attachments are always read per order (the PO page's panel and the
+        // create-form uploads land through the same list).
+        modelBuilder.Entity<WorkOrderAttachmentEntity>()
+            .HasIndex(row => row.WorkOrderId)
+            .HasDatabaseName("IX_WorkOrderAttachments_WorkOrderId");
 
         // ---- Audit trail ---------------------------------------------------------------------------
         // The register is read per record (a request's own History panel) as well as per project.

@@ -7,6 +7,8 @@
 @using Jewel.JPMS.Contracts.MailboxCompose
 @using Jewel.JPMS.Features.Triage
 @using Jewel.JPMS.Contracts.Procurement
+@using Jewel.JPMS.Features.Procurement
+@using Jewel.JPMS.Contracts.RecordLinks
 @using Jewel.JPMS.Contracts.Requests
 @using Jewel.JPMS.Contracts.Todos
 @using Jewel.JPMS.Features.Todos
@@ -20,8 +22,10 @@
 @inject IRequestRegister RequestRegister
 @inject IDrawingStore DrawingStore
 @inject ICommandSender Commands
+@inject IWorkOrderAttachmentStore WorkOrderAttachments
 @inject IQueryClient Queries
 @inject Jewel.JPMS.Features.Projects.ProjectListReadModel Projects
+@inject Jewel.JPMS.Features.Subcontractors.SubcontractorsReadModel Subcontractors
 @implements IDisposable
 
 <PageTitle>Control Centre · JPMS</PageTitle>
@@ -549,6 +553,19 @@ else
                                 <p class="text-sm text-content">@linkNote</p>
                             </div>
                         }
+                        @if (poEmailNote is not null)
+                        {
+                            <div class="panel p-5 mb-4 @(poEmailNoteIsSuccess ? "border-positive/40" : "border-amber-500/40") space-y-2">
+                                <div class="flex items-center justify-between gap-2">
+                                    <p class="text-xs uppercase tracking-wider font-semibold @(poEmailNoteIsSuccess ? "text-positive" : "text-amber-600")">
+                                        Purchase-order email
+                                    </p>
+                                    <button type="button" class="text-content-subtle hover:text-content text-xs" title="Dismiss"
+                                            @onclick="() => poEmailNote = null">✕</button>
+                                </div>
+                                <p class="text-sm text-content">@poEmailNote</p>
+                            </div>
+                        }
                         <div class="panel p-8 text-center text-sm text-content-subtle">
                             Select an email to process it.
                         </div>
@@ -671,14 +688,34 @@ else
                                 @* The programme's relevant-event flag sits OUTSIDE System Tags: the programme
                                    bucket isn't a record anyone links or creates — every project has exactly
                                    one — so filing an email to it is a tick, not a record pick. Staged like
-                                   everything else; the Apply below tags the email's thread to the project's
-                                   programme so it shows under the Programme tab's Relevant Events. *@
+                                   everything else; the Apply below tags the email to the project's
+                                   programme so it shows under the Programme tab's Relevant Events (the
+                                   thread checkbox below decides whether the rest of the conversation
+                                   comes along). *@
                                 <label class="mt-3 flex items-start gap-2 cursor-pointer select-none">
                                     <input type="checkbox" checked="@relevantEventStaged"
                                            @onchange="e => relevantEventStaged = e.Value is true" />
                                     <span class="text-sm text-content">
                                         Relevant Event for Programme
-                                        <span class="block text-xs text-content-subtle">Tags the email's thread to the project's programme — it appears in the Programme tab's Relevant Events.</span>
+                                        <span class="block text-xs text-content-subtle">Tags the email to the project's programme — it appears in the Programme tab's Relevant Events.</span>
+                                    </span>
+                                </label>
+
+                                @* Thread scope for the WHOLE apply. By default every action above —
+                                   record links, a created record, the Relevant Event tag, to-dos —
+                                   tags ONLY the clicked email; its thread siblings stay in the queue
+                                   for their own decisions. This tick opts the whole apply into the
+                                   conversation: everything also tags every email currently in the
+                                   thread, clearing them from the queue in one go. Deliberately a
+                                   per-apply checkbox (cleared with the rest of the staging), never a
+                                   remembered preference: sweeping a thread is a decision about THIS
+                                   thread. *@
+                                <label class="mt-2 flex items-start gap-2 cursor-pointer select-none">
+                                    <input type="checkbox" checked="@triageEntireThread"
+                                           @onchange="e => triageEntireThread = e.Value is true" />
+                                    <span class="text-sm text-content">
+                                        Also triage the email's entire thread
+                                        <span class="block text-xs text-content-subtle">Everything you apply also tags every email currently in this conversation, clearing them from the queue together. Leave off to deal with just this email.</span>
                                     </span>
                                 </label>
 
@@ -1141,6 +1178,7 @@ else
                  ProjectId="@triageProjectId"
                  EmailSubject="@(selected?.Subject ?? "")"
                  SenderEmail="@(selected?.FromEmail ?? "")"
+                 EmailAttachments="@(detail?.Attachments ?? Array.Empty<IntakeAttachment>())"
                  LockedPathway="@(FixedPathway is { } fp ? PathwayLabel(fp) : null)"
                  ActivePathway="@(pathway is { } chosenPathway ? PathwayLabel(chosenPathway) : null)"
                  ActivePathwayChanged="OnModalPathwayChanged"
@@ -1577,6 +1615,11 @@ else
     // some picks didn't take, so the notice — shown in place of the cleared selection — says which
     // and points at the Tagged view to finish. Dismissable; cleared on the next selection/link.
     private string? linkNote;
+    // What happened to the automatic purchase-order email after a work order was raised
+    // un-drafted from this queue — sent, saved as a mailbox draft, or skipped and why. Shown in
+    // place of the cleared selection like linkNote; dismissable; cleared on the next selection.
+    private string? poEmailNote;
+    private bool poEmailNoteIsSuccess;
     private IReadOnlyList<LinkableRecord> linkRecords = Array.Empty<LinkableRecord>();
     private bool linkRecordsLoading;
 
@@ -1640,7 +1683,7 @@ else
 
     // The staged-work modals + armed discard. The System Tags modal's tab mirrors the page's own
     // `pathway` field (the pathway decision); stagedCreate is the modal's drafted new record
-    // (null = none) — StagedRecordKind decides whether Apply raises a request, a bid package or a work order.
+    // (null = none) — StagedRecordKind decides whether Apply raises a request, a bid package, a work order or a defect.
     private bool todoModalOpen;
     private bool tagsModalOpen;
     private bool discardArmed;
@@ -1649,6 +1692,11 @@ else
     // Apply. Lives OUTSIDE System Tags because the programme bucket isn't a record anyone picks
     // or creates: every project has exactly one, so filing to it is a yes/no, not a search.
     private bool relevantEventStaged;
+    // The "Also triage the email's entire thread" tick: when on, every action in the apply spreads
+    // across the whole current conversation (LinkThreadScope.EntireThread); when off — the default —
+    // each action tags only the clicked email (MessageOnly). Never persisted, cleared with the rest
+    // of the staging on every selection/view change and after every apply.
+    private bool triageEntireThread;
 
     // The System Tags modal's tab IS the pathway decision — parse the tab label back onto the
     // page's own pathway state so filing, to-dos and a record-less reply all read one field.
@@ -1660,7 +1708,10 @@ else
     private int StagedTagCount => pickedRecords.Count + (StagedCreateReady ? 1 : 0);
 
     private bool StagedCreateReady =>
-        stagedCreate is { } sc && !string.IsNullOrWhiteSpace(sc.Title);
+        // A defect has no title — its description is what makes it a real staged record.
+        stagedCreate is { } sc && (sc.Kind == StagedRecordKind.Defect
+            ? !string.IsNullOrWhiteSpace(sc.Description)
+            : !string.IsNullOrWhiteSpace(sc.Title));
 
     private string? TodoProjectNote =>
         string.IsNullOrWhiteSpace(triageProjectId)
@@ -1784,6 +1835,7 @@ else
         discardArmed = false;
         stagedCreate = null;
         relevantEventStaged = false;
+        triageEntireThread = false;
         pickedRecords.Clear();
         actionError = null;
         composeOutcome = null;
@@ -1808,6 +1860,7 @@ else
         discardArmed = false;
         stagedCreate = null;
         relevantEventStaged = false;
+        triageEntireThread = false;
         pickedRecords.Clear();
         actionError = null;
         composeOutcome = null;
@@ -2052,6 +2105,7 @@ else
         ResetLinkState();
         composeOutcome = null;
         linkNote = null;
+        poEmailNote = null;
         replyBody = "";
         replyToField = replyCcField = replyBccField = replySubject = "";
         replyShowBcc = false;
@@ -2066,10 +2120,12 @@ else
         discardArmed = false;
         stagedCreate = null;
         relevantEventStaged = false;
+        triageEntireThread = false;
     }
 
     // Open the clicked email exactly as clicked — the selection stays on it; the thread panel
-    // below still shows any newer replies for context (actions apply thread-wide regardless).
+    // below still shows any newer replies for context. Actions apply to just this email unless
+    // the "entire thread" checkbox opts the apply into the whole conversation.
     private async Task Select(MailboxMessage item)
     {
         ApplySelection(item);
@@ -2297,7 +2353,8 @@ else
 
     // Reply-all prefill, computed once per selection from the opened email's envelope: the sender
     // (or their Reply-To) goes in To; the original To + Cc — minus whoever is now in To — go in Cc.
-    // The projects mailbox is auto-copied server-side, so it's filtered out of the visible Cc here.
+    // The projects mailbox itself is filtered out — Cc'ing it would deliver a copy back to the
+    // Inbox and land it in the triage queue (decision 2026-08-07: no auto-Cc anywhere).
     private void PrefillReplyEnvelope(MailboxMessage item, MailboxMessageDetail loaded)
     {
         if (replyEnvelopePrefilled) return;
@@ -2309,8 +2366,8 @@ else
             .Concat(loaded.Cc ?? Array.Empty<string>())
             .Where(a => !string.IsNullOrWhiteSpace(a))
             .Where(a => !a.Equals(toAddress, StringComparison.OrdinalIgnoreCase))
-            // The projects mailbox is auto-copied on every send server-side — showing it here
-            // would only invite someone to delete it or double it.
+            // Strip the projects mailbox from the prefill: replying with it on Cc would deliver
+            // the sent email back into the Inbox, where it lands in the triage queue again.
             .Where(a => loaded.MailboxAddress is null || !a.Equals(loaded.MailboxAddress, StringComparison.OrdinalIgnoreCase))
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToList();
@@ -2357,9 +2414,8 @@ else
                 parts.Add(stagedCreate!.Kind switch
                 {
                     StagedRecordKind.BidPackage => "create the bid package from this email",
-                    StagedRecordKind.WorkOrder => stagedCreate.SaveAsDraft
-                        ? "raise the draft work order from this email"
-                        : "raise the work order from this email",
+                    StagedRecordKind.WorkOrder => StagedWorkOrderSummary(stagedCreate),
+                    StagedRecordKind.Defect => "raise the defect from this email",
                     _ => "create the request from this email"
                 });
             if (relevantEventStaged)
@@ -2367,8 +2423,26 @@ else
             if (discardArmed)
                 parts.Add("discard this email and its thread");
             if (parts.Count == 0) return null;
-            return parts.Count == 1 ? parts[0] : string.Join(", ", parts.Take(parts.Count - 1)) + " and " + parts[^1];
+            var summary = parts.Count == 1 ? parts[0] : string.Join(", ", parts.Take(parts.Count - 1)) + " and " + parts[^1];
+            // The thread tick changes what an apply MEANS, so the sentence says so — but only when
+            // something staged actually spreads (a bare discard is thread-wide regardless).
+            if (triageEntireThread && !(discardArmed && parts.Count == 1))
+                summary += " — covering every email currently in this thread";
+            return summary;
         }
+    }
+
+    // The staged work order phrased for the apply note, counting the record-keeping attachments
+    // (ticked email files + picked uploads) it will keep on the new order.
+    private static string StagedWorkOrderSummary(StagedRecordCreate staged)
+    {
+        var label = staged.SaveAsDraft
+            ? "raise the draft work order from this email"
+            : "raise the work order from this email and email the purchase order to the subcontractor";
+        var attachmentCount = staged.EmailAttachmentIds.Count + staged.UploadFiles.Count;
+        return attachmentCount == 0
+            ? label
+            : $"{label} (keeping {attachmentCount} attachment{(attachmentCount == 1 ? "" : "s")} on the order — not emailed)";
     }
 
     private string ApplyButtonLabel
@@ -2451,6 +2525,8 @@ else
         var createReady = StagedCreateReady && !string.IsNullOrWhiteSpace(triageProjectId);
         var relevantEvent = relevantEventStaged;
         var discarding = discardArmed;
+        // One scope for the whole apply: the checkbox opts every staged action into the thread.
+        var scope = triageEntireThread ? LinkThreadScope.EntireThread : LinkThreadScope.MessageOnly;
         if (!replying && drafts.Count == 0 && picks.Count == 0 && !createReady && !relevantEvent && !discarding) return;
 
         // A reply and a discard contradict each other — an email worth answering isn't spam.
@@ -2493,6 +2569,13 @@ else
             actionError = $"The staged work order isn't ready — {orderProblem} Finish it in System Tags, or remove it.";
             return;
         }
+        // Same "decision not yet made" rule for a staged defect with no description yet.
+        if (createReady && stagedCreate is { Kind: StagedRecordKind.Defect } stagedDefect
+            && stagedDefect.DefectProblem is { } defectProblem)
+        {
+            actionError = $"The staged defect isn't ready — {defectProblem} Finish it in System Tags, or remove it.";
+            return;
+        }
         if (replying)
         {
             if (ParseRecipients(replyToField).Count == 0) { actionError = "Add a To recipient to the reply."; return; }
@@ -2522,7 +2605,8 @@ else
                     drafts,
                     LinkRequestId: null,
                     InternetMessageId: anchor.InternetMessageId,
-                    Pathway: pathway is { } chosenForTodos ? PathwayLabel(chosenForTodos) : null));
+                    Pathway: pathway is { } chosenForTodos ? PathwayLabel(chosenForTodos) : null,
+                    Scope: scope));
                 // One batch per apply: clear the rows so a cross-filing re-run can't double-raise.
                 createTodoRows = new List<TodoDraftRow> { new() };
                 filed = true;
@@ -2539,7 +2623,8 @@ else
                         await Intake.LinkMessageToRecordAsync(
                             anchor.Id, anchor.InternetMessageId, record.Type, record.RecordId,
                             pathway: CostCentrePathwayFor(record),
-                            allowCrossPathway: allowCrossPathway);
+                            allowCrossPathway: allowCrossPathway,
+                            scope: scope);
                     }
                     catch (CommandFailedException ex) when (!allowCrossPathway && IsCrossFilePrompt(ex.Message))
                     {
@@ -2565,7 +2650,8 @@ else
                     await Intake.LinkMessageToRecordAsync(
                         anchor.Id, anchor.InternetMessageId, RecordType.Scheduling, triageProjectId,
                         pathway: null,
-                        allowCrossPathway: allowCrossPathway);
+                        allowCrossPathway: allowCrossPathway,
+                        scope: scope);
                 }
                 catch (CommandFailedException ex) when (!allowCrossPathway && IsCrossFilePrompt(ex.Message))
                 {
@@ -2582,7 +2668,8 @@ else
                     busyLabel = "Creating bid package";
                     await Intake.CreateBidPackageFromMessageAsync(new CreateBidPackageFromMessage(
                         anchor.Id, triageProjectId, staged.Title.Trim(), staged.Trade?.Trim() ?? "",
-                        InternetMessageId: anchor.InternetMessageId));
+                        InternetMessageId: anchor.InternetMessageId,
+                        Scope: scope));
                 }
                 else if (staged.Kind == StagedRecordKind.WorkOrder)
                 {
@@ -2595,7 +2682,7 @@ else
                         .Select(line => new ManualWorkOrderLine(
                             line.CostCode, line.Title.Trim(), line.Amount!.Value, line.Description.Trim()))
                         .ToList();
-                    await Intake.CreateWorkOrderFromMessageAsync(new CreateWorkOrderFromMessage(
+                    var raisedOrder = await Intake.CreateWorkOrderFromMessageAsync(new CreateWorkOrderFromMessage(
                         anchor.Id, triageProjectId, staged.SubcontractorId,
                         staged.Title.Trim(), staged.Scope.Trim(), orderLines,
                         ProgrammeStart: AsUtcDate(staged.ProgrammeStart),
@@ -2606,7 +2693,58 @@ else
                         DepositPercent: staged.DepositRequired
                             ? StagedRecordCreate.ParseDecimal(staged.DepositPercentText)
                             : null,
-                        InternetMessageId: anchor.InternetMessageId));
+                        InternetMessageId: anchor.InternetMessageId,
+                        Scope: scope,
+                        // Ticked email attachments — copied onto the order server-side (record
+                        // keeping only; never sent to the supplier).
+                        AttachmentIds: staged.EmailAttachmentIds.Count > 0 ? staged.EmailAttachmentIds.ToList() : null));
+
+                    // The email the modal's warning promised: a released (non-draft) order sends
+                    // its purchase order to the supplier there and then. Non-fatal by design —
+                    // the order is raised and the email tagged to it either way; the note (shown
+                    // where the cleared selection was) says what happened.
+                    if (!staged.SaveAsDraft)
+                    {
+                        busyLabel = "Emailing purchase order";
+                        (poEmailNote, poEmailNoteIsSuccess) = await TrySendWorkOrderPoEmailAsync(raisedOrder, orderLines);
+                    }
+
+                    // Files picked from this computer land straight after the order exists —
+                    // multipart to the order's attachment endpoint. Record keeping only: never
+                    // part of the purchase-order email above.
+                    if (staged.UploadFiles.Count > 0)
+                    {
+                        busyLabel = "Uploading attachments";
+                        try
+                        {
+                            await WorkOrderAttachments.UploadFilesAsync(raisedOrder.WorkOrderId, staged.UploadFiles.ToList());
+                        }
+                        catch (Exception ex)
+                        {
+                            // The order exists and the email is tagged to it — never re-raise it.
+                            // Stop here (before any reply sends) so the failure is seen; the email
+                            // stays selected and the files can be re-added from the order's PO page.
+                            var fileCount = staged.UploadFiles.Count;
+                            stagedCreate = null;
+                            actionError = $"{raisedOrder.Reference} was raised and this email tagged to it, but the picked "
+                                + $"file{(fileCount == 1 ? "" : "s")} couldn't be uploaded — add "
+                                + $"{(fileCount == 1 ? "it" : "them")} again from the order's PO page. ({ex.Message})";
+                            return;
+                        }
+                    }
+                }
+                else if (staged.Kind == StagedRecordKind.Defect)
+                {
+                    // The defect staged in System Tags, raised through the same rules as a manual
+                    // defect (numbering, Open status) with the email tagged to it.
+                    busyLabel = "Raising defect";
+                    await Intake.CreateDefectFromMessageAsync(new Jewel.JPMS.Contracts.Closeout.CreateDefectFromMessage(
+                        anchor.Id, triageProjectId,
+                        staged.Description.Trim(),
+                        staged.DefectLocation.Trim(),
+                        staged.DefectAssignedTo.Trim(),
+                        InternetMessageId: anchor.InternetMessageId,
+                        Scope: scope));
                 }
                 else
                 {
@@ -2618,7 +2756,8 @@ else
                         DrawingRef: NullIfBlank(staged.DrawingRef),
                         ResponseDue: ParseDate(staged.ResponseDue),
                         InternetMessageId: anchor.InternetMessageId,
-                        AddToProgramme: staged.AddToProgramme));
+                        AddToProgramme: staged.AddToProgramme,
+                        Scope: scope));
                 }
                 // One create per apply: clear it so a cross-filing re-run can't double-create.
                 stagedCreate = null;
@@ -2667,6 +2806,7 @@ else
             discardArmed = false;
             stagedCreate = null;
             relevantEventStaged = false;
+            triageEntireThread = false;
             pickedRecords.Clear();
         }
         catch (CommandFailedException ex)
@@ -2678,6 +2818,45 @@ else
             actionError = "That didn't complete. Please try again.";
         }
         finally { busy = false; }
+    }
+
+    /// <summary>Sends the purchase-order email a released (non-draft) work order promised —
+    /// the same covering email every other route sends (WorkOrderPoEmail). Never throws: the
+    /// order is already raised, so the outcome is a note, not an error.</summary>
+    private async Task<(string Note, bool Sent)> TrySendWorkOrderPoEmailAsync(
+        WorkOrder order, IReadOnlyList<ManualWorkOrderLine> orderLines)
+    {
+        var supplier = (Subcontractors.Current ?? Array.Empty<Subcontractor>()).FirstOrDefault(sub =>
+            string.Equals(sub.SubcontractorId, order.SubcontractorId, StringComparison.OrdinalIgnoreCase));
+        if (supplier is null || string.IsNullOrWhiteSpace(supplier.ContactEmail))
+            return ($"{order.Reference} was raised, but the supplier has no email address in the directory "
+                + "so the purchase order wasn't emailed — add one, then send it from the order's PO page.", false);
+
+        var projectName = Projects.Find(triageProjectId)?.Name ?? "";
+        var emailLines = orderLines
+            .Select(line => new WorkOrderPoEmail.Line(line.Title, 1m, "item", line.Amount))
+            .ToList();
+        try
+        {
+            var outcome = await Commands.SendAsync(new SendWorkOrderPoEmail(
+                order.WorkOrderId,
+                WorkOrderPoEmail.Subject(order, string.IsNullOrWhiteSpace(projectName) ? triageProjectId : projectName),
+                WorkOrderPoEmail.Body(order, supplier.CompanyName, emailLines, projectName, Nav.BaseUri)),
+                CancellationToken.None);
+            return outcome.Sent
+                ? ($"{order.Reference} was raised and the purchase order was emailed to {outcome.RecipientEmail}.", true)
+                : ($"{order.Reference} was raised. {outcome.FailureNote}", false);
+        }
+        catch (CommandFailedException ex)
+        {
+            return ($"{order.Reference} was raised, but the purchase-order email couldn't be sent: "
+                + $"{ex.Message} You can send it from the order's PO page.", false);
+        }
+        catch
+        {
+            return ($"{order.Reference} was raised, but the purchase-order email couldn't be sent "
+                + "— you can send it from the order's PO page.", false);
+        }
     }
 
     private void OnReplyToInput(ChangeEventArgs e) => replyToField = e.Value?.ToString() ?? "";
@@ -2969,6 +3148,7 @@ else
             discardArmed = false;
             stagedCreate = null;
             relevantEventStaged = false;
+            triageEntireThread = false;
             pickedRecords.Clear();
         }
         catch (CommandFailedException ex)

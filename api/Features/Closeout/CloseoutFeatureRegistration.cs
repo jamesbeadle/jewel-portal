@@ -24,6 +24,11 @@ public static class CloseoutFeatureRegistration
         services.AddScoped<UpdateDefectAuthorisation>();
         services.AddScoped<UpdateDefectValidation>();
 
+        // The Control Centre's "create new → Defect": raise + link the originating email.
+        services.AddScoped<ICommandHandler<CreateDefectFromMessage, Defect>, CreateDefectFromMessageHandler>();
+        services.AddScoped<CreateDefectFromMessageAuthorisation>();
+        services.AddScoped<CreateDefectFromMessageValidation>();
+
         services.AddScoped<ICommandHandler<AgreeSettlement, SettlementRecord>, AgreeSettlementHandler>();
         services.AddScoped<AgreeSettlementAuthorisation>();
         services.AddScoped<AgreeSettlementValidation>();

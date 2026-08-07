@@ -16,7 +16,24 @@ public sealed record Defect(
     string AssignedToEmail,
     DefectStatus Status,
     DateTimeOffset RaisedAt,
-    DateTimeOffset? ResolvedAt);
+    DateTimeOffset? ResolvedAt,
+    // Sequential human reference ("DEF-0001") — also the mailbox tag stem ("JPMS/DEF-0001"), so a
+    // triage email can be filed to the defect and the defect reads its mail back live by tag.
+    // Defaulted last so existing construction sites keep compiling; the server always mints it.
+    string Reference = "");
+
+public static class DefectStatusExtensions
+{
+    // UI wording for a status — the enum's InProgress must never leak into copy.
+    public static string DisplayName(this DefectStatus status) => status switch
+    {
+        DefectStatus.Open       => "Open",
+        DefectStatus.InProgress => "In progress",
+        DefectStatus.Resolved   => "Resolved",
+        DefectStatus.Verified   => "Verified",
+        _ => status.ToString()
+    };
+}
 
 public sealed record PracticalCompletion(
     string PracticalCompletionId,

@@ -95,6 +95,25 @@ public interface IMailboxGraphClient
     /// Mailbox-wide; unsent drafts are skipped (a tagged draft is the drafting flow's to manage).</summary>
     Task<IReadOnlyList<string>> ListTaggedIdsInConversationAsync(string conversationId, string category, CancellationToken ct);
 
+    /// <summary>Add a workflow category (plus the JPMS marker) to every conversation member that
+    /// doesn't yet carry it, using Graph JSON batching (20 PATCHes per round-trip) — the fast path
+    /// for thread-wide sweeps. A long thread must not cost several Graph round-trips per member:
+    /// the hosting platform's 45-second request ceiling turns per-message walks over big threads
+    /// into guaranteed 500s (JPMS-2B6023 — a 56-email thread ≈ 340 sequential calls).
+    /// <paramref name="receivedOnOrBefore"/> restricts the sweep exactly as
+    /// <see cref="ListUntaggedIdsInConversationAsync"/> does. Best-effort per member with no
+    /// read-back verification — callers verify their ANCHOR message individually via
+    /// <see cref="AssignAsync"/>; the sweep is the same best-effort covering the anchor's thread.
+    /// Returns how many members were patched successfully.</summary>
+    Task<int> TagConversationMembersAsync(string conversationId, string category, CancellationToken ct, DateTimeOffset? receivedOnOrBefore = null);
+
+    /// <summary>Remove a workflow category from every conversation member that carries it, using
+    /// Graph JSON batching — the fast inverse of <see cref="TagConversationMembersAsync"/>. A member
+    /// left with no workflow tag also loses its pathway tags and the marker (back to the triage
+    /// queue), mirroring <see cref="RemoveTagAsync"/>. Best-effort per member; returns how many
+    /// members were patched successfully.</summary>
+    Task<int> UntagConversationMembersAsync(string conversationId, string category, CancellationToken ct);
+
     /// <summary>
     /// Create a draft message in the mailbox's Drafts folder — recipients, subject, HTML body and
     /// attachments all pre-filled — for a person to review and send from the mailbox itself.
@@ -116,9 +135,10 @@ public interface IMailboxGraphClient
     /// <summary>
     /// Replace a staged draft's envelope — To/Cc/Bcc/Subject — with exactly what the composer
     /// submitted. The visible envelope is authoritative: Graph's createReplyAll recipients are only
-    /// scaffolding for the threading headers and quoted history. The projects mailbox is re-added
-    /// to Cc if the new envelope dropped it (same rule as WithProjectsMailboxCopy). Verified by
-    /// response status; returns false on failure (the draft is left as it was).
+    /// scaffolding for the threading headers and quoted history, and nothing is added behind the
+    /// composer's back (the projects mailbox is never auto-Cc'd — a delivered copy would land back
+    /// in the triage queue). Verified by response status; returns false on failure (the draft is
+    /// left as it was).
     /// </summary>
     Task<bool> UpdateDraftEnvelopeAsync(
         string draftMessageId,
@@ -131,7 +151,7 @@ public interface IMailboxGraphClient
     /// <summary>
     /// SEND a staged draft (<c>POST …/messages/{id}/send</c>). This is the single send chokepoint
     /// in the whole system — every outbound email still passes through the draft plumbing above
-    /// (projects-mailbox auto-Cc, category stamping, large-attachment upload sessions), and only
+    /// (category stamping, large-attachment upload sessions), and only
     /// this one call, made on an explicit human "Send" in the portal, moves it to Sent Items.
     /// No agent tool is wired to it. Needs the Mail.Send application permission (decision
     /// 2026-08-04, reversing ADR-006's draft-only rule); without consent Graph returns 403 and the
@@ -229,6 +249,10 @@ public sealed class NullMailboxGraphClient : IMailboxGraphClient
         Task.FromResult<IReadOnlyList<string>>(Array.Empty<string>());
     public Task<IReadOnlyList<string>> ListTaggedIdsInConversationAsync(string conversationId, string category, CancellationToken ct) =>
         Task.FromResult<IReadOnlyList<string>>(Array.Empty<string>());
+    public Task<int> TagConversationMembersAsync(string conversationId, string category, CancellationToken ct, DateTimeOffset? receivedOnOrBefore = null) =>
+        Task.FromResult(0);
+    public Task<int> UntagConversationMembersAsync(string conversationId, string category, CancellationToken ct) =>
+        Task.FromResult(0);
     public Task<MailboxDraft?> CreateDraftAsync(MailboxDraftMessage draft, CancellationToken ct) =>
         Task.FromResult<MailboxDraft?>(null);
     public Task<MailboxReplyDraft?> CreateReplyDraftAsync(MailboxReplyDraftMessage reply, CancellationToken ct) =>
@@ -714,6 +738,151 @@ public sealed class MailboxGraphClient : IMailboxGraphClient
             .ToList();
     }
 
+    public async Task<int> TagConversationMembersAsync(
+        string conversationId, string category, CancellationToken ct, DateTimeOffset? receivedOnOrBefore = null)
+    {
+        await EnsureMasterCategoryAsync(TriageCategories.Marker, ct);
+        await EnsureMasterCategoryAsync(category, ct);
+
+        // One raw read of the thread (full category lists included) replaces the old
+        // GET-current + PATCH + GET-verify walk per member; the cutoff semantics are identical to
+        // ListUntaggedIdsInConversationAsync.
+        var members = await ListConversationRawAsync(conversationId, ct);
+        var updates = members
+            .Where(m => !m.Categories.Contains(category, StringComparer.OrdinalIgnoreCase))
+            .Where(m => receivedOnOrBefore is null || m.ReceivedAt <= receivedOnOrBefore)
+            .Select(m => (m.Id, m.Categories
+                .Concat(new[] { TriageCategories.Marker, category })
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToArray()))
+            .ToList();
+        return await BatchPatchCategoriesAsync(updates, ct);
+    }
+
+    public async Task<int> UntagConversationMembersAsync(string conversationId, string category, CancellationToken ct)
+    {
+        var members = await ListConversationRawAsync(conversationId, ct);
+        var updates = new List<(string Id, string[] Categories)>();
+        foreach (var member in members
+            .Where(m => m.Categories.Contains(category, StringComparer.OrdinalIgnoreCase)))
+        {
+            var remaining = member.Categories
+                .Where(c => !c.Equals(category, StringComparison.OrdinalIgnoreCase))
+                .ToList();
+            // Same rule as RemoveTagAsync: no record/workflow tags left → drop pathway tags and the
+            // marker too, so the member returns to the triage queue rather than sitting outside it
+            // carrying only a bucket.
+            if (!remaining.Any(c => TriageCategories.IsWorkflowTag(c) && !TriageCategories.IsBucketTag(c)))
+            {
+                remaining.RemoveAll(TriageCategories.IsBucketTag);
+                remaining.RemoveAll(c => c.Equals(TriageCategories.Marker, StringComparison.OrdinalIgnoreCase));
+            }
+            updates.Add((member.Id, remaining.ToArray()));
+        }
+        return await BatchPatchCategoriesAsync(updates, ct);
+    }
+
+    // The raw thread view backing the batched sweeps: every member's id plus its FULL category list
+    // — marker, pathway tags and the user's own Outlook categories included, because a categories
+    // PATCH replaces the whole array, so the sweep must write back exactly what it read plus/minus
+    // the one tag. (MailboxMessage.Categories is no use here: Parse deliberately strips everything
+    // but the record tags.) Same constraints as ListConversationAsync: whole mailbox, no $orderby
+    // (Graph rejects it beside a conversationId filter), one capped page, unsent drafts skipped.
+    private async Task<List<(string Id, string[] Categories, DateTimeOffset ReceivedAt)>> ListConversationRawAsync(
+        string conversationId, CancellationToken ct)
+    {
+        var members = new List<(string Id, string[] Categories, DateTimeOffset ReceivedAt)>();
+        if (string.IsNullOrWhiteSpace(conversationId))
+            return members;
+
+        var filter = $"conversationId eq '{conversationId.Replace("'", "''")}'";
+        var url = $"{GraphBase}/users/{Mailbox}/messages"
+            + $"?$filter={Uri.EscapeDataString(filter)}"
+            + "&$select=id,categories,receivedDateTime,isDraft&$top=100";
+
+        using var response = await SendAsync(HttpMethod.Get, url, content: null, ct, allowNotFound: true, consistencyEventual: true);
+        if (!response.IsSuccessStatusCode)
+        {
+            _logger.LogWarning("Raw conversation list failed: {Status}. {Detail}",
+                (int)response.StatusCode, await SafeBodyAsync(response, ct));
+            return members;
+        }
+
+        await using var stream = await response.Content.ReadAsStreamAsync(ct);
+        using var doc = await JsonDocument.ParseAsync(stream, cancellationToken: ct);
+        if (doc.RootElement.TryGetProperty("value", out var arr) && arr.ValueKind == JsonValueKind.Array)
+            foreach (var item in arr.EnumerateArray())
+            {
+                if (IsDraft(item)) continue;
+                var id = item.TryGetProperty("id", out var idEl) ? idEl.GetString() : null;
+                if (string.IsNullOrEmpty(id)) continue;
+
+                var categories = Array.Empty<string>();
+                if (item.TryGetProperty("categories", out var catsEl) && catsEl.ValueKind == JsonValueKind.Array)
+                    categories = catsEl.EnumerateArray()
+                        .Select(c => c.GetString() ?? "")
+                        .Where(c => c.Length > 0)
+                        .ToArray();
+
+                DateTimeOffset receivedAt = default;
+                if (item.TryGetProperty("receivedDateTime", out var rdt) && rdt.TryGetDateTimeOffset(out var parsedAt))
+                    receivedAt = parsedAt;
+
+                members.Add((id, categories, receivedAt));
+            }
+        return members;
+    }
+
+    // Graph JSON batching (POST /$batch): up to 20 sub-requests per round-trip, each PATCHing one
+    // message's categories. Sub-request failures are logged and skipped — the sweeps are
+    // best-effort by contract (the caller's anchor tag is the verified association). Returns how
+    // many PATCHes came back 2xx.
+    private async Task<int> BatchPatchCategoriesAsync(
+        IReadOnlyList<(string Id, string[] Categories)> updates, CancellationToken ct)
+    {
+        var patched = 0;
+        foreach (var chunk in updates.Chunk(20))
+        {
+            var payload = new
+            {
+                requests = chunk.Select((update, index) => new
+                {
+                    id = index.ToString(),
+                    method = "PATCH",
+                    url = $"/users/{Mailbox}/messages/{Uri.EscapeDataString(update.Id)}",
+                    headers = new Dictionary<string, string> { ["Content-Type"] = "application/json" },
+                    body = new { categories = update.Categories }
+                }).ToArray()
+            };
+
+            using var response = await SendAsync(HttpMethod.Post, $"{GraphBase}/$batch", JsonContent.Create(payload), ct);
+            if (!response.IsSuccessStatusCode)
+            {
+                _logger.LogWarning("Category batch PATCH failed outright: {Status}. {Detail}",
+                    (int)response.StatusCode, await SafeBodyAsync(response, ct));
+                continue;
+            }
+
+            await using var stream = await response.Content.ReadAsStreamAsync(ct);
+            using var doc = await JsonDocument.ParseAsync(stream, cancellationToken: ct);
+            if (doc.RootElement.TryGetProperty("responses", out var responses) && responses.ValueKind == JsonValueKind.Array)
+                foreach (var sub in responses.EnumerateArray())
+                {
+                    var status = sub.TryGetProperty("status", out var statusEl) && statusEl.TryGetInt32(out var code) ? code : 0;
+                    if (status is >= 200 and < 300)
+                    {
+                        patched++;
+                        continue;
+                    }
+                    var messageId = sub.TryGetProperty("id", out var subId)
+                        && int.TryParse(subId.GetString(), out var at) && at >= 0 && at < chunk.Length
+                            ? chunk[at].Id : "(unknown)";
+                    _logger.LogWarning("Category batch PATCH for {MessageId} failed: {Status}.", messageId, status);
+                }
+        }
+        return patched;
+    }
+
     private async Task<string?> FindByInternetMessageIdAsync(string internetMessageId, CancellationToken ct)
     {
         var escaped = internetMessageId.Replace("'", "''");
@@ -827,38 +996,18 @@ public sealed class MailboxGraphClient : IMailboxGraphClient
     // Graph only accepts attachments up to ~3 MB inline; larger files stream through an upload session.
     private const long InlineAttachmentLimit = 3_000_000;
 
-    /// <summary>
-    /// The projects mailbox is copied on every outbound draft. The draft already sits in the
-    /// mailbox's Drafts folder and the sent copy lands in its Sent Items, but an explicit Cc means
-    /// the mailbox also receives the message as delivered mail — so the thread is complete in one
-    /// place even when a recipient replies to only some of the addressees. Applied here, at the one
-    /// chokepoint every new draft passes through, so no caller can forget it. Idempotent: the
-    /// address is never added twice, and never demoted from an existing To/Bcc placement.
-    /// </summary>
-    private MailboxDraftMessage WithProjectsMailboxCopy(MailboxDraftMessage draft)
-    {
-        var mailbox = _options.Mailbox;
-        if (string.IsNullOrWhiteSpace(mailbox)) return draft;
-
-        bool Already(IReadOnlyList<MailboxDraftRecipient>? recipients) =>
-            recipients is not null
-            && recipients.Any(r => string.Equals(r.Email?.Trim(), mailbox, StringComparison.OrdinalIgnoreCase));
-
-        if (Already(draft.To) || Already(draft.Cc) || Already(draft.Bcc)) return draft;
-
-        var cc = draft.Cc is null
-            ? new List<MailboxDraftRecipient>()
-            : new List<MailboxDraftRecipient>(draft.Cc);
-        cc.Add(new MailboxDraftRecipient(mailbox.Trim()));
-        return draft with { Cc = cc };
-    }
+    // NOTE (decision 2026-08-07): the projects mailbox is deliberately NOT auto-Cc'd on outbound
+    // drafts (this removes the old WithProjectsMailboxCopy rule). A Cc'd copy arrives back in the
+    // mailbox's Inbox as delivered mail WITHOUT the draft's categories, so every send landed
+    // straight back in the triage queue as an apparently new email. The outbound leg is not lost:
+    // the sent copy lives in Sent Items, record correspondence reads tags across the whole mailbox
+    // (Sent Items included), and replies still return because the mailbox is the From address.
 
     public async Task<MailboxDraft?> CreateDraftAsync(MailboxDraftMessage draft, CancellationToken ct)
     {
         // POST /users/{mailbox}/messages creates the message in the Drafts folder. Attachments under
         // the ~3 MB inline limit go in the same call; anything larger (e.g. drawings) is streamed
         // onto the created draft through an upload session afterwards.
-        draft = WithProjectsMailboxCopy(draft);
         var url = $"{GraphBase}/users/{Mailbox}/messages";
         var large = draft.Attachments.Where(a => a.Content.LongLength > InlineAttachmentLimit).ToList();
         var small = large.Count == 0 ? draft.Attachments : draft.Attachments.Where(a => a.Content.LongLength <= InlineAttachmentLimit).ToList();
@@ -939,20 +1088,10 @@ public sealed class MailboxGraphClient : IMailboxGraphClient
         if (reply.Categories is { Count: > 0 } categories)
             patchPayload["categories"] = categories.ToArray();
 
-        // Copy the projects mailbox on the reply too. createReplyAll pre-fills the original
-        // correspondents but never the mailbox itself, so it is added here (once) alongside them —
-        // the same rule new drafts get in WithProjectsMailboxCopy.
-        if (!string.IsNullOrWhiteSpace(_options.Mailbox)
-            && !to.Concat(cc).Any(e => string.Equals(e.Trim(), _options.Mailbox, StringComparison.OrdinalIgnoreCase)))
-        {
-            cc.Add(_options.Mailbox.Trim());
-            patchPayload["ccRecipients"] = cc
-                .Select(email => new Dictionary<string, object?>
-                {
-                    ["emailAddress"] = new Dictionary<string, object?> { ["address"] = email }
-                })
-                .ToArray();
-        }
+        // The projects mailbox is NOT added to Cc (decision 2026-08-07, see the note above
+        // CreateDraftAsync) — a Cc'd copy would be delivered back to the Inbox untagged and land
+        // in the triage queue. createReplyAll's own recipients (the original correspondents) are
+        // kept as-is.
 
         using (var patchContent = JsonContent.Create(patchPayload))
         using (var patchResponse = await SendAsync(HttpMethod.Patch, $"{GraphBase}/users/{Mailbox}/messages/{Uri.EscapeDataString(id)}", patchContent, ct))
@@ -1118,17 +1257,9 @@ public sealed class MailboxGraphClient : IMailboxGraphClient
         string subject,
         CancellationToken ct)
     {
-        // The composer's envelope replaces Graph's scaffolding wholesale — but the projects mailbox
-        // keeps its copy: if the new envelope dropped it everywhere, it goes back on Cc (the same
-        // invariant WithProjectsMailboxCopy applies to fresh drafts).
-        var mailbox = _options.Mailbox?.Trim();
-        bool Has(IReadOnlyList<MailboxDraftRecipient> list) =>
-            !string.IsNullOrWhiteSpace(mailbox)
-            && list.Any(r => string.Equals(r.Email?.Trim(), mailbox, StringComparison.OrdinalIgnoreCase));
-        var ccFinal = cc;
-        if (!string.IsNullOrWhiteSpace(mailbox) && !Has(to) && !Has(cc) && !Has(bcc))
-            ccFinal = cc.Concat(new[] { new MailboxDraftRecipient(mailbox!) }).ToList();
-
+        // The composer's envelope replaces Graph's scaffolding wholesale. The projects mailbox is
+        // NOT re-added to Cc (decision 2026-08-07, see the note above CreateDraftAsync) — the
+        // envelope the user saw is exactly what is sent.
         static Dictionary<string, object?> Recipient(MailboxDraftRecipient r) => new()
         {
             ["emailAddress"] = string.IsNullOrWhiteSpace(r.Name)
@@ -1140,7 +1271,7 @@ public sealed class MailboxGraphClient : IMailboxGraphClient
         {
             ["subject"] = subject,
             ["toRecipients"] = to.Select(Recipient).ToArray(),
-            ["ccRecipients"] = ccFinal.Select(Recipient).ToArray(),
+            ["ccRecipients"] = cc.Select(Recipient).ToArray(),
             ["bccRecipients"] = bcc.Select(Recipient).ToArray()
         };
 

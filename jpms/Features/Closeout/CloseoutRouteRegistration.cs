@@ -39,6 +39,11 @@ public static class CloseoutRouteRegistration
             new CommandRoute("PUT", "/api/defects/{defectId}",
                 command => $"/api/defects/{((UpdateDefect)command).DefectId}"));
 
+        // The Control Centre's "create new → Defect": raise + link the originating email.
+        commands.Register<CreateDefectFromMessage, Defect>(
+            new CommandRoute("POST", "/api/mailbox/message/create-defect",
+                _ => "/api/mailbox/message/create-defect"));
+
         commands.Register<AgreeSettlement, SettlementRecord>(
             new CommandRoute("POST", "/api/projects/{projectId}/settlement",
                 command => $"/api/projects/{((AgreeSettlement)command).ProjectId}/settlement"));

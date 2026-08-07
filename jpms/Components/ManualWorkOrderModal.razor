@@ -2,6 +2,8 @@
 @using Jewel.JPMS.Contracts.Procurement
 @using Jewel.JPMS.Features.CostCenters
 @using Jewel.JPMS.Features.Commercial
+@using Jewel.JPMS.Features.Procurement
+@using Jewel.JPMS.Features.Projects
 @using Jewel.JPMS.Features.Subcontractors
 @using Jewel.JPMS.Models
 @inject ICommandSender Commands
@@ -9,7 +11,10 @@
 @inject SubcontractorsReadModel Subcontractors
 @inject CostCentersReadModel CostCenters
 @inject ValuationLinesReadModel ValuationLines
+@inject ProjectListReadModel Projects
+@inject NavigationManager Nav
 @inject AuthService Auth
+@inject IWorkOrderAttachmentStore WorkOrderAttachments
 
 @* Raises a work order directly — no bid package, no tender — and, in the same act,
    matches it against the valuation sales lines that priced its scope, creating a
@@ -154,6 +159,58 @@
             }
         </div>
 
+        @* ── Attachments: record keeping only — never sent to the supplier ───── *@
+        <div class="rounded-lg border border-line bg-surface p-3">
+            <div class="flex items-center justify-between gap-3 mb-1">
+                <p class="text-[11px] uppercase tracking-wider text-content-subtle font-semibold"
+                   title="Kept on the order for the office's records — the quote it rests on, a signed copy, photos. Never emailed to the supplier and never printed on the purchase order">
+                    Attachments — record keeping
+                </p>
+                <label class="btn-secondary text-xs cursor-pointer @(busy ? "opacity-50 pointer-events-none" : "")">
+                    Add files
+                    <InputFile OnChange="OnAttachmentFilesSelected" multiple class="hidden" />
+                </label>
+            </div>
+            <p class="text-xs text-content-subtle">
+                Stored on the order for the office's records — never sent to the supplier.@(IsEditing ? "" : " Files upload when you save the order.")
+            </p>
+            @if (existingAttachments.Count > 0)
+            {
+                <ul class="mt-2 space-y-1">
+                    @foreach (var attachment in existingAttachments)
+                    {
+                        <li class="flex items-center gap-2 text-sm text-content">
+                            <a class="text-accent hover:underline truncate"
+                               href="@WorkOrderAttachments.FileUrl(Editing!.Order.WorkOrderId, attachment.WorkOrderAttachmentId)"
+                               target="_blank" rel="noopener" title="@attachment.DisplayName">@attachment.DisplayName</a>
+                            <span class="text-xs text-content-subtle whitespace-nowrap">@(attachment.Source == WorkOrderAttachmentSource.Email ? "from email" : "uploaded")</span>
+                            <button type="button" class="ml-auto text-xs text-content-subtle hover:text-negative"
+                                    disabled="@busy" @onclick="() => RemoveExistingAttachmentAsync(attachment)">Remove</button>
+                        </li>
+                    }
+                </ul>
+            }
+            @if (stagedAttachmentFiles.Count > 0)
+            {
+                <ul class="mt-2 space-y-1">
+                    @foreach (var file in stagedAttachmentFiles.ToList())
+                    {
+                        var staged = file;
+                        <li class="flex items-center gap-2 text-sm text-content">
+                            <span class="truncate">@staged.Name</span>
+                            <span class="text-xs text-content-subtle whitespace-nowrap">@FormatBytes(staged.Size)</span>
+                            <button type="button" aria-label="Remove this file" class="ml-auto text-xs text-content-subtle hover:text-negative"
+                                    disabled="@busy" @onclick="() => stagedAttachmentFiles.Remove(staged)">Remove</button>
+                        </li>
+                    }
+                </ul>
+            }
+            @if (attachmentError is not null)
+            {
+                <p class="text-xs text-negative mt-2">@attachmentError</p>
+            }
+        </div>
+
         @* ── Draft or release: a draft sits unnumbered and uncommitted until released ── *@
         @if (!IsEditing)
         {
@@ -164,6 +221,28 @@
             <input type="checkbox" class="cursor-pointer align-middle" disabled="@(busy || createdOrder is not null)" @bind="saveAsDraft" />
             Save as a draft — needs approval before it's issued
         </label>
+
+        @* The warning the auto-send promises: a released order emails its purchase order to the
+           supplier there and then (a draft never does — approval is when its email goes out). *@
+        @if (!saveAsDraft)
+        {
+            @if (SelectedSupplier is { } supplier && string.IsNullOrWhiteSpace(supplier.ContactEmail))
+            {
+                <p class="rounded-lg bg-amber-50 border border-amber-200 px-3 py-2 text-sm text-amber-800">
+                    @supplier.CompanyName has no email address in the directory, so the purchase order
+                    can't be emailed. The order will still be created — add an email address in the
+                    directory, then send the PO from its page.
+                </p>
+            }
+            else
+            {
+                <p class="rounded-lg bg-accent/10 border border-accent/30 px-3 py-2 text-sm text-content">
+                    When you save, the purchase-order email will be <strong>sent</strong> to
+                    <strong>@(SelectedSupplier?.ContactEmail ?? "the subcontractor's directory email")</strong>
+                    from the projects mailbox. Tick "Save as a draft" if it shouldn't go out yet.
+                </p>
+            }
+        }
         }
 
         @* ── Optional: package the order against its sales lines right away ──
@@ -258,6 +337,11 @@
     /// <summary>Raised after a successful save so hosts can refresh their stores.</summary>
     [Parameter] public EventCallback OnSaved { get; set; }
 
+    /// <summary>Raised (after OnSaved) when releasing an order triggered the automatic
+    /// purchase-order email — the note says what happened (sent, saved as a mailbox draft,
+    /// or why it was skipped) so the host can show it once the modal has closed.</summary>
+    [Parameter] public EventCallback<string> OnPoEmailNote { get; set; }
+
     /// <summary>The order being edited, with its lines — null when raising a new order.
     /// Only manually raised orders (Order.IsManual) may be passed here.</summary>
     [Parameter] public ProjectWorkOrderDetail? Editing { get; set; }
@@ -304,6 +388,19 @@
     // Set once the order itself has saved, so a package failure can be retried
     // without raising a duplicate order.
     private WorkOrder? createdOrder;
+    // Set once the purchase-order email has been handed to the server, so a later
+    // retry through this form can never email the supplier twice.
+    private bool poEmailAttempted;
+
+    // ---- Attachments (record keeping only — never sent to the supplier) --------------------
+    // Files picked here are STAGED and only uploaded once the order exists (create) or the edit
+    // has saved, so cancelling the form never leaves stray files on the order.
+    private readonly List<Microsoft.AspNetCore.Components.Forms.IBrowserFile> stagedAttachmentFiles = new();
+    // Editing only: what is already on the order, removable in place.
+    private List<WorkOrderAttachment> existingAttachments = new();
+    // A non-fatal "the order saved but an attachment didn't" message, surfaced via OnPoEmailNote.
+    private string? attachmentNote;
+    private string? attachmentError;
 
     protected override async Task OnParametersSetAsync()
     {
@@ -359,6 +456,11 @@
         pickedAmounts.Clear();
         saveError = null;
         createdOrder = null;
+        poEmailAttempted = false;
+        stagedAttachmentFiles.Clear();
+        existingAttachments = new List<WorkOrderAttachment>();
+        attachmentNote = null;
+        attachmentError = null;
         // Freshen everything the pickers show; cached values render immediately. Editing
         // has no packaging step, so the sales-side lookups are only needed when raising.
         if (IsEditing)
@@ -366,19 +468,29 @@
             await Task.WhenAll(
                 Subcontractors.RefreshAsync(CancellationToken.None),
                 CostCenters.RefreshAsync(CancellationToken.None));
+            await LoadExistingAttachmentsAsync();
             return;
         }
         var packagesTask = Queries.AskAsync(new ListReconciliationPackagesForProject(ProjectId), CancellationToken.None);
         await Task.WhenAll(
             Subcontractors.RefreshAsync(CancellationToken.None),
             CostCenters.RefreshAsync(CancellationToken.None),
-            ValuationLines.RefreshAsync(ProjectId, CancellationToken.None));
+            ValuationLines.RefreshAsync(ProjectId, CancellationToken.None),
+            Projects.RefreshAsync(CancellationToken.None));
         allPackages = await packagesTask;
     }
 
     private IEnumerable<Subcontractor> SortedSubcontractors =>
         (Subcontractors.Current ?? Array.Empty<Subcontractor>())
             .OrderBy(sub => sub.CompanyName, StringComparer.OrdinalIgnoreCase);
+
+    // The chosen supplier's directory record — what the auto-send warning names, and where the
+    // purchase-order email goes when a released (non-draft) order is saved.
+    private Subcontractor? SelectedSupplier =>
+        subcontractorId == ""
+            ? null
+            : (Subcontractors.Current ?? Array.Empty<Subcontractor>()).FirstOrDefault(sub =>
+                string.Equals(sub.SubcontractorId, subcontractorId, StringComparison.OrdinalIgnoreCase));
 
     private static decimal? Parse(string text) =>
         decimal.TryParse(text, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var value)
@@ -549,8 +661,12 @@
                     AsUtcDate(programmeStart), AsUtcDate(targetCompletion), programmeNotes.Trim(),
                     DepositRequired: depositRequired,
                     DepositPercent: depositRequired ? Parse(depositPercentText) : null), CancellationToken.None);
+                // Staged record-keeping attachments land once the edit has saved. Non-fatal: a
+                // failure becomes a note, never an error that undoes the save.
+                var editAttachmentNote = await UploadStagedAttachmentsAsync(Editing.Order.WorkOrderId);
                 seeded = false; // reseed fresh on next open
                 await OnSaved.InvokeAsync();
+                if (editAttachmentNote is not null) await OnPoEmailNote.InvokeAsync(editAttachmentNote);
                 return;
             }
 
@@ -572,6 +688,11 @@
                     DepositPercent: depositRequired ? Parse(depositPercentText) : null), CancellationToken.None);
             }
 
+            // Step 1.5 — the staged record-keeping attachments, straight onto the fresh order.
+            // Non-fatal: failures become a note (the files stay staged, so saving again through
+            // the package-retry path retries only what didn't land).
+            attachmentNote = await UploadStagedAttachmentsAsync(createdOrder.WorkOrderId) ?? attachmentNote;
+
             // Step 2 — the package, with the fresh order already assigned. Never for a
             // draft: packages carry approved scope, and a draft hasn't been approved yet.
             if (!saveAsDraft && createPackage && pickedAmounts.Count > 0)
@@ -588,8 +709,56 @@
                     slices), CancellationToken.None);
             }
 
+            // Step 3 — the promised purchase-order email (released orders only; a draft's email
+            // waits for approval). Non-fatal by design: the order is already raised, so a failed
+            // or skipped send becomes a note for the host, never an error that undoes the save.
+            string? poEmailNote = null;
+            if (!saveAsDraft && createdOrder is not null && !poEmailAttempted)
+            {
+                var supplier = SelectedSupplier;
+                if (supplier is null || string.IsNullOrWhiteSpace(supplier.ContactEmail))
+                {
+                    poEmailNote = $"{createdOrder.Reference} was raised, but the supplier has no email address in the "
+                        + "directory so the purchase order wasn't emailed — add one, then send it from the PO page.";
+                }
+                else
+                {
+                    poEmailAttempted = true;
+                    var projectName = Projects.Find(ProjectId)?.Name ?? "";
+                    var emailLines = lines
+                        .Where(line => line.CostCode != "" && Parse(line.AmountText) is { } amount && amount != 0m)
+                        .Select(line => new WorkOrderPoEmail.Line(line.Title.Trim(), 1m, "item", Parse(line.AmountText)!.Value))
+                        .ToList();
+                    try
+                    {
+                        var outcome = await Commands.SendAsync(new SendWorkOrderPoEmail(
+                            createdOrder.WorkOrderId,
+                            WorkOrderPoEmail.Subject(createdOrder, string.IsNullOrWhiteSpace(projectName) ? ProjectId : projectName),
+                            WorkOrderPoEmail.Body(createdOrder, supplier.CompanyName, emailLines, projectName, Nav.BaseUri)),
+                            CancellationToken.None);
+                        poEmailNote = outcome.Sent
+                            ? $"{createdOrder.Reference} was raised and the purchase order was emailed to {outcome.RecipientEmail}."
+                            : $"{createdOrder.Reference} was raised. {outcome.FailureNote}";
+                    }
+                    catch (CommandFailedException ex)
+                    {
+                        poEmailNote = $"{createdOrder.Reference} was raised, but the purchase-order email couldn't be sent: "
+                            + $"{ex.Message} You can send it from the PO page.";
+                    }
+                    catch
+                    {
+                        poEmailNote = $"{createdOrder.Reference} was raised, but the purchase-order email couldn't be sent "
+                            + "— you can send it from the PO page.";
+                    }
+                }
+            }
+
             seeded = false; // reseed fresh on next open
             await OnSaved.InvokeAsync();
+            // One note channel, one message: the host shows the newest note only, so the PO-email
+            // outcome and any attachment failure travel together.
+            var savedNote = string.Join(" ", new[] { poEmailNote, attachmentNote }.Where(note => !string.IsNullOrWhiteSpace(note)));
+            if (!string.IsNullOrWhiteSpace(savedNote)) await OnPoEmailNote.InvokeAsync(savedNote);
         }
         catch (CommandFailedException ex)
         {
@@ -604,6 +773,61 @@
             busy = false;
         }
     }
+
+    private void OnAttachmentFilesSelected(Microsoft.AspNetCore.Components.Forms.InputFileChangeEventArgs e)
+    {
+        attachmentError = null;
+        stagedAttachmentFiles.AddRange(e.GetMultipleFiles(20));
+    }
+
+    private async Task LoadExistingAttachmentsAsync()
+    {
+        if (Editing is null) return;
+        try { existingAttachments = (await WorkOrderAttachments.ListAsync(Editing.Order.WorkOrderId)).ToList(); }
+        catch { existingAttachments = new List<WorkOrderAttachment>(); }
+    }
+
+    private async Task RemoveExistingAttachmentAsync(WorkOrderAttachment attachment)
+    {
+        if (busy || Editing is null) return;
+        attachmentError = null;
+        try
+        {
+            existingAttachments = (await WorkOrderAttachments.RemoveAsync(
+                Editing.Order.WorkOrderId, attachment.WorkOrderAttachmentId)).ToList();
+        }
+        catch (CommandFailedException ex) { attachmentError = ex.Message; }
+        catch { attachmentError = "Couldn't remove that attachment. Please try again."; }
+    }
+
+    /// <summary>Uploads the staged files one at a time (successes leave the staged list, so a
+    /// retry only re-sends what failed). Returns a human note when anything failed, else null.</summary>
+    private async Task<string?> UploadStagedAttachmentsAsync(string workOrderId)
+    {
+        if (stagedAttachmentFiles.Count == 0) return null;
+        var failed = new List<string>();
+        foreach (var file in stagedAttachmentFiles.ToList())
+        {
+            try
+            {
+                await WorkOrderAttachments.UploadFilesAsync(workOrderId, new[] { file });
+                stagedAttachmentFiles.Remove(file);
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                failed.Add(file.Name + (string.IsNullOrWhiteSpace(ex.Message) ? "" : $" ({ex.Message})"));
+            }
+        }
+        if (failed.Count == 0) return null;
+        return (failed.Count == 1 ? "One attachment" : $"{failed.Count} attachments")
+            + " couldn't be stored: " + string.Join("; ", failed)
+            + " — the order itself saved; add the file(s) from its PO page.";
+    }
+
+    private static string FormatBytes(long bytes) =>
+        bytes >= 1_048_576 ? $"{bytes / 1_048_576.0:0.#} MB"
+        : bytes >= 1024 ? $"{bytes / 1024.0:0.#} KB"
+        : $"{bytes} B";
 
     // Mirrors the Valuation Report tab's CodeFor (and the cost-centre sales-lines modal's Ref)
     // so the picker cross-references against that tab: works/PC/contingency lines show the cost

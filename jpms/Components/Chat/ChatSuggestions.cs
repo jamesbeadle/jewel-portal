@@ -70,6 +70,16 @@ public static class ChatSuggestions
             };
         }
 
+        if (route.Contains("/defects", StringComparison.OrdinalIgnoreCase))
+        {
+            return new[]
+            {
+                $"Which defects on {project} are still open?",
+                "Who is each open defect assigned to?",
+                "What came in by email about these defects?"
+            };
+        }
+
         if (route.Contains("/contract", StringComparison.OrdinalIgnoreCase)
             || route.Contains("/settings", StringComparison.OrdinalIgnoreCase))
         {

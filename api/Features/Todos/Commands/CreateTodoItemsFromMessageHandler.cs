@@ -3,6 +3,7 @@ using Jewel.JPMS.Api.Data;
 using Jewel.JPMS.Api.Data.Entities;
 using Jewel.JPMS.Api.Features.MailboxIntake.Graph;
 using Jewel.JPMS.Api.Features.RecordLinks;
+using Jewel.JPMS.Contracts.RecordLinks;
 using Jewel.JPMS.Contracts.Todos;
 using Jewel.JPMS.Models;
 using Microsoft.EntityFrameworkCore;
@@ -49,6 +50,14 @@ public sealed class CreateTodoItemsFromMessageHandler : ICommandHandler<CreateTo
         var snapshot = await graph.GetSnapshotAsync(command.MessageId, command.InternetMessageId, cancellationToken)
             ?? throw new InvalidOperationException("The email could not be read from the mailbox.");
 
+        // The command's Scope decides how far every tag below spreads across the conversation,
+        // exactly as in LinkMessageToRecordHandler: MessageOnly suppresses the sibling sweep (the
+        // thread's other emails keep queueing); EntireThread drops the received-at cutoff; the
+        // default sweeps the anchor plus the thread behind it. One scope governs the request link,
+        // the per-item TODO tags and the pathway stamp alike — they are one triage decision.
+        var sweepConversationId = command.Scope == LinkThreadScope.MessageOnly ? null : snapshot.ConversationId;
+        DateTimeOffset? sweepCutoff = command.Scope == LinkThreadScope.EntireThread ? null : snapshot.ReceivedAt;
+
         // Optional request link ("Create new → To-do" with a request picked): tag the whole thread to
         // the request as well, exactly as "Link to existing" would — the email then feeds the request's
         // conversation AND the to-dos created below. Applied and verified first, so a failed request
@@ -73,9 +82,9 @@ public sealed class CreateTodoItemsFromMessageHandler : ICommandHandler<CreateTo
                     $"{request.Reference} is closed, so this email can't be linked to it. Reopen the request first, or create the to-dos without a request link.");
 
             var requestTagged = await threadTagger.TagThreadAsync(
-                command.MessageId, snapshot.InternetMessageId, snapshot.ConversationId,
+                command.MessageId, snapshot.InternetMessageId, sweepConversationId,
                 TriageCategories.ForRecord(request.TagReference), cancellationToken,
-                anchorReceivedAt: snapshot.ReceivedAt);
+                anchorReceivedAt: sweepCutoff);
             if (!requestTagged)
                 throw new InvalidOperationException("The email couldn't be tagged to the request. Please try again.");
         }
@@ -118,16 +127,15 @@ public sealed class CreateTodoItemsFromMessageHandler : ICommandHandler<CreateTo
         }).ToList();
 
         // Tag the email to every new item first (one "JPMS/TODO-####" category per item, verified by
-        // read-back); only persist the rows once every tag sticks. Tag the WHOLE conversation, not just
-        // the clicked message (same as LinkMessageToRecordHandler) — otherwise the thread's other emails
-        // never gain the JPMS marker and the thread stays in the triage queue. The anchor tag is
-        // verified; sibling tagging is best-effort.
+        // read-back); only persist the rows once every tag sticks. The spread across the
+        // conversation follows command.Scope (see above). The anchor tag is verified; sibling
+        // tagging is best-effort.
         foreach (var entity in entities)
         {
             var tagged = await threadTagger.TagThreadAsync(
-                command.MessageId, snapshot.InternetMessageId, snapshot.ConversationId,
+                command.MessageId, snapshot.InternetMessageId, sweepConversationId,
                 TriageCategories.ForRecord(entity.Reference), cancellationToken,
-                anchorReceivedAt: snapshot.ReceivedAt);
+                anchorReceivedAt: sweepCutoff);
             if (!tagged)
                 throw new InvalidOperationException("The email couldn't be tagged to the new to-do items. Please try again.");
         }
@@ -156,8 +164,8 @@ public sealed class CreateTodoItemsFromMessageHandler : ICommandHandler<CreateTo
             try
             {
                 await threadTagger.TagThreadAsync(
-                    command.MessageId, snapshot.InternetMessageId, snapshot.ConversationId,
-                    bucket, cancellationToken, anchorReceivedAt: snapshot.ReceivedAt);
+                    command.MessageId, snapshot.InternetMessageId, sweepConversationId,
+                    bucket, cancellationToken, anchorReceivedAt: sweepCutoff);
             }
             catch (Exception ex) when (ex is not OperationCanceledException) { /* best-effort */ }
         }

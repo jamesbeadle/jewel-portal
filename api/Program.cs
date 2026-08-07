@@ -92,7 +92,7 @@ var host = new HostBuilder()
         services.AddRatesFeature();
         services.AddDrawingsFeature(context.Configuration);
         services.AddProgressFeature(context.Configuration);
-        services.AddProcurementFeature();
+        services.AddProcurementFeature(context.Configuration);
         services.AddLocalSearchFeature(context.Configuration);
         services.AddVariationsFeature();
         services.AddSubcontractorsFeature(context.Configuration);

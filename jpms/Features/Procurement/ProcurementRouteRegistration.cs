@@ -59,9 +59,23 @@ public static class ProcurementRouteRegistration
                         : $"{path}&pageToken={Uri.EscapeDataString(search.PageToken)}";
                 }));
 
+        // Attachments kept on a work order for record keeping (uploads travel as multipart
+        // through HttpWorkOrderAttachmentStore, not through this table).
+        queries.Register<ListWorkOrderAttachments, IReadOnlyList<WorkOrderAttachment>>(
+            new QueryRoute("/api/work-orders/{workOrderId}/attachments",
+                query => $"/api/work-orders/{((ListWorkOrderAttachments)query).WorkOrderId}/attachments"));
+
         queries.Register<ListBidPackageDrawings, IReadOnlyList<Drawing>>(
             new QueryRoute("/api/bid-packages/{bidPackageId}/drawings",
                 query => $"/api/bid-packages/{((ListBidPackageDrawings)query).BidPackageId}/drawings"));
+
+        commands.Register<RemoveWorkOrderAttachment, IReadOnlyList<WorkOrderAttachment>>(
+            new CommandRoute("DELETE", "/api/work-orders/{workOrderId}/attachments/{attachmentId}",
+                command =>
+                {
+                    var c = (RemoveWorkOrderAttachment)command;
+                    return $"/api/work-orders/{c.WorkOrderId}/attachments/{c.WorkOrderAttachmentId}";
+                }));
 
         commands.Register<CreateBidPackage, BidPackage>(
             new CommandRoute("POST", "/api/projects/{projectId}/bid-packages",
@@ -122,6 +136,10 @@ public static class ProcurementRouteRegistration
         commands.Register<PrepareWorkOrderEmailDraft, WorkOrderEmailDraft>(
             new CommandRoute("POST", "/api/work-orders/{workOrderId}/draft-email",
                 command => $"/api/work-orders/{((PrepareWorkOrderEmailDraft)command).WorkOrderId}/draft-email"));
+
+        commands.Register<SendWorkOrderPoEmail, WorkOrderPoEmailOutcome>(
+            new CommandRoute("POST", "/api/work-orders/{workOrderId}/send-po-email",
+                command => $"/api/work-orders/{((SendWorkOrderPoEmail)command).WorkOrderId}/send-po-email"));
 
         commands.Register<ExtractQuoteFromMessage, QuoteExtractionProposal>(
             new CommandRoute("POST", "/api/bid-packages/{bidPackageId}/extract-quote",

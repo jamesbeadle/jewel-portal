@@ -5,6 +5,8 @@
 @inject IVariationStore Variations
 @inject IDrawingStore Drawings
 @inject SessionService Session
+@inject AuthService Auth
+@inject TodoViewStorage ViewStorage
 @inject NavigationManager Nav
 @inject Jewel.JPMS.Features.Projects.ProjectListReadModel Projects
 @implements IDisposable
@@ -36,10 +38,21 @@
                 <span class="text-[11px] text-content-subtle">@items.Count(i => i.IsComplete) of @items.Count done</span>
             }
         </div>
-        @if (CanManage && !loading)
-        {
-            <button type="button" class="btn-primary text-xs px-2.5 py-1.5" @onclick="OpenAdd">Add item</button>
-        }
+        <div class="flex items-center gap-2">
+            @if (!loading)
+            {
+                @* Board or list — the same per-user preference every to-do surface reads
+                   (TodoViewStorage), so the idiom follows the reader between screens. *@
+                <div class="flex items-center gap-1">
+                    <button type="button" class="@ViewTabClass(true)" title="Status board — drag a card between columns to change its status" @onclick="() => SetView(true)">Board</button>
+                    <button type="button" class="@ViewTabClass(false)" title="Flat list" @onclick="() => SetView(false)">List</button>
+                </div>
+            }
+            @if (CanManage && !loading)
+            {
+                <button type="button" class="btn-primary text-xs px-2.5 py-1.5" @onclick="OpenAdd">Add item</button>
+            }
+        </div>
     </div>
     <p class="text-xs text-content-subtle mb-4">
         Items added here or captured from an email in the Control Centre. Click an item for its full detail and
@@ -57,15 +70,32 @@
     }
     else
     {
-        <div class="relative mb-4">
-            <input type="search" class="field w-full text-sm pr-8" placeholder="Search keywords — filters the list and finds related requests, variations and drawings"
-                   value="@search" @oninput="OnSearchInput" />
-            @if (HasQuery)
-            {
-                <button type="button" title="Clear search"
-                        class="absolute right-2 top-1/2 -translate-y-1/2 text-content-faint hover:text-content-muted text-sm leading-none"
-                        @onclick="ClearSearch">✕</button>
-            }
+        <div class="flex items-center gap-2 mb-4">
+            <div class="relative flex-1">
+                <input type="search" class="field w-full text-sm pr-8" placeholder="Search keywords — filters the list and finds related requests, variations and drawings"
+                       value="@search" @oninput="OnSearchInput" />
+                @if (HasQuery)
+                {
+                    <button type="button" title="Clear search"
+                            class="absolute right-2 top-1/2 -translate-y-1/2 text-content-faint hover:text-content-muted text-sm leading-none"
+                            @onclick="ClearSearch">✕</button>
+                }
+            </div>
+            @* The role filter, board and list alike. Options are the roles that actually have
+               items on this project — built from data, so it never offers a row that matches
+               nothing — plus Unassigned when that would match something. *@
+            <select class="field !w-auto text-xs" title="Filter by assigned role"
+                    value="@roleFilter" @onchange="e => roleFilter = e.Value?.ToString() ?? string.Empty">
+                <option value="">Any role</option>
+                @if (HasUnassigned)
+                {
+                    <option value="@UnassignedFilter">Unassigned</option>
+                }
+                @foreach (var role in RolesOnList)
+                {
+                    <option value="@((int)role)">@role.DisplayName()</option>
+                }
+            </select>
         </div>
 
         @if (items.Count == 0)
@@ -74,13 +104,25 @@
         }
         else
         {
-            var visible = HasQuery ? items.Where(MatchesTodo).ToList() : items;
+            var visible = items.Where(item => MatchesRoleFilter(item) && (!HasQuery || MatchesTodo(item))).ToList();
             var open = visible.Where(i => !i.IsComplete).ToList();
             var done = visible.Where(i => i.IsComplete).ToList();
 
-            @if (HasQuery && visible.Count == 0)
+            @if ((HasQuery || roleFilter != "") && visible.Count == 0)
             {
-                <p class="text-sm text-content-subtle italic mb-4">No to-do items match "@search".</p>
+                <p class="text-sm text-content-subtle italic mb-4">No to-do items match @(HasQuery ? "\"" + search + "\"" : "this role filter").</p>
+            }
+            else if (boardView)
+            {
+                @* The board answers "what's open / what's done" by layout, so the list's own
+                   empty-state lines and Done heading don't apply here. Drag mirrors the detail
+                   modal's manage gate; read-only visitors still click cards for the detail. *@
+                <div class="mb-4">
+                    <TodoBoard Items="@visible" Busy="@busy"
+                               OnOpen="item => selected = item"
+                               OnSetComplete="args => SetComplete(args.Item, args.IsComplete)"
+                               CanDrag="_ => CanManage" />
+                </div>
             }
             else if (open.Count == 0 && !HasQuery)
             {
@@ -116,7 +158,7 @@
                 </div>
             }
 
-            @if (done.Count > 0)
+            @if (!boardView && done.Count > 0)
             {
                 <h3 class="text-[11px] uppercase tracking-wider text-content-subtle font-semibold mb-2">Done</h3>
                 <div class="space-y-2 mb-4">
@@ -299,6 +341,11 @@
     private bool loading = true;
     private bool busy;
     private string? error;
+    // Board (the default) or flat list — the shared per-user preference (TodoViewStorage).
+    private bool boardView = true;
+    // The assigned-role filter: "" = any, UnassignedFilter, or a Role's int as a string.
+    private const string UnassignedFilter = "__unassigned__";
+    private string roleFilter = "";
 
     // The item open in the detail modal (null = closed). Complete/reopen and delete happen there;
     // a successful action closes it, and the refreshed list re-groups the item into Open/Done.
@@ -336,6 +383,8 @@
 
     protected override async Task OnInitializedAsync()
     {
+        boardView = await ViewStorage.ReadBoardAsync(Auth.CurrentUser?.Email ?? "");
+
         // Related-record sources for the keyword search. Refresh on entry per the store
         // convention: cached requests/drawings serve matches immediately, then update when the
         // background reload lands. Variation orders load once alongside (no cached register to lean on).
@@ -459,9 +508,15 @@
         if (error is not null && addOpen) addError = error;
     }
 
-    private async Task ToggleComplete(TodoItem item)
+    private Task ToggleComplete(TodoItem item) => SetComplete(item, !item.IsComplete);
+
+    // One path for both ways status changes: the detail modal's Mark done / Reopen and the
+    // board's drag onto the other column. Success closes the detail modal if it was open — the
+    // reloaded list re-files the item; a drag never had it open. A failure keeps it open with
+    // the error surfaced inside.
+    private async Task SetComplete(TodoItem item, bool complete)
     {
-        if (busy) return;
+        if (busy || item.IsComplete == complete) return;
         await Run(() => Todos.UpdateAsync(new UpdateTodoItem(
             item.TodoItemId,
             item.Title,
@@ -469,9 +524,7 @@
             item.AssigneeRole,
             item.AssigneePersonEmail,
             item.DueAt,
-            !item.IsComplete)));
-        // Success closes the detail modal — the reloaded list shows the item in its new section.
-        // A failure keeps it open with the error surfaced inside.
+            complete)));
         if (error is null) selected = null;
     }
 
@@ -573,6 +626,33 @@
     private static string RequestStatusLabel(RequestStatus status) => status.DisplayName();
 
     // --------------------------------------------------------------------------------------------
+
+    // The role filter's option pool: the roles that actually have items on this project.
+    private IReadOnlyList<Role> RolesOnList =>
+        items.Where(item => item.AssigneeRole is not null)
+            .Select(item => item.AssigneeRole!.Value)
+            .Distinct()
+            .OrderBy(role => role.DisplayName(), StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+    private bool HasUnassigned => items.Any(item => item.AssigneeRole is null);
+
+    private bool MatchesRoleFilter(TodoItem item) =>
+        roleFilter == "" ? true
+        : roleFilter == UnassignedFilter ? item.AssigneeRole is null
+        : int.TryParse(roleFilter, out var value) && item.AssigneeRole == (Role)value;
+
+    private string ViewTabClass(bool board) =>
+        boardView == board
+            ? "btn-primary text-xs px-2.5 py-1.5"
+            : "btn-secondary text-xs px-2.5 py-1.5";
+
+    private async Task SetView(bool board)
+    {
+        if (boardView == board) return;
+        boardView = board;
+        await ViewStorage.WriteAsync(Auth.CurrentUser?.Email ?? "", board);
+    }
 
     private static bool IsOverdue(TodoItem item) =>
         !item.IsComplete && item.DueAt is not null && item.DueAt.Value < DateTimeOffset.Now.Date;

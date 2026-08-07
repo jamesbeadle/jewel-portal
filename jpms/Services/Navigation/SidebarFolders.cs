@@ -101,6 +101,10 @@ public static class SidebarFolders
                     DesktopNavigation.ProjectRoles),
                 new SidebarRow(new NavigationItem("Progress", "/projects/{project}/progress"),
                     DesktopNavigation.ProjectRoles),
+                // The defect register (DEF-#### references). Defects are raised here or from a
+                // subcontractor email in the Control Centre; each reads its mail back live by tag.
+                new SidebarRow(new NavigationItem("Defects", "/projects/{project}/defects"),
+                    DesktopNavigation.ProjectRoles),
                 new SidebarRow(new NavigationItem("Communications", "/projects/{project}/communications"),
                     DesktopNavigation.ProjectRoles),
                 new SidebarRow(new NavigationItem("Project Settings", "/projects/{project}/settings"),

@@ -2,10 +2,15 @@
 @using Jewel.JPMS.Features.Todos
 @inject ITodoStore Todos
 @inject SessionService Session
+@inject AuthService Auth
+@inject TodoViewStorage ViewStorage
 @inject Jewel.JPMS.Features.Projects.ProjectListReadModel Projects
 
 @*
-    "My to-dos" — the dashboard home panel. Shows the OPEN items assigned to any ROLE the
+    "My to-dos" — the dashboard home panel. Board view (the default) lays the reader's items out
+    as Open / Done status columns — drag a card across to tick it off or reopen it (Done capped to
+    the most recent few; the full pile is on the /todos page). List view shows the OPEN items only,
+    as before. Shows the items assigned to any ROLE the
     signed-in user holds — minus any pinned to a different named person, plus the ones pinned to
     them — general (company-wide) and project items alike, read through ListMyTodoItems (the
     server stamps the roles and email from the session). Rows show only the title;
@@ -24,7 +29,18 @@
                 <span class="text-[11px] text-content-subtle">@openItems.Count open</span>
             }
         </div>
-        <a href="/todos" class="text-xs font-medium text-accent hover:underline">View all</a>
+        <div class="flex items-center gap-2">
+            @* Board or list — the same per-user preference every to-do surface reads
+               (TodoViewStorage), so the idiom follows the reader between screens. *@
+            @if (!loading)
+            {
+                <div class="flex items-center gap-1">
+                    <button type="button" class="@ViewTabClass(true)" title="Status board — drag a card between columns to change its status" @onclick="() => SetView(true)">Board</button>
+                    <button type="button" class="@ViewTabClass(false)" title="Flat list of open items" @onclick="() => SetView(false)">List</button>
+                </div>
+            }
+            <a href="/todos" class="text-xs font-medium text-accent hover:underline">View all</a>
+        </div>
     </div>
     <p class="text-xs text-content-subtle mb-4">
         Items assigned to your roles or to you by name — general and project to-dos alike. Click
@@ -36,18 +52,49 @@
         <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-3">@error</p>
     }
 
+    @if (!loading && items.Count > 0 && RolesOnPanel.Count > 1)
+    {
+        @* Only when the reader's items span several roles — one role has nothing to filter. *@
+        <div class="mb-3 flex justify-end">
+            <select class="field !w-auto text-xs" title="Filter by assigned role"
+                    value="@roleFilter" @onchange="e => roleFilter = e.Value?.ToString() ?? string.Empty">
+                <option value="">All my roles</option>
+                @foreach (var role in RolesOnPanel)
+                {
+                    <option value="@((int)role)">@role.DisplayName()</option>
+                }
+            </select>
+        </div>
+    }
+
     @if (loading)
     {
         <JewelSpinner Class="py-6" Label="Loading" />
     }
-    else if (openItems.Count == 0)
+    else if (boardView && items.Count > 0)
+    {
+        @* Everything on this panel is the reader's own (ListMyTodoItems), and the API lets a
+           role-holder tick their role's items off even outside the manage gate — so every card
+           drags. The Done column is capped: this is a dashboard glance, the full pile lives on
+           the To-dos page behind View all. *@
+        <TodoBoard Items="@BoardItems" Busy="@busy" Compact="true" DoneCap="6"
+                   OnOpen="item => selected = item"
+                   OnSetComplete="args => SetComplete(args.Item, args.IsComplete)"
+                   CanDrag="_ => true"
+                   Scope="ScopeChipFor" />
+    }
+    else if (openItems.Count == 0 && (!boardView || items.Count == 0))
     {
         <p class="text-sm text-content-subtle italic">Nothing is assigned to your role right now.</p>
+    }
+    else if (VisibleOpenItems.Count == 0)
+    {
+        <p class="text-sm text-content-subtle italic">Nothing open for this role.</p>
     }
     else
     {
         <div class="space-y-2">
-            @foreach (var item in openItems)
+            @foreach (var item in VisibleOpenItems)
             {
                 <button type="button" @key="item.TodoItemId" title="Open this item"
                         class="w-full rounded-lg border border-line px-3 py-2 text-left hover:border-line-strong hover:bg-surface-raised"
@@ -88,7 +135,15 @@
     /// </summary>
     [Parameter] public EventCallback<IReadOnlyList<TodoItem>> OnOpenItemsChanged { get; set; }
 
+    // Everything assigned to this reader — open and done alike. The board shows both as columns
+    // (done capped); the list view and the OnOpenItemsChanged tiles read the open subset below.
+    private IReadOnlyList<TodoItem> items = Array.Empty<TodoItem>();
     private IReadOnlyList<TodoItem> openItems = Array.Empty<TodoItem>();
+    // Board (the default) or flat open-only list — the shared per-user preference (TodoViewStorage).
+    private bool boardView = true;
+    // The assigned-role filter ("" = all my roles) — the panel's items are all the reader's own,
+    // so unlike the bigger lists there is no Unassigned answer to offer.
+    private string roleFilter = "";
     // The role pool for the detail modal's reassign picker — fetched only for users inside the
     // manage gate, who are the only ones offered the control.
     private IReadOnlyList<SearchSelect.Option> assigneeOptions = Array.Empty<SearchSelect.Option>();
@@ -110,6 +165,8 @@
 
     protected override async Task OnInitializedAsync()
     {
+        boardView = await ViewStorage.ReadBoardAsync(Auth.CurrentUser?.Email ?? "");
+
         // Three independent reads — the list is the panel, the labels dress the modal's scope
         // line, the role pool feeds the reassign picker. None needs another, so they run together
         // instead of each waiting its turn behind the last.
@@ -142,16 +199,23 @@
         loading = true;
         try
         {
-            openItems = (await Todos.ListMineAsync()).Where(item => !item.IsComplete).ToList();
+            items = await Todos.ListMineAsync();
+            openItems = items.Where(item => !item.IsComplete).ToList();
             await OnOpenItemsChanged.InvokeAsync(openItems);
         }
         catch { error = "Couldn't load your to-dos right now."; }
         finally { loading = false; }
     }
 
-    private async Task Complete(TodoItem item)
+    private Task Complete(TodoItem item) => SetComplete(item, !item.IsComplete);
+
+    // One path for both ways status changes: the detail modal's Mark done / Reopen (done cards
+    // are reachable on the board, so reopening is a real ask here now) and the board's drag onto
+    // the other column. The list is refetched so the item re-files under its new column with the
+    // server's ordering, and the open-items event keeps the dashboard tiles telling the same story.
+    private async Task SetComplete(TodoItem item, bool complete)
     {
-        if (busy) return;
+        if (busy || item.IsComplete == complete) return;
         error = null;
         try
         {
@@ -163,8 +227,9 @@
                 item.AssigneeRole,
                 item.AssigneePersonEmail,
                 item.DueAt,
-                IsComplete: true));
-            openItems = openItems.Where(open => open.TodoItemId != item.TodoItemId).ToList();
+                complete));
+            items = await Todos.ListMineAsync();
+            openItems = items.Where(open => !open.IsComplete).ToList();
             await OnOpenItemsChanged.InvokeAsync(openItems);
             selected = null;
         }
@@ -194,9 +259,10 @@
                 assignee?.PersonEmail,
                 item.DueAt,
                 item.IsComplete));
-            openItems = (await Todos.ListMineAsync()).Where(open => !open.IsComplete).ToList();
+            items = await Todos.ListMineAsync();
+            openItems = items.Where(open => !open.IsComplete).ToList();
             await OnOpenItemsChanged.InvokeAsync(openItems);
-            selected = openItems.FirstOrDefault(open => open.TodoItemId == item.TodoItemId);
+            selected = items.FirstOrDefault(open => open.TodoItemId == item.TodoItemId);
         }
         catch (CommandFailedException ex) { error = ex.Message; }
         catch { error = "That action didn't complete. Please try again."; }
@@ -211,6 +277,47 @@
         var project = (Projects.Current ?? (IReadOnlyList<Project>)Array.Empty<Project>())
             .FirstOrDefault(p => p.ProjectId == item.ProjectId);
         return project is null ? "Project" : $"{project.Reference} — {project.Name}";
+    }
+
+    // The role filter's option pool: the roles the reader's items actually span.
+    private IReadOnlyList<Role> RolesOnPanel =>
+        items.Where(item => item.AssigneeRole is not null)
+            .Select(item => item.AssigneeRole!.Value)
+            .Distinct()
+            .OrderBy(role => role.DisplayName(), StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+    private bool MatchesRoleFilter(TodoItem item) =>
+        roleFilter == "" || (int.TryParse(roleFilter, out var value) && item.AssigneeRole == (Role)value);
+
+    private IReadOnlyList<TodoItem> BoardItems =>
+        roleFilter == "" ? items : items.Where(MatchesRoleFilter).ToList();
+
+    private IReadOnlyList<TodoItem> VisibleOpenItems =>
+        roleFilter == "" ? openItems : openItems.Where(MatchesRoleFilter).ToList();
+
+    // The board card's project badge: the reference as a compact chip (hover for the full name),
+    // or the accent "Company" chip for a no-project item.
+    private TodoBoard.ScopeChip ScopeChipFor(TodoItem item)
+    {
+        if (IsGeneral(item)) return new TodoBoard.ScopeChip("Company", "Company-wide — no project", true);
+        var project = (Projects.Current ?? (IReadOnlyList<Project>)Array.Empty<Project>())
+            .FirstOrDefault(p => p.ProjectId == item.ProjectId);
+        return project is null
+            ? new TodoBoard.ScopeChip("Project", "Project", false)
+            : new TodoBoard.ScopeChip(project.Reference, $"{project.Reference} — {project.Name}", false);
+    }
+
+    private string ViewTabClass(bool board) =>
+        boardView == board
+            ? "btn-primary text-[10px] px-2 py-1"
+            : "btn-secondary text-[10px] px-2 py-1";
+
+    private async Task SetView(bool board)
+    {
+        if (boardView == board) return;
+        boardView = board;
+        await ViewStorage.WriteAsync(Auth.CurrentUser?.Email ?? "", board);
     }
 
     private static bool IsOverdue(TodoItem item) =>

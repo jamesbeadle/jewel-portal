@@ -44,7 +44,9 @@ public sealed class CreateBidPackageFromMessageHandler
         // Tag the originating email to the new package through the shared record-link path (verified by
         // read-back inside the handler). Throws if the email can't be read/tagged.
         await link.HandleAsync(
-            new LinkMessageToRecord(command.MessageId, RecordType.BidPackageInvite, entity.BidPackageId, command.InternetMessageId),
+            new LinkMessageToRecord(
+                command.MessageId, RecordType.BidPackageInvite, entity.BidPackageId, command.InternetMessageId,
+                Scope: command.Scope),
             cancellationToken);
 
         return entity.ToModel();

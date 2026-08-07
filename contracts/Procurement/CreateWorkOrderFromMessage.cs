@@ -1,4 +1,5 @@
 using Jewel.JPMS.Contracts.Cqrs;
+using Jewel.JPMS.Contracts.RecordLinks;
 using Jewel.JPMS.Models;
 
 namespace Jewel.JPMS.Contracts.Procurement;
@@ -24,4 +25,15 @@ public sealed record CreateWorkOrderFromMessage(
     bool DepositRequired = false,
     decimal? DepositPercent = null,
     string? InternetMessageId = null,
-    string RaisedByEmail = "") : ICommand<WorkOrder>;
+    string RaisedByEmail = "",
+    // Graph attachment ids ticked in the triage form: each is copied off the email into the new
+    // order's attachments (record keeping only -- never sent to the supplier). The bytes move
+    // server-side, mailbox -> blob store, so they never round-trip through the browser. The
+    // handler downloads them all BEFORE the order is created, so a vanished attachment fails
+    // the apply cleanly rather than leaving a half-attached order behind.
+    IReadOnlyList<string>? AttachmentIds = null,
+    // How far the record tag spreads across the email's conversation (forwarded verbatim to the
+    // shared LinkMessageToRecord path). Default keeps the long-standing anchor+thread-behind
+    // sweep; the Control Centre passes an explicit MessageOnly / EntireThread from its
+    // "triage the entire thread" checkbox.
+    LinkThreadScope Scope = LinkThreadScope.ThreadBehindAnchor) : ICommand<WorkOrder>;

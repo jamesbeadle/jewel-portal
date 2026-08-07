@@ -1,0 +1,64 @@
+using System.Text;
+using Jewel.JPMS.Models;
+
+namespace Jewel.JPMS.Features.Procurement;
+
+/// <summary>
+/// The purchase-order covering email to the supplier, composed once for every route that emails a
+/// work order: the PO page's "Draft email to supplier…" modal (pre-fill, editable) and the automatic
+/// send fired when an order is released — created without "save as draft" (Work Orders tab, Control
+/// Centre) or a draft approved. One builder means the supplier reads the same email whichever door
+/// the order went out through: the order summary (priced lines, or value + scope when there is no
+/// breakdown), programme dates when set, the portal link for electronic acceptance, and the standard
+/// pre-start paperwork line (RAMS/insurances to projects@ — never a named person).
+///
+/// Composed client-side (not in the API) because the portal-acceptance link needs the app's own
+/// base URI — pass NavigationManager.BaseUri.
+/// </summary>
+public static class WorkOrderPoEmail
+{
+    /// <summary>One displayed line of the order summary table. Mirrors WorkOrderLine's display
+    /// fields so callers that only have staged input (Control Centre) can build rows the same way
+    /// the server will store them (quantity 1, unit "item", total = amount).</summary>
+    public sealed record Line(string Title, decimal Quantity, string Unit, decimal LineTotal);
+
+    public static Line ToLine(WorkOrderLine line) => new(line.Title, line.Quantity, line.Unit, line.LineTotal);
+
+    public static string Subject(WorkOrder order, string projectName) =>
+        $"Work order {order.Reference} — {order.Title} — {projectName}";
+
+    public static string Body(
+        WorkOrder order,
+        string supplierName,
+        IReadOnlyList<Line> lines,
+        string projectName,
+        string baseUri)
+    {
+        var sb = new StringBuilder();
+        sb.AppendLine($"<p>Hello {supplierName},</p>");
+        sb.AppendLine($"<p>Please find below the details of our work order <strong>{order.Reference}</strong> for <strong>{(string.IsNullOrWhiteSpace(projectName) ? "the project" : projectName)}</strong>.</p>");
+        if (lines.Count > 0)
+        {
+            sb.AppendLine("<table border=\"1\" cellpadding=\"6\" cellspacing=\"0\" style=\"border-collapse:collapse\">");
+            sb.AppendLine("<tr><th align=\"left\">Item</th><th align=\"left\">Qty</th><th align=\"left\">Unit</th><th align=\"right\">Total</th></tr>");
+            foreach (var line in lines)
+                sb.AppendLine($"<tr><td>{line.Title}</td><td>{line.Quantity}</td><td>{line.Unit}</td><td align=\"right\">{line.LineTotal:£#,##0.00}</td></tr>");
+            sb.AppendLine($"<tr><td colspan=\"3\"><strong>Order total</strong></td><td align=\"right\"><strong>{order.Value:£#,##0.00}</strong></td></tr>");
+            sb.AppendLine("</table>");
+        }
+        else
+        {
+            sb.AppendLine($"<p><strong>Order value:</strong> {order.Value:£#,##0.00}</p>");
+            if (!string.IsNullOrWhiteSpace(order.Scope))
+                sb.AppendLine($"<p><strong>Scope:</strong> {order.Scope}</p>");
+        }
+        if (order.ProgrammeStart is { } start)
+            sb.AppendLine($"<p><strong>Programme start:</strong> {start.LocalDateTime:d MMM yyyy}</p>");
+        if (order.ScheduledCompletion is { } completion)
+            sb.AppendLine($"<p><strong>Scheduled completion:</strong> {completion.LocalDateTime:d MMM yyyy}</p>");
+        sb.AppendLine($"<p>You can view and electronically accept this work order in our portal: <a href=\"{baseUri}portal/work-orders/{order.WorkOrderId}\">{baseUri}portal/work-orders/{order.WorkOrderId}</a></p>");
+        sb.AppendLine("<p>Before starting on site, please send your RAMS documentation and current insurance certificates to projects@jewelbb.co.uk.</p>");
+        sb.AppendLine("<p>Kind regards,<br/>Jewel Bespoke Build</p>");
+        return sb.ToString();
+    }
+}

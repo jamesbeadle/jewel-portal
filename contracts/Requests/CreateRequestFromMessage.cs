@@ -1,4 +1,5 @@
 using Jewel.JPMS.Contracts.Cqrs;
+using Jewel.JPMS.Contracts.RecordLinks;
 using Jewel.JPMS.Models;
 
 namespace Jewel.JPMS.Contracts.Requests;
@@ -24,4 +25,10 @@ public sealed record CreateRequestFromMessage(
     DateTimeOffset? ResponseDue = null,
     string? InternetMessageId = null,
     string RaisedByEmail = "",
-    bool AddToProgramme = false) : ICommand<Request>;
+    bool AddToProgramme = false,
+    // How far the request tag (and the Client pathway stamp) spread across the email's
+    // conversation -- the same LinkThreadScope as LinkMessageToRecord. The default keeps the
+    // long-standing behaviour (anchor + the thread behind it) for existing callers such as
+    // "Reply in thread"; the Control Centre passes MessageOnly, or EntireThread when its
+    // "triage the entire thread" box is ticked.
+    LinkThreadScope Scope = LinkThreadScope.ThreadBehindAnchor) : ICommand<Request>;

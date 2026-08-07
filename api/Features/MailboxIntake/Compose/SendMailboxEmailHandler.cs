@@ -280,7 +280,9 @@ public sealed class SendMailboxEmailHandler : ICommandHandler<SendMailboxEmail, 
             webLink = replyDraft.WebLink;
 
             // The composer's envelope is authoritative — replace Graph's reply-all scaffolding with
-            // exactly what the user saw (the projects mailbox keeps its Cc copy server-side).
+            // exactly what the user saw. Nothing is added server-side: the projects mailbox is
+            // never auto-Cc'd (decision 2026-08-07 — a delivered Cc copy arrives back in the Inbox
+            // untagged and lands straight back in the triage queue).
             if (!await graph.UpdateDraftEnvelopeAsync(draftId, ToDraft(to), ToDraft(cc), ToDraft(bcc), subject, cancellationToken))
             {
                 await RollBackRaisedRequestAsync(raisedRequest, recordTag, cancellationToken);

@@ -183,7 +183,8 @@ else
         (RecordType.Todo,             "To-dos"),
         (RecordType.Lad,              "LADs"),
         (RecordType.Variation,        "Variation orders"),
-        (RecordType.VariationQuote,   "VO quotes")
+        (RecordType.VariationQuote,   "VO quotes"),
+        (RecordType.Defect,           "Defects")
     };
 
     protected override async Task OnInitializedAsync()
@@ -283,6 +284,7 @@ else
         RecordType.Lad              => "LADs",
         RecordType.Variation        => "VO",
         RecordType.VariationQuote   => "Variation",
+        RecordType.Defect           => "Defect",
         _                           => type.ToString()
     };
 

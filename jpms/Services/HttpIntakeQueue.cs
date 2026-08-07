@@ -1,4 +1,5 @@
 using System.Net.Http.Json;
+using Jewel.JPMS.Contracts.Closeout;
 using Jewel.JPMS.Contracts.Cqrs;
 using Jewel.JPMS.Contracts.Procurement;
 using Jewel.JPMS.Contracts.RecordLinks;
@@ -99,8 +100,8 @@ public sealed class HttpIntakeQueue : IIntakeQueue
     public Task<IReadOnlyList<LinkableRecord>> ListLinkableRecordsAsync(string projectId, RecordType type, CancellationToken cancellationToken = default) =>
         queries.AskAsync(new ListLinkableRecords(projectId, type), cancellationToken);
 
-    public Task<Acknowledgement> LinkMessageToRecordAsync(string messageId, string? internetMessageId, RecordType type, string recordId, string? pathway = null, bool allowCrossPathway = false, CancellationToken cancellationToken = default) =>
-        commands.SendAsync(new LinkMessageToRecord(messageId, type, recordId, internetMessageId, pathway, allowCrossPathway), cancellationToken);
+    public Task<Acknowledgement> LinkMessageToRecordAsync(string messageId, string? internetMessageId, RecordType type, string recordId, string? pathway = null, bool allowCrossPathway = false, LinkThreadScope scope = LinkThreadScope.ThreadBehindAnchor, CancellationToken cancellationToken = default) =>
+        commands.SendAsync(new LinkMessageToRecord(messageId, type, recordId, internetMessageId, pathway, allowCrossPathway, scope), cancellationToken);
 
     public Task<BidPackage> CreateBidPackageFromMessageAsync(CreateBidPackageFromMessage command, CancellationToken cancellationToken = default) =>
         commands.SendAsync(command, cancellationToken);
@@ -109,5 +110,8 @@ public sealed class HttpIntakeQueue : IIntakeQueue
         commands.SendAsync(command, cancellationToken);
 
     public Task<IReadOnlyList<TodoItem>> CreateTodoItemsFromMessageAsync(CreateTodoItemsFromMessage command, CancellationToken cancellationToken = default) =>
+        commands.SendAsync(command, cancellationToken);
+
+    public Task<Defect> CreateDefectFromMessageAsync(CreateDefectFromMessage command, CancellationToken cancellationToken = default) =>
         commands.SendAsync(command, cancellationToken);
 }

@@ -122,12 +122,13 @@ public sealed class RecordThreadTagger
         if (string.IsNullOrWhiteSpace(conversationId))
             return 0;
 
-        var ids = await graph.ListUntaggedIdsInConversationAsync(conversationId, category, ct, receivedOnOrBefore);
-        var tagged = 0;
-        foreach (var id in ids)
-            if (await graph.AssignAsync(id, null, category, ct))
-                tagged++;
-        return tagged;
+        // Batched sweep (Graph $batch, 20 PATCHes per round-trip). This used to walk the thread one
+        // AssignAsync at a time — 3 Graph calls per member — which on a long thread blew straight
+        // through the hosting platform's 45-second request ceiling and surfaced as a 500
+        // ("Backend call failure", JPMS-2B6023: a 56-email thread × 2 to-dos ≈ 340 sequential
+        // calls). The sweep was always best-effort, so batching without per-member verification
+        // changes cost, not contract.
+        return await graph.TagConversationMembersAsync(conversationId, category, ct, receivedOnOrBefore);
     }
 
     // The inverse of TagThreadAsync: remove the category from the anchor (verified) and from every
@@ -141,11 +142,9 @@ public sealed class RecordThreadTagger
             return false;
 
         if (!string.IsNullOrWhiteSpace(conversationId))
-        {
-            var ids = await graph.ListTaggedIdsInConversationAsync(conversationId, category, ct);
-            foreach (var id in ids)
-                await graph.RemoveTagAsync(id, null, category, ct); // best-effort
-        }
+            // Best-effort batched sweep — same rationale as TagConversationSiblingsAsync: a
+            // per-member RemoveTagAsync walk costs 3 Graph calls each and times out on long threads.
+            await graph.UntagConversationMembersAsync(conversationId, category, ct);
         return true;
     }
 }

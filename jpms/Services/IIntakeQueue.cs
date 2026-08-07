@@ -1,3 +1,4 @@
+using Jewel.JPMS.Contracts.Closeout;
 using Jewel.JPMS.Contracts.Cqrs;
 using Jewel.JPMS.Contracts.Procurement;
 using Jewel.JPMS.Contracts.RecordLinks;
@@ -59,7 +60,10 @@ public interface IIntakeQueue
     // choice ("Client"/"Subcontractor"/"Internal") for pathway-neutral record types (cost centres);
     // allowCrossPathway is the explicit consent to a Subcontractor↔Internal dual filing after the
     // UI's warning. The client wall (Client never shares a thread with the others) has no override.
-    Task<Acknowledgement> LinkMessageToRecordAsync(string messageId, string? internetMessageId, RecordType type, string recordId, string? pathway = null, bool allowCrossPathway = false, CancellationToken cancellationToken = default);
+    // scope is how far the tag spreads across the email's conversation (LinkThreadScope): the
+    // default keeps the long-standing anchor+thread-behind sweep for callers that don't choose;
+    // the Control Centre always passes MessageOnly or EntireThread from its thread checkbox.
+    Task<Acknowledgement> LinkMessageToRecordAsync(string messageId, string? internetMessageId, RecordType type, string recordId, string? pathway = null, bool allowCrossPathway = false, LinkThreadScope scope = LinkThreadScope.ThreadBehindAnchor, CancellationToken cancellationToken = default);
 
     // Create a new Bid Package Invite from an email (Draft package + link the email to it). The Request
     // equivalent is CreateRequestFromMessageAsync; both are the "create a new record from this email"
@@ -75,4 +79,9 @@ public interface IIntakeQueue
     // message). The email is tagged "JPMS/TODO-####" per item, so each item reads its mail back live by
     // its own tag — the to-do half of "create a new record from this email".
     Task<IReadOnlyList<TodoItem>> CreateTodoItemsFromMessageAsync(CreateTodoItemsFromMessage command, CancellationToken cancellationToken = default);
+
+    // Create a new Defect from an email (the defect raised exactly as a manual one, plus the email
+    // linked to it). The Subcontractor pathway's third "create a new record from this email",
+    // alongside the bid package and work order above.
+    Task<Defect> CreateDefectFromMessageAsync(CreateDefectFromMessage command, CancellationToken cancellationToken = default);
 }

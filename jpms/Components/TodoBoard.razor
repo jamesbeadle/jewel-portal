@@ -1,0 +1,161 @@
+@using Jewel.JPMS.Features.Todos
+
+@*
+    The to-do board: the same items every to-do list shows, laid out as two status columns —
+    Open and Done — in the task-board idiom. A card's status is changed by DRAGGING it into the
+    other column (HTML5 drag and drop; the host is told via OnSetComplete and owns the command +
+    reload, exactly as it does for the detail modal's Mark done). Clicking a card still opens the
+    detail modal — the board changes how status reads and moves, never where the detail lives —
+    so completing remains possible without a mouse drag too.
+
+    Cards carry the assignee ROLE's accent colour as a left-edge stripe (RolePresentations, the
+    same colour the role wears everywhere else in the app); unassigned items get a muted stripe.
+    On boards that mix projects, each card also wears a compact project reference chip (Scope) —
+    hover it for the full project name.
+
+    Shared by the To-dos browser page, the project To-do tab and the dashboard My-todos panel
+    (Compact) so the three surfaces can never lay the board out differently. The host passes the
+    already-FILTERED items — scope/role/person filters and keyword search stay the host's job.
+
+    While a drag is in flight the one valid destination (the OTHER column) shows a dashed accent
+    border — a drop anywhere else, or of a card onto its own column, is a no-op. Drops are ignored
+    while Busy so a slow command can't be stacked on.
+*@
+
+<div class="grid grid-cols-1 sm:grid-cols-2 @(Compact ? "gap-3" : "gap-4")">
+    @foreach (var done in Columns)
+    {
+        var all = ItemsFor(done);
+        var shown = done && DoneCap is int cap && all.Count > cap ? all.Take(cap).ToList() : all;
+        var isTarget = dragging is TodoItem drag && drag.IsComplete != done;
+
+        <div class="rounded-lg border p-2.5 flex flex-col @(isTarget ? "border-dashed border-accent/60 bg-accent/5" : "border-line bg-canvas/40")"
+             @key="done"
+             @ondragover:preventDefault
+             @ondrop="() => HandleDrop(done)" @ondrop:preventDefault>
+
+            <div class="flex items-center gap-2 mb-2 px-0.5">
+                <span class="h-2 w-2 rounded-full @(done ? "bg-positive" : "bg-info")" aria-hidden="true"></span>
+                <h3 class="text-[11px] uppercase tracking-wider text-content-subtle font-semibold">@(done ? "Done" : "Open")</h3>
+                <span class="text-[11px] text-content-subtle">@all.Count</span>
+            </div>
+
+            <div class="space-y-2 flex-1 @(Compact ? "min-h-[5rem]" : "min-h-[7rem]")">
+                @if (all.Count == 0)
+                {
+                    <p class="text-xs text-content-subtle italic px-0.5 py-1">
+                        @(isTarget ? "Drop here." : done ? "Nothing done yet." : "Nothing open.")
+                    </p>
+                }
+                @foreach (var item in shown)
+                {
+                    var canDrag = !Busy && CanDrag is not null && CanDrag(item);
+                    <button type="button" @key="item.TodoItemId"
+                            title="@(canDrag ? "Open this item — or drag it to the other column to " + (done ? "reopen it" : "mark it done") : "Open this item")"
+                            draggable="@(canDrag ? "true" : null)" data-todo-drag
+                            class="relative block w-full rounded-lg border border-line bg-surface pl-4 pr-3 text-left hover:border-line-strong hover:bg-surface-raised @(Compact ? "py-1.5" : "py-2") @(canDrag ? "cursor-grab active:cursor-grabbing" : "") @(dragging == item ? "opacity-50" : "")"
+                            @onclick="() => OnOpen.InvokeAsync(item)"
+                            @ondragstart="() => dragging = item"
+                            @ondragend="() => dragging = null">
+                        @* The assignee role's accent, worn on the card's leading edge. *@
+                        <span class="absolute inset-y-0 left-0 w-1.5 rounded-l-lg @StripeClass(item)" aria-hidden="true"></span>
+                        <p class="truncate text-sm @(item.IsComplete ? "text-content-subtle line-through" : "text-content")">
+                            <span class="font-mono text-xs text-content-muted mr-2">@item.Reference</span>@item.Title
+                        </p>
+                        <div class="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 overflow-hidden text-[11px] text-content-subtle">
+                            @if (Scope is not null && Scope(item) is ScopeChip chip)
+                            {
+                                <span title="@chip.Title"
+                                      class="inline-flex items-center rounded border px-1.5 text-[10px] font-mono leading-4 whitespace-nowrap @(chip.Emphasis ? "border-accent/40 text-accent" : "border-line bg-surface-raised text-content-muted")">@chip.Label</span>
+                            }
+                            @if (!item.IsComplete && item.DueAt is not null)
+                            {
+                                <span class="whitespace-nowrap @(IsOverdue(item) ? "text-negative font-medium" : "")">Due @item.DueAt.Value.LocalDateTime.ToString("d MMM yyyy")</span>
+                            }
+                            @if (item.CompletedAt is not null)
+                            {
+                                <span class="whitespace-nowrap">Done @item.CompletedAt.Value.LocalDateTime.ToString("d MMM yyyy")</span>
+                            }
+                            @if (TodoAssigneePicker.Label(item) is string assigneeLabel)
+                            {
+                                <span class="truncate">@assigneeLabel</span>
+                            }
+                        </div>
+                    </button>
+                }
+                @if (shown.Count < all.Count)
+                {
+                    @* Never a silent cap: the column says how much of the pile it is showing. *@
+                    <p class="text-[11px] text-content-subtle px-0.5">Showing @shown.Count of @all.Count done items.</p>
+                }
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    /// <summary>The items to lay out — already filtered by the host's own controls.</summary>
+    [Parameter, EditorRequired] public IReadOnlyList<TodoItem> Items { get; set; } = Array.Empty<TodoItem>();
+
+    /// <summary>A card was clicked — the host opens its detail modal.</summary>
+    [Parameter] public EventCallback<TodoItem> OnOpen { get; set; }
+
+    /// <summary>
+    /// A card was dropped on the OTHER column: complete it (true) or reopen it (false). Only ever
+    /// raised with a real change — a card dropped back onto its own column stays a no-op.
+    /// </summary>
+    [Parameter] public EventCallback<(TodoItem Item, bool IsComplete)> OnSetComplete { get; set; }
+
+    /// <summary>
+    /// Which items this reader may drag between columns — mirror the host's complete/reopen gate
+    /// (the same one the detail modal's Mark done uses). Null = a read-only board.
+    /// </summary>
+    [Parameter] public Func<TodoItem, bool>? CanDrag { get; set; }
+
+    /// <summary>A command is in flight — drags are ignored rather than queued behind it.</summary>
+    [Parameter] public bool Busy { get; set; }
+
+    /// <summary>
+    /// Optional project badge for boards that mix projects (the browser page, the dashboard
+    /// panel): a compact reference chip on each card, the full name in its tooltip. Emphasis is
+    /// the company-wide (no-project) chip's accent. The single-project tab passes nothing — a
+    /// badge naming the page's own project on every card would say nothing.
+    /// </summary>
+    [Parameter] public Func<TodoItem, ScopeChip>? Scope { get; set; }
+
+    /// <summary>One card's project chip: short label, tooltip title, company-wide emphasis.</summary>
+    public sealed record ScopeChip(string Label, string Title, bool Emphasis);
+
+    /// <summary>Tighter paddings and column heights for the dashboard panel.</summary>
+    [Parameter] public bool Compact { get; set; }
+
+    /// <summary>Cap on the Done column's rendered cards (null = all) — the column says when it caps.</summary>
+    [Parameter] public int? DoneCap { get; set; }
+
+    private static readonly bool[] Columns = { false, true };
+
+    // The card mid-drag (null = no drag). Set on dragstart, cleared on drop/dragend — dragend
+    // still fires when the drop lands outside any column, so the highlight can't stick.
+    private TodoItem? dragging;
+
+    // Open cards keep the host's order (the server's open-first ordering); done cards read
+    // newest-done-first, which is also what a Done cap should keep when one is set.
+    private IReadOnlyList<TodoItem> ItemsFor(bool done) =>
+        done
+            ? Items.Where(i => i.IsComplete).OrderByDescending(i => i.CompletedAt ?? DateTimeOffset.MinValue).ToList()
+            : Items.Where(i => !i.IsComplete).ToList();
+
+    private async Task HandleDrop(bool done)
+    {
+        var item = dragging;
+        dragging = null;
+        if (Busy || item is null || item.IsComplete == done) return;
+        await OnSetComplete.InvokeAsync((item, done));
+    }
+
+    private static string StripeClass(TodoItem item) =>
+        item.AssigneeRole is Role role ? RolePresentations.For(role).AccentDotClass : "bg-surface-field";
+
+    private static bool IsOverdue(TodoItem item) =>
+        !item.IsComplete && item.DueAt is not null && item.DueAt.Value < DateTimeOffset.Now.Date;
+}

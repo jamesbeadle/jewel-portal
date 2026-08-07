@@ -1,4 +1,5 @@
 using Jewel.JPMS.Contracts.Cqrs;
+using Jewel.JPMS.Contracts.RecordLinks;
 using Jewel.JPMS.Models;
 
 namespace Jewel.JPMS.Contracts.Todos;
@@ -28,4 +29,9 @@ public sealed record CreateTodoItemsFromMessage(
     // this only files the thread under that pathway when the thread has no pathway yet — a to-do
     // raised from a client email leaves the thread Client. "Client" is ignored (the wall is only
     // crossed into by an explicit client record). Null = no pathway involvement.
-    string? Pathway = null) : ICommand<IReadOnlyList<TodoItem>>;
+    string? Pathway = null,
+    // How far the to-do tags (and the optional request link / pathway stamp) spread across the
+    // email's conversation -- the same LinkThreadScope as LinkMessageToRecord. Default keeps the
+    // long-standing anchor+thread-behind sweep for existing callers; the Control Centre passes
+    // MessageOnly, or EntireThread when its "triage the entire thread" box is ticked.
+    LinkThreadScope Scope = LinkThreadScope.ThreadBehindAnchor) : ICommand<IReadOnlyList<TodoItem>>;

@@ -6,6 +6,7 @@
 @inject ITodoStore TodoStore
 @inject NavigationManager Nav
 @inject Jewel.JPMS.Features.Projects.ProjectListReadModel Projects
+@inject TodoViewStorage ViewStorage
 
 <PageTitle>To-dos · JPMS</PageTitle>
 
@@ -85,9 +86,20 @@ else
         }
 
         <div class="flex flex-wrap items-center gap-2 mb-4">
-            <button type="button" class="@StatusTabClass(StatusFilter.Open)" @onclick="() => statusFilter = StatusFilter.Open">Open</button>
-            <button type="button" class="@StatusTabClass(StatusFilter.Done)" @onclick="() => statusFilter = StatusFilter.Done">Done</button>
-            <button type="button" class="@StatusTabClass(StatusFilter.All)" @onclick="() => statusFilter = StatusFilter.All">All</button>
+            @* Board or list — one preference shared by every to-do surface (TodoViewStorage). The
+               board lays Open and Done side by side, so the status tabs are the LIST's own control
+               and step aside while the board is up rather than sitting there answering nothing. *@
+            <div class="flex items-center gap-1 mr-1">
+                <button type="button" class="@ViewTabClass(true)" title="Status board — drag a card between columns to change its status" @onclick="() => SetView(true)">Board</button>
+                <button type="button" class="@ViewTabClass(false)" title="Flat list with status tabs" @onclick="() => SetView(false)">List</button>
+            </div>
+
+            @if (!boardView)
+            {
+                <button type="button" class="@StatusTabClass(StatusFilter.Open)" @onclick="() => statusFilter = StatusFilter.Open">Open</button>
+                <button type="button" class="@StatusTabClass(StatusFilter.Done)" @onclick="() => statusFilter = StatusFilter.Done">Done</button>
+                <button type="button" class="@StatusTabClass(StatusFilter.All)" @onclick="() => statusFilter = StatusFilter.All">All</button>
+            }
 
             @* The selects are built from data — the scope filter from the projects that have
                items, the role and person filters from the assignable pool — so they wait with the
@@ -105,24 +117,31 @@ else
                 }
             </select>
 
+            @* The role filter is EVERYONE's (a reader holding several roles narrows to one of
+               them); its options are the roles that actually have items on this list — built from
+               data like the scope filter, so it needs no assignable-pool fetch and never offers a
+               row that matches nothing. Unassigned is a role-slot answer, so it lives here — and
+               empties the person filter. *@
+            <select class="field !w-auto text-xs" value="@roleFilter" @onchange="OnRoleFilterChange"
+                    disabled="@(!filtersReady)">
+                <option value="">@(filtersReady ? "Any role" : "Loading…")</option>
+                @if (CanSeeAll || HasUnassigned)
+                {
+                    <option value="@Unassigned">Unassigned</option>
+                }
+                @foreach (var role in RolesOnList)
+                {
+                    <option value="@((int)role)">@role.DisplayName()</option>
+                }
+            </select>
+
             @if (CanSeeAll)
             {
                 @* Disabled until the pool lands, never absent: a filter that pops into the row a
-                   second late is a control the reader has already decided isn't there. *@
-                @* Two filters, not one combined list: pick a role to narrow the person list to its
-                   holders, pick a person straight away (no role = every assignable user) to see
-                   everything pinned to them, or both to intersect. Unassigned is a role-slot
-                   answer, so it lives in the role filter — and empties the person one. *@
-                <select class="field !w-auto text-xs" value="@roleFilter" @onchange="OnRoleFilterChange"
-                        disabled="@(!filtersReady)">
-                    <option value="">@(filtersReady ? "Any role" : "Loading…")</option>
-                    <option value="@Unassigned">Unassigned</option>
-                    @foreach (var role in assignableRoles)
-                    {
-                        <option value="@((int)role)">@role.DisplayName()</option>
-                    }
-                </select>
-
+                   second late is a control the reader has already decided isn't there. Role and
+                   person are two filters, not one combined list: pick a role to narrow the person
+                   list to its holders, a person straight away to see everything pinned to them,
+                   or both to intersect. *@
                 <select class="field !w-auto text-xs" value="@personFilter" @onchange="e => personFilter = e.Value?.ToString() ?? string.Empty"
                         disabled="@(!filtersReady || roleFilter == Unassigned)">
                     <option value="">@(filtersReady ? "Anyone" : "Loading…")</option>
@@ -163,22 +182,37 @@ else
         }
         else
         {
-            var visible = VisibleItems;
+            var visible = boardView ? FilteredItems : VisibleItems;
             <div class="panel p-5">
                 <div class="flex items-center gap-3 mb-1">
-                    <h2 class="text-sm font-semibold text-content">To-do list</h2>
+                    <h2 class="text-sm font-semibold text-content">@(boardView ? "To-do board" : "To-do list")</h2>
                     @if (items.Count > 0)
                     {
                         <span class="text-[11px] text-content-subtle">@items.Count(i => i.IsComplete) of @items.Count done</span>
                     }
                 </div>
-                <p class="text-xs text-content-subtle mb-4">Click an item for its full detail, linked emails and actions.</p>
+                <p class="text-xs text-content-subtle mb-4">
+                    @(boardView
+                        ? "Click a card for its full detail, linked emails and actions — or drag it between the columns to mark it done or reopen it."
+                        : "Click an item for its full detail, linked emails and actions.")
+                </p>
 
                 @if (visible.Count == 0)
                 {
                     <p class="text-sm text-content-subtle italic">
                         @(items.Count == 0 ? (CanSeeAll ? "No to-do items yet." : "Nothing is assigned to your role right now.") : "Nothing matches these filters.")
                     </p>
+                }
+                else if (boardView)
+                {
+                    @* Cards a reader may not tick off (someone else's item on a CanSeeAll list is
+                       never that here — the drag gate mirrors the detail modal's CanComplete) stay
+                       clickable but not draggable. *@
+                    <TodoBoard Items="@visible" Busy="@busy"
+                               OnOpen="item => selected = item"
+                               OnSetComplete="args => SetComplete(args.Item, args.IsComplete)"
+                               CanDrag="item => CanSeeAll || IsMine(item)"
+                               Scope="ScopeChipFor" />
                 }
                 else
                 {
@@ -305,6 +339,9 @@ else
     private IReadOnlyList<TodoAssignablePerson> assignablePeople = Array.Empty<TodoAssignablePerson>();
 
     private StatusFilter statusFilter = StatusFilter.Open;
+    // Board (the default) or flat list — read from TodoViewStorage per user, written back on
+    // toggle, and shared with the project tab and the dashboard panel.
+    private bool boardView = true;
     private string scopeFilter = ScopeAll;
     // The two assignee filters: a role (its int as a string, or Unassigned, "" = any) and a
     // person's email ("" = anyone). Independent — see MatchesAssigneeFilter.
@@ -353,6 +390,7 @@ else
         await Session.EnsureLoadedAsync();
         if (!Auth.IsSignedIn) { Nav.NavigateTo("/login", forceLoad: true); return; }
         sessionReady = true;
+        boardView = await ViewStorage.ReadBoardAsync(Auth.CurrentUser!.Email);
         // Paint the chrome before the fetches: Blazor re-renders OnInitializedAsync only at its
         // FIRST await, which has already passed, so without this the page waits on the list.
         StateHasChanged();
@@ -399,14 +437,10 @@ else
         finally { loading = false; }
     }
 
-    private IReadOnlyList<TodoItem> VisibleItems =>
+    // Everything the scope and assignee filters leave standing — the BOARD's item set (it shows
+    // both statuses as columns, so the status filter is not applied here).
+    private IReadOnlyList<TodoItem> FilteredItems =>
         items
-            .Where(item => statusFilter switch
-            {
-                StatusFilter.Open => !item.IsComplete,
-                StatusFilter.Done => item.IsComplete,
-                _ => true
-            })
             .Where(item => scopeFilter switch
             {
                 ScopeAll => true,
@@ -414,6 +448,17 @@ else
                 _ => item.ProjectId == scopeFilter
             })
             .Where(item => MatchesAssigneeFilter(item))
+            .ToList();
+
+    // The LIST's item set: the filtered items narrowed further by the Open/Done/All tabs.
+    private IReadOnlyList<TodoItem> VisibleItems =>
+        FilteredItems
+            .Where(item => statusFilter switch
+            {
+                StatusFilter.Open => !item.IsComplete,
+                StatusFilter.Done => item.IsComplete,
+                _ => true
+            })
             .ToList();
 
     // Role and person are independent narrowings: a role alone matches every item assigned to it
@@ -516,10 +561,47 @@ else
         return project is null ? "Project" : $"{project.Reference} — {project.Name}";
     }
 
+    // The board card's project badge: the reference as a compact chip (hover for the full name),
+    // or the accent "Company" chip for a no-project item. While the project labels are still in
+    // flight the chip says just "Project" rather than nothing.
+    private TodoBoard.ScopeChip ScopeChipFor(TodoItem item)
+    {
+        if (IsGeneral(item)) return new TodoBoard.ScopeChip("Company", "Company-wide — no project", true);
+        var project = (Projects.Current ?? (IReadOnlyList<Project>)Array.Empty<Project>())
+            .FirstOrDefault(p => p.ProjectId == item.ProjectId);
+        return project is null
+            ? new TodoBoard.ScopeChip("Project", "Project", false)
+            : new TodoBoard.ScopeChip(project.Reference, $"{project.Reference} — {project.Name}", false);
+    }
+
+    // The role filter's option pool: the roles that actually HAVE items on this reader's current
+    // list, A–Z by display name. Unassigned is offered when it would match something (or to the
+    // MD/administrators, whose list is the master one).
+    private IReadOnlyList<Role> RolesOnList =>
+        items.Where(item => item.AssigneeRole is not null)
+            .Select(item => item.AssigneeRole!.Value)
+            .Distinct()
+            .OrderBy(role => role.DisplayName(), StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+    private bool HasUnassigned => items.Any(item => item.AssigneeRole is null);
+
     private string StatusTabClass(StatusFilter tab) =>
         statusFilter == tab
             ? "btn-primary text-xs px-2.5 py-1.5"
             : "btn-secondary text-xs px-2.5 py-1.5";
+
+    private string ViewTabClass(bool board) =>
+        boardView == board
+            ? "btn-primary text-xs px-2.5 py-1.5"
+            : "btn-secondary text-xs px-2.5 py-1.5";
+
+    private async Task SetView(bool board)
+    {
+        if (boardView == board) return;
+        boardView = board;
+        await ViewStorage.WriteAsync(Auth.CurrentUser!.Email, board);
+    }
 
     private void OnNewNotesInput(ChangeEventArgs e) => newNotes = e.Value?.ToString() ?? "";
 
@@ -581,7 +663,8 @@ else
         // Tested against what the reader can SEE, not what came back: an item raised for Ravenswood
         // while the filter says Company-wide (or while Done is the open tab) is on the list and
         // still invisible, which looks exactly like the add having done nothing.
-        if (added is TodoItem raised && !VisibleItems.Any(item => item.TodoItemId == raised.TodoItemId))
+        if (added is TodoItem raised
+            && !(boardView ? FilteredItems : VisibleItems).Any(item => item.TodoItemId == raised.TodoItemId))
         {
             addedNote = items.Any(item => item.TodoItemId == raised.TodoItemId)
                 ? $"{raised.Reference} added to {ScopeLabel(raised)}. These filters are hiding it."
@@ -590,9 +673,16 @@ else
         }
     }
 
-    private async Task ToggleComplete(TodoItem item)
+    private Task ToggleComplete(TodoItem item) => SetComplete(item, !item.IsComplete);
+
+    // One path for both ways status changes: the detail modal's Mark done / Reopen
+    // (ToggleComplete) and the board's drag onto the other column. Success closes the detail
+    // modal if it was open — the reloaded list re-files the item under its new status; a drag
+    // never had it open, so there is nothing to close. A failure keeps the modal (and the error
+    // bar) saying what went wrong.
+    private async Task SetComplete(TodoItem item, bool complete)
     {
-        if (busy) return;
+        if (busy || item.IsComplete == complete) return;
         await Run(() => TodoStore.UpdateAsync(new UpdateTodoItem(
             item.TodoItemId,
             item.Title,
@@ -600,9 +690,7 @@ else
             item.AssigneeRole,
             item.AssigneePersonEmail,
             item.DueAt,
-            !item.IsComplete)));
-        // Success closes the detail modal — the reloaded list re-files the item (a completed item
-        // leaves the Open tab for Done). A failure keeps it open with the error surfaced inside.
+            complete)));
         if (error is null) selected = null;
     }
 

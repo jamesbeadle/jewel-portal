@@ -32,10 +32,11 @@ public sealed class AssignMessageToRequestHandler : ICommandHandler<AssignMessag
 
 /// <summary>
 /// Create a brand-new request from a mailbox message (live-read model). Creates the request and tags
-/// the email to it — and, like the link-to-existing path, the tag is applied across the email's whole
-/// conversation (anchor verified, siblings best-effort via <see cref="RecordThreadTagger"/>) so the
-/// entire thread leaves the triage queue together, not just the one clicked message. This is also the
-/// path "Reply in thread" delegates to, so replying triages the whole thread as well. No document
+/// the email to it. How far the tag spreads across the email's conversation is the command's
+/// <see cref="LinkThreadScope"/> (anchor verified, siblings best-effort via
+/// <see cref="RecordThreadTagger"/>): the default sweeps the anchor plus the thread behind it, so
+/// existing callers — "Reply in thread" among them — still triage the whole thread; the Control
+/// Centre passes MessageOnly unless its "triage the entire thread" box is ticked. No document
 /// email is drafted here — drafts are only created when explicitly requested
 /// (PrepareRequestEmailDraft / PrepareRequestReplyDraft).
 /// </summary>
@@ -129,15 +130,21 @@ public sealed class CreateRequestFromMessageHandler : ICommandHandler<CreateRequ
             DrawingRef = command.DrawingRef,
             ResponseDue = command.ResponseDue
         };
+        // The command's Scope decides how far the tags below spread across the conversation,
+        // exactly as in LinkMessageToRecordHandler: MessageOnly suppresses the sibling sweep
+        // (the thread's other emails keep queueing); EntireThread drops the received-at cutoff;
+        // the default sweeps the anchor plus the thread behind it.
+        var sweepConversationId = command.Scope == LinkThreadScope.MessageOnly ? null : snapshot.ConversationId;
+        DateTimeOffset? sweepCutoff = command.Scope == LinkThreadScope.EntireThread ? null : snapshot.ReceivedAt;
+
         // Tag the email to this new request first, verified by read-back; only persist the request
         // once the tag sticks, so we never create a request whose email is still sitting in the queue.
-        // The tag spans the whole conversation (siblings best-effort), matching the link-to-existing
-        // path — otherwise older messages and replies in the same thread would stay in triage.
+
         var tag = TriageCategories.ForRequest(
             RequestTags.Stem(await RequestTags.ProjectRefAsync(context, command.ProjectId, cancellationToken), command.ProjectId, request.TagReference));
         var tagged = await threadTagger.TagThreadAsync(
-            command.MessageId, snapshot.InternetMessageId, snapshot.ConversationId, tag, cancellationToken,
-            anchorReceivedAt: snapshot.ReceivedAt);
+            command.MessageId, snapshot.InternetMessageId, sweepConversationId, tag, cancellationToken,
+            anchorReceivedAt: sweepCutoff);
         if (!tagged)
             throw new InvalidOperationException("The email couldn't be tagged to the new request. Please try again.");
 
@@ -166,8 +173,8 @@ public sealed class CreateRequestFromMessageHandler : ICommandHandler<CreateRequ
             try
             {
                 stampedClient = await threadTagger.TagThreadAsync(
-                    command.MessageId, snapshot.InternetMessageId, snapshot.ConversationId,
-                    TriageCategories.Client, cancellationToken, anchorReceivedAt: snapshot.ReceivedAt);
+                    command.MessageId, snapshot.InternetMessageId, sweepConversationId,
+                    TriageCategories.Client, cancellationToken, anchorReceivedAt: sweepCutoff);
             }
             catch (Exception ex) when (ex is not OperationCanceledException) { /* best-effort */ }
         }
@@ -199,7 +206,9 @@ public sealed class CreateRequestFromMessageHandler : ICommandHandler<CreateRequ
             try
             {
                 await linkToRecord.HandleAsync(
-                    new LinkMessageToRecord(command.MessageId, RecordType.Scheduling, command.ProjectId, snapshot.InternetMessageId),
+                    new LinkMessageToRecord(
+                        command.MessageId, RecordType.Scheduling, command.ProjectId, snapshot.InternetMessageId,
+                        Scope: command.Scope),
                     cancellationToken);
             }
             catch (Exception ex) when (ex is not OperationCanceledException)

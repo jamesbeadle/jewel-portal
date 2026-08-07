@@ -1,0 +1,173 @@
+--- new-modal.razor	2026-08-07 14:24:18.125236124 +0000
++++ out/jpms/Features/Triage/SystemTagsModal.razor	2026-08-07 14:18:26.295938432 +0000
+@@ -47,7 +47,7 @@
+                 @if (StagedCreate is { } staged)
+                 {
+                     <span class="inline-flex items-center gap-1 rounded-full border border-accent/50 bg-accent/5 text-accent pl-2.5 pr-1 py-0.5 text-xs">
+-                        <span>✚ @staged.Label: @(string.IsNullOrWhiteSpace(staged.Title) ? "(untitled)" : staged.Title)</span>
++                        <span>✚ @staged.Label: @(string.IsNullOrWhiteSpace(staged.DisplayTitle) ? "(untitled)" : staged.DisplayTitle)</span>
+                         <button type="button" class="leading-none px-1 text-accent/70 hover:text-negative" title="Remove"
+                                 @onclick="ClearStagedCreate">&times;</button>
+                     </span>
+@@ -107,15 +107,17 @@
+             else
+             {
+                 <div class="space-y-3">
+-                    @* Which Subcontractor record the create drafts: a bid package (tendering) or a
+-                       work order (direct commitment). One staged create either way — switching kind
+-                       re-labels what Apply will raise. *@
++                    @* Which Subcontractor record the create drafts: a bid package (tendering), a
++                       work order (direct commitment) or a defect (remediation to chase). One staged
++                       create either way — switching kind re-labels what Apply will raise. *@
+                     <div class="flex items-center gap-2">
+                         <span class="text-xs uppercase tracking-wider text-content-subtle font-semibold">Record</span>
+                         <button type="button" class="@SubTabClass(SubCreateKind == StagedRecordKind.BidPackage)"
+                                 @onclick="() => SwitchSubCreateKind(StagedRecordKind.BidPackage)">Bid package</button>
+                         <button type="button" class="@SubTabClass(SubCreateKind == StagedRecordKind.WorkOrder)"
+                                 @onclick="() => SwitchSubCreateKind(StagedRecordKind.WorkOrder)">Work order</button>
++                        <button type="button" class="@SubTabClass(SubCreateKind == StagedRecordKind.Defect)"
++                                @onclick="() => SwitchSubCreateKind(StagedRecordKind.Defect)">Defect</button>
+                     </div>
+ 
+                     @if (SubCreateKind == StagedRecordKind.BidPackage)
+@@ -124,7 +126,7 @@
+                         <FormField Label="Title" Value="@Create.Title" OnChange="v => { Create.Title = v; NotifyCreate(); }" Required="true" />
+                         <FormField Label="Trade" Value="@Create.Trade" OnChange="v => { Create.Trade = v; NotifyCreate(); }" />
+                     }
+-                    else
++                    else if (SubCreateKind == StagedRecordKind.WorkOrder)
+                     {
+                         <p class="text-xs text-content-subtle">The work order is raised and this email is tagged to it on apply — released with the next order number, or as an unnumbered draft for approval from the Work Orders page.</p>
+ 
+@@ -252,6 +254,35 @@
+                             <p class="text-xs text-amber-600">@problem</p>
+                         }
+                     }
++                    else
++                    {
++                        <p class="text-xs text-content-subtle">The defect is raised (numbered DEF-####) and this email is tagged to it on apply — it appears on the project's Defects tab, where its status is worked to Verified.</p>
++
++                        <div>
++                            <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Location</label>
++                            <input type="text" class="field" maxlength="256" placeholder="Room, area or feature"
++                                   value="@Create.DefectLocation" @oninput="e => SetDefect(c => c.DefectLocation = e.Value?.ToString() ?? string.Empty)" />
++                        </div>
++                        <div>
++                            <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Description *</label>
++                            <textarea class="field" rows="3" maxlength="1024" placeholder="What's wrong and what putting it right needs"
++                                      value="@Create.Description" @oninput="e => SetDefect(c => c.Description = e.Value?.ToString() ?? string.Empty)"></textarea>
++                        </div>
++                        <div>
++                            <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Assigned to</label>
++                            <input type="text" class="field" maxlength="256" placeholder="Who the fix is chased with — an email address"
++                                   value="@Create.DefectAssignedTo" @oninput="e => SetDefect(c => c.DefectAssignedTo = e.Value?.ToString() ?? string.Empty)" />
++                            @if (defectAssigneeFromSender && Create.DefectAssignedTo != "")
++                            {
++                                <p class="text-[11px] text-content-subtle mt-1">Pre-filled from the sender</p>
++                            }
++                        </div>
++
++                        @if (StagedCreate is not null && Create.DefectProblem is { } defectProblem)
++                        {
++                            <p class="text-xs text-amber-600">@defectProblem</p>
++                        }
++                    }
+                 </div>
+             }
+         }
+@@ -271,7 +302,7 @@
+     // "Relevant Event for Programme" checkbox files to it instead; the bucket's claims
+     // documents stay reachable here via Request / RFI and LADs claim.
+     private static readonly RecordType[] ClientTypes = { RecordType.Request, RecordType.Variation, RecordType.Lad };
+-    private static readonly RecordType[] SubcontractorTypes = { RecordType.BidPackageInvite, RecordType.WorkOrder };
++    private static readonly RecordType[] SubcontractorTypes = { RecordType.BidPackageInvite, RecordType.WorkOrder, RecordType.Defect };
+     private static readonly RecordType[] InternalTypes = { RecordType.Todo };
+ 
+     [Parameter] public bool IsOpen { get; set; }
+@@ -303,8 +334,11 @@
+ 
+     private string activeTab = "Client";
+     private bool createOpen;
+-    // Which Subcontractor record the create pane drafts (BidPackage | WorkOrder).
++    // Which Subcontractor record the create pane drafts (BidPackage | WorkOrder | Defect).
+     private StagedRecordKind subCreateKind = StagedRecordKind.BidPackage;
++    // True while the defect assignee is the sender suggestion rather than a typed value — drives
++    // the "Pre-filled from the sender" hint, cleared by the first user edit.
++    private bool defectAssigneeFromSender;
+     // One refresh of the work-order lookups (directory + cost-code master) per modal open.
+     private bool workOrderLookupsRequested;
+     // The company name the sender was matched to, shown as a hint under the pre-selected picker.
+@@ -330,11 +364,15 @@
+             // The house-standard response window pre-fills the request form — a week is what all
+             // but a handful of requests get, so typing a date is keystrokes spent on the common case.
+             scratchCreate = new StagedRecordCreate { ResponseDue = RequestDefaults.ResponseDue() };
+-            subCreateKind = StagedCreate?.Kind == StagedRecordKind.WorkOrder
+-                ? StagedRecordKind.WorkOrder
+-                : StagedRecordKind.BidPackage;
++            subCreateKind = StagedCreate?.Kind switch
++            {
++                StagedRecordKind.WorkOrder => StagedRecordKind.WorkOrder,
++                StagedRecordKind.Defect => StagedRecordKind.Defect,
++                _ => StagedRecordKind.BidPackage
++            };
+             workOrderLookupsRequested = false;
+             senderMatchedCompany = null;
++            defectAssigneeFromSender = false;
+             if (createOpen && activeTab == "Subcontractor" && subCreateKind == StagedRecordKind.WorkOrder)
+                 _ = EnsureWorkOrderLookupsAsync();
+             linkType = DefaultTypeFor(activeTab);
+@@ -422,6 +460,8 @@
+         createOpen = true;
+         if (activeTab == "Subcontractor" && subCreateKind == StagedRecordKind.WorkOrder)
+             _ = EnsureWorkOrderLookupsAsync();
++        if (activeTab == "Subcontractor" && subCreateKind == StagedRecordKind.Defect)
++            TryPrefillDefectAssignee();
+     }
+ 
+     private void SwitchSubCreateKind(StagedRecordKind kind)
+@@ -429,10 +469,37 @@
+         if (subCreateKind == kind) return;
+         subCreateKind = kind;
+         if (kind == StagedRecordKind.WorkOrder) _ = EnsureWorkOrderLookupsAsync();
++        if (kind == StagedRecordKind.Defect) TryPrefillDefectAssignee();
+         // A staged create keeps its content and just changes what Apply will raise from it.
+         if (StagedCreate is not null) NotifyCreate();
+     }
+ 
++    /// <summary>Every defect form edit funnels through here: apply the edit, stamp the kind, and
++    /// stage/report — so a half-built defect is always the one staged record. A user edit of the
++    /// assignee replaces the sender suggestion, so the hint stops claiming it.</summary>
++    private void SetDefect(Action<StagedRecordCreate> edit)
++    {
++        var suggestedAssignee = Create.DefectAssignedTo;
++        edit(Create);
++        if (defectAssigneeFromSender && Create.DefectAssignedTo != suggestedAssignee)
++            defectAssigneeFromSender = false;
++        subCreateKind = StagedRecordKind.Defect;
++        NotifyCreate();
++    }
++
++    /// <summary>Pre-fill the defect's assignee from the email's sender — the defect is being
++    /// raised off their email, so they are the likeliest person the fix is chased with. A
++    /// suggestion only (never overrides a value already there), and like the work-order
++    /// subcontractor match it fills the scratch form WITHOUT staging it — only a user edit stages.</summary>
++    private void TryPrefillDefectAssignee()
++    {
++        if (string.IsNullOrWhiteSpace(SenderEmail) || Create.DefectAssignedTo != "") return;
++        Create.DefectAssignedTo = SenderEmail.Trim();
++        defectAssigneeFromSender = true;
++        // A form already staged reports the fill so the page's copy stays current.
++        if (StagedCreate is not null) _ = StagedCreateChanged.InvokeAsync(StagedCreate);
++    }
++
+     /// <summary>Every work-order form edit funnels through here: apply the edit, stamp the kind,
+     /// and stage/report — so a half-built order is always the one staged record.</summary>
+     private void SetWorkOrder(Action<StagedRecordCreate> edit)
+@@ -649,6 +716,7 @@
+         RecordType.Scheduling => "Relevant Event",
+         RecordType.BidPackageInvite => "Bid Package Invite",
+         RecordType.WorkOrder => "Work Order",
++        RecordType.Defect => "Defect",
+         RecordType.Todo => "To-do item",
+         _ => type.ToString()
+     };

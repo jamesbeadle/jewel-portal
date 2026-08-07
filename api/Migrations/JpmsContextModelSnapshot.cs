@@ -1155,6 +1155,9 @@ namespace Jewel.JPMS.Api.Migrations
                         .HasMaxLength(256)
                         .HasColumnType("nvarchar(256)");
 
+                    b.Property<int>("Number")
+                        .HasColumnType("int");
+
                     b.Property<string>("ProjectId")
                         .IsRequired()
                         .HasMaxLength(64)
@@ -3566,6 +3569,59 @@ namespace Jewel.JPMS.Api.Migrations
                     b.HasKey("WalkRoundNoteId");
 
                     b.ToTable("WalkRoundNotes");
+                });
+
+            modelBuilder.Entity("Jewel.JPMS.Api.Data.Entities.WorkOrderAttachmentEntity", b =>
+                {
+                    b.Property<string>("WorkOrderAttachmentId")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<DateTimeOffset>("AddedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("AddedByEmail")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<string>("BlobRef")
+                        .IsRequired()
+                        .HasMaxLength(1024)
+                        .HasColumnType("nvarchar(1024)");
+
+                    b.Property<string>("ContentType")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.Property<string>("FileName")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<long>("FileSizeBytes")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("ProjectId")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<int>("Source")
+                        .HasColumnType("int");
+
+                    b.Property<string>("WorkOrderId")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.HasKey("WorkOrderAttachmentId");
+
+                    b.HasIndex("WorkOrderId")
+                        .HasDatabaseName("IX_WorkOrderAttachments_WorkOrderId");
+
+                    b.ToTable("WorkOrderAttachments");
                 });
 
             modelBuilder.Entity("Jewel.JPMS.Api.Data.Entities.WorkOrderEntity", b =>

@@ -1,16 +1,26 @@
 using Jewel.JPMS.Api.Cqrs;
+using Jewel.JPMS.Api.Features.Procurement.Attachments;
 using Jewel.JPMS.Api.Features.Procurement.Commands;
 using Jewel.JPMS.Api.Features.Procurement.Queries;
 using Jewel.JPMS.Contracts.Procurement;
 using Jewel.JPMS.Models;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Jewel.JPMS.Api.Features.Procurement;
 
 public static class ProcurementFeatureRegistration
 {
-    public static IServiceCollection AddProcurementFeature(this IServiceCollection services)
+    public static IServiceCollection AddProcurementFeature(this IServiceCollection services, IConfiguration configuration)
     {
+        RegisterAttachmentStore(services, configuration);
+
+        // Attachments kept on a work order for record keeping (never sent to the supplier).
+        services.AddScoped<IQueryHandler<ListWorkOrderAttachments, IReadOnlyList<WorkOrderAttachment>>,
+            ListWorkOrderAttachmentsHandler>();
+        services.AddScoped<ICommandHandler<RemoveWorkOrderAttachment, IReadOnlyList<WorkOrderAttachment>>,
+            RemoveWorkOrderAttachmentHandler>();
+
         services.AddScoped<IQueryHandler<ListBidPackagesForProject, IReadOnlyList<BidPackage>>, ListBidPackagesForProjectHandler>();
         services.AddScoped<IQueryHandler<GetBidPackageById, BidPackage?>, GetBidPackageByIdHandler>();
         services.AddScoped<IQueryHandler<ListQuotesForBidPackage, IReadOnlyList<Quote>>, ListQuotesForBidPackageHandler>();
@@ -73,6 +83,12 @@ public static class ProcurementFeatureRegistration
         services.AddScoped<PrepareWorkOrderEmailDraftAuthorisation>();
         services.AddScoped<PrepareWorkOrderEmailDraftValidation>();
 
+        // The automatic counterpart: SENDS the purchase-order email the moment an order is
+        // released (created un-drafted, or a draft approved) — the UI warns before firing it.
+        services.AddScoped<ICommandHandler<SendWorkOrderPoEmail, WorkOrderPoEmailOutcome>, SendWorkOrderPoEmailHandler>();
+        services.AddScoped<SendWorkOrderPoEmailAuthorisation>();
+        services.AddScoped<SendWorkOrderPoEmailValidation>();
+
         services.AddScoped<ICommandHandler<ExtractQuoteFromMessage, QuoteExtractionProposal>, ExtractQuoteFromMessageHandler>();
         services.AddScoped<ExtractQuoteFromMessageAuthorisation>();
         services.AddScoped<ExtractQuoteFromMessageValidation>();
@@ -131,5 +147,21 @@ public static class ProcurementFeatureRegistration
         services.AddScoped<RejectWorkOrderValidation>();
 
         return services;
+    }
+
+    // Work-order attachments share the drawings storage account by default — one connection string
+    // to configure, one backup story — but can be pointed at their own account if volume ever
+    // warrants it. Same chain as the request attachment store.
+    private static void RegisterAttachmentStore(IServiceCollection services, IConfiguration configuration)
+    {
+        var connectionString = configuration["WorkOrderAttachmentsStorage:ConnectionString"]
+            ?? configuration["DrawingsStorage:ConnectionString"]
+            ?? configuration["AzureWebJobsStorage"];
+
+        if (string.IsNullOrWhiteSpace(connectionString))
+            services.AddSingleton<IWorkOrderAttachmentStore, NullWorkOrderAttachmentStore>();
+        else
+            services.AddSingleton<IWorkOrderAttachmentStore>(
+                _ => new AzureBlobWorkOrderAttachmentStore(connectionString));
     }
 }

@@ -22,7 +22,8 @@ public sealed class TodoDraftRow
 /// the page's Apply runs. Which fields matter depends on <see cref="Kind"/>: a Client-side General
 /// request carries the request fields; a Subcontractor bid package carries Title + Trade; a
 /// Subcontractor work order carries the full manual-order surface (subcontractor, scope,
-/// programme, priced lines, deposit, draft flag).
+/// programme, priced lines, deposit, draft flag); a Subcontractor defect carries location,
+/// description and assigned-to.
 /// </summary>
 public sealed class StagedRecordCreate
 {
@@ -49,12 +50,36 @@ public sealed class StagedRecordCreate
     public bool SaveAsDraft { get; set; }
     public List<StagedWorkOrderLine> Lines { get; } = new() { new StagedWorkOrderLine() };
 
+    // ---- Attachments for the staged work order — record keeping only, never sent to the
+    //      supplier (the PO email and printed PO ignore them). ----
+    // Graph attachment ids ticked from the open email; the server copies the bytes mailbox →
+    // blob store when the apply raises the order, so they never round-trip through the browser.
+    public List<string> EmailAttachmentIds { get; } = new();
+    // Files picked from this computer; the page uploads them onto the new order right after the
+    // apply raises it (multipart, same transport as request attachments).
+    public List<Microsoft.AspNetCore.Components.Forms.IBrowserFile> UploadFiles { get; } = new();
+
+    // ---- Defect fields (Kind == Defect) — mirroring RaiseDefect's surface. Description is shared
+    // with the request form above (both are "what's wrong" prose). ----
+    public string DefectLocation { get; set; } = "";
+    // Who the remediation is chased with — pre-filled from the email's sender, freely editable.
+    public string DefectAssignedTo { get; set; } = "";
+
     public string Label => Kind switch
     {
         StagedRecordKind.BidPackage => "new bid package",
         StagedRecordKind.WorkOrder => "new work order",
+        StagedRecordKind.Defect => "new defect",
         _ => "new request"
     };
+
+    /// <summary>What the staged-record chip shows after the label: the title — or for a defect,
+    /// which has no title, its location (else the start of its description).</summary>
+    public string DisplayTitle => Kind == StagedRecordKind.Defect
+        ? (!string.IsNullOrWhiteSpace(DefectLocation)
+            ? DefectLocation
+            : Description.Length > 48 ? Description[..48] + "…" : Description)
+        : Title;
 
     /// <summary>Lines the apply will actually send: rows where anything has been entered.</summary>
     public IEnumerable<StagedWorkOrderLine> EnteredLines =>
@@ -86,6 +111,21 @@ public sealed class StagedRecordCreate
         }
     }
 
+    /// <summary>
+    /// What still stops the staged defect being raised — null when it is complete. Shared by the
+    /// modal (inline hint) and the page's Apply (hard gate), so the wording is decided once.
+    /// Mirrors the server's own rule (RaiseDefectValidation: a description is required).
+    /// </summary>
+    public string? DefectProblem
+    {
+        get
+        {
+            if (Kind != StagedRecordKind.Defect) return null;
+            if (string.IsNullOrWhiteSpace(Description)) return "Describe the defect.";
+            return null;
+        }
+    }
+
     public static decimal? ParseDecimal(string text) =>
         decimal.TryParse(text, System.Globalization.NumberStyles.Any,
             System.Globalization.CultureInfo.InvariantCulture, out var value)
@@ -106,4 +146,4 @@ public sealed class StagedWorkOrderLine
     public decimal? Amount => StagedRecordCreate.ParseDecimal(AmountText);
 }
 
-public enum StagedRecordKind { Request, BidPackage, WorkOrder }
+public enum StagedRecordKind { Request, BidPackage, WorkOrder, Defect }

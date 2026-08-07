@@ -3,11 +3,15 @@
 @using Jewel.JPMS.Contracts.Procurement
 @using Jewel.JPMS.Features.CostCenters
 @using Jewel.JPMS.Features.Procurement
+@using Jewel.JPMS.Features.Projects
+@using Jewel.JPMS.Features.Subcontractors
 @using Jewel.JPMS.Models
 @inject AuthService Auth
 @inject SessionService Session
 @inject CostCentersReadModel CostCenters
 @inject ProjectWorkOrdersReadModel WorkOrders
+@inject SubcontractorsReadModel Subcontractors
+@inject ProjectListReadModel Projects
 @inject WorkOrderGroupingStorage GroupingStorage
 @inject ICommandSender Commands
 @inject IQueryClient Queries
@@ -58,6 +62,17 @@ else
                 </button>
             </div>
         </div>
+
+        @* What happened to the automatic purchase-order email after a release (creation or
+           approval) — sent, saved as a mailbox draft, or skipped and why. *@
+        @if (poEmailNote is not null)
+        {
+            <p class="rounded-lg bg-accent/10 border border-accent/30 px-3 py-2 text-sm text-content mb-3">
+                @poEmailNote
+                <button type="button" class="text-xs text-content-subtle underline underline-offset-4 ml-2"
+                        @onclick="() => poEmailNote = null">Dismiss</button>
+            </p>
+        }
 
         @* One panel. The summary line, the table and its footer are the same arithmetic over the
            orders, their cost-centre master names and the per-order invoiced balances — and "no
@@ -125,8 +140,18 @@ else
                             <span class="ml-auto">@Money(detail.Order.Value)</span>
                             @if (PendingFor(detail) is { } pending)
                             {
+                                @* The approve warning: releasing the draft emails its purchase order there and then. *@
+                                @if (pending == DraftDecision.Approve)
+                                {
+                                    <span class="text-[11px] @(SupplierEmailFor(detail) is null ? "text-amber-700" : "text-content-subtle")"
+                                          title="Approving releases the order — the purchase-order email is sent from the projects mailbox the moment the number is minted">
+                                        @(SupplierEmailFor(detail) is { } supplierEmail
+                                            ? $"PO will be emailed to {supplierEmail}"
+                                            : "No directory email — the PO won't be emailed")
+                                    </span>
+                                }
                                 <button type="button" class="text-xs font-medium @(pending == DraftDecision.Approve ? "text-accent" : "text-negative") underline underline-offset-4"
-                                        title="@(pending == DraftDecision.Approve ? "Mint the next order number and issue this order" : "End this draft — its value stops counting and there is no undo")"
+                                        title="@(pending == DraftDecision.Approve ? "Mint the next order number, issue this order and email the purchase order to the supplier" : "End this draft — its value stops counting and there is no undo")"
                                         disabled="@decisionBusy"
                                         @onclick="() => DecideAsync(detail, pending)">
                                     @(decisionBusy ? "Working…" : pending == DraftDecision.Approve ? "Confirm approve" : "Confirm reject")
@@ -421,7 +446,8 @@ else
                               ProjectId="@ProjectId"
                               Editing="@editingOrder"
                               OnClose="CloseManualOrder"
-                              OnSaved="HandleManualOrderSavedAsync" />
+                              OnSaved="HandleManualOrderSavedAsync"
+                              OnPoEmailNote="ShowPoEmailNote" />
     </ProjectPageShell>
 }
 
@@ -786,6 +812,53 @@ else
     private DraftDecision? PendingFor(ProjectWorkOrderDetail detail) =>
         pendingDraftId == detail.Order.WorkOrderId ? pendingDecision : null;
 
+    // What happened to the automatic purchase-order email after a release (modal creation or
+    // draft approval) — shown at the top of the page until dismissed.
+    private string? poEmailNote;
+
+    private void ShowPoEmailNote(string note) => poEmailNote = note;
+
+    /// <summary>The supplier's directory email for an order, or null when the directory has
+    /// none — which is exactly the case the approve warning must call out.</summary>
+    private string? SupplierEmailFor(ProjectWorkOrderDetail detail)
+    {
+        var supplier = (Subcontractors.Current ?? Array.Empty<Subcontractor>()).FirstOrDefault(sub =>
+            string.Equals(sub.SubcontractorId, detail.Order.SubcontractorId, StringComparison.OrdinalIgnoreCase));
+        return string.IsNullOrWhiteSpace(supplier?.ContactEmail) ? null : supplier!.ContactEmail;
+    }
+
+    /// <summary>Sends the purchase-order email a release promised (draft approval path).
+    /// Never throws — the order is released either way; the returned note says what happened.</summary>
+    private async Task<string> TrySendPoEmailAsync(WorkOrder order, ProjectWorkOrderDetail detail)
+    {
+        if (SupplierEmailFor(detail) is null)
+            return $"{order.Reference} was approved, but the supplier has no email address in the directory "
+                + "so the purchase order wasn't emailed — add one, then send it from the PO page.";
+        var projectName = Projects.Find(ProjectId)?.Name ?? "";
+        var emailLines = detail.Lines.OrderBy(l => l.SortOrder).Select(WorkOrderPoEmail.ToLine).ToList();
+        try
+        {
+            var outcome = await Commands.SendAsync(new SendWorkOrderPoEmail(
+                order.WorkOrderId,
+                WorkOrderPoEmail.Subject(order, string.IsNullOrWhiteSpace(projectName) ? ProjectId : projectName),
+                WorkOrderPoEmail.Body(order, detail.SubcontractorName, emailLines, projectName, Nav.BaseUri)),
+                CancellationToken.None);
+            return outcome.Sent
+                ? $"{order.Reference} was approved and the purchase order was emailed to {outcome.RecipientEmail}."
+                : $"{order.Reference} was approved. {outcome.FailureNote}";
+        }
+        catch (CommandFailedException ex)
+        {
+            return $"{order.Reference} was approved, but the purchase-order email couldn't be sent: "
+                + $"{ex.Message} You can send it from the PO page.";
+        }
+        catch
+        {
+            return $"{order.Reference} was approved, but the purchase-order email couldn't be sent "
+                + "— you can send it from the PO page.";
+        }
+    }
+
     private void SetPending(ProjectWorkOrderDetail detail, DraftDecision decision)
     {
         pendingDraftId = detail.Order.WorkOrderId;
@@ -804,16 +877,21 @@ else
         {
             if (decision == DraftDecision.Approve)
             {
-                await Commands.SendAsync(new ApproveWorkOrder(
+                var approved = await Commands.SendAsync(new ApproveWorkOrder(
                     ProjectId, detail.Order.WorkOrderId, Auth.CurrentUser?.Email ?? ""), CancellationToken.None);
+                pendingDraftId = null;
+                await WorkOrders.RefreshAsync(ProjectId, CancellationToken.None);
+                // The email the approve warning promised — non-fatal by design: the order is
+                // released either way, and the note says what happened to its email.
+                poEmailNote = await TrySendPoEmailAsync(approved, detail);
             }
             else
             {
                 await Commands.SendAsync(new RejectWorkOrder(
                     ProjectId, detail.Order.WorkOrderId), CancellationToken.None);
+                pendingDraftId = null;
+                await WorkOrders.RefreshAsync(ProjectId, CancellationToken.None);
             }
-            pendingDraftId = null;
-            await WorkOrders.RefreshAsync(ProjectId, CancellationToken.None);
         }
         catch (CommandFailedException ex)
         {
@@ -953,6 +1031,10 @@ else
         // Refresh once per tab entry (stale-while-revalidate, per the front-end
         // data-loading convention) — cached figures render immediately, then update.
         _ = WorkOrders.RefreshAsync(ProjectId, CancellationToken.None);
+        // The supplier directory (approve-warning email addresses) and project name (the
+        // auto-sent PO email's subject) follow the same convention.
+        _ = Subcontractors.RefreshAsync(CancellationToken.None);
+        _ = Projects.RefreshAsync(CancellationToken.None);
 
         // The saved grouping, the cost centres and the invoice summaries are independent of each
         // other, so they go out together instead of in series.

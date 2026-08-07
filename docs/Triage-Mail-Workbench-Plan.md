@@ -15,7 +15,7 @@ discard it (spam). Sender is always the shared `projects@jewelbb.co.uk` mailbox.
 
 ### Sending (Phase 1)
 - `IMailboxGraphClient.SendDraftAsync` — the ONE send call in the system: every outbound email is
-  still staged as a draft first (auto-Cc of projects@, category stamping, large-attachment upload
+  still staged as a draft first (category stamping, large-attachment upload
   sessions — all the existing plumbing), then `POST …/send` on an explicit human click. 429 retried
   once honouring Retry-After. No agent tool is wired to it.
 - `POST /api/mailbox/compose` (`SendMailboxEmail` → `ComposeOutcome`), triage-role gated, sender
@@ -25,7 +25,10 @@ discard it (spam). Sender is always the shared `projects@jewelbb.co.uk` mailbox.
   webLink ("open in Outlook") — same for the explicit **Save as draft** button.
 - **The visible envelope is authoritative**: reply prefill (reply-all computed from the new
   To/Cc/ReplyTo/Subject fields on `MailboxMessageDetail`) is editable, and the server PATCHes the
-  staged draft to exactly what was submitted. The projects mailbox keeps its Cc copy server-side.
+  staged draft to exactly what was submitted. Nothing is added server-side — the projects mailbox
+  is never auto-Cc'd (amended 2026-08-07: the delivered Cc copy arrived back in the Inbox untagged
+  and landed straight back in the triage queue; Sent Items + whole-mailbox tag reads keep the
+  outbound leg visible instead).
 - **`JPMS/Replied`** — a reply with no record chosen triages the thread with this ordinary
   workflow tag: answering an email IS dealing with it. A pathway alongside is optional (v7): a
   chosen System Tags tab (or any record filing) files the thread under that side; a reply alone
@@ -50,7 +53,8 @@ discard it (spam). Sender is always the shared `projects@jewelbb.co.uk` mailbox.
   contradiction. The Subcontractor↔Internal cross-filing confirm interrupts the apply and re-runs
   it with consent.
 - The reply-all Cc prefill filters out the projects mailbox itself (`MailboxMessageDetail.MailboxAddress`)
-  — the server auto-Cc's it on every send, so showing it was noise.
+  — Cc'ing the mailbox would deliver the sent copy back into the Inbox and the triage queue
+  (2026-08-07: the server no longer auto-Cc's it either, for the same reason).
 - Audit: `EmailSent` (always written, whatever the pathway — recipients snapshot in Detail,
   webLink = the sent copy) and `EmailSendFailed`. Plain int values 13/14 — **no EF migration**.
 

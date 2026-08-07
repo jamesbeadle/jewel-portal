@@ -1,0 +1,159 @@
+@using Jewel.JPMS.Models
+@inject IWorkOrderAttachmentStore Attachments
+
+@*
+    What is kept on a work order for record keeping: the quote it was raised against, a signed
+    copy, a photo of the scope. Pure paperwork for the office — attachments are never sent to the
+    supplier (the purchase-order email and the printed PO ignore them), which is why this panel
+    lives on screen and is hidden from print.
+*@
+
+<Panel Title="Attachments" IsLoading="@(!loaded)" Prominent="false">
+    <HeaderActions>
+        @if (CanEdit)
+        {
+            <label class="btn-secondary text-xs cursor-pointer @(busy ? "opacity-50 pointer-events-none" : "")">
+                @(uploading ? "Uploading…" : "Add files")
+                <InputFile OnChange="OnFilesSelected" multiple class="hidden" />
+            </label>
+        }
+    </HeaderActions>
+    <ChildContent>
+
+    <p class="text-xs text-content-subtle mb-3">
+        Record keeping only — these files are never sent to the supplier and don't print on the
+        purchase order.
+    </p>
+
+    @if (error is not null)
+    {
+        <div class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-3">@error</div>
+    }
+
+    @if (items.Count == 0)
+    {
+        <p class="text-sm text-content-subtle">
+            @(CanEdit ? "Nothing attached. Add the quote, signed copy or photos this order rests on." : "Nothing attached.")
+        </p>
+    }
+    else
+    {
+        <ul class="divide-y divide-line rounded-lg border border-line bg-surface">
+            @foreach (var item in items)
+            {
+                var attachment = item;
+                <li class="px-3 py-2 flex items-center gap-3 text-sm">
+                    @if (attachment.IsImage)
+                    {
+                        <a href="@Attachments.FileUrl(WorkOrderId, attachment.WorkOrderAttachmentId)" target="_blank" rel="noopener" class="shrink-0">
+                            <img src="@Attachments.FileUrl(WorkOrderId, attachment.WorkOrderAttachmentId, inline: true)"
+                                 alt="@attachment.DisplayName" loading="lazy"
+                                 class="w-10 h-10 rounded object-cover border border-line" />
+                        </a>
+                    }
+                    <span class="min-w-0 flex-1">
+                        <span class="block text-content truncate" title="@attachment.DisplayName">@attachment.DisplayName</span>
+                        <span class="block text-[11px] text-content-subtle">
+                            @(attachment.Source == WorkOrderAttachmentSource.Email ? "From the triaged email" : "Uploaded")
+                            @(attachment.FileSizeBytes > 0 ? $" · {Size(attachment.FileSizeBytes)}" : "")
+                            · @attachment.AddedAt.LocalDateTime.ToString("d MMM yyyy")
+                        </span>
+                    </span>
+                    <a class="text-xs text-accent hover:underline whitespace-nowrap"
+                       href="@Attachments.FileUrl(WorkOrderId, attachment.WorkOrderAttachmentId)" target="_blank" rel="noopener">Open</a>
+                    @if (CanEdit)
+                    {
+                        <button type="button" class="text-xs text-content-subtle hover:text-negative whitespace-nowrap"
+                                disabled="@busy" @onclick="() => Remove(attachment)">Remove</button>
+                    }
+                </li>
+            }
+        </ul>
+    }
+    </ChildContent>
+</Panel>
+
+@code {
+    [Parameter, EditorRequired] public string WorkOrderId { get; set; } = "";
+    [Parameter] public bool CanEdit { get; set; }
+
+    /// <summary>Raised whenever the attachment list changes, so a parent can re-read its own counts.</summary>
+    [Parameter] public EventCallback OnChanged { get; set; }
+
+    private List<WorkOrderAttachment> items = new();
+    private bool loaded;
+    private bool busy;
+    private bool uploading;
+    private string? error;
+    private string? loadedFor;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (string.IsNullOrWhiteSpace(WorkOrderId) || loadedFor == WorkOrderId) return;
+        loadedFor = WorkOrderId;
+        loaded = false;
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        error = null;
+        try
+        {
+            items = (await Attachments.ListAsync(WorkOrderId)).ToList();
+        }
+        catch
+        {
+            error = "Couldn't load the attachments.";
+        }
+        finally
+        {
+            loaded = true;
+        }
+    }
+
+    private async Task OnFilesSelected(InputFileChangeEventArgs e)
+    {
+        if (busy) return;
+        var files = e.GetMultipleFiles(20);
+        if (files.Count == 0) return;
+
+        error = null;
+        try
+        {
+            busy = uploading = true;
+            items = (await Attachments.UploadFilesAsync(WorkOrderId, files)).ToList();
+            await OnChanged.InvokeAsync();
+        }
+        catch (Exception ex)
+        {
+            // The store surfaces the server's own message (storage unconfigured, file too big),
+            // which is the part a user can act on.
+            error = ex.Message;
+        }
+        finally
+        {
+            busy = uploading = false;
+        }
+    }
+
+    private async Task Remove(WorkOrderAttachment attachment)
+    {
+        if (busy) return;
+        error = null;
+        try
+        {
+            busy = true;
+            items = (await Attachments.RemoveAsync(WorkOrderId, attachment.WorkOrderAttachmentId)).ToList();
+            await OnChanged.InvokeAsync();
+        }
+        catch (CommandFailedException ex) { error = ex.Message; }
+        catch { error = "Couldn't remove that attachment. Please try again."; }
+        finally { busy = false; }
+    }
+
+    private static string Size(long bytes) =>
+        bytes >= 1_048_576 ? $"{bytes / 1_048_576.0:0.#} MB"
+        : bytes >= 1024 ? $"{bytes / 1024.0:0.#} KB"
+        : $"{bytes} B";
+}

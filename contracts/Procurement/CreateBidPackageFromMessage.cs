@@ -1,4 +1,5 @@
 using Jewel.JPMS.Contracts.Cqrs;
+using Jewel.JPMS.Contracts.RecordLinks;
 using Jewel.JPMS.Models;
 
 namespace Jewel.JPMS.Contracts.Procurement;
@@ -13,4 +14,9 @@ public sealed record CreateBidPackageFromMessage(
     string Title,
     string Trade,
     string? InternetMessageId = null,
-    string OwnerEmail = "") : ICommand<BidPackage>;
+    string OwnerEmail = "",
+    // How far the record tag spreads across the email's conversation (forwarded verbatim to the
+    // shared LinkMessageToRecord path). Default keeps the long-standing anchor+thread-behind
+    // sweep; the Control Centre passes an explicit MessageOnly / EntireThread from its
+    // "triage the entire thread" checkbox.
+    LinkThreadScope Scope = LinkThreadScope.ThreadBehindAnchor) : ICommand<BidPackage>;

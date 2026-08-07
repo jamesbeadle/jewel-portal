@@ -6,7 +6,7 @@ namespace Jewel.JPMS.Api.Features.Closeout;
 internal static class CloseoutEntityMapping
 {
     public static Defect ToModel(this DefectEntity entity) =>
-        new(entity.DefectId, entity.ProjectId, entity.Description, entity.Location, entity.AssignedToEmail, (DefectStatus)entity.Status, entity.RaisedAt, entity.ResolvedAt);
+        new(entity.DefectId, entity.ProjectId, entity.Description, entity.Location, entity.AssignedToEmail, (DefectStatus)entity.Status, entity.RaisedAt, entity.ResolvedAt, entity.Reference);
 
     public static SettlementRecord ToModel(this SettlementRecordEntity entity) =>
         new(entity.SettlementRecordId, entity.ProjectId, entity.FinalContractValue, entity.FinalCost, entity.FinalMargin, entity.AgreedAt, entity.IsClientSigned);

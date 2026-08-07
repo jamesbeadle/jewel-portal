@@ -195,6 +195,27 @@ public sealed class WorkOrderLineEntity
     public int SortOrder { get; set; }
 }
 
+// A file kept on a work order for record keeping -- the quote the order was raised against, a
+// signed copy, a photo of the scope. Never sent to the supplier: the purchase-order email and the
+// printed PO ignore these entirely. Bytes live in the work-order-attachments blob container
+// (BlobRef); the row is the register entry the Work Orders views read.
+public sealed class WorkOrderAttachmentEntity
+{
+    [Key, MaxLength(64)] public string WorkOrderAttachmentId { get; set; } = "";
+    [MaxLength(64)]      public string WorkOrderId { get; set; } = "";
+    [MaxLength(64)]      public string ProjectId { get; set; } = "";
+    [MaxLength(256)]     public string FileName { get; set; } = "";
+    [MaxLength(128)]     public string ContentType { get; set; } = "";
+    public long FileSizeBytes { get; set; }
+    [MaxLength(1024)]    public string BlobRef { get; set; } = "";
+
+    // Maps to WorkOrderAttachmentSource (0 = uploaded from a computer, 1 = copied off the
+    // triaged email the order was raised from).
+    public int Source { get; set; }
+    public DateTimeOffset AddedAt { get; set; }
+    [MaxLength(256)]     public string AddedByEmail { get; set; } = "";
+}
+
 public sealed class RequestEntity
 {
     [Key, MaxLength(64)] public string RequestId { get; set; } = "";

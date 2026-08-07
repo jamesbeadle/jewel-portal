@@ -14,7 +14,8 @@ public enum RecordType
     Lad = 5,               // a Liquidated Damages claim — a claims document on the Programme tab
     Variation = 6,         // a Variation Order — the approved change feeding the valuation report
     VariationQuote = 7,    // a Variation Order Quote (VOQ) — the pre-approval quote a VO is raised from
-    WorkOrder = 8          // a work order (purchase order) awarded to a subcontractor — subcontract-side
+    WorkOrder = 8,         // a work order (purchase order) awarded to a subcontractor — subcontract-side
+    Defect = 9             // a defect logged on the project — remediation chased with the subcontractor
 }
 
 // The discipline an agent belongs to. Mirrors the columns of the request-agent flow diagram:
