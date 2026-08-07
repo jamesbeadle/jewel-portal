@@ -68,6 +68,9 @@ public sealed class UpdateRequestDetailsHandler : ICommandHandler<UpdateRequestD
         // The Critical Path tag follows the same convention: a supplied value (over)writes it,
         // null means "not supplied" — so surfaces that don't carry the tag never shed it.
         if (command.CriticalPath is { } criticalPath) entity.CriticalPath = criticalPath;
+        // The nudge dismissal follows suit: only the banner's "No" ever supplies a value, so no
+        // other edit surface can resurrect (or re-dismiss) the two-week prompt.
+        if (command.CriticalPathNudgeDismissed is { } nudgeDismissed) entity.CriticalPathNudgeDismissed = nudgeDismissed;
         if (entity.RespondedAt is null && !string.IsNullOrWhiteSpace(command.ResponseText)) entity.RespondedAt = DateTimeOffset.UtcNow;
 
         // The close date lives and dies with the Closed status. While closed it is user-manageable

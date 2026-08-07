@@ -94,8 +94,8 @@
                     <label class="flex items-start gap-2 cursor-pointer">
                         <input type="checkbox" checked="@Create.AddToProgramme" @onchange="e => { Create.AddToProgramme = e.Value is true; NotifyCreate(); }" />
                         <span class="text-sm text-content">
-                            Also add to Programme
-                            <span class="block text-xs text-content-subtle">The email's thread is also tagged to the project's programme communications.</span>
+                            Also a Relevant Event for the Programme
+                            <span class="block text-xs text-content-subtle">The email's thread is also tagged to the project's programme — it appears in the Programme tab's Relevant Events.</span>
                         </span>
                     </label>
                 </div>
@@ -120,8 +120,11 @@
     private static readonly string[] Tabs = { "Client", "Subcontractor", "Internal" };
 
     // What each tab can link to. Cost Centre removed as a filing destination (2026-08-04);
-    // VariationQuote folded into Variation (one record, one number).
-    private static readonly RecordType[] ClientTypes = { RecordType.Request, RecordType.Variation, RecordType.Lad, RecordType.Scheduling };
+    // VariationQuote folded into Variation (one record, one number). Scheduling removed
+    // (2026-08-07): the programme bucket isn't a record anyone picks — the page's own
+    // "Relevant Event for Programme" checkbox files to it instead; the bucket's claims
+    // documents stay reachable here via Request / RFI and LADs claim.
+    private static readonly RecordType[] ClientTypes = { RecordType.Request, RecordType.Variation, RecordType.Lad };
     private static readonly RecordType[] SubcontractorTypes = { RecordType.BidPackageInvite, RecordType.WorkOrder };
     private static readonly RecordType[] InternalTypes = { RecordType.Todo };
 
@@ -367,13 +370,13 @@
         .Where(t => t.Length >= 4)
         .ToHashSet();
 
-    // UI terminology: Programme (not Scheduling), LADs claim, Variation Order (one record).
+    // UI terminology: Relevant Event (not Scheduling), LADs claim, Variation Order (one record).
     private static string TypeLabel(RecordType type) => type switch
     {
         RecordType.Request => "Request / RFI",
         RecordType.Variation => "Variation Order",
         RecordType.Lad => "LADs claim",
-        RecordType.Scheduling => "Programme",
+        RecordType.Scheduling => "Relevant Event",
         RecordType.BidPackageInvite => "Bid Package Invite",
         RecordType.WorkOrder => "Work Order",
         RecordType.Todo => "To-do item",

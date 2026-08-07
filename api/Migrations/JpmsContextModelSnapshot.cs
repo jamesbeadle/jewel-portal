@@ -469,6 +469,9 @@ namespace Jewel.JPMS.Api.Migrations
                     b.Property<bool>("CriticalPath")
                         .HasColumnType("bit");
 
+                    b.Property<bool>("CriticalPathNudgeDismissed")
+                        .HasColumnType("bit");
+
                     b.Property<string>("Description")
                         .IsRequired()
                         .HasMaxLength(2048)

@@ -37,4 +37,8 @@ public sealed record UpdateRequestDetails(
     // Critical Path tag — the RFI is programme-related (its answer gates critical-path work).
     // A value (over)writes the tag; null means "not supplied" and keeps the existing one (most
     // edit surfaces don't carry it, so status changes and the like never shed the tag).
-    bool? CriticalPath = null) : ICommand<Request>;
+    bool? CriticalPath = null,
+    // "No" on the two-week critical-path nudge. Same convention again: a value (over)writes the
+    // flag, null means "not supplied" — only the nudge banner itself ever sends one, so ordinary
+    // edits never resurrect (or re-dismiss) the prompt.
+    bool? CriticalPathNudgeDismissed = null) : ICommand<Request>;

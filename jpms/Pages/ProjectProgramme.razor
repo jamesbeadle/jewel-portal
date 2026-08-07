@@ -17,10 +17,10 @@
     The project Programme tab. Three views: the programme itself (not built yet — placeholder), Claims
     — the formal time/notice documents around the programme: Jewel's own Notices of Delay (NOD) and
     the Extensions of Time (EOT) they give rise to, plus the Liquidated Damages (LADs) claims the
-    client can make against Jewel — and Communications, which lists every email tagged to this
+    client can make against Jewel — and Relevant Events, which lists every email tagged to this
     project's scheduling bucket ("JPMS/SCH-<projectRef>") live from the mailbox. Emails get here from
-    mailbox triage — link an email to record type "Scheduling", either to the general bucket or deeper
-    to a specific claims document — and an email can carry other workflow tags at the same time, so
+    the Control Centre — tick "Relevant Event for Programme" on the email (or link it deeper to a
+    specific claims document) — and an email can carry other workflow tags at the same time, so
     the same message can feed a request AND appear here.
 *@
 
@@ -58,8 +58,8 @@ else
                     <span class="ml-1.5 inline-flex items-center rounded-full bg-accent/10 px-2 py-0.5 text-[11px] font-medium text-accent">@OpenCriticalRfiCount</span>
                 }
             </button>
-            <button type="button" class="@SubTabClass(SubView.Communications)" @onclick="() => SwitchView(SubView.Communications)">
-                Communications
+            <button type="button" class="@SubTabClass(SubView.RelevantEvents)" @onclick="() => SwitchView(SubView.RelevantEvents)">
+                Relevant Events
                 @if (emailsLoaded && emails.Count > 0)
                 {
                     <span class="ml-1.5 inline-flex items-center rounded-full bg-accent/10 px-2 py-0.5 text-[11px] font-medium text-accent">@emails.Count</span>
@@ -638,9 +638,9 @@ else
                 @if (emailsError is null)
                 {
                 <div class="panel p-8 text-center">
-                    <p class="text-sm text-content">No programme emails yet.</p>
+                    <p class="text-sm text-content">No relevant events yet.</p>
                     <p class="text-xs text-content-subtle mt-1">
-                        Tag an email to <span class="font-medium text-content">Programme</span> in mailbox triage and it will appear here.
+                        Tick <span class="font-medium text-content">Relevant Event for Programme</span> on an email in the Control Centre and it will appear here.
                     </p>
                 </div>
                 }
@@ -768,7 +768,7 @@ else
 @code {
     [Parameter] public string ProjectId { get; set; } = "";
 
-    private enum SubView { Programme, Claims, CriticalRfis, Communications }
+    private enum SubView { Programme, Claims, CriticalRfis, RelevantEvents }
     private SubView view = SubView.Programme;
 
     private enum ClaimForm { None, Nod, Eot, Lad }
@@ -878,7 +878,7 @@ else
         // register was first cached (stale-while-revalidate).
         RequestRegister.Refresh(ProjectId);
         sessionReady = true;
-        // Load the programme, claims + communications in the background so the default view and the
+        // Load the programme, claims + relevant events in the background so the default view and the
         // count badges are ready when the tabs are opened.
         await Task.WhenAll(LoadProgrammeAsync(), LoadLadsAsync(), LoadEmailsAsync());
     }
@@ -1217,7 +1217,7 @@ else
         }
     }
 
-    // ---- Communications: expand to the full email, and reply in the email's thread ----
+    // ---- Relevant Events: expand to the full email, and reply in the email's thread ----
 
     // Emails render their short preview by default; expanding fetches the FULL body (with the quoted
     // thread + attachment names) live from the mailbox, cached per message for the page's life.

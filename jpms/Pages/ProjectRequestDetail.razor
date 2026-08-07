@@ -171,6 +171,22 @@ else
         {
             <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-5">@actionError</p>
         }
+        @* The two-week critical-path nudge: an RFI still outstanding after a fortnight is usually
+           gating programme work. Yes tags it (same command as the Actions-menu toggle); No records
+           the decision on the request so the banner never re-asks anyone about this RFI. *@
+        @if (ShowCriticalPathNudge)
+        {
+            <div class="rounded-lg bg-amber-500/10 border border-amber-500/30 px-3 py-2 mb-5 flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+                <div>
+                    <p class="text-sm font-medium text-amber-700">RFI 2 weeks old — tag as critical path?</p>
+                    <p class="text-xs text-content-subtle">Outstanding @record.DaysOutstanding days. Critical path RFIs surface in the Programme tab, where their answers gate the programme.</p>
+                </div>
+                <div class="flex items-center gap-2 shrink-0">
+                    <button type="button" class="btn-primary text-xs" disabled="@busy" @onclick="() => AnswerCriticalPathNudge(true)">Yes — tag as critical path</button>
+                    <button type="button" class="btn-secondary text-xs" disabled="@busy" @onclick="() => AnswerCriticalPathNudge(false)" title="Hides this prompt for this RFI, for everyone — the tag can still be set from the Actions menu">No</button>
+                </div>
+            </div>
+        }
         @if (blockingAgents.Count > 0)
         {
             <div class="rounded-lg bg-amber-500/10 border border-amber-500/30 px-3 py-2 mb-5">
@@ -2083,7 +2099,24 @@ else
     // Flips the Critical Path tag in place from the Actions menu — a one-click alternative to the
     // edit modal. Everything else on the command echoes the record unchanged (and CriticalPath is
     // "keep existing" on every other surface, so only this toggle and the edit modal move it).
-    private async Task ToggleCriticalPathFromMenu()
+    private Task ToggleCriticalPathFromMenu() =>
+        SendCriticalPathUpdate(criticalPath: record is { } r ? !r.CriticalPath : (bool?)null, nudgeDismissed: null);
+
+    // The two-week nudge shows on an RFI that is still outstanding a fortnight after issue and
+    // carries no answer to the question yet — not tagged, not previously dismissed. The clock is
+    // the record's own DaysOutstanding (Issued date, falling back to the created-on stamp; stops
+    // at Closed), so the banner and the "Days outstanding" fact can never disagree.
+    private bool ShowCriticalPathNudge =>
+        CanEditDetails // both answers write to the request, so viewers aren't asked
+        && record is { Kind: RequestType.Rfi, CriticalPath: false, CriticalPathNudgeDismissed: false }
+        && record.DaysOutstanding is >= 14;
+
+    // Yes tags the RFI critical path; No records the dismissal so the nudge never re-asks. Both
+    // travel on the same echo command the menu toggle uses.
+    private Task AnswerCriticalPathNudge(bool tag) =>
+        SendCriticalPathUpdate(criticalPath: tag ? true : (bool?)null, nudgeDismissed: tag ? (bool?)null : true);
+
+    private async Task SendCriticalPathUpdate(bool? criticalPath, bool? nudgeDismissed)
     {
         if (record is null || busy) return;
         actionError = null;
@@ -2105,7 +2138,8 @@ else
             record.InternalNotes,
             record.ClientNotes,
             RaisedToContactId: record.RaisedToContactId,
-            CriticalPath: !record.CriticalPath);
+            CriticalPath: criticalPath,
+            CriticalPathNudgeDismissed: nudgeDismissed);
 
         try
         {

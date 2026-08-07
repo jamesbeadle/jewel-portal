@@ -171,14 +171,15 @@ else
     private int total;
 
     // Every linkable record type, labelled in canonical UI terms — RecordType.Scheduling is the
-    // programme's bucket, so it reads "Programme" here (never "Scheduling" in UI copy).
+    // programme's bucket, so it reads "Relevant Events" here (never "Scheduling" in UI copy;
+    // "Relevant Event" per the 2026-08-07 rename).
     private static readonly (RecordType Type, string Label)[] TypeOptions =
     {
         (RecordType.CostCentre,       "Cost centres"),
         (RecordType.Request,          "Requests (RFI/RFA/…)"),
         (RecordType.BidPackageInvite, "Bid package invites"),
         (RecordType.WorkOrder,        "Work orders"),
-        (RecordType.Scheduling,       "Programme"),
+        (RecordType.Scheduling,       "Relevant events (Programme)"),
         (RecordType.Todo,             "To-dos"),
         (RecordType.Lad,              "LADs"),
         (RecordType.Variation,        "Variation orders"),
@@ -277,7 +278,7 @@ else
         RecordType.BidPackageInvite => "Bid package",
         RecordType.WorkOrder        => "Work order",
         RecordType.CostCentre       => "Cost centre",
-        RecordType.Scheduling       => "Programme",
+        RecordType.Scheduling       => "Relevant Event",
         RecordType.Todo             => "To-do",
         RecordType.Lad              => "LADs",
         RecordType.Variation        => "VO",

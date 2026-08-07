@@ -228,6 +228,11 @@ public sealed class RequestEntity
     // "Critical Path RFIs" view. User-set from the RFI detail page; defaults to off.
     public bool CriticalPath { get; set; }
 
+    // "No" was clicked on the RFI detail page's two-week critical-path nudge. Recorded on the
+    // request (not per user, not per session) so the banner never re-asks anyone about this RFI.
+    // Tagging the RFI critical path later is unaffected — the toggle and edit modal still work.
+    public bool CriticalPathNudgeDismissed { get; set; }
+
     [MaxLength(256)]     public string? RaisedTo { get; set; }
 
     // When RaisedTo was picked from the project's contact list (Setup tab), the ProjectContact it
