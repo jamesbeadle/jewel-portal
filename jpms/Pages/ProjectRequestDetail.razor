@@ -578,12 +578,12 @@ else
     </Modal>
 
     <Modal IsOpen="confirmingReturn"
-           Title="Return this request to triage?"
-           ConfirmLabel="@(busy ? "Returning…" : "Return to triage")"
+           Title="Return this request to the Control Centre?"
+           ConfirmLabel="@(busy ? "Returning…" : "Return to Control Centre")"
            OnCancel="CancelReturn"
            OnConfirm="PerformReturn">
         <p class="text-sm text-content">
-            Every email linked to <span class="font-mono">@record?.Reference</span> — “@record?.Title” — will go back to the triage queue so the thread can be triaged again from scratch. The request itself and its conversation history stay in the register.
+            Every email linked to <span class="font-mono">@record?.Reference</span> — “@record?.Title” — will go back to the Control Centre queue so the thread can be processed again from scratch. The request itself and its conversation history stay in the register.
         </p>
     </Modal>
 
@@ -1341,9 +1341,9 @@ else
 
             // Group 3 — the destructive tail, kept last and marked.
             if (CanTriage)
-                items.Add(new(Label: "Return to triage…",
+                items.Add(new(Label: "Return to Control Centre…",
                     OnSelect: EventCallback.Factory.Create(this, () => { confirmingReturn = true; }),
-                    Hint: "Sends every email linked to this request back to the triage queue",
+                    Hint: "Sends every email linked to this request back to the Control Centre queue",
                     Destructive: true, Group: 3));
             if (IsAdmin)
                 items.Add(new(Label: "Delete request…",
@@ -2375,7 +2375,7 @@ else
         }
         catch
         {
-            actionError = "Couldn't return the request to triage. Please try again.";
+            actionError = "Couldn't return the request to the Control Centre. Please try again.";
             confirmingReturn = false;
             busy = false;
         }

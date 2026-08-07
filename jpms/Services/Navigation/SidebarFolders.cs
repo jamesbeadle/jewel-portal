@@ -264,10 +264,11 @@ public static class SidebarFolders
     /// the project picker has selected. Gated per row exactly like folder rows.</summary>
     public static readonly IReadOnlyList<SidebarRow> Standalone = new[]
     {
-        // The mailbox intake queue — the router for ALL correspondence across EVERY project, and
-        // the reason it is not a folder row: under Internal it read as this project's internal
-        // work, which it never was. Mirrors the API's TriageRoles gate.
-        new SidebarRow(new NavigationItem("Triage", "/requests/triage"),
+        // The Control Centre (formerly Triage) — the mailbox intake queue and router for ALL
+        // correspondence across EVERY project, and the reason it is not a folder row: under
+        // Internal it read as this project's internal work, which it never was. Mirrors the
+        // API's TriageRoles gate.
+        new SidebarRow(new NavigationItem("Control Centre", "/control-centre"),
             DesktopNavigation.TriageRoles)
     };
 }

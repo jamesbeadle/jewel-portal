@@ -22,7 +22,7 @@
     else if (items.Count == 0)
     {
         <p class="text-sm text-content-subtle">
-            Nothing recorded yet. Drafted correspondence, triage decisions and record links appear here.
+            Nothing recorded yet. Drafted correspondence, routing decisions and record links appear here.
         </p>
     }
     else
@@ -133,7 +133,7 @@
 
     private static string EventLabel(AuditEventType type) => type switch
     {
-        AuditEventType.EmailTriaged           => "Email triaged",
+        AuditEventType.EmailTriaged           => "Email routed",
         AuditEventType.RecordLinked           => "Record linked",
         AuditEventType.RecordCreatedFromEmail => "Record created from email",
         AuditEventType.TagRemoved             => "Tag removed",

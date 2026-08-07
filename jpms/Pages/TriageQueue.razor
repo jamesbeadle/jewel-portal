@@ -1,4 +1,7 @@
+@page "/control-centre"
 @page "/requests/triage"
+@* The second route is the legacy alias: the page lived at /requests/triage before the section
+   became the Control Centre (2026-08-07); old bookmarks and links still land here. *@
 @using Jewel.JPMS.Contracts.Audit
 @using Jewel.JPMS.Contracts.Drawings
 @using Jewel.JPMS.Contracts.MailboxCompose
@@ -21,7 +24,7 @@
 @inject Jewel.JPMS.Features.Projects.ProjectListReadModel Projects
 @implements IDisposable
 
-<PageTitle>Triage · JPMS</PageTitle>
+<PageTitle>Control Centre · JPMS</PageTitle>
 
 @*
     Live-read triage. The mailbox is the single source of truth and nothing ever moves — triage just
@@ -325,8 +328,8 @@ else if (!CanTriage)
 {
     <section class="px-6 md:px-8 py-12">
         <div class="panel p-8 text-center">
-            <p class="text-sm text-content">You don't have access to mailbox triage.</p>
-            <p class="text-xs text-content-subtle mt-1">Triage is available to administrators and project managers.</p>
+            <p class="text-sm text-content">You don't have access to the Control Centre.</p>
+            <p class="text-xs text-content-subtle mt-1">The Control Centre is available to administrators and project managers.</p>
         </div>
     </section>
 }
@@ -335,7 +338,7 @@ else
     <section class="px-6 md:px-8 py-8 md:py-12">
         <header class="mb-6">
             <p class="text-xs uppercase tracking-wider text-content-subtle font-medium mb-1">JPMS · projects@@jewelbb.co.uk</p>
-            <h1 class="text-2xl md:text-3xl font-semibold text-content leading-tight">Mailbox triage</h1>
+            <h1 class="text-2xl md:text-3xl font-semibold text-content leading-tight">Control Centre</h1>
             @* Each strapline is a count, not a description, so it waits for its own list —
                "0 emails in the inbox" is the one sentence a triager must never be told wrongly.
                It simply does not render until the count is known: a line of muted text that
@@ -385,7 +388,7 @@ else
                     <span class="inline-flex items-center rounded-full bg-amber-500/10 px-2 py-0.5 text-[11px] font-medium text-amber-600">@unassigned.Count</span>
                 </div>
                 <p class="text-xs text-content-subtle mb-3">
-                    These requests aren't tied to a live project, so they don't appear in any register. Return one to triage to process its emails again and pick the right project.
+                    These requests aren't tied to a live project, so they don't appear in any register. Return one to the Control Centre to process its emails again and pick the right project.
                 </p>
                 @if (unassignedError is not null)
                 {
@@ -403,7 +406,7 @@ else
                             </div>
                             <button type="button" class="btn-secondary text-xs whitespace-nowrap"
                                     disabled="@busy" @onclick="() => ReturnUnassigned(request)">
-                                Return to triage
+                                Return to Control Centre
                             </button>
                         </div>
                     }
@@ -551,7 +554,7 @@ else
                             </div>
                         }
                         <div class="panel p-8 text-center text-sm text-content-subtle">
-                            Select an email to triage it.
+                            Select an email to process it.
                         </div>
                     }
                     else
@@ -726,7 +729,7 @@ else
         {
             <div class="panel p-5 mt-6">
                 <div class="flex items-baseline justify-between gap-3 mb-3">
-                    <h2 class="text-sm font-semibold text-content">Recently triaged</h2>
+                    <h2 class="text-sm font-semibold text-content">Recently processed</h2>
                     <a href="/audit" class="text-xs text-content-muted hover:text-content underline underline-offset-2">Full audit trail</a>
                 </div>
                 <div class="divide-y divide-line">
@@ -844,9 +847,9 @@ else
 
                                 <div class="pt-3 border-t border-line">
                                     <p class="text-sm text-content-muted mb-3">
-                                        This email was discarded. Restore it to remove the “discarded” tag and put it back in the triage queue.
+                                        This email was discarded. Restore it to remove the “discarded” tag and put it back in the queue.
                                     </p>
-                                    <button type="button" class="btn-primary" disabled="@busy" @onclick="DoRestore">Restore to triage</button>
+                                    <button type="button" class="btn-primary" disabled="@busy" @onclick="DoRestore">Restore to queue</button>
                                 </div>
                             </div>
                         }
@@ -2016,7 +2019,7 @@ else
         }
         catch
         {
-            unassignedError = "Couldn't return that request to triage. Please try again.";
+            unassignedError = "Couldn't return that request to the Control Centre. Please try again.";
         }
         finally { busy = false; }
     }
@@ -2125,7 +2128,7 @@ else
                 jumped = true;
                 threadLoading = false;
                 ApplySelection(latest);
-                threadNote = $"This email has newer replies, so the latest ({Date(latest.ReceivedAt)}) is shown — triage from here. "
+                threadNote = $"This email has newer replies, so the latest ({Date(latest.ReceivedAt)}) is shown — process it from here. "
                     + $"The one you clicked ({Date(item.ReceivedAt)}) is in the thread below.";
                 await LoadDetailAsync(latest);
             }

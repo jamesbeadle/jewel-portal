@@ -98,7 +98,7 @@ else
             <div class="panel p-8 text-center">
                 <p class="text-sm text-content">Nothing recorded@(HasFilter ? " for these filters" : "") yet.</p>
                 <p class="text-xs text-content-subtle mt-1">
-                    Client-pathway triage decisions, drafted documents and snapshots appear here as they happen.
+                    Client-pathway routing decisions, drafted documents and snapshots appear here as they happen.
                 </p>
             </div>
         }
@@ -204,7 +204,7 @@ else
     // page reads the same events narrowed to its project.
     private static readonly (AuditEventType Type, string Label)[] EventTypeOptions =
     {
-        (AuditEventType.EmailTriaged,           "Email triaged"),
+        (AuditEventType.EmailTriaged,           "Email routed"),
         (AuditEventType.RecordLinked,           "Record linked"),
         (AuditEventType.RecordCreatedFromEmail, "Record created from email"),
         (AuditEventType.TagRemoved,             "Tag removed"),
@@ -336,7 +336,7 @@ else
 
     private static string EventLabel(AuditEventType type) => type switch
     {
-        AuditEventType.EmailTriaged           => "Email triaged",
+        AuditEventType.EmailTriaged           => "Email routed",
         AuditEventType.RecordLinked           => "Record linked",
         AuditEventType.RecordCreatedFromEmail => "Record created from email",
         AuditEventType.TagRemoved             => "Tag removed",

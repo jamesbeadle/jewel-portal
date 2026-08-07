@@ -36,7 +36,9 @@ public static class ChatSuggestions
             };
         }
 
-        if (route.Contains("triage", StringComparison.OrdinalIgnoreCase))
+        // The Control Centre — matches its route and the legacy /requests/triage alias.
+        if (route.Contains("control-centre", StringComparison.OrdinalIgnoreCase)
+            || route.Contains("triage", StringComparison.OrdinalIgnoreCase))
         {
             return new[]
             {

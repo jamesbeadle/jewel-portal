@@ -198,7 +198,7 @@
             // tile appears only once its count has actually landed (null = no fetch yet) — the
             // loading-states convention: never a zero that silently becomes 47.
             if (ShowTriage && inboxTotal is { } toTriage)
-                tiles.Add(new("Mailbox to triage", toTriage.ToString(), "/requests/triage",
+                tiles.Add(new("Control Centre inbox", toTriage.ToString(), "/control-centre",
                     Note: toTriage > 0 ? "awaiting routing" : "queue clear", IsBad: toTriage > 0));
 
             if (ShowAllocation && XeroLedger.Counts is { } ledger)
