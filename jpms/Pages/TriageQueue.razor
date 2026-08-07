@@ -2694,7 +2694,9 @@ else
                             ? StagedRecordCreate.ParseDecimal(staged.DepositPercentText)
                             : null,
                         InternetMessageId: anchor.InternetMessageId,
-                        Scope: scope,
+                        // Named LinkScope on this command only: the order's own Scope (works text)
+                        // already owns the name — see CreateWorkOrderFromMessage.
+                        LinkScope: scope,
                         // Ticked email attachments — copied onto the order server-side (record
                         // keeping only; never sent to the supplier).
                         AttachmentIds: staged.EmailAttachmentIds.Count > 0 ? staged.EmailAttachmentIds.ToList() : null));

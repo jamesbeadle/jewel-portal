@@ -121,7 +121,7 @@ public sealed class CreateWorkOrderFromMessageHandler
         await link.HandleAsync(
             new LinkMessageToRecord(
                 command.MessageId, RecordType.WorkOrder, order.WorkOrderId, command.InternetMessageId,
-                Scope: command.Scope),
+                Scope: command.LinkScope),
             cancellationToken);
 
         return order;

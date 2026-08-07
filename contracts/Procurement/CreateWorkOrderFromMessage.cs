@@ -35,5 +35,7 @@ public sealed record CreateWorkOrderFromMessage(
     // How far the record tag spreads across the email's conversation (forwarded verbatim to the
     // shared LinkMessageToRecord path). Default keeps the long-standing anchor+thread-behind
     // sweep; the Control Centre passes an explicit MessageOnly / EntireThread from its
-    // "triage the entire thread" checkbox.
-    LinkThreadScope Scope = LinkThreadScope.ThreadBehindAnchor) : ICommand<WorkOrder>;
+    // "triage the entire thread" checkbox. Named LinkScope — not Scope like the sibling
+    // create-from-message commands — because this command already carries the ORDER's Scope
+    // (the instructed works text) and a record can't have two parameters with one name.
+    LinkThreadScope LinkScope = LinkThreadScope.ThreadBehindAnchor) : ICommand<WorkOrder>;
