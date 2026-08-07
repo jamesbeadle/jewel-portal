@@ -12,7 +12,7 @@ public sealed class ListXeroSuppliersEndpoint
     // Mirrors the import gate (directory managers): the list exists to feed "Import from Xero",
     // and it exposes supplier contact details straight from the accounts system.
     private static readonly RoleSet AllowedToListSuppliers = RoleSet.Of(
-        JpmsRoles.Director, JpmsRoles.FinanceDirector, JpmsRoles.OfficeComplianceCoordinator);
+        JpmsRoles.Director, JpmsRoles.FinanceDirector, JpmsRoles.OfficeComplianceCoordinator, JpmsRoles.OfficeAdmin);
 
     private readonly SignedInUserResolver users;
     private readonly IQueryHandler<ListXeroSuppliers, XeroSuppliersSnapshot> handler;

@@ -26,7 +26,7 @@ public sealed class GetSubcontractorStatementEndpoint
     // cross-project figures.
     internal static readonly RoleSet RolesThatMayReadStatements = RoleSet.Of(
         JpmsRoles.Director, JpmsRoles.FinanceDirector, JpmsRoles.ProjectManager,
-        JpmsRoles.Estimator, JpmsRoles.OfficeComplianceCoordinator);
+        JpmsRoles.Estimator, JpmsRoles.OfficeComplianceCoordinator, JpmsRoles.OfficeAdmin);
 
     [Function(nameof(GetSubcontractorStatement))]
     public async Task<IActionResult> Run(

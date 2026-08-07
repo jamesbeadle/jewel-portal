@@ -30,7 +30,7 @@ public sealed class DownloadComplianceDocumentEndpoint
 
     private static readonly RoleSet InternalRolesThatMayReadCompliance = RoleSet.Of(
         JpmsRoles.Director, JpmsRoles.FinanceDirector, JpmsRoles.ProjectManager, JpmsRoles.Estimator,
-        JpmsRoles.SiteManager, JpmsRoles.HealthAndSafetyLead, JpmsRoles.OfficeComplianceCoordinator);
+        JpmsRoles.SiteManager, JpmsRoles.HealthAndSafetyLead, JpmsRoles.OfficeComplianceCoordinator, JpmsRoles.OfficeAdmin);
 
     [Function("DownloadComplianceDocument")]
     public async Task<IActionResult> Run(

@@ -7,7 +7,7 @@ public sealed class ImportDrawingFromMessageAuthorisation
 {
     // Same circle as registering drawings, plus the compliance coordinator who runs triage.
     private static readonly RoleSet RolesThatMayImport =
-        RoleSet.Of(JpmsRoles.Director, JpmsRoles.ProjectManager, JpmsRoles.Estimator, JpmsRoles.OfficeComplianceCoordinator);
+        RoleSet.Of(JpmsRoles.Director, JpmsRoles.ProjectManager, JpmsRoles.Estimator, JpmsRoles.OfficeComplianceCoordinator, JpmsRoles.OfficeAdmin);
 
     public bool Allows(SignedInUser user, ImportDrawingFromMessage command) => RolesThatMayImport.IncludesAny(user.Roles);
 }

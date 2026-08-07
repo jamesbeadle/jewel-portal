@@ -112,6 +112,12 @@ public static class ProcurementFeatureRegistration
         services.AddScoped<CreateManualWorkOrderAuthorisation>();
         services.AddScoped<CreateManualWorkOrderValidation>();
 
+        // The Control Centre's "create new work order from this email" — the manual-order
+        // handler wrapped with the email link, mirroring CreateBidPackageFromMessage.
+        services.AddScoped<ICommandHandler<CreateWorkOrderFromMessage, WorkOrder>, CreateWorkOrderFromMessageHandler>();
+        services.AddScoped<CreateWorkOrderFromMessageAuthorisation>();
+        services.AddScoped<CreateWorkOrderFromMessageValidation>();
+
         services.AddScoped<ICommandHandler<UpdateManualWorkOrder, WorkOrder>, UpdateManualWorkOrderHandler>();
         services.AddScoped<UpdateManualWorkOrderAuthorisation>();
         services.AddScoped<UpdateManualWorkOrderValidation>();

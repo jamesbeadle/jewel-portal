@@ -12,13 +12,17 @@ public sealed class TodoDraftRow
     public string Title { get; set; } = "";
     public string Notes { get; set; } = "";
     public List<string> Assignees { get; } = new();
-    public string Due { get; set; } = "";
+    // New drafts start due one week out — the house default for an item raised today. The field
+    // stays editable (or clearable) in the modal; this is a starting value, not a rule.
+    public string Due { get; set; } = DateTime.Today.AddDays(7).ToString("yyyy-MM-dd");
 }
 
 /// <summary>
 /// A NEW system record staged in the System Tags modal, created (and the email tagged to it) when
 /// the page's Apply runs. Which fields matter depends on <see cref="Kind"/>: a Client-side General
-/// request carries the request fields; a Subcontractor bid package carries Title + Trade.
+/// request carries the request fields; a Subcontractor bid package carries Title + Trade; a
+/// Subcontractor work order carries the full manual-order surface (subcontractor, scope,
+/// programme, priced lines, deposit, draft flag).
 /// </summary>
 public sealed class StagedRecordCreate
 {
@@ -31,7 +35,75 @@ public sealed class StagedRecordCreate
     public bool AddToProgramme { get; set; }
     public string Trade { get; set; } = "";
 
-    public string Label => Kind == StagedRecordKind.BidPackage ? "new bid package" : "new request";
+    // ---- Work order fields (Kind == WorkOrder) — mirroring ManualWorkOrderModal's surface. ----
+    public string SubcontractorId { get; set; } = "";
+    public string Scope { get; set; } = "";
+    // Date-only strings ("yyyy-MM-dd", like ResponseDue above); blank = not set.
+    public string ProgrammeStart { get; set; } = "";
+    public string TargetCompletion { get; set; } = "";
+    public string ProgrammeNotes { get; set; } = "";
+    public bool DepositRequired { get; set; }
+    // Parsed like the line amounts (invariant decimal text).
+    public string DepositPercentText { get; set; } = "";
+    // Store the order as an unnumbered draft rather than releasing it on apply.
+    public bool SaveAsDraft { get; set; }
+    public List<StagedWorkOrderLine> Lines { get; } = new() { new StagedWorkOrderLine() };
+
+    public string Label => Kind switch
+    {
+        StagedRecordKind.BidPackage => "new bid package",
+        StagedRecordKind.WorkOrder => "new work order",
+        _ => "new request"
+    };
+
+    /// <summary>Lines the apply will actually send: rows where anything has been entered.</summary>
+    public IEnumerable<StagedWorkOrderLine> EnteredLines =>
+        Lines.Where(line => line.CostCode != ""
+                            || !string.IsNullOrWhiteSpace(line.Title)
+                            || !string.IsNullOrWhiteSpace(line.AmountText));
+
+    /// <summary>
+    /// What still stops the staged work order being raised — null when it is complete. Shared by
+    /// the modal (inline hint) and the page's Apply (hard gate), so the wording is decided once.
+    /// Mirrors ManualWorkOrderModal's client-side validation and the server's own rules.
+    /// </summary>
+    public string? WorkOrderProblem
+    {
+        get
+        {
+            if (Kind != StagedRecordKind.WorkOrder) return null;
+            if (string.IsNullOrWhiteSpace(Title)) return "Give the work order a title.";
+            if (string.IsNullOrWhiteSpace(SubcontractorId)) return "Choose the subcontractor the order is raised to.";
+            var entered = EnteredLines.ToList();
+            if (entered.Count == 0) return "Add at least one priced line.";
+            if (entered.Any(line => line.CostCode == "")) return "Choose a cost centre for every line.";
+            if (entered.Any(line => string.IsNullOrWhiteSpace(line.Title))) return "Every line needs a title.";
+            if (entered.Any(line => line.Amount is not { } amount || amount == 0m))
+                return "Every line needs a non-zero amount.";
+            if (DepositRequired && (ParseDecimal(DepositPercentText) is not { } percent || percent <= 0m || percent > 100m))
+                return "A required deposit needs a percentage above 0 and no more than 100.";
+            return null;
+        }
+    }
+
+    public static decimal? ParseDecimal(string text) =>
+        decimal.TryParse(text, System.Globalization.NumberStyles.Any,
+            System.Globalization.CultureInfo.InvariantCulture, out var value)
+            ? value
+            : null;
 }
 
-public enum StagedRecordKind { Request, BidPackage }
+/// <summary>One staged priced line: its cost centre, what it covers, its £ amount as typed, and
+/// the optional longer detail printed on the purchase order — same shape as ManualWorkOrderLine,
+/// held as text until apply so half-typed amounts never throw.</summary>
+public sealed class StagedWorkOrderLine
+{
+    public string CostCode { get; set; } = "";
+    public string Title { get; set; } = "";
+    public string AmountText { get; set; } = "";
+    public string Description { get; set; } = "";
+
+    public decimal? Amount => StagedRecordCreate.ParseDecimal(AmountText);
+}
+
+public enum StagedRecordKind { Request, BidPackage, WorkOrder }

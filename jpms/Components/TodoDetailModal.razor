@@ -38,11 +38,42 @@
                 </div>
 
                 <dl class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2 text-sm">
-                    @if (!string.IsNullOrWhiteSpace(ScopeLabel))
+                    @* The scope row: where the item lives (a project, or company-wide). With the
+                       move gate it grows the same two-step editor as Assigned to below — pick the
+                       destination, then Save — because re-filing an item is re-allocating work,
+                       one stray click away from making it vanish from a whole team's list. *@
+                    @if (!string.IsNullOrWhiteSpace(ScopeLabel) || ShowMove)
                     {
                         <div>
                             <dt class="text-[11px] uppercase tracking-wider text-content-subtle font-semibold">Scope</dt>
-                            <dd class="text-content mt-0.5">@ScopeLabel</dd>
+                            @if (moving)
+                            {
+                                <dd class="mt-1 space-y-2">
+                                    <SearchSelect Options="@MoveOptions" Value="@moveTo" ValueChanged="v => moveTo = v"
+                                                  Placeholder="Pick where this item goes" WidthClass="w-full"
+                                                  InputClass="bg-surface border border-line px-2 py-1"
+                                                  Disabled="@Busy" />
+                                    <div class="flex gap-2">
+                                        <button type="button" class="btn-primary text-xs px-2 py-1" disabled="@(Busy || moveTo == "")" @onclick="HandleMove">Save</button>
+                                        <button type="button" class="btn-secondary text-xs px-2 py-1" disabled="@Busy" @onclick="CancelMove">Cancel</button>
+                                    </div>
+                                    <p class="text-[11px] text-content-subtle">
+                                        The item keeps its reference, assignee, due date and linked emails — it simply
+                                        leaves this list for the destination's To-do tab.
+                                    </p>
+                                </dd>
+                            }
+                            else
+                            {
+                                <dd class="text-content mt-0.5 flex flex-wrap items-center gap-2">
+                                    <span>@(string.IsNullOrWhiteSpace(ScopeLabel) ? "This project" : ScopeLabel)</span>
+                                    @if (ShowMove)
+                                    {
+                                        <button type="button" class="btn-ghost text-[11px] px-1.5 py-0.5" disabled="@Busy"
+                                                title="Move this item to a different project" @onclick="StartMove">Move</button>
+                                    }
+                                </dd>
+                            }
                         </div>
                     }
                     @* Assignment is to a ROLE, optionally pinned to a named holder of it — the
@@ -200,6 +231,19 @@
     /// unassigned). Like complete/delete, the write itself belongs to the parent, which owns the
     /// reload.</summary>
     [Parameter] public EventCallback<TodoAssignee?> OnReassign { get; set; }
+    /// <summary>Whether the signed-in user may move this item to a different project — the API's
+    /// MoveTodoItem manage gate, mirrored by the parent. Company-wide as a destination is a
+    /// narrower (MD/admin) call the parent makes by including or omitting that option.</summary>
+    [Parameter] public bool CanMove { get; set; }
+    /// <summary>The destinations the move picker offers: the projects the item could go to
+    /// (excluding wherever it is now) and, for the MD / administrators, the company-wide row
+    /// (value <see cref="GeneralScope"/>). Empty hides the control rather than offering a picker
+    /// with nothing in it.</summary>
+    [Parameter] public IReadOnlyList<SearchSelect.Option> MoveOptions { get; set; } = Array.Empty<SearchSelect.Option>();
+    /// <summary>Raised with the chosen destination — a ProjectId, or <see cref="GeneralScope"/>
+    /// for company-wide. Like complete/delete, the write itself belongs to the parent, which owns
+    /// the reload.</summary>
+    [Parameter] public EventCallback<string> OnMove { get; set; }
     /// <summary>The parent's in-flight-action flag — disables the action buttons while a
     /// complete/reopen/delete round-trip runs.</summary>
     [Parameter] public bool Busy { get; set; }
@@ -231,6 +275,27 @@
     private bool ShowReassign =>
         CanReassign && Item is { IsComplete: false } && AssigneeOptions.Count > 0;
 
+    /// <summary>The move picker's value for the company-wide (general, no-project) destination —
+    /// a real pick, distinct from the picker's own blank "nothing chosen yet" row. Parents map it
+    /// to the blank ProjectId the MoveTodoItem command stores.</summary>
+    public const string GeneralScope = "__general__";
+
+    // Move editor state, the same shape as reassign: `submittedMoveTo` holds the destination that
+    // has been sent but not yet seen coming back, so the editor closes only when the refreshed
+    // Item actually lives there — a failed save leaves the pick on screen to retry.
+    private bool moving;
+    private string moveTo = "";
+    private string? submittedMoveTo;
+
+    // Like reassign: moving a DONE item re-files work nobody is going to do, so open items only —
+    // and it needs somewhere to move to.
+    private bool ShowMove =>
+        CanMove && Item is { IsComplete: false } && MoveOptions.Count > 0;
+
+    // Where the item lives now, in the move picker's own encoding.
+    private static string ScopeValueFor(TodoItem item) =>
+        string.IsNullOrWhiteSpace(item.ProjectId) ? GeneralScope : item.ProjectId;
+
     // Fetch the linked emails once per opened item (an on-demand read, not a cached render-time
     // store — so no fetch-once-per-key store bookkeeping applies here). Re-opening the same item
     // while the modal never left the page re-reads, since closing clears the key.
@@ -244,15 +309,17 @@
             emailsLoading = false;
             deleteArmed = false;
             ResetReassign();
+            ResetMove();
             return;
         }
 
         if (Item.TodoItemId == loadedForItemId)
         {
             // The same item, re-supplied after a save: close the editor once the record itself
-            // shows the assignee that was picked. Anything else (a failed save, an unrelated
-            // reload) leaves it open with the pick intact.
+            // shows the assignee (or scope) that was picked. Anything else (a failed save, an
+            // unrelated reload) leaves it open with the pick intact.
             if (submittedReassignTo is not null && TodoAssigneePicker.ValueFor(Item) == submittedReassignTo) ResetReassign();
+            if (submittedMoveTo is not null && ScopeValueFor(Item) == submittedMoveTo) ResetMove();
             return;
         }
 
@@ -260,6 +327,7 @@
         loadedForItemId = itemId;
         deleteArmed = false;
         ResetReassign();
+        ResetMove();
         emailsLoading = true;
         emailsError = null;
         emails = Array.Empty<MailboxMessage>();
@@ -298,6 +366,9 @@
         reassignTo = AssigneeOptions.Any(option => option.Value == current) ? current : "";
         submittedReassignTo = null;
         deleteArmed = false;
+        // One editor at a time: opening this one closes the other, so two half-made changes can't
+        // sit side by side.
+        ResetMove();
         reassigning = true;
     }
 
@@ -317,11 +388,39 @@
         await OnReassign.InvokeAsync(TodoAssigneePicker.Parse(reassignTo));
     }
 
+    private void StartMove()
+    {
+        // The options already exclude wherever the item is now, so the picker starts blank — every
+        // offered row is a real move — and Save stays disabled until a destination is picked.
+        moveTo = "";
+        submittedMoveTo = null;
+        deleteArmed = false;
+        ResetReassign();
+        moving = true;
+    }
+
+    private void CancelMove() => ResetMove();
+
+    private void ResetMove()
+    {
+        moving = false;
+        moveTo = "";
+        submittedMoveTo = null;
+    }
+
+    private async Task HandleMove()
+    {
+        if (Item is null || moveTo == "") return;
+        submittedMoveTo = moveTo;
+        await OnMove.InvokeAsync(moveTo);
+    }
+
     private async Task HandleToggleComplete()
     {
         if (Item is null) return;
         deleteArmed = false;
         ResetReassign();
+        ResetMove();
         await OnToggleComplete.InvokeAsync(Item);
     }
 
@@ -329,6 +428,7 @@
     {
         deleteArmed = false;
         ResetReassign();
+        ResetMove();
         return OnClose.InvokeAsync();
     }
 }

@@ -6,7 +6,7 @@ namespace Jewel.JPMS.Api.Features.Procurement.Commands;
 public sealed class SetBidPackageDrawingsAuthorisation
 {
     private static readonly RoleSet RolesThatMayLink =
-        RoleSet.Of(JpmsRoles.Director, JpmsRoles.ProjectManager, JpmsRoles.OfficeComplianceCoordinator);
+        RoleSet.Of(JpmsRoles.Director, JpmsRoles.ProjectManager, JpmsRoles.OfficeComplianceCoordinator, JpmsRoles.OfficeAdmin);
 
     public bool Allows(SignedInUser user, SetBidPackageDrawings command) => RolesThatMayLink.IncludesAny(user.Roles);
 }

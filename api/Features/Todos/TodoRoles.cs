@@ -33,6 +33,11 @@ internal static class TodoRoles
     // external roles (Architect, Client, Subcontractor) it also excludes Foreman and SiteOperative,
     // who work the site rather than the to-do list. Items are assigned to a role, not a person, so
     // they survive staff changes; ListTodoAssignableRoles serves this list to the pickers.
+    //
+    // The ADMINISTRATOR super-role (Role.Admin) is deliberately NOT here (decision 2026-08-07):
+    // it is a system role that carries every other role, not a desk work lands on. The internal
+    // lower-level OfficeAdmin role is the assignable "admin" — existing Administrator-assigned
+    // items were remapped by scripts/2026-08-07-todoitems-admin-to-office-admin.sql.
     public static readonly IReadOnlyList<Role> AssignableTodoRolesInPickerOrder = new[]
     {
         JpmsRoles.Director,
@@ -45,7 +50,7 @@ internal static class TodoRoles
         JpmsRoles.SiteManager,
         JpmsRoles.HealthAndSafetyLead,
         JpmsRoles.OfficeComplianceCoordinator,
-        Role.Admin
+        JpmsRoles.OfficeAdmin
     };
 
     // The same pool as a set, for gate checks ("is this AssigneeRole value allowed?").

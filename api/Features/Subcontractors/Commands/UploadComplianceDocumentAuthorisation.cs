@@ -6,7 +6,7 @@ namespace Jewel.JPMS.Api.Features.Subcontractors.Commands;
 public sealed class UploadComplianceDocumentAuthorisation
 {
     private static readonly RoleSet InternalRolesThatMayUploadCompliance =
-        RoleSet.Of(JpmsRoles.Director, JpmsRoles.OfficeComplianceCoordinator);
+        RoleSet.Of(JpmsRoles.Director, JpmsRoles.OfficeComplianceCoordinator, JpmsRoles.OfficeAdmin);
 
     /// <summary>Internal roles may upload to any record; a portal-scoped subcontractor login may
     /// only upload to its own record (SubcontractorScope) — never another company's.</summary>

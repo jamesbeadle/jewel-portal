@@ -1,5 +1,9 @@
 @namespace Jewel.JPMS.Features.Triage
+@using Jewel.JPMS.Features.Subcontractors
+@using Jewel.JPMS.Features.CostCenters
 @inject IIntakeQueue Intake
+@inject SubcontractorsReadModel Subcontractors
+@inject CostCentersReadModel CostCenters
 
 @* THE tagging surface for triage: one modal, three tabs — Client / Subcontractor / Internal —
    each offering exactly what that side of the system can do with an email. Everything here is
@@ -68,7 +72,7 @@
         {
             <div class="flex items-center gap-2">
                 <button type="button" class="@SubTabClass(!createOpen)" @onclick="() => createOpen = false">Link to existing</button>
-                <button type="button" class="@SubTabClass(createOpen)" @onclick="() => createOpen = true">Create new</button>
+                <button type="button" class="@SubTabClass(createOpen)" @onclick="OpenCreatePane">Create new</button>
             </div>
 
             @if (!createOpen)
@@ -103,9 +107,151 @@
             else
             {
                 <div class="space-y-3">
-                    <p class="text-xs text-content-subtle">A draft bid package is created and this email is tagged to it on apply. Invite subcontractors and add line items from the bid package page.</p>
-                    <FormField Label="Title" Value="@Create.Title" OnChange="v => { Create.Title = v; NotifyCreate(); }" Required="true" />
-                    <FormField Label="Trade" Value="@Create.Trade" OnChange="v => { Create.Trade = v; NotifyCreate(); }" />
+                    @* Which Subcontractor record the create drafts: a bid package (tendering) or a
+                       work order (direct commitment). One staged create either way — switching kind
+                       re-labels what Apply will raise. *@
+                    <div class="flex items-center gap-2">
+                        <span class="text-xs uppercase tracking-wider text-content-subtle font-semibold">Record</span>
+                        <button type="button" class="@SubTabClass(SubCreateKind == StagedRecordKind.BidPackage)"
+                                @onclick="() => SwitchSubCreateKind(StagedRecordKind.BidPackage)">Bid package</button>
+                        <button type="button" class="@SubTabClass(SubCreateKind == StagedRecordKind.WorkOrder)"
+                                @onclick="() => SwitchSubCreateKind(StagedRecordKind.WorkOrder)">Work order</button>
+                    </div>
+
+                    @if (SubCreateKind == StagedRecordKind.BidPackage)
+                    {
+                        <p class="text-xs text-content-subtle">A draft bid package is created and this email is tagged to it on apply. Invite subcontractors and add line items from the bid package page.</p>
+                        <FormField Label="Title" Value="@Create.Title" OnChange="v => { Create.Title = v; NotifyCreate(); }" Required="true" />
+                        <FormField Label="Trade" Value="@Create.Trade" OnChange="v => { Create.Trade = v; NotifyCreate(); }" />
+                    }
+                    else
+                    {
+                        <p class="text-xs text-content-subtle">The work order is raised and this email is tagged to it on apply — released with the next order number, or as an unnumbered draft for approval from the Work Orders page.</p>
+
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Subcontractor *</label>
+                                <select class="field" disabled="@(Subcontractors.Current is null)"
+                                        @onchange="e => SetWorkOrder(c => c.SubcontractorId = e.Value?.ToString() ?? string.Empty)">
+                                    @if (Subcontractors.Current is null)
+                                    {
+                                        <option value="">Loading…</option>
+                                    }
+                                    else
+                                    {
+                                        <option value="" selected="@(Create.SubcontractorId == "")">Choose a subcontractor…</option>
+                                        @foreach (var sub in SortedSubcontractors)
+                                        {
+                                            <option value="@sub.SubcontractorId" selected="@(Create.SubcontractorId == sub.SubcontractorId)">@sub.CompanyName</option>
+                                        }
+                                    }
+                                </select>
+                                @if (senderMatchedCompany is { } matched && Create.SubcontractorId != "" && StagedCreate is null)
+                                {
+                                    <p class="text-[11px] text-content-subtle mt-1">Matched to the sender — @matched</p>
+                                }
+                            </div>
+                            <FormField Label="Order title" Value="@Create.Title" OnChange="v => SetWorkOrder(c => c.Title = v)" Required="true" />
+                        </div>
+                        <div>
+                            <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Scope</label>
+                            <textarea class="field" rows="2" maxlength="4000" placeholder="What the order instructs (optional)"
+                                      value="@Create.Scope" @oninput="e => SetWorkOrder(c => c.Scope = e.Value?.ToString() ?? string.Empty)"></textarea>
+                        </div>
+
+                        @* Programme — printed in the purchase order's Programme section; all optional. *@
+                        <div class="rounded-lg border border-line bg-surface p-3 space-y-3">
+                            <p class="text-[11px] uppercase tracking-wider text-content-subtle font-semibold"
+                               title="Printed in the purchase order's Programme section — leave everything empty to omit it">Programme</p>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                <FormField Label="Start date" Value="@Create.ProgrammeStart" OnChange="v => SetWorkOrder(c => c.ProgrammeStart = v)" InputType="date" />
+                                <FormField Label="Target completion" Value="@Create.TargetCompletion" OnChange="v => SetWorkOrder(c => c.TargetCompletion = v)" InputType="date" />
+                            </div>
+                            <div>
+                                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Programme notes</label>
+                                <textarea class="field" rows="2" maxlength="2000" placeholder="e.g. Weekly programme duration 1st &amp; 2nd fix phases (optional)"
+                                          value="@Create.ProgrammeNotes" @oninput="e => SetWorkOrder(c => c.ProgrammeNotes = e.Value?.ToString() ?? string.Empty)"></textarea>
+                            </div>
+                        </div>
+
+                        @* Priced lines — each carries its own cost centre; the order's value is their sum. *@
+                        <div class="rounded-lg border border-line bg-surface p-3">
+                            <p class="text-[11px] uppercase tracking-wider text-content-subtle font-semibold mb-2"
+                               title="Each line lands on its own cost centre — the order's value is their sum">Priced lines</p>
+                            <div class="space-y-2">
+                                @for (var index = 0; index < Create.Lines.Count; index++)
+                                {
+                                    var lineIndex = index;
+                                    var line = Create.Lines[lineIndex];
+                                    <div>
+                                        <div class="flex items-center gap-2 mb-1">
+                                            <SearchSelect Options="@CostCentreOptions" WidthClass="w-48"
+                                                          Placeholder="Cost centre…"
+                                                          InputClass="bg-surface border border-line px-2 py-1.5"
+                                                          Value="@line.CostCode" ValueChanged="v => SetWorkOrder(_ => line.CostCode = v)" />
+                                            <input type="text" maxlength="256" placeholder="What this line covers"
+                                                   class="bg-surface border border-line rounded-lg px-2 py-1.5 text-content text-sm flex-1"
+                                                   value="@line.Title"
+                                                   @onchange="e => SetWorkOrder(_ => line.Title = e.Value?.ToString() ?? string.Empty)" />
+                                            <input type="number" step="any" placeholder="Amount £"
+                                                   class="bg-surface border border-line rounded-lg px-2 py-1.5 text-right text-content text-sm w-28"
+                                                   value="@line.AmountText"
+                                                   @onchange="e => SetWorkOrder(_ => line.AmountText = e.Value?.ToString() ?? string.Empty)" />
+                                            <button type="button" aria-label="Remove this line" disabled="@(Create.Lines.Count == 1)"
+                                                    class="inline-flex items-center justify-center w-7 h-7 rounded-md text-content-subtle hover:text-negative hover:bg-surface-raised"
+                                                    @onclick="() => SetWorkOrder(c => c.Lines.RemoveAt(lineIndex))">
+                                                <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                                     stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6L6 18" /></svg>
+                                            </button>
+                                        </div>
+                                        <textarea rows="2" maxlength="1024" placeholder="Description — the full detail printed on the purchase order (optional)"
+                                                  class="w-full bg-surface border border-line rounded-lg px-2 py-1.5 text-content text-sm placeholder:text-content-subtle"
+                                                  value="@line.Description"
+                                                  @onchange="e => SetWorkOrder(_ => line.Description = e.Value?.ToString() ?? string.Empty)"></textarea>
+                                    </div>
+                                }
+                            </div>
+                            <div class="flex items-center justify-between mt-2">
+                                <button type="button" @onclick="() => SetWorkOrder(c => c.Lines.Add(new StagedWorkOrderLine()))"
+                                        class="text-xs font-medium text-content-subtle hover:text-content underline underline-offset-4">
+                                    + Add another line
+                                </button>
+                                <span class="text-sm text-content-muted">Order value <span class="text-content font-medium">@Money(OrderTotal)</span></span>
+                            </div>
+                        </div>
+
+                        @* Deposit — percentage of the order value only, printed at the foot of the PO. *@
+                        <div class="rounded-lg border border-line bg-surface p-3">
+                            <label class="flex w-fit items-center gap-2 text-sm text-content cursor-pointer select-none"
+                                   title="Tick when the subcontractor requires a deposit — the percentage prints at the foot of the purchase order">
+                                <input type="checkbox" class="cursor-pointer align-middle" checked="@Create.DepositRequired"
+                                       @onchange="e => SetWorkOrder(c => c.DepositRequired = e.Value is true)" />
+                                Deposit required
+                            </label>
+                            @if (Create.DepositRequired)
+                            {
+                                <div class="mt-2 flex items-center gap-2">
+                                    <input type="number" step="any" min="0" max="100" placeholder="%"
+                                           class="bg-surface border border-line rounded-lg px-2 py-1.5 text-right text-content text-sm w-24"
+                                           value="@Create.DepositPercentText"
+                                           @onchange="e => SetWorkOrder(c => c.DepositPercentText = e.Value?.ToString() ?? string.Empty)" />
+                                    <span class="text-sm text-content-muted">% of the order value</span>
+                                </div>
+                            }
+                        </div>
+
+                        <label class="flex w-fit items-center gap-2 text-sm text-content cursor-pointer select-none"
+                               title="A draft is stored without a number and is invisible to the supplier — though its value counts in the Financials tab's committed figures — until someone approves or rejects it from the Work Orders tab">
+                            <input type="checkbox" class="cursor-pointer align-middle" checked="@Create.SaveAsDraft"
+                                   @onchange="e => SetWorkOrder(c => c.SaveAsDraft = e.Value is true)" />
+                            Save as a draft — needs approval before it's issued
+                        </label>
+
+                        @if (StagedCreate is not null && Create.WorkOrderProblem is { } problem)
+                        {
+                            <p class="text-xs text-amber-600">@problem</p>
+                        }
+                    }
                 </div>
             }
         }
@@ -133,6 +279,11 @@
     [Parameter] public string ProjectId { get; set; } = "";
     [Parameter] public string EmailSubject { get; set; } = "";
 
+    /// <summary>The selected email's sender address — used to pre-select the work-order
+    /// subcontractor when it matches a directory record (exact contact email, else a unique
+    /// company domain). A suggestion only; the picker stays fully changeable.</summary>
+    [Parameter] public string SenderEmail { get; set; } = "";
+
     /// <summary>The thread's fixed pathway label ("Client"/"Subcontractor"/"Internal"), when it is
     /// already filed — locks the tabs to that side (the wall in tab form). Null = free choice.</summary>
     [Parameter] public string? LockedPathway { get; set; }
@@ -152,6 +303,12 @@
 
     private string activeTab = "Client";
     private bool createOpen;
+    // Which Subcontractor record the create pane drafts (BidPackage | WorkOrder).
+    private StagedRecordKind subCreateKind = StagedRecordKind.BidPackage;
+    // One refresh of the work-order lookups (directory + cost-code master) per modal open.
+    private bool workOrderLookupsRequested;
+    // The company name the sender was matched to, shown as a hint under the pre-selected picker.
+    private string? senderMatchedCompany;
     private RecordType linkType = RecordType.Request;
     private string search = "";
     private bool loading;
@@ -173,6 +330,13 @@
             // The house-standard response window pre-fills the request form — a week is what all
             // but a handful of requests get, so typing a date is keystrokes spent on the common case.
             scratchCreate = new StagedRecordCreate { ResponseDue = RequestDefaults.ResponseDue() };
+            subCreateKind = StagedCreate?.Kind == StagedRecordKind.WorkOrder
+                ? StagedRecordKind.WorkOrder
+                : StagedRecordKind.BidPackage;
+            workOrderLookupsRequested = false;
+            senderMatchedCompany = null;
+            if (createOpen && activeTab == "Subcontractor" && subCreateKind == StagedRecordKind.WorkOrder)
+                _ = EnsureWorkOrderLookupsAsync();
             linkType = DefaultTypeFor(activeTab);
             await LoadRecordsAsync();
         }
@@ -236,17 +400,123 @@
     private void NotifyCreate()
     {
         // First keystroke on the scratch form stages it; a staged form just reports the edit.
+        var kind = activeTab == "Subcontractor" ? subCreateKind : StagedRecordKind.Request;
         if (StagedCreate is null)
         {
-            scratchCreate.Kind = activeTab == "Subcontractor" ? StagedRecordKind.BidPackage : StagedRecordKind.Request;
+            scratchCreate.Kind = kind;
             _ = StagedCreateChanged.InvokeAsync(scratchCreate);
         }
         else
         {
-            StagedCreate.Kind = activeTab == "Subcontractor" ? StagedRecordKind.BidPackage : StagedRecordKind.Request;
+            StagedCreate.Kind = kind;
             _ = StagedCreateChanged.InvokeAsync(StagedCreate);
         }
     }
+
+    // ---- work order create (Subcontractor tab) ----
+
+    private StagedRecordKind SubCreateKind => subCreateKind;
+
+    private void OpenCreatePane()
+    {
+        createOpen = true;
+        if (activeTab == "Subcontractor" && subCreateKind == StagedRecordKind.WorkOrder)
+            _ = EnsureWorkOrderLookupsAsync();
+    }
+
+    private void SwitchSubCreateKind(StagedRecordKind kind)
+    {
+        if (subCreateKind == kind) return;
+        subCreateKind = kind;
+        if (kind == StagedRecordKind.WorkOrder) _ = EnsureWorkOrderLookupsAsync();
+        // A staged create keeps its content and just changes what Apply will raise from it.
+        if (StagedCreate is not null) NotifyCreate();
+    }
+
+    /// <summary>Every work-order form edit funnels through here: apply the edit, stamp the kind,
+    /// and stage/report — so a half-built order is always the one staged record.</summary>
+    private void SetWorkOrder(Action<StagedRecordCreate> edit)
+    {
+        edit(Create);
+        subCreateKind = StagedRecordKind.WorkOrder;
+        NotifyCreate();
+    }
+
+    // One refresh per open (stale-while-revalidate): cached lists render immediately, the fetch
+    // freshens them in the background — and the sender match runs once the directory has landed.
+    private async Task EnsureWorkOrderLookupsAsync()
+    {
+        if (workOrderLookupsRequested)
+        {
+            TryMatchSender();
+            return;
+        }
+        workOrderLookupsRequested = true;
+        try
+        {
+            await Task.WhenAll(
+                Subcontractors.RefreshAsync(CancellationToken.None),
+                CostCenters.RefreshAsync(CancellationToken.None));
+        }
+        catch { /* the pickers fall back to whatever is cached; the error toast already reported */ }
+        TryMatchSender();
+        StateHasChanged();
+    }
+
+    // Sender addresses from the big freemail providers say nothing about the company, so they
+    // never drive a domain match (an exact contact-email match still wins even there).
+    private static readonly HashSet<string> FreemailDomains = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "gmail.com", "googlemail.com", "hotmail.com", "hotmail.co.uk", "outlook.com",
+        "live.com", "live.co.uk", "yahoo.com", "yahoo.co.uk", "icloud.com", "me.com",
+        "aol.com", "msn.com", "btinternet.com", "sky.com"
+    };
+
+    /// <summary>Pre-select the subcontractor from the email's sender: an exact contact-email match
+    /// first, else the single directory record sharing the sender's (non-freemail) domain. Never
+    /// overrides a choice already made.</summary>
+    private void TryMatchSender()
+    {
+        if (string.IsNullOrWhiteSpace(SenderEmail) || Subcontractors.Current is not { } companies) return;
+        if (Create.SubcontractorId != "") return;
+        var email = SenderEmail.Trim();
+        var match = companies.FirstOrDefault(company =>
+            string.Equals(company.ContactEmail?.Trim(), email, StringComparison.OrdinalIgnoreCase));
+        if (match is null)
+        {
+            var at = email.LastIndexOf('@');
+            if (at < 0) return;
+            var domain = email[(at + 1)..];
+            if (FreemailDomains.Contains(domain)) return;
+            var byDomain = companies
+                .Where(company => (company.ContactEmail ?? "").Trim()
+                    .EndsWith("@" + domain, StringComparison.OrdinalIgnoreCase))
+                .ToList();
+            if (byDomain.Count != 1) return;
+            match = byDomain[0];
+        }
+        Create.SubcontractorId = match.SubcontractorId;
+        senderMatchedCompany = match.CompanyName;
+        // A scratch form isn't staged by a suggestion — only by the user's own first edit. A form
+        // already staged reports the fill so the page's copy stays current.
+        if (StagedCreate is not null) _ = StagedCreateChanged.InvokeAsync(StagedCreate);
+    }
+
+    private IEnumerable<Subcontractor> SortedSubcontractors =>
+        (Subcontractors.Current ?? Array.Empty<Subcontractor>())
+            .OrderBy(company => company.CompanyName, StringComparer.OrdinalIgnoreCase);
+
+    // The label carries code + name so typing matches either — same convention as the manual
+    // work-order modal and the Xero allocation page.
+    private IReadOnlyList<SearchSelect.Option> CostCentreOptions =>
+        CostCenters.Alphabetical
+            .Select(centre => new SearchSelect.Option(centre.Code, $"{centre.Code} {centre.Name}"))
+            .ToList();
+
+    private decimal OrderTotal => Create.Lines.Sum(line => line.Amount ?? 0m);
+
+    private static string Money(decimal value) =>
+        value.ToString("C2", System.Globalization.CultureInfo.GetCultureInfo("en-GB"));
 
     private void ClearStagedCreate()
     {

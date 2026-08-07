@@ -6,7 +6,7 @@ namespace Jewel.JPMS.Api.Features.Procurement.Commands;
 public sealed class SaveExtractedQuoteAuthorisation
 {
     private static readonly RoleSet RolesThatMaySave =
-        RoleSet.Of(JpmsRoles.Director, JpmsRoles.ProjectManager, JpmsRoles.OfficeComplianceCoordinator);
+        RoleSet.Of(JpmsRoles.Director, JpmsRoles.ProjectManager, JpmsRoles.OfficeComplianceCoordinator, JpmsRoles.OfficeAdmin);
 
     public bool Allows(SignedInUser user, SaveExtractedQuote command) => RolesThatMaySave.IncludesAny(user.Roles);
 }

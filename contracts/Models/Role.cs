@@ -27,5 +27,13 @@ public enum Role
     //
     // NOTE: roles persist as their integer value (DirectoryUserRoles.Role, TodoItems.AssigneeRole),
     // so new members are APPENDED here and never inserted mid-list.
-    Accounts
+    Accounts,
+
+    // General office administration — the internal lower-level "Office Admin" role, added
+    // (2026-08-07) so day-to-day office to-dos have a proper assignee. NOT the Administrator
+    // super-role (Role.Admin) above, which carries every role and is deliberately no longer
+    // offered by the to-do assignment pickers (TodoRoles.AssignableTodoRolesInPickerOrder).
+    // Access-wise it mirrors OfficeComplianceCoordinator: same project pages, same
+    // subcontractor/procurement/drawing gates — kept side by side wherever that role appears.
+    OfficeAdmin
 }

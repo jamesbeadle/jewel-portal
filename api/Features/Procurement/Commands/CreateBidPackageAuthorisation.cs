@@ -11,7 +11,7 @@ public sealed class CreateBidPackageAuthorisation
     // not be the narrower one.
     private static readonly RoleSet RolesThatMayCreatePackages = RoleSet.Of(
         JpmsRoles.Director, JpmsRoles.ProjectManager,
-        JpmsRoles.Estimator, JpmsRoles.OfficeComplianceCoordinator);
+        JpmsRoles.Estimator, JpmsRoles.OfficeComplianceCoordinator, JpmsRoles.OfficeAdmin);
 
     public bool Allows(SignedInUser user, CreateBidPackage command) => RolesThatMayCreatePackages.IncludesAny(user.Roles);
 }

@@ -226,8 +226,9 @@ else
                  CanComplete="@(selected is not null && (CanSeeAll || IsMine(selected)))"
                  CanDelete="@CanSeeAll"
                  CanReassign="@CanManage" AssigneeOptions="@assigneeOptions"
+                 CanMove="@CanManage" MoveOptions="@MoveOptionsFor(selected)"
                  OnClose="() => selected = null"
-                 OnToggleComplete="ToggleComplete" OnDelete="Delete" OnReassign="Reassign" />
+                 OnToggleComplete="ToggleComplete" OnDelete="Delete" OnReassign="Reassign" OnMove="Move" />
 
 <Modal IsOpen="@addOpen" Title="Add a to-do" ConfirmLabel="Add to-do item" CancelLabel="Cancel"
        OnConfirm="Add" OnCancel="CloseAdd">
@@ -345,7 +346,7 @@ else
     private bool HasInternalRole =>
         Session.AvailableRoles.Any(role => role is Role.Admin or Role.ManagingDirector or Role.FinanceDirector
             or Role.ProjectManager or Role.QuantitySurveyor or Role.SiteManager or Role.HealthSafetyOfficer
-            or Role.OfficeComplianceCoordinator or Role.Foreman or Role.Accounts);
+            or Role.OfficeComplianceCoordinator or Role.OfficeAdmin or Role.Foreman or Role.Accounts);
 
     protected override async Task OnInitializedAsync()
     {
@@ -603,6 +604,35 @@ else
         // Success closes the detail modal — the reloaded list re-files the item (a completed item
         // leaves the Open tab for Done). A failure keeps it open with the error surfaced inside.
         if (error is null) selected = null;
+    }
+
+    // The move picker's destination pool for one item: every project it could go to (the same
+    // list the add modal offers, minus wherever the item is now — every offered row is a real
+    // move) and, for the MD / administrators only, the company-wide row. That mirrors the api's
+    // MoveTodoItemAuthorisation: managers re-file between projects, but a general item is the
+    // master list's own, so only its readers may send an item there.
+    private IReadOnlyList<SearchSelect.Option> MoveOptionsFor(TodoItem? item)
+    {
+        if (item is null) return Array.Empty<SearchSelect.Option>();
+        var options = new List<SearchSelect.Option>();
+        if (CanSeeAll && !IsGeneral(item))
+            options.Add(new SearchSelect.Option(TodoDetailModal.GeneralScope, "Company-wide — no project"));
+        options.AddRange(ProjectOptions.Where(option => option.Value != item.ProjectId));
+        return options;
+    }
+
+    // Re-file the item under the picked destination. On a CanSeeAll list the refreshed item stays
+    // selected, so the new scope is read back where it was changed; on a reader's own list the
+    // item survives only if it is still assigned to them — otherwise the reload drops it and the
+    // modal closes with it.
+    private async Task Move(string destination)
+    {
+        if (busy || selected is null) return;
+        var item = selected;
+        await Run(() => TodoStore.MoveAsync(new MoveTodoItem(
+            item.TodoItemId,
+            destination == TodoDetailModal.GeneralScope ? "" : destination)));
+        if (error is null) selected = items.FirstOrDefault(i => i.TodoItemId == item.TodoItemId);
     }
 
     // Move the item to a different assignee (a role, optionally pinned to a person). On a

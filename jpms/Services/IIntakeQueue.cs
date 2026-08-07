@@ -66,6 +66,11 @@ public interface IIntakeQueue
     // half of triage, one per record type.
     Task<BidPackage> CreateBidPackageFromMessageAsync(CreateBidPackageFromMessage command, CancellationToken cancellationToken = default);
 
+    // Create a new Work Order from an email (the order raised exactly as a manual order — draft or
+    // released — plus the email linked to it). The Subcontractor pathway's second "create a new
+    // record from this email", alongside the bid package above.
+    Task<WorkOrder> CreateWorkOrderFromMessageAsync(CreateWorkOrderFromMessage command, CancellationToken cancellationToken = default);
+
     // Create one or more to-do items on a project from an email (several can be captured from a single
     // message). The email is tagged "JPMS/TODO-####" per item, so each item reads its mail back live by
     // its own tag — the to-do half of "create a new record from this email".

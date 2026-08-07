@@ -41,6 +41,12 @@ public static class TodosFeatureRegistration
         services.AddScoped<UpdateTodoItemAuthorisation>();
         services.AddScoped<UpdateTodoItemValidation>();
 
+        // Re-file an item under a different project — or company-wide, which is the MD's /
+        // administrators' destination only (see MoveTodoItemAuthorisation).
+        services.AddScoped<ICommandHandler<MoveTodoItem, TodoItem>, MoveTodoItemHandler>();
+        services.AddScoped<MoveTodoItemAuthorisation>();
+        services.AddScoped<MoveTodoItemValidation>();
+
         services.AddScoped<ICommandHandler<DeleteTodoItem, Acknowledgement>, DeleteTodoItemHandler>();
         services.AddScoped<DeleteTodoItemAuthorisation>();
         services.AddScoped<DeleteTodoItemValidation>();

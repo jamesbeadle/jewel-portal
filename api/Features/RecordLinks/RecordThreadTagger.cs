@@ -31,11 +31,12 @@ public sealed class RecordThreadTagger
     // anchorReceivedAt (when the caller has it — every triage decision does, via its snapshot)
     // restricts the sibling sweep to messages received AT OR BEFORE the anchor: a decision made on
     // an email covers that email and the thread behind it ("triage the lot"), never a newer reply —
-    // even one that was already sitting in the queue when the decision landed. The queue's
-    // jump-to-latest keeps this invisible in the normal flow (the anchor IS the newest member); it
-    // matters when acting from an older thread-panel member, and it closes the race where a reply
-    // arriving between opening and acting would otherwise be triaged unseen. Null sweeps the whole
-    // current thread (the pre-2026-08 behaviour, kept for maintenance callers like the backfill).
+    // even one that was already sitting in the queue when the decision landed. Since the queue's
+    // jump-to-latest was removed (2026-08-07) the clicked email is often NOT the newest member, so
+    // this cutoff does real work on every triage; it also closes the race where a reply arriving
+    // between opening and acting would otherwise be triaged unseen. Null sweeps the whole current
+    // thread — maintenance callers like the backfill, and LinkThreadScope.EntireThread ("Triage
+    // entire thread" on a Relevant Event).
     public async Task<bool> TagThreadAsync(
         string anchorMessageId, string? internetMessageId, string? conversationId, string category, CancellationToken ct,
         DateTimeOffset? anchorReceivedAt = null)

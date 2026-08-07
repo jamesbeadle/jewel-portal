@@ -23,7 +23,7 @@ public sealed class ListComplianceDocumentsForSubcontractorEndpoint
     // only read its own (the route param is never trusted for external sessions).
     private static readonly RoleSet InternalRolesThatMayReadCompliance = RoleSet.Of(
         JpmsRoles.Director, JpmsRoles.FinanceDirector, JpmsRoles.ProjectManager, JpmsRoles.Estimator,
-        JpmsRoles.SiteManager, JpmsRoles.HealthAndSafetyLead, JpmsRoles.OfficeComplianceCoordinator);
+        JpmsRoles.SiteManager, JpmsRoles.HealthAndSafetyLead, JpmsRoles.OfficeComplianceCoordinator, JpmsRoles.OfficeAdmin);
 
     [Function(nameof(ListComplianceDocumentsForSubcontractor))]
     public async Task<IActionResult> Run(

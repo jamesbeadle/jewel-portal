@@ -27,6 +27,7 @@ public static class JpmsRoles
     public const Role SiteManager = Role.SiteManager;
     public const Role HealthAndSafetyLead = Role.HealthSafetyOfficer;
     public const Role OfficeComplianceCoordinator = Role.OfficeComplianceCoordinator;
+    public const Role OfficeAdmin = Role.OfficeAdmin;
     public const Role Architect = Role.Architect;
     public const Role Client = Role.Client;
     public const Role Subcontractor = Role.Subcontractor;

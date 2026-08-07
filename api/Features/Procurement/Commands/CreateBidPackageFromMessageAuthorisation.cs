@@ -6,7 +6,7 @@ namespace Jewel.JPMS.Api.Features.Procurement.Commands;
 public sealed class CreateBidPackageFromMessageAuthorisation
 {
     private static readonly RoleSet RolesThatMayCreatePackages =
-        RoleSet.Of(JpmsRoles.Director, JpmsRoles.ProjectManager, JpmsRoles.OfficeComplianceCoordinator);
+        RoleSet.Of(JpmsRoles.Director, JpmsRoles.ProjectManager, JpmsRoles.OfficeComplianceCoordinator, JpmsRoles.OfficeAdmin);
 
     public bool Allows(SignedInUser user, CreateBidPackageFromMessage command) => RolesThatMayCreatePackages.IncludesAny(user.Roles);
 }

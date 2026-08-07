@@ -50,6 +50,11 @@ public static class TodosRouteRegistration
             new CommandRoute("PUT", "/api/todo-items/{todoItemId}",
                 command => $"/api/todo-items/{((UpdateTodoItem)command).TodoItemId}"));
 
+        // Re-file an item under a different project (blank ProjectId = company-wide, MD/admin only).
+        commands.Register<MoveTodoItem, TodoItem>(
+            new CommandRoute("POST", "/api/todo-items/{todoItemId}/move",
+                command => $"/api/todo-items/{((MoveTodoItem)command).TodoItemId}/move"));
+
         commands.Register<DeleteTodoItem, Acknowledgement>(
             new CommandRoute("DELETE", "/api/todo-items/{todoItemId}",
                 command => $"/api/todo-items/{((DeleteTodoItem)command).TodoItemId}"));

@@ -43,6 +43,9 @@ public sealed class HttpTodoStore : ITodoStore
     public Task<TodoItem> UpdateAsync(UpdateTodoItem command, CancellationToken cancellationToken = default) =>
         commands.SendAsync(command, cancellationToken);
 
+    public Task<TodoItem> MoveAsync(MoveTodoItem command, CancellationToken cancellationToken = default) =>
+        commands.SendAsync(command, cancellationToken);
+
     public Task<Acknowledgement> DeleteAsync(string todoItemId, CancellationToken cancellationToken = default) =>
         commands.SendAsync(new DeleteTodoItem(todoItemId), cancellationToken);
 }

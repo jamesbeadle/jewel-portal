@@ -20,7 +20,8 @@ public static class RolePresentations
             [Role.Subcontractor]               = new("Subcontractor",              "P10", "bg-amber-500"),
             [Role.Foreman]                     = new("Foreman / Site Team",        "P11", "bg-lime-500"),
             [Role.SiteOperative]               = new("Site Operative",             "P12", "bg-amber-500"),
-            [Role.Accounts]                    = new("Accounts",                   "P13", "bg-fuchsia-500")
+            [Role.Accounts]                    = new("Accounts",                   "P13", "bg-fuchsia-500"),
+            [Role.OfficeAdmin]                 = new("Office Admin",               "P14", "bg-cyan-500")
         };
 
     public static RolePresentation For(Role role) => Map[role];

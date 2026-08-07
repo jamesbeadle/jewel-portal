@@ -31,5 +31,9 @@ public interface ITodoStore
     /// <summary>Add a general (company-wide, no-project) item from the /todos browser page.</summary>
     Task<TodoItem> AddGeneralAsync(AddGeneralTodoItem command, CancellationToken cancellationToken = default);
     Task<TodoItem> UpdateAsync(UpdateTodoItem command, CancellationToken cancellationToken = default);
+    /// <summary>Re-file an item under a different project — or company-wide (blank ProjectId),
+    /// which is the MD's / administrators' destination only. Everything else about the item,
+    /// linked emails included, moves with it.</summary>
+    Task<TodoItem> MoveAsync(MoveTodoItem command, CancellationToken cancellationToken = default);
     Task<Acknowledgement> DeleteAsync(string todoItemId, CancellationToken cancellationToken = default);
 }

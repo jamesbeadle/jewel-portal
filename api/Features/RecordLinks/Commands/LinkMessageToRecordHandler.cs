@@ -96,26 +96,33 @@ public sealed class LinkMessageToRecordHandler : ICommandHandler<LinkMessageToRe
                         + "Confirm the cross-filing to proceed, or link the email to a record on the same pathway.");
             }
 
-        // The tag is the only link — and we apply it across the entire conversation so the record sees
-        // the full thread context, not just the one clicked message. The anchor tag is verified; sibling
+        // The tag is the only link. How far it spreads is the command's Scope (2026-08-07): the
+        // default sweeps the anchor plus the thread behind it so the record sees the full context;
+        // MessageOnly suppresses the conversation sweep entirely (the anchor alone is tagged, its
+        // siblings keep queueing); EntireThread drops the received-at cutoff so the whole current
+        // conversation — newer replies included — is tagged. The anchor tag is verified; sibling
         // (reply/forward) tagging is best-effort.
+        var sweepConversationId = command.Scope == LinkThreadScope.MessageOnly ? null : snapshot.ConversationId;
+        DateTimeOffset? sweepCutoff = command.Scope == LinkThreadScope.EntireThread ? null : snapshot.ReceivedAt;
         var tagged = await threadTagger.TagThreadAsync(
-            command.MessageId, snapshot.InternetMessageId, snapshot.ConversationId,
+            command.MessageId, snapshot.InternetMessageId, sweepConversationId,
             TriageCategories.ForRecord(record.TagReference), cancellationToken,
-            anchorReceivedAt: snapshot.ReceivedAt);
+            anchorReceivedAt: sweepCutoff);
         if (!tagged)
             throw new InvalidOperationException("The email couldn't be tagged to the record. Please try again.");
 
-        // File the thread under its pathway (thread-wide, best-effort: the record tag is the primary
-        // association; a missed bucket stamp is healed by the backfill / conflict report).
+        // File the pathway alongside the record tag, with the same spread as above (best-effort: the
+        // record tag is the primary association; a missed bucket stamp is healed by the backfill /
+        // conflict report). MessageOnly must scope this too — a thread-wide bucket stamp carries the
+        // JPMS marker, which would pull the untagged siblings out of the queue.
         var stampedBucket = false;
         if (bucket is not null && !existingBuckets.Contains(bucket, StringComparer.OrdinalIgnoreCase))
         {
             try
             {
                 stampedBucket = await threadTagger.TagThreadAsync(
-                    command.MessageId, snapshot.InternetMessageId, snapshot.ConversationId, bucket, cancellationToken,
-                    anchorReceivedAt: snapshot.ReceivedAt);
+                    command.MessageId, snapshot.InternetMessageId, sweepConversationId, bucket, cancellationToken,
+                    anchorReceivedAt: sweepCutoff);
             }
             catch (Exception ex) when (ex is not OperationCanceledException) { /* best-effort */ }
         }

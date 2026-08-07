@@ -7,7 +7,7 @@ public sealed class ExtractQuoteFromMessageAuthorisation
 {
     // Whoever manages the tender may extract submissions from its responses.
     private static readonly RoleSet RolesThatMayExtract =
-        RoleSet.Of(JpmsRoles.Director, JpmsRoles.ProjectManager, JpmsRoles.OfficeComplianceCoordinator);
+        RoleSet.Of(JpmsRoles.Director, JpmsRoles.ProjectManager, JpmsRoles.OfficeComplianceCoordinator, JpmsRoles.OfficeAdmin);
 
     public bool Allows(SignedInUser user, ExtractQuoteFromMessage command) => RolesThatMayExtract.IncludesAny(user.Roles);
 }

@@ -76,10 +76,6 @@
     </div>;
 
     RenderFragment MessageBody =@<text>
-        @if (threadNote is not null)
-        {
-            <p class="rounded-lg bg-accent/10 border border-accent/30 px-3 py-2 text-xs text-content">@threadNote</p>
-        }
         <div class="rounded-lg bg-surface-raised border border-line p-3 max-h-[28rem] overflow-y-auto">
             @if (detailLoading)
             {
@@ -260,7 +256,7 @@
                 @foreach (var sent in SentReplies)
                 {
                     <button type="button" @key="sent.Id" class="w-full text-left text-xs hover:bg-surface-raised rounded px-1.5 py-1"
-                            title="Open this reply" @onclick="() => Select(sent, jumpToLatest: false)">
+                            title="Open this reply" @onclick="() => Select(sent)">
                         <span class="text-content-subtle">@ListDate(sent.ReceivedAt)</span>
                         <span class="text-content ml-2">@FirstLineOf(sent.BodyPreview)</span>
                     </button>
@@ -297,7 +293,7 @@
                             var isLatest = i == thread.Count - 1;
                             <button type="button" @key="member.Id" disabled="@isCurrent"
                                     title="@($"{DisplayFrom(member)} — {Date(member.ReceivedAt)}{(member.HasAttachments ? " · has attachments" : "")}")"
-                                    @onclick="() => Select(member, jumpToLatest: false)"
+                                    @onclick="() => Select(member)"
                                     class="@ThreadTabClass(isCurrent, isLatest)">
                                 @(i + 1)@(isLatest ? " ·" : "")
                             </button>
@@ -1144,6 +1140,7 @@ else
 <SystemTagsModal IsOpen="@tagsModalOpen"
                  ProjectId="@triageProjectId"
                  EmailSubject="@(selected?.Subject ?? "")"
+                 SenderEmail="@(selected?.FromEmail ?? "")"
                  LockedPathway="@(FixedPathway is { } fp ? PathwayLabel(fp) : null)"
                  ActivePathway="@(pathway is { } chosenPathway ? PathwayLabel(chosenPathway) : null)"
                  ActivePathwayChanged="OnModalPathwayChanged"
@@ -1481,9 +1478,6 @@ else
     private IReadOnlyList<MailboxMessage> thread = Array.Empty<MailboxMessage>();
     private bool threadLoading;
     private CancellationTokenSource? threadCts;
-    // Set when the selection was auto-moved onto a thread's latest reply, telling the triager what
-    // happened and where the email they actually clicked sits. Cleared on every new selection.
-    private string? threadNote;
 
     private IReadOnlyList<Request> unassigned = Array.Empty<Request>();
     private string? unassignedError;
@@ -1646,7 +1640,7 @@ else
 
     // The staged-work modals + armed discard. The System Tags modal's tab mirrors the page's own
     // `pathway` field (the pathway decision); stagedCreate is the modal's drafted new record
-    // (null = none) — StagedRecordKind decides whether Apply raises a request or a bid package.
+    // (null = none) — StagedRecordKind decides whether Apply raises a request, a bid package or a work order.
     private bool todoModalOpen;
     private bool tagsModalOpen;
     private bool discardArmed;
@@ -2045,8 +2039,7 @@ else
     }
 
     // Point the detail pane at an email: set the selection and reset the create forms. Loading
-    // the body and thread is the caller's job — Select does both; the jump-to-latest inside
-    // LoadThreadAsync reuses this directly so it doesn't re-fetch the thread it already has.
+    // the body and thread is the caller's job — Select does both.
     private void ApplySelection(MailboxMessage item)
     {
         selected = item;
@@ -2056,7 +2049,6 @@ else
         actionError = null;
         crossFileMessage = null;
         previewAttachment = null;
-        threadNote = null;
         ResetLinkState();
         composeOutcome = null;
         linkNote = null;
@@ -2076,17 +2068,15 @@ else
         relevantEventStaged = false;
     }
 
-    // jumpToLatest: clicking an email in the QUEUE list triages its thread from the newest member —
-    // if later replies exist, the selection moves onto the latest one (the reply that says what to
-    // do with the rest; every action applies thread-wide anyway). Clicks inside the thread panel
-    // pass false so any member can still be read without being bounced back to the latest.
-    private async Task Select(MailboxMessage item, bool jumpToLatest = true)
+    // Open the clicked email exactly as clicked — the selection stays on it; the thread panel
+    // below still shows any newer replies for context (actions apply thread-wide regardless).
+    private async Task Select(MailboxMessage item)
     {
         ApplySelection(item);
         // Body and thread are independent live reads — fetch them side by side.
-        await Task.WhenAll(LoadDetailAsync(item), LoadThreadAsync(item, jumpToLatest));
-        // Both reads have landed (including any jump onto the thread's latest reply), so the whole
-        // chain is available to search for a project name to pre-fill the pickers with.
+        await Task.WhenAll(LoadDetailAsync(item), LoadThreadAsync(item));
+        // Both reads have landed, so the whole chain is available to search for a project name
+        // to pre-fill the pickers with.
         await TryPrefillProjectFromEmailAsync();
     }
 
@@ -2121,7 +2111,7 @@ else
     // Fetch the selected email's whole conversation for the thread panel. Same cancellation shape as
     // LoadDetailAsync: rapid clicking can't race a stale thread onto the newly selected email. The
     // list is cleared up front so a previous selection's thread never flashes against this one.
-    private async Task LoadThreadAsync(MailboxMessage item, bool jumpToLatest = false)
+    private async Task LoadThreadAsync(MailboxMessage item)
     {
         threadCts?.Cancel();
         var cts = new CancellationTokenSource();
@@ -2131,34 +2121,18 @@ else
         if (string.IsNullOrEmpty(item.ConversationId)) { threadLoading = false; return; }
 
         threadLoading = true;
-        var jumped = false;
         try
         {
             var page = await Intake.ListConversationLiveAsync(item.ConversationId, cts.Token);
             if (cts.IsCancellationRequested || selected?.Id != item.Id)
                 return;
             thread = page.Items;
-
-            // Triage the thread from its newest member: when the clicked email has later replies,
-            // move the selection onto the latest one and note where the user came from. Queue view
-            // only — the Discarded/Tagged panes are management surfaces where the clicked email is
-            // the one being managed.
-            if (jumpToLatest && view == QueueView.Active && thread.Count > 1 && thread[^1].Id != item.Id)
-            {
-                var latest = thread[^1];
-                jumped = true;
-                threadLoading = false;
-                ApplySelection(latest);
-                threadNote = $"This email has newer replies, so the latest ({Date(latest.ReceivedAt)}) is shown — process it from here. "
-                    + $"The one you clicked ({Date(item.ReceivedAt)}) is in the thread below.";
-                await LoadDetailAsync(latest);
-            }
         }
         catch (OperationCanceledException) { /* superseded by a newer selection */ }
         catch { /* leave empty: the panel simply doesn't render */ }
         finally
         {
-            if (jumped || selected?.Id == item.Id)
+            if (selected?.Id == item.Id)
                 threadLoading = false;
         }
     }
@@ -2380,7 +2354,14 @@ else
                     ? $"link this email to {pickedRecords[0].Reference}"
                     : $"link this email to {string.Join(", ", pickedRecords.Take(3).Select(r => r.Reference))}{(pickedRecords.Count > 3 ? $" +{pickedRecords.Count - 3} more" : "")}");
             if (StagedCreateReady && !string.IsNullOrWhiteSpace(triageProjectId))
-                parts.Add(stagedCreate!.Kind == StagedRecordKind.BidPackage ? "create the bid package from this email" : "create the request from this email");
+                parts.Add(stagedCreate!.Kind switch
+                {
+                    StagedRecordKind.BidPackage => "create the bid package from this email",
+                    StagedRecordKind.WorkOrder => stagedCreate.SaveAsDraft
+                        ? "raise the draft work order from this email"
+                        : "raise the work order from this email",
+                    _ => "create the request from this email"
+                });
             if (relevantEventStaged)
                 parts.Add("tag it a Relevant Event for the Programme");
             if (discardArmed)
@@ -2503,6 +2484,15 @@ else
             actionError = "To create the record, set the email's Project first — or remove the staged record in System Tags.";
             return;
         }
+        // A staged work order that isn't complete yet (no subcontractor, no priced line…) is the
+        // same "decision not yet made": finish it or clear it, rather than let the server reject
+        // a half-built order after the to-dos have already been raised.
+        if (createReady && stagedCreate is { Kind: StagedRecordKind.WorkOrder } stagedOrder
+            && stagedOrder.WorkOrderProblem is { } orderProblem)
+        {
+            actionError = $"The staged work order isn't ready — {orderProblem} Finish it in System Tags, or remove it.";
+            return;
+        }
         if (replying)
         {
             if (ParseRecipients(replyToField).Count == 0) { actionError = "Add a To recipient to the reply."; return; }
@@ -2592,6 +2582,30 @@ else
                     busyLabel = "Creating bid package";
                     await Intake.CreateBidPackageFromMessageAsync(new CreateBidPackageFromMessage(
                         anchor.Id, triageProjectId, staged.Title.Trim(), staged.Trade?.Trim() ?? "",
+                        InternetMessageId: anchor.InternetMessageId));
+                }
+                else if (staged.Kind == StagedRecordKind.WorkOrder)
+                {
+                    // The full manual-order surface staged in System Tags, raised through the
+                    // same rules as the Work Orders tab (numbering, draft semantics, cost-code
+                    // master guard) with the email tagged to the new order.
+                    busyLabel = "Raising work order";
+                    var orderLines = staged.EnteredLines
+                        .Where(line => line.CostCode != "" && line.Amount is { } amount && amount != 0m)
+                        .Select(line => new ManualWorkOrderLine(
+                            line.CostCode, line.Title.Trim(), line.Amount!.Value, line.Description.Trim()))
+                        .ToList();
+                    await Intake.CreateWorkOrderFromMessageAsync(new CreateWorkOrderFromMessage(
+                        anchor.Id, triageProjectId, staged.SubcontractorId,
+                        staged.Title.Trim(), staged.Scope.Trim(), orderLines,
+                        ProgrammeStart: AsUtcDate(staged.ProgrammeStart),
+                        TargetCompletion: AsUtcDate(staged.TargetCompletion),
+                        ProgrammeNotes: staged.ProgrammeNotes.Trim(),
+                        SaveAsDraft: staged.SaveAsDraft,
+                        DepositRequired: staged.DepositRequired,
+                        DepositPercent: staged.DepositRequired
+                            ? StagedRecordCreate.ParseDecimal(staged.DepositPercentText)
+                            : null,
                         InternetMessageId: anchor.InternetMessageId));
                 }
                 else
@@ -3235,6 +3249,13 @@ else
 
     private static DateTimeOffset? ParseDate(string value) =>
         DateTimeOffset.TryParse(value, out var parsed) ? parsed : null;
+
+    // Date-only picker value ("yyyy-MM-dd") → a UTC date, matching how the manual work-order
+    // modal and the other date pickers send dates — the purchase order prints a date, not a moment.
+    private static DateTimeOffset? AsUtcDate(string value) =>
+        DateTime.TryParse(value, out var parsed)
+            ? new DateTimeOffset(DateTime.SpecifyKind(parsed.Date, DateTimeKind.Utc))
+            : null;
 
     private void StageFilterChanged() => InvokeAsync(StateHasChanged);
 

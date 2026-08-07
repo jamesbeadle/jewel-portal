@@ -12,7 +12,7 @@ public sealed class AddBidPackageLineItemsAuthorisation
     // go, which is where it surfaced: variation created, empty package created, 403 on the lines.
     private static readonly RoleSet RolesThatMayEditLineItems = RoleSet.Of(
         JpmsRoles.Director, JpmsRoles.ProjectManager,
-        JpmsRoles.Estimator, JpmsRoles.OfficeComplianceCoordinator);
+        JpmsRoles.Estimator, JpmsRoles.OfficeComplianceCoordinator, JpmsRoles.OfficeAdmin);
 
     public bool Allows(SignedInUser user, AddBidPackageLineItems command) => RolesThatMayEditLineItems.IncludesAny(user.Roles);
 }

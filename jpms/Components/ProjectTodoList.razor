@@ -6,6 +6,7 @@
 @inject IDrawingStore Drawings
 @inject SessionService Session
 @inject NavigationManager Nav
+@inject Jewel.JPMS.Features.Projects.ProjectListReadModel Projects
 @implements IDisposable
 
 @*
@@ -254,8 +255,9 @@
 <TodoDetailModal Item="@selected" Busy="@busy" Error="@(selected is null ? null : error)"
                  CanComplete="@CanManage" CanDelete="@CanManage"
                  CanReassign="@CanManage" AssigneeOptions="@AssigneeOptions"
+                 CanMove="@CanManage" MoveOptions="@MoveOptions"
                  OnClose="() => selected = null"
-                 OnToggleComplete="ToggleComplete" OnDelete="Delete" OnReassign="Reassign" />
+                 OnToggleComplete="ToggleComplete" OnDelete="Delete" OnReassign="Reassign" OnMove="Move" />
 
 <Modal IsOpen="@addOpen" Title="Add a to-do item" ConfirmLabel="Add to-do item" CancelLabel="Cancel"
        OnConfirm="Add" OnCancel="CloseAdd">
@@ -327,6 +329,11 @@
         Session.AvailableRoles.Any(role => role is Role.Admin or Role.ManagingDirector or Role.FinanceDirector
             or Role.ProjectManager or Role.SiteManager or Role.Accounts);
 
+    // Mirrors the API's TodoRoles.AllowedToSeeAllTodos gate — who may move an item to COMPANY-WIDE
+    // (the To-dos browser's own, no-project scope) rather than just between projects.
+    private bool CanSeeAll =>
+        Session.AvailableRoles.Any(role => role is Role.Admin or Role.ManagingDirector);
+
     protected override async Task OnInitializedAsync()
     {
         // Related-record sources for the keyword search. Refresh on entry per the store
@@ -338,8 +345,9 @@
         Drawings.Refresh(ProjectId);
         _ = LoadVariationsAsync();
 
-        // The list and the assignable-role pool are independent reads — run them together.
-        if (CanManage) await Task.WhenAll(LoadAsync(), LoadAssignableRolesAsync());
+        // The list, the assignable-role pool and the project labels (the move picker's
+        // destinations) are independent reads — run them together.
+        if (CanManage) await Task.WhenAll(LoadAsync(), LoadAssignableRolesAsync(), LoadProjectsAsync());
         else await LoadAsync();
     }
 
@@ -364,6 +372,31 @@
         {
             relatedLoading = false;
             await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private async Task LoadProjectsAsync()
+    {
+        // A failed load leaves the move picker with no destinations — the control then simply
+        // doesn't render (the modal hides an empty picker) — rather than blocking the tab.
+        try { if (Projects.Current is null) await Projects.RefreshAsync(CancellationToken.None); }
+        catch { }
+    }
+
+    // The move picker's destination pool: every other project (the read model's own live-work
+    // order, this project excluded so every offered row is a real move) and, for the MD /
+    // administrators only, the company-wide row — mirroring the api's MoveTodoItemAuthorisation.
+    private IReadOnlyList<SearchSelect.Option> MoveOptions
+    {
+        get
+        {
+            var options = new List<SearchSelect.Option>();
+            if (CanSeeAll)
+                options.Add(new SearchSelect.Option(TodoDetailModal.GeneralScope, "Company-wide — no project"));
+            options.AddRange((Projects.Current ?? (IReadOnlyList<Project>)Array.Empty<Project>())
+                .Where(p => p.ProjectId != ProjectId)
+                .Select(p => new SearchSelect.Option(p.ProjectId, $"{p.Reference} — {p.Name}")));
+            return options;
         }
     }
 
@@ -392,7 +425,9 @@
 
     private void OpenAdd()
     {
-        newTitle = newNotes = newAssignee = newDue = "";
+        newTitle = newNotes = newAssignee = "";
+        // Due defaults to one week out; clear the field to raise an item with no due date.
+        newDue = DateTime.Today.AddDays(7).ToString("yyyy-MM-dd");
         addError = null;
         addOpen = true;
     }
@@ -456,6 +491,19 @@
             assignee?.PersonEmail,
             item.DueAt,
             item.IsComplete)));
+        if (error is null) selected = items.FirstOrDefault(i => i.TodoItemId == item.TodoItemId);
+    }
+
+    // Re-file the item under the picked destination (another project, or company-wide for the
+    // MD / administrators). A moved item is no longer this project's, so the reload drops it from
+    // the tab and the modal closes with it — its new home's To-do tab picks it up.
+    private async Task Move(string destination)
+    {
+        if (busy || selected is null) return;
+        var item = selected;
+        await Run(() => Todos.MoveAsync(new MoveTodoItem(
+            item.TodoItemId,
+            destination == TodoDetailModal.GeneralScope ? "" : destination)));
         if (error is null) selected = items.FirstOrDefault(i => i.TodoItemId == item.TodoItemId);
     }
 

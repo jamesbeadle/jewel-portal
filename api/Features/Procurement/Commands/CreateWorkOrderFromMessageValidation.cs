@@ -1,0 +1,37 @@
+using Jewel.JPMS.Api.Cqrs;
+using Jewel.JPMS.Contracts.Procurement;
+
+namespace Jewel.JPMS.Api.Features.Procurement.Commands;
+
+// The order half is validated by the same rules as a manually raised order (the inner
+// CreateManualWorkOrder), re-stated here on the wrapping command so a bad triage submission
+// fails before any handler runs; the message half just needs the ids to link with.
+public sealed class CreateWorkOrderFromMessageValidation
+{
+    public ValidationOutcome Check(CreateWorkOrderFromMessage command)
+    {
+        var errors = new List<string>();
+        if (string.IsNullOrWhiteSpace(command.MessageId)) errors.Add("MessageId is required.");
+        if (string.IsNullOrWhiteSpace(command.ProjectId)) errors.Add("ProjectId is required.");
+        if (string.IsNullOrWhiteSpace(command.SubcontractorId)) errors.Add("SubcontractorId is required.");
+        if (string.IsNullOrWhiteSpace(command.Title)) errors.Add("Title is required.");
+        if (string.IsNullOrWhiteSpace(command.RaisedByEmail)) errors.Add("RaisedByEmail is required.");
+        if (command.Lines is null || command.Lines.Count == 0)
+        {
+            errors.Add("At least one priced line is required.");
+            return new ValidationOutcome(errors);
+        }
+        if (command.Lines.Any(line => string.IsNullOrWhiteSpace(line.CostCode)))
+            errors.Add("Every line needs a cost centre.");
+        if (command.Lines.Any(line => string.IsNullOrWhiteSpace(line.Title)))
+            errors.Add("Every line needs a title.");
+        // Decimal constants can't appear in patterns, hence the explicit comparison.
+        if (command.Lines.Any(line => line.Amount == 0m))
+            errors.Add("Every line needs a non-zero amount.");
+        // Deposit is recorded as a percentage of the order value only, and only when required.
+        if (command.DepositRequired && (command.DepositPercent is not { } percent || percent <= 0m || percent > 100m))
+            errors.Add("A required deposit needs a percentage above 0 and no more than 100.");
+        if (errors.Count == 0) return ValidationOutcome.Passed;
+        return new ValidationOutcome(errors);
+    }
+}
