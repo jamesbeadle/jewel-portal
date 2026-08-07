@@ -850,7 +850,18 @@ public sealed class MailboxGraphClient : IMailboxGraphClient
                     id = index.ToString(),
                     method = "PATCH",
                     url = $"/users/{Mailbox}/messages/{Uri.EscapeDataString(update.Id)}",
-                    headers = new Dictionary<string, string> { ["Content-Type"] = "application/json" },
+                    // Sub-requests do NOT inherit the outer request's headers, and every id this
+                    // client handles is an IMMUTABLE id (SendAsync sends Prefer: IdType=ImmutableId
+                    // on every direct call). Without repeating that preference here, Graph reads
+                    // each id as a standard id, fails to resolve it, and every PATCH in the batch
+                    // 404s — silently, because the sweep is best-effort. The anchor (tagged via a
+                    // direct call) still worked, which is exactly how this hid: threads stopped
+                    // following their anchor out of the queue while every apply looked successful.
+                    headers = new Dictionary<string, string>
+                    {
+                        ["Content-Type"] = "application/json",
+                        ["Prefer"] = "IdType=\"ImmutableId\""
+                    },
                     body = new { categories = update.Categories }
                 }).ToArray()
             };

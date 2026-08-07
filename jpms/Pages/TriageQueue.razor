@@ -498,7 +498,7 @@ else
                             {
                                 <span></span>
                             }
-                            <span class="text-[11px] text-content-subtle">Page @(queueIndex + 1) / @QueuePageCount</span>
+                            <span class="text-[11px] text-content-subtle">Page @(queueIndex + 1) / @QueuePageCount · @total email@(total == 1 ? "" : "s")</span>
                             @if (queueNext is not null)
                             {
                                 <button type="button" class="btn-secondary text-xs px-2.5 py-1.5" @onclick="NextPage">Next</button>
@@ -854,7 +854,7 @@ else
                                 {
                                     <span></span>
                                 }
-                                <span class="text-[11px] text-content-subtle">Page @(discardedIndex + 1) / @DiscardedPageCount</span>
+                                <span class="text-[11px] text-content-subtle">Page @(discardedIndex + 1) / @DiscardedPageCount · @discardedTotal email@(discardedTotal == 1 ? "" : "s")</span>
                                 @if (discardedNext is not null)
                                 {
                                     <button type="button" class="btn-secondary text-xs px-2.5 py-1.5" @onclick="NextDiscarded">Next</button>
@@ -1027,7 +1027,7 @@ else
                                 {
                                     <span></span>
                                 }
-                                <span class="text-[11px] text-content-subtle">Page @(taggedIndex + 1) / @TaggedPageCount</span>
+                                <span class="text-[11px] text-content-subtle">Page @(taggedIndex + 1) / @TaggedPageCount · @taggedTotal email@(taggedTotal == 1 ? "" : "s")</span>
                                 @if (taggedNext is not null)
                                 {
                                     <button type="button" class="btn-secondary text-xs px-2.5 py-1.5" @onclick="NextTagged">Next</button>
