@@ -671,16 +671,14 @@ else
                                         Show completed
                                     </label>
                                 </div>
-                                @* THREE doors, one apply: System Tags (the modal owns the Client /
-                                   Subcontractor / Internal decision and all linking/creating), To-dos,
-                                   and Discard. The badges show what is staged; nothing happens until
-                                   the Apply below. *@
+                                @* TWO doors, one apply: System Tags (the modal owns the Client /
+                                   Subcontractor / Internal decision and all linking and creating —
+                                   to-dos included, drafted under Internal → Create new) and Discard.
+                                   The badge shows everything staged; nothing happens until the
+                                   Apply below. *@
                                 <div class="flex flex-wrap items-center gap-2">
                                     <button type="button" class="@TagsButtonClass" @onclick="() => tagsModalOpen = true">
                                         🏷 System Tags@(StagedTagCount > 0 ? $" · {StagedTagCount}" : "")
-                                    </button>
-                                    <button type="button" class="@TodoButtonClass" @onclick="() => todoModalOpen = true">
-                                        ☑ To-dos@(CurrentTodoDrafts().Count > 0 ? $" · {CurrentTodoDrafts().Count}" : "")
                                     </button>
                                     <button type="button" class="@DiscardTabClass" @onclick="() => discardArmed = !discardArmed">🗑 Discard</button>
                                 </div>
@@ -745,7 +743,7 @@ else
                                 }
                                 else
                                 {
-                                    <p class="text-sm text-content-subtle">Write a reply, or stage system tags and to-dos with the buttons above — then apply it all in one go here.</p>
+                                    <p class="text-sm text-content-subtle">Write a reply, or stage system tags and to-dos with the System Tags button above — then apply it all in one go here.</p>
                                 }
                                 <div class="flex items-center gap-2">
                                     <button type="button" class="btn-primary" disabled="@(busy || PendingSummary is null)" @onclick="() => DoApplyAll(saveAsDraftOnly: false)">
@@ -1166,14 +1164,8 @@ else
     </section>
 }
 
-@* The staged-work modals — components, so this page only orchestrates. *@
-<TodosModal IsOpen="@todoModalOpen"
-            Rows="createTodoRows"
-            AssigneeOptions="todoAssigneeOptions"
-            ProjectNote="@TodoProjectNote"
-            OnChanged="StateHasChanged"
-            OnClose="() => todoModalOpen = false" />
-
+@* The staged-work modal — a component, so this page only orchestrates. To-do drafting lives
+   inside it too (Internal → Create new), editing the page-owned createTodoRows in place. *@
 <SystemTagsModal IsOpen="@tagsModalOpen"
                  ProjectId="@triageProjectId"
                  EmailSubject="@(selected?.Subject ?? "")"
@@ -1186,6 +1178,9 @@ else
                  OnStagingChanged="StateHasChanged"
                  StagedCreate="@stagedCreate"
                  StagedCreateChanged="v => stagedCreate = v"
+                 TodoRows="createTodoRows"
+                 TodoAssigneeOptions="todoAssigneeOptions"
+                 TodoProjectNote="@TodoProjectNote"
                  OnClose="() => tagsModalOpen = false" />
 
 @* ---- New email (compose a fresh outbound thread from the projects mailbox) ---- *@
@@ -1667,8 +1662,8 @@ else
     private bool newEmailRecordsLoading;
     private IReadOnlyList<LinkableRecord> newEmailRecords = Array.Empty<LinkableRecord>();
 
-    // To-do draft rows (Features.Triage.TodoDraftRow), edited in the TodosModal component; one
-    // to-do is raised PER ASSIGNEE per row when the apply runs.
+    // To-do draft rows (Features.Triage.TodoDraftRow), edited in the System Tags modal's
+    // Internal → Create new pane; one to-do is raised PER ASSIGNEE per row when the apply runs.
     private List<TodoDraftRow> createTodoRows = new() { new TodoDraftRow() };
 
     // Section 2's own project pick (independent of section 3's triageProjectId — both sections are
@@ -1681,10 +1676,9 @@ else
     // say so ("matched from the email — change it if that's wrong").
     private bool projectAutoMatched;
 
-    // The staged-work modals + armed discard. The System Tags modal's tab mirrors the page's own
+    // The staged-work modal + armed discard. The System Tags modal's tab mirrors the page's own
     // `pathway` field (the pathway decision); stagedCreate is the modal's drafted new record
     // (null = none) — StagedRecordKind decides whether Apply raises a request, a bid package, a work order or a defect.
-    private bool todoModalOpen;
     private bool tagsModalOpen;
     private bool discardArmed;
     private StagedRecordCreate? stagedCreate;
@@ -1705,7 +1699,9 @@ else
         if (Enum.TryParse<TriagePathway>(tab, out var next)) SetPathway(next);
     }
 
-    private int StagedTagCount => pickedRecords.Count + (StagedCreateReady ? 1 : 0);
+    // Picked links + the staged create + the drafted to-dos — everything the System Tags modal
+    // is holding for the apply, so the one button's badge tells the whole story.
+    private int StagedTagCount => pickedRecords.Count + (StagedCreateReady ? 1 : 0) + CurrentTodoDrafts().Count;
 
     private bool StagedCreateReady =>
         // A defect has no title — its description is what makes it a real staged record.
@@ -1741,27 +1737,6 @@ else
             ParseTodoAssignees(row.Assignees),
             ParseDate(row.Due)))
         .ToList();
-
-    // The assignees already on a row drop out of its own picker, so the same pick can't be added
-    // twice (and the picker disables itself once every option is on the row).
-    private IReadOnlyList<SearchSelect.Option> AvailableTodoRoleOptions(TodoDraftRow row) =>
-        todoAssigneeOptions.Where(option => !row.Assignees.Contains(option.Value)).ToList();
-
-    private static string TodoRolePlaceholder(TodoDraftRow row) =>
-        row.Assignees.Count == 0 ? "Unassigned" : "Add another…";
-
-    private string TodoRoleLabel(string value) =>
-        todoAssigneeOptions.FirstOrDefault(option => option.Value == value)?.Label ?? value;
-
-    // The picker is an ADDER: it is bound to a constant empty Value, so picking an option raises
-    // ValueChanged and then re-renders back to its placeholder, ready for the next assignee.
-    // ---- The to-dos button (the modal itself is the TodosModal component) ----
-
-    private string TodoButtonClass =>
-        "inline-flex items-center gap-1 rounded-lg border px-3 py-1.5 text-sm "
-        + (CurrentTodoDrafts().Count > 0
-            ? "border-accent/50 text-accent bg-accent/5 font-medium"
-            : "border-line-strong text-content-muted hover:text-content hover:border-line-strong");
 
     private async Task LoadTodoAssignableRolesAsync()
     {
@@ -2154,7 +2129,6 @@ else
         triageProjectId = "";
         projectAutoMatched = false;
         createTodoRows = new List<TodoDraftRow> { new() };
-        todoModalOpen = false;
         tagsModalOpen = false;
         discardArmed = false;
         stagedCreate = null;
