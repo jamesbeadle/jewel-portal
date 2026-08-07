@@ -6,9 +6,11 @@
 @inject CostCentersReadModel CostCenters
 
 @* THE tagging surface for triage: one modal, three tabs — Client / Subcontractor / Internal —
-   each offering exactly what that side of the system can do with an email. Everything here is
-   STAGED: picked records and the drafted new record go back to the page as pending work, applied
-   (and tagged, verified) by the page's single Apply. A thread already filed under a pathway opens
+   each offering exactly what that side of the system can do with an email: link to existing
+   records, or create new ones (the Internal tab's create drafts to-dos — the multi-item editor
+   that used to be the page's own To-dos modal). Everything here is STAGED: picked records, the
+   drafted new record and the drafted to-dos go back to the page as pending work, applied (and
+   tagged, verified) by the page's single Apply. A thread already filed under a pathway opens
    locked to its own tab — the client wall in tab form. *@
 
 <Modal IsOpen="@IsOpen" Title="System tags" Class="max-w-3xl" DismissOnOverlayClick="false"
@@ -33,7 +35,7 @@
         }
 
         @* What's staged so far, across every tab — the modal's running total. *@
-        @if (Picked.Count > 0 || StagedCreate is not null)
+        @if (Picked.Count > 0 || StagedCreate is not null || TitledTodoRows.Count > 0)
         {
             <div class="flex flex-wrap items-center gap-1.5">
                 @foreach (var picked in Picked.ToList())
@@ -52,21 +54,49 @@
                                 @onclick="ClearStagedCreate">&times;</button>
                     </span>
                 }
+                @foreach (var todoChipRow in TitledTodoRows)
+                {
+                    var chipRow = todoChipRow;
+                    <span @key="chipRow" class="inline-flex items-center gap-1 rounded-full border border-accent/50 bg-accent/5 text-accent pl-2.5 pr-1 py-0.5 text-xs" title="@chipRow.Title">
+                        <span>✚ to-do: @chipRow.Title</span>
+                        <button type="button" class="leading-none px-1 text-accent/70 hover:text-negative" title="Remove"
+                                @onclick="() => RemoveTodoRow(chipRow)">&times;</button>
+                    </span>
+                }
             </div>
         }
 
-        @if (string.IsNullOrWhiteSpace(ProjectId))
+        @if (activeTab == "Internal")
+        {
+            @* Internal: to-do items (pathway-neutral) — link the email to existing ones, or draft
+               new ones that the page's Apply raises (numbered TODO-####). Creating works without a
+               project (the items are company-wide); linking needs the project's own list. *@
+            <div class="flex items-center gap-2">
+                <button type="button" class="@SubTabClass(!createOpen)" @onclick="CloseCreatePane">Link to existing</button>
+                <button type="button" class="@SubTabClass(createOpen)" @onclick="OpenCreatePane">Create new</button>
+            </div>
+
+            @if (createOpen)
+            {
+                @TodoCreatePane
+            }
+            else if (string.IsNullOrWhiteSpace(ProjectId))
+            {
+                <p class="rounded-lg bg-amber-500/10 border border-amber-500/40 px-3 py-2 text-xs text-content">
+                    Set the email's <span class="font-medium">Project</span> on the page to link to its to-do items — or use <span class="font-medium">Create new</span> to draft to-dos (company-wide until a project is set).
+                </p>
+            }
+            else
+            {
+                <p class="text-xs text-content-subtle">Link this email to existing to-do items — the email is tagged to every picked item on apply.</p>
+                @LinkPicker
+            }
+        }
+        else if (string.IsNullOrWhiteSpace(ProjectId))
         {
             <p class="rounded-lg bg-amber-500/10 border border-amber-500/40 px-3 py-2 text-xs text-content">
                 Set the email's <span class="font-medium">Project</span> on the page first — tags file the email against a project's records.
             </p>
-        }
-        else if (activeTab == "Internal")
-        {
-            @* Internal: link the email to existing to-do items (pathway-neutral). New to-dos are
-               drafted in the To-dos modal, not here. *@
-            <p class="text-xs text-content-subtle">Link this email to existing to-do items. New to-dos are raised from the To-dos button on the page.</p>
-            @LinkPicker
         }
         else
         {
@@ -418,8 +448,23 @@
     [Parameter] public StagedRecordCreate? StagedCreate { get; set; }
     [Parameter] public EventCallback<StagedRecordCreate?> StagedCreateChanged { get; set; }
 
+    /// <summary>Page-owned to-do draft rows — the Internal tab's "Create new". The modal edits
+    /// them in place and raises <see cref="OnStagingChanged"/> so the page's badge re-renders.
+    /// One to-do is raised PER ASSIGNEE per row when the page's Apply runs; nothing before.</summary>
+    [Parameter] public List<TodoDraftRow> TodoRows { get; set; } = new();
+
+    /// <summary>Assignee picker options (roles, and named people within them), built once by the
+    /// page from the todo store's assignable roles/people.</summary>
+    [Parameter] public IReadOnlyList<SearchSelect.Option> TodoAssigneeOptions { get; set; } = Array.Empty<SearchSelect.Option>();
+
+    /// <summary>One line saying where the items will land ("Items land on … — the email's project").</summary>
+    [Parameter] public string? TodoProjectNote { get; set; }
+
     private string activeTab = "Client";
     private bool createOpen;
+    // The Internal create pane's drill-in: null = the list of drafted to-dos, an index = that
+    // row's detail form (same LIST ⇄ DETAIL shape the standalone To-dos modal had).
+    private int? todoEditIndex;
     // Which Subcontractor record the create pane drafts (BidPackage | WorkOrder | Defect).
     private StagedRecordKind subCreateKind = StagedRecordKind.BidPackage;
     // True while the defect assignee is the sender suggestion rather than a typed value — drives
@@ -446,7 +491,11 @@
         if (IsOpen && !wasOpen)
         {
             activeTab = LockedPathway ?? ActivePathway ?? "Client";
-            createOpen = StagedCreate is not null;
+            // Re-open onto whatever is mid-draft: a staged record's form, or — on Internal — the
+            // drafted to-dos.
+            createOpen = StagedCreate is not null || (activeTab == "Internal" && TitledTodoRows.Count > 0);
+            todoEditIndex = null;
+            if (TodoRows.Count == 0) TodoRows.Add(new TodoDraftRow());
             // The house-standard response window pre-fills the request form — a week is what all
             // but a handful of requests get, so typing a date is keystrokes spent on the common case.
             scratchCreate = new StagedRecordCreate { ResponseDue = RequestDefaults.ResponseDue() };
@@ -486,6 +535,7 @@
         if (activeTab == tab) return;
         activeTab = tab;
         createOpen = false;
+        todoEditIndex = null;
         linkType = DefaultTypeFor(tab);
         search = "";
         await ActivePathwayChanged.InvokeAsync(tab);
@@ -544,10 +594,24 @@
     private void OpenCreatePane()
     {
         createOpen = true;
+        if (activeTab == "Internal")
+        {
+            if (TodoRows.Count == 0) TodoRows.Add(new TodoDraftRow());
+            // "Create new" means draft one: open straight into the form when nothing is drafted
+            // yet; the list view once there is something to list.
+            todoEditIndex = TitledTodoRows.Count == 0 && TodoRows.All(r => string.IsNullOrWhiteSpace(r.Title)) ? 0 : null;
+            return;
+        }
         if (activeTab == "Subcontractor" && subCreateKind == StagedRecordKind.WorkOrder)
             _ = EnsureWorkOrderLookupsAsync();
         if (activeTab == "Subcontractor" && subCreateKind == StagedRecordKind.Defect)
             TryPrefillDefectAssignee();
+    }
+
+    private void CloseCreatePane()
+    {
+        createOpen = false;
+        todoEditIndex = null;
     }
 
     private void SwitchSubCreateKind(StagedRecordKind kind)
@@ -714,7 +778,148 @@
         _ = StagedCreateChanged.InvokeAsync(null);
     }
 
-    private Task CloseAsync() => OnClose.InvokeAsync();
+    private async Task CloseAsync()
+    {
+        // Drop empty to-do draft rows so the page badge and the chips stay honest.
+        TodoRows.RemoveAll(r => string.IsNullOrWhiteSpace(r.Title) && string.IsNullOrWhiteSpace(r.Notes) && r.Assignees.Count == 0);
+        if (TodoRows.Count == 0) TodoRows.Add(new TodoDraftRow());
+        todoEditIndex = null;
+        await OnStagingChanged.InvokeAsync();
+        await OnClose.InvokeAsync();
+    }
+
+    // ---- to-do create pane (Internal tab) — the multi-draft editor moved in from the
+    //      standalone To-dos modal. Rows are DRAFTS owned by the page: nothing is created until
+    //      the email's Apply runs, and the page's System Tags badge reads the same list. ----
+
+    private List<TodoDraftRow> TitledTodoRows => TodoRows.Where(r => !string.IsNullOrWhiteSpace(r.Title)).ToList();
+
+    private IReadOnlyList<SearchSelect.Option> TodoOptionsFor(TodoDraftRow row) =>
+        TodoAssigneeOptions.Where(option => !row.Assignees.Contains(option.Value)).ToList();
+
+    private string TodoAssigneeLabel(string value) =>
+        TodoAssigneeOptions.FirstOrDefault(option => option.Value == value)?.Label ?? value;
+
+    private void AddTodoAssignee(TodoDraftRow row, string value)
+    {
+        if (string.IsNullOrWhiteSpace(value) || row.Assignees.Contains(value)) return;
+        row.Assignees.Add(value);
+        NotifyTodos();
+    }
+
+    private void AddTodoRowAndEdit()
+    {
+        TodoRows.Add(new TodoDraftRow());
+        todoEditIndex = TodoRows.Count - 1;
+        NotifyTodos();
+    }
+
+    private void RemoveTodoRow(TodoDraftRow row)
+    {
+        TodoRows.Remove(row);
+        if (TodoRows.Count == 0) TodoRows.Add(new TodoDraftRow());
+        todoEditIndex = null;
+        NotifyTodos();
+    }
+
+    private void NotifyTodos() => _ = OnStagingChanged.InvokeAsync();
+
+    private RenderFragment TodoCreatePane => __builder =>
+    {
+        <div class="space-y-4">
+            @if (todoEditIndex is { } activeIndex && activeIndex < TodoRows.Count)
+            {
+                var row = TodoRows[activeIndex];
+                <button type="button" class="text-xs text-content-subtle hover:text-content underline" @onclick="() => todoEditIndex = null">← All to-dos</button>
+
+                <FormField Label="Title" Value="@row.Title" OnChange="v => { row.Title = v; NotifyTodos(); }" Required="true" />
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Assigned to</label>
+                        @if (row.Assignees.Count > 0)
+                        {
+                            <div class="flex flex-wrap gap-1 mb-1.5">
+                                @foreach (var assigneeValue in row.Assignees.ToList())
+                                {
+                                    var picked = assigneeValue;
+                                    <span class="inline-flex items-center gap-1 rounded-full border border-line bg-surface-raised pl-2 pr-1 py-0.5 text-xs text-content">
+                                        @TodoAssigneeLabel(picked)
+                                        <button type="button" title="Remove assignee"
+                                                class="leading-none px-1 text-content-subtle hover:text-negative"
+                                                @onclick="() => { row.Assignees.Remove(picked); NotifyTodos(); }">&times;</button>
+                                    </span>
+                                }
+                            </div>
+                        }
+                        @{ var roleOptions = TodoOptionsFor(row); }
+                        <SearchSelect Options="@roleOptions" Value=""
+                                      ValueChanged="v => AddTodoAssignee(row, v)"
+                                      Placeholder="@(row.Assignees.Count == 0 ? "Unassigned" : "Add another…")"
+                                      Disabled="@(roleOptions.Count == 0)"
+                                      WidthClass="w-full" />
+                        @if (row.Assignees.Count > 1)
+                        {
+                            <p class="text-xs text-content-subtle mt-1">Raised as @row.Assignees.Count separate to-dos, one per assignee.</p>
+                        }
+                    </div>
+                    <FormField Label="Due" Value="@row.Due" OnChange="v => { row.Due = v; NotifyTodos(); }" InputType="date" />
+                </div>
+
+                <div>
+                    <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Detail</label>
+                    <textarea class="field" rows="5" value="@row.Notes" @oninput="e => { row.Notes = e.Value?.ToString() ?? string.Empty; NotifyTodos(); }"></textarea>
+                </div>
+
+                <div class="flex items-center justify-between pt-1">
+                    <button type="button" class="text-xs text-content-subtle hover:text-negative underline" @onclick="() => RemoveTodoRow(row)">Remove this to-do</button>
+                    <button type="button" class="btn-secondary text-xs" @onclick="() => todoEditIndex = null">Done</button>
+                </div>
+            }
+            else
+            {
+                <p class="text-xs text-content-subtle">
+                    Each item is numbered TODO-#### and this email is tagged to every one, so one email can feed several to-dos. More than one assignee raises the item once per assignee. Nothing is created until you apply the email's actions.
+                </p>
+
+                @if (TitledTodoRows.Count == 0)
+                {
+                    <p class="text-sm text-content-subtle italic">No to-dos drafted from this email yet.</p>
+                }
+                else
+                {
+                    <div class="divide-y divide-line rounded-lg border border-line">
+                        @for (var i = 0; i < TodoRows.Count; i++)
+                        {
+                            var listIndex = i;
+                            var listRow = TodoRows[i];
+                            if (string.IsNullOrWhiteSpace(listRow.Title) && TodoRows.Count > 1) { continue; }
+                            <button type="button" @key="listRow" class="w-full text-left px-3 py-2 hover:bg-surface-raised flex items-center gap-3"
+                                    @onclick="() => todoEditIndex = listIndex">
+                                <span class="text-sm text-content flex-1 truncate">@(string.IsNullOrWhiteSpace(listRow.Title) ? "(untitled)" : listRow.Title)</span>
+                                @if (listRow.Assignees.Count > 0)
+                                {
+                                    <span class="text-xs text-content-subtle truncate max-w-[12rem]">@string.Join(", ", listRow.Assignees.Select(TodoAssigneeLabel))</span>
+                                }
+                                @if (!string.IsNullOrWhiteSpace(listRow.Due))
+                                {
+                                    <span class="text-xs text-content-subtle shrink-0">due @listRow.Due</span>
+                                }
+                                <span class="text-content-faint">›</span>
+                            </button>
+                        }
+                    </div>
+                }
+
+                <button type="button" class="btn-secondary text-xs" @onclick="AddTodoRowAndEdit">+ Add a to-do</button>
+
+                @if (!string.IsNullOrWhiteSpace(TodoProjectNote))
+                {
+                    <p class="text-xs text-content-subtle pt-2 border-t border-line">@TodoProjectNote</p>
+                }
+            }
+        </div>
+    };
 
     // ---- link picker (shared by every tab) ----
 

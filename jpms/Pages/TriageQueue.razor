@@ -1874,6 +1874,45 @@ else
     private void ResetDiscardedPaging() { discardedCursors = new() { null }; discardedIndex = 0; discardedNext = null; }
     private void ResetTaggedPaging() { taggedCursors = new() { null }; taggedIndex = 0; taggedNext = null; }
 
+    // After an action consumes an email, its list shrinks under the pager. The cursor is a plain
+    // offset (see MailboxGraphClient.ListFilteredAsync), so re-reading the SAME page simply refills
+    // it from the emails further down — the triager stays on the page they were working, and emails
+    // they deliberately skipped stay behind on earlier pages instead of being re-presented from
+    // page one after every action. Only when the page has fallen off the end entirely (the last
+    // email on the last page was consumed) does this step back — one page at a time, never past
+    // page one. A failed reload keeps the index rather than guessing: loadError already tells the
+    // story, and Previous/Next still work. View switches and sort flips still reset to page one —
+    // those genuinely start a new read of the list.
+    private async Task ReloadQueueInPlaceAsync()
+    {
+        await LoadAsync();
+        while (loadError is null && items.Count == 0 && queueIndex > 0)
+        {
+            queueIndex--;
+            await LoadAsync();
+        }
+    }
+
+    private async Task ReloadDiscardedInPlaceAsync()
+    {
+        await LoadDiscardedAsync();
+        while (loadError is null && discardedItems.Count == 0 && discardedIndex > 0)
+        {
+            discardedIndex--;
+            await LoadDiscardedAsync();
+        }
+    }
+
+    private async Task ReloadTaggedInPlaceAsync()
+    {
+        await LoadTaggedAsync();
+        while (loadError is null && taggedItems.Count == 0 && taggedIndex > 0)
+        {
+            taggedIndex--;
+            await LoadTaggedAsync();
+        }
+    }
+
     private async Task LoadAsync()
     {
         loadError = null;
@@ -2799,9 +2838,9 @@ else
                 replyAttachments = Array.Empty<ComposeDraftAttachment>();
             }
 
-            // Applied in full: refresh the queue and clear the selection (the email has left it).
-            ResetQueuePaging();
-            await Task.WhenAll(LoadAsync(), LoadRecentTriageAsync());
+            // Applied in full: refresh the queue in place — the triager stays on the page they
+            // were working — and clear the selection (the email has left it).
+            await Task.WhenAll(ReloadQueueInPlaceAsync(), LoadRecentTriageAsync());
             selected = null;
             detail = null;
             detailLoading = false;
@@ -2992,8 +3031,7 @@ else
             selected = null;
             detail = null;
             detailLoading = false;
-            ResetDiscardedPaging();
-            await LoadDiscardedAsync();
+            await ReloadDiscardedInPlaceAsync();
         }
         catch
         {
@@ -3140,10 +3178,10 @@ else
             busyLabel = label;
             busy = true;
             await action();
-            ResetQueuePaging();
             // The queue and the recently-triaged panel move together: the action that consumed
-            // this email is the newest row of the panel.
-            await Task.WhenAll(LoadAsync(), LoadRecentTriageAsync());
+            // this email is the newest row of the panel. The reload stays on the current page
+            // (in-place) so emails the triager skipped don't come round again after every action.
+            await Task.WhenAll(ReloadQueueInPlaceAsync(), LoadRecentTriageAsync());
             selected = null;
             detail = null;
             detailLoading = false;
@@ -3175,8 +3213,7 @@ else
             busyLabel = label;
             busy = true;
             await action();
-            ResetTaggedPaging();
-            await LoadTaggedAsync();
+            await ReloadTaggedInPlaceAsync();
             selected = null;
             detail = null;
             detailLoading = false;
@@ -3215,8 +3252,7 @@ else
                 pathway: record is null ? null : CostCentrePathwayFor(record),
                 allowCrossPathway: allowCrossPathway);
             crossFileMessage = null;
-            ResetTaggedPaging();
-            await LoadTaggedAsync();
+            await ReloadTaggedInPlaceAsync();
             selected = null;
             detail = null;
             detailLoading = false;
