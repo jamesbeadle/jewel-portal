@@ -3,6 +3,7 @@ using Jewel.JPMS.Api.Data;
 using Jewel.JPMS.Api.Features.Audit;
 using Jewel.JPMS.Api.Features.Drawings.Storage;
 using Jewel.JPMS.Api.Features.MailboxIntake.Graph;
+using Jewel.JPMS.Api.Features.MailboxIntake.Sharing;
 using Jewel.JPMS.Api.Features.Progress.Storage;
 using Jewel.JPMS.Api.Features.RecordLinks;
 using Jewel.JPMS.Api.Features.Requests;
@@ -37,8 +38,9 @@ namespace Jewel.JPMS.Api.Features.MailboxIntake.Compose;
 public sealed class SendMailboxEmailHandler : ICommandHandler<SendMailboxEmail, ComposeOutcome>
 {
     /// <summary>Cap on the combined size of a composed email's attachments — the usual Exchange
-    /// message-size ceiling, applied here so a too-big email fails before anything is staged.</summary>
-    public const long MaxTotalAttachmentBytes = 25_000_000;
+    /// message-size ceiling. One number for the whole system, owned by the planner; kept here as an
+    /// alias for existing callers.</summary>
+    public const long MaxTotalAttachmentBytes = EmailAttachmentPlanner.MaxTotalAttachmentBytes;
 
     private readonly JpmsContext context;
     private readonly IMailboxGraphClient graph;
@@ -47,6 +49,7 @@ public sealed class SendMailboxEmailHandler : ICommandHandler<SendMailboxEmail, 
     private readonly RecordProviderRegistry providers;
     private readonly IDrawingBlobStore drawingBlobs;
     private readonly IProgressPhotoStore photoBlobs;
+    private readonly IEmailFileShareStore shareStore;
     private readonly ComposeHtmlPipeline pipeline;
     private readonly AuditTrail audit;
     private readonly ICommandHandler<CreateRequestFromMessage, Request> createRequest;
@@ -59,6 +62,7 @@ public sealed class SendMailboxEmailHandler : ICommandHandler<SendMailboxEmail, 
         RecordProviderRegistry providers,
         IDrawingBlobStore drawingBlobs,
         IProgressPhotoStore photoBlobs,
+        IEmailFileShareStore shareStore,
         ComposeHtmlPipeline pipeline,
         AuditTrail audit,
         ICommandHandler<CreateRequestFromMessage, Request> createRequest)
@@ -70,6 +74,7 @@ public sealed class SendMailboxEmailHandler : ICommandHandler<SendMailboxEmail, 
         this.providers = providers;
         this.drawingBlobs = drawingBlobs;
         this.photoBlobs = photoBlobs;
+        this.shareStore = shareStore;
         this.pipeline = pipeline;
         this.audit = audit;
         this.createRequest = createRequest;
@@ -134,9 +139,38 @@ public sealed class SendMailboxEmailHandler : ICommandHandler<SendMailboxEmail, 
         var composed = command.BodyIsHtml
             ? pipeline.FromHtml(command.Body)
             : new ComposeHtmlPipeline.ComposedBody(ComposeHtmlPipeline.FromPlainText(command.Body), Array.Empty<MailboxDraftAttachment>());
+        var bodyHtml = composed.Html;
+
+        // ---- 4b. Over-budget attachments become 7-day download links -----------------------------
+        // Inline (cid) images are part of the body and never linked; their bytes are reserved out
+        // of the budget instead. The largest ordinary attachments move to links until what remains
+        // fits the Exchange ceiling — so the email always goes, with as much attached as fits.
+        var inlineBytes = composed.InlineImages.Sum(a => a.Content.LongLength);
+        var plan = EmailAttachmentPlanner.Split(attachments, reservedBytes: inlineBytes);
+        if (plan.ToLink.Count > 0)
+        {
+            if (!shareStore.IsConfigured)
+                throw new InvalidOperationException(
+                    "The attachments total more than 25 MB, and the file-share store isn't configured to turn the " +
+                    "largest into download links — remove some files and try again.");
+
+            var shareScope = NullIfEmpty(command.ProjectId) ?? "compose";
+            var links = new List<EmailFileShareLink>();
+            foreach (var file in plan.ToLink)
+            {
+                var link = await shareStore.ShareAsync(shareScope, file.FileName, file.ContentType, file.Content, cancellationToken)
+                    ?? throw new InvalidOperationException(
+                        $"A download link couldn't be created for {file.FileName}. Nothing was sent — try again.");
+                links.Add(link);
+            }
+            bodyHtml += EmailAttachmentPlanner.LinksHtmlBlock(links);
+            attachments = plan.Attach.ToList();
+        }
+
         var allAttachments = attachments.Concat(composed.InlineImages).ToList();
         if (allAttachments.Sum(a => a.Content.LongLength) > MaxTotalAttachmentBytes)
-            throw new InvalidOperationException("The attachments total more than 25 MB — remove some, or share large files as drawing links.");
+            throw new InvalidOperationException(
+                "The images pasted into the email total more than 25 MB on their own — remove some and try again.");
 
         // ---- 5. Optional record filing (tag-first, verified — the recoverable half) ---------------
         Request? raisedRequest = null;
@@ -231,7 +265,7 @@ public sealed class SendMailboxEmailHandler : ICommandHandler<SendMailboxEmail, 
             var replyDraft = await graph.CreateReplyDraftAsync(
                 new MailboxReplyDraftMessage(
                     command.ReplyToMessageId!,
-                    HtmlCoverNote: composed.Html,
+                    HtmlCoverNote: bodyHtml,
                     Attachments: allAttachments,
                     Categories: draftCategories.Count == 0 ? null : draftCategories),
                 cancellationToken);
@@ -259,7 +293,7 @@ public sealed class SendMailboxEmailHandler : ICommandHandler<SendMailboxEmail, 
         {
             var draft = await graph.CreateDraftAsync(
                 new MailboxDraftMessage(
-                    ToDraft(to), subject, composed.Html, allAttachments,
+                    ToDraft(to), subject, bodyHtml, allAttachments,
                     Bcc: bcc.Count == 0 ? null : ToDraft(bcc),
                     Categories: draftCategories.Count == 0 ? null : draftCategories,
                     Cc: cc.Count == 0 ? null : ToDraft(cc)),

@@ -496,7 +496,8 @@ else
                     {
                         <div class="rounded-xl border border-dashed border-line bg-surface-raised px-4 py-5 text-sm text-content-subtle">
                             No drawings linked yet. Link drawings from the project's Drawings section — they're attached
-                            to the invite email when it's sent. (Save drawings out of any email from Triage.)
+                            to the invite email when it's sent (files too large for one email go out as 7-day download
+                            links instead). (Save drawings out of any email from Triage.)
                         </div>
                     }
                 }
@@ -791,7 +792,7 @@ else
         }
         else
         {
-            <p class="text-xs text-content-subtle mb-3">Linked drawings are attached to the invite email (latest approved revision, or the newest upload when none is approved).</p>
+            <p class="text-xs text-content-subtle mb-3">Linked drawings are attached to the invite email (latest approved revision, or the newest upload when none is approved). Files that would push the email over the 25&nbsp;MB limit are sent as download links that expire after 7 days.</p>
             <div class="space-y-1 max-h-80 overflow-y-auto">
                 @foreach (var drawing in projectDrawings)
                 {
@@ -822,7 +823,7 @@ else
             Tender responses below.
             @if (packageDrawings.Count > 0)
             {
-                <span> The @packageDrawings.Count linked drawing@(packageDrawings.Count == 1 ? "" : "s") will be attached.</span>
+                <span> The @packageDrawings.Count linked drawing@(packageDrawings.Count == 1 ? "" : "s") will be attached — any that would push the email over the 25&nbsp;MB limit go out as 7-day download links instead.</span>
             }
         </p>
 
@@ -1826,6 +1827,12 @@ else
             showComposeModal = false;
             draftWebLink = draft.WebLink;
             sendNote = $"Draft created in the shared mailbox with {draft.Bcc.Count} subcontractor(s) in BCC, tagged {package.Reference}. Review and send it from the mailbox's Drafts folder.";
+            if (draft.LinkedFiles is { Count: > 0 } linked)
+            {
+                sendNote += linked.Count == 1
+                    ? $" 1 drawing was too large to attach and travels as a download link in the email body (expires after 7 days): {linked[0]}."
+                    : $" {linked.Count} drawings were too large to attach and travel as download links in the email body (they expire after 7 days): {string.Join(", ", linked)}.";
+            }
         }
         catch (CommandFailedException ex) { error = $"Couldn't create the draft: {ex.Message}"; }
         catch { error = "Couldn't create the draft. Check the recipients have email addresses and the mailbox connection, then try again."; }

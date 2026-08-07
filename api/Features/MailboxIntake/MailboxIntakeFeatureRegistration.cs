@@ -44,6 +44,26 @@ public static class MailboxIntakeFeatureRegistration
         // Always available so the triage handlers can depend on it; it self-gates on the flags.
         services.AddSingleton<IMailboxActionScheduler, MailboxActionScheduler>();
 
+        // Large-attachment share links: files that would push an email past the ~25 MB Exchange
+        // ceiling are copied into a private 'email-shares' container and sent as 7-day SAS download
+        // links instead (EmailAttachmentPlanner decides the split; the invite-draft, compose and
+        // request-draft handlers consume it). Shares the drawings storage account — same fallback
+        // chain as the drawings blob store — and the null store keeps callers on their pre-link
+        // behaviour when no storage is configured.
+        var shareConnection = configuration["DrawingsStorage:ConnectionString"]
+            ?? configuration["AzureWebJobsStorage"];
+        if (string.IsNullOrWhiteSpace(shareConnection))
+        {
+            services.AddSingleton<Sharing.IEmailFileShareStore, Sharing.NullEmailFileShareStore>();
+        }
+        else
+        {
+            services.AddSingleton<Sharing.IEmailFileShareStore>(sp =>
+                new Sharing.AzureBlobEmailFileShareStore(
+                    shareConnection!,
+                    sp.GetRequiredService<ILogger<Sharing.AzureBlobEmailFileShareStore>>()));
+        }
+
         // On-demand intake message reader: lets the triage detail endpoint pull an email's full body
         // + attachment names live from Graph when a triager opens it. Real when Graph credentials are
         // configured for the API app, otherwise a no-op so callers fall back to the stored preview.

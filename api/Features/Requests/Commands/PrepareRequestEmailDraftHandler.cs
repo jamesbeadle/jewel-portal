@@ -2,6 +2,7 @@ using Jewel.JPMS.Api.Cqrs;
 using Jewel.JPMS.Api.Data;
 using Jewel.JPMS.Api.Features.MailboxIntake;
 using Jewel.JPMS.Api.Features.MailboxIntake.Graph;
+using Jewel.JPMS.Api.Features.MailboxIntake.Sharing;
 using Jewel.JPMS.Api.Features.Requests.Documents;
 using Jewel.JPMS.Api.Features.Requests.Recipients;
 using Jewel.JPMS.Contracts.Requests;
@@ -31,19 +32,22 @@ public sealed class PrepareRequestEmailDraftHandler : ICommandHandler<PrepareReq
     private readonly Audit.AuditTrail audit;
     private readonly MailboxIntakeOptions mailboxOptions;
     private readonly Attachments.IRequestAttachmentStore attachmentStore;
+    private readonly IEmailFileShareStore shareStore;
 
     public PrepareRequestEmailDraftHandler(
         JpmsContext context,
         IMailboxGraphClient graph,
         Audit.AuditTrail audit,
         MailboxIntakeOptions mailboxOptions,
-        Attachments.IRequestAttachmentStore attachmentStore)
+        Attachments.IRequestAttachmentStore attachmentStore,
+        IEmailFileShareStore shareStore)
     {
         this.context = context;
         this.graph = graph;
         this.audit = audit;
         this.mailboxOptions = mailboxOptions;
         this.attachmentStore = attachmentStore;
+        this.shareStore = shareStore;
     }
 
     public async Task<RequestEmailDraft> HandleAsync(PrepareRequestEmailDraft command, CancellationToken cancellationToken)
@@ -89,16 +93,41 @@ public sealed class PrepareRequestEmailDraftHandler : ICommandHandler<PrepareReq
         // architect could see what they were being asked about — so it belongs on the email, not
         // only in the portal. Drawing LINKS are not sent: the architect issued those drawings, and
         // the PDF already cites them by code and revision.
-        var attachments = new List<MailboxDraftAttachment>
+        //
+        // Request uploads are allowed up to 64 MB each, well past what one email carries, so files
+        // that would push the message over the Exchange ceiling travel as 7-day download links in
+        // the cover note instead. The official PDF is ALWAYS attached — it is the document. Linking
+        // is best-effort like the file loading itself: if the share store is unconfigured or a link
+        // can't be minted, everything stays attached exactly as before and the person reviewing the
+        // draft in Outlook sees what they're sending.
+        var pdfAttachment = new MailboxDraftAttachment(model.FileName, "application/pdf", pdf);
+        var files = await LoadRequestFileAttachmentsAsync(request.RequestId, cancellationToken);
+        var coverNote = BuildCoverNote(model);
+
+        var attachments = new List<MailboxDraftAttachment> { pdfAttachment };
+        var plan = EmailAttachmentPlanner.Split(files, reservedBytes: pdf.LongLength);
+        if (plan.ToLink.Count == 0 || !shareStore.IsConfigured)
         {
-            new(model.FileName, "application/pdf", pdf)
-        };
-        attachments.AddRange(await LoadRequestFileAttachmentsAsync(request.RequestId, cancellationToken));
+            attachments.AddRange(files);
+        }
+        else
+        {
+            var links = await TryShareAsync(plan.ToLink, $"{model.TypeShort}-{model.DisplayNumber}", cancellationToken);
+            if (links is null)
+            {
+                attachments.AddRange(files); // linking failed — see the note above
+            }
+            else
+            {
+                attachments.AddRange(plan.Attach);
+                coverNote += EmailAttachmentPlanner.LinksHtmlBlock(links);
+            }
+        }
 
         var draft = new MailboxDraftMessage(
             recipients.To.Select(ToDraftRecipient).ToList(),
             model.EmailSubject,
-            BuildCoverNote(model),
+            coverNote,
             attachments,
             Bcc: recipients.Bcc.Select(ToDraftRecipient).ToList(),
             Categories: new[] { TriageCategories.Marker, recordTag },
@@ -194,6 +223,29 @@ public sealed class PrepareRequestEmailDraftHandler : ICommandHandler<PrepareReq
         }
 
         return attachments;
+    }
+
+    /// <summary>Mints a download link per file, or null if ANY link fails — the caller then attaches
+    /// everything instead, because an email promising links it doesn't carry is worse than a draft
+    /// Outlook refuses to send (the reviewer can still trim it there).</summary>
+    private async Task<List<EmailFileShareLink>?> TryShareAsync(
+        IReadOnlyList<MailboxDraftAttachment> toLink, string scope, CancellationToken cancellationToken)
+    {
+        var links = new List<EmailFileShareLink>();
+        foreach (var file in toLink)
+        {
+            try
+            {
+                var link = await shareStore.ShareAsync(scope, file.FileName, file.ContentType, file.Content, cancellationToken);
+                if (link is null) return null;
+                links.Add(link);
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                return null;
+            }
+        }
+        return links;
     }
 
     private static MailboxDraftRecipient ToDraftRecipient(CorrespondenceRecipient r) =>

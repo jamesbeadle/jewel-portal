@@ -3,6 +3,7 @@ using Jewel.JPMS.Api.Data;
 using Jewel.JPMS.Api.Features.Drawings.Storage;
 using Jewel.JPMS.Api.Features.MailboxIntake;
 using Jewel.JPMS.Api.Features.MailboxIntake.Graph;
+using Jewel.JPMS.Api.Features.MailboxIntake.Sharing;
 using Jewel.JPMS.Contracts.Procurement;
 using Jewel.JPMS.Models;
 using Microsoft.EntityFrameworkCore;
@@ -14,18 +15,25 @@ namespace Jewel.JPMS.Api.Features.Procurement.Commands;
 // goes in BCC, and the draft carries the package's tag ("JPMS/BPI-0001") so the copy that is
 // eventually sent from Outlook — and the replies triaged onto the same tag — group under the
 // package. The package's linked drawings are attached (latest approved revision, or the newest
-// upload when none is approved). Package status is untouched: inviting recipients already moved a
-// Draft package to Inviting, and the actual send happens in Outlook.
+// upload when none is approved) — except when they would push the email past the ~25 MB Exchange
+// ceiling, in which case the largest files are copied to the email-shares container and travel as
+// 7-day download links in the body instead (an oversized draft would otherwise stage fine and only
+// fail when a person presses Send in Outlook). Package status is untouched: inviting recipients
+// already moved a Draft package to Inviting, and the actual send happens in Outlook.
 public sealed class PrepareBidPackageInviteDraftHandler : ICommandHandler<PrepareBidPackageInviteDraft, BidPackageInviteDraft>
 {
     private readonly JpmsContext context;
     private readonly IMailboxGraphClient mailbox;
     private readonly MailboxIntakeOptions options;
     private readonly IDrawingBlobStore blobStore;
+    private readonly IEmailFileShareStore shareStore;
 
-    public PrepareBidPackageInviteDraftHandler(JpmsContext context, IMailboxGraphClient mailbox, MailboxIntakeOptions options, IDrawingBlobStore blobStore)
+    public PrepareBidPackageInviteDraftHandler(
+        JpmsContext context, IMailboxGraphClient mailbox, MailboxIntakeOptions options,
+        IDrawingBlobStore blobStore, IEmailFileShareStore shareStore)
     {
-        this.context = context; this.mailbox = mailbox; this.options = options; this.blobStore = blobStore;
+        this.context = context; this.mailbox = mailbox; this.options = options;
+        this.blobStore = blobStore; this.shareStore = shareStore;
     }
 
     public async Task<BidPackageInviteDraft> HandleAsync(PrepareBidPackageInviteDraft command, CancellationToken cancellationToken)
@@ -51,11 +59,39 @@ public sealed class PrepareBidPackageInviteDraftHandler : ICommandHandler<Prepar
             .Select(g => new MailboxDraftRecipient(g.Key, g.First().CompanyName))
             .ToList();
 
+        // Attach what fits; anything that would push the email past the ceiling goes out as a
+        // 7-day download link in the body instead.
+        var drawings = await LoadDrawingAttachmentsAsync(command.BidPackageId, cancellationToken);
+        var plan = EmailAttachmentPlanner.Split(drawings);
+        var htmlBody = command.HtmlBody;
+        var linkedFiles = new List<string>();
+
+        if (plan.ToLink.Count > 0)
+        {
+            if (!shareStore.IsConfigured)
+                throw new InvalidOperationException(
+                    $"The linked drawings total {EmailAttachmentPlanner.FormatSize(drawings.Sum(a => a.Content.LongLength))} — " +
+                    "more than fits one email — and the file-share store isn't configured, so download links can't be " +
+                    "created. Unlink some drawings, or configure DrawingsStorage:ConnectionString.");
+
+            var links = new List<EmailFileShareLink>();
+            foreach (var file in plan.ToLink)
+            {
+                var link = await shareStore.ShareAsync(
+                        package.Reference, file.FileName, file.ContentType, file.Content, cancellationToken)
+                    ?? throw new InvalidOperationException(
+                        $"A download link couldn't be created for {file.FileName}. Nothing was drafted — try again.");
+                links.Add(link);
+                linkedFiles.Add(file.FileName);
+            }
+            htmlBody += EmailAttachmentPlanner.LinksHtmlBlock(links, "Tender documents — download links");
+        }
+
         var message = new MailboxDraftMessage(
             To: new[] { new MailboxDraftRecipient(options.Mailbox) },
             Subject: command.Subject,
-            HtmlBody: command.HtmlBody,
-            Attachments: await LoadDrawingAttachmentsAsync(command.BidPackageId, cancellationToken),
+            HtmlBody: htmlBody,
+            Attachments: plan.Attach,
             Bcc: recipients,
             // Record tag + Subcontractor pathway: the invite thread is born filed on the
             // subcontractor side, and replies inherit both through the thread sweep.
@@ -70,7 +106,8 @@ public sealed class PrepareBidPackageInviteDraftHandler : ICommandHandler<Prepar
             package.ToModel(),
             command.Subject,
             recipients.Select(r => r.Email).ToList(),
-            draft.WebLink);
+            draft.WebLink,
+            LinkedFiles: linkedFiles);
     }
 
     // One attachment per linked drawing: its latest approved revision, or — when nothing is approved
