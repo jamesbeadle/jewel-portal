@@ -1,20 +1,27 @@
-@namespace Jewel.JPMS.Features.Triage
+@namespace Jewel.JPMS.Features.Triage.Panels
 @using Jewel.JPMS.Features.Subcontractors
 @using Jewel.JPMS.Features.CostCenters
 @inject IIntakeQueue Intake
 @inject SubcontractorsReadModel Subcontractors
 @inject CostCentersReadModel CostCenters
 
-@* THE tagging surface for triage: one modal, three tabs — Client / Subcontractor / Internal —
-   each offering exactly what that side of the system can do with an email: link to existing
-   records, or create new ones (the Internal tab's create drafts to-dos — the multi-item editor
-   that used to be the page's own To-dos modal). Everything here is STAGED: picked records, the
-   drafted new record and the drafted to-dos go back to the page as pending work, applied (and
-   tagged, verified) by the page's single Apply. A thread already filed under a pathway opens
-   locked to its own tab — the client wall in tab form. *@
+@* THE tagging surface for triage: one workspace pane (no longer a modal), three tabs — Client /
+   Subcontractor / Internal — each offering exactly what that side of the system can do with an
+   email: link to existing records, or create new ones (the Internal tab's create drafts to-dos —
+   the multi-item editor that used to be the page's own To-dos modal). Everything here is STAGED:
+   picked records, the drafted new record and the drafted to-dos go back to the page as pending
+   work, applied (and tagged, verified) by the page's single Apply. A thread already filed under a
+   pathway opens locked to its own tab — the client wall in tab form. *@
 
-<Modal IsOpen="@IsOpen" Title="System tags" Class="max-w-3xl" DismissOnOverlayClick="false"
-       ShowFooter="false" OnCancel="CloseAsync">
+@if (IsOpen)
+{
+<div class="panel p-5">
+    <div class="flex items-center justify-between gap-3 mb-4">
+        <div class="min-w-0">
+            <h2 class="text-base font-semibold text-content">System tags</h2>
+            <p class="text-xs text-content-subtle truncate">Staged against: @(string.IsNullOrWhiteSpace(EmailSubject) ? "the open email" : EmailSubject)</p>
+        </div>
+    </div>
     <div class="space-y-4">
 
         @* Who is this correspondence with? The tab IS the pathway decision. *@
@@ -398,10 +405,12 @@
         }
 
         <div class="flex items-center justify-end pt-1">
-            <button type="button" class="btn-primary" @onclick="CloseAsync">Done</button>
+            <button type="button" class="btn-primary" @onclick="CloseAsync"
+                    title="Tidies the staged list and hands this window back to what it showed before — nothing is applied until the inbox's Apply">Done</button>
         </div>
     </div>
-</Modal>
+</div>
+}
 
 @code {
     private static readonly string[] Tabs = { "Client", "Subcontractor", "Internal" };
@@ -415,7 +424,11 @@
     private static readonly RecordType[] SubcontractorTypes = { RecordType.BidPackageInvite, RecordType.WorkOrder, RecordType.Defect };
     private static readonly RecordType[] InternalTypes = { RecordType.Todo };
 
+    /// <summary>True while there is an email to stage against — the page renders the pane per
+    /// selected email (keyed on the message id), so a fresh selection starts a fresh pane.</summary>
     [Parameter] public bool IsOpen { get; set; }
+
+    /// <summary>Done pressed — the page hands this window back to what it showed before.</summary>
     [Parameter] public EventCallback OnClose { get; set; }
     [Parameter] public string ProjectId { get; set; } = "";
     [Parameter] public string EmailSubject { get; set; } = "";

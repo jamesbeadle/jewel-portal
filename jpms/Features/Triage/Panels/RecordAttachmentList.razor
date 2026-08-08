@@ -1,0 +1,74 @@
+@namespace Jewel.JPMS.Features.Triage.Panels
+@using Jewel.JPMS.Features.Triage.Workspace
+@inject IRequestAttachmentStore Attachments
+
+@*
+    The open request's attached documents — linked drawing revisions and uploaded files — as a
+    read-only list whose Preview buttons open the document in the Preview pane on the opposite
+    window: the RFI stays readable here while the drawing it argues about is viewed alongside.
+*@
+
+@if (items is { Count: > 0 } attachmentItems)
+{
+    <div class="panel p-4">
+        <p class="text-xs uppercase tracking-wider text-content-subtle font-semibold mb-2">
+            @attachmentItems.Count attached document@(attachmentItems.Count == 1 ? "" : "s")
+        </p>
+        <ul class="space-y-1">
+            @foreach (var attachment in attachmentItems)
+            {
+                <li class="flex items-center justify-between gap-3 text-sm text-content">
+                    <span class="truncate" title="@attachment.Caption">@attachment.DisplayName</span>
+                    <span class="flex items-center gap-3 whitespace-nowrap">
+                        @if (PreviewFor(attachment) is { } preview)
+                        {
+                            <button type="button" class="text-xs text-accent hover:underline"
+                                    @onclick="() => OnPreview.InvokeAsync(preview)">Preview</button>
+                        }
+                        <a class="text-xs text-accent hover:underline" target="_blank" rel="noopener"
+                           href="@DownloadUrlFor(attachment)">Open</a>
+                    </span>
+                </li>
+            }
+        </ul>
+    </div>
+}
+
+@code {
+    [Parameter, EditorRequired] public string ProjectId { get; set; } = "";
+    [Parameter, EditorRequired] public string RequestId { get; set; } = "";
+    [Parameter] public EventCallback<PreviewRequest> OnPreview { get; set; }
+
+    private IReadOnlyList<RequestAttachment>? items;
+    private string loadedRequestId = "";
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (RequestId == loadedRequestId) return;
+        loadedRequestId = RequestId;
+        items = null;
+        try { items = await Attachments.ListAsync(RequestId); }
+        catch { /* reported by the query client; the panel simply doesn't render */ }
+    }
+
+    // Drawing revisions stream from the drawing register's endpoint; uploaded files from the
+    // request's own. Both render inline with ?inline=1, same as their home pages.
+    private string InlineUrlFor(RequestAttachment attachment) =>
+        attachment.Kind == RequestAttachmentKind.Drawing
+            ? $"/api/drawings/revisions/{attachment.DrawingRevisionId}/file?inline=1"
+            : Attachments.FileUrl(RequestId, attachment.RequestAttachmentId, inline: true);
+
+    private string DownloadUrlFor(RequestAttachment attachment) =>
+        attachment.Kind == RequestAttachmentKind.Drawing
+            ? $"/api/drawings/revisions/{attachment.DrawingRevisionId}/file"
+            : Attachments.FileUrl(RequestId, attachment.RequestAttachmentId);
+
+    // Drawings are near-always PDFs; uploaded files preview when the browser can render them.
+    private PreviewRequest? PreviewFor(RequestAttachment attachment)
+    {
+        var isPdf = attachment.Kind == RequestAttachmentKind.Drawing
+            || (attachment.ContentType?.Contains("pdf", StringComparison.OrdinalIgnoreCase) ?? false);
+        if (!isPdf && !attachment.IsImage) return null;
+        return new PreviewRequest(attachment.DisplayName, InlineUrlFor(attachment), DownloadUrlFor(attachment), isPdf);
+    }
+}

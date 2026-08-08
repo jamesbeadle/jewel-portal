@@ -12,6 +12,8 @@
 @using Jewel.JPMS.Contracts.Requests
 @using Jewel.JPMS.Contracts.Todos
 @using Jewel.JPMS.Features.Todos
+@using Jewel.JPMS.Features.Triage.Panels
+@using Jewel.JPMS.Features.Triage.Workspace
 @inject AuthService Auth
 @inject SessionService Session
 @inject NavigationManager Nav
@@ -125,8 +127,8 @@
                                     @if (IsPreviewable(att))
                                     {
                                         <button type="button" class="text-xs text-accent hover:underline"
-                                                @onclick="() => ToggleAttachmentPreview(att)">
-                                            @(previewAttachment == att ? "Hide preview" : "Preview")
+                                                @onclick="() => OpenEmailAttachmentPreview(att)">
+                                            Preview
                                         </button>
                                     }
                                     <a href="@AttachmentUrl(att, inline: false)" target="_blank" rel="noopener"
@@ -138,25 +140,6 @@
                         </li>
                     }
                 </ul>
-
-                @* Inline preview: check a PDF/image without leaving triage. The iframe hits the same
-                   endpoint the Download link does, with ?inline=1 so the browser renders it in place. *@
-                @if (previewAttachment is not null)
-                {
-                    <div class="mt-3 rounded-lg border border-line bg-surface overflow-hidden">
-                        <header class="px-3 py-2 border-b border-line bg-surface-raised flex items-center justify-between gap-3">
-                            <span class="text-xs text-content-muted font-medium truncate">@previewAttachment.Name</span>
-                            <span class="flex items-center gap-3 shrink-0">
-                                <a href="@AttachmentUrl(previewAttachment, inline: false)" target="_blank" rel="noopener"
-                                   class="text-xs text-accent hover:underline underline-offset-2">Open / download</a>
-                                <button type="button" class="text-xs text-content-muted hover:text-content"
-                                        @onclick="() => previewAttachment = null">Close</button>
-                            </span>
-                        </header>
-                        <iframe src="@AttachmentUrl(previewAttachment, inline: true)"
-                                class="w-full h-[60vh] bg-white" title="Attachment preview"></iframe>
-                    </div>
-                }
 
                 @if (importNote is not null)
                 {
@@ -312,67 +295,46 @@
         }
 
     </text>;
-}
 
-@if (!sessionReady)
-{
-    <section class="px-6 md:px-8 py-12">
-        <LoadGate IsLoading="true" Prominent="true" Label="Loading" />
-    </section>
-}
-else if (!Session.IsApproved)
-{
-    <RequestAccessView Email="@Auth.CurrentUser!.Email" DisplayName="@Auth.CurrentUser.DisplayName" />
-}
-else if (!CanTriage)
-{
-    <section class="px-6 md:px-8 py-12">
-        <div class="panel p-8 text-center">
-            <p class="text-sm text-content">You don't have access to the Control Centre.</p>
-            <p class="text-xs text-content-subtle mt-1">The Control Centre is available to administrators and project managers.</p>
-        </div>
-    </section>
-}
-else
-{
-    <section class="px-6 md:px-8 py-8 md:py-12">
-        <header class="mb-6">
-            <p class="text-xs uppercase tracking-wider text-content-subtle font-medium mb-1">JPMS · projects@@jewelbb.co.uk</p>
-            <h1 class="text-2xl md:text-3xl font-semibold text-content leading-tight">Control Centre</h1>
-            @* Each strapline is a count, not a description, so it waits for its own list —
-               "0 emails in the inbox" is the one sentence a triager must never be told wrongly.
-               It simply does not render until the count is known: a line of muted text that
-               arrives a moment late is invisible, whereas a spinner in its place is an event. *@
+    @*
+        The four page-owned pane contents for the workspace (the other four panes own their own
+        data). Declared here as fragments — like MessageHeader/MessageBody above — so every one
+        reads the page's live fields and the page stays the single orchestrator it always was.
+    *@
+
+    RenderFragment InboxPaneContent =@<div class="space-y-4 lg:pr-1">
+        <header>
+            <p class="text-xs uppercase tracking-wider text-content-subtle font-medium">JPMS · projects@@jewelbb.co.uk</p>
+            @* Each strapline is a count, not a description, so it waits for its own list — it
+               simply does not render until the count is known (see the loading-states notes). *@
             @if (view == QueueView.Active && queueArrived)
             {
-                <p class="text-sm text-content-muted mt-2">
+                <p class="text-sm text-content-muted mt-1">
                     @total email@(total == 1 ? "" : "s") in the inbox waiting to be assigned to a request.
                 </p>
             }
             else if (view == QueueView.Discarded && discardedArrived)
             {
-                <p class="text-sm text-content-muted mt-2">
+                <p class="text-sm text-content-muted mt-1">
                     @discardedTotal discarded email@(discardedTotal == 1 ? "" : "s") — restore one to put it back in the queue.
                 </p>
             }
             else if (view == QueueView.Tagged && taggedArrived)
             {
-                <p class="text-sm text-content-muted mt-2">
+                <p class="text-sm text-content-muted mt-1">
                     @taggedTotal tagged email@(taggedTotal == 1 ? "" : "s") — add or remove tags to manage which processes use them.
                 </p>
             }
         </header>
 
-        <div class="flex items-center gap-2 mb-6 border-b border-line">
+        <div class="flex items-center gap-2 border-b border-line">
             <button type="button" class="@ViewTabClass(QueueView.Active)" @onclick="() => SwitchView(QueueView.Active)">Queue</button>
             <button type="button" class="@ViewTabClass(QueueView.Tagged)" @onclick="() => SwitchView(QueueView.Tagged)">Tagged</button>
-            <span class="ml-auto"></span>
-            <button type="button" class="btn-primary mb-1.5" @onclick="OpenNewEmail">New email</button>
         </div>
 
         @if (loadError is not null)
         {
-            <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-4">@loadError</p>
+            <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@loadError</p>
         }
 
         @if (view == QueueView.Active)
@@ -413,7 +375,6 @@ else
                 </div>
             </div>
         }
-
         <LoadGate IsLoading="@(!queueArrived)" Prominent="true" Label="Loading the inbox">
         @if (loadError is not null && items.Count == 0)
         {
@@ -429,8 +390,7 @@ else
         }
         else
         {
-            <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
-                <div class="relative space-y-2 lg:col-span-1">
+            <div class="relative space-y-2">
                     @* Sort is a light, rarely-used view preference — small muted text under the
                        header, not an action button. The choice is remembered per user. *@
                     <div class="flex items-center gap-3 text-xs px-1">
@@ -510,143 +470,25 @@ else
                         </div>
                     }
                 </div>
+        }
+        </LoadGate>
 
-                <div class="lg:col-span-2">
-                    @if (selected is null)
-                    {
-                        @if (composeOutcome is { } outcome)
-                        {
-                            <div class="panel p-5 mb-4 @(outcome.Sent ? "border-positive/40" : "border-amber-500/40") space-y-2">
-                                <div class="flex items-center justify-between gap-2">
-                                    <p class="text-xs uppercase tracking-wider font-semibold @(outcome.Sent ? "text-positive" : "text-amber-600")">
-                                        @(outcome.Sent ? "Email sent" : "Saved as draft")
-                                    </p>
-                                    <button type="button" class="text-content-subtle hover:text-content text-xs" title="Dismiss"
-                                            @onclick="() => composeOutcome = null">✕</button>
-                                </div>
-                                <p class="text-sm text-content">
-                                    <span class="font-medium">@outcome.Subject</span>
-                                    — @(outcome.Sent ? "sent to" : "addressed to") @(string.Join("; ", outcome.To))@(outcome.Cc.Count > 0 ? $" (cc {string.Join("; ", outcome.Cc)})" : "").
-                                    @if (outcome.RaisedRequest is { } raised)
-                                    {
-                                        <span> <span class="font-mono text-xs text-content-muted">@raised.Reference</span> was raised from the email.</span>
-                                    }
-                                </p>
-                                @if (!string.IsNullOrWhiteSpace(outcome.FailureNote))
-                                {
-                                    <p class="text-sm text-amber-600">@outcome.FailureNote</p>
-                                }
-                                @if (!string.IsNullOrWhiteSpace(outcome.WebLink))
-                                {
-                                    <a class="text-accent underline text-sm" href="@outcome.WebLink" target="_blank" rel="noopener">Open in Outlook</a>
-                                }
-                            </div>
-                        }
-                        @if (linkNote is not null)
-                        {
-                            <div class="panel p-5 mb-4 border-amber-500/40 space-y-2">
-                                <div class="flex items-center justify-between gap-2">
-                                    <p class="text-xs uppercase tracking-wider text-amber-600 font-semibold">Partially linked</p>
-                                    <button type="button" class="text-content-subtle hover:text-content text-xs" title="Dismiss"
-                                            @onclick="() => linkNote = null">✕</button>
-                                </div>
-                                <p class="text-sm text-content">@linkNote</p>
-                            </div>
-                        }
-                        @if (poEmailNote is not null)
-                        {
-                            <div class="panel p-5 mb-4 @(poEmailNoteIsSuccess ? "border-positive/40" : "border-amber-500/40") space-y-2">
-                                <div class="flex items-center justify-between gap-2">
-                                    <p class="text-xs uppercase tracking-wider font-semibold @(poEmailNoteIsSuccess ? "text-positive" : "text-amber-600")">
-                                        Purchase-order email
-                                    </p>
-                                    <button type="button" class="text-content-subtle hover:text-content text-xs" title="Dismiss"
-                                            @onclick="() => poEmailNote = null">✕</button>
-                                </div>
-                                <p class="text-sm text-content">@poEmailNote</p>
-                            </div>
-                        }
-                        <div class="panel p-8 text-center text-sm text-content-subtle">
-                            Select an email to process it.
-                        </div>
-                    }
-                    else
-                    {
-                        <div class="panel p-5 space-y-4 relative">
-                            @if (busy)
-                            {
-                                <JewelSpinner Overlay="true" Label="@busyLabel" />
-                            }
-                            @if (actionError is not null)
-                            {
-                                <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@actionError</p>
-                            }
-
-                            @MessageHeader
-
-                            @MessageBody
-
-                            @* Reply where the reading ends — you get to the bottom of an email and
-                               answer it, so the button (and the open composer) sit right here. *@
-                            @if (!replyOpen)
-                            {
-                                <div>
-                                    <button type="button" class="btn-secondary" @onclick="() => replyOpen = true">↩ Reply</button>
-                                </div>
-                            }
-                            <div>
-                                    @if (replyOpen)
-                                    {
-                                        <div class="space-y-3">
-                                            <div class="flex items-center justify-between">
-                                                <p class="text-xs uppercase tracking-wider text-content-subtle font-semibold">Reply — sends from the projects mailbox</p>
-                                                <button type="button" class="text-xs text-content-subtle hover:text-negative underline" @onclick="DiscardReplyDraft">Discard draft</button>
-                                            </div>
-
-                                            <div>
-                                                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">To *</label>
-                                                <input class="field" type="text" placeholder="name@example.com; other@example.com"
-                                                       value="@replyToField" @oninput="OnReplyToInput" />
-                                            </div>
-                                            <div>
-                                                <div class="flex items-center justify-between">
-                                                    <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Cc</label>
-                                                    @if (!replyShowBcc)
-                                                    {
-                                                        <button type="button" class="text-xs text-content-subtle hover:text-content underline" @onclick="() => replyShowBcc = true">Bcc</button>
-                                                    }
-                                                </div>
-                                                <input class="field" type="text" placeholder="Copied recipients — separated by ;"
-                                                       value="@replyCcField" @oninput="OnReplyCcInput" />
-                                            </div>
-                                            @if (replyShowBcc)
-                                            {
-                                                <div>
-                                                    <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Bcc</label>
-                                                    <input class="field" type="text" placeholder="Blind-copied recipients — separated by ;"
-                                                           value="@replyBccField" @oninput="OnReplyBccInput" />
-                                                </div>
-                                            }
-                                            <div>
-                                                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Subject *</label>
-                                                <input class="field" type="text" value="@replySubject" @oninput="OnReplySubjectInput" />
-                                            </div>
-                                            <div>
-                                                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Your reply *</label>
-                                                <RichTextEditor @bind-Value="replyBody" MinHeight="180"
-                                                                Placeholder="Write the reply — the whole thread is quoted behind it…" />
-                                            </div>
-
-                                            <AttachmentPicker Attachments="replyAttachments" AttachmentsChanged="OnReplyAttachmentsChanged"
-                                                              Projects="ProjectOptionsFor(ComposeContextProjectId)" ProjectId="@ComposeContextProjectId"
-                                                              OriginalAttachments="detail?.Attachments" OriginalMessageId="@selected?.Id" />
-
-                                        </div>
-                                    }
-                                </div>
-
-                            <div class="pt-3 border-t border-line">
-                                <p class="eyebrow mb-3">Deal with this email</p>
+        @* The triage staging + THE Apply — this pane is the main page, so the decisions and the
+           one action bar live here; the email itself reads in the Email window alongside. *@
+        @if (selected is not null)
+        {
+            <div class="panel p-5 space-y-4 relative">
+                @if (busy)
+                {
+                    <JewelSpinner Overlay="true" Label="@busyLabel" />
+                }
+                @if (actionError is not null)
+                {
+                    <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@actionError</p>
+                }
+                <div>
+                <p class="eyebrow mb-1">Deal with this email</p>
+                <p class="text-xs text-content-subtle mb-3 truncate" title="@Dash(selected.Subject)">@Dash(selected.Subject)</p>
 
                                 @* PROJECT — the easiest decision, made first; everything below (to-dos,
                                    record pickers, attachments) uses it. Auto-matched from the email
@@ -671,17 +513,17 @@ else
                                         Show completed
                                     </label>
                                 </div>
-                                @* TWO doors, one apply: System Tags (the modal owns the Client /
-                                   Subcontractor / Internal decision and all linking and creating —
-                                   to-dos included, drafted under Internal → Create new) and Discard.
-                                   The badge shows everything staged; nothing happens until the
-                                   Apply below. *@
-                                <div class="flex flex-wrap items-center gap-2">
-                                    <button type="button" class="@TagsButtonClass" @onclick="() => tagsModalOpen = true">
-                                        🏷 System Tags@(StagedTagCount > 0 ? $" · {StagedTagCount}" : "")
-                                    </button>
-                                    <button type="button" class="@DiscardTabClass" @onclick="() => discardArmed = !discardArmed">🗑 Discard</button>
-                                </div>
+                @* TWO doors, one apply: System Tags (the pane owns the Client / Subcontractor /
+                   Internal decision and all linking and creating — to-dos included) and Discard.
+                   The button loads System Tags in the window alongside — the same place its rail
+                   icon puts it; the badge shows everything staged; nothing happens until the
+                   Apply below. *@
+                <div class="flex flex-wrap items-center gap-2">
+                    <button type="button" class="@TagsButtonClass" @onclick="() => workspace.ShowOpposite(PanelKind.SystemTags, PanelKind.Inbox)">
+                        🏷 System Tags@(StagedTagCount > 0 ? $" · {StagedTagCount}" : "")
+                    </button>
+                    <button type="button" class="@DiscardTabClass" @onclick="() => discardArmed = !discardArmed">🗑 Discard</button>
+                </div>
 
                                 @* The programme's relevant-event flag sits OUTSIDE System Tags: the programme
                                    bucket isn't a record anyone links or creates — every project has exactly
@@ -731,7 +573,7 @@ else
                                         <button type="button" class="btn-secondary text-xs" disabled="@busy" @onclick="() => DoApplyAll(pendingSaveDraft, allowCrossPathway: true)">File under both anyway</button>
                                     </div>
                                 }
-                            </div>
+                </div>
 
                             @* ---- The one action bar: whatever is set up above — a reply, to-dos, a
                                    record filing — is applied together, in one click, in that order.
@@ -758,12 +600,8 @@ else
                                     }
                                 </div>
                             </div>
-                        </div>
-                    }
-                </div>
             </div>
         }
-        </LoadGate>
 
         @* Recently triaged — the audit register's latest link/create decisions, newest first, so
            the triager can jump straight to the document an email was just filed against. Same
@@ -816,8 +654,7 @@ else
             }
             else
             {
-                <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
-                    <div class="relative space-y-2 lg:col-span-1">
+                <div class="relative space-y-2">
                         @if (listLoading)
                         {
                             <JewelSpinner Overlay="true" Label="Loading" />
@@ -866,40 +703,6 @@ else
                             </div>
                         }
                     </div>
-
-                    <div class="lg:col-span-2">
-                        @if (selected is null)
-                        {
-                            <div class="panel p-8 text-center text-sm text-content-subtle">
-                                Select a discarded email to view it.
-                            </div>
-                        }
-                        else
-                        {
-                            <div class="panel p-5 space-y-4 relative">
-                                @if (busy)
-                                {
-                                    <JewelSpinner Overlay="true" Label="@busyLabel" />
-                                }
-                                @if (actionError is not null)
-                                {
-                                    <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@actionError</p>
-                                }
-
-                                @MessageHeader
-
-                                @MessageBody
-
-                                <div class="pt-3 border-t border-line">
-                                    <p class="text-sm text-content-muted mb-3">
-                                        This email was discarded. Restore it to remove the “discarded” tag and put it back in the queue.
-                                    </p>
-                                    <button type="button" class="btn-primary" disabled="@busy" @onclick="DoRestore">Restore to queue</button>
-                                </div>
-                            </div>
-                        }
-                    </div>
-                </div>
             }
             </LoadGate>
         }
@@ -958,7 +761,6 @@ else
                 }
             </div>
             }
-
             <LoadGate IsLoading="@(!taggedArrived)" Prominent="true" Label="Loading tagged emails">
             @if (loadError is not null && taggedItems.Count == 0)
             {
@@ -974,8 +776,7 @@ else
             }
             else
             {
-                <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
-                    <div class="relative space-y-2 lg:col-span-1">
+                <div class="relative space-y-2">
                         @if (listLoading)
                         {
                             <JewelSpinner Overlay="true" Label="Loading" />
@@ -1039,16 +840,188 @@ else
                             </div>
                         }
                     </div>
+            }
+            </LoadGate>
+        }
+    </div>;
 
-                    <div class="lg:col-span-2">
-                        @if (selected is null)
+    RenderFragment EmailPaneContent =@<div>
+        @if (view == QueueView.Active)
+        {
+            @if (selected is null)
+            {
+                        @if (composeOutcome is { } outcome)
                         {
-                            <div class="panel p-8 text-center text-sm text-content-subtle">
-                                Select a tagged email to manage its tags.
+                            <div class="panel p-5 mb-4 @(outcome.Sent ? "border-positive/40" : "border-amber-500/40") space-y-2">
+                                <div class="flex items-center justify-between gap-2">
+                                    <p class="text-xs uppercase tracking-wider font-semibold @(outcome.Sent ? "text-positive" : "text-amber-600")">
+                                        @(outcome.Sent ? "Email sent" : "Saved as draft")
+                                    </p>
+                                    <button type="button" class="text-content-subtle hover:text-content text-xs" title="Dismiss"
+                                            @onclick="() => composeOutcome = null">✕</button>
+                                </div>
+                                <p class="text-sm text-content">
+                                    <span class="font-medium">@outcome.Subject</span>
+                                    — @(outcome.Sent ? "sent to" : "addressed to") @(string.Join("; ", outcome.To))@(outcome.Cc.Count > 0 ? $" (cc {string.Join("; ", outcome.Cc)})" : "").
+                                    @if (outcome.RaisedRequest is { } raised)
+                                    {
+                                        <span> <span class="font-mono text-xs text-content-muted">@raised.Reference</span> was raised from the email.</span>
+                                    }
+                                </p>
+                                @if (!string.IsNullOrWhiteSpace(outcome.FailureNote))
+                                {
+                                    <p class="text-sm text-amber-600">@outcome.FailureNote</p>
+                                }
+                                @if (!string.IsNullOrWhiteSpace(outcome.WebLink))
+                                {
+                                    <a class="text-accent underline text-sm" href="@outcome.WebLink" target="_blank" rel="noopener">Open in Outlook</a>
+                                }
                             </div>
                         }
-                        else
+                        @if (linkNote is not null)
                         {
+                            <div class="panel p-5 mb-4 border-amber-500/40 space-y-2">
+                                <div class="flex items-center justify-between gap-2">
+                                    <p class="text-xs uppercase tracking-wider text-amber-600 font-semibold">Partially linked</p>
+                                    <button type="button" class="text-content-subtle hover:text-content text-xs" title="Dismiss"
+                                            @onclick="() => linkNote = null">✕</button>
+                                </div>
+                                <p class="text-sm text-content">@linkNote</p>
+                            </div>
+                        }
+                        @if (poEmailNote is not null)
+                        {
+                            <div class="panel p-5 mb-4 @(poEmailNoteIsSuccess ? "border-positive/40" : "border-amber-500/40") space-y-2">
+                                <div class="flex items-center justify-between gap-2">
+                                    <p class="text-xs uppercase tracking-wider font-semibold @(poEmailNoteIsSuccess ? "text-positive" : "text-amber-600")">
+                                        Purchase-order email
+                                    </p>
+                                    <button type="button" class="text-content-subtle hover:text-content text-xs" title="Dismiss"
+                                            @onclick="() => poEmailNote = null">✕</button>
+                                </div>
+                                <p class="text-sm text-content">@poEmailNote</p>
+                            </div>
+                        }
+                <div class="panel p-8 text-center text-sm text-content-subtle">
+                    Select an email to process it.
+                </div>
+            }
+            else
+            {
+                <div class="panel p-5 space-y-4 relative">
+                    @if (busy)
+                    {
+                        <JewelSpinner Overlay="true" Label="@busyLabel" />
+                    }
+
+                    @MessageHeader
+
+                    @MessageBody
+
+                            @* Reply where the reading ends — you get to the bottom of an email and
+                               answer it, so the button (and the open composer) sit right here. *@
+                            @if (!replyOpen)
+                            {
+                                <div>
+                                    <button type="button" class="btn-secondary" @onclick="() => replyOpen = true">↩ Reply</button>
+                                </div>
+                            }
+                            <div>
+                                    @if (replyOpen)
+                                    {
+                                        <div class="space-y-3">
+                                            <div class="flex items-center justify-between">
+                                                <p class="text-xs uppercase tracking-wider text-content-subtle font-semibold">Reply — sends from the projects mailbox</p>
+                                                <button type="button" class="text-xs text-content-subtle hover:text-negative underline" @onclick="DiscardReplyDraft">Discard draft</button>
+                                            </div>
+
+                                            <div>
+                                                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">To *</label>
+                                                <input class="field" type="text" placeholder="name@example.com; other@example.com"
+                                                       value="@replyToField" @oninput="OnReplyToInput" />
+                                            </div>
+                                            <div>
+                                                <div class="flex items-center justify-between">
+                                                    <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Cc</label>
+                                                    @if (!replyShowBcc)
+                                                    {
+                                                        <button type="button" class="text-xs text-content-subtle hover:text-content underline" @onclick="() => replyShowBcc = true">Bcc</button>
+                                                    }
+                                                </div>
+                                                <input class="field" type="text" placeholder="Copied recipients — separated by ;"
+                                                       value="@replyCcField" @oninput="OnReplyCcInput" />
+                                            </div>
+                                            @if (replyShowBcc)
+                                            {
+                                                <div>
+                                                    <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Bcc</label>
+                                                    <input class="field" type="text" placeholder="Blind-copied recipients — separated by ;"
+                                                           value="@replyBccField" @oninput="OnReplyBccInput" />
+                                                </div>
+                                            }
+                                            <div>
+                                                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Subject *</label>
+                                                <input class="field" type="text" value="@replySubject" @oninput="OnReplySubjectInput" />
+                                            </div>
+                                            <div>
+                                                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Your reply *</label>
+                                                <RichTextEditor @bind-Value="replyBody" MinHeight="180"
+                                                                Placeholder="Write the reply — the whole thread is quoted behind it…" />
+                                            </div>
+
+                                            <AttachmentPicker Attachments="replyAttachments" AttachmentsChanged="OnReplyAttachmentsChanged"
+                                                              Projects="ProjectOptionsFor(ComposeContextProjectId)" ProjectId="@ComposeContextProjectId"
+                                                              OriginalAttachments="detail?.Attachments" OriginalMessageId="@selected?.Id" />
+
+                                        </div>
+                                    }
+                                </div>
+                </div>
+            }
+        }
+        else if (view == QueueView.Discarded)
+        {
+            @if (selected is null)
+            {
+                <div class="panel p-8 text-center text-sm text-content-subtle">
+                    Select a discarded email to view it.
+                </div>
+            }
+            else
+            {
+                            <div class="panel p-5 space-y-4 relative">
+                                @if (busy)
+                                {
+                                    <JewelSpinner Overlay="true" Label="@busyLabel" />
+                                }
+                                @if (actionError is not null)
+                                {
+                                    <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@actionError</p>
+                                }
+
+                                @MessageHeader
+
+                                @MessageBody
+
+                                <div class="pt-3 border-t border-line">
+                                    <p class="text-sm text-content-muted mb-3">
+                                        This email was discarded. Restore it to remove the “discarded” tag and put it back in the queue.
+                                    </p>
+                                    <button type="button" class="btn-primary" disabled="@busy" @onclick="DoRestore">Restore to queue</button>
+                                </div>
+                            </div>
+            }
+        }
+        else
+        {
+            @if (selected is null)
+            {
+                <div class="panel p-8 text-center text-sm text-content-subtle">
+                    Select a tagged email to manage its tags.
+                </div>
+            }
+            else
+            {
                             <div class="panel p-5 space-y-4 relative">
                                 @if (busy)
                                 {
@@ -1155,38 +1128,45 @@ else
                                     </div>
                                 </div>
                             </div>
-                        }
-                    </div>
-                </div>
             }
-            </LoadGate>
         }
-    </section>
-}
+    </div>;
 
-@* The staged-work modal — a component, so this page only orchestrates. To-do drafting lives
-   inside it too (Internal → Create new), editing the page-owned createTodoRows in place. *@
-<SystemTagsModal IsOpen="@tagsModalOpen"
-                 ProjectId="@triageProjectId"
-                 EmailSubject="@(selected?.Subject ?? "")"
-                 SenderEmail="@(selected?.FromEmail ?? "")"
-                 EmailAttachments="@(detail?.Attachments ?? Array.Empty<IntakeAttachment>())"
-                 LockedPathway="@(FixedPathway is { } fp ? PathwayLabel(fp) : null)"
-                 ActivePathway="@(pathway is { } chosenPathway ? PathwayLabel(chosenPathway) : null)"
-                 ActivePathwayChanged="OnModalPathwayChanged"
-                 Picked="pickedRecords"
-                 OnStagingChanged="StateHasChanged"
-                 StagedCreate="@stagedCreate"
-                 StagedCreateChanged="v => stagedCreate = v"
-                 TodoRows="createTodoRows"
-                 TodoAssigneeOptions="todoAssigneeOptions"
-                 TodoProjectNote="@TodoProjectNote"
-                 OnClose="() => tagsModalOpen = false" />
+    RenderFragment TagsPaneContent =@<div>
+        @if (view != QueueView.Active || selected is null)
+        {
+            <div class="panel p-8 text-center text-sm text-content-subtle">
+                Open a queue email first — system tags are staged against the email being triaged,
+                then applied all together by the inbox window's Apply.
+            </div>
+        }
+        else
+        {
+            @* Keyed on the message id so a fresh selection starts a fresh pane (the staged work
+               itself is page-owned and already resets per selection). *@
+            <SystemTagsPane @key="selected.Id"
+                            IsOpen="true"
+                            ProjectId="@triageProjectId"
+                            EmailSubject="@(selected?.Subject ?? "")"
+                            SenderEmail="@(selected?.FromEmail ?? "")"
+                            EmailAttachments="@(detail?.Attachments ?? Array.Empty<IntakeAttachment>())"
+                            LockedPathway="@(FixedPathway is { } fp ? PathwayLabel(fp) : null)"
+                            ActivePathway="@(pathway is { } chosenPathway ? PathwayLabel(chosenPathway) : null)"
+                            ActivePathwayChanged="OnModalPathwayChanged"
+                            Picked="pickedRecords"
+                            OnStagingChanged="StateHasChanged"
+                            StagedCreate="@stagedCreate"
+                            StagedCreateChanged="v => stagedCreate = v"
+                            TodoRows="createTodoRows"
+                            TodoAssigneeOptions="todoAssigneeOptions"
+                            TodoProjectNote="@TodoProjectNote"
+                            OnClose="() => workspace.Close(PanelKind.SystemTags)" />
+        }
+    </div>;
 
-@* ---- New email (compose a fresh outbound thread from the projects mailbox) ---- *@
-<Modal IsOpen="@newEmailOpen" Title="New email" Class="max-w-3xl" DismissOnOverlayClick="false"
-       ShowFooter="false" OnCancel="CloseNewEmail">
-    <div class="space-y-3">
+    RenderFragment ComposePaneContent =@<div class="panel p-5">
+        <h2 class="text-base font-semibold text-content mb-4">New email</h2>
+        <div class="space-y-3">
         <p class="rounded-lg bg-surface-raised border border-line px-3 py-2 text-xs text-content-subtle">
             Sends from the <span class="font-medium text-content">projects mailbox</span>. Optionally file it to a record so the sent copy shows in that record's correspondence — replies will arrive in the queue either way.
         </p>
@@ -1263,7 +1243,56 @@ else
             <button type="button" class="btn-primary" disabled="@(newEmailBusy || !NewEmailIsSendable)" @onclick="() => DoSendNewEmail(saveAsDraftOnly: false)">@(newEmailBusy ? "Sending…" : "Send")</button>
         </div>
     </div>
-</Modal>
+    </div>;
+}
+
+@if (!sessionReady)
+{
+    <section class="px-6 md:px-8 py-12">
+        <LoadGate IsLoading="true" Prominent="true" Label="Loading" />
+    </section>
+}
+else if (!Session.IsApproved)
+{
+    <RequestAccessView Email="@Auth.CurrentUser!.Email" DisplayName="@Auth.CurrentUser.DisplayName" />
+}
+else if (!CanTriage)
+{
+    <section class="px-6 md:px-8 py-12">
+        <div class="panel p-8 text-center">
+            <p class="text-sm text-content">You don't have access to the Control Centre.</p>
+            <p class="text-xs text-content-subtle mt-1">The Control Centre is available to administrators and project managers.</p>
+        </div>
+    </section>
+}
+else
+{
+    @*
+        The Control Centre workspace: two side-by-side windows, each with the same icon rail, split
+        by a draggable divider (1/3 : 2/3 until dragged). Any content loads either side and always
+        remembers where it was — data is gathered by jumping around windows, side by side, instead
+        of through modals. On mobile there is one window; the icons still carry the full context.
+    *@
+    <section class="px-3 md:px-4 pt-3 pb-4 h-[calc(100dvh-5.25rem)] min-h-[34rem]">
+        <PanelWorkspace State="workspace"
+                        EmailAvailable="@(selected is not null)"
+                        PreviewAvailable="@(workspace.Preview is not null)"
+                        TagsBadge="@StagedTagCount">
+            <InboxContent>@InboxPaneContent</InboxContent>
+            <EmailContent>@EmailPaneContent</EmailContent>
+            <TagsContent>@TagsPaneContent</TagsContent>
+            <ActionsContent><SystemActionsPane /></ActionsContent>
+            <RecordsContent>
+                <RecordExplorerPane Projects="@ProjectOptionsFor(null)" OnPreview="OpenRecordPreview" />
+            </RecordsContent>
+            <PreviewContent>
+                <PreviewPane Request="@workspace.Preview" OnClose="() => workspace.ClosePreview()" />
+            </PreviewContent>
+            <XeroContent><XeroExplorerPane /></XeroContent>
+            <ComposeContent>@ComposePaneContent</ComposeContent>
+        </PanelWorkspace>
+    </section>
+}
 
 @code {
     // The communication pathway — WHO the correspondence is with (docs/Pathway-Split-Platform-Flow-
@@ -1646,7 +1675,6 @@ else
     private ComposeOutcome? composeOutcome;
 
     // ---- New email (fresh outbound thread) ----
-    private bool newEmailOpen;
     private bool newEmailBusy;
     private string? newEmailError;
     private string newEmailTo = "";
@@ -1676,10 +1704,19 @@ else
     // say so ("matched from the email — change it if that's wrong").
     private bool projectAutoMatched;
 
-    // The staged-work modal + armed discard. The System Tags modal's tab mirrors the page's own
-    // `pathway` field (the pathway decision); stagedCreate is the modal's drafted new record
+    // ---- The workspace: which content each of the two windows shows, the divider position, and
+    //      the open preview document. Everything pane-shaped goes through this one object; the
+    //      page re-renders on its OnChange so a rail press anywhere redraws both windows. ----
+    private readonly PanelWorkspaceState workspace = new();
+
+    // A document opened from inside a record (the record explorer's Preview buttons) — shown in
+    // the Preview pane on the window OPPOSITE the explorer, so record and document read together.
+    private void OpenRecordPreview(PreviewRequest document) =>
+        workspace.OpenPreview(document, PanelKind.Records);
+
+    // The staged work + armed discard. The System Tags pane's tab mirrors the page's own
+    // `pathway` field (the pathway decision); stagedCreate is the pane's drafted new record
     // (null = none) — StagedRecordKind decides whether Apply raises a request, a bid package, a work order or a defect.
-    private bool tagsModalOpen;
     private bool discardArmed;
     private StagedRecordCreate? stagedCreate;
     // The "Relevant Event for Programme" tick — staged like everything else, applied by the one
@@ -1758,6 +1795,7 @@ else
         await Session.EnsureLoadedAsync();
         if (!Auth.IsSignedIn) { Nav.NavigateTo("/login", forceLoad: true); return; }
         RequestRegister.OnChange += StateHasChanged;
+        workspace.OnChange += StateHasChanged;
         DrawingStore.OnChange += StateHasChanged;
         // The sort preference has to land first — LoadAsync pages the mailbox in this order, so
         // reading it late would fetch the first page the wrong way round. It is a local-storage
@@ -2115,7 +2153,6 @@ else
         pathway = PathwayFromBucket(item.Bucket);
         actionError = null;
         crossFileMessage = null;
-        previewAttachment = null;
         ResetLinkState();
         composeOutcome = null;
         linkNote = null;
@@ -2129,7 +2166,6 @@ else
         triageProjectId = "";
         projectAutoMatched = false;
         createTodoRows = new List<TodoDraftRow> { new() };
-        tagsModalOpen = false;
         discardArmed = false;
         stagedCreate = null;
         relevantEventStaged = false;
@@ -2142,6 +2178,9 @@ else
     private async Task Select(MailboxMessage item)
     {
         ApplySelection(item);
+        // The email reads in the window OPPOSITE the list, side by side — desktop's version of
+        // the old list/detail split, but with both halves loadable anywhere.
+        workspace.ShowOpposite(PanelKind.Email, PanelKind.Inbox);
         // Body and thread are independent live reads — fetch them side by side.
         await Task.WhenAll(LoadDetailAsync(item), LoadThreadAsync(item));
         // Both reads have landed, so the whole chain is available to search for a project name
@@ -2880,16 +2919,12 @@ else
 
     // ---- New email (fresh outbound thread from the projects mailbox) ----
 
-    private void OpenNewEmail()
-    {
-        newEmailOpen = true;
-        newEmailError = null;
-    }
-
+    // Clears the compose form and hands its window back to whatever it showed before — pressed
+    // as Cancel, and called after a successful send so the outcome banner is what remains.
     private void CloseNewEmail()
     {
         if (newEmailBusy) return;
-        newEmailOpen = false;
+        workspace.Close(PanelKind.Compose);
         newEmailError = null;
         newEmailTo = newEmailCc = newEmailBcc = newEmailSubject = newEmailBody = "";
         newEmailAttachments = Array.Empty<ComposeDraftAttachment>();
@@ -3013,12 +3048,13 @@ else
         finally { busy = false; }
     }
 
-    // ---- Preview / open an attachment without leaving triage ----
-    // Same previewable set as the drawing viewer: browsers render PDFs and images natively in an
-    // iframe; everything else gets a Download link only. Bytes are proxied through the API on
-    // demand (mailbox/message/attachment) — nothing is stored in JPMS by previewing.
-
-    private IntakeAttachment? previewAttachment;
+    // ---- Preview an attachment without leaving triage ----
+    // Same previewable set as the drawing viewer: PDFs (the in-app viewer) and images; everything
+    // else gets a Download link only. Bytes are proxied through the API on demand
+    // (mailbox/message/attachment) — nothing is stored in JPMS by previewing. The document opens
+    // in the Preview pane on the window OPPOSITE the email, the same route as a record's
+    // documents, so email and attachment read side by side. The URLs are baked at click time —
+    // the preview outlives the selection that opened it.
 
     private static bool IsPreviewable(IntakeAttachment attachment)
     {
@@ -3032,8 +3068,14 @@ else
         $"/api/mailbox/message/attachment?id={Uri.EscapeDataString(selected?.Id ?? "")}"
         + $"&aid={Uri.EscapeDataString(attachment.Id)}{(inline ? "&inline=1" : "")}";
 
-    private void ToggleAttachmentPreview(IntakeAttachment attachment) =>
-        previewAttachment = previewAttachment == attachment ? null : attachment;
+    private void OpenEmailAttachmentPreview(IntakeAttachment attachment)
+    {
+        var isPdf = (attachment.ContentType ?? "").Contains("pdf", StringComparison.OrdinalIgnoreCase);
+        workspace.OpenPreview(
+            new PreviewRequest(attachment.Name, AttachmentUrl(attachment, inline: true),
+                AttachmentUrl(attachment, inline: false), isPdf),
+            anchor: PanelKind.Email);
+    }
 
     // ---- Save an attachment into a project's drawings ----
     // Unlike the record actions this does NOT consume the email: the message keeps its place in
@@ -3455,5 +3497,6 @@ else
         StageFilter.OnChange -= StageFilterChanged;
         RequestRegister.OnChange -= StateHasChanged;
         DrawingStore.OnChange -= StateHasChanged;
+        workspace.OnChange -= StateHasChanged;
     }
 }

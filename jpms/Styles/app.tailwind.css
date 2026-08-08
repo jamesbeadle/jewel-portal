@@ -242,3 +242,20 @@
         opacity: 0.6;
     }
 }
+
+/* Control Centre workspace (Features/Triage/Workspace/PanelWorkspace.razor): two panes and a
+   draggable 6px divider column. --left-w is written inline by Blazor (and live by
+   panel-workspace.js during a drag), so the split is one CSS variable wherever it is read.
+   Below lg the grid is a single column — the left pane is the only window. */
+.panel-workspace {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr);
+}
+
+@media (min-width: 1024px) {
+    .panel-workspace {
+        grid-template-columns: minmax(0, var(--left-w, 33.33%)) 6px minmax(0, 1fr);
+        column-gap: 0.375rem;
+    }
+}

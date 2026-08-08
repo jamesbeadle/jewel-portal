@@ -1,0 +1,47 @@
+@namespace Jewel.JPMS.Features.Triage.Workspace
+
+@*
+    The workspace rail's glyph set — ActionIcon's pattern (one component, a name switch) for the
+    Control Centre panes. Same outline conventions: 24-box, stroke 1.6, currentColor, aria-hidden;
+    the rail button carries the accessible name.
+*@
+
+<svg class="@Class" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+     stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+    @((MarkupString)PathFor(Kind))
+</svg>
+
+@code {
+    [Parameter, EditorRequired] public PanelKind Kind { get; set; }
+
+    [Parameter] public string Class { get; set; } = "w-5 h-5";
+
+    private static string PathFor(PanelKind kind) => kind switch
+    {
+        // An inbox tray with mail dropping in — the email list / main triage page.
+        PanelKind.Inbox => "<path d='M3.5 13.5h4l1.5 2.5h6l1.5-2.5h4'/><path d='M5.5 6.5h13a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2v-9a2 2 0 0 1 2-2z'/><path d='M12 3v6M9.5 6.5 12 9l2.5-2.5'/>",
+
+        // An open envelope — the email currently being read.
+        PanelKind.Email => "<path d='m3.5 9.5 8.5-5.5 8.5 5.5v9a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2z'/><path d='m3.5 9.5 8.5 6 8.5-6'/>",
+
+        // A luggage tag — system tags.
+        PanelKind.SystemTags => "<path d='M12.6 3.5h6a1.9 1.9 0 0 1 1.9 1.9v6a1.9 1.9 0 0 1-.56 1.35l-7.7 7.7a1.9 1.9 0 0 1-2.68 0l-5.5-5.5a1.9 1.9 0 0 1 0-2.68l7.7-7.7a1.9 1.9 0 0 1 1.34-.57z'/><circle cx='16.4' cy='7.6' r='1.2'/>",
+
+        // A bolt — system actions lined up to fire on apply.
+        PanelKind.SystemActions => "<path d='M13 2.5 4.5 13.5H11l-1 8 8.5-11H12z'/>",
+
+        // A document under a magnifier — the record explorer.
+        PanelKind.Records => "<path d='M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h3.5'/><path d='M14 3v5h5v3'/><circle cx='15.5' cy='15.5' r='3.2'/><path d='m17.9 17.9 2.6 2.6'/>",
+
+        // An eye — the document preview.
+        PanelKind.Preview => "<path d='M2.5 12s3.5-6.5 9.5-6.5S21.5 12 21.5 12s-3.5 6.5-9.5 6.5S2.5 12 2.5 12z'/><circle cx='12' cy='12' r='2.8'/>",
+
+        // The Xero mark reduced to an outline: a circle around its x.
+        PanelKind.Xero => "<circle cx='12' cy='12' r='8.5'/><path d='m9.2 9.2 5.6 5.6M14.8 9.2l-5.6 5.6'/>",
+
+        // A pencil over a sheet — compose a new email.
+        PanelKind.Compose => "<path d='M11 4.5H6a2 2 0 0 0-2 2v11a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2v-5'/><path d='M17.8 3.2a1.9 1.9 0 0 1 2.7 2.7l-8 8-3.6.9.9-3.6z'/>",
+
+        _ => "<circle cx='12' cy='12' r='8'/>"
+    };
+}
