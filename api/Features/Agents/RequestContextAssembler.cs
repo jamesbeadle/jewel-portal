@@ -111,7 +111,6 @@ public sealed class RequestContextAssembler
         sb.AppendLine($"Title: {r.Title}");
         sb.AppendLine($"Status: {(RequestStatus)r.Status}");
         if (r.Value is not null) sb.AppendLine($"Value: {r.Value:N2}");
-        if (!string.IsNullOrWhiteSpace(r.RaisedTo)) sb.AppendLine($"Ball-in-court: {r.RaisedTo}");
         if (!string.IsNullOrWhiteSpace(r.DrawingRef)) sb.AppendLine($"Drawing ref: {r.DrawingRef}");
         if (r.ResponseDue is not null) sb.AppendLine($"Response due: {r.ResponseDue:yyyy-MM-dd}");
         // IssuedAt is the one visible request date; RaisedAt is only the internal created-on stamp

@@ -53,7 +53,7 @@ public static class DesktopNavigation
         Role.SiteManager,
         Role.HealthSafetyOfficer,
         Role.OfficeComplianceCoordinator,
-        // Office Admin mirrors the Office & Compliance role's reach (decision 2026-08-07).
+        // Office Admin mirrors the Compliance role's reach (decision 2026-08-07).
         Role.OfficeAdmin
     };
 

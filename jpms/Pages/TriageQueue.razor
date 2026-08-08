@@ -2767,7 +2767,6 @@ else
                     await Intake.CreateRequestFromMessageAsync(new CreateRequestFromMessage(
                         anchor.Id, triageProjectId, createKind, "", staged.Title.Trim(),
                         staged.Description?.Trim() ?? "",
-                        RaisedTo: NullIfBlank(staged.RaisedTo),
                         DrawingRef: NullIfBlank(staged.DrawingRef),
                         ResponseDue: ParseDate(staged.ResponseDue),
                         InternetMessageId: anchor.InternetMessageId,

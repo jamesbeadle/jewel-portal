@@ -26,7 +26,6 @@ public sealed record RequestDocumentModel(
     DateTimeOffset RaisedAt,
     DateTimeOffset? IssuedAt,     // when the document was issued — user-set on the request, null until then
     DateTimeOffset? ResponseDue,
-    string? RaisedTo,             // responding party the RFI is issued to
     string? DrawingRef,
     string? RelatedDrawingSpec,
     decimal? Value,

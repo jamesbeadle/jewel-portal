@@ -1,7 +1,6 @@
 @using Jewel.JPMS.Contracts.Requests
 @inject AuthService Auth
 @inject IRequestRegister RequestRegister
-@inject ICorrespondenceStore Correspondence
 @inject IRequestAttachmentStore Attachments
 @inject IDrawingStore Drawings
 @implements IDisposable
@@ -54,15 +53,11 @@
         </div>
 
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <ProjectContactSelect Contacts="@projectContacts"
-                                  Value="@raisedToContactId"
-                                  OnChange="v => raisedToContactId = v"
-                                  Loading="@contactsLoading" />
             <FormField Label="Drawing / detail ref" Value="@drawingRef" OnChange="v => drawingRef = v" />
+            <FormField Label="Response due" Value="@responseDue" OnChange="v => responseDue = v" InputType="date" />
         </div>
 
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <FormField Label="Response due" Value="@responseDue" OnChange="v => responseDue = v" InputType="date" />
             <FormField Label="Value (£)" Value="@valueText" OnChange="v => valueText = v" InputType="number" />
         </div>
 
@@ -219,14 +214,8 @@
 
     private string title = "";
     private string description = "";
-    private string raisedToContactId = "";
     private string drawingRef = "";
 
-    // The project's own contact list (Setup tab → Project contacts) backing the "Raised to"
-    // dropdown. Fetched when the dialog opens — ICorrespondenceStore is an on-demand async store,
-    // so no fetch-once-per-key bookkeeping applies here.
-    private IReadOnlyList<ProjectContact> projectContacts = Array.Empty<ProjectContact>();
-    private bool contactsLoading;
     // Pre-filled with the standard one-week window (RequestDefaults) so the common case needs no
     // typing; editable as before, and cleared to blank means no due date at all.
     private string responseDue = RequestDefaults.ResponseDue();
@@ -296,40 +285,22 @@
 
     public void Dispose() => Drawings.OnChange -= StateHasChanged;
 
-    protected override async Task OnParametersSetAsync()
+    protected override Task OnParametersSetAsync()
     {
         var opening = IsOpen && !wasOpen;
         wasOpen = IsOpen;
-        if (!opening) return;
+        if (!opening) return Task.CompletedTask;
 
         Reset();
         // Warm the drawing register from a lifecycle method, not from render, so "Attach drawings"
         // has something in it the first time it is pressed.
         Drawings.Refresh(ProjectId);
-        await LoadContactsAsync();
-    }
-
-    private async Task LoadContactsAsync()
-    {
-        contactsLoading = true;
-        try
-        {
-            // Ad-hoc rows only: the contacts added on the Setup tab's Project contacts list.
-            // (Party-linked rows are per-project routing overrides, not list entries.)
-            var rows = await Correspondence.ListProjectContactsAsync(ProjectId);
-            projectContacts = rows.Where(row => row.PartyContactId is null).ToList();
-        }
-        catch
-        {
-            // The dropdown just renders empty; raising a request without a Raised-to stays possible.
-            projectContacts = Array.Empty<ProjectContact>();
-        }
-        finally { contactsLoading = false; }
+        return Task.CompletedTask;
     }
 
     private void Reset()
     {
-        title = description = raisedToContactId = drawingRef = valueText = "";
+        title = description = drawingRef = valueText = "";
         responseDue = RequestDefaults.ResponseDue();
         backfill = false;
         raisedAt = respondedAt = responseText = "";
@@ -439,8 +410,6 @@
             description?.Trim() ?? "",
             value,
             email,
-            RaisedTo: null,
-            RaisedToContactId: NullIfBlank(raisedToContactId),
             DrawingRef: NullIfBlank(drawingRef),
             ResponseDue: ParseDate(responseDue),
             RaisedAt: backfill ? ParseDate(raisedAt) : null,

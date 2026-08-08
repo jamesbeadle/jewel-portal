@@ -325,7 +325,7 @@ public static class AiToolCatalogue
                         .Select(row => new
                         {
                             row.RequestId, row.Reference, row.Title, row.Kind, row.Status,
-                            row.Value, row.RaisedAt, row.ResponseDue, row.ClosedAt, row.CriticalPath, row.RaisedTo
+                            row.Value, row.RaisedAt, row.ResponseDue, row.ClosedAt, row.CriticalPath
                         })
                         .ToListAsync(ct);
 
@@ -346,7 +346,6 @@ public static class AiToolCatalogue
                             row.ResponseDue,
                             row.ClosedAt,
                             row.CriticalPath,
-                            awaiting = row.RaisedTo,
                             // The detail page is /requests/view/{id} (ProjectRequestDetail.razor).
                             // Without "view" this lands on the request LIST with the id read as a
                             // kind filter — a navigate_to that silently went to the wrong page.
@@ -416,7 +415,7 @@ public static class AiToolCatalogue
                         .Select(row => new
                         {
                             row.RequestId, row.ProjectId, row.Reference, row.Title,
-                            row.Kind, row.Status, row.Value, row.ResponseDue, row.RaisedTo
+                            row.Kind, row.Status, row.Value, row.ResponseDue
                         })
                         .ToListAsync(ct);
 
@@ -436,7 +435,6 @@ public static class AiToolCatalogue
                             status = ((RequestStatus)row.Status).ToString(),
                             row.Value,
                             row.ResponseDue,
-                            awaiting = row.RaisedTo,
                             route = $"/projects/{row.ProjectId}/requests/view/{row.RequestId}"
                         })
                     });
@@ -457,7 +455,7 @@ public static class AiToolCatalogue
             new(
                 "get_request_context",
                 "The full working papers for one request: its header — number, reference, type, status, value, "
-                + "ball-in-court, drawing reference, dates, description and any recorded response — followed by "
+                + "drawing reference, dates, description and any recorded response — followed by "
                 + "the whole conversation oldest first, in-app notes and every email tagged to it in Outlook. "
                 + "Email bodies come back in full — quoted thread included — with each message's attachment names "
                 + "listed above it, and the result tells you whether it is complete or whether a long body had to "

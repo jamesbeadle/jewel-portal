@@ -223,10 +223,6 @@
                                     <div class="mt-1 flex items-center gap-x-3 overflow-hidden text-[11px] text-content-subtle">
                                         <span class="whitespace-nowrap" title="@record.Kind.LongName()">@record.Kind.DisplayName()</span>
                                         <span class="whitespace-nowrap">@RequestStatusLabel(record.Status)</span>
-                                        @if (!string.IsNullOrWhiteSpace(record.RaisedTo))
-                                        {
-                                            <span class="truncate">Raised to @record.RaisedTo</span>
-                                        }
                                     </div>
                                 </button>
                             }

@@ -89,8 +89,8 @@ else
                     <p class="text-sm font-medium text-content mb-1">RFI — Request for Information</p>
                     <p class="text-sm text-content-muted">
                         An official ask of an external party — architect, client or consultant — for information the
-                        project needs. An RFI carries an issue date, a contractual response-due date and the
-                        ball-in-court party, and its official document can be drafted to the projects mailbox from here.
+                        project needs. An RFI carries an issue date and a contractual response-due date, and its
+                        official document can be drafted to the projects mailbox from here.
                     </p>
                     <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mt-2">
                         While an RFI is unanswered the project may be waiting on information — that wait can have a
@@ -730,14 +730,11 @@ else
                 record.ResponseText,
                 hasResponse ? (record.RespondedByEmail ?? Auth.CurrentUser?.Email) : record.RespondedByEmail,
                 record.ImpliesVariation,
-                record.RaisedTo,
                 record.DrawingRef,
                 record.ResponseDue,
                 record.RelatedDrawingSpec,
                 record.InternalNotes,
-                record.ClientNotes,
-                // A status change must not shed the structured Raised-to link.
-                RaisedToContactId: record.RaisedToContactId));
+                record.ClientNotes));
         }
         catch (CommandFailedException ex)
         {
@@ -977,7 +974,6 @@ else
         yield return record.DisplayNumber;
         yield return record.Title;
         yield return record.Description;
-        yield return record.RaisedTo;
         yield return record.DrawingRef;
         yield return record.RelatedDrawingSpec;
         yield return record.ResponseText;
@@ -1372,7 +1368,6 @@ else
                 new ExcelColumn("Ref"),
                 new ExcelColumn("Kind"),
                 new ExcelColumn("Subject"),
-                new ExcelColumn("Raised to"),
                 new ExcelColumn("Drawing / detail"),
                 new ExcelColumn("Issued", ExcelFormat.Date),
                 new ExcelColumn("Response due", ExcelFormat.Date),
@@ -1386,7 +1381,6 @@ else
                     record.Reference,
                     record.Kind.DisplayName(),
                     record.Title,
-                    record.RaisedTo,
                     record.DrawingRef,
                     (record.IssuedAt ?? record.RaisedAt).LocalDateTime,
                     record.ResponseDue?.LocalDateTime,

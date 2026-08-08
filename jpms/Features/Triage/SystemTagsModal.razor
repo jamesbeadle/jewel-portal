@@ -115,7 +115,6 @@
                     <p class="rounded-lg bg-surface-raised border border-line px-3 py-2 text-xs text-content-subtle">
                         Created as a <span class="font-medium text-content">General</span> request, auto-numbered REQ-#### — promote it to an official RFI (or on to a variation) from the request page. The email is tagged to it on apply.
                     </p>
-                    <FormField Label="Raised to" Value="@Create.RaisedTo" OnChange="v => { Create.RaisedTo = v; NotifyCreate(); }" />
                     <FormField Label="Subject" Value="@Create.Title" OnChange="v => { Create.Title = v; NotifyCreate(); }" Required="true" />
                     <div>
                         <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Detail</label>

@@ -30,7 +30,6 @@ public sealed class StagedRecordCreate
     public StagedRecordKind Kind { get; set; } = StagedRecordKind.Request;
     public string Title { get; set; } = "";
     public string Description { get; set; } = "";
-    public string RaisedTo { get; set; } = "";
     public string DrawingRef { get; set; } = "";
     public string ResponseDue { get; set; } = "";
     public bool AddToProgramme { get; set; }

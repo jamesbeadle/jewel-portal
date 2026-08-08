@@ -611,7 +611,7 @@ else
         r is Role.Admin or Role.ManagingDirector or Role.FinanceDirector or Role.ProjectManager);
 
     // Adding companies mirrors the API's add authorisation (Admin, MD, FD — the API also allows
-    // Office & Compliance, but that role can't reach this page). FD added 2026-07-28.
+    // Compliance, but that role can't reach this page). FD added 2026-07-28.
     private bool CanManage => Session.AvailableRoles.Any(r =>
         r is Role.Admin or Role.ManagingDirector or Role.FinanceDirector);
 

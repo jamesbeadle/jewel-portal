@@ -254,13 +254,6 @@ public sealed class RequestEntity
     // Tagging the RFI critical path later is unaffected — the toggle and edit modal still work.
     public bool CriticalPathNudgeDismissed { get; set; }
 
-    [MaxLength(256)]     public string? RaisedTo { get; set; }
-
-    // When RaisedTo was picked from the project's contact list (Setup tab), the ProjectContact it
-    // points at. RaisedTo keeps the denormalised display string so documents, tables and old rows
-    // render without a join; the id is the structured link (survives renames, enables future
-    // routing behaviour). Null for legacy free-text rows and non-dropdown callers.
-    [MaxLength(64)]      public string? RaisedToContactId { get; set; }
     [MaxLength(256)]     public string? DrawingRef { get; set; }
     public DateTimeOffset? ResponseDue { get; set; }
     [MaxLength(512)]     public string? RelatedDrawingSpec { get; set; }

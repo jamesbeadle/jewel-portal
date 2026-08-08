@@ -20,7 +20,6 @@ internal static class RequestsEntityMapping
         ResponseText: entity.ResponseText,
         RespondedByEmail: entity.RespondedByEmail,
         ImpliesVariation: entity.ImpliesVariation,
-        RaisedTo: entity.RaisedTo,
         DrawingRef: entity.DrawingRef,
         ResponseDue: entity.ResponseDue,
         RelatedDrawingSpec: entity.RelatedDrawingSpec,
@@ -38,7 +37,6 @@ internal static class RequestsEntityMapping
         MergedIntoRequestId: entity.MergedIntoRequestId,
         ClosedAt: entity.ClosedAt,
         IssuedAt: entity.IssuedAt,
-        RaisedToContactId: entity.RaisedToContactId,
         CriticalPath: entity.CriticalPath,
         CriticalPathNudgeDismissed: entity.CriticalPathNudgeDismissed);
 
