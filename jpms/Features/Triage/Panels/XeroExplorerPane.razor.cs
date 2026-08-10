@@ -1,10 +1,16 @@
 using Jewel.JPMS.Contracts.Xero;
+using Jewel.JPMS.Features.Triage.Workspace;
+using Microsoft.AspNetCore.Components;
 
 namespace Jewel.JPMS.Features.Triage.Panels;
 
 public partial class XeroExplorerPane : IDisposable
 {
     private const int ResultCap = 100;
+
+    /// <summary>A document chosen for preview inside the open transaction — bubbled to the page,
+    /// which routes it to the workspace Preview pane opposite this explorer.</summary>
+    [Parameter] public EventCallback<PreviewRequest> OnPreview { get; set; }
 
     private string search = "";
     private string typeFilter = "";

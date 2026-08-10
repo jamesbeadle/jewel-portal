@@ -10,7 +10,8 @@
 
 @if (openTransaction is { } transaction)
 {
-    <XeroTransactionView Transaction="transaction" OnBack="() => openTransaction = null" />
+    <XeroTransactionView @key="transaction.TransactionId" Transaction="transaction"
+                         OnBack="() => openTransaction = null" OnPreview="OnPreview" />
 }
 else if (Xero.Snapshot() is not { } snapshot)
 {

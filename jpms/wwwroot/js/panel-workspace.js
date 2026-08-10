@@ -8,6 +8,8 @@ window.panelWorkspace = (function () {
     const MIN_FRACTION = 0.2;
     const MAX_FRACTION = 0.8;
     const sessions = new Map();
+    let linkChannel = null;
+    let linkBye = null;
 
     function fractionFrom(container, clientX) {
         const rect = container.getBoundingClientRect();
@@ -61,6 +63,46 @@ window.panelWorkspace = (function () {
         // Outlook-style pop-out: a real browser window (not a tab), sized for a workspace.
         openPopout(url) {
             window.open(url, "_blank", "noopener,width=1280,height=860");
+        },
+
+        // ---- Cross-window link. Every Control Centre window in this browser joins one
+        //      BroadcastChannel, so popouts stay live companions of the window they were born
+        //      from: selections, previews and applies travel between them. The messages are
+        //      opaque JSON — .NET builds and reads them; this side only carries them. ----
+        linkInit(dotnetRef, popoutKind) {
+            if (typeof BroadcastChannel === "undefined") return; // very old browsers: no link
+            this.linkDispose();
+            const channel = new BroadcastChannel("jpms-control-centre");
+            channel.onmessage = (event) =>
+                dotnetRef.invokeMethodAsync("OnWorkspaceBroadcast", JSON.stringify(event.data));
+            linkChannel = channel;
+            // A popout announces itself (and its kind) so other windows can route to it — and
+            // says goodbye when it closes, so routing stops. A main window instead asks who's
+            // already out there, in case it reloaded while popouts were open.
+            if (popoutKind) {
+                linkBye = () => channel.postMessage({ type: "bye", kind: popoutKind });
+                window.addEventListener("pagehide", linkBye);
+                channel.postMessage({ type: "hello", kind: popoutKind });
+            }
+            // Every window asks who's already out there — a reloaded main re-learns its popouts,
+            // and a late-born popout learns its siblings (for routing previews between popouts).
+            channel.postMessage({ type: "who" });
+        },
+
+        linkSend(json) {
+            if (linkChannel) linkChannel.postMessage(JSON.parse(json));
+        },
+
+        linkDispose() {
+            if (linkBye) {
+                linkBye();
+                window.removeEventListener("pagehide", linkBye);
+                linkBye = null;
+            }
+            if (linkChannel) {
+                linkChannel.close();
+                linkChannel = null;
+            }
         },
 
         dispose(container) {

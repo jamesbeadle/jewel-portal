@@ -31,8 +31,27 @@ public sealed partial class PanelWorkspaceState
 
     public void Show(PanelKind kind, PanelSide side)
     {
-        if (!IsDesktop || !IsSplit) side = PanelSide.Left;
-        if (ActiveOn(side) == kind) return;
+        var restoredSplit = false;
+        if (!IsDesktop)
+        {
+            side = PanelSide.Left;
+        }
+        else if (!IsSplit)
+        {
+            // Solo (a pane popped out, or a popout window): asking for what's already on show is
+            // a no-op, but asking for a SECOND kind brings the split back — the new content opens
+            // beside what's there, rather than silently replacing it. That's what a rail press or
+            // an email click means in a one-pane window on a desktop.
+            if (ActiveOn(PanelSide.Left) == kind) return;
+            IsSplit = true;
+            restoredSplit = true;
+            side = PanelSide.Right;
+        }
+        if (ActiveOn(side) == kind)
+        {
+            if (restoredSplit) Notify();
+            return;
+        }
         if (ActiveOn(OtherThan(side)) == kind) FallBack(OtherThan(side), kind);
         var history = HistoryOf(side);
         history.Remove(kind);
