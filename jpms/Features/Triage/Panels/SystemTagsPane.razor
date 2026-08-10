@@ -90,7 +90,7 @@
             else if (string.IsNullOrWhiteSpace(ProjectId))
             {
                 <p class="rounded-lg bg-amber-500/10 border border-amber-500/40 px-3 py-2 text-xs text-content">
-                    Set the email's <span class="font-medium">Project</span> on the page to link to its to-do items — or use <span class="font-medium">Create new</span> to draft to-dos (company-wide until a project is set).
+                    Set the email's <span class="font-medium">Project</span> above to link to its to-do items — or use <span class="font-medium">Create new</span> to draft to-dos (company-wide until a project is set).
                 </p>
             }
             else
@@ -102,7 +102,7 @@
         else if (string.IsNullOrWhiteSpace(ProjectId))
         {
             <p class="rounded-lg bg-amber-500/10 border border-amber-500/40 px-3 py-2 text-xs text-content">
-                Set the email's <span class="font-medium">Project</span> on the page first — tags file the email against a project's records.
+                Set the email's <span class="font-medium">Project</span> above first — tags file the email against a project's records.
             </p>
         }
         else
@@ -523,6 +523,13 @@
             if (createOpen && activeTab == "Subcontractor" && subCreateKind == StagedRecordKind.WorkOrder)
                 _ = EnsureWorkOrderLookupsAsync();
             linkType = DefaultTypeFor(activeTab);
+            await LoadRecordsAsync();
+        }
+        else if (IsOpen)
+        {
+            // The pane sits beside the project picker now (Triage tab / its own header row), so
+            // the project can change while it is open — re-read the pool. loadedKey makes this a
+            // no-op unless the project (or type) actually differs from what is loaded.
             await LoadRecordsAsync();
         }
         wasOpen = IsOpen;

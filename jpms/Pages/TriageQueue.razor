@@ -327,7 +327,9 @@
             }
         </header>
 
-        <div class="flex items-center gap-2 border-b border-line">
+        @* Sticky: the tabs are this pane's whole navigation — Triage above all must stay in
+           reach however far the list is scrolled (bg-canvas so rows vanish behind it). *@
+        <div class="sticky top-0 z-10 bg-canvas flex items-center gap-2 border-b border-line">
             <button type="button" class="@ViewTabClass(QueueView.Active)" @onclick="() => SwitchListTab(QueueView.Active)">Queue</button>
             <button type="button" class="@ViewTabClass(QueueView.Tagged)" @onclick="() => SwitchListTab(QueueView.Tagged)">Tagged</button>
             <span class="ml-auto"></span>
@@ -1162,6 +1164,26 @@
         }
         else
         {
+            @* THE project decision, repeated here so tagging never dead-ends on "set the project
+               somewhere else" — the same page-owned field as the Triage tab's picker, so setting
+               it either place sets it everywhere. *@
+            <div class="panel p-4 mb-3">
+                <div class="flex flex-wrap items-center gap-2">
+                    <label class="text-xs uppercase tracking-wider text-content-subtle font-semibold shrink-0">Project</label>
+                    <select class="field max-w-md" value="@triageProjectId" @onchange="OnTriageProjectChanged">
+                        <option value="">No project…</option>
+                        @foreach (var project in ProjectOptionsFor(triageProjectId))
+                        {
+                            <option value="@project.ProjectId">@project.Reference — @project.Name</option>
+                        }
+                    </select>
+                    @if (projectAutoMatched && !string.IsNullOrWhiteSpace(triageProjectId))
+                    {
+                        <span class="text-xs text-accent">Matched from the email — change it if that's wrong.</span>
+                    }
+                </div>
+            </div>
+
             @* Keyed on the message id so a fresh selection starts a fresh pane (the staged work
                itself is page-owned and already resets per selection). *@
             <SystemTagsPane @key="selected.Id"
@@ -1789,8 +1811,8 @@ else
 
     private string? TodoProjectNote =>
         string.IsNullOrWhiteSpace(triageProjectId)
-            ? "No project set on the email — these will be company-wide items. Set the Project on the page to put them on a project's To-do tab."
-            : $"Items land on the To-do tab of {ProjectLabelFor(triageProjectId)} — the email's project, set on the page.";
+            ? "No project set on the email — these will be company-wide items. Set the Project above (or on the Triage tab) to put them on a project's To-do tab."
+            : $"Items land on the To-do tab of {ProjectLabelFor(triageProjectId)} — the email's project.";
 
     private string TagsButtonClass =>
         "inline-flex items-center gap-1 rounded-lg border px-3 py-1.5 text-sm "
