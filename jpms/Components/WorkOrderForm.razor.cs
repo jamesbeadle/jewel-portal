@@ -146,8 +146,8 @@ public partial class WorkOrderForm : IDisposable
 
     protected override async Task OnInitializedAsync()
     {
-        Subcontractors.OnChange += StoreChanged;
-        CostCenters.OnChange += StoreChanged;
+        Subcontractors.OnChanged += StoreChanged;
+        CostCenters.OnChanged += StoreChanged;
         Seed();
         // Freshen everything the pickers show; cached values render immediately.
         await Task.WhenAll(
@@ -157,8 +157,8 @@ public partial class WorkOrderForm : IDisposable
 
     public void Dispose()
     {
-        Subcontractors.OnChange -= StoreChanged;
-        CostCenters.OnChange -= StoreChanged;
+        Subcontractors.OnChanged -= StoreChanged;
+        CostCenters.OnChanged -= StoreChanged;
     }
 
     private void StoreChanged() => InvokeAsync(StateHasChanged);

@@ -21,6 +21,23 @@
     {
         @RailButton(PanelKind.Preview, "Document preview")
     }
+
+    @* Window management, kept apart at the rail's end. Pop-out sends THIS pane's content to its
+       own browser window (Outlook-style) and collapses this window to the other pane; the
+       restore button brings the second pane back after one has popped out. Desktop-only — a
+       phone has one window and no popouts. *@
+    <span class="ml-auto"></span>
+    @if (!State.IsSplit)
+    {
+        <button type="button" title="Restore the second panel" aria-label="Restore the second panel"
+                class="@WindowButtonClass" @onclick="() => State.RestoreSplit()">
+            <ActionIcon Name="split-panes" Class="w-4 h-4" />
+        </button>
+    }
+    <button type="button" title="Pop this panel out into its own window" aria-label="Pop this panel out into its own window"
+            class="@WindowButtonClass" @onclick="() => OnPopOut.InvokeAsync(Side)">
+        <ActionIcon Name="pop-out" Class="w-4 h-4" />
+    </button>
 </div>
 
 @code {
@@ -38,6 +55,13 @@
 
     /// <summary>How many system actions are lined up — badged on the System Actions icon.</summary>
     [Parameter] public int ActionsBadge { get; set; }
+
+    /// <summary>This pane wants to pop out — the workspace opens the window and collapses.</summary>
+    [Parameter] public EventCallback<PanelSide> OnPopOut { get; set; }
+
+    private const string WindowButtonClass =
+        "relative hidden lg:inline-flex items-center justify-center w-8 h-8 rounded-lg border border-transparent "
+        + "text-content-subtle hover:text-content hover:bg-surface-raised transition";
 
     private RenderFragment RailButton(PanelKind kind, string label) => __builder =>
     {

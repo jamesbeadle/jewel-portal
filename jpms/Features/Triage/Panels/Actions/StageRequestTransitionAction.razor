@@ -53,7 +53,7 @@
 
     private string projectId = "";
     private string requestId = "";
-    private string closeDate = DateTime.Today.ToString("yyyy-MM-dd");
+    private DateTime? closeDate = DateTime.Today;
     private string? error;
 
     protected override void OnInitialized() => RequestRegister.OnChange += StoreChanged;
@@ -95,9 +95,9 @@
         DateTimeOffset? closedAt = null;
         if (Kind == SystemActionKind.CloseRfi)
         {
-            if (!DateTimeOffset.TryParse(closeDate, out var parsed)) { error = "A close date is required."; return; }
-            if (parsed.Date > DateTime.Today) { error = "The closed date cannot be in the future."; return; }
-            closedAt = parsed;
+            if (closeDate is not { } chosen) { error = "A close date is required."; return; }
+            if (chosen.Date > DateTime.Today) { error = "The closed date cannot be in the future."; return; }
+            closedAt = new DateTimeOffset(DateTime.SpecifyKind(chosen.Date, DateTimeKind.Utc));
         }
         await OnStaged.InvokeAsync(new StagedSystemAction(Kind, SummaryFor(picked, closedAt), ExecutorFor(picked, closedAt)));
         requestId = "";

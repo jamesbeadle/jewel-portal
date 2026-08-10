@@ -1,5 +1,7 @@
 using Jewel.JPMS.Contracts.Commercial;
 using Jewel.JPMS.Contracts.Procurement;
+using Jewel.JPMS.Cqrs;
+using Jewel.JPMS.Features.Procurement;
 using Jewel.JPMS.Models;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Forms;

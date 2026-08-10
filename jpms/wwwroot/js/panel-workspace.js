@@ -58,6 +58,11 @@ window.panelWorkspace = (function () {
             });
         },
 
+        // Outlook-style pop-out: a real browser window (not a tab), sized for a workspace.
+        openPopout(url) {
+            window.open(url, "_blank", "noopener,width=1280,height=860");
+        },
+
         dispose(container) {
             const cleanUp = sessions.get(container);
             if (cleanUp) cleanUp();

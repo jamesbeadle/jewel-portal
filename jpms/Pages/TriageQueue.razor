@@ -1253,7 +1253,8 @@ else
                         EmailAvailable="@(selected is not null)"
                         PreviewAvailable="@(workspace.Preview is not null)"
                         TagsBadge="@StagedTagCount"
-                        ActionsBadge="@stagedSystemActions.Count">
+                        ActionsBadge="@stagedSystemActions.Count"
+                        PopoutContext="@PopoutQueryContext">
             <InboxContent>@InboxPaneContent</InboxContent>
             <EmailContent>@EmailPaneContent</EmailContent>
             <TagsContent>@TagsPaneContent</TagsContent>
@@ -1708,6 +1709,31 @@ else
     private void OpenRecordPreview(PreviewRequest document) =>
         workspace.OpenPreview(document, PanelKind.Records);
 
+    // ---- Pop-out boot. A popout window is a full Control Centre started solo on the kind the
+    //      pane carried (?popout=), reading the same server data as every other window — live for
+    //      reference; staging stays with the window it was staged in. When the Email pane pops
+    //      out, the open email's ids travel too so the new window re-selects it. ----
+    [SupplyParameterFromQuery(Name = "popout")] public string? PopoutKindRaw { get; set; }
+    [SupplyParameterFromQuery(Name = "email")] public string? PopoutEmailId { get; set; }
+    [SupplyParameterFromQuery(Name = "imid")] public string? PopoutInternetMessageId { get; set; }
+
+    private bool IsPopoutBoot => !string.IsNullOrEmpty(PopoutKindRaw);
+
+    // What a popout opened FROM this window should carry: the open email, so an Email popout can
+    // re-select it (other kinds simply ignore the extra context).
+    private string PopoutQueryContext =>
+        selected is null
+            ? ""
+            : $"&email={Uri.EscapeDataString(selected.Id)}&imid={Uri.EscapeDataString(selected.InternetMessageId ?? "")}";
+
+    // The popped-out email may sit beyond the queue's first page — search the loaded page first,
+    // by either id (the Graph id can churn; the internet-message id is the stable one).
+    private MailboxMessage? FindPopoutEmail() =>
+        string.IsNullOrEmpty(PopoutEmailId)
+            ? null
+            : items.FirstOrDefault(item => item.Id == PopoutEmailId
+                || (!string.IsNullOrEmpty(PopoutInternetMessageId) && item.InternetMessageId == PopoutInternetMessageId));
+
     // System actions lined up in the Actions pane, run by the one Apply after the filing —
     // payloads snapshotted at stage time, cleared per selection like all staging.
     private readonly List<StagedSystemAction> stagedSystemActions = new();
@@ -1793,6 +1819,8 @@ else
         // reading it late would fetch the first page the wrong way round. It is a local-storage
         // read, so it costs almost nothing.
         newestFirst = await SortStorage.ReadNewestFirstAsync(Auth.CurrentUser!.Email);
+        if (IsPopoutBoot && Enum.TryParse<PanelKind>(PopoutKindRaw, ignoreCase: true, out var popoutKind))
+            workspace.StartSolo(popoutKind);
         sessionReady = true;
         // Paint the chrome before the four fetches: Blazor re-renders OnInitializedAsync only at
         // its FIRST await, which has already passed. The sort toggle is drawn from newestFirst, so
@@ -1818,8 +1846,18 @@ else
         // Land straight in the first email: opening the top of the queue is what a triager does
         // first every time, so the page does it for them. Initial load only — after an action the
         // deliberately-cleared pane is where the outcome banners (reply draft, partial link) show.
-        if (view == QueueView.Active && selected is null && items.Count > 0)
-            await Select(items[0]);
+        // A popout window auto-selects nothing (a selection would steal its solo pane) — except
+        // an Email popout, which re-selects the email it was popped out with when the queue's
+        // first page carries it.
+        if (view != QueueView.Active || selected is not null || items.Count == 0) return;
+        if (IsPopoutBoot)
+        {
+            if (string.Equals(PopoutKindRaw, nameof(PanelKind.Email), StringComparison.OrdinalIgnoreCase)
+                && FindPopoutEmail() is { } carried)
+                await Select(carried);
+            return;
+        }
+        await Select(items[0]);
     }
 
     // The project list only feeds the "file this email against a project" pickers. Losing it should

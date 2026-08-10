@@ -31,7 +31,7 @@ public sealed partial class PanelWorkspaceState
 
     public void Show(PanelKind kind, PanelSide side)
     {
-        if (!IsDesktop) side = PanelSide.Left;
+        if (!IsDesktop || !IsSplit) side = PanelSide.Left;
         if (ActiveOn(side) == kind) return;
         if (ActiveOn(OtherThan(side)) == kind) FallBack(OtherThan(side), kind);
         var history = HistoryOf(side);
