@@ -3099,7 +3099,7 @@ else
     private void OpenEmailAttachmentPreview(IntakeAttachment attachment)
     {
         var isPdf = (attachment.ContentType ?? "").Contains("pdf", StringComparison.OrdinalIgnoreCase);
-        RoutePreview(
+        workspace.OpenPreview(
             new PreviewRequest(attachment.Name, AttachmentUrl(attachment, inline: true),
                 AttachmentUrl(attachment, inline: false), isPdf),
             anchor: PanelKind.Email);
