@@ -26,10 +26,8 @@
 @inject ICommandSender Commands
 @inject IWorkOrderAttachmentStore WorkOrderAttachments
 @inject IQueryClient Queries
-@inject IJSRuntime JS
 @inject Jewel.JPMS.Features.Projects.ProjectListReadModel Projects
 @inject Jewel.JPMS.Features.Subcontractors.SubcontractorsReadModel Subcontractors
-@using System.Text.Json
 @implements IDisposable
 
 <PageTitle>Control Centre · JPMS</PageTitle>
@@ -476,40 +474,6 @@
                 </div>
         }
         </LoadGate>
-
-        @* Recently triaged — the audit register's latest link/create decisions, newest first, so
-           the triager can jump straight to the document an email was just filed against. Same
-           no-gate pattern as the unassigned panel above: it renders if and when there is something
-           to show. (The register records client-pathway triage today; subcontractor/internal rows
-           appear here automatically once the audit scope widens.) *@
-        @if (RecentTriage.Count > 0)
-        {
-            <div class="panel p-5 mt-6">
-                <div class="flex items-baseline justify-between gap-3 mb-3">
-                    <h2 class="text-sm font-semibold text-content">Recently processed</h2>
-                    <a href="/audit" class="text-xs text-content-muted hover:text-content underline underline-offset-2">Full audit trail</a>
-                </div>
-                <div class="divide-y divide-line">
-                    @foreach (var entry in RecentTriage)
-                    {
-                        <div @key="entry.AuditEventId" class="flex items-center gap-3 py-2">
-                            <span class="text-[11px] text-content-subtle whitespace-nowrap w-16 shrink-0"
-                                  title="@entry.OccurredAt.LocalDateTime.ToString("d MMM yyyy, HH:mm")">@Ago(entry.OccurredAt)</span>
-                            @if (RecentHref(entry) is { } href)
-                            {
-                                <a class="font-mono text-xs text-content underline underline-offset-2 hover:text-accent whitespace-nowrap" href="@href">@Dash(entry.RecordReference)</a>
-                            }
-                            else
-                            {
-                                <span class="font-mono text-xs text-content-muted whitespace-nowrap">@Dash(entry.RecordReference)</span>
-                            }
-                            <span class="text-xs text-content-muted truncate">@entry.Detail</span>
-                            <span class="text-[11px] text-content-subtle whitespace-nowrap ml-auto hidden md:inline">@RecentMeta(entry)</span>
-                        </div>
-                    }
-                </div>
-            </div>
-        }
         }
         else if (view == QueueView.Discarded)
         {
@@ -1248,8 +1212,7 @@ else
                         EmailAvailable="@(selected is not null)"
                         PreviewAvailable="@(workspace.Preview is not null)"
                         TagsBadge="@StagedTagCount"
-                        ActionsBadge="@StagedActionCount"
-                        PopoutContext="@PopoutQueryContext">
+                        ActionsBadge="@StagedActionCount">
             <InboxContent>@InboxPaneContent</InboxContent>
             <EmailContent>@EmailPaneContent</EmailContent>
             <TagsContent>@TagsPaneContent</TagsContent>
@@ -1290,6 +1253,43 @@ else
         </PanelWorkspace>
         </div>
     </section>
+
+    @* Recently processed — the audit register's latest link/create decisions, newest first, so the
+       triager can jump straight to the document an email was just filed against. Its own section
+       beneath the whole workspace (reached by scrolling past it), full width — not squeezed into
+       the inbox pane under the queue. Same no-gate pattern as the unassigned panel: it renders if
+       and when there is something to show. (The register records client-pathway triage today;
+       subcontractor/internal rows appear here automatically once the audit scope widens.) *@
+    @if (RecentTriage.Count > 0)
+    {
+        <section class="px-3 md:px-4 pb-6">
+            <div class="panel p-5">
+                <div class="flex items-baseline justify-between gap-3 mb-3">
+                    <h2 class="text-sm font-semibold text-content">Recently processed</h2>
+                    <a href="/audit" class="text-xs text-content-muted hover:text-content underline underline-offset-2">Full audit trail</a>
+                </div>
+                <div class="divide-y divide-line">
+                    @foreach (var entry in RecentTriage)
+                    {
+                        <div @key="entry.AuditEventId" class="flex items-center gap-3 py-2">
+                            <span class="text-[11px] text-content-subtle whitespace-nowrap w-16 shrink-0"
+                                  title="@entry.OccurredAt.LocalDateTime.ToString("d MMM yyyy, HH:mm")">@Ago(entry.OccurredAt)</span>
+                            @if (RecentHref(entry) is { } href)
+                            {
+                                <a class="font-mono text-xs text-content underline underline-offset-2 hover:text-accent whitespace-nowrap" href="@href">@Dash(entry.RecordReference)</a>
+                            }
+                            else
+                            {
+                                <span class="font-mono text-xs text-content-muted whitespace-nowrap">@Dash(entry.RecordReference)</span>
+                            }
+                            <span class="text-xs text-content-muted truncate">@entry.Detail</span>
+                            <span class="text-[11px] text-content-subtle whitespace-nowrap ml-auto hidden md:inline">@RecentMeta(entry)</span>
+                        </div>
+                    }
+                </div>
+            </div>
+        </section>
+    }
 }
 
 @code {
@@ -1544,9 +1544,9 @@ else
     private IReadOnlyList<Request> unassigned = Array.Empty<Request>();
     private string? unassignedError;
 
-    // The audit register's latest triage decisions, for the "Recently triaged" panel at the foot of
-    // the queue. Nullable backing field: null is the honest "not fetched yet" (the panel simply
-    // doesn't render), an empty list is a real answer that keeps it hidden either way.
+    // The audit register's latest triage decisions, for the "Recently processed" section beneath
+    // the workspace. Nullable backing field: null is the honest "not fetched yet" (the section
+    // simply doesn't render), an empty list is a real answer that keeps it hidden either way.
     private IReadOnlyList<AuditEvent>? recentTriage;
     private IReadOnlyList<AuditEvent> RecentTriage => recentTriage ?? Array.Empty<AuditEvent>();
     private const int RecentTriageCount = 8;
@@ -1712,168 +1712,11 @@ else
     // A document opened from inside a record (the record explorer's Preview buttons) — shown in
     // the Preview pane on the window OPPOSITE the explorer, so record and document read together.
     private void OpenRecordPreview(PreviewRequest document) =>
-        RoutePreview(document, PanelKind.Records);
+        workspace.OpenPreview(document, PanelKind.Records);
 
     // A document opened from a Xero transaction — same Preview pane, opposite the explorer.
     private void OpenXeroPreview(PreviewRequest document) =>
-        RoutePreview(document, PanelKind.Xero);
-
-    // Every preview request funnels through here: when a popped-out Preview window exists in
-    // this window family, it IS the document viewer — the request travels there over the link
-    // and this window's panes stay put. Otherwise the preview opens locally as always.
-    private void RoutePreview(PreviewRequest document, PanelKind anchor)
-    {
-        if (!IsPreviewPopoutSelf && openPopoutKinds.Contains(nameof(PanelKind.Preview)))
-        {
-            _ = AnnounceAsync(new
-            {
-                type = "preview",
-                title = document.Title,
-                fileUrl = document.FileUrl,
-                downloadUrl = document.DownloadUrl,
-                isPdf = document.IsPdf
-            });
-            return;
-        }
-        workspace.OpenPreview(document, anchor);
-    }
-
-    // ---- Pop-out boot. A popout window is a full Control Centre started solo on the kind the
-    //      pane carried (?popout=), reading the same server data as every other window — live for
-    //      reference; staging stays with the window it was staged in. When the Email pane pops
-    //      out, the open email's ids travel too so the new window re-selects it. ----
-    [SupplyParameterFromQuery(Name = "popout")] public string? PopoutKindRaw { get; set; }
-    [SupplyParameterFromQuery(Name = "email")] public string? PopoutEmailId { get; set; }
-    [SupplyParameterFromQuery(Name = "imid")] public string? PopoutInternetMessageId { get; set; }
-
-    private bool IsPopoutBoot => !string.IsNullOrEmpty(PopoutKindRaw);
-
-    // What a popout opened FROM this window should carry: the open email, so an Email popout can
-    // re-select it (other kinds simply ignore the extra context).
-    private string PopoutQueryContext =>
-        selected is null
-            ? ""
-            : $"&email={Uri.EscapeDataString(selected.Id)}&imid={Uri.EscapeDataString(selected.InternetMessageId ?? "")}";
-
-    // The popped-out email may sit beyond the queue's first page — search the loaded page first,
-    // by either id (the Graph id can churn; the internet-message id is the stable one).
-    private MailboxMessage? FindPopoutEmail() =>
-        string.IsNullOrEmpty(PopoutEmailId)
-            ? null
-            : items.FirstOrDefault(item => item.Id == PopoutEmailId
-                || (!string.IsNullOrEmpty(PopoutInternetMessageId) && item.InternetMessageId == PopoutInternetMessageId));
-
-    private bool IsEmailPopoutSelf =>
-        IsPopoutBoot && string.Equals(PopoutKindRaw, nameof(PanelKind.Email), StringComparison.OrdinalIgnoreCase);
-    private bool IsPreviewPopoutSelf =>
-        IsPopoutBoot && string.Equals(PopoutKindRaw, nameof(PanelKind.Preview), StringComparison.OrdinalIgnoreCase);
-
-    // ---- The cross-window LINK (BroadcastChannel via panel-workspace.js). Every Control Centre
-    //      window in this browser joins one channel, so popouts are live companions of the family
-    //      they were born from, not orphaned snapshots: selecting an email anywhere re-points the
-    //      family's Email popout; previews opened anywhere land in the family's Preview popout;
-    //      an apply anywhere refreshes every window's queue. Popouts announce their kind (hello /
-    //      bye) so the other windows know where to route; a booting main window asks "who" in
-    //      case it reloaded while popouts were open. Staging never travels — it stays with the
-    //      window it was staged in, exactly as before. ----
-    private DotNetObjectReference<TriageQueue>? linkRef;
-    private readonly HashSet<string> openPopoutKinds = new(StringComparer.OrdinalIgnoreCase);
-
-    protected override async Task OnAfterRenderAsync(bool firstRender)
-    {
-        if (!firstRender) return;
-        linkRef = DotNetObjectReference.Create(this);
-        try { await JS.InvokeVoidAsync("panelWorkspace.linkInit", linkRef, IsPopoutBoot ? PopoutKindRaw : null); }
-        catch { /* the link is best-effort — a window without it still works alone */ }
-    }
-
-    private async Task AnnounceAsync(object message)
-    {
-        try { await JS.InvokeVoidAsync("panelWorkspace.linkSend", JsonSerializer.Serialize(message)); }
-        catch { /* best-effort, as above */ }
-    }
-
-    [JSInvokable]
-    public async Task OnWorkspaceBroadcast(string json)
-    {
-        try
-        {
-            using var doc = JsonDocument.Parse(json);
-            var root = doc.RootElement;
-            string? Field(string name) =>
-                root.TryGetProperty(name, out var value) && value.ValueKind == JsonValueKind.String
-                    ? value.GetString()
-                    : null;
-            switch (Field("type"))
-            {
-                case "hello" when Field("kind") is { } arrived:
-                    openPopoutKinds.Add(arrived);
-                    StateHasChanged();
-                    break;
-                case "bye" when Field("kind") is { } left:
-                    openPopoutKinds.Remove(left);
-                    StateHasChanged();
-                    break;
-                case "who":
-                    if (IsPopoutBoot) await AnnounceAsync(new { type = "hello", kind = PopoutKindRaw });
-                    break;
-                case "select" when Field("id") is { } id:
-                    await FollowRemoteSelectAsync(id, Field("imid"));
-                    break;
-                case "preview" when IsPreviewPopoutSelf && Field("fileUrl") is { } fileUrl:
-                    workspace.OpenPreview(
-                        new PreviewRequest(
-                            Field("title") ?? "Document", fileUrl, Field("downloadUrl") ?? fileUrl,
-                            root.TryGetProperty("isPdf", out var pdf) && pdf.ValueKind == JsonValueKind.True),
-                        PanelKind.Records);
-                    StateHasChanged();
-                    break;
-                case "applied":
-                    await FollowRemoteApplyAsync(Field("id"));
-                    break;
-            }
-        }
-        catch { /* a malformed or stale message never takes the page down */ }
-    }
-
-    // Another window selected an email: follow it — the whole family reads the same email, which
-    // is the point of popping panes out. Same-id selections and non-queue views are no-ops.
-    private async Task FollowRemoteSelectAsync(string id, string? internetMessageId)
-    {
-        if (view != QueueView.Active || selected?.Id == id) return;
-        var item = items.FirstOrDefault(m => m.Id == id
-            || (!string.IsNullOrEmpty(internetMessageId) && m.InternetMessageId == internetMessageId));
-        if (item is null)
-        {
-            // Not on this window's loaded page (it may have been open a while) — refresh once.
-            await ReloadQueueInPlaceAsync();
-            item = items.FirstOrDefault(m => m.Id == id
-                || (!string.IsNullOrEmpty(internetMessageId) && m.InternetMessageId == internetMessageId));
-        }
-        if (item is null) return;
-        await SelectCore(item, announce: false);
-        StateHasChanged();
-    }
-
-    // Another window applied an email's triage: refresh this window's lists — and if it was
-    // showing that very email, clear the selection exactly as a local apply would have.
-    private async Task FollowRemoteApplyAsync(string? appliedId)
-    {
-        await Task.WhenAll(ReloadQueueInPlaceAsync(), LoadRecentTriageAsync());
-        if (appliedId is not null && selected?.Id == appliedId)
-        {
-            selected = null;
-            detail = null;
-            detailLoading = false;
-            discardArmed = false;
-            stagedCreate = null;
-            relevantEventStaged = false;
-            triageEntireThread = false;
-            pickedRecords.Clear();
-            stagedSystemActions.Clear();
-        }
-        StateHasChanged();
-    }
+        workspace.OpenPreview(document, PanelKind.Xero);
 
     // System actions lined up in the Actions pane, run by the one Apply after the filing —
     // payloads snapshotted at stage time, cleared per selection like all staging.
@@ -1961,8 +1804,6 @@ else
         // reading it late would fetch the first page the wrong way round. It is a local-storage
         // read, so it costs almost nothing.
         newestFirst = await SortStorage.ReadNewestFirstAsync(Auth.CurrentUser!.Email);
-        if (IsPopoutBoot && Enum.TryParse<PanelKind>(PopoutKindRaw, ignoreCase: true, out var popoutKind))
-            workspace.StartSolo(popoutKind);
         sessionReady = true;
         // Paint the chrome before the four fetches: Blazor re-renders OnInitializedAsync only at
         // its FIRST await, which has already passed. The sort toggle is drawn from newestFirst, so
@@ -1988,19 +1829,8 @@ else
         // Land straight in the first email: opening the top of the queue is what a triager does
         // first every time, so the page does it for them. Initial load only — after an action the
         // deliberately-cleared pane is where the outcome banners (reply draft, partial link) show.
-        // A popout window auto-selects nothing (a selection would steal its solo pane) — except
-        // an Email popout, which re-selects the email it was popped out with when the queue's
-        // first page carries it.
         if (view != QueueView.Active || selected is not null || items.Count == 0) return;
-        if (IsPopoutBoot)
-        {
-            if (IsEmailPopoutSelf && FindPopoutEmail() is { } carried)
-                await SelectCore(carried, announce: false);
-            return;
-        }
-        // Boot's auto-select is this window settling in, not the user picking — don't announce
-        // it, or reloading a main window would yank every companion to the top of the queue.
-        await SelectCore(items[0], announce: false);
+        await Select(items[0]);
     }
 
     // The project list only feeds the "file this email against a project" pickers. Losing it should
@@ -2349,20 +2179,12 @@ else
     // Open the clicked email exactly as clicked — the selection stays on it; the thread panel
     // below still shows any newer replies for context. Actions apply to just this email unless
     // the "entire thread" checkbox opts the apply into the whole conversation.
-    // A user's click: select, and tell the window family so companions follow.
-    private Task Select(MailboxMessage item) => SelectCore(item, announce: true);
-
-    private async Task SelectCore(MailboxMessage item, bool announce)
+    private async Task Select(MailboxMessage item)
     {
         ApplySelection(item);
         // The email reads in the window OPPOSITE the list, side by side — desktop's version of
-        // the old list/detail split, but with both halves loadable anywhere. When the reading
-        // pane lives in a popped-out companion window, it shows there instead and this window's
-        // panes stay put (the Email popout itself is already showing it — a no-op either way).
-        if (IsEmailPopoutSelf || (!IsPopoutBoot && !openPopoutKinds.Contains(nameof(PanelKind.Email))))
-            workspace.ShowOpposite(PanelKind.Email, PanelKind.Inbox);
-        if (announce)
-            await AnnounceAsync(new { type = "select", id = item.Id, imid = item.InternetMessageId });
+        // the old list/detail split, but with both halves loadable anywhere.
+        workspace.ShowOpposite(PanelKind.Email, PanelKind.Inbox);
         // Body and thread are independent live reads — fetch them side by side.
         await Task.WhenAll(LoadDetailAsync(item), LoadThreadAsync(item));
         // Both reads have landed, so the whole chain is available to search for a project name
@@ -3067,9 +2889,6 @@ else
             triageEntireThread = false;
             pickedRecords.Clear();
             stagedSystemActions.Clear();
-            // Tell the window family: companions refresh their queues, and one showing this very
-            // email clears it exactly as this window just did.
-            await AnnounceAsync(new { type = "applied", id = anchor.Id });
         }
         catch (CommandFailedException ex)
         {
@@ -3709,9 +3528,5 @@ else
         RequestRegister.OnChange -= StateHasChanged;
         DrawingStore.OnChange -= StateHasChanged;
         workspace.OnChange -= StateHasChanged;
-        // Leave the window family's channel (a popout's bye goes out with it) and release the
-        // interop handle. Fire-and-forget: Dispose is synchronous and the link is best-effort.
-        try { _ = JS.InvokeVoidAsync("panelWorkspace.linkDispose"); } catch { }
-        linkRef?.Dispose();
     }
 }

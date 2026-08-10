@@ -258,11 +258,4 @@
         grid-template-columns: minmax(0, var(--left-w, 33.33%)) 6px minmax(0, 1fr);
         column-gap: 0.375rem;
     }
-
-    /* Solo: a pane has popped out into its own window (or a popout window booted this way), so
-       this window is one full-width pane until the split is restored. */
-    .panel-workspace.panel-workspace-solo {
-        grid-template-columns: minmax(0, 1fr);
-        column-gap: 0;
-    }
 }

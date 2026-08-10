@@ -11,12 +11,12 @@
     column: the left pane is the single window and every icon press lands content there.
 *@
 
-<div @ref="root" class="panel-workspace @(State.IsSplit ? "" : "panel-workspace-solo") h-full" style="--left-w: @LeftWidthCss">
-    <div class="col-start-1 row-start-1 min-w-0 pb-2"><PanelRail State="State" Side="PanelSide.Left" EmailAvailable="EmailAvailable" PreviewAvailable="PreviewAvailable" TagsBadge="TagsBadge" ActionsBadge="ActionsBadge" OnPopOut="PopOutAsync" /></div>
-    <div class="col-start-3 row-start-1 min-w-0 pb-2 @(State.IsSplit ? "hidden lg:block" : "hidden")"><PanelRail State="State" Side="PanelSide.Right" EmailAvailable="EmailAvailable" PreviewAvailable="PreviewAvailable" TagsBadge="TagsBadge" ActionsBadge="ActionsBadge" OnPopOut="PopOutAsync" /></div>
+<div @ref="root" class="panel-workspace h-full" style="--left-w: @LeftWidthCss">
+    <div class="col-start-1 row-start-1 min-w-0 pb-2"><PanelRail State="State" Side="PanelSide.Left" EmailAvailable="EmailAvailable" PreviewAvailable="PreviewAvailable" TagsBadge="TagsBadge" ActionsBadge="ActionsBadge" /></div>
+    <div class="col-start-3 row-start-1 min-w-0 pb-2 hidden lg:block"><PanelRail State="State" Side="PanelSide.Right" EmailAvailable="EmailAvailable" PreviewAvailable="PreviewAvailable" TagsBadge="TagsBadge" ActionsBadge="ActionsBadge" /></div>
 
     @* The divider column: a 6px hit area with a hairline drawn down its middle. *@
-    <div @ref="divider" class="col-start-2 row-start-1 row-span-2 @(State.IsSplit ? "hidden lg:flex" : "hidden") justify-center cursor-col-resize select-none group"
+    <div @ref="divider" class="col-start-2 row-start-1 row-span-2 hidden lg:flex justify-center cursor-col-resize select-none group"
          title="Drag to resize the panes">
         <div class="w-px h-full bg-line group-hover:bg-line-strong"></div>
     </div>
@@ -36,10 +36,6 @@
     [Parameter] public bool PreviewAvailable { get; set; }
     [Parameter] public int TagsBadge { get; set; }
     [Parameter] public int ActionsBadge { get; set; }
-
-    /// <summary>Extra query-string context appended to a popout's URL (the page adds the open
-    /// email's ids so a popped-out email window can re-select it).</summary>
-    [Parameter] public string PopoutContext { get; set; } = "";
 
     [Parameter] public RenderFragment? InboxContent { get; set; }
     [Parameter] public RenderFragment? EmailContent { get; set; }
@@ -77,8 +73,7 @@
         + State.SideShowing(kind) switch
         {
             PanelSide.Left => "col-start-1 block",
-            // A solo layout has one column, so whatever the hidden right pane holds stays hidden.
-            PanelSide.Right => State.IsSplit ? "col-start-3 hidden lg:block" : "hidden",
+            PanelSide.Right => "col-start-3 hidden lg:block",
             _ => "hidden"
         };
 
@@ -87,17 +82,6 @@
         if (!firstRender) return;
         selfReference = DotNetObjectReference.Create(this);
         await JS.InvokeVoidAsync("panelWorkspace.init", root, divider, selfReference);
-    }
-
-    // Pop a pane out Outlook-style: its content opens in a fresh browser window (a full Control
-    // Centre booted solo on that kind via ?popout=), and this window collapses to the OTHER pane
-    // full width. Each window is its own app instance reading the same server data — reference
-    // views stay live; triage staging stays with the window it was staged in.
-    private async Task PopOutAsync(PanelSide side)
-    {
-        var kind = State.ActiveOn(side);
-        await JS.InvokeVoidAsync("panelWorkspace.openPopout", $"/control-centre?popout={kind}{PopoutContext}");
-        State.Solo(keep: side == PanelSide.Left ? PanelSide.Right : PanelSide.Left);
     }
 
     [JSInvokable] public void OnDividerMoved(double fraction) => State.SetLeftFraction(fraction);

@@ -26,34 +26,4 @@ public sealed partial class PanelWorkspaceState
         IsDesktop = isDesktop;
         Notify();
     }
-
-    /// <summary>Two panes side by side (the default), or one full-width pane — what a pane leaves
-    /// behind when it pops out into its own browser window, and how a popout window starts.</summary>
-    public bool IsSplit { get; private set; } = true;
-
-    /// <summary>Collapse to one full-width pane, keeping the given side's content — the other
-    /// side's just popped out into its own window. Its history survives for RestoreSplit.</summary>
-    public void Solo(PanelSide keep)
-    {
-        if (!IsSplit) return;
-        if (keep == PanelSide.Right) Show(ActiveOn(PanelSide.Right), PanelSide.Left);
-        IsSplit = false;
-        Notify();
-    }
-
-    /// <summary>Bring the second pane back — it resumes whatever its history holds.</summary>
-    public void RestoreSplit()
-    {
-        if (IsSplit) return;
-        IsSplit = true;
-        Notify();
-    }
-
-    /// <summary>A popout window's boot: one full-width pane on the popped-out kind.</summary>
-    public void StartSolo(PanelKind kind)
-    {
-        Show(kind, PanelSide.Left);
-        IsSplit = false;
-        Notify();
-    }
 }
