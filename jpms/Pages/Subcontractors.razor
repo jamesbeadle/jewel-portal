@@ -318,105 +318,13 @@ else
         }
     </section>
 
+    @* Add company: DirectoryContactForm (the shared fields/validation component — the Control
+       Centre's System Actions pane hosts the same form to stage a contact) inside the house
+       Modal, with this page owning the SEND (SubcontractorStore.Upsert). *@
     <Modal IsOpen="showAddModal" Title="Add company" ShowFooter="true"
            ConfirmLabel="@(saving ? "Saving…" : "Add company")" CancelLabel="Cancel"
            OnCancel="CloseAddModal" OnConfirm="SaveCompany" Class="max-w-lg w-full">
-        @if (addError is not null)
-        {
-            <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-3">@addError</p>
-        }
-        <div class="space-y-3">
-            <div>
-                <label class="eyebrow block mb-1">Company name</label>
-                <input class="field" @bind="nCompany" />
-            </div>
-            <div class="grid grid-cols-2 gap-3">
-                <div>
-                    <label class="eyebrow block mb-1">Type</label>
-                    <select class="field" @bind="nCategory">
-                        @foreach (var c in AllCategories)
-                        {
-                            <option value="@c">@Label(c)</option>
-                        }
-                    </select>
-                </div>
-                <div>
-                    <label class="eyebrow block mb-1">Trades</label>
-                    @if (nTradeIds.Count > 0)
-                    {
-                        <div class="flex flex-wrap gap-1 mb-1">
-                            @foreach (var trade in SelectedTrades(nTradeIds))
-                            {
-                                <span class="inline-flex items-center gap-1 rounded-full bg-surface-raised border border-line px-2 py-0.5 text-[11px] font-medium text-content-muted">
-                                    @trade.Name
-                                    <button type="button" class="text-content-subtle hover:text-content" @onclick="() => nTradeIds.Remove(trade.TradeId)">×</button>
-                                </span>
-                            }
-                        </div>
-                    }
-                    <select class="field" value="" @onchange="e => AddTradeToSelection(e, nTradeIds)">
-                        <option value="">Add a trade…</option>
-                        @foreach (var trade in SubcontractorStore.Trades().Where(t => !nTradeIds.Contains(t.TradeId)))
-                        {
-                            <option value="@trade.TradeId">@trade.Name</option>
-                        }
-                    </select>
-                </div>
-            </div>
-            <div>
-                <label class="eyebrow block mb-1">Not in the list?</label>
-                <div class="flex gap-2">
-                    <input class="field flex-1" @bind="nNewTrade" @bind:event="oninput" placeholder="New trade, e.g. Hod carrier" />
-                    <button type="button" class="btn-secondary shrink-0" disabled="@(addingTrade || string.IsNullOrWhiteSpace(nNewTrade))" @onclick="CreateTrade">
-                        @(addingTrade ? "Adding…" : "Add trade")
-                    </button>
-                </div>
-            </div>
-            <div class="grid grid-cols-2 gap-3">
-                <div>
-                    <label class="eyebrow block mb-1">Contact name</label>
-                    <input class="field" @bind="nContact" />
-                </div>
-                <div>
-                    <label class="eyebrow block mb-1">Email</label>
-                    <input class="field" @bind="nEmail" />
-                </div>
-            </div>
-            <div class="grid grid-cols-2 gap-3">
-                <div>
-                    <label class="eyebrow block mb-1">Phone</label>
-                    <input class="field" @bind="nPhone" />
-                </div>
-                <div>
-                    <label class="eyebrow block mb-1">Mobile</label>
-                    <input class="field" @bind="nMobile" />
-                </div>
-            </div>
-            <div>
-                <label class="eyebrow block mb-1">Address line</label>
-                <input class="field" placeholder="Street address, printed on purchase orders" @bind="nAddressLine" />
-            </div>
-            <div class="grid grid-cols-2 gap-3">
-                <div>
-                    <label class="eyebrow block mb-1">Town</label>
-                    <input class="field" @bind="nTown" />
-                </div>
-                <div>
-                    <label class="eyebrow block mb-1">County</label>
-                    <input class="field" @bind="nCounty" />
-                </div>
-            </div>
-            <div class="grid grid-cols-2 gap-3">
-                <div>
-                    <label class="eyebrow block mb-1">Postcode</label>
-                    <input class="field" @bind="nPostcode" />
-                </div>
-                <div>
-                    <label class="eyebrow block mb-1">Website</label>
-                    <input class="field" @bind="nWebsite" />
-                </div>
-            </div>
-        </div>
+        <DirectoryContactForm @ref="addForm" OnSubmit="SendCompanyAsync" />
     </Modal>
 
     @* ---- Import from Xero: the supplier list straight out of the accounts system. Each import
@@ -738,67 +646,31 @@ else
     // Add-company form state
     private bool showAddModal;
     private bool saving;
-    private string? addError;
-    private string nCompany = "", nContact = "", nEmail = "", nPhone = "", nMobile = "", nTown = "", nCounty = "", nWebsite = "", nAddressLine = "", nPostcode = "";
-    private string nNewTrade = "";
-    private bool addingTrade;
-    private readonly HashSet<string> nTradeIds = new(StringComparer.OrdinalIgnoreCase);
-    private DirectoryCategory nCategory = DirectoryCategory.Subcontractor;
+    // The add-company fields live in DirectoryContactForm now — the Modal renders it fresh on
+    // each open, and this page owns only the send.
+    private DirectoryContactForm? addForm;
 
-    private void OpenAddModal()
-    {
-        nCompany = nContact = nEmail = nPhone = nMobile = nTown = nCounty = nWebsite = nAddressLine = nPostcode = nNewTrade = "";
-        nTradeIds.Clear();
-        nCategory = DirectoryCategory.Subcontractor;
-        addError = null;
-        showAddModal = true;
-    }
+    private void OpenAddModal() => showAddModal = true;
 
     private void CloseAddModal() => showAddModal = false;
 
-    private void AddTradeToSelection(ChangeEventArgs e, HashSet<string> target)
+    private async Task SaveCompany()
     {
-        var id = e.Value?.ToString();
-        if (!string.IsNullOrEmpty(id)) target.Add(id);
+        if (saving || addForm is null) return;
+        await addForm.TrySubmitAsync(); // a valid form comes back through SendCompanyAsync
     }
 
-    private IReadOnlyList<Trade> SelectedTrades(HashSet<string> ids) =>
-        SubcontractorStore.Trades().Where(t => ids.Contains(t.TradeId)).ToList();
-
-    // Adds a brand-new trade to the curated list and selects it for this company.
-    private async Task CreateTrade()
+    private Task SendCompanyAsync(DirectoryContactForm.Draft draft)
     {
-        if (addingTrade || string.IsNullOrWhiteSpace(nNewTrade)) return;
-        addError = null;
-        try
-        {
-            addingTrade = true;
-            var trade = await SubcontractorStore.AddTradeAsync(nNewTrade.Trim());
-            nTradeIds.Add(trade.TradeId);
-            nNewTrade = "";
-        }
-        catch { addError = "Couldn't add that trade. Please try again."; }
-        finally { addingTrade = false; }
-    }
-
-    private void SaveCompany()
-    {
-        if (saving) return;
-        addError = null;
-        if (string.IsNullOrWhiteSpace(nCompany)) { addError = "Company name is required."; return; }
-        if ((nCategory is DirectoryCategory.Subcontractor or DirectoryCategory.Supplier) && nTradeIds.Count == 0)
-        { addError = "At least one trade is required for subcontractors and suppliers."; return; }
         try
         {
             saving = true;
-            SubcontractorStore.Upsert(new Subcontractor(
-                "", nCompany.Trim(), SelectedTrades(nTradeIds), nContact.Trim(), nEmail.Trim(), nPhone.Trim(),
-                "", DateTimeOffset.UtcNow, nCategory, nMobile.Trim(), nTown.Trim(), nCounty.Trim(), nWebsite.Trim(),
-                AddressLine: nAddressLine.Trim(), Postcode: nPostcode.Trim()));
+            SubcontractorStore.Upsert(draft.Company);
             showAddModal = false;
         }
-        catch { addError = "Couldn't add the company. Please try again."; }
+        catch { addForm?.ShowError("Couldn't add the company. Please try again."); }
         finally { saving = false; }
+        return Task.CompletedTask;
     }
 
     protected override async Task OnInitializedAsync()

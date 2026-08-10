@@ -1,0 +1,107 @@
+@inject ISubcontractorStore SubcontractorStore
+@implements IDisposable
+
+@*
+    The add-company FORM for the directory — fields, trades and validation, with no opinion about
+    what happens on submit (extracted from the /directory page 2026-08-10, same pattern as
+    RequestForm). The directory page saves immediately; the Control Centre's System Actions pane
+    stages the draft to fire with the email's Apply. Adding a brand-new trade to the curated list
+    is the one thing that acts immediately — it is master reference data, not the company itself.
+*@
+
+<div class="space-y-3">
+    @if (error is not null)
+    {
+        <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@error</p>
+    }
+    <div>
+        <label class="eyebrow block mb-1">Company name</label>
+        <input class="field" @bind="company" />
+    </div>
+    <div class="grid grid-cols-2 gap-3">
+        <div>
+            <label class="eyebrow block mb-1">Type</label>
+            <select class="field" @bind="category">
+                @foreach (var option in AllCategories)
+                {
+                    <option value="@option">@CategoryLabel(option)</option>
+                }
+            </select>
+        </div>
+        <div>
+            <label class="eyebrow block mb-1">Trades</label>
+            @if (tradeIds.Count > 0)
+            {
+                <div class="flex flex-wrap gap-1 mb-1">
+                    @foreach (var trade in SelectedTrades)
+                    {
+                        <span class="inline-flex items-center gap-1 rounded-full bg-surface-raised border border-line px-2 py-0.5 text-[11px] font-medium text-content-muted">
+                            @trade.Name
+                            <button type="button" class="text-content-subtle hover:text-content" @onclick="() => tradeIds.Remove(trade.TradeId)">×</button>
+                        </span>
+                    }
+                </div>
+            }
+            <select class="field" value="" @onchange="AddTradeToSelection">
+                <option value="">Add a trade…</option>
+                @foreach (var trade in SubcontractorStore.Trades().Where(t => !tradeIds.Contains(t.TradeId)))
+                {
+                    <option value="@trade.TradeId">@trade.Name</option>
+                }
+            </select>
+        </div>
+    </div>
+    <div>
+        <label class="eyebrow block mb-1">Not in the list?</label>
+        <div class="flex gap-2">
+            <input class="field flex-1" @bind="newTrade" @bind:event="oninput" placeholder="New trade, e.g. Hod carrier" />
+            <button type="button" class="btn-secondary shrink-0" disabled="@(addingTrade || string.IsNullOrWhiteSpace(newTrade))" @onclick="CreateTrade">
+                @(addingTrade ? "Adding…" : "Add trade")
+            </button>
+        </div>
+    </div>
+    <div class="grid grid-cols-2 gap-3">
+        <div>
+            <label class="eyebrow block mb-1">Contact name</label>
+            <input class="field" @bind="contact" />
+        </div>
+        <div>
+            <label class="eyebrow block mb-1">Email</label>
+            <input class="field" @bind="email" />
+        </div>
+    </div>
+    <div class="grid grid-cols-2 gap-3">
+        <div>
+            <label class="eyebrow block mb-1">Phone</label>
+            <input class="field" @bind="phone" />
+        </div>
+        <div>
+            <label class="eyebrow block mb-1">Mobile</label>
+            <input class="field" @bind="mobile" />
+        </div>
+    </div>
+    <div>
+        <label class="eyebrow block mb-1">Address line</label>
+        <input class="field" placeholder="Street address, printed on purchase orders" @bind="addressLine" />
+    </div>
+    <div class="grid grid-cols-2 gap-3">
+        <div>
+            <label class="eyebrow block mb-1">Town</label>
+            <input class="field" @bind="town" />
+        </div>
+        <div>
+            <label class="eyebrow block mb-1">County</label>
+            <input class="field" @bind="county" />
+        </div>
+    </div>
+    <div class="grid grid-cols-2 gap-3">
+        <div>
+            <label class="eyebrow block mb-1">Postcode</label>
+            <input class="field" @bind="postcode" />
+        </div>
+        <div>
+            <label class="eyebrow block mb-1">Website</label>
+            <input class="field" @bind="website" />
+        </div>
+    </div>
+</div>

@@ -1,0 +1,45 @@
+@namespace Jewel.JPMS.Features.Triage.Panels
+@inject IVariationStore Variations
+
+@* Raise Variation Order as a STAGED action: the same ManualVariationForm the variations page's
+   dialog uses, snapshotted here and fired by the email's Apply. Lands in Quoting, like every
+   manual variation. *@
+
+<div class="space-y-3">
+    <div class="flex flex-wrap items-center gap-2">
+        <label class="text-xs uppercase tracking-wider text-content-subtle font-semibold shrink-0">Project</label>
+        <ProjectSelect Projects="@Projects" Value="@projectId" ValueChanged="v => projectId = v"
+                       AllowNone="false" Placeholder="Pick a project…" ToggleTitle="The project the variation is raised on" />
+    </div>
+    @if (projectId != "")
+    {
+        <ManualVariationForm @ref="form" OnSubmit="StageAsync" />
+        <button type="button" class="btn-primary" @onclick="SubmitAsync">Stage action</button>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public IReadOnlyList<Project> Projects { get; set; } = Array.Empty<Project>();
+    [Parameter] public EventCallback<StagedSystemAction> OnStaged { get; set; }
+
+    private string projectId = "";
+    private ManualVariationForm? form;
+
+    private async Task SubmitAsync()
+    {
+        if (form is not null) await form.TrySubmitAsync();
+    }
+
+    private async Task StageAsync(ManualVariationForm.Draft draft)
+    {
+        var variations = Variations;
+        var stagedProjectId = projectId;
+        var project = Projects.FirstOrDefault(p => p.ProjectId == stagedProjectId);
+        await OnStaged.InvokeAsync(new StagedSystemAction(
+            SystemActionKind.RaiseVariationOrder,
+            $"raise variation \"{draft.Title}\" on {project?.Reference ?? "the project"}",
+            async () => await variations.CreateManualAsync(
+                stagedProjectId, draft.Title, draft.Description, draft.EstimatedValue, draft.Number)));
+        form?.Reset();
+    }
+}

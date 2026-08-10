@@ -1,24 +1,109 @@
 @namespace Jewel.JPMS.Features.Triage.Panels
 
 @*
-    System actions — the place where specific actions will be lined up against an email and fired
-    when its triage completes. Deliberately a shell for now: the form components it will host live
-    elsewhere in the app and are being brought across in a code-reuse refactor, so this pane only
-    stakes out the ground (and keeps the icon honest) rather than wiring anything to Apply.
+    System actions — line up specific actions against the email being triaged, fired when its
+    Apply runs. Every action reuses the component (or store call) its home page uses — RequestForm,
+    ManualVariationForm, WorkOrderForm, VariationApprovePanel, DirectoryContactForm — so the
+    behaviour is defined in one place; this pane only picks the action, hosts the shared form and
+    holds the staged list. Payloads are snapshotted at stage time: editing a form after staging
+    changes nothing until it is staged again.
 *@
 
-<div class="panel p-6 space-y-3">
+<div class="panel p-5 space-y-4">
     <div>
         <p class="eyebrow mb-1">System actions</p>
         <h2 class="text-base font-semibold text-content">Line up actions for when triage completes</h2>
     </div>
-    <p class="text-sm text-content-muted">
-        This is where specific system actions will be staged against the open email — queued here,
-        then actioned automatically when the email's triage is applied.
-    </p>
-    <p class="text-sm text-content-subtle">
-        Nothing can be staged yet: the action forms are being brought across from their current
-        homes so they can be reused here without duplication. The window itself already behaves
-        like the others — load it either side, resize, and it keeps its place.
+
+    @if (StagedActions.Count > 0)
+    {
+        <div class="space-y-1.5">
+            @foreach (var staged in StagedActions.ToList())
+            {
+                var action = staged;
+                <div class="flex items-center justify-between gap-3 rounded-lg border border-accent/40 bg-accent/5 px-3 py-2">
+                    <p class="text-sm text-content min-w-0">
+                        <span class="text-xs uppercase tracking-wider text-accent font-semibold mr-2">@SystemActionKinds.Label(action.Kind)</span>
+                        <span class="text-content-muted">Will @action.Summary.</span>
+                    </p>
+                    <button type="button" class="text-xs text-content-subtle hover:text-negative shrink-0"
+                            @onclick="() => RemoveAsync(action)">Remove</button>
+                </div>
+            }
+        </div>
+    }
+
+    <div class="flex flex-wrap items-center gap-2">
+        <label class="text-xs uppercase tracking-wider text-content-subtle font-semibold shrink-0">Action</label>
+        <select class="field max-w-xs" value="@((int)kind)" @onchange="OnKindChanged">
+            @foreach (var option in SystemActionKinds.All)
+            {
+                <option value="@((int)option)">@SystemActionKinds.Label(option)</option>
+            }
+        </select>
+    </div>
+
+    @switch (kind)
+    {
+        case SystemActionKind.RaiseRequest:
+        case SystemActionKind.RaiseRfi:
+            <StageRequestAction @key="kind" Kind="kind" Projects="@Projects" OnStaged="StagedAsync" />
+            break;
+        case SystemActionKind.PromoteRequestToRfi:
+        case SystemActionKind.CloseRfi:
+        case SystemActionKind.ReopenRfi:
+            <StageRequestTransitionAction @key="kind" Kind="kind" Projects="@Projects" OnStaged="StagedAsync" />
+            break;
+        case SystemActionKind.RaiseVariationOrder:
+            <StageVariationAction Projects="@Projects" OnStaged="StagedAsync" />
+            break;
+        case SystemActionKind.ApproveVariationOrder:
+        case SystemActionKind.RejectVariationOrder:
+            <StageVariationDecisionAction @key="kind" Kind="kind" Projects="@Projects" OnStaged="StagedAsync" />
+            break;
+        case SystemActionKind.RaiseWorkOrder:
+            <StageWorkOrderAction Projects="@Projects" OnStaged="StagedAsync" />
+            break;
+        case SystemActionKind.CreateBidPackageInvite:
+            <StageBidPackageAction Projects="@Projects" OnStaged="StagedAsync" />
+            break;
+        case SystemActionKind.AddDirectoryContact:
+            <StageDirectoryContactAction OnStaged="StagedAsync" />
+            break;
+    }
+
+    <p class="text-xs text-content-subtle pt-2 border-t border-line">
+        Staged actions run with the email's Apply, after its filing — and clear if you move to
+        another email without applying.
     </p>
 </div>
+
+@code {
+    /// <summary>The pickable projects — supplied by the page so every picker honours the same
+    /// completed-projects preference.</summary>
+    [Parameter, EditorRequired] public IReadOnlyList<Project> Projects { get; set; } = Array.Empty<Project>();
+
+    /// <summary>Page-owned staged actions (cleared per selection, like all staging); the pane
+    /// adds/removes and notifies.</summary>
+    [Parameter, EditorRequired] public List<StagedSystemAction> StagedActions { get; set; } = new();
+    [Parameter] public EventCallback OnStagingChanged { get; set; }
+
+    private SystemActionKind kind = SystemActionKind.RaiseRequest;
+
+    private void OnKindChanged(ChangeEventArgs e)
+    {
+        if (Enum.TryParse<SystemActionKind>(e.Value?.ToString(), out var parsed)) kind = parsed;
+    }
+
+    private async Task StagedAsync(StagedSystemAction action)
+    {
+        StagedActions.Add(action);
+        await OnStagingChanged.InvokeAsync();
+    }
+
+    private async Task RemoveAsync(StagedSystemAction action)
+    {
+        StagedActions.Remove(action);
+        await OnStagingChanged.InvokeAsync();
+    }
+}

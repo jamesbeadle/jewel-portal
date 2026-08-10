@@ -1,0 +1,118 @@
+@using Jewel.JPMS.Models
+
+@*
+    The manual-variation FORM — fields, validation and payload building, with no opinion about
+    what happens on submit (split from AddManualVariationDialog 2026-08-10, same pattern as
+    RequestForm). The dialog creates immediately; the Control Centre's System Actions pane stages
+    the draft to fire with the email's Apply. A standalone variation lands in Quoting: nothing
+    reaches the valuation report until it is approved.
+*@
+
+<div class="space-y-4">
+    @if (error is not null)
+    {
+        <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@error</p>
+    }
+
+    <p class="rounded-lg bg-surface-raised border border-line px-3 py-2 text-xs text-content-subtle">
+        Adds a standalone variation in <span class="font-medium text-content">Quoting</span> — no RFI needed. It won't
+        appear on the valuation report until you approve it: open it and use
+        <span class="font-medium text-content">Approve manually &amp; raise VO</span> (cost code + value).
+    </p>
+
+    <div>
+        <FormField Label="Variation no." Value="@numberText" OnChange="v => numberText = v" InputType="number" />
+        <p class="mt-1 text-xs text-content-subtle">
+            Becomes <span class="font-mono text-content">@Preview</span> — set it to match the client's report,
+            or leave it for the project's next number.
+        </p>
+    </div>
+
+    <FormField Label="Title" Value="@title" OnChange="v => title = v" Required="true" />
+
+    <div>
+        <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Description</label>
+        <textarea class="field" rows="3" value="@description" @oninput="OnDescriptionInput"
+                  placeholder="What the variation covers…"></textarea>
+    </div>
+
+    <div>
+        <FormField Label="Estimated value (£)" Value="@valueText" OnChange="v => valueText = v" InputType="number" />
+        <p class="mt-1 text-xs text-content-subtle">Optional — pre-fills the value on the approve panel. Use a negative figure for an omit.</p>
+    </div>
+</div>
+
+@code {
+    /// <summary>A valid submission — the host sends it now (dialog) or stages it (System Actions).</summary>
+    public sealed record Draft(string Title, string? Description, decimal? EstimatedValue, int? Number);
+
+    /// <summary>Raised by <see cref="TrySubmitAsync"/> when the form validates.</summary>
+    [Parameter] public EventCallback<Draft> OnSubmit { get; set; }
+
+    /// <summary>Numbers already taken on the project — caught here so the common clash never
+    /// round-trips. Empty when the host has no register to hand; the server still rejects.</summary>
+    [Parameter] public IReadOnlyCollection<int> UsedNumbers { get; set; } = Array.Empty<int>();
+
+    private string numberText = "";
+    private string title = "";
+    private string description = "";
+    private string valueText = "";
+    private string? error;
+
+    private int? ParsedNumber => int.TryParse(numberText, out var n) && n > 0 ? n : null;
+    // Shows the number the way the rest of the app shows it ("V50").
+    private string Preview => ParsedNumber is { } n ? $"V{n}" : "V…";
+
+    private void OnDescriptionInput(ChangeEventArgs e) => description = e.Value?.ToString() ?? "";
+
+    /// <summary>Seed the number field (the dialog's next-number suggestion). No-op once typed in.</summary>
+    public void SuggestNumber(int suggested)
+    {
+        if (!string.IsNullOrWhiteSpace(numberText) || suggested <= 0) return;
+        numberText = suggested.ToString();
+        StateHasChanged();
+    }
+
+    public void Reset()
+    {
+        numberText = title = description = valueText = "";
+        error = null;
+        StateHasChanged();
+    }
+
+    public void ShowError(string message)
+    {
+        error = message;
+        StateHasChanged();
+    }
+
+    /// <summary>Validate and, when valid, hand the draft to the host through OnSubmit.</summary>
+    public async Task<bool> TrySubmitAsync()
+    {
+        error = null;
+        if (string.IsNullOrWhiteSpace(title)) { error = "A title is required."; return false; }
+        if (!string.IsNullOrWhiteSpace(numberText) && ParsedNumber is null)
+        {
+            error = "The variation number must be a positive whole number.";
+            return false;
+        }
+        if (ParsedNumber is { } requested && UsedNumbers.Contains(requested))
+        {
+            error = $"V{requested} already exists on this project — choose a different number.";
+            return false;
+        }
+        decimal? estimate = null;
+        if (!string.IsNullOrWhiteSpace(valueText))
+        {
+            if (!decimal.TryParse(valueText, out var parsed)) { error = "The estimated value must be a number."; return false; }
+            estimate = parsed;
+        }
+
+        await OnSubmit.InvokeAsync(new Draft(
+            title.Trim(),
+            string.IsNullOrWhiteSpace(description) ? null : description.Trim(),
+            estimate,
+            ParsedNumber));
+        return true;
+    }
+}

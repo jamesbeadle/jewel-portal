@@ -971,21 +971,9 @@
                                                         <option value="">Select a @(RecordTypeLabelSingular(linkRecordType))…</option>
                                                         @foreach (var record in ProjectRecords())
                                                         {
-                                                            <option value="@record.RecordId">@record.Reference — @record.Title@(record.IsActive ? "" : $" ({record.StatusLabel})")</option>
+                                                            <option value="@record.RecordId">@record.Reference — @record.Title</option>
                                                         }
                                                     </select>
-                                                    <label class="flex w-fit items-center gap-2 text-xs text-content-subtle cursor-pointer select-none"
-                                                           title="The list defaults to live records — tick to also offer closed, rejected and completed ones">
-                                                        <input type="checkbox" class="cursor-pointer align-middle" checked="@shouldIncludeInactiveLinks"
-                                                               @onchange="e => OnIncludeInactiveLinksToggled(e.Value is true)" />
-                                                        <span>
-                                                            Include closed / inactive records
-                                                            @if (!shouldIncludeInactiveLinks && HiddenInactiveLinkCount > 0)
-                                                            {
-                                                                <span class="text-content-faint">(@HiddenInactiveLinkCount hidden)</span>
-                                                            }
-                                                        </span>
-                                                    </label>
                                                 }
                                             }
 
@@ -1209,24 +1197,12 @@
                     </select>
                     <select class="field" value="@newEmailRecordId" @onchange="OnNewEmailRecordChanged" disabled="@(string.IsNullOrEmpty(newEmailProjectId))">
                         <option value="">@(string.IsNullOrEmpty(newEmailProjectId) ? "Select a project first…" : newEmailRecordsLoading ? "Loading…" : "Select a record…")</option>
-                        @foreach (var record in VisibleNewEmailRecords)
+                        @foreach (var record in newEmailRecords)
                         {
-                            <option value="@record.RecordId">@record.Reference — @record.Title@(record.IsActive ? "" : $" ({record.StatusLabel})")</option>
+                            <option value="@record.RecordId">@record.Reference — @record.Title</option>
                         }
                     </select>
                 </div>
-                <label class="flex w-fit items-center gap-2 text-xs text-content-subtle cursor-pointer select-none"
-                       title="The list defaults to live records — tick to also offer closed, rejected and completed ones">
-                    <input type="checkbox" class="cursor-pointer align-middle" checked="@shouldIncludeInactiveNewEmailRecords"
-                           @onchange="e => OnIncludeInactiveNewEmailRecordsToggled(e.Value is true)" />
-                    <span>
-                        Include closed / inactive records
-                        @if (!shouldIncludeInactiveNewEmailRecords && HiddenInactiveNewEmailRecordCount > 0)
-                        {
-                            <span class="text-content-faint">(@HiddenInactiveNewEmailRecordCount hidden)</span>
-                        }
-                    </span>
-                </label>
             }
         </div>
 
@@ -1276,11 +1252,26 @@ else
         <PanelWorkspace State="workspace"
                         EmailAvailable="@(selected is not null)"
                         PreviewAvailable="@(workspace.Preview is not null)"
-                        TagsBadge="@StagedTagCount">
+                        TagsBadge="@StagedTagCount"
+                        ActionsBadge="@stagedSystemActions.Count">
             <InboxContent>@InboxPaneContent</InboxContent>
             <EmailContent>@EmailPaneContent</EmailContent>
             <TagsContent>@TagsPaneContent</TagsContent>
-            <ActionsContent><SystemActionsPane /></ActionsContent>
+            <ActionsContent>
+                @if (view != QueueView.Active || selected is null)
+                {
+                    <div class="panel p-8 text-center text-sm text-content-subtle">
+                        Open a queue email first — system actions are lined up against the email
+                        being triaged and fire with its Apply.
+                    </div>
+                }
+                else
+                {
+                    <SystemActionsPane Projects="@ProjectOptionsFor(null)"
+                                       StagedActions="stagedSystemActions"
+                                       OnStagingChanged="StateHasChanged" />
+                }
+            </ActionsContent>
             <RecordsContent>
                 <RecordExplorerPane Projects="@ProjectOptionsFor(null)" OnPreview="OpenRecordPreview" />
             </RecordsContent>
@@ -1414,7 +1405,8 @@ else
     {
         RecordType.Request or RecordType.Variation or RecordType.VariationQuote
             or RecordType.Scheduling or RecordType.Lad => "Client",
-        RecordType.BidPackageInvite or RecordType.WorkOrder => "Subcontractor",
+        RecordType.BidPackageInvite or RecordType.WorkOrder
+            or RecordType.SubcontractorComms => "Subcontractor",
         RecordType.CostCentre       => "Client or Subcontractor",
         RecordType.Todo             => "Neutral",
         _ => ""
@@ -1438,6 +1430,7 @@ else
         RecordType.VariationQuote   => "Variation Order Quote",
         RecordType.Lad              => "LADs claim",
         RecordType.Todo             => "To-do item",
+        RecordType.SubcontractorComms => "Subcontractor communication",
         _                           => type.ToString()
     };
 
@@ -1575,6 +1568,7 @@ else
     // project tab (work orders, programme, financials, to-dos); anything unresolvable reads as text.
     private static string? RecentHref(AuditEvent entry)
     {
+        if (entry.RecordType == RecordType.SubcontractorComms) return "/subcontractors/communications";
         if (string.IsNullOrEmpty(entry.ProjectId))
             return entry.RecordType == RecordType.Todo ? "/todos" : null;
         var projectId = entry.ProjectId;
@@ -1632,9 +1626,6 @@ else
     // linkRecords pool), while pickedRecords holds the modal's staged picks for the queue apply.
     private RecordType linkRecordType = RecordType.Request;
     private string linkRecordId = "";
-    // The dropdown defaults to the type's live records (a request that isn't Closed, a released
-    // work order…); ticking the box reveals the closed / rejected / completed ones too.
-    private bool shouldIncludeInactiveLinks;
     // The staged record links — whole LinkableRecords (not ids), so picks survive switching the
     // record-type filter and one email can be linked to, say, a variation AND an RFI in one apply.
     private readonly List<LinkableRecord> pickedRecords = new();
@@ -1692,9 +1683,6 @@ else
     private string newEmailRecordId = "";
     private bool newEmailRecordsLoading;
     private IReadOnlyList<LinkableRecord> newEmailRecords = Array.Empty<LinkableRecord>();
-    // The "file to a record" dropdown defaults to the type's live records; ticking the box
-    // reveals the closed / rejected / completed ones too.
-    private bool shouldIncludeInactiveNewEmailRecords;
 
     // To-do draft rows (Features.Triage.TodoDraftRow), edited in the System Tags modal's
     // Internal → Create new pane; one to-do is raised PER ASSIGNEE per row when the apply runs.
@@ -1719,6 +1707,10 @@ else
     // the Preview pane on the window OPPOSITE the explorer, so record and document read together.
     private void OpenRecordPreview(PreviewRequest document) =>
         workspace.OpenPreview(document, PanelKind.Records);
+
+    // System actions lined up in the Actions pane, run by the one Apply after the filing —
+    // payloads snapshotted at stage time, cleared per selection like all staging.
+    private readonly List<StagedSystemAction> stagedSystemActions = new();
 
     // The staged work + armed discard. The System Tags pane's tab mirrors the page's own
     // `pathway` field (the pathway decision); stagedCreate is the pane's drafted new record
@@ -2166,6 +2158,7 @@ else
         triageProjectId = "";
         projectAutoMatched = false;
         createTodoRows = new List<TodoDraftRow> { new() };
+        stagedSystemActions.Clear();
         discardArmed = false;
         stagedCreate = null;
         relevantEventStaged = false;
@@ -2385,7 +2378,6 @@ else
     {
         linkRecordType = DefaultLinkRecordType;
         linkRecordId = "";
-        shouldIncludeInactiveLinks = false;
         pickedRecords.Clear();
         linkRecords = Array.Empty<LinkableRecord>();
     }
@@ -2476,6 +2468,10 @@ else
                     StagedRecordKind.Defect => "raise the defect from this email",
                     _ => "create the request from this email"
                 });
+            if (stagedSystemActions.Count == 1)
+                parts.Add($"run 1 system action ({stagedSystemActions[0].Summary})");
+            else if (stagedSystemActions.Count > 1)
+                parts.Add($"run {stagedSystemActions.Count} system actions");
             if (relevantEventStaged)
                 parts.Add("tag it a Relevant Event for the Programme");
             if (discardArmed)
@@ -2510,6 +2506,7 @@ else
             var filing = CurrentTodoDrafts().Count > 0
                 || pickedRecords.Count > 0
                 || relevantEventStaged
+                || stagedSystemActions.Count > 0
                 || (StagedCreateReady && !string.IsNullOrWhiteSpace(triageProjectId));
             if (ReplyDraftPending) return filing ? "Send reply & file" : "Send reply";
             return discardArmed && !filing ? "Discard email" : "Apply";
@@ -2585,7 +2582,7 @@ else
         var discarding = discardArmed;
         // One scope for the whole apply: the checkbox opts every staged action into the thread.
         var scope = triageEntireThread ? LinkThreadScope.EntireThread : LinkThreadScope.MessageOnly;
-        if (!replying && drafts.Count == 0 && picks.Count == 0 && !createReady && !relevantEvent && !discarding) return;
+        if (!replying && drafts.Count == 0 && picks.Count == 0 && !createReady && !relevantEvent && !discarding && stagedSystemActions.Count == 0) return;
 
         // A reply and a discard contradict each other — an email worth answering isn't spam.
         if (discarding && replying)
@@ -2822,6 +2819,16 @@ else
                 stagedCreate = null;
                 filed = true;
             }
+            // ---- System actions lined up in the Actions pane — run once the filing above has
+            //      landed, each removed as it succeeds so a failed one can be retried without
+            //      re-running its predecessors. A failure stops the apply with its reason. ----
+            foreach (var stagedAction in stagedSystemActions.ToList())
+            {
+                busyLabel = $"System action: {SystemActionKinds.Label(stagedAction.Kind)}";
+                await stagedAction.ExecuteAsync();
+                stagedSystemActions.Remove(stagedAction);
+            }
+
             if (discarding)
             {
                 // "File it as nothing": tag the thread discarded — restorable from the Tagged tab.
@@ -2868,6 +2875,7 @@ else
             relevantEventStaged = false;
             triageEntireThread = false;
             pickedRecords.Clear();
+            stagedSystemActions.Clear();
         }
         catch (CommandFailedException ex)
         {
@@ -2940,7 +2948,6 @@ else
         newEmailRecordType = RecordType.Request;
         newEmailRecordId = "";
         newEmailRecords = Array.Empty<LinkableRecord>();
-        shouldIncludeInactiveNewEmailRecords = false;
     }
 
     private bool NewEmailIsSendable =>
@@ -2978,20 +2985,6 @@ else
 
     private void OnNewEmailRecordChanged(ChangeEventArgs e) => newEmailRecordId = e.Value?.ToString() ?? "";
 
-    // Live records only until "include closed / inactive" is ticked — same default as every picker.
-    private IReadOnlyList<LinkableRecord> VisibleNewEmailRecords =>
-        shouldIncludeInactiveNewEmailRecords ? newEmailRecords : newEmailRecords.Where(r => r.IsActive).ToList();
-
-    private int HiddenInactiveNewEmailRecordCount => newEmailRecords.Count(r => !r.IsActive);
-
-    // Unticking can hide the record the dropdown had selected; clear the selection when it does so
-    // the send can never file to a record the list no longer shows.
-    private void OnIncludeInactiveNewEmailRecordsToggled(bool isTicked)
-    {
-        shouldIncludeInactiveNewEmailRecords = isTicked;
-        if (VisibleNewEmailRecords.All(r => r.RecordId != newEmailRecordId)) newEmailRecordId = "";
-    }
-
     private async Task LoadNewEmailRecordsAsync()
     {
         newEmailRecords = Array.Empty<LinkableRecord>();
@@ -3010,12 +3003,6 @@ else
         if (string.IsNullOrWhiteSpace(newEmailSubject)) { newEmailError = "Write a subject."; return; }
         if (!HtmlHasContent(newEmailBody)) { newEmailError = "Write the email first."; return; }
 
-        // The type to file as is the picked RECORD's own type, not the dropdown's — the Variation
-        // pool lists pre-approval stages under their VariationQuote identity (same rule as
-        // DoAddTagLinkCore), so the server resolves the record through the right provider.
-        var filedRecord = newEmailRecords.FirstOrDefault(r => r.RecordId == newEmailRecordId);
-        var filedRecordType = filedRecord?.Type ?? newEmailRecordType;
-
         var command = new SendMailboxEmail(
             ReplyToMessageId: null,
             ReplyToInternetMessageId: null,
@@ -3029,7 +3016,7 @@ else
             SaveAsDraftOnly: saveAsDraftOnly,
             Pathway: null,
             MarkThreadHandled: false,
-            LinkRecordType: newEmailFile && !string.IsNullOrEmpty(newEmailRecordId) ? filedRecordType : null,
+            LinkRecordType: newEmailFile && !string.IsNullOrEmpty(newEmailRecordId) ? newEmailRecordType : null,
             LinkRecordId: newEmailFile && !string.IsNullOrEmpty(newEmailRecordId) ? newEmailRecordId : null,
             ProjectId: newEmailFile && !string.IsNullOrEmpty(newEmailProjectId) ? newEmailProjectId : null);
         var uploadParts = UploadPartsOf(newEmailAttachments);
@@ -3356,20 +3343,8 @@ else
             ? "text-content font-medium underline underline-offset-4 decoration-line-strong"
             : "text-content-subtle hover:text-content";
 
-    // The loaded records for the chosen type + project (empty until both are chosen and the load
-    // runs) — live records only until "include closed / inactive" is ticked.
-    private IReadOnlyList<LinkableRecord> ProjectRecords() =>
-        shouldIncludeInactiveLinks ? linkRecords : linkRecords.Where(r => r.IsActive).ToList();
-
-    private int HiddenInactiveLinkCount => linkRecords.Count(r => !r.IsActive);
-
-    // Unticking can hide the record the dropdown had selected; clear the selection when it does so
-    // the link button can never act on a record the list no longer shows.
-    private void OnIncludeInactiveLinksToggled(bool isTicked)
-    {
-        shouldIncludeInactiveLinks = isTicked;
-        if (ProjectRecords().All(r => r.RecordId != linkRecordId)) linkRecordId = "";
-    }
+    // The loaded records for the chosen type + project (empty until both are chosen and the load runs).
+    private IReadOnlyList<LinkableRecord> ProjectRecords() => linkRecords;
 
     // Records on the chosen project whose reference or title overlaps the email subject — surfaced
     // first so a duplicate record isn't created for something already being tracked. Type-agnostic.

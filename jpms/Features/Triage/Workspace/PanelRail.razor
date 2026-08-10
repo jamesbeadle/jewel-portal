@@ -36,17 +36,27 @@
     /// <summary>How many tags are staged — badged on the System Tags icon like the old button.</summary>
     [Parameter] public int TagsBadge { get; set; }
 
+    /// <summary>How many system actions are lined up — badged on the System Actions icon.</summary>
+    [Parameter] public int ActionsBadge { get; set; }
+
     private RenderFragment RailButton(PanelKind kind, string label) => __builder =>
     {
         var isActive = State.ActiveOn(Side) == kind;
         <button type="button" title="@label" aria-label="@label" @onclick="() => State.Show(kind, Side)"
                 class="@ButtonClass(isActive)">
             <WorkspaceIcon Kind="kind" />
-            @if (kind == PanelKind.SystemTags && TagsBadge > 0)
+            @if (BadgeFor(kind) is > 0 and var badge)
             {
-                <span class="absolute -top-1 -right-1 min-w-[1.1rem] h-[1.1rem] px-0.5 rounded-full bg-accent text-accent-ink text-[10px] font-semibold flex items-center justify-center leading-none">@TagsBadge</span>
+                <span class="absolute -top-1 -right-1 min-w-[1.1rem] h-[1.1rem] px-0.5 rounded-full bg-accent text-accent-ink text-[10px] font-semibold flex items-center justify-center leading-none">@badge</span>
             }
         </button>
+    };
+
+    private int BadgeFor(PanelKind kind) => kind switch
+    {
+        PanelKind.SystemTags => TagsBadge,
+        PanelKind.SystemActions => ActionsBadge,
+        _ => 0
     };
 
     private static string ButtonClass(bool isActive) =>

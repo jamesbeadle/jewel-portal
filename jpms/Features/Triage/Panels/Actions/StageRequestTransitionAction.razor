@@ -1,0 +1,147 @@
+@namespace Jewel.JPMS.Features.Triage.Panels
+@using Jewel.JPMS.Contracts.Requests
+@implements IDisposable
+@inject IRequestRegister RequestRegister
+@inject IAgentDesk Agents
+@inject AuthService Auth
+
+@* Promote Request to RFI / Close RFI / Reopen RFI as STAGED actions: pick the project and the
+   target record, stage; the same store calls the request page's buttons make fire with the
+   email's Apply (closing still goes through the agent gate — a blocked close fails the apply
+   with the agents' reason, exactly as the page would refuse it). *@
+
+<div class="space-y-3">
+    <div class="flex flex-wrap items-center gap-2">
+        <label class="text-xs uppercase tracking-wider text-content-subtle font-semibold shrink-0">Project</label>
+        <ProjectSelect Projects="@Projects" Value="@projectId" ValueChanged="OnProjectPicked"
+                       AllowNone="false" Placeholder="Pick a project…" ToggleTitle="The project the record sits on" />
+    </div>
+
+    @if (projectId != "")
+    {
+        @if (error is not null)
+        {
+            <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@error</p>
+        }
+        <select class="field" @bind="requestId">
+            <option value="">@(Candidates.Count == 0 ? $"No {CandidateNoun} on this project" : $"Select a {CandidateNoun}…")</option>
+            @foreach (var request in Candidates)
+            {
+                <option value="@request.RequestId">@request.Reference — @request.Title</option>
+            }
+        </select>
+
+        @if (Kind == SystemActionKind.CloseRfi)
+        {
+            <div class="flex flex-wrap items-center gap-2">
+                <label class="text-xs uppercase tracking-wider text-content-subtle font-semibold shrink-0">Closed date</label>
+                <input type="date" class="field max-w-[12rem]" @bind="closeDate" />
+            </div>
+        }
+
+        <button type="button" class="btn-primary" disabled="@(requestId == "")" @onclick="StageAsync">Stage action</button>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public IReadOnlyList<Project> Projects { get; set; } = Array.Empty<Project>();
+
+    /// <summary>PromoteRequestToRfi, CloseRfi or ReopenRfi — one picker, three transitions.</summary>
+    [Parameter] public SystemActionKind Kind { get; set; }
+
+    [Parameter] public EventCallback<StagedSystemAction> OnStaged { get; set; }
+
+    private string projectId = "";
+    private string requestId = "";
+    private string closeDate = DateTime.Today.ToString("yyyy-MM-dd");
+    private string? error;
+
+    protected override void OnInitialized() => RequestRegister.OnChange += StoreChanged;
+    public void Dispose() => RequestRegister.OnChange -= StoreChanged;
+    private void StoreChanged() => InvokeAsync(StateHasChanged);
+
+    private void OnProjectPicked(string picked)
+    {
+        projectId = picked;
+        requestId = "";
+        error = null;
+        if (picked != "") RequestRegister.Refresh(picked); // stale-while-revalidate, never from render
+    }
+
+    // Which records the transition can touch: promotion takes an unpromoted General container;
+    // closing takes anything not yet closed; reopening takes what is closed.
+    private IReadOnlyList<Request> Candidates => Kind switch
+    {
+        SystemActionKind.PromoteRequestToRfi => RequestRegister.ForProject(projectId)
+            .Where(request => request.Kind == RequestType.General && request.Status != RequestStatus.Closed).ToList(),
+        SystemActionKind.CloseRfi => RequestRegister.ForProject(projectId)
+            .Where(request => request.Status != RequestStatus.Closed).ToList(),
+        _ => RequestRegister.ForProject(projectId)
+            .Where(request => request.Status == RequestStatus.Closed).ToList()
+    };
+
+    private string CandidateNoun => Kind switch
+    {
+        SystemActionKind.PromoteRequestToRfi => "General request",
+        SystemActionKind.CloseRfi => "open request / RFI",
+        _ => "closed request / RFI"
+    };
+
+    private async Task StageAsync()
+    {
+        error = null;
+        var picked = Candidates.FirstOrDefault(request => request.RequestId == requestId);
+        if (picked is null) { error = "Pick the record first."; return; }
+        DateTimeOffset? closedAt = null;
+        if (Kind == SystemActionKind.CloseRfi)
+        {
+            if (!DateTimeOffset.TryParse(closeDate, out var parsed)) { error = "A close date is required."; return; }
+            if (parsed.Date > DateTime.Today) { error = "The closed date cannot be in the future."; return; }
+            closedAt = parsed;
+        }
+        await OnStaged.InvokeAsync(new StagedSystemAction(Kind, SummaryFor(picked, closedAt), ExecutorFor(picked, closedAt)));
+        requestId = "";
+    }
+
+    private string SummaryFor(Request picked, DateTimeOffset? closedAt) => Kind switch
+    {
+        SystemActionKind.PromoteRequestToRfi => $"promote {picked.Reference} to an RFI",
+        SystemActionKind.CloseRfi => $"close {picked.Reference} (dated {closedAt!.Value.LocalDateTime:d MMM yyyy})",
+        _ => $"reopen {picked.Reference}"
+    };
+
+    private Func<Task> ExecutorFor(Request picked, DateTimeOffset? closedAt)
+    {
+        var register = RequestRegister;
+        var agents = Agents;
+        var email = Auth.CurrentUser?.Email;
+        return Kind switch
+        {
+            SystemActionKind.PromoteRequestToRfi => async () =>
+                await register.PromoteToRfiAsync(picked.RequestId, picked.ProjectId),
+
+            // Closing goes through the agent gate, same as the request page: the request only
+            // closes if every applied agent agrees its work is complete.
+            SystemActionKind.CloseRfi => async () =>
+            {
+                var outcome = await agents.AttemptCloseAsync(picked.RequestId, closedAt!.Value);
+                if (!outcome.Closed)
+                    throw new CommandFailedException(
+                        $"{picked.Reference} wasn't closed — an applied agent reports its work incomplete. Close it from the request page to see the detail.");
+            },
+
+            // Reopening puts the ball back in our court — the same UpdateRequestDetails the page
+            // sends, re-read at fire time so no other field is clobbered by a stale copy.
+            _ => async () =>
+            {
+                var current = await register.GetAsync(picked.RequestId)
+                    ?? throw new CommandFailedException($"{picked.Reference} no longer exists.");
+                await register.UpdateAsync(new UpdateRequestDetails(
+                    current.RequestId, current.Reference, current.Title, current.Description,
+                    RequestStatus.NeedsAction, current.Value, current.ResponseText,
+                    current.RespondedByEmail ?? email, current.ImpliesVariation, current.DrawingRef,
+                    current.ResponseDue, current.RelatedDrawingSpec, current.InternalNotes, current.ClientNotes));
+            }
+        };
+    }
+}
