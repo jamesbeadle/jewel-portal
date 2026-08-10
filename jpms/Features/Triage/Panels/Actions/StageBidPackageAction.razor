@@ -8,32 +8,27 @@
    The package lands as a draft; inviting subcontractors and line items live on its page. *@
 
 <div class="space-y-3">
-    <div class="flex flex-wrap items-center gap-2">
-        <label class="text-xs uppercase tracking-wider text-content-subtle font-semibold shrink-0">Project</label>
-        <ProjectSelect Projects="@Projects" Value="@projectId" ValueChanged="v => projectId = v"
-                       AllowNone="false" Placeholder="Pick a project…" ToggleTitle="The project the bid package belongs to" />
-    </div>
-    @if (projectId != "")
+    @if (error is not null)
     {
-        @if (error is not null)
-        {
-            <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@error</p>
-        }
-        <FormField Label="Title" Value="@title" OnChange="v => title = v" Required="true" />
-        <FormField Label="Trade" Value="@trade" OnChange="v => trade = v" />
-        <label class="flex items-center gap-2 text-sm text-content cursor-pointer select-none">
-            <input type="checkbox" @bind="materialsApplicable" />
-            Materials applicable
-        </label>
-        <button type="button" class="btn-primary" @onclick="StageAsync">Stage action</button>
+        <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@error</p>
     }
+    <FormField Label="Title" Value="@title" OnChange="v => title = v" Required="true" />
+    <FormField Label="Trade" Value="@trade" OnChange="v => trade = v" />
+    <label class="flex items-center gap-2 text-sm text-content cursor-pointer select-none">
+        <input type="checkbox" @bind="materialsApplicable" />
+        Materials applicable
+    </label>
+    <button type="button" class="btn-primary" @onclick="StageAsync">Stage action</button>
 </div>
 
 @code {
     [Parameter, EditorRequired] public IReadOnlyList<Project> Projects { get; set; } = Array.Empty<Project>();
+
+    /// <summary>The email's project, set in the triage bar above the split.</summary>
+    [Parameter, EditorRequired] public string ProjectId { get; set; } = "";
+
     [Parameter] public EventCallback<StagedSystemAction> OnStaged { get; set; }
 
-    private string projectId = "";
     private string title = "";
     private string trade = "";
     private bool materialsApplicable;
@@ -45,9 +40,9 @@
         if (string.IsNullOrWhiteSpace(title)) { error = "A title is required."; return; }
 
         var commands = Commands;
-        var command = new CreateBidPackage(projectId, title.Trim(), trade.Trim(),
+        var command = new CreateBidPackage(ProjectId, title.Trim(), trade.Trim(),
             Auth.CurrentUser?.Email ?? "", materialsApplicable);
-        var project = Projects.FirstOrDefault(p => p.ProjectId == projectId);
+        var project = Projects.FirstOrDefault(p => p.ProjectId == ProjectId);
         await OnStaged.InvokeAsync(new StagedSystemAction(
             SystemActionKind.CreateBidPackageInvite,
             $"create bid package \"{command.Title}\" on {project?.Reference ?? "the project"}",

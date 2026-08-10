@@ -43,33 +43,43 @@
         </select>
     </div>
 
-    @switch (kind)
+    @if (kind != SystemActionKind.AddDirectoryContact && ProjectId == "")
     {
-        case SystemActionKind.RaiseRequest:
-        case SystemActionKind.RaiseRfi:
-            <StageRequestAction @key="kind" Kind="kind" Projects="@Projects" OnStaged="StagedAsync" />
-            break;
-        case SystemActionKind.PromoteRequestToRfi:
-        case SystemActionKind.CloseRfi:
-        case SystemActionKind.ReopenRfi:
-            <StageRequestTransitionAction @key="kind" Kind="kind" Projects="@Projects" OnStaged="StagedAsync" />
-            break;
-        case SystemActionKind.RaiseVariationOrder:
-            <StageVariationAction Projects="@Projects" OnStaged="StagedAsync" />
-            break;
-        case SystemActionKind.ApproveVariationOrder:
-        case SystemActionKind.RejectVariationOrder:
-            <StageVariationDecisionAction @key="kind" Kind="kind" Projects="@Projects" OnStaged="StagedAsync" />
-            break;
-        case SystemActionKind.RaiseWorkOrder:
-            <StageWorkOrderAction Projects="@Projects" OnStaged="StagedAsync" />
-            break;
-        case SystemActionKind.CreateBidPackageInvite:
-            <StageBidPackageAction Projects="@Projects" OnStaged="StagedAsync" />
-            break;
-        case SystemActionKind.AddDirectoryContact:
-            <StageDirectoryContactAction OnStaged="StagedAsync" />
-            break;
+        @* Every project-bound action raises on the email's project — one pick, in one place. *@
+        <p class="rounded-lg bg-amber-500/10 border border-amber-500/40 px-3 py-2 text-sm text-content">
+            Pick the email's project in the bar above first — system actions are raised on it.
+        </p>
+    }
+    else
+    {
+        @switch (kind)
+        {
+            case SystemActionKind.RaiseRequest:
+            case SystemActionKind.RaiseRfi:
+                <StageRequestAction @key="kind" Kind="kind" Projects="@Projects" ProjectId="@ProjectId" OnStaged="StagedAsync" />
+                break;
+            case SystemActionKind.PromoteRequestToRfi:
+            case SystemActionKind.CloseRfi:
+            case SystemActionKind.ReopenRfi:
+                <StageRequestTransitionAction @key="kind" Kind="kind" ProjectId="@ProjectId" OnStaged="StagedAsync" />
+                break;
+            case SystemActionKind.RaiseVariationOrder:
+                <StageVariationAction Projects="@Projects" ProjectId="@ProjectId" OnStaged="StagedAsync" />
+                break;
+            case SystemActionKind.ApproveVariationOrder:
+            case SystemActionKind.RejectVariationOrder:
+                <StageVariationDecisionAction @key="kind" Kind="kind" ProjectId="@ProjectId" OnStaged="StagedAsync" />
+                break;
+            case SystemActionKind.RaiseWorkOrder:
+                <StageWorkOrderAction Projects="@Projects" ProjectId="@ProjectId" OnStaged="StagedAsync" />
+                break;
+            case SystemActionKind.CreateBidPackageInvite:
+                <StageBidPackageAction Projects="@Projects" ProjectId="@ProjectId" OnStaged="StagedAsync" />
+                break;
+            case SystemActionKind.AddDirectoryContact:
+                <StageDirectoryContactAction OnStaged="StagedAsync" />
+                break;
+        }
     }
 
     <p class="text-xs text-content-subtle pt-2 border-t border-line">
@@ -79,9 +89,13 @@
 </div>
 
 @code {
-    /// <summary>The pickable projects — supplied by the page so every picker honours the same
-    /// completed-projects preference.</summary>
+    /// <summary>The full project list — the action components read it only to name the project
+    /// in their staged summaries.</summary>
     [Parameter, EditorRequired] public IReadOnlyList<Project> Projects { get; set; } = Array.Empty<Project>();
+
+    /// <summary>The email's project, picked once in the triage bar; blank shows the note above
+    /// instead of a project-bound form.</summary>
+    [Parameter, EditorRequired] public string ProjectId { get; set; } = "";
 
     /// <summary>Page-owned staged actions (cleared per selection, like all staging); the pane
     /// adds/removes and notifies.</summary>

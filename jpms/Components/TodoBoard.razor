@@ -4,9 +4,9 @@
     The to-do board: the same items every to-do list shows, laid out as two status columns —
     Open and Done — in the task-board idiom. A card's status is changed by DRAGGING it into the
     other column (HTML5 drag and drop; the host is told via OnSetComplete and owns the command +
-    reload, exactly as it does for the detail modal's Mark done). Clicking a card still opens the
-    detail modal — the board changes how status reads and moves, never where the detail lives —
-    so completing remains possible without a mouse drag too.
+    reload, exactly as it does for the item page's Mark done). Clicking a card opens the item's
+    own page (/todos/{id}) — the board changes how status reads and moves, never where the detail
+    lives — so completing remains possible without a mouse drag too.
 
     Cards carry the assignee ROLE's accent colour as a left-edge stripe (RolePresentations, the
     same colour the role wears everywhere else in the app); unassigned items get a muted stripe.
@@ -97,7 +97,7 @@
     /// <summary>The items to lay out — already filtered by the host's own controls.</summary>
     [Parameter, EditorRequired] public IReadOnlyList<TodoItem> Items { get; set; } = Array.Empty<TodoItem>();
 
-    /// <summary>A card was clicked — the host opens its detail modal.</summary>
+    /// <summary>A card was clicked — the host opens the item's own page.</summary>
     [Parameter] public EventCallback<TodoItem> OnOpen { get; set; }
 
     /// <summary>
@@ -108,7 +108,7 @@
 
     /// <summary>
     /// Which items this reader may drag between columns — mirror the host's complete/reopen gate
-    /// (the same one the detail modal's Mark done uses). Null = a read-only board.
+    /// (the same one the item page's Mark done uses). Null = a read-only board.
     /// </summary>
     [Parameter] public Func<TodoItem, bool>? CanDrag { get; set; }
 

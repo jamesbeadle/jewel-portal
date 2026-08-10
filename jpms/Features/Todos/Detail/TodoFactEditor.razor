@@ -1,0 +1,44 @@
+@namespace Jewel.JPMS.Features.Todos.Detail
+
+@* The two-step editor both editable facts (Assigned to, Scope) share: pick, then Save. Two steps
+   on purpose — a single-click picker in a detail view is one stray click away from handing work
+   away or re-filing it off a whole team's list. The editor stays open after a failed save (the
+   page's error bar says why) so the pick survives to retry rather than silently reverting. *@
+
+<dd class="mt-1 space-y-2">
+    <SearchSelect Options="@Options" Value="@picked" ValueChanged="v => picked = v"
+                  Placeholder="@Placeholder" WidthClass="w-full"
+                  InputClass="bg-surface border border-line px-2 py-1"
+                  Disabled="@Busy" />
+    <div class="flex gap-2">
+        <button type="button" class="btn-primary text-xs px-2 py-1"
+                disabled="@(Busy || (RequirePick && picked == ""))" @onclick="SaveAsync">Save</button>
+        <button type="button" class="btn-secondary text-xs px-2 py-1" disabled="@Busy"
+                @onclick="() => OnCancel.InvokeAsync()">Cancel</button>
+    </div>
+    <p class="text-[11px] text-content-subtle">@Hint</p>
+</dd>
+
+@code {
+    [Parameter] public IReadOnlyList<SearchSelect.Option> Options { get; set; } = Array.Empty<SearchSelect.Option>();
+    /// <summary>Where the picker starts: the current value when the options offer it, else blank.</summary>
+    [Parameter] public string InitialValue { get; set; } = "";
+    [Parameter] public string Placeholder { get; set; } = "";
+    /// <summary>One sentence under the buttons saying what saving MEANS for this fact.</summary>
+    [Parameter] public string Hint { get; set; } = "";
+    [Parameter] public bool Busy { get; set; }
+    /// <summary>True when blank is not a saveable answer (a move needs a destination); false when
+    /// blank is one (reassigning to unassigned).</summary>
+    [Parameter] public bool RequirePick { get; set; }
+    /// <summary>Raised with the picked value; the hosting fact runs the command and decides
+    /// whether the editor closes (success) or stays open with the pick intact (failure).</summary>
+    [Parameter] public EventCallback<string> OnSave { get; set; }
+    [Parameter] public EventCallback OnCancel { get; set; }
+
+    private string picked = "";
+
+    protected override void OnInitialized() =>
+        picked = Options.Any(option => option.Value == InitialValue) ? InitialValue : "";
+
+    private Task SaveAsync() => OnSave.InvokeAsync(picked);
+}

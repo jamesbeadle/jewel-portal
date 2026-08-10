@@ -25,8 +25,14 @@ public interface ITodoStore
     /// one row per (role, holder) pair. Feeds the same pickers, under each role.</summary>
     Task<IReadOnlyList<TodoAssignablePerson>> ListAssignablePeopleAsync(CancellationToken cancellationToken = default);
     /// <summary>The emails currently tagged to one item ("JPMS/TODO-####"), read live from the
-    /// mailbox — the linked-mail list in the to-do detail modal.</summary>
+    /// mailbox — the linked-communications list on the item's page.</summary>
     Task<IReadOnlyList<MailboxMessage>> ListEmailsAsync(string todoItemId, CancellationToken cancellationToken = default);
+    /// <summary>One item by id — the read behind the item's own page. Null when the item doesn't
+    /// exist (deleted, or a stale link).</summary>
+    Task<TodoItem?> GetAsync(string todoItemId, CancellationToken cancellationToken = default);
+    /// <summary>The items linked to one item — every other item sharing a tagged email with it,
+    /// derived live from the same mail tags as <see cref="ListEmailsAsync"/>.</summary>
+    Task<IReadOnlyList<TodoItem>> ListLinkedAsync(string todoItemId, CancellationToken cancellationToken = default);
     Task<TodoItem> AddAsync(AddTodoItem command, CancellationToken cancellationToken = default);
     /// <summary>Add a general (company-wide, no-project) item from the /todos browser page.</summary>
     Task<TodoItem> AddGeneralAsync(AddGeneralTodoItem command, CancellationToken cancellationToken = default);

@@ -1,0 +1,106 @@
+@page "/todos/{TodoItemId}"
+@using Jewel.JPMS.Features.Todos
+@using Jewel.JPMS.Features.Todos.Detail
+@inject AuthService Auth
+@inject SessionService Session
+@inject ITodoStore TodoStore
+@inject NavigationManager Nav
+@inject Jewel.JPMS.Features.Projects.ProjectListReadModel Projects
+
+<PageTitle>@(item is null ? "To-do" : item.Reference) · JPMS</PageTitle>
+
+@*
+    One to-do item's own page — where a click on any to-do list lands (the detail modal retired,
+    decision 2026-08-10: the item's surface outgrew a dialog). Everything about the item in one
+    place: its facts (with the reassign / move editors), the to-dos LINKED to it by shared tagged
+    mail, and its communications — the "JPMS/TODO-####"-tagged emails read live, each answerable
+    right here, plus a new outbound email filed to the item. Completing, reopening and deleting
+    live here too. The router keys pages by route value, so following a linked to-do re-runs the
+    whole load for the new item.
+*@
+
+@if (!sessionReady)
+{
+    <section class="px-6 md:px-8 py-12">
+        <LoadGate IsLoading="true" Prominent="true" Label="Loading" />
+    </section>
+}
+else if (!Session.IsApproved)
+{
+    <RequestAccessView Email="@Auth.CurrentUser!.Email" DisplayName="@Auth.CurrentUser.DisplayName" />
+}
+else if (!HasInternalRole)
+{
+    <section class="px-6 md:px-8 py-12">
+        <h1 class="text-2xl font-semibold text-content mb-2">Not available</h1>
+        <p class="text-content-muted">To-dos are an internal Jewel surface.</p>
+    </section>
+}
+else
+{
+    <section class="px-6 py-6 md:px-8">
+        <a href="/todos" class="text-xs text-content-subtle hover:text-content underline underline-offset-2">← All to-dos</a>
+
+        <LoadGate IsLoading="@itemLoading" Prominent="true" Label="Loading the to-do">
+        @if (loadFailed)
+        {
+            <p class="mt-4 text-sm text-negative">Couldn't load this to-do. The reason is in the red bar above — reload to try again.</p>
+        }
+        else if (item is null)
+        {
+            <div class="mt-4">
+                <h1 class="text-2xl font-semibold text-content mb-2">This to-do is gone</h1>
+                <p class="text-content-muted">It may have been deleted. The <a class="underline underline-offset-2" href="/todos">To-dos list</a> has everything current.</p>
+            </div>
+        }
+        else
+        {
+            <header class="mt-3 mb-6 flex flex-wrap items-end justify-between gap-3">
+                <div>
+                    <p class="eyebrow mb-1">JPMS · <span class="font-mono">@item.Reference</span></p>
+                    <div class="flex items-center gap-3">
+                        <h1 class="text-2xl md:text-3xl font-semibold leading-tight @(item.IsComplete ? "text-content-subtle line-through" : "text-content")">@item.Title</h1>
+                        <span class="shrink-0 inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium @(item.IsComplete ? "bg-positive/10 text-positive" : "bg-accent/10 text-accent")">
+                            @(item.IsComplete ? "Done" : "Open")
+                        </span>
+                    </div>
+                </div>
+                <div class="flex items-center gap-2">
+                    @if (CanManage)
+                    {
+                        @* Two-step delete, confirmed in place: the first click arms the button —
+                           it restyles and asks — and only the second click actually deletes. *@
+                        <button type="button" disabled="@busy" @onclick="DeleteAsync"
+                                class="btn-ghost text-negative @(deleteArmed ? "bg-negative/10 font-semibold" : "")">
+                            @(deleteArmed ? "Delete this item? Click again to confirm" : "Delete")
+                        </button>
+                    }
+                    @if (CanComplete)
+                    {
+                        <button type="button" class="btn-primary" disabled="@busy" @onclick="ToggleCompleteAsync">
+                            @(item.IsComplete ? "Reopen" : "Mark done")
+                        </button>
+                    }
+                </div>
+            </header>
+
+            @if (error is not null)
+            {
+                <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-4">@error</p>
+            }
+
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+                <div class="lg:col-span-2">
+                    <TodoCommunicationsPanel Todo="@item" CanSend="@HasInternalRole" Projects="@ProjectPool" />
+                </div>
+                <div class="space-y-6">
+                    <TodoFactsPanel Item="@item" ScopeLabel="@ScopeLabel(item)" Busy="@busy"
+                                    CanReassign="@CanManage" AssigneeOptions="@assigneeOptions" Reassign="@ReassignAsync"
+                                    CanMove="@CanManage" MoveOptions="@MoveOptions" Move="@MoveAsync" />
+                    <LinkedTodosPanel TodoItemId="@TodoItemId" />
+                </div>
+            </div>
+        }
+        </LoadGate>
+    </section>
+}

@@ -2,79 +2,73 @@
 @using Jewel.JPMS.Contracts.Commercial
 @inject IVariationStore Variations
 
-@* Approve / Reject Variation Order as STAGED actions. Approving reuses VariationApprovePanel —
-   the exact cost-code/lines build-up the variation page shows — with the built ApproveRequest
-   snapshotted and fired by the email's Apply; rejecting stages the same RejectAsync the page's
-   status pill sends. *@
+@* Approve / Reject Variation Order as STAGED actions on the triage bar's project. Approving
+   reuses VariationApprovePanel — the exact cost-code/lines build-up the variation page shows —
+   with the built ApproveRequest snapshotted and fired by the email's Apply; rejecting stages
+   the same RejectAsync the page's status pill sends. *@
 
 <div class="space-y-3">
-    <div class="flex flex-wrap items-center gap-2">
-        <label class="text-xs uppercase tracking-wider text-content-subtle font-semibold shrink-0">Project</label>
-        <ProjectSelect Projects="@Projects" Value="@projectId" ValueChanged="OnProjectPickedAsync"
-                       AllowNone="false" Placeholder="Pick a project…" ToggleTitle="The project the variation sits on" />
-    </div>
-
-    @if (projectId != "")
+    @if (error is not null)
     {
-        @if (error is not null)
-        {
-            <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@error</p>
-        }
-        @if (orders is null)
-        {
-            <p class="text-sm text-content-subtle italic">Loading the project's variations…</p>
-        }
-        else
-        {
-            <select class="field" value="@variationOrderId" @onchange="OnVariationPicked">
-                <option value="">@(Candidates.Count == 0 ? $"No {CandidateNoun} on this project" : "Select a variation…")</option>
-                @foreach (var order in Candidates)
-                {
-                    <option value="@order.VariationOrderId">@order.DisplayNumber — @order.Title</option>
-                }
-            </select>
-        }
+        <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@error</p>
+    }
+    @if (orders is null)
+    {
+        <p class="text-sm text-content-subtle italic">Loading the project's variations…</p>
+    }
+    else
+    {
+        <select class="field" value="@variationOrderId" @onchange="OnVariationPicked">
+            <option value="">@(Candidates.Count == 0 ? $"No {CandidateNoun} on this project" : "Select a variation…")</option>
+            @foreach (var order in Candidates)
+            {
+                <option value="@order.VariationOrderId">@order.DisplayNumber — @order.Title</option>
+            }
+        </select>
+    }
 
-        @if (Kind == SystemActionKind.ApproveVariationOrder && Picked is { } picked)
-        {
-            @* Keyed per variation so the build-up seeds fresh from its estimate. *@
-            <VariationApprovePanel @key="picked.VariationOrderId"
-                                   IsManual="true" ShowHeading="false"
-                                   EstimatedValue="@picked.EstimatedValue"
-                                   DefaultDescription="@picked.Title"
-                                   SubmitLabel="Stage action"
-                                   HelpOverride="Staged, not sent: the approval fires when the email's triage is applied."
-                                   OnApprove="StageApproveAsync" />
-        }
-        else if (Kind == SystemActionKind.RejectVariationOrder)
-        {
-            <button type="button" class="btn-primary" disabled="@(Picked is null)" @onclick="StageRejectAsync">Stage action</button>
-        }
+    @if (Kind == SystemActionKind.ApproveVariationOrder && Picked is { } picked)
+    {
+        @* Keyed per variation so the build-up seeds fresh from its estimate. *@
+        <VariationApprovePanel @key="picked.VariationOrderId"
+                               IsManual="true" ShowHeading="false"
+                               EstimatedValue="@picked.EstimatedValue"
+                               DefaultDescription="@picked.Title"
+                               SubmitLabel="Stage action"
+                               HelpOverride="Staged, not sent: the approval fires when the email's triage is applied."
+                               OnApprove="StageApproveAsync" />
+    }
+    else if (Kind == SystemActionKind.RejectVariationOrder)
+    {
+        <button type="button" class="btn-primary" disabled="@(Picked is null)" @onclick="StageRejectAsync">Stage action</button>
     }
 </div>
 
 @code {
-    [Parameter, EditorRequired] public IReadOnlyList<Project> Projects { get; set; } = Array.Empty<Project>();
+    /// <summary>The email's project, set in the triage bar above the split.</summary>
+    [Parameter, EditorRequired] public string ProjectId { get; set; } = "";
 
     /// <summary>ApproveVariationOrder or RejectVariationOrder — one picker, two decisions.</summary>
     [Parameter] public SystemActionKind Kind { get; set; }
 
     [Parameter] public EventCallback<StagedSystemAction> OnStaged { get; set; }
 
-    private string projectId = "";
+    private string loadedProjectId = "";
     private string variationOrderId = "";
     // Null until the project's variations have landed — distinct from an empty answer.
     private IReadOnlyList<VariationOrder>? orders;
     private string? error;
 
-    private async Task OnProjectPickedAsync(string picked)
+    // The triage bar owns the project; reload this project's variations when it changes hands.
+    protected override async Task OnParametersSetAsync()
     {
-        projectId = picked;
+        if (ProjectId == loadedProjectId) return;
+        loadedProjectId = ProjectId;
         variationOrderId = "";
         orders = null;
         error = null;
-        if (picked == "") return;
-        try { orders = await Variations.ListForProjectAsync(picked); }
+        if (ProjectId == "") return;
+        try { orders = await Variations.ListForProjectAsync(ProjectId); }
         catch { orders = Array.Empty<VariationOrder>(); error = "Couldn't load the project's variations. Please try again."; }
     }
 

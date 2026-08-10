@@ -5,53 +5,45 @@
 @inject IAgentDesk Agents
 @inject AuthService Auth
 
-@* Promote Request to RFI / Close RFI / Reopen RFI as STAGED actions: pick the project and the
-   target record, stage; the same store calls the request page's buttons make fire with the
-   email's Apply (closing still goes through the agent gate — a blocked close fails the apply
-   with the agents' reason, exactly as the page would refuse it). *@
+@* Promote Request to RFI / Close RFI / Reopen RFI as STAGED actions: pick the target record on
+   the triage bar's project, stage; the same store calls the request page's buttons make fire
+   with the email's Apply (closing still goes through the agent gate — a blocked close fails the
+   apply with the agents' reason, exactly as the page would refuse it). *@
 
 <div class="space-y-3">
-    <div class="flex flex-wrap items-center gap-2">
-        <label class="text-xs uppercase tracking-wider text-content-subtle font-semibold shrink-0">Project</label>
-        <ProjectSelect Projects="@Projects" Value="@projectId" ValueChanged="OnProjectPicked"
-                       AllowNone="false" Placeholder="Pick a project…" ToggleTitle="The project the record sits on" />
-    </div>
-
-    @if (projectId != "")
+    @if (error is not null)
     {
-        @if (error is not null)
-        {
-            <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@error</p>
-        }
-        <select class="field" @bind="requestId">
-            <option value="">@(Candidates.Count == 0 ? $"No {CandidateNoun} on this project" : $"Select a {CandidateNoun}…")</option>
-            @foreach (var request in Candidates)
-            {
-                <option value="@request.RequestId">@request.Reference — @request.Title</option>
-            }
-        </select>
-
-        @if (Kind == SystemActionKind.CloseRfi)
-        {
-            <div class="flex flex-wrap items-center gap-2">
-                <label class="text-xs uppercase tracking-wider text-content-subtle font-semibold shrink-0">Closed date</label>
-                <input type="date" class="field max-w-[12rem]" @bind="closeDate" />
-            </div>
-        }
-
-        <button type="button" class="btn-primary" disabled="@(requestId == "")" @onclick="StageAsync">Stage action</button>
+        <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@error</p>
     }
+    <select class="field" @bind="requestId">
+        <option value="">@(Candidates.Count == 0 ? $"No {CandidateNoun} on this project" : $"Select a {CandidateNoun}…")</option>
+        @foreach (var request in Candidates)
+        {
+            <option value="@request.RequestId">@request.Reference — @request.Title</option>
+        }
+    </select>
+
+    @if (Kind == SystemActionKind.CloseRfi)
+    {
+        <div class="flex flex-wrap items-center gap-2">
+            <label class="text-xs uppercase tracking-wider text-content-subtle font-semibold shrink-0">Closed date</label>
+            <input type="date" class="field max-w-[12rem]" @bind="closeDate" />
+        </div>
+    }
+
+    <button type="button" class="btn-primary" disabled="@(requestId == "")" @onclick="StageAsync">Stage action</button>
 </div>
 
 @code {
-    [Parameter, EditorRequired] public IReadOnlyList<Project> Projects { get; set; } = Array.Empty<Project>();
+    /// <summary>The email's project, set in the triage bar above the split.</summary>
+    [Parameter, EditorRequired] public string ProjectId { get; set; } = "";
 
     /// <summary>PromoteRequestToRfi, CloseRfi or ReopenRfi — one picker, three transitions.</summary>
     [Parameter] public SystemActionKind Kind { get; set; }
 
     [Parameter] public EventCallback<StagedSystemAction> OnStaged { get; set; }
 
-    private string projectId = "";
+    private string loadedProjectId = "";
     private string requestId = "";
     private DateTime? closeDate = DateTime.Today;
     private string? error;
@@ -60,23 +52,25 @@
     public void Dispose() => RequestRegister.OnChange -= StoreChanged;
     private void StoreChanged() => InvokeAsync(StateHasChanged);
 
-    private void OnProjectPicked(string picked)
+    // The triage bar owns the project; react when it changes hands.
+    protected override void OnParametersSet()
     {
-        projectId = picked;
+        if (ProjectId == loadedProjectId) return;
+        loadedProjectId = ProjectId;
         requestId = "";
         error = null;
-        if (picked != "") RequestRegister.Refresh(picked); // stale-while-revalidate, never from render
+        if (ProjectId != "") RequestRegister.Refresh(ProjectId); // stale-while-revalidate, never from render
     }
 
     // Which records the transition can touch: promotion takes an unpromoted General container;
     // closing takes anything not yet closed; reopening takes what is closed.
     private IReadOnlyList<Request> Candidates => Kind switch
     {
-        SystemActionKind.PromoteRequestToRfi => RequestRegister.ForProject(projectId)
+        SystemActionKind.PromoteRequestToRfi => RequestRegister.ForProject(ProjectId)
             .Where(request => request.Kind == RequestType.General && request.Status != RequestStatus.Closed).ToList(),
-        SystemActionKind.CloseRfi => RequestRegister.ForProject(projectId)
+        SystemActionKind.CloseRfi => RequestRegister.ForProject(ProjectId)
             .Where(request => request.Status != RequestStatus.Closed).ToList(),
-        _ => RequestRegister.ForProject(projectId)
+        _ => RequestRegister.ForProject(ProjectId)
             .Where(request => request.Status == RequestStatus.Closed).ToList()
     };
 

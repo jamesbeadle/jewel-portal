@@ -8,17 +8,16 @@
 @inject AuthService Auth
 @inject TodoViewStorage ViewStorage
 @inject NavigationManager Nav
-@inject Jewel.JPMS.Features.Projects.ProjectListReadModel Projects
 @implements IDisposable
 
 @*
     The project's to-do list, shown on the To-do tab. Items are added here directly or created
     from an email at the triage stage ("Create new → To-do item"), in which case the email is tagged
     "JPMS/TODO-####" per item. Each row is a single fixed-height line of title + key facts (never
-    the multiline notes) — clicking one opens the detail modal (TodoDetailModal) with the full
-    detail including those notes, the item's linked emails read live by tag,
-    and the actions: completing there moves the item to the Done section below, and delete lives
-    there too. Full manage: add, complete/reopen, delete.
+    the multiline notes) — clicking one opens the item's own page (/todos/{id}) with the full
+    detail including those notes, the linked to-dos and communications, and the actions:
+    complete/reopen, reassign, move and delete all live there. The board's drag-to-complete and
+    the Add modal stay here.
 
     Keyword search: the search box filters the to-do items AND surfaces this project's related
     records that match the keywords — requests (ref / kind / title / description), variations
@@ -55,8 +54,8 @@
         </div>
     </div>
     <p class="text-xs text-content-subtle mb-4">
-        Items added here or captured from an email in the Control Centre. Click an item for its full detail and
-        linked emails@(CanManage ? ", and to mark it done" : "").
+        Items added here or captured from an email in the Control Centre. Click an item for its full
+        detail, linked to-dos and communications@(CanManage ? ", and to mark it done" : "").
     </p>
 
     @if (error is not null)
@@ -115,11 +114,11 @@
             else if (boardView)
             {
                 @* The board answers "what's open / what's done" by layout, so the list's own
-                   empty-state lines and Done heading don't apply here. Drag mirrors the detail
-                   modal's manage gate; read-only visitors still click cards for the detail. *@
+                   empty-state lines and Done heading don't apply here. Drag mirrors the manage
+                   gate; read-only visitors still click cards through to the item's page. *@
                 <div class="mb-4">
                     <TodoBoard Items="@visible" Busy="@busy"
-                               OnOpen="item => selected = item"
+                               OnOpen="OpenItem"
                                OnSetComplete="args => SetComplete(args.Item, args.IsComplete)"
                                CanDrag="_ => CanManage" />
                 </div>
@@ -135,7 +134,7 @@
                     {
                         <button type="button" @key="item.TodoItemId" title="Open this item"
                                 class="w-full rounded-lg border border-line px-3 py-2 text-left hover:border-line-strong hover:bg-surface-raised"
-                                @onclick="() => selected = item">
+                                @onclick="() => OpenItem(item)">
                             <p class="truncate text-sm text-content">
                                 <span class="font-mono text-xs text-content-muted mr-2">@item.Reference</span>@item.Title
                             </p>
@@ -166,7 +165,7 @@
                     {
                         <button type="button" @key="item.TodoItemId" title="Open this item"
                                 class="w-full rounded-lg border border-line px-3 py-2 text-left hover:border-line-strong hover:bg-surface-raised"
-                                @onclick="() => selected = item">
+                                @onclick="() => OpenItem(item)">
                             <p class="truncate text-sm text-content-subtle line-through">
                                 <span class="font-mono text-xs text-content-muted mr-2">@item.Reference</span>@item.Title
                             </p>
@@ -290,13 +289,6 @@
     }
 </div>
 
-<TodoDetailModal Item="@selected" Busy="@busy" Error="@(selected is null ? null : error)"
-                 CanComplete="@CanManage" CanDelete="@CanManage"
-                 CanReassign="@CanManage" AssigneeOptions="@AssigneeOptions"
-                 CanMove="@CanManage" MoveOptions="@MoveOptions"
-                 OnClose="() => selected = null"
-                 OnToggleComplete="ToggleComplete" OnDelete="Delete" OnReassign="Reassign" OnMove="Move" />
-
 <Modal IsOpen="@addOpen" Title="Add a to-do item" ConfirmLabel="Add to-do item" CancelLabel="Cancel"
        OnConfirm="Add" OnCancel="CloseAdd">
     <div class="space-y-3">
@@ -343,10 +335,6 @@
     private const string UnassignedFilter = "__unassigned__";
     private string roleFilter = "";
 
-    // The item open in the detail modal (null = closed). Complete/reopen and delete happen there;
-    // a successful action closes it, and the refreshed list re-groups the item into Open/Done.
-    private TodoItem? selected;
-
     // Keyword search state. The query filters the to-do list and drives the "Related records"
     // sections. Requests and drawings read synchronously from their cached stores; variation orders
     // have no cached register, so they are fetched once in the background when the tab loads and held
@@ -372,11 +360,6 @@
         Session.AvailableRoles.Any(role => role is Role.Admin or Role.ManagingDirector or Role.FinanceDirector
             or Role.ProjectManager or Role.SiteManager or Role.Accounts);
 
-    // Mirrors the API's TodoRoles.AllowedToSeeAllTodos gate — who may move an item to COMPANY-WIDE
-    // (the To-dos browser's own, no-project scope) rather than just between projects.
-    private bool CanSeeAll =>
-        Session.AvailableRoles.Any(role => role is Role.Admin or Role.ManagingDirector);
-
     protected override async Task OnInitializedAsync()
     {
         boardView = await ViewStorage.ReadBoardAsync(Auth.CurrentUser?.Email ?? "");
@@ -390,9 +373,9 @@
         Drawings.Refresh(ProjectId);
         _ = LoadVariationsAsync();
 
-        // The list, the assignable-role pool and the project labels (the move picker's
-        // destinations) are independent reads — run them together.
-        if (CanManage) await Task.WhenAll(LoadAsync(), LoadAssignableRolesAsync(), LoadProjectsAsync());
+        // The list and the assignable-role pool (the add modal's picker) are independent reads —
+        // run them together.
+        if (CanManage) await Task.WhenAll(LoadAsync(), LoadAssignableRolesAsync());
         else await LoadAsync();
     }
 
@@ -417,31 +400,6 @@
         {
             relatedLoading = false;
             await InvokeAsync(StateHasChanged);
-        }
-    }
-
-    private async Task LoadProjectsAsync()
-    {
-        // A failed load leaves the move picker with no destinations — the control then simply
-        // doesn't render (the modal hides an empty picker) — rather than blocking the tab.
-        try { if (Projects.Current is null) await Projects.RefreshAsync(CancellationToken.None); }
-        catch { }
-    }
-
-    // The move picker's destination pool: every other project (the read model's own live-work
-    // order, this project excluded so every offered row is a real move) and, for the MD /
-    // administrators only, the company-wide row — mirroring the api's MoveTodoItemAuthorisation.
-    private IReadOnlyList<SearchSelect.Option> MoveOptions
-    {
-        get
-        {
-            var options = new List<SearchSelect.Option>();
-            if (CanSeeAll)
-                options.Add(new SearchSelect.Option(TodoDetailModal.GeneralScope, "Company-wide — no project"));
-            options.AddRange((Projects.Current ?? (IReadOnlyList<Project>)Array.Empty<Project>())
-                .Where(p => p.ProjectId != ProjectId)
-                .Select(p => new SearchSelect.Option(p.ProjectId, $"{p.Reference} — {p.Name}")));
-            return options;
         }
     }
 
@@ -504,12 +462,12 @@
         if (error is not null && addOpen) addError = error;
     }
 
-    private Task ToggleComplete(TodoItem item) => SetComplete(item, !item.IsComplete);
+    // Opening an item is a navigation: everything beyond the row — full detail, linked to-dos,
+    // communications, the manage actions — lives on the item's own page.
+    private void OpenItem(TodoItem item) => Nav.NavigateTo($"/todos/{item.TodoItemId}");
 
-    // One path for both ways status changes: the detail modal's Mark done / Reopen and the
-    // board's drag onto the other column. Success closes the detail modal if it was open — the
-    // reloaded list re-files the item; a drag never had it open. A failure keeps it open with
-    // the error surfaced inside.
+    // The board's drag onto the other column — the tab's one in-place status change. The reloaded
+    // list re-groups the item into Open/Done with the server's ordering.
     private async Task SetComplete(TodoItem item, bool complete)
     {
         if (busy || item.IsComplete == complete) return;
@@ -521,46 +479,6 @@
             item.AssigneePersonEmail,
             item.DueAt,
             complete)));
-        if (error is null) selected = null;
-    }
-
-    // Move the item to a different assignee (a role, optionally pinned to a person) — everything
-    // else about it stays put. The modal stays open on the refreshed item so the new assignee is
-    // read back where it was changed.
-    private async Task Reassign(TodoAssignee? assignee)
-    {
-        if (busy || selected is null) return;
-        var item = selected;
-        if (TodoAssigneePicker.Value(assignee) == TodoAssigneePicker.ValueFor(item)) return;
-        await Run(() => Todos.UpdateAsync(new UpdateTodoItem(
-            item.TodoItemId,
-            item.Title,
-            NullIfBlank(item.Notes),
-            assignee?.Role,
-            assignee?.PersonEmail,
-            item.DueAt,
-            item.IsComplete)));
-        if (error is null) selected = items.FirstOrDefault(i => i.TodoItemId == item.TodoItemId);
-    }
-
-    // Re-file the item under the picked destination (another project, or company-wide for the
-    // MD / administrators). A moved item is no longer this project's, so the reload drops it from
-    // the tab and the modal closes with it — its new home's To-do tab picks it up.
-    private async Task Move(string destination)
-    {
-        if (busy || selected is null) return;
-        var item = selected;
-        await Run(() => Todos.MoveAsync(new MoveTodoItem(
-            item.TodoItemId,
-            destination == TodoDetailModal.GeneralScope ? "" : destination)));
-        if (error is null) selected = items.FirstOrDefault(i => i.TodoItemId == item.TodoItemId);
-    }
-
-    private async Task Delete(TodoItem item)
-    {
-        if (busy) return;
-        await Run(() => Todos.DeleteAsync(item.TodoItemId));
-        if (error is null) selected = null;
     }
 
     private async Task Run(Func<Task> action)
@@ -570,9 +488,8 @@
         {
             busy = true;
             await action();
-            // Take the server's fresh open-first/done-pile order: with completion happening in the
-            // detail modal (not via an inline checkbox), re-grouping on reload is the expected
-            // "moves to the done section" behaviour rather than a row jumping under the cursor.
+            // Take the server's fresh open-first/done-pile order: a dragged card re-grouping on
+            // reload is the expected "moves to the done column" behaviour.
             items = await Todos.ListForProjectAsync(ProjectId);
         }
         catch (CommandFailedException ex) { error = ex.Message; }

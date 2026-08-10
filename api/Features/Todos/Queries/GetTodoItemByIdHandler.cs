@@ -1,0 +1,26 @@
+using Jewel.JPMS.Api.Cqrs;
+using Jewel.JPMS.Api.Data;
+using Jewel.JPMS.Contracts.Todos;
+using Jewel.JPMS.Models;
+using Microsoft.EntityFrameworkCore;
+
+namespace Jewel.JPMS.Api.Features.Todos.Queries;
+
+// One to-do item by id, for the item's own page. Null when it doesn't exist — the page says so
+// rather than the endpoint erroring, because a stale link is an everyday event, not a fault.
+public sealed class GetTodoItemByIdHandler : IQueryHandler<GetTodoItemById, TodoItem?>
+{
+    private readonly JpmsContext context;
+
+    public GetTodoItemByIdHandler(JpmsContext context) { this.context = context; }
+
+    public async Task<TodoItem?> HandleAsync(GetTodoItemById query, CancellationToken cancellationToken)
+    {
+        var entity = await context.TodoItems.AsNoTracking()
+            .FirstOrDefaultAsync(item => item.TodoItemId == query.TodoItemId, cancellationToken);
+        if (entity is null) return null;
+
+        var personNames = await context.PersonNamesForAsync(new[] { entity }, cancellationToken);
+        return entity.ToModel(personNames);
+    }
+}

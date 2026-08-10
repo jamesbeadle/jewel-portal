@@ -1,0 +1,55 @@
+@namespace Jewel.JPMS.Features.Todos.Detail
+@using Jewel.JPMS.Features.Todos
+
+@* The Scope fact: where the item lives (a project, or company-wide), with the move editor for
+   those inside the move gate. Re-filing an item is re-allocating work, so it takes the same
+   two-step editor as Assigned to. The options already exclude wherever the item is now, so the
+   picker starts blank and every offered row is a real move. *@
+
+<div>
+    <dt class="text-[11px] uppercase tracking-wider text-content-subtle font-semibold">Scope</dt>
+    @if (editing)
+    {
+        <TodoFactEditor Options="@MoveOptions" InitialValue=""
+                        Placeholder="Pick where this item goes" Busy="@Busy" RequirePick="true"
+                        Hint="The item keeps its reference, assignee, due date and linked emails — it simply leaves this list for the destination's To-do tab."
+                        OnSave="SaveAsync" OnCancel="() => editing = false" />
+    }
+    else
+    {
+        <dd class="text-content mt-0.5 flex flex-wrap items-center gap-2">
+            <span>@ScopeLabel</span>
+            @if (ShowMove)
+            {
+                <button type="button" class="btn-ghost text-[11px] px-1.5 py-0.5" disabled="@Busy"
+                        title="Move this item to a different project" @onclick="() => editing = true">Move</button>
+            }
+        </dd>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public TodoItem Item { get; set; } = default!;
+    [Parameter] public string ScopeLabel { get; set; } = "";
+    /// <summary>Whether the signed-in user may move this item — the API's MoveTodoItem manage
+    /// gate, mirrored by the page. Company-wide as a destination is a narrower (MD/admin) call the
+    /// page makes by including or omitting that option.</summary>
+    [Parameter] public bool CanMove { get; set; }
+    [Parameter] public IReadOnlyList<SearchSelect.Option> MoveOptions { get; set; } = Array.Empty<SearchSelect.Option>();
+    [Parameter] public bool Busy { get; set; }
+    /// <summary>Runs the move command with the picked destination (a ProjectId, or
+    /// <see cref="TodoScope.General"/>); true = saved, false = failed and the editor stays open.</summary>
+    [Parameter, EditorRequired] public Func<string, Task<bool>> Move { get; set; } = default!;
+
+    private bool editing;
+
+    // Like reassign: moving a DONE item re-files work nobody is going to do, so open items only —
+    // and it needs somewhere to move to.
+    private bool ShowMove => CanMove && !Item.IsComplete && MoveOptions.Count > 0;
+
+    private async Task SaveAsync(string picked)
+    {
+        if (picked == "") return;
+        if (await Move(picked)) editing = false;
+    }
+}

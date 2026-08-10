@@ -4,23 +4,19 @@
 
 @* Raise Request / Raise RFI as a STAGED action: the same RequestForm the raise dialog uses,
    with the payload snapshotted here and fired by the email's Apply. Attachments are hidden —
-   a staged draft has no request id to attach to until it fires. *@
+   a staged draft has no request id to attach to until it fires. The project comes from the
+   triage bar (the pane withholds this component until one is picked). *@
 
 <div class="space-y-3">
-    <div class="flex flex-wrap items-center gap-2">
-        <label class="text-xs uppercase tracking-wider text-content-subtle font-semibold shrink-0">Project</label>
-        <ProjectSelect Projects="@Projects" Value="@projectId" ValueChanged="v => projectId = v"
-                       AllowNone="false" Placeholder="Pick a project…" ToggleTitle="The project the request is raised on" />
-    </div>
-    @if (projectId != "")
-    {
-        <RequestForm @ref="form" @key="projectId" ProjectId="@projectId" ShowAttachments="false" OnSubmit="StageAsync" />
-        <button type="button" class="btn-primary" @onclick="SubmitAsync">Stage action</button>
-    }
+    <RequestForm @ref="form" @key="ProjectId" ProjectId="@ProjectId" ShowAttachments="false" OnSubmit="StageAsync" />
+    <button type="button" class="btn-primary" @onclick="SubmitAsync">Stage action</button>
 </div>
 
 @code {
     [Parameter, EditorRequired] public IReadOnlyList<Project> Projects { get; set; } = Array.Empty<Project>();
+
+    /// <summary>The email's project, set in the triage bar above the split.</summary>
+    [Parameter, EditorRequired] public string ProjectId { get; set; } = "";
 
     /// <summary>RaiseRequest opens on General, RaiseRfi straight on the official RFI kind — one
     /// form, two dropdown entries.</summary>
@@ -28,7 +24,6 @@
 
     [Parameter] public EventCallback<StagedSystemAction> OnStaged { get; set; }
 
-    private string projectId = "";
     private RequestForm? form;
 
     protected override void OnAfterRender(bool firstRender)

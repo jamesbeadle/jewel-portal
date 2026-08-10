@@ -12,23 +12,18 @@
    approval); the send outcome is best-effort, the order itself is the act. *@
 
 <div class="space-y-3">
-    <div class="flex flex-wrap items-center gap-2">
-        <label class="text-xs uppercase tracking-wider text-content-subtle font-semibold shrink-0">Project</label>
-        <ProjectSelect Projects="@Projects" Value="@projectId" ValueChanged="v => projectId = v"
-                       AllowNone="false" Placeholder="Pick a project…" ToggleTitle="The project the order is raised on" />
-    </div>
-    @if (projectId != "")
-    {
-        <WorkOrderForm @ref="form" ProjectId="@projectId" />
-        <button type="button" class="btn-primary" @onclick="StageAsync">Stage action</button>
-    }
+    <WorkOrderForm @ref="form" ProjectId="@ProjectId" />
+    <button type="button" class="btn-primary" @onclick="StageAsync">Stage action</button>
 </div>
 
 @code {
     [Parameter, EditorRequired] public IReadOnlyList<Project> Projects { get; set; } = Array.Empty<Project>();
+
+    /// <summary>The email's project, set in the triage bar above the split.</summary>
+    [Parameter, EditorRequired] public string ProjectId { get; set; } = "";
+
     [Parameter] public EventCallback<StagedSystemAction> OnStaged { get; set; }
 
-    private string projectId = "";
     private WorkOrderForm? form;
 
     private async Task StageAsync()
@@ -39,7 +34,7 @@
 
         // Snapshot everything the closure needs NOW — the form is reset the moment this stages.
         var commands = Commands;
-        var stagedProjectId = projectId;
+        var stagedProjectId = ProjectId;
         var project = Projects.FirstOrDefault(p => p.ProjectId == stagedProjectId);
         var supplier = form.SelectedSupplier;
         var raisedBy = Auth.CurrentUser?.Email ?? "";
