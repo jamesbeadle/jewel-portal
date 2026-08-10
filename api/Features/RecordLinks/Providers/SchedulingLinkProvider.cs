@@ -50,11 +50,10 @@ public sealed class SchedulingLinkProvider : ILinkableRecordProvider
 
         // The schedule's claims documents: Jewel's own NOD/EOT notices (Request family) …
         var projectRef = await RequestTags.ProjectRefAsync(context, projectId, ct);
-        // Closed claims documents are excluded for the same reason RequestLinkProvider excludes
-        // closed requests: triage links emails to live records only.
+        // Closed claims documents are flagged inactive the same way RequestLinkProvider flags
+        // closed requests: the pickers default to live records and reveal the rest on request.
         var claimRequests = await context.Requests.AsNoTracking()
-            .Where(r => r.ProjectId == projectId && ClaimRequestKinds.Contains(r.Kind)
-                        && r.Status != (int)RequestStatus.Closed)
+            .Where(r => r.ProjectId == projectId && ClaimRequestKinds.Contains(r.Kind))
             .OrderByDescending(r => r.RaisedAt)
             .ToListAsync(ct);
         records.AddRange(claimRequests.Select(r => new LinkableRecord(
@@ -65,7 +64,8 @@ public sealed class SchedulingLinkProvider : ILinkableRecordProvider
             TagReference: RequestTags.Stem(projectRef, r.ProjectId, r.TagReference),
             Title:        r.Title,
             StatusLabel:  ((RequestStatus)r.Status).DisplayName(),
-            Summary:      RecordSummaries.Clip(r.Description))));
+            Summary:      RecordSummaries.Clip(r.Description),
+            IsActive:     r.Status != (int)RequestStatus.Closed)));
 
         // … and the client's LADs claims against Jewel.
         var ladClaims = await context.LadClaims.AsNoTracking()
@@ -80,7 +80,8 @@ public sealed class SchedulingLinkProvider : ILinkableRecordProvider
             TagReference: l.Reference,
             Title:        l.Title,
             StatusLabel:  ((LadStatus)l.Status).DisplayName(),
-            Summary:      RecordSummaries.Clip(l.Description))));
+            Summary:      RecordSummaries.Clip(l.Description),
+            IsActive:     ((LadStatus)l.Status).IsLive())));
 
         return records;
     }

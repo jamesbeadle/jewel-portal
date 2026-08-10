@@ -30,11 +30,11 @@ public sealed class RequestLinkProvider : ILinkableRecordProvider
     public async Task<IReadOnlyList<LinkableRecord>> ForProjectAsync(string projectId, CancellationToken ct)
     {
         var projectRef = await RequestTags.ProjectRefAsync(context, projectId, ct);
-        // Closed requests are finished business, so they're not offered in the triage picker — an
-        // email must be linked to a live request (any status but Closed). Reopen the request first
-        // if a late reply genuinely belongs to it.
+        // Closed requests are finished business, so they carry IsActive = false — the pickers hide
+        // them by default and reveal them behind the "include closed / inactive" checkbox, so a late
+        // reply can still be linked without reopening the request.
         var entities = await context.Requests.AsNoTracking()
-            .Where(r => r.ProjectId == projectId && r.Status != (int)RequestStatus.Closed)
+            .Where(r => r.ProjectId == projectId)
             .ToListAsync(ct);
         // Pickers read in reference order — the same ordering as the project's Requests register
         // (ProjectRequests.razor): references grouped by prefix (NOD, REQ, RFI, …) with numbers
@@ -84,5 +84,6 @@ public sealed class RequestLinkProvider : ILinkableRecordProvider
         TagReference: RequestTags.Stem(projectRef, entity.ProjectId, entity.TagReference),
         Title:        entity.Title,
         StatusLabel:  ((RequestStatus)entity.Status).DisplayName(),
-        Summary:      RecordSummaries.Clip(entity.Description));
+        Summary:      RecordSummaries.Clip(entity.Description),
+        IsActive:     entity.Status != (int)RequestStatus.Closed);
 }

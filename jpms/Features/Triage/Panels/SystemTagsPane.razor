@@ -488,6 +488,9 @@
     private string? senderMatchedCompany;
     private RecordType linkType = RecordType.Request;
     private string search = "";
+    // Every record type's pool defaults to its own live records (a request that isn't Closed, a
+    // released work order, an open to-do…); ticking the box reveals the finished ones too.
+    private bool shouldIncludeInactive;
     private bool loading;
     private string loadedKey = "";
     private IReadOnlyList<LinkableRecord> records = Array.Empty<LinkableRecord>();
@@ -557,6 +560,7 @@
         todoEditIndex = null;
         linkType = DefaultTypeFor(tab);
         search = "";
+        shouldIncludeInactive = false;
         await ActivePathwayChanged.InvokeAsync(tab);
         await LoadRecordsAsync();
     }
@@ -962,6 +966,19 @@
                 </div>
             </div>
 
+            <label class="flex w-fit items-center gap-2 text-xs text-content-subtle cursor-pointer select-none"
+                   title="Each record type defaults to its live records — tick to also list closed, rejected and completed ones">
+                <input type="checkbox" class="cursor-pointer align-middle" checked="@shouldIncludeInactive"
+                       @onchange="e => shouldIncludeInactive = e.Value is true" />
+                <span>
+                    Include closed / inactive records
+                    @if (!shouldIncludeInactive && HiddenInactiveCount > 0)
+                    {
+                        <span class="text-content-faint">(@HiddenInactiveCount hidden)</span>
+                    }
+                </span>
+            </label>
+
             @if (loading)
             {
                 <p class="text-sm text-content-subtle italic">Loading @TypeLabel(linkType) records…</p>
@@ -969,7 +986,7 @@
             else
             {
                 var candidates = Filter(Candidates());
-                var others = Filter(records.Except(Candidates()).ToList());
+                var others = Filter(VisibleRecords.Except(Candidates()).ToList());
                 @if (candidates.Count > 0)
                 {
                     <p class="text-xs font-semibold text-amber-600">Possible matches for this email</p>
@@ -1023,12 +1040,20 @@
                     || (r.Summary?.Contains(search, StringComparison.OrdinalIgnoreCase) ?? false))
                 .ToList();
 
+    // The pool the picker actually lists: live records by default, everything once the
+    // "include closed / inactive" box is ticked. Already-picked records always stay visible in the
+    // staged chips above, whatever the box says.
+    private IReadOnlyList<LinkableRecord> VisibleRecords =>
+        shouldIncludeInactive ? records : records.Where(r => r.IsActive).ToList();
+
+    private int HiddenInactiveCount => records.Count(r => !r.IsActive);
+
     // Records whose reference or title overlaps the email subject — surfaced first so a duplicate
     // record isn't created for something already tracked.
     private List<LinkableRecord> Candidates()
     {
         var tokens = Tokenise(EmailSubject);
-        return records
+        return VisibleRecords
             .Select(r => (r, score: Score(r, tokens)))
             .Where(x => x.score > 0)
             .OrderByDescending(x => x.score)

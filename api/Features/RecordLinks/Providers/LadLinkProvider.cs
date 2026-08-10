@@ -50,6 +50,7 @@ public sealed class LadLinkProvider : ILinkableRecordProvider
             TagReference: reference,
             Title:        entity.Title,
             StatusLabel:  ((LadStatus)entity.Status).DisplayName(),
-            Summary:      RecordSummaries.Clip(entity.Description));
+            Summary:      RecordSummaries.Clip(entity.Description),
+            IsActive:     ((LadStatus)entity.Status).IsLive());
     }
 }

@@ -49,6 +49,7 @@ public sealed class TodoLinkProvider : ILinkableRecordProvider
             TagReference: reference,
             Title:        entity.Title,
             StatusLabel:  entity.IsComplete ? "Done" : "Open",
-            Summary:      RecordSummaries.Clip(entity.Notes));
+            Summary:      RecordSummaries.Clip(entity.Notes),
+            IsActive:     !entity.IsComplete);
     }
 }

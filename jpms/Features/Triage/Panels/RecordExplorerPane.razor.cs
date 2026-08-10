@@ -20,6 +20,9 @@ public partial class RecordExplorerPane
     private string projectId = "";
     private RecordType recordType = RecordType.Request;
     private string search = "";
+    // The explorer defaults to each type's live records; ticking the box lists the closed,
+    // rejected and completed ones too — history is exactly what an explorer is for.
+    private bool shouldIncludeInactive;
     private bool loading;
     // Null until a search context exists — distinct from an empty answer, which is a real "none".
     private IReadOnlyList<LinkableRecord>? records;
@@ -30,13 +33,16 @@ public partial class RecordExplorerPane
         get
         {
             if (records is null) return Array.Empty<LinkableRecord>();
+            var pool = shouldIncludeInactive ? records : records.Where(record => record.IsActive);
             var needle = search.Trim();
             var matches = needle.Length == 0
-                ? records
-                : records.Where(record => Matches(record, needle));
+                ? pool
+                : pool.Where(record => Matches(record, needle));
             return matches.Take(ResultCap).ToList();
         }
     }
+
+    private int HiddenInactiveCount => records?.Count(record => !record.IsActive) ?? 0;
 
     private static bool Matches(LinkableRecord record, string needle) =>
         record.Reference.Contains(needle, StringComparison.OrdinalIgnoreCase)
@@ -83,7 +89,8 @@ public partial class RecordExplorerPane
             .Select(rfi => new LinkableRecord(
                 RecordType.Request, rfi.RequestId, rfi.ProjectId, rfi.Reference, rfi.Reference,
                 rfi.Title, StatusLabel: rfi.Status.DisplayName(),
-                Summary: rfi.Description))
+                Summary: rfi.Description,
+                IsActive: rfi.Status != RequestStatus.Closed))
             .ToList();
     }
 }

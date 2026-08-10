@@ -29,14 +29,14 @@ public sealed class WorkOrderLinkProvider : ILinkableRecordProvider
         // The supplier's company name is the discriminator a triager reads first ("which of the four
         // WOs on this project is the flooring one?"), so it is resolved alongside the order rather
         // than left to the title. One extra projection, no per-row queries.
-        // Drafts are excluded until approved (and rejected drafts forever): a draft has no
-        // number, so its tag stem would be the id fallback ("WO-A1B2C3D4") — and the moment
-        // approval mints the real number the stem would change, silently detaching any mail
-        // already tagged against it.
+        // Drafts stay excluded until approved: a draft has no number, so its tag stem would be
+        // the id fallback ("WO-A1B2C3D4") — and the moment approval mints the real number the
+        // stem would change, silently detaching any mail already tagged against it. A REJECTED
+        // draft's stem can never change (no approval is coming), so rejected orders ARE listed —
+        // flagged inactive, behind the pickers' "include closed / inactive" checkbox.
         var rows = await context.WorkOrders.AsNoTracking()
             .Where(o => o.ProjectId == projectId
-                        && o.Status != (int)WorkOrderStatus.Draft
-                        && o.Status != (int)WorkOrderStatus.Rejected)
+                        && o.Status != (int)WorkOrderStatus.Draft)
             .OrderByDescending(o => o.Number)
             .Select(o => new
             {
@@ -88,6 +88,8 @@ public sealed class WorkOrderLinkProvider : ILinkableRecordProvider
             TagReference: reference,
             Title:        title,
             StatusLabel:  ((WorkOrderStatus)entity.Status).ToString(),
-            Summary:      RecordSummaries.Clip(companyName));
+            Summary:      RecordSummaries.Clip(companyName),
+            // Released is the one live state; Complete, Cancelled and Rejected are finished business.
+            IsActive:     entity.Status == (int)WorkOrderStatus.Released);
     }
 }

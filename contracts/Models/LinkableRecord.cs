@@ -15,6 +15,11 @@ public sealed record LinkableRecord(
     string     TagReference,  // canonical tag stem → "JPMS/<TagReference>" (usually == Reference)
     string     Title,
     string?    StatusLabel = null, // optional small badge, type-specific (e.g. "Open", "Draft")
-    string?    Summary     = null); // optional short description shown under the title in the picker,
-                                    // so similarly-titled records (e.g. two "Coombe Lane defects"
-                                    // requests) can be told apart. Providers clip it server-side.
+    string?    Summary     = null, // optional short description shown under the title in the picker,
+                                   // so similarly-titled records (e.g. two "Coombe Lane defects"
+                                   // requests) can be told apart. Providers clip it server-side.
+    bool       IsActive    = true); // whether the record is live by its own type's rule (a request
+                                    // that isn't Closed, a released work order, an open to-do…).
+                                    // Providers list finished records too, flagged false, so every
+                                    // picker can default to live work and reveal the rest behind an
+                                    // "include closed / inactive" checkbox.

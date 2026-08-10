@@ -971,9 +971,21 @@
                                                         <option value="">Select a @(RecordTypeLabelSingular(linkRecordType))…</option>
                                                         @foreach (var record in ProjectRecords())
                                                         {
-                                                            <option value="@record.RecordId">@record.Reference — @record.Title</option>
+                                                            <option value="@record.RecordId">@record.Reference — @record.Title@(record.IsActive ? "" : $" ({record.StatusLabel})")</option>
                                                         }
                                                     </select>
+                                                    <label class="flex w-fit items-center gap-2 text-xs text-content-subtle cursor-pointer select-none"
+                                                           title="The list defaults to live records — tick to also offer closed, rejected and completed ones">
+                                                        <input type="checkbox" class="cursor-pointer align-middle" checked="@shouldIncludeInactiveLinks"
+                                                               @onchange="e => OnIncludeInactiveLinksToggled(e.Value is true)" />
+                                                        <span>
+                                                            Include closed / inactive records
+                                                            @if (!shouldIncludeInactiveLinks && HiddenInactiveLinkCount > 0)
+                                                            {
+                                                                <span class="text-content-faint">(@HiddenInactiveLinkCount hidden)</span>
+                                                            }
+                                                        </span>
+                                                    </label>
                                                 }
                                             }
 
@@ -1197,12 +1209,24 @@
                     </select>
                     <select class="field" value="@newEmailRecordId" @onchange="OnNewEmailRecordChanged" disabled="@(string.IsNullOrEmpty(newEmailProjectId))">
                         <option value="">@(string.IsNullOrEmpty(newEmailProjectId) ? "Select a project first…" : newEmailRecordsLoading ? "Loading…" : "Select a record…")</option>
-                        @foreach (var record in newEmailRecords)
+                        @foreach (var record in VisibleNewEmailRecords)
                         {
-                            <option value="@record.RecordId">@record.Reference — @record.Title</option>
+                            <option value="@record.RecordId">@record.Reference — @record.Title@(record.IsActive ? "" : $" ({record.StatusLabel})")</option>
                         }
                     </select>
                 </div>
+                <label class="flex w-fit items-center gap-2 text-xs text-content-subtle cursor-pointer select-none"
+                       title="The list defaults to live records — tick to also offer closed, rejected and completed ones">
+                    <input type="checkbox" class="cursor-pointer align-middle" checked="@shouldIncludeInactiveNewEmailRecords"
+                           @onchange="e => OnIncludeInactiveNewEmailRecordsToggled(e.Value is true)" />
+                    <span>
+                        Include closed / inactive records
+                        @if (!shouldIncludeInactiveNewEmailRecords && HiddenInactiveNewEmailRecordCount > 0)
+                        {
+                            <span class="text-content-faint">(@HiddenInactiveNewEmailRecordCount hidden)</span>
+                        }
+                    </span>
+                </label>
             }
         </div>
 
@@ -1608,6 +1632,9 @@ else
     // linkRecords pool), while pickedRecords holds the modal's staged picks for the queue apply.
     private RecordType linkRecordType = RecordType.Request;
     private string linkRecordId = "";
+    // The dropdown defaults to the type's live records (a request that isn't Closed, a released
+    // work order…); ticking the box reveals the closed / rejected / completed ones too.
+    private bool shouldIncludeInactiveLinks;
     // The staged record links — whole LinkableRecords (not ids), so picks survive switching the
     // record-type filter and one email can be linked to, say, a variation AND an RFI in one apply.
     private readonly List<LinkableRecord> pickedRecords = new();
@@ -1665,6 +1692,9 @@ else
     private string newEmailRecordId = "";
     private bool newEmailRecordsLoading;
     private IReadOnlyList<LinkableRecord> newEmailRecords = Array.Empty<LinkableRecord>();
+    // The "file to a record" dropdown defaults to the type's live records; ticking the box
+    // reveals the closed / rejected / completed ones too.
+    private bool shouldIncludeInactiveNewEmailRecords;
 
     // To-do draft rows (Features.Triage.TodoDraftRow), edited in the System Tags modal's
     // Internal → Create new pane; one to-do is raised PER ASSIGNEE per row when the apply runs.
@@ -2355,6 +2385,7 @@ else
     {
         linkRecordType = DefaultLinkRecordType;
         linkRecordId = "";
+        shouldIncludeInactiveLinks = false;
         pickedRecords.Clear();
         linkRecords = Array.Empty<LinkableRecord>();
     }
@@ -2909,6 +2940,7 @@ else
         newEmailRecordType = RecordType.Request;
         newEmailRecordId = "";
         newEmailRecords = Array.Empty<LinkableRecord>();
+        shouldIncludeInactiveNewEmailRecords = false;
     }
 
     private bool NewEmailIsSendable =>
@@ -2946,6 +2978,20 @@ else
 
     private void OnNewEmailRecordChanged(ChangeEventArgs e) => newEmailRecordId = e.Value?.ToString() ?? "";
 
+    // Live records only until "include closed / inactive" is ticked — same default as every picker.
+    private IReadOnlyList<LinkableRecord> VisibleNewEmailRecords =>
+        shouldIncludeInactiveNewEmailRecords ? newEmailRecords : newEmailRecords.Where(r => r.IsActive).ToList();
+
+    private int HiddenInactiveNewEmailRecordCount => newEmailRecords.Count(r => !r.IsActive);
+
+    // Unticking can hide the record the dropdown had selected; clear the selection when it does so
+    // the send can never file to a record the list no longer shows.
+    private void OnIncludeInactiveNewEmailRecordsToggled(bool isTicked)
+    {
+        shouldIncludeInactiveNewEmailRecords = isTicked;
+        if (VisibleNewEmailRecords.All(r => r.RecordId != newEmailRecordId)) newEmailRecordId = "";
+    }
+
     private async Task LoadNewEmailRecordsAsync()
     {
         newEmailRecords = Array.Empty<LinkableRecord>();
@@ -2964,6 +3010,12 @@ else
         if (string.IsNullOrWhiteSpace(newEmailSubject)) { newEmailError = "Write a subject."; return; }
         if (!HtmlHasContent(newEmailBody)) { newEmailError = "Write the email first."; return; }
 
+        // The type to file as is the picked RECORD's own type, not the dropdown's — the Variation
+        // pool lists pre-approval stages under their VariationQuote identity (same rule as
+        // DoAddTagLinkCore), so the server resolves the record through the right provider.
+        var filedRecord = newEmailRecords.FirstOrDefault(r => r.RecordId == newEmailRecordId);
+        var filedRecordType = filedRecord?.Type ?? newEmailRecordType;
+
         var command = new SendMailboxEmail(
             ReplyToMessageId: null,
             ReplyToInternetMessageId: null,
@@ -2977,7 +3029,7 @@ else
             SaveAsDraftOnly: saveAsDraftOnly,
             Pathway: null,
             MarkThreadHandled: false,
-            LinkRecordType: newEmailFile && !string.IsNullOrEmpty(newEmailRecordId) ? newEmailRecordType : null,
+            LinkRecordType: newEmailFile && !string.IsNullOrEmpty(newEmailRecordId) ? filedRecordType : null,
             LinkRecordId: newEmailFile && !string.IsNullOrEmpty(newEmailRecordId) ? newEmailRecordId : null,
             ProjectId: newEmailFile && !string.IsNullOrEmpty(newEmailProjectId) ? newEmailProjectId : null);
         var uploadParts = UploadPartsOf(newEmailAttachments);
@@ -3304,8 +3356,20 @@ else
             ? "text-content font-medium underline underline-offset-4 decoration-line-strong"
             : "text-content-subtle hover:text-content";
 
-    // The loaded records for the chosen type + project (empty until both are chosen and the load runs).
-    private IReadOnlyList<LinkableRecord> ProjectRecords() => linkRecords;
+    // The loaded records for the chosen type + project (empty until both are chosen and the load
+    // runs) — live records only until "include closed / inactive" is ticked.
+    private IReadOnlyList<LinkableRecord> ProjectRecords() =>
+        shouldIncludeInactiveLinks ? linkRecords : linkRecords.Where(r => r.IsActive).ToList();
+
+    private int HiddenInactiveLinkCount => linkRecords.Count(r => !r.IsActive);
+
+    // Unticking can hide the record the dropdown had selected; clear the selection when it does so
+    // the link button can never act on a record the list no longer shows.
+    private void OnIncludeInactiveLinksToggled(bool isTicked)
+    {
+        shouldIncludeInactiveLinks = isTicked;
+        if (ProjectRecords().All(r => r.RecordId != linkRecordId)) linkRecordId = "";
+    }
 
     // Records on the chosen project whose reference or title overlaps the email subject — surfaced
     // first so a duplicate record isn't created for something already being tracked. Type-agnostic.

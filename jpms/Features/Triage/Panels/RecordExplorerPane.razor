@@ -35,6 +35,18 @@ else
         </div>
         <input class="field" type="search" placeholder="Search reference, title or description…"
                value="@search" @oninput="e => search = e.Value?.ToString() ?? string.Empty" />
+        <label class="flex w-fit items-center gap-2 text-xs text-content-subtle cursor-pointer select-none"
+               title="The list defaults to live records — tick to also list closed, rejected and completed ones">
+            <input type="checkbox" class="cursor-pointer align-middle" checked="@shouldIncludeInactive"
+                   @onchange="e => shouldIncludeInactive = e.Value is true" />
+            <span>
+                Include closed / inactive records
+                @if (!shouldIncludeInactive && HiddenInactiveCount > 0)
+                {
+                    <span class="text-content-faint">(@HiddenInactiveCount hidden)</span>
+                }
+            </span>
+        </label>
 
         @if (loading)
         {
