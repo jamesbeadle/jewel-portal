@@ -1,12 +1,14 @@
 @namespace Jewel.JPMS.Features.Triage.Panels
 
 @*
-    System actions — line up specific actions against the email being triaged, fired when its
-    Apply runs. Every action reuses the component (or store call) its home page uses — RequestForm,
-    ManualVariationForm, WorkOrderForm, VariationApprovePanel, DirectoryContactForm — so the
-    behaviour is defined in one place; this pane only picks the action, hosts the shared form and
-    holds the staged list. Payloads are snapshotted at stage time: editing a form after staging
-    changes nothing until it is staged again.
+    System actions — THE creation surface for triage: line up records and actions against the email
+    being triaged, fired when its Apply runs (System Tags is tagging only — linking the email to
+    records that already exist). Two families share the dropdown:
+    - Email-linked creates (Raise Request / RFI, Raise Work Order, Create Bid Package Invite,
+      Raise Defect, Create To-do Items): drafted into page-owned staging and raised by Apply
+      through the intake commands, so the EMAIL IS TAGGED to the new record.
+    - Staged store calls (RFI transitions, variations, directory contact): each reuses the
+      component or store call its home page uses, snapshotted as a closure at stage time.
 *@
 
 <div class="panel p-5 space-y-4">
@@ -15,7 +17,7 @@
         <h2 class="text-base font-semibold text-content">Line up actions for when triage completes</h2>
     </div>
 
-    @if (StagedActions.Count > 0)
+    @if (StagedActions.Count > 0 || StagedCreate is not null || TitledTodoRows.Count > 0)
     {
         <div class="space-y-1.5">
             @foreach (var staged in StagedActions.ToList())
@@ -28,6 +30,29 @@
                     </p>
                     <button type="button" class="text-xs text-content-subtle hover:text-negative shrink-0"
                             @onclick="() => RemoveAsync(action)">Remove</button>
+                </div>
+            }
+            @if (StagedCreate is { } stagedRecord)
+            {
+                <div class="flex items-center justify-between gap-3 rounded-lg border border-accent/40 bg-accent/5 px-3 py-2">
+                    <p class="text-sm text-content min-w-0">
+                        <span class="text-xs uppercase tracking-wider text-accent font-semibold mr-2">✚ @stagedRecord.Label</span>
+                        <span class="text-content-muted truncate">@(string.IsNullOrWhiteSpace(stagedRecord.DisplayTitle) ? "(untitled)" : stagedRecord.DisplayTitle) — this email is tagged to it.</span>
+                    </p>
+                    <button type="button" class="text-xs text-content-subtle hover:text-negative shrink-0"
+                            @onclick="ClearStagedCreateAsync">Remove</button>
+                </div>
+            }
+            @foreach (var todoChipRow in TitledTodoRows)
+            {
+                var chipRow = todoChipRow;
+                <div @key="chipRow" class="flex items-center justify-between gap-3 rounded-lg border border-accent/40 bg-accent/5 px-3 py-2">
+                    <p class="text-sm text-content min-w-0">
+                        <span class="text-xs uppercase tracking-wider text-accent font-semibold mr-2">✚ to-do</span>
+                        <span class="text-content-muted truncate" title="@chipRow.Title">@chipRow.Title</span>
+                    </p>
+                    <button type="button" class="text-xs text-content-subtle hover:text-negative shrink-0"
+                            @onclick="() => RemoveTodoRowAsync(chipRow)">Remove</button>
                 </div>
             }
         </div>
@@ -43,7 +68,7 @@
         </select>
     </div>
 
-    @if (kind != SystemActionKind.AddDirectoryContact && ProjectId == "")
+    @if (NeedsProject(kind) && ProjectId == "")
     {
         @* Every project-bound action raises on the email's project — one pick, in one place. *@
         <p class="rounded-lg bg-amber-500/10 border border-amber-500/40 px-3 py-2 text-sm text-content">
@@ -55,8 +80,14 @@
         @switch (kind)
         {
             case SystemActionKind.RaiseRequest:
+                <StagedRecordActionEditor @key="kind" Kind="StagedRecordKind.Request" RequestKind="RequestType.General"
+                                          StagedCreate="@StagedCreate" StagedCreateChanged="StagedCreateChanged"
+                                          EmailAttachments="@EmailAttachments" SenderEmail="@SenderEmail" />
+                break;
             case SystemActionKind.RaiseRfi:
-                <StageRequestAction @key="kind" Kind="kind" Projects="@Projects" ProjectId="@ProjectId" OnStaged="StagedAsync" />
+                <StagedRecordActionEditor @key="kind" Kind="StagedRecordKind.Request" RequestKind="RequestType.Rfi"
+                                          StagedCreate="@StagedCreate" StagedCreateChanged="StagedCreateChanged"
+                                          EmailAttachments="@EmailAttachments" SenderEmail="@SenderEmail" />
                 break;
             case SystemActionKind.PromoteRequestToRfi:
             case SystemActionKind.CloseRfi:
@@ -71,10 +102,23 @@
                 <StageVariationDecisionAction @key="kind" Kind="kind" ProjectId="@ProjectId" OnStaged="StagedAsync" />
                 break;
             case SystemActionKind.RaiseWorkOrder:
-                <StageWorkOrderAction Projects="@Projects" ProjectId="@ProjectId" OnStaged="StagedAsync" />
+                <StagedRecordActionEditor @key="kind" Kind="StagedRecordKind.WorkOrder"
+                                          StagedCreate="@StagedCreate" StagedCreateChanged="StagedCreateChanged"
+                                          EmailAttachments="@EmailAttachments" SenderEmail="@SenderEmail" />
                 break;
             case SystemActionKind.CreateBidPackageInvite:
-                <StageBidPackageAction Projects="@Projects" ProjectId="@ProjectId" OnStaged="StagedAsync" />
+                <StagedRecordActionEditor @key="kind" Kind="StagedRecordKind.BidPackage"
+                                          StagedCreate="@StagedCreate" StagedCreateChanged="StagedCreateChanged"
+                                          EmailAttachments="@EmailAttachments" SenderEmail="@SenderEmail" />
+                break;
+            case SystemActionKind.RaiseDefect:
+                <StagedRecordActionEditor @key="kind" Kind="StagedRecordKind.Defect"
+                                          StagedCreate="@StagedCreate" StagedCreateChanged="StagedCreateChanged"
+                                          EmailAttachments="@EmailAttachments" SenderEmail="@SenderEmail" />
+                break;
+            case SystemActionKind.CreateTodos:
+                <StageTodosAction TodoRows="TodoRows" TodoAssigneeOptions="@TodoAssigneeOptions"
+                                  TodoProjectNote="@TodoProjectNote" OnStagingChanged="OnStagingChanged" />
                 break;
             case SystemActionKind.AddDirectoryContact:
                 <StageDirectoryContactAction OnStaged="StagedAsync" />
@@ -83,18 +127,18 @@
     }
 
     <p class="text-xs text-content-subtle pt-2 border-t border-line">
-        Staged actions run with the email's Apply, after its filing — and clear if you move to
-        another email without applying.
+        Everything lined up here runs with the email's Apply — created records are tagged to the
+        email; staged actions clear if you move to another email without applying.
     </p>
 </div>
 
 @code {
-    /// <summary>The full project list — the action components read it only to name the project
+    /// <summary>The full project list — the staged store calls read it only to name the project
     /// in their staged summaries.</summary>
     [Parameter, EditorRequired] public IReadOnlyList<Project> Projects { get; set; } = Array.Empty<Project>();
 
     /// <summary>The email's project, picked once in the triage bar; blank shows the note above
-    /// instead of a project-bound form.</summary>
+    /// instead of a project-bound form (to-dos and directory contacts work without one).</summary>
     [Parameter, EditorRequired] public string ProjectId { get; set; } = "";
 
     /// <summary>Page-owned staged actions (cleared per selection, like all staging); the pane
@@ -102,7 +146,33 @@
     [Parameter, EditorRequired] public List<StagedSystemAction> StagedActions { get; set; } = new();
     [Parameter] public EventCallback OnStagingChanged { get; set; }
 
+    /// <summary>The staged new record (null = none) — the email-linked creates' one draft. Owned
+    /// by the page; edited in <see cref="StagedRecordActionEditor"/>.</summary>
+    [Parameter] public StagedRecordCreate? StagedCreate { get; set; }
+    [Parameter] public EventCallback<StagedRecordCreate?> StagedCreateChanged { get; set; }
+
+    /// <summary>Page-owned to-do draft rows — "Create To-do Items". One to-do per assignee per
+    /// row on Apply, the email tagged to every one.</summary>
+    [Parameter] public List<TodoDraftRow> TodoRows { get; set; } = new();
+    [Parameter] public IReadOnlyList<SearchSelect.Option> TodoAssigneeOptions { get; set; } = Array.Empty<SearchSelect.Option>();
+    [Parameter] public string? TodoProjectNote { get; set; }
+
+    /// <summary>The open email's attachments — the work-order create offers them as record-keeping
+    /// tick-boxes.</summary>
+    [Parameter] public IReadOnlyList<IntakeAttachment> EmailAttachments { get; set; } = Array.Empty<IntakeAttachment>();
+
+    /// <summary>The selected email's sender — pre-fills the work-order subcontractor and the
+    /// defect assignee. Suggestions only.</summary>
+    [Parameter] public string SenderEmail { get; set; } = "";
+
     private SystemActionKind kind = SystemActionKind.RaiseRequest;
+
+    // To-dos are company-wide until a project is set, and a directory contact has no project at
+    // all — everything else raises on the email's project.
+    private static bool NeedsProject(SystemActionKind actionKind) =>
+        actionKind is not (SystemActionKind.AddDirectoryContact or SystemActionKind.CreateTodos);
+
+    private List<TodoDraftRow> TitledTodoRows => TodoRows.Where(r => !string.IsNullOrWhiteSpace(r.Title)).ToList();
 
     private void OnKindChanged(ChangeEventArgs e)
     {
@@ -118,6 +188,19 @@
     private async Task RemoveAsync(StagedSystemAction action)
     {
         StagedActions.Remove(action);
+        await OnStagingChanged.InvokeAsync();
+    }
+
+    private async Task ClearStagedCreateAsync()
+    {
+        await StagedCreateChanged.InvokeAsync(null);
+        await OnStagingChanged.InvokeAsync();
+    }
+
+    private async Task RemoveTodoRowAsync(TodoDraftRow row)
+    {
+        TodoRows.Remove(row);
+        if (TodoRows.Count == 0) TodoRows.Add(new TodoDraftRow());
         await OnStagingChanged.InvokeAsync();
     }
 }

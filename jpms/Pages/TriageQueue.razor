@@ -1083,7 +1083,7 @@
             }
             else
             {
-                <p class="text-sm text-content-subtle flex-1">Write a reply in the email window, or stage system tags and to-dos in the System Tags window — then apply it all in one go here.</p>
+                <p class="text-sm text-content-subtle flex-1">Write a reply in the email window, stage tags in System Tags, or line up new records and to-dos in System Actions — then apply it all in one go here.</p>
             }
             <div class="flex items-center gap-2">
                 <button type="button" class="@DiscardTabClass" @onclick="() => discardArmed = !discardArmed">🗑 Discard</button>
@@ -1117,18 +1117,11 @@
                             IsOpen="true"
                             ProjectId="@triageProjectId"
                             EmailSubject="@(selected?.Subject ?? "")"
-                            SenderEmail="@(selected?.FromEmail ?? "")"
-                            EmailAttachments="@(detail?.Attachments ?? Array.Empty<IntakeAttachment>())"
                             LockedPathway="@(FixedPathway is { } fp ? PathwayLabel(fp) : null)"
                             ActivePathway="@(pathway is { } chosenPathway ? PathwayLabel(chosenPathway) : null)"
                             ActivePathwayChanged="OnModalPathwayChanged"
                             Picked="pickedRecords"
                             OnStagingChanged="StateHasChanged"
-                            StagedCreate="@stagedCreate"
-                            StagedCreateChanged="v => stagedCreate = v"
-                            TodoRows="createTodoRows"
-                            TodoAssigneeOptions="todoAssigneeOptions"
-                            TodoProjectNote="@TodoProjectNote"
                             OnClose="() => workspace.Close(PanelKind.SystemTags)" />
         }
     </div>;
@@ -1253,7 +1246,7 @@ else
                         EmailAvailable="@(selected is not null)"
                         PreviewAvailable="@(workspace.Preview is not null)"
                         TagsBadge="@StagedTagCount"
-                        ActionsBadge="@stagedSystemActions.Count"
+                        ActionsBadge="@StagedActionCount"
                         PopoutContext="@PopoutQueryContext">
             <InboxContent>@InboxPaneContent</InboxContent>
             <EmailContent>@EmailPaneContent</EmailContent>
@@ -1268,10 +1261,20 @@ else
                 }
                 else
                 {
-                    <SystemActionsPane Projects="@ProjectOptionsFor(null)"
+                    @* Keyed on the message id like the tags pane: a fresh selection starts fresh
+                       scratch forms (the staged work itself is page-owned and resets per selection). *@
+                    <SystemActionsPane @key="selected.Id"
+                                       Projects="@ProjectOptionsFor(null)"
                                        ProjectId="@triageProjectId"
                                        StagedActions="stagedSystemActions"
-                                       OnStagingChanged="StateHasChanged" />
+                                       OnStagingChanged="StateHasChanged"
+                                       StagedCreate="@stagedCreate"
+                                       StagedCreateChanged="v => stagedCreate = v"
+                                       TodoRows="createTodoRows"
+                                       TodoAssigneeOptions="todoAssigneeOptions"
+                                       TodoProjectNote="@TodoProjectNote"
+                                       EmailAttachments="@(detail?.Attachments ?? Array.Empty<IntakeAttachment>())"
+                                       SenderEmail="@(selected?.FromEmail ?? "")" />
                 }
             </ActionsContent>
             <RecordsContent>
@@ -1643,10 +1646,9 @@ else
     private IReadOnlyList<LinkableRecord> linkRecords = Array.Empty<LinkableRecord>();
     private bool linkRecordsLoading;
 
-    // Create-new state lives in `stagedCreate` (Features.Triage.StagedRecordCreate), drafted in the
-    // System Tags modal. A request created from an email always starts as a General container
-    // (auto-numbered REQ-#### server-side); it's promoted to an RFI later from the request page.
-    private const RequestType createKind = RequestType.General;
+    // Create-new state lives in `stagedCreate` (Features.Triage.StagedRecordCreate), drafted in
+    // the System Actions pane (moved from System Tags 2026-08-10). Its RequestKind says whether
+    // the Request kind raises a General container (REQ-####) or an official RFI.
 
     // Reply-in-thread state: the chosen project, the reply written in the portal (it becomes the
     // draft's body AND the background request's description), and the last successful outcome
@@ -1686,8 +1688,8 @@ else
     private bool newEmailRecordsLoading;
     private IReadOnlyList<LinkableRecord> newEmailRecords = Array.Empty<LinkableRecord>();
 
-    // To-do draft rows (Features.Triage.TodoDraftRow), edited in the System Tags modal's
-    // Internal → Create new pane; one to-do is raised PER ASSIGNEE per row when the apply runs.
+    // To-do draft rows (Features.Triage.TodoDraftRow), edited in the System Actions pane's
+    // "Create To-do Items" action; one to-do is raised PER ASSIGNEE per row when the apply runs.
     private List<TodoDraftRow> createTodoRows = new() { new TodoDraftRow() };
 
     // Section 2's own project pick (independent of section 3's triageProjectId — both sections are
@@ -1761,9 +1763,10 @@ else
         if (Enum.TryParse<TriagePathway>(tab, out var next)) SetPathway(next);
     }
 
-    // Picked links + the staged create + the drafted to-dos — everything the System Tags modal
-    // is holding for the apply, so the one button's badge tells the whole story.
-    private int StagedTagCount => pickedRecords.Count + (StagedCreateReady ? 1 : 0) + CurrentTodoDrafts().Count;
+    // Tags badge = staged LINKS; actions badge = everything the Actions pane will run (staged
+    // store calls, the drafted new record, the drafted to-dos) — creation moved there 2026-08-10.
+    private int StagedTagCount => pickedRecords.Count;
+    private int StagedActionCount => stagedSystemActions.Count + (StagedCreateReady ? 1 : 0) + CurrentTodoDrafts().Count;
 
     private bool StagedCreateReady =>
         // A defect has no title — its description is what makes it a real staged record.
@@ -2505,7 +2508,9 @@ else
                     StagedRecordKind.BidPackage => "create the bid package from this email",
                     StagedRecordKind.WorkOrder => StagedWorkOrderSummary(stagedCreate),
                     StagedRecordKind.Defect => "raise the defect from this email",
-                    _ => "create the request from this email"
+                    _ => stagedCreate.RequestKind == RequestType.Rfi
+                        ? "raise the RFI from this email"
+                        : "create the request from this email"
                 });
             if (stagedSystemActions.Count == 1)
                 parts.Add($"run 1 system action ({stagedSystemActions[0].Summary})");
@@ -2651,7 +2656,7 @@ else
         // it, rather than have Apply quietly skip it.
         if (StagedCreateReady && !createReady)
         {
-            actionError = "To create the record, set the email's Project first — or remove the staged record in System Tags.";
+            actionError = "To create the record, set the email's Project first — or remove the staged record in System Actions.";
             return;
         }
         // A staged work order that isn't complete yet (no subcontractor, no priced line…) is the
@@ -2660,14 +2665,14 @@ else
         if (createReady && stagedCreate is { Kind: StagedRecordKind.WorkOrder } stagedOrder
             && stagedOrder.WorkOrderProblem is { } orderProblem)
         {
-            actionError = $"The staged work order isn't ready — {orderProblem} Finish it in System Tags, or remove it.";
+            actionError = $"The staged work order isn't ready — {orderProblem} Finish it in System Actions, or remove it.";
             return;
         }
         // Same "decision not yet made" rule for a staged defect with no description yet.
         if (createReady && stagedCreate is { Kind: StagedRecordKind.Defect } stagedDefect
             && stagedDefect.DefectProblem is { } defectProblem)
         {
-            actionError = $"The staged defect isn't ready — {defectProblem} Finish it in System Tags, or remove it.";
+            actionError = $"The staged defect isn't ready — {defectProblem} Finish it in System Actions, or remove it.";
             return;
         }
         if (replying)
@@ -2767,7 +2772,7 @@ else
                 }
                 else if (staged.Kind == StagedRecordKind.WorkOrder)
                 {
-                    // The full manual-order surface staged in System Tags, raised through the
+                    // The full manual-order surface staged in System Actions, raised through the
                     // same rules as the Work Orders tab (numbering, draft semantics, cost-code
                     // master guard) with the email tagged to the new order.
                     busyLabel = "Raising work order";
@@ -2831,7 +2836,7 @@ else
                 }
                 else if (staged.Kind == StagedRecordKind.Defect)
                 {
-                    // The defect staged in System Tags, raised through the same rules as a manual
+                    // The defect staged in System Actions, raised through the same rules as a manual
                     // defect (numbering, Open status) with the email tagged to it.
                     busyLabel = "Raising defect";
                     await Intake.CreateDefectFromMessageAsync(new Jewel.JPMS.Contracts.Closeout.CreateDefectFromMessage(
@@ -2844,9 +2849,9 @@ else
                 }
                 else
                 {
-                    busyLabel = "Creating request";
+                    busyLabel = staged.RequestKind == RequestType.Rfi ? "Raising RFI" : "Creating request";
                     await Intake.CreateRequestFromMessageAsync(new CreateRequestFromMessage(
-                        anchor.Id, triageProjectId, createKind, "", staged.Title.Trim(),
+                        anchor.Id, triageProjectId, staged.RequestKind, "", staged.Title.Trim(),
                         staged.Description?.Trim() ?? "",
                         DrawingRef: NullIfBlank(staged.DrawingRef),
                         ResponseDue: ParseDate(staged.ResponseDue),

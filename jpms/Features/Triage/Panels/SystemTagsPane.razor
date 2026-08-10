@@ -1,17 +1,14 @@
 @namespace Jewel.JPMS.Features.Triage.Panels
-@using Jewel.JPMS.Features.Subcontractors
-@using Jewel.JPMS.Features.CostCenters
+@using Jewel.JPMS.Contracts.RecordLinks
 @inject IIntakeQueue Intake
-@inject SubcontractorsReadModel Subcontractors
-@inject CostCentersReadModel CostCenters
 
-@* THE tagging surface for triage: one workspace pane (no longer a modal), three tabs — Client /
-   Subcontractor / Internal — each offering exactly what that side of the system can do with an
-   email: link to existing records, or create new ones (the Internal tab's create drafts to-dos —
-   the multi-item editor that used to be the page's own To-dos modal). Everything here is STAGED:
-   picked records, the drafted new record and the drafted to-dos go back to the page as pending
-   work, applied (and tagged, verified) by the page's single Apply. A thread already filed under a
-   pathway opens locked to its own tab — the client wall in tab form. *@
+@* THE tagging surface for triage: one workspace pane, three tabs — Client / Subcontractor /
+   Internal — each linking the email to the records that side of the system already has. Tagging
+   only (2026-08-10): CREATING records from the email — requests, bid packages, work orders,
+   defects, to-dos — lives in System Actions, the one home for every creation. Everything here is
+   STAGED: picked records go back to the page as pending work, applied (and tagged, verified) by
+   the page's single Apply. A thread already filed under a pathway opens locked to its own tab —
+   the client wall in tab form. *@
 
 @if (IsOpen)
 {
@@ -41,8 +38,8 @@
             <p class="text-xs text-content-subtle -mt-2">Already filed under <span class="font-medium text-content">@lockedPathway</span> — tags here work within it.</p>
         }
 
-        @* What's staged so far, across every tab — the modal's running total. *@
-        @if (Picked.Count > 0 || StagedCreate is not null || TitledTodoRows.Count > 0)
+        @* What's staged so far, across every tab — the running total. *@
+        @if (Picked.Count > 0)
         {
             <div class="flex flex-wrap items-center gap-1.5">
                 @foreach (var picked in Picked.ToList())
@@ -53,361 +50,42 @@
                                 @onclick="() => TogglePick(picked)">&times;</button>
                     </span>
                 }
-                @if (StagedCreate is { } staged)
-                {
-                    <span class="inline-flex items-center gap-1 rounded-full border border-accent/50 bg-accent/5 text-accent pl-2.5 pr-1 py-0.5 text-xs">
-                        <span>✚ @staged.Label: @(string.IsNullOrWhiteSpace(staged.DisplayTitle) ? "(untitled)" : staged.DisplayTitle)</span>
-                        <button type="button" class="leading-none px-1 text-accent/70 hover:text-negative" title="Remove"
-                                @onclick="ClearStagedCreate">&times;</button>
-                    </span>
-                }
-                @foreach (var todoChipRow in TitledTodoRows)
-                {
-                    var chipRow = todoChipRow;
-                    <span @key="chipRow" class="inline-flex items-center gap-1 rounded-full border border-accent/50 bg-accent/5 text-accent pl-2.5 pr-1 py-0.5 text-xs" title="@chipRow.Title">
-                        <span>✚ to-do: @chipRow.Title</span>
-                        <button type="button" class="leading-none px-1 text-accent/70 hover:text-negative" title="Remove"
-                                @onclick="() => RemoveTodoRow(chipRow)">&times;</button>
-                    </span>
-                }
             </div>
         }
 
-        @if (activeTab == "Internal")
+        @* The one record-less tag on the Subcontractor side: general correspondence. A tick, not
+           a search — no project needed, staged like every pick and applied by the same Apply; the
+           mail reads back under Subcontractor → Communications. *@
+        @if (activeTab == "Subcontractor")
         {
-            @* Internal: to-do items (pathway-neutral) — link the email to existing ones, or draft
-               new ones that the page's Apply raises (numbered TODO-####). Creating works without a
-               project (the items are company-wide); linking needs the project's own list. *@
-            <div class="flex items-center gap-2">
-                <button type="button" class="@SubTabClass(!createOpen)" @onclick="CloseCreatePane">Link to existing</button>
-                <button type="button" class="@SubTabClass(createOpen)" @onclick="OpenCreatePane">Create new</button>
-            </div>
-
-            @if (createOpen)
-            {
-                @TodoCreatePane
-            }
-            else if (string.IsNullOrWhiteSpace(ProjectId))
-            {
-                <p class="rounded-lg bg-amber-500/10 border border-amber-500/40 px-3 py-2 text-xs text-content">
-                    Set the email's <span class="font-medium">Project</span> above to link to its to-do items — or use <span class="font-medium">Create new</span> to draft to-dos (company-wide until a project is set).
-                </p>
-            }
-            else
-            {
-                <p class="text-xs text-content-subtle">Link this email to existing to-do items — the email is tagged to every picked item on apply.</p>
-                @LinkPicker
-            }
+            <label class="flex items-start gap-2 cursor-pointer select-none">
+                <input type="checkbox" checked="@IsCommsPicked" @onchange="ToggleCommsPickAsync" />
+                <span class="text-sm text-content">
+                    Subcontractor communication
+                    <span class="block text-xs text-content-subtle">Tags the thread as general subcontractor correspondence — no record needed. It appears under Subcontractor → Communications.</span>
+                </span>
+            </label>
         }
-        else if (string.IsNullOrWhiteSpace(ProjectId))
+
+        @if (string.IsNullOrWhiteSpace(ProjectId))
         {
             <p class="rounded-lg bg-amber-500/10 border border-amber-500/40 px-3 py-2 text-xs text-content">
-                Set the email's <span class="font-medium">Project</span> above first — tags file the email against a project's records.
+                Set the email's <span class="font-medium">Project</span> above first — tags file the email against a project's records. To create a new record or to-do from this email, use <span class="font-medium">System actions</span>.
             </p>
         }
         else
         {
-            <div class="flex items-center gap-2">
-                <button type="button" class="@SubTabClass(!createOpen)" @onclick="() => createOpen = false">Link to existing</button>
-                <button type="button" class="@SubTabClass(createOpen)" @onclick="OpenCreatePane">Create new</button>
-            </div>
-
-            @if (!createOpen)
+            @if (activeTab == "Internal")
             {
-                @LinkPicker
+                <p class="text-xs text-content-subtle">Link this email to existing to-do items — the email is tagged to every picked item on apply. To draft NEW to-dos from this email, use System actions.</p>
             }
-            else if (activeTab == "Client")
-            {
-                <div class="space-y-3">
-                    <p class="rounded-lg bg-surface-raised border border-line px-3 py-2 text-xs text-content-subtle">
-                        Created as a <span class="font-medium text-content">General</span> request, auto-numbered REQ-#### — promote it to an official RFI (or on to a variation) from the request page. The email is tagged to it on apply.
-                    </p>
-                    <FormField Label="Subject" Value="@Create.Title" OnChange="v => { Create.Title = v; NotifyCreate(); }" Required="true" />
-                    <div>
-                        <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Detail</label>
-                        <textarea class="field" rows="4" value="@Create.Description" @oninput="e => { Create.Description = e.Value?.ToString() ?? string.Empty; NotifyCreate(); }"></textarea>
-                    </div>
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <FormField Label="Drawing / detail ref" Value="@Create.DrawingRef" OnChange="v => { Create.DrawingRef = v; NotifyCreate(); }" />
-                        <FormField Label="Response due" Value="@Create.ResponseDue" OnChange="v => { Create.ResponseDue = v; NotifyCreate(); }" InputType="date" />
-                    </div>
-                    <label class="flex items-start gap-2 cursor-pointer">
-                        <input type="checkbox" checked="@Create.AddToProgramme" @onchange="e => { Create.AddToProgramme = e.Value is true; NotifyCreate(); }" />
-                        <span class="text-sm text-content">
-                            Also a Relevant Event for the Programme
-                            <span class="block text-xs text-content-subtle">The email's thread is also tagged to the project's programme — it appears in the Programme tab's Relevant Events.</span>
-                        </span>
-                    </label>
-                </div>
-            }
-            else
-            {
-                <div class="space-y-3">
-                    @* Which Subcontractor record the create drafts: a bid package (tendering), a
-                       work order (direct commitment) or a defect (remediation to chase). One staged
-                       create either way — switching kind re-labels what Apply will raise. *@
-                    <div class="flex items-center gap-2">
-                        <span class="text-xs uppercase tracking-wider text-content-subtle font-semibold">Record</span>
-                        <button type="button" class="@SubTabClass(SubCreateKind == StagedRecordKind.BidPackage)"
-                                @onclick="() => SwitchSubCreateKind(StagedRecordKind.BidPackage)">Bid package</button>
-                        <button type="button" class="@SubTabClass(SubCreateKind == StagedRecordKind.WorkOrder)"
-                                @onclick="() => SwitchSubCreateKind(StagedRecordKind.WorkOrder)">Work order</button>
-                        <button type="button" class="@SubTabClass(SubCreateKind == StagedRecordKind.Defect)"
-                                @onclick="() => SwitchSubCreateKind(StagedRecordKind.Defect)">Defect</button>
-                    </div>
-
-                    @if (SubCreateKind == StagedRecordKind.BidPackage)
-                    {
-                        <p class="text-xs text-content-subtle">A draft bid package is created and this email is tagged to it on apply. Invite subcontractors and add line items from the bid package page.</p>
-                        <FormField Label="Title" Value="@Create.Title" OnChange="v => { Create.Title = v; NotifyCreate(); }" Required="true" />
-                        <FormField Label="Trade" Value="@Create.Trade" OnChange="v => { Create.Trade = v; NotifyCreate(); }" />
-                    }
-                    else if (SubCreateKind == StagedRecordKind.WorkOrder)
-                    {
-                        <p class="text-xs text-content-subtle">The work order is raised and this email is tagged to it on apply — released with the next order number, or as an unnumbered draft for approval from the Work Orders page.</p>
-
-                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                            <div>
-                                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Subcontractor *</label>
-                                <select class="field" disabled="@(Subcontractors.Current is null)"
-                                        @onchange="e => SetWorkOrder(c => c.SubcontractorId = e.Value?.ToString() ?? string.Empty)">
-                                    @if (Subcontractors.Current is null)
-                                    {
-                                        <option value="">Loading…</option>
-                                    }
-                                    else
-                                    {
-                                        <option value="" selected="@(Create.SubcontractorId == "")">Choose a subcontractor…</option>
-                                        @foreach (var sub in SortedSubcontractors)
-                                        {
-                                            <option value="@sub.SubcontractorId" selected="@(Create.SubcontractorId == sub.SubcontractorId)">@sub.CompanyName</option>
-                                        }
-                                    }
-                                </select>
-                                @if (senderMatchedCompany is { } matched && Create.SubcontractorId != "" && StagedCreate is null)
-                                {
-                                    <p class="text-[11px] text-content-subtle mt-1">Matched to the sender — @matched</p>
-                                }
-                            </div>
-                            <FormField Label="Order title" Value="@Create.Title" OnChange="v => SetWorkOrder(c => c.Title = v)" Required="true" />
-                        </div>
-                        <div>
-                            <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Scope</label>
-                            <textarea class="field" rows="2" maxlength="4000" placeholder="What the order instructs (optional)"
-                                      value="@Create.Scope" @oninput="e => SetWorkOrder(c => c.Scope = e.Value?.ToString() ?? string.Empty)"></textarea>
-                        </div>
-
-                        @* Programme — printed in the purchase order's Programme section; all optional. *@
-                        <div class="rounded-lg border border-line bg-surface p-3 space-y-3">
-                            <p class="text-[11px] uppercase tracking-wider text-content-subtle font-semibold"
-                               title="Printed in the purchase order's Programme section — leave everything empty to omit it">Programme</p>
-                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                <FormField Label="Start date" Value="@Create.ProgrammeStart" OnChange="v => SetWorkOrder(c => c.ProgrammeStart = v)" InputType="date" />
-                                <FormField Label="Target completion" Value="@Create.TargetCompletion" OnChange="v => SetWorkOrder(c => c.TargetCompletion = v)" InputType="date" />
-                            </div>
-                            <div>
-                                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Programme notes</label>
-                                <textarea class="field" rows="2" maxlength="2000" placeholder="e.g. Weekly programme duration 1st &amp; 2nd fix phases (optional)"
-                                          value="@Create.ProgrammeNotes" @oninput="e => SetWorkOrder(c => c.ProgrammeNotes = e.Value?.ToString() ?? string.Empty)"></textarea>
-                            </div>
-                        </div>
-
-                        @* Priced lines — each carries its own cost centre; the order's value is their sum. *@
-                        <div class="rounded-lg border border-line bg-surface p-3">
-                            <p class="text-[11px] uppercase tracking-wider text-content-subtle font-semibold mb-2"
-                               title="Each line lands on its own cost centre — the order's value is their sum">Priced lines</p>
-                            <div class="space-y-2">
-                                @for (var index = 0; index < Create.Lines.Count; index++)
-                                {
-                                    var lineIndex = index;
-                                    var line = Create.Lines[lineIndex];
-                                    <div>
-                                        <div class="flex items-center gap-2 mb-1">
-                                            <SearchSelect Options="@CostCentreOptions" WidthClass="w-48"
-                                                          Placeholder="Cost centre…"
-                                                          InputClass="bg-surface border border-line px-2 py-1.5"
-                                                          Value="@line.CostCode" ValueChanged="v => SetWorkOrder(_ => line.CostCode = v)" />
-                                            <input type="text" maxlength="256" placeholder="What this line covers"
-                                                   class="bg-surface border border-line rounded-lg px-2 py-1.5 text-content text-sm flex-1"
-                                                   value="@line.Title"
-                                                   @onchange="e => SetWorkOrder(_ => line.Title = e.Value?.ToString() ?? string.Empty)" />
-                                            <input type="number" step="any" placeholder="Amount £"
-                                                   class="bg-surface border border-line rounded-lg px-2 py-1.5 text-right text-content text-sm w-28"
-                                                   value="@line.AmountText"
-                                                   @onchange="e => SetWorkOrder(_ => line.AmountText = e.Value?.ToString() ?? string.Empty)" />
-                                            <button type="button" aria-label="Remove this line" disabled="@(Create.Lines.Count == 1)"
-                                                    class="inline-flex items-center justify-center w-7 h-7 rounded-md text-content-subtle hover:text-negative hover:bg-surface-raised"
-                                                    @onclick="() => SetWorkOrder(c => c.Lines.RemoveAt(lineIndex))">
-                                                <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                                                     stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6L6 18" /></svg>
-                                            </button>
-                                        </div>
-                                        <textarea rows="2" maxlength="1024" placeholder="Description — the full detail printed on the purchase order (optional)"
-                                                  class="w-full bg-surface border border-line rounded-lg px-2 py-1.5 text-content text-sm placeholder:text-content-subtle"
-                                                  value="@line.Description"
-                                                  @onchange="e => SetWorkOrder(_ => line.Description = e.Value?.ToString() ?? string.Empty)"></textarea>
-                                    </div>
-                                }
-                            </div>
-                            <div class="flex items-center justify-between mt-2">
-                                <button type="button" @onclick="() => SetWorkOrder(c => c.Lines.Add(new StagedWorkOrderLine()))"
-                                        class="text-xs font-medium text-content-subtle hover:text-content underline underline-offset-4">
-                                    + Add another line
-                                </button>
-                                <span class="text-sm text-content-muted">Order value <span class="text-content font-medium">@Money(OrderTotal)</span></span>
-                            </div>
-                        </div>
-
-                        @* Deposit — percentage of the order value only, printed at the foot of the PO. *@
-                        <div class="rounded-lg border border-line bg-surface p-3">
-                            <label class="flex w-fit items-center gap-2 text-sm text-content cursor-pointer select-none"
-                                   title="Tick when the subcontractor requires a deposit — the percentage prints at the foot of the purchase order">
-                                <input type="checkbox" class="cursor-pointer align-middle" checked="@Create.DepositRequired"
-                                       @onchange="e => SetWorkOrder(c => c.DepositRequired = e.Value is true)" />
-                                Deposit required
-                            </label>
-                            @if (Create.DepositRequired)
-                            {
-                                <div class="mt-2 flex items-center gap-2">
-                                    <input type="number" step="any" min="0" max="100" placeholder="%"
-                                           class="bg-surface border border-line rounded-lg px-2 py-1.5 text-right text-content text-sm w-24"
-                                           value="@Create.DepositPercentText"
-                                           @onchange="e => SetWorkOrder(c => c.DepositPercentText = e.Value?.ToString() ?? string.Empty)" />
-                                    <span class="text-sm text-content-muted">% of the order value</span>
-                                </div>
-                            }
-                        </div>
-
-                        @* Attachments — record keeping only. Ticked email attachments are copied
-                           onto the order server-side when Apply raises it; picked files upload
-                           straight after. Neither is ever sent to the supplier. *@
-                        <div class="rounded-lg border border-line bg-surface p-3 space-y-2">
-                            <div class="flex items-center justify-between gap-3">
-                                <p class="text-[11px] uppercase tracking-wider text-content-subtle font-semibold"
-                                   title="Kept on the order for the office's records — never emailed to the supplier and never printed on the purchase order">
-                                    Attachments — record keeping
-                                </p>
-                                <label class="btn-secondary text-xs cursor-pointer">
-                                    Add files
-                                    <InputFile OnChange="OnWorkOrderFilesSelected" multiple class="hidden" />
-                                </label>
-                            </div>
-                            <p class="text-xs text-content-subtle">Kept on the order for the office's records — never sent to the supplier.</p>
-                            @if (TickableEmailAttachments.Count > 0)
-                            {
-                                <div>
-                                    <p class="text-xs font-semibold text-content-subtle mb-1">From this email</p>
-                                    <ul class="space-y-1">
-                                        @foreach (var attachment in TickableEmailAttachments)
-                                        {
-                                            var emailAttachment = attachment;
-                                            <li>
-                                                <label class="flex items-center gap-2 text-sm text-content cursor-pointer">
-                                                    <input type="checkbox"
-                                                           checked="@Create.EmailAttachmentIds.Contains(emailAttachment.Id)"
-                                                           @onchange="e => ToggleEmailAttachment(emailAttachment, e.Value is true)" />
-                                                    <span class="truncate" title="@emailAttachment.Name">@emailAttachment.Name</span>
-                                                    @if (emailAttachment.Size > 0)
-                                                    {
-                                                        <span class="text-xs text-content-subtle whitespace-nowrap">@FormatSize(emailAttachment.Size)</span>
-                                                    }
-                                                </label>
-                                            </li>
-                                        }
-                                    </ul>
-                                </div>
-                            }
-                            @if (Create.UploadFiles.Count > 0)
-                            {
-                                <ul class="space-y-1">
-                                    @foreach (var file in Create.UploadFiles.ToList())
-                                    {
-                                        var staged = file;
-                                        <li class="flex items-center gap-2 text-sm text-content">
-                                            <span class="truncate">@staged.Name</span>
-                                            <span class="text-xs text-content-subtle whitespace-nowrap">@FormatSize(staged.Size)</span>
-                                            <button type="button" aria-label="Remove this file"
-                                                    class="ml-auto text-xs text-content-subtle hover:text-negative"
-                                                    @onclick="() => SetWorkOrder(c => c.UploadFiles.Remove(staged))">Remove</button>
-                                        </li>
-                                    }
-                                </ul>
-                            }
-                        </div>
-
-                        <label class="flex w-fit items-center gap-2 text-sm text-content cursor-pointer select-none"
-                               title="A draft is stored without a number and is invisible to the supplier — though its value counts in the Financials tab's committed figures — until someone approves or rejects it from the Work Orders tab">
-                            <input type="checkbox" class="cursor-pointer align-middle" checked="@Create.SaveAsDraft"
-                                   @onchange="e => SetWorkOrder(c => c.SaveAsDraft = e.Value is true)" />
-                            Save as a draft — needs approval before it's issued
-                        </label>
-
-                        @* The warning the auto-send promises: a released order emails its purchase
-                           order to the supplier the moment the page's Apply raises it (a draft
-                           never does — its email waits for approval). *@
-                        @if (!Create.SaveAsDraft)
-                        {
-                            @if (WorkOrderSupplier is { } woSupplier && string.IsNullOrWhiteSpace(woSupplier.ContactEmail))
-                            {
-                                <p class="rounded-lg bg-amber-50 border border-amber-200 px-3 py-2 text-sm text-amber-800">
-                                    @woSupplier.CompanyName has no email address in the directory, so the purchase
-                                    order can't be emailed. The order will still be raised — add an email address
-                                    in the directory, then send the PO from its page.
-                                </p>
-                            }
-                            else
-                            {
-                                <p class="rounded-lg bg-accent/10 border border-accent/30 px-3 py-2 text-sm text-content">
-                                    When Apply raises this order, the purchase-order email will be
-                                    <strong>sent</strong> to
-                                    <strong>@(WorkOrderSupplier?.ContactEmail ?? "the subcontractor's directory email")</strong>
-                                    from the projects mailbox. Tick "Save as a draft" if it shouldn't go out yet.
-                                </p>
-                            }
-                        }
-
-                        @if (StagedCreate is not null && Create.WorkOrderProblem is { } problem)
-                        {
-                            <p class="text-xs text-amber-600">@problem</p>
-                        }
-                    }
-                    else
-                    {
-                        <p class="text-xs text-content-subtle">The defect is raised (numbered DEF-####) and this email is tagged to it on apply — it appears on the project's Defects tab, where its status is worked to Verified.</p>
-
-                        <div>
-                            <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Location</label>
-                            <input type="text" class="field" maxlength="256" placeholder="Room, area or feature"
-                                   value="@Create.DefectLocation" @oninput="e => SetDefect(c => c.DefectLocation = e.Value?.ToString() ?? string.Empty)" />
-                        </div>
-                        <div>
-                            <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Description *</label>
-                            <textarea class="field" rows="3" maxlength="1024" placeholder="What's wrong and what putting it right needs"
-                                      value="@Create.Description" @oninput="e => SetDefect(c => c.Description = e.Value?.ToString() ?? string.Empty)"></textarea>
-                        </div>
-                        <div>
-                            <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Assigned to</label>
-                            <input type="text" class="field" maxlength="256" placeholder="Who the fix is chased with — an email address"
-                                   value="@Create.DefectAssignedTo" @oninput="e => SetDefect(c => c.DefectAssignedTo = e.Value?.ToString() ?? string.Empty)" />
-                            @if (defectAssigneeFromSender && Create.DefectAssignedTo != "")
-                            {
-                                <p class="text-[11px] text-content-subtle mt-1">Pre-filled from the sender</p>
-                            }
-                        </div>
-
-                        @if (StagedCreate is not null && Create.DefectProblem is { } defectProblem)
-                        {
-                            <p class="text-xs text-amber-600">@defectProblem</p>
-                        }
-                    }
-                </div>
-            }
+            @LinkPicker
         }
+    </div>
 
-        <div class="flex items-center justify-end pt-1">
-            <button type="button" class="btn-primary" @onclick="CloseAsync"
-                    title="Tidies the staged list and hands this window back to what it showed before — nothing is applied until the inbox's Apply">Done</button>
-        </div>
+    <div class="flex items-center justify-end pt-4">
+        <button type="button" class="btn-primary" @onclick="CloseAsync"
+                title="Tidies the staged list and hands this window back to what it showed before — nothing is applied until the inbox's Apply">Done</button>
     </div>
 </div>
 }
@@ -433,106 +111,40 @@
     [Parameter] public string ProjectId { get; set; } = "";
     [Parameter] public string EmailSubject { get; set; } = "";
 
-    /// <summary>The open email's attachments (from the message detail), offered as tick-boxes on
-    /// the work-order create pane so they can be kept on the new order as record keeping. Empty
-    /// when the email has none (or the detail hasn't loaded).</summary>
-    [Parameter] public IReadOnlyList<IntakeAttachment> EmailAttachments { get; set; } = Array.Empty<IntakeAttachment>();
-
-    /// <summary>The selected email's sender address — used to pre-select the work-order
-    /// subcontractor when it matches a directory record (exact contact email, else a unique
-    /// company domain). A suggestion only; the picker stays fully changeable.</summary>
-    [Parameter] public string SenderEmail { get; set; } = "";
-
     /// <summary>The thread's fixed pathway label ("Client"/"Subcontractor"/"Internal"), when it is
     /// already filed — locks the tabs to that side (the wall in tab form). Null = free choice.</summary>
     [Parameter] public string? LockedPathway { get; set; }
 
     /// <summary>The tab in use — the pathway decision, reported up so the page files the thread
-    /// (and stamps to-dos / Replied) under it.</summary>
+    /// (and stamps Replied) under it.</summary>
     [Parameter] public string? ActivePathway { get; set; }
     [Parameter] public EventCallback<string> ActivePathwayChanged { get; set; }
 
-    /// <summary>Page-owned staged record links; the modal mutates and notifies.</summary>
+    /// <summary>Page-owned staged record links; the pane mutates and notifies.</summary>
     [Parameter] public List<LinkableRecord> Picked { get; set; } = new();
     [Parameter] public EventCallback OnStagingChanged { get; set; }
 
-    /// <summary>The staged new record (null = none). Owned by the page; edited here.</summary>
-    [Parameter] public StagedRecordCreate? StagedCreate { get; set; }
-    [Parameter] public EventCallback<StagedRecordCreate?> StagedCreateChanged { get; set; }
-
-    /// <summary>Page-owned to-do draft rows — the Internal tab's "Create new". The modal edits
-    /// them in place and raises <see cref="OnStagingChanged"/> so the page's badge re-renders.
-    /// One to-do is raised PER ASSIGNEE per row when the page's Apply runs; nothing before.</summary>
-    [Parameter] public List<TodoDraftRow> TodoRows { get; set; } = new();
-
-    /// <summary>Assignee picker options (roles, and named people within them), built once by the
-    /// page from the todo store's assignable roles/people.</summary>
-    [Parameter] public IReadOnlyList<SearchSelect.Option> TodoAssigneeOptions { get; set; } = Array.Empty<SearchSelect.Option>();
-
-    /// <summary>One line saying where the items will land ("Items land on … — the email's project").</summary>
-    [Parameter] public string? TodoProjectNote { get; set; }
-
     private string activeTab = "Client";
-    private bool createOpen;
-    // The Internal create pane's drill-in: null = the list of drafted to-dos, an index = that
-    // row's detail form (same LIST ⇄ DETAIL shape the standalone To-dos modal had).
-    private int? todoEditIndex;
-    // Which Subcontractor record the create pane drafts (BidPackage | WorkOrder | Defect).
-    private StagedRecordKind subCreateKind = StagedRecordKind.BidPackage;
-    // True while the defect assignee is the sender suggestion rather than a typed value — drives
-    // the "Pre-filled from the sender" hint, cleared by the first user edit.
-    private bool defectAssigneeFromSender;
-    // One refresh of the work-order lookups (directory + cost-code master) per modal open.
-    private bool workOrderLookupsRequested;
-    // The company name the sender was matched to, shown as a hint under the pre-selected picker.
-    private string? senderMatchedCompany;
     private RecordType linkType = RecordType.Request;
     private string search = "";
-    // Every record type's pool defaults to its own live records (a request that isn't Closed, a
-    // released work order, an open to-do…); ticking the box reveals the finished ones too.
-    private bool shouldIncludeInactive;
     private bool loading;
     private string loadedKey = "";
     private IReadOnlyList<LinkableRecord> records = Array.Empty<LinkableRecord>();
     private bool wasOpen;
-
-    // The create form binds to a scratch instance until something is typed, so an empty form never
-    // stages a phantom "new record".
-    private StagedRecordCreate Create => StagedCreate ?? scratchCreate;
-    private StagedRecordCreate scratchCreate = new();
 
     protected override async Task OnParametersSetAsync()
     {
         if (IsOpen && !wasOpen)
         {
             activeTab = LockedPathway ?? ActivePathway ?? "Client";
-            // Re-open onto whatever is mid-draft: a staged record's form, or — on Internal — the
-            // drafted to-dos.
-            createOpen = StagedCreate is not null || (activeTab == "Internal" && TitledTodoRows.Count > 0);
-            todoEditIndex = null;
-            if (TodoRows.Count == 0) TodoRows.Add(new TodoDraftRow());
-            // The house-standard response window pre-fills the request form — a week is what all
-            // but a handful of requests get, so typing a date is keystrokes spent on the common case.
-            scratchCreate = new StagedRecordCreate { ResponseDue = RequestDefaults.ResponseDue() };
-            subCreateKind = StagedCreate?.Kind switch
-            {
-                StagedRecordKind.WorkOrder => StagedRecordKind.WorkOrder,
-                StagedRecordKind.Defect => StagedRecordKind.Defect,
-                _ => StagedRecordKind.BidPackage
-            };
-            workOrderLookupsRequested = false;
-            senderMatchedCompany = null;
-            defectAssigneeFromSender = false;
-            if (createOpen && activeTab == "Subcontractor" && subCreateKind == StagedRecordKind.WorkOrder)
-                _ = EnsureWorkOrderLookupsAsync();
             linkType = DefaultTypeFor(activeTab);
             await LoadRecordsAsync();
         }
         else if (IsOpen)
         {
-            // The pane sits beside the project picker now (Triage tab / its own header row), so
-            // the project can change while it is open — re-read the pool. loadedKey makes this a
-            // no-op unless the project (or type) actually differs from what is loaded.
+            // The pane sits beside the triage bar's project picker, so the project can change
+            // while it is open — re-read the pool. loadedKey makes this a no-op unless the
+            // project (or type) actually differs from what is loaded.
             await LoadRecordsAsync();
         }
         wasOpen = IsOpen;
@@ -556,11 +168,8 @@
     {
         if (activeTab == tab) return;
         activeTab = tab;
-        createOpen = false;
-        todoEditIndex = null;
         linkType = DefaultTypeFor(tab);
         search = "";
-        shouldIncludeInactive = false;
         await ActivePathwayChanged.InvokeAsync(tab);
         await LoadRecordsAsync();
     }
@@ -594,355 +203,18 @@
         await OnStagingChanged.InvokeAsync();
     }
 
-    private void NotifyCreate()
-    {
-        // First keystroke on the scratch form stages it; a staged form just reports the edit.
-        var kind = activeTab == "Subcontractor" ? subCreateKind : StagedRecordKind.Request;
-        if (StagedCreate is null)
-        {
-            scratchCreate.Kind = kind;
-            _ = StagedCreateChanged.InvokeAsync(scratchCreate);
-        }
-        else
-        {
-            StagedCreate.Kind = kind;
-            _ = StagedCreateChanged.InvokeAsync(StagedCreate);
-        }
-    }
+    // The Subcontractor tab's "communication" tick — the constant record staged through the same
+    // picks list as everything else, so the chips, the badge and the one Apply need nothing new.
+    private bool IsCommsPicked =>
+        Picked.Any(record => record.Type == RecordType.SubcontractorComms);
 
-    // ---- work order create (Subcontractor tab) ----
-
-    private StagedRecordKind SubCreateKind => subCreateKind;
-
-    private void OpenCreatePane()
-    {
-        createOpen = true;
-        if (activeTab == "Internal")
-        {
-            if (TodoRows.Count == 0) TodoRows.Add(new TodoDraftRow());
-            // "Create new" means draft one: open straight into the form when nothing is drafted
-            // yet; the list view once there is something to list.
-            todoEditIndex = TitledTodoRows.Count == 0 && TodoRows.All(r => string.IsNullOrWhiteSpace(r.Title)) ? 0 : null;
-            return;
-        }
-        if (activeTab == "Subcontractor" && subCreateKind == StagedRecordKind.WorkOrder)
-            _ = EnsureWorkOrderLookupsAsync();
-        if (activeTab == "Subcontractor" && subCreateKind == StagedRecordKind.Defect)
-            TryPrefillDefectAssignee();
-    }
-
-    private void CloseCreatePane()
-    {
-        createOpen = false;
-        todoEditIndex = null;
-    }
-
-    private void SwitchSubCreateKind(StagedRecordKind kind)
-    {
-        if (subCreateKind == kind) return;
-        subCreateKind = kind;
-        if (kind == StagedRecordKind.WorkOrder) _ = EnsureWorkOrderLookupsAsync();
-        if (kind == StagedRecordKind.Defect) TryPrefillDefectAssignee();
-        // A staged create keeps its content and just changes what Apply will raise from it.
-        if (StagedCreate is not null) NotifyCreate();
-    }
-
-    /// <summary>Every defect form edit funnels through here: apply the edit, stamp the kind, and
-    /// stage/report — so a half-built defect is always the one staged record. A user edit of the
-    /// assignee replaces the sender suggestion, so the hint stops claiming it.</summary>
-    private void SetDefect(Action<StagedRecordCreate> edit)
-    {
-        var suggestedAssignee = Create.DefectAssignedTo;
-        edit(Create);
-        if (defectAssigneeFromSender && Create.DefectAssignedTo != suggestedAssignee)
-            defectAssigneeFromSender = false;
-        subCreateKind = StagedRecordKind.Defect;
-        NotifyCreate();
-    }
-
-    /// <summary>Pre-fill the defect's assignee from the email's sender — the defect is being
-    /// raised off their email, so they are the likeliest person the fix is chased with. A
-    /// suggestion only (never overrides a value already there), and like the work-order
-    /// subcontractor match it fills the scratch form WITHOUT staging it — only a user edit stages.</summary>
-    private void TryPrefillDefectAssignee()
-    {
-        if (string.IsNullOrWhiteSpace(SenderEmail) || Create.DefectAssignedTo != "") return;
-        Create.DefectAssignedTo = SenderEmail.Trim();
-        defectAssigneeFromSender = true;
-        // A form already staged reports the fill so the page's copy stays current.
-        if (StagedCreate is not null) _ = StagedCreateChanged.InvokeAsync(StagedCreate);
-    }
-
-    /// <summary>Every work-order form edit funnels through here: apply the edit, stamp the kind,
-    /// and stage/report — so a half-built order is always the one staged record.</summary>
-    private void SetWorkOrder(Action<StagedRecordCreate> edit)
-    {
-        edit(Create);
-        subCreateKind = StagedRecordKind.WorkOrder;
-        NotifyCreate();
-    }
-
-    // One refresh per open (stale-while-revalidate): cached lists render immediately, the fetch
-    // freshens them in the background — and the sender match runs once the directory has landed.
-    private async Task EnsureWorkOrderLookupsAsync()
-    {
-        if (workOrderLookupsRequested)
-        {
-            TryMatchSender();
-            return;
-        }
-        workOrderLookupsRequested = true;
-        try
-        {
-            await Task.WhenAll(
-                Subcontractors.RefreshAsync(CancellationToken.None),
-                CostCenters.RefreshAsync(CancellationToken.None));
-        }
-        catch { /* the pickers fall back to whatever is cached; the error toast already reported */ }
-        TryMatchSender();
-        StateHasChanged();
-    }
-
-    // Sender addresses from the big freemail providers say nothing about the company, so they
-    // never drive a domain match (an exact contact-email match still wins even there).
-    private static readonly HashSet<string> FreemailDomains = new(StringComparer.OrdinalIgnoreCase)
-    {
-        "gmail.com", "googlemail.com", "hotmail.com", "hotmail.co.uk", "outlook.com",
-        "live.com", "live.co.uk", "yahoo.com", "yahoo.co.uk", "icloud.com", "me.com",
-        "aol.com", "msn.com", "btinternet.com", "sky.com"
-    };
-
-    /// <summary>Pre-select the subcontractor from the email's sender: an exact contact-email match
-    /// first, else the single directory record sharing the sender's (non-freemail) domain. Never
-    /// overrides a choice already made.</summary>
-    private void TryMatchSender()
-    {
-        if (string.IsNullOrWhiteSpace(SenderEmail) || Subcontractors.Current is not { } companies) return;
-        if (Create.SubcontractorId != "") return;
-        var email = SenderEmail.Trim();
-        var match = companies.FirstOrDefault(company =>
-            string.Equals(company.ContactEmail?.Trim(), email, StringComparison.OrdinalIgnoreCase));
-        if (match is null)
-        {
-            var at = email.LastIndexOf('@');
-            if (at < 0) return;
-            var domain = email[(at + 1)..];
-            if (FreemailDomains.Contains(domain)) return;
-            var byDomain = companies
-                .Where(company => (company.ContactEmail ?? "").Trim()
-                    .EndsWith("@" + domain, StringComparison.OrdinalIgnoreCase))
-                .ToList();
-            if (byDomain.Count != 1) return;
-            match = byDomain[0];
-        }
-        Create.SubcontractorId = match.SubcontractorId;
-        senderMatchedCompany = match.CompanyName;
-        // A scratch form isn't staged by a suggestion — only by the user's own first edit. A form
-        // already staged reports the fill so the page's copy stays current.
-        if (StagedCreate is not null) _ = StagedCreateChanged.InvokeAsync(StagedCreate);
-    }
-
-    private IEnumerable<Subcontractor> SortedSubcontractors =>
-        (Subcontractors.Current ?? Array.Empty<Subcontractor>())
-            .OrderBy(company => company.CompanyName, StringComparer.OrdinalIgnoreCase);
-
-    // The work-order pane's chosen supplier — what the auto-send warning names, and where the
-    // purchase-order email goes when the page's Apply raises a released (non-draft) order.
-    private Subcontractor? WorkOrderSupplier =>
-        string.IsNullOrWhiteSpace(Create.SubcontractorId)
-            ? null
-            : (Subcontractors.Current ?? Array.Empty<Subcontractor>()).FirstOrDefault(sub =>
-                string.Equals(sub.SubcontractorId, Create.SubcontractorId, StringComparison.OrdinalIgnoreCase));
-
-    // The label carries code + name so typing matches either — same convention as the manual
-    // work-order modal and the Xero allocation page.
-    private IReadOnlyList<SearchSelect.Option> CostCentreOptions =>
-        CostCenters.Alphabetical
-            .Select(centre => new SearchSelect.Option(centre.Code, $"{centre.Code} {centre.Name}"))
-            .ToList();
-
-    private decimal OrderTotal => Create.Lines.Sum(line => line.Amount ?? 0m);
-
-    private static string Money(decimal value) =>
-        value.ToString("C2", System.Globalization.CultureInfo.GetCultureInfo("en-GB"));
-
-    // Email attachments that can actually be acted on: legacy snapshots without an id can't be
-    // fetched from the mailbox, so they aren't offered.
-    private IReadOnlyList<IntakeAttachment> TickableEmailAttachments =>
-        (EmailAttachments ?? Array.Empty<IntakeAttachment>())
-            .Where(attachment => !string.IsNullOrEmpty(attachment.Id))
-            .ToList();
-
-    private void ToggleEmailAttachment(IntakeAttachment attachment, bool ticked) =>
-        SetWorkOrder(create =>
-        {
-            if (ticked)
-            {
-                if (!create.EmailAttachmentIds.Contains(attachment.Id))
-                    create.EmailAttachmentIds.Add(attachment.Id);
-            }
-            else
-            {
-                create.EmailAttachmentIds.Remove(attachment.Id);
-            }
-        });
-
-    private void OnWorkOrderFilesSelected(Microsoft.AspNetCore.Components.Forms.InputFileChangeEventArgs e) =>
-        SetWorkOrder(create => create.UploadFiles.AddRange(e.GetMultipleFiles(20)));
-
-    private static string FormatSize(long bytes) =>
-        bytes >= 1_048_576 ? $"{bytes / 1_048_576.0:0.#} MB"
-        : bytes >= 1024 ? $"{bytes / 1024.0:0.#} KB"
-        : $"{bytes} B";
-
-    private void ClearStagedCreate()
-    {
-        scratchCreate = new StagedRecordCreate();
-        _ = StagedCreateChanged.InvokeAsync(null);
-    }
+    private Task ToggleCommsPickAsync() => TogglePick(SubcontractorComms.Record);
 
     private async Task CloseAsync()
     {
-        // Drop empty to-do draft rows so the page badge and the chips stay honest.
-        TodoRows.RemoveAll(r => string.IsNullOrWhiteSpace(r.Title) && string.IsNullOrWhiteSpace(r.Notes) && r.Assignees.Count == 0);
-        if (TodoRows.Count == 0) TodoRows.Add(new TodoDraftRow());
-        todoEditIndex = null;
         await OnStagingChanged.InvokeAsync();
         await OnClose.InvokeAsync();
     }
-
-    // ---- to-do create pane (Internal tab) — the multi-draft editor moved in from the
-    //      standalone To-dos modal. Rows are DRAFTS owned by the page: nothing is created until
-    //      the email's Apply runs, and the page's System Tags badge reads the same list. ----
-
-    private List<TodoDraftRow> TitledTodoRows => TodoRows.Where(r => !string.IsNullOrWhiteSpace(r.Title)).ToList();
-
-    private IReadOnlyList<SearchSelect.Option> TodoOptionsFor(TodoDraftRow row) =>
-        TodoAssigneeOptions.Where(option => !row.Assignees.Contains(option.Value)).ToList();
-
-    private string TodoAssigneeLabel(string value) =>
-        TodoAssigneeOptions.FirstOrDefault(option => option.Value == value)?.Label ?? value;
-
-    private void AddTodoAssignee(TodoDraftRow row, string value)
-    {
-        if (string.IsNullOrWhiteSpace(value) || row.Assignees.Contains(value)) return;
-        row.Assignees.Add(value);
-        NotifyTodos();
-    }
-
-    private void AddTodoRowAndEdit()
-    {
-        TodoRows.Add(new TodoDraftRow());
-        todoEditIndex = TodoRows.Count - 1;
-        NotifyTodos();
-    }
-
-    private void RemoveTodoRow(TodoDraftRow row)
-    {
-        TodoRows.Remove(row);
-        if (TodoRows.Count == 0) TodoRows.Add(new TodoDraftRow());
-        todoEditIndex = null;
-        NotifyTodos();
-    }
-
-    private void NotifyTodos() => _ = OnStagingChanged.InvokeAsync();
-
-    private RenderFragment TodoCreatePane => __builder =>
-    {
-        <div class="space-y-4">
-            @if (todoEditIndex is { } activeIndex && activeIndex < TodoRows.Count)
-            {
-                var row = TodoRows[activeIndex];
-                <button type="button" class="text-xs text-content-subtle hover:text-content underline" @onclick="() => todoEditIndex = null">← All to-dos</button>
-
-                <FormField Label="Title" Value="@row.Title" OnChange="v => { row.Title = v; NotifyTodos(); }" Required="true" />
-
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Assigned to</label>
-                        @if (row.Assignees.Count > 0)
-                        {
-                            <div class="flex flex-wrap gap-1 mb-1.5">
-                                @foreach (var assigneeValue in row.Assignees.ToList())
-                                {
-                                    var picked = assigneeValue;
-                                    <span class="inline-flex items-center gap-1 rounded-full border border-line bg-surface-raised pl-2 pr-1 py-0.5 text-xs text-content">
-                                        @TodoAssigneeLabel(picked)
-                                        <button type="button" title="Remove assignee"
-                                                class="leading-none px-1 text-content-subtle hover:text-negative"
-                                                @onclick="() => { row.Assignees.Remove(picked); NotifyTodos(); }">&times;</button>
-                                    </span>
-                                }
-                            </div>
-                        }
-                        @{ var roleOptions = TodoOptionsFor(row); }
-                        <SearchSelect Options="@roleOptions" Value=""
-                                      ValueChanged="v => AddTodoAssignee(row, v)"
-                                      Placeholder="@(row.Assignees.Count == 0 ? "Unassigned" : "Add another…")"
-                                      Disabled="@(roleOptions.Count == 0)"
-                                      WidthClass="w-full" />
-                        @if (row.Assignees.Count > 1)
-                        {
-                            <p class="text-xs text-content-subtle mt-1">Raised as @row.Assignees.Count separate to-dos, one per assignee.</p>
-                        }
-                    </div>
-                    <FormField Label="Due" Value="@row.Due" OnChange="v => { row.Due = v; NotifyTodos(); }" InputType="date" />
-                </div>
-
-                <div>
-                    <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Detail</label>
-                    <textarea class="field" rows="5" value="@row.Notes" @oninput="e => { row.Notes = e.Value?.ToString() ?? string.Empty; NotifyTodos(); }"></textarea>
-                </div>
-
-                <div class="flex items-center justify-between pt-1">
-                    <button type="button" class="text-xs text-content-subtle hover:text-negative underline" @onclick="() => RemoveTodoRow(row)">Remove this to-do</button>
-                    <button type="button" class="btn-secondary text-xs" @onclick="() => todoEditIndex = null">Done</button>
-                </div>
-            }
-            else
-            {
-                <p class="text-xs text-content-subtle">
-                    Each item is numbered TODO-#### and this email is tagged to every one, so one email can feed several to-dos. More than one assignee raises the item once per assignee. Nothing is created until you apply the email's actions.
-                </p>
-
-                @if (TitledTodoRows.Count == 0)
-                {
-                    <p class="text-sm text-content-subtle italic">No to-dos drafted from this email yet.</p>
-                }
-                else
-                {
-                    <div class="divide-y divide-line rounded-lg border border-line">
-                        @for (var i = 0; i < TodoRows.Count; i++)
-                        {
-                            var listIndex = i;
-                            var listRow = TodoRows[i];
-                            if (string.IsNullOrWhiteSpace(listRow.Title) && TodoRows.Count > 1) { continue; }
-                            <button type="button" @key="listRow" class="w-full text-left px-3 py-2 hover:bg-surface-raised flex items-center gap-3"
-                                    @onclick="() => todoEditIndex = listIndex">
-                                <span class="text-sm text-content flex-1 truncate">@(string.IsNullOrWhiteSpace(listRow.Title) ? "(untitled)" : listRow.Title)</span>
-                                @if (listRow.Assignees.Count > 0)
-                                {
-                                    <span class="text-xs text-content-subtle truncate max-w-[12rem]">@string.Join(", ", listRow.Assignees.Select(TodoAssigneeLabel))</span>
-                                }
-                                @if (!string.IsNullOrWhiteSpace(listRow.Due))
-                                {
-                                    <span class="text-xs text-content-subtle shrink-0">due @listRow.Due</span>
-                                }
-                                <span class="text-content-faint">›</span>
-                            </button>
-                        }
-                    </div>
-                }
-
-                <button type="button" class="btn-secondary text-xs" @onclick="AddTodoRowAndEdit">+ Add a to-do</button>
-
-                @if (!string.IsNullOrWhiteSpace(TodoProjectNote))
-                {
-                    <p class="text-xs text-content-subtle pt-2 border-t border-line">@TodoProjectNote</p>
-                }
-            }
-        </div>
-    };
 
     // ---- link picker (shared by every tab) ----
 
@@ -966,19 +238,6 @@
                 </div>
             </div>
 
-            <label class="flex w-fit items-center gap-2 text-xs text-content-subtle cursor-pointer select-none"
-                   title="Each record type defaults to its live records — tick to also list closed, rejected and completed ones">
-                <input type="checkbox" class="cursor-pointer align-middle" checked="@shouldIncludeInactive"
-                       @onchange="e => shouldIncludeInactive = e.Value is true" />
-                <span>
-                    Include closed / inactive records
-                    @if (!shouldIncludeInactive && HiddenInactiveCount > 0)
-                    {
-                        <span class="text-content-faint">(@HiddenInactiveCount hidden)</span>
-                    }
-                </span>
-            </label>
-
             @if (loading)
             {
                 <p class="text-sm text-content-subtle italic">Loading @TypeLabel(linkType) records…</p>
@@ -986,7 +245,7 @@
             else
             {
                 var candidates = Filter(Candidates());
-                var others = Filter(VisibleRecords.Except(Candidates()).ToList());
+                var others = Filter(records.Except(Candidates()).ToList());
                 @if (candidates.Count > 0)
                 {
                     <p class="text-xs font-semibold text-amber-600">Possible matches for this email</p>
@@ -1040,20 +299,12 @@
                     || (r.Summary?.Contains(search, StringComparison.OrdinalIgnoreCase) ?? false))
                 .ToList();
 
-    // The pool the picker actually lists: live records by default, everything once the
-    // "include closed / inactive" box is ticked. Already-picked records always stay visible in the
-    // staged chips above, whatever the box says.
-    private IReadOnlyList<LinkableRecord> VisibleRecords =>
-        shouldIncludeInactive ? records : records.Where(r => r.IsActive).ToList();
-
-    private int HiddenInactiveCount => records.Count(r => !r.IsActive);
-
     // Records whose reference or title overlaps the email subject — surfaced first so a duplicate
     // record isn't created for something already tracked.
     private List<LinkableRecord> Candidates()
     {
         var tokens = Tokenise(EmailSubject);
-        return VisibleRecords
+        return records
             .Select(r => (r, score: Score(r, tokens)))
             .Where(x => x.score > 0)
             .OrderByDescending(x => x.score)
@@ -1100,12 +351,6 @@
             : locked
                 ? "border-transparent text-content-faint cursor-not-allowed"
                 : "border-transparent text-content-muted hover:text-content");
-
-    private string SubTabClass(bool active) =>
-        "rounded-lg px-3 py-1.5 text-sm border transition "
-        + (active
-            ? "border-accent text-accent bg-accent/5 font-medium"
-            : "border-line text-content-muted hover:text-content hover:border-line-strong");
 
     private static string TabHint(string tab) => tab switch
     {

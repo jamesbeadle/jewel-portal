@@ -1,8 +1,10 @@
 namespace Jewel.JPMS.Features.Triage.Panels;
 
 /// <summary>
-/// Every action the System Actions pane can stage — one entry per dropdown row. Each reuses the
-/// component (or store call) its home page uses, so the behaviour is defined in one place.
+/// Every action the System Actions pane offers — one entry per dropdown row. The record creates
+/// (request/RFI, work order, bid package, defect, to-dos) draft the page's email-linked staging,
+/// so Apply tags the email to what it raises; the rest reuse the component (or store call) their
+/// home page uses, staged as closures. Either way the behaviour is defined in one place.
 /// </summary>
 public enum SystemActionKind
 {
@@ -16,6 +18,8 @@ public enum SystemActionKind
     RejectVariationOrder,
     RaiseWorkOrder,
     CreateBidPackageInvite,
+    RaiseDefect,
+    CreateTodos,
     AddDirectoryContact
 }
 
@@ -34,6 +38,8 @@ public static class SystemActionKinds
         SystemActionKind.RejectVariationOrder,
         SystemActionKind.RaiseWorkOrder,
         SystemActionKind.CreateBidPackageInvite,
+        SystemActionKind.RaiseDefect,
+        SystemActionKind.CreateTodos,
         SystemActionKind.AddDirectoryContact
     };
 
@@ -49,6 +55,8 @@ public static class SystemActionKinds
         SystemActionKind.RejectVariationOrder => "Reject Variation Order",
         SystemActionKind.RaiseWorkOrder => "Raise Work Order",
         SystemActionKind.CreateBidPackageInvite => "Create Bid Package Invite",
+        SystemActionKind.RaiseDefect => "Raise Defect",
+        SystemActionKind.CreateTodos => "Create To-do Items",
         SystemActionKind.AddDirectoryContact => "Add Directory Contact",
         _ => kind.ToString()
     };
