@@ -1025,35 +1025,18 @@
             </div>
 
             @* PROJECT — the easiest decision, made first; everything staged below uses it.
-               Auto-matched from the email text when a single live project's name appears. *@
+               Auto-matched from the email text when a single live project's name appears. The
+               picker carries the completed-projects toggle inside its own panel (ProjectSelect). *@
             <div class="flex flex-wrap items-center gap-2">
                 <label class="text-xs uppercase tracking-wider text-content-subtle font-semibold shrink-0">Project</label>
-                <select class="field max-w-xs" value="@triageProjectId" @onchange="OnTriageProjectChanged">
-                    <option value="">No project…</option>
-                    @foreach (var project in ProjectOptionsFor(triageProjectId))
-                    {
-                        <option value="@project.ProjectId">@project.Reference — @project.Name</option>
-                    }
-                </select>
-                <label class="flex items-center gap-1.5 text-xs text-content-subtle cursor-pointer select-none"
-                       title="Completed projects stay out of the picker until you ask — the same per-user toggle as the project switcher">
-                    <input type="checkbox" checked="@StageFilter.IncludeCompleted"
-                           @onchange="e => StageFilter.SetAsync(e.Value is true)" />
-                    Show completed
-                </label>
+                <ProjectSelect Projects="@AllProjects" Value="@triageProjectId" ValueChanged="OnTriageProjectPicked"
+                               ToggleTitle="The email's project — everything staged files against it" />
             </div>
 
-            @* TWO doors, one apply: System Tags (loads in the window alongside — the same place
-               its rail icon puts it) and Discard. Nothing happens until the Apply below. *@
-            <div class="flex flex-wrap items-center gap-2">
-                <button type="button" class="@TagsButtonClass" @onclick="() => workspace.ShowOpposite(PanelKind.SystemTags, PanelKind.Inbox)">
-                    🏷 System Tags@(StagedTagCount > 0 ? $" · {StagedTagCount}" : "")
-                </button>
-                <button type="button" class="@DiscardTabClass" @onclick="() => discardArmed = !discardArmed">🗑 Discard</button>
-            </div>
-
-            @* The email-global ticks, compact — the full wording lives in the hover titles. *@
-            <div class="flex flex-wrap items-center gap-x-4 gap-y-1">
+            @* The email-global ticks, stacked and compact — the full wording lives in the hover
+               titles. The thread tick says how many emails the apply would sweep, once the
+               thread has been read (staging tags themselves lives on the System Tags window). *@
+            <div class="flex flex-col gap-1">
                 <label class="flex items-center gap-1.5 text-sm text-content cursor-pointer select-none"
                        title="Tags the email to the project's programme — it appears in the Programme tab's Relevant Events">
                     <input type="checkbox" checked="@relevantEventStaged"
@@ -1064,7 +1047,7 @@
                        title="Everything you apply also tags every email currently in this conversation, clearing them from the queue together. Leave off to deal with just this email">
                     <input type="checkbox" checked="@triageEntireThread"
                            @onchange="e => triageEntireThread = e.Value is true" />
-                    Entire thread
+                    Entire thread@(thread.Count > 1 ? $" · {thread.Count} emails" : "")
                 </label>
             </div>
         </div>
@@ -1100,9 +1083,10 @@
             }
             else
             {
-                <p class="text-sm text-content-subtle flex-1">Write a reply in the email window, or stage system tags and to-dos with the System Tags button — then apply it all in one go here.</p>
+                <p class="text-sm text-content-subtle flex-1">Write a reply in the email window, or stage system tags and to-dos in the System Tags window — then apply it all in one go here.</p>
             }
             <div class="flex items-center gap-2">
+                <button type="button" class="@DiscardTabClass" @onclick="() => discardArmed = !discardArmed">🗑 Discard</button>
                 <button type="button" class="btn-primary" disabled="@(busy || PendingSummary is null)" @onclick="() => DoApplyAll(saveAsDraftOnly: false)">
                     @ApplyButtonLabel
                 </button>
@@ -1743,12 +1727,6 @@ else
             ? "No project set on the email — these will be company-wide items. Set the Project in the triage bar above to put them on a project's To-do tab."
             : $"Items land on the To-do tab of {ProjectLabelFor(triageProjectId)} — the email's project, set in the triage bar above.";
 
-    private string TagsButtonClass =>
-        "inline-flex items-center gap-1 rounded-lg border px-3 py-1.5 text-sm "
-        + (StagedTagCount > 0
-            ? "border-accent/50 text-accent bg-accent/5 font-medium"
-            : "border-line-strong text-content-muted hover:text-content hover:border-line-strong");
-
     // The assignee picker's option pool: the ROLES a to-do can be assigned to
     // (TodoRoles.AssignableAsTodoAssignee, served by ListTodoAssignableRoles) and, under each
     // role, the directory holders it can be pinned to (ListTodoAssignablePeople) — fetched once
@@ -2321,14 +2299,19 @@ else
         await LoadLinkRecordsAsync();
     }
 
-    private async Task OnTriageProjectChanged(ChangeEventArgs e)
+    // One landing for the email's project decision: the triage bar's ProjectSelect hands the id
+    // straight in; the Tagged view's plain <select> still speaks ChangeEventArgs and forwards.
+    private async Task OnTriageProjectPicked(string projectId)
     {
-        triageProjectId = e.Value?.ToString() ?? "";
+        triageProjectId = projectId;
         projectAutoMatched = false; // an explicit choice replaces the guess
         linkRecordId = "";
         pickedRecords.Clear();
         await LoadLinkRecordsAsync();
     }
+
+    private async Task OnTriageProjectChanged(ChangeEventArgs e) =>
+        await OnTriageProjectPicked(e.Value?.ToString() ?? "");
 
     // Load the chosen project's records of the chosen type for the picker. Record-agnostic: the same
     // call backs both the Link panel and the Tagged tab's "link to another record" control.
@@ -3406,8 +3389,10 @@ else
             ? "bg-accent text-accent-ink border-accent font-semibold"
             : "border-line text-content-muted hover:text-content hover:border-line-strong");
 
+    // Sits beside Apply in the triage bar's action row — armed it reads negative, so the state
+    // is visible right where the button that would act on it lives.
     private string DiscardTabClass =>
-        "ml-auto rounded-lg px-3 py-1.5 text-sm border transition "
+        "rounded-lg px-3 py-1.5 text-sm border transition "
         + (discardArmed
             ? "border-negative text-negative bg-negative/10 font-medium"
             : "border-line text-content-subtle hover:text-negative hover:border-negative/50");

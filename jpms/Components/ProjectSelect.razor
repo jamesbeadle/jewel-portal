@@ -1,0 +1,66 @@
+@inject ProjectStageFilter StageFilter
+
+@*
+    The single-project picker with the completed-projects decision built in — the side-nav
+    switcher's interior as a reusable control, and ProjectMultiSelect's sibling for one-project
+    picks. Completed projects stay out of the list until the "Show completed" row inside the
+    panel is ticked; the tick is the per-user ProjectStageFilter (decision 2026-08-03), so one
+    preference is honoured everywhere. Replaces every dropdown-plus-separate-checkbox pair.
+*@
+
+<DropdownMenu @ref="menu" AlignLeft="true" WidthClass="w-96 max-w-[90vw]" Disabled="@Disabled"
+              ToggleTitle="@ToggleTitle"
+              ToggleClass="inline-flex items-center gap-2 rounded-lg border border-line-strong bg-surface-field px-3 py-2 text-sm text-content hover:border-line-strong focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent transition">
+    <ToggleContent>
+        <span class="truncate max-w-[16rem]">@ToggleLabel</span>
+    </ToggleContent>
+    <ChildContent>
+        <ul class="max-h-80 overflow-y-auto divide-y divide-line">
+            @if (AllowNone)
+            {
+                <li>
+                    <button type="button" class="@RowClass(isPicked: Value == "")" @onclick="() => PickAsync(string.Empty)">
+                        <span class="text-content-subtle">@Placeholder</span>
+                    </button>
+                </li>
+            }
+            @foreach (var project in ActiveProjects)
+            {
+                @ProjectRow(project)
+            }
+        </ul>
+        @if (CompletedProjects.Count > 0)
+        {
+            <label class="flex items-center gap-2 px-3 py-2 border-t border-line text-xs text-content-subtle hover:text-content cursor-pointer transition">
+                <input type="checkbox" checked="@StageFilter.IncludeCompleted"
+                       @onchange="e => StageFilter.SetAsync(e.Value is true)" />
+                Show completed (@CompletedProjects.Count)
+            </label>
+            @if (StageFilter.IncludeCompleted)
+            {
+                <ul class="max-h-60 overflow-y-auto divide-y divide-line border-t border-line">
+                    @foreach (var project in CompletedProjects)
+                    {
+                        @ProjectRow(project)
+                    }
+                </ul>
+            }
+        }
+    </ChildContent>
+</DropdownMenu>
+
+@code {
+    private RenderFragment ProjectRow(Project project) => __builder =>
+    {
+        <li>
+            <button type="button" class="@RowClass(isPicked: project.ProjectId == Value)"
+                    @onclick="() => PickAsync(project.ProjectId)">
+                <span class="w-1.5 h-1.5 rounded-full shrink-0 @project.Stage.AccentDotClass()"
+                      title="@project.Stage.DisplayName()" aria-hidden="true"></span>
+                <span class="font-mono text-[11px] text-content-subtle shrink-0">@project.Reference</span>
+                <span class="text-content truncate">@project.Name</span>
+                <span class="ml-auto pl-2 text-[11px] text-content-subtle whitespace-nowrap shrink-0">@project.Stage.DisplayName()</span>
+            </button>
+        </li>
+    };
+}
