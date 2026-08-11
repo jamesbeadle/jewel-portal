@@ -1,0 +1,236 @@
+@using Jewel.JPMS.Contracts.UsefulInformation
+@inject IUsefulInformationStore Notes
+
+@*
+    The project's Useful Information notes, shown on the Useful Information tab. Titled free-text
+    reference material for the office — door codes, key safe locations, access arrangements, site
+    quirks. Strictly internal (the API gates reads and writes to internal roles), and every
+    internal role may edit as well as read: whoever discovers the gate code changed fixes the note
+    on the spot. Notes are looked up, not worked — nothing here is assigned or due; anything that
+    needs doing belongs on the To-do tab.
+
+    The list is A–Z by title (the server's order — reference material is found by name, not by
+    recency). Clicking a note opens it in the edit dialog, where delete also lives; Add opens the
+    same shape of dialog empty.
+*@
+
+<div class="panel p-5">
+    <div class="flex items-center justify-between gap-2 mb-1">
+        <h2 class="text-sm font-semibold text-content">Useful Information</h2>
+        @if (notes is not null)
+        {
+            <button type="button" class="btn-primary text-xs px-2.5 py-1.5" @onclick="OpenAdd">Add note</button>
+        }
+    </div>
+    <p class="text-xs text-content-subtle mb-4">
+        Internal notes for this project — door codes, key safes, access arrangements, anything the
+        office needs to hand. Never visible to clients, architects or subcontractors.
+    </p>
+
+    @if (error is not null)
+    {
+        <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-3">@error</p>
+    }
+
+    @if (notes is null)
+    {
+        <JewelSpinner Class="py-8" Label="Loading" />
+    }
+    else if (notes.Count == 0)
+    {
+        <p class="text-sm text-content-subtle italic">No useful information on this project yet — add the first note.</p>
+    }
+    else
+    {
+        @if (notes.Count > FilterThreshold)
+        {
+            <div class="relative mb-4">
+                <input type="search" class="field w-full text-sm pr-8" placeholder="Filter notes by keyword"
+                       value="@filter" @oninput="OnFilterInput" />
+                @if (HasFilter)
+                {
+                    <button type="button" title="Clear filter"
+                            class="absolute right-2 top-1/2 -translate-y-1/2 text-content-faint hover:text-content-muted text-sm leading-none"
+                            @onclick="ClearFilter">✕</button>
+                }
+            </div>
+        }
+
+        var visible = HasFilter ? notes.Where(Matches).ToList() : (IReadOnlyList<UsefulInformationNote>)notes;
+
+        @if (visible.Count == 0)
+        {
+            <p class="text-sm text-content-subtle italic">No notes match "@filter".</p>
+        }
+        else
+        {
+            <div class="space-y-2">
+                @foreach (var note in visible)
+                {
+                    <button type="button" @key="note.UsefulInformationNoteId" title="Open this note to read or edit it"
+                            class="w-full rounded-lg border border-line px-3 py-2 text-left hover:border-line-strong hover:bg-surface-raised"
+                            @onclick="() => OpenEdit(note)">
+                        <p class="truncate text-sm font-medium text-content">@note.Title</p>
+                        <p class="mt-0.5 text-sm text-content-muted whitespace-pre-wrap line-clamp-3">@note.Body</p>
+                        <div class="mt-1 flex items-center gap-x-3 overflow-hidden text-[11px] text-content-subtle">
+                            @if (note.UpdatedAt is not null)
+                            {
+                                <span class="truncate">Updated @note.UpdatedAt.Value.LocalDateTime.ToString("d MMM yyyy") by @(note.UpdatedByEmail ?? "")</span>
+                            }
+                            else
+                            {
+                                <span class="truncate">Added @note.CreatedAt.LocalDateTime.ToString("d MMM yyyy") by @note.CreatedByEmail</span>
+                            }
+                        </div>
+                    </button>
+                }
+            </div>
+        }
+    }
+</div>
+
+@* One dialog for both shapes: empty for Add, pre-filled (with Delete in the footer) for an
+   existing note. *@
+<Modal IsOpen="@dialogOpen" Title="@(editing is null ? "Add a note" : "Edit note")" OnCancel="CloseDialog">
+    <ChildContent>
+
+    <div class="space-y-3">
+        @if (dialogError is not null)
+        {
+            <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@dialogError</p>
+        }
+
+        <FormField Label="Title" Value="@draftTitle" OnChange="v => draftTitle = v" Required="true" />
+
+        <div>
+            <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Note *</label>
+            <textarea class="field" rows="6" placeholder="The information itself — e.g. Front gate code 4482#, changes first Monday of the month."
+                      value="@draftBody" @oninput="OnDraftBodyInput"></textarea>
+        </div>
+    </div>
+
+    </ChildContent>
+    <FooterContent>
+        @if (editing is not null)
+        {
+            <button type="button" class="btn-secondary text-negative mr-auto" disabled="@busy" @onclick="Delete">Delete note</button>
+        }
+        <button type="button" class="btn-secondary" disabled="@busy" @onclick="CloseDialog">Cancel</button>
+        <button type="button" class="btn-primary" disabled="@busy" @onclick="Save">@(editing is null ? "Add note" : "Save changes")</button>
+    </FooterContent>
+</Modal>
+
+@code {
+    [Parameter, EditorRequired] public string ProjectId { get; set; } = "";
+
+    // null = not fetched yet (the only honest "loading"); the empty list is a real answer.
+    private IReadOnlyList<UsefulInformationNote>? notes;
+    private bool busy;
+    private string? error;
+
+    // The keyword filter, shown once the list is long enough to need one. Every
+    // whitespace-separated keyword must match the title or body (AND across keywords).
+    private const int FilterThreshold = 8;
+    private string filter = "";
+
+    // Dialog state: editing is the note being edited, or null when adding a new one.
+    private bool dialogOpen;
+    private string? dialogError;
+    private UsefulInformationNote? editing;
+    private string draftTitle = "";
+    private string draftBody = "";
+
+    protected override Task OnInitializedAsync() => LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        try { notes = await Notes.ListForProjectAsync(ProjectId); }
+        catch { error = "Couldn't load the Useful Information notes. Please try again."; notes ??= Array.Empty<UsefulInformationNote>(); }
+    }
+
+    private bool HasFilter => !string.IsNullOrWhiteSpace(filter);
+
+    private void OnFilterInput(ChangeEventArgs e) => filter = e.Value?.ToString() ?? "";
+
+    private void ClearFilter() => filter = "";
+
+    private bool Matches(UsefulInformationNote note)
+    {
+        var tokens = filter.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        return tokens.All(token =>
+            note.Title.Contains(token, StringComparison.OrdinalIgnoreCase)
+            || note.Body.Contains(token, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private void OpenAdd()
+    {
+        editing = null;
+        draftTitle = draftBody = "";
+        dialogError = null;
+        dialogOpen = true;
+    }
+
+    private void OpenEdit(UsefulInformationNote note)
+    {
+        editing = note;
+        draftTitle = note.Title;
+        draftBody = note.Body;
+        dialogError = null;
+        dialogOpen = true;
+    }
+
+    private void CloseDialog()
+    {
+        dialogOpen = false;
+        dialogError = null;
+        editing = null;
+    }
+
+    private void OnDraftBodyInput(ChangeEventArgs e) => draftBody = e.Value?.ToString() ?? "";
+
+    private async Task Save()
+    {
+        if (busy) return;
+        if (string.IsNullOrWhiteSpace(draftTitle)) { dialogError = "A title is required."; return; }
+        if (string.IsNullOrWhiteSpace(draftBody)) { dialogError = "The note itself is required."; return; }
+        dialogError = null;
+        var editingId = editing?.UsefulInformationNoteId;
+        await Run(async () =>
+        {
+            if (editingId is null)
+                await Notes.AddAsync(new AddUsefulInformationNote(ProjectId, draftTitle.Trim(), draftBody.Trim()));
+            else
+                await Notes.UpdateAsync(new UpdateUsefulInformationNote(editingId, draftTitle.Trim(), draftBody.Trim()));
+            CloseDialog();
+        });
+        // A failed save leaves the dialog open with the panel-level error mirrored inside it.
+        if (error is not null && dialogOpen) dialogError = error;
+    }
+
+    private async Task Delete()
+    {
+        if (busy || editing is null) return;
+        var noteId = editing.UsefulInformationNoteId;
+        await Run(async () =>
+        {
+            await Notes.DeleteAsync(noteId);
+            CloseDialog();
+        });
+        if (error is not null && dialogOpen) dialogError = error;
+    }
+
+    private async Task Run(Func<Task> action)
+    {
+        error = null;
+        try
+        {
+            busy = true;
+            await action();
+            // Take the server's fresh A–Z order rather than patching the local list.
+            notes = await Notes.ListForProjectAsync(ProjectId);
+        }
+        catch (CommandFailedException ex) { error = ex.Message; }
+        catch { error = "That action didn't complete. Please try again."; }
+        finally { busy = false; }
+    }
+}

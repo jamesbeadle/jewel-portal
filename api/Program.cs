@@ -40,6 +40,7 @@ using Jewel.JPMS.Api.Features.RecordLinks;
 using Jewel.JPMS.Api.Features.Site;
 using Jewel.JPMS.Api.Features.Subcontractors;
 using Jewel.JPMS.Api.Features.Todos;
+using Jewel.JPMS.Api.Features.UsefulInformation;
 using Jewel.JPMS.Api.Features.Variations;
 using Jewel.JPMS.Api.Features.Xero;
 using Jewel.JPMS.Api.Gates;
@@ -113,6 +114,7 @@ var host = new HostBuilder()
         services.AddRecordLinksFeature();
         services.AddAuditFeature();
         services.AddTodosFeature();
+        services.AddUsefulInformationFeature();
         services.AddLadsFeature();
         services.AddAgentsFeature();
         services.AddCostCentersFeature();

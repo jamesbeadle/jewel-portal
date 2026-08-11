@@ -85,6 +85,10 @@ public sealed class JpmsContext : DbContext
     // Undirected to-do ↔ to-do links, one row per pair in canonical id order (TodoItemLinkPairs).
     public DbSet<TodoItemLinkEntity> TodoItemLinks => Set<TodoItemLinkEntity>();
 
+    // Internal-only titled free-text notes per project (door codes, site notes) — the Useful
+    // Information tab.
+    public DbSet<UsefulInformationNoteEntity> UsefulInformationNotes => Set<UsefulInformationNoteEntity>();
+
     public DbSet<LadClaimEntity> LadClaims => Set<LadClaimEntity>();
 
     public DbSet<SiteReportEntity> SiteReports => Set<SiteReportEntity>();
@@ -305,6 +309,9 @@ public sealed class JpmsContext : DbContext
         modelBuilder.Entity<TodoItemEntity>()
             .HasIndex(row => row.ProjectId)
             .HasDatabaseName("IX_TodoItems_ProjectId");
+        modelBuilder.Entity<UsefulInformationNoteEntity>()
+            .HasIndex(row => row.ProjectId)
+            .HasDatabaseName("IX_UsefulInformationNotes_ProjectId");
         // Unique on the canonically-ordered pair: the same two items can only be linked once, and
         // "everything linked to X" seeks this index for the A side and the one below for the B side.
         modelBuilder.Entity<TodoItemLinkEntity>()

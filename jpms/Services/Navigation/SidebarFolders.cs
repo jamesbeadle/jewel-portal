@@ -103,6 +103,11 @@ public static class SidebarFolders
                     DesktopNavigation.DirectorRoles),
                 new SidebarRow(new NavigationItem("Communications", "/projects/{project}/communications"),
                     DesktopNavigation.DirectorRoles),
+                // Internal-only titled free-text notes for the office — door codes, key safes,
+                // site access. Every internal role reads AND edits (the API's
+                // UsefulInformationRoles); external roles never see them.
+                new SidebarRow(new NavigationItem("Useful Information", "/projects/{project}/useful-information"),
+                    DesktopNavigation.DirectorRoles),
                 new SidebarRow(new NavigationItem("Project Settings", "/projects/{project}/settings"),
                     DesktopNavigation.DirectorRoles)
             }),
