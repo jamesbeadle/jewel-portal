@@ -871,9 +871,11 @@
                     <textarea class="field" rows="5" value="@row.Notes" @oninput="e => { row.Notes = e.Value?.ToString() ?? string.Empty; NotifyTodos(); }"></textarea>
                 </div>
 
-                <div class="flex items-center justify-between pt-1">
+                @* One Done per modal: the footer's Done closes the whole thing, and "← All to-dos"
+                   above is the way back to the list — a second Done here just stacked two Done
+                   buttons on top of each other. *@
+                <div class="flex items-center pt-1">
                     <button type="button" class="text-xs text-content-subtle hover:text-negative underline" @onclick="() => RemoveTodoRow(row)">Remove this to-do</button>
-                    <button type="button" class="btn-secondary text-xs" @onclick="() => todoEditIndex = null">Done</button>
                 </div>
             }
             else

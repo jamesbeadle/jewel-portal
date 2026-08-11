@@ -47,6 +47,18 @@ public static class TodosFeatureRegistration
         services.AddScoped<MoveTodoItemAuthorisation>();
         services.AddScoped<MoveTodoItemValidation>();
 
+        // Linked to-dos: the flat two-way "these belong together" association — the detail
+        // modal's linked list (+ add/remove there), and the link-picker pool for the Control
+        // Centre's create pane and the modal alike.
+        services.AddScoped<IQueryHandler<ListLinkedTodoItems, IReadOnlyList<TodoItem>>, ListLinkedTodoItemsHandler>();
+        services.AddScoped<IQueryHandler<ListTodoLinkCandidates, IReadOnlyList<TodoItem>>, ListTodoLinkCandidatesHandler>();
+        services.AddScoped<ICommandHandler<LinkTodoItems, Acknowledgement>, LinkTodoItemsHandler>();
+        services.AddScoped<LinkTodoItemsAuthorisation>();
+        services.AddScoped<LinkTodoItemsValidation>();
+        services.AddScoped<ICommandHandler<UnlinkTodoItems, Acknowledgement>, UnlinkTodoItemsHandler>();
+        services.AddScoped<UnlinkTodoItemsAuthorisation>();
+        services.AddScoped<UnlinkTodoItemsValidation>();
+
         services.AddScoped<ICommandHandler<DeleteTodoItem, Acknowledgement>, DeleteTodoItemHandler>();
         services.AddScoped<DeleteTodoItemAuthorisation>();
         services.AddScoped<DeleteTodoItemValidation>();

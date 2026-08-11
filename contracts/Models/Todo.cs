@@ -46,11 +46,16 @@ public sealed record TodoAssignablePerson(Role Role, string Email, string Displa
 // to price something and the site manager to book access is therefore two independent to-dos
 // raised in one action, either completable without closing the other. Empty or null = a single
 // unassigned item. Duplicates are collapsed.
+// LinkedTodoItemIds names EXISTING to-do items the new one is related to ("linked to-dos" — a
+// flat two-way association, no hierarchy; see TodoItemLinks in contracts/Todos). Every item the
+// row fans out into is linked to every named existing item, so a QS copy and a site-manager copy
+// of the same task both point back at the same prior work. Empty or null = no links.
 public sealed record TodoItemDraft(
     string Title,
     string? Notes = null,
     IReadOnlyList<TodoAssignee>? Assignees = null,
-    DateTimeOffset? DueAt = null);
+    DateTimeOffset? DueAt = null,
+    IReadOnlyList<string>? LinkedTodoItemIds = null);
 
 // One item the fan-out will create: the row it came from and the single assignee it lands on.
 public sealed record TodoItemFanOut(TodoItemDraft Draft, TodoAssignee? Assignee)

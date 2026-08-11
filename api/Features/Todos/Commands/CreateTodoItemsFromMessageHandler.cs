@@ -109,9 +109,30 @@ public sealed class CreateTodoItemsFromMessageHandler : ICommandHandler<CreateTo
                 context, assignee.Role, assignee.PersonEmail, cancellationToken);
         }
 
+        // Every LINKED to-do named on a row must exist — checked before any email is tagged, so a
+        // stale pick (an item deleted since the picker loaded) creates nothing rather than raising
+        // items whose promised links silently point nowhere.
+        static List<string> CleanLinkedIds(TodoItemDraft draft) =>
+            (draft.LinkedTodoItemIds ?? Array.Empty<string>())
+                .Where(id => !string.IsNullOrWhiteSpace(id))
+                .Distinct(StringComparer.Ordinal)
+                .ToList();
+        var allLinkedIds = drafts.SelectMany(CleanLinkedIds).Distinct(StringComparer.Ordinal).ToList();
+        if (allLinkedIds.Count > 0)
+        {
+            var known = await context.TodoItems.AsNoTracking()
+                .Where(item => allLinkedIds.Contains(item.TodoItemId))
+                .Select(item => item.TodoItemId)
+                .ToListAsync(cancellationToken);
+            var missing = allLinkedIds.Except(known, StringComparer.Ordinal).ToList();
+            if (missing.Count > 0)
+                throw new InvalidOperationException(
+                    "A to-do item picked as a link no longer exists — remove it from the draft and apply again.");
+        }
+
         var nextNumber = (await context.TodoItems.MaxAsync(t => (int?)t.Number, cancellationToken) ?? 0) + 1;
 
-        var entities = expanded.Select((item, index) => new TodoItemEntity
+        var fannedOut = expanded.Select((item, index) => (item.Draft, Entity: new TodoItemEntity
         {
             TodoItemId = TodosIdentifierFactory.Next(),
             ProjectId = projectId,
@@ -124,7 +145,8 @@ public sealed class CreateTodoItemsFromMessageHandler : ICommandHandler<CreateTo
             IsComplete = false,
             CreatedAt = snapshot.ReceivedAt,
             DueAt = item.Draft.DueAt
-        }).ToList();
+        })).ToList();
+        var entities = fannedOut.Select(pair => pair.Entity).ToList();
 
         // Tag the email to every new item first (one "JPMS/TODO-####" category per item, verified by
         // read-back); only persist the rows once every tag sticks. The spread across the
@@ -141,6 +163,26 @@ public sealed class CreateTodoItemsFromMessageHandler : ICommandHandler<CreateTo
         }
 
         context.TodoItems.AddRange(entities);
+
+        // The row's LINKED to-dos (validated above): every item the row fanned out into is linked
+        // to every existing item picked — undirected pairs in canonical order, one row each
+        // (TodoItemLinkPairs), saved with the items so a failure leaves neither behind.
+        foreach (var (draft, entity) in fannedOut)
+        {
+            foreach (var linkedId in CleanLinkedIds(draft))
+            {
+                var (aId, bId) = TodoItemLinkPairs.Normalise(entity.TodoItemId, linkedId);
+                context.TodoItemLinks.Add(new TodoItemLinkEntity
+                {
+                    TodoItemLinkId = TodosIdentifierFactory.Next(),
+                    TodoItemAId = aId,
+                    TodoItemBId = bId,
+                    LinkedAt = DateTimeOffset.UtcNow,
+                    LinkedByEmail = command.CreatedByEmail
+                });
+            }
+        }
+
         await context.SaveChangesAsync(cancellationToken);
 
         // Pathway (docs/Pathway-Split-Platform-Flow-Plan.md §2.1): a to-do link is NEUTRAL — it never
