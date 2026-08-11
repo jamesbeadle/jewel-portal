@@ -477,7 +477,8 @@ else
             ? ClaimEntries.Current(latest.ValuationClaimId)
             : Array.Empty<ClaimLine>();
         var figures = ValuationSummaryFigures.For(
-            Lines.Current(projectId), entries, latest, invoiceSummary?.TotalInvoiced ?? 0m);
+            Lines.Current(projectId), entries, latest,
+            invoiceSummary?.TotalCertified ?? 0m, invoiceSummary?.TotalDepositCredited ?? 0m);
 
         // Retention terms + schedule — no record means the retention figures show nothing and
         // add nothing back, exactly as the Cashflow tab treats a project without terms.

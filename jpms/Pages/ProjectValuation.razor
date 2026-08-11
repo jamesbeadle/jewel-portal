@@ -136,8 +136,9 @@ else
                             break;
                         case ClaimStage.ReadyToConfirm:
                             <button @onclick="ConfirmClickedAsync" disabled="@busy"
+                                    title="The invoice payment is already recorded — this locks the period as the baseline and rolls into the next"
                                     class="rounded-lg bg-accent text-accent-ink font-medium text-sm px-4 py-2 hover:bg-accent-hover disabled:bg-surface-field transition shrink-0">
-                                Confirm payment received
+                                Confirm &amp; roll over
                             </button>
                             break;
                         case ClaimStage.Confirmed:
@@ -175,7 +176,8 @@ else
            entries, so the table holds until both masters are in. *@
         <LoadGate IsLoading="@(!ReportReady)" Prominent="true" Label="Loading the valuation report">
         <ValuationReportTable ProjectId="@ProjectId" SelectedClaim="@Selected" PreviousClaim="@PreviousClaim"
-                              OnEditLine="StartEditLine" InvoicedToDate="@invoicedToDate">
+                              OnEditLine="StartEditLine" CertifiedToDate="@CertifiedToDateGross"
+                              DepositCreditedToDate="@DepositCreditedToDate">
             <ExtraSections>
                 @* The old Cash Calls tab, folded into the report: issued invoices feed
                    "Certified to date" and therefore the payment due. *@
@@ -330,13 +332,22 @@ else
     private bool showLineForm;
     private string selectedClaimId = "";
     private ValuationLineItem? editingLine;
-    private decimal invoicedToDate;
+
+    // Certification runs GROSS of the deposit: each issued/paid invoice's cash amount plus
+    // the deposit credit embedded in it. Both figures come from our own invoice list, which
+    // the invoices section keeps fresh via OnInvoicedToDateChanged below.
+    private IEnumerable<ValuationInvoice> CertifiableInvoices => (projectInvoices ?? Array.Empty<ValuationInvoice>())
+        .Where(invoice => invoice.Status is ValuationInvoiceStatus.Issued or ValuationInvoiceStatus.Paid);
+
+    private decimal CertifiedToDateGross => CertifiableInvoices.Sum(invoice => invoice.CertifiedAmount);
+
+    private decimal DepositCreditedToDate => CertifiableInvoices.Sum(invoice => invoice.DepositCredited);
 
     // Fired by the invoices section on every reload — keep our copy of the invoice list in
-    // step so the claim card's stage (invoice raised? issued? paid?) tracks reality.
+    // step so the claim card's stage (invoice raised? issued? paid?) and the certified
+    // figures track reality. The raw total is superseded by CertifiedToDateGross above.
     private async Task OnInvoicedToDateChanged(decimal total)
     {
-        invoicedToDate = total;
         await RefreshInvoicesAsync();
         StateHasChanged();
     }
@@ -475,7 +486,7 @@ else
                     Hint: "Undo the preapproval — back to Draft, % complete editable again",
                     Disabled: busy, Group: 1));
                 if (StageFor(claim) != ClaimStage.ReadyToConfirm)
-                    items.Add(new(Label: "Confirm payment received",
+                    items.Add(new(Label: "Confirm & roll over",
                         OnSelect: EventCallback.Factory.Create(this, ConfirmClickedAsync),
                         Hint: "Normally done once the claim's invoice is paid — confirming now will ask first",
                         Disabled: busy, Group: 1));
@@ -530,7 +541,7 @@ else
         : ValuationSummaryFigures.For(
             Store.LinesFor(ProjectId),
             Store.EntriesFor(Selected.ValuationClaimId),
-            Selected, invoicedToDate).PaymentDueExVat;
+            Selected, CertifiedToDateGross, DepositCreditedToDate).PaymentDueExVat;
 
     // The claim immediately before the selected one (highest ClaimNumber below it), so the
     // report table can show each line's previously-claimed % against what's being claimed now.

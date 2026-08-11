@@ -3,6 +3,7 @@
 @inject SessionService Session
 @inject IProjectRetentionStore Retention
 @inject IValuationReportStore ValuationReport
+@inject IValuationInvoiceStore Invoices
 @implements IDisposable
 
 @*
@@ -248,8 +249,11 @@
         Session.AvailableRoles.Any(role => role is Role.Admin or Role.ManagingDirector or Role.FinanceDirector);
 
     // Works complete / contract sum / deposit released from the latest claim (live for
-    // drafts) — the same figures the Valuation Report footer and Cashflow tab use.
-    // Certified-to-date doesn't affect this panel, so no invoice summary is needed here.
+    // drafts) — the same figures the Valuation Report footer and Cashflow tab use. The
+    // invoice summary supplies the deposit credits already taken on issued/paid invoices,
+    // so "Released to date" counts them; certified itself doesn't affect this panel.
+    private ProjectValuationInvoiceSummary? invoiceSummary;
+
     private ValuationSummaryFigures Figures
     {
         get
@@ -259,7 +263,8 @@
             var entries = latest is { Status: ValuationClaimStatus.Draft }
                 ? ValuationReport.EntriesFor(latest.ValuationClaimId)
                 : Array.Empty<ClaimLine>();
-            return ValuationSummaryFigures.For(ValuationReport.LinesFor(ProjectId), entries, latest, 0m);
+            return ValuationSummaryFigures.For(ValuationReport.LinesFor(ProjectId), entries, latest,
+                invoiceSummary?.TotalCertified ?? 0m, invoiceSummary?.TotalDepositCredited ?? 0m);
         }
     }
 
@@ -290,6 +295,12 @@
         Retention.OnChange += StateHasChanged;
         ValuationReport.OnChange += StateHasChanged;
         Retention.Refresh(ProjectId);
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        try { invoiceSummary = await Invoices.GetSummaryAsync(ProjectId); }
+        catch { /* deposit released-to-date just omits invoice credits until it loads */ }
     }
 
     private void OpenTerms()

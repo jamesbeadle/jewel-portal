@@ -44,11 +44,15 @@ internal static class ValuationReportSnapshotCapture
                 .Where(entry => entry.ValuationClaimId == claim.ValuationClaimId)
                 .ToDictionaryAsync(entry => entry.ValuationLineItemId, cancellationToken);
 
-        var certifiedToDate = await context.ValuationInvoices
+        // Gross certification: issued/paid cash amounts plus their embedded deposit credits.
+        var issuedInvoices = await context.ValuationInvoices
             .Where(invoice => invoice.ProjectId == projectId
                               && (invoice.Status == (int)ValuationInvoiceStatus.Issued
                                   || invoice.Status == (int)ValuationInvoiceStatus.Paid))
-            .SumAsync(invoice => (decimal?)invoice.Amount, cancellationToken) ?? 0m;
+            .Select(invoice => new { invoice.Amount, invoice.DepositCredited })
+            .ToListAsync(cancellationToken);
+        var certifiedToDate = issuedInvoices.Sum(invoice => invoice.Amount + invoice.DepositCredited);
+        var depositCreditedToDate = issuedInvoices.Sum(invoice => invoice.DepositCredited);
 
         var lineModels = lines.Select(line => line.ToModel()).ToList();
         var contractSum = ValuationCalculations.ContractSum(lineModels);
@@ -118,14 +122,15 @@ internal static class ValuationReportSnapshotCapture
 
         snapshot.TotalWorksComplete = totalWorksComplete;
         snapshot.RetentionHeld = ValuationCalculations.RetentionHeld(totalWorksComplete, snapshot.RetentionPercent);
-        // Cash-up-front deposit deducted from the payment due: release earned against
+        // Cash-up-front deposit credit still to be taken: release earned against
         // contract-side works (capped at the deposit received), less the opening balance
-        // settled before the portal began deducting — mirrors ValuationClaimSummary.
+        // settled before tracking, less credits already embedded in issued/paid invoices —
+        // mirrors ValuationClaimSummary.
         snapshot.DepositReleased = ValuationCalculations.DepositDeduction(
             ValuationCalculations.DepositReleased(
                 nonVariationWorksComplete, snapshot.DepositPercent,
                 ValuationCalculations.DepositReceived(contractSum, snapshot.DepositPercent)),
-            claim?.DepositReleasedOpening ?? 0m);
+            claim?.DepositReleasedOpening ?? 0m, depositCreditedToDate);
         snapshot.PaymentDueExVat = ValuationCalculations.PaymentDueExVat(
             totalWorksComplete, snapshot.RetentionHeld, snapshot.RetentionReleased,
             snapshot.DepositReleased, certifiedToDate);

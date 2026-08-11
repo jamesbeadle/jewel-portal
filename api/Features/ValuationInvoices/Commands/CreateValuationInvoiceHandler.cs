@@ -85,6 +85,10 @@ public sealed class CreateValuationInvoiceHandler : ICommandHandler<CreateValuat
             var snapshot = await ValuationReportSnapshotCapture.CaptureAsync(
                 context, entity.ProjectId, $"{entity.Reference} raise", entity.ValuationInvoiceId, cancellationToken);
             entity.ValuationReportSnapshotId = snapshot.ValuationReportSnapshotId;
+            // Stamp the deposit credit embedded in this invoice's amount (the claim's
+            // outstanding deduction at this moment — the snapshot just computed it). Gross
+            // certificate = Amount + DepositCredited; manual/historic entries stay at 0.
+            entity.DepositCredited = snapshot.DepositReleased;
 
             ValuationInvoiceAuditTrail.Append(context, entity.ValuationInvoiceId,
                 ValuationInvoiceEventType.Created, command.Note ?? "", amountAfter: command.Amount);

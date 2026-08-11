@@ -25,13 +25,17 @@ internal static class ValuationClaimSummary
             .Select(line => line.ToModel())
             .ToList();
 
-        // Certified to date = total valuation-invoiced to date: every invoice that has been issued
-        // to the client (Issued or Paid). Draft (Raised) invoices don't count until issued.
-        var certifiedToDate = await context.ValuationInvoices
+        // Certified to date = GROSS certification: every issued/paid invoice's cash amount
+        // plus the deposit credit embedded in it (the certificate before the deposit came
+        // off). Draft (Raised) invoices don't count until issued.
+        var issuedInvoices = await context.ValuationInvoices
             .Where(invoice => invoice.ProjectId == claim.ProjectId
                               && (invoice.Status == (int)ValuationInvoiceStatus.Issued
                                   || invoice.Status == (int)ValuationInvoiceStatus.Paid))
-            .SumAsync(invoice => (decimal?)invoice.Amount, cancellationToken) ?? 0m;
+            .Select(invoice => new { invoice.Amount, invoice.DepositCredited })
+            .ToListAsync(cancellationToken);
+        var certifiedToDate = issuedInvoices.Sum(invoice => invoice.Amount + invoice.DepositCredited);
+        var depositCreditedToDate = issuedInvoices.Sum(invoice => invoice.DepositCredited);
 
         var contractSum = ValuationCalculations.ContractSum(lineModels);
         var netVariations = ValuationCalculations.NetVariations(lineModels);
@@ -42,14 +46,15 @@ internal static class ValuationClaimSummary
 
         // Cash-up-front deposit: released back pro rata against the contract-side works
         // (contract works + PC sums + contingency — variations excluded), capped at the
-        // deposit received (deposit % of the contract sum). What the claim deducts is the
-        // release earned to date LESS the opening balance settled before the portal began
-        // deducting (DepositReleasedOpening) — so the invoice matches what the client pays.
+        // deposit received (deposit % of the contract sum). What the claim still deducts
+        // is the release earned to date LESS the opening balance settled before tracking
+        // LESS credits already embedded in issued/paid invoices — zero once the period's
+        // invoice is out, so a freshly rolled claim starts clean.
         var nonVariationWorks = ValuationCalculations.NonVariationWorksComplete(claimLineModels, lineModels);
         var depositReceived = ValuationCalculations.DepositReceived(contractSum, claim.DepositPercent);
         var depositReleased = ValuationCalculations.DepositDeduction(
             ValuationCalculations.DepositReleased(nonVariationWorks, claim.DepositPercent, depositReceived),
-            claim.DepositReleasedOpening);
+            claim.DepositReleasedOpening, depositCreditedToDate);
 
         claim.ContractSum = contractSum;
         claim.NetVariations = netVariations;

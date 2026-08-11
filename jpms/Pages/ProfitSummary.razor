@@ -731,7 +731,8 @@ else
     private readonly HashSet<string> loadingProjects = new(StringComparer.OrdinalIgnoreCase);
 
     // Per-project answers to the reads the shared read models don't cache for us.
-    private readonly Dictionary<string, decimal> invoicedByProject = new(StringComparer.OrdinalIgnoreCase);
+    // Certified gross + the deposit credits inside it (see ProjectValuationInvoiceSummary).
+    private readonly Dictionary<string, (decimal Certified, decimal DepositCredited)> invoicedByProject = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, IReadOnlyList<PackageReconciliationRow>> packagesByProject = new(StringComparer.OrdinalIgnoreCase);
 
     // ONE throttle for the page's lifetime, not one per LoadSelectedAsync call — a filter change
@@ -815,9 +816,10 @@ else
         var entries = latest is { Status: ValuationClaimStatus.Draft }
             ? ClaimEntries.Current(latest.ValuationClaimId)
             : Array.Empty<ClaimLine>();
+        var certification = invoicedByProject.TryGetValue(projectId, out var totals) ? totals : (0m, 0m);
         var figures = ValuationSummaryFigures.For(
             Lines.Current(projectId), entries, latest,
-            invoicedByProject.TryGetValue(projectId, out var invoiced) ? invoiced : 0m);
+            certification.Item1, certification.Item2);
 
         var summaryRows = Summary.Current(projectId);
         var packages = packagesByProject.TryGetValue(projectId, out var packageRows)
@@ -1514,7 +1516,8 @@ else
         await WorkOrders.RefreshAsync(projectId, CancellationToken.None);
         await Lines.RefreshAsync(projectId, CancellationToken.None);
         await Claims.RefreshAsync(projectId, CancellationToken.None);
-        invoicedByProject[projectId] = (await Invoices.GetSummaryAsync(projectId)).TotalInvoiced;
+        var invoiceSummary = await Invoices.GetSummaryAsync(projectId);
+        invoicedByProject[projectId] = (invoiceSummary.TotalCertified, invoiceSummary.TotalDepositCredited);
         if (LatestClaimFor(projectId) is { Status: ValuationClaimStatus.Draft } draft)
             await ClaimEntries.RefreshAsync(draft.ValuationClaimId, CancellationToken.None);
         packagesByProject[projectId] = await Queries.AskAsync(new ListPackageReconciliation(projectId), CancellationToken.None);

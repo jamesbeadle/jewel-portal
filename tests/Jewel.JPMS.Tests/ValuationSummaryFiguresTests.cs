@@ -85,7 +85,7 @@ public sealed class ValuationSummaryFiguresTests
         };
         var claim = Claim(ValuationClaimStatus.Draft, retentionPercent: 5m, retentionReleasePercent: 2.5m);
 
-        var figures = ValuationSummaryFigures.For(lines, entries, claim, invoicedToDate: 1_513_295.82m);
+        var figures = ValuationSummaryFigures.For(lines, entries, claim, certifiedToDate: 1_513_295.82m);
 
         Assert.Equal(1_780_455m, figures.ContractSum);
         Assert.Equal(215_737.58m, figures.NetVariations);
@@ -121,7 +121,7 @@ public sealed class ValuationSummaryFiguresTests
         // Entries deliberately contradict the frozen totals — they must be ignored.
         var entries = new[] { new ClaimLine("C1", "V1", "L1", 10m, 0m, 0m) };
 
-        var figures = ValuationSummaryFigures.For(lines, entries, claim, invoicedToDate: 999_999m);
+        var figures = ValuationSummaryFigures.For(lines, entries, claim, certifiedToDate: 999_999m);
 
         Assert.Equal(1_647_990.65m, figures.TotalWorksComplete);
         Assert.Equal(82_399.53m, figures.RetentionHeld);
@@ -136,7 +136,7 @@ public sealed class ValuationSummaryFiguresTests
     {
         var lines = new[] { Line(ValuationElementType.ContractWorks, ValuationLineType.Priced, 1m, 261_218m) };
 
-        var figures = ValuationSummaryFigures.For(lines, Array.Empty<ClaimLine>(), claim: null, invoicedToDate: 0m);
+        var figures = ValuationSummaryFigures.For(lines, Array.Empty<ClaimLine>(), claim: null, certifiedToDate: 0m);
 
         Assert.Equal(261_218m, figures.ContractSum);
         Assert.Equal(0m, figures.TotalWorksComplete);
@@ -164,7 +164,7 @@ public sealed class ValuationSummaryFiguresTests
         };
         var claim = Claim(ValuationClaimStatus.Draft, retentionPercent: 5m, depositPercent: 20m);
 
-        var figures = ValuationSummaryFigures.For(lines, entries, claim, invoicedToDate: 10_000m);
+        var figures = ValuationSummaryFigures.For(lines, entries, claim, certifiedToDate: 10_000m);
 
         Assert.Equal(20m, figures.DepositPercent);
         Assert.Equal(52_243.60m, figures.DepositReceived);            // 20% × 261,218
@@ -200,7 +200,7 @@ public sealed class ValuationSummaryFiguresTests
         var claim = Claim(ValuationClaimStatus.Draft, retentionPercent: 5m,
             depositPercent: 20m, depositReleasedOpening: 6_049.00m);
 
-        var figures = ValuationSummaryFigures.For(linesExact, entries, claim, invoicedToDate: 39_328.57m);
+        var figures = ValuationSummaryFigures.For(linesExact, entries, claim, certifiedToDate: 39_328.57m);
 
         Assert.Equal(63_152.99m, figures.TotalWorksComplete);
         Assert.Equal(3_157.6495m, figures.RetentionHeld);
@@ -209,6 +209,36 @@ public sealed class ValuationSummaryFiguresTests
         Assert.Equal(8_799.20m, figures.DepositReleasedToDate);     // deduction + opening
         Assert.Equal(20_666.77m, decimal.Round(figures.PaymentDueBeforeDepositExVat, 2));
         Assert.Equal(17_916.57m, decimal.Round(figures.PaymentDueExVat, 2));
+    }
+
+    // After VI-0003 (17,916.57 cash + 2,750.20 deposit credit) is issued: certification is
+    // GROSS (39,328.57 + 20,666.77 = 59,995.34 — the accountant's "39K + 20K"), the credit
+    // already taken zeroes the pending deduction, and nothing further is due this period.
+    [Fact]
+    public void DraftClaim_afterInvoiceIssued_certifiedIsGross_andDeductionReturnsToZero()
+    {
+        var lines = new[]
+        {
+            Line(ValuationElementType.ContractWorks, ValuationLineType.Priced, 1m, 43_996m, 1),
+            Line(ValuationElementType.ContractWorks, ValuationLineType.Priced, 1m, 217_222m, 2),
+            Line(ValuationElementType.Variation, ValuationLineType.Priced, 1m, 19_156.99m, 3)
+        };
+        var entries = new[]
+        {
+            new ClaimLine("C1", "V1", "L1", 100m, 0m, 0m),
+            new ClaimLine("C2", "V1", "L2", 0m, 0m, 0m),
+            new ClaimLine("C3", "V1", "L3", 100m, 0m, 0m)
+        };
+        var claim = Claim(ValuationClaimStatus.Draft, retentionPercent: 5m,
+            depositPercent: 20m, depositReleasedOpening: 6_049.00m);
+
+        var figures = ValuationSummaryFigures.For(lines, entries, claim,
+            certifiedToDate: 59_995.34m, depositCreditedToDate: 2_750.20m);
+
+        Assert.Equal(0m, figures.DepositReleased);                  // credit already taken
+        Assert.Equal(8_799.20m, figures.DepositReleasedToDate);     // 0 pending + 6,049 opening + 2,750.20 credited
+        Assert.Equal(43_444.40m, figures.DepositOutstanding);       // 52,243.60 − 8,799.20
+        Assert.Equal(0m, decimal.Round(figures.PaymentDueExVat, 2));
     }
 
     // A locked claim reads its frozen deposit release; the deposit received stays live
@@ -226,7 +256,7 @@ public sealed class ValuationSummaryFiguresTests
             depositPercent: 20m,
             depositReleased: 9_301.75m);
 
-        var figures = ValuationSummaryFigures.For(lines, Array.Empty<ClaimLine>(), claim, invoicedToDate: 0m);
+        var figures = ValuationSummaryFigures.For(lines, Array.Empty<ClaimLine>(), claim, certifiedToDate: 0m);
 
         Assert.Equal(52_243.60m, figures.DepositReceived);
         Assert.Equal(9_301.75m, figures.DepositReleased);

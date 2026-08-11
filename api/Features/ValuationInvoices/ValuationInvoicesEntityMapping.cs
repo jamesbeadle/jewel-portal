@@ -25,7 +25,8 @@ internal static class ValuationInvoicesEntityMapping
         RejectionReason: entity.RejectionReason,
         AmendmentCount: entity.AmendmentCount,
         IsManual: entity.IsManual,
-        ValuationReportSnapshotId: entity.ValuationReportSnapshotId);
+        ValuationReportSnapshotId: entity.ValuationReportSnapshotId,
+        DepositCredited: entity.DepositCredited);
 
     public static ValuationInvoiceEvent ToModel(this ValuationInvoiceEventEntity entity) => new(
         ValuationInvoiceEventId: entity.ValuationInvoiceEventId,

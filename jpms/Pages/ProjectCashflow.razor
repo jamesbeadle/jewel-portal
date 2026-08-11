@@ -335,7 +335,7 @@ else
             ? ValuationReport.EntriesFor(draft.ValuationClaimId)
             : Array.Empty<ClaimLine>(),
         LatestClaim,
-        invoiceSummary?.TotalInvoiced ?? 0m);
+        invoiceSummary?.TotalCertified ?? 0m, invoiceSummary?.TotalDepositCredited ?? 0m);
 
     // ── Retention terms + schedule — the project's retention record (Setup tab). No record
     // means the retention rows show a dash and add nothing back: a claim's retention/release

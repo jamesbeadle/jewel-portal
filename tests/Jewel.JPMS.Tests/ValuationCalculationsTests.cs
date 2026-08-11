@@ -175,25 +175,37 @@ public sealed class ValuationCalculationsTests
     }
 
     // The Ravenswood Claim 3 position: claims 1–2 were invoiced gross, so their £6,049
-    // of deposit release is settled outside the portal (the opening balance) and the
-    // claim only deducts what has been earned beyond it.
+    // of deposit release is settled outside the portal (the opening balance); the claim
+    // deducts what has been earned beyond it and beyond credits already taken on
+    // issued/paid invoices.
     [Fact]
-    public void Deposit_deduction_excludes_the_opening_balance()
+    public void Deposit_deduction_excludes_opening_balance_and_credits_already_taken()
     {
-        // Earned to date 8,799.20 (20% × 43,996 contract-side works), opening 6,049.
-        Assert.Equal(2_750.20m, ValuationCalculations.DepositDeduction(8_799.20m, 6_049.00m));
+        // Earned to date 8,799.20 (20% × 43,996 contract-side works), opening 6,049,
+        // nothing yet credited on an invoice → the next invoice credits 2,750.20.
+        Assert.Equal(2_750.20m, ValuationCalculations.DepositDeduction(8_799.20m, 6_049.00m, 0m));
+
+        // Once VI-0003 (carrying the 2,750.20 credit) is issued, nothing is left to
+        // deduct — a freshly rolled claim starts at zero.
+        Assert.Equal(0m, ValuationCalculations.DepositDeduction(8_799.20m, 6_049.00m, 2_750.20m));
 
         // An opening balance ahead of the earned release never goes negative — it just
         // waits for the works to catch up.
-        Assert.Equal(0m, ValuationCalculations.DepositDeduction(5_000.00m, 6_049.00m));
+        Assert.Equal(0m, ValuationCalculations.DepositDeduction(5_000.00m, 6_049.00m, 0m));
 
-        // No opening balance = deduct the full earned release.
-        Assert.Equal(8_799.20m, ValuationCalculations.DepositDeduction(8_799.20m, 0m));
+        // No opening balance and no credits = deduct the full earned release.
+        Assert.Equal(8_799.20m, ValuationCalculations.DepositDeduction(8_799.20m, 0m, 0m));
 
         // Ravenswood Claim 3 end-to-end: 20,666.77 payable less 2,750.20 = 17,916.57 invoiced.
         var paymentDue = ValuationCalculations.PaymentDueExVat(
             63_152.99m, 3_157.65m, 0m, 2_750.20m, 39_328.57m);
         Assert.Equal(17_916.57m, decimal.Round(paymentDue, 2));
+
+        // And after the invoice is issued: certified GROSS moves to 59,995.34
+        // (39,328.57 + 20,666.77), the deduction is spent — nothing further due.
+        var afterInvoice = ValuationCalculations.PaymentDueExVat(
+            63_152.99m, 3_157.65m, 0m, 0m, 59_995.34m);
+        Assert.Equal(0m, decimal.Round(afterInvoice, 2));
     }
 
     private static ValuationLineItem Line(

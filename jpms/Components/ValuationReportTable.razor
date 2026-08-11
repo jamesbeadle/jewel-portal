@@ -395,7 +395,10 @@ else
     // Rendered between the bill sections and the summary (e.g. the valuation invoices accordion).
     [Parameter] public RenderFragment? ExtraSections { get; set; }
     // Total issued/paid valuation invoices — drives "Certified to date" for live (draft/no-claim) views.
-    [Parameter] public decimal InvoicedToDate { get; set; }
+    // Gross certification to date (issued/paid invoice amounts plus their embedded deposit
+    // credits) and the deposit credits alone — both fed by the page's invoice list.
+    [Parameter] public decimal CertifiedToDate { get; set; }
+    [Parameter] public decimal DepositCreditedToDate { get; set; }
 
     private static readonly System.Globalization.CultureInfo Gb = System.Globalization.CultureInfo.GetCultureInfo("en-GB");
 
@@ -461,7 +464,7 @@ else
     private void Recompute()
     {
         // Shared with the Cashflow tab (ValuationSummaryFigures) so the two tabs can't drift.
-        var figures = ValuationSummaryFigures.For(lines, entries, SelectedClaim, InvoicedToDate);
+        var figures = ValuationSummaryFigures.For(lines, entries, SelectedClaim, CertifiedToDate, DepositCreditedToDate);
         contractSum = figures.ContractSum;
         netVariations = figures.NetVariations;
         revisedContractSum = figures.RevisedContractSum;

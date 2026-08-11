@@ -38,6 +38,11 @@ public enum ValuationInvoiceEventType
 // valuation report; when paid, the amount rolls into the project-level total. Submitted/Approved
 // invoices are pending — they never count toward certified until issued. Manual invoices are
 // backdated historical entries created directly as Issued or Paid; they bypass the approval loop.
+//
+// Amount is the CASH the client is asked to pay. On a deposit project the invoice also carries
+// DepositCredited — the cash-up-front deposit credit embedded in it (stamped from the claim's
+// outstanding deduction at raise time) — so the GROSS certificate the invoice represents is
+// Amount + DepositCredited. Certification runs gross; the deposit credit is a cash-side line.
 public sealed record ValuationInvoice(
     string ValuationInvoiceId,
     string ProjectId,
@@ -58,9 +63,13 @@ public sealed record ValuationInvoice(
     string? RejectionReason = null,
     int AmendmentCount = 0,
     bool IsManual = false,
-    string? ValuationReportSnapshotId = null)  // latest snapshot backing this invoice
+    string? ValuationReportSnapshotId = null,  // latest snapshot backing this invoice
+    decimal DepositCredited = 0m)              // deposit credit embedded in Amount; gross certificate = Amount + DepositCredited
 {
     public string DisplayNumber => Number > 0 ? $"VI-{Number:0000}" : "";
+
+    // The gross certificate this invoice represents (works certified before the deposit credit).
+    public decimal CertifiedAmount => Amount + DepositCredited;
 
     // Pending states: claimed from the client but not yet certifiable.
     public bool IsAwaitingApproval => Status is ValuationInvoiceStatus.Submitted or ValuationInvoiceStatus.Approved;
@@ -83,7 +92,12 @@ public sealed record ValuationInvoiceEvent(
 public sealed record ProjectValuationInvoiceSummary(
     string ProjectId,
     decimal TotalRaised,             // sum of all live invoice amounts, any status except Cancelled
-    decimal TotalInvoiced,           // sum of Issued + Paid invoice amounts — feeds "Certified to date"
+    decimal TotalInvoiced,           // sum of Issued + Paid invoice CASH amounts
     decimal TotalPaid,               // sum of amounts the client has paid
     decimal Outstanding,             // invoiced but not yet paid
-    decimal TotalAwaitingApproval = 0m); // sum of Submitted + Approved amounts — pending exposure
+    decimal TotalAwaitingApproval = 0m,  // sum of Submitted + Approved amounts — pending exposure
+    decimal TotalDepositCredited = 0m)   // deposit credits embedded in Issued + Paid invoices
+{
+    // Gross certification to date — what feeds "Certified to date" on the valuation report.
+    public decimal TotalCertified => TotalInvoiced + TotalDepositCredited;
+}

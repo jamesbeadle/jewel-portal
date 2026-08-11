@@ -27,6 +27,11 @@ public sealed class GetProjectValuationInvoiceSummaryHandler : IQueryHandler<Get
         var awaitingApproval = invoices
             .Where(invoice => invoice.Status is (int)ValuationInvoiceStatus.Submitted or (int)ValuationInvoiceStatus.Approved)
             .Sum(invoice => invoice.Amount);
+        // Deposit credits embedded in issued/paid invoices — gross certification is
+        // TotalInvoiced + this (the summary record's TotalCertified).
+        var depositCredited = invoices
+            .Where(invoice => invoice.Status is (int)ValuationInvoiceStatus.Issued or (int)ValuationInvoiceStatus.Paid)
+            .Sum(invoice => invoice.DepositCredited);
 
         return new ProjectValuationInvoiceSummary(
             ProjectId: query.ProjectId,
@@ -34,6 +39,7 @@ public sealed class GetProjectValuationInvoiceSummaryHandler : IQueryHandler<Get
             TotalInvoiced: invoiced,
             TotalPaid: paid,
             Outstanding: invoiced - paid,
-            TotalAwaitingApproval: awaitingApproval);
+            TotalAwaitingApproval: awaitingApproval,
+            TotalDepositCredited: depositCredited);
     }
 }

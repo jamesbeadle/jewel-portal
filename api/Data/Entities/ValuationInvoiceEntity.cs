@@ -26,6 +26,9 @@ public sealed class ValuationInvoiceEntity
     public int AmendmentCount { get; set; }
     public bool IsManual { get; set; }
     [MaxLength(64)]      public string? ValuationReportSnapshotId { get; set; }
+    // Cash-up-front deposit credit embedded in Amount (stamped from the claim's outstanding
+    // deduction at raise time). The gross certificate = Amount + DepositCredited.
+    public decimal DepositCredited { get; set; }
 }
 
 // Audit trail: everything that has happened to a valuation invoice (creation, submission,
