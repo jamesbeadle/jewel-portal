@@ -8,8 +8,8 @@ using Microsoft.Azure.Functions.Worker;
 
 namespace Jewel.JPMS.Api.Features.Todos.Queries;
 
-// GET a to-do item's linked to-dos — the items sharing tagged mail with it. Derived from mailbox
-// tags, so the gate matches the linked-emails read it leans on: every internal role, no externals.
+// GET a to-do item's linked to-dos — the stored undirected pairs naming it (TodoItemLinks).
+// Internal-only read, like the item lists themselves: every internal role, no externals.
 public sealed class ListLinkedTodoItemsEndpoint
 {
     private readonly SignedInUserResolver users;

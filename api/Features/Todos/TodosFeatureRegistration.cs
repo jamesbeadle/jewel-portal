@@ -28,10 +28,9 @@ public static class TodosFeatureRegistration
         // record-link layer) — the linked-mail list on the item's page.
         services.AddScoped<IQueryHandler<ListTodoEmails, IReadOnlyList<MailboxMessage>>, ListTodoEmailsHandler>();
 
-        // The item's own page (/todos/{id}): the item itself, and the to-dos linked to it — the
-        // items sharing tagged mail with it, derived live from the same tags as the list above.
+        // The item's own page (/todos/{id}): the item itself. Its linked to-dos read is registered
+        // with the rest of the linked-to-dos block below.
         services.AddScoped<IQueryHandler<GetTodoItemById, TodoItem?>, GetTodoItemByIdHandler>();
-        services.AddScoped<IQueryHandler<ListLinkedTodoItems, IReadOnlyList<TodoItem>>, ListLinkedTodoItemsHandler>();
 
         services.AddScoped<ICommandHandler<AddTodoItem, TodoItem>, AddTodoItemHandler>();
         services.AddScoped<AddTodoItemAuthorisation>();
