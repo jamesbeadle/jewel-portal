@@ -5,10 +5,13 @@
    accordion. Issued invoices drive "Certified to date" — and so the payment due — in the
    report summary; the total is reported up via OnInvoicedToDateChanged.
 
-   Lifecycle: Raised → Submitted (with the client; report snapshot frozen) → Approved →
-   Issued → Paid, with Rejected returning an invoice for amendment or cancellation, and a
-   Raised → Issued skip path for projects without a formal approval loop. Manual entries
-   are backdated historic invoices recorded directly as Issued/Paid. *@
+   Lifecycle: raised & sent in one move from the claim card (Submitted — with the client;
+   the raise froze the report snapshot) → Approved → Issued → Paid, with Rejected returning
+   an invoice for amendment or cancellation, and a Submitted/Raised → Issued skip path for
+   projects without a formal approval loop. Raised survives as a draft state (an invoice
+   added below starts there). Manual entries are backdated historic invoices recorded
+   directly as Issued/Paid. The claim card on the valuation page drives the happy path;
+   this section's row menu covers the same moves plus the edge cases. *@
 <div class="rounded-xl border border-line bg-surface overflow-hidden">
     <div class="w-full flex items-center gap-3 px-4 py-3 hover:bg-surface-raised/60 transition">
         <button type="button" @onclick="Toggle" aria-expanded="@isOpen"
@@ -279,7 +282,7 @@
             {
                 <p class="text-sm text-content">
                     Amending <span class="font-mono">@editInvoice.DisplayNumber</span> returns it to
-                    Raised — resubmit to freeze a fresh report snapshot for the client.
+                    draft — send the claim again and a fresh report snapshot freezes for the client.
                 </p>
             }
             <div>
@@ -358,21 +361,24 @@
         // Group 0 — moving the invoice along its lifecycle.
         if (!invoice.IsManual && invoice.Status == ValuationInvoiceStatus.Raised)
         {
-            items.Add(new(Label: "Submit for approval",
+            items.Add(new(Label: "Send claim",
                 OnSelect: EventCallback.Factory.Create(this, () => SubmitAsync(invoice)),
-                Hint: "Send to the architect/client for approval — freezes a report snapshot"));
-            items.Add(new(Label: "Issue",
+                Hint: "Send to the architect/client for approval"));
+            items.Add(new(Label: "Issue without approval",
                 OnSelect: EventCallback.Factory.Create(this, () => IssueAsync(invoice)),
-                Hint: "Issue without the approval loop — counts toward certified to date"));
+                Hint: "Skip the approval loop — counts toward certified to date"));
         }
         else if (invoice.Status == ValuationInvoiceStatus.Submitted)
         {
-            items.Add(new(Label: "Approve",
+            items.Add(new(Label: "Record approval",
                 OnSelect: EventCallback.Factory.Create(this, () => ApproveAsync(invoice)),
                 Hint: "Record the client's approval — issue next to count toward certified to date"));
-            items.Add(new(Label: "Reject…",
+            items.Add(new(Label: "Record rejection…",
                 OnSelect: EventCallback.Factory.Create(this, () => OpenReject(invoice)),
                 Hint: "Record the client's rejection — the invoice unlocks for amendment or cancellation"));
+            items.Add(new(Label: "Issue without approval",
+                OnSelect: EventCallback.Factory.Create(this, () => IssueAsync(invoice)),
+                Hint: "For clients with no formal approval loop — counts toward certified to date"));
         }
         else if (invoice.Status == ValuationInvoiceStatus.Approved)
         {
@@ -392,7 +398,7 @@
             items.Add(new(Label: invoice.Status == ValuationInvoiceStatus.Rejected ? "Amend…" : "Edit…",
                 OnSelect: EventCallback.Factory.Create(this, () => OpenEdit(invoice)),
                 Hint: invoice.Status == ValuationInvoiceStatus.Rejected
-                    ? "Amend and return to Raised, ready to resubmit"
+                    ? "Amend and return to draft, ready to send again"
                     : "Amend period/amount",
                 Group: 1));
         if (!invoice.IsManual && invoice.Status is ValuationInvoiceStatus.Raised or ValuationInvoiceStatus.Rejected)
@@ -453,6 +459,13 @@
         await OnInvoicedToDateChanged.InvokeAsync(InvoicedToDate);
         StateHasChanged();
     }
+
+    /// <summary>Open this section's modals for a given invoice from outside — the claim card
+    /// on the valuation page drives the happy path and borrows these forms rather than
+    /// duplicating them. The modals render whether or not the accordion is open.</summary>
+    public void OpenPaymentFor(ValuationInvoice invoice) { OpenPayment(invoice); StateHasChanged(); }
+    public void OpenRejectFor(ValuationInvoice invoice) { OpenReject(invoice); StateHasChanged(); }
+    public void OpenEditFor(ValuationInvoice invoice) { OpenEdit(invoice); StateHasChanged(); }
 
     private async Task AddAsync()
     {
@@ -681,8 +694,8 @@
 
     private static string StatusLabel(ValuationInvoiceStatus status) => status switch
     {
-        ValuationInvoiceStatus.Raised => "Raised",
-        ValuationInvoiceStatus.Submitted => "Submitted",
+        ValuationInvoiceStatus.Raised => "Draft",
+        ValuationInvoiceStatus.Submitted => "Awaiting approval",
         ValuationInvoiceStatus.Approved => "Approved",
         ValuationInvoiceStatus.Rejected => "Rejected",
         ValuationInvoiceStatus.Issued => "Issued",
@@ -693,7 +706,7 @@
 
     private static string StatusTitle(ValuationInvoice invoice) => invoice.Status switch
     {
-        ValuationInvoiceStatus.Raised => "Draft — submit for approval, or issue directly",
+        ValuationInvoiceStatus.Raised => "Draft — send the claim for approval, or issue directly",
         ValuationInvoiceStatus.Submitted => $"With the client for approval{(invoice.SubmittedAt is { } s ? $" since {s:dd MMM yyyy}" : "")}",
         ValuationInvoiceStatus.Approved => "Approved by the client — issue to count toward certified to date",
         ValuationInvoiceStatus.Rejected => "Rejected — amend and resubmit, or cancel",

@@ -12,6 +12,11 @@ public sealed class NullProjectContractBlobStore : IProjectContractBlobStore
         string fileName, string contentType, Stream content, CancellationToken cancellationToken) =>
         throw new InvalidOperationException(Message);
 
+    public Task<string> UploadAmendmentAsync(
+        string projectId, string projectContractAmendmentId,
+        string fileName, string contentType, Stream content, CancellationToken cancellationToken) =>
+        throw new InvalidOperationException(Message);
+
     public Task<ProjectContractBlob?> OpenAsync(string blobRef, CancellationToken cancellationToken) =>
         throw new InvalidOperationException(Message);
 

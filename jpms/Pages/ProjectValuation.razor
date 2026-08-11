@@ -98,7 +98,7 @@ else
                                     @(step.Done ? "✓" : step.Index.ToString())
                                 </span>
                                 <span class="@(step.Current ? "text-content font-medium" : step.Done ? "text-content-muted" : "text-content-subtle")">@step.Label</span>
-                                @if (step.Index < 4)
+                                @if (step.Index < 6)
                                 {
                                     <span class="w-6 h-px bg-line mx-1" aria-hidden="true"></span>
                                 }
@@ -118,17 +118,45 @@ else
                         case ClaimStage.AwaitingInvoice:
                             <button @onclick="RaiseInvoiceAsync" disabled="@(busy || PaymentDueNow <= 0m)"
                                     title="@(PaymentDueNow > 0m
-                                              ? "Creates the application to send to the client, drawn against this claim. The amount can still be edited before it's issued."
+                                              ? "One click: raises the valuation invoice for the amount due and sends the claim to the architect/client — the report snapshot freezes behind it."
                                               : "Nothing is currently due — manage invoices in Valuation Invoices below")"
                                     class="rounded-lg bg-accent text-accent-ink font-medium text-sm px-4 py-2 hover:bg-accent-hover disabled:bg-surface-field transition shrink-0">
-                                Raise invoice (@Money(PaymentDueNow))
+                                Raise &amp; send invoice (@Money(PaymentDueNow))
+                            </button>
+                            break;
+                        case ClaimStage.InvoiceDraft:
+                            <button @onclick="SendInvoiceAsync" disabled="@busy"
+                                    title="Sends the drafted invoice to the architect/client for approval — Actions has the no-approval-loop issue"
+                                    class="rounded-lg bg-accent text-accent-ink font-medium text-sm px-4 py-2 hover:bg-accent-hover disabled:bg-surface-field transition shrink-0">
+                                Send claim
+                            </button>
+                            break;
+                        case ClaimStage.AwaitingApproval:
+                            <button @onclick="ApproveInvoiceAsync" disabled="@busy"
+                                    title="Record the architect/client's approval — Actions has rejection, and issue-without-approval for clients with no formal loop"
+                                    class="rounded-lg bg-accent text-accent-ink font-medium text-sm px-4 py-2 hover:bg-accent-hover disabled:bg-surface-field transition shrink-0">
+                                Record approval
+                            </button>
+                            break;
+                        case ClaimStage.ApprovedAwaitingIssue:
+                            <button @onclick="IssueInvoiceAsync" disabled="@busy"
+                                    title="Marks the invoice issued to the client — moves certified to date"
+                                    class="rounded-lg bg-accent text-accent-ink font-medium text-sm px-4 py-2 hover:bg-accent-hover disabled:bg-surface-field transition shrink-0">
+                                Issue invoice
+                            </button>
+                            break;
+                        case ClaimStage.InvoiceRejected:
+                            <button @onclick="AmendRejectedInvoice" disabled="@busy"
+                                    title="Amend the rejected invoice — saving returns it to draft, ready to resend"
+                                    class="rounded-lg bg-accent text-accent-ink font-medium text-sm px-4 py-2 hover:bg-accent-hover disabled:bg-surface-field transition shrink-0">
+                                Amend invoice…
                             </button>
                             break;
                         case ClaimStage.AwaitingPayment:
                             @if (IsLatestClaim(s))
                             {
                                 <button @onclick="@(() => OpenNextClaimForm(s))"
-                                        title="Payment isn't a gate: the invoice stays tracked below and you confirm whenever the cash lands"
+                                        title="Payment isn't a gate — carry on with the next period. Record payment… is in Actions for when the cash lands"
                                         class="rounded-lg bg-accent text-accent-ink font-medium text-sm px-4 py-2 hover:bg-accent-hover transition shrink-0">
                                     Start next claim
                                 </button>
@@ -311,9 +339,9 @@ else
                     has been issued yet, so certified to date won't reflect this claim.
                 </p>
                 <p class="text-content-subtle">
-                    The usual order is: raise the invoice, submit or issue it (freezing the report
-                    snapshot), then confirm the claim once the client pays. You can still confirm
-                    now and sort the invoice out afterwards.
+                    The usual order is: raise &amp; send the invoice, record the approval, issue it,
+                    then confirm the claim once the client pays. You can still confirm now and
+                    sort the invoice out afterwards.
                 </p>
             </div>
         </Modal>
@@ -380,7 +408,10 @@ else
         .OrderByDescending(invoice => invoice.Number)
         .FirstOrDefault();
 
-    private enum ClaimStage { Draft, AwaitingInvoice, InvoicePending, AwaitingPayment, ReadyToConfirm, Confirmed }
+    // One stage per invoice status, so the card can always name the ONE most likely next
+    // action — the FD's whole flow (send → approve → issue → paid) runs off this panel
+    // instead of the row dropdown in Valuation Invoices below.
+    private enum ClaimStage { Draft, AwaitingInvoice, InvoiceDraft, AwaitingApproval, ApprovedAwaitingIssue, InvoiceRejected, AwaitingPayment, ReadyToConfirm, Confirmed }
 
     private ClaimStage StageFor(ValuationClaim claim)
     {
@@ -392,7 +423,10 @@ else
         {
             ValuationInvoiceStatus.Paid => ClaimStage.ReadyToConfirm,
             ValuationInvoiceStatus.Issued => ClaimStage.AwaitingPayment,
-            _ => ClaimStage.InvoicePending // Raised / Submitted / Approved / Rejected
+            ValuationInvoiceStatus.Approved => ClaimStage.ApprovedAwaitingIssue,
+            ValuationInvoiceStatus.Submitted => ClaimStage.AwaitingApproval,
+            ValuationInvoiceStatus.Rejected => ClaimStage.InvoiceRejected,
+            _ => ClaimStage.InvoiceDraft // Raised — a draft that was never sent (legacy, or a manually added invoice)
         };
     }
 
@@ -404,11 +438,17 @@ else
             ClaimStage.Draft =>
                 "Set each line's cumulative % complete (Bulk edit % handles many at once), then lock the claim.",
             ClaimStage.AwaitingInvoice =>
-                $"Locked — {Money(claim.TotalWorksComplete)} works complete. Raise the invoice to apply for the amount due; you can edit the figure before it's issued.",
-            ClaimStage.InvoicePending =>
-                $"Invoice {invoice?.DisplayNumber} raised for {Money(invoice?.Amount ?? 0m)} — submit or issue it in Valuation Invoices below. Issuing freezes the report snapshot and moves certified to date.",
+                $"Locked — {Money(claim.TotalWorksComplete)} works complete. One click raises the invoice for the amount due and sends the claim to the architect/client.",
+            ClaimStage.InvoiceDraft =>
+                $"Invoice {invoice?.DisplayNumber} drafted for {Money(invoice?.Amount ?? 0m)} but not sent — send the claim, or issue it directly from Actions if this client runs no approval loop.",
+            ClaimStage.AwaitingApproval =>
+                $"Claimed — invoice {invoice?.DisplayNumber} for {Money(invoice?.Amount ?? 0m)} is with the architect/client{(invoice?.SubmittedAt is { } sub ? $" since {sub:dd MMM yyyy}" : "")}. Record their approval (or rejection, in Actions) when it comes.",
+            ClaimStage.ApprovedAwaitingIssue =>
+                $"Approved — issue invoice {invoice?.DisplayNumber} to count it toward certified to date, then raise it in the accounts as usual.",
+            ClaimStage.InvoiceRejected =>
+                $"Invoice {invoice?.DisplayNumber} was rejected{(invoice?.RejectedAt is { } rej ? $" on {rej:dd MMM yyyy}" : "")} — amend it (back to draft, ready to resend), or cancel it in Valuation Invoices below.",
             ClaimStage.AwaitingPayment =>
-                $"Invoice {invoice?.DisplayNumber} issued for {Money(invoice?.Amount ?? 0m)} — payment is tracked below (Record payment when it lands) and is no gate: carry straight on with the next claim.",
+                $"Invoice {invoice?.DisplayNumber} issued for {Money(invoice?.Amount ?? 0m)} — payment is no gate: carry on with the next claim and record the payment (Actions) when the cash lands.",
             ClaimStage.ReadyToConfirm =>
                 $"Invoice {invoice?.DisplayNumber} is paid — confirm to lock this period as the baseline and roll into the next.",
             ClaimStage.Confirmed =>
@@ -423,13 +463,20 @@ else
     {
         var locked = claim.Status != ValuationClaimStatus.Draft;
         var invoice = InvoiceFor(claim);
+        // A rejected invoice reads as "not claimed": the Claim step lights up again, which is
+        // exactly where the FD is — amend and resend. Issued-without-approval marks Approve
+        // done implicitly; the audit trail keeps the distinction.
+        var claimed = invoice is { Status: ValuationInvoiceStatus.Submitted or ValuationInvoiceStatus.Approved or ValuationInvoiceStatus.Issued or ValuationInvoiceStatus.Paid };
+        var approved = invoice is { Status: ValuationInvoiceStatus.Approved or ValuationInvoiceStatus.Issued or ValuationInvoiceStatus.Paid };
         var invoiced = invoice is { Status: ValuationInvoiceStatus.Issued or ValuationInvoiceStatus.Paid };
         var paid = invoice is { Status: ValuationInvoiceStatus.Paid };
         var confirmed = claim.Status == ValuationClaimStatus.Confirmed;
         yield return new(1, "Value & lock", locked, !locked);
-        yield return new(2, "Invoice", invoiced || confirmed, locked && !invoiced && !confirmed);
-        yield return new(3, "Paid", paid || confirmed, invoiced && !paid && !confirmed);
-        yield return new(4, "Confirm & roll over", confirmed, paid && !confirmed);
+        yield return new(2, "Claim", claimed || confirmed, locked && !claimed && !confirmed);
+        yield return new(3, "Approve", approved || confirmed, claimed && !approved && !confirmed);
+        yield return new(4, "Invoice", invoiced || confirmed, approved && !invoiced && !confirmed);
+        yield return new(5, "Paid", paid || confirmed, invoiced && !paid && !confirmed);
+        yield return new(6, "Confirm & roll over", confirmed, paid && !confirmed);
     }
 
     private static string ClaimBadgeClass(ValuationClaimStatus status)
@@ -490,6 +537,34 @@ else
                         OnSelect: EventCallback.Factory.Create(this, ConfirmClickedAsync),
                         Hint: "Normally done once the claim's invoice is paid — confirming now will ask first",
                         Disabled: busy, Group: 1));
+            }
+
+            // Group 1 (continued) — the other scenarios for the invoice stage the card is at.
+            // The most likely move is the card's primary button; these are the alternatives.
+            switch (StageFor(claim))
+            {
+                case ClaimStage.InvoiceDraft:
+                    items.Add(new(Label: "Issue without approval",
+                        OnSelect: EventCallback.Factory.Create(this, IssueInvoiceAsync),
+                        Hint: "For clients with no formal approval loop — counts toward certified to date",
+                        Disabled: busy, Group: 1));
+                    break;
+                case ClaimStage.AwaitingApproval:
+                    items.Add(new(Label: "Record rejection…",
+                        OnSelect: EventCallback.Factory.Create(this, OpenRejectInvoice),
+                        Hint: "The client refused the claim — unlocks the invoice for amendment or cancellation",
+                        Disabled: busy, Group: 1));
+                    items.Add(new(Label: "Issue without approval",
+                        OnSelect: EventCallback.Factory.Create(this, IssueInvoiceAsync),
+                        Hint: "For clients with no formal approval loop — counts toward certified to date",
+                        Disabled: busy, Group: 1));
+                    break;
+                case ClaimStage.AwaitingPayment:
+                    items.Add(new(Label: "Record payment…",
+                        OnSelect: EventCallback.Factory.Create(this, OpenRecordPayment),
+                        Hint: "The cash has landed — rolls the amount into the project's paid total",
+                        Disabled: busy, Group: 1));
+                    break;
             }
 
             // Group 2 — the destructive tail.
@@ -624,10 +699,12 @@ else
         if (invoicesSection is not null) await invoicesSection.ReloadAsync();
     }, "Couldn't delete the claim — the server may be restarting. Please try again.");
 
-    // ---- Raise invoice from the claim --------------------------------------
-    // Creates a Raised invoice for the claim's payment due, drawn against the claim, first
-    // day of the claim date's month as its period. Submitting/issuing it below freezes the
-    // report snapshot — the guaranteed-snapshot path (unlike a manual/historic entry).
+    // ---- Raise & send the invoice from the claim ---------------------------
+    // One click, two moves: creates the invoice for the claim's payment due (first day of the
+    // claim date's month as its period; the raise freezes the report snapshot) and sends the
+    // claim — straight to awaiting approval. The FD's flow then runs off this card: record
+    // approval → issue → record payment. If the send half fails, the invoice sits as a draft
+    // and the card's primary button becomes "Send claim", so recovery is the same click.
     private Task RaiseInvoiceAsync()
     {
         if (Selected is null || busy) return Task.CompletedTask;
@@ -638,9 +715,76 @@ else
         {
             var period = new DateTimeOffset(
                 new DateTime(claim.ClaimDate.Year, claim.ClaimDate.Month, 1), TimeSpan.Zero);
-            await Invoices.CreateAsync(ProjectId, period, amount, claim.ValuationClaimId);
-            if (invoicesSection is not null) await invoicesSection.ReloadAsync();
-        }, "Couldn't raise the invoice — the server may be restarting. Please try again.");
+            var invoice = await Invoices.CreateAsync(ProjectId, period, amount, claim.ValuationClaimId);
+            try
+            {
+                await Invoices.SubmitAsync(invoice.ValuationInvoiceId);
+            }
+            finally
+            {
+                // Reload even when the send half fails — the raise already happened, and the
+                // card must show the draft it left behind. The raise froze a snapshot, so the
+                // register refreshes too.
+                await ReloadInvoicePanelsAsync();
+                OnCertifiedChanged();
+            }
+        }, "Couldn't raise & send the invoice — if it now shows as drafted, Send claim finishes the job. The server may be restarting.");
+    }
+
+    // ---- Panel-driven invoice actions --------------------------------------
+    // The claim card is where the FD works the whole flow, so the invoice moves are
+    // first-class here — the row menu in Valuation Invoices stays for the edge cases.
+
+    // The selected claim's live invoice — what the card's primary button acts on.
+    private ValuationInvoice? SelectedInvoice => Selected is { } claim ? InvoiceFor(claim) : null;
+
+    private Task SendInvoiceAsync()
+    {
+        if (busy || SelectedInvoice is not { } invoice) return Task.CompletedTask;
+        return GuardAsync(async () =>
+        {
+            await Invoices.SubmitAsync(invoice.ValuationInvoiceId);
+            await ReloadInvoicePanelsAsync();
+            // An amended invoice freezes a fresh snapshot at send — refresh the register.
+            OnCertifiedChanged();
+        }, "Couldn't send the claim — the server may be restarting. Please try again.");
+    }
+
+    private Task ApproveInvoiceAsync()
+    {
+        if (busy || SelectedInvoice is not { } invoice) return Task.CompletedTask;
+        return GuardAsync(async () =>
+        {
+            await Invoices.ApproveAsync(invoice.ValuationInvoiceId);
+            await ReloadInvoicePanelsAsync();
+        }, "Couldn't record the approval — the server may be restarting. Please try again.");
+    }
+
+    private Task IssueInvoiceAsync()
+    {
+        if (busy || SelectedInvoice is not { } invoice) return Task.CompletedTask;
+        return GuardAsync(async () =>
+        {
+            await Invoices.IssueAsync(invoice.ValuationInvoiceId);
+            await ReloadInvoicePanelsAsync();
+            // Issuing moves certified to date — re-pull claims for the re-frozen totals.
+            OnCertifiedChanged();
+        }, "Couldn't issue the invoice — the server may be restarting. Please try again.");
+    }
+
+    // The moves that need a form (amount, reason) open the invoices section's own modals —
+    // they render whether or not the accordion is open, so nothing is duplicated here.
+    private void AmendRejectedInvoice() { if (SelectedInvoice is { } invoice) invoicesSection?.OpenEditFor(invoice); }
+    private void OpenRejectInvoice() { if (SelectedInvoice is { } invoice) invoicesSection?.OpenRejectFor(invoice); }
+    private void OpenRecordPayment() { if (SelectedInvoice is { } invoice) invoicesSection?.OpenPaymentFor(invoice); }
+
+    // Refresh both readers of the invoice list: the section's table (which reports back via
+    // OnInvoicedToDateChanged, updating our stage copy) — or our copy directly before the
+    // section has rendered.
+    private async Task ReloadInvoicePanelsAsync()
+    {
+        if (invoicesSection is not null) await invoicesSection.ReloadAsync();
+        else await RefreshInvoicesAsync();
     }
 
     // A failed API call (validation, or the server mid-deploy answering 503) surfaces in

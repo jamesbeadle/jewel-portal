@@ -1,0 +1,123 @@
+@using Jewel.JPMS.Contracts.ProjectContracts
+@inject IProjectContractStore Contracts
+
+@*
+    Corrects the title, date or notes on a recorded amendment. The document is deliberately
+    untouched here — SetProjectContractAmendmentDetails does not carry it, so re-wording a title
+    can never detach the signed deed. A wrong file means removing the amendment and uploading
+    again.
+
+    Rendered only while open (the parent guards with @@if), so it always seeds fresh from the
+    stored row rather than from whatever was typed and abandoned last time.
+*@
+
+<Modal IsOpen="true" Title="Edit amendment details" Class="max-w-xl" OnCancel="Cancel">
+    <ChildContent>
+
+    <div class="space-y-3">
+        <FormField Label="Title *" Value="@title" OnChange="v => title = v" />
+
+        <div>
+            <label class="@LabelClass">Amendment date</label>
+            <input type="date" class="field" @bind="amendmentDate" />
+            <p class="text-xs text-content-subtle mt-1">
+                The date the amendment was made — the deed's own date, not the upload date.
+            </p>
+        </div>
+
+        <div>
+            <label class="@LabelClass">Notes</label>
+            <textarea class="field" rows="3" @bind="notes"
+                      placeholder="What this amendment changed, in a sentence or two."></textarea>
+            <p class="text-xs text-content-subtle mt-1">
+                If it changed a term — the sum, a date, a rate — edit the contract terms too:
+                they are what everything downstream reads.
+            </p>
+        </div>
+
+        <p class="text-xs text-content-subtle">
+            Document: @Amendment.DocumentFileName. To change the file, remove this amendment and
+            upload again.
+        </p>
+    </div>
+
+    </ChildContent>
+    <FooterContent>
+        @if (error is not null)
+        {
+            <p class="mr-auto text-sm text-negative">@error</p>
+        }
+        <button type="button" class="btn-secondary" disabled="@busy" @onclick="Cancel">Cancel</button>
+        <button type="button" class="btn-primary" disabled="@busy" @onclick="SaveAsync">
+            @(busy ? "Saving…" : "Save details")
+        </button>
+    </FooterContent>
+</Modal>
+
+@code {
+    [Parameter, EditorRequired] public string ProjectId { get; set; } = "";
+    [Parameter, EditorRequired] public ProjectContractAmendment Amendment { get; set; } = default!;
+
+    /// <summary>Raised after the details have been written and the cached row replaced.</summary>
+    [Parameter] public EventCallback OnSaved { get; set; }
+
+    [Parameter] public EventCallback OnCancelled { get; set; }
+
+    private bool busy;
+    private string? error;
+
+    private string title = "";
+    private DateTime? amendmentDate;
+    private string notes = "";
+
+    private const string LabelClass = "block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1";
+
+    protected override void OnInitialized()
+    {
+        title = Amendment.Title;
+        amendmentDate = Amendment.AmendmentDate?.Date;
+        notes = Amendment.Notes ?? "";
+    }
+
+    private Task Cancel() => busy ? Task.CompletedTask : OnCancelled.InvokeAsync();
+
+    private async Task SaveAsync()
+    {
+        if (busy) return;
+        busy = true;
+        error = null;
+        try
+        {
+            // UpdatedByEmail is re-stamped from the session by the endpoint; whatever is sent here
+            // is discarded, so there is nothing to look up client-side.
+            await Contracts.SetAmendmentDetailsAsync(
+                new SetProjectContractAmendmentDetails(
+                    ProjectId,
+                    Amendment.ProjectContractAmendmentId,
+                    "",
+                    title.Trim(),
+                    AsOffset(amendmentDate),
+                    string.IsNullOrWhiteSpace(notes) ? null : notes.Trim()),
+                CancellationToken.None);
+
+            await OnSaved.InvokeAsync();
+        }
+        catch (CommandFailedException ex)
+        {
+            // The endpoint's validation sentences, joined by the command sender. Shown here rather
+            // than in a toast — they belong next to the fields they are about.
+            error = ex.Message;
+        }
+        catch
+        {
+            error = "Couldn't save the amendment details. Please try again.";
+        }
+        finally
+        {
+            busy = false;
+        }
+    }
+
+    private static DateTimeOffset? AsOffset(DateTime? date) =>
+        date is { } value ? new DateTimeOffset(value.Date, TimeSpan.Zero) : null;
+}

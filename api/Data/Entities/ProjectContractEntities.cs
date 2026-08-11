@@ -68,3 +68,35 @@ public sealed class ProjectContractEntity
     [MaxLength(256)] public string? UpdatedByEmail { get; set; }
     public DateTimeOffset UpdatedAt { get; set; }
 }
+
+/// <summary>
+/// One row per contract amendment — a deed of variation, side letter or supplemental agreement,
+/// each with its own stored document. Amendments accumulate in date order; they are never a
+/// version chain on the executed contract (see AttachProjectContractDocumentHandler — replacing
+/// that document means the wrong file was uploaded, whereas an amendment is a real event).
+///
+/// <para>Keyed to the project, not to ProjectContracts — an amendment can be filed before the
+/// terms have been keyed, exactly as the executed document can. The document columns are NOT NULL:
+/// a row only exists once its file has been stored, so there is never a placeholder amendment.</para>
+/// </summary>
+public sealed class ProjectContractAmendmentEntity
+{
+    [Key, MaxLength(64)] public string ProjectContractAmendmentId { get; set; } = "";
+    [MaxLength(64)] public string ProjectId { get; set; } = "";
+
+    // ---- What it is ----
+    [MaxLength(256)] public string Title { get; set; } = "";
+    public DateTimeOffset? AmendmentDate { get; set; }
+    [MaxLength(4000)] public string? Notes { get; set; }
+
+    // ---- The document. Naming follows ProjectContractEntity's document block. ----
+    [MaxLength(1024)] public string DocumentBlobRef { get; set; } = "";
+    [MaxLength(256)] public string DocumentFileName { get; set; } = "";
+    [MaxLength(128)] public string DocumentContentType { get; set; } = "";
+    public long DocumentFileSizeBytes { get; set; }
+    public DateTimeOffset DocumentUploadedAt { get; set; }
+    [MaxLength(256)] public string DocumentUploadedByEmail { get; set; } = "";
+
+    [MaxLength(256)] public string? UpdatedByEmail { get; set; }
+    public DateTimeOffset UpdatedAt { get; set; }
+}

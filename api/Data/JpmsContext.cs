@@ -136,6 +136,7 @@ public sealed class JpmsContext : DbContext
     public DbSet<SubcontractorRetentionEntity> SubcontractorRetentions => Set<SubcontractorRetentionEntity>();
     public DbSet<ProjectRetentionEntity> ProjectRetentions => Set<ProjectRetentionEntity>();
     public DbSet<ProjectContractEntity> ProjectContracts => Set<ProjectContractEntity>();
+    public DbSet<ProjectContractAmendmentEntity> ProjectContractAmendments => Set<ProjectContractAmendmentEntity>();
 
     public DbSet<AiConversationEntity> AiConversations => Set<AiConversationEntity>();
     public DbSet<AiConversationMessageEntity> AiConversationMessages => Set<AiConversationMessageEntity>();
@@ -247,6 +248,10 @@ public sealed class JpmsContext : DbContext
             .HasIndex(row => row.ProjectId)
             .IsUnique()
             .HasDatabaseName("IX_ProjectContracts_ProjectId");
+        // Amendments are always read per project. NOT unique — they accumulate.
+        modelBuilder.Entity<ProjectContractAmendmentEntity>()
+            .HasIndex(row => row.ProjectId)
+            .HasDatabaseName("IX_ProjectContractAmendments_ProjectId");
 
         // ---- Variations ------------------------------------------------------------------------
         modelBuilder.Entity<VariationOrderEntity>()

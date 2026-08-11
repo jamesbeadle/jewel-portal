@@ -51,6 +51,21 @@ public sealed class AzureBlobProjectContractStore : IProjectContractBlobStore
         return blobRef;
     }
 
+    public async Task<string> UploadAmendmentAsync(
+        string projectId, string projectContractAmendmentId,
+        string fileName, string contentType, Stream content, CancellationToken cancellationToken)
+    {
+        await EnsureContainerAsync(cancellationToken);
+
+        var blobRef = BuildAmendmentBlobRef(projectId, projectContractAmendmentId, fileName);
+        var blob = container.GetBlobClient(blobRef);
+        await blob.UploadAsync(
+            content,
+            new BlobUploadOptions { HttpHeaders = new BlobHttpHeaders { ContentType = contentType } },
+            cancellationToken);
+        return blobRef;
+    }
+
     public async Task<ProjectContractBlob?> OpenAsync(string blobRef, CancellationToken cancellationToken)
     {
         var blob = container.GetBlobClient(blobRef);
@@ -77,6 +92,15 @@ public sealed class AzureBlobProjectContractStore : IProjectContractBlobStore
         var safeName = Path.GetFileName(fileName);
         if (string.IsNullOrWhiteSpace(safeName)) safeName = "contract";
         return $"{projectId}/{projectContractId}/{safeName}";
+    }
+
+    // The literal "amendments" segment can never collide with a contract id — ids are compact
+    // GUIDs — so both kinds of document share the container without ambiguity.
+    private static string BuildAmendmentBlobRef(string projectId, string projectContractAmendmentId, string fileName)
+    {
+        var safeName = Path.GetFileName(fileName);
+        if (string.IsNullOrWhiteSpace(safeName)) safeName = "amendment";
+        return $"{projectId}/amendments/{projectContractAmendmentId}/{safeName}";
     }
 
     private async Task EnsureContainerAsync(CancellationToken cancellationToken)

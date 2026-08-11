@@ -2475,6 +2475,70 @@ namespace Jewel.JPMS.Api.Migrations
                     b.ToTable("ProjectContacts");
                 });
 
+            modelBuilder.Entity("Jewel.JPMS.Api.Data.Entities.ProjectContractAmendmentEntity", b =>
+                {
+                    b.Property<string>("ProjectContractAmendmentId")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<DateTimeOffset?>("AmendmentDate")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("DocumentBlobRef")
+                        .IsRequired()
+                        .HasMaxLength(1024)
+                        .HasColumnType("nvarchar(1024)");
+
+                    b.Property<string>("DocumentContentType")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.Property<string>("DocumentFileName")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<long>("DocumentFileSizeBytes")
+                        .HasColumnType("bigint");
+
+                    b.Property<DateTimeOffset>("DocumentUploadedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("DocumentUploadedByEmail")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(4000)
+                        .HasColumnType("nvarchar(4000)");
+
+                    b.Property<string>("ProjectId")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("UpdatedByEmail")
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.HasKey("ProjectContractAmendmentId");
+
+                    b.HasIndex("ProjectId")
+                        .HasDatabaseName("IX_ProjectContractAmendments_ProjectId");
+
+                    b.ToTable("ProjectContractAmendments");
+                });
+
             modelBuilder.Entity("Jewel.JPMS.Api.Data.Entities.ProposalEntity", b =>
                 {
                     b.Property<string>("ProposalId")

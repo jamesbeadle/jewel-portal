@@ -10,7 +10,7 @@
 
 @*
     The project's ONE settings page — the three per-section Setup tabs recombined so "Setup" means
-    a single place: Details (identity and stage banner), Deposits, retentions & valuation (the
+    a single place: Details (identity, site address and Xero mapping), Deposits, retentions & valuation (the
     money-side profile), Contract (the executed document and the terms every clause citation is argued from),
     and Correspondence (the profile that routes every document the project issues). The old /setup,
     /financials-setup and /operations-setup routes redirect here.
@@ -44,11 +44,16 @@ else
                     <div class="flex items-center justify-end mb-3">
                         <ProjectDetailsEditor ProjectId="@ProjectId" />
                     </div>
-                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4 mb-6">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4 mb-3">
                         <Stat Label="Stage"           Value="@Project.Stage.DisplayName()" />
                         <Stat Label="Entity"          Value="@Project.Organisation.ShortCode()" />
                         <Stat Label="Project Manager" Value="@Project.ProjectManagerEmail" />
+                        <Stat Label="Client"          Value="@Project.ClientName" />
+                        <Stat Label="Site address"    Value="@SiteAddress(Project)" />
+                        <Stat Label="Xero site"       Value="@XeroSite(Project)" />
                     </div>
+                    @* Created is the system's own stamp — a secondary fact here, never a lead date. *@
+                    <p class="text-xs text-content-subtle mb-6">Created @Project.CreatedAt.ToLocalTime().ToString("d MMM yyyy")</p>
                     break;
                 case ContractPane:
                     <ProjectContractPanel ProjectId="@ProjectId" />
@@ -80,6 +85,22 @@ else
     private string activePane = DetailsPane;
 
     private Project? Project => Projects.Find(ProjectId);
+
+    // The site address as one line — the record's free-text parts joined in order, "Not set" when
+    // nothing has been recorded. Town + Postcode are what "Find subcontractors" searches near.
+    private static string SiteAddress(Project project)
+    {
+        var joined = string.Join(", ",
+            new[] { project.AddressLine, project.Town, project.Postcode }
+                .Where(part => !string.IsNullOrWhiteSpace(part))
+                .Select(part => part.Trim()));
+        return joined.Length == 0 ? "Not set" : joined;
+    }
+
+    // The project's option in Xero's "Sites" tracking category — "Not set" is worth surfacing
+    // because the Xero write-back refuses to run until it is mapped.
+    private static string XeroSite(Project project) =>
+        string.IsNullOrWhiteSpace(project.XeroSiteName) ? "Not set" : project.XeroSiteName;
 
     private string PaneClass(string pane) =>
         pane == activePane

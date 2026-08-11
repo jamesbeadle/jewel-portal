@@ -167,9 +167,11 @@ public static class AiToolCatalogue
             new(
                 "get_project_contract",
                 "The contract terms for a project: form and edition, contract sum, dates, LAD rate, retention, "
-                + "the payment mechanism, and the overheads-and-profit and daywork percentages. "
+                + "the payment mechanism, the overheads-and-profit and daywork percentages, and any recorded "
+                + "amendments (deeds of variation, side letters) in date order. "
                 + "ALWAYS call this before quoting a clause, an OH&P percentage, a retention rate or a notice period — "
-                + "these are contract terms and they differ per project. Returns ok:false when no contract is recorded.",
+                + "these are contract terms and they differ per project, and an amendment may have moved them since "
+                + "the contract was signed. Returns ok:false when no contract is recorded.",
                 AiToolSchema.Object(("projectId", "string", "Defaults to the project in view.", false)),
                 AiToolKind.Read,
                 readers,
@@ -184,6 +186,14 @@ public static class AiToolCatalogue
 
                     if (contract is null)
                         return NotFound($"No contract has been recorded for {project.Reference}. Say so plainly — do not infer the terms.");
+
+                    // The amendments register, in the order the amendments were made. The terms
+                    // above are already the current position — the register says how it got there,
+                    // and its notes are the first place to look when a figure surprises.
+                    var amendmentRows = await context.Db.ProjectContractAmendments
+                        .AsNoTracking()
+                        .Where(row => row.ProjectId == project.ProjectId)
+                        .ToListAsync(ct);
 
                     var form = (ContractForm)contract.Form;
                     return Serialise(new
@@ -225,7 +235,18 @@ public static class AiToolCatalogue
                             dayworkMaterialsPercent = contract.DayworkMaterialsPercent,
                             dayworkPlantPercent = contract.DayworkPlantPercent
                         },
-                        documentUploaded = !string.IsNullOrWhiteSpace(contract.DocumentFileName)
+                        documentUploaded = !string.IsNullOrWhiteSpace(contract.DocumentFileName),
+                        amendments = amendmentRows
+                            .OrderBy(row => row.AmendmentDate ?? row.DocumentUploadedAt)
+                            .ThenBy(row => row.DocumentUploadedAt)
+                            .Select(row => new
+                            {
+                                row.Title,
+                                row.AmendmentDate,
+                                row.Notes,
+                                uploadedAt = row.DocumentUploadedAt
+                            })
+                            .ToList()
                     });
                 }),
 

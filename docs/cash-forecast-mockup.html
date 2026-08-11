@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cash Forecast · JPMS — layout mockup</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --canvas:#0B0B0C; --surface:#161719; --raised:#1F2024; --field:#2A2D31;
+    --line:#232427; --line-strong:#34373B;
+    --content:#FFFFFF; --muted:#C4C8CE; --subtle:#8A9099; --faint:#5A5F68;
+    --accent:#57E08A; --positive:#4ED07D; --negative:#FF4D4D; --info:#4691F6;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--canvas);color:var(--content);font-family:Poppins,system-ui,sans-serif;font-size:14px}
+  .wrap{padding:32px 32px 48px;max-width:1280px;margin:0 auto}
+  .eyebrow{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--subtle);font-weight:600}
+  h1{font-size:26px;font-weight:600;margin:4px 0 2px;line-height:1.2}
+  .intro{color:var(--muted);font-size:13px;margin:0 0 20px;max-width:760px}
+  .mock{display:inline-block;font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--canvas);background:var(--accent);border-radius:4px;padding:2px 8px;margin-left:10px;vertical-align:middle}
+
+  /* KPI strip */
+  .kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:18px}
+  .kpi{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px 18px}
+  .kpi .label{font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:var(--subtle);font-weight:600;margin-bottom:4px}
+  .kpi .value{font-size:24px;font-weight:600}
+  .kpi .note{font-size:11px;color:var(--subtle);margin-top:3px}
+  .neg{color:var(--negative)} .pos{color:var(--positive)}
+
+  /* reading rules */
+  .rules{display:flex;gap:18px;flex-wrap:wrap;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px 16px;margin-bottom:18px}
+  .rules span{font-size:12px;color:var(--subtle)}
+  .rules b{color:var(--muted);font-weight:500}
+
+  /* chart */
+  .chartcard{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px 18px 6px;margin-bottom:18px}
+  .chartcard .label{font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:var(--subtle);font-weight:600}
+
+  /* table */
+  .tablecard{background:var(--surface);border:1px solid var(--line);border-radius:12px;overflow-x:auto}
+  table{border-collapse:collapse;width:100%;min-width:1050px;font-size:12px}
+  th,td{padding:8px 6px;text-align:right;white-space:nowrap}
+  th:last-child,td:last-child{padding-right:12px}
+  th:first-child,td:first-child{text-align:left;position:sticky;left:0;background:var(--surface);min-width:205px;max-width:240px;white-space:normal;z-index:2}
+  thead th{font-size:10.5px;text-transform:uppercase;letter-spacing:.07em;color:var(--subtle);border-bottom:2px solid var(--line);background:var(--raised)}
+  thead th:first-child{background:var(--raised)}
+  .band td{padding-top:14px;font-size:10.5px;text-transform:uppercase;letter-spacing:.09em;color:var(--subtle);font-weight:600;border-bottom:1px solid var(--line)}
+  .row td{border-bottom:1px solid var(--line);color:var(--content)}
+  .row td:first-child .src{display:block;font-size:10.5px;color:var(--faint);font-weight:400}
+  .row .name{font-weight:500;cursor:default}
+  .expandable .name{cursor:pointer}
+  .expandable .name:hover{color:var(--accent)}
+  .caret{display:inline-block;width:12px;color:var(--subtle);transition:transform .15s}
+  .open .caret{transform:rotate(90deg)}
+  .sub td{border-bottom:1px solid var(--line);color:var(--muted);font-size:12px;background:rgba(255,255,255,.015)}
+  .sub td:first-child{padding-left:30px;background:var(--surface)}
+  .sub td:first-child a{color:var(--muted);text-decoration:none;border-bottom:1px dotted var(--faint)}
+  .dim{color:var(--faint)}
+  .netrow td{border-top:2px solid var(--line);border-bottom:1px solid var(--line);font-weight:600;padding-top:10px;padding-bottom:10px}
+  .closerow td{font-weight:600;font-size:13px;padding-top:10px;padding-bottom:12px;background:var(--raised)}
+  .closerow td:first-child{background:var(--raised)}
+  .minflag{outline:2px solid var(--negative);outline-offset:-2px;border-radius:6px}
+  td.latercol,th.latercol{border-left:1px solid var(--line-strong)}
+  td.undated,th.undated{border-left:1px solid var(--line-strong);color:var(--subtle)}
+
+  /* footer */
+  .tie{display:flex;align-items:flex-start;gap:10px;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px 18px;margin-top:18px}
+  .tick{color:var(--positive);font-size:16px;line-height:1.2}
+  .tie p{margin:0;font-size:12px;color:var(--subtle);max-width:900px}
+  .tie b{color:var(--muted);font-weight:500}
+  .foot{font-size:11px;color:var(--faint);margin-top:14px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <p class="eyebrow">JPMS · Company</p>
+  <h1>Cash Forecast<span class="mock">Layout mockup · dummy figures</span></h1>
+  <p class="intro">Opening bank position, then every known future cash movement placed in the month it is expected to land, and the running bank balance that results. The point of the page is one number: the lowest the balance gets, and when.</p>
+
+  <div class="kpis">
+    <div class="kpi"><div class="label">Cash in bank now</div><div class="value" id="kpi-open"></div><div class="note">from Xero · 3 accounts · fetched 08:14</div></div>
+    <div class="kpi"><div class="label">Lowest forecast balance</div><div class="value neg" id="kpi-min"></div><div class="note" id="kpi-min-note"></div></div>
+    <div class="kpi"><div class="label">Balance at horizon end</div><div class="value" id="kpi-end"></div><div class="note" id="kpi-end-note"></div></div>
+  </div>
+
+  <div class="rules">
+    <span><b>No signs to decode:</b> the band carries the direction — Cash in adds, Cash out subtracts. Only Net movement and the balance are signed.</span>
+    <span><b>Overdue never vanishes:</b> anything past due sits in the current month.</span>
+    <span><b>Undated is quarantined:</b> flows with no honest date sit in their own column and never touch the balance.</span>
+  </div>
+
+  <div class="chartcard">
+    <div class="label">Closing bank balance by month</div>
+    <svg id="chart" width="100%" height="150" viewBox="0 0 1160 150" preserveAspectRatio="none" aria-label="Closing bank balance line chart"></svg>
+  </div>
+
+  <div class="tablecard"><table id="tbl" aria-label="Cash forecast by month"></table></div>
+
+  <div class="tie">
+    <span class="tick">✓</span>
+    <p><b>Ties to Project Cashflow, to the penny.</b> Every project's months here sum to its Project Completion Cashflow on the Project Cashflow tab — the forecast is the same figures spread in time, never a second opinion. If phasing ever fails to explain a project's statement, that project's row turns red with the variance shown; it is a bug to report, not a judgement to argue with.</p>
+  </div>
+  <p class="foot">Mockup only — figures are invented and every total, net movement and balance on this page is computed live from the row data, exactly as the real page would compute them. Rows expand to one line per project; every project line links to that job's Project Cashflow.</p>
+</div>
+
+<script>
+// ---- Dummy data. Months Aug 26 – Apr 27, then Later (dated beyond horizon) and Undated. ----
+const months = ["Aug 26","Sep 26","Oct 26","Nov 26","Dec 26","Jan 27","Feb 27","Mar 27","Apr 27"];
+const N = months.length;
+const OPENING = 412350;
+
+// Sub-rows are per-project; parents are computed sums, so the table cannot disagree with itself.
+const Z = () => Array(N).fill(0);
+function r(name, src, cells, later=0, undated=0, subs=null, expandable=false){
+  return {name, src, cells, later, undated, subs, expandable};
+}
+
+const cashIn = [
+  r("Valuation invoices outstanding","already issued · lands on each invoice's contractual pay date",
+    [96400,41200,0,0,0,0,0,0,0]),
+  r("Future valuations","left to claim, spread over remaining valuation months, lagged by payment terms",
+    null, 0, 6200, [
+      r("Oak Hill House",null,[0,22000,26000,26000,52800,0,0,0,0]),
+      r("Sherwood Park",null,[0,14000,16000,16000,42000,58000,44000,30200,0]),
+      r("Windy Ridge",null,[0,9000,11000,11000,30000,42000,33000,20000,18000], 0, 6200),
+      r("Beresford Road",null,[0,7000,11000,11000,39000,52000,42000,26000,36000]),
+    ], true),
+  r("Retention releases","R1 at practical completion · R2 after the defects period",
+    [0,0,0,0,14200,0,0,9800,0], 24600, 0),
+];
+const cashOut = [
+  r("Supplier bills unpaid","every allocated bill incl. drafts · on its Xero due date, part-payment aware",
+    [132700,48900,12400,0,0,0,0,0,0]),
+  r("Work orders still to invoice","committed less invoiced, spread to practical completion + supplier terms",
+    [22000,64000,78000,84000,56000,34000,18000,8000,0]),
+  r("Drawdowns still to spend","budget beyond orders and bills, spread to the completion date",
+    [0,42000,58000,72000,44000,30000,18000,10000,6000]),
+  r("Company overheads","monthly figure set by the FD · last set 11 Aug by Nigel",
+    Array(N).fill(38000)),
+];
+
+// Parent cells = sum of subs where subs exist.
+for (const row of [...cashIn, ...cashOut]) {
+  if (row.subs) {
+    row.cells = Z(); row.later = 0; row.undated = 0;
+    for (const s of row.subs) {
+      s.cells.forEach((v,i)=>row.cells[i]+=v);
+      row.later += s.later; row.undated += s.undated;
+    }
+  }
+}
+
+const money = v => (v<0?"−":"") + "£" + Math.abs(v).toLocaleString("en-GB");
+const moneyK = v => (v<0?"−":"") + "£" + (Math.abs(v)/1000).toFixed(1) + "k";
+const cell = v => v===0 ? '<span class="dim">—</span>' : money(v);
+
+// Net + closing.
+const inTot = Z(), outTot = Z();
+cashIn.forEach(r=>r.cells.forEach((v,i)=>inTot[i]+=v));
+cashOut.forEach(r=>r.cells.forEach((v,i)=>outTot[i]+=v));
+const net = inTot.map((v,i)=>v-outTot[i]);
+const closing = []; let bal = OPENING;
+net.forEach(v=>{bal+=v; closing.push(bal);});
+const minIdx = closing.indexOf(Math.min(...closing));
+const laterIn = cashIn.reduce((a,r)=>a+r.later,0), laterOut = cashOut.reduce((a,r)=>a+r.later,0);
+const undatedIn = cashIn.reduce((a,r)=>a+r.undated,0), undatedOut = cashOut.reduce((a,r)=>a+r.undated,0);
+
+// KPIs.
+document.getElementById("kpi-open").textContent = money(OPENING);
+document.getElementById("kpi-min").textContent = money(closing[minIdx]);
+document.getElementById("kpi-min-note").textContent = months[minIdx] + " — the month to plan for";
+document.getElementById("kpi-end").textContent = money(closing[N-1] + laterIn - laterOut);
+document.getElementById("kpi-end-note").textContent = "after " + months[N-1] + " incl. later retention releases";
+
+// ---- Table ----
+function rowHtml(row, band){
+  const id = row.name.replace(/\W+/g,"-");
+  const nameCell = row.expandable
+    ? `<span class="name" onclick="toggle('${id}')"><span class="caret">▸</span>${row.name}</span><span class="src">${row.src}</span>`
+    : `<span class="name">${row.name}</span>${row.src?`<span class="src">${row.src}</span>`:""}`;
+  let html = `<tr class="row ${row.expandable?'expandable':''}" id="p-${id}"><td>${nameCell}</td>` +
+    row.cells.map(v=>`<td>${cell(v)}</td>`).join("") +
+    `<td class="latercol">${cell(row.later)}</td><td class="undated">${cell(row.undated)}</td></tr>`;
+  if (row.subs) html += row.subs.map(s=>
+    `<tr class="sub sub-${id}" style="display:none"><td><a href="#" onclick="return false" title="Opens this project's Project Cashflow">${s.name}</a></td>`+
+    s.cells.map(v=>`<td>${cell(v)}</td>`).join("")+
+    `<td class="latercol">${cell(s.later)}</td><td class="undated">${cell(s.undated)}</td></tr>`).join("");
+  return html;
+}
+function toggle(id){
+  const p = document.getElementById("p-"+id); p.classList.toggle("open");
+  document.querySelectorAll(".sub-"+id).forEach(el=>el.style.display = el.style.display==="none"?"table-row":"none");
+}
+
+let t = `<thead><tr><th></th>${months.map(m=>`<th>${m}</th>`).join("")}<th class="latercol" title="Dated flows beyond the monthly horizon — the R2 retention releases">Later</th><th class="undated" title="Flows with no honest date (e.g. no practical-completion date set). Kept out of the balance until dated.">Undated</th></tr></thead><tbody>`;
+t += `<tr class="band"><td>Cash in</td>${"<td></td>".repeat(N)}<td class="latercol"></td><td class="undated"></td></tr>`;
+t += cashIn.map(r=>rowHtml(r,"in")).join("");
+t += `<tr class="band"><td>Cash out</td>${"<td></td>".repeat(N)}<td class="latercol"></td><td class="undated"></td></tr>`;
+t += cashOut.map(r=>rowHtml(r,"out")).join("");
+t += `<tr class="netrow"><td>Net movement</td>${net.map(v=>`<td class="${v<0?'neg':'pos'}">${moneyK(v)}</td>`).join("")}<td class="latercol ${laterIn-laterOut<0?'neg':'pos'}">${moneyK(laterIn-laterOut)}</td><td class="undated dim">excluded</td></tr>`;
+t += `<tr class="closerow"><td>Closing bank balance <span class="src" style="font-weight:400">directors only · seeded from Xero</span></td>${closing.map((v,i)=>`<td class="${v<0?'neg':''} ${i===minIdx?'minflag':''}" ${i===minIdx?'title="The low point — the month to plan for"':''}>${money(v)}</td>`).join("")}<td class="latercol">${money(closing[N-1]+laterIn-laterOut)}</td><td class="undated dim">—</td></tr>`;
+t += `</tbody>`;
+document.getElementById("tbl").innerHTML = t;
+
+// ---- Chart: single series, zero line, min flagged. ----
+const svg = document.getElementById("chart");
+const W = 1160, H = 150, padL = 30, padR = 30, padT = 16, padB = 20;
+const lo = Math.min(0, ...closing), hi = Math.max(OPENING, ...closing);
+const x = i => padL + (W-padL-padR) * i/(N-1);
+const y = v => padT + (H-padT-padB) * (1 - (v-lo)/(hi-lo));
+let s = "";
+// zero line
+s += `<line x1="${padL}" y1="${y(0)}" x2="${W-padR}" y2="${y(0)}" stroke="#34373B" stroke-dasharray="4 4" stroke-width="1"/>`;
+s += `<text x="${padL+2}" y="${y(0)-5}" text-anchor="start" font-size="10" fill="#5A5F68">£0</text>`;
+// path
+s += `<path d="${closing.map((v,i)=>(i?"L":"M")+x(i)+" "+y(v)).join(" ")}" fill="none" stroke="#57E08A" stroke-width="2" stroke-linejoin="round"/>`;
+// month ticks (edge labels anchored inward so nothing clips)
+months.forEach((m,i)=>{
+  const anchor = i===0 ? "start" : i===N-1 ? "end" : "middle";
+  s += `<text x="${x(i)}" y="${H-4}" text-anchor="${anchor}" font-size="10" fill="#8A9099">${m}</text>`;
+});
+// points with hover titles
+closing.forEach((v,i)=>{ s += `<circle cx="${x(i)}" cy="${y(v)}" r="${i===minIdx?5:3.5}" fill="${i===minIdx?"#FF4D4D":"#57E08A"}" stroke="#161719" stroke-width="2"><title>${months[i]}: ${money(v)}</title></circle>`; });
+// min label — above the point (the trough sits at the plot's bottom edge, so a label below
+// would collide with the month axis)
+s += `<text x="${x(minIdx)}" y="${y(closing[minIdx])-12}" text-anchor="middle" font-size="11" font-weight="600" fill="#FF4D4D">${moneyK(closing[minIdx])} · ${months[minIdx]}</text>`;
+svg.innerHTML = s;
+</script>
+</body>
+</html>

@@ -4,12 +4,16 @@
 @implements IDisposable
 
 @*
-    The project's contract: the executed document and the terms keyed off it.
+    The project's contract: the executed document, the amendments made to it, and the terms keyed
+    off it.
 
     One document per project — there is one executed contract, and uploading again means the wrong
     file went up, so a replacement supersedes rather than versions (the server deletes the old blob
-    once the row is committed). Contract amendments that need their own history are a separate
-    record, not a version chain here.
+    once the row is committed). Amendments are exactly the separate record type that convention
+    promised: each deed of variation or side letter is its own row with its own document,
+    accumulating in date order — never a version chain on the executed contract. The terms stay
+    the single source of truth; an amendment that changes a term is recorded here as evidence and
+    the term is edited to match.
 
     The terms beside it are what get_project_contract returns: until they are keyed, the AI
     correctly answers "no contract has been recorded for this project" to any question about
@@ -112,6 +116,105 @@
             }
         </section>
 
+        <section class="mb-6">
+            <h4 class="eyebrow mb-2">Amendments</h4>
+
+            @if (Amendments.Count == 0)
+            {
+                <p class="text-sm text-content-subtle">
+                    No amendments recorded.
+                    @if (CanManage)
+                    {
+                        <text>When a deed of variation or side letter is executed, file it here — and if it
+                        changes a term, edit the terms too, because they are what everything downstream reads.</text>
+                    }
+                </p>
+            }
+            else
+            {
+                <ul class="space-y-2">
+                    @foreach (var (amendment, index) in Amendments.Select((a, i) => (a, i)))
+                    {
+                        <li class="rounded-lg border border-line bg-surface px-3 py-2.5 flex items-start justify-between gap-3">
+                            <div class="min-w-0">
+                                <p class="text-sm text-content font-medium truncate">
+                                    <span class="text-content-subtle">@(index + 1).</span> @amendment.Title
+                                    @if (amendment.AmendmentDate is { } made)
+                                    {
+                                        <span class="text-content-subtle font-normal"> · @made.ToString("d MMM yyyy")</span>
+                                    }
+                                </p>
+                                @if (!string.IsNullOrWhiteSpace(amendment.Notes))
+                                {
+                                    <p class="text-xs text-content-muted mt-0.5">@amendment.Notes</p>
+                                }
+                                <p class="text-xs text-content-subtle mt-0.5">
+                                    @amendment.DocumentFileName · @FormatSize(amendment.DocumentFileSizeBytes)
+                                    · uploaded @amendment.DocumentUploadedAt.ToLocalTime().ToString("d MMM yyyy")
+                                    by @amendment.DocumentUploadedByEmail
+                                </p>
+                            </div>
+                            <div class="flex items-center gap-3 shrink-0">
+                                <a href="@AmendmentDocumentUrl(amendment.ProjectContractAmendmentId, inline: true)" target="_blank" rel="noopener"
+                                   class="text-xs text-accent hover:underline underline-offset-2">View</a>
+                                <a href="@AmendmentDocumentUrl(amendment.ProjectContractAmendmentId, inline: false)" target="_blank" rel="noopener"
+                                   class="text-xs text-accent hover:underline underline-offset-2">Download</a>
+                                @if (CanManage)
+                                {
+                                    <button type="button" class="text-xs text-accent hover:underline underline-offset-2"
+                                            @onclick="() => editingAmendment = amendment">Edit</button>
+                                    <button type="button" class="text-xs text-red-600 hover:text-red-700 hover:underline underline-offset-2"
+                                            @onclick="() => pendingRemove = amendment">Remove</button>
+                                }
+                            </div>
+                        </li>
+                    }
+                </ul>
+            }
+
+            @if (CanManage)
+            {
+                <div class="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Title</label>
+                        <input type="text" class="field" @bind="amendmentTitle"
+                               placeholder="e.g. Deed of Variation No. 1" />
+                    </div>
+                    <div>
+                        <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Amendment date</label>
+                        <input type="date" class="field" @bind="amendmentDate" />
+                    </div>
+                </div>
+                <div class="mt-3 flex flex-wrap items-end gap-3">
+                    <div class="min-w-0">
+                        <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Amendment document</label>
+                        <InputFile OnChange="OnAmendmentFileSelected" disabled="@amendmentUploading" class="text-sm text-content-muted" />
+                    </div>
+                    <button type="button" class="btn-secondary text-xs px-2.5 py-1.5"
+                            disabled="@(amendmentUploading || selectedAmendmentFile is null)" @onclick="UploadAmendmentAsync">
+                        @(amendmentUploading ? "Uploading…" : "Add amendment")
+                    </button>
+                </div>
+
+                @if (selectedAmendmentFile is not null && !amendmentUploading)
+                {
+                    <p class="text-xs text-content-subtle mt-1.5">
+                        @selectedAmendmentFile.Name · @FormatSize(selectedAmendmentFile.Size)
+                    </p>
+                }
+
+                @if (amendmentError is not null)
+                {
+                    <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mt-2">@amendmentError</p>
+                }
+
+                <p class="text-xs text-content-subtle mt-1.5">
+                    PDF or Word, up to 100 MB. Each upload is a new amendment — notes can be added
+                    after via Edit.
+                </p>
+            }
+        </section>
+
         <section>
             <h4 class="eyebrow mb-2">Terms</h4>
 
@@ -164,6 +267,31 @@
                                 OnCancelled="CloseTerms" />
 }
 
+@if (editingAmendment is not null)
+{
+    <ProjectContractAmendmentDialog ProjectId="@ProjectId"
+                                    Amendment="editingAmendment"
+                                    OnSaved="() => editingAmendment = null"
+                                    OnCancelled="() => editingAmendment = null" />
+}
+
+<Modal IsOpen="pendingRemove is not null"
+       Title="Remove amendment?"
+       ConfirmLabel="@(removeBusy ? "Removing…" : "Remove amendment")"
+       OnCancel="() => { if (!removeBusy) pendingRemove = null; }"
+       OnConfirm="RemovePendingAsync">
+    <p class="text-sm text-content-muted">
+        This permanently removes <strong>@pendingRemove?.Title</strong>
+        (@pendingRemove?.DocumentFileName) and its stored file. If it changed any contract terms,
+        those stay as recorded — edit them separately if they need to move back.
+        This cannot be undone.
+    </p>
+    @if (removeError is not null)
+    {
+        <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mt-2">@removeError</p>
+    }
+</Modal>
+
 @code {
     [Parameter, EditorRequired] public string ProjectId { get; set; } = "";
 
@@ -173,7 +301,22 @@
     private string? uploadError;
     private IBrowserFile? selectedFile;
 
+    private bool amendmentUploading;
+    private string? amendmentError;
+    private IBrowserFile? selectedAmendmentFile;
+    private string amendmentTitle = "";
+    private DateTime? amendmentDate;
+    private ProjectContractAmendment? editingAmendment;
+    private ProjectContractAmendment? pendingRemove;
+    private bool removeBusy;
+    private string? removeError;
+
     private ProjectContract? Current => Contracts.ForProject(ProjectId);
+
+    // Non-null accessor for the render; the panel is gated on LoadedFor, which only opens once
+    // the amendments have been fetched alongside the contract.
+    private IReadOnlyList<ProjectContractAmendment> Amendments =>
+        Contracts.AmendmentsFor(ProjectId) ?? Array.Empty<ProjectContractAmendment>();
 
     // Mirrors ProjectContractRoles.AllowedToManageContract. Deliberately narrower than who can
     // read: a wrong retention percent or completion date propagates silently into every notice the
@@ -236,12 +379,73 @@
         }
     }
 
+    private void OnAmendmentFileSelected(InputFileChangeEventArgs args)
+    {
+        selectedAmendmentFile = args.FileCount > 0 ? args.File : null;
+        amendmentError = null;
+    }
+
+    private async Task UploadAmendmentAsync()
+    {
+        if (amendmentUploading || selectedAmendmentFile is null) return;
+        amendmentUploading = true;
+        amendmentError = null;
+        try
+        {
+            // The endpoint falls back to the filename when the title is blank, so the list is
+            // never a column of blanks.
+            await Contracts.UploadAmendmentAsync(
+                ProjectId, selectedAmendmentFile, amendmentTitle.Trim(), AsOffset(amendmentDate), null,
+                CancellationToken.None);
+            selectedAmendmentFile = null;
+            amendmentTitle = "";
+            amendmentDate = null;
+        }
+        catch (Exception ex)
+        {
+            // The store surfaces the server's own sentence — a storage misconfiguration says so
+            // rather than showing a bare status code.
+            amendmentError = $"Upload failed: {ex.Message}";
+        }
+        finally
+        {
+            amendmentUploading = false;
+        }
+    }
+
+    private async Task RemovePendingAsync()
+    {
+        if (pendingRemove is null || removeBusy) return;
+        removeBusy = true;
+        removeError = null;
+        try
+        {
+            await Contracts.RemoveAmendmentAsync(
+                ProjectId, pendingRemove.ProjectContractAmendmentId, CancellationToken.None);
+            pendingRemove = null;
+        }
+        catch (Exception ex)
+        {
+            removeError = $"Couldn't remove the amendment: {ex.Message}";
+        }
+        finally
+        {
+            removeBusy = false;
+        }
+    }
+
     private void OpenTerms() => termsOpen = true;
 
     private void CloseTerms() => termsOpen = false;
 
     private string DocumentUrl(bool inline) =>
         $"/api/projects/{ProjectId}/contract/document{(inline ? "?inline=1" : "")}";
+
+    private string AmendmentDocumentUrl(string amendmentId, bool inline) =>
+        $"/api/projects/{ProjectId}/contract/amendments/{amendmentId}/document{(inline ? "?inline=1" : "")}";
+
+    private static DateTimeOffset? AsOffset(DateTime? date) =>
+        date is { } value ? new DateTimeOffset(value.Date, TimeSpan.Zero) : null;
 
     private static IEnumerable<(string Label, string Value)> Summary(ProjectContract contract)
     {

@@ -42,4 +42,18 @@ internal static class ProjectContractsEntityMapping
         entity.DocumentUploadedByEmail,
         entity.UpdatedByEmail,
         entity.UpdatedAt);
+
+    public static ProjectContractAmendment ToModel(this ProjectContractAmendmentEntity entity) => new(
+        entity.ProjectContractAmendmentId,
+        entity.ProjectId,
+        entity.Title,
+        entity.AmendmentDate,
+        entity.Notes,
+        entity.DocumentFileName,
+        entity.DocumentContentType,
+        entity.DocumentFileSizeBytes,
+        entity.DocumentUploadedAt,
+        entity.DocumentUploadedByEmail,
+        entity.UpdatedByEmail,
+        entity.UpdatedAt);
 }

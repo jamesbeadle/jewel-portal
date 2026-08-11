@@ -8,10 +8,12 @@ using Microsoft.EntityFrameworkCore;
 namespace Jewel.JPMS.Api.Features.ValuationInvoices.Commands;
 
 /// <summary>
-/// Approved -> Issued (or Raised -> Issued for projects that skip the formal approval loop). From
-/// here the amount counts toward "Certified to date". A report snapshot is normally frozen at
-/// raise; issuing re-freezes only when no live one backs the invoice (amended since raise, or
-/// pre-dating raise-time capture), so even two-click invoices keep the report behind them.
+/// Approved -> Issued, or Raised/Submitted -> Issued for projects that skip the formal approval
+/// loop (invoices are claimed — Submitted — at raise now, so the skip path starts there; Raised
+/// survives for drafts and legacy rows). From here the amount counts toward "Certified to date".
+/// A report snapshot is normally frozen at raise; issuing re-freezes only when no live one backs
+/// the invoice (amended since raise, or pre-dating raise-time capture), so even one-click
+/// invoices keep the report behind them.
 /// </summary>
 public sealed class IssueValuationInvoiceHandler : ICommandHandler<IssueValuationInvoice, ValuationInvoice>
 {
@@ -26,10 +28,9 @@ public sealed class IssueValuationInvoiceHandler : ICommandHandler<IssueValuatio
         switch ((ValuationInvoiceStatus)entity.Status)
         {
             case ValuationInvoiceStatus.Raised:
+            case ValuationInvoiceStatus.Submitted: // claimed, but this client runs no formal approval loop
             case ValuationInvoiceStatus.Approved:
-                break; // the two legal starting points
-            case ValuationInvoiceStatus.Submitted:
-                throw new InvalidOperationException("This valuation invoice is awaiting approval — approve or reject it first.");
+                break; // the legal starting points
             case ValuationInvoiceStatus.Rejected:
                 throw new InvalidOperationException("This valuation invoice was rejected — amend and resubmit it first.");
             case ValuationInvoiceStatus.Cancelled:
@@ -53,11 +54,17 @@ public sealed class IssueValuationInvoiceHandler : ICommandHandler<IssueValuatio
             entity.ValuationReportSnapshotId = snapshot.ValuationReportSnapshotId;
         }
 
+        // The audit trail says when the approval loop was skipped — the trail is the only
+        // place that distinction survives once the status reads Issued.
+        var note = entity.Status == (int)ValuationInvoiceStatus.Submitted
+            ? "Issued without a recorded approval."
+            : "";
+
         entity.Status = (int)ValuationInvoiceStatus.Issued;
         entity.IssuedAt = DateTimeOffset.UtcNow;
 
         ValuationInvoiceAuditTrail.Append(context, entity.ValuationInvoiceId,
-            ValuationInvoiceEventType.Issued, "", amountAfter: entity.Amount);
+            ValuationInvoiceEventType.Issued, note, amountAfter: entity.Amount);
 
         await context.SaveChangesAsync(cancellationToken);
 

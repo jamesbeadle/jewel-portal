@@ -3,33 +3,38 @@ using Jewel.JPMS.Models;
 namespace Jewel.JPMS.Services.Navigation;
 
 /// <summary>
-/// The sidebar's folders (docs/Pathway-Split-Platform-Flow-Plan.md §6) — the successor to the
-/// old three workspace blocks + flat Company list. Grouping follows what the rows are FOR
-/// (decision 2026-08-04, replacing the earlier who-is-it-with split): the external parties first
-/// (Client, Subcontractor — only what each relationship actually needs), then the job (Project),
-/// then the company's own machinery (Internal), time on site (Time), the working money
-/// (Finance), the read-only money (Financial Reports), oversight (Audit) and finally the system
-/// itself (Admin). Folders mix scopes deliberately — project-scoped rows
-/// ("/projects/{project}/…" templates) and company rows sit side by side where the work does
-/// (e.g. Workers lives with Labour under Time). A row that belongs to no project at all belongs
-/// to no folder either: see SidebarFolders.Standalone.
+/// The sidebar's folders (docs/Financial-Reports-and-Nav-Refactor-Plan.md §1, restructure of
+/// 2026-08-11 — successor to the 2026-08-04 grouping). The job first (Project — the full record
+/// chain from Requests through Variations to the snapshots sent out), then the subcontractor
+/// relationship, the company's own running lists (Internal), time on site (Time), the working
+/// money (Finance), the read-only money (Financial Reports), the Xero screens (one home per
+/// screen), oversight (Audit) and finally the system itself (Admin). Folders mix scopes
+/// deliberately — project-scoped rows ("/projects/{project}/…" templates) and company rows sit
+/// side by side where the work does. A row that belongs to no folder at all — the Control Centre
+/// and the Valuation Report — lives in SidebarFolders.Standalone.
+///
+/// The retired Client folder's rows (Requests, Architect's Instructions, Valuation Report
+/// Snapshots) moved into Project: with only directors using the system there is no external
+/// audience to group "as the client sees it" for, and the chain reads better in one folder.
 /// </summary>
 public enum SidebarFolder
 {
-    Client,
-    Subcontractor,
     Project,
+    Subcontractor,
     Internal,
     Time,
     Finance,
     FinancialReports,
+    Xero,
     Audit,
     Admin
 }
 
-/// <summary>One sidebar row: a destination plus the roles that may see it. Per-row gates
-/// reproduce the visibility each page had before the folder regrouping — grouping widens
-/// nothing; administrators bypass every gate (DesktopNavigation.CanSee).</summary>
+/// <summary>One sidebar row: a destination plus the roles that may see it. The whole catalog is
+/// currently clamped to the directors (DesktopNavigation.DirectorRoles) — decision 2026-08-11:
+/// only the MD, FD and administrators use the system, every other role sees Home alone until its
+/// own nav is designed. Administrators bypass every gate (DesktopNavigation.CanSee). API
+/// authorisation is untouched by the clamp — this is nav visibility, not permission.</summary>
 public sealed record SidebarRow(NavigationItem Item, IReadOnlyList<Role> VisibleTo);
 
 /// <summary>A folder in the catalog: a collapsible header in the sidebar, one icon in the
@@ -43,38 +48,69 @@ public sealed record SidebarFolderInfo(
 
 public static class SidebarFolders
 {
-    // Page slugs are unchanged from the old blocks so existing links and bookmarks keep working
+    // Page slugs are unchanged from the old grouping so existing links and bookmarks keep working
     // (the standing convention: labels move, slugs don't). Role sets live on DesktopNavigation —
     // the single home for nav RBAC — so the catalog and the gates can never drift apart.
     public static readonly IReadOnlyList<SidebarFolderInfo> All = new[]
     {
-        // ---- Client: correspondence and money as the client sees it. First folder, so its
-        // first row (Requests) is the bare-project-URL landing for full-access roles. ----
+        // ---- Project: the day-to-day running of the picked job, led by the record chain —
+        // Requests → RFIs → Variations is one lifecycle in one register. First folder, so its
+        // first row (Requests) is the bare-project-URL landing. ----
         new SidebarFolderInfo(
-            SidebarFolder.Client,
-            "Client",
-            "#client",
+            SidebarFolder.Project,
+            "Project",
+            "#project",
             new[]
             {
-                // Requests is the client-side document register: Requests, RFIs and Variations
-                // and variations are one lifecycle in one place.
-                new SidebarRow(new NavigationItem("Requests", "/projects/{project}/requests"),
-                    DesktopNavigation.ProjectRoles),
-                // The formal instructions that authorise varied work. Sits with Requests because it
-                // is the same correspondence with the same people, and it is what a variation at
-                // Awaiting AI is waiting for. The architect can see it: they issue them.
+                // The document register (Requests, RFIs and Variations, one lifecycle). Exact on
+                // the base route: the register's variations view belongs to the row below, so this
+                // row matches the register's other views and the request detail pages explicitly.
+                new SidebarRow(new NavigationItem("Requests", "/projects/{project}/requests",
+                        new[]
+                        {
+                            "/projects/{project}/requests/all",
+                            "/projects/{project}/requests/general",
+                            "/projects/{project}/requests/rfis",
+                            "/projects/{project}/requests/view"
+                        }, ExactMatch: true),
+                    DesktopNavigation.DirectorRoles),
+                // The register's variations view, plus the variation detail pages (and the legacy
+                // /voq route kept for links already sent out). Its own row (2026-08-11): the
+                // variation book is checked on its own far more often than the rest of the chain.
+                new SidebarRow(new NavigationItem("Variation Orders", "/projects/{project}/requests/variations",
+                        new[] { "/projects/{project}/variations", "/projects/{project}/voq" }),
+                    DesktopNavigation.DirectorRoles),
+                // The formal instructions that authorise varied work — what a variation at
+                // Awaiting AI is waiting for.
                 new SidebarRow(new NavigationItem("Architect's Instructions", "/projects/{project}/architect-instructions"),
-                    DesktopNavigation.ArchitectInstructionRoles),
+                    DesktopNavigation.DirectorRoles),
                 // Point-in-time captures of issued valuation reports — what the client was
-                // actually sent, frozen. New page; finance-gated like the live report.
+                // actually sent, frozen.
                 new SidebarRow(new NavigationItem("Valuation Report Snapshots", "/projects/{project}/valuation-snapshots"),
-                    DesktopNavigation.FinanceRoles)
+                    DesktopNavigation.DirectorRoles),
+                new SidebarRow(new NavigationItem("Drawings", "/projects/{project}/drawings"),
+                    DesktopNavigation.DirectorRoles),
+                new SidebarRow(new NavigationItem("Programme", "/projects/{project}/programme"),
+                    DesktopNavigation.DirectorRoles),
+                // The project-specific to-do view — second way in, alongside Internal's master list.
+                new SidebarRow(new NavigationItem("To-do", "/projects/{project}/todos"),
+                    DesktopNavigation.DirectorRoles),
+                new SidebarRow(new NavigationItem("Progress", "/projects/{project}/progress"),
+                    DesktopNavigation.DirectorRoles),
+                // The defect register (DEF-#### references). Defects are raised here or from a
+                // subcontractor email in the Control Centre; each reads its mail back live by tag.
+                new SidebarRow(new NavigationItem("Defects", "/projects/{project}/defects"),
+                    DesktopNavigation.DirectorRoles),
+                new SidebarRow(new NavigationItem("Communications", "/projects/{project}/communications"),
+                    DesktopNavigation.DirectorRoles),
+                new SidebarRow(new NavigationItem("Project Settings", "/projects/{project}/settings"),
+                    DesktopNavigation.DirectorRoles)
             }),
 
-        // ---- Subcontractor: what the subcontractor relationship needs — inviting bids, and
-        // nothing more. Work Orders and WO Allocation looked at home here but are things WE do
-        // with subcontractor money, not things done with subcontractors, so they live under
-        // Finance (decision 2026-08-04). ----
+        // ---- Subcontractor: the subcontractor relationship — inviting bids, placing the orders,
+        // and the correspondence. Work Orders moved back in from Finance (2026-08-11, reversing
+        // 2026-08-04): placing the order is done WITH the subcontractor; paying for it stays
+        // under Finance as WO Allocation. ----
         new SidebarFolderInfo(
             SidebarFolder.Subcontractor,
             "Subcontractor",
@@ -82,58 +118,29 @@ public static class SidebarFolders
             new[]
             {
                 new SidebarRow(new NavigationItem("Bid Package Invites", "/projects/{project}/bid-package-invites"),
-                    DesktopNavigation.ProjectRoles),
+                    DesktopNavigation.DirectorRoles),
+                new SidebarRow(new NavigationItem("Work Orders", "/projects/{project}/work-orders"),
+                    DesktopNavigation.DirectorRoles),
                 // General subcontractor correspondence — every email tagged "JPMS/SubComms" at
                 // triage (the System Tags Subcontractor tab's communication tick), read live.
                 new SidebarRow(new NavigationItem("Communications", "/subcontractors/communications"),
-                    DesktopNavigation.ProjectRoles)
-            }),
-
-        // ---- Project: the day-to-day running of the picked job. ----
-        new SidebarFolderInfo(
-            SidebarFolder.Project,
-            "Project",
-            "#project",
-            new[]
-            {
-                // The project-specific to-do view — second way in, alongside Internal's master list.
-                new SidebarRow(new NavigationItem("To-do", "/projects/{project}/todos"),
-                    DesktopNavigation.ProjectRoles),
-                new SidebarRow(new NavigationItem("Drawings", "/projects/{project}/drawings"),
-                    DesktopNavigation.ProjectRoles),
-                new SidebarRow(new NavigationItem("Programme", "/projects/{project}/programme"),
-                    DesktopNavigation.ProjectRoles),
-                new SidebarRow(new NavigationItem("Progress", "/projects/{project}/progress"),
-                    DesktopNavigation.ProjectRoles),
-                // The defect register (DEF-#### references). Defects are raised here or from a
-                // subcontractor email in the Control Centre; each reads its mail back live by tag.
-                new SidebarRow(new NavigationItem("Defects", "/projects/{project}/defects"),
-                    DesktopNavigation.ProjectRoles),
-                new SidebarRow(new NavigationItem("Communications", "/projects/{project}/communications"),
-                    DesktopNavigation.ProjectRoles),
-                new SidebarRow(new NavigationItem("Project Settings", "/projects/{project}/settings"),
-                    DesktopNavigation.ProjectRoles)
+                    DesktopNavigation.DirectorRoles)
             }),
 
         // ---- Internal: the company's own running lists — the master to-do and the people
-        // directory. Labour/Workers moved to Time and the audit registers to Audit
-        // (decision 2026-08-04). ----
+        // directory. ----
         new SidebarFolderInfo(
             SidebarFolder.Internal,
             "Internal",
             "#internal",
             new[]
             {
-                // The master to-do list: all projects plus company-wide items, with a project
-                // filter (revived page). TodoListRoles, not ProjectRoles — Accounts holds no
-                // project rows but this is the page its work lives on.
+                // The master to-do list: all projects plus company-wide items, with a project filter.
                 new SidebarRow(new NavigationItem("Todo", "/todos"),
-                    DesktopNavigation.TodoListRoles),
-                // Everyone the company deals with — the unified page replaces the old separate
-                // Clients and Architects entries (their routes survive; the page filters by
-                // Clients · Architects · Subcontractors · Internal staff).
+                    DesktopNavigation.DirectorRoles),
+                // Everyone the company deals with — Clients · Architects · Subcontractors · Staff.
                 new SidebarRow(new NavigationItem("Directory", "/directory"),
-                    DesktopNavigation.DirectoryRoles)
+                    DesktopNavigation.DirectorRoles)
             }),
 
         // ---- Time: timesheets — labour recorded on the picked site, and the company-wide
@@ -145,15 +152,15 @@ public static class SidebarFolders
             new[]
             {
                 new SidebarRow(new NavigationItem("Labour", "/projects/{project}/labour"),
-                    DesktopNavigation.ProjectRoles),
-                // Mirrors the API's labour registry authorisation (LabourRoleSets.ManageWorkers).
+                    DesktopNavigation.DirectorRoles),
                 new SidebarRow(new NavigationItem("Workers", "/labour/workers"),
-                    DesktopNavigation.WorkerRegistryRoles)
+                    DesktopNavigation.DirectorRoles)
             }),
 
-        // ---- Finance: the money that is worked, not read — the picked project's cost ledger
-        // and the subcontractor spend that feeds it, then the company-wide coding screens.
-        // The read-only statements live next door in Financial Reports. ----
+        // ---- Finance: the money that is worked, not read — the picked project's cost ledger,
+        // the subcontractor spend allocation that feeds it, and the coding setup. The Xero
+        // screens have their own folder below; the read-only statements live in Financial
+        // Reports. Cost Codes and Rates split into their own rows (2026-08-11). ----
         new SidebarFolderInfo(
             SidebarFolder.Finance,
             "Finance",
@@ -161,94 +168,93 @@ public static class SidebarFolders
             new[]
             {
                 new SidebarRow(new NavigationItem("Financials", "/projects/{project}/financials"),
-                    DesktopNavigation.FinanceRoles),
-                // Placing and paying for subcontract work — internal money-handling, which is why
-                // these sit here and not under Subcontractor (decision 2026-08-04).
-                new SidebarRow(new NavigationItem("Work Orders", "/projects/{project}/work-orders"),
-                    DesktopNavigation.ProjectRoles),
+                    DesktopNavigation.DirectorRoles),
                 new SidebarRow(new NavigationItem("WO Allocation", "/projects/{project}/work-order-allocation"),
-                    DesktopNavigation.ProjectRoles),
-                // Allocation + Transactions as tabs of one page — Allocation leads (the working
-                // screen); the match prefix keeps the row lit on the Transactions tab.
-                new SidebarRow(new NavigationItem("Xero", "/finance/allocation", new[] { "/finance/xero" }),
-                    DesktopNavigation.FinanceRoles),
-                new SidebarRow(new NavigationItem("Cost Codes & Rates", "/cost-codes", new[] { "/rate-library" }),
-                    DesktopNavigation.FinanceRoles)
+                    DesktopNavigation.DirectorRoles),
+                new SidebarRow(new NavigationItem("Cost Codes", "/cost-codes"),
+                    DesktopNavigation.DirectorRoles),
+                new SidebarRow(new NavigationItem("Rates", "/rate-library"),
+                    DesktopNavigation.DirectorRoles)
             }),
 
-        // ---- Financial Reports: the money that is read — the picked project's statements
-        // first, then the company-wide views. ----
+        // ---- Financial Reports: the money that is read — the picked project's statement, then
+        // the company-wide views. The Valuation Report moved to the top level (Standalone); the
+        // aged views moved to the Xero folder (2026-08-11). ----
         new SidebarFolderInfo(
             SidebarFolder.FinancialReports,
             "Financial Reports",
             "#financial-reports",
             new[]
             {
-                new SidebarRow(new NavigationItem("Valuation Report", "/projects/{project}/valuation"),
-                    DesktopNavigation.FinanceRoles),
-                new SidebarRow(new NavigationItem("Cashflow", "/projects/{project}/cashflow"),
-                    DesktopNavigation.FinanceRoles),
-                // The by-project cash summary: every project's Cashflow statement collapsed to a
-                // line, plus the total cash position (bank tiles inside the page are directors
-                // only, mirroring the API's GetXeroCashSummaryEndpoint gate). Replaced the
-                // consolidated Valuation Summary on the same slug (finance meeting 2026-08-03) —
-                // slugs don't move, and the retired company Cash Summary's /finance/cash-summary
-                // route lands here too so old bookmarks keep working. Exact-only matching:
-                // /finance/* otherwise belongs to the Xero and aged rows.
-                new SidebarRow(new NavigationItem("Cash Summary", "/finance", new[] { "/finance/cash-summary" }, ExactMatch: true),
-                    DesktopNavigation.FinanceRoles),
-                // Gross profit by project: budgeted (initial contract), current (certified less
-                // actual cost) and forecasted profit per project, one row each (finance meeting
-                // 2026-08-03). Same audience as the per-project Financials tab it reads from.
+                // The per-project to-completion statement — "if this job runs to the end, where
+                // does its cash land". Renamed from "Cashflow" (2026-08-11): the company view
+                // next door is the one that carries the time axis.
+                new SidebarRow(new NavigationItem("Project Cashflow", "/projects/{project}/cashflow"),
+                    DesktopNavigation.DirectorRoles),
+                // The company Cash Forecast (Pages/CashForecast.razor) — the time-phased view,
+                // with the former Cash Summary preserved below its divider while the §4 phasing
+                // rules await FD/consultant sign-off. The retired slugs /finance and
+                // /finance/cash-summary land on the same page, so old bookmarks keep working;
+                // "$" keeps the bare /finance prefix from stealing the Xero rows' routes.
+                new SidebarRow(new NavigationItem("Cash Forecast", "/finance/cash-forecast",
+                        new[] { "/finance$", "/finance/cash-summary" }),
+                    DesktopNavigation.DirectorRoles),
+                // Gross profit by project: budgeted, current and forecast (finance meeting
+                // 2026-08-03).
                 new SidebarRow(new NavigationItem("Profit Summary", "/finance/profit-summary"),
-                    DesktopNavigation.FinanceRoles),
-                // Outstanding sales invoices aged as in Xero but including drafts still being
-                // prepared — the sales-side mirror of Aged Payables (finance meeting 2026-08-03).
-                // Finance roles: receivables are the valuation invoices this audience already
-                // raises and tracks; mirrors the API's authorisation (GetXeroAgedReceivablesEndpoint).
-                new SidebarRow(new NavigationItem("Aged Receivables", "/finance/aged-receivables"),
-                    DesktopNavigation.FinanceRoles),
-                // Outstanding supplier bills aged as in Xero but including drafts — the invoices
-                // the accounting procedure leaves in DRAFT until coded through the portal, which
-                // Xero's own aged payables report cannot see. Finance roles, like the Xero row:
-                // the allocation queue already shows this audience every bill and its amount due;
-                // mirrors the API's authorisation (GetXeroAgedPayablesEndpoint).
-                new SidebarRow(new NavigationItem("Aged Payables", "/finance/aged-payables"),
-                    DesktopNavigation.FinanceRoles)
+                    DesktopNavigation.DirectorRoles)
             }),
 
-        // ---- Audit: who did what — the correspondence audit register and the assistant's
-        // activity log. Near the foot deliberately: review, not day-to-day work. ----
+        // ---- Xero: every screen that reads or feeds the accounts system — one home per screen
+        // (2026-08-11; Allocation and Transactions were tabs behind one row, the aged views
+        // lived under Financial Reports). ----
+        new SidebarFolderInfo(
+            SidebarFolder.Xero,
+            "Xero",
+            "#xero",
+            new[]
+            {
+                // The working screen: distributing allocated purchase lines to cost centres.
+                new SidebarRow(new NavigationItem("Xero Cost Allocation", "/finance/allocation"),
+                    DesktopNavigation.DirectorRoles),
+                new SidebarRow(new NavigationItem("Xero Transactions", "/finance/xero"),
+                    DesktopNavigation.DirectorRoles),
+                // Outstanding sales invoices aged as in Xero but including drafts still being
+                // prepared (finance meeting 2026-08-03).
+                new SidebarRow(new NavigationItem("Aged Receivables", "/finance/aged-receivables"),
+                    DesktopNavigation.DirectorRoles),
+                // Outstanding supplier bills aged as in Xero but including drafts — the invoices
+                // the accounting procedure leaves in DRAFT until coded through the portal, which
+                // Xero's own aged payables report cannot see.
+                new SidebarRow(new NavigationItem("Aged Payables", "/finance/aged-payables"),
+                    DesktopNavigation.DirectorRoles)
+            }),
+
+        // ---- Audit: who did what — the reconciliation trail, the routing register and the
+        // assistant's activity log. Near the foot deliberately: review, not day-to-day work. ----
         new SidebarFolderInfo(
             SidebarFolder.Audit,
             "Audit",
             "#audit",
             new[]
             {
-                // The finance reconciliation trail (new page): every cost-centre move on the
-                // valuation report — who moved which line, from where to where, when. Project-
-                // scoped, so it leads the folder (the house pattern: the picked project first,
-                // then company rows). Moved in from Financial Reports (decision 2026-08-04) —
-                // it is a register of who-did-what, not a statement. Mirrors the API's
-                // CommercialTeam gate on the filtered audit read (AuditEndpoints).
+                // The finance reconciliation trail: every cost-centre move on the valuation
+                // report — who moved which line, from where to where, when. Project-scoped, so
+                // it leads the folder (the house pattern: the picked project first).
                 new SidebarRow(new NavigationItem("Reconciliation Audit", "/projects/{project}/reconciliation-audit"),
-                    DesktopNavigation.FinanceRoles),
-                // The append-only audit register (new page) — who routed, linked and filed what.
-                // Same gate as Triage (Standalone below): the people who make routing decisions
-                // review them.
-                new SidebarRow(new NavigationItem("Audit Trail", "/audit"),
-                    DesktopNavigation.TriageRoles),
-                // What the assistant has done, on whose behalf, and what it cost. Directors only —
-                // the log carries spend, and the people who authorise it are the people who see it.
-                // Mirrors the API's AiRoles.AllowedToUseAssistant.
+                    DesktopNavigation.DirectorRoles),
+                // The append-only audit register — who routed, linked and filed what. Renamed
+                // from "Audit Trail" (2026-08-11, label only): beside the reconciliation trail
+                // the old name no longer said WHICH trail.
+                new SidebarRow(new NavigationItem("System Audit Trail", "/audit"),
+                    DesktopNavigation.DirectorRoles),
+                // What the assistant has done, on whose behalf, and what it cost.
                 new SidebarRow(new NavigationItem("Agent Activity", "/agents/activity"),
                     DesktopNavigation.DirectorRoles)
             }),
 
         // ---- Admin: running the system itself, not any project — administrators only (the
-        // empty role list + CanSee bypass). Users carries the active/revoked tabs
-        // (WorkspaceSections.Admin); the panels lived on the admin home until 2026-07-30, when
-        // user administration outgrew a homepage. Last folder deliberately: it is the least
+        // empty role list + CanSee bypass). Last folder deliberately: it is the least
         // day-to-day thing on the rail. ----
         new SidebarFolderInfo(
             SidebarFolder.Admin,
@@ -259,24 +265,27 @@ public static class SidebarFolders
                 new SidebarRow(new NavigationItem("Users", "/admin/users"),
                     DesktopNavigation.AdministratorOnly),
                 // The announced app version: publishing an update here raises the refresh bar
-                // (UpdateToast) on every signed-in tab. Mirrors the API's AdminGate on the
-                // system/version endpoints.
+                // (UpdateToast) on every signed-in tab.
                 new SidebarRow(new NavigationItem("System", "/admin/system"),
                     DesktopNavigation.AdministratorOnly)
             })
     };
 
-    /// <summary>Rows that belong to no folder — whole-company destinations that answer to no one
-    /// project and no one workspace. They render as top-level links at the FOOT of the sidebar,
-    /// below every folder, because the shape says what a folder cannot: these sit outside whatever
-    /// the project picker has selected. Gated per row exactly like folder rows.</summary>
+    /// <summary>Rows that belong to no folder — they render as top-level links at the FOOT of the
+    /// sidebar, below every folder, with an icon, like Home. Gated per row exactly like folder
+    /// rows. Two kinds of resident: whole-company destinations that answer to no one project
+    /// (the Control Centre), and the one project record important enough to outrank its folder
+    /// (the Valuation Report — the system's flagship output, elevated 2026-08-11; being a
+    /// {project} template it follows the picker like any folder row).</summary>
     public static readonly IReadOnlyList<SidebarRow> Standalone = new[]
     {
         // The Control Centre (formerly Triage) — the mailbox intake queue and router for ALL
-        // correspondence across EVERY project, and the reason it is not a folder row: under
-        // Internal it read as this project's internal work, which it never was. Mirrors the
-        // API's TriageRoles gate.
+        // correspondence across EVERY project. Mirrors the API's TriageRoles gate on the page;
+        // the nav row carries the 2026-08-11 directors-only clamp like every other row.
         new SidebarRow(new NavigationItem("Control Centre", "/control-centre"),
-            DesktopNavigation.TriageRoles)
+            DesktopNavigation.DirectorRoles),
+        // The picked project's live valuation report.
+        new SidebarRow(new NavigationItem("Valuation Reports", "/projects/{project}/valuation"),
+            DesktopNavigation.DirectorRoles)
     };
 }

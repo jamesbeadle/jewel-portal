@@ -145,6 +145,9 @@ builder.Services.AddScoped<AllocationTabStorage>();
 builder.Services.AddScoped<WorkOrderGroupingStorage>();
 builder.Services.AddScoped<TriageSortStorage>();
 builder.Services.AddScoped<TodoViewStorage>();
+// INTERIM (2026-08-11): the Cash Forecast's per-browser overheads figure — replaced by an
+// FD-owned server setting once the forecast's phasing rules are signed off.
+builder.Services.AddScoped<ForecastOverheadsStorage>();
 builder.Services.AddScoped<CurrentProjectService>();
 builder.Services.AddScoped<ProjectStageFilter>();
 builder.Services.AddScoped<ChatPanelState>();

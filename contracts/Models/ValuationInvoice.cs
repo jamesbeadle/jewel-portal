@@ -1,11 +1,15 @@
 namespace Jewel.JPMS.Models;
 
-// Lifecycle of a valuation invoice (formerly "cash call"). The happy path is
-// Raised (drafted against the current valuation; a report snapshot is frozen and attached) →
-// Submitted (with the architect/client for approval) → Approved → Issued (client invoice sent — counts toward
-// certified/invoiced to date) → Paid (client has paid — rolls into the project-level paid total).
-// Submitted can come back Rejected, returning the invoice for amendment (→ Raised) or cancellation.
-// Raised → Issued directly remains permitted for projects that skip the formal approval loop.
+// Lifecycle of a valuation invoice (formerly "cash call"). The happy path is one move per
+// material stage, driven from the claim card: raised & sent in one click (Raised is a
+// transient — a report snapshot is frozen at raise and the claim goes straight to
+// Submitted, with the architect/client for approval) → Approved → Issued (client invoice
+// sent — counts toward certified/invoiced to date) → Paid (client has paid — rolls into
+// the project-level paid total).
+// Submitted can come back Rejected, returning the invoice for amendment (→ Raised, now a
+// draft state that also covers invoices added directly in the section) or cancellation.
+// Raised/Submitted → Issued directly remains permitted for projects that skip the formal
+// approval loop.
 // Int values 0–2 predate the approval states and are persisted/seeded — never renumber.
 public enum ValuationInvoiceStatus
 {

@@ -273,10 +273,11 @@
 
     private string CurrentPath => new Uri(Nav.Uri).AbsolutePath;
 
-    // The picker only earns its space for roles that can open projects; every role holding a
-    // project-scoped row is inside ProjectRoles (finance/triage/directory sets are subsets).
+    // The picker only earns its space when the role's visible nav actually holds a project-scoped
+    // row to retarget — under the directors-only nav clamp (2026-08-11) that is the honest test,
+    // where "may open projects" (CanSeeProjects) would hang a picker over an empty rail.
     private bool ShowsProjectPicker =>
-        Session.ActiveRole is { } role && DesktopNavigation.CanSeeProjects(role);
+        Session.ActiveRole is { } role && DesktopNavigation.HasProjectScopedRows(role);
 
     // Rows that belong to no folder (SidebarFolders.Standalone) — rendered at the foot of the nav,
     // below every folder, in both the expanded panel and the collapsed rail.

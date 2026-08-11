@@ -12,7 +12,10 @@ namespace Jewel.JPMS.Services.Navigation;
 /// MatchPrefixes extend active-state matching to sibling routes an entry spans (templates and a
 /// trailing "$" for exact-only are allowed there too). ShallowMatch limits a plain route to
 /// itself plus one path segment — "/projects" stays lit on the project list and a project's
-/// landing page without stealing every project tab from the grouped entries.
+/// landing page without stealing every project tab from the grouped entries. ExactMatch makes
+/// the HREF itself exact-only (plain or template — a template matches exactly its own tail, so
+/// Requests at ".../requests" stays dark on ".../requests/variations", which is Variation
+/// Orders' row); MatchPrefixes keep their own prefix semantics and opt into exactness with "$".
 /// </summary>
 public sealed record NavigationItem(
     string Label,
@@ -33,13 +36,19 @@ public sealed record NavigationItem(
         : Href.Replace(ProjectToken, projectId, StringComparison.Ordinal);
 
     public bool IsActiveFor(string path) =>
-        Matches(path, Href) || (MatchPrefixes?.Any(prefix => Matches(path, prefix)) ?? false);
+        // ExactMatch governs the Href alone; each prefix keeps prefix semantics unless it opts
+        // into exactness itself with a trailing "$".
+        Matches(path, Href, ExactMatch) || (MatchPrefixes?.Any(prefix => Matches(path, prefix, exact: false)) ?? false);
 
-    private bool Matches(string path, string href)
+    private bool Matches(string path, string href, bool exact)
     {
-        // "$" suffix: exact-only — used where a plain prefix would swallow a sibling entry's
-        // routes (e.g. "/finance$" on Project financials must not light up for /finance/xero).
-        if (href.EndsWith('$')) return path == href[..^1];
+        // "$" suffix: exact-only for THIS href (plain or template) — used in MatchPrefixes where
+        // a plain prefix would swallow a sibling entry's routes.
+        if (href.EndsWith('$'))
+        {
+            exact = true;
+            href = href[..^1];
+        }
 
         if (href.Contains(ProjectToken, StringComparison.Ordinal))
         {
@@ -53,12 +62,13 @@ public sealed record NavigationItem(
             var slash = rest.IndexOf('/');
             if (slash < 0) return false;
             var tail = rest[slash..];
+            if (exact) return tail == parts[1];
             return tail == parts[1] || tail.StartsWith(parts[1] + "/", StringComparison.Ordinal);
         }
 
-        // Exact-only — used where a prefix would swallow a sibling entry's routes (e.g. Financial
+        // Exact-only — used where a prefix would swallow a sibling entry's routes (e.g. Cash
         // Summary at "/finance" must not light up for /finance/xero, which is Xero's).
-        if (ExactMatch) return path == href;
+        if (exact) return path == href;
 
         if (ShallowMatch)
         {

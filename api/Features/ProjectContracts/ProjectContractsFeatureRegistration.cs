@@ -2,6 +2,7 @@ using Jewel.JPMS.Api.Cqrs;
 using Jewel.JPMS.Api.Features.ProjectContracts.Commands;
 using Jewel.JPMS.Api.Features.ProjectContracts.Queries;
 using Jewel.JPMS.Api.Features.ProjectContracts.Storage;
+using Jewel.JPMS.Contracts.Cqrs;
 using Jewel.JPMS.Contracts.ProjectContracts;
 using Jewel.JPMS.Models;
 using Microsoft.Extensions.Configuration;
@@ -17,6 +18,7 @@ public static class ProjectContractsFeatureRegistration
         RegisterBlobStore(services, configuration);
 
         services.AddScoped<IQueryHandler<GetProjectContract, ProjectContract?>, GetProjectContractHandler>();
+        services.AddScoped<IQueryHandler<ListProjectContractAmendments, IReadOnlyList<ProjectContractAmendment>>, ListProjectContractAmendmentsHandler>();
 
         services.AddScoped<ICommandHandler<SetProjectContractTerms, ProjectContract>, SetProjectContractTermsHandler>();
         services.AddScoped<SetProjectContractTermsAuthorisation>();
@@ -25,6 +27,18 @@ public static class ProjectContractsFeatureRegistration
         services.AddScoped<ICommandHandler<AttachProjectContractDocument, ProjectContract>, AttachProjectContractDocumentHandler>();
         services.AddScoped<AttachProjectContractDocumentAuthorisation>();
         services.AddScoped<AttachProjectContractDocumentValidation>();
+
+        services.AddScoped<ICommandHandler<AttachProjectContractAmendment, ProjectContractAmendment>, AttachProjectContractAmendmentHandler>();
+        services.AddScoped<AttachProjectContractAmendmentAuthorisation>();
+        services.AddScoped<AttachProjectContractAmendmentValidation>();
+
+        services.AddScoped<ICommandHandler<SetProjectContractAmendmentDetails, ProjectContractAmendment>, SetProjectContractAmendmentDetailsHandler>();
+        services.AddScoped<SetProjectContractAmendmentDetailsAuthorisation>();
+        services.AddScoped<SetProjectContractAmendmentDetailsValidation>();
+
+        services.AddScoped<ICommandHandler<RemoveProjectContractAmendment, Acknowledgement>, RemoveProjectContractAmendmentHandler>();
+        services.AddScoped<RemoveProjectContractAmendmentAuthorisation>();
+        services.AddScoped<RemoveProjectContractAmendmentValidation>();
 
         return services;
     }

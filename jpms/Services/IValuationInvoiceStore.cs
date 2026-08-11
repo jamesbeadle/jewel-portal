@@ -20,6 +20,7 @@ public interface IValuationInvoiceStore
     Task<ValuationInvoice> UpdateAsync(string valuationInvoiceId, DateTimeOffset periodMonth, decimal amount, decimal? amountPaid = null, DateTimeOffset? issuedAt = null, DateTimeOffset? paidAt = null, string? note = null, CancellationToken cancellationToken = default);
 
     // Approval workflow: Raised → Submitted → Approved/Rejected; Raised/Rejected → Cancelled.
+    // Issue accepts Approved — or Raised/Submitted for projects with no formal approval loop.
     Task<ValuationInvoice> SubmitAsync(string valuationInvoiceId, CancellationToken cancellationToken = default);
     Task<ValuationInvoice> ApproveAsync(string valuationInvoiceId, string? note = null, CancellationToken cancellationToken = default);
     Task<ValuationInvoice> RejectAsync(string valuationInvoiceId, string reason, CancellationToken cancellationToken = default);

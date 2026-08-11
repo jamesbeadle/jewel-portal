@@ -23,7 +23,7 @@
                 title="Numbered list" @onclick='() => ExecAsync("insertOrderedList")' @onmousedown:preventDefault>1.&nbsp;List</button>
         <span class="ml-auto text-[11px] text-content-faint pr-1">Paste images straight into the text</span>
     </div>
-    <div @ref="editor" contenteditable="true" data-placeholder="@Placeholder"
+    <div @ref="editor" contenteditable="true" spellcheck="true" lang="en-GB" data-placeholder="@Placeholder"
          class="jpms-rich-editor px-3 py-2 text-sm text-content focus:outline-none overflow-y-auto"
          style="min-height:@(MinHeight)px; max-height:60vh;"></div>
 </div>

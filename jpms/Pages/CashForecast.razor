@@ -1,0 +1,1290 @@
+@page "/finance/cash-forecast"
+@page "/finance"
+@page "/finance/cash-summary"
+@using Jewel.JPMS.Commercial
+@using Jewel.JPMS.Contracts.Commercial
+@using Jewel.JPMS.Contracts.Retention
+@using Jewel.JPMS.Contracts.Xero
+@using Jewel.JPMS.Features.Commercial
+@using Jewel.JPMS.Features.Procurement
+@using Jewel.JPMS.Features.Projects
+@using Jewel.JPMS.Models
+@inject AuthService Auth
+@inject SessionService Session
+@inject ProjectListReadModel Projects
+@inject ProjectFinancialSummaryReadModel Summary
+@inject ProjectWorkOrdersReadModel WorkOrders
+@inject ValuationLinesReadModel Lines
+@inject ValuationClaimsReadModel Claims
+@inject ClaimLinesReadModel ClaimEntries
+@inject IValuationInvoiceStore Invoices
+@inject IProjectContractStore Contracts
+@inject IXeroCashSummaryStore Cash
+@inject ForecastOverheadsStorage OverheadsStorage
+@inject IQueryClient Queries
+@inject NavigationManager Nav
+@implements IDisposable
+
+<PageTitle>Cash Forecast · JPMS</PageTitle>
+
+@*
+    The company Cash Forecast (the sidebar's Financial Reports folder) — successor to the Cash
+    Summary on the same slugs (/finance and /finance/cash-summary still land here; the canonical
+    route is /finance/cash-forecast).
+
+    Two sections, one load:
+
+    FORECAST (top) — the time axis the Cash Summary never had: every known future cash movement
+    placed in the month it is expected to land (CashForecastPhasing, contracts — pure and
+    unit-tested), a net movement line, and for directors the running bank balance seeded from
+    Xero, with the lowest point flagged. The phasing RULES are the interim set from
+    docs/Financial-Reports-and-Nav-Refactor-Plan.md §4, awaiting FD/consultant sign-off — hence
+    the standing amber notice. The figures being phased are the statements' own (RowFor below),
+    so each project's months sum to its Project Completion Cashflow to the penny — checked live
+    in the reconciliation footer, red if it ever fails.
+
+    POSITION TO COMPLETION (below the divider) — the former Cash Summary, unchanged: the
+    combined to-completion statement and the by-project table (finance meeting 2026-08-03,
+    retired page Pages/CashSummary.razor). Kept while the forecast is unconfirmed so nothing
+    anyone relies on disappears; the old bank tiles are not duplicated here — their figures live
+    in the KPI strip on top.
+
+    Figures come from exactly the same sources and arithmetic as each project's Cashflow tab
+    (ValuationSummaryFigures, RetentionSchedule, ProjectDrawdown, part-payment-aware unpaid
+    bills), so this page and the per-project statement can never disagree.
+*@
+
+@if (!sessionReady)
+{
+    <section class="px-6 md:px-8 py-12">
+        <LoadGate IsLoading="true" Prominent="true" Label="Loading" />
+    </section>
+}
+else if (!Session.IsApproved)
+{
+    <RequestAccessView Email="@Auth.CurrentUser!.Email" DisplayName="@Auth.CurrentUser.DisplayName" />
+}
+else
+{
+    <section class="px-6 md:px-8 py-8 md:py-12">
+        <header class="mb-4">
+            <p class="eyebrow mb-1">JPMS · Company</p>
+            <h1 class="text-2xl md:text-3xl font-semibold text-content leading-tight">Cash Forecast</h1>
+            <p class="text-sm text-content-muted mt-1">
+                Every known future cash movement in the month it is expected to land@(IsDirector ? ", and the bank balance that results — lowest point first" : "").
+            </p>
+        </header>
+
+        @* Standing notice until the FD and consultant sign off the §4 phasing rules — the
+           AMOUNTS are live and tie to the statements; only their TIMING is provisional. *@
+        <p class="rounded-lg bg-amber-500/10 border border-amber-500/30 px-3 py-2 text-sm text-amber-600 mb-6 max-w-4xl">
+            <span class="font-semibold">Unconfirmed figures.</span> The timing rules behind this
+            forecast are awaiting sign-off (Financial-Reports-and-Nav-Refactor-Plan §4). Amounts
+            are live and reconcile to the statement below; treat the months as indicative. Two
+            known simplifications: supplier bills are assumed payable this month (per-bill due
+            dates come with the confirmed build), and the overheads figure is entered on this
+            page, not yet a system setting.
+        </p>
+
+        @{
+            // Computed ONCE per render and threaded through — the KPI strip, the table, the
+            // chart and the reconciliation check must all describe the same forecast.
+            var forecastView = TableReady && SelectedProjects.Count > 0 ? BuildForecast() : null;
+        }
+
+        @* ── KPI strip, directors only — every tile is anchored to the bank position (mirrors
+           the API's directors-only gate). Tiles keep their shape while loading: label stays,
+           figure pulses. ── *@
+        @if (IsDirector)
+        {
+            <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 mb-8">
+                <div class="rounded-xl border border-line bg-surface px-5 py-4">
+                    <p class="text-[11px] uppercase tracking-wider text-content-subtle font-semibold mb-1">Cash in bank</p>
+                    @if (BankSnapshot is null)
+                    {
+                        <p class="text-2xl font-semibold text-content flex items-center h-8" role="status" aria-live="polite" aria-busy="true">
+                            <JewelIcon Class="w-4 h-4 animate-jewel-pulse" />
+                            <span class="sr-only">Loading cash in bank</span>
+                        </p>
+                    }
+                    else if (!BankSnapshot.IsConfigured || BankSnapshot.Error is not null)
+                    {
+                        <p class="text-sm text-content-muted mt-1">@(BankSnapshot.Error ?? "Xero isn't connected — add the Xero__ClientId / Xero__ClientSecret app settings.")</p>
+                    }
+                    else
+                    {
+                        <p class="text-2xl font-semibold text-content">@Money(BankSnapshot.TotalCash)</p>
+                        <p class="text-xs text-content-subtle mt-1">@BankSnapshot.BankAccounts.Count @(BankSnapshot.BankAccounts.Count == 1 ? "account" : "accounts") · fetched @FetchedText</p>
+                    }
+                </div>
+                <div class="rounded-xl border border-line bg-surface px-5 py-4"
+                     title="The lowest the forecast bank balance gets across the visible months — the month to plan for.">
+                    <p class="text-[11px] uppercase tracking-wider text-content-subtle font-semibold mb-1">Lowest forecast balance</p>
+                    @if (!BankReady || !TableReady)
+                    {
+                        <p class="text-2xl font-semibold text-content flex items-center h-8" role="status" aria-live="polite" aria-busy="true">
+                            <JewelIcon Class="w-4 h-4 animate-jewel-pulse" />
+                            <span class="sr-only">Loading lowest forecast balance</span>
+                        </p>
+                    }
+                    else if (forecastView is not { } low || low.Closing.Length == 0)
+                    {
+                        <p class="text-sm text-content-muted mt-1">Needs the bank position from Xero.</p>
+                    }
+                    else
+                    {
+                        <p class="text-2xl font-semibold @(low.Closing[low.MinIndex] < 0m ? "text-negative" : "text-content")">@Money(low.Closing[low.MinIndex])</p>
+                        <p class="text-xs text-content-subtle mt-1">@MonthLabel(low.Axis[low.MinIndex]) — the month to plan for</p>
+                    }
+                </div>
+                <div class="rounded-xl border border-line bg-surface px-5 py-4">
+                    <p class="text-[11px] uppercase tracking-wider text-content-subtle font-semibold mb-1">Outstanding sales invoices</p>
+                    @if (BankSnapshot is null)
+                    {
+                        <p class="text-2xl font-semibold text-content flex items-center h-8" role="status" aria-live="polite" aria-busy="true">
+                            <JewelIcon Class="w-4 h-4 animate-jewel-pulse" />
+                            <span class="sr-only">Loading outstanding sales invoices</span>
+                        </p>
+                    }
+                    else if (!BankSnapshot.IsConfigured || BankSnapshot.Error is not null)
+                    {
+                        <p class="text-sm text-content-muted mt-1">—</p>
+                    }
+                    else
+                    {
+                        <p class="text-2xl font-semibold text-content">@Money(BankSnapshot.TotalOutstanding)</p>
+                        <p class="text-xs text-content-subtle mt-1">
+                            issued &amp; awaiting payment ·
+                            <a class="underline underline-offset-2 hover:text-content" href="/finance/aged-receivables">aged receivables</a>
+                        </p>
+                    }
+                </div>
+                <div class="rounded-xl border border-line bg-surface px-5 py-4"
+                     title="Bank cash after every visible month and the dated flows beyond them — where the selected jobs leave the company if they run to the end as forecast. Undated flows excluded until they earn a date.">
+                    <p class="text-[11px] uppercase tracking-wider text-content-subtle font-semibold mb-1">Balance at horizon end</p>
+                    @if (!BankReady || !TableReady)
+                    {
+                        <p class="text-2xl font-semibold text-content flex items-center h-8" role="status" aria-live="polite" aria-busy="true">
+                            <JewelIcon Class="w-4 h-4 animate-jewel-pulse" />
+                            <span class="sr-only">Loading balance at horizon end</span>
+                        </p>
+                    }
+                    else if (forecastView is not { } view || view.Closing.Length == 0)
+                    {
+                        <p class="text-sm text-content-muted mt-1">Needs the bank position from Xero.</p>
+                    }
+                    else
+                    {
+                        var horizonEnd = view.Closing[^1] + view.LaterNet;
+                        <p class="text-2xl font-semibold @(horizonEnd < 0m ? "text-negative" : "text-content")">@Money(horizonEnd)</p>
+                        <p class="text-xs text-content-subtle mt-1">after @MonthLabel(view.Axis[^1]) incl. later retention releases</p>
+                    }
+                </div>
+            </div>
+        }
+
+        @if (projectsFailed)
+        {
+            <p class="text-sm text-negative">Couldn't load the project list. The details are in the red bar at the top — reload to try again.</p>
+        }
+        else
+        {
+            <div class="mb-3 flex items-center justify-between gap-3 flex-wrap">
+                @* The filter is a control, so it is never gated: it renders disabled with a
+                   loading label until the project list lands (the loading-states convention). *@
+                @if (Projects.Current is null)
+                {
+                    <select disabled
+                            class="rounded-lg border border-line-strong bg-surface-field px-3 py-2 text-sm text-content-subtle">
+                        <option>Loading projects…</option>
+                    </select>
+                }
+                else
+                {
+                    <ProjectMultiSelect Projects="@(Projects.Current!)"
+                                        Selected="@selectedIds"
+                                        SelectedChanged="OnSelectionChangedAsync" />
+                }
+                @* Disabled while any selected row failed to load: the on-screen banner discloses
+                   the zeros, but a workbook travels without it — retry first, then export. *@
+                <ExportToExcelButton FileName="Cash forecast"
+                                     Disabled="@(!TableReady || SelectedProjects.Count == 0 || FailedSelectedProjects.Count > 0)"
+                                     BuildWorkbook="BuildExportWorkbook" />
+            </div>
+
+            @* One gate for everything below: the forecast, the statement and the table are the
+               same arithmetic over the same sources, so all of it reveals in one piece. *@
+            <LoadGate IsLoading="@(!TableReady)" Prominent="true" Label="Loading project cashflows">
+            @if (SelectedProjects.Count == 0)
+            {
+                <div class="panel p-8 text-center">
+                    <p class="text-sm text-content">No projects selected — pick some in the filter above.</p>
+                </div>
+            }
+            else
+            {
+                @if (FailedSelectedProjects.Count > 0)
+                {
+                    <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-4">
+                        The cash position could not be loaded for @string.Join(", ", FailedSelectedProjects.Select(p => p.Reference)) — those rows show zeros.
+                        <button type="button" class="underline underline-offset-2 ml-1" @onclick="RetryFailedAsync">Retry</button>
+                    </p>
+                }
+
+                var forecast = forecastView!;
+
+                <p class="text-xs text-content-subtle mb-3 max-w-4xl">
+                    <span class="font-medium text-content-muted">No signs to decode:</span> the band
+                    carries the direction — Cash in adds, Cash out subtracts; only Net movement and
+                    the balance are signed. Anything overdue sits in the current month, never the
+                    past. Flows with no honest date (no practical-completion date set) sit in
+                    Undated and never touch the balance.
+                </p>
+
+                @* ── The forecast table: one column per month, rows in two bands, every category
+                   expandable to its per-project lines. ── *@
+                <div class="rounded-xl border border-line bg-surface overflow-x-auto mb-6">
+                    <table class="w-full text-sm border-collapse">
+                        <thead class="bg-surface-raised border-b border-line">
+                            <tr class="text-left text-[11px] uppercase tracking-wider text-content-subtle font-semibold">
+                                <th class="px-4 py-3 min-w-[230px]"></th>
+                                @foreach (var month in forecast.Axis)
+                                {
+                                    <th class="px-3 py-3 text-right whitespace-nowrap">@MonthLabel(month)</th>
+                                }
+                                <th class="px-3 py-3 text-right whitespace-nowrap border-l border-line"
+                                    title="Dated flows beyond the visible months — typically the final retention releases.">Later</th>
+                                <th class="px-3 py-3 text-right whitespace-nowrap border-l border-line text-content-subtle"
+                                    title="Flows with no honest date — e.g. spreads on a project with no practical-completion date. Kept out of the balance until dated.">Undated</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr class="border-b border-line">
+                                <td colspan="@(forecast.Axis.Length + 3)" class="px-4 pt-4 pb-2 text-[11px] uppercase tracking-wider text-content-subtle font-semibold">Cash in</td>
+                            </tr>
+                            @foreach (var row in InRows)
+                            {
+                                @CategoryRow((forecast, row.Category, row.Label, row.Source))
+                            }
+                            <tr class="border-b border-line">
+                                <td colspan="@(forecast.Axis.Length + 3)" class="px-4 pt-4 pb-2 text-[11px] uppercase tracking-wider text-content-subtle font-semibold">Cash out</td>
+                            </tr>
+                            @foreach (var row in OutRows)
+                            {
+                                @CategoryRow((forecast, row.Category, row.Label, row.Source))
+                            }
+                            @* Company overheads — the interim page-level figure (see the amber
+                               notice). The input is a control: never gated, and editable in place. *@
+                            <tr class="border-b border-line">
+                                <td class="px-4 py-2.5">
+                                    <span class="text-content font-medium">Company overheads</span>
+                                    <span class="block text-[11px] text-content-faint">
+                                        monthly ·
+                                        <input type="number" min="0" step="500" value="@overheadsMonthly"
+                                               @onchange="OnOverheadsChanged"
+                                               class="w-24 rounded border border-line-strong bg-surface-field px-1.5 py-0.5 text-xs text-content" />
+                                        £/month — remembered in this browser, not yet a system setting
+                                    </span>
+                                </td>
+                                @foreach (var _ in forecast.Axis)
+                                {
+                                    <td class="px-3 py-2.5 text-right whitespace-nowrap text-content">@CellAmount(overheadsMonthly)</td>
+                                }
+                                <td class="px-3 py-2.5 text-right border-l border-line text-content-faint">—</td>
+                                <td class="px-3 py-2.5 text-right border-l border-line text-content-faint">—</td>
+                            </tr>
+                            @* ── The running answer ── *@
+                            <tr class="border-t-2 border-line border-b border-line font-semibold">
+                                <td class="px-4 py-3 text-content">Net movement</td>
+                                @for (var index = 0; index < forecast.Axis.Length; index++)
+                                {
+                                    var net = forecast.Net[index];
+                                    <td class="px-3 py-3 text-right whitespace-nowrap @(net < 0m ? "text-negative" : "text-positive")">@Signed(net)</td>
+                                }
+                                <td class="px-3 py-3 text-right whitespace-nowrap border-l border-line @(forecast.LaterNet < 0m ? "text-negative" : "text-positive")">@Signed(forecast.LaterNet)</td>
+                                <td class="px-3 py-3 text-right border-l border-line text-content-faint font-normal" title="Undated flows are excluded from the balance until they earn a date.">excluded</td>
+                            </tr>
+                            @if (IsDirector && forecast.Closing.Length > 0)
+                            {
+                                <tr class="bg-surface-raised font-semibold">
+                                    <td class="px-4 py-3 text-content">
+                                        Closing bank balance
+                                        <span class="block text-[11px] text-content-faint font-normal">directors only · seeded from Xero</span>
+                                    </td>
+                                    @for (var index = 0; index < forecast.Axis.Length; index++)
+                                    {
+                                        var balance = forecast.Closing[index];
+                                        <td class="px-3 py-3 text-right whitespace-nowrap @(balance < 0m ? "text-negative" : "text-content") @(index == forecast.MinIndex ? "ring-2 ring-inset ring-negative rounded" : "")"
+                                            title="@(index == forecast.MinIndex ? "The low point — the month to plan for" : null)">@Money(balance)</td>
+                                    }
+                                    <td class="px-3 py-3 text-right whitespace-nowrap border-l border-line">@Money(forecast.Closing[^1] + forecast.LaterNet)</td>
+                                    <td class="px-3 py-3 text-right border-l border-line text-content-faint font-normal">—</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+
+                @* ── The balance drawn: one line, the trough flagged. Directors only — it is the
+                   bank position over time. ── *@
+                @if (IsDirector && forecast.Closing.Length > 1)
+                {
+                    <div class="rounded-xl border border-line bg-surface px-5 py-4 mb-6">
+                        <p class="text-[11px] uppercase tracking-wider text-content-subtle font-semibold mb-2">Closing bank balance by month</p>
+                        @BalanceChart(forecast)
+                    </div>
+                }
+
+                @* ── The promise, checked live: phased months per project must equal that
+                   project's completion cashflow on the statement below — to the penny. ── *@
+                @if (forecast.Variances.Count == 0)
+                {
+                    <p class="text-xs text-content-subtle mb-10 max-w-4xl">
+                        <span class="text-positive font-semibold">✓ Ties to the statement below, to the penny.</span>
+                        Every project's phased months (dated, later and undated together) sum to its
+                        Project Completion Cashflow — the forecast is the same figures spread in
+                        time, never a second opinion.
+                    </p>
+                }
+                else
+                {
+                    <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-xs text-negative mb-10 max-w-4xl">
+                        Phasing does not explain the statement for
+                        @string.Join(", ", forecast.Variances.Select(variance => $"{variance.Project.Reference} ({Signed(variance.Variance)})"))
+                        — this is a defect to report, not a judgement call. The statement below remains authoritative.
+                    </p>
+                }
+
+                @* ════════════════════════ the divider ════════════════════════ *@
+                <div class="flex items-center gap-4 mb-6">
+                    <div class="h-px bg-line flex-1"></div>
+                    <p class="text-[11px] uppercase tracking-wider text-content-subtle font-semibold whitespace-nowrap">Position to completion — the former Cash Summary</p>
+                    <div class="h-px bg-line flex-1"></div>
+                </div>
+                <p class="text-xs text-content-subtle mb-4 max-w-4xl">
+                    The to-completion statement this page grew out of, unchanged: no time axis, just
+                    where the selected jobs' cash lands if they run to the end. The forecast above is
+                    these same figures with "when" added. The old bank tiles are not repeated here —
+                    their figures live in the strip at the top.
+                </p>
+
+                @* ── The combined statement: the selected projects' Cashflow tabs summed into one
+                   whiteboard — the same rows, the same helpers, over the table's own figures, so
+                   the statement and the rows beneath it agree to the penny. With one project
+                   ticked this IS that project's statement. ── *@
+                var combined = Totals();
+                <div class="rounded-xl border border-line bg-surface mb-8 max-w-2xl">
+                    <div class="px-4 py-3 border-b-2 border-line">
+                        <p class="text-[11px] uppercase tracking-wider text-content-subtle font-semibold">Combined statement</p>
+                        <p class="text-sm font-semibold text-content mt-0.5">@SelectionLabel</p>
+                    </div>
+
+                    <div class="flex items-baseline justify-between gap-4 px-4 py-3">
+                        <div>
+                            <p class="text-sm font-semibold text-content"
+                               title="The valuation reports' counting lines — contract works, provisional sums, contingency and variations — summed across the selected projects">Project claim</p>
+                            <p class="text-xs text-content-subtle mt-0.5">The full value of the works as currently valued</p>
+                        </div>
+                        <p class="text-lg font-semibold text-content whitespace-nowrap">@Money(combined.ProjectClaim)</p>
+                    </div>
+
+                    <div class="flex items-baseline justify-between gap-4 px-4 py-3 border-t border-line">
+                        <div>
+                            <p class="text-sm font-semibold text-content"
+                               title="Valuation invoices clients have paid, plus retention withheld on works complete (held less confirmed releases, from each project's retention terms)">Cash allocated</p>
+                            <p class="text-xs text-content-subtle mt-0.5">
+                                @Money(combined.CashReceived) received from clients · @Money(combined.RetentionOutstanding) held in retention
+                            </p>
+                        </div>
+                        <p class="text-lg font-semibold text-content whitespace-nowrap">@Money(-combined.CashAllocated)</p>
+                    </div>
+
+                    <div class="flex items-baseline justify-between gap-4 px-4 py-3 border-t-2 border-line">
+                        <div>
+                            <p class="text-sm font-semibold text-content"
+                               title="Project claim less cash allocated, less the retention that will be withheld on the works still to value — what can actually be invoiced to clients before the releases">Left to claim</p>
+                            @if (combined.RetentionStillToWithhold != 0m)
+                            {
+                                <p class="text-xs text-content-subtle mt-0.5"
+                                   title="Valuation invoices are raised net of retention, so this slice of the remainder is never invoiceable on a valuation — it comes back through the release rows below instead">
+                                    less @Money(combined.RetentionStillToWithhold) retention to be withheld on works left to value
+                                </p>
+                            }
+                            @if (combined.InvoicedAwaitingPayment != 0m)
+                            {
+                                <p class="text-xs text-content-subtle mt-0.5">of which @Money(combined.InvoicedAwaitingPayment) already invoiced &amp; awaiting payment</p>
+                            }
+                        </div>
+                        <p class="text-lg font-semibold text-content whitespace-nowrap">@Money(combined.LeftToClaim)</p>
+                    </div>
+
+                    <div class="flex items-baseline justify-between gap-4 px-4 py-3 border-t border-line">
+                        <div>
+                            <p class="text-sm text-content"
+                               title="Each Financials tab's drawdown to the penny — every cost centre's unspent target cost, with finalised lines realised to profit / loss and reconciliation packages accounted for. Negative means overspent.">Cost centre drawdowns</p>
+                            <p class="text-xs text-content-subtle mt-0.5">Budget still expected to be spent, on top of orders and bills</p>
+                        </div>
+                        <p class="text-base font-semibold text-content whitespace-nowrap">@Money(-combined.Drawdown)</p>
+                    </div>
+
+                    <div class="flex items-baseline justify-between gap-4 px-4 py-3 border-t border-line">
+                        <div>
+                            <p class="text-sm text-content"
+                               title="Work-order value not yet invoiced by suppliers — committed spend still to bill; see each project's WO Allocation tab">Uninvoiced work orders</p>
+                            <p class="text-xs text-content-subtle mt-0.5">@Money(combined.WoCommitted) committed · @Money(combined.WoInvoiced) invoiced to date</p>
+                        </div>
+                        <p class="text-base font-semibold text-content whitespace-nowrap">@Money(-combined.WoLeftToInvoice)</p>
+                    </div>
+
+                    <div class="flex items-baseline justify-between gap-4 px-4 py-3 border-t border-line">
+                        <div>
+                            <p class="text-sm text-content"
+                               title="The net still owed on allocated purchase lines, part-payment aware: a bill Xero has partly settled counts only its remainder, from the bill's AmountDue as last synced">Unpaid Xero purchase invoices</p>
+                        </div>
+                        <p class="text-base font-semibold @(combined.BillsUnpaid == 0m ? "text-content" : "text-negative") whitespace-nowrap">@Money(-combined.BillsUnpaid)</p>
+                    </div>
+
+                    <div class="flex items-baseline justify-between gap-4 px-4 py-3 border-t border-line">
+                        <div>
+                            <p class="text-sm text-content"
+                               title="The first retention releases still forecast, due at each project's practical completion. A confirmed release has moved into the claim, so it is no longer added back here.">Retention release 1</p>
+                            <p class="text-xs text-content-subtle mt-0.5">Still forecast, due at practical completion</p>
+                        </div>
+                        <p class="text-base font-semibold text-content whitespace-nowrap">@AddBack(combined.Release1)</p>
+                    </div>
+
+                    <div class="flex items-baseline justify-between gap-4 px-4 py-3 border-t-2 border-line">
+                        <p class="text-sm font-semibold text-content"
+                           title="Left to claim, less cost centre drawdowns, uninvoiced work orders and unpaid purchase invoices, plus the first retention releases — the net cash movement between now and practical completion">Practical completion cashflow</p>
+                        <p class="text-xl font-semibold @(combined.PracticalCompletionCashflow < 0m ? "text-negative" : "text-positive") whitespace-nowrap">@Money(combined.PracticalCompletionCashflow)</p>
+                    </div>
+
+                    <div class="flex items-baseline justify-between gap-4 px-4 py-3 border-t border-line">
+                        <div>
+                            <p class="text-sm text-content"
+                               title="The final retention releases still forecast, due after each project's defects period. A confirmed release has moved into the claim, so it is no longer added back here.">Retention release 2</p>
+                            <p class="text-xs text-content-subtle mt-0.5">Still forecast, due after the defects period</p>
+                        </div>
+                        <p class="text-base font-semibold text-content whitespace-nowrap">@AddBack(combined.Release2)</p>
+                    </div>
+
+                    <div class="flex items-baseline justify-between gap-4 px-4 py-3 border-t-2 border-line">
+                        <p class="text-sm font-semibold text-content"
+                           title="Practical completion cashflow plus the final retention releases — the selected projects' net cash movement to the end of their defects periods">Project completion cashflow</p>
+                        <p class="text-xl font-semibold @(combined.ProjectCompletionCashflow < 0m ? "text-negative" : "text-positive") whitespace-nowrap">@Money(combined.ProjectCompletionCashflow)</p>
+                    </div>
+                </div>
+
+                <div class="rounded-xl border border-line bg-surface overflow-x-auto">
+                    <table class="w-full text-sm border-collapse">
+                        <thead class="bg-surface-raised border-b border-line">
+                            <tr class="text-left text-[11px] uppercase tracking-wider text-content-subtle font-semibold">
+                                <th class="px-4 py-3 min-w-[220px]">Project</th>
+                                <th class="px-4 py-3 text-right whitespace-nowrap" title="The valuation report's counting lines — the full value of the works as currently valued.">Project Claim</th>
+                                <th class="px-4 py-3 text-right whitespace-nowrap" title="Valuation invoices the client has paid, plus retention withheld on works complete.">Cash Allocated</th>
+                                <th class="px-4 py-3 text-right whitespace-nowrap border-l border-line" title="Project claim less cash allocated, less the retention that will be withheld on the works still to value — what can actually be invoiced before the releases.">Left to Claim</th>
+                                <th class="px-4 py-3 text-right whitespace-nowrap" title="The Financials tab's drawdown to the penny — budget still expected to be spent, on top of orders and bills. Netted: an overspent centre reduces it.">Drawdowns</th>
+                                <th class="px-4 py-3 text-right whitespace-nowrap" title="Work-order value not yet invoiced by suppliers — committed spend still to bill.">Uninvoiced WOs</th>
+                                <th class="px-4 py-3 text-right whitespace-nowrap" title="The net still owed on allocated purchase lines, part-payment aware: a part-paid bill counts only its remainder.">Unpaid Bills</th>
+                                <th class="px-4 py-3 text-right whitespace-nowrap" title="The first retention release where still forecast — due at practical completion. A confirmed release has moved into the claim.">Retention R1</th>
+                                <th class="px-4 py-3 text-right whitespace-nowrap border-l border-line" title="Left to claim, less drawdowns, uninvoiced work orders and unpaid bills, plus the first retention release — the net cash movement to practical completion.">PC Cashflow</th>
+                                <th class="px-4 py-3 text-right whitespace-nowrap" title="The final retention release where still forecast — due after the defects period.">Retention R2</th>
+                                <th class="px-4 py-3 text-right whitespace-nowrap" title="Practical completion cashflow plus the final retention release — the project's net cash movement to the end of the defects period.">Completion Cashflow</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-line">
+                            @foreach (var project in SelectedProjects)
+                            {
+                                var row = RowFor(project.ProjectId);
+                                <tr>
+                                    <td class="px-4 py-3 whitespace-nowrap">
+                                        <a href="@($"/projects/{project.ProjectId}/cashflow")" class="hover:underline underline-offset-4">
+                                            <span class="font-mono text-[11px] text-content-subtle mr-2">@project.Reference</span>
+                                            <span class="text-content font-medium">@project.Name</span>
+                                        </a>
+                                    </td>
+                                    <td class="px-4 py-3 text-right whitespace-nowrap text-content">@Money(row.ProjectClaim)</td>
+                                    <td class="px-4 py-3 text-right whitespace-nowrap text-content">@Money(-row.CashAllocated)</td>
+                                    <td class="px-4 py-3 text-right whitespace-nowrap text-content border-l border-line">@Money(row.LeftToClaim)</td>
+                                    <td class="px-4 py-3 text-right whitespace-nowrap text-content">@Money(-row.Drawdown)</td>
+                                    <td class="px-4 py-3 text-right whitespace-nowrap text-content">@Money(-row.WoLeftToInvoice)</td>
+                                    <td class="px-4 py-3 text-right whitespace-nowrap @(row.BillsUnpaid == 0m ? "text-content" : "text-negative")">@Money(-row.BillsUnpaid)</td>
+                                    <td class="px-4 py-3 text-right whitespace-nowrap text-content-muted">@AddBack(row.Release1)</td>
+                                    <td class="px-4 py-3 text-right whitespace-nowrap font-medium border-l border-line @(row.PracticalCompletionCashflow < 0m ? "text-negative" : "text-positive")">@Money(row.PracticalCompletionCashflow)</td>
+                                    <td class="px-4 py-3 text-right whitespace-nowrap text-content-muted">@AddBack(row.Release2)</td>
+                                    <td class="px-4 py-3 text-right whitespace-nowrap font-medium @(row.ProjectCompletionCashflow < 0m ? "text-negative" : "text-positive")">@Money(row.ProjectCompletionCashflow)</td>
+                                </tr>
+                            }
+                        </tbody>
+                        @if (SelectedProjects.Count > 1)
+                        {
+                            var total = Totals();
+                            <tfoot class="border-t border-line bg-surface-raised">
+                                <tr class="font-semibold">
+                                    <td class="px-4 py-3 text-content">All projects</td>
+                                    <td class="px-4 py-3 text-right whitespace-nowrap text-content">@Money(total.ProjectClaim)</td>
+                                    <td class="px-4 py-3 text-right whitespace-nowrap text-content">@Money(-total.CashAllocated)</td>
+                                    <td class="px-4 py-3 text-right whitespace-nowrap text-content border-l border-line">@Money(total.LeftToClaim)</td>
+                                    <td class="px-4 py-3 text-right whitespace-nowrap text-content">@Money(-total.Drawdown)</td>
+                                    <td class="px-4 py-3 text-right whitespace-nowrap text-content">@Money(-total.WoLeftToInvoice)</td>
+                                    <td class="px-4 py-3 text-right whitespace-nowrap @(total.BillsUnpaid == 0m ? "text-content" : "text-negative")">@Money(-total.BillsUnpaid)</td>
+                                    <td class="px-4 py-3 text-right whitespace-nowrap text-content-muted">@AddBack(total.Release1)</td>
+                                    <td class="px-4 py-3 text-right whitespace-nowrap border-l border-line @(total.PracticalCompletionCashflow < 0m ? "text-negative" : "text-positive")">@Money(total.PracticalCompletionCashflow)</td>
+                                    <td class="px-4 py-3 text-right whitespace-nowrap text-content-muted">@AddBack(total.Release2)</td>
+                                    <td class="px-4 py-3 text-right whitespace-nowrap @(total.ProjectCompletionCashflow < 0m ? "text-negative" : "text-positive")">@Money(total.ProjectCompletionCashflow)</td>
+                                </tr>
+                            </tfoot>
+                        }
+                    </table>
+                </div>
+                <p class="text-xs text-content-subtle mt-3 max-w-3xl">
+                    Each row is that project's Cashflow tab collapsed to a line — the same sources,
+                    the same arithmetic, to the penny. Cash allocated counts valuation invoices the
+                    client has paid plus retention withheld on works complete; left to claim is net
+                    of the retention still to be withheld on works left to value; drawdowns reuse
+                    the Financials tab's netted figure; unpaid bills are part-payment aware; a
+                    retention release is only added back while it is still forecast. Click a
+                    project for the full statement.
+                </p>
+            }
+            </LoadGate>
+        }
+    </section>
+}
+
+@code {
+    // Session checked and the user is signed in. This is NOT "the figures are here": the heading,
+    // notice, filter and (for directors) the KPI tiles show at once; everything computed waits
+    // behind the one gate.
+    private bool sessionReady;
+    // The project list is what the filter and every row are built from, and its fetch throws
+    // rather than recording per-project failure — so a failure here opens the gate with a message.
+    private bool projectsFailed;
+    // True once the default (live jobs) selection has been seeded from the loaded project list —
+    // before that the table has no honest answer, not even "no projects selected".
+    private bool selectionInitialised;
+
+    // How many per-project loads run at once. Each load's reads run sequentially, so this is
+    // also the total concurrent-query ceiling (see the Profit Summary page; same reasoning).
+    // Each project here costs eleven reads, so the ceiling matters more, not less.
+    private const int ProjectRefreshConcurrency = 4;
+
+    // The §4.1 fallback when a project has no contract record: 30 days from issue to cash.
+    private const int DefaultPaymentLagDays = 30;
+
+    // The visible month axis is capped so the table stays readable; dated flows beyond it fold
+    // into the Later column rather than dropping off.
+    private const int MaxVisibleMonths = 12;
+
+    private IReadOnlyCollection<string> selectedIds = Array.Empty<string>();
+
+    // Per-project load state. A project is in exactly one of these once selected: loading (fetch
+    // in flight), loaded (every read landed), or failed (any read threw — its row shows zeros
+    // behind the banner). Ids, matched case-insensitively like every project id comparison.
+    private readonly HashSet<string> loadedProjects = new(StringComparer.OrdinalIgnoreCase);
+    private readonly HashSet<string> failedProjects = new(StringComparer.OrdinalIgnoreCase);
+    private readonly HashSet<string> loadingProjects = new(StringComparer.OrdinalIgnoreCase);
+
+    // Per-project answers to the reads the shared read models don't cache for us.
+    private readonly Dictionary<string, ProjectValuationInvoiceSummary> invoiceSummaryByProject = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, IReadOnlyList<ValuationInvoice>> invoicesByProject = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, ProjectRetention?> retentionByProject = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, IReadOnlyList<WorkOrderInvoiceSummary>> woSummariesByProject = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, IReadOnlyList<ProjectCostOfSalesLine>> costLinesByProject = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, IReadOnlyList<PackageReconciliationRow>> packagesByProject = new(StringComparer.OrdinalIgnoreCase);
+
+    // ONE throttle for the page's lifetime, not one per LoadSelectedAsync call — a filter change
+    // or retry while the first batch is still in flight must share the same ceiling.
+    private readonly SemaphoreSlim throttle = new(ProjectRefreshConcurrency);
+
+    // The interim overheads figure (see the amber notice and ForecastOverheadsStorage).
+    private decimal overheadsMonthly;
+
+    // Which forecast category rows are expanded to their per-project lines.
+    private readonly HashSet<ForecastCategory> expandedCategories = new();
+
+    // Bank tiles/rows are directors-only, mirroring the API's gate on the Xero cash summary.
+    private bool IsDirector =>
+        Session.ActiveRole is { } role && DesktopNavigation.CanSee(role, DesktopNavigation.DirectorRoles);
+
+    private XeroCashSummarySnapshot? BankSnapshot => IsDirector ? Cash.Snapshot() : null;
+
+    private bool BankReady => BankSnapshot is { IsConfigured: true, Error: null };
+
+    private string FetchedText =>
+        BankSnapshot?.FetchedAtUtc is { } fetched ? fetched.ToLocalTime().ToString("HH:mm") : "—";
+
+    // The selected projects in the canonical work order (re-applied after the filter, per the
+    // project-ordering convention) — the rows both sections render.
+    private List<Project> SelectedProjects =>
+        (Projects.Current ?? (IReadOnlyList<Project>)Array.Empty<Project>())
+            .Where(project => selectedIds.Contains(project.ProjectId, StringComparer.OrdinalIgnoreCase))
+            .InWorkOrder()
+            .ToList();
+
+    private List<Project> FailedSelectedProjects =>
+        SelectedProjects.Where(project => failedProjects.Contains(project.ProjectId)).ToList();
+
+    private bool TableReady =>
+        selectionInitialised
+        && SelectedProjects.All(project =>
+            loadedProjects.Contains(project.ProjectId) || failedProjects.Contains(project.ProjectId));
+
+    // ---- The statement figures (unchanged from the retired Cash Summary) --------------------
+    // One line per project, computed exactly as the project's Cashflow tab computes its
+    // statement — same sources, same helpers — so the two can never disagree.
+
+    private sealed record CashRow(
+        decimal ProjectClaim,
+        decimal CashReceived,
+        decimal RetentionOutstanding,
+        decimal InvoicedAwaitingPayment,
+        decimal RetentionStillToWithhold,
+        decimal LeftToClaim,
+        decimal Drawdown,
+        decimal WoCommitted,
+        decimal WoInvoiced,
+        decimal BillsUnpaid,
+        decimal Release1,
+        decimal Release2)
+    {
+        public decimal CashAllocated => CashReceived + RetentionOutstanding;
+
+        public decimal WoLeftToInvoice => WoCommitted - WoInvoiced;
+
+        public decimal PracticalCompletionCashflow =>
+            LeftToClaim - Drawdown - WoLeftToInvoice - BillsUnpaid + Release1;
+
+        public decimal ProjectCompletionCashflow => PracticalCompletionCashflow + Release2;
+    }
+
+    private ValuationClaim? LatestClaimFor(string projectId) =>
+        Claims.Current(projectId)
+            .OrderByDescending(claim => claim.ClaimNumber)
+            .FirstOrDefault();
+
+    private RetentionSchedule? ScheduleFor(string projectId, ValuationSummaryFigures figures) =>
+        retentionByProject.TryGetValue(projectId, out var terms) && terms is not null
+            ? RetentionSchedule.For(terms, figures.TotalWorksComplete, figures.RevisedContractSum)
+            : null;
+
+    private ValuationSummaryFigures FiguresFor(string projectId)
+    {
+        var invoiceSummary = invoiceSummaryByProject.TryGetValue(projectId, out var summary) ? summary : null;
+        var latest = LatestClaimFor(projectId);
+        var entries = latest is { Status: ValuationClaimStatus.Draft }
+            ? ClaimEntries.Current(latest.ValuationClaimId)
+            : Array.Empty<ClaimLine>();
+        return ValuationSummaryFigures.For(
+            Lines.Current(projectId), entries, latest,
+            invoiceSummary?.TotalCertified ?? 0m, invoiceSummary?.TotalDepositCredited ?? 0m);
+    }
+
+    private CashRow RowFor(string projectId)
+    {
+        var invoiceSummary = invoiceSummaryByProject.TryGetValue(projectId, out var summary) ? summary : null;
+        var figures = FiguresFor(projectId);
+
+        // Retention terms + schedule — no record means the retention figures show nothing and
+        // add nothing back, exactly as the Cashflow tab treats a project without terms.
+        var schedule = ScheduleFor(projectId, figures);
+        var retentionOutstanding = schedule?.Outstanding ?? 0m;
+        var terms = retentionByProject.TryGetValue(projectId, out var retention) ? retention : null;
+
+        var summaryRows = Summary.Current(projectId);
+        var orders = WorkOrders.Current(projectId);
+
+        var woCommitted = orders.Where(detail => !detail.Order.IsRejected).Sum(detail => detail.Order.Value);
+        var woInvoiced = (woSummariesByProject.TryGetValue(projectId, out var woSummaries)
+                ? woSummaries
+                : Array.Empty<WorkOrderInvoiceSummary>())
+            .Sum(orderSummary => orderSummary.InvoicedToDate);
+
+        var billsUnpaid = (costLinesByProject.TryGetValue(projectId, out var costLines)
+                ? costLines
+                : Array.Empty<ProjectCostOfSalesLine>())
+            .Sum(line => line.OutstandingNet);
+
+        var packages = packagesByProject.TryGetValue(projectId, out var packageRows)
+            ? packageRows
+            : Array.Empty<PackageReconciliationRow>();
+        var drawdown = ProjectDrawdown.ForProject(
+            summaryRows, ProjectDrawdown.CommittedByCostCode(orders), packages);
+
+        var projectClaim = summaryRows.Sum(row => row.BudgetedSales);
+        var cashReceived = invoiceSummary?.TotalPaid ?? 0m;
+
+        // Left to claim is net of the retention future valuations will withhold — the same
+        // CashflowMaths the project Cashflow tab uses, so the two agree to the penny.
+        var retentionStillToWithhold = CashflowMaths.RetentionStillToWithhold(
+            projectClaim, figures.TotalWorksComplete, terms?.RetentionPercent ?? 0m);
+
+        return new CashRow(
+            ProjectClaim: projectClaim,
+            CashReceived: cashReceived,
+            RetentionOutstanding: retentionOutstanding,
+            InvoicedAwaitingPayment: invoiceSummary?.Outstanding ?? 0m,
+            RetentionStillToWithhold: retentionStillToWithhold,
+            LeftToClaim: CashflowMaths.LeftToClaim(
+                projectClaim, cashReceived, retentionOutstanding, retentionStillToWithhold),
+            Drawdown: drawdown,
+            WoCommitted: woCommitted,
+            WoInvoiced: woInvoiced,
+            BillsUnpaid: billsUnpaid,
+            Release1: schedule?.CompletionRelease is { IsConfirmed: false } completion ? completion.Amount : 0m,
+            Release2: schedule?.FinalRelease is { IsConfirmed: false } final ? final.Amount : 0m);
+    }
+
+    private CashRow Totals()
+    {
+        var rows = SelectedProjects.Select(project => RowFor(project.ProjectId)).ToList();
+        return new CashRow(
+            rows.Sum(row => row.ProjectClaim),
+            rows.Sum(row => row.CashReceived),
+            rows.Sum(row => row.RetentionOutstanding),
+            rows.Sum(row => row.InvoicedAwaitingPayment),
+            rows.Sum(row => row.RetentionStillToWithhold),
+            rows.Sum(row => row.LeftToClaim),
+            rows.Sum(row => row.Drawdown),
+            rows.Sum(row => row.WoCommitted),
+            rows.Sum(row => row.WoInvoiced),
+            rows.Sum(row => row.BillsUnpaid),
+            rows.Sum(row => row.Release1),
+            rows.Sum(row => row.Release2));
+    }
+
+    // ---- The forecast --------------------------------------------------------------------
+    // The engine (CashForecastPhasing, contracts) owns every phasing rule; this page only
+    // prepares its inputs from the statement figures above and renders what comes back.
+
+    private sealed record ForecastRowInfo(ForecastCategory Category, string Label, string Source);
+
+    private static readonly ForecastRowInfo[] InRows =
+    {
+        new(ForecastCategory.InvoicesOutstanding, "Valuation invoices outstanding",
+            "already issued (or awaiting approval) · lands a payment-mechanism lag after issue"),
+        new(ForecastCategory.FutureValuations, "Future valuations",
+            "left to claim, spread over remaining valuation months, lagged by payment terms"),
+        new(ForecastCategory.RetentionReleases, "Retention releases",
+            "R1 at practical completion · R2 after the defects period")
+    };
+
+    private static readonly ForecastRowInfo[] OutRows =
+    {
+        new(ForecastCategory.BillsUnpaid, "Supplier bills unpaid",
+            "part-payment aware · assumed payable this month (per-bill due dates pending)"),
+        new(ForecastCategory.WorkOrdersToInvoice, "Work orders still to invoice",
+            "committed less invoiced, spread to practical completion, paid a month later"),
+        new(ForecastCategory.DrawdownsToSpend, "Drawdowns still to spend",
+            "budget beyond orders and bills, spread to practical completion, paid a month later")
+    };
+
+    private DateTimeOffset Now => DateTimeOffset.Now;
+
+    private ProjectForecastInputs ForecastInputsFor(Project project)
+    {
+        var projectId = project.ProjectId;
+        var row = RowFor(projectId);
+        var figures = FiguresFor(projectId);
+        var schedule = ScheduleFor(projectId, figures);
+        var contract = Contracts.ForProject(projectId);
+        var terms = retentionByProject.TryGetValue(projectId, out var retention) ? retention : null;
+
+        // §4.1 — the contract's payment mechanism: notice days then final date for payment.
+        var lagDays = contract is { } paymentTerms
+            ? Math.Max(1, paymentTerms.PaymentNoticeDays + paymentTerms.FinalDateForPaymentDays)
+            : DefaultPaymentLagDays;
+
+        // Itemised outstanding invoices at their expected receipt dates. Awaiting-approval
+        // invoices count one month later than issued ones — the approval loop's cost.
+        var receipts = new List<DatedAmount>();
+        decimal issuedOutstanding = 0m, awaitingApproval = 0m;
+        foreach (var invoice in invoicesByProject.TryGetValue(projectId, out var list)
+                     ? list : (IReadOnlyList<ValuationInvoice>)Array.Empty<ValuationInvoice>())
+        {
+            if (invoice.Status == ValuationInvoiceStatus.Issued)
+            {
+                var outstanding = invoice.Amount - invoice.AmountPaid;
+                if (outstanding == 0m) continue;
+                issuedOutstanding += outstanding;
+                receipts.Add(new DatedAmount(outstanding, invoice.IssuedAt?.AddDays(lagDays)));
+            }
+            else if (invoice.IsAwaitingApproval)
+            {
+                awaitingApproval += invoice.Amount;
+                receipts.Add(new DatedAmount(invoice.Amount, Now.AddMonths(1).AddDays(lagDays)));
+            }
+        }
+
+        // §4.2 — the remainder still to be valued: left to claim less the two invoice buckets,
+        // NOT floored — subtracting keeps the in-total exactly LeftToClaim, which is what makes
+        // the tie-back to the statement exact.
+        var futureValuations = row.LeftToClaim - issuedOutstanding - awaitingApproval;
+
+        // The spread anchor: practical completion from the retention terms, else the contract's
+        // completion date, else nothing honest — the engine sends the spreads to Undated.
+        var practicalCompletion = terms?.PracticalCompletionAt ?? contract?.CompletionDate;
+
+        return new ProjectForecastInputs(
+            projectId,
+            receipts,
+            futureValuations,
+            project.NextExpectedValuationDate,
+            practicalCompletion,
+            lagDays,
+            new DatedAmount(row.Release1, schedule?.CompletionRelease.DueOn),
+            new DatedAmount(row.Release2, schedule?.FinalRelease.DueOn),
+            row.BillsUnpaid,
+            row.WoLeftToInvoice,
+            row.Drawdown);
+    }
+
+    private sealed record ForecastView(
+        DateTime[] Axis,
+        IReadOnlyDictionary<ForecastCategory, decimal[]> Cells,
+        IReadOnlyDictionary<ForecastCategory, decimal> Later,
+        IReadOnlyDictionary<ForecastCategory, decimal> Undated,
+        IReadOnlyDictionary<ForecastCategory, List<(Project Project, PhasedCategory Phased)>> PerProject,
+        decimal[] Net,
+        decimal LaterNet,
+        decimal[] Closing,
+        int MinIndex,
+        List<(Project Project, decimal Variance)> Variances);
+
+    // Built ONCE per render, at the top of the markup, and threaded through — the same cost
+    // profile the retired page accepted for Totals().
+    private ForecastView BuildForecast()
+    {
+        var asOf = Now;
+        var start = CashForecastPhasing.MonthOf(asOf);
+        var projects = SelectedProjects;
+        var inputs = projects.Select(project => (Project: project, Inputs: ForecastInputsFor(project))).ToList();
+
+        var horizonEnd = CashForecastPhasing.HorizonEndFor(inputs.Select(pair => pair.Inputs), asOf);
+        var monthCount = Math.Clamp(CashForecastPhasing.MonthsBetween(start, horizonEnd) + 1, 1, MaxVisibleMonths);
+        var axis = Enumerable.Range(0, monthCount).Select(offset => start.AddMonths(offset)).ToArray();
+
+        var categories = Enum.GetValues<ForecastCategory>();
+        var cells = categories.ToDictionary(category => category, _ => new decimal[monthCount]);
+        var later = categories.ToDictionary(category => category, _ => 0m);
+        var undated = categories.ToDictionary(category => category, _ => 0m);
+        var perProject = categories.ToDictionary(
+            category => category, _ => new List<(Project Project, PhasedCategory Phased)>());
+        var variances = new List<(Project Project, decimal Variance)>();
+
+        foreach (var (project, projectInputs) in inputs)
+        {
+            var phased = CashForecastPhasing.Phase(projectInputs, asOf, monthCount);
+            foreach (var category in categories)
+            {
+                var answer = phased.Categories[category];
+                for (var index = 0; index < monthCount; index++) cells[category][index] += answer.Months[index];
+                later[category] += answer.Later;
+                undated[category] += answer.Undated;
+                if (answer.Total != 0m) perProject[category].Add((project, answer));
+            }
+
+            // The promise: phased buckets must reproduce the statement's completion cashflow.
+            var variance = phased.CompletionCashflow - RowFor(project.ProjectId).ProjectCompletionCashflow;
+            if (variance != 0m) variances.Add((project, variance));
+        }
+
+        var net = new decimal[monthCount];
+        for (var index = 0; index < monthCount; index++)
+        {
+            var cashIn = InRows.Sum(row => cells[row.Category][index]);
+            var cashOut = OutRows.Sum(row => cells[row.Category][index]) + overheadsMonthly;
+            net[index] = cashIn - cashOut;
+        }
+        var laterNet = InRows.Sum(row => later[row.Category]) - OutRows.Sum(row => later[row.Category]);
+
+        // The running balance, directors only — seeded from the bank position.
+        var closing = Array.Empty<decimal>();
+        var minIndex = 0;
+        if (BankReady && BankSnapshot is { } bank)
+        {
+            closing = new decimal[monthCount];
+            var balance = bank.TotalCash;
+            for (var index = 0; index < monthCount; index++)
+            {
+                balance += net[index];
+                closing[index] = balance;
+                if (balance < closing[minIndex]) minIndex = index;
+            }
+        }
+
+        return new ForecastView(axis, cells, later, undated, perProject, net, laterNet, closing, minIndex, variances);
+    }
+
+    // One rendering for a forecast category row plus its per-project lines, shared by both
+    // bands so cash in and cash out can never drift apart in shape (a templated delegate,
+    // like SideNav's ProjectOption).
+    private RenderFragment<(ForecastView Forecast, ForecastCategory Category, string Label, string Source)> CategoryRow => context =>
+        @<text>
+        @{
+            var forecast = context.Forecast;
+            var category = context.Category;
+            var label = context.Label;
+            var source = context.Source;
+            var expanded = expandedCategories.Contains(category);
+            var contributors = forecast.PerProject[category];
+        }
+        <tr class="border-b border-line">
+            <td class="px-4 py-2.5">
+                <button type="button" class="text-left" @onclick="() => ToggleCategory(category)"
+                        title="@(expanded ? "Collapse the per-project lines" : "Expand to one line per project")">
+                    <span class="inline-block w-3 text-content-subtle transition-transform @(expanded ? "rotate-90" : "")">▸</span>
+                    <span class="text-content font-medium hover:text-accent">@label</span>
+                </button>
+                <span class="block pl-3 text-[11px] text-content-faint">@source</span>
+            </td>
+            @for (var index = 0; index < forecast.Axis.Length; index++)
+            {
+                <td class="px-3 py-2.5 text-right whitespace-nowrap text-content">@CellAmount(forecast.Cells[category][index])</td>
+            }
+            <td class="px-3 py-2.5 text-right whitespace-nowrap border-l border-line text-content-muted">@CellAmount(forecast.Later[category])</td>
+            <td class="px-3 py-2.5 text-right whitespace-nowrap border-l border-line text-content-subtle">@CellAmount(forecast.Undated[category])</td>
+        </tr>
+        @if (expanded)
+        {
+            @if (contributors.Count == 0)
+            {
+                <tr class="border-b border-line">
+                    <td colspan="@(forecast.Axis.Length + 3)" class="px-4 pl-7 py-2 text-xs text-content-subtle italic">Nothing forecast in this category for the selected projects.</td>
+                </tr>
+            }
+            @foreach (var (project, phased) in contributors)
+            {
+                <tr class="border-b border-line">
+                    <td class="px-4 pl-7 py-2 whitespace-nowrap">
+                        <a href="@($"/projects/{project.ProjectId}/cashflow")" class="text-xs text-content-muted hover:text-content hover:underline underline-offset-4"
+                           title="This project's full statement — the figures this line is spread from">
+                            <span class="font-mono text-[10px] text-content-subtle mr-1.5">@project.Reference</span>@project.Name
+                        </a>
+                    </td>
+                    @for (var index = 0; index < forecast.Axis.Length; index++)
+                    {
+                        <td class="px-3 py-2 text-right whitespace-nowrap text-xs text-content-muted">@CellAmount(phased.Months[index])</td>
+                    }
+                    <td class="px-3 py-2 text-right whitespace-nowrap border-l border-line text-xs text-content-muted">@CellAmount(phased.Later)</td>
+                    <td class="px-3 py-2 text-right whitespace-nowrap border-l border-line text-xs text-content-subtle">@CellAmount(phased.Undated)</td>
+                </tr>
+            }
+        }
+        </text>;
+
+    // The balance line, drawn inline — one series, the zero line dashed, the trough flagged.
+    // Coordinates are formatted invariant: SVG wants dots regardless of the browser's culture.
+    private RenderFragment<ForecastView> BalanceChart => forecast =>
+        @<text>
+        @{
+            const double width = 1000, height = 140, padX = 30, padTop = 18, padBottom = 22;
+            var closing = forecast.Closing;
+            var low = Math.Min(0m, closing.Min());
+            var high = Math.Max(BankSnapshot?.TotalCash ?? 0m, closing.Max());
+            if (high == low) high = low + 1m;
+            string S(double value) => value.ToString("0.#", System.Globalization.CultureInfo.InvariantCulture);
+            double X(int index) => padX + (width - 2 * padX) * index / Math.Max(1, closing.Length - 1);
+            double Y(decimal value) => padTop + (height - padTop - padBottom) * (1 - (double)((value - low) / (high - low)));
+            var path = string.Join(" ", closing.Select((value, index) => $"{(index == 0 ? "M" : "L")}{S(X(index))} {S(Y(value))}"));
+        }
+        <svg width="100%" height="140" viewBox="0 0 1000 140" preserveAspectRatio="none" role="img"
+             aria-label="Closing bank balance by month">
+            <line x1="@S(padX)" y1="@S(Y(0m))" x2="@S(width - padX)" y2="@S(Y(0m))"
+                  stroke="#34373B" stroke-width="1" stroke-dasharray="4 4" />
+            <path d="@path" fill="none" stroke="#57E08A" stroke-width="2" stroke-linejoin="round" />
+            @for (var index = 0; index < closing.Length; index++)
+            {
+                var isMin = index == forecast.MinIndex;
+                <circle cx="@S(X(index))" cy="@S(Y(closing[index]))" r="@(isMin ? "5" : "3.5")"
+                        fill="@(isMin ? "#FF4D4D" : "#57E08A")" stroke="#161719" stroke-width="2">
+                    <title>@MonthLabel(forecast.Axis[index]): @Money(closing[index])</title>
+                </circle>
+                <text x="@S(X(index))" y="@S(height - 6)" text-anchor="@(index == 0 ? "start" : index == closing.Length - 1 ? "end" : "middle")"
+                      font-size="10" fill="#8A9099">@MonthLabel(forecast.Axis[index])</text>
+            }
+            <text x="@S(X(forecast.MinIndex))" y="@S(Y(closing[forecast.MinIndex]) - 10)"
+                  text-anchor="middle" font-size="11" font-weight="600" fill="#FF4D4D">@Money(closing[forecast.MinIndex])</text>
+        </svg>
+        </text>;
+
+    private void ToggleCategory(ForecastCategory category)
+    {
+        if (!expandedCategories.Remove(category)) expandedCategories.Add(category);
+    }
+
+    private async Task OnOverheadsChanged(ChangeEventArgs args)
+    {
+        overheadsMonthly = decimal.TryParse(args.Value?.ToString(), out var value) && value >= 0m ? value : 0m;
+        if (Auth.CurrentUser is { } user) await OverheadsStorage.WriteAsync(user.Email, overheadsMonthly);
+    }
+
+    // What the combined statement's header names — mirroring ProjectMultiSelect's own toggle
+    // label rules so the card and the filter always describe the selection in the same words.
+    private string SelectionLabel
+    {
+        get
+        {
+            var all = Projects.Current ?? (IReadOnlyList<Project>)Array.Empty<Project>();
+            var selected = SelectedProjects;
+            if (selected.Count == 1) return $"{selected[0].Reference} · {selected[0].Name}";
+            if (selected.Count == all.Count) return $"All projects ({selected.Count})";
+            var live = all.Where(ProjectMultiSelect.IsLiveJob).ToList();
+            if (selected.Count == live.Count
+                && live.All(project => selectedIds.Contains(project.ProjectId, StringComparer.OrdinalIgnoreCase)))
+                return $"Live jobs ({selected.Count})";
+            return $"{selected.Count} of {all.Count} projects";
+        }
+    }
+
+    private static string AddBack(decimal value) => value == 0m ? "—" : $"+ {Money(value)}";
+
+    private static string Money(decimal value) =>
+        value.ToString("C2",
+            System.Globalization.CultureInfo.GetCultureInfo("en-GB"));
+
+    // Forecast cells drop the pennies: twelve columns of £1,234.56 is noise, and the invariant
+    // is checked on the exact decimals underneath, never on what is displayed.
+    private static string CellAmount(decimal value) =>
+        value == 0m ? "—" : value.ToString("C0", System.Globalization.CultureInfo.GetCultureInfo("en-GB"));
+
+    private static string Signed(decimal value) =>
+        value == 0m ? "—"
+        : (value > 0m ? "+" : "") + value.ToString("C0", System.Globalization.CultureInfo.GetCultureInfo("en-GB"));
+
+    private static string MonthLabel(DateTime month) =>
+        month.ToString("MMM yy", System.Globalization.CultureInfo.GetCultureInfo("en-GB"));
+
+    // ---- Loading ------------------------------------------------------------
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Session.EnsureLoadedAsync();
+        if (!Auth.IsSignedIn) { Nav.NavigateTo("/login", forceLoad: true); return; }
+        Projects.OnChanged += StateHasChanged;
+        Summary.OnChanged += StateHasChanged;
+        WorkOrders.OnChanged += StateHasChanged;
+        Lines.OnChanged += StateHasChanged;
+        Claims.OnChanged += StateHasChanged;
+        ClaimEntries.OnChanged += StateHasChanged;
+        Contracts.OnChange += StateHasChanged;
+        Cash.OnChange += StateHasChanged;
+        sessionReady = true;
+
+        // The bank position loads alongside the table, directors only (stale-while-revalidate;
+        // the store's fetch-once guard covers the very first load).
+        if (IsDirector) _ = Cash.RefreshAsync();
+
+        if (Auth.CurrentUser is { } user)
+            overheadsMonthly = await OverheadsStorage.ReadAsync(user.Email) ?? 0m;
+
+        try
+        {
+            if (Projects.Current is null) await Projects.RefreshAsync(CancellationToken.None);
+        }
+        catch
+        {
+            // HttpQueryClient has already reported this to the error toast with a reference; here
+            // we only need to stop the table waiting on a list that is not coming.
+            projectsFailed = true;
+            return;
+        }
+        selectedIds = ProjectMultiSelect.LiveJobIds(Projects.Current ?? Array.Empty<Project>());
+        selectionInitialised = true;
+        await LoadSelectedAsync();
+    }
+
+    private async Task OnSelectionChangedAsync(IReadOnlyCollection<string> ids)
+    {
+        selectedIds = ids;
+        await LoadSelectedAsync();
+    }
+
+    private async Task RetryFailedAsync()
+    {
+        failedProjects.Clear();
+        await LoadSelectedAsync();
+    }
+
+    // Loads every selected project that hasn't been loaded yet, a few at a time — not all at
+    // once. Firing every project's eleven reads together stampedes the serverless database;
+    // each project inside the throttle runs its reads sequentially, so the ceiling is
+    // ProjectRefreshConcurrency queries in flight. Already-loaded projects are simply re-shown
+    // (fetch-once, like the read models beneath) — re-entering the page recreates it
+    // (KeyedPageRouteView) and reloads fresh.
+    private async Task LoadSelectedAsync()
+    {
+        var toLoad = SelectedProjects
+            .Where(project => !loadedProjects.Contains(project.ProjectId)
+                              && !failedProjects.Contains(project.ProjectId)
+                              && !loadingProjects.Contains(project.ProjectId))
+            .ToList();
+        if (toLoad.Count == 0) return;
+        foreach (var project in toLoad) loadingProjects.Add(project.ProjectId);
+        await Task.WhenAll(toLoad.Select(async project =>
+        {
+            await throttle.WaitAsync();
+            try
+            {
+                await LoadProjectAsync(project.ProjectId);
+                loadedProjects.Add(project.ProjectId);
+            }
+            catch
+            {
+                // The read model / query client has already raised the error toast; the row
+                // degrades to zeros behind the banner rather than a blank page.
+                failedProjects.Add(project.ProjectId);
+            }
+            finally
+            {
+                loadingProjects.Remove(project.ProjectId);
+                throttle.Release();
+            }
+        }));
+        StateHasChanged();
+    }
+
+    private async Task LoadProjectAsync(string projectId)
+    {
+        // Sequential on purpose — see LoadSelectedAsync. Claims must land before the entries
+        // read anyway, because only a Draft latest claim needs its per-line % entries.
+        await Summary.RefreshAsync(projectId, CancellationToken.None);
+        // The summary read model records failure rather than throwing (its page fires it
+        // fire-and-forget); here a silent all-zero row would be a lie, so failure fails the row.
+        if (Summary.LastRefreshFailed(projectId))
+            throw new InvalidOperationException("The financial summary could not be loaded.");
+        await WorkOrders.RefreshAsync(projectId, CancellationToken.None);
+        await Lines.RefreshAsync(projectId, CancellationToken.None);
+        await Claims.RefreshAsync(projectId, CancellationToken.None);
+        invoiceSummaryByProject[projectId] = await Invoices.GetSummaryAsync(projectId);
+        // The forecast's two extra reads: the itemised invoices (each phased at its own expected
+        // receipt date) and the contract (payment mechanism + completion-date fallback).
+        invoicesByProject[projectId] = await Invoices.ListAsync(projectId);
+        await Contracts.RefreshAsync(projectId, CancellationToken.None);
+        if (LatestClaimFor(projectId) is { Status: ValuationClaimStatus.Draft } draft)
+            await ClaimEntries.RefreshAsync(draft.ValuationClaimId, CancellationToken.None);
+        retentionByProject[projectId] = await Queries.AskAsync(new GetProjectRetention(projectId), CancellationToken.None);
+        woSummariesByProject[projectId] = await Queries.AskAsync(new ListWorkOrderInvoiceSummaries(projectId), CancellationToken.None);
+        costLinesByProject[projectId] = await Queries.AskAsync(new ListProjectCostOfSalesLines(projectId), CancellationToken.None);
+        packagesByProject[projectId] = await Queries.AskAsync(new ListPackageReconciliation(projectId), CancellationToken.None);
+    }
+
+    // ---- Excel export -------------------------------------------------------
+    // Sheet 1: the forecast as rendered — category rows per month plus Later/Undated, net
+    // movement, and (directors, bank connected) the closing balance. Sheet 2: the statement
+    // rows, signed the way the statement reads. Sheet 3: bank accounts, directors only.
+    private ExcelWorkbook? BuildExportWorkbook(bool _)
+    {
+        var projects = SelectedProjects;
+        if (projects.Count == 0) return null;
+
+        var workbook = new ExcelWorkbook();
+
+        // The export button is disabled until TableReady, so the forecast can always be built
+        // here — the workbook and the screen come from the same computation.
+        if (TableReady && BuildForecast() is { } forecast)
+        {
+            var columns = new List<ExcelColumn> { new("Row") };
+            columns.AddRange(forecast.Axis.Select(month => new ExcelColumn(MonthLabel(month), ExcelFormat.Currency)));
+            columns.Add(new ExcelColumn("Later", ExcelFormat.Currency));
+            columns.Add(new ExcelColumn("Undated", ExcelFormat.Currency));
+            var sheet = workbook.AddSheet("Cash forecast", columns.ToArray());
+
+            void AddCategoryRow(string label, ForecastCategory category, bool cashIn)
+            {
+                var values = new List<object> { label };
+                values.AddRange(forecast.Cells[category].Select(value => (object)(cashIn ? value : -value)));
+                values.Add(cashIn ? forecast.Later[category] : -forecast.Later[category]);
+                values.Add(cashIn ? forecast.Undated[category] : -forecast.Undated[category]);
+                sheet.AddRow(values.ToArray());
+            }
+
+            foreach (var row in InRows) AddCategoryRow(row.Label, row.Category, cashIn: true);
+            foreach (var row in OutRows) AddCategoryRow(row.Label, row.Category, cashIn: false);
+
+            var overheads = new List<object> { "Company overheads" };
+            overheads.AddRange(forecast.Axis.Select(_ => (object)(-overheadsMonthly)));
+            overheads.Add(0m);
+            overheads.Add(0m);
+            sheet.AddRow(overheads.ToArray());
+
+            var net = new List<object> { "Net movement" };
+            net.AddRange(forecast.Net.Select(value => (object)value));
+            net.Add(forecast.LaterNet);
+            net.Add(0m);
+            sheet.AddRow(net.ToArray());
+
+            if (forecast.Closing.Length > 0)
+            {
+                var closing = new List<object> { "Closing bank balance" };
+                closing.AddRange(forecast.Closing.Select(value => (object)value));
+                closing.Add(forecast.Closing[^1] + forecast.LaterNet);
+                closing.Add(0m);
+                sheet.AddRow(closing.ToArray());
+            }
+        }
+
+        var statement = workbook.AddSheet("Position to completion",
+            new ExcelColumn("Project"),
+            new ExcelColumn("Project claim", ExcelFormat.Currency),
+            new ExcelColumn("Cash received", ExcelFormat.Currency),
+            new ExcelColumn("Retention outstanding", ExcelFormat.Currency),
+            new ExcelColumn("Cash allocated", ExcelFormat.Currency),
+            new ExcelColumn("Left to claim", ExcelFormat.Currency),
+            new ExcelColumn("Cost centre drawdowns", ExcelFormat.Currency),
+            new ExcelColumn("Uninvoiced work orders", ExcelFormat.Currency),
+            new ExcelColumn("Unpaid purchase invoices", ExcelFormat.Currency),
+            new ExcelColumn("Retention release 1", ExcelFormat.Currency),
+            new ExcelColumn("Practical completion cashflow", ExcelFormat.Currency),
+            new ExcelColumn("Retention release 2", ExcelFormat.Currency),
+            new ExcelColumn("Project completion cashflow", ExcelFormat.Currency));
+
+        void AddStatementRow(string name, CashRow row) => statement.AddRow(
+            name,
+            row.ProjectClaim,
+            row.CashReceived,
+            row.RetentionOutstanding,
+            -row.CashAllocated,
+            row.LeftToClaim,
+            -row.Drawdown,
+            -row.WoLeftToInvoice,
+            -row.BillsUnpaid,
+            row.Release1,
+            row.PracticalCompletionCashflow,
+            row.Release2,
+            row.ProjectCompletionCashflow);
+
+        foreach (var project in projects)
+            AddStatementRow(project.Name, RowFor(project.ProjectId));
+
+        if (projects.Count > 1)
+            AddStatementRow("All projects", Totals());
+
+        if (BankSnapshot is { IsConfigured: true, Error: null } bank)
+        {
+            var banksSheet = workbook.AddSheet("Bank accounts",
+                new ExcelColumn("Account"),
+                new ExcelColumn("Balance", ExcelFormat.Currency));
+            foreach (var account in bank.BankAccounts.OrderByDescending(account => account.Balance))
+                banksSheet.AddRow(account.Name, account.Balance);
+            banksSheet.AddRow("Total", bank.TotalCash);
+        }
+
+        return workbook;
+    }
+
+    public void Dispose()
+    {
+        Projects.OnChanged -= StateHasChanged;
+        Summary.OnChanged -= StateHasChanged;
+        WorkOrders.OnChanged -= StateHasChanged;
+        Lines.OnChanged -= StateHasChanged;
+        Claims.OnChanged -= StateHasChanged;
+        ClaimEntries.OnChanged -= StateHasChanged;
+        Contracts.OnChange -= StateHasChanged;
+        Cash.OnChange -= StateHasChanged;
+        // The throttle is deliberately NOT disposed: a load still in flight when the user
+        // navigates away would Release() a disposed semaphore and fault the abandoned task.
+        // An undisposed SemaphoreSlim (no wait-handle use) holds nothing worth reclaiming.
+    }
+}

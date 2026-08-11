@@ -26,7 +26,6 @@
         "/architects"     => "<circle cx='12' cy='5' r='2'/><path d='M12 7l-5 13M12 7l5 13'/><path d='M8.4 15.5a7.5 7.5 0 0 0 7.2 0'/>",
         // Folder icon keys (see SidebarFolders: "#..." keys identify the collapsible folders,
         // shown as one icon per folder in the collapsed rail and on the landing-page cards).
-        "#client"         => "<path d='M3 21V8l6-4v17'/><path d='M9 21V11l6 4v6'/><path d='M6 8h.01M6 12h.01M6 16h.01'/>",
         "#subcontractor"  => "<rect x='3' y='9' width='18' height='10' rx='2'/><path d='M9 9V7a3 3 0 0 1 6 0v2'/><path d='M3 14h18'/>",
         "#internal"       => "<path d='M4 5.5l1.5 1.5L8 4.5'/><path d='M11 6h9'/><path d='M4 12.5l1.5 1.5L8 11.5'/><path d='M11 13h9'/><path d='M4 19.5l1.5 1.5L8 18.5'/><path d='M11 20h9'/>",
         "#project"        => "<rect x='4' y='5' width='16' height='16' rx='2'/><path d='M9 5V4a3 3 0 0 1 6 0v1'/><path d='M9 13l2 2 4-4'/>",
@@ -36,14 +35,22 @@
         // bar chart — worked money vs read money (decision 2026-08-04).
         "#finance"        => "<rect x='3' y='6' width='18' height='12' rx='2'/><circle cx='12' cy='12' r='2.5'/><path d='M6.5 9.5h.01M17.5 14.5h.01'/>",
         "#financial-reports" => "<path d='M6 3h9l4 4v14H6z'/><path d='M15 3v4h4'/><path d='M9 17v-3M12 17v-6M15 17v-4'/>",
+        // Xero: the X-in-a-circle the Transactions entry already wore — now the folder's mark.
+        "#xero"           => "<circle cx='12' cy='12' r='8'/><path d='M9 9l6 6M15 9l-6 6'/>",
         // Audit: a magnifier over the register — reviewing what was done, not doing it.
         "#audit"          => "<path d='M4 5h9M4 9h6M4 13h4'/><circle cx='14.5' cy='13.5' r='4'/><path d='M17.4 16.4l3.1 3.1'/>",
         "#admin"          => "<path d='M12 3l7 3v5c0 4.5-2.9 8.4-7 10-4.1-1.6-7-5.5-7-10V6z'/><path d='M9.2 12l2 2 3.6-3.8'/>",
         "/admin/users"    => "<circle cx='9' cy='8' r='3'/><path d='M3 20a6 6 0 0 1 12 0'/><path d='M17.5 10l3.5 1.4v2.6c0 2.6-1.7 4.9-3.5 5.8-1.8-.9-3.5-3.2-3.5-5.8v-2.6z'/>",
         "/finance"        => "<rect x='3' y='6' width='18' height='12' rx='2'/><circle cx='12' cy='12' r='2.5'/><path d='M6.5 9.5h.01M17.5 14.5h.01'/>",
+        "/finance/cash-forecast" => "<rect x='3' y='6' width='18' height='12' rx='2'/><circle cx='12' cy='12' r='2.5'/><path d='M6.5 9.5h.01M17.5 14.5h.01'/>",
         "/labour/workers" => "<rect x='3' y='9' width='18' height='10' rx='2'/><path d='M9 9V7a3 3 0 0 1 6 0v2'/><path d='M3 14h18'/>",
         "/finance/xero"   => "<circle cx='12' cy='12' r='8'/><path d='M9 9l6 6M15 9l-6 6'/>",
         "/finance/allocation" => "<path d='M4 7h7M4 12h7M4 17h7'/><path d='M15 7h5M15 12h5M15 17h5'/><path d='M11 7l4 5-4 5'/>",
+        // The standalone rows at the foot of the sidebar (SidebarFolders.Standalone) render by
+        // route like Home does — the Control Centre's envelope, and the valuation report's
+        // ticked certificate (the flagship output, elevated 2026-08-11).
+        "/control-centre" => "<rect x='3' y='5' width='18' height='14' rx='2'/><path d='M3 7l9 6 9-6'/>",
+        "/projects/{project}/valuation" => "<path d='M6 3h9l4 4v14H6z'/><path d='M15 3v4h4'/><path d='M9.5 14.5l2 2 3.5-4'/><path d='M9 9h4'/>",
         _                 => "<circle cx='12' cy='12' r='8'/>"
     };
 }

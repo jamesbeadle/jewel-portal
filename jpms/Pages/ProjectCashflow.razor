@@ -17,7 +17,7 @@
 @inject NavigationManager Nav
 @implements IDisposable
 
-<PageTitle>Cashflow · JPMS</PageTitle>
+<PageTitle>Project Cashflow · JPMS</PageTitle>
 
 @if (!sessionReady)
 {
@@ -32,12 +32,13 @@ else if (!Session.IsApproved)
 else
 {
     <ProjectPageShell ProjectId="@ProjectId" ActiveTab="cashflow">
-        <h2 class="text-lg font-semibold text-content mb-1">Cashflow</h2>
+        <h2 class="text-lg font-semibold text-content mb-1">Project Cashflow</h2>
         <p class="text-sm text-content-subtle mb-4 max-w-2xl">
             The project claim against the cash already allocated, then the cash still to move —
             out to costs, back from retention — through practical completion to the end of the
-            project. This statement combined across every project, filterable by project, is the
-            <a href="/finance" class="underline underline-offset-2 hover:text-content">Cash Summary</a>.
+            project. These figures spread across the months they are expected to land in, company
+            wide, are the
+            <a href="/finance/cash-forecast" class="underline underline-offset-2 hover:text-content">Cash Forecast</a>.
         </p>
 
         @* ── Statement on the left, its explanatory notes alongside — the two share the width

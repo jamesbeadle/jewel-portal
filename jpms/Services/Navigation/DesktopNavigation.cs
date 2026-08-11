@@ -42,6 +42,15 @@ public static class DesktopNavigation
             .Append(Role.Subcontractor)
             .ToArray();
 
+    // ---------------------------------------------------------------------------------------
+    // NAV CLAMP (decision 2026-08-11): every sidebar row is currently gated DirectorRoles —
+    // only the MD, FD and administrators use the system, so every other role sees Home alone
+    // until its own nav is designed. The per-duty sets below are deliberately KEPT: they still
+    // mirror the API's authorisation sets (untouched by the clamp) and they are what the future
+    // per-role nav will be rebuilt from. Do not delete them for being unreferenced by
+    // SidebarFolders.
+    // ---------------------------------------------------------------------------------------
+
     // The internal office/management roles that can open projects. Internal (not public):
     // SidebarFolders is the only outside consumer, and it lives in this assembly.
     internal static readonly Role[] ProjectRoles =
@@ -112,7 +121,8 @@ public static class DesktopNavigation
     // every ordinary role's sidebar — exactly as the old dashboard panels were.
     internal static readonly Role[] AdministratorOnly = Array.Empty<Role>();
 
-    // Directors only — reserved for the company's most sensitive figures (Cash Summary).
+    // Directors only. Originally reserved for the company's most sensitive figures (the bank
+    // position); since 2026-08-11 also the whole catalog's nav gate — see the NAV CLAMP note.
     internal static readonly Role[] DirectorRoles =
     {
         Role.ManagingDirector,
@@ -134,6 +144,14 @@ public static class DesktopNavigation
         role == Role.Admin || visibleTo.Contains(role);
 
     public static bool CanSeeProjects(Role role) => CanSee(role, ProjectRoles);
+
+    /// <summary>Whether the role's visible nav actually contains a project-scoped row — what the
+    /// sidebar's project picker gates on. Distinct from CanSeeProjects (the API-mirroring "may
+    /// open projects" set): under the nav clamp a PM can still open project pages by URL, but a
+    /// picker above an empty rail would be an orphan.</summary>
+    public static bool HasProjectScopedRows(Role role) =>
+        FoldersFor(role).SelectMany(folder => folder.Items).Any(item => item.IsProjectScoped)
+        || StandaloneItemsFor(role).Any(item => item.IsProjectScoped);
 
     // Decision 2026-07-27: widened from DirectorRoles to the commercial team. The assistant now
     // drafts variations from RFI correspondence inside the Create Variation Order Quote dialog
@@ -181,7 +199,7 @@ public static class DesktopNavigation
             .ToList();
 
     /// <summary>Where the bare project URL (/projects/{id}) lands: the first project-scoped row
-    /// of the first visible folder — Client → Requests for full-access roles. The Requests
+    /// of the first visible folder — Project → Requests for full-access roles. The Requests
     /// fallback keeps the redirect deterministic if a role somehow reaches a project URL with no
     /// project rows; the page's own RBAC remains the enforcement.</summary>
     public static string FirstProjectTabHref(Role role, string projectId)
