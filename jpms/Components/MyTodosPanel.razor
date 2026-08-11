@@ -4,6 +4,7 @@
 @inject SessionService Session
 @inject AuthService Auth
 @inject TodoViewStorage ViewStorage
+@inject NavigationManager Nav
 @inject Jewel.JPMS.Features.Projects.ProjectListReadModel Projects
 
 @*
@@ -14,9 +15,9 @@
     signed-in user holds — minus any pinned to a different named person, plus the ones pinned to
     them — general (company-wide) and project items alike, read through ListMyTodoItems (the
     server stamps the roles and email from the session). Rows show only the title;
-    clicking one opens the detail modal (TodoDetailModal) with the full detail, the item's linked
-    emails, and the Mark done action — the API allows a role-holder to update their role's items
-    even outside the manage-todos gate. Completing removes the item from this open-only panel.
+    clicking one opens the item's own page (/todos/{id}) with the full detail, the linked to-dos
+    and communications, and the Mark done action — the API allows a role-holder to update their
+    role's items even outside the manage-todos gate. The board's drag is this panel's own tick-off.
     The full list, with filters and done items, lives on the /todos page.
 *@
 
@@ -44,7 +45,7 @@
     </div>
     <p class="text-xs text-content-subtle mb-4">
         Items assigned to your roles or to you by name — general and project to-dos alike. Click
-        one for its detail, linked emails and to mark it done.
+        one for its detail, linked to-dos and communications, and to mark it done.
     </p>
 
     @if (error is not null)
@@ -78,7 +79,7 @@
            drags. The Done column is capped: this is a dashboard glance, the full pile lives on
            the To-dos page behind View all. *@
         <TodoBoard Items="@BoardItems" Busy="@busy" Compact="true" DoneCap="6"
-                   OnOpen="item => selected = item"
+                   OnOpen="OpenItem"
                    OnSetComplete="args => SetComplete(args.Item, args.IsComplete)"
                    CanDrag="_ => true"
                    Scope="ScopeChipFor" />
@@ -98,7 +99,7 @@
             {
                 <button type="button" @key="item.TodoItemId" title="Open this item"
                         class="w-full rounded-lg border border-line px-3 py-2 text-left hover:border-line-strong hover:bg-surface-raised"
-                        @onclick="() => selected = item">
+                        @onclick="() => OpenItem(item)">
                     <p class="truncate text-sm text-content">
                         <span class="font-mono text-xs text-content-muted mr-2">@item.Reference</span>@item.Title
                     </p>
@@ -119,13 +120,6 @@
     }
 </div>
 
-<TodoDetailModal Item="@selected" Busy="@busy" Error="@(selected is null ? null : error)"
-                 ScopeLabel="@(selected is null ? null : ScopeLabel(selected))"
-                 CanComplete="true" CanDelete="false"
-                 CanReassign="@CanManage" AssigneeOptions="@assigneeOptions"
-                 OnClose="() => selected = null"
-                 OnToggleComplete="Complete" OnReassign="Reassign" />
-
 @code {
     /// <summary>
     /// Fires with the current OPEN items whenever they change — on the initial load and after a
@@ -144,54 +138,23 @@
     // The assigned-role filter ("" = all my roles) — the panel's items are all the reader's own,
     // so unlike the bigger lists there is no Unassigned answer to offer.
     private string roleFilter = "";
-    // The role pool for the detail modal's reassign picker — fetched only for users inside the
-    // manage gate, who are the only ones offered the control.
-    private IReadOnlyList<SearchSelect.Option> assigneeOptions = Array.Empty<SearchSelect.Option>();
     private bool loading = true;
     private bool busy;
     private string? error;
-
-    // The item open in the detail modal (null = closed). This panel lists open items only, so a
-    // successful complete closes the modal and drops the item from the panel; the /todos page is
-    // where it reappears under Done.
-    private TodoItem? selected;
-
-    // Mirrors the API's TodoRoles.AllowedToManageTodos gate: directors (managing and finance),
-    // project managers, site managers and accounts (administrators carry every role). Everyone else
-    // can tick their own items off here but not hand them on.
-    private bool CanManage =>
-        Session.AvailableRoles.Any(role => role is Role.Admin or Role.ManagingDirector or Role.FinanceDirector
-            or Role.ProjectManager or Role.SiteManager or Role.Accounts);
 
     protected override async Task OnInitializedAsync()
     {
         boardView = await ViewStorage.ReadBoardAsync(Auth.CurrentUser?.Email ?? "");
 
-        // Three independent reads — the list is the panel, the labels dress the modal's scope
-        // line, the role pool feeds the reassign picker. None needs another, so they run together
-        // instead of each waiting its turn behind the last.
-        var loads = new List<Task> { LoadAsync(), LoadProjectLabelsAsync() };
-        if (CanManage) loads.Add(LoadAssigneeOptionsAsync());
-        await Task.WhenAll(loads);
+        // Two independent reads — the list is the panel, the labels dress the rows' scope lines.
+        // Neither needs the other, so they run together instead of one waiting behind the last.
+        await Task.WhenAll(LoadAsync(), LoadProjectLabelsAsync());
     }
 
-    // Project labels for the modal's scope line — a failed load degrades the label, never the list.
+    // Project labels for the rows' scope lines — a failed load degrades the label, never the list.
     private async Task LoadProjectLabelsAsync()
     {
         try { if (Projects.Current is null) await Projects.RefreshAsync(CancellationToken.None); } catch { }
-    }
-
-    // A failed load leaves the reassign picker with no options, which hides the control — the
-    // panel's own job (read and tick off) is untouched.
-    private async Task LoadAssigneeOptionsAsync()
-    {
-        try
-        {
-            var rolesTask = Todos.ListAssignableRolesAsync();
-            var peopleTask = Todos.ListAssignablePeopleAsync();
-            assigneeOptions = TodoAssigneePicker.BuildOptions(await rolesTask, await peopleTask);
-        }
-        catch { }
     }
 
     private async Task LoadAsync()
@@ -207,12 +170,14 @@
         finally { loading = false; }
     }
 
-    private Task Complete(TodoItem item) => SetComplete(item, !item.IsComplete);
+    // Opening an item is a navigation: everything beyond the row — full detail, linked to-dos,
+    // communications, the manage actions — lives on the item's own page.
+    private void OpenItem(TodoItem item) => Nav.NavigateTo($"/todos/{item.TodoItemId}");
 
-    // One path for both ways status changes: the detail modal's Mark done / Reopen (done cards
-    // are reachable on the board, so reopening is a real ask here now) and the board's drag onto
-    // the other column. The list is refetched so the item re-files under its new column with the
-    // server's ordering, and the open-items event keeps the dashboard tiles telling the same story.
+    // The board's drag onto the other column — this panel's own tick-off (and reopen: done cards
+    // are reachable on the board). The list is refetched so the item re-files under its new column
+    // with the server's ordering, and the open-items event keeps the dashboard tiles telling the
+    // same story.
     private async Task SetComplete(TodoItem item, bool complete)
     {
         if (busy || item.IsComplete == complete) return;
@@ -231,38 +196,6 @@
             items = await Todos.ListMineAsync();
             openItems = items.Where(open => !open.IsComplete).ToList();
             await OnOpenItemsChanged.InvokeAsync(openItems);
-            selected = null;
-        }
-        catch (CommandFailedException ex) { error = ex.Message; }
-        catch { error = "That action didn't complete. Please try again."; }
-        finally { busy = false; }
-    }
-
-    // Hand the item to a different assignee (a role, optionally pinned to a person). This panel is
-    // "items assigned to ME", so passing one on usually means it leaves the panel — reload and
-    // re-find, and close the modal when it has gone rather than leaving a record on screen that is
-    // no longer this reader's.
-    private async Task Reassign(TodoAssignee? assignee)
-    {
-        if (busy || selected is null) return;
-        var item = selected;
-        if (TodoAssigneePicker.Value(assignee) == TodoAssigneePicker.ValueFor(item)) return;
-        error = null;
-        try
-        {
-            busy = true;
-            await Todos.UpdateAsync(new UpdateTodoItem(
-                item.TodoItemId,
-                item.Title,
-                NullIfBlank(item.Notes),
-                assignee?.Role,
-                assignee?.PersonEmail,
-                item.DueAt,
-                item.IsComplete));
-            items = await Todos.ListMineAsync();
-            openItems = items.Where(open => !open.IsComplete).ToList();
-            await OnOpenItemsChanged.InvokeAsync(openItems);
-            selected = items.FirstOrDefault(open => open.TodoItemId == item.TodoItemId);
         }
         catch (CommandFailedException ex) { error = ex.Message; }
         catch { error = "That action didn't complete. Please try again."; }

@@ -24,11 +24,6 @@ public sealed class RaiseRequestHandler : ICommandHandler<RaiseRequest, Request>
 
         var manualReference = !string.IsNullOrWhiteSpace(command.Reference);
 
-        // A "Raised to" picked from the project's contact list resolves to its display string here
-        // (and fails loudly if the contact isn't on this project); free text passes through as-is.
-        var raisedToContact = await RaisedToContactResolver.ResolveAsync(
-            context, command.ProjectId, command.RaisedToContactId, cancellationToken);
-
         RequestEntity entity;
         for (var attempt = 1; ; attempt++)
         {
@@ -72,8 +67,6 @@ public sealed class RaiseRequestHandler : ICommandHandler<RaiseRequest, Request>
                     ? command.RespondedAt ?? DateTimeOffset.UtcNow
                     : null,
                 ImpliesVariation = false,
-                RaisedTo = raisedToContact?.Display ?? command.RaisedTo,
-                RaisedToContactId = raisedToContact?.ContactId,
                 DrawingRef = command.DrawingRef,
                 ResponseDue = command.ResponseDue,
                 RelatedDrawingSpec = null,

@@ -1,0 +1,361 @@
+@namespace Jewel.JPMS.Features.Triage.Panels
+@using Jewel.JPMS.Contracts.RecordLinks
+@inject IIntakeQueue Intake
+
+@* THE tagging surface for triage: one workspace pane, three tabs — Client / Subcontractor /
+   Internal — each linking the email to the records that side of the system already has. Tagging
+   only (2026-08-10): CREATING records from the email — requests, bid packages, work orders,
+   defects, to-dos — lives in System Actions, the one home for every creation. Everything here is
+   STAGED: picked records go back to the page as pending work, applied (and tagged, verified) by
+   the page's single Apply. A thread already filed under a pathway opens locked to its own tab —
+   the client wall in tab form. *@
+
+@if (IsOpen)
+{
+<div class="panel p-5">
+    <div class="flex items-center justify-between gap-3 mb-4">
+        <div class="min-w-0">
+            <h2 class="text-base font-semibold text-content">System tags</h2>
+            <p class="text-xs text-content-subtle truncate">Staged against: @(string.IsNullOrWhiteSpace(EmailSubject) ? "the open email" : EmailSubject)</p>
+        </div>
+    </div>
+    <div class="space-y-4">
+
+        @* Who is this correspondence with? The tab IS the pathway decision. *@
+        <div class="flex items-center gap-2 border-b border-line">
+            @foreach (var tab in Tabs)
+            {
+                var locked = LockedPathway is { } fixedTab && fixedTab != tab;
+                <button type="button" @key="tab" disabled="@locked"
+                        title="@(locked ? $"This thread is already filed under {LockedPathway} — its routing was decided at first filing" : TabHint(tab))"
+                        class="@TabClass(tab, locked)" @onclick="() => SwitchTab(tab)">
+                    @tab
+                </button>
+            }
+        </div>
+        @if (LockedPathway is { } lockedPathway)
+        {
+            <p class="text-xs text-content-subtle -mt-2">Already filed under <span class="font-medium text-content">@lockedPathway</span> — tags here work within it.</p>
+        }
+
+        @* What's staged so far, across every tab — the running total. *@
+        @if (Picked.Count > 0)
+        {
+            <div class="flex flex-wrap items-center gap-1.5">
+                @foreach (var picked in Picked.ToList())
+                {
+                    <span @key="picked.RecordId" class="inline-flex items-center gap-1 rounded-full border border-accent/50 bg-accent/5 text-accent pl-2.5 pr-1 py-0.5 text-xs" title="@picked.Title">
+                        <span>🔗 @picked.Reference</span>
+                        <button type="button" class="leading-none px-1 text-accent/70 hover:text-negative" title="Unpick"
+                                @onclick="() => TogglePick(picked)">&times;</button>
+                    </span>
+                }
+            </div>
+        }
+
+        @* The one record-less tag on the Subcontractor side: general correspondence. A tick, not
+           a search — no project needed, staged like every pick and applied by the same Apply; the
+           mail reads back under Subcontractor → Communications. *@
+        @if (activeTab == "Subcontractor")
+        {
+            <label class="flex items-start gap-2 cursor-pointer select-none">
+                <input type="checkbox" checked="@IsCommsPicked" @onchange="ToggleCommsPickAsync" />
+                <span class="text-sm text-content">
+                    Subcontractor communication
+                    <span class="block text-xs text-content-subtle">Tags the thread as general subcontractor correspondence — no record needed. It appears under Subcontractor → Communications.</span>
+                </span>
+            </label>
+        }
+
+        @if (string.IsNullOrWhiteSpace(ProjectId))
+        {
+            <p class="rounded-lg bg-amber-500/10 border border-amber-500/40 px-3 py-2 text-xs text-content">
+                Set the email's <span class="font-medium">Project</span> above first — tags file the email against a project's records. To create a new record or to-do from this email, use <span class="font-medium">System actions</span>.
+            </p>
+        }
+        else
+        {
+            @if (activeTab == "Internal")
+            {
+                <p class="text-xs text-content-subtle">Link this email to existing to-do items — the email is tagged to every picked item on apply. To draft NEW to-dos from this email, use System actions.</p>
+            }
+            @LinkPicker
+        }
+    </div>
+
+    <div class="flex items-center justify-end pt-4">
+        <button type="button" class="btn-primary" @onclick="CloseAsync"
+                title="Tidies the staged list and hands this window back to what it showed before — nothing is applied until the inbox's Apply">Done</button>
+    </div>
+</div>
+}
+
+@code {
+    private static readonly string[] Tabs = { "Client", "Subcontractor", "Internal" };
+
+    // What each tab can link to. Cost Centre removed as a filing destination (2026-08-04);
+    // VariationQuote folded into Variation (one record, one number). Scheduling removed
+    // (2026-08-07): the programme bucket isn't a record anyone picks — the page's own
+    // "Relevant Event for Programme" checkbox files to it instead; the bucket's claims
+    // documents stay reachable here via Request / RFI and LADs claim.
+    private static readonly RecordType[] ClientTypes = { RecordType.Request, RecordType.Variation, RecordType.Lad };
+    private static readonly RecordType[] SubcontractorTypes = { RecordType.BidPackageInvite, RecordType.WorkOrder, RecordType.Defect };
+    private static readonly RecordType[] InternalTypes = { RecordType.Todo };
+
+    /// <summary>True while there is an email to stage against — the page renders the pane per
+    /// selected email (keyed on the message id), so a fresh selection starts a fresh pane.</summary>
+    [Parameter] public bool IsOpen { get; set; }
+
+    /// <summary>Done pressed — the page hands this window back to what it showed before.</summary>
+    [Parameter] public EventCallback OnClose { get; set; }
+    [Parameter] public string ProjectId { get; set; } = "";
+    [Parameter] public string EmailSubject { get; set; } = "";
+
+    /// <summary>The thread's fixed pathway label ("Client"/"Subcontractor"/"Internal"), when it is
+    /// already filed — locks the tabs to that side (the wall in tab form). Null = free choice.</summary>
+    [Parameter] public string? LockedPathway { get; set; }
+
+    /// <summary>The tab in use — the pathway decision, reported up so the page files the thread
+    /// (and stamps Replied) under it.</summary>
+    [Parameter] public string? ActivePathway { get; set; }
+    [Parameter] public EventCallback<string> ActivePathwayChanged { get; set; }
+
+    /// <summary>Page-owned staged record links; the pane mutates and notifies.</summary>
+    [Parameter] public List<LinkableRecord> Picked { get; set; } = new();
+    [Parameter] public EventCallback OnStagingChanged { get; set; }
+
+    private string activeTab = "Client";
+    private RecordType linkType = RecordType.Request;
+    private string search = "";
+    private bool loading;
+    private string loadedKey = "";
+    private IReadOnlyList<LinkableRecord> records = Array.Empty<LinkableRecord>();
+    private bool wasOpen;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (IsOpen && !wasOpen)
+        {
+            activeTab = LockedPathway ?? ActivePathway ?? "Client";
+            linkType = DefaultTypeFor(activeTab);
+            await LoadRecordsAsync();
+        }
+        else if (IsOpen)
+        {
+            // The pane sits beside the triage bar's project picker, so the project can change
+            // while it is open — re-read the pool. loadedKey makes this a no-op unless the
+            // project (or type) actually differs from what is loaded.
+            await LoadRecordsAsync();
+        }
+        wasOpen = IsOpen;
+    }
+
+    private IReadOnlyList<RecordType> TypesFor(string tab) => tab switch
+    {
+        "Subcontractor" => SubcontractorTypes,
+        "Internal" => InternalTypes,
+        _ => ClientTypes
+    };
+
+    private static RecordType DefaultTypeFor(string tab) => tab switch
+    {
+        "Subcontractor" => RecordType.BidPackageInvite,
+        "Internal" => RecordType.Todo,
+        _ => RecordType.Request
+    };
+
+    private async Task SwitchTab(string tab)
+    {
+        if (activeTab == tab) return;
+        activeTab = tab;
+        linkType = DefaultTypeFor(tab);
+        search = "";
+        await ActivePathwayChanged.InvokeAsync(tab);
+        await LoadRecordsAsync();
+    }
+
+    private async Task OnTypeChanged(ChangeEventArgs e)
+    {
+        if (Enum.TryParse<RecordType>(e.Value?.ToString(), out var type)) linkType = type;
+        await LoadRecordsAsync();
+    }
+
+    private async Task LoadRecordsAsync()
+    {
+        if (string.IsNullOrWhiteSpace(ProjectId)) { records = Array.Empty<LinkableRecord>(); return; }
+        var key = $"{ProjectId}|{linkType}";
+        if (key == loadedKey) return;
+        loading = true;
+        try
+        {
+            records = await Intake.ListLinkableRecordsAsync(ProjectId, linkType);
+            loadedKey = key;
+        }
+        catch { records = Array.Empty<LinkableRecord>(); loadedKey = ""; }
+        finally { loading = false; }
+    }
+
+    private async Task TogglePick(LinkableRecord record)
+    {
+        var existing = Picked.FirstOrDefault(r => r.RecordId == record.RecordId);
+        if (existing is not null) Picked.Remove(existing);
+        else Picked.Add(record);
+        await OnStagingChanged.InvokeAsync();
+    }
+
+    // The Subcontractor tab's "communication" tick — the constant record staged through the same
+    // picks list as everything else, so the chips, the badge and the one Apply need nothing new.
+    private bool IsCommsPicked =>
+        Picked.Any(record => record.Type == RecordType.SubcontractorComms);
+
+    private Task ToggleCommsPickAsync() => TogglePick(SubcontractorComms.Record);
+
+    private async Task CloseAsync()
+    {
+        await OnStagingChanged.InvokeAsync();
+        await OnClose.InvokeAsync();
+    }
+
+    // ---- link picker (shared by every tab) ----
+
+    private RenderFragment LinkPicker => __builder =>
+    {
+        <div class="space-y-3">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                    <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Record type</label>
+                    <select class="field" value="@((int)linkType)" @onchange="OnTypeChanged" disabled="@(TypesFor(activeTab).Count == 1)">
+                        @foreach (var recordType in TypesFor(activeTab))
+                        {
+                            <option value="@((int)recordType)">@TypeLabel(recordType)</option>
+                        }
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Search</label>
+                    <input class="field" type="text" placeholder="Reference or title…" value="@search"
+                           @oninput="e => search = e.Value?.ToString() ?? string.Empty" />
+                </div>
+            </div>
+
+            @if (loading)
+            {
+                <p class="text-sm text-content-subtle italic">Loading @TypeLabel(linkType) records…</p>
+            }
+            else
+            {
+                var candidates = Filter(Candidates());
+                var others = Filter(records.Except(Candidates()).ToList());
+                @if (candidates.Count > 0)
+                {
+                    <p class="text-xs font-semibold text-amber-600">Possible matches for this email</p>
+                    <div class="space-y-1">
+                        @foreach (var record in candidates) { @RecordRow(record, true) }
+                    </div>
+                }
+                @if (others.Count > 0)
+                {
+                    <p class="text-xs font-semibold text-content-subtle">@(candidates.Count > 0 ? "Others" : "Records") on this project</p>
+                    <div class="space-y-1 max-h-56 overflow-y-auto">
+                        @foreach (var record in others) { @RecordRow(record, false) }
+                    </div>
+                }
+                @if (candidates.Count == 0 && others.Count == 0)
+                {
+                    <p class="text-sm text-content-subtle italic">Nothing matching on this project.</p>
+                }
+                <p class="text-xs text-content-subtle">Click to add, click again to unpick — the email is tagged to every picked record on apply.</p>
+            }
+        </div>
+    };
+
+    private RenderFragment RecordRow(LinkableRecord record, bool candidate) => __builder =>
+    {
+        <button type="button" @key="record.RecordId" @onclick="() => TogglePick(record)" class="@RowClass(record, candidate)">
+            <span class="font-mono text-xs text-content-muted shrink-0">@record.Reference</span>
+            <span class="text-sm text-content truncate flex-1" title="@record.Summary">@record.Title</span>
+            @if (!string.IsNullOrWhiteSpace(record.StatusLabel))
+            {
+                <span class="text-[10px] uppercase tracking-wider text-content-subtle shrink-0">@record.StatusLabel</span>
+            }
+        </button>
+    };
+
+    private string RowClass(LinkableRecord record, bool candidate)
+    {
+        var baseClass = "w-full text-left rounded-lg border px-3 py-1.5 flex items-center gap-2 transition";
+        if (Picked.Any(r => r.RecordId == record.RecordId)) return $"{baseClass} border-accent bg-surface-raised";
+        return candidate
+            ? $"{baseClass} border-amber-500/40 hover:border-amber-500"
+            : $"{baseClass} border-line hover:border-line-strong";
+    }
+
+    private List<LinkableRecord> Filter(IEnumerable<LinkableRecord> source) =>
+        string.IsNullOrWhiteSpace(search)
+            ? source.ToList()
+            : source.Where(r =>
+                    r.Reference.Contains(search, StringComparison.OrdinalIgnoreCase)
+                    || r.Title.Contains(search, StringComparison.OrdinalIgnoreCase)
+                    || (r.Summary?.Contains(search, StringComparison.OrdinalIgnoreCase) ?? false))
+                .ToList();
+
+    // Records whose reference or title overlaps the email subject — surfaced first so a duplicate
+    // record isn't created for something already tracked.
+    private List<LinkableRecord> Candidates()
+    {
+        var tokens = Tokenise(EmailSubject);
+        return records
+            .Select(r => (r, score: Score(r, tokens)))
+            .Where(x => x.score > 0)
+            .OrderByDescending(x => x.score)
+            .Select(x => x.r)
+            .ToList();
+    }
+
+    private int Score(LinkableRecord record, HashSet<string> subjectTokens)
+    {
+        var score = 0;
+        if (!string.IsNullOrWhiteSpace(record.Reference)
+            && EmailSubject.Contains(record.Reference, StringComparison.OrdinalIgnoreCase))
+            score += 10;
+        foreach (var token in Tokenise(record.Title))
+            if (subjectTokens.Contains(token)) score++;
+        return score;
+    }
+
+    private static HashSet<string> Tokenise(string text) =>
+        (text ?? "")
+        .ToLowerInvariant()
+        .Split(new[] { ' ', ',', '.', ';', ':', '-', '—', '/', '(', ')', '[', ']' }, StringSplitOptions.RemoveEmptyEntries)
+        .Where(t => t.Length >= 4)
+        .ToHashSet();
+
+    // UI terminology: Relevant Event (not Scheduling), LADs claim, Variation Order (one record).
+    private static string TypeLabel(RecordType type) => type switch
+    {
+        RecordType.Request => "Request / RFI",
+        RecordType.Variation => "Variation Order",
+        RecordType.Lad => "LADs claim",
+        RecordType.Scheduling => "Relevant Event",
+        RecordType.BidPackageInvite => "Bid Package Invite",
+        RecordType.WorkOrder => "Work Order",
+        RecordType.Defect => "Defect",
+        RecordType.Todo => "To-do item",
+        _ => type.ToString()
+    };
+
+    private string TabClass(string tab, bool locked) =>
+        "px-4 py-2 text-sm border-b-2 -mb-px transition "
+        + (activeTab == tab
+            ? "border-accent text-content font-semibold"
+            : locked
+                ? "border-transparent text-content-faint cursor-not-allowed"
+                : "border-transparent text-content-muted hover:text-content");
+
+    private static string TabHint(string tab) => tab switch
+    {
+        "Client" => "The client, or their architect and team",
+        "Subcontractor" => "A subcontractor or supplier",
+        _ => "Jewel staff — company admin"
+    };
+}

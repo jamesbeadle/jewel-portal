@@ -42,15 +42,6 @@ public sealed class UpdateRequestDetailsHandler : ICommandHandler<UpdateRequestD
         entity.ResponseText = command.ResponseText;
         entity.RespondedByEmail = command.RespondedByEmail;
         entity.ImpliesVariation = command.ImpliesVariation;
-        // A "Raised to" picked from the project's contact list wins and re-derives the display
-        // string (contact renames flow through on the next edit); a null contact id clears the
-        // link and keeps whatever RaisedTo string travelled — legacy free text survives edits.
-        // Lenient resolve: a stale link (contact since removed from the project) drops quietly
-        // rather than failing edits and status changes on old requests.
-        var raisedToContact = await RaisedToContactResolver.ResolveAsync(
-            context, entity.ProjectId, command.RaisedToContactId, cancellationToken, required: false);
-        entity.RaisedTo = raisedToContact?.Display ?? command.RaisedTo;
-        entity.RaisedToContactId = raisedToContact?.ContactId;
         entity.DrawingRef = command.DrawingRef;
         entity.ResponseDue = command.ResponseDue;
         entity.RelatedDrawingSpec = command.RelatedDrawingSpec;

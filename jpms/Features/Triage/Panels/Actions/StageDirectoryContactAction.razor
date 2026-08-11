@@ -1,0 +1,36 @@
+@namespace Jewel.JPMS.Features.Triage.Panels
+@inject ISubcontractorStore SubcontractorStore
+
+@* Add Directory Contact as a STAGED action: the same DirectoryContactForm the /directory page's
+   Add-company dialog uses, snapshotted here and fired by the email's Apply. No project — the
+   directory is company-wide. *@
+
+<div class="space-y-3">
+    <DirectoryContactForm @ref="form" OnSubmit="StageAsync" />
+    <button type="button" class="btn-primary" @onclick="SubmitAsync">Stage action</button>
+</div>
+
+@code {
+    [Parameter] public EventCallback<StagedSystemAction> OnStaged { get; set; }
+
+    private DirectoryContactForm? form;
+
+    private async Task SubmitAsync()
+    {
+        if (form is not null) await form.TrySubmitAsync();
+    }
+
+    private async Task StageAsync(DirectoryContactForm.Draft draft)
+    {
+        var store = SubcontractorStore;
+        await OnStaged.InvokeAsync(new StagedSystemAction(
+            SystemActionKind.AddDirectoryContact,
+            $"add {draft.Company.CompanyName} to the directory",
+            () =>
+            {
+                store.Upsert(draft.Company);
+                return Task.CompletedTask;
+            }));
+        form?.Reset();
+    }
+}

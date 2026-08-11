@@ -1,0 +1,46 @@
+@namespace Jewel.JPMS.Features.Triage.Panels
+@using Jewel.JPMS.Features.Triage.Workspace
+
+@*
+    The Preview pane: one document opened from a record — a drawing linked to an RFI, a site
+    photo, a PDF attachment — shown opposite the window it was opened from, so the record and the
+    document read side by side. Closing it just hands the window back to whatever it showed before.
+*@
+
+@if (Request is null)
+{
+    <div class="panel p-8 text-center text-sm text-content-subtle">
+        Nothing on preview. Open a document from a record and it appears here.
+    </div>
+}
+else
+{
+    <div class="space-y-2">
+        <div class="flex items-center justify-between gap-3">
+            <p class="text-sm font-medium text-content truncate" title="@Request.Title">@Request.Title</p>
+            <span class="flex items-center gap-3 shrink-0">
+                <a class="text-xs text-accent hover:underline underline-offset-2" href="@Request.DownloadUrl"
+                   target="_blank" rel="noopener">Open / download</a>
+                <button type="button" class="text-xs text-content-muted hover:text-content" @onclick="OnClose">Close</button>
+            </span>
+        </div>
+
+        @if (Request.IsPdf)
+        {
+            <PdfViewer FileUrl="@Request.FileUrl" DownloadUrl="@Request.DownloadUrl"
+                       Caption="@Request.Title" HeightClass="h-[calc(100vh-16rem)]" />
+        }
+        else
+        {
+            <div class="rounded-xl border border-line bg-surface overflow-hidden">
+                <iframe src="@Request.FileUrl" title="@Request.Title"
+                        class="w-full h-[calc(100vh-16rem)] bg-white"></iframe>
+            </div>
+        }
+    </div>
+}
+
+@code {
+    [Parameter] public PreviewRequest? Request { get; set; }
+    [Parameter] public EventCallback OnClose { get; set; }
+}

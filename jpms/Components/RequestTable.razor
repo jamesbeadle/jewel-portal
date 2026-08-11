@@ -17,7 +17,6 @@
                 <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3">Ref</th>
                 <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 hidden sm:table-cell">Kind</th>
                 <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3">Subject</th>
-                <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 hidden lg:table-cell">Raised To</th>
                 <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 hidden xl:table-cell">Drawing / Detail</th>
                 <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 hidden lg:table-cell">Issued</th>
                 <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 hidden lg:table-cell">Response Due</th>
@@ -59,7 +58,6 @@
                            nothing while quiet or before the activity store has loaded. *@
                         <ActivityBadge Activity="@ActivityFor?.Invoke(record)" Class="ml-1.5" />
                     </td>
-                    <td class="px-4 py-3 text-content-muted hidden lg:table-cell whitespace-nowrap">@Dash(record.RaisedTo)</td>
                     <td class="px-4 py-3 text-content-subtle hidden xl:table-cell font-mono text-xs">@Dash(record.DrawingRef)</td>
                     @* The user-set issue date once recorded; falls back to the raised date until one is set. *@
                     <td class="px-4 py-3 text-content-subtle hidden lg:table-cell whitespace-nowrap">@((record.IssuedAt ?? record.RaisedAt).LocalDateTime.ToString("d MMM yyyy"))</td>

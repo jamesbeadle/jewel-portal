@@ -1,0 +1,157 @@
+@namespace Jewel.JPMS.Features.Triage.Panels
+@using Jewel.JPMS.Contracts.Xero
+@using Jewel.JPMS.Features.Triage.Workspace
+@inject IQueryClient Queries
+
+@*
+    One Xero transaction read in full — the header facts, the money, the line items with their
+    site / cost-code tracking, and the documents Xero holds (the supplier's invoice, published by
+    Dext) — previewable through the workspace's own Preview pane, like every other attachment.
+*@
+
+<div class="space-y-3">
+    <button type="button" class="text-xs text-content-muted hover:text-content underline underline-offset-2"
+            @onclick="OnBack">← Back to search</button>
+
+    <div class="panel p-5 space-y-3">
+        <div>
+            <p class="eyebrow mb-1">@XeroExplorerPane.TypeLabel(Transaction.Type) · @Transaction.Status</p>
+            <h2 class="text-lg font-semibold text-content leading-snug">@(Transaction.ContactName ?? "(no contact)")</h2>
+            <p class="font-mono text-xs text-content-muted mt-0.5">@(Transaction.Number ?? Transaction.Reference ?? Transaction.TransactionId)</p>
+        </div>
+
+        <div class="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
+            <span class="text-content-subtle">Date</span><span class="text-content">@DateText(Transaction.Date)</span>
+            <span class="text-content-subtle">Due</span><span class="text-content">@DateText(Transaction.DueDate)</span>
+            <span class="text-content-subtle">Subtotal</span><span class="text-content tabular-nums">@Money(Transaction.SubTotal)</span>
+            <span class="text-content-subtle">Tax</span><span class="text-content tabular-nums">@Money(Transaction.TotalTax)</span>
+            <span class="text-content-subtle">Total</span><span class="text-content tabular-nums font-medium">@Money(Transaction.Total)</span>
+            <span class="text-content-subtle">Paid / due</span><span class="text-content tabular-nums">@Money(Transaction.AmountPaid) / @Money(Transaction.AmountDue)</span>
+        </div>
+    </div>
+
+    @* The documents Xero holds for this transaction — listed live, previewed through the
+       workspace Preview pane (PDFs in the viewer, images inline), downloadable always. *@
+    @if (Transaction.HasAttachments)
+    {
+        <div class="panel p-4">
+            <p class="text-xs uppercase tracking-wider text-content-subtle font-semibold mb-2">Documents</p>
+            @if (attachmentsError is { } problem)
+            {
+                <p class="text-sm text-negative">@problem</p>
+            }
+            else if (attachments is null)
+            {
+                <p class="text-sm text-content-subtle italic">Fetching the documents from Xero…</p>
+            }
+            else if (attachments.Count == 0)
+            {
+                <p class="text-sm text-content-subtle italic">Xero holds no documents for this transaction — they may have been removed since the last sync.</p>
+            }
+            else
+            {
+                <ul class="divide-y divide-line">
+                    @foreach (var attachment in attachments)
+                    {
+                        <li class="py-1.5 flex items-center gap-3">
+                            <span class="text-sm text-content truncate flex-1" title="@attachment.FileName">@attachment.FileName</span>
+                            <span class="text-xs text-content-subtle shrink-0">@SizeText(attachment.ContentLength)</span>
+                            @if (IsPreviewable(attachment))
+                            {
+                                <button type="button" class="text-xs text-accent hover:underline underline-offset-2 shrink-0"
+                                        @onclick="() => PreviewAttachment(attachment)">Preview</button>
+                            }
+                            <a class="text-xs text-content-muted hover:text-content underline underline-offset-2 shrink-0"
+                               href="@AttachmentUrl(attachment, inline: false)" target="_blank" rel="noopener">Download</a>
+                        </li>
+                    }
+                </ul>
+            }
+        </div>
+    }
+
+    @if (Transaction.Lines.Count > 0)
+    {
+        <div class="panel p-4">
+            <p class="text-xs uppercase tracking-wider text-content-subtle font-semibold mb-2">
+                @Transaction.Lines.Count line item@(Transaction.Lines.Count == 1 ? "" : "s")
+            </p>
+            <div class="divide-y divide-line">
+                @foreach (var line in Transaction.Lines)
+                {
+                    <div class="py-2 flex items-start justify-between gap-3">
+                        <div class="min-w-0">
+                            <p class="text-sm text-content">@(string.IsNullOrWhiteSpace(line.Description) ? "(no description)" : line.Description)</p>
+                            <p class="text-[11px] text-content-subtle mt-0.5">
+                                @(line.AccountName ?? line.AccountCode ?? "—")@(line.Site is { Length: > 0 } site ? $" · {site}" : "")@(line.CostCode is { Length: > 0 } code ? $" · {code}" : "")
+                            </p>
+                        </div>
+                        <span class="text-sm text-content tabular-nums shrink-0">@Money(line.LineAmount)</span>
+                    </div>
+                }
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public XeroTransaction Transaction { get; set; } = default!;
+    [Parameter] public EventCallback OnBack { get; set; }
+
+    /// <summary>A document chosen for preview — routed to the workspace Preview pane by the page,
+    /// exactly like a record document or an email attachment.</summary>
+    [Parameter] public EventCallback<PreviewRequest> OnPreview { get; set; }
+
+    // Null until Xero has answered — distinct from an empty answer.
+    private IReadOnlyList<XeroInvoiceAttachment>? attachments;
+    private string? attachmentsError;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!Transaction.HasAttachments) return;
+        try
+        {
+            attachments = await Queries.AskAsync(
+                new ListXeroInvoiceAttachments(Transaction.TransactionId, Transaction.Type == "ACCPAYCREDIT"),
+                CancellationToken.None);
+        }
+        catch
+        {
+            attachmentsError = "Couldn't fetch the documents from Xero. If this keeps happening, check that the "
+                + "Xero custom connection has the accounting.attachments scope ticked in the Xero developer portal.";
+        }
+    }
+
+    private static bool IsPreviewable(XeroInvoiceAttachment attachment) =>
+        attachment.MimeType.Contains("pdf", StringComparison.OrdinalIgnoreCase)
+        || attachment.MimeType.StartsWith("image/", StringComparison.OrdinalIgnoreCase);
+
+    // The file name travels in the query string, never the path — supplier file names carry
+    // spaces and characters that don't survive a URL path segment. Same endpoint the Xero
+    // allocation page's invoice viewer uses.
+    private string AttachmentUrl(XeroInvoiceAttachment attachment, bool inline) =>
+        $"/api/xero/invoice/attachment?id={Uri.EscapeDataString(Transaction.TransactionId)}"
+        + $"&file={Uri.EscapeDataString(attachment.FileName)}"
+        + (Transaction.Type == "ACCPAYCREDIT" ? "&credit=1" : "")
+        + (inline ? "&inline=1" : "");
+
+    private Task PreviewAttachment(XeroInvoiceAttachment attachment) =>
+        OnPreview.InvokeAsync(new PreviewRequest(
+            attachment.FileName,
+            AttachmentUrl(attachment, inline: true),
+            AttachmentUrl(attachment, inline: false),
+            attachment.MimeType.Contains("pdf", StringComparison.OrdinalIgnoreCase)));
+
+    private static string SizeText(long bytes) =>
+        bytes >= 1_048_576 ? $"{bytes / 1_048_576.0:0.#} MB"
+        : bytes >= 1024 ? $"{bytes / 1024.0:0.#} KB"
+        : $"{bytes} B";
+
+    private string Money(decimal value) =>
+        $"{CurrencySymbol}{value:N2}";
+
+    private string CurrencySymbol =>
+        Transaction.CurrencyCode is null or "GBP" ? "£" : Transaction.CurrencyCode + " ";
+
+    private static string DateText(DateTime? value) => value?.ToString("d MMM yyyy") ?? "—";
+}

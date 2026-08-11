@@ -1,0 +1,51 @@
+@namespace Jewel.JPMS.Features.Triage.Panels
+@using Jewel.JPMS.Contracts.RecordLinks
+@inject IQueryClient Queries
+
+@*
+    The correspondence currently tagged to the open record, read live from the mailbox — the same
+    association the record's own page shows. Read-only: the point here is gathering context while
+    working an email in the other window.
+*@
+
+@if (emails is null)
+{
+    <p class="text-xs text-content-subtle italic px-1">Checking the record's correspondence…</p>
+}
+else if (emails.Count > 0)
+{
+    <div class="panel p-4">
+        <p class="text-xs uppercase tracking-wider text-content-subtle font-semibold mb-2">
+            Correspondence · @emails.Count
+        </p>
+        <div class="divide-y divide-line">
+            @foreach (var email in emails)
+            {
+                <div @key="email.Id" class="py-2">
+                    <div class="flex items-baseline justify-between gap-2">
+                        <span class="text-sm text-content truncate">@(string.IsNullOrWhiteSpace(email.FromName) ? email.FromEmail : email.FromName)</span>
+                        <span class="text-[11px] text-content-subtle shrink-0">@email.ReceivedAt.LocalDateTime.ToString("d MMM yyyy, HH:mm")</span>
+                    </div>
+                    <p class="text-xs text-content-muted truncate">@email.Subject</p>
+                </div>
+            }
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter, EditorRequired] public RecordType Type { get; set; }
+    [Parameter, EditorRequired] public string RecordId { get; set; } = "";
+
+    private IReadOnlyList<MailboxMessage>? emails;
+    private string loadedRecordId = "";
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (RecordId == loadedRecordId) return;
+        loadedRecordId = RecordId;
+        emails = null;
+        try { emails = await Queries.AskAsync(new ListRecordEmails(Type, RecordId), CancellationToken.None); }
+        catch { emails = Array.Empty<MailboxMessage>(); }
+    }
+}

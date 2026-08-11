@@ -1,0 +1,96 @@
+@namespace Jewel.JPMS.Features.Triage.Workspace
+@using Microsoft.JSInterop
+@inject IJSRuntime JS
+@implements IAsyncDisposable
+
+@*
+    The Control Centre's two side-by-side panes, each with its own icon rail, split by a draggable
+    divider (wwwroot/js/panel-workspace.js). Every kind of content renders ONCE into a fixed
+    wrapper and moves between panes by grid column alone — never re-parented — so its state (a
+    half-written search, a scrolled list) survives every jump. Below lg the grid collapses to one
+    column: the left pane is the single window and every icon press lands content there.
+*@
+
+<div @ref="root" class="panel-workspace h-full" style="--left-w: @LeftWidthCss">
+    <div class="col-start-1 row-start-1 min-w-0 pb-2"><PanelRail State="State" Side="PanelSide.Left" EmailAvailable="EmailAvailable" PreviewAvailable="PreviewAvailable" TagsBadge="TagsBadge" ActionsBadge="ActionsBadge" /></div>
+    <div class="col-start-3 row-start-1 min-w-0 pb-2 hidden lg:block"><PanelRail State="State" Side="PanelSide.Right" EmailAvailable="EmailAvailable" PreviewAvailable="PreviewAvailable" TagsBadge="TagsBadge" ActionsBadge="ActionsBadge" /></div>
+
+    @* The divider column: a 6px hit area with a hairline drawn down its middle. *@
+    <div @ref="divider" class="col-start-2 row-start-1 row-span-2 hidden lg:flex justify-center cursor-col-resize select-none group"
+         title="Drag to resize the panes">
+        <div class="w-px h-full bg-line group-hover:bg-line-strong"></div>
+    </div>
+
+    @foreach (var kind in Enum.GetValues<PanelKind>())
+    {
+        @if (State.HasShown(kind))
+        {
+            <div @key="kind" class="@WrapperClass(kind)">@ContentFor(kind)</div>
+        }
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public PanelWorkspaceState State { get; set; } = default!;
+    [Parameter] public bool EmailAvailable { get; set; }
+    [Parameter] public bool PreviewAvailable { get; set; }
+    [Parameter] public int TagsBadge { get; set; }
+    [Parameter] public int ActionsBadge { get; set; }
+
+    [Parameter] public RenderFragment? InboxContent { get; set; }
+    [Parameter] public RenderFragment? EmailContent { get; set; }
+    [Parameter] public RenderFragment? TagsContent { get; set; }
+    [Parameter] public RenderFragment? ActionsContent { get; set; }
+    [Parameter] public RenderFragment? RecordsContent { get; set; }
+    [Parameter] public RenderFragment? PreviewContent { get; set; }
+    [Parameter] public RenderFragment? XeroContent { get; set; }
+    [Parameter] public RenderFragment? ComposeContent { get; set; }
+
+    private ElementReference root;
+    private ElementReference divider;
+    private DotNetObjectReference<PanelWorkspace>? selfReference;
+
+    private string LeftWidthCss =>
+        (State.LeftFraction * 100).ToString("0.##", System.Globalization.CultureInfo.InvariantCulture) + "%";
+
+    private RenderFragment? ContentFor(PanelKind kind) => kind switch
+    {
+        PanelKind.Inbox => InboxContent,
+        PanelKind.Email => EmailContent,
+        PanelKind.SystemTags => TagsContent,
+        PanelKind.SystemActions => ActionsContent,
+        PanelKind.Records => RecordsContent,
+        PanelKind.Preview => PreviewContent,
+        PanelKind.Xero => XeroContent,
+        PanelKind.Compose => ComposeContent,
+        _ => null
+    };
+
+    // A wrapper sits in the column of the pane showing it, hidden otherwise (and hidden on mobile
+    // when it belongs to the right pane — mobile is the left pane alone).
+    private string WrapperClass(PanelKind kind) =>
+        "row-start-2 min-h-0 min-w-0 overflow-y-auto "
+        + State.SideShowing(kind) switch
+        {
+            PanelSide.Left => "col-start-1 block",
+            PanelSide.Right => "col-start-3 hidden lg:block",
+            _ => "hidden"
+        };
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender) return;
+        selfReference = DotNetObjectReference.Create(this);
+        await JS.InvokeVoidAsync("panelWorkspace.init", root, divider, selfReference);
+    }
+
+    [JSInvokable] public void OnDividerMoved(double fraction) => State.SetLeftFraction(fraction);
+    [JSInvokable] public void OnViewportChanged(bool isDesktop) => State.SetIsDesktop(isDesktop);
+
+    public async ValueTask DisposeAsync()
+    {
+        try { await JS.InvokeVoidAsync("panelWorkspace.dispose", root); }
+        catch { /* page tear-down — the browser is discarding the elements anyway */ }
+        selfReference?.Dispose();
+    }
+}

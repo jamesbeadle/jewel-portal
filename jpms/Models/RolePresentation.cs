@@ -14,7 +14,7 @@ public static class RolePresentations
             [Role.QuantitySurveyor]            = new("QS / Estimator",             "P04", "bg-emerald-500"),
             [Role.SiteManager]                 = new("Site Manager",               "P05", "bg-orange-500"),
             [Role.HealthSafetyOfficer]         = new("Health & Safety Officer",    "P06", "bg-red-500"),
-            [Role.OfficeComplianceCoordinator] = new("Office & Compliance",        "P07", "bg-teal-500"),
+            [Role.OfficeComplianceCoordinator] = new("Compliance",                 "P07", "bg-teal-500"),
             [Role.Architect]                   = new("Architect / Designer",       "P08", "bg-sky-500"),
             [Role.Client]                      = new("Client / Homeowner",         "P09", "bg-pink-500"),
             [Role.Subcontractor]               = new("Subcontractor",              "P10", "bg-amber-500"),

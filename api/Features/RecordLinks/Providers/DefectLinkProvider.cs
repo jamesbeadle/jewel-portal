@@ -61,6 +61,8 @@ public sealed class DefectLinkProvider : ILinkableRecordProvider
             TagReference: reference,
             Title:        title,
             StatusLabel:  ((DefectStatus)entity.Status).DisplayName(),
-            Summary:      RecordSummaries.Clip(entity.Description));
+            Summary:      RecordSummaries.Clip(entity.Description),
+            // Verified is the defect's closed-out state; everything before it is still being chased.
+            IsActive:     entity.Status != (int)DefectStatus.Verified);
     }
 }

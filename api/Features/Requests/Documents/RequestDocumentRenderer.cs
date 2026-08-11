@@ -168,9 +168,14 @@ public static class RequestDocumentRenderer
         AddGridRow(table,
             "Client", string.IsNullOrWhiteSpace(model.ClientName) ? "—" : model.ClientName,
             "Status", model.StatusLabel);
-        AddGridRow(table,
-            "Requesting party", model.RaisedByEmail,
-            "Issued to", string.IsNullOrWhiteSpace(model.RaisedTo) ? "—" : model.RaisedTo!);
+
+        // The odd value out: its cell spans the rest of the row so the grid closes cleanly.
+        var requestingParty = table.AddRow();
+        requestingParty.TopPadding = Unit.FromMillimeter(1.2);
+        requestingParty.BottomPadding = Unit.FromMillimeter(1.2);
+        LabelCell(requestingParty.Cells[0], "Requesting party");
+        ValueCell(requestingParty.Cells[1], model.RaisedByEmail);
+        requestingParty.Cells[1].MergeRight = 2;
 
         SpaceAfterTable(section);
     }

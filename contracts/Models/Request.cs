@@ -48,7 +48,6 @@ public sealed record Request(
     string? ResponseText = null,
     string? RespondedByEmail = null,
     bool ImpliesVariation = false,
-    string? RaisedTo = null,            // ball-in-court party (e.g. PLG Architects)
     string? DrawingRef = null,          // drawing / detail reference the request concerns
     DateTimeOffset? ResponseDue = null, // contractual response-due date
     string? RelatedDrawingSpec = null,  // related drawing / spec issued with the response
@@ -67,7 +66,6 @@ public sealed record Request(
     string? MergedIntoRequestId = null,     // set when this General request was merged into another (the survivor's id)
     DateTimeOffset? ClosedAt = null,        // when the request was closed — user-chosen (today or prior), cleared on reopen
     DateTimeOffset? IssuedAt = null,        // the one visible request date — stamped on creation (today / backfill date), user-editable thereafter
-    string? RaisedToContactId = null,       // the project contact RaisedTo points at, when picked from the project's contact list (RaisedTo stays the denormalised display string)
     bool CriticalPath = false,              // Critical Path tag — the RFI is programme-related; shows in the Programme tab's "Critical Path RFIs" view
     bool CriticalPathNudgeDismissed = false) // "No" was clicked on the two-week critical-path nudge — the banner never re-asks on this RFI
 {

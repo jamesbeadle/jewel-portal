@@ -1,0 +1,67 @@
+@namespace Jewel.JPMS.Features.Triage.Workspace
+
+@*
+    One pane's icon row — the same set on both sides, so either window can load any content.
+    Pressing an icon loads that content THIS side; whatever the pane showed before waits in its
+    history. The Email and Preview icons only exist while there is an email / a document to show.
+*@
+
+<div class="flex items-center gap-1 flex-wrap">
+    @RailButton(PanelKind.Inbox, "Email inbox — triage and apply")
+    @if (EmailAvailable)
+    {
+        @RailButton(PanelKind.Email, "The open email")
+    }
+    @RailButton(PanelKind.SystemTags, "System tags")
+    @RailButton(PanelKind.SystemActions, "System actions")
+    @RailButton(PanelKind.Records, "Record explorer")
+    @RailButton(PanelKind.Xero, "Xero explorer")
+    @RailButton(PanelKind.Compose, "New email")
+    @if (PreviewAvailable)
+    {
+        @RailButton(PanelKind.Preview, "Document preview")
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public PanelWorkspaceState State { get; set; } = default!;
+    [Parameter, EditorRequired] public PanelSide Side { get; set; }
+
+    /// <summary>An email is open, so the Email icon exists. Otherwise it disappears entirely.</summary>
+    [Parameter] public bool EmailAvailable { get; set; }
+
+    /// <summary>A document is open from a record, so the Preview icon exists.</summary>
+    [Parameter] public bool PreviewAvailable { get; set; }
+
+    /// <summary>How many tags are staged — badged on the System Tags icon like the old button.</summary>
+    [Parameter] public int TagsBadge { get; set; }
+
+    /// <summary>How many system actions are lined up — badged on the System Actions icon.</summary>
+    [Parameter] public int ActionsBadge { get; set; }
+
+    private RenderFragment RailButton(PanelKind kind, string label) => __builder =>
+    {
+        var isActive = State.ActiveOn(Side) == kind;
+        <button type="button" title="@label" aria-label="@label" @onclick="() => State.Show(kind, Side)"
+                class="@ButtonClass(isActive)">
+            <WorkspaceIcon Kind="kind" />
+            @if (BadgeFor(kind) is > 0 and var badge)
+            {
+                <span class="absolute -top-1 -right-1 min-w-[1.1rem] h-[1.1rem] px-0.5 rounded-full bg-accent text-accent-ink text-[10px] font-semibold flex items-center justify-center leading-none">@badge</span>
+            }
+        </button>
+    };
+
+    private int BadgeFor(PanelKind kind) => kind switch
+    {
+        PanelKind.SystemTags => TagsBadge,
+        PanelKind.SystemActions => ActionsBadge,
+        _ => 0
+    };
+
+    private static string ButtonClass(bool isActive) =>
+        "relative inline-flex items-center justify-center w-8 h-8 rounded-lg border transition "
+        + (isActive
+            ? "border-accent/60 bg-accent/10 text-accent"
+            : "border-transparent text-content-subtle hover:text-content hover:bg-surface-raised");
+}

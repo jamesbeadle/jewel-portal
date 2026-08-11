@@ -126,7 +126,6 @@ public sealed class CreateRequestFromMessageHandler : ICommandHandler<CreateRequ
             // date as its issue date (user-editable thereafter).
             IssuedAt = snapshot.ReceivedAt,
             ImpliesVariation = false,
-            RaisedTo = command.RaisedTo,
             DrawingRef = command.DrawingRef,
             ResponseDue = command.ResponseDue
         };

@@ -14,8 +14,7 @@
       practice's finance person here but nowhere else).
     - Project contacts — the project's own contact list: consultants, engineers, internal Jewel
       staff or any third party. Each has a role and a routing; Off means the contact is on the
-      list (so requests can be raised to them) without being copied on issued documents. This
-      list also feeds the "Raised to" dropdown when raising a request.
+      list without being copied on issued documents.
 *@
 
 <div class="panel p-5 mb-6">
@@ -103,7 +102,7 @@
         <h4 class="eyebrow mb-2">Project contacts</h4>
         @if (adHocContacts.Count == 0)
         {
-            <p class="text-xs text-content-subtle mb-3">No contacts on this project yet. Contacts appear in the "Raised to" dropdown when raising a request, and can be copied (CC/BCC) on every document this project issues.</p>
+            <p class="text-xs text-content-subtle mb-3">No contacts on this project yet. Contacts can be copied (CC/BCC) on every document this project issues.</p>
         }
         else
         {

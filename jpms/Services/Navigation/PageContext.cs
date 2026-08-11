@@ -17,8 +17,10 @@ public static class PageContext
         if (trimmed is "" or "/dashboard") return "Home";
         if (role is not { } activeRole) return null;
         // Sidebar labels that are deliberately terser than the page deserves: the master to-do
-        // list's row reads "Todo" in the Internal folder, but the header spells it out.
+        // list's row reads "Todo" in the Internal folder, but the header spells it out. An item's
+        // own page (/todos/{id}) has no sidebar row of its own — label it by what it shows.
         if (trimmed == "/todos") return "To-dos";
+        if (trimmed.StartsWith("/todos/", StringComparison.Ordinal)) return "To-do";
         // Catalog items in sidebar order — folder rows put project templates before most company
         // routes, so the more specific project routes win. Template items match any project id,
         // so no project context is needed here.

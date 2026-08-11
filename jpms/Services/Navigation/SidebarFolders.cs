@@ -82,6 +82,10 @@ public static class SidebarFolders
             new[]
             {
                 new SidebarRow(new NavigationItem("Bid Package Invites", "/projects/{project}/bid-package-invites"),
+                    DesktopNavigation.ProjectRoles),
+                // General subcontractor correspondence — every email tagged "JPMS/SubComms" at
+                // triage (the System Tags Subcontractor tab's communication tick), read live.
+                new SidebarRow(new NavigationItem("Communications", "/subcontractors/communications"),
                     DesktopNavigation.ProjectRoles)
             }),
 

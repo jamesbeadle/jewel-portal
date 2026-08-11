@@ -20,7 +20,6 @@ public sealed record CreateRequestFromMessage(
     string Title,
     string Description,
     decimal? Value = null,
-    string? RaisedTo = null,
     string? DrawingRef = null,
     DateTimeOffset? ResponseDue = null,
     string? InternetMessageId = null,

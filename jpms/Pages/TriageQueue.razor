@@ -12,6 +12,8 @@
 @using Jewel.JPMS.Contracts.Requests
 @using Jewel.JPMS.Contracts.Todos
 @using Jewel.JPMS.Features.Todos
+@using Jewel.JPMS.Features.Triage.Panels
+@using Jewel.JPMS.Features.Triage.Workspace
 @inject AuthService Auth
 @inject SessionService Session
 @inject NavigationManager Nav
@@ -125,8 +127,8 @@
                                     @if (IsPreviewable(att))
                                     {
                                         <button type="button" class="text-xs text-accent hover:underline"
-                                                @onclick="() => ToggleAttachmentPreview(att)">
-                                            @(previewAttachment == att ? "Hide preview" : "Preview")
+                                                @onclick="() => OpenEmailAttachmentPreview(att)">
+                                            Preview
                                         </button>
                                     }
                                     <a href="@AttachmentUrl(att, inline: false)" target="_blank" rel="noopener"
@@ -138,25 +140,6 @@
                         </li>
                     }
                 </ul>
-
-                @* Inline preview: check a PDF/image without leaving triage. The iframe hits the same
-                   endpoint the Download link does, with ?inline=1 so the browser renders it in place. *@
-                @if (previewAttachment is not null)
-                {
-                    <div class="mt-3 rounded-lg border border-line bg-surface overflow-hidden">
-                        <header class="px-3 py-2 border-b border-line bg-surface-raised flex items-center justify-between gap-3">
-                            <span class="text-xs text-content-muted font-medium truncate">@previewAttachment.Name</span>
-                            <span class="flex items-center gap-3 shrink-0">
-                                <a href="@AttachmentUrl(previewAttachment, inline: false)" target="_blank" rel="noopener"
-                                   class="text-xs text-accent hover:underline underline-offset-2">Open / download</a>
-                                <button type="button" class="text-xs text-content-muted hover:text-content"
-                                        @onclick="() => previewAttachment = null">Close</button>
-                            </span>
-                        </header>
-                        <iframe src="@AttachmentUrl(previewAttachment, inline: true)"
-                                class="w-full h-[60vh] bg-white" title="Attachment preview"></iframe>
-                    </div>
-                }
 
                 @if (importNote is not null)
                 {
@@ -312,67 +295,48 @@
         }
 
     </text>;
-}
 
-@if (!sessionReady)
-{
-    <section class="px-6 md:px-8 py-12">
-        <LoadGate IsLoading="true" Prominent="true" Label="Loading" />
-    </section>
-}
-else if (!Session.IsApproved)
-{
-    <RequestAccessView Email="@Auth.CurrentUser!.Email" DisplayName="@Auth.CurrentUser.DisplayName" />
-}
-else if (!CanTriage)
-{
-    <section class="px-6 md:px-8 py-12">
-        <div class="panel p-8 text-center">
-            <p class="text-sm text-content">You don't have access to the Control Centre.</p>
-            <p class="text-xs text-content-subtle mt-1">The Control Centre is available to administrators and project managers.</p>
-        </div>
-    </section>
-}
-else
-{
-    <section class="px-6 md:px-8 py-8 md:py-12">
-        <header class="mb-6">
-            <p class="text-xs uppercase tracking-wider text-content-subtle font-medium mb-1">JPMS · projects@@jewelbb.co.uk</p>
-            <h1 class="text-2xl md:text-3xl font-semibold text-content leading-tight">Control Centre</h1>
-            @* Each strapline is a count, not a description, so it waits for its own list —
-               "0 emails in the inbox" is the one sentence a triager must never be told wrongly.
-               It simply does not render until the count is known: a line of muted text that
-               arrives a moment late is invisible, whereas a spinner in its place is an event. *@
+    @*
+        The four page-owned pane contents for the workspace (the other four panes own their own
+        data). Declared here as fragments — like MessageHeader/MessageBody above — so every one
+        reads the page's live fields and the page stays the single orchestrator it always was.
+    *@
+
+    RenderFragment InboxPaneContent =@<div class="space-y-4 lg:pr-1">
+        <header>
+            <p class="text-xs uppercase tracking-wider text-content-subtle font-medium">JPMS · projects@@jewelbb.co.uk</p>
+            @* Each strapline is a count, not a description, so it waits for its own list — it
+               simply does not render until the count is known (see the loading-states notes). *@
             @if (view == QueueView.Active && queueArrived)
             {
-                <p class="text-sm text-content-muted mt-2">
+                <p class="text-sm text-content-muted mt-1">
                     @total email@(total == 1 ? "" : "s") in the inbox waiting to be assigned to a request.
                 </p>
             }
             else if (view == QueueView.Discarded && discardedArrived)
             {
-                <p class="text-sm text-content-muted mt-2">
+                <p class="text-sm text-content-muted mt-1">
                     @discardedTotal discarded email@(discardedTotal == 1 ? "" : "s") — restore one to put it back in the queue.
                 </p>
             }
             else if (view == QueueView.Tagged && taggedArrived)
             {
-                <p class="text-sm text-content-muted mt-2">
+                <p class="text-sm text-content-muted mt-1">
                     @taggedTotal tagged email@(taggedTotal == 1 ? "" : "s") — add or remove tags to manage which processes use them.
                 </p>
             }
         </header>
 
-        <div class="flex items-center gap-2 mb-6 border-b border-line">
+        @* Sticky, so the pane's navigation stays in reach however far the list is scrolled
+           (bg-canvas so rows vanish behind it). *@
+        <div class="sticky top-0 z-10 bg-canvas flex items-center gap-2 border-b border-line">
             <button type="button" class="@ViewTabClass(QueueView.Active)" @onclick="() => SwitchView(QueueView.Active)">Queue</button>
             <button type="button" class="@ViewTabClass(QueueView.Tagged)" @onclick="() => SwitchView(QueueView.Tagged)">Tagged</button>
-            <span class="ml-auto"></span>
-            <button type="button" class="btn-primary mb-1.5" @onclick="OpenNewEmail">New email</button>
         </div>
 
         @if (loadError is not null)
         {
-            <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-4">@loadError</p>
+            <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@loadError</p>
         }
 
         @if (view == QueueView.Active)
@@ -413,7 +377,6 @@ else
                 </div>
             </div>
         }
-
         <LoadGate IsLoading="@(!queueArrived)" Prominent="true" Label="Loading the inbox">
         @if (loadError is not null && items.Count == 0)
         {
@@ -429,8 +392,7 @@ else
         }
         else
         {
-            <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
-                <div class="relative space-y-2 lg:col-span-1">
+            <div class="relative space-y-2">
                     @* Sort is a light, rarely-used view preference — small muted text under the
                        header, not an action button. The choice is remembered per user. *@
                     <div class="flex items-center gap-3 text-xs px-1">
@@ -459,6 +421,11 @@ else
                             </div>
                             <div class="flex items-center gap-1.5 mt-0.5">
                                 <p class="text-sm text-content-muted truncate flex-1">@Dash(item.Subject)</p>
+                                @* Parked work waits on this email — the marker says "open me to carry on". *@
+                                @if (parkedTriageByEmailId.ContainsKey(item.Id))
+                                {
+                                    <span title="Unfinished triage — open the email to carry on where you left off" class="text-[10px] font-semibold text-accent shrink-0">✎ draft</span>
+                                }
                                 @if (item.HasAttachments)
                                 {
                                     <span title="Has attachments" class="inline-flex items-center text-content-subtle shrink-0">@PaperclipIcon</span>
@@ -510,10 +477,227 @@ else
                         </div>
                     }
                 </div>
+        }
+        </LoadGate>
+        }
+        else if (view == QueueView.Discarded)
+        {
+            <LoadGate IsLoading="@(!discardedArrived)" Prominent="true" Label="Loading discarded emails">
+            @if (loadError is not null && discardedItems.Count == 0)
+            {
+                @* A failed page has nothing to report; "no discarded emails" would read as an answer. *@
+                <p class="text-sm text-negative">Couldn't load the discarded emails. The reason is in the red bar above — reload to try again.</p>
+            }
+            else if (discardedTotal == 0)
+            {
+                <div class="panel p-8 text-center">
+                    <p class="text-sm text-content">No discarded emails.</p>
+                    <p class="text-xs text-content-subtle mt-1">Emails you discard from the queue show up here, and can be restored.</p>
+                </div>
+            }
+            else
+            {
+                <div class="relative space-y-2">
+                        @if (listLoading)
+                        {
+                            <JewelSpinner Overlay="true" Label="Loading" />
+                        }
+                        @foreach (var item in discardedItems)
+                        {
+                            <button type="button" @key="item.Id" @onclick="() => Select(item)" class="@RowClass(item)">
+                                <div class="flex items-baseline justify-between gap-2">
+                                    <span class="text-sm font-semibold text-content truncate">@DisplayFrom(item)</span>
+                                    <span class="text-[11px] text-content-subtle shrink-0">@ListDate(item.ReceivedAt)</span>
+                                </div>
+                                <div class="flex items-center gap-1.5 mt-0.5">
+                                    <p class="text-sm text-content-muted truncate flex-1">@Dash(item.Subject)</p>
+                                    @if (item.HasAttachments)
+                                    {
+                                        <span title="Has attachments" class="inline-flex items-center text-content-subtle shrink-0">@PaperclipIcon</span>
+                                    }
+                                </div>
+                                @if (!string.IsNullOrWhiteSpace(item.BodyPreview))
+                                {
+                                    <p class="text-xs text-content-subtle truncate mt-0.5">@FirstLineOf(item.BodyPreview)</p>
+                                }
+                            </button>
+                        }
 
-                <div class="lg:col-span-2">
-                    @if (selected is null)
+                        @if (DiscardedPageCount > 1)
+                        {
+                            <div class="flex items-center justify-between gap-2 pt-2">
+                                @if (discardedIndex > 0)
+                                {
+                                    <button type="button" class="btn-secondary text-xs px-2.5 py-1.5" @onclick="PreviousDiscarded">Previous</button>
+                                }
+                                else
+                                {
+                                    <span></span>
+                                }
+                                <span class="text-[11px] text-content-subtle">Page @(discardedIndex + 1) / @DiscardedPageCount · @discardedTotal email@(discardedTotal == 1 ? "" : "s")</span>
+                                @if (discardedNext is not null)
+                                {
+                                    <button type="button" class="btn-secondary text-xs px-2.5 py-1.5" @onclick="NextDiscarded">Next</button>
+                                }
+                                else
+                                {
+                                    <span></span>
+                                }
+                            </div>
+                        }
+                    </div>
+            }
+            </LoadGate>
+        }
+        else
+        {
+            @* Pathway filter: one chip per pathway, read server-side as an exact bucket-category
+               filter. Kept separate from (and mutually exclusive with) the tag filter below — Graph
+               composes category filters with OR only, so combining them would show a union, not the
+               intersection the combination looks like. *@
+            <div class="flex flex-wrap items-center gap-2 mb-3">
+                <span class="text-xs uppercase tracking-wider text-content-subtle font-semibold mr-1">Pathway</span>
+                <button type="button" class="@PathwayFilterChipClass(null)" @onclick="() => SetPathwayFilter(null)">All</button>
+                <button type="button" class="@PathwayFilterChipClass(ClientBucket)" @onclick="() => SetPathwayFilter(ClientBucket)">Client</button>
+                <button type="button" class="@PathwayFilterChipClass(SubcontractorBucket)" @onclick="() => SetPathwayFilter(SubcontractorBucket)">Subcontractor</button>
+                <button type="button" class="@PathwayFilterChipClass(InternalBucket)" @onclick="() => SetPathwayFilter(InternalBucket)">Internal</button>
+            </div>
+
+            @* The tag list accrues from the emails that have loaded, so before the first page lands
+               the dropdown offers only "Discarded" — a short list that looks like the whole list. *@
+            @if (taggedArrived)
+            {
+            <div class="flex flex-wrap items-center gap-2 mb-5">
+                <span class="text-xs uppercase tracking-wider text-content-subtle font-semibold mr-1">Filter</span>
+                <div class="relative">
+                    <button type="button"
+                            class="rounded-full border border-line px-3 py-1 text-xs font-medium text-content-muted hover:text-content hover:border-line-strong transition inline-flex items-center gap-1.5"
+                            @onclick="ToggleFilterMenu">
+                        @FilterButtonLabel
+                        <span class="text-[9px] leading-none">▾</span>
+                    </button>
+                    @if (filterOpen)
                     {
+                        <div class="absolute z-20 mt-1 w-60 max-h-72 overflow-y-auto rounded-lg border border-line bg-surface-raised shadow-lg p-1">
+                            <button type="button"
+                                    class="w-full text-left rounded px-3 py-1.5 text-sm text-content-muted hover:bg-surface hover:text-content"
+                                    @onclick="ClearTagFilters">
+                                All tags
+                            </button>
+                            <div class="my-1 border-t border-line"></div>
+                            @foreach (var tag in knownTags)
+                            {
+                                <label class="flex items-center gap-2 rounded px-3 py-1.5 text-sm text-content hover:bg-surface cursor-pointer">
+                                    <input type="checkbox" checked="@selectedTags.Contains(tag)" @onchange="() => ToggleTag(tag)" />
+                                    <span>@TagLabel(tag)</span>
+                                </label>
+                            }
+                        </div>
+                    }
+                </div>
+                @foreach (var tag in selectedTags)
+                {
+                    <span class="inline-flex items-center gap-1.5 rounded-full border border-accent bg-surface-raised px-2.5 py-1 text-xs text-content">
+                        @TagLabel(tag)
+                        <button type="button" class="text-content-subtle hover:text-negative" @onclick="() => ToggleTag(tag)" title="Remove filter">✕</button>
+                    </span>
+                }
+            </div>
+            }
+            <LoadGate IsLoading="@(!taggedArrived)" Prominent="true" Label="Loading tagged emails">
+            @if (loadError is not null && taggedItems.Count == 0)
+            {
+                @* A failed page has nothing to report; "no tagged emails" would read as an answer. *@
+                <p class="text-sm text-negative">Couldn't load the tagged emails. The reason is in the red bar above — reload to try again.</p>
+            }
+            else if (taggedTotal == 0)
+            {
+                <div class="panel p-8 text-center">
+                    <p class="text-sm text-content">@(selectedTags.Count == 0 ? "No tagged emails." : "No emails with the selected tags.")</p>
+                    <p class="text-xs text-content-subtle mt-1">Emails linked to a request (or discarded) appear here. Open one to add it to another request or remove a tag.</p>
+                </div>
+            }
+            else
+            {
+                <div class="relative space-y-2">
+                        @if (listLoading)
+                        {
+                            <JewelSpinner Overlay="true" Label="Loading" />
+                        }
+                        @foreach (var item in taggedItems)
+                        {
+                            <button type="button" @key="item.Id" @onclick="() => Select(item)" class="@RowClass(item)">
+                                <div class="flex items-baseline justify-between gap-2">
+                                    <span class="text-sm font-semibold text-content truncate">@DisplayFrom(item)</span>
+                                    <span class="text-[11px] text-content-subtle shrink-0">@ListDate(item.ReceivedAt)</span>
+                                </div>
+                                <div class="flex items-center gap-1.5 mt-0.5">
+                                    <p class="text-sm text-content-muted truncate flex-1">@Dash(item.Subject)</p>
+                                    @if (item.HasAttachments)
+                                    {
+                                        <span title="Has attachments" class="inline-flex items-center text-content-subtle shrink-0">@PaperclipIcon</span>
+                                    }
+                                </div>
+                                @if (!string.IsNullOrWhiteSpace(item.BodyPreview))
+                                {
+                                    <p class="text-xs text-content-subtle truncate mt-0.5">@FirstLineOf(item.BodyPreview)</p>
+                                }
+                                @* Parked work waits on this email — the marker says "open me to carry on". *@
+                                @if (parkedTriageByEmailId.ContainsKey(item.Id))
+                                {
+                                    <p class="text-[10px] font-semibold text-accent mt-0.5">✎ draft in progress</p>
+                                }
+                                @if (item.Bucket is not null || item.Categories.Count > 0)
+                                {
+                                    <div class="flex flex-wrap items-center gap-1 mt-1">
+                                        @* The pathway badge leads the chip row: the thread's filing is the first thing
+                                           to know about a tagged email, before which records it feeds. *@
+                                        @if (PathwayFromBucket(item.Bucket) is { } rowPathway)
+                                        {
+                                            <span class="inline-flex items-center rounded-full @PathwayChipColour(rowPathway) text-[10px] font-medium px-2 py-0.5">@PathwayLabel(rowPathway)</span>
+                                        }
+                                        @foreach (var tag in item.Categories)
+                                        {
+                                            <span class="inline-flex items-center rounded-full bg-accent/10 text-accent text-[10px] font-medium px-2 py-0.5">@TagLabel(tag)</span>
+                                        }
+                                    </div>
+                                }
+                            </button>
+                        }
+
+                        @if (TaggedPageCount > 1)
+                        {
+                            <div class="flex items-center justify-between gap-2 pt-2">
+                                @if (taggedIndex > 0)
+                                {
+                                    <button type="button" class="btn-secondary text-xs px-2.5 py-1.5" @onclick="PreviousTagged">Previous</button>
+                                }
+                                else
+                                {
+                                    <span></span>
+                                }
+                                <span class="text-[11px] text-content-subtle">Page @(taggedIndex + 1) / @TaggedPageCount · @taggedTotal email@(taggedTotal == 1 ? "" : "s")</span>
+                                @if (taggedNext is not null)
+                                {
+                                    <button type="button" class="btn-secondary text-xs px-2.5 py-1.5" @onclick="NextTagged">Next</button>
+                                }
+                                else
+                                {
+                                    <span></span>
+                                }
+                            </div>
+                        }
+                    </div>
+            }
+            </LoadGate>
+        }
+    </div>;
+
+    RenderFragment EmailPaneContent =@<div>
+        @if (view == QueueView.Active)
+        {
+            @if (selected is null)
+            {
                         @if (composeOutcome is { } outcome)
                         {
                             <div class="panel p-5 mb-4 @(outcome.Sent ? "border-positive/40" : "border-amber-500/40") space-y-2">
@@ -566,25 +750,21 @@ else
                                 <p class="text-sm text-content">@poEmailNote</p>
                             </div>
                         }
-                        <div class="panel p-8 text-center text-sm text-content-subtle">
-                            Select an email to process it.
-                        </div>
-                    }
-                    else
+                <div class="panel p-8 text-center text-sm text-content-subtle">
+                    Select an email to process it.
+                </div>
+            }
+            else
+            {
+                <div class="panel p-5 space-y-4 relative">
+                    @if (busy)
                     {
-                        <div class="panel p-5 space-y-4 relative">
-                            @if (busy)
-                            {
-                                <JewelSpinner Overlay="true" Label="@busyLabel" />
-                            }
-                            @if (actionError is not null)
-                            {
-                                <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@actionError</p>
-                            }
+                        <JewelSpinner Overlay="true" Label="@busyLabel" />
+                    }
 
-                            @MessageHeader
+                    @MessageHeader
 
-                            @MessageBody
+                    @MessageBody
 
                             @* Reply where the reading ends — you get to the bottom of an email and
                                answer it, so the button (and the open composer) sit right here. *@
@@ -644,238 +824,19 @@ else
                                         </div>
                                     }
                                 </div>
-
-                            <div class="pt-3 border-t border-line">
-                                <p class="eyebrow mb-3">Deal with this email</p>
-
-                                @* PROJECT — the easiest decision, made first; everything below (to-dos,
-                                   record pickers, attachments) uses it. Auto-matched from the email
-                                   text when a single live project's name appears. *@
-                                <div class="flex flex-wrap items-center gap-2 mb-4">
-                                    <label class="text-xs uppercase tracking-wider text-content-subtle font-semibold shrink-0">Project</label>
-                                    <select class="field max-w-md" value="@triageProjectId" @onchange="OnTriageProjectChanged">
-                                        <option value="">No project…</option>
-                                        @foreach (var project in ProjectOptionsFor(triageProjectId))
-                                        {
-                                            <option value="@project.ProjectId">@project.Reference — @project.Name</option>
-                                        }
-                                    </select>
-                                    @if (projectAutoMatched && !string.IsNullOrWhiteSpace(triageProjectId))
-                                    {
-                                        <span class="text-xs text-accent">Matched from the email — change it if that's wrong.</span>
-                                    }
-                                    <label class="flex items-center gap-1.5 text-xs text-content-subtle cursor-pointer select-none"
-                                           title="Completed projects stay out of the picker until you ask — the same per-user toggle as the project switcher">
-                                        <input type="checkbox" checked="@StageFilter.IncludeCompleted"
-                                               @onchange="e => StageFilter.SetAsync(e.Value is true)" />
-                                        Show completed
-                                    </label>
-                                </div>
-                                @* TWO doors, one apply: System Tags (the modal owns the Client /
-                                   Subcontractor / Internal decision and all linking and creating —
-                                   to-dos included, drafted under Internal → Create new) and Discard.
-                                   The badge shows everything staged; nothing happens until the
-                                   Apply below. *@
-                                <div class="flex flex-wrap items-center gap-2">
-                                    <button type="button" class="@TagsButtonClass" @onclick="() => tagsModalOpen = true">
-                                        🏷 System Tags@(StagedTagCount > 0 ? $" · {StagedTagCount}" : "")
-                                    </button>
-                                    <button type="button" class="@DiscardTabClass" @onclick="() => discardArmed = !discardArmed">🗑 Discard</button>
-                                </div>
-
-                                @* The programme's relevant-event flag sits OUTSIDE System Tags: the programme
-                                   bucket isn't a record anyone links or creates — every project has exactly
-                                   one — so filing an email to it is a tick, not a record pick. Staged like
-                                   everything else; the Apply below tags the email to the project's
-                                   programme so it shows under the Programme tab's Relevant Events (the
-                                   thread checkbox below decides whether the rest of the conversation
-                                   comes along). *@
-                                <label class="mt-3 flex items-start gap-2 cursor-pointer select-none">
-                                    <input type="checkbox" checked="@relevantEventStaged"
-                                           @onchange="e => relevantEventStaged = e.Value is true" />
-                                    <span class="text-sm text-content">
-                                        Relevant Event for Programme
-                                        <span class="block text-xs text-content-subtle">Tags the email to the project's programme — it appears in the Programme tab's Relevant Events.</span>
-                                    </span>
-                                </label>
-
-                                @* Thread scope for the WHOLE apply. By default every action above —
-                                   record links, a created record, the Relevant Event tag, to-dos —
-                                   tags ONLY the clicked email; its thread siblings stay in the queue
-                                   for their own decisions. This tick opts the whole apply into the
-                                   conversation: everything also tags every email currently in the
-                                   thread, clearing them from the queue in one go. Deliberately a
-                                   per-apply checkbox (cleared with the rest of the staging), never a
-                                   remembered preference: sweeping a thread is a decision about THIS
-                                   thread. *@
-                                <label class="mt-2 flex items-start gap-2 cursor-pointer select-none">
-                                    <input type="checkbox" checked="@triageEntireThread"
-                                           @onchange="e => triageEntireThread = e.Value is true" />
-                                    <span class="text-sm text-content">
-                                        Also triage the email's entire thread
-                                        <span class="block text-xs text-content-subtle">Everything you apply also tags every email currently in this conversation, clearing them from the queue together. Leave off to deal with just this email.</span>
-                                    </span>
-                                </label>
-
-                                @if (discardArmed)
-                                {
-                                    <p class="mt-3 rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-content">
-                                        Discard this email if it isn't for a record at all — spam, an auto-reply, or sent to the wrong place. It (and its thread) gets a "discarded" tag and leaves the queue; nothing moves in the mailbox, and it can be restored from the Tagged tab. Applied by the button below.
-                                    </p>
-                                }
-
-                                @if (view == QueueView.Active && crossFileMessage is not null)
-                                {
-                                    <div class="mt-3 rounded-lg bg-amber-500/10 border border-amber-500/40 px-3 py-2 space-y-2">
-                                        <p class="text-sm text-content">@crossFileMessage</p>
-                                        <button type="button" class="btn-secondary text-xs" disabled="@busy" @onclick="() => DoApplyAll(pendingSaveDraft, allowCrossPathway: true)">File under both anyway</button>
-                                    </div>
-                                }
-                            </div>
-
-                            @* ---- The one action bar: whatever is set up above — a reply, to-dos, a
-                                   record filing — is applied together, in one click, in that order.
-                                   Nothing happens to the email until this is pressed. *@
-                            <div class="pt-3 border-t border-line space-y-2">
-                                @if (PendingSummary is { } pending)
-                                {
-                                    <p class="text-sm text-content">This will @pending.</p>
-                                }
-                                else
-                                {
-                                    <p class="text-sm text-content-subtle">Write a reply, or stage system tags and to-dos with the System Tags button above — then apply it all in one go here.</p>
-                                }
-                                <div class="flex items-center gap-2">
-                                    <button type="button" class="btn-primary" disabled="@(busy || PendingSummary is null)" @onclick="() => DoApplyAll(saveAsDraftOnly: false)">
-                                        @ApplyButtonLabel
-                                    </button>
-                                    @if (ReplyDraftPending)
-                                    {
-                                        <button type="button" class="btn-secondary" disabled="@busy" @onclick="() => DoApplyAll(saveAsDraftOnly: true)"
-                                                title="Applies the to-dos and filing above, but stages the reply as an Outlook draft instead of sending it">
-                                            Save reply as draft
-                                        </button>
-                                    }
-                                </div>
-                            </div>
-                        </div>
-                    }
                 </div>
-            </div>
-        }
-        </LoadGate>
-
-        @* Recently triaged — the audit register's latest link/create decisions, newest first, so
-           the triager can jump straight to the document an email was just filed against. Same
-           no-gate pattern as the unassigned panel above: it renders if and when there is something
-           to show. (The register records client-pathway triage today; subcontractor/internal rows
-           appear here automatically once the audit scope widens.) *@
-        @if (RecentTriage.Count > 0)
-        {
-            <div class="panel p-5 mt-6">
-                <div class="flex items-baseline justify-between gap-3 mb-3">
-                    <h2 class="text-sm font-semibold text-content">Recently processed</h2>
-                    <a href="/audit" class="text-xs text-content-muted hover:text-content underline underline-offset-2">Full audit trail</a>
-                </div>
-                <div class="divide-y divide-line">
-                    @foreach (var entry in RecentTriage)
-                    {
-                        <div @key="entry.AuditEventId" class="flex items-center gap-3 py-2">
-                            <span class="text-[11px] text-content-subtle whitespace-nowrap w-16 shrink-0"
-                                  title="@entry.OccurredAt.LocalDateTime.ToString("d MMM yyyy, HH:mm")">@Ago(entry.OccurredAt)</span>
-                            @if (RecentHref(entry) is { } href)
-                            {
-                                <a class="font-mono text-xs text-content underline underline-offset-2 hover:text-accent whitespace-nowrap" href="@href">@Dash(entry.RecordReference)</a>
-                            }
-                            else
-                            {
-                                <span class="font-mono text-xs text-content-muted whitespace-nowrap">@Dash(entry.RecordReference)</span>
-                            }
-                            <span class="text-xs text-content-muted truncate">@entry.Detail</span>
-                            <span class="text-[11px] text-content-subtle whitespace-nowrap ml-auto hidden md:inline">@RecentMeta(entry)</span>
-                        </div>
-                    }
-                </div>
-            </div>
-        }
+            }
         }
         else if (view == QueueView.Discarded)
         {
-            <LoadGate IsLoading="@(!discardedArrived)" Prominent="true" Label="Loading discarded emails">
-            @if (loadError is not null && discardedItems.Count == 0)
+            @if (selected is null)
             {
-                @* A failed page has nothing to report; "no discarded emails" would read as an answer. *@
-                <p class="text-sm text-negative">Couldn't load the discarded emails. The reason is in the red bar above — reload to try again.</p>
-            }
-            else if (discardedTotal == 0)
-            {
-                <div class="panel p-8 text-center">
-                    <p class="text-sm text-content">No discarded emails.</p>
-                    <p class="text-xs text-content-subtle mt-1">Emails you discard from the queue show up here, and can be restored.</p>
+                <div class="panel p-8 text-center text-sm text-content-subtle">
+                    Select a discarded email to view it.
                 </div>
             }
             else
             {
-                <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
-                    <div class="relative space-y-2 lg:col-span-1">
-                        @if (listLoading)
-                        {
-                            <JewelSpinner Overlay="true" Label="Loading" />
-                        }
-                        @foreach (var item in discardedItems)
-                        {
-                            <button type="button" @key="item.Id" @onclick="() => Select(item)" class="@RowClass(item)">
-                                <div class="flex items-baseline justify-between gap-2">
-                                    <span class="text-sm font-semibold text-content truncate">@DisplayFrom(item)</span>
-                                    <span class="text-[11px] text-content-subtle shrink-0">@ListDate(item.ReceivedAt)</span>
-                                </div>
-                                <div class="flex items-center gap-1.5 mt-0.5">
-                                    <p class="text-sm text-content-muted truncate flex-1">@Dash(item.Subject)</p>
-                                    @if (item.HasAttachments)
-                                    {
-                                        <span title="Has attachments" class="inline-flex items-center text-content-subtle shrink-0">@PaperclipIcon</span>
-                                    }
-                                </div>
-                                @if (!string.IsNullOrWhiteSpace(item.BodyPreview))
-                                {
-                                    <p class="text-xs text-content-subtle truncate mt-0.5">@FirstLineOf(item.BodyPreview)</p>
-                                }
-                            </button>
-                        }
-
-                        @if (DiscardedPageCount > 1)
-                        {
-                            <div class="flex items-center justify-between gap-2 pt-2">
-                                @if (discardedIndex > 0)
-                                {
-                                    <button type="button" class="btn-secondary text-xs px-2.5 py-1.5" @onclick="PreviousDiscarded">Previous</button>
-                                }
-                                else
-                                {
-                                    <span></span>
-                                }
-                                <span class="text-[11px] text-content-subtle">Page @(discardedIndex + 1) / @DiscardedPageCount · @discardedTotal email@(discardedTotal == 1 ? "" : "s")</span>
-                                @if (discardedNext is not null)
-                                {
-                                    <button type="button" class="btn-secondary text-xs px-2.5 py-1.5" @onclick="NextDiscarded">Next</button>
-                                }
-                                else
-                                {
-                                    <span></span>
-                                }
-                            </div>
-                        }
-                    </div>
-
-                    <div class="lg:col-span-2">
-                        @if (selected is null)
-                        {
-                            <div class="panel p-8 text-center text-sm text-content-subtle">
-                                Select a discarded email to view it.
-                            </div>
-                        }
-                        else
-                        {
                             <div class="panel p-5 space-y-4 relative">
                                 @if (busy)
                                 {
@@ -897,158 +858,18 @@ else
                                     <button type="button" class="btn-primary" disabled="@busy" @onclick="DoRestore">Restore to queue</button>
                                 </div>
                             </div>
-                        }
-                    </div>
-                </div>
             }
-            </LoadGate>
         }
         else
         {
-            @* Pathway filter: one chip per pathway, read server-side as an exact bucket-category
-               filter. Kept separate from (and mutually exclusive with) the tag filter below — Graph
-               composes category filters with OR only, so combining them would show a union, not the
-               intersection the combination looks like. *@
-            <div class="flex flex-wrap items-center gap-2 mb-3">
-                <span class="text-xs uppercase tracking-wider text-content-subtle font-semibold mr-1">Pathway</span>
-                <button type="button" class="@PathwayFilterChipClass(null)" @onclick="() => SetPathwayFilter(null)">All</button>
-                <button type="button" class="@PathwayFilterChipClass(ClientBucket)" @onclick="() => SetPathwayFilter(ClientBucket)">Client</button>
-                <button type="button" class="@PathwayFilterChipClass(SubcontractorBucket)" @onclick="() => SetPathwayFilter(SubcontractorBucket)">Subcontractor</button>
-                <button type="button" class="@PathwayFilterChipClass(InternalBucket)" @onclick="() => SetPathwayFilter(InternalBucket)">Internal</button>
-            </div>
-
-            @* The tag list accrues from the emails that have loaded, so before the first page lands
-               the dropdown offers only "Discarded" — a short list that looks like the whole list. *@
-            @if (taggedArrived)
+            @if (selected is null)
             {
-            <div class="flex flex-wrap items-center gap-2 mb-5">
-                <span class="text-xs uppercase tracking-wider text-content-subtle font-semibold mr-1">Filter</span>
-                <div class="relative">
-                    <button type="button"
-                            class="rounded-full border border-line px-3 py-1 text-xs font-medium text-content-muted hover:text-content hover:border-line-strong transition inline-flex items-center gap-1.5"
-                            @onclick="ToggleFilterMenu">
-                        @FilterButtonLabel
-                        <span class="text-[9px] leading-none">▾</span>
-                    </button>
-                    @if (filterOpen)
-                    {
-                        <div class="absolute z-20 mt-1 w-60 max-h-72 overflow-y-auto rounded-lg border border-line bg-surface-raised shadow-lg p-1">
-                            <button type="button"
-                                    class="w-full text-left rounded px-3 py-1.5 text-sm text-content-muted hover:bg-surface hover:text-content"
-                                    @onclick="ClearTagFilters">
-                                All tags
-                            </button>
-                            <div class="my-1 border-t border-line"></div>
-                            @foreach (var tag in knownTags)
-                            {
-                                <label class="flex items-center gap-2 rounded px-3 py-1.5 text-sm text-content hover:bg-surface cursor-pointer">
-                                    <input type="checkbox" checked="@selectedTags.Contains(tag)" @onchange="() => ToggleTag(tag)" />
-                                    <span>@TagLabel(tag)</span>
-                                </label>
-                            }
-                        </div>
-                    }
-                </div>
-                @foreach (var tag in selectedTags)
-                {
-                    <span class="inline-flex items-center gap-1.5 rounded-full border border-accent bg-surface-raised px-2.5 py-1 text-xs text-content">
-                        @TagLabel(tag)
-                        <button type="button" class="text-content-subtle hover:text-negative" @onclick="() => ToggleTag(tag)" title="Remove filter">✕</button>
-                    </span>
-                }
-            </div>
-            }
-
-            <LoadGate IsLoading="@(!taggedArrived)" Prominent="true" Label="Loading tagged emails">
-            @if (loadError is not null && taggedItems.Count == 0)
-            {
-                @* A failed page has nothing to report; "no tagged emails" would read as an answer. *@
-                <p class="text-sm text-negative">Couldn't load the tagged emails. The reason is in the red bar above — reload to try again.</p>
-            }
-            else if (taggedTotal == 0)
-            {
-                <div class="panel p-8 text-center">
-                    <p class="text-sm text-content">@(selectedTags.Count == 0 ? "No tagged emails." : "No emails with the selected tags.")</p>
-                    <p class="text-xs text-content-subtle mt-1">Emails linked to a request (or discarded) appear here. Open one to add it to another request or remove a tag.</p>
+                <div class="panel p-8 text-center text-sm text-content-subtle">
+                    Select a tagged email to manage its tags.
                 </div>
             }
             else
             {
-                <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
-                    <div class="relative space-y-2 lg:col-span-1">
-                        @if (listLoading)
-                        {
-                            <JewelSpinner Overlay="true" Label="Loading" />
-                        }
-                        @foreach (var item in taggedItems)
-                        {
-                            <button type="button" @key="item.Id" @onclick="() => Select(item)" class="@RowClass(item)">
-                                <div class="flex items-baseline justify-between gap-2">
-                                    <span class="text-sm font-semibold text-content truncate">@DisplayFrom(item)</span>
-                                    <span class="text-[11px] text-content-subtle shrink-0">@ListDate(item.ReceivedAt)</span>
-                                </div>
-                                <div class="flex items-center gap-1.5 mt-0.5">
-                                    <p class="text-sm text-content-muted truncate flex-1">@Dash(item.Subject)</p>
-                                    @if (item.HasAttachments)
-                                    {
-                                        <span title="Has attachments" class="inline-flex items-center text-content-subtle shrink-0">@PaperclipIcon</span>
-                                    }
-                                </div>
-                                @if (!string.IsNullOrWhiteSpace(item.BodyPreview))
-                                {
-                                    <p class="text-xs text-content-subtle truncate mt-0.5">@FirstLineOf(item.BodyPreview)</p>
-                                }
-                                @if (item.Bucket is not null || item.Categories.Count > 0)
-                                {
-                                    <div class="flex flex-wrap items-center gap-1 mt-1">
-                                        @* The pathway badge leads the chip row: the thread's filing is the first thing
-                                           to know about a tagged email, before which records it feeds. *@
-                                        @if (PathwayFromBucket(item.Bucket) is { } rowPathway)
-                                        {
-                                            <span class="inline-flex items-center rounded-full @PathwayChipColour(rowPathway) text-[10px] font-medium px-2 py-0.5">@PathwayLabel(rowPathway)</span>
-                                        }
-                                        @foreach (var tag in item.Categories)
-                                        {
-                                            <span class="inline-flex items-center rounded-full bg-accent/10 text-accent text-[10px] font-medium px-2 py-0.5">@TagLabel(tag)</span>
-                                        }
-                                    </div>
-                                }
-                            </button>
-                        }
-
-                        @if (TaggedPageCount > 1)
-                        {
-                            <div class="flex items-center justify-between gap-2 pt-2">
-                                @if (taggedIndex > 0)
-                                {
-                                    <button type="button" class="btn-secondary text-xs px-2.5 py-1.5" @onclick="PreviousTagged">Previous</button>
-                                }
-                                else
-                                {
-                                    <span></span>
-                                }
-                                <span class="text-[11px] text-content-subtle">Page @(taggedIndex + 1) / @TaggedPageCount · @taggedTotal email@(taggedTotal == 1 ? "" : "s")</span>
-                                @if (taggedNext is not null)
-                                {
-                                    <button type="button" class="btn-secondary text-xs px-2.5 py-1.5" @onclick="NextTagged">Next</button>
-                                }
-                                else
-                                {
-                                    <span></span>
-                                }
-                            </div>
-                        }
-                    </div>
-
-                    <div class="lg:col-span-2">
-                        @if (selected is null)
-                        {
-                            <div class="panel p-8 text-center text-sm text-content-subtle">
-                                Select a tagged email to manage its tags.
-                            </div>
-                        }
-                        else
-                        {
                             <div class="panel p-5 space-y-4 relative">
                                 @if (busy)
                                 {
@@ -1155,38 +976,135 @@ else
                                     </div>
                                 </div>
                             </div>
-                        }
-                    </div>
-                </div>
             }
-            </LoadGate>
         }
-    </section>
-}
+    </div>;
 
-@* The staged-work modal — a component, so this page only orchestrates. To-do drafting lives
-   inside it too (Internal → Create new), editing the page-owned createTodoRows in place. *@
-<SystemTagsModal IsOpen="@tagsModalOpen"
-                 ProjectId="@triageProjectId"
-                 EmailSubject="@(selected?.Subject ?? "")"
-                 SenderEmail="@(selected?.FromEmail ?? "")"
-                 EmailAttachments="@(detail?.Attachments ?? Array.Empty<IntakeAttachment>())"
-                 LockedPathway="@(FixedPathway is { } fp ? PathwayLabel(fp) : null)"
-                 ActivePathway="@(pathway is { } chosenPathway ? PathwayLabel(chosenPathway) : null)"
-                 ActivePathwayChanged="OnModalPathwayChanged"
-                 Picked="pickedRecords"
-                 OnStagingChanged="StateHasChanged"
-                 StagedCreate="@stagedCreate"
-                 StagedCreateChanged="v => stagedCreate = v"
-                 TodoRows="createTodoRows"
-                 TodoAssigneeOptions="todoAssigneeOptions"
-                 TodoProjectNote="@TodoProjectNote"
-                 OnClose="() => tagsModalOpen = false" />
+    @*
+        The triage bar — rendered ABOVE the two-window split, because the selected email is the
+        one thing global to everything below: whatever the windows are showing, this strip says
+        which email is being dealt with, holds the decisions that belong to the email itself
+        (project, the staged-work doors, the ticks) and fires the one Apply. Selecting another
+        email swaps the bar's subject; the windows carry on where they were.
+    *@
+    RenderFragment TriageBarContent =@<div class="panel px-4 py-3 mb-3 relative space-y-3">
+        @if (busy)
+        {
+            <JewelSpinner Overlay="true" Label="@busyLabel" />
+        }
 
-@* ---- New email (compose a fresh outbound thread from the projects mailbox) ---- *@
-<Modal IsOpen="@newEmailOpen" Title="New email" Class="max-w-3xl" DismissOnOverlayClick="false"
-       ShowFooter="false" OnCancel="CloseNewEmail">
-    <div class="space-y-3">
+        <div class="flex flex-wrap items-center gap-x-6 gap-y-2">
+            <div class="min-w-0 max-w-full xl:max-w-sm">
+                <p class="text-[11px] uppercase tracking-wider text-content-subtle font-semibold">Dealing with</p>
+                <p class="text-sm font-medium text-content truncate" title="@Dash(selected!.Subject)">@Dash(selected.Subject)</p>
+                <p class="text-[11px] text-content-subtle truncate">@DisplayFrom(selected) · @Date(selected.ReceivedAt)</p>
+            </div>
+
+            @* PROJECT — the easiest decision, made first; everything staged below uses it.
+               Auto-matched from the email text when a single live project's name appears. The
+               picker carries the completed-projects toggle inside its own panel (ProjectSelect). *@
+            <div class="flex flex-wrap items-center gap-2">
+                <label class="text-xs uppercase tracking-wider text-content-subtle font-semibold shrink-0">Project</label>
+                <ProjectSelect Projects="@AllProjects" Value="@triageProjectId" ValueChanged="OnTriageProjectPicked"
+                               ToggleTitle="The email's project — everything staged files against it" />
+            </div>
+
+            @* The email-global ticks, stacked and compact — the full wording lives in the hover
+               titles. The thread tick says how many emails the apply would sweep, once the
+               thread has been read (staging tags themselves lives on the System Tags window). *@
+            <div class="flex flex-col gap-1">
+                <label class="flex items-center gap-1.5 text-sm text-content cursor-pointer select-none"
+                       title="Tags the email to the project's programme — it appears in the Programme tab's Relevant Events">
+                    <input type="checkbox" checked="@relevantEventStaged"
+                           @onchange="e => relevantEventStaged = e.Value is true" />
+                    Relevant Event for Programme
+                </label>
+                <label class="flex items-center gap-1.5 text-sm text-content cursor-pointer select-none"
+                       title="Everything you apply also tags every email currently in this conversation, clearing them from the queue together. Leave off to deal with just this email">
+                    <input type="checkbox" checked="@triageEntireThread"
+                           @onchange="e => triageEntireThread = e.Value is true" />
+                    Entire thread@(thread.Count > 1 ? $" · {thread.Count} emails" : "")
+                </label>
+            </div>
+        </div>
+
+        @if (projectAutoMatched && !string.IsNullOrWhiteSpace(triageProjectId))
+        {
+            <p class="text-xs text-accent">Project matched from the email — change it if that's wrong.</p>
+        }
+        @if (actionError is not null)
+        {
+            <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@actionError</p>
+        }
+        @if (discardArmed)
+        {
+            <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-content">
+                Discard this email if it isn't for a record at all — spam, an auto-reply, or sent to the wrong place. It (and its thread) gets a "discarded" tag and leaves the queue; nothing moves in the mailbox, and it can be restored from the Tagged tab. Applied by the Apply button.
+            </p>
+        }
+        @if (crossFileMessage is not null)
+        {
+            <div class="rounded-lg bg-amber-500/10 border border-amber-500/40 px-3 py-2 space-y-2">
+                <p class="text-sm text-content">@crossFileMessage</p>
+                <button type="button" class="btn-secondary text-xs" disabled="@busy" @onclick="() => DoApplyAll(pendingSaveDraft, allowCrossPathway: true)">File under both anyway</button>
+            </div>
+        }
+
+        @* ---- The one action bar: whatever is set up here and in the windows below — a reply,
+               to-dos, a record filing — is applied together, in one click. ---- *@
+        <div class="pt-2 border-t border-line flex flex-wrap items-center gap-3">
+            @if (PendingSummary is { } pending)
+            {
+                <p class="text-sm text-content flex-1">This will @pending.</p>
+            }
+            else
+            {
+                <p class="text-sm text-content-subtle flex-1">Write a reply in the email window, stage tags in System Tags, or line up new records and to-dos in System Actions — then apply it all in one go here.</p>
+            }
+            <div class="flex items-center gap-2">
+                <button type="button" class="@DiscardTabClass" @onclick="() => discardArmed = !discardArmed">🗑 Discard</button>
+                <button type="button" class="btn-primary" disabled="@(busy || PendingSummary is null)" @onclick="() => DoApplyAll(saveAsDraftOnly: false)">
+                    @ApplyButtonLabel
+                </button>
+                @if (ReplyDraftPending)
+                {
+                    <button type="button" class="btn-secondary" disabled="@busy" @onclick="() => DoApplyAll(saveAsDraftOnly: true)"
+                            title="Applies the to-dos and filing above, but stages the reply as an Outlook draft instead of sending it">
+                        Save reply as draft
+                    </button>
+                }
+            </div>
+        </div>
+    </div>;
+
+    RenderFragment TagsPaneContent =@<div>
+        @if (view != QueueView.Active || selected is null)
+        {
+            <div class="panel p-8 text-center text-sm text-content-subtle">
+                Open a queue email first — system tags are staged against the email being triaged,
+                then applied all together by the inbox window's Apply.
+            </div>
+        }
+        else
+        {
+            @* Keyed on the message id so a fresh selection starts a fresh pane (the staged work
+               itself is page-owned and already resets per selection). *@
+            <SystemTagsPane @key="selected.Id"
+                            IsOpen="true"
+                            ProjectId="@triageProjectId"
+                            EmailSubject="@(selected?.Subject ?? "")"
+                            LockedPathway="@(FixedPathway is { } fp ? PathwayLabel(fp) : null)"
+                            ActivePathway="@(pathway is { } chosenPathway ? PathwayLabel(chosenPathway) : null)"
+                            ActivePathwayChanged="OnModalPathwayChanged"
+                            Picked="pickedRecords"
+                            OnStagingChanged="StateHasChanged"
+                            OnClose="() => workspace.Close(PanelKind.SystemTags)" />
+        }
+    </div>;
+
+    RenderFragment ComposePaneContent =@<div class="panel p-5">
+        <h2 class="text-base font-semibold text-content mb-4">New email</h2>
+        <div class="space-y-3">
         <p class="rounded-lg bg-surface-raised border border-line px-3 py-2 text-xs text-content-subtle">
             Sends from the <span class="font-medium text-content">projects mailbox</span>. Optionally file it to a record so the sent copy shows in that record's correspondence — replies will arrive in the queue either way.
         </p>
@@ -1263,7 +1181,126 @@ else
             <button type="button" class="btn-primary" disabled="@(newEmailBusy || !NewEmailIsSendable)" @onclick="() => DoSendNewEmail(saveAsDraftOnly: false)">@(newEmailBusy ? "Sending…" : "Send")</button>
         </div>
     </div>
-</Modal>
+    </div>;
+}
+
+@if (!sessionReady)
+{
+    <section class="px-6 md:px-8 py-12">
+        <LoadGate IsLoading="true" Prominent="true" Label="Loading" />
+    </section>
+}
+else if (!Session.IsApproved)
+{
+    <RequestAccessView Email="@Auth.CurrentUser!.Email" DisplayName="@Auth.CurrentUser.DisplayName" />
+}
+else if (!CanTriage)
+{
+    <section class="px-6 md:px-8 py-12">
+        <div class="panel p-8 text-center">
+            <p class="text-sm text-content">You don't have access to the Control Centre.</p>
+            <p class="text-xs text-content-subtle mt-1">The Control Centre is available to administrators and project managers.</p>
+        </div>
+    </section>
+}
+else
+{
+    @*
+        The Control Centre workspace: two side-by-side windows, each with the same icon rail, split
+        by a draggable divider (1/3 : 2/3 until dragged). Any content loads either side and always
+        remembers where it was — data is gathered by jumping around windows, side by side, instead
+        of through modals. On mobile there is one window; the icons still carry the full context.
+    *@
+    <section class="px-3 md:px-4 pt-3 pb-4 h-[calc(100dvh-5.25rem)] min-h-[34rem] flex flex-col">
+        @* The selected email is global to both windows, so its bar sits above the split. *@
+        @if (view == QueueView.Active && selected is not null)
+        {
+            @TriageBarContent
+        }
+        <div class="flex-1 min-h-0">
+        <PanelWorkspace State="workspace"
+                        EmailAvailable="@(selected is not null)"
+                        PreviewAvailable="@(workspace.Preview is not null)"
+                        TagsBadge="@StagedTagCount"
+                        ActionsBadge="@StagedActionCount">
+            <InboxContent>@InboxPaneContent</InboxContent>
+            <EmailContent>@EmailPaneContent</EmailContent>
+            <TagsContent>@TagsPaneContent</TagsContent>
+            <ActionsContent>
+                @if (view != QueueView.Active || selected is null)
+                {
+                    <div class="panel p-8 text-center text-sm text-content-subtle">
+                        Open a queue email first — system actions are lined up against the email
+                        being triaged and fire with its Apply.
+                    </div>
+                }
+                else
+                {
+                    @* Keyed on the message id like the tags pane: a fresh selection starts fresh
+                       scratch forms (the staged work itself is page-owned and resets per selection). *@
+                    <SystemActionsPane @key="selected.Id"
+                                       Projects="@ProjectOptionsFor(null)"
+                                       ProjectId="@triageProjectId"
+                                       StagedActions="stagedSystemActions"
+                                       OnStagingChanged="StateHasChanged"
+                                       StagedCreate="@stagedCreate"
+                                       StagedCreateChanged="v => stagedCreate = v"
+                                       TodoRows="createTodoRows"
+                                       TodoAssigneeOptions="todoAssigneeOptions"
+                                       TodoProjectNote="@TodoProjectNote"
+                                       EmailAttachments="@(detail?.Attachments ?? Array.Empty<IntakeAttachment>())"
+                                       SenderEmail="@(selected?.FromEmail ?? "")" />
+                }
+            </ActionsContent>
+            <RecordsContent>
+                <RecordExplorerPane Projects="@ProjectOptionsFor(null)" OnPreview="OpenRecordPreview" />
+            </RecordsContent>
+            <PreviewContent>
+                <PreviewPane Request="@workspace.Preview" OnClose="() => workspace.ClosePreview()" />
+            </PreviewContent>
+            <XeroContent><XeroExplorerPane OnPreview="OpenXeroPreview" /></XeroContent>
+            <ComposeContent>@ComposePaneContent</ComposeContent>
+        </PanelWorkspace>
+        </div>
+    </section>
+
+    @* Recently processed — the audit register's latest link/create decisions, newest first, so the
+       triager can jump straight to the document an email was just filed against. Its own section
+       beneath the whole workspace (reached by scrolling past it), full width — not squeezed into
+       the inbox pane under the queue. Same no-gate pattern as the unassigned panel: it renders if
+       and when there is something to show. (The register records client-pathway triage today;
+       subcontractor/internal rows appear here automatically once the audit scope widens.) *@
+    @if (RecentTriage.Count > 0)
+    {
+        <section class="px-3 md:px-4 pb-6">
+            <div class="panel p-5">
+                <div class="flex items-baseline justify-between gap-3 mb-3">
+                    <h2 class="text-sm font-semibold text-content">Recently processed</h2>
+                    <a href="/audit" class="text-xs text-content-muted hover:text-content underline underline-offset-2">Full audit trail</a>
+                </div>
+                <div class="divide-y divide-line">
+                    @foreach (var entry in RecentTriage)
+                    {
+                        <div @key="entry.AuditEventId" class="flex items-center gap-3 py-2">
+                            <span class="text-[11px] text-content-subtle whitespace-nowrap w-16 shrink-0"
+                                  title="@entry.OccurredAt.LocalDateTime.ToString("d MMM yyyy, HH:mm")">@Ago(entry.OccurredAt)</span>
+                            @if (RecentHref(entry) is { } href)
+                            {
+                                <a class="font-mono text-xs text-content underline underline-offset-2 hover:text-accent whitespace-nowrap" href="@href">@Dash(entry.RecordReference)</a>
+                            }
+                            else
+                            {
+                                <span class="font-mono text-xs text-content-muted whitespace-nowrap">@Dash(entry.RecordReference)</span>
+                            }
+                            <span class="text-xs text-content-muted truncate">@entry.Detail</span>
+                            <span class="text-[11px] text-content-subtle whitespace-nowrap ml-auto hidden md:inline">@RecentMeta(entry)</span>
+                        </div>
+                    }
+                </div>
+            </div>
+        </section>
+    }
+}
 
 @code {
     // The communication pathway — WHO the correspondence is with (docs/Pathway-Split-Platform-Flow-
@@ -1385,7 +1422,8 @@ else
     {
         RecordType.Request or RecordType.Variation or RecordType.VariationQuote
             or RecordType.Scheduling or RecordType.Lad => "Client",
-        RecordType.BidPackageInvite or RecordType.WorkOrder => "Subcontractor",
+        RecordType.BidPackageInvite or RecordType.WorkOrder
+            or RecordType.SubcontractorComms => "Subcontractor",
         RecordType.CostCentre       => "Client or Subcontractor",
         RecordType.Todo             => "Neutral",
         _ => ""
@@ -1409,6 +1447,7 @@ else
         RecordType.VariationQuote   => "Variation Order Quote",
         RecordType.Lad              => "LADs claim",
         RecordType.Todo             => "To-do item",
+        RecordType.SubcontractorComms => "Subcontractor communication",
         _                           => type.ToString()
     };
 
@@ -1515,9 +1554,9 @@ else
     private IReadOnlyList<Request> unassigned = Array.Empty<Request>();
     private string? unassignedError;
 
-    // The audit register's latest triage decisions, for the "Recently triaged" panel at the foot of
-    // the queue. Nullable backing field: null is the honest "not fetched yet" (the panel simply
-    // doesn't render), an empty list is a real answer that keeps it hidden either way.
+    // The audit register's latest triage decisions, for the "Recently processed" section beneath
+    // the workspace. Nullable backing field: null is the honest "not fetched yet" (the section
+    // simply doesn't render), an empty list is a real answer that keeps it hidden either way.
     private IReadOnlyList<AuditEvent>? recentTriage;
     private IReadOnlyList<AuditEvent> RecentTriage => recentTriage ?? Array.Empty<AuditEvent>();
     private const int RecentTriageCount = 8;
@@ -1546,6 +1585,7 @@ else
     // project tab (work orders, programme, financials, to-dos); anything unresolvable reads as text.
     private static string? RecentHref(AuditEvent entry)
     {
+        if (entry.RecordType == RecordType.SubcontractorComms) return "/subcontractors/communications";
         if (string.IsNullOrEmpty(entry.ProjectId))
             return entry.RecordType == RecordType.Todo ? "/todos" : null;
         var projectId = entry.ProjectId;
@@ -1618,10 +1658,9 @@ else
     private IReadOnlyList<LinkableRecord> linkRecords = Array.Empty<LinkableRecord>();
     private bool linkRecordsLoading;
 
-    // Create-new state lives in `stagedCreate` (Features.Triage.StagedRecordCreate), drafted in the
-    // System Tags modal. A request created from an email always starts as a General container
-    // (auto-numbered REQ-#### server-side); it's promoted to an RFI later from the request page.
-    private const RequestType createKind = RequestType.General;
+    // Create-new state lives in `stagedCreate` (Features.Triage.StagedRecordCreate), drafted in
+    // the System Actions pane (moved from System Tags 2026-08-10). Its RequestKind says whether
+    // the Request kind raises a General container (REQ-####) or an official RFI.
 
     // Reply-in-thread state: the chosen project, the reply written in the portal (it becomes the
     // draft's body AND the background request's description), and the last successful outcome
@@ -1646,7 +1685,6 @@ else
     private ComposeOutcome? composeOutcome;
 
     // ---- New email (fresh outbound thread) ----
-    private bool newEmailOpen;
     private bool newEmailBusy;
     private string? newEmailError;
     private string newEmailTo = "";
@@ -1662,8 +1700,8 @@ else
     private bool newEmailRecordsLoading;
     private IReadOnlyList<LinkableRecord> newEmailRecords = Array.Empty<LinkableRecord>();
 
-    // To-do draft rows (Features.Triage.TodoDraftRow), edited in the System Tags modal's
-    // Internal → Create new pane; one to-do is raised PER ASSIGNEE per row when the apply runs.
+    // To-do draft rows (Features.Triage.TodoDraftRow), edited in the System Actions pane's
+    // "Create To-do Items" action; one to-do is raised PER ASSIGNEE per row when the apply runs.
     private List<TodoDraftRow> createTodoRows = new() { new TodoDraftRow() };
 
     // Section 2's own project pick (independent of section 3's triageProjectId — both sections are
@@ -1676,10 +1714,27 @@ else
     // say so ("matched from the email — change it if that's wrong").
     private bool projectAutoMatched;
 
-    // The staged-work modal + armed discard. The System Tags modal's tab mirrors the page's own
-    // `pathway` field (the pathway decision); stagedCreate is the modal's drafted new record
+    // ---- The workspace: which content each of the two windows shows, the divider position, and
+    //      the open preview document. Everything pane-shaped goes through this one object; the
+    //      page re-renders on its OnChange so a rail press anywhere redraws both windows. ----
+    private readonly PanelWorkspaceState workspace = new();
+
+    // A document opened from inside a record (the record explorer's Preview buttons) — shown in
+    // the Preview pane on the window OPPOSITE the explorer, so record and document read together.
+    private void OpenRecordPreview(PreviewRequest document) =>
+        workspace.OpenPreview(document, PanelKind.Records);
+
+    // A document opened from a Xero transaction — same Preview pane, opposite the explorer.
+    private void OpenXeroPreview(PreviewRequest document) =>
+        workspace.OpenPreview(document, PanelKind.Xero);
+
+    // System actions lined up in the Actions pane, run by the one Apply after the filing —
+    // payloads snapshotted at stage time, cleared per selection like all staging.
+    private readonly List<StagedSystemAction> stagedSystemActions = new();
+
+    // The staged work + armed discard. The System Tags pane's tab mirrors the page's own
+    // `pathway` field (the pathway decision); stagedCreate is the pane's drafted new record
     // (null = none) — StagedRecordKind decides whether Apply raises a request, a bid package, a work order or a defect.
-    private bool tagsModalOpen;
     private bool discardArmed;
     private StagedRecordCreate? stagedCreate;
     // The "Relevant Event for Programme" tick — staged like everything else, applied by the one
@@ -1699,9 +1754,10 @@ else
         if (Enum.TryParse<TriagePathway>(tab, out var next)) SetPathway(next);
     }
 
-    // Picked links + the staged create + the drafted to-dos — everything the System Tags modal
-    // is holding for the apply, so the one button's badge tells the whole story.
-    private int StagedTagCount => pickedRecords.Count + (StagedCreateReady ? 1 : 0) + CurrentTodoDrafts().Count;
+    // Tags badge = staged LINKS; actions badge = everything the Actions pane will run (staged
+    // store calls, the drafted new record, the drafted to-dos) — creation moved there 2026-08-10.
+    private int StagedTagCount => pickedRecords.Count;
+    private int StagedActionCount => stagedSystemActions.Count + (StagedCreateReady ? 1 : 0) + CurrentTodoDrafts().Count;
 
     private bool StagedCreateReady =>
         // A defect has no title — its description is what makes it a real staged record.
@@ -1711,14 +1767,8 @@ else
 
     private string? TodoProjectNote =>
         string.IsNullOrWhiteSpace(triageProjectId)
-            ? "No project set on the email — these will be company-wide items. Set the Project on the page to put them on a project's To-do tab."
-            : $"Items land on the To-do tab of {ProjectLabelFor(triageProjectId)} — the email's project, set on the page.";
-
-    private string TagsButtonClass =>
-        "inline-flex items-center gap-1 rounded-lg border px-3 py-1.5 text-sm "
-        + (StagedTagCount > 0
-            ? "border-accent/50 text-accent bg-accent/5 font-medium"
-            : "border-line-strong text-content-muted hover:text-content hover:border-line-strong");
+            ? "No project set on the email — these will be company-wide items. Set the Project in the triage bar above to put them on a project's To-do tab."
+            : $"Items land on the To-do tab of {ProjectLabelFor(triageProjectId)} — the email's project, set in the triage bar above.";
 
     // The assignee picker's option pool: the ROLES a to-do can be assigned to
     // (TodoRoles.AssignableAsTodoAssignee, served by ListTodoAssignableRoles) and, under each
@@ -1758,6 +1808,7 @@ else
         await Session.EnsureLoadedAsync();
         if (!Auth.IsSignedIn) { Nav.NavigateTo("/login", forceLoad: true); return; }
         RequestRegister.OnChange += StateHasChanged;
+        workspace.OnChange += StateHasChanged;
         DrawingStore.OnChange += StateHasChanged;
         // The sort preference has to land first — LoadAsync pages the mailbox in this order, so
         // reading it late would fetch the first page the wrong way round. It is a local-storage
@@ -1788,8 +1839,8 @@ else
         // Land straight in the first email: opening the top of the queue is what a triager does
         // first every time, so the page does it for them. Initial load only — after an action the
         // deliberately-cleared pane is where the outcome banners (reply draft, partial link) show.
-        if (view == QueueView.Active && selected is null && items.Count > 0)
-            await Select(items[0]);
+        if (view != QueueView.Active || selected is not null || items.Count == 0) return;
+        await Select(items[0]);
     }
 
     // The project list only feeds the "file this email against a project" pickers. Losing it should
@@ -1803,6 +1854,7 @@ else
     private async Task SwitchView(QueueView next)
     {
         if (view == next) return;
+        ParkSelectedTriage();
         view = next;
         selected = null;
         detail = null;
@@ -1829,6 +1881,7 @@ else
         newestFirst = newest;
         if (Auth.CurrentUser is not null)
             await SortStorage.WriteAsync(Auth.CurrentUser.Email, newest);
+        ParkSelectedTriage();
         selected = null;
         detail = null;
         detailLoading = false;
@@ -2024,6 +2077,7 @@ else
     {
         if (!selectedTags.Add(tag)) selectedTags.Remove(tag);
         pathwayBucketFilter = null;
+        ParkSelectedTriage();
         selected = null;
         detail = null;
         detailLoading = false;
@@ -2035,6 +2089,7 @@ else
     {
         selectedTags.Clear();
         filterOpen = false;
+        ParkSelectedTriage();
         selected = null;
         detail = null;
         detailLoading = false;
@@ -2050,6 +2105,7 @@ else
         pathwayBucketFilter = bucket;
         selectedTags.Clear();
         filterOpen = false;
+        ParkSelectedTriage();
         selected = null;
         detail = null;
         detailLoading = false;
@@ -2105,17 +2161,128 @@ else
         finally { busy = false; }
     }
 
-    // Point the detail pane at an email: set the selection and reset the create forms. Loading
-    // the body and thread is the caller's job — Select does both.
-    private void ApplySelection(MailboxMessage item)
+    // ---- Parked triage (2026-08-10): navigating away no longer costs drafted work. ----
+    // Whatever was staged on the open email — the written reply, the project choice, the picked
+    // tags, the lined-up actions and to-dos — is parked under that email's id whenever the
+    // selection moves off it, and put back exactly as it was the next time the email is opened.
+    // Parking is in-memory only: a page refresh still starts clean ("Save reply as draft" is the
+    // deliberate keep), and Apply consumes the work instead of parking it. An armed discard is
+    // deliberately NOT parked — a destructive step should never come back pre-armed.
+    private readonly Dictionary<string, ParkedTriage> parkedTriageByEmailId = new();
+
+    // Everything drafted against one email, held while the triager reads elsewhere.
+    private sealed class ParkedTriage
     {
+        public TriagePathway? Pathway { get; init; }
+        public string ReplyBody { get; init; } = "";
+        public string ReplyToField { get; init; } = "";
+        public string ReplyCcField { get; init; } = "";
+        public string ReplyBccField { get; init; } = "";
+        public string ReplySubject { get; init; } = "";
+        public bool ReplyShowBcc { get; init; }
+        public bool ReplyOpen { get; init; }
+        public bool ReplyEnvelopePrefilled { get; init; }
+        public IReadOnlyList<ComposeDraftAttachment> ReplyAttachments { get; init; } = Array.Empty<ComposeDraftAttachment>();
+        public string ProjectId { get; init; } = "";
+        public bool ProjectAutoMatched { get; init; }
+        public RecordType LinkRecordType { get; init; }
+        public IReadOnlyList<LinkableRecord> PickedRecords { get; init; } = Array.Empty<LinkableRecord>();
+        public IReadOnlyList<StagedSystemAction> SystemActions { get; init; } = Array.Empty<StagedSystemAction>();
+        public StagedRecordCreate? Create { get; init; }
+        public List<TodoDraftRow> TodoRows { get; init; } = new();
+        public bool RelevantEventStaged { get; init; }
+        public bool TriageEntireThread { get; init; }
+    }
+
+    // Anything the triager has actually set is worth keeping; an untouched email parks nothing.
+    private bool HasTriageWorthParking =>
+        replyOpen
+        || HtmlHasContent(replyBody)
+        || replyAttachments.Count > 0
+        || pickedRecords.Count > 0
+        || stagedSystemActions.Count > 0
+        || stagedCreate is not null
+        || createTodoRows.Any(row => !string.IsNullOrWhiteSpace(row.Title) || !string.IsNullOrWhiteSpace(row.Notes))
+        || relevantEventStaged
+        || triageEntireThread
+        || !string.IsNullOrWhiteSpace(triageProjectId);
+
+    private void ParkSelectedTriage()
+    {
+        if (selected is null) return;
+        if (!HasTriageWorthParking) return;
+        parkedTriageByEmailId[selected.Id] = new ParkedTriage
+        {
+            Pathway = pathway,
+            ReplyBody = replyBody,
+            ReplyToField = replyToField,
+            ReplyCcField = replyCcField,
+            ReplyBccField = replyBccField,
+            ReplySubject = replySubject,
+            ReplyShowBcc = replyShowBcc,
+            ReplyOpen = replyOpen,
+            ReplyEnvelopePrefilled = replyEnvelopePrefilled,
+            ReplyAttachments = replyAttachments,
+            ProjectId = triageProjectId,
+            ProjectAutoMatched = projectAutoMatched,
+            LinkRecordType = linkRecordType,
+            PickedRecords = pickedRecords.ToList(),
+            SystemActions = stagedSystemActions.ToList(),
+            Create = stagedCreate,
+            TodoRows = createTodoRows,
+            RelevantEventStaged = relevantEventStaged,
+            TriageEntireThread = triageEntireThread
+        };
+    }
+
+    // Put a parked email's work back exactly as it was left. Returns whether anything came back,
+    // so Select knows to refetch the link-record pool the restored picks came from.
+    private bool RestoreParkedTriage(string emailId)
+    {
+        if (!parkedTriageByEmailId.Remove(emailId, out var parked)) return false;
+        pathway = parked.Pathway;
+        replyBody = parked.ReplyBody;
+        replyToField = parked.ReplyToField;
+        replyCcField = parked.ReplyCcField;
+        replyBccField = parked.ReplyBccField;
+        replySubject = parked.ReplySubject;
+        replyShowBcc = parked.ReplyShowBcc;
+        replyOpen = parked.ReplyOpen;
+        replyEnvelopePrefilled = parked.ReplyEnvelopePrefilled;
+        replyAttachments = parked.ReplyAttachments;
+        triageProjectId = parked.ProjectId;
+        projectAutoMatched = parked.ProjectAutoMatched;
+        linkRecordType = parked.LinkRecordType;
+        pickedRecords.AddRange(parked.PickedRecords);
+        stagedSystemActions.AddRange(parked.SystemActions);
+        stagedCreate = parked.Create;
+        createTodoRows = parked.TodoRows;
+        relevantEventStaged = parked.RelevantEventStaged;
+        triageEntireThread = parked.TriageEntireThread;
+        return true;
+    }
+
+    // LoadLinkRecordsAsync clears the picks because a new pool normally invalidates them —
+    // restored picks are the exception, so they are carried over the reload by hand.
+    private async Task ReloadLinkRecordsKeepingPicksAsync()
+    {
+        var restoredPicks = pickedRecords.ToList();
+        await LoadLinkRecordsAsync();
+        pickedRecords.AddRange(restoredPicks);
+    }
+
+    // Point the detail pane at an email: park whatever was drafted on the previous one, set the
+    // selection and reset the forms — then, if this email itself was parked earlier, put its
+    // work back. Loading the body and thread is the caller's job — Select does both.
+    private bool ApplySelection(MailboxMessage item)
+    {
+        ParkSelectedTriage();
         selected = item;
         // Pathway-first: pre-select the thread's own pathway when it already carries one (rendered as
         // a fixed badge); otherwise the triager chooses before any action beyond Discard is offered.
         pathway = PathwayFromBucket(item.Bucket);
         actionError = null;
         crossFileMessage = null;
-        previewAttachment = null;
         ResetLinkState();
         composeOutcome = null;
         linkNote = null;
@@ -2129,11 +2296,12 @@ else
         triageProjectId = "";
         projectAutoMatched = false;
         createTodoRows = new List<TodoDraftRow> { new() };
-        tagsModalOpen = false;
+        stagedSystemActions.Clear();
         discardArmed = false;
         stagedCreate = null;
         relevantEventStaged = false;
         triageEntireThread = false;
+        return RestoreParkedTriage(item.Id);
     }
 
     // Open the clicked email exactly as clicked — the selection stays on it; the thread panel
@@ -2141,9 +2309,15 @@ else
     // the "entire thread" checkbox opts the apply into the whole conversation.
     private async Task Select(MailboxMessage item)
     {
-        ApplySelection(item);
+        var restoredParkedWork = ApplySelection(item);
+        // The email reads in the window OPPOSITE the list, side by side — desktop's version of
+        // the old list/detail split, but with both halves loadable anywhere.
+        workspace.ShowOpposite(PanelKind.Email, PanelKind.Inbox);
         // Body and thread are independent live reads — fetch them side by side.
         await Task.WhenAll(LoadDetailAsync(item), LoadThreadAsync(item));
+        // A restored draft brings its record picks back, so the pool they came from is refetched.
+        if (restoredParkedWork && !string.IsNullOrWhiteSpace(triageProjectId))
+            await ReloadLinkRecordsKeepingPicksAsync();
         // Both reads have landed, so the whole chain is available to search for a project name
         // to pre-fill the pickers with.
         await TryPrefillProjectFromEmailAsync();
@@ -2290,14 +2464,19 @@ else
         await LoadLinkRecordsAsync();
     }
 
-    private async Task OnTriageProjectChanged(ChangeEventArgs e)
+    // One landing for the email's project decision: the triage bar's ProjectSelect hands the id
+    // straight in; the Tagged view's plain <select> still speaks ChangeEventArgs and forwards.
+    private async Task OnTriageProjectPicked(string projectId)
     {
-        triageProjectId = e.Value?.ToString() ?? "";
+        triageProjectId = projectId;
         projectAutoMatched = false; // an explicit choice replaces the guess
         linkRecordId = "";
         pickedRecords.Clear();
         await LoadLinkRecordsAsync();
     }
+
+    private async Task OnTriageProjectChanged(ChangeEventArgs e) =>
+        await OnTriageProjectPicked(e.Value?.ToString() ?? "");
 
     // Load the chosen project's records of the chosen type for the picker. Record-agnostic: the same
     // call backs both the Link panel and the Tagged tab's "link to another record" control.
@@ -2429,8 +2608,14 @@ else
                     StagedRecordKind.BidPackage => "create the bid package from this email",
                     StagedRecordKind.WorkOrder => StagedWorkOrderSummary(stagedCreate),
                     StagedRecordKind.Defect => "raise the defect from this email",
-                    _ => "create the request from this email"
+                    _ => stagedCreate.RequestKind == RequestType.Rfi
+                        ? "raise the RFI from this email"
+                        : "create the request from this email"
                 });
+            if (stagedSystemActions.Count == 1)
+                parts.Add($"run 1 system action ({stagedSystemActions[0].Summary})");
+            else if (stagedSystemActions.Count > 1)
+                parts.Add($"run {stagedSystemActions.Count} system actions");
             if (relevantEventStaged)
                 parts.Add("tag it a Relevant Event for the Programme");
             if (discardArmed)
@@ -2465,6 +2650,7 @@ else
             var filing = CurrentTodoDrafts().Count > 0
                 || pickedRecords.Count > 0
                 || relevantEventStaged
+                || stagedSystemActions.Count > 0
                 || (StagedCreateReady && !string.IsNullOrWhiteSpace(triageProjectId));
             if (ReplyDraftPending) return filing ? "Send reply & file" : "Send reply";
             return discardArmed && !filing ? "Discard email" : "Apply";
@@ -2540,7 +2726,7 @@ else
         var discarding = discardArmed;
         // One scope for the whole apply: the checkbox opts every staged action into the thread.
         var scope = triageEntireThread ? LinkThreadScope.EntireThread : LinkThreadScope.MessageOnly;
-        if (!replying && drafts.Count == 0 && picks.Count == 0 && !createReady && !relevantEvent && !discarding) return;
+        if (!replying && drafts.Count == 0 && picks.Count == 0 && !createReady && !relevantEvent && !discarding && stagedSystemActions.Count == 0) return;
 
         // A reply and a discard contradict each other — an email worth answering isn't spam.
         if (discarding && replying)
@@ -2570,7 +2756,7 @@ else
         // it, rather than have Apply quietly skip it.
         if (StagedCreateReady && !createReady)
         {
-            actionError = "To create the record, set the email's Project first — or remove the staged record in System Tags.";
+            actionError = "To create the record, set the email's Project first — or remove the staged record in System Actions.";
             return;
         }
         // A staged work order that isn't complete yet (no subcontractor, no priced line…) is the
@@ -2579,14 +2765,14 @@ else
         if (createReady && stagedCreate is { Kind: StagedRecordKind.WorkOrder } stagedOrder
             && stagedOrder.WorkOrderProblem is { } orderProblem)
         {
-            actionError = $"The staged work order isn't ready — {orderProblem} Finish it in System Tags, or remove it.";
+            actionError = $"The staged work order isn't ready — {orderProblem} Finish it in System Actions, or remove it.";
             return;
         }
         // Same "decision not yet made" rule for a staged defect with no description yet.
         if (createReady && stagedCreate is { Kind: StagedRecordKind.Defect } stagedDefect
             && stagedDefect.DefectProblem is { } defectProblem)
         {
-            actionError = $"The staged defect isn't ready — {defectProblem} Finish it in System Tags, or remove it.";
+            actionError = $"The staged defect isn't ready — {defectProblem} Finish it in System Actions, or remove it.";
             return;
         }
         if (replying)
@@ -2686,7 +2872,7 @@ else
                 }
                 else if (staged.Kind == StagedRecordKind.WorkOrder)
                 {
-                    // The full manual-order surface staged in System Tags, raised through the
+                    // The full manual-order surface staged in System Actions, raised through the
                     // same rules as the Work Orders tab (numbering, draft semantics, cost-code
                     // master guard) with the email tagged to the new order.
                     busyLabel = "Raising work order";
@@ -2750,7 +2936,7 @@ else
                 }
                 else if (staged.Kind == StagedRecordKind.Defect)
                 {
-                    // The defect staged in System Tags, raised through the same rules as a manual
+                    // The defect staged in System Actions, raised through the same rules as a manual
                     // defect (numbering, Open status) with the email tagged to it.
                     busyLabel = "Raising defect";
                     await Intake.CreateDefectFromMessageAsync(new Jewel.JPMS.Contracts.Closeout.CreateDefectFromMessage(
@@ -2763,11 +2949,10 @@ else
                 }
                 else
                 {
-                    busyLabel = "Creating request";
+                    busyLabel = staged.RequestKind == RequestType.Rfi ? "Raising RFI" : "Creating request";
                     await Intake.CreateRequestFromMessageAsync(new CreateRequestFromMessage(
-                        anchor.Id, triageProjectId, createKind, "", staged.Title.Trim(),
+                        anchor.Id, triageProjectId, staged.RequestKind, "", staged.Title.Trim(),
                         staged.Description?.Trim() ?? "",
-                        RaisedTo: NullIfBlank(staged.RaisedTo),
                         DrawingRef: NullIfBlank(staged.DrawingRef),
                         ResponseDue: ParseDate(staged.ResponseDue),
                         InternetMessageId: anchor.InternetMessageId,
@@ -2778,6 +2963,16 @@ else
                 stagedCreate = null;
                 filed = true;
             }
+            // ---- System actions lined up in the Actions pane — run once the filing above has
+            //      landed, each removed as it succeeds so a failed one can be retried without
+            //      re-running its predecessors. A failure stops the apply with its reason. ----
+            foreach (var stagedAction in stagedSystemActions.ToList())
+            {
+                busyLabel = $"System action: {SystemActionKinds.Label(stagedAction.Kind)}";
+                await stagedAction.ExecuteAsync();
+                stagedSystemActions.Remove(stagedAction);
+            }
+
             if (discarding)
             {
                 // "File it as nothing": tag the thread discarded — restorable from the Tagged tab.
@@ -2813,7 +3008,8 @@ else
             }
 
             // Applied in full: refresh the queue in place — the triager stays on the page they
-            // were working — and clear the selection (the email has left it).
+            // were working — and clear the selection (the email has left it). The Triage tab
+            // hands back to the queue list, ready for the next email.
             await Task.WhenAll(ReloadQueueInPlaceAsync(), LoadRecentTriageAsync());
             selected = null;
             detail = null;
@@ -2823,6 +3019,7 @@ else
             relevantEventStaged = false;
             triageEntireThread = false;
             pickedRecords.Clear();
+            stagedSystemActions.Clear();
         }
         catch (CommandFailedException ex)
         {
@@ -2881,16 +3078,12 @@ else
 
     // ---- New email (fresh outbound thread from the projects mailbox) ----
 
-    private void OpenNewEmail()
-    {
-        newEmailOpen = true;
-        newEmailError = null;
-    }
-
+    // Clears the compose form and hands its window back to whatever it showed before — pressed
+    // as Cancel, and called after a successful send so the outcome banner is what remains.
     private void CloseNewEmail()
     {
         if (newEmailBusy) return;
-        newEmailOpen = false;
+        workspace.Close(PanelKind.Compose);
         newEmailError = null;
         newEmailTo = newEmailCc = newEmailBcc = newEmailSubject = newEmailBody = "";
         newEmailAttachments = Array.Empty<ComposeDraftAttachment>();
@@ -3014,12 +3207,13 @@ else
         finally { busy = false; }
     }
 
-    // ---- Preview / open an attachment without leaving triage ----
-    // Same previewable set as the drawing viewer: browsers render PDFs and images natively in an
-    // iframe; everything else gets a Download link only. Bytes are proxied through the API on
-    // demand (mailbox/message/attachment) — nothing is stored in JPMS by previewing.
-
-    private IntakeAttachment? previewAttachment;
+    // ---- Preview an attachment without leaving triage ----
+    // Same previewable set as the drawing viewer: PDFs (the in-app viewer) and images; everything
+    // else gets a Download link only. Bytes are proxied through the API on demand
+    // (mailbox/message/attachment) — nothing is stored in JPMS by previewing. The document opens
+    // in the Preview pane on the window OPPOSITE the email, the same route as a record's
+    // documents, so email and attachment read side by side. The URLs are baked at click time —
+    // the preview outlives the selection that opened it.
 
     private static bool IsPreviewable(IntakeAttachment attachment)
     {
@@ -3033,8 +3227,14 @@ else
         $"/api/mailbox/message/attachment?id={Uri.EscapeDataString(selected?.Id ?? "")}"
         + $"&aid={Uri.EscapeDataString(attachment.Id)}{(inline ? "&inline=1" : "")}";
 
-    private void ToggleAttachmentPreview(IntakeAttachment attachment) =>
-        previewAttachment = previewAttachment == attachment ? null : attachment;
+    private void OpenEmailAttachmentPreview(IntakeAttachment attachment)
+    {
+        var isPdf = (attachment.ContentType ?? "").Contains("pdf", StringComparison.OrdinalIgnoreCase);
+        workspace.OpenPreview(
+            new PreviewRequest(attachment.Name, AttachmentUrl(attachment, inline: true),
+                AttachmentUrl(attachment, inline: false), isPdf),
+            anchor: PanelKind.Email);
+    }
 
     // ---- Save an attachment into a project's drawings ----
     // Unlike the record actions this does NOT consume the email: the message keeps its place in
@@ -3372,8 +3572,10 @@ else
             ? "bg-accent text-accent-ink border-accent font-semibold"
             : "border-line text-content-muted hover:text-content hover:border-line-strong");
 
+    // Sits beside Apply in the triage bar's action row — armed it reads negative, so the state
+    // is visible right where the button that would act on it lives.
     private string DiscardTabClass =>
-        "ml-auto rounded-lg px-3 py-1.5 text-sm border transition "
+        "rounded-lg px-3 py-1.5 text-sm border transition "
         + (discardArmed
             ? "border-negative text-negative bg-negative/10 font-medium"
             : "border-line text-content-subtle hover:text-negative hover:border-negative/50");
@@ -3456,5 +3658,6 @@ else
         StageFilter.OnChange -= StageFilterChanged;
         RequestRegister.OnChange -= StateHasChanged;
         DrawingStore.OnChange -= StateHasChanged;
+        workspace.OnChange -= StateHasChanged;
     }
 }

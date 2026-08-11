@@ -1,0 +1,179 @@
+@using Jewel.JPMS.Contracts.Procurement
+@using Jewel.JPMS.Features.CostCenters
+@using Jewel.JPMS.Features.Subcontractors
+@inject SubcontractorsReadModel Subcontractors
+@inject CostCentersReadModel CostCenters
+@implements IDisposable
+
+@*
+    The work-order FORM — the core order surface (subcontractor, title, scope, programme, priced
+    lines, deposit, the draft/release decision) with its validation, and no opinion about what
+    happens on submit. Split out of ManualWorkOrderModal (2026-08-10, same pattern as
+    RequestForm): the modal keeps the packaging step, record-keeping attachments and the
+    PO-email orchestration around this form; the Control Centre's System Actions pane hosts the
+    same form to stage an order that fires with the email's Apply.
+*@
+
+<div class="space-y-4">
+    @if (error is not null)
+    {
+        <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@error</p>
+    }
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <div>
+            <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Subcontractor</label>
+            <select class="w-full bg-surface border border-line-strong rounded-lg px-3 py-2 text-sm text-content focus:outline-none focus:border-accent"
+                    disabled="@Busy" @onchange="e => SetSubcontractorAsync(e.Value?.ToString())">
+                <option value="" selected="@(subcontractorId == "")">Choose a subcontractor…</option>
+                @foreach (var sub in SortedSubcontractors)
+                {
+                    <option value="@sub.SubcontractorId" selected="@(subcontractorId == sub.SubcontractorId)">@sub.CompanyName</option>
+                }
+            </select>
+        </div>
+        <div>
+            <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Order title</label>
+            <input type="text" maxlength="256" placeholder="e.g. Groundworks package — BVMH"
+                   class="w-full rounded-lg border border-line-strong bg-surface-field px-3 py-2 text-sm text-content focus:outline-none focus:border-accent"
+                   disabled="@Busy" @bind="title" @bind:event="oninput" />
+        </div>
+    </div>
+    <div>
+        <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Scope</label>
+        <textarea rows="2" maxlength="4000" placeholder="What the order instructs (optional)"
+                  class="w-full rounded-lg border border-line-strong bg-surface-field px-3 py-2 text-sm text-content focus:outline-none focus:border-accent"
+                  disabled="@Busy" @bind="scope" @bind:event="oninput"></textarea>
+    </div>
+
+    @* ── Programme: printed in the purchase order's Programme section ──── *@
+    <div class="rounded-lg border border-line bg-surface p-3">
+        <p class="text-[11px] uppercase tracking-wider text-content-subtle font-semibold mb-2"
+           title="Printed in the purchase order's Programme section — leave everything empty to omit it">Programme</p>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div>
+                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Start date</label>
+                <input type="date"
+                       class="w-full rounded-lg border border-line-strong bg-surface-field px-3 py-2 text-sm text-content focus:outline-none focus:border-accent"
+                       disabled="@Busy" @bind="programmeStart" />
+            </div>
+            <div>
+                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Target completion</label>
+                <input type="date"
+                       class="w-full rounded-lg border border-line-strong bg-surface-field px-3 py-2 text-sm text-content focus:outline-none focus:border-accent"
+                       disabled="@Busy" @bind="targetCompletion" />
+            </div>
+        </div>
+        <div class="mt-3">
+            <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Programme notes</label>
+            <textarea rows="2" maxlength="2000" placeholder="e.g. Weekly programme duration 1st &amp; 2nd fix phases (optional)"
+                      class="w-full rounded-lg border border-line-strong bg-surface-field px-3 py-2 text-sm text-content focus:outline-none focus:border-accent"
+                      disabled="@Busy" @bind="programmeNotes" @bind:event="oninput"></textarea>
+        </div>
+    </div>
+
+    @* ── Priced lines: each carries its own cost centre ────────────────── *@
+    <div class="rounded-lg border border-line bg-surface p-3">
+        <p class="text-[11px] uppercase tracking-wider text-content-subtle font-semibold mb-2"
+           title="Each line lands on its own cost centre — the order's value is their sum">Priced lines</p>
+        <div class="space-y-2">
+            @for (var index = 0; index < lines.Count; index++)
+            {
+                var lineIndex = index;
+                var line = lines[lineIndex];
+                <div>
+                <div class="flex items-center gap-2 mb-1">
+                    @* Typed-to-find, like every other cost-centre picker: the master runs to
+                       hundreds of codes, so scrolling a native select is the wrong instrument. *@
+                    <SearchSelect Options="@CostCentreOptionsFor(line)" WidthClass="w-64"
+                                  Placeholder="Cost centre…" Disabled="@Busy"
+                                  InputClass="bg-surface border border-line px-2 py-1.5"
+                                  Value="@line.CostCode" ValueChanged="value => SetLineCode(line, value)" />
+                    <input type="text" maxlength="256" placeholder="What this line covers" disabled="@Busy"
+                           class="bg-surface border border-line rounded-lg px-2 py-1.5 text-content text-sm flex-1"
+                           value="@line.Title"
+                           @onchange="e => SetLineTitle(line, e.Value?.ToString())" />
+                    <input type="number" step="any" placeholder="Amount £" disabled="@Busy"
+                           class="bg-surface border border-line rounded-lg px-2 py-1.5 text-right text-content text-sm w-32"
+                           title="@(line.PaidToDate != 0m ? $"{Money(line.PaidToDate)} already paid against this line — the amount can't drop below that" : "")"
+                           value="@line.AmountText"
+                           @onchange="e => SetLineAmount(line, e.Value?.ToString())" />
+                    <button type="button" aria-label="Remove this line"
+                            disabled="@(Busy || lines.Count == 1 || line.PaidToDate != 0m)"
+                            title="@(line.PaidToDate != 0m ? $"{Money(line.PaidToDate)} already paid against this line — it can't be removed" : "")"
+                            class="inline-flex items-center justify-center w-7 h-7 rounded-md text-content-subtle hover:text-negative hover:bg-surface-raised"
+                            @onclick="() => RemoveLineAsync(lineIndex)">
+                        <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                             stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6L6 18" /></svg>
+                    </button>
+                </div>
+                @* The longer detail printed in the PO items table's Description column — optional. *@
+                <textarea rows="2" maxlength="1024" placeholder="Description — the full detail printed on the purchase order (optional)"
+                          disabled="@Busy"
+                          class="w-full bg-surface border border-line rounded-lg px-2 py-1.5 text-content text-sm placeholder:text-content-subtle"
+                          value="@line.Description"
+                          @onchange="e => SetLineDescription(line, e.Value?.ToString())"></textarea>
+                </div>
+            }
+        </div>
+        <div class="flex items-center justify-between mt-2">
+            <button type="button" disabled="@Busy" @onclick="AddLineAsync"
+                    class="text-xs font-medium text-content-subtle hover:text-content underline underline-offset-4">
+                + Add another line
+            </button>
+            <span class="text-sm text-content-muted">Order value <span class="text-content font-medium">@Money(OrderTotal)</span></span>
+        </div>
+    </div>
+
+    @* ── Deposit: percentage of the order value, printed at the foot of the PO when required ── *@
+    <div class="rounded-lg border border-line bg-surface p-3">
+        <label class="flex w-fit items-center gap-2 text-sm text-content cursor-pointer select-none"
+               title="Tick when the subcontractor requires a deposit — the percentage prints at the foot of the purchase order">
+            <input type="checkbox" class="cursor-pointer align-middle" disabled="@Busy" @bind="depositRequired" />
+            Deposit required
+        </label>
+        @if (depositRequired)
+        {
+            <div class="mt-2 flex items-center gap-2">
+                <input type="number" step="any" min="0" max="100" placeholder="%" disabled="@Busy"
+                       class="bg-surface border border-line rounded-lg px-2 py-1.5 text-right text-content text-sm w-24"
+                       value="@depositPercentText"
+                       @onchange="e => SetDepositPercent(e.Value?.ToString())" />
+                <span class="text-sm text-content-muted">% of the order value</span>
+            </div>
+        }
+    </div>
+
+    @* ── Draft or release: a draft sits unnumbered and uncommitted until released ── *@
+    @if (!IsEditing)
+    {
+        <label class="flex w-fit items-center gap-2 text-sm text-content cursor-pointer select-none"
+               title="A draft is stored without a number and is invisible to the supplier — though its value counts in the Financials tab's committed figures — until someone approves or rejects it from the Work Orders tab">
+            <input type="checkbox" class="cursor-pointer align-middle" disabled="@(Busy || DraftTickLocked)"
+                   checked="@saveAsDraft" @onchange="SetSaveAsDraftAsync" />
+            Save as a draft — needs approval before it's issued
+        </label>
+
+        @* The warning the auto-send promises: a released order emails its purchase order to the
+           supplier there and then (a draft never does — approval is when its email goes out). *@
+        @if (!saveAsDraft)
+        {
+            @if (SelectedSupplier is { } supplier && string.IsNullOrWhiteSpace(supplier.ContactEmail))
+            {
+                <p class="rounded-lg bg-amber-50 border border-amber-200 px-3 py-2 text-sm text-amber-800">
+                    @supplier.CompanyName has no email address in the directory, so the purchase order
+                    can't be emailed. The order will still be created — add an email address in the
+                    directory, then send the PO from its page.
+                </p>
+            }
+            else
+            {
+                <p class="rounded-lg bg-accent/10 border border-accent/30 px-3 py-2 text-sm text-content">
+                    When it saves, the purchase-order email will be <strong>sent</strong> to
+                    <strong>@(SelectedSupplier?.ContactEmail ?? "the subcontractor's directory email")</strong>
+                    from the projects mailbox. Tick "Save as a draft" if it shouldn't go out yet.
+                </p>
+            }
+        }
+    }
+</div>

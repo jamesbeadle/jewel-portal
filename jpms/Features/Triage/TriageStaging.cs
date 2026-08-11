@@ -28,9 +28,15 @@ public sealed class TodoDraftRow
 public sealed class StagedRecordCreate
 {
     public StagedRecordKind Kind { get; set; } = StagedRecordKind.Request;
+
+    // Which request the Request kind raises: General ("Raise Request") or an official RFI
+    // ("Raise RFI") — the server mints the matching reference either way (REQ-#### global, or
+    // the project's own RFI sequence).
+    public Jewel.JPMS.Models.RequestType RequestKind { get; set; }
+        = Jewel.JPMS.Models.RequestType.General;
+
     public string Title { get; set; } = "";
     public string Description { get; set; } = "";
-    public string RaisedTo { get; set; } = "";
     public string DrawingRef { get; set; } = "";
     public string ResponseDue { get; set; } = "";
     public bool AddToProgramme { get; set; }
@@ -70,7 +76,7 @@ public sealed class StagedRecordCreate
         StagedRecordKind.BidPackage => "new bid package",
         StagedRecordKind.WorkOrder => "new work order",
         StagedRecordKind.Defect => "new defect",
-        _ => "new request"
+        _ => RequestKind == Jewel.JPMS.Models.RequestType.Rfi ? "new RFI" : "new request"
     };
 
     /// <summary>What the staged-record chip shows after the label: the title — or for a defect,

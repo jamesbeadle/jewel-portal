@@ -33,10 +33,20 @@ public static class TodosRouteRegistration
         queries.Register<ListAllTodoItems, IReadOnlyList<TodoItem>>(
             QueryRoute.Static("/api/todos"));
 
-        // A to-do item's linked emails ("JPMS/TODO-####"-tagged mail, read live) — the detail modal.
+        // A to-do item's linked emails ("JPMS/TODO-####"-tagged mail, read live) — the item's page.
         queries.Register<ListTodoEmails, IReadOnlyList<MailboxMessage>>(
             new QueryRoute("/api/todo-items/{todoItemId}/emails",
                 query => $"/api/todo-items/{((ListTodoEmails)query).TodoItemId}/emails"));
+
+        // The item's page (/todos/{id}): the item itself, and the to-dos linked to it — the items
+        // sharing tagged mail with it.
+        queries.Register<GetTodoItemById, TodoItem?>(
+            new QueryRoute("/api/todo-items/{todoItemId}",
+                query => $"/api/todo-items/{((GetTodoItemById)query).TodoItemId}"));
+
+        queries.Register<ListLinkedTodoItems, IReadOnlyList<TodoItem>>(
+            new QueryRoute("/api/todo-items/{todoItemId}/linked-todos",
+                query => $"/api/todo-items/{((ListLinkedTodoItems)query).TodoItemId}/linked-todos"));
 
         commands.Register<AddTodoItem, TodoItem>(
             new CommandRoute("POST", "/api/projects/{projectId}/todos",

@@ -8,7 +8,7 @@ namespace Jewel.JPMS.Features.Todos;
 // labels. An assignee is a ROLE, optionally pinned to a named holder (TodoAssignee) — the picker
 // offers "Project Manager" (the pool) and "Project Manager — Jane Doe" (pinned) as sibling
 // options, so pinning is one pick, not a second control. Built in one place so the project tab,
-// the To-dos browser, the dashboard panel, the detail modal and the triage form can never encode
+// the To-dos browser, the dashboard panel, the item's page and the triage form can never encode
 // or label an assignee differently.
 public static class TodoAssigneePicker
 {

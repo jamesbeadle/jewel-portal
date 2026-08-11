@@ -1,0 +1,87 @@
+@namespace Jewel.JPMS.Features.Todos.Detail
+@using Jewel.JPMS.Features.Todos
+@inject ITodoStore Todos
+@inject Jewel.JPMS.Features.Projects.ProjectListReadModel Projects
+
+@* The to-dos linked to this item: every other item sharing a tagged email with it. The link IS
+   the mail tag — one email raised as (or filed to) several items in the Control Centre ties them
+   together — so the list is read live and follows the tags. Each row opens that item's own page;
+   the router keys pages by route value, so moving between linked items is a full fresh read. *@
+
+<Panel Title="Linked to-dos" BodyClass="p-5" IsLoading="@loading" Prominent="false">
+    <HeaderActions>
+        @if (!loading && failed is null && linked.Count > 0)
+        {
+            <span class="inline-flex items-center rounded-full bg-accent/10 px-2 py-0.5 text-[11px] font-medium text-accent">@linked.Count</span>
+        }
+    </HeaderActions>
+    <ChildContent>
+        @if (failed is not null)
+        {
+            <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@failed</p>
+        }
+        else if (linked.Count == 0)
+        {
+            <p class="text-sm text-content-subtle italic">
+                No other to-dos share this item's emails. Linking happens in the Control Centre —
+                raise several to-dos from one email, or file an email to more than one item.
+            </p>
+        }
+        else
+        {
+            <div class="space-y-2">
+                @foreach (var item in linked)
+                {
+                    <a href="@($"/todos/{item.TodoItemId}")" @key="item.TodoItemId" title="Open this to-do"
+                       class="block rounded-lg border border-line px-3 py-2 hover:border-line-strong hover:bg-surface-raised">
+                        <div class="flex items-center justify-between gap-2">
+                            <p class="truncate text-sm @(item.IsComplete ? "text-content-subtle line-through" : "text-content")">
+                                <span class="font-mono text-xs text-content-muted mr-2">@item.Reference</span>@item.Title
+                            </p>
+                            <span class="shrink-0 inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium @(item.IsComplete ? "bg-positive/10 text-positive" : "bg-accent/10 text-accent")">
+                                @(item.IsComplete ? "Done" : "Open")
+                            </span>
+                        </div>
+                        <div class="mt-1 flex items-center gap-x-3 overflow-hidden text-[11px] text-content-subtle">
+                            <span class="whitespace-nowrap">@ScopeLabel(item)</span>
+                            @if (TodoAssigneePicker.Label(item) is string assigneeLabel)
+                            {
+                                <span class="truncate">@assigneeLabel</span>
+                            }
+                            @if (item.DueAt is not null)
+                            {
+                                <span class="whitespace-nowrap">Due @item.DueAt.Value.LocalDateTime.ToString("d MMM yyyy")</span>
+                            }
+                        </div>
+                    </a>
+                }
+            </div>
+        }
+    </ChildContent>
+</Panel>
+
+@code {
+    [Parameter, EditorRequired] public string TodoItemId { get; set; } = "";
+
+    private bool loading = true;
+    private string? failed;
+    private IReadOnlyList<TodoItem> linked = Array.Empty<TodoItem>();
+
+    protected override async Task OnInitializedAsync()
+    {
+        // The linked list is the panel; the project labels only dress the scope line, so a failed
+        // label read degrades the label rather than the panel.
+        try { if (Projects.Current is null) await Projects.RefreshAsync(CancellationToken.None); } catch { }
+        try { linked = await Todos.ListLinkedAsync(TodoItemId); }
+        catch { failed = "Couldn't read the linked to-dos. The reason is in the red bar above — reload to try again."; }
+        finally { loading = false; }
+    }
+
+    private string ScopeLabel(TodoItem item)
+    {
+        if (string.IsNullOrWhiteSpace(item.ProjectId)) return "Company-wide";
+        var project = (Projects.Current ?? (IReadOnlyList<Project>)Array.Empty<Project>())
+            .FirstOrDefault(candidate => candidate.ProjectId == item.ProjectId);
+        return project is null ? "Project" : $"{project.Reference} — {project.Name}";
+    }
+}

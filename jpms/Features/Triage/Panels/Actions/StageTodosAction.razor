@@ -1,0 +1,159 @@
+@namespace Jewel.JPMS.Features.Triage.Panels
+
+@* The to-do drafting surface, moved here from System Tags' Internal tab (2026-08-10): the same
+   multi-draft LIST ⇄ DETAIL editor, editing the page-owned rows in place. One to-do is raised
+   PER ASSIGNEE per row — and this email tagged to every one — when the page's Apply runs;
+   nothing before. Works without a project (the items are company-wide until one is set).
+   Linking the email to EXISTING to-dos stays in System Tags — that's tagging, not creating. *@
+
+<div class="space-y-4">
+    @if (todoEditIndex is { } activeIndex && activeIndex < TodoRows.Count)
+    {
+        var row = TodoRows[activeIndex];
+        <button type="button" class="text-xs text-content-subtle hover:text-content underline" @onclick="() => todoEditIndex = null">← All to-dos</button>
+
+        <FormField Label="Title" Value="@row.Title" OnChange="v => { row.Title = v; NotifyTodos(); }" Required="true" />
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Assigned to</label>
+                @if (row.Assignees.Count > 0)
+                {
+                    <div class="flex flex-wrap gap-1 mb-1.5">
+                        @foreach (var assigneeValue in row.Assignees.ToList())
+                        {
+                            var picked = assigneeValue;
+                            <span class="inline-flex items-center gap-1 rounded-full border border-line bg-surface-raised pl-2 pr-1 py-0.5 text-xs text-content">
+                                @TodoAssigneeLabel(picked)
+                                <button type="button" title="Remove assignee"
+                                        class="leading-none px-1 text-content-subtle hover:text-negative"
+                                        @onclick="() => { row.Assignees.Remove(picked); NotifyTodos(); }">&times;</button>
+                            </span>
+                        }
+                    </div>
+                }
+                @{ var roleOptions = TodoOptionsFor(row); }
+                <SearchSelect Options="@roleOptions" Value=""
+                              ValueChanged="v => AddTodoAssignee(row, v)"
+                              Placeholder="@(row.Assignees.Count == 0 ? "Unassigned" : "Add another…")"
+                              Disabled="@(roleOptions.Count == 0)"
+                              WidthClass="w-full" />
+                @if (row.Assignees.Count > 1)
+                {
+                    <p class="text-xs text-content-subtle mt-1">Raised as @row.Assignees.Count separate to-dos, one per assignee.</p>
+                }
+            </div>
+            <FormField Label="Due" Value="@row.Due" OnChange="v => { row.Due = v; NotifyTodos(); }" InputType="date" />
+        </div>
+
+        <div>
+            <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Detail</label>
+            <textarea class="field" rows="5" value="@row.Notes" @oninput="e => { row.Notes = e.Value?.ToString() ?? string.Empty; NotifyTodos(); }"></textarea>
+        </div>
+
+        <div class="flex items-center justify-between pt-1">
+            <button type="button" class="text-xs text-content-subtle hover:text-negative underline" @onclick="() => RemoveTodoRow(row)">Remove this to-do</button>
+            <button type="button" class="btn-secondary text-xs" @onclick="() => todoEditIndex = null">Done</button>
+        </div>
+    }
+    else
+    {
+        <p class="text-xs text-content-subtle">
+            Each item is numbered TODO-#### and this email is tagged to every one, so one email can feed several to-dos. More than one assignee raises the item once per assignee. Nothing is created until you apply the email's actions.
+        </p>
+
+        @if (TitledTodoRows.Count == 0)
+        {
+            <p class="text-sm text-content-subtle italic">No to-dos drafted from this email yet.</p>
+        }
+        else
+        {
+            <div class="divide-y divide-line rounded-lg border border-line">
+                @for (var i = 0; i < TodoRows.Count; i++)
+                {
+                    var listIndex = i;
+                    var listRow = TodoRows[i];
+                    if (string.IsNullOrWhiteSpace(listRow.Title) && TodoRows.Count > 1) { continue; }
+                    <button type="button" @key="listRow" class="w-full text-left px-3 py-2 hover:bg-surface-raised flex items-center gap-3"
+                            @onclick="() => todoEditIndex = listIndex">
+                        <span class="text-sm text-content flex-1 truncate">@(string.IsNullOrWhiteSpace(listRow.Title) ? "(untitled)" : listRow.Title)</span>
+                        @if (listRow.Assignees.Count > 0)
+                        {
+                            <span class="text-xs text-content-subtle truncate max-w-[12rem]">@string.Join(", ", listRow.Assignees.Select(TodoAssigneeLabel))</span>
+                        }
+                        @if (!string.IsNullOrWhiteSpace(listRow.Due))
+                        {
+                            <span class="text-xs text-content-subtle shrink-0">due @listRow.Due</span>
+                        }
+                        <span class="text-content-faint">›</span>
+                    </button>
+                }
+            </div>
+        }
+
+        <button type="button" class="btn-secondary text-xs" @onclick="AddTodoRowAndEdit">+ Add a to-do</button>
+
+        @if (!string.IsNullOrWhiteSpace(TodoProjectNote))
+        {
+            <p class="text-xs text-content-subtle pt-2 border-t border-line">@TodoProjectNote</p>
+        }
+    }
+</div>
+
+@code {
+    /// <summary>Page-owned to-do draft rows, edited in place; <see cref="OnStagingChanged"/> is
+    /// raised so the page's badge re-renders. One to-do PER ASSIGNEE per row on Apply.</summary>
+    [Parameter] public List<TodoDraftRow> TodoRows { get; set; } = new();
+    [Parameter] public EventCallback OnStagingChanged { get; set; }
+
+    /// <summary>Assignee picker options (roles, and named people within them), built once by the
+    /// page from the todo store's assignable roles/people.</summary>
+    [Parameter] public IReadOnlyList<SearchSelect.Option> TodoAssigneeOptions { get; set; } = Array.Empty<SearchSelect.Option>();
+
+    /// <summary>One line saying where the items will land ("Items land on … — the email's project").</summary>
+    [Parameter] public string? TodoProjectNote { get; set; }
+
+    // The drill-in: null = the list of drafted to-dos, an index = that row's detail form (same
+    // LIST ⇄ DETAIL shape the tags pane's create sub-tab had).
+    private int? todoEditIndex;
+
+    protected override void OnInitialized()
+    {
+        if (TodoRows.Count == 0) TodoRows.Add(new TodoDraftRow());
+        // "Create To-do Items" means draft one: open straight into the form when nothing is
+        // drafted yet; the list view once there is something to list.
+        todoEditIndex = TitledTodoRows.Count == 0 && TodoRows.All(r => string.IsNullOrWhiteSpace(r.Title)) ? 0 : null;
+    }
+
+    private List<TodoDraftRow> TitledTodoRows => TodoRows.Where(r => !string.IsNullOrWhiteSpace(r.Title)).ToList();
+
+    private IReadOnlyList<SearchSelect.Option> TodoOptionsFor(TodoDraftRow row) =>
+        TodoAssigneeOptions.Where(option => !row.Assignees.Contains(option.Value)).ToList();
+
+    private string TodoAssigneeLabel(string value) =>
+        TodoAssigneeOptions.FirstOrDefault(option => option.Value == value)?.Label ?? value;
+
+    private void AddTodoAssignee(TodoDraftRow row, string value)
+    {
+        if (string.IsNullOrWhiteSpace(value) || row.Assignees.Contains(value)) return;
+        row.Assignees.Add(value);
+        NotifyTodos();
+    }
+
+    private void AddTodoRowAndEdit()
+    {
+        TodoRows.Add(new TodoDraftRow());
+        todoEditIndex = TodoRows.Count - 1;
+        NotifyTodos();
+    }
+
+    private void RemoveTodoRow(TodoDraftRow row)
+    {
+        TodoRows.Remove(row);
+        if (TodoRows.Count == 0) TodoRows.Add(new TodoDraftRow());
+        todoEditIndex = null;
+        NotifyTodos();
+    }
+
+    private void NotifyTodos() => _ = OnStagingChanged.InvokeAsync();
+}

@@ -43,4 +43,9 @@ public static class LadStatusExtensions
         LadStatus.Settled   => "Settled",
         _ => status.ToString()
     };
+
+    // A claim is live while it is still being contested or paid — Withdrawn and Settled are finished
+    // business, hidden by default in the link pickers behind the "include closed / inactive" checkbox.
+    public static bool IsLive(this LadStatus status) =>
+        status is LadStatus.Notified or LadStatus.Disputed or LadStatus.Agreed;
 }

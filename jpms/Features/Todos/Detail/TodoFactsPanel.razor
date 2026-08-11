@@ -1,0 +1,55 @@
+@namespace Jewel.JPMS.Features.Todos.Detail
+
+@* The item's facts: its notes in full, then the detail grid — scope and assignee (each with its
+   two-step editor for those inside the gates), due, added and completed. The page owns the item
+   and the commands; this panel is presentation plus the editors' open/closed state. *@
+
+<Panel Title="Detail" BodyClass="p-5">
+    <div class="space-y-4">
+        @if (!string.IsNullOrWhiteSpace(Item.Notes))
+        {
+            <p class="text-sm text-content-muted whitespace-pre-wrap">@Item.Notes</p>
+        }
+
+        <dl class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3 text-sm">
+            <TodoScopeFact Item="@Item" ScopeLabel="@ScopeLabel" CanMove="@CanMove"
+                           MoveOptions="@MoveOptions" Busy="@Busy" Move="@Move" />
+            <TodoAssigneeFact Item="@Item" CanReassign="@CanReassign"
+                              Options="@AssigneeOptions" Busy="@Busy" Reassign="@Reassign" />
+            <div>
+                <dt class="text-[11px] uppercase tracking-wider text-content-subtle font-semibold">Due</dt>
+                <dd class="mt-0.5 @(IsOverdue ? "text-negative font-medium" : "text-content")">
+                    @(Item.DueAt is null ? "—" : Item.DueAt.Value.LocalDateTime.ToString("d MMM yyyy"))@(IsOverdue ? " (overdue)" : "")
+                </dd>
+            </div>
+            <div>
+                <dt class="text-[11px] uppercase tracking-wider text-content-subtle font-semibold">Added</dt>
+                <dd class="text-content mt-0.5">
+                    @Item.CreatedAt.LocalDateTime.ToString("d MMM yyyy")@(string.IsNullOrWhiteSpace(Item.CreatedByEmail) ? "" : $" by {Item.CreatedByEmail}")
+                </dd>
+            </div>
+            @if (Item.CompletedAt is not null)
+            {
+                <div>
+                    <dt class="text-[11px] uppercase tracking-wider text-content-subtle font-semibold">Completed</dt>
+                    <dd class="text-content mt-0.5">@Item.CompletedAt.Value.LocalDateTime.ToString("d MMM yyyy")</dd>
+                </div>
+            }
+        </dl>
+    </div>
+</Panel>
+
+@code {
+    [Parameter, EditorRequired] public TodoItem Item { get; set; } = default!;
+    [Parameter] public string ScopeLabel { get; set; } = "";
+    [Parameter] public bool CanReassign { get; set; }
+    [Parameter] public IReadOnlyList<SearchSelect.Option> AssigneeOptions { get; set; } = Array.Empty<SearchSelect.Option>();
+    [Parameter, EditorRequired] public Func<TodoAssignee?, Task<bool>> Reassign { get; set; } = default!;
+    [Parameter] public bool CanMove { get; set; }
+    [Parameter] public IReadOnlyList<SearchSelect.Option> MoveOptions { get; set; } = Array.Empty<SearchSelect.Option>();
+    [Parameter, EditorRequired] public Func<string, Task<bool>> Move { get; set; } = default!;
+    [Parameter] public bool Busy { get; set; }
+
+    private bool IsOverdue =>
+        !Item.IsComplete && Item.DueAt is not null && Item.DueAt.Value < DateTimeOffset.Now.Date;
+}

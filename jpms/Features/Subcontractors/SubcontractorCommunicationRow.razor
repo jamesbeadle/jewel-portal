@@ -1,0 +1,50 @@
+@namespace Jewel.JPMS.Features.Subcontractors
+@using Jewel.JPMS.Contracts.RecordLinks
+
+@*
+    One row of the Subcontractor → Communications list: who, when, subject, the opening line, and
+    any OTHER workflow tags the thread carries (a communication can also feed a bid package or a
+    work order) — the communication tag itself is the page's premise, so it isn't repeated per row.
+*@
+
+<li class="rounded-lg border border-line bg-surface px-4 py-3">
+    <div class="flex flex-wrap items-baseline justify-between gap-2">
+        <span class="text-sm font-medium text-content truncate">@DisplayFrom</span>
+        <span class="text-xs text-content-subtle">@Message.ReceivedAt.LocalDateTime.ToString("d MMM yyyy, HH:mm")</span>
+    </div>
+    <p class="text-sm text-content mt-0.5">
+        @Message.Subject
+        @if (Message.HasAttachments)
+        {
+            <span class="ml-2 inline-flex items-center rounded bg-surface-raised border border-line px-1.5 py-0.5 text-[10px] text-content-subtle">attachment</span>
+        }
+    </p>
+    @if (!string.IsNullOrWhiteSpace(Message.BodyPreview))
+    {
+        <p class="text-xs text-content-subtle mt-1 line-clamp-2">@Message.BodyPreview</p>
+    }
+    @if (OtherTags.Count > 0)
+    {
+        <div class="flex flex-wrap items-center gap-1 mt-2">
+            @foreach (var tag in OtherTags)
+            {
+                <span class="inline-flex items-center rounded-full bg-accent/10 text-accent text-[10px] font-medium px-2 py-0.5">@TagStem(tag)</span>
+            }
+        </div>
+    }
+</li>
+
+@code {
+    [Parameter, EditorRequired] public MailboxMessage Message { get; set; } = default!;
+
+    private string DisplayFrom =>
+        string.IsNullOrWhiteSpace(Message.FromName) ? Message.FromEmail : Message.FromName;
+
+    private List<string> OtherTags =>
+        Message.Categories
+            .Where(tag => !tag.Equals(SubcontractorComms.Tag, StringComparison.OrdinalIgnoreCase))
+            .ToList();
+
+    private static string TagStem(string tag) =>
+        tag.StartsWith("JPMS/", StringComparison.OrdinalIgnoreCase) ? tag["JPMS/".Length..] : tag;
+}

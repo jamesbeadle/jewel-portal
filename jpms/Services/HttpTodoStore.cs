@@ -34,6 +34,12 @@ public sealed class HttpTodoStore : ITodoStore
     public Task<IReadOnlyList<MailboxMessage>> ListEmailsAsync(string todoItemId, CancellationToken cancellationToken = default) =>
         queries.AskAsync(new ListTodoEmails(todoItemId), cancellationToken);
 
+    public Task<TodoItem?> GetAsync(string todoItemId, CancellationToken cancellationToken = default) =>
+        queries.AskAsync(new GetTodoItemById(todoItemId), cancellationToken);
+
+    public Task<IReadOnlyList<TodoItem>> ListLinkedAsync(string todoItemId, CancellationToken cancellationToken = default) =>
+        queries.AskAsync(new ListLinkedTodoItems(todoItemId), cancellationToken);
+
     public Task<TodoItem> AddAsync(AddTodoItem command, CancellationToken cancellationToken = default) =>
         commands.SendAsync(command, cancellationToken);
 

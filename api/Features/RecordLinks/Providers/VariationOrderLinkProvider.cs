@@ -15,6 +15,13 @@ namespace Jewel.JPMS.Api.Features.RecordLinks.Providers;
 // Variation references ("V18") are only unique per project, while JPMS tags share one flat
 // mailbox-category space — so the tag stem is project-qualified the same way cost-centre tags are:
 //   TagReference = "VO-{projectRef}-{variationRef}"  ->  category "JPMS/VO-JBB-2026-001-V18".
+//
+// ForProjectAsync goes wider than the VO identity: the picker lists EVERY stage of the project's
+// variations (one document, one number — see CLAUDE.md), so an email about a still-quoting
+// variation can be linked to it. Pre-approval rows are handed out under their VariationQuote
+// identity — the stable VOQ- tag stem — because the V-ref is only minted at approval and a guessed
+// stem would silently detach mail the moment the real one lands. The variation page already reads
+// both tags' mail, so either identity surfaces on the same record.
 public sealed class VariationOrderLinkProvider : ILinkableRecordProvider
 {
     private readonly JpmsContext context;
@@ -30,10 +37,12 @@ public sealed class VariationOrderLinkProvider : ILinkableRecordProvider
     {
         var projectRef = await ProjectRefAsync(projectId, ct);
         var entities = await context.VariationOrders.AsNoTracking()
-            .Where(v => v.ProjectId == projectId && v.VariationRef != null)
+            .Where(v => v.ProjectId == projectId)
             .OrderByDescending(v => v.Number)
             .ToListAsync(ct);
-        return entities.Select(v => ToLinkable(v, projectRef)).ToList().AsReadOnly();
+        return entities
+            .Select(v => v.VariationRef is null ? ToLinkableQuoteStage(v, projectRef) : ToLinkable(v, projectRef))
+            .ToList().AsReadOnly();
     }
 
     public async Task<LinkableRecord?> FindAsync(string recordId, CancellationToken ct)
@@ -68,7 +77,26 @@ public sealed class VariationOrderLinkProvider : ILinkableRecordProvider
             Reference:    variationRef,
             TagReference: $"VO-{projectRef}-{variationRef}",
             Title:        entity.Title,
-            StatusLabel:  ((VariationOrderStatus)entity.Status).ToString(),
-            Summary:      RecordSummaries.Clip(entity.Description));
+            StatusLabel:  ((VariationOrderStatus)entity.Status).DisplayName(),
+            Summary:      RecordSummaries.Clip(entity.Description),
+            IsActive:     entity.Status != (int)VariationOrderStatus.Rejected);
+    }
+
+    // A variation with no minted V-ref yet, listed under its stable quoting-stage identity: the
+    // user still reads the one number ("V72"), the tag is the VOQ- stem historic mail already uses,
+    // and the link/read layer resolves it through the VariationQuote provider.
+    private static LinkableRecord ToLinkableQuoteStage(VariationOrderEntity entity, string projectRef)
+    {
+        var displayNumber = entity.Number > 0 ? $"V{entity.Number}" : entity.Reference.Trim();
+        return new LinkableRecord(
+            Type:         RecordType.VariationQuote,
+            RecordId:     entity.VariationOrderId,
+            ProjectId:    entity.ProjectId,
+            Reference:    displayNumber,
+            TagReference: $"VOQ-{projectRef}-{entity.Number:0000}",
+            Title:        entity.Title,
+            StatusLabel:  ((VariationOrderStatus)entity.Status).DisplayName(),
+            Summary:      RecordSummaries.Clip(entity.Description),
+            IsActive:     entity.Status != (int)VariationOrderStatus.Rejected);
     }
 }

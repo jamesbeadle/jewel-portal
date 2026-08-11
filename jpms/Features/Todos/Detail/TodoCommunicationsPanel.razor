@@ -1,0 +1,78 @@
+@namespace Jewel.JPMS.Features.Todos.Detail
+@inject ITodoStore Todos
+@inject IIntakeQueue Intake
+
+@* The item's communications: mail tagged "JPMS/@Todo.Reference" in the projects mailbox, read
+   live — tag or untag an email in the Control Centre and this list follows. Replying (and sending
+   a new email filed to the item) happens here too; the sent copy carries the item's tag, so it
+   lands back in this list. Newest first — the latest exchange is what people come to check. *@
+
+<Panel Title="Communications" BodyClass="p-5" IsLoading="@loading">
+    <HeaderActions>
+        @if (!loading && failed is null && emails.Count > 0)
+        {
+            <span class="text-xs text-content-subtle">@emails.Count email@(emails.Count == 1 ? "" : "s")</span>
+        }
+        <Toolbar>
+            @if (CanSend)
+            {
+                <ToolbarButton Icon="email" Label="New email — a fresh outbound thread filed to this to-do"
+                               Disabled="@(loading || composingNew || replyingTo is not null)" OnClick="StartNewEmail" />
+            }
+            <ToolbarButton Icon="refresh" Label="Refresh — re-read the tagged mail from the mailbox"
+                           Busy="@refreshing" Disabled="@loading" OnClick="RefreshAsync" />
+        </Toolbar>
+    </HeaderActions>
+    <ChildContent>
+        @if (failed is not null)
+        {
+            <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-3">@failed</p>
+        }
+
+        @if (sentNote is not null)
+        {
+            <div class="rounded-lg bg-positive/10 border border-positive/30 px-3 py-2 mb-3">
+                <p class="text-sm font-medium text-positive">@sentNote</p>
+                @if (sentNoteWebLink is not null)
+                {
+                    <a href="@sentNoteWebLink" target="_blank" rel="noopener"
+                       class="text-xs text-accent hover:underline underline-offset-2">Open it in Outlook</a>
+                }
+            </div>
+        }
+
+        @if (composingNew)
+        {
+            <div class="mb-4">
+                <TodoEmailComposer Todo="@Todo" Projects="@Projects" OnSent="HandleSent" OnCancel="CloseComposer" />
+            </div>
+        }
+
+        @if (failed is null && emails.Count == 0 && !composingNew)
+        {
+            <p class="text-sm text-content-subtle italic">
+                No emails are linked to this item. Mail is linked by tagging it
+                <span class="font-mono">JPMS/@Todo.Reference</span> in the Control Centre@(CanSend ? ", or by sending a new email from here." : ".")
+            </p>
+        }
+        else if (emails.Count > 0)
+        {
+            <ul class="space-y-3">
+                @foreach (var email in emails)
+                {
+                    <TodoEmailCard @key="email.Id" Email="@email" OwnTag="@OwnTag" CanSend="@CanSend"
+                                   Expanded="@expanded.Contains(email.Id)"
+                                   Detail="@DetailFor(email.Id)"
+                                   OnToggleExpand="ToggleExpandAsync" OnReply="StartReply" />
+                    @if (replyingTo?.Id == email.Id)
+                    {
+                        <li>
+                            <TodoEmailComposer Todo="@Todo" ReplyTo="@replyingTo" Projects="@Projects"
+                                               OnSent="HandleSent" OnCancel="CloseComposer" />
+                        </li>
+                    }
+                }
+            </ul>
+        }
+    </ChildContent>
+</Panel>

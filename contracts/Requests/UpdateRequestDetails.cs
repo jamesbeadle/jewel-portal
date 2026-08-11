@@ -13,7 +13,6 @@ public sealed record UpdateRequestDetails(
     string? ResponseText,
     string? RespondedByEmail,
     bool ImpliesVariation,
-    string? RaisedTo = null,
     string? DrawingRef = null,
     DateTimeOffset? ResponseDue = null,
     string? RelatedDrawingSpec = null,
@@ -29,11 +28,6 @@ public sealed record UpdateRequestDetails(
     // value (over)writes the recorded issue date, null means "not supplied" and keeps the existing
     // one (most edit surfaces don't carry it).
     DateTimeOffset? IssuedAt = null,
-    // The ball-in-court party picked from the project's contact list (Setup tab). When set, the
-    // server verifies the contact belongs to the project and derives the RaisedTo display string
-    // from it — RaisedTo passed alongside is ignored. Null clears the link and keeps whatever
-    // RaisedTo string was supplied (legacy free text survives edit round-trips this way).
-    string? RaisedToContactId = null,
     // Critical Path tag — the RFI is programme-related (its answer gates critical-path work).
     // A value (over)writes the tag; null means "not supplied" and keeps the existing one (most
     // edit surfaces don't carry it, so status changes and the like never shed the tag).

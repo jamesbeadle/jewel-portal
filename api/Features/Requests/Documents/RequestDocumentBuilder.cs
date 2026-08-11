@@ -65,7 +65,6 @@ public static class RequestDocumentBuilder
             RaisedAt: request.RaisedAt,
             IssuedAt: request.IssuedAt,
             ResponseDue: request.ResponseDue,
-            RaisedTo: request.RaisedTo,
             DrawingRef: request.DrawingRef,
             RelatedDrawingSpec: request.RelatedDrawingSpec,
             Value: request.Value,

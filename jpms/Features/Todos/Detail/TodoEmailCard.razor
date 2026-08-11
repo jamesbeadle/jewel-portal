@@ -1,0 +1,97 @@
+@namespace Jewel.JPMS.Features.Todos.Detail
+
+@* One linked email as a bordered card (the pattern the request conversation uses): envelope line,
+   preview or the full body on demand, the OTHER records the email is tagged to as chips, and the
+   Reply action. The full body — with the quoted thread behind it — is fetched live when asked
+   for; the listed BodyPreview is only Graph's short snippet. *@
+
+<li class="rounded-lg border border-line bg-surface-raised px-4 py-3">
+    <div class="flex flex-wrap items-center justify-between gap-2">
+        <span class="text-sm font-medium text-content">@(string.IsNullOrWhiteSpace(Email.FromName) ? Email.FromEmail : Email.FromName)</span>
+        <span class="text-xs text-content-subtle">@Email.ReceivedAt.LocalDateTime.ToString("d MMM yyyy, HH:mm")</span>
+    </div>
+    <p class="text-sm text-content mt-0.5">
+        @Email.Subject
+        @if (Email.HasAttachments)
+        {
+            <span class="ml-2 inline-flex items-center rounded bg-surface border border-line px-1.5 py-0.5 text-[10px] text-content-subtle">attachment</span>
+        }
+    </p>
+    @if (OtherTags.Count > 0)
+    {
+        <div class="flex flex-wrap items-center gap-1 mt-1">
+            @foreach (var tag in OtherTags)
+            {
+                <span class="inline-flex items-center rounded-full bg-accent/10 text-accent text-[10px] font-medium px-2 py-0.5">@TagLabel(tag)</span>
+            }
+        </div>
+    }
+
+    @if (Expanded)
+    {
+        <div class="mt-2 rounded-lg bg-surface border border-line p-3 max-h-[28rem] overflow-y-auto">
+            @if (Detail is null)
+            {
+                <p class="text-sm text-content-subtle italic">Loading full email…</p>
+            }
+            else if (!string.IsNullOrWhiteSpace(Detail.BodyHtml) && Detail.BodyIsHtml)
+            {
+                <div class="rounded bg-white text-gray-900 p-3 text-sm overflow-x-auto">@((MarkupString)Detail.BodyHtml)</div>
+            }
+            else if (!string.IsNullOrWhiteSpace(Detail.BodyHtml))
+            {
+                <p class="text-sm text-content whitespace-pre-wrap">@Detail.BodyHtml</p>
+            }
+            else
+            {
+                <p class="text-sm text-content whitespace-pre-wrap">@Email.BodyPreview</p>
+            }
+        </div>
+        @if (Detail is { Attachments.Count: > 0 })
+        {
+            <p class="text-xs text-content-subtle mt-1">
+                @Detail.Attachments.Count attachment@(Detail.Attachments.Count == 1 ? "" : "s"):
+                @string.Join(", ", Detail.Attachments.Select(attachment => attachment.Name))
+            </p>
+        }
+    }
+    else if (!string.IsNullOrWhiteSpace(Email.BodyPreview))
+    {
+        <p class="text-xs text-content-subtle mt-1 line-clamp-2">@Email.BodyPreview</p>
+    }
+
+    <div class="mt-3 pt-2 border-t border-line/70 flex flex-wrap items-center gap-4">
+        <button type="button" class="text-xs font-medium text-accent hover:underline"
+                @onclick="() => OnToggleExpand.InvokeAsync(Email)">
+            @(Expanded ? "Show summary" : "Show full email")
+        </button>
+        @if (CanSend)
+        {
+            <button type="button" class="text-xs font-medium text-accent hover:underline"
+                    @onclick="() => OnReply.InvokeAsync(Email)">Reply</button>
+        }
+    </div>
+</li>
+
+@code {
+    [Parameter, EditorRequired] public MailboxMessage Email { get; set; } = default!;
+    /// <summary>This item's own workflow tag ("JPMS/TODO-####") — excluded from the chip row,
+    /// which shows where ELSE the email is filed.</summary>
+    [Parameter] public string OwnTag { get; set; } = "";
+    [Parameter] public bool CanSend { get; set; }
+    [Parameter] public bool Expanded { get; set; }
+    /// <summary>The full body, once fetched by the hosting panel; null while it loads.</summary>
+    [Parameter] public MailboxMessageDetail? Detail { get; set; }
+    [Parameter] public EventCallback<MailboxMessage> OnToggleExpand { get; set; }
+    [Parameter] public EventCallback<MailboxMessage> OnReply { get; set; }
+
+    private const string WorkflowPrefix = "JPMS/";
+
+    private IReadOnlyList<string> OtherTags =>
+        Email.Categories
+            .Where(tag => !tag.Equals(OwnTag, StringComparison.OrdinalIgnoreCase))
+            .ToList();
+
+    private static string TagLabel(string tag) =>
+        tag.StartsWith(WorkflowPrefix, StringComparison.OrdinalIgnoreCase) ? tag[WorkflowPrefix.Length..] : tag;
+}

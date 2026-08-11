@@ -143,7 +143,6 @@ else
                 @* Issued is the official date the correspondent was notified. Rows predating the
                    IssuedAt backfill fall back to the internal created-on stamp rather than a dash. *@
                 <MetaCell Label="Issued" Value="@Date(record.IssuedAt ?? record.RaisedAt)" />
-                <MetaCell Label="Raised to" Value="@Dash(record.RaisedTo)" />
                 <MetaCell Label="Response due" Value="@Date(record.ResponseDue)" />
                 <div>
                     <p class="text-[10px] uppercase tracking-wide font-semibold text-content-subtle mb-0.5">Days outstanding</p>
@@ -724,7 +723,7 @@ else
 
     @* The old single "Edit request details" modal is split three ways, each opened from an Edit
        control on the surface it edits: the page header (reference, status, subject), the facts
-       strip (dates, raised to, drawing refs, value) and the Detail panel (the detail text). *@
+       strip (dates, drawing refs, value) and the Detail panel (the detail text). *@
     <Modal IsOpen="editingHeader"
            Title="Edit reference &amp; status"
            ConfirmLabel="@(busy ? "Saving…" : "Save changes")"
@@ -789,10 +788,6 @@ else
             </div>
 
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <ProjectContactSelect Contacts="@projectContacts"
-                                      Value="@editRaisedToContactId"
-                                      OnChange="v => editRaisedToContactId = v"
-                                      LegacyText="@editLegacyRaisedTo" />
                 <FormField Label="Drawing / detail ref" Value="@editDrawingRef" OnChange="v => editDrawingRef = v" />
             </div>
 
@@ -1062,18 +1057,12 @@ else
     private string editIssuedAt = "";
     private string editResponseDue = "";
     private string editClosedAt = "";
-    private string editRaisedToContactId = "";
-    private string? editLegacyRaisedTo;
     private string editDrawingRef = "";
     private string editRelatedSpec = "";
     private string editValue = "";
     private RequestStatus editStatus = RequestStatus.NeedsAction;
     private bool editCriticalPath;
     private string? editError;
-
-    // The project's own contact list (Setup tab → Project contacts) backing the "Raised to"
-    // dropdown in the edit modal. On-demand async store, fetched once with the page.
-    private IReadOnlyList<ProjectContact> projectContacts = Array.Empty<ProjectContact>();
 
     protected override async Task OnInitializedAsync()
     {
@@ -1099,7 +1088,6 @@ else
         {
             firstWave.Add(LoadClientsAsync());
             firstWave.Add(LoadArchitectsAsync());
-            firstWave.Add(LoadProjectContactsAsync());
         }
         await Task.WhenAll(firstWave);
 
@@ -1184,19 +1172,6 @@ else
     private async Task LoadArchitectsAsync()
     {
         try { architects = await ArchitectStore.ListAsync(); } catch { architects = Array.Empty<Architect>(); }
-    }
-
-    private async Task LoadProjectContactsAsync()
-    {
-        try
-        {
-            // Ad-hoc rows only: the contacts added on the Setup tab's Project contacts list
-            // (party-linked rows are routing overrides, not list entries).
-            projectContacts = (await Correspondence.ListProjectContactsAsync(ProjectId))
-                .Where(row => row.PartyContactId is null)
-                .ToList();
-        }
-        catch { projectContacts = Array.Empty<ProjectContact>(); }
     }
 
     // The tagged emails offered as reply targets in the email modal, fetched fresh each time the
@@ -1325,7 +1300,7 @@ else
             {
                 items.Add(new(Label: "Edit subject & reference…", OnSelect: EventCallback.Factory.Create(this, OpenHeaderEdit), Group: 2));
                 items.Add(new(Label: "Edit dates & references…", OnSelect: EventCallback.Factory.Create(this, OpenFactsEdit),
-                    Hint: "Date issued, response due, raised to, drawing references", Group: 2));
+                    Hint: "Date issued, response due, drawing references", Group: 2));
                 items.Add(new(Label: "Edit description…", OnSelect: EventCallback.Factory.Create(this, OpenDetailEdit), Group: 2));
                 items.Add(new(Label: "Edit official form", OnSelect: EventCallback.Factory.Create(this, OpenFormEditor),
                     Hint: "The itemised queries and the basis / response / impact sections",
@@ -2067,14 +2042,11 @@ else
             hasResponse ? responseText!.Trim() : null,
             hasResponse ? (record.RespondedByEmail ?? email) : record.RespondedByEmail,
             record.ImpliesVariation,
-            record.RaisedTo,
             record.DrawingRef,
             record.ResponseDue,
             record.RelatedDrawingSpec,
             record.InternalNotes,
-            record.ClientNotes,
-            // A status change must not shed the structured Raised-to link.
-            RaisedToContactId: record.RaisedToContactId);
+            record.ClientNotes);
 
         try
         {
@@ -2131,13 +2103,11 @@ else
             record.ResponseText,
             record.RespondedByEmail,
             record.ImpliesVariation,
-            record.RaisedTo,
             record.DrawingRef,
             record.ResponseDue,
             record.RelatedDrawingSpec,
             record.InternalNotes,
             record.ClientNotes,
-            RaisedToContactId: record.RaisedToContactId,
             CriticalPath: criticalPath,
             CriticalPathNudgeDismissed: nudgeDismissed);
 
@@ -2205,14 +2175,12 @@ else
             record.ResponseText,
             record.RespondedByEmail,
             record.ImpliesVariation,
-            record.RaisedTo,
             record.DrawingRef,
             record.ResponseDue,
             record.RelatedDrawingSpec,
             record.InternalNotes,
             record.ClientNotes,
             ClosedAt: closedAt,
-            RaisedToContactId: record.RaisedToContactId,
             // Only the RFI modal shows the checkbox; null keeps the tag untouched elsewhere.
             CriticalPath: record.Kind is RequestType.Rfi ? editCriticalPath : null);
 
@@ -2220,7 +2188,7 @@ else
         if (await SendEdit(command)) editingHeader = false;
     }
 
-    // ---- Facts edit: the at-a-glance strip (dates, raised to, drawing refs, value) --------------
+    // ---- Facts edit: the at-a-glance strip (dates, drawing refs, value) -------------------------
 
     private void OpenFactsEdit()
     {
@@ -2229,15 +2197,6 @@ else
         editIssuedAt = (record.IssuedAt ?? record.RaisedAt).LocalDateTime.ToString("yyyy-MM-dd");
         editResponseDue = record.ResponseDue?.LocalDateTime.ToString("yyyy-MM-dd") ?? "";
         editClosedAt = record.ClosedAt?.LocalDateTime.ToString("yyyy-MM-dd") ?? "";
-        // Raised-to: a live contact link selects that contact; anything else (legacy free text, or
-        // a link whose contact has since been removed from the project) falls back to a "keep as
-        // recorded" option so opening the editor never silently wipes the recorded value.
-        var hasLiveContactLink = record.RaisedToContactId is { } linkedId
-            && projectContacts.Any(c => c.ContactId == linkedId);
-        editRaisedToContactId = hasLiveContactLink
-            ? record.RaisedToContactId!
-            : !string.IsNullOrWhiteSpace(record.RaisedTo) ? ProjectContactSelect.LegacyValue : "";
-        editLegacyRaisedTo = hasLiveContactLink ? null : record.RaisedTo;
         editDrawingRef = record.DrawingRef ?? "";
         editRelatedSpec = record.RelatedDrawingSpec ?? "";
         editValue = record.Value?.ToString("0.##") ?? "";
@@ -2290,19 +2249,13 @@ else
             record.ResponseText,
             record.RespondedByEmail,
             record.ImpliesVariation,
-            // "Keep as recorded" preserves the existing free text; a picked contact travels as the
-            // structured id (the server derives the display string); "—" clears both.
-            editRaisedToContactId == ProjectContactSelect.LegacyValue ? record.RaisedTo : null,
             NullIfBlank(editDrawingRef),
             ParseDate(editResponseDue),
             NullIfBlank(editRelatedSpec),
             record.InternalNotes,
             record.ClientNotes,
             ClosedAt: closedAt,
-            IssuedAt: issuedAt,
-            RaisedToContactId: editRaisedToContactId == ProjectContactSelect.LegacyValue
-                ? null
-                : NullIfBlank(editRaisedToContactId));
+            IssuedAt: issuedAt);
 
         if (await SendEdit(command)) editingFacts = false;
     }
@@ -2334,13 +2287,11 @@ else
             record.ResponseText,
             record.RespondedByEmail,
             record.ImpliesVariation,
-            record.RaisedTo,
             record.DrawingRef,
             record.ResponseDue,
             record.RelatedDrawingSpec,
             record.InternalNotes,
-            record.ClientNotes,
-            RaisedToContactId: record.RaisedToContactId);
+            record.ClientNotes);
 
         if (await SendEdit(command)) editingDetail = false;
     }

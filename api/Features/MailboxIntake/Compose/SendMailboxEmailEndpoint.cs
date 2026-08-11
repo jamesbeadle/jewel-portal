@@ -1,5 +1,4 @@
 using System.Text.Json;
-using Jewel.JPMS.Api.Features.Requests;
 using Jewel.JPMS.Api.Gates;
 using Jewel.JPMS.Contracts.MailboxCompose;
 using Microsoft.AspNetCore.Http;
@@ -15,9 +14,12 @@ namespace Jewel.JPMS.Api.Features.MailboxIntake.Compose;
 ///   • multipart/form-data — a "command" part carrying the same JSON, plus one file part per
 ///     Source=Upload attachment, matched by part name to <see cref="ComposeAttachmentRef.Id"/>
 ///     (the same transport shape as the progress-photo upload).
-/// Gated to the triage roles; SenderEmail is stamped from the signed-in user — the client cannot
-/// spoof it. Handler-refused sends (validation, wall, mailbox unavailable) surface verbatim as 400s
-/// so the composer shows them inline rather than as a toast.
+/// Gated to every internal role (decision 2026-08-10, widened from the triage roles): a to-do's
+/// assignee — a site manager, accounts, office admin — replies to the item's linked mail from the
+/// item's own page, and sending from the projects mailbox is what "reply" means there. Externals
+/// never pass. SenderEmail is stamped from the signed-in user — the client cannot spoof it.
+/// Handler-refused sends (validation, wall, mailbox unavailable) surface verbatim as 400s so the
+/// composer shows them inline rather than as a toast.
 /// </summary>
 public sealed class SendMailboxEmailEndpoint
 {
@@ -45,7 +47,7 @@ public sealed class SendMailboxEmailEndpoint
 
         var signedInUser = await users.ResolveAsync(request, cancellationToken);
         if (signedInUser is null) return new UnauthorizedResult();
-        if (!TriageRoles.AllowedToTriage.IncludesAny(signedInUser.Roles)) return new StatusCodeResult(403);
+        if (!JpmsRoleSets.AllInternal.IncludesAny(signedInUser.Roles)) return new StatusCodeResult(403);
         auditActor.Email = signedInUser.Email;
 
         SendMailboxEmail? command;

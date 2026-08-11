@@ -1,10 +1,14 @@
 @using Jewel.JPMS.Contracts.Requests
-@inject AuthService Auth
 @inject IRequestRegister RequestRegister
-@inject ICorrespondenceStore Correspondence
 @inject IRequestAttachmentStore Attachments
-@inject IDrawingStore Drawings
-@implements IDisposable
+
+@*
+    The raise-request dialog: RequestForm (the shared fields/validation/payload component — the
+    Control Centre's System Actions pane hosts the same form to stage a draft) inside the house
+    Modal, with this wrapper owning the SEND — raise, then apply the chosen attachments the moment
+    the request has an id. An attachment failure never loses the request: the button becomes
+    "Continue", carrying the user to the request to attach by hand.
+*@
 
 <Modal IsOpen="IsOpen"
        Title="Raise a request"
@@ -12,182 +16,11 @@
        OnCancel="Cancel"
        OnConfirm="Submit"
        Class="max-w-2xl">
-    <div class="space-y-4">
-        @if (error is not null)
-        {
-            <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@error</p>
-        }
-
-        <div>
-            <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Raise as</label>
-            <div class="flex gap-2">
-                <button type="button"
-                        class="@KindButtonClass(RequestType.General)"
-                        @onclick="() => SetKind(RequestType.General)">General request</button>
-                <button type="button"
-                        class="@KindButtonClass(RequestType.Rfi)"
-                        @onclick="() => SetKind(RequestType.Rfi)">Official RFI</button>
-            </div>
-            <p class="mt-2 rounded-lg bg-surface-raised border border-line px-3 py-2 text-xs text-content-subtle">
-                @if (kind == RequestType.General)
-                {
-                    <text>Auto-numbered REQ-####. Promote it to an official RFI from the request once it's created.</text>
-                }
-                else
-                {
-                    <text>Takes the project's next RFI number automatically — edit the reference only to back-fill a legacy RFI.</text>
-                }
-            </p>
-        </div>
-
-        @if (kind == RequestType.Rfi)
-        {
-            <FormField Label="RFI reference" Value="@reference" OnChange="v => reference = v" Required="true" />
-        }
-
-        <FormField Label="Subject" Value="@title" OnChange="v => title = v" Required="true" />
-
-        <div>
-            <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Detail</label>
-            <textarea class="field" rows="4" value="@description" @oninput="OnDescriptionInput"
-                      placeholder="Describe the information being requested…"></textarea>
-        </div>
-
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <ProjectContactSelect Contacts="@projectContacts"
-                                  Value="@raisedToContactId"
-                                  OnChange="v => raisedToContactId = v"
-                                  Loading="@contactsLoading" />
-            <FormField Label="Drawing / detail ref" Value="@drawingRef" OnChange="v => drawingRef = v" />
-        </div>
-
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <FormField Label="Response due" Value="@responseDue" OnChange="v => responseDue = v" InputType="date" />
-            <FormField Label="Value (£)" Value="@valueText" OnChange="v => valueText = v" InputType="number" />
-        </div>
-
-        @* Attachments are chosen here and applied the moment the request exists — the request has no
-           id until it is raised, so nothing can be attached before then. A site manager standing in
-           front of the problem photographs it and points at the detail it contradicts, and both go
-           out with the RFI when it is issued. *@
-        <div class="pt-1 border-t border-line">
-            <div class="flex items-center justify-between gap-3 mt-3">
-                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold">Attachments</label>
-                <div class="flex items-center gap-2">
-                    <button type="button" class="btn-secondary text-xs" disabled="@saving" @onclick="OpenDrawingPicker">
-                        Attach drawings@(selectedRevisions.Count > 0 ? $" ({selectedRevisions.Count})" : "")
-                    </button>
-                    <label class="btn-secondary text-xs cursor-pointer @(saving ? "opacity-50 pointer-events-none" : "")">
-                        Attach images@(pendingFiles.Count > 0 ? $" ({pendingFiles.Count})" : "")
-                        @* Deliberately no `capture`: forcing the camera on mobile removes the photo
-                           library, and site photos are as often taken earlier as taken now. *@
-                        <InputFile OnChange="OnFilesSelected" multiple accept="image/*,application/pdf" class="hidden" />
-                    </label>
-                </div>
-            </div>
-            @if (selectedRevisions.Count > 0 || pendingFiles.Count > 0)
-            {
-                <ul class="mt-2 space-y-1">
-                    @foreach (var revision in selectedRevisions)
-                    {
-                        var option = revision;
-                        <li class="flex items-center justify-between gap-2 text-xs text-content-muted">
-                            <span class="truncate"><span class="font-mono">@option.Code</span> rev @option.Label</span>
-                            <button type="button" class="text-content-subtle hover:text-negative"
-                                    @onclick="() => selectedRevisions.Remove(option)">Remove</button>
-                        </li>
-                    }
-                    @foreach (var file in pendingFiles)
-                    {
-                        var pending = file;
-                        <li class="flex items-center justify-between gap-2 text-xs text-content-muted">
-                            <span class="truncate">@pending.Name</span>
-                            <button type="button" class="text-content-subtle hover:text-negative"
-                                    @onclick="() => pendingFiles.Remove(pending)">Remove</button>
-                        </li>
-                    }
-                </ul>
-            }
-            @if (attachmentWarning is not null)
-            {
-                <p class="mt-2 text-xs text-negative">@attachmentWarning</p>
-            }
-
-            <label class="inline-flex items-center gap-2 mt-3 text-sm text-content-muted cursor-pointer">
-                <input type="checkbox" checked="@backfill" @onchange="OnBackfillChanged" class="rounded border-line-strong" />
-                Log a historical request (set issue date &amp; status)
-            </label>
-
-            @if (backfill)
-            {
-                <div class="mt-3 space-y-4">
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <FormField Label="Date issued" Value="@raisedAt" OnChange="v => raisedAt = v" InputType="date" />
-                        <div>
-                            <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Status</label>
-                            <select class="field" value="@((int)status)" @onchange="OnStatusChanged">
-                                @foreach (var option in StatusOptions)
-                                {
-                                    <option value="@((int)option)">@StatusLabel(option)</option>
-                                }
-                            </select>
-                        </div>
-                    </div>
-                    <FormField Label="Response date" Value="@respondedAt" OnChange="v => respondedAt = v" InputType="date" />
-                    <div>
-                        <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Response</label>
-                        <textarea class="field" rows="3" value="@responseText" @oninput="OnResponseTextInput"
-                                  placeholder="The answer received, if already closed…"></textarea>
-                    </div>
-                </div>
-            }
-        </div>
-    </div>
-</Modal>
-
-@* Picking a drawing is a second dialog over the first — the register can be long, and the raise
-   form must not lose what has been typed into it. *@
-<Modal IsOpen="drawingPickerOpen"
-       Title="Attach drawings"
-       ConfirmLabel="Done"
-       CancelLabel="Cancel"
-       OnCancel="() => drawingPickerOpen = false"
-       OnConfirm="() => drawingPickerOpen = false"
-       Class="max-w-2xl">
     <div class="space-y-3">
-        @if (PickableRevisions.Count == 0)
+        <RequestForm @ref="form" ProjectId="@ProjectId" Busy="@saving" OnSubmit="SendAsync" />
+        @if (attachmentWarning is not null)
         {
-            <p class="text-sm text-content-subtle">
-                This project has no drawing revisions yet. Upload them on the Drawings tab first.
-            </p>
-        }
-        else
-        {
-            <p class="text-xs text-content-subtle">
-                Attaching links the revision rather than copying it, so the drawing register stays the single
-                record of what is current.
-            </p>
-            <ul class="space-y-1 max-h-80 overflow-y-auto">
-                @foreach (var option in PickableRevisions)
-                {
-                    var revision = option;
-                    <li>
-                        <label class="flex items-start gap-2 text-sm text-content">
-                            <input type="checkbox" class="mt-0.5"
-                                   checked="@selectedRevisions.Any(r => r.RevisionId == revision.RevisionId)"
-                                   @onchange="e => ToggleRevision(revision, e.Value is true)" />
-                            <span>
-                                <span class="font-mono">@revision.Code</span>
-                                <span class="text-content-subtle"> rev @revision.Label</span>
-                                @if (!string.IsNullOrWhiteSpace(revision.Title))
-                                {
-                                    <span class="text-content-subtle"> — @revision.Title</span>
-                                }
-                            </span>
-                        </label>
-                    </li>
-                }
-            </ul>
+            <p class="rounded-lg bg-amber-500/10 border border-amber-500/40 px-3 py-2 text-xs text-content">@attachmentWarning</p>
         }
     </div>
 </Modal>
@@ -198,60 +31,9 @@
     [Parameter] public EventCallback OnClose { get; set; }
     [Parameter] public EventCallback<Request> OnRaised { get; set; }
 
-    // A request is raised either as a General container (auto-numbered REQ-#### server-side, promoted
-    // to an RFI later) or directly as an official RFI. An RFI's reference is pre-filled with the
-    // project's next number (same shared logic the server uses) and stays editable so legacy RFIs can
-    // be back-filled under their original numbers. If the suggestion is left untouched it is sent
-    // blank and the server mints the number authoritatively — a stale local register can't clash.
-    private RequestType kind = RequestType.General;
-    private string reference = "";
-    private string suggestedReference = "";
-
-    // Lifecycle order, listed as the ball moves: ours to do (Needs action), with the correspondent
-    // (Open), back with us needing a variation order quote (Needs variation), then closed. Where a
-    // request JOINS that order depends on its kind — an official instrument is raised straight into
-    // Open, a General container into Needs action (see DefaultStatusOnRaise).
-    private static readonly RequestStatus[] StatusOptions =
-    {
-        RequestStatus.NeedsAction, RequestStatus.Open,
-        RequestStatus.NeedsVariation, RequestStatus.Closed
-    };
-
-    private string title = "";
-    private string description = "";
-    private string raisedToContactId = "";
-    private string drawingRef = "";
-
-    // The project's own contact list (Setup tab → Project contacts) backing the "Raised to"
-    // dropdown. Fetched when the dialog opens — ICorrespondenceStore is an on-demand async store,
-    // so no fetch-once-per-key bookkeeping applies here.
-    private IReadOnlyList<ProjectContact> projectContacts = Array.Empty<ProjectContact>();
-    private bool contactsLoading;
-    // Pre-filled with the standard one-week window (RequestDefaults) so the common case needs no
-    // typing; editable as before, and cleared to blank means no due date at all.
-    private string responseDue = RequestDefaults.ResponseDue();
-    private string valueText = "";
-
-    private bool backfill;
-    private string raisedAt = "";
-    private string respondedAt = "";
-    private string responseText = "";
-    // The backfill status picker's starting point. Follows the same raise policy the server applies
-    // to a brand-new record (RequestTypeExtensions.DefaultStatusOnRaise), so the dialog never shows
-    // one answer while the server stores another — and it moves with the kind toggle below. Once
-    // the user picks a status by hand, that choice is theirs and the toggle stops overwriting it.
-    private RequestStatus status = RequestType.General.DefaultStatusOnRaise();
-    private bool statusChosenByUser;
-
+    private RequestForm? form;
     private bool saving;
-    private string? error;
     private bool wasOpen;
-
-    // Attachments chosen before the request exists, applied straight after it is raised.
-    private sealed record RevisionOption(string RevisionId, string Code, string Label, string Title);
-    private readonly List<RevisionOption> selectedRevisions = new();
-    private readonly List<IBrowserFile> pendingFiles = new();
-    private bool drawingPickerOpen;
     // Attachments failing must not lose the request that was just created, so a failure here is a
     // warning on a request that already exists — not an error that pretends nothing happened.
     private string? attachmentWarning;
@@ -259,225 +41,56 @@
     // second request when only the attachment step failed.
     private Request? raisedRequest;
 
-    // Every revision of every drawing on the project, newest first within each drawing, so the
-    // current issue is the obvious one to tick.
-    private List<RevisionOption> PickableRevisions =>
-        Drawings.DrawingsFor(ProjectId)
-            .SelectMany(drawing => Drawings.RevisionsFor(drawing.DrawingId)
-                .OrderByDescending(revision => revision.ReceivedAt)
-                .Select(revision => new RevisionOption(
-                    revision.DrawingRevisionId, drawing.DrawingCode, revision.RevisionLabel, drawing.Title)))
-            .ToList();
-
-    private void OpenDrawingPicker()
-    {
-        // Fetch on open, never from render.
-        Drawings.Refresh(ProjectId);
-        drawingPickerOpen = true;
-    }
-
-    private void ToggleRevision(RevisionOption revision, bool selected)
-    {
-        selectedRevisions.RemoveAll(r => r.RevisionId == revision.RevisionId);
-        if (selected) selectedRevisions.Add(revision);
-    }
-
-    private void OnFilesSelected(InputFileChangeEventArgs e)
-    {
-        attachmentWarning = null;
-        foreach (var file in e.GetMultipleFiles(20))
-            if (!pendingFiles.Any(existing => existing.Name == file.Name && existing.Size == file.Size))
-                pendingFiles.Add(file);
-    }
-
-    // The drawing store fills in the background and publishes OnChange when it lands; without this
-    // the picker would render once, empty, and never catch up.
-    protected override void OnInitialized() => Drawings.OnChange += StateHasChanged;
-
-    public void Dispose() => Drawings.OnChange -= StateHasChanged;
-
-    protected override async Task OnParametersSetAsync()
+    protected override void OnParametersSet()
     {
         var opening = IsOpen && !wasOpen;
         wasOpen = IsOpen;
         if (!opening) return;
-
-        Reset();
-        // Warm the drawing register from a lifecycle method, not from render, so "Attach drawings"
-        // has something in it the first time it is pressed.
-        Drawings.Refresh(ProjectId);
-        await LoadContactsAsync();
-    }
-
-    private async Task LoadContactsAsync()
-    {
-        contactsLoading = true;
-        try
-        {
-            // Ad-hoc rows only: the contacts added on the Setup tab's Project contacts list.
-            // (Party-linked rows are per-project routing overrides, not list entries.)
-            var rows = await Correspondence.ListProjectContactsAsync(ProjectId);
-            projectContacts = rows.Where(row => row.PartyContactId is null).ToList();
-        }
-        catch
-        {
-            // The dropdown just renders empty; raising a request without a Raised-to stays possible.
-            projectContacts = Array.Empty<ProjectContact>();
-        }
-        finally { contactsLoading = false; }
-    }
-
-    private void Reset()
-    {
-        title = description = raisedToContactId = drawingRef = valueText = "";
-        responseDue = RequestDefaults.ResponseDue();
-        backfill = false;
-        raisedAt = respondedAt = responseText = "";
-        kind = RequestType.General;
-        status = kind.DefaultStatusOnRaise();
-        statusChosenByUser = false;
-        reference = suggestedReference = "";
-        saving = false;
-        error = null;
-        selectedRevisions.Clear();
-        pendingFiles.Clear();
-        drawingPickerOpen = false;
-        attachmentWarning = null;
+        // The Modal renders its children only while open, so each opening MOUNTS a fresh
+        // RequestForm — no reset call needed (and none safe: the previous instance is disposed).
         raisedRequest = null;
+        attachmentWarning = null;
+        saving = false;
     }
-
-    private void SetKind(RequestType selected)
-    {
-        if (kind == selected) return;
-        kind = selected;
-        // An official RFI is with the architect the moment it is raised; a General container is
-        // ours. Track that as the kind toggles, unless the user has already set the status.
-        if (!statusChosenByUser) status = kind.DefaultStatusOnRaise();
-        if (kind == RequestType.Rfi)
-        {
-            // Suggest the project's next RFI number from the local register (the server re-derives it
-            // on save, so this is a preview the user can overtype for legacy back-fills).
-            suggestedReference = RequestReference.SuggestNext(
-                RequestType.Rfi,
-                RequestRegister.ForProject(ProjectId).Select(r => r.Reference));
-            reference = suggestedReference;
-        }
-        else
-        {
-            reference = suggestedReference = "";
-        }
-    }
-
-    private string KindButtonClass(RequestType option) =>
-        kind == option
-            ? "px-3 py-1.5 rounded-lg text-sm font-medium bg-accent/15 border border-accent text-content"
-            : "px-3 py-1.5 rounded-lg text-sm font-medium bg-surface-raised border border-line text-content-muted hover:text-content";
-
-    private void OnStatusChanged(ChangeEventArgs e)
-    {
-        if (!int.TryParse(e.Value?.ToString(), out var raw)) return;
-        status = (RequestStatus)raw;
-        statusChosenByUser = true;
-    }
-
-    // Logging a HISTORICAL request clears the pre-filled response due: a week from today is a
-    // sensible default for a request being raised now, and nonsense for one raised months ago. The
-    // field stays editable either way, so the real historical date can be typed in.
-    private void OnBackfillChanged(ChangeEventArgs e)
-    {
-        backfill = e.Value is true;
-        if (backfill && responseDue == RequestDefaults.ResponseDue()) responseDue = "";
-        else if (!backfill && string.IsNullOrWhiteSpace(responseDue)) responseDue = RequestDefaults.ResponseDue();
-    }
-
-    private void OnDescriptionInput(ChangeEventArgs e) => description = e.Value?.ToString() ?? "";
-
-    private void OnResponseTextInput(ChangeEventArgs e) => responseText = e.Value?.ToString() ?? "";
 
     private async Task Cancel() => await OnClose.InvokeAsync();
 
     private async Task Submit()
     {
-        if (saving) return;
-
-        // The request was already raised and only its attachments failed — the button now means
-        // "carry on to it", never "raise another one".
+        if (saving || form is null) return;
+        // Already raised and only its attachments failed — the button now means "carry on to it",
+        // never "raise another one".
         if (raisedRequest is { } alreadyRaised)
         {
             await OnRaised.InvokeAsync(alreadyRaised);
             return;
         }
+        await form.TrySubmitAsync(); // a valid form comes back through SendAsync
+    }
 
-        error = null;
-
-        if (string.IsNullOrWhiteSpace(title)) { error = "A subject is required."; return; }
-
-        var email = Auth.CurrentUser?.Email;
-        if (string.IsNullOrWhiteSpace(email)) { error = "You must be signed in to raise a request."; return; }
-
-        decimal? value = null;
-        if (!string.IsNullOrWhiteSpace(valueText))
-        {
-            if (!decimal.TryParse(valueText, out var parsed)) { error = "Value must be a number."; return; }
-            value = parsed;
-        }
-
-        // Blank reference: the server mints the number (REQ-#### for General, the project's next
-        // RFI-nnn for an RFI). An untouched suggestion is sent blank so the server stays authoritative;
-        // only a genuinely edited reference (legacy back-fill) is sent as typed.
-        var referenceToSend = kind == RequestType.Rfi
-            && !string.IsNullOrWhiteSpace(reference)
-            && !string.Equals(reference.Trim(), suggestedReference, StringComparison.OrdinalIgnoreCase)
-                ? reference.Trim()
-                : "";
-
-        var command = new RaiseRequest(
-            ProjectId,
-            kind,
-            referenceToSend,
-            title.Trim(),
-            description?.Trim() ?? "",
-            value,
-            email,
-            RaisedTo: null,
-            RaisedToContactId: NullIfBlank(raisedToContactId),
-            DrawingRef: NullIfBlank(drawingRef),
-            ResponseDue: ParseDate(responseDue),
-            RaisedAt: backfill ? ParseDate(raisedAt) : null,
-            RespondedAt: backfill ? ParseDate(respondedAt) : null,
-            ResponseText: backfill ? NullIfBlank(responseText) : null,
-            RespondedByEmail: backfill && !string.IsNullOrWhiteSpace(responseText) ? email : null,
-            Status: backfill ? status : null);
-
+    private async Task SendAsync(RequestForm.Draft draft)
+    {
         try
         {
             saving = true;
-            var raised = await RequestRegister.RaiseAsync(command);
-            // Remember it immediately: from here on the request EXISTS, and pressing the button
-            // again must never raise a second one.
+            var raised = await RequestRegister.RaiseAsync(draft.Command);
+            // Remember it immediately: from here on the request EXISTS.
             raisedRequest = raised;
 
-            // The request now has an id, so the chosen attachments can be applied. If that fails
-            // the request is still real and is not rolled back — the user is told what didn't land
-            // and the button becomes "Continue", which carries them through to the request where
-            // they can attach it by hand. Losing the request would be far worse than losing a photo.
-            if (selectedRevisions.Count > 0 || pendingFiles.Count > 0)
+            if (draft.DrawingRevisionIds.Count > 0 || draft.Files.Count > 0)
             {
                 try
                 {
-                    if (selectedRevisions.Count > 0)
-                        await Attachments.AttachDrawingsAsync(
-                            raised.RequestId, selectedRevisions.Select(r => r.RevisionId).ToList());
-                    if (pendingFiles.Count > 0)
-                        await Attachments.UploadFilesAsync(raised.RequestId, pendingFiles, caption: null);
+                    if (draft.DrawingRevisionIds.Count > 0)
+                        await Attachments.AttachDrawingsAsync(raised.RequestId, draft.DrawingRevisionIds);
+                    if (draft.Files.Count > 0)
+                        await Attachments.UploadFilesAsync(raised.RequestId, draft.Files, caption: null);
                 }
                 catch (Exception attachmentFailure)
                 {
                     attachmentWarning =
                         $"{raised.DisplayNumber} was raised, but the attachments didn't save: {attachmentFailure.Message} " +
                         "Continue to the request and add them there.";
-                    selectedRevisions.Clear();
-                    pendingFiles.Clear();
                     saving = false;
                     return;
                 }
@@ -487,20 +100,13 @@
         }
         catch (CommandFailedException ex)
         {
-            error = ex.Message;
+            form?.ShowError(ex.Message);
             saving = false;
         }
         catch
         {
-            error = "Couldn't raise the request. Please try again.";
+            form?.ShowError("Couldn't raise the request. Please try again.");
             saving = false;
         }
     }
-
-    private static string? NullIfBlank(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
-
-    private static DateTimeOffset? ParseDate(string value) =>
-        DateTimeOffset.TryParse(value, out var parsed) ? parsed : null;
-
-    private static string StatusLabel(RequestStatus status) => status.DisplayName();
 }

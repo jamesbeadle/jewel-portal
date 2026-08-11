@@ -604,10 +604,6 @@ else
                                     </div>
                                 </div>
                                 <div class="flex flex-wrap items-center gap-x-4 gap-y-1 mt-1 text-xs text-content-subtle">
-                                    @if (!string.IsNullOrWhiteSpace(rfi.RaisedTo))
-                                    {
-                                        <span>Raised to @rfi.RaisedTo</span>
-                                    }
                                     @if (rfi.ResponseDue is { } due)
                                     {
                                         <span>Response due @due.LocalDateTime.ToString("d MMM yyyy")</span>

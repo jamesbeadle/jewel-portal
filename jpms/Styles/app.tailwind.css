@@ -242,3 +242,44 @@
         opacity: 0.6;
     }
 }
+
+/* Control Centre workspace (Features/Triage/Workspace/PanelWorkspace.razor): two panes and a
+   draggable 6px divider column. --left-w is written inline by Blazor (and live by
+   panel-workspace.js during a drag), so the split is one CSS variable wherever it is read.
+   Below lg the grid is a single column — the left pane is the only window. */
+.panel-workspace {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr);
+}
+
+@media (min-width: 1024px) {
+    .panel-workspace {
+        grid-template-columns: minmax(0, var(--left-w, 33.33%)) 6px minmax(0, 1fr);
+        column-gap: 0.375rem;
+    }
+}
+
+/* Rich-lite compose editor (Features/Triage/RichTextEditor.razor). Tailwind's preflight strips
+   the markers and indentation from every ul/ol, so the toolbar's list buttons inserted a
+   perfectly good list that rendered exactly like plain paragraphs. Restore both inside the
+   editor only — the recipient's mail client applies its own list styling to the sent HTML. */
+.jpms-rich-editor ul {
+    list-style: disc;
+    padding-left: 1.5rem;
+    margin: 0.25rem 0;
+}
+
+.jpms-rich-editor ol {
+    list-style: decimal;
+    padding-left: 1.5rem;
+    margin: 0.25rem 0;
+}
+
+/* The editor's placeholder — same missing-stylesheet gap: the component sets data-placeholder
+   but nothing ever rendered it. */
+.jpms-rich-editor:empty::before {
+    content: attr(data-placeholder);
+    color: theme('colors.content.faint');
+    pointer-events: none;
+}

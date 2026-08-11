@@ -1,0 +1,74 @@
+@namespace Jewel.JPMS.Features.Triage.Panels
+@using Jewel.JPMS.Features.Triage.Workspace
+@inject IQueryClient Queries
+
+@*
+    One record read as a document, sized for a workspace window: the header says what and where,
+    a request carries its full write-up (description, itemised queries, dates), and the linked
+    documents / correspondence below feed the Preview pane on the opposite window. Read-only by
+    design — the "Open full page" link is where editing lives.
+*@
+
+<div class="space-y-3">
+    <div class="flex items-center justify-between gap-3">
+        <button type="button" class="text-xs text-content-muted hover:text-content underline underline-offset-2"
+                @onclick="OnBack">← Back to search</button>
+        @if (ExplorerRecordTypes.FullPageHref(Record) is { } href)
+        {
+            <a class="text-xs text-accent hover:underline underline-offset-2" href="@href">Open full page</a>
+        }
+    </div>
+
+    <div class="panel p-5 space-y-3">
+        <div>
+            <p class="font-mono text-xs text-content-muted">@Record.Reference</p>
+            <h2 class="text-lg font-semibold text-content leading-snug">@Record.Title</h2>
+            @if (StatusLabel is { Length: > 0 } status)
+            {
+                <span class="inline-flex items-center rounded-full bg-accent/10 text-accent text-[11px] font-medium px-2 py-0.5 mt-1.5">@status</span>
+            }
+        </div>
+
+        @if (requestLoading)
+        {
+            <JewelSpinner Label="Loading the request" />
+        }
+        else if (request is { } loadedRequest)
+        {
+            <div class="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
+                <span class="text-content-subtle">Issued</span><span class="text-content">@DateText(loadedRequest.IssuedAt ?? loadedRequest.RaisedAt)</span>
+                <span class="text-content-subtle">Response due</span><span class="text-content">@DateText(loadedRequest.ResponseDue)</span>
+                <span class="text-content-subtle">Raised by</span><span class="text-content truncate">@loadedRequest.RaisedByEmail</span>
+                @if (!string.IsNullOrWhiteSpace(loadedRequest.DrawingRef))
+                {
+                    <span class="text-content-subtle">Drawing ref</span><span class="text-content">@loadedRequest.DrawingRef</span>
+                }
+            </div>
+            @if (!string.IsNullOrWhiteSpace(loadedRequest.Description))
+            {
+                <p class="text-sm text-content whitespace-pre-wrap rounded-lg bg-surface-raised border border-line p-3">@loadedRequest.Description</p>
+            }
+            @foreach (var item in loadedRequest.ItemList)
+            {
+                <div class="rounded-lg border border-line p-3">
+                    <p class="text-sm text-content whitespace-pre-wrap">@item.Query</p>
+                    @if (!string.IsNullOrWhiteSpace(item.Response))
+                    {
+                        <p class="text-sm text-content-muted whitespace-pre-wrap mt-2 pl-3 border-l-2 border-accent/40">@item.Response</p>
+                    }
+                </div>
+            }
+        }
+        else if (!string.IsNullOrWhiteSpace(Record.Summary))
+        {
+            <p class="text-sm text-content whitespace-pre-wrap">@Record.Summary</p>
+        }
+    </div>
+
+    @if (Record.Type == RecordType.Request)
+    {
+        <RecordAttachmentList ProjectId="@Record.ProjectId" RequestId="@Record.RecordId" OnPreview="OnPreview" />
+    }
+
+    <RecordEmailList Type="Record.Type" RecordId="@Record.RecordId" />
+</div>
