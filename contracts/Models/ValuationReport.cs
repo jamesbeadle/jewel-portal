@@ -76,7 +76,13 @@ public sealed record ValuationClaim(
     decimal PaymentDueExVat,
     // Free-text period name (e.g. "June 2026"); renameable at any status. Empty for
     // claims from before names existed — display falls back to "Claim n".
-    string Name = "")
+    string Name = "",
+    // Cash-up-front deposit: the % stamped from the project's terms when the claim starts
+    // (kept live on Drafts when terms change), and the cumulative amount released back to
+    // the client, frozen with the other totals when the claim locks. Trailing defaults
+    // keep the positional constructor stable for pre-deposit callers.
+    decimal DepositPercent = 0m,
+    decimal DepositReleased = 0m)
 {
     // "June 2026" when named, otherwise "Claim 3" — one rule for every claim label.
     public string DisplayName => string.IsNullOrWhiteSpace(Name) ? $"Claim {ClaimNumber}" : Name;
@@ -115,7 +121,11 @@ public sealed record ValuationReportSnapshot(
     decimal RetentionReleasePercent,
     decimal RetentionReleased,
     decimal CertifiedToDate,
-    decimal PaymentDueExVat);
+    decimal PaymentDueExVat,
+    // Cash-up-front deposit as frozen at capture: the claim's deposit % and the cumulative
+    // amount released back to the client. Trailing defaults for pre-deposit callers.
+    decimal DepositPercent = 0m,
+    decimal DepositReleased = 0m);
 
 // One frozen row of a snapshot: values copied (not referenced) from the live line item and its
 // claim entry at capture time, so later edits/deletions of live data never disturb the snapshot.

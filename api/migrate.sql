@@ -3,45 +3,56 @@ GO
 
 IF NOT EXISTS (
     SELECT * FROM [__EFMigrationsHistory]
-    WHERE [MigrationId] = N'20260811100000_AddTodoItemLinks'
+    WHERE [MigrationId] = N'20260811120000_AddCashUpFrontDeposit'
 )
 BEGIN
-    CREATE TABLE [TodoItemLinks] (
-        [TodoItemLinkId] nvarchar(64) NOT NULL,
-        [TodoItemAId] nvarchar(64) NOT NULL,
-        [TodoItemBId] nvarchar(64) NOT NULL,
-        [LinkedAt] datetimeoffset NOT NULL,
-        [LinkedByEmail] nvarchar(256) NOT NULL,
-        CONSTRAINT [PK_TodoItemLinks] PRIMARY KEY ([TodoItemLinkId])
-    );
+    ALTER TABLE [ProjectRetentions] ADD [DepositPercent] decimal(18,4) NOT NULL DEFAULT 0.0;
 END;
 GO
 
 IF NOT EXISTS (
     SELECT * FROM [__EFMigrationsHistory]
-    WHERE [MigrationId] = N'20260811100000_AddTodoItemLinks'
+    WHERE [MigrationId] = N'20260811120000_AddCashUpFrontDeposit'
 )
 BEGIN
-    EXEC(N'CREATE UNIQUE INDEX [IX_TodoItemLinks_TodoItemAId_TodoItemBId] ON [TodoItemLinks] ([TodoItemAId], [TodoItemBId]) WHERE [TodoItemAId] IS NOT NULL AND [TodoItemBId] IS NOT NULL');
+    ALTER TABLE [ValuationClaims] ADD [DepositPercent] decimal(18,4) NOT NULL DEFAULT 0.0;
 END;
 GO
 
 IF NOT EXISTS (
     SELECT * FROM [__EFMigrationsHistory]
-    WHERE [MigrationId] = N'20260811100000_AddTodoItemLinks'
+    WHERE [MigrationId] = N'20260811120000_AddCashUpFrontDeposit'
 )
 BEGIN
-    CREATE INDEX [IX_TodoItemLinks_TodoItemBId] ON [TodoItemLinks] ([TodoItemBId]);
+    ALTER TABLE [ValuationClaims] ADD [DepositReleased] decimal(18,4) NOT NULL DEFAULT 0.0;
 END;
 GO
 
 IF NOT EXISTS (
     SELECT * FROM [__EFMigrationsHistory]
-    WHERE [MigrationId] = N'20260811100000_AddTodoItemLinks'
+    WHERE [MigrationId] = N'20260811120000_AddCashUpFrontDeposit'
+)
+BEGIN
+    ALTER TABLE [ValuationReportSnapshots] ADD [DepositPercent] decimal(18,4) NOT NULL DEFAULT 0.0;
+END;
+GO
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20260811120000_AddCashUpFrontDeposit'
+)
+BEGIN
+    ALTER TABLE [ValuationReportSnapshots] ADD [DepositReleased] decimal(18,4) NOT NULL DEFAULT 0.0;
+END;
+GO
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20260811120000_AddCashUpFrontDeposit'
 )
 BEGIN
     INSERT INTO [__EFMigrationsHistory] ([MigrationId], [ProductVersion])
-    VALUES (N'20260811100000_AddTodoItemLinks', N'8.0.10');
+    VALUES (N'20260811120000_AddCashUpFrontDeposit', N'8.0.10');
 END;
 GO
 

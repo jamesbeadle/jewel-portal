@@ -159,4 +159,34 @@ public class WorkOrderPaymentStatusTests
         Assert.Equal(WorkOrderPaymentStatus.PartPaid,
             WorkOrderPaymentStatuses.For(1, 130m, 0m));
     }
+
+    [Fact]
+    public void CreditOrderWithNothingLinkedIsNoBillDue()
+    {
+        // Fluid Glass WO-0010: a negative order raised to remove works the client paid the
+        // supplier for directly. No supplier bill will ever exist to link, so NotLinked would
+        // hold its GBP 34,515.58 credit out of the supplier's remaining for ever — when the
+        // honest answer is that GBP 0.00 has been paid and always will be, and the credit
+        // nets off the order it was raised against.
+        Assert.Equal(WorkOrderPaymentStatus.NoBillDue,
+            WorkOrderPaymentStatuses.For(0, 0m, -34515.58m));
+    }
+
+    [Fact]
+    public void PositiveOrderWithNothingLinkedStaysNotLinked()
+    {
+        // The credit exception must not leak: a positive order with nothing linked is still
+        // an unknown, not a zero.
+        Assert.Equal(WorkOrderPaymentStatus.NotLinked,
+            WorkOrderPaymentStatuses.For(0, 0m, 35000m));
+    }
+
+    [Fact]
+    public void CreditOrderWithACreditNoteLinkedFollowsTheLinkedLadder()
+    {
+        // If a supplier credit note IS entered in Xero and linked to the credit order, Xero
+        // has answered and the linked ladder takes over from the no-bill-due assumption.
+        Assert.Equal(WorkOrderPaymentStatus.Unpaid,
+            WorkOrderPaymentStatuses.For(1, 0m, -34515.58m));
+    }
 }

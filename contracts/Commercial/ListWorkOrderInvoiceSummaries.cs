@@ -35,6 +35,12 @@ public enum WorkOrderInvoicingStatus
 /// OpeningBalance is its sibling for the migrated orders: nothing linked either, but the order
 /// carries a Buildertrend opening balance, so there IS a figure — it is just a carried-over one
 /// rather than anything Xero has confirmed.
+///
+/// NoBillDue is the one case where "nothing linked" is a final answer rather than a pending
+/// one: a net-credit order (scope removed, or works the client paid the supplier for
+/// directly) will never have a supplier bill to link. Its paid position is a known GBP 0.00,
+/// so — unlike NotLinked — its full credit counts in the remaining figure, where it nets off
+/// the positive order it was raised against.
 /// </summary>
 public enum WorkOrderPaymentStatus
 {
@@ -42,7 +48,8 @@ public enum WorkOrderPaymentStatus
     Unpaid = 1,
     PartPaid = 2,
     Paid = 3,
-    OpeningBalance = 4
+    OpeningBalance = 4,
+    NoBillDue = 5
 }
 
 /// <summary>How much an order's paid figure can be trusted. See WorkOrderPaymentStatus.</summary>
@@ -51,13 +58,22 @@ public static class WorkOrderPaymentStatuses
     /// <summary>
     /// With nothing linked, JPMS has not been told anything about this order's payments: that
     /// is NotLinked, and the reader must be shown no figure rather than a zero — unless a
-    /// migrated opening balance gives it one. With links, Xero has answered, and the answer
+    /// migrated opening balance gives it one, or the order is a net credit, on which no bill
+    /// is ever due and the zero is a fact. With links, Xero has answered, and the answer
     /// runs from nothing settled through to the order's full value.
     /// </summary>
     public static WorkOrderPaymentStatus For(int linkedLineCount, decimal paid, decimal value)
     {
         if (linkedLineCount == 0)
-            return paid == 0m ? WorkOrderPaymentStatus.NotLinked : WorkOrderPaymentStatus.OpeningBalance;
+        {
+            if (paid != 0m) return WorkOrderPaymentStatus.OpeningBalance;
+            // A net-credit order will never have a supplier bill: no money is owed on it, so
+            // there is nothing for a bill to say. "Not linked" would hold its credit out of
+            // the remaining figure for ever; NoBillDue says the GBP 0.00 paid is a fact.
+            // Should a supplier credit note ever be entered in Xero and linked to it,
+            // linkedLineCount moves off zero and the linked ladder below takes over.
+            return value < 0m ? WorkOrderPaymentStatus.NoBillDue : WorkOrderPaymentStatus.NotLinked;
+        }
 
         if (paid <= 0m) return WorkOrderPaymentStatus.Unpaid;
         return value > 0m && paid >= value ? WorkOrderPaymentStatus.Paid : WorkOrderPaymentStatus.PartPaid;

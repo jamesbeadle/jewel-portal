@@ -13,6 +13,12 @@ public enum RetentionMilestone
 // date, forecast release amounts, due dates) is CALCULATED from the valuation figures by
 // RetentionSchedule; only what's been confirmed is stored, frozen at confirmation time.
 // Distinct from SubcontractorRetention (what Jewel holds on subcontractors).
+//
+// DepositPercent is the cash-up-front deposit: the client pays deposit % of the contract
+// sum before works start, and it is released back to them pro rata against each valuation's
+// contract-side works (contract works + PC sums + contingency — variations excluded),
+// reducing the payment due on every claim. 0 means no deposit on this project. Trailing
+// default keeps the positional constructor stable for existing callers.
 public sealed record ProjectRetention(
     string ProjectRetentionId,
     string ProjectId,
@@ -23,4 +29,5 @@ public sealed record ProjectRetention(
     DateTimeOffset? CompletionReleaseConfirmedAt,   // null until someone confirms the release happened
     decimal CompletionReleaseAmount,                // frozen when confirmed; 0 until then
     DateTimeOffset? FinalReleaseConfirmedAt,
-    decimal FinalReleaseAmount);
+    decimal FinalReleaseAmount,
+    decimal DepositPercent = 0m);       // e.g. 20 — cash up front, released back against contract-side works

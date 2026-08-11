@@ -40,7 +40,9 @@ public sealed class ValuationSummaryFiguresTests
         decimal retentionHeld = 0m,
         decimal retentionReleased = 0m,
         decimal certifiedToDate = 0m,
-        decimal paymentDueExVat = 0m) =>
+        decimal paymentDueExVat = 0m,
+        decimal depositPercent = 0m,
+        decimal depositReleased = 0m) =>
         new(
             ValuationClaimId: "V1",
             ProjectId: "PRJ-1",
@@ -58,7 +60,9 @@ public sealed class ValuationSummaryFiguresTests
             RetentionHeld: retentionHeld,
             RetentionReleased: retentionReleased,
             CertifiedToDate: certifiedToDate,
-            PaymentDueExVat: paymentDueExVat);
+            PaymentDueExVat: paymentDueExVat,
+            DepositPercent: depositPercent,
+            DepositReleased: depositReleased);
 
     // Mirrors the By France Claim 18 shape: retention held at 5% of works complete, release
     // held at £- until a release is separately confirmed (the By France report shows £- here),
@@ -138,5 +142,57 @@ public sealed class ValuationSummaryFiguresTests
         Assert.Equal(0m, figures.RetentionOutstanding);
         Assert.Equal(0m, figures.CertifiedToDate);
         Assert.Equal(0m, figures.PaymentDueExVat);
+    }
+
+    // The Ravenswood cash-up-front deposit on a live draft: 20% of the contract-side works
+    // claimed (variations excluded) is released back and reduces the payment due; the
+    // deposit received always reads 20% of the contract sum.
+    [Fact]
+    public void DraftClaim_depositReleasesAgainstContractSideWorks_andReducesPaymentDue()
+    {
+        var lines = new[]
+        {
+            Line(ValuationElementType.ContractWorks, ValuationLineType.Priced, 1m, 261_218m, 1),
+            Line(ValuationElementType.Variation, ValuationLineType.Priced, 1m, 19_156.99m, 2)
+        };
+        var entries = new[]
+        {
+            new ClaimLine("C1", "V1", "L1", 25m, 0m, 0m),   // 65,304.50 contract-side works
+            new ClaimLine("C2", "V1", "L2", 100m, 0m, 0m)   // 19,156.99 variation works
+        };
+        var claim = Claim(ValuationClaimStatus.Draft, retentionPercent: 5m, depositPercent: 20m);
+
+        var figures = ValuationSummaryFigures.For(lines, entries, claim, invoicedToDate: 10_000m);
+
+        Assert.Equal(20m, figures.DepositPercent);
+        Assert.Equal(52_243.60m, figures.DepositReceived);            // 20% × 261,218
+        Assert.Equal(13_060.90m, figures.DepositReleased);            // 20% × 65,304.50 — variations excluded
+        Assert.Equal(39_182.70m, figures.DepositOutstanding);
+        var worksComplete = 65_304.50m + 19_156.99m;
+        Assert.Equal(
+            worksComplete - figures.RetentionHeld - 13_060.90m - 10_000m,
+            figures.PaymentDueExVat);
+    }
+
+    // A locked claim reads its frozen deposit release; the deposit received stays live
+    // against the bill's contract sum.
+    [Fact]
+    public void LockedClaim_readsFrozenDepositReleased()
+    {
+        var lines = new[] { Line(ValuationElementType.ContractWorks, ValuationLineType.Priced, 1m, 261_218m) };
+        var claim = Claim(
+            ValuationClaimStatus.Confirmed,
+            totalWorksComplete: 63_152.99m,
+            retentionHeld: 3_157.65m,
+            certifiedToDate: 39_328.57m,
+            paymentDueExVat: 11_365.02m,
+            depositPercent: 20m,
+            depositReleased: 9_301.75m);
+
+        var figures = ValuationSummaryFigures.For(lines, Array.Empty<ClaimLine>(), claim, invoicedToDate: 0m);
+
+        Assert.Equal(52_243.60m, figures.DepositReceived);
+        Assert.Equal(9_301.75m, figures.DepositReleased);
+        Assert.Equal(11_365.02m, figures.PaymentDueExVat);
     }
 }

@@ -423,6 +423,9 @@ else
                 than £0.00 — nothing is known about it either way until its bills are linked on
                 the WO Allocation tab, and its committed value counts in neither the paid nor
                 the remaining totals, so the Remaining column always sums to its total.
+                A credit order — value below £0.00 — is the exception: no supplier bill is ever
+                due on it, so it reads a factual £0.00 paid and its full credit counts in the
+                remaining figure, netting off the order it was raised against.
                 Click a row to see the orders behind it. Re-code a line to move it to
                 another cost centre, or to split its amount across several — for orders priced wholesale
                 under one code whose lines belong to different centres. The parts must total the line
@@ -480,7 +483,8 @@ else
     private const string UnassignedCode = "(unassigned)";
 
     // PaidKnown: at least one order behind this row has a payment position JPMS can stand
-    // behind (a linked bill, or a migrated opening balance). When no order in the row does,
+    // behind (a linked bill, a migrated opening balance, or a net-credit order on which no
+    // bill is ever due, so £0.00 paid is a fact). When no order in the row does,
     // the row's Paid is not zero — it is unknown — and the table says so with an em dash.
     // KnownCommitted is the committed value on just those known orders: Remaining is
     // KnownCommitted less Paid, so an unlinked order's value is never passed off as
@@ -574,6 +578,7 @@ else
         WorkOrderPaymentStatus.Unpaid => "Unpaid",
         WorkOrderPaymentStatus.PartPaid => "Part paid",
         WorkOrderPaymentStatus.Paid => "Paid",
+        WorkOrderPaymentStatus.NoBillDue => "No bill due",
         _ => "Opening balance"
     };
 
@@ -590,6 +595,7 @@ else
         WorkOrderPaymentStatus.Unpaid => "Bills are linked to this order and Xero has settled none of them yet",
         WorkOrderPaymentStatus.PartPaid => "Xero has settled some of the bills linked to this order",
         WorkOrderPaymentStatus.Paid => "Xero has settled the bills linked to this order to its full value",
+        WorkOrderPaymentStatus.NoBillDue => "A credit order — no supplier bill is ever due on it, so its £0.00 paid is a fact and its full credit counts in the remaining figure",
         _ => "Carried over from Buildertrend at migration — no Xero bill is linked to this order yet"
     };
 

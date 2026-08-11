@@ -10,8 +10,8 @@
 
 @*
     The project's ONE settings page — the three per-section Setup tabs recombined so "Setup" means
-    a single place: Details (identity and stage banner), Retention & valuation (the money-side
-    profile), Contract (the executed document and the terms every clause citation is argued from),
+    a single place: Details (identity and stage banner), Deposits, retentions & valuation (the
+    money-side profile), Contract (the executed document and the terms every clause citation is argued from),
     and Correspondence (the profile that routes every document the project issues). The old /setup,
     /financials-setup and /operations-setup routes redirect here.
 *@
@@ -71,7 +71,7 @@ else
     [Parameter] public string ProjectId { get; set; } = "";
 
     private const string DetailsPane = "Details";
-    private const string RetentionPane = "Retention & valuation";
+    private const string RetentionPane = "Deposits, retentions & valuation";
     private const string ContractPane = "Contract";
     private const string CorrespondencePane = "Correspondence";
     private static readonly string[] Panes = { DetailsPane, RetentionPane, ContractPane, CorrespondencePane };

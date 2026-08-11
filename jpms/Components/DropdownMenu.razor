@@ -119,19 +119,36 @@
 
     [Parameter] public bool Disabled { get; set; }
 
+    /// <summary>Raised whenever the panel opens (true) or closes (false). A host whose menu sits
+    /// inside an overflow/scroll container listens to this to lift the clipping while the panel
+    /// is showing — an absolutely-positioned panel cannot escape an overflow ancestor on its own,
+    /// so its bottom items are cut off at the container's edge (which is how a row's Delete… went
+    /// missing in the valuation invoices table).</summary>
+    [Parameter] public EventCallback<bool> OnOpenChanged { get; set; }
+
     private bool open;
 
     private string AlignClass => AlignLeft ? "left-0" : "right-0";
 
-    private void Toggle() => open = !open;
+    private async Task Toggle()
+    {
+        open = !open;
+        await OnOpenChanged.InvokeAsync(open);
+    }
 
     /// <summary>Closes the menu. Public so a ChildContent menu can dismiss itself.</summary>
-    public void Close() => open = false;
+    public void Close()
+    {
+        if (!open) return;
+        open = false;
+        _ = OnOpenChanged.InvokeAsync(false);
+    }
 
     private async Task Run(Item item)
     {
         if (item.Disabled) return;
         open = false;
+        await OnOpenChanged.InvokeAsync(false);
         if (item.OnSelect is { } callback) await callback.InvokeAsync();
     }
 }

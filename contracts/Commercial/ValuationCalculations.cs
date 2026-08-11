@@ -55,10 +55,38 @@ public static class ValuationCalculations
     public static decimal RetentionReleased(decimal eligibleWorks, decimal retentionReleasePercent) =>
         eligibleWorks * retentionReleasePercent / WholePercent;
 
+    // The cash-up-front deposit the client paid before works started: deposit % of the
+    // original contract sum (variations never enlarge it).
+    public static decimal DepositReceived(decimal contractSum, decimal depositPercent) =>
+        contractSum * depositPercent / WholePercent;
+
+    // Cumulative deposit released back to the client: deposit % of works complete on the
+    // contract-side lines (contract works + PC sums + contingency — variations excluded),
+    // capped at the deposit received so no claim can ever release more than was paid.
+    public static decimal DepositReleased(
+        decimal nonVariationWorksComplete, decimal depositPercent, decimal depositReceived) =>
+        Math.Min(nonVariationWorksComplete * depositPercent / WholePercent, depositReceived);
+
+    // Works complete on the contract-side lines only — the base the deposit releases
+    // against. Pairs a claim's entries with their bill lines; entries whose line has been
+    // removed (or is Declined/TBC) contribute nothing, matching CountsTowardTotals.
+    public static decimal NonVariationWorksComplete(
+        IEnumerable<ClaimLine> claimLines, IEnumerable<ValuationLineItem> lines)
+    {
+        var linesById = lines
+            .Where(line => line.ElementType != ValuationElementType.Variation && line.CountsTowardTotals)
+            .Select(line => line.ValuationLineItemId)
+            .ToHashSet();
+        return claimLines
+            .Where(claimLine => linesById.Contains(claimLine.ValuationLineItemId))
+            .Sum(claimLine => claimLine.CumulativeClaimed);
+    }
+
     public static decimal PaymentDueExVat(
         decimal totalWorksComplete,
         decimal retentionHeld,
         decimal retentionReleased,
+        decimal depositReleased,
         decimal certifiedToDate) =>
-        totalWorksComplete - retentionHeld + retentionReleased - certifiedToDate;
+        totalWorksComplete - retentionHeld + retentionReleased - depositReleased - certifiedToDate;
 }

@@ -58,7 +58,12 @@
         }
         else
         {
-            <div class="border-t border-line overflow-x-auto overflow-y-auto max-h-[85vh]">
+            @* The scroll cap is lifted while a row's Actions menu is open: the menu positions
+               absolutely inside this container, so with the overflow active its bottom entries
+               (History, Delete…) are clipped at the table's edge — on a short table that hid
+               Delete entirely. Short lists render identically either way; a long list grows to
+               full height for the moment the menu is showing and gets its cap back on close. *@
+            <div class="border-t border-line @(openMenuId is null ? "overflow-x-auto overflow-y-auto max-h-[85vh]" : "")">
                 <table class="w-full text-sm border-collapse">
                     <thead class="bg-surface-raised border-b border-line">
                         <tr class="text-left text-[11px] uppercase tracking-wider text-content-subtle font-semibold">
@@ -123,6 +128,7 @@
                                             <DropdownMenu Label="Actions" WidthClass="w-64" Disabled="@busy"
                                                           ToggleClass="inline-flex items-center gap-1 rounded-lg border border-line bg-surface px-2.5 py-1 text-xs text-content-muted hover:border-line-strong transition"
                                                           Class="inline-block text-left"
+                                                          OnOpenChanged="open => openMenuId = open ? invoice.ValuationInvoiceId : (openMenuId == invoice.ValuationInvoiceId ? null : openMenuId)"
                                                           Items="InvoiceMenuItems(invoice)" />
                                         }
                                     </td>
@@ -324,6 +330,11 @@
     private string paymentAmount = "";
     private string? pendingDeleteId;
 
+    // The invoice whose Actions menu is currently open — while set, the table's overflow cap is
+    // lifted so the menu isn't clipped (see the wrapper div). Cleared on reload in case the row
+    // disappears under an open menu.
+    private string? openMenuId;
+
     private ValuationInvoice? rejectInvoice;
     private string rejectReason = "";
 
@@ -432,6 +443,7 @@
     /// out-of-band change — e.g. deleting a snapshot clears invoice links server-side.</summary>
     public async Task ReloadAsync()
     {
+        openMenuId = null;
         try
         {
             invoices = await Invoices.ListAsync(ProjectId);
@@ -537,9 +549,22 @@
     {
         if (busy || editInvoice is null) return;
         error = null;
-        if (!TryParseAmount(editAmount, out var amount)) { error = "Enter an amount greater than zero."; return; }
+        // Manual entries may be zeroed — correcting a mistaken historic figure without losing the
+        // row. Workflow invoices still need a real amount.
+        if (!TryParseAmount(editAmount, out var amount, allowZero: editInvoice.IsManual))
+        {
+            error = editInvoice.IsManual
+                ? "Enter an amount of zero or more (0 voids the invoice's value)."
+                : "Enter an amount greater than zero.";
+            return;
+        }
         decimal? paidAmount = null;
-        if (editInvoice.IsManual && !string.IsNullOrWhiteSpace(editPaidAmount))
+        if (amount == 0m)
+        {
+            // Zeroing the invoice zeroes its receipts with it — the paid total rolls back on save.
+            paidAmount = 0m;
+        }
+        else if (editInvoice.IsManual && !string.IsNullOrWhiteSpace(editPaidAmount))
         {
             if (!decimal.TryParse(editPaidAmount, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var paid) || paid < 0)
             { error = "Enter a valid paid amount, or leave it blank."; return; }
@@ -645,8 +670,9 @@
         finally { busy = false; }
     }
 
-    private static bool TryParseAmount(string value, out decimal amount) =>
-        decimal.TryParse(value, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out amount) && amount > 0;
+    private static bool TryParseAmount(string value, out decimal amount, bool allowZero = false) =>
+        decimal.TryParse(value, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out amount)
+        && (allowZero ? amount >= 0 : amount > 0);
 
     private static DateTimeOffset ParseMonth(string value) =>
         DateTimeOffset.TryParse(string.IsNullOrWhiteSpace(value) ? "" : value + "-01", out var parsed)

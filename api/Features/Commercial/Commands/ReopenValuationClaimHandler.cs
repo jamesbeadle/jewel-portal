@@ -2,6 +2,7 @@ using Jewel.JPMS.Api.Cqrs;
 using Jewel.JPMS.Api.Data;
 using Jewel.JPMS.Contracts.Commercial;
 using Jewel.JPMS.Models;
+using Microsoft.EntityFrameworkCore;
 
 namespace Jewel.JPMS.Api.Features.Commercial.Commands;
 
@@ -34,8 +35,16 @@ public sealed class ReopenValuationClaimHandler : ICommandHandler<ReopenValuatio
         entity.TotalWorksComplete = 0m;
         entity.RetentionHeld = 0m;
         entity.RetentionReleased = 0m;
+        entity.DepositReleased = 0m;
         entity.CertifiedToDate = 0m;
         entity.PaymentDueExVat = 0m;
+
+        // Back on Draft, the deposit % tracks the project's current terms again (the same
+        // rule SetProjectRetention applies to open drafts), so a claim locked before a
+        // deposit was recorded picks the deposit up when it is reopened and re-locked.
+        var terms = await context.ProjectRetentions
+            .FirstOrDefaultAsync(retention => retention.ProjectId == entity.ProjectId, cancellationToken);
+        entity.DepositPercent = terms?.DepositPercent ?? entity.DepositPercent;
 
         await context.SaveChangesAsync(cancellationToken);
         return entity.ToModel();

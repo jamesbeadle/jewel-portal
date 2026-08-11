@@ -40,13 +40,21 @@ internal static class ValuationClaimSummary
         // Retention release is triggered as a separate event; the By France report shows £-.
         const decimal retentionReleased = 0m;
 
+        // Cash-up-front deposit: released back pro rata against the contract-side works
+        // (contract works + PC sums + contingency — variations excluded), capped at the
+        // deposit received (deposit % of the contract sum). Reduces the payment due.
+        var nonVariationWorks = ValuationCalculations.NonVariationWorksComplete(claimLineModels, lineModels);
+        var depositReceived = ValuationCalculations.DepositReceived(contractSum, claim.DepositPercent);
+        var depositReleased = ValuationCalculations.DepositReleased(nonVariationWorks, claim.DepositPercent, depositReceived);
+
         claim.ContractSum = contractSum;
         claim.NetVariations = netVariations;
         claim.RevisedContractSum = ValuationCalculations.RevisedContractSum(contractSum, netVariations);
         claim.TotalWorksComplete = worksComplete;
         claim.RetentionHeld = retentionHeld;
         claim.RetentionReleased = retentionReleased;
+        claim.DepositReleased = depositReleased;
         claim.CertifiedToDate = certifiedToDate;
-        claim.PaymentDueExVat = ValuationCalculations.PaymentDueExVat(worksComplete, retentionHeld, retentionReleased, certifiedToDate);
+        claim.PaymentDueExVat = ValuationCalculations.PaymentDueExVat(worksComplete, retentionHeld, retentionReleased, depositReleased, certifiedToDate);
     }
 }

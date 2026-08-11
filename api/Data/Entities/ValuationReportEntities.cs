@@ -43,6 +43,10 @@ public sealed class ValuationClaimEntity
     public decimal RetentionReleased { get; set; }
     public decimal CertifiedToDate { get; set; }
     public decimal PaymentDueExVat { get; set; }
+    // Cash-up-front deposit: % stamped from the project's terms at claim start (kept live
+    // on Drafts), cumulative release frozen with the other totals when the claim locks.
+    public decimal DepositPercent { get; set; }
+    public decimal DepositReleased { get; set; }
 }
 
 public sealed class ClaimLineEntity
@@ -77,6 +81,10 @@ public sealed class ValuationReportSnapshotEntity
     public decimal RetentionReleased { get; set; }
     public decimal CertifiedToDate { get; set; }
     public decimal PaymentDueExVat { get; set; }
+    // Cash-up-front deposit as frozen at capture: the claim's deposit % and the
+    // cumulative amount released back to the client.
+    public decimal DepositPercent { get; set; }
+    public decimal DepositReleased { get; set; }
 }
 
 public sealed class ValuationReportSnapshotLineEntity

@@ -367,6 +367,13 @@ else
             }
             <SummaryRow Label=@($"Retention held ({Pct(retentionPercent)})") Value="@Money(retentionHeld)" />
             <SummaryRow Label=@($"Retention released ({Pct(retentionReleasePercent)})") Value="@Money(retentionReleased)" />
+            @* Cash-up-front deposit — only projects with one show the rows, so everyone
+               else's summary keeps its familiar By France shape. *@
+            @if (depositPercent > 0m || depositReleased != 0m)
+            {
+                <SummaryRow Label=@($"Deposit received ({Pct(depositPercent)})") Value="@Money(depositReceived)" />
+                <SummaryRow Label=@($"Deposit released ({Pct(depositPercent)})") Value="@Money(depositReleased)" />
+            }
             <SummaryRow Label="Certified to date" Value="@Money(certifiedToDate)" />
             <SummaryRow Label="Payment due (ex VAT)" Value="@Money(paymentDueExVat)" Strong="true" />
         </dl>
@@ -412,6 +419,7 @@ else
     private decimal contractSum, netVariations, revisedContractSum, totalWorksComplete;
     private decimal retentionHeld, retentionReleased, certifiedToDate, paymentDueExVat;
     private decimal retentionPercent, retentionReleasePercent;
+    private decimal depositPercent, depositReceived, depositReleased;
 
     protected override void OnInitialized()
     {
@@ -457,6 +465,9 @@ else
         retentionHeld = figures.RetentionHeld;
         retentionReleasePercent = figures.RetentionReleasePercent;
         retentionReleased = figures.RetentionReleased;
+        depositPercent = figures.DepositPercent;
+        depositReceived = figures.DepositReceived;
+        depositReleased = figures.DepositReleased;
         certifiedToDate = figures.CertifiedToDate;
         paymentDueExVat = figures.PaymentDueExVat;
     }
@@ -1041,6 +1052,11 @@ else
         summarySheet.AddRow("Total works complete", totalWorksComplete);
         summarySheet.AddRow($"Retention held ({Pct(retentionPercent)})", retentionHeld);
         summarySheet.AddRow($"Retention released ({Pct(retentionReleasePercent)})", retentionReleased);
+        if (depositPercent > 0m || depositReleased != 0m)
+        {
+            summarySheet.AddRow($"Deposit received ({Pct(depositPercent)})", depositReceived);
+            summarySheet.AddRow($"Deposit released ({Pct(depositPercent)})", depositReleased);
+        }
         summarySheet.AddRow("Certified to date", certifiedToDate);
         summarySheet.AddRow("Payment due (ex VAT)", paymentDueExVat);
 

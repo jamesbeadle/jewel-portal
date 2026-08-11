@@ -11,6 +11,9 @@ public sealed class ProjectRetentionEntity
     [MaxLength(64)]      public string ProjectId { get; set; } = "";
     public decimal RetentionPercent { get; set; }
     public decimal CompletionReleasePercent { get; set; }
+    // Cash-up-front deposit % of the contract sum, released back to the client against
+    // each valuation's contract-side works. 0 = no deposit on this project.
+    public decimal DepositPercent { get; set; }
     public int DefectsPeriodMonths { get; set; }
     public DateTimeOffset? PracticalCompletionAt { get; set; }
     public DateTimeOffset? CompletionReleaseConfirmedAt { get; set; }

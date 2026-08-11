@@ -95,7 +95,7 @@ public sealed class ValuationInvoiceLifecycleTests
         // A £1.25m-works-complete claim at 5% retention against that history:
         var totalWorksComplete = 1_250_000m;
         var retentionHeld = ValuationCalculations.RetentionHeld(totalWorksComplete, 5m);
-        var paymentDue = ValuationCalculations.PaymentDueExVat(totalWorksComplete, retentionHeld, 0m, certifiedToDate);
+        var paymentDue = ValuationCalculations.PaymentDueExVat(totalWorksComplete, retentionHeld, 0m, 0m, certifiedToDate);
 
         Assert.Equal(62_500m, retentionHeld);
         Assert.Equal(187_500m, paymentDue); // 1,250,000 − 62,500 − 1,000,000

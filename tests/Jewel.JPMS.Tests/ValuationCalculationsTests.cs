@@ -112,7 +112,70 @@ public sealed class ValuationCalculationsTests
         Assert.Equal(0m, retentionReleased);
 
         const decimal certifiedToDate = 1_513_295.82m; // net certified on the previous confirmed claim
-        var paymentDue = ValuationCalculations.PaymentDueExVat(totalWorksComplete, retentionHeld, retentionReleased, certifiedToDate);
+        var paymentDue = ValuationCalculations.PaymentDueExVat(totalWorksComplete, retentionHeld, retentionReleased, 0m, certifiedToDate);
         Assert.Equal(-3_241.87m, decimal.Round(paymentDue, 2));
     }
+
+    // The Ravenswood cash-up-front deposit: 20% of the contract sum received before works
+    // start, released back pro rata against the contract-side works so each claim's payment
+    // due drops by 20% of what was claimed on contract works + PC sums + contingency.
+    [Fact]
+    public void Deposit_received_is_deposit_percent_of_the_contract_sum()
+    {
+        // 20% × £261,218.00 = £52,243.60 — the Ravenswood workbook's deposit.
+        Assert.Equal(52_243.60m, ValuationCalculations.DepositReceived(261_218.00m, 20m));
+        Assert.Equal(0m, ValuationCalculations.DepositReceived(261_218.00m, 0m));
+    }
+
+    [Fact]
+    public void Deposit_release_tracks_contract_side_works_and_caps_at_the_deposit_received()
+    {
+        var received = ValuationCalculations.DepositReceived(261_218.00m, 20m);
+
+        // 20% of the contract-side works claimed comes back to the client each period.
+        Assert.Equal(6_049.00m, ValuationCalculations.DepositReleased(30_245.00m, 20m, received));
+        Assert.Equal(3_252.75m, ValuationCalculations.DepositReleased(16_263.75m, 20m, received));
+
+        // Even if contract-side works somehow exceed the contract sum, the release stops
+        // at the deposit actually received.
+        Assert.Equal(received, ValuationCalculations.DepositReleased(300_000.00m, 20m, received));
+    }
+
+    [Fact]
+    public void Non_variation_works_complete_excludes_variation_and_non_counting_lines()
+    {
+        var lines = new[]
+        {
+            Line("L1", ValuationElementType.ContractWorks, ValuationLineType.Priced, 100_000m),
+            Line("L2", ValuationElementType.PcSum, ValuationLineType.ProvisionalSum, 20_000m),
+            Line("L3", ValuationElementType.Contingency, ValuationLineType.Priced, 10_000m),
+            Line("L4", ValuationElementType.Variation, ValuationLineType.Priced, 15_000m),
+            Line("L5", ValuationElementType.ContractWorks, ValuationLineType.Declined, 9_999m)
+        };
+        var claimLines = new[]
+        {
+            new ClaimLine("C1", "V1", "L1", 50m, 50_000m, 0m),
+            new ClaimLine("C2", "V1", "L2", 25m, 5_000m, 0m),
+            new ClaimLine("C3", "V1", "L3", 10m, 1_000m, 0m),
+            new ClaimLine("C4", "V1", "L4", 100m, 15_000m, 0m),  // variation — excluded
+            new ClaimLine("C5", "V1", "L5", 100m, 9_999m, 0m),   // declined — excluded
+            new ClaimLine("C6", "V1", "GONE", 100m, 4_444m, 0m)  // line removed — excluded
+        };
+
+        Assert.Equal(56_000m, ValuationCalculations.NonVariationWorksComplete(claimLines, lines));
+    }
+
+    [Fact]
+    public void Payment_due_subtracts_the_deposit_released()
+    {
+        // 63,152.99 works − 3,157.65 retention − 9,301.75 deposit − 39,328.57 certified.
+        var paymentDue = ValuationCalculations.PaymentDueExVat(
+            63_152.99m, 3_157.65m, 0m, 9_301.75m, 39_328.57m);
+        Assert.Equal(11_365.02m, decimal.Round(paymentDue, 2));
+    }
+
+    private static ValuationLineItem Line(
+        string id, ValuationElementType elementType, ValuationLineType lineType, decimal amount) =>
+        new(id, "P1", elementType, "A1", "Section", "", "", lineType,
+            "0001", "Line", "item", 1m, amount, amount, "", 0);
 }

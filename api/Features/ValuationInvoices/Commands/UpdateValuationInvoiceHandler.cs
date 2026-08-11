@@ -11,7 +11,8 @@ namespace Jewel.JPMS.Api.Features.ValuationInvoices.Commands;
 /// invoice's snapshot superseded (a fresh one is frozen on the next submit/issue), and amending a
 /// Rejected invoice additionally returns it to Raised and bumps the amendment count. Manual
 /// invoices are editable at any status
-/// (correcting history is the point): amount/paid/date changes adjust the project paid total and
+/// (correcting history is the point) and may be amended to zero — voiding a mistaken entry's
+/// value without losing the row: amount/paid/date changes adjust the project paid total and
 /// re-freeze any Preapproved claim, since "Certified to date" may have moved.
 /// </summary>
 public sealed class UpdateValuationInvoiceHandler : ICommandHandler<UpdateValuationInvoice, ValuationInvoice>
@@ -29,6 +30,11 @@ public sealed class UpdateValuationInvoiceHandler : ICommandHandler<UpdateValuat
         if (!editable)
             throw new InvalidOperationException(
                 "This valuation invoice is locked — only Raised or Rejected invoices (or manual entries) can be amended.");
+
+        // Validation lets zero through so a manual entry can be voided; a workflow invoice for
+        // nothing is a mistake, not an amendment.
+        if (!entity.IsManual && command.Amount <= 0)
+            throw new InvalidOperationException("Amount must be greater than zero — only manual entries can be zeroed.");
 
         var amountBefore = entity.Amount;
         var wasRejected = entity.Status == (int)ValuationInvoiceStatus.Rejected;

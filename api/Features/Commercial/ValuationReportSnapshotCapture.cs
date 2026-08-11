@@ -70,10 +70,13 @@ internal static class ValuationReportSnapshotCapture
             RetentionReleasePercent = claim?.RetentionReleasePercent ?? 0m,
             // Retention release is triggered as a separate event; mirrors ValuationClaimSummary.
             RetentionReleased = 0m,
+            DepositPercent = claim?.DepositPercent ?? 0m,
             CertifiedToDate = certifiedToDate
         };
 
         var totalWorksComplete = 0m;
+        // Contract-side works only (variations excluded) — the base the deposit releases against.
+        var nonVariationWorksComplete = 0m;
         var displayOrder = 0;
         foreach (var line in lines.OrderBy(line => line.ElementType).ThenBy(line => line.DisplayOrder))
         {
@@ -104,14 +107,25 @@ internal static class ValuationReportSnapshotCapture
             // Declined/TBC lines are recorded but never priced into totals — keep the
             // footer reconciling with the viewer's per-section sums.
             var countsTowardTotals = snapshotLine.LineType is not ((int)ValuationLineType.Declined or (int)ValuationLineType.Tbc);
-            if (countsTowardTotals) totalWorksComplete += snapshotLine.CumulativeClaimed;
+            if (countsTowardTotals)
+            {
+                totalWorksComplete += snapshotLine.CumulativeClaimed;
+                if (snapshotLine.ElementType != (int)ValuationElementType.Variation)
+                    nonVariationWorksComplete += snapshotLine.CumulativeClaimed;
+            }
             context.ValuationReportSnapshotLines.Add(snapshotLine);
         }
 
         snapshot.TotalWorksComplete = totalWorksComplete;
         snapshot.RetentionHeld = ValuationCalculations.RetentionHeld(totalWorksComplete, snapshot.RetentionPercent);
+        // Cash-up-front deposit released back against contract-side works, capped at the
+        // deposit received (deposit % of the contract sum) — mirrors ValuationClaimSummary.
+        snapshot.DepositReleased = ValuationCalculations.DepositReleased(
+            nonVariationWorksComplete, snapshot.DepositPercent,
+            ValuationCalculations.DepositReceived(contractSum, snapshot.DepositPercent));
         snapshot.PaymentDueExVat = ValuationCalculations.PaymentDueExVat(
-            totalWorksComplete, snapshot.RetentionHeld, snapshot.RetentionReleased, certifiedToDate);
+            totalWorksComplete, snapshot.RetentionHeld, snapshot.RetentionReleased,
+            snapshot.DepositReleased, certifiedToDate);
 
         context.ValuationReportSnapshots.Add(snapshot);
 

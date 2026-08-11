@@ -22,7 +22,8 @@ internal static class ValuationReportEntityMapping
             entity.PreapprovedAt, entity.ConfirmedAt,
             entity.ContractSum, entity.NetVariations, entity.RevisedContractSum,
             entity.TotalWorksComplete, entity.RetentionHeld, entity.RetentionReleased,
-            entity.CertifiedToDate, entity.PaymentDueExVat, entity.Name);
+            entity.CertifiedToDate, entity.PaymentDueExVat, entity.Name,
+            entity.DepositPercent, entity.DepositReleased);
 
     public static ClaimLine ToModel(this ClaimLineEntity entity) =>
         new(entity.ClaimLineId, entity.ValuationClaimId, entity.ValuationLineItemId,
@@ -36,7 +37,8 @@ internal static class ValuationReportEntityMapping
             entity.TotalWorksComplete,
             entity.RetentionPercent, entity.RetentionHeld,
             entity.RetentionReleasePercent, entity.RetentionReleased,
-            entity.CertifiedToDate, entity.PaymentDueExVat);
+            entity.CertifiedToDate, entity.PaymentDueExVat,
+            entity.DepositPercent, entity.DepositReleased);
 
     public static ValuationReportSnapshotLine ToModel(this ValuationReportSnapshotLineEntity entity) =>
         new(entity.ValuationReportSnapshotLineId, entity.ValuationReportSnapshotId,

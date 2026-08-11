@@ -76,7 +76,7 @@ public sealed class ValuationReportSnapshotTests
 
         var retentionHeld = ValuationCalculations.RetentionHeld(worksComplete, 5m);
         var certifiedToDate = 700_000m;                 // Issued+Paid invoices at capture time
-        var paymentDue = ValuationCalculations.PaymentDueExVat(worksComplete, retentionHeld, 0m, certifiedToDate);
+        var paymentDue = ValuationCalculations.PaymentDueExVat(worksComplete, retentionHeld, 0m, 0m, certifiedToDate);
 
         Assert.Equal(44_000m, retentionHeld);
         Assert.Equal(136_000m, paymentDue);             // 880,000 − 44,000 − 700,000

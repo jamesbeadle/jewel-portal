@@ -33,6 +33,18 @@ public sealed class SetProjectRetentionHandler : ICommandHandler<SetProjectReten
         entity.CompletionReleasePercent = command.CompletionReleasePercent;
         entity.DefectsPeriodMonths = command.DefectsPeriodMonths;
         entity.PracticalCompletionAt = command.PracticalCompletionAt;
+        entity.DepositPercent = command.DepositPercent;
+
+        // The deposit % rides on each claim (stamped at claim start, frozen when it locks).
+        // A Draft is still live, so a terms change flows straight onto any open drafts —
+        // that's what lets a deposit be introduced mid-period (the Ravenswood reconciliation)
+        // without restarting the open claim. Locked claims keep their frozen copy.
+        var draftClaims = await context.ValuationClaims
+            .Where(claim => claim.ProjectId == command.ProjectId
+                            && claim.Status == (int)ValuationClaimStatus.Draft)
+            .ToListAsync(cancellationToken);
+        foreach (var draft in draftClaims)
+            draft.DepositPercent = command.DepositPercent;
 
         await context.SaveChangesAsync(cancellationToken);
         return entity.ToModel();
