@@ -224,7 +224,9 @@ else
                                 <tfoot>
                                     <tr class="border-t border-line-strong font-semibold text-content">
                                         <td class="py-2 pr-3" colspan="4">Total</td>
-                                        <td class="py-2 text-right font-mono">@MoneyPennies(VariationLines.Sum(vline => vline.LineAmount))</td>
+                                        @* whitespace-nowrap: a negative total must never wrap its minus sign onto
+                                           its own line and read as positive. *@
+                                        <td class="py-2 text-right font-mono whitespace-nowrap @(VariationLines.Sum(vline => vline.LineAmount) < 0m ? "text-negative" : "")">@MoneyPennies(VariationLines.Sum(vline => vline.LineAmount))</td>
                                     </tr>
                                 </tfoot>
                             </table>

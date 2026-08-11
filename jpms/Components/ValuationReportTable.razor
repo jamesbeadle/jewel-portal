@@ -487,14 +487,25 @@ else
     }
 
     // Always render all four sections so the shape of the bill is visible even before
-    // any lines exist in a given block.
+    // any lines exist in a given block. Variation lines group by their V-ref (natural
+    // numeric order) before display order — a line added to an earlier variation later
+    // on (ReviseVariationOrderLines appends with the project's next display order) still
+    // renders with its variation instead of dropping to the bottom of the section.
+    private static int VariationRefOrder(string variationRef)
+    {
+        var digits = new string(variationRef.Where(char.IsDigit).ToArray());
+        return int.TryParse(digits, out var number) ? number : int.MaxValue;
+    }
+
     private IEnumerable<Section> Sections
     {
         get
         {
             Section Make(string title, ValuationElementType type) =>
                 new(type, title, lines.Where(l => l.ElementType == type)
-                                      .OrderBy(l => l.DisplayOrder)
+                                      .OrderBy(l => type == ValuationElementType.Variation
+                                          ? VariationRefOrder(l.VariationRef) : 0)
+                                      .ThenBy(l => l.DisplayOrder)
                                       .ToList());
 
             return new[]

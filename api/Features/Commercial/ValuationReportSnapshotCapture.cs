@@ -82,7 +82,19 @@ internal static class ValuationReportSnapshotCapture
         // Contract-side works only (variations excluded) — the base the deposit releases against.
         var nonVariationWorksComplete = 0m;
         var displayOrder = 0;
-        foreach (var line in lines.OrderBy(line => line.ElementType).ThenBy(line => line.DisplayOrder))
+        // Variation lines group by their V-ref (natural numeric order) before display order,
+        // matching the live report table — a line added to an earlier variation later on
+        // must not drop to the bottom of the client-facing statement.
+        static int VariationRefOrder(string variationRef)
+        {
+            var digits = new string(variationRef.Where(char.IsDigit).ToArray());
+            return int.TryParse(digits, out var number) ? number : int.MaxValue;
+        }
+        foreach (var line in lines
+            .OrderBy(line => line.ElementType)
+            .ThenBy(line => line.ElementType == (int)ValuationElementType.Variation
+                ? VariationRefOrder(line.VariationRef) : 0)
+            .ThenBy(line => line.DisplayOrder))
         {
             entriesByLineItem.TryGetValue(line.ValuationLineItemId, out var entry);
             var snapshotLine = new ValuationReportSnapshotLineEntity
