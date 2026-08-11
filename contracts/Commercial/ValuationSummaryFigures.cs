@@ -76,13 +76,13 @@ public sealed record ValuationSummaryFigures(
                 .Where(line => line.CountsTowardTotals)
                 .Sum(line => ValuationCalculations.CumulativeClaimed(PercentFor(entries, line), line.LineAmount));
             var retentionHeld = ValuationCalculations.RetentionHeld(totalWorksComplete, retentionPercent);
-            // Retention release is a separate, confirmed event (the Retention tab's "Confirm
-            // release"), never part of a claim's payment due: the server freezes RetentionReleased
-            // to 0 when the claim locks (ValuationClaimSummary) and the By France report shows
-            // £- here. Keep the live draft preview consistent with that so the footer can't add
-            // back a forecast release that hasn't happened yet — its forecast lives on the
-            // Retention & valuation tab (RetentionSchedule), which counts confirmed releases only.
-            const decimal retentionReleased = 0m;
+            // Retention release adds back into the payment due ONLY once the claim carries a
+            // release % — which StartValuationClaim/SetProjectRetention stamp solely when the
+            // claim date has reached practical completion. Pre-completion claims carry 0% and
+            // show the workbook's £- here; post-completion (the Albany Mews final-account
+            // model, and PLG's interim certificates) the client is due works less net
+            // retention: held % less release % of works complete. Mirrors ValuationClaimSummary.
+            var retentionReleased = ValuationCalculations.RetentionReleased(totalWorksComplete, retentionReleasePercent);
             // The deposit, by contrast, releases automatically with the works: deposit % of
             // the contract-side works complete (variations excluded), capped at what was
             // paid, less the opening balance settled before tracking, less credits already

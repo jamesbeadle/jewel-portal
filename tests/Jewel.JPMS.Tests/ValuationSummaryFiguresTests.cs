@@ -66,9 +66,10 @@ public sealed class ValuationSummaryFiguresTests
             DepositReleased: depositReleased,
             DepositReleasedOpening: depositReleasedOpening);
 
-    // Mirrors the By France Claim 18 shape: retention held at 5% of works complete, release
-    // held at £- until a release is separately confirmed (the By France report shows £- here),
-    // certified tracking the issued/paid invoices.
+    // Retention held at 5% of works complete; a claim carrying a release % (stamped only
+    // once the claim date has reached practical completion) adds the release back into the
+    // payment due — the Albany Mews final-account model and PLG's interim-certificate
+    // convention (gross less net retention). Certified tracks the issued/paid invoices.
     [Fact]
     public void DraftClaim_computesLive_fromPercentCompleteAndInvoicedToDate()
     {
@@ -94,14 +95,30 @@ public sealed class ValuationSummaryFiguresTests
         var worksComplete = 0.92m * 1_780_455m + 215_737.58m;
         Assert.Equal(worksComplete, figures.TotalWorksComplete);
         Assert.Equal(worksComplete * 0.05m, figures.RetentionHeld);
-        // Release is a separate confirmed event, never part of a live claim's payment due:
-        // 0 until confirmed, matching the frozen total on lock (ValuationClaimSummary).
-        Assert.Equal(0m, figures.RetentionReleased);
+        // The claim carries a 2.5% release (post-practical-completion), so half the
+        // retention comes back into the payment due: works less NET retention.
+        Assert.Equal(worksComplete * 0.025m, figures.RetentionReleased);
         Assert.Equal(figures.RetentionHeld - figures.RetentionReleased, figures.RetentionOutstanding);
         Assert.Equal(1_513_295.82m, figures.CertifiedToDate);
         Assert.Equal(
             worksComplete - figures.RetentionHeld + figures.RetentionReleased - 1_513_295.82m,
             figures.PaymentDueExVat);
+    }
+
+    // A pre-completion claim carries 0% release (StartValuationClaim only stamps the
+    // completion release once the claim date reaches practical completion), so the
+    // payment due holds the full retention — the By France workbook's £- release row.
+    [Fact]
+    public void DraftClaim_beforePracticalCompletion_releasesNothing()
+    {
+        var lines = new[] { Line(ValuationElementType.ContractWorks, ValuationLineType.Priced, 1m, 100_000m) };
+        var entries = new[] { new ClaimLine("C1", "V1", "L1", 50m, 0m, 0m) };
+        var claim = Claim(ValuationClaimStatus.Draft, retentionPercent: 5m, retentionReleasePercent: 0m);
+
+        var figures = ValuationSummaryFigures.For(lines, entries, claim, certifiedToDate: 0m);
+
+        Assert.Equal(0m, figures.RetentionReleased);
+        Assert.Equal(50_000m - 2_500m, figures.PaymentDueExVat);
     }
 
     [Fact]

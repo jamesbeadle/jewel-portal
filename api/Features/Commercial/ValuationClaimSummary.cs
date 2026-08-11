@@ -41,8 +41,12 @@ internal static class ValuationClaimSummary
         var netVariations = ValuationCalculations.NetVariations(lineModels);
         var worksComplete = ValuationCalculations.TotalWorksComplete(claimLineModels);
         var retentionHeld = ValuationCalculations.RetentionHeld(worksComplete, claim.RetentionPercent);
-        // Retention release is triggered as a separate event; the By France report shows £-.
-        const decimal retentionReleased = 0m;
+        // Retention release adds back only when the claim carries a release % — stamped
+        // solely once the claim date has reached practical completion (pre-completion
+        // claims carry 0% and reconcile to the By France workbook's £-). Post-completion
+        // the payment due is works less NET retention, matching the architect's interim
+        // certificate convention (e.g. PLG's PC certificate: gross less 2.5%).
+        var retentionReleased = ValuationCalculations.RetentionReleased(worksComplete, claim.RetentionReleasePercent);
 
         // Cash-up-front deposit: released back pro rata against the contract-side works
         // (contract works + PC sums + contingency — variations excluded), capped at the

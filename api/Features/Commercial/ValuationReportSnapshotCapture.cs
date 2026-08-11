@@ -72,8 +72,9 @@ internal static class ValuationReportSnapshotCapture
             RevisedContractSum = ValuationCalculations.RevisedContractSum(contractSum, netVariations),
             RetentionPercent = claim?.RetentionPercent ?? 0m,
             RetentionReleasePercent = claim?.RetentionReleasePercent ?? 0m,
-            // Retention release is triggered as a separate event; mirrors ValuationClaimSummary.
-            RetentionReleased = 0m,
+            // RetentionReleased is computed below once works complete is known — the claim's
+            // release % (non-zero only after practical completion) of works complete,
+            // mirroring ValuationClaimSummary.
             DepositPercent = claim?.DepositPercent ?? 0m,
             CertifiedToDate = certifiedToDate
         };
@@ -134,6 +135,7 @@ internal static class ValuationReportSnapshotCapture
 
         snapshot.TotalWorksComplete = totalWorksComplete;
         snapshot.RetentionHeld = ValuationCalculations.RetentionHeld(totalWorksComplete, snapshot.RetentionPercent);
+        snapshot.RetentionReleased = ValuationCalculations.RetentionReleased(totalWorksComplete, snapshot.RetentionReleasePercent);
         // Cash-up-front deposit credit still to be taken: release earned against
         // contract-side works (capped at the deposit received), less the opening balance
         // settled before tracking, less credits already embedded in issued/paid invoices —
