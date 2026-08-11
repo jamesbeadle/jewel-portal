@@ -82,6 +82,8 @@ public sealed class JpmsContext : DbContext
     public DbSet<XeroSitePnlMonthEntity> XeroSitePnlMonths => Set<XeroSitePnlMonthEntity>();
 
     public DbSet<TodoItemEntity> TodoItems => Set<TodoItemEntity>();
+    // Undirected to-do ↔ to-do links, one row per pair in canonical id order (TodoItemLinkPairs).
+    public DbSet<TodoItemLinkEntity> TodoItemLinks => Set<TodoItemLinkEntity>();
 
     public DbSet<LadClaimEntity> LadClaims => Set<LadClaimEntity>();
 
@@ -298,6 +300,15 @@ public sealed class JpmsContext : DbContext
         modelBuilder.Entity<TodoItemEntity>()
             .HasIndex(row => row.ProjectId)
             .HasDatabaseName("IX_TodoItems_ProjectId");
+        // Unique on the canonically-ordered pair: the same two items can only be linked once, and
+        // "everything linked to X" seeks this index for the A side and the one below for the B side.
+        modelBuilder.Entity<TodoItemLinkEntity>()
+            .HasIndex(row => new { row.TodoItemAId, row.TodoItemBId })
+            .IsUnique()
+            .HasDatabaseName("IX_TodoItemLinks_TodoItemAId_TodoItemBId");
+        modelBuilder.Entity<TodoItemLinkEntity>()
+            .HasIndex(row => row.TodoItemBId)
+            .HasDatabaseName("IX_TodoItemLinks_TodoItemBId");
         modelBuilder.Entity<DefectEntity>()
             .HasIndex(row => row.ProjectId)
             .HasDatabaseName("IX_Defects_ProjectId");

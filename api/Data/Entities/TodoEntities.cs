@@ -40,3 +40,19 @@ public sealed class TodoItemEntity
     [System.ComponentModel.DataAnnotations.Schema.NotMapped]
     public string Reference => $"TODO-{Number:0000}";
 }
+
+/// <summary>
+/// An undirected LINK between two to-do items — "these belong together", no hierarchy, no
+/// completion rules (contracts/Todos/TodoItemLinks.cs). Stored ONCE per pair with the two ids in
+/// canonical order (TodoItemAId &lt; TodoItemBId, ordinal — TodoItemLinkPairs.Normalise), so A→B
+/// and B→A cannot exist as two rows. Follows the house style of loose string ids with no FK
+/// constraints; DeleteTodoItemHandler sweeps the rows that name a deleted item.
+/// </summary>
+public sealed class TodoItemLinkEntity
+{
+    [Key, MaxLength(64)] public string TodoItemLinkId { get; set; } = "";
+    [MaxLength(64)]      public string TodoItemAId { get; set; } = "";
+    [MaxLength(64)]      public string TodoItemBId { get; set; } = "";
+    public DateTimeOffset LinkedAt { get; set; }
+    [MaxLength(256)]     public string LinkedByEmail { get; set; } = "";
+}
