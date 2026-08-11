@@ -23,16 +23,25 @@
     where the previous answer is still meaningful.
 *@
 
-@if (!IsLoading)
+@if (Overlay)
 {
-    @ChildContent
-}
-else if (Overlay)
-{
+    @* One stable wrapper whether loading or not: if the child moved between render-tree branches
+       when IsLoading flipped, Blazor would recreate its DOM — and anything JS drew into the old
+       elements (the pdf.js canvases in PdfViewer) would be thrown away with them while the JS
+       kept rendering into the detached nodes. That is exactly the "preview is just black" defect:
+       the viewer reported ready, the toolbar worked, and the surface on screen was a fresh empty
+       div. Only the spinner may come and go; the wrapped content must never move. *@
     <div class="relative">
         @ChildContent
-        <JewelSpinner Overlay="true" Size="@SpinnerSize" IconSize="@IconSize" Label="@Label" />
+        @if (IsLoading)
+        {
+            <JewelSpinner Overlay="true" Size="@SpinnerSize" IconSize="@IconSize" Label="@Label" />
+        }
     </div>
+}
+else if (!IsLoading)
+{
+    @ChildContent
 }
 else
 {
