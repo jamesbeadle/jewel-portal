@@ -47,6 +47,10 @@
                 released back to the client as works complete — each valuation claim's payment
                 due is reduced by @Pct(Current.DepositPercent) of the works claimed on contract
                 works, PC sums and contingency (variations excluded).
+                @if (Current.DepositReleasedOpening > 0m)
+                {
+                    <text> · @Money(Current.DepositReleasedOpening) settled before tracking began</text>
+                }
             </p>
             <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
                 <div class="rounded-lg border border-line bg-surface px-3 py-2">
@@ -158,6 +162,15 @@
                     is reduced by its share. 0 = no deposit.
                 </p>
             </div>
+            <div>
+                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Released before tracking (£)</label>
+                <input type="number" step="0.01" class="field" @bind="depositReleasedOpening" />
+                <p class="text-xs text-content-subtle mt-1">
+                    Deposit releases already made or settled before the portal began
+                    deducting them — excluded from future claim deductions. Leave 0 for a
+                    project tracked from day one.
+                </p>
+            </div>
         </div>
 
         <div class="grid grid-cols-2 gap-4">
@@ -218,6 +231,7 @@
     private string? error;
 
     private decimal depositPercent = 0m;
+    private decimal depositReleasedOpening = 0m;
     private decimal retentionPercent = 5m;
     private decimal completionReleasePercent = 2.5m;
     private int defectsPeriodMonths = 12;
@@ -260,11 +274,12 @@
 
     // The deposit trio reads the TERMS' percent against the live contract sum (so editing
     // the % updates "Received" immediately); released-to-date comes from the claims, which
-    // carry the same percent — SetProjectRetention keeps open drafts in step.
+    // carry the same terms — SetProjectRetention keeps open drafts in step. It includes
+    // the opening balance settled before the portal began deducting.
     private decimal DepositReceived =>
         ValuationCalculations.DepositReceived(Figures.ContractSum, Current?.DepositPercent ?? 0m);
 
-    private decimal DepositReleasedToDate => Figures.DepositReleased;
+    private decimal DepositReleasedToDate => Figures.DepositReleasedToDate;
 
     private decimal? ParsedConfirmAmount =>
         decimal.TryParse(confirmAmount, System.Globalization.NumberStyles.Number,
@@ -280,6 +295,7 @@
     private void OpenTerms()
     {
         depositPercent = Current?.DepositPercent ?? 0m;
+        depositReleasedOpening = Current?.DepositReleasedOpening ?? 0m;
         retentionPercent = Current?.RetentionPercent ?? 5m;
         completionReleasePercent = Current?.CompletionReleasePercent ?? 2.5m;
         defectsPeriodMonths = Current?.DefectsPeriodMonths ?? 12;
@@ -300,7 +316,8 @@
             await Retention.SetAsync(new SetProjectRetention(
                 ProjectId, retentionPercent, completionReleasePercent, defectsPeriodMonths,
                 practicalCompletionDate is { } date ? new DateTimeOffset(date.Date, TimeSpan.Zero) : null,
-                DepositPercent: depositPercent));
+                DepositPercent: depositPercent,
+                DepositReleasedOpening: depositReleasedOpening));
             CloseTerms();
         }
         catch (CommandFailedException ex) { error = ex.Message; }

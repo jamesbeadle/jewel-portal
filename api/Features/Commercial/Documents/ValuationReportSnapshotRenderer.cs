@@ -313,11 +313,15 @@ public static class ValuationReportSnapshotRenderer
         SummaryRow("Total works complete", snapshot.TotalWorksComplete);
         SummaryRow($"Retention held ({Pct(snapshot.RetentionPercent)})", snapshot.RetentionHeld);
         SummaryRow($"Retention released ({Pct(snapshot.RetentionReleasePercent)})", snapshot.RetentionReleased);
-        // Only projects with a cash-up-front deposit show the row — everyone else's
-        // summary keeps its familiar By France shape.
-        if (snapshot.DepositPercent > 0m || snapshot.DepositReleased != 0m)
-            SummaryRow($"Deposit released ({Pct(snapshot.DepositPercent)})", snapshot.DepositReleased);
         SummaryRow("Certified to date", snapshot.CertifiedToDate);
+        // Only projects with a cash-up-front deposit show the deduction block — everyone
+        // else's summary keeps its familiar By France shape. Mirrors the workbook: total
+        // payable, less the deposit released, equals the amount actually invoiced.
+        if (snapshot.DepositPercent > 0m || snapshot.DepositReleased != 0m)
+        {
+            SummaryRow("Payment due before deposit (ex VAT)", snapshot.PaymentDueExVat + snapshot.DepositReleased);
+            SummaryRow($"Less deposit released ({Pct(snapshot.DepositPercent)})", snapshot.DepositReleased);
+        }
         SummaryRow("Payment due (ex VAT)", snapshot.PaymentDueExVat, strong: true);
 
         SpaceAfterTable(section);

@@ -39,12 +39,13 @@ public sealed class ReopenValuationClaimHandler : ICommandHandler<ReopenValuatio
         entity.CertifiedToDate = 0m;
         entity.PaymentDueExVat = 0m;
 
-        // Back on Draft, the deposit % tracks the project's current terms again (the same
-        // rule SetProjectRetention applies to open drafts), so a claim locked before a
-        // deposit was recorded picks the deposit up when it is reopened and re-locked.
+        // Back on Draft, the deposit terms track the project's current record again (the
+        // same rule SetProjectRetention applies to open drafts), so a claim locked before
+        // a deposit was recorded picks the deposit up when it is reopened and re-locked.
         var terms = await context.ProjectRetentions
             .FirstOrDefaultAsync(retention => retention.ProjectId == entity.ProjectId, cancellationToken);
         entity.DepositPercent = terms?.DepositPercent ?? entity.DepositPercent;
+        entity.DepositReleasedOpening = terms?.DepositReleasedOpening ?? entity.DepositReleasedOpening;
 
         await context.SaveChangesAsync(cancellationToken);
         return entity.ToModel();

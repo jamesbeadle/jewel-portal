@@ -118,11 +118,14 @@ internal static class ValuationReportSnapshotCapture
 
         snapshot.TotalWorksComplete = totalWorksComplete;
         snapshot.RetentionHeld = ValuationCalculations.RetentionHeld(totalWorksComplete, snapshot.RetentionPercent);
-        // Cash-up-front deposit released back against contract-side works, capped at the
-        // deposit received (deposit % of the contract sum) — mirrors ValuationClaimSummary.
-        snapshot.DepositReleased = ValuationCalculations.DepositReleased(
-            nonVariationWorksComplete, snapshot.DepositPercent,
-            ValuationCalculations.DepositReceived(contractSum, snapshot.DepositPercent));
+        // Cash-up-front deposit deducted from the payment due: release earned against
+        // contract-side works (capped at the deposit received), less the opening balance
+        // settled before the portal began deducting — mirrors ValuationClaimSummary.
+        snapshot.DepositReleased = ValuationCalculations.DepositDeduction(
+            ValuationCalculations.DepositReleased(
+                nonVariationWorksComplete, snapshot.DepositPercent,
+                ValuationCalculations.DepositReceived(contractSum, snapshot.DepositPercent)),
+            claim?.DepositReleasedOpening ?? 0m);
         snapshot.PaymentDueExVat = ValuationCalculations.PaymentDueExVat(
             totalWorksComplete, snapshot.RetentionHeld, snapshot.RetentionReleased,
             snapshot.DepositReleased, certifiedToDate);

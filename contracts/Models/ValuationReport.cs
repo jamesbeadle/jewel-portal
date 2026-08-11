@@ -77,12 +77,15 @@ public sealed record ValuationClaim(
     // Free-text period name (e.g. "June 2026"); renameable at any status. Empty for
     // claims from before names existed — display falls back to "Claim n".
     string Name = "",
-    // Cash-up-front deposit: the % stamped from the project's terms when the claim starts
-    // (kept live on Drafts when terms change), and the cumulative amount released back to
-    // the client, frozen with the other totals when the claim locks. Trailing defaults
-    // keep the positional constructor stable for pre-deposit callers.
+    // Cash-up-front deposit: the % and opening balance stamped from the project's terms
+    // when the claim starts (kept live on Drafts when terms change). DepositReleased is
+    // the amount actually DEDUCTED from this claim's payment due — the deposit release
+    // earned to date less the opening balance settled before tracking — frozen with the
+    // other totals when the claim locks. Trailing defaults keep the positional
+    // constructor stable for pre-deposit callers.
     decimal DepositPercent = 0m,
-    decimal DepositReleased = 0m)
+    decimal DepositReleased = 0m,
+    decimal DepositReleasedOpening = 0m)
 {
     // "June 2026" when named, otherwise "Claim 3" — one rule for every claim label.
     public string DisplayName => string.IsNullOrWhiteSpace(Name) ? $"Claim {ClaimNumber}" : Name;

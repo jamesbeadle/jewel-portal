@@ -10,10 +10,13 @@ namespace Jewel.JPMS.Commercial;
 // issued/paid valuation invoices); a locked claim (Preapproved/Confirmed) reads its
 // frozen totals; no claim means nothing is being claimed, but invoiced still reads.
 //
-// The deposit trio (trailing, defaulted so pre-deposit constructions still compile):
+// The deposit block (trailing, defaulted so pre-deposit constructions still compile):
 // DepositReceived is always computed live (deposit % of the contract sum — the cash the
-// client paid up front); DepositReleased is the cumulative amount handed back against
-// contract-side works, live for a Draft and frozen on a locked claim.
+// client paid up front). DepositReleased is the amount DEDUCTED from this claim's payment
+// due: the release earned against contract-side works to date, less the opening balance
+// settled before the portal began deducting (DepositReleasedOpening). PaymentDueExVat is
+// therefore the amount actually invoiced to the client; PaymentDueBeforeDepositExVat is
+// the figure above the deduction line — the workbook's "Total Payment Due Excluding VAT".
 public sealed record ValuationSummaryFigures(
     decimal ContractSum,
     decimal NetVariations,
@@ -27,13 +30,20 @@ public sealed record ValuationSummaryFigures(
     decimal PaymentDueExVat,
     decimal DepositPercent = 0m,
     decimal DepositReceived = 0m,
-    decimal DepositReleased = 0m)
+    decimal DepositReleased = 0m,
+    decimal DepositReleasedOpening = 0m)
 {
     // Retention currently withheld by the client — held less what has been released.
     public decimal RetentionOutstanding => RetentionHeld - RetentionReleased;
 
+    // Everything handed back so far, including releases settled before tracking began.
+    public decimal DepositReleasedToDate => DepositReleased + DepositReleasedOpening;
+
     // Deposit still to be released back to the client over the remaining works.
-    public decimal DepositOutstanding => DepositReceived - DepositReleased;
+    public decimal DepositOutstanding => DepositReceived - DepositReleasedToDate;
+
+    // The workbook's "Total Payment Due Excluding VAT" — before the deposit comes off.
+    public decimal PaymentDueBeforeDepositExVat => PaymentDueExVat + DepositReleased;
 
     public static ValuationSummaryFigures For(
         IReadOnlyList<ValuationLineItem> lines,
@@ -48,6 +58,7 @@ public sealed record ValuationSummaryFigures(
         var retentionPercent = claim?.RetentionPercent ?? 0m;
         var retentionReleasePercent = claim?.RetentionReleasePercent ?? 0m;
         var depositPercent = claim?.DepositPercent ?? 0m;
+        var depositOpening = claim?.DepositReleasedOpening ?? 0m;
         var depositReceived = ValuationCalculations.DepositReceived(contractSum, depositPercent);
 
         if (claim is { Status: ValuationClaimStatus.Draft })
@@ -66,19 +77,21 @@ public sealed record ValuationSummaryFigures(
             // Retention & valuation tab (RetentionSchedule), which counts confirmed releases only.
             const decimal retentionReleased = 0m;
             // The deposit, by contrast, releases automatically with the works: deposit % of
-            // the contract-side works complete (variations excluded), capped at what was paid.
+            // the contract-side works complete (variations excluded), capped at what was
+            // paid, less any releases settled before the portal began deducting them.
             var nonVariationWorksComplete = lines
                 .Where(line => line.ElementType != ValuationElementType.Variation && line.CountsTowardTotals)
                 .Sum(line => ValuationCalculations.CumulativeClaimed(PercentFor(entries, line), line.LineAmount));
-            var depositReleased = ValuationCalculations.DepositReleased(
+            var depositReleasedToDate = ValuationCalculations.DepositReleased(
                 nonVariationWorksComplete, depositPercent, depositReceived);
+            var depositDeduction = ValuationCalculations.DepositDeduction(depositReleasedToDate, depositOpening);
             return new(
                 contractSum, netVariations, revisedContractSum, totalWorksComplete,
                 retentionPercent, retentionHeld, retentionReleasePercent, retentionReleased,
                 invoicedToDate,
                 ValuationCalculations.PaymentDueExVat(
-                    totalWorksComplete, retentionHeld, retentionReleased, depositReleased, invoicedToDate),
-                depositPercent, depositReceived, depositReleased);
+                    totalWorksComplete, retentionHeld, retentionReleased, depositDeduction, invoicedToDate),
+                depositPercent, depositReceived, depositDeduction, depositOpening);
         }
 
         if (claim is not null)
@@ -89,7 +102,7 @@ public sealed record ValuationSummaryFigures(
                 contractSum, netVariations, revisedContractSum, claim.TotalWorksComplete,
                 retentionPercent, claim.RetentionHeld, retentionReleasePercent, claim.RetentionReleased,
                 claim.CertifiedToDate, claim.PaymentDueExVat,
-                depositPercent, depositReceived, claim.DepositReleased);
+                depositPercent, depositReceived, claim.DepositReleased, depositOpening);
         }
 
         // No claim: nothing is being claimed, but what's been invoiced still reads.
@@ -97,7 +110,7 @@ public sealed record ValuationSummaryFigures(
             contractSum, netVariations, revisedContractSum, 0m,
             retentionPercent, 0m, retentionReleasePercent, 0m,
             invoicedToDate, 0m,
-            depositPercent, depositReceived, 0m);
+            depositPercent, depositReceived, 0m, depositOpening);
     }
 
     private static decimal PercentFor(IReadOnlyList<ClaimLine> entries, ValuationLineItem line) =>

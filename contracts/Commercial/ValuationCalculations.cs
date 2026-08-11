@@ -67,6 +67,12 @@ public static class ValuationCalculations
         decimal nonVariationWorksComplete, decimal depositPercent, decimal depositReceived) =>
         Math.Min(nonVariationWorksComplete * depositPercent / WholePercent, depositReceived);
 
+    // What a claim actually deducts from its payment due: the release earned to date less
+    // the opening balance settled before the portal began deducting (never negative — an
+    // opening balance ahead of the earned release just waits to be caught up).
+    public static decimal DepositDeduction(decimal depositReleasedToDate, decimal depositReleasedOpening) =>
+        Math.Max(0m, depositReleasedToDate - depositReleasedOpening);
+
     // Works complete on the contract-side lines only — the base the deposit releases
     // against. Pairs a claim's entries with their bill lines; entries whose line has been
     // removed (or is Declined/TBC) contribute nothing, matching CountsTowardTotals.

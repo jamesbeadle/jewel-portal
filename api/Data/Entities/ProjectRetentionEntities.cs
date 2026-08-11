@@ -14,6 +14,9 @@ public sealed class ProjectRetentionEntity
     // Cash-up-front deposit % of the contract sum, released back to the client against
     // each valuation's contract-side works. 0 = no deposit on this project.
     public decimal DepositPercent { get; set; }
+    // Deposit releases settled before the portal began deducting them from claims —
+    // excluded from every future claim's deduction.
+    public decimal DepositReleasedOpening { get; set; }
     public int DefectsPeriodMonths { get; set; }
     public DateTimeOffset? PracticalCompletionAt { get; set; }
     public DateTimeOffset? CompletionReleaseConfirmedAt { get; set; }

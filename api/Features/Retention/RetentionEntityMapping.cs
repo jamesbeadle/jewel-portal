@@ -16,5 +16,6 @@ internal static class RetentionEntityMapping
         CompletionReleaseAmount: entity.CompletionReleaseAmount,
         FinalReleaseConfirmedAt: entity.FinalReleaseConfirmedAt,
         FinalReleaseAmount: entity.FinalReleaseAmount,
-        DepositPercent: entity.DepositPercent);
+        DepositPercent: entity.DepositPercent,
+        DepositReleasedOpening: entity.DepositReleasedOpening);
 }

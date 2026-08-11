@@ -13,4 +13,7 @@ public sealed record SetProjectRetention(
     decimal CompletionReleasePercent,
     int DefectsPeriodMonths,
     DateTimeOffset? PracticalCompletionAt,
-    decimal DepositPercent = 0m) : ICommand<ProjectRetention>;
+    decimal DepositPercent = 0m,
+    // Deposit releases settled before the portal began deducting them (excluded from
+    // future claim deductions). See ProjectRetention.DepositReleasedOpening.
+    decimal DepositReleasedOpening = 0m) : ICommand<ProjectRetention>;

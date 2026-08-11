@@ -36,9 +36,10 @@ public sealed class StartValuationClaimHandler : ICommandHandler<StartValuationC
             Status = (int)ValuationClaimStatus.Draft,
             RetentionPercent = retentionPercent,
             RetentionReleasePercent = retentionReleasePercent,
-            // Cash-up-front deposit % from the same terms record; SetProjectRetention keeps
-            // it current on Drafts, and locking freezes it with the other totals.
+            // Cash-up-front deposit terms from the same record; SetProjectRetention keeps
+            // them current on Drafts, and locking freezes them with the other totals.
             DepositPercent = terms?.DepositPercent ?? 0m,
+            DepositReleasedOpening = terms?.DepositReleasedOpening ?? 0m,
             PreapprovedAt = null,
             ConfirmedAt = null
             // Summary totals stay zero until the claim is preapproved / confirmed.

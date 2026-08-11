@@ -174,6 +174,28 @@ public sealed class ValuationCalculationsTests
         Assert.Equal(11_365.02m, decimal.Round(paymentDue, 2));
     }
 
+    // The Ravenswood Claim 3 position: claims 1–2 were invoiced gross, so their £6,049
+    // of deposit release is settled outside the portal (the opening balance) and the
+    // claim only deducts what has been earned beyond it.
+    [Fact]
+    public void Deposit_deduction_excludes_the_opening_balance()
+    {
+        // Earned to date 8,799.20 (20% × 43,996 contract-side works), opening 6,049.
+        Assert.Equal(2_750.20m, ValuationCalculations.DepositDeduction(8_799.20m, 6_049.00m));
+
+        // An opening balance ahead of the earned release never goes negative — it just
+        // waits for the works to catch up.
+        Assert.Equal(0m, ValuationCalculations.DepositDeduction(5_000.00m, 6_049.00m));
+
+        // No opening balance = deduct the full earned release.
+        Assert.Equal(8_799.20m, ValuationCalculations.DepositDeduction(8_799.20m, 0m));
+
+        // Ravenswood Claim 3 end-to-end: 20,666.77 payable less 2,750.20 = 17,916.57 invoiced.
+        var paymentDue = ValuationCalculations.PaymentDueExVat(
+            63_152.99m, 3_157.65m, 0m, 2_750.20m, 39_328.57m);
+        Assert.Equal(17_916.57m, decimal.Round(paymentDue, 2));
+    }
+
     private static ValuationLineItem Line(
         string id, ValuationElementType elementType, ValuationLineType lineType, decimal amount) =>
         new(id, "P1", elementType, "A1", "Section", "", "", lineType,

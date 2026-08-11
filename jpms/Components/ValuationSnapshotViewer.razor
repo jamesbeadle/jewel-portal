@@ -123,11 +123,12 @@ else
             <SummaryRow Label="Total works complete" Value="@Money(snapshot.TotalWorksComplete)" />
             <SummaryRow Label=@($"Retention held ({Pct(snapshot.RetentionPercent)})") Value="@Money(snapshot.RetentionHeld)" />
             <SummaryRow Label=@($"Retention released ({Pct(snapshot.RetentionReleasePercent)})") Value="@Money(snapshot.RetentionReleased)" />
+            <SummaryRow Label="Certified to date" Value="@Money(snapshot.CertifiedToDate)" />
             @if (snapshot.DepositPercent > 0m || snapshot.DepositReleased != 0m)
             {
-                <SummaryRow Label=@($"Deposit released ({Pct(snapshot.DepositPercent)})") Value="@Money(snapshot.DepositReleased)" />
+                <SummaryRow Label="Payment due before deposit (ex VAT)" Value="@Money(snapshot.PaymentDueExVat + snapshot.DepositReleased)" />
+                <SummaryRow Label=@($"Less deposit released ({Pct(snapshot.DepositPercent)})") Value="@Money(snapshot.DepositReleased)" />
             }
-            <SummaryRow Label="Certified to date" Value="@Money(snapshot.CertifiedToDate)" />
             <SummaryRow Label="Payment due (ex VAT)" Value="@Money(snapshot.PaymentDueExVat)" Strong="true" />
         </dl>
     </div>
@@ -248,9 +249,12 @@ else
         summary.AddRow("Total works complete", snapshot.TotalWorksComplete);
         summary.AddRow($"Retention held ({Pct(snapshot.RetentionPercent)})", snapshot.RetentionHeld);
         summary.AddRow($"Retention released ({Pct(snapshot.RetentionReleasePercent)})", snapshot.RetentionReleased);
-        if (snapshot.DepositPercent > 0m || snapshot.DepositReleased != 0m)
-            summary.AddRow($"Deposit released ({Pct(snapshot.DepositPercent)})", snapshot.DepositReleased);
         summary.AddRow("Certified to date", snapshot.CertifiedToDate);
+        if (snapshot.DepositPercent > 0m || snapshot.DepositReleased != 0m)
+        {
+            summary.AddRow("Payment due before deposit (ex VAT)", snapshot.PaymentDueExVat + snapshot.DepositReleased);
+            summary.AddRow($"Less deposit released ({Pct(snapshot.DepositPercent)})", snapshot.DepositReleased);
+        }
         summary.AddRow("Payment due (ex VAT)", snapshot.PaymentDueExVat);
 
         return workbook;

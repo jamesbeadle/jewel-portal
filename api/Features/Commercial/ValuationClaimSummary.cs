@@ -42,10 +42,14 @@ internal static class ValuationClaimSummary
 
         // Cash-up-front deposit: released back pro rata against the contract-side works
         // (contract works + PC sums + contingency — variations excluded), capped at the
-        // deposit received (deposit % of the contract sum). Reduces the payment due.
+        // deposit received (deposit % of the contract sum). What the claim deducts is the
+        // release earned to date LESS the opening balance settled before the portal began
+        // deducting (DepositReleasedOpening) — so the invoice matches what the client pays.
         var nonVariationWorks = ValuationCalculations.NonVariationWorksComplete(claimLineModels, lineModels);
         var depositReceived = ValuationCalculations.DepositReceived(contractSum, claim.DepositPercent);
-        var depositReleased = ValuationCalculations.DepositReleased(nonVariationWorks, claim.DepositPercent, depositReceived);
+        var depositReleased = ValuationCalculations.DepositDeduction(
+            ValuationCalculations.DepositReleased(nonVariationWorks, claim.DepositPercent, depositReceived),
+            claim.DepositReleasedOpening);
 
         claim.ContractSum = contractSum;
         claim.NetVariations = netVariations;

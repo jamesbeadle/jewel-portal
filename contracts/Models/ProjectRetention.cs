@@ -30,4 +30,8 @@ public sealed record ProjectRetention(
     decimal CompletionReleaseAmount,                // frozen when confirmed; 0 until then
     DateTimeOffset? FinalReleaseConfirmedAt,
     decimal FinalReleaseAmount,
-    decimal DepositPercent = 0m);       // e.g. 20 — cash up front, released back against contract-side works
+    decimal DepositPercent = 0m,        // e.g. 20 — cash up front, released back against contract-side works
+    // Deposit releases settled before the portal began deducting them from claims (e.g.
+    // Ravenswood's £6,049 covering claims 1–2, which were invoiced gross). Excluded from
+    // every future claim's deduction so the portal reproduces the agreed client position.
+    decimal DepositReleasedOpening = 0m);

@@ -15,6 +15,7 @@ public sealed class SetProjectRetentionValidation
             errors.Add("Completion release percent cannot exceed the retention percent.");
         if (command.DefectsPeriodMonths is not (6 or 12)) errors.Add("Defects period must be 6 or 12 months.");
         if (command.DepositPercent is < 0 or > 100) errors.Add("Deposit percent must be between 0 and 100.");
+        if (command.DepositReleasedOpening < 0) errors.Add("Deposit released before tracking cannot be negative.");
         if (errors.Count == 0) return ValidationOutcome.Passed;
         return new ValidationOutcome(errors);
     }
