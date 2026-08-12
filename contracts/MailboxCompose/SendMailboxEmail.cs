@@ -76,8 +76,8 @@ public enum ComposeAttachmentSource
     OriginalMessage = 3,
     /// <summary>The official PDF of a system record, rendered server-side at send time so the
     /// attached document is always the record as it currently stands. Id is the record id;
-    /// RecordType says which type. The request family (RFI/NOD/EOT…) is the only type with an
-    /// official document so far — extend the resolver as more record types grow one.</summary>
+    /// RecordType says which type. The request family (RFI/NOD/EOT…) and variation orders carry
+    /// official documents so far — extend the resolver as more record types grow one.</summary>
     RecordDocument = 4
 }
 

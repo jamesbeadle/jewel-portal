@@ -48,7 +48,8 @@
         try
         {
             var created = await Variations.CreateManualAsync(
-                ProjectId, draft.Title, draft.Description, draft.EstimatedValue, draft.Number);
+                ProjectId, draft.Title, draft.Description, draft.EstimatedValue, draft.Number,
+                draft.CommercialBasis, draft.ProgrammeImpact, draft.Exclusions);
             await OnCreated.InvokeAsync(created);
         }
         catch (System.Exception ex)

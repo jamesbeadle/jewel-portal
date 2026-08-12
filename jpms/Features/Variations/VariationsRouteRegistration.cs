@@ -88,6 +88,13 @@ public static class VariationsRouteRegistration
             new CommandRoute("POST", "/api/variation-orders/{voId}/title",
                 command => $"/api/variation-orders/{((RenameVariationOrder)command).VariationOrderId}/title"));
 
+        // The official document's narrative sections (commercial basis, programme impact,
+        // exclusions) — wording only, same any-stage rule as the retitle. The document itself is
+        // fetched straight from /api/variation-orders/{voId}/document (a file, not a query route).
+        commands.Register<UpdateVariationOrderNarratives, VariationOrder>(
+            new CommandRoute("POST", "/api/variation-orders/{voId}/narratives",
+                command => $"/api/variation-orders/{((UpdateVariationOrderNarratives)command).VariationOrderId}/narratives"));
+
         // Delete a non-approved variation order (cascades its bid-package tender data).
         commands.Register<DeleteVariationOrder, Acknowledgement>(
             new CommandRoute("DELETE", "/api/variation-orders/{voId}",

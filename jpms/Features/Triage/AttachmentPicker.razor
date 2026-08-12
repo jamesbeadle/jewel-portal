@@ -187,7 +187,7 @@
                     {
                         <p class="text-xs text-content-subtle">
                             @(recordsByProject[panelProjectId].Count == 0
-                                ? "No requests on this project yet."
+                                ? "No requests or variation orders on this project yet."
                                 : "No records match — clear the filter or include closed records.")
                         </p>
                     }
@@ -211,7 +211,7 @@
                     }
                     <p class="text-[11px] text-content-faint">
                         Attaches the record's official PDF, rendered as the record stands when the email is sent.
-                        Requests (RFI, NOD, EOT…) carry official documents today.
+                        Requests (RFI, NOD, EOT…) and variation orders carry official documents today.
                     </p>
                 }
             }
@@ -323,7 +323,13 @@
         if (recordsByProject.ContainsKey(projectId)) return;
         try
         {
-            recordsByProject[projectId] = await Intake.ListLinkableRecordsAsync(projectId, RecordType.Request);
+            // Both record families that carry an official PDF: requests (RFI, NOD, EOT…) and
+            // variation orders. The variation provider lists every stage of a project's
+            // variations — a still-quoting order is offered under its VOQ identity, an approved
+            // one under its V-ref — so a VO can be attached and sent at any point in its life.
+            var requests = await Intake.ListLinkableRecordsAsync(projectId, RecordType.Request);
+            var variations = await Intake.ListLinkableRecordsAsync(projectId, RecordType.Variation);
+            recordsByProject[projectId] = requests.Concat(variations).ToList();
         }
         catch
         {

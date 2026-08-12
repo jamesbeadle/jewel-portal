@@ -51,7 +51,15 @@ public sealed record VariationOrder(
     DateTimeOffset? IssuedAt = null,
     DateTimeOffset? ApprovedAt = null,
     string? ApprovedByEmail = null,
-    DateTimeOffset? RejectedAt = null)
+    DateTimeOffset? RejectedAt = null,
+    // ---- Narrative sections of the issued VO document (all optional free text) ----------------
+    // Printed on the official PDF between the header and the cost breakdown / at its foot, in the
+    // order the client reads them: what the price is based on, what it does to the programme, and
+    // what it deliberately leaves out. Editable at every stage — wording is refined right up to
+    // (and after) issue, the same rule as the title.
+    string? CommercialBasis = null,   // pricing basis: tender-face position, rate basis, OH&P…
+    string? ProgrammeImpact = null,   // effect on the programme (procurement, mobilisation, duration)
+    string? Exclusions = null)        // what this VO expressly does not price
 {
     /// <summary>What a user sees this variation called, at every stage: "V72".
     ///

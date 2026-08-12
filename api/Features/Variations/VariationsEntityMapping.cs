@@ -25,7 +25,10 @@ internal static class VariationsEntityMapping
         IssuedAt: entity.IssuedAt,
         ApprovedAt: entity.ApprovedAt,
         ApprovedByEmail: entity.ApprovedByEmail,
-        RejectedAt: entity.RejectedAt);
+        RejectedAt: entity.RejectedAt,
+        CommercialBasis: entity.CommercialBasis,
+        ProgrammeImpact: entity.ProgrammeImpact,
+        Exclusions: entity.Exclusions);
 
     public static BidPackage ToModel(this BidPackageEntity entity) => new(
         entity.BidPackageId, entity.ProjectId, entity.Title, entity.Trade,

@@ -35,12 +35,22 @@ public sealed class HttpVariationStore : IVariationStore
         return created;
     }
 
-    public async Task<VariationOrder> CreateManualAsync(string projectId, string title, string? description, decimal? estimatedValue, int? number, CancellationToken cancellationToken = default)
+    public async Task<VariationOrder> CreateManualAsync(string projectId, string title, string? description, decimal? estimatedValue, int? number, string? commercialBasis = null, string? programmeImpact = null, string? exclusions = null, CancellationToken cancellationToken = default)
     {
         // CreatedByEmail is resolved from the signed-in user server-side, so it is a placeholder here.
-        var created = await commands.SendAsync(new CreateManualVariationOrder(projectId, string.Empty, title, description, estimatedValue, number), cancellationToken);
+        var created = await commands.SendAsync(new CreateManualVariationOrder(
+            projectId, string.Empty, title, description, estimatedValue, number,
+            commercialBasis, programmeImpact, exclusions), cancellationToken);
         OnChange?.Invoke();
         return created;
+    }
+
+    public async Task<VariationOrder> UpdateNarrativesAsync(string variationOrderId, string? commercialBasis, string? programmeImpact, string? exclusions, CancellationToken cancellationToken = default)
+    {
+        var order = await commands.SendAsync(new UpdateVariationOrderNarratives(
+            variationOrderId, commercialBasis, programmeImpact, exclusions), cancellationToken);
+        OnChange?.Invoke();
+        return order;
     }
 
     public async Task<VariationOrder> SelectTenderAsync(string variationOrderId, string subcontractorId, decimal? estimatedValue, CancellationToken cancellationToken = default)

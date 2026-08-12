@@ -17,8 +17,14 @@ public interface IVariationStore
 
     /// <summary>Creates a standalone variation order (in Quoting) with no request behind it — the
     /// manual-entry route for historic / client-instructed variations. A supplied number fixes the
-    /// VOQ number (and the V-ref minted at approval); null takes the project's next number.</summary>
-    Task<VariationOrder> CreateManualAsync(string projectId, string title, string? description, decimal? estimatedValue, int? number, CancellationToken cancellationToken = default);
+    /// VOQ number (and the V-ref minted at approval); null takes the project's next number. The
+    /// narrative sections (commercial basis, programme impact, exclusions) print on the official
+    /// document and can be captured here or edited later.</summary>
+    Task<VariationOrder> CreateManualAsync(string projectId, string title, string? description, decimal? estimatedValue, int? number, string? commercialBasis = null, string? programmeImpact = null, string? exclusions = null, CancellationToken cancellationToken = default);
+
+    /// <summary>Re-states the official document's narrative sections — commercial basis, programme
+    /// impact and exclusions. Wording only, allowed at every stage; blank clears a section.</summary>
+    Task<VariationOrder> UpdateNarrativesAsync(string variationOrderId, string? commercialBasis, string? programmeImpact, string? exclusions, CancellationToken cancellationToken = default);
 
     /// <summary>Records the agreed subcontractor and value on a quoting variation order — who the
     /// works will be instructed to if the variation is approved. (Bid packages were separated from

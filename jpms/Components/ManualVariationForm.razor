@@ -43,11 +43,33 @@
         <FormField Label="Estimated value (£)" Value="@valueText" OnChange="v => valueText = v" InputType="number" />
         <p class="mt-1 text-xs text-content-subtle">Optional — pre-fills the value on the approve panel. Use a negative figure for an omit.</p>
     </div>
+
+    @* The official document's narrative sections — printed on the VO sheet when it is downloaded
+       or emailed. All optional here: the wording is editable on the variation page at every stage. *@
+    <div>
+        <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Commercial basis</label>
+        <textarea class="field" rows="3" value="@commercialBasis" @oninput="e => commercialBasis = e.Value?.ToString() ?? string.Empty"
+                  placeholder="What the price is based on — tender-face position, rate basis, OH&amp;P…"></textarea>
+    </div>
+
+    <div>
+        <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Programme impact</label>
+        <textarea class="field" rows="3" value="@programmeImpact" @oninput="e => programmeImpact = e.Value?.ToString() ?? string.Empty"
+                  placeholder="Effect on the programme — procurement, mobilisation, works duration…"></textarea>
+    </div>
+
+    <div>
+        <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Exclusions</label>
+        <textarea class="field" rows="3" value="@exclusions" @oninput="e => exclusions = e.Value?.ToString() ?? string.Empty"
+                  placeholder="What this variation expressly does not price…"></textarea>
+    </div>
 </div>
 
 @code {
     /// <summary>A valid submission — the host sends it now (dialog) or stages it (System Actions).</summary>
-    public sealed record Draft(string Title, string? Description, decimal? EstimatedValue, int? Number);
+    public sealed record Draft(
+        string Title, string? Description, decimal? EstimatedValue, int? Number,
+        string? CommercialBasis, string? ProgrammeImpact, string? Exclusions);
 
     /// <summary>Raised by <see cref="TrySubmitAsync"/> when the form validates.</summary>
     [Parameter] public EventCallback<Draft> OnSubmit { get; set; }
@@ -64,6 +86,9 @@
     private string title = "";
     private string description = "";
     private string valueText = "";
+    private string commercialBasis = "";
+    private string programmeImpact = "";
+    private string exclusions = "";
     private string? error;
 
     private int? ParsedNumber => int.TryParse(numberText, out var n) && n > 0 ? n : null;
@@ -89,6 +114,7 @@
     public void Reset()
     {
         numberText = title = description = valueText = "";
+        commercialBasis = programmeImpact = exclusions = "";
         error = null;
         StateHasChanged();
     }
@@ -125,7 +151,10 @@
             title.Trim(),
             string.IsNullOrWhiteSpace(description) ? null : description.Trim(),
             estimate,
-            ParsedNumber));
+            ParsedNumber,
+            string.IsNullOrWhiteSpace(commercialBasis) ? null : commercialBasis.Trim(),
+            string.IsNullOrWhiteSpace(programmeImpact) ? null : programmeImpact.Trim(),
+            string.IsNullOrWhiteSpace(exclusions) ? null : exclusions.Trim()));
         return true;
     }
 }

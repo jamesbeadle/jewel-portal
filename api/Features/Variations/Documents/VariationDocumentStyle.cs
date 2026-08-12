@@ -1,0 +1,140 @@
+using System.Globalization;
+using Jewel.JPMS.Api.Features.Requests.Documents;
+using MigraDoc.DocumentObjectModel;
+using MigraDoc.DocumentObjectModel.Tables;
+using PdfSharp.Fonts;
+
+namespace Jewel.JPMS.Api.Features.Variations.Documents;
+
+/// <summary>
+/// The variation document's shared look — the JewelBB palette and the table/paragraph helpers the
+/// renderer's section builders lean on. Matches the request (RFI) document exactly, so the two
+/// official documents read as one family; fonts come from the same DocumentFontResolver.
+/// </summary>
+internal static class VariationDocumentStyle
+{
+    // JewelBB palette — Orange identifies, Navy sets the atmosphere, Gold is the luxury accent.
+    public static readonly Color Navy = new(0x1A, 0x1E, 0x29);
+    public static readonly Color Orange = new(0xFF, 0x83, 0x00);
+    public static readonly Color Gold = new(0xC0, 0x9A, 0x51);
+    public static readonly Color White = new(0xFF, 0xFF, 0xFF);
+    public static readonly Color Panel = new(0xF3, 0xF3, 0xF5);
+    public static readonly Color Hair = new(0xDD, 0xDD, 0xE1);
+    public static readonly Color Muted = new(0x60, 0x66, 0x72);
+    public static readonly Color Ink = new(0x22, 0x26, 0x30);
+
+    public const string FontFamily = "JPMS Sans";
+    public static readonly CultureInfo Uk = CultureInfo.GetCultureInfo("en-GB");
+
+    private static readonly object FontGate = new();
+    private static bool _fontsReady;
+
+    public static void EnsureFonts()
+    {
+        if (_fontsReady) return;
+        lock (FontGate)
+        {
+            if (_fontsReady) return;
+            // FontResolver is a global, set-once setting; only install ours if nothing else has.
+            GlobalFontSettings.FontResolver ??= new DocumentFontResolver();
+            _fontsReady = true;
+        }
+    }
+
+    public static void SectionHeading(Section section, string text)
+    {
+        var paragraph = section.AddParagraph(text);
+        paragraph.Format.Font.Size = 10.5;
+        paragraph.Format.Font.Bold = true;
+        paragraph.Format.Font.Color = Navy;
+        paragraph.Format.Borders.Bottom.Width = 0.75;
+        paragraph.Format.Borders.Bottom.Color = Orange;
+        paragraph.Format.Borders.Distance = Unit.FromMillimeter(1.5);
+        SpaceBefore(paragraph, 4);
+        SpaceAfter(paragraph, 2.5);
+    }
+
+    public static Paragraph Panelled(Section section, string text)
+    {
+        var table = section.AddTable();
+        table.Borders.Width = 0;
+        table.AddColumn(Unit.FromCentimeter(17.8));
+        var row = table.AddRow();
+        row.Shading.Color = Panel;
+        row.TopPadding = Unit.FromMillimeter(2.5);
+        row.BottomPadding = Unit.FromMillimeter(2.5);
+        row.Cells[0].Format.LeftIndent = Unit.FromMillimeter(2.5);
+        row.Cells[0].Format.RightIndent = Unit.FromMillimeter(2.5);
+        var paragraph = row.Cells[0].AddParagraph(text);
+        paragraph.Format.Font.Size = 9.5;
+        return paragraph;
+    }
+
+    public static void LabelCell(Cell cell, string text)
+    {
+        cell.Shading.Color = Panel;
+        cell.Format.LeftIndent = Unit.FromMillimeter(1.5);
+        var paragraph = cell.AddParagraph(text);
+        paragraph.Format.Font.Size = 8;
+        paragraph.Format.Font.Bold = true;
+        paragraph.Format.Font.Color = Muted;
+    }
+
+    public static void ValueCell(Cell cell, string text)
+    {
+        cell.Format.LeftIndent = Unit.FromMillimeter(1.5);
+        var paragraph = cell.AddParagraph(string.IsNullOrWhiteSpace(text) ? "—" : text);
+        paragraph.Format.Font.Size = 9;
+        paragraph.Format.Font.Color = Ink;
+    }
+
+    public static void HeaderCell(Cell cell, string text)
+    {
+        cell.Format.LeftIndent = Unit.FromMillimeter(1.5);
+        var paragraph = cell.AddParagraph(text);
+        // MigraDoc cell padding lives on the Row; emulate vertical padding via paragraph spacing.
+        paragraph.Format.SpaceBefore = Unit.FromMillimeter(1);
+        paragraph.Format.SpaceAfter = Unit.FromMillimeter(1);
+        paragraph.Format.Font.Size = 8;
+        paragraph.Format.Font.Bold = true;
+        paragraph.Format.Font.Color = White;
+    }
+
+    public static void BodyCell(Cell cell, string text)
+    {
+        cell.Format.LeftIndent = Unit.FromMillimeter(1.5);
+        var paragraph = cell.AddParagraph(string.IsNullOrWhiteSpace(text) ? "—" : text);
+        paragraph.Format.SpaceBefore = Unit.FromMillimeter(0.8);
+        paragraph.Format.SpaceAfter = Unit.FromMillimeter(0.8);
+        paragraph.Format.Font.Size = 8.5;
+        paragraph.Format.Font.Color = Ink;
+    }
+
+    public static void Hairline(Section section)
+    {
+        var table = section.AddTable();
+        table.Borders.Width = 0;
+        table.AddColumn(Unit.FromCentimeter(17.8));
+        var row = table.AddRow();
+        row.Height = Unit.FromMillimeter(0.9);
+        row.HeightRule = RowHeightRule.Exactly;
+        row.Cells[0].Shading.Color = Orange;
+    }
+
+    public static void SpaceBefore(Paragraph paragraph, double millimetres) =>
+        paragraph.Format.SpaceBefore = Unit.FromMillimeter(millimetres);
+
+    public static void SpaceAfter(Paragraph paragraph, double millimetres) =>
+        paragraph.Format.SpaceAfter = Unit.FromMillimeter(millimetres);
+
+    public static void SpaceAfterTable(Section section)
+    {
+        var spacer = section.AddParagraph();
+        spacer.Format.SpaceAfter = Unit.FromMillimeter(2);
+        spacer.Format.Font.Size = 2;
+    }
+
+    public static string Date(DateTimeOffset value) => value.ToString("dd MMM yyyy", Uk);
+    public static string DateAndTime(DateTimeOffset value) => value.ToString("dd MMM yyyy HH:mm", Uk);
+    public static string Money(decimal value) => value.ToString("C2", Uk);
+}
