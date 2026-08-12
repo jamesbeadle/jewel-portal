@@ -385,7 +385,7 @@ else
                                     </div>
                                     <div class="flex items-center gap-3">
                                         <button type="button" class="btn-primary"
-                                                disabled="@(busy || string.IsNullOrWhiteSpace(filingProjectId) || string.IsNullOrWhiteSpace(certificateNumber) || string.IsNullOrWhiteSpace(certificateIssuedDate))"
+                                                disabled="@(busy || string.IsNullOrWhiteSpace(filingProjectId) || string.IsNullOrWhiteSpace(certificateNumber) || certificateIssuedDate is null)"
                                                 @onclick="DoFileAsPaymentCertificate">@(busy ? "Filing…" : "File as payment certificate")</button>
                                         @DiscardControl
                                     </div>
@@ -483,11 +483,11 @@ else
     private string drawingRevision = "";
     private string certificateNumber = "";
     private string certificateAmountText = "";
-    private string certificateIssuedDate = "";
+    private DateTime? certificateIssuedDate;
     private string certificateClaimId = "";
     private string subcontractorId = "";
     private string subcontractorKind = "";
-    private string subcontractorExpiry = "";
+    private DateTime? subcontractorExpiry;
 
     private RenderFragment DiscardControl =>
         @<button type="button" class="text-sm text-content-muted hover:text-negative" disabled="@busy"
@@ -600,11 +600,11 @@ else
         drawingId = "";
         certificateNumber = "";
         certificateAmountText = "";
-        certificateIssuedDate = "";
+        certificateIssuedDate = null;
         certificateClaimId = "";
         subcontractorId = "";
         subcontractorKind = "";
-        subcontractorExpiry = "";
+        subcontractorExpiry = null;
         // The email's triage project is the hint; the drawing fields prefill from the file name
         // ("PRO-064-(WD)-P-800 Rev I Site set out.pdf" → code / revision / title).
         filingProjectId = item?.ProjectIdHint ?? "";
@@ -716,11 +716,14 @@ else
             }
             amount = parsed;
         }
-        if (!DateTimeOffset.TryParse(certificateIssuedDate, out var issued))
+        if (certificateIssuedDate is null)
         {
             actionError = "Set the certificate's issued date.";
             return;
         }
+        // Date-only, pinned to UTC so the stored day never drifts with the browser's timezone
+        // (the same rule as the portal upload's expiry date).
+        var issued = new DateTimeOffset(DateTime.SpecifyKind(certificateIssuedDate.Value.Date, DateTimeKind.Utc));
         await RunFiling("Filing payment certificate", () =>
             Store.FileAsPaymentCertificateAsync(
                 item.DocumentControlItemId, filingProjectId, certificateNumber.Trim(), amount,
@@ -731,16 +734,10 @@ else
     {
         var item = Selected;
         if (item is null || busy) return;
-        DateTimeOffset? expires = null;
-        if (!string.IsNullOrWhiteSpace(subcontractorExpiry))
-        {
-            if (!DateTimeOffset.TryParse(subcontractorExpiry, out var parsed))
-            {
-                actionError = "The expiry date isn't a date — clear it or correct it.";
-                return;
-            }
-            expires = parsed;
-        }
+        // Date-only, pinned to UTC — the same conversion the portal upload applies to its expiry.
+        DateTimeOffset? expires = subcontractorExpiry is null
+            ? null
+            : new DateTimeOffset(DateTime.SpecifyKind(subcontractorExpiry.Value.Date, DateTimeKind.Utc));
         await RunFiling("Filing to subcontractor", () =>
             Store.FileToSubcontractorAsync(item.DocumentControlItemId, subcontractorId, subcontractorKind, expires));
     }
