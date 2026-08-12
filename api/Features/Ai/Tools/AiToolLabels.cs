@@ -28,6 +28,12 @@ public static class AiToolLabels
             "find_by_reference" => Named(arguments, "reference", reference => $"Looking up {reference}")
                                    ?? "Looking that up",
             "navigate_to" => "Taking you there",
+            "switch_agent" => Named(arguments, "agent", agent => $"Bringing in the {agent} agent")
+                              ?? "Changing agent",
+            "load_skill" => Named(arguments, "skill_key", key => $"Reading the {key} skill")
+                            ?? "Reading a skill",
+            "load_skill_reference" => Named(arguments, "ref_key", key => $"Reading {key}")
+                                      ?? "Reading a reference",
             _ => "Working on it"
         };
     }

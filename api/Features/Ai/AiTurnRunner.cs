@@ -4,6 +4,7 @@ using Jewel.JPMS.Api.Data;
 using Jewel.JPMS.Api.Data.Entities;
 using Jewel.JPMS.Api.Features.Ai.Tools;
 using Jewel.JPMS.Api.Gates;
+using Jewel.JPMS.Contracts.Ai;
 using Jewel.JPMS.Models;
 using Microsoft.EntityFrameworkCore;
 
@@ -91,8 +92,20 @@ public sealed class AiTurnRunner
             : await context.Projects.AsNoTracking()
                 .FirstOrDefaultAsync(row => row.ProjectId == scope!.ProjectId, cancellationToken);
 
-        var systemPrompt = AiSystemPrompt.Build(user, scope, project?.Reference, project?.Name);
-        var tools = AiToolCatalogue.For(user)
+        // The agent in force this hop. A conversation stamped with a key the catalogue no longer
+        // knows (renamed, retired) degrades to the orchestrator rather than failing the turn; a
+        // key the CALLER may not engage degrades the same way — a conversation id is not a
+        // capability, and neither is a persisted agent key.
+        var agent = AgentCatalogue.Find(conversation.CapabilityKey) ?? AgentCatalogue.Orchestrator;
+        if (!AgentCatalogue.CanEngage(agent, user.Roles)) agent = AgentCatalogue.Orchestrator;
+
+        // The agent's skills plus the shared set, fresh from the database every hop — a portal
+        // edit is in force on the very next message. Bodies are fetched for PINNED skills only;
+        // the rest ride as one menu line each and arrive via load_skill.
+        var skills = await LoadSkillsAsync(agent.Key, cancellationToken);
+
+        var systemPrompt = AiSystemPrompt.Build(user, scope, project?.Reference, project?.Name, agent, skills);
+        var tools = AiToolCatalogue.For(user, scope, agent)
             .Select(tool => new ClaudeToolSpec(tool.Name, tool.Description, tool.InputSchema))
             .ToList();
 
@@ -118,7 +131,7 @@ public sealed class AiTurnRunner
                 reply.ToolCalls.Select(call => new { id = call.Id, name = call.Name, input = call.ArgumentsJson }));
         }
 
-        var toolContext = new AiToolContext(context, user, scope, services);
+        var toolContext = new AiToolContext(context, user, scope, services, agent.Key);
 
         foreach (var call in reply.ToolCalls)
         {
@@ -136,6 +149,14 @@ public sealed class AiTurnRunner
             {
                 output = Fail("You are not permitted to use that tool.");
                 ok = false;
+            }
+            else if (string.Equals(call.Name, AiToolCatalogue.SwitchAgent, StringComparison.OrdinalIgnoreCase))
+            {
+                // Executed here, not in the catalogue: it writes the conversation's own
+                // CapabilityKey, which no ordinary tool can reach. Takes effect on the NEXT hop —
+                // this hop's tools and prompt were assembled under the old agent, and rebuilding
+                // them mid-hop would mean a tool list the model was never shown.
+                output = SwitchAgent(conversation, user, call.ArgumentsJson, out ok);
             }
             else if (tool.Kind == AiToolKind.Ui)
             {
@@ -184,6 +205,77 @@ public sealed class AiTurnRunner
         return Result(conversation, status, newMessages, uiActions, steps, remaining);
     }
 
+    // ---- agents and skills -----------------------------------------------------------------
+
+    /// <summary>
+    /// The model asked to change hat. Validated exactly like any other capability: the key must
+    /// exist and the CALLER's roles must be allowed to engage it — the model cannot talk its way
+    /// into an agent the person could not have chosen from a menu.
+    /// </summary>
+    private string SwitchAgent(
+        AiConversationEntity conversation, SignedInUser user, string? argumentsJson, out bool ok)
+    {
+        ok = false;
+
+        string? key = null;
+        try
+        {
+            using var arguments = JsonDocument.Parse(
+                string.IsNullOrWhiteSpace(argumentsJson) ? "{}" : argumentsJson);
+            if (arguments.RootElement.ValueKind == JsonValueKind.Object
+                && arguments.RootElement.TryGetProperty("agent", out var value)
+                && value.ValueKind == JsonValueKind.String)
+            {
+                key = value.GetString();
+            }
+        }
+        catch (JsonException)
+        {
+        }
+
+        var destination = AgentCatalogue.Find(key);
+        if (destination is null)
+            return Fail($"No agent named {key}. Only the agents listed in the tool description exist.");
+        if (!AgentCatalogue.CanEngage(destination, user.Roles))
+            return Fail("This user may not engage that agent.");
+        if (string.Equals(conversation.CapabilityKey, destination.Key, StringComparison.OrdinalIgnoreCase))
+            return Fail($"The {destination.DisplayName} agent is already in force.");
+
+        conversation.CapabilityKey = destination.Key;
+        ok = true;
+        return JsonSerializer.Serialize(new
+        {
+            ok = true,
+            switched_to = destination.Key,
+            note = $"You are now the {destination.DisplayName} agent. Your tools, working rules and "
+                   + "skills change from your next step — continue the task under them."
+        });
+    }
+
+    /// <summary>The agent's skills plus the shared set. Pinned bodies come back whole; unpinned
+    /// skills come back as menu lines (key + description) with no body — load_skill fetches those.</summary>
+    private async Task<IReadOnlyList<AiSystemPrompt.PromptSkill>> LoadSkillsAsync(
+        string agentKey, CancellationToken ct)
+    {
+        var rows = await context.Skills
+            .AsNoTracking()
+            .Where(row => row.IsActive
+                          && (row.AgentKey == agentKey || row.AgentKey == AiSkillTools.SharedAgentKey))
+            .OrderBy(row => row.AgentKey == AiSkillTools.SharedAgentKey ? 0 : 1)
+            .ThenBy(row => row.DisplayName)
+            .Select(row => new
+            {
+                row.SkillKey, row.DisplayName, row.Description, row.Pinned, row.Version,
+                Body = row.Pinned ? row.Body : null
+            })
+            .ToListAsync(ct);
+
+        return rows
+            .Select(row => new AiSystemPrompt.PromptSkill(
+                row.SkillKey, row.DisplayName, row.Description, row.Pinned, row.Version, row.Body))
+            .ToList();
+    }
+
     // ---- transcript ------------------------------------------------------------------------
 
     private Task<List<AiConversationMessageEntity>> LoadAsync(string conversationId, CancellationToken ct) =>
@@ -198,8 +290,44 @@ public sealed class AiTurnRunner
     /// verbatim, and the tool rows that follow are grouped into a single user message of
     /// tool_result blocks — the shape the API requires.
     /// </summary>
+    /// <summary>
+    /// Rebuilds the messages array WITH the two cost bounds applied first: repeated identical
+    /// calls to the big tools replay latest-only, and the whole transcript is stubbed
+    /// oldest-tool-first down to <see cref="AiTranscriptBudget.MaxTranscriptChars"/>. Both bounds
+    /// touch tool-result bodies only — a user or assistant turn is the conversation itself and is
+    /// never rewritten. The logic lives in contracts (AiTranscriptBudget) so the test project can
+    /// pin it; this method's job is to feed it and to keep the tool_use/tool_result pairing the
+    /// API requires.
+    /// </summary>
     private static List<object> BuildTranscript(List<AiConversationMessageEntity> rows)
     {
+        // ---- the budget pass -----------------------------------------------------------------
+        var bodies = new string[rows.Count];
+        for (var i = 0; i < rows.Count; i++) bodies[i] = rows[i].Body ?? "";
+
+        // A tool row's identity for the supersede rule is name + the arguments that produced it,
+        // and the arguments live on the assistant row's stored tool_use blocks — pair them back up.
+        var argumentsByToolUseId = new Dictionary<string, string>(StringComparer.Ordinal);
+        foreach (var row in rows)
+        {
+            if ((AiChatRole)row.Role != AiChatRole.Assistant) continue;
+            foreach (var call in ReadToolCalls(row.ToolCallsJson))
+                argumentsByToolUseId[call.Id] = call.Input;
+        }
+
+        var toolRows = new List<TranscriptToolRow>();
+        for (var i = 0; i < rows.Count; i++)
+        {
+            if ((AiChatRole)rows[i].Role != AiChatRole.Tool) continue;
+            var arguments = rows[i].ToolUseId is { } id && argumentsByToolUseId.TryGetValue(id, out var input)
+                ? input
+                : null;
+            toolRows.Add(new TranscriptToolRow(i, rows[i].ToolName, arguments, rows[i].Sequence));
+        }
+
+        AiTranscriptBudget.Apply(bodies, toolRows);
+
+        // ---- the replay ------------------------------------------------------------------------
         var transcript = new List<object>();
         var index = 0;
 
@@ -210,15 +338,15 @@ public sealed class AiTurnRunner
             switch ((AiChatRole)row.Role)
             {
                 case AiChatRole.User:
-                    transcript.Add(new { role = "user", content = row.Body });
+                    transcript.Add(new { role = "user", content = bodies[index] });
                     index++;
                     break;
 
                 case AiChatRole.Assistant:
                 {
                     var blocks = new List<object>();
-                    if (!string.IsNullOrWhiteSpace(row.Body))
-                        blocks.Add(new { type = "text", text = row.Body });
+                    if (!string.IsNullOrWhiteSpace(bodies[index]))
+                        blocks.Add(new { type = "text", text = bodies[index] });
 
                     foreach (var call in ReadToolCalls(row.ToolCallsJson))
                     {
@@ -247,8 +375,8 @@ public sealed class AiTurnRunner
                         results.Add(string.IsNullOrWhiteSpace(toolRow.ToolUseId)
                             // Legacy rows written before tool_use blocks were persisted — replay as
                             // prose so an old conversation still loads rather than 400ing.
-                            ? new { type = "text", text = $"[earlier result from {toolRow.ToolName}]\n{toolRow.Body}" }
-                            : new { type = "tool_result", tool_use_id = toolRow.ToolUseId!, content = toolRow.Body });
+                            ? new { type = "text", text = $"[earlier result from {toolRow.ToolName}]\n{bodies[index]}" }
+                            : new { type = "tool_result", tool_use_id = toolRow.ToolUseId!, content = bodies[index] });
                         index++;
                     }
                     transcript.Add(new { role = "user", content = results.ToArray() });
@@ -352,7 +480,10 @@ public sealed class AiTurnRunner
                 .ToList(),
             uiActions,
             steps,
-            remaining);
+            remaining,
+            // Post-switch: a switch_agent call in this hop is already on the conversation, so the
+            // panel can show the new hat as soon as the hop returns.
+            conversation.CapabilityKey);
 
     private static string Fail(string message) => JsonSerializer.Serialize(new { ok = false, error = message });
 

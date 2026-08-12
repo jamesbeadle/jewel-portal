@@ -96,7 +96,11 @@ public sealed record AiTurnResult(
     /// <summary>What happened in this hop, in order, for the live status line.</summary>
     IReadOnlyList<AiStep> Steps,
     /// <summary>Hops left in the budget. Zero means the next one will be the last.</summary>
-    int StepsRemaining)
+    int StepsRemaining,
+    /// <summary>The agent in force AFTER this hop (an AgentCatalogue key) — a switch_agent call
+    /// takes effect on the next hop, and the panel shows this so a change of hat is visible.
+    /// Defaulted so pre-agent clients and cached responses keep deserialising.</summary>
+    string? AgentKey = null)
 {
     /// <summary>The label to show beside the pulsing jewel while the next hop runs.</summary>
     public string? LatestLabel => Steps.Count > 0 ? Steps[^1].Label : null;

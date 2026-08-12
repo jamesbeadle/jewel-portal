@@ -1,0 +1,521 @@
+@page "/admin/skills"
+@using Jewel.JPMS.Contracts.Ai
+@using Jewel.JPMS.Contracts.Cqrs
+@inject AuthService Auth
+@inject SessionService Session
+@inject IQueryClient Queries
+@inject ICommandSender Commands
+
+<PageTitle>AI skills · JPMS</PageTitle>
+
+@*
+    The skill store's admin page (docs/ai/05-agents-and-skills.md §2.2). This is the OWNERSHIP SPLIT
+    in a screen: the agents themselves — their tools, their dialogs, the turn loop — are code, and a
+    developer changes them. The DOMAIN knowledge each agent works from is a skill: a versioned
+    markdown manual, edited here by the discipline owner. A new commercial rule lands here and is in
+    force on the assistant's very next message. No deploy.
+
+    Format is agentskills.io, same as Nigel's pack: a key, a description (what the assistant routes
+    on), a markdown body, and optional reference documents the model loads on demand.
+*@
+
+@if (!sessionReady)
+{
+    <section class="px-6 md:px-8 py-12">
+        <LoadGate IsLoading="true" Prominent="true" Label="Loading" />
+    </section>
+}
+else if (!Session.IsApproved)
+{
+    <RequestAccessView Email="@Auth.CurrentUser!.Email" DisplayName="@Auth.CurrentUser.DisplayName" />
+}
+else if (!CanSee)
+{
+    <section class="px-6 md:px-8 py-12">
+        <p class="text-sm text-content-muted">You do not have access to the assistant's skills.</p>
+    </section>
+}
+else
+{
+    <section class="px-6 py-6 md:px-8">
+        <p class="eyebrow mb-1">Assistant</p>
+        <h1 class="text-2xl font-semibold text-content mb-1">AI skills</h1>
+        <p class="text-sm text-content-muted mb-6 max-w-3xl">
+            The domain knowledge behind each agent — doctrine, method, standing rules — written as
+            markdown and versioned on every save. A skill saved here is in force on the assistant's
+            next message. <span class="text-content">Pinned</span> skills ride with the agent on every
+            turn; unpinned ones are loaded by the assistant when the task needs them.
+        </p>
+
+        @if (editing is null)
+        {
+            <div class="flex items-center justify-between gap-3 mb-4">
+                <span class="text-xs text-content-subtle">
+                    @(skills is null ? "" : $"{skills.Count} skills")
+                </span>
+                <button type="button" class="btn-primary" @onclick="StartNew">New skill</button>
+            </div>
+
+            @if (dataFailed)
+            {
+                <div class="panel p-5">
+                    <p class="text-sm text-content-muted">
+                        The skills could not be loaded. The error toast carries the reference.
+                    </p>
+                </div>
+            }
+            else if (skills is null)
+            {
+                <LoadGate IsLoading="true" Prominent="true" Label="Loading skills" />
+            }
+            else if (skills.Count == 0)
+            {
+                <div class="panel p-5">
+                    <p class="text-sm text-content-muted">
+                        No skills yet. Add the first — paste a SKILL.md straight in, frontmatter and all.
+                    </p>
+                </div>
+            }
+            else
+            {
+                <div class="panel overflow-hidden">
+                    <div class="overflow-x-auto">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Skill</th>
+                                    <th>Agent</th>
+                                    <th>Pinned</th>
+                                    <th>Active</th>
+                                    <th class="text-right">Version</th>
+                                    <th class="text-right">Size</th>
+                                    <th class="text-right">References</th>
+                                    <th>Updated</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var row in skills)
+                                {
+                                    <tr class="is-clickable" @onclick="() => OpenAsync(row.SkillKey)">
+                                        <td>
+                                            <span class="block text-content">@row.DisplayName</span>
+                                            <span class="block text-xs text-content-subtle">@row.SkillKey</span>
+                                        </td>
+                                        <td class="whitespace-nowrap">@AgentLabel(row.AgentKey)</td>
+                                        <td>@(row.Pinned ? "Pinned" : "On demand")</td>
+                                        <td>
+                                            <span class="@(row.IsActive ? "text-content" : "text-content-subtle")">
+                                                @(row.IsActive ? "Active" : "Off")
+                                            </span>
+                                        </td>
+                                        <td class="text-right">v@(row.Version)</td>
+                                        <td class="text-right whitespace-nowrap">@FormatSize(row.BodyLength)</td>
+                                        <td class="text-right">@row.ReferenceCount</td>
+                                        <td class="whitespace-nowrap">
+                                            <span class="block">@row.UpdatedAt.ToLocalTime().ToString("dd MMM HH:mm")</span>
+                                            <span class="block truncate max-w-[12rem] text-xs text-content-subtle"
+                                                  title="@row.UpdatedByEmail">@row.UpdatedByEmail</span>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            }
+        }
+        else
+        {
+            <div class="flex items-center justify-between gap-3 mb-4">
+                <button type="button" class="btn-secondary" @onclick="CloseEditor" disabled="@saving">
+                    Back to the list
+                </button>
+                <div class="flex items-center gap-2">
+                    @if (savedTick)
+                    {
+                        <span class="text-xs text-positive">Saved — live on the next message.</span>
+                    }
+                    <button type="button" class="btn-primary" @onclick="SaveAsync" disabled="@saving">
+                        @(saving ? "Saving…" : isNew ? "Create skill" : "Save new version")
+                    </button>
+                </div>
+            </div>
+
+            @if (saveErrors.Count > 0)
+            {
+                <div class="rounded-lg border border-negative/40 bg-negative/5 px-4 py-3 mb-4">
+                    @foreach (var saveError in saveErrors)
+                    {
+                        <p class="text-xs leading-snug text-content-muted">@saveError</p>
+                    }
+                </div>
+            }
+
+            <div class="panel p-5 space-y-4">
+                <div class="grid gap-4 md:grid-cols-2">
+                    <label class="block">
+                        <span class="block text-xs font-medium text-content-muted mb-1">Skill key</span>
+                        <input class="field w-full" @bind="editing.SkillKey" disabled="@(!isNew)"
+                               placeholder="nigel-commercial-doctrine" />
+                        <span class="block mt-1 text-[11px] text-content-subtle">
+                            Lowercase, hyphenated. Fixed once created — saves become new versions.
+                        </span>
+                    </label>
+                    <label class="block">
+                        <span class="block text-xs font-medium text-content-muted mb-1">Agent</span>
+                        <select class="field w-full" @bind="editing.AgentKey">
+                            <option value="shared">Shared — every agent</option>
+                            @foreach (var agent in AgentCatalogue.All)
+                            {
+                                <option value="@agent.Key">@agent.DisplayName (@agent.Key)</option>
+                            }
+                        </select>
+                        <span class="block mt-1 text-[11px] text-content-subtle">
+                            Which agent works from this skill. Shared is for house-wide knowledge.
+                        </span>
+                    </label>
+                </div>
+
+                <label class="block">
+                    <span class="block text-xs font-medium text-content-muted mb-1">Display name</span>
+                    <input class="field w-full" @bind="editing.DisplayName" placeholder="Nigel — Commercial Doctrine" />
+                </label>
+
+                <label class="block">
+                    <span class="block text-xs font-medium text-content-muted mb-1">Description</span>
+                    <textarea class="field w-full" rows="3" @bind="editing.Description"
+                              placeholder="When this skill applies — the assistant routes on this, so say when to use it and when not."></textarea>
+                </label>
+
+                <div class="flex flex-wrap items-center gap-6">
+                    <label class="inline-flex items-center gap-2 text-sm text-content">
+                        <input type="checkbox" @bind="editing.Pinned" />
+                        Pinned — in force on every turn of its agent
+                    </label>
+                    <label class="inline-flex items-center gap-2 text-sm text-content">
+                        <input type="checkbox" @bind="editing.IsActive" />
+                        Active
+                    </label>
+                </div>
+
+                <label class="block">
+                    <span class="block text-xs font-medium text-content-muted mb-1">
+                        Body (markdown)
+                        <span class="font-normal text-content-subtle">
+                            — paste a SKILL.md whole; a ---frontmatter--- block fills the fields above on paste.
+                        </span>
+                    </span>
+                    <textarea class="field w-full font-mono text-xs leading-relaxed" rows="24"
+                              value="@editing.Body" @oninput="OnBodyInput" spellcheck="false"></textarea>
+                </label>
+            </div>
+
+            @if (!isNew)
+            {
+                <div class="panel p-5 mt-4">
+                    <h2 class="text-sm font-semibold text-content mb-1">Reference documents</h2>
+                    <p class="text-xs text-content-subtle mb-4 max-w-2xl">
+                        The larger source material a skill names but does not inline — clause maps,
+                        methodologies, precedent libraries. The assistant loads one only when a task
+                        needs it, so size costs nothing until it is used.
+                    </p>
+
+                    @if (references.Count > 0)
+                    {
+                        <div class="space-y-2 mb-4">
+                            @foreach (var reference in references)
+                            {
+                                <button type="button" @onclick="() => EditReference(reference)"
+                                        class="w-full text-left rounded-lg border border-line bg-surface-raised px-3 py-2 hover:border-line-strong transition">
+                                    <span class="block text-sm text-content">@reference.DisplayName
+                                        <span class="text-xs text-content-subtle">— @reference.RefKey</span></span>
+                                    <span class="block text-xs text-content-subtle truncate">@reference.Description</span>
+                                </button>
+                            }
+                        </div>
+                    }
+
+                    @if (editingReference is null)
+                    {
+                        <button type="button" class="btn-secondary" @onclick="StartNewReference">Add reference</button>
+                    }
+                    else
+                    {
+                        <div class="rounded-lg border border-line p-4 space-y-3">
+                            <div class="grid gap-3 md:grid-cols-2">
+                                <label class="block">
+                                    <span class="block text-xs font-medium text-content-muted mb-1">Reference key</span>
+                                    <input class="field w-full" @bind="editingReference.RefKey"
+                                           disabled="@(!referenceIsNew)" placeholder="jct-clause-map" />
+                                </label>
+                                <label class="block">
+                                    <span class="block text-xs font-medium text-content-muted mb-1">Display name</span>
+                                    <input class="field w-full" @bind="editingReference.DisplayName" placeholder="JCT clause map" />
+                                </label>
+                            </div>
+                            <label class="block">
+                                <span class="block text-xs font-medium text-content-muted mb-1">Description</span>
+                                <input class="field w-full" @bind="editingReference.Description"
+                                       placeholder="When the assistant should bother loading this." />
+                            </label>
+                            <label class="block">
+                                <span class="block text-xs font-medium text-content-muted mb-1">Body (markdown)</span>
+                                <textarea class="field w-full font-mono text-xs leading-relaxed" rows="12"
+                                          @bind="editingReference.Body" spellcheck="false"></textarea>
+                            </label>
+                            <div class="flex items-center gap-2">
+                                <button type="button" class="btn-primary" @onclick="SaveReferenceAsync" disabled="@saving">
+                                    @(saving ? "Saving…" : "Save reference")
+                                </button>
+                                <button type="button" class="btn-secondary" @onclick="() => editingReference = null"
+                                        disabled="@saving">Cancel</button>
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+        }
+    </section>
+}
+
+@code {
+    private bool sessionReady;
+    private bool dataFailed;
+    private bool saving;
+    private bool savedTick;
+    private bool isNew;
+    private bool referenceIsNew;
+
+    // Null means no fetch has landed — never render a count from it (CLAUDE.md loading states).
+    private IReadOnlyList<SkillSummary>? skills;
+    private SkillDraft? editing;
+    private ReferenceDraft? editingReference;
+    private List<SkillReferenceDetail> references = new();
+    private List<string> saveErrors = new();
+
+    // Mirrors the API's SkillRoles.ManageSkills — the board plus administrators. Nav visibility is
+    // not permission; the endpoint gates for real.
+    private bool CanSee =>
+        Session.ActiveRole is Role.Admin or Role.ManagingDirector or Role.FinanceDirector;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Session.EnsureLoadedAsync();
+        sessionReady = true;
+        if (CanSee) await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        dataFailed = false;
+        skills = null;
+        try
+        {
+            skills = await Queries.AskAsync(new ListAiSkills(), CancellationToken.None);
+        }
+        catch
+        {
+            dataFailed = true;
+        }
+    }
+
+    private void StartNew()
+    {
+        editing = new SkillDraft();
+        references = new List<SkillReferenceDetail>();
+        editingReference = null;
+        isNew = true;
+        savedTick = false;
+        saveErrors.Clear();
+    }
+
+    private async Task OpenAsync(string skillKey)
+    {
+        savedTick = false;
+        saveErrors.Clear();
+        editingReference = null;
+        try
+        {
+            var detail = await Queries.AskAsync(new GetAiSkill(skillKey), CancellationToken.None);
+            if (detail is null) return;
+
+            editing = new SkillDraft
+            {
+                SkillKey = detail.SkillKey,
+                AgentKey = detail.AgentKey,
+                DisplayName = detail.DisplayName,
+                Description = detail.Description,
+                Body = detail.Body,
+                Pinned = detail.Pinned,
+                IsActive = detail.IsActive
+            };
+            references = detail.References.ToList();
+            isNew = false;
+        }
+        catch
+        {
+            // The error toast carries the reference; staying on the list is the right failure mode.
+        }
+    }
+
+    private void CloseEditor()
+    {
+        editing = null;
+        editingReference = null;
+        _ = LoadAsync();
+    }
+
+    private async Task SaveAsync()
+    {
+        if (editing is null || saving) return;
+
+        saving = true;
+        savedTick = false;
+        saveErrors.Clear();
+        try
+        {
+            await Commands.SendAsync(
+                new SaveAiSkill(
+                    editing.SkillKey.Trim(),
+                    editing.AgentKey,
+                    editing.DisplayName.Trim(),
+                    editing.Description.Trim(),
+                    editing.Body,
+                    editing.Pinned,
+                    editing.IsActive,
+                    string.Empty),
+                CancellationToken.None);
+
+            savedTick = true;
+            isNew = false;
+        }
+        catch (CommandFailedException failure)
+        {
+            // Validation answers come back verbatim — "a description is required" belongs next to
+            // the form, not in the global toast.
+            saveErrors = new List<string> { failure.Message };
+        }
+        catch
+        {
+            saveErrors = new List<string> { "The skill could not be saved. The error toast carries the reference." };
+        }
+        finally
+        {
+            saving = false;
+        }
+    }
+
+    private void StartNewReference()
+    {
+        editingReference = new ReferenceDraft();
+        referenceIsNew = true;
+    }
+
+    private void EditReference(SkillReferenceDetail reference)
+    {
+        editingReference = new ReferenceDraft
+        {
+            RefKey = reference.RefKey,
+            DisplayName = reference.DisplayName,
+            Description = reference.Description,
+            Body = reference.Body
+        };
+        referenceIsNew = false;
+    }
+
+    private async Task SaveReferenceAsync()
+    {
+        if (editing is null || editingReference is null || saving) return;
+
+        saving = true;
+        saveErrors.Clear();
+        try
+        {
+            await Commands.SendAsync(
+                new SaveAiSkillReference(
+                    editing.SkillKey.Trim(),
+                    editingReference.RefKey.Trim(),
+                    editingReference.DisplayName.Trim(),
+                    editingReference.Description.Trim(),
+                    editingReference.Body,
+                    string.Empty),
+                CancellationToken.None);
+
+            editingReference = null;
+            await OpenAsync(editing.SkillKey.Trim());
+        }
+        catch (CommandFailedException failure)
+        {
+            saveErrors = new List<string> { failure.Message };
+        }
+        catch
+        {
+            saveErrors = new List<string> { "The reference could not be saved. The error toast carries the reference." };
+        }
+        finally
+        {
+            saving = false;
+        }
+    }
+
+    /// <summary>
+    /// A pasted SKILL.md fills the form: when the body starts with a ---frontmatter--- block, its
+    /// name/description lift into the fields (only where they are still empty, so a deliberate edit
+    /// is never overwritten) and the frontmatter itself stays in the body — it is part of the file
+    /// Nigel maintains, and round-tripping it out would make his next paste a diff nightmare.
+    /// </summary>
+    private void OnBodyInput(ChangeEventArgs args)
+    {
+        if (editing is null) return;
+        var body = args.Value?.ToString() ?? "";
+        editing.Body = body;
+
+        if (!body.StartsWith("---", StringComparison.Ordinal)) return;
+        var end = body.IndexOf("\n---", 3, StringComparison.Ordinal);
+        if (end < 0) return;
+
+        foreach (var line in body[3..end].Split('\n'))
+        {
+            var separator = line.IndexOf(':');
+            if (separator <= 0) continue;
+            var name = line[..separator].Trim().ToLowerInvariant();
+            var value = line[(separator + 1)..].Trim().Trim('"', '\'');
+            if (value.Length == 0) continue;
+
+            if (name == "name" && string.IsNullOrWhiteSpace(editing.SkillKey) && isNew)
+                editing.SkillKey = value;
+            if (name == "name" && string.IsNullOrWhiteSpace(editing.DisplayName))
+                editing.DisplayName = value;
+            if (name == "description" && string.IsNullOrWhiteSpace(editing.Description))
+                editing.Description = value;
+        }
+    }
+
+    private static string AgentLabel(string agentKey) =>
+        agentKey == "shared"
+            ? "Shared (all agents)"
+            : AgentCatalogue.Find(agentKey)?.DisplayName ?? agentKey;
+
+    private static string FormatSize(int characters) =>
+        characters >= 10_000 ? $"{characters / 1000}k chars" : $"{characters:N0} chars";
+
+    /// <summary>Mutable editor state — the contracts records stay immutable.</summary>
+    private sealed class SkillDraft
+    {
+        public string SkillKey { get; set; } = "";
+        public string AgentKey { get; set; } = "shared";
+        public string DisplayName { get; set; } = "";
+        public string Description { get; set; } = "";
+        public string Body { get; set; } = "";
+        public bool Pinned { get; set; } = true;
+        public bool IsActive { get; set; } = true;
+    }
+
+    private sealed class ReferenceDraft
+    {
+        public string RefKey { get; set; } = "";
+        public string DisplayName { get; set; } = "";
+        public string Description { get; set; } = "";
+        public string Body { get; set; } = "";
+    }
+}

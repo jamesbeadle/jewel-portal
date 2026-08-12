@@ -1,4 +1,5 @@
 using Jewel.JPMS.Contracts.Ai;
+using Jewel.JPMS.Contracts.Cqrs;
 using Jewel.JPMS.Cqrs;
 using Jewel.JPMS.Models;
 
@@ -20,6 +21,20 @@ public static class AiRouteRegistration
 
         commands.Register<ContinueAiTurn, AiTurnResult>(
             CommandRoute.Post("/api/ai/turn/continue"));
+
+        // The skill store — the AI Skills admin page (docs/ai/05-agents-and-skills.md §2).
+        queries.Register<ListAiSkills, IReadOnlyList<SkillSummary>>(
+            new QueryRoute("/api/ai/skills", _ => "/api/ai/skills"));
+
+        queries.Register<GetAiSkill, SkillDetail?>(
+            new QueryRoute("/api/ai/skills/{skillKey}",
+                query => $"/api/ai/skills/{Uri.EscapeDataString(((GetAiSkill)query).SkillKey)}"));
+
+        commands.Register<SaveAiSkill, Acknowledgement>(
+            CommandRoute.Post("/api/ai/skills"));
+
+        commands.Register<SaveAiSkillReference, Acknowledgement>(
+            CommandRoute.Post("/api/ai/skills/references"));
     }
 
     private static string BuildAgentActivityPath(object query)

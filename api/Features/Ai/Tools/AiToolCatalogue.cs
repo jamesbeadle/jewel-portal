@@ -32,6 +32,11 @@ public static class AiToolCatalogue
     /// registration, the filter and the specialiser cannot drift apart.</summary>
     private const string UpdateOpenModal = "update_open_modal";
 
+    /// <summary>The agent hand-over tool. Registered here so it appears in the catalogue like any
+    /// other tool, but EXECUTED by AiTurnRunner itself — it mutates the conversation's
+    /// CapabilityKey, which no ordinary tool can reach. Named once for the same reason as above.</summary>
+    public const string SwitchAgent = "switch_agent";
+
     /// <summary>
     /// How much of a request's conversation get_request_context returns unasked. Sized for FULL
     /// email bodies rather than Graph's 255-character previews: a six-leg Outlook thread, each reply
@@ -46,7 +51,8 @@ public static class AiToolCatalogue
     private const int MaxConversationChars = 50_000;
 
     /// <summary>Every tool, before role filtering.</summary>
-    public static IReadOnlyList<AiTool> All { get; } = Build().Concat(AiRecordTools.Build()).ToList();
+    public static IReadOnlyList<AiTool> All { get; } =
+        Build().Concat(AiRecordTools.Build()).Concat(AiSkillTools.Build()).ToList();
 
     /// <summary>
     /// The catalogue this caller is told about, on this turn.
@@ -55,8 +61,13 @@ public static class AiToolCatalogue
     /// while a registered dialog is actually open in front of the user, and it is described with THAT
     /// dialog's fields. So the model is never told about a form it cannot see, and never has to guess
     /// a field name — the ADR-002 rule that a tool the user could not invoke is never described.</para>
+    ///
+    /// <para><paramref name="agent"/> narrows further: an agent that declares a tool subset gets
+    /// only that subset (the role filter still applies underneath), and <c>switch_agent</c> is
+    /// rewritten per turn to name exactly the agents THIS caller may switch to. One agent to
+    /// switch to or none, and the tool is dropped entirely — same rule as the modal.</para>
     /// </summary>
-    public static IReadOnlyList<AiTool> For(SignedInUser user, AiScope? scope = null)
+    public static IReadOnlyList<AiTool> For(SignedInUser user, AiScope? scope = null, AgentDefinition? agent = null)
     {
         var visible = All.Where(tool => tool.VisibleTo.IncludesAny(user.Roles)).ToList();
 
@@ -64,6 +75,29 @@ public static class AiToolCatalogue
         // would invite the model to promise a form and then route them to a page that has no button.
         if (ModalCatalog.For(user.Roles).Count == 0)
             visible = visible.Where(tool => tool.Name != "open_modal").ToList();
+
+        // The agent's declared tool subset, when it declares one. switch_agent and the open-dialog
+        // tool are never filtered out by it — the hand-over path must survive every configuration.
+        if (agent?.ToolNames is { Count: > 0 } allowed)
+        {
+            var names = new HashSet<string>(allowed, StringComparer.OrdinalIgnoreCase)
+            {
+                SwitchAgent,
+                UpdateOpenModal
+            };
+            visible = visible.Where(tool => names.Contains(tool.Name)).ToList();
+        }
+
+        // switch_agent is described with the real destinations, per caller, per turn — or dropped
+        // when there is nowhere to go.
+        var destinations = AgentCatalogue.For(user.Roles)
+            .Where(candidate => !string.Equals(candidate.Key, agent?.Key ?? AgentCatalogue.Orchestrator.Key,
+                StringComparison.OrdinalIgnoreCase))
+            .ToList();
+
+        visible = destinations.Count == 0
+            ? visible.Where(tool => tool.Name != SwitchAgent).ToList()
+            : visible.Select(tool => tool.Name == SwitchAgent ? SpecialiseSwitch(tool, destinations) : tool).ToList();
 
         var modal = ModalCatalog.Find(scope?.Task?.ModalKey);
         if (modal is not null && !ModalCatalog.CanOpen(modal, user.Roles)) modal = null;
@@ -74,6 +108,28 @@ public static class AiToolCatalogue
         return visible
             .Select(tool => tool.Name == UpdateOpenModal ? Specialise(tool, modal) : tool)
             .ToList();
+    }
+
+    /// <summary>Rewrites switch_agent with the agents this caller can actually reach — key, what
+    /// each is for, and the trigger phrases that mark a task as theirs.</summary>
+    private static AiTool SpecialiseSwitch(AiTool tool, IReadOnlyList<AgentDefinition> destinations)
+    {
+        var lines = destinations.Select(agent =>
+            $"- \"{agent.Key}\" — {agent.Description}"
+            + (agent.Triggers.Count > 0 ? $" Typical asks: {string.Join("; ", agent.Triggers)}." : ""));
+
+        return tool with
+        {
+            Description =
+                "Change which agent is in force for this conversation. The history survives; your "
+                + "tools, working rules and domain skills change from the NEXT step. Switch BEFORE "
+                + "drafting any content that belongs to a discipline — never draft from the wrong "
+                + "agent. Announce the switch to the user in one short clause. Available agents:\n"
+                + string.Join("\n", lines),
+            InputSchema = AiToolSchema.Object(
+                ("agent", "string", $"One of: {string.Join(", ", destinations.Select(agent => agent.Key))}.", true),
+                ("reason", "string", "One clause explaining why.", false))
+        };
     }
 
     /// <summary>Rewrites the placeholder registration into this dialog's real description and input
@@ -593,6 +649,21 @@ public static class AiToolCatalogue
                 AiToolKind.Ui,
                 JpmsRoleSets.CommercialTeam,
                 (_, _, _) => Task.FromResult(Serialise(new { ok = true, handed_to_browser = true }))),
+
+            new(
+                SwitchAgent,
+                // Replaced per turn by SpecialiseSwitch() with the caller's real destinations; this
+                // registration is never the one the model sees. EXECUTED BY THE RUNNER — it writes
+                // the conversation's CapabilityKey, which no ordinary tool can reach — so this
+                // delegate only answers if the interception is ever broken, and it fails safe.
+                "Change which agent is in force for this conversation.",
+                AiToolSchema.Object(
+                    ("agent", "string", "The agent key to switch to.", true),
+                    ("reason", "string", "One clause explaining why.", false)),
+                AiToolKind.Read,
+                JpmsRoleSets.CommercialTeam,
+                (_, _, _) => Task.FromResult(NotFound(
+                    "switch_agent must be handled by the turn runner. This is a wiring defect — tell the user."))),
 
             new(
                 "open_modal",

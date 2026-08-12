@@ -48,6 +48,12 @@
                         <span class="min-w-0">
                             <span class="block text-sm font-semibold text-content truncate">Jewel Assistant</span>
                             <span class="block text-[11px] text-content-subtle truncate" title="@ContextLabel">@ContextLabel</span>
+                            @if (AgentChip is { } chip)
+                            {
+                                @* Which hat is on. Only shown once a specialist agent is in force —
+                                   the orchestrator is the resting state and not worth announcing. *@
+                                <span class="block text-[11px] font-medium text-accent truncate">@chip</span>
+                            }
                         </span>
                     </div>
                     <div class="shrink-0 flex items-center gap-1">
@@ -261,6 +267,7 @@
     private readonly List<AiChatMessage> messages = new();
     private List<string> lastToolsUsed = new();
     private string? conversationId;
+    private string? agentKey;
     private string draft = "";
     private bool busy;
     private string? activityLabel;
@@ -422,9 +429,19 @@
         messages.Clear();
         lastToolsUsed = new List<string>();
         conversationId = null;
+        agentKey = null;
         draft = "";
         error = null;
     }
+
+    /// <summary>The specialist agent in force, when one is — the orchestrator is the resting state
+    /// and stays unannounced.</summary>
+    private string? AgentChip =>
+        agentKey is { } key
+        && !string.Equals(key, AgentCatalogue.Orchestrator.Key, StringComparison.OrdinalIgnoreCase)
+        && AgentCatalogue.Find(key) is { } agent
+            ? $"{agent.DisplayName} agent"
+            : null;
 
     private async Task SendSuggestion(string suggestion)
     {
@@ -461,6 +478,7 @@
         foreach (var step in result.Steps) lastToolsUsed.Add(step.Tool);
         foreach (var action in result.UiActions) Apply(action);
 
+        agentKey = result.AgentKey;
         activityLabel = result.LatestLabel;
 
         // No API key, or the call failed. Tell the dialog, so a form sitting blank waiting for a

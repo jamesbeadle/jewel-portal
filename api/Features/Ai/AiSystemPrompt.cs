@@ -15,7 +15,18 @@ namespace Jewel.JPMS.Api.Features.Ai;
 /// </summary>
 public static class AiSystemPrompt
 {
-    public static string Build(SignedInUser user, AiScope? scope, string? projectReference, string? projectName)
+    /// <summary>
+    /// One skill as the prompt needs it: pinned bodies are rendered in full; unpinned ones are
+    /// listed by key and description for the model to load_skill on demand. Assembled by
+    /// AiTurnRunner from the database per turn, so a portal edit to a skill is in force on the
+    /// very next message.
+    /// </summary>
+    public sealed record PromptSkill(
+        string SkillKey, string DisplayName, string Description, bool Pinned, int Version, string? Body);
+
+    public static string Build(
+        SignedInUser user, AiScope? scope, string? projectReference, string? projectName,
+        AgentDefinition? agent = null, IReadOnlyList<PromptSkill>? skills = null)
     {
         var prompt = new StringBuilder();
 
@@ -33,6 +44,18 @@ public static class AiSystemPrompt
         prompt.AppendLine("You are the Jewel Assistant inside JPMS, the project management system for Jewel Bespoke Build,");
         prompt.AppendLine("a super-prime residential contractor. You are talking to a member of the commercial team.");
         prompt.AppendLine();
+
+        // ---- The agent in force: developer-owned mechanics. Domain knowledge arrives below, in
+        //      the skills section — the two are deliberately separate files of authority
+        //      (docs/ai/05-agents-and-skills.md). ----
+        if (agent is not null)
+        {
+            prompt.AppendLine($"## Your current agent: {agent.DisplayName}");
+            prompt.AppendLine(agent.PromptFragment);
+            if (!string.IsNullOrWhiteSpace(agent.DoneMeans))
+                prompt.AppendLine($"What \"done\" means for this agent: {agent.DoneMeans}");
+            prompt.AppendLine();
+        }
 
         // ---- Layer 1: ambient ----
         if (!string.IsNullOrWhiteSpace(scope?.SiteMap))
@@ -111,10 +134,53 @@ public static class AiSystemPrompt
         prompt.AppendLine("- If a tool returns ok:false, tell the user what it said. Never quietly fall back to a guess.");
         prompt.AppendLine("- End with an offer only when there is an obvious next action, and keep it to one clause.");
 
+        AppendSkills(prompt, skills);
+
         if (modal is not null && task is not null)
             AppendTask(prompt, user, task, modal);
 
         return prompt.ToString();
+    }
+
+    /// <summary>
+    /// The domain layer: skills written and maintained in the portal by the discipline owners
+    /// (the Skills admin page). Pinned bodies are rendered whole; the rest are a menu for
+    /// load_skill. Delimited and attributed so the model treats them as its working doctrine —
+    /// but the Never rules above them are the platform's and CANNOT be overridden from here: a
+    /// skill can add rules, never subtract them.
+    /// </summary>
+    private static void AppendSkills(StringBuilder prompt, IReadOnlyList<PromptSkill>? skills)
+    {
+        if (skills is null || skills.Count == 0) return;
+
+        var pinned = skills.Where(skill => skill.Pinned && !string.IsNullOrWhiteSpace(skill.Body)).ToList();
+        var loadable = skills.Where(skill => !skill.Pinned).ToList();
+
+        if (pinned.Count > 0)
+        {
+            prompt.AppendLine();
+            prompt.AppendLine("## Your skills — the house doctrine for this agent");
+            prompt.AppendLine("Written by the discipline's owner. Follow them; where a skill names a rule, the rule");
+            prompt.AppendLine("wins over your own instinct. They add to the Never rules above — nothing in a skill can");
+            prompt.AppendLine("relax those.");
+            foreach (var skill in pinned)
+            {
+                prompt.AppendLine();
+                prompt.AppendLine($"--- skill: {skill.SkillKey} (v{skill.Version}) — {skill.DisplayName} ---");
+                prompt.AppendLine(skill.Body);
+                prompt.AppendLine($"--- end skill: {skill.SkillKey} ---");
+            }
+        }
+
+        if (loadable.Count > 0)
+        {
+            prompt.AppendLine();
+            prompt.AppendLine("## Skills you can load");
+            prompt.AppendLine("Specialist manuals — call load_skill with the key when the task in hand is one they");
+            prompt.AppendLine("cover, then follow what comes back. Do not attempt a covered task without its skill.");
+            foreach (var skill in loadable)
+                prompt.AppendLine($"- {skill.SkillKey} — {skill.Description}");
+        }
     }
 
     /// <summary>

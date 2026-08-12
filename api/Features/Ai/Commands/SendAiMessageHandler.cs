@@ -72,6 +72,16 @@ public sealed class SendAiMessageHandler : ICommandHandler<SendAiMessage, AiTurn
         }
 
         var now = DateTimeOffset.UtcNow;
+
+        // Contextual agent selection (docs/ai/04-orchestration.md §2.1): the route the conversation
+        // opens on seeds its INITIAL agent — a chat started on the variations register starts in
+        // the commercial agent. Explicit switch_agent calls outrank this from then on, and the
+        // orchestrator is the fallback. Resolved against the caller's roles so the seed can never
+        // be an agent this person could not have chosen.
+        var initialAgent = caller.Current is { } current
+            ? AgentCatalogue.ForRoute(command.Scope?.Route, current.Roles)
+            : AgentCatalogue.Orchestrator;
+
         var conversation = new AiConversationEntity
         {
             ConversationId = Guid.NewGuid().ToString("N"),
@@ -81,7 +91,7 @@ public sealed class SendAiMessageHandler : ICommandHandler<SendAiMessage, AiTurn
             // the user navigates away mid-conversation.
             ScopeRecordType = command.Scope?.RecordType,
             ScopeRecordId = command.Scope?.RecordId,
-            CapabilityKey = "orchestrator",
+            CapabilityKey = initialAgent.Key,
             StartedByEmail = command.SentByEmail,
             Title = command.Message.Length <= 120 ? command.Message : command.Message[..120],
             StartedAt = now,

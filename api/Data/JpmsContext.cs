@@ -146,6 +146,12 @@ public sealed class JpmsContext : DbContext
     public DbSet<AiConversationMessageEntity> AiConversationMessages => Set<AiConversationMessageEntity>();
     public DbSet<AgentActivityEntity> AgentActivity => Set<AgentActivityEntity>();
 
+    // The assistant's skills — the domain half of an agent, edited in the portal
+    // (docs/ai/05-agents-and-skills.md). Revisions are append-only.
+    public DbSet<SkillEntity> Skills => Set<SkillEntity>();
+    public DbSet<SkillReferenceEntity> SkillReferences => Set<SkillReferenceEntity>();
+    public DbSet<SkillRevisionEntity> SkillRevisions => Set<SkillRevisionEntity>();
+
     public DbSet<DefectEntity> Defects => Set<DefectEntity>();
     public DbSet<PracticalCompletionEntity> PracticalCompletions => Set<PracticalCompletionEntity>();
     public DbSet<HandoverPackItemEntity> HandoverPackItems => Set<HandoverPackItemEntity>();
@@ -230,6 +236,20 @@ public sealed class JpmsContext : DbContext
         modelBuilder.Entity<AiConversationEntity>()
             .HasIndex(row => new { row.ScopeRecordId, row.LastMessageAt })
             .HasDatabaseName("IX_AiConversations_ScopeRecordId");
+
+        // ---- Assistant skills --------------------------------------------------------------------
+        // Every turn loads the agent's skills plus the shared set, so the agent-key filter is the
+        // hot path. RefKey is unique per skill — the model asks for a reference by that pair.
+        modelBuilder.Entity<SkillEntity>()
+            .HasIndex(row => new { row.AgentKey, row.IsActive })
+            .HasDatabaseName("IX_Skills_AgentKey_IsActive");
+        modelBuilder.Entity<SkillReferenceEntity>()
+            .HasIndex(row => new { row.SkillKey, row.RefKey })
+            .IsUnique()
+            .HasDatabaseName("IX_SkillReferences_SkillKey_RefKey");
+        modelBuilder.Entity<SkillRevisionEntity>()
+            .HasIndex(row => new { row.SkillKey, row.Version })
+            .HasDatabaseName("IX_SkillRevisions_SkillKey_Version");
 
         // ---- Company directory (Xero links + contacts) -----------------------------------------
         // Unique: one Xero supplier can only ever be imported once — consolidation re-points the

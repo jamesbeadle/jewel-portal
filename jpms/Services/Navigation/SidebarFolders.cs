@@ -272,7 +272,13 @@ public static class SidebarFolders
                 // The announced app version: publishing an update here raises the refresh bar
                 // (UpdateToast) on every signed-in tab.
                 new SidebarRow(new NavigationItem("System", "/admin/system"),
-                    DesktopNavigation.AdministratorOnly)
+                    DesktopNavigation.AdministratorOnly),
+                // The assistant's skills — the domain knowledge behind each agent, edited by the
+                // discipline owner (docs/ai/05-agents-and-skills.md). Directors rather than
+                // administrator-only, deliberately: the MD maintaining his own doctrine is the
+                // entire point of the store. Mirrors the API's SkillRoles.ManageSkills.
+                new SidebarRow(new NavigationItem("AI Skills", "/admin/skills"),
+                    DesktopNavigation.DirectorRoles)
             })
     };
 

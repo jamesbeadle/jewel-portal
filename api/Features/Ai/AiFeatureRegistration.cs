@@ -2,6 +2,7 @@ using Jewel.JPMS.Api.Cqrs;
 using Jewel.JPMS.Api.Features.Ai.Commands;
 using Jewel.JPMS.Api.Features.Ai.Queries;
 using Jewel.JPMS.Contracts.Ai;
+using Jewel.JPMS.Contracts.Cqrs;
 using Jewel.JPMS.Models;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -64,6 +65,17 @@ public static class AiFeatureRegistration
         // The agent activity log. Scoped because it writes through the request's JpmsContext.
         services.AddScoped<AgentActivityLog>();
         services.AddScoped<IQueryHandler<ListAgentActivity, IReadOnlyList<AgentActivity>>, ListAgentActivityHandler>();
+
+        // The skill store — the domain half of an agent, edited in the portal
+        // (docs/ai/05-agents-and-skills.md §2).
+        services.AddScoped<IQueryHandler<ListAiSkills, IReadOnlyList<SkillSummary>>, Skills.ListAiSkillsHandler>();
+        services.AddScoped<IQueryHandler<GetAiSkill, SkillDetail?>, Skills.GetAiSkillHandler>();
+        services.AddScoped<ICommandHandler<SaveAiSkill, Acknowledgement>, Skills.SaveAiSkillHandler>();
+        services.AddScoped<Skills.SaveAiSkillAuthorisation>();
+        services.AddScoped<Skills.SaveAiSkillValidation>();
+        services.AddScoped<ICommandHandler<SaveAiSkillReference, Acknowledgement>, Skills.SaveAiSkillReferenceHandler>();
+        services.AddScoped<Skills.SaveAiSkillReferenceAuthorisation>();
+        services.AddScoped<Skills.SaveAiSkillReferenceValidation>();
 
         return services;
     }

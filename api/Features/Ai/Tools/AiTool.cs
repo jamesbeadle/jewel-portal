@@ -8,9 +8,10 @@ namespace Jewel.JPMS.Api.Features.Ai.Tools;
 /// <summary>What a tool can see when it runs. Scoped per turn.</summary>
 /// <summary>What a tool can see when it runs. <paramref name="Services"/> is the request scope, so a
 /// tool can resolve a feature service (RequestContextAssembler, RequestEmailReader) rather than
-/// re-implementing it.</summary>
+/// re-implementing it. <paramref name="AgentKey"/> is the agent in force this hop — the skill
+/// tools use it to keep an agent inside its own (plus shared) skill set.</summary>
 public sealed record AiToolContext(
-    JpmsContext Db, SignedInUser User, AiScope? Scope, IServiceProvider Services);
+    JpmsContext Db, SignedInUser User, AiScope? Scope, IServiceProvider Services, string AgentKey = "orchestrator");
 
 public enum AiToolKind
 {
