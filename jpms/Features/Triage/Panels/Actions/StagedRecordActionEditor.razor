@@ -281,6 +281,7 @@ else
         <div>
             <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Assigned to</label>
             <input type="text" class="field" maxlength="256" placeholder="Who the fix is chased with — an email address"
+                   autocomplete="off" data-lpignore="true" data-1p-ignore data-bwignore data-form-type="other"
                    value="@Create.DefectAssignedTo" @oninput="e => SetDefect(c => c.DefectAssignedTo = e.Value?.ToString() ?? string.Empty)" />
             @if (defectAssigneeFromSender && Create.DefectAssignedTo != "")
             {

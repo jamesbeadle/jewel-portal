@@ -2820,7 +2820,7 @@ else
 
         var anchorEmail = selected;
         var replying = ReplyDraftPending && anchorEmail is not null;
-        var drafts = anchorEmail is null ? new List<TodoDraftRow>() : CurrentTodoDrafts();
+        var drafts = anchorEmail is null ? new List<TodoItemDraft>() : CurrentTodoDrafts();
         var picks = pickedRecords.ToList();
         var createReady = anchorEmail is not null && StagedCreateReady && !string.IsNullOrWhiteSpace(triageProjectId);
         var relevantEvent = relevantEventStaged && anchorEmail is not null;
