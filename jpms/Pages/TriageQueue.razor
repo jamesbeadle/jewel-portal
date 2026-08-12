@@ -1330,36 +1330,43 @@ else
     @* Recently processed — the audit register's latest link/create decisions, newest first, so the
        triager can jump straight to the document an email was just filed against. Its own section
        beneath the whole workspace (reached by scrolling past it), full width — not squeezed into
-       the inbox pane under the queue. Same no-gate pattern as the unassigned panel: it renders if
-       and when there is something to show. (The register records client-pathway triage today;
-       subcontractor/internal rows appear here automatically once the audit scope widens.) *@
+       the inbox pane under the queue. Closed by default — a native <details> fold, the same
+       pattern as the rejected-work-orders pile: it is a reference list, not live work, so the
+       header line with its count is enough until the triager actually wants to look. Same no-gate
+       pattern as the unassigned panel: it renders if and when there is something to show. (The
+       register records client-pathway triage today; subcontractor/internal rows appear here
+       automatically once the audit scope widens.) *@
     @if (RecentTriage.Count > 0)
     {
         <section class="px-3 md:px-4 pb-6">
             <div class="panel p-5">
-                <div class="flex items-baseline justify-between gap-3 mb-3">
-                    <h2 class="text-sm font-semibold text-content">Recently processed</h2>
-                    <a href="/audit" class="text-xs text-content-muted hover:text-content underline underline-offset-2">Full audit trail</a>
-                </div>
-                <div class="divide-y divide-line">
-                    @foreach (var entry in RecentTriage)
-                    {
-                        <div @key="entry.AuditEventId" class="flex items-center gap-3 py-2">
-                            <span class="text-[11px] text-content-subtle whitespace-nowrap w-16 shrink-0"
-                                  title="@entry.OccurredAt.LocalDateTime.ToString("d MMM yyyy, HH:mm")">@Ago(entry.OccurredAt)</span>
-                            @if (RecentHref(entry) is { } href)
-                            {
-                                <a class="font-mono text-xs text-content underline underline-offset-2 hover:text-accent whitespace-nowrap" href="@href">@Dash(entry.RecordReference)</a>
-                            }
-                            else
-                            {
-                                <span class="font-mono text-xs text-content-muted whitespace-nowrap">@Dash(entry.RecordReference)</span>
-                            }
-                            <span class="text-xs text-content-muted truncate">@entry.Detail</span>
-                            <span class="text-[11px] text-content-subtle whitespace-nowrap ml-auto hidden md:inline">@RecentMeta(entry)</span>
-                        </div>
-                    }
-                </div>
+                <details>
+                    <summary class="cursor-pointer select-none">
+                        <h2 class="inline text-sm font-semibold text-content">Recently processed (@RecentTriage.Count)</h2>
+                    </summary>
+                    <div class="divide-y divide-line mt-3">
+                        @foreach (var entry in RecentTriage)
+                        {
+                            <div @key="entry.AuditEventId" class="flex items-center gap-3 py-2">
+                                <span class="text-[11px] text-content-subtle whitespace-nowrap w-16 shrink-0"
+                                      title="@entry.OccurredAt.LocalDateTime.ToString("d MMM yyyy, HH:mm")">@Ago(entry.OccurredAt)</span>
+                                @if (RecentHref(entry) is { } href)
+                                {
+                                    <a class="font-mono text-xs text-content underline underline-offset-2 hover:text-accent whitespace-nowrap" href="@href">@Dash(entry.RecordReference)</a>
+                                }
+                                else
+                                {
+                                    <span class="font-mono text-xs text-content-muted whitespace-nowrap">@Dash(entry.RecordReference)</span>
+                                }
+                                <span class="text-xs text-content-muted truncate">@entry.Detail</span>
+                                <span class="text-[11px] text-content-subtle whitespace-nowrap ml-auto hidden md:inline">@RecentMeta(entry)</span>
+                            </div>
+                        }
+                    </div>
+                    <div class="mt-3 text-right">
+                        <a href="/audit" class="text-xs text-content-muted hover:text-content underline underline-offset-2">Full audit trail</a>
+                    </div>
+                </details>
             </div>
         </section>
     }
@@ -2293,6 +2300,16 @@ else
         public List<TodoDraftRow> TodoRows { get; init; } = new();
         public bool RelevantEventStaged { get; init; }
         public bool TriageEntireThread { get; init; }
+        // The open save-to-drawings form, if any — drafted against ONE email's attachment, so it
+        // must travel with that email like every other draft (leaking it under the next email is
+        // what paired the wrong attachment with the wrong message before 2026-08-12).
+        public IntakeAttachment? ImportAttachment { get; init; }
+        public bool ImportIsRevision { get; init; }
+        public string ImportDrawingId { get; init; } = "";
+        public string ImportProjectId { get; init; } = "";
+        public string ImportCode { get; init; } = "";
+        public string ImportTitle { get; init; } = "";
+        public string ImportRevision { get; init; } = "";
     }
 
     // Anything the triager has actually set is worth keeping; an untouched email parks nothing.
@@ -2306,6 +2323,7 @@ else
         || createTodoRows.Any(row => !string.IsNullOrWhiteSpace(row.Title) || !string.IsNullOrWhiteSpace(row.Notes))
         || relevantEventStaged
         || triageEntireThread
+        || importAttachment is not null
         // The project counts only when the triager chose it themselves. An auto-matched project
         // (TryPrefillProjectFromEmailAsync's guess from the email text) is the page's doing, not
         // theirs — parking it made untouched emails show a "✎ draft" badge after a mere click-through.
@@ -2336,7 +2354,14 @@ else
             Create = stagedCreate,
             TodoRows = createTodoRows,
             RelevantEventStaged = relevantEventStaged,
-            TriageEntireThread = triageEntireThread
+            TriageEntireThread = triageEntireThread,
+            ImportAttachment = importAttachment,
+            ImportIsRevision = importIsRevision,
+            ImportDrawingId = importDrawingId,
+            ImportProjectId = importProjectId,
+            ImportCode = importCode,
+            ImportTitle = importTitle,
+            ImportRevision = importRevision
         };
     }
 
@@ -2364,6 +2389,16 @@ else
         createTodoRows = parked.TodoRows;
         relevantEventStaged = parked.RelevantEventStaged;
         triageEntireThread = parked.TriageEntireThread;
+        importAttachment = parked.ImportAttachment;
+        importIsRevision = parked.ImportIsRevision;
+        importDrawingId = parked.ImportDrawingId;
+        importProjectId = parked.ImportProjectId;
+        importCode = parked.ImportCode;
+        importTitle = parked.ImportTitle;
+        importRevision = parked.ImportRevision;
+        // A restored revision-mode form needs its drawing options back in the store.
+        if (importAttachment is not null && !string.IsNullOrWhiteSpace(importProjectId))
+            DrawingStore.Refresh(importProjectId);
         return true;
     }
 
@@ -2409,7 +2444,27 @@ else
         stagedCreate = null;
         relevantEventStaged = false;
         triageEntireThread = false;
+        // The save-to-drawings form is drafted against ONE email's attachment — leaving it open
+        // across a selection change rendered the old email's draft under the new email, and its
+        // Save would have paired the new message id with the old attachment id. Parked above,
+        // reset here, restored below like every other per-email draft.
+        ResetDrawingImport();
         return RestoreParkedTriage(item.Id);
+    }
+
+    // Close and blank the save-to-drawings form (outcome banners included) — per-email state,
+    // never allowed to survive onto a different selection.
+    private void ResetDrawingImport()
+    {
+        importAttachment = null;
+        importIsRevision = false;
+        importDrawingId = "";
+        importProjectId = "";
+        importCode = "";
+        importTitle = "";
+        importRevision = "";
+        importNote = null;
+        importError = null;
     }
 
     // Open the clicked email exactly as clicked — the selection stays on it; the thread panel
@@ -3475,6 +3530,16 @@ else
     private async Task DoImportDrawing()
     {
         if (selected is null || importAttachment is null || busy) return;
+        // Hard guard: the staged attachment must belong to the OPEN email. Selection changes reset
+        // the form (ApplySelection → ResetDrawingImport), so this cannot fire in normal use — it
+        // exists so no future state leak can ever send another email's attachment id against this
+        // message and file the wrong document.
+        var stagedAttachmentId = importAttachment.Id;
+        if (detail is null || detail.Attachments.All(a => a.Id != stagedAttachmentId))
+        {
+            importError = "That attachment belongs to a different email — reopen Save to drawings from this email's attachment list.";
+            return;
+        }
         importError = null;
         importNote = null;
 
