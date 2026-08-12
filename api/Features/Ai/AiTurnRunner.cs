@@ -312,7 +312,7 @@ public sealed class AiTurnRunner
         {
             if ((AiChatRole)row.Role != AiChatRole.Assistant) continue;
             foreach (var call in ReadToolCalls(row.ToolCallsJson))
-                argumentsByToolUseId[call.Id] = call.Input;
+                argumentsByToolUseId[call.Id!] = call.Input ?? "";
         }
 
         var toolRows = new List<TranscriptToolRow>();
@@ -328,6 +328,10 @@ public sealed class AiTurnRunner
         AiTranscriptBudget.Apply(bodies, toolRows);
 
         // ---- the replay ------------------------------------------------------------------------
+        // A tool_result may only replay against a tool_use that actually made it into the
+        // transcript — an orphan pair is rejected by the API and takes the whole turn down.
+        // Ids accumulate as assistant rows are walked (they always precede their tool rows).
+        var replayedToolUseIds = new HashSet<string>(StringComparer.Ordinal);
         var transcript = new List<object>();
         var index = 0;
 
@@ -350,11 +354,12 @@ public sealed class AiTurnRunner
 
                     foreach (var call in ReadToolCalls(row.ToolCallsJson))
                     {
+                        replayedToolUseIds.Add(call.Id!);
                         blocks.Add(new
                         {
                             type = "tool_use",
-                            id = call.Id,
-                            name = call.Name,
+                            id = call.Id!,
+                            name = call.Name!,
                             input = ParseInput(call.Input)
                         });
                     }
@@ -372,11 +377,14 @@ public sealed class AiTurnRunner
                     while (index < rows.Count && (AiChatRole)rows[index].Role == AiChatRole.Tool)
                     {
                         var toolRow = rows[index];
-                        results.Add(string.IsNullOrWhiteSpace(toolRow.ToolUseId)
-                            // Legacy rows written before tool_use blocks were persisted — replay as
-                            // prose so an old conversation still loads rather than 400ing.
-                            ? new { type = "text", text = $"[earlier result from {toolRow.ToolName}]\n{bodies[index]}" }
-                            : new { type = "tool_result", tool_use_id = toolRow.ToolUseId!, content = bodies[index] });
+                        // Prose fallback covers two cases: legacy rows written before tool_use
+                        // blocks were persisted, and rows whose paired tool_use could not be
+                        // replayed — a tool_result without its tool_use is rejected by the API.
+                        var paired = !string.IsNullOrWhiteSpace(toolRow.ToolUseId)
+                                     && replayedToolUseIds.Contains(toolRow.ToolUseId!);
+                        results.Add(paired
+                            ? new { type = "tool_result", tool_use_id = toolRow.ToolUseId!, content = bodies[index] }
+                            : (object)new { type = "text", text = $"[earlier result from {toolRow.ToolName}]\n{bodies[index]}" });
                         index++;
                     }
                     transcript.Add(new { role = "user", content = results.ToArray() });
@@ -392,14 +400,29 @@ public sealed class AiTurnRunner
         return transcript;
     }
 
-    private sealed record StoredToolCall(string Id, string Name, string Input);
+    private sealed record StoredToolCall(string? Id, string? Name, string? Input);
+
+    /// <summary>ToolCallsJson is written lowercase ({id, name, input}) and System.Text.Json is
+    /// case-SENSITIVE by default — without this option every stored call deserialised to nulls,
+    /// which broke the tool_use replay on every continuation hop (JPMS-B55A7A).</summary>
+    private static readonly JsonSerializerOptions StoredToolCallJson = new()
+    {
+        PropertyNameCaseInsensitive = true
+    };
 
     private static IReadOnlyList<StoredToolCall> ReadToolCalls(string? json)
     {
         if (string.IsNullOrWhiteSpace(json)) return Array.Empty<StoredToolCall>();
         try
         {
-            return JsonSerializer.Deserialize<List<StoredToolCall>>(json) ?? new List<StoredToolCall>();
+            var calls = JsonSerializer.Deserialize<List<StoredToolCall>>(json, StoredToolCallJson)
+                        ?? new List<StoredToolCall>();
+            // A call with no id or name cannot be replayed as a tool_use block (the API rejects
+            // it) and cannot key a lookup. Drop it rather than letting a bad row kill the turn —
+            // its tool RESULT still replays, as prose, via the legacy branch below.
+            return calls
+                .Where(call => !string.IsNullOrWhiteSpace(call.Id) && !string.IsNullOrWhiteSpace(call.Name))
+                .ToList();
         }
         catch (JsonException)
         {
