@@ -20,6 +20,7 @@ using Jewel.JPMS.Api.Features.Commercial;
 using Jewel.JPMS.Api.Features.CommercialInputs;
 using Jewel.JPMS.Api.Features.Cvr;
 using Jewel.JPMS.Api.Features.Directory;
+using Jewel.JPMS.Api.Features.DocumentControl;
 using Jewel.JPMS.Api.Features.Drawings;
 using Jewel.JPMS.Api.Features.Hs;
 using Jewel.JPMS.Api.Features.Labour;
@@ -92,6 +93,7 @@ var host = new HostBuilder()
         services.AddBoqFeature();
         services.AddRatesFeature();
         services.AddDrawingsFeature(context.Configuration);
+        services.AddDocumentControlFeature(context.Configuration);
         services.AddProgressFeature(context.Configuration);
         services.AddProcurementFeature(context.Configuration);
         services.AddLocalSearchFeature(context.Configuration);

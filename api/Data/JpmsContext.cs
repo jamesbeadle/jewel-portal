@@ -43,6 +43,9 @@ public sealed class JpmsContext : DbContext
     public DbSet<DrawingRevisionEntity> DrawingRevisions => Set<DrawingRevisionEntity>();
     public DbSet<DrawingIssueRecordEntity> DrawingIssueRecords => Set<DrawingIssueRecordEntity>();
 
+    public DbSet<DocumentControlItemEntity> DocumentControlItems => Set<DocumentControlItemEntity>();
+    public DbSet<PaymentCertificateEntity> PaymentCertificates => Set<PaymentCertificateEntity>();
+
     public DbSet<SubcontractorEntity> Subcontractors => Set<SubcontractorEntity>();
     public DbSet<TradeEntity> Trades => Set<TradeEntity>();
     public DbSet<SubcontractorTradeEntity> SubcontractorTrades => Set<SubcontractorTradeEntity>();
@@ -384,5 +387,19 @@ public sealed class JpmsContext : DbContext
         modelBuilder.Entity<XeroSitePnlMonthEntity>()
             .HasIndex(row => row.ProjectId)
             .HasDatabaseName("IX_XeroSitePnlMonths_ProjectId");
+
+        // ---- Document Control ----------------------------------------------------------------------
+        // The send handler's "already sent?" read seeks on MessageId. (No UNIQUE composite over
+        // MessageId+AttachmentId: two nvarchar(512) Graph ids overshoot SQL Server's 1700-byte
+        // index-key cap, so one-row-per-attachment is enforced in the handler instead.)
+        modelBuilder.Entity<DocumentControlItemEntity>()
+            .HasIndex(row => row.MessageId)
+            .HasDatabaseName("IX_DocumentControlItems_MessageId");
+        modelBuilder.Entity<DocumentControlItemEntity>()
+            .HasIndex(row => row.Status)
+            .HasDatabaseName("IX_DocumentControlItems_Status");
+        modelBuilder.Entity<PaymentCertificateEntity>()
+            .HasIndex(row => row.ProjectId)
+            .HasDatabaseName("IX_PaymentCertificates_ProjectId");
     }
 }

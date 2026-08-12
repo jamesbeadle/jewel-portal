@@ -176,6 +176,10 @@ public static class SidebarFolders
                     DesktopNavigation.DirectorRoles),
                 new SidebarRow(new NavigationItem("WO Allocation", "/projects/{project}/work-order-allocation"),
                     DesktopNavigation.DirectorRoles),
+                // The payment certificate register — what the client is paying, certified, filed
+                // from Document Control. Company page with a project filter (viewable by project).
+                new SidebarRow(new NavigationItem("Payment Certificates", "/finance/payment-certificates"),
+                    DesktopNavigation.DirectorRoles),
                 new SidebarRow(new NavigationItem("Cost Codes", "/cost-codes"),
                     DesktopNavigation.DirectorRoles),
                 new SidebarRow(new NavigationItem("Rates", "/rate-library"),
@@ -298,6 +302,11 @@ public static class SidebarFolders
         // correspondence across EVERY project. Mirrors the API's TriageRoles gate on the page;
         // the nav row carries the 2026-08-11 directors-only clamp like every other row.
         new SidebarRow(new NavigationItem("Control Centre", "/control-centre"),
+            DesktopNavigation.DirectorRoles),
+        // Document Control — the attachment triage queue for ALL projects: files sent in from the
+        // Control Centre, filed out to Drawings, Payment Certificates or subcontractor records.
+        // Same whole-company footing as the Control Centre it feeds from (decision 2026-08-12).
+        new SidebarRow(new NavigationItem("Document Control", "/document-control"),
             DesktopNavigation.DirectorRoles),
         // The picked project's live valuation report.
         new SidebarRow(new NavigationItem("Valuation Reports", "/projects/{project}/valuation"),

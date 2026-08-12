@@ -42,7 +42,11 @@ public enum AuditEventType
     // Project lifecycle (written since the settings danger-zone work, 2026-08-05). The project's
     // own rows are gone by the time this is written, so RecordReference carries the deleted
     // project's reference and the detail its name — the event is the surviving record.
-    ProjectDeleted = 15         // a project and its records were permanently deleted from settings
+    ProjectDeleted = 15,        // a project and its records were permanently deleted from settings
+    // Document Control (written since the attachment-triage split, 2026-08-12):
+    SentToDocumentControl = 16, // an email attachment was copied into the Document Control queue
+    DocumentFiled = 17,         // a Document Control item was filed to its destination record
+    DocumentDiscarded = 18      // a Document Control item was discarded (restorable, never deleted)
 }
 
 // One append-only audit event. WebLink (when present) opens the email or draft in Outlook on the
