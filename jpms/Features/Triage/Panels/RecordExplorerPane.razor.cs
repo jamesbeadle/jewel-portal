@@ -15,6 +15,10 @@ public partial class RecordExplorerPane
     /// shows it in the Preview pane on the opposite window.</summary>
     [Parameter] public EventCallback<PreviewRequest> OnPreview { get; set; }
 
+    /// <summary>Raised when a Reply is started on an email in the open record's correspondence —
+    /// the page lines the reply up in the Outbox. No delegate, no Reply buttons.</summary>
+    [Parameter] public EventCallback<MailboxMessage> OnReply { get; set; }
+
     private const int ResultCap = 50;
 
     private string projectId = "";

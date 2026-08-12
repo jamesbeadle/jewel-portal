@@ -5,7 +5,10 @@
 @using Jewel.JPMS.Contracts.RecordLinks
 @using Jewel.JPMS.Contracts.Variations
 @using Jewel.JPMS.Features.RecordLinks
+@using Jewel.JPMS.Features.Triage
+@using Jewel.JPMS.Features.Triage.Panels
 @inject AuthService Auth
+@inject Jewel.JPMS.Features.Projects.ProjectListReadModel ProjectList
 @inject SessionService Session
 @inject IVariationStore Variations
 @inject IArchitectInstructionStore Instructions
@@ -285,7 +288,11 @@ else
                 @* ---- Communications: the mail behind this record, read live by tag ----
                        Emails tagged to the record's quoting reference or (once approved) its V-ref
                        in mailbox triage appear here, so the correspondence behind the variation is
-                       visible where the record lives — not only on the project's Communications tab. *@
+                       visible where the record lives — not only on the project's Communications
+                       tab. The shared thread list carries the consistent Reply widget: replying
+                       from here SENDS there and then (the Control Centre is where replies queue),
+                       and the sent copy inherits the thread's tags, so it files straight back
+                       into this list. *@
                 <div class="panel p-5">
                     <div class="flex items-center justify-between mb-3">
                         <h3 class="eyebrow">Communications</h3>
@@ -301,6 +308,27 @@ else
                     }
 
                     <LoadGate IsLoading="@(!emailsLoaded)" Prominent="true" Label="Loading emails">
+                    @if (commsReplySent is not null)
+                    {
+                        <div class="rounded-lg border border-positive/40 bg-positive/5 px-3 py-2 mb-3 flex items-center justify-between gap-2">
+                            <p class="text-sm text-content">@commsReplySent</p>
+                            <button type="button" class="text-content-subtle hover:text-content text-xs" title="Dismiss"
+                                    @onclick="() => commsReplySent = null">✕</button>
+                        </div>
+                    }
+                    @if (commsReplyTo is { } replyingTo)
+                    {
+                        <div class="mb-3 space-y-2">
+                            <p class="text-sm text-content-muted">
+                                Replying to <span class="text-content font-medium">@(string.IsNullOrWhiteSpace(replyingTo.FromName) ? replyingTo.FromEmail : replyingTo.FromName)</span> —
+                                <span class="italic">@replyingTo.Subject</span>
+                            </p>
+                            <MailReplyComposer @key="replyingTo.Id" ReplyTo="replyingTo"
+                                               Projects="@(ProjectList.Current ?? Array.Empty<Project>())" ProjectId="@ProjectId"
+                                               FooterNote="The reply sends now from the projects mailbox and files itself back into this list."
+                                               OnSent="OnCommsReplySent" OnCancel="() => commsReplyTo = null" />
+                        </div>
+                    }
                     @if (emails.Count == 0)
                     {
                         @* Only when the mailbox actually answered "none" — a failure says so above. *@
@@ -315,28 +343,8 @@ else
                     }
                     else
                     {
-                        <ul class="space-y-2">
-                            @foreach (var email in emails)
-                            {
-                                <li class="rounded-lg border border-line bg-surface px-4 py-3">
-                                    <div class="flex flex-wrap items-center justify-between gap-2">
-                                        <span class="text-sm font-medium text-content">@(string.IsNullOrWhiteSpace(email.FromName) ? email.FromEmail : email.FromName)</span>
-                                        <span class="text-xs text-content-subtle">@email.ReceivedAt.LocalDateTime.ToString("d MMM yyyy, HH:mm")</span>
-                                    </div>
-                                    <p class="text-sm text-content mt-0.5">
-                                        @email.Subject
-                                        @if (email.HasAttachments)
-                                        {
-                                            <span class="ml-2 inline-flex items-center rounded bg-surface-raised border border-line px-1.5 py-0.5 text-[10px] text-content-subtle">attachment</span>
-                                        }
-                                    </p>
-                                    @if (!string.IsNullOrWhiteSpace(email.BodyPreview))
-                                    {
-                                        <p class="text-xs text-content-subtle mt-1 line-clamp-2">@email.BodyPreview</p>
-                                    }
-                                </li>
-                            }
-                        </ul>
+                        <CorrespondenceThreadList Emails="emails" ExcludeTag="@($"JPMS/{order.Reference}")"
+                                                  OnReply="email => commsReplyTo = email" />
                     }
                     </LoadGate>
                 </div>
@@ -689,6 +697,20 @@ else
     private bool emailsLoaded;
     private string? emailsError;
     private IReadOnlyList<MailboxMessage> emails = Array.Empty<MailboxMessage>();
+    // The email a Reply was pressed on (the shared composer opens above the list; replying from a
+    // record page sends immediately) and the confirmation left behind by the last send.
+    private MailboxMessage? commsReplyTo;
+    private string? commsReplySent;
+
+    private async Task OnCommsReplySent(Jewel.JPMS.Contracts.MailboxCompose.ComposeOutcome outcome)
+    {
+        commsReplyTo = null;
+        commsReplySent = outcome.Sent
+            ? $"Reply sent to {string.Join("; ", outcome.To)} — it joins the thread and files back into this list."
+            : "The reply was saved to the mailbox's Drafts — review and send it from Outlook.";
+        // The sent copy self-files by tag; re-read so it appears in the list straight away.
+        await LoadEmailsAsync();
+    }
 
     // The record only carries commercial figures (V-ref, value, cost code) once approved — this is
     // the "VO" the old two-record model kept separately; here it's just the current record, or null.
@@ -750,6 +772,10 @@ else
         // Activity dots on the tab bar land in the background — absent until then (never gated).
         Activity.OnChanged += StateHasChanged;
         Activity.Refresh(ProjectId);
+        // The project list feeds the reply composer's attachment picker (drawings/photos by
+        // project) — revalidated in the background like every other read model here.
+        ProjectList.OnChanged += StateHasChanged;
+        _ = LoadProjectListAsync();
         sessionReady = true;
         await ReloadAsync();
     }
@@ -771,6 +797,14 @@ else
         RequestRegister.OnChange -= StateHasChanged;
         Valuation.OnChange -= StateHasChanged;
         Activity.OnChanged -= StateHasChanged;
+        ProjectList.OnChanged -= StateHasChanged;
+    }
+
+    // Losing the project list should cost the composer its drawing/photo sources, not the page.
+    private async Task LoadProjectListAsync()
+    {
+        try { await ProjectList.RefreshAsync(CancellationToken.None); }
+        catch { /* reported by the query client; the picker's project sources render empty */ }
     }
 
     // The tab bar's per-record activity dots (the containing request's linked mail, this

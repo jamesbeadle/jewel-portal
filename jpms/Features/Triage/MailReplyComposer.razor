@@ -1,0 +1,74 @@
+@namespace Jewel.JPMS.Features.Triage
+@inject IIntakeQueue Intake
+
+@* THE reply widget — one composer for every place a communication is listed. Two modes, decided
+   by which callback the host passes:
+   - Send mode (OnSent): the email goes on the wire immediately from the projects mailbox — the
+     record pages' behaviour (a reply from a variation's Communications panel just sends).
+   - Stage mode (OnStage): nothing is sent; the composer hands back a StagedOutboxReply for the
+     Control Centre's Outbox, where many replies line up and the page's Apply sends them all.
+   Either way the envelope prefills reply-all from the anchor's live detail (minus the projects
+   mailbox — Cc'ing it would deliver a copy straight back into the triage queue), and the visible
+   fields are exactly what goes on the wire. *@
+
+<div class="rounded-lg border border-line bg-surface-raised p-4 space-y-3">
+    <div class="flex items-center justify-between">
+        <p class="text-xs uppercase tracking-wider text-content-subtle font-semibold">@HeaderLabel</p>
+        <button type="button" class="text-xs text-content-subtle hover:text-negative underline"
+                @onclick="() => OnCancel.InvokeAsync()">@(IsEditingDraft ? "Cancel" : "Discard draft")</button>
+    </div>
+
+    @if (error is not null)
+    {
+        <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@error</p>
+    }
+
+    <div>
+        <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">To *</label>
+        <input class="field" type="text" placeholder="name@example.com; other@example.com"
+               value="@toField" @oninput="e => toField = e.Value?.ToString() ?? string.Empty" />
+    </div>
+    <div>
+        <div class="flex items-center justify-between">
+            <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Cc</label>
+            @if (!showBcc)
+            {
+                <button type="button" class="text-xs text-content-subtle hover:text-content underline"
+                        @onclick="() => showBcc = true">Bcc</button>
+            }
+        </div>
+        <input class="field" type="text" placeholder="Copied recipients — separated by ;"
+               value="@ccField" @oninput="e => ccField = e.Value?.ToString() ?? string.Empty" />
+    </div>
+    @if (showBcc)
+    {
+        <div>
+            <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Bcc</label>
+            <input class="field" type="text" placeholder="Blind-copied recipients — separated by ;"
+                   value="@bccField" @oninput="e => bccField = e.Value?.ToString() ?? string.Empty" />
+        </div>
+    }
+    <div>
+        <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Subject *</label>
+        <input class="field" type="text" value="@subject"
+               @oninput="e => subject = e.Value?.ToString() ?? string.Empty" />
+    </div>
+    <div>
+        <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">
+            @(IsReply ? "Your reply *" : "Your email *")
+        </label>
+        <RichTextEditor @bind-Value="body" MinHeight="180"
+                        Placeholder="@(IsReply ? "Write the reply — the whole thread is quoted behind it…" : "Write the email…")" />
+    </div>
+
+    <AttachmentPicker Attachments="attachments" AttachmentsChanged="picked => attachments = picked"
+                      Projects="@Projects" ProjectId="@ProjectId"
+                      OriginalAttachments="@anchorDetail?.Attachments" OriginalMessageId="@AnchorMessageId" />
+
+    <div class="flex items-center justify-between gap-3 pt-1">
+        <p class="text-xs text-content-subtle">@(FooterNote ?? DefaultFooterNote)</p>
+        <button type="button" class="btn-primary" disabled="@(sending || !IsSendable)" @onclick="ConfirmAsync">
+            @PrimaryLabel
+        </button>
+    </div>
+</div>

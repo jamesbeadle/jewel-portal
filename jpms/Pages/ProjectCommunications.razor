@@ -1,9 +1,11 @@
 @page "/projects/{ProjectId}/communications"
 @using Jewel.JPMS.Contracts.RecordLinks
+@using Jewel.JPMS.Features.Triage
 @inject AuthService Auth
 @inject SessionService Session
 @inject IQueryClient Queries
 @inject NavigationManager Nav
+@inject Jewel.JPMS.Features.Projects.ProjectListReadModel ProjectList
 
 <PageTitle>Communications · JPMS</PageTitle>
 
@@ -15,7 +17,9 @@
     first, filterable by pathway (the Client / Subcontractor / Internal bucket the thread is filed
     under) and by the type of thing tagged. Each row shows the thread's pathway chip plus WHICH
     record(s) the email is tagged to — an email can feed several records at once (e.g. a request
-    AND a cost centre). Informational only: tagging itself stays in mailbox triage.
+    AND a cost centre). Every row carries the consistent Reply widget — replying from here SENDS
+    there and then; the sent copy inherits the thread's tags and files back into this roll-up.
+    Tagging itself stays in mailbox triage.
 *@
 
 @if (!sessionReady)
@@ -82,6 +86,27 @@ else
         }
         else
         {
+            @if (replySent is not null)
+            {
+                <div class="rounded-lg border border-positive/40 bg-positive/5 px-3 py-2 mb-3 flex items-center justify-between gap-2">
+                    <p class="text-sm text-content">@replySent</p>
+                    <button type="button" class="text-content-subtle hover:text-content text-xs" title="Dismiss"
+                            @onclick="() => replySent = null">✕</button>
+                </div>
+            }
+            @if (replyTo is { } replyingTo)
+            {
+                <div class="mb-4 space-y-2">
+                    <p class="text-sm text-content-muted">
+                        Replying to <span class="text-content font-medium">@DisplayFrom(replyingTo)</span> —
+                        <span class="italic">@replyingTo.Subject</span>
+                    </p>
+                    <MailReplyComposer @key="replyingTo.Id" ReplyTo="replyingTo"
+                                       Projects="@(ProjectList.Current ?? Array.Empty<Project>())" ProjectId="@ProjectId"
+                                       FooterNote="The reply sends now from the projects mailbox and files itself back into this list."
+                                       OnSent="OnReplySent" OnCancel="() => replyTo = null" />
+                </div>
+            }
             <ul class="space-y-2">
                 @foreach (var item in items)
                 {
@@ -129,6 +154,10 @@ else
                                 <span class="inline-flex items-center rounded-full bg-surface-raised border border-line px-2 py-0.5 text-[10px] text-content-subtle">@TagStem(tag)</span>
                             }
                         </div>
+                        <div class="mt-2">
+                            <button type="button" class="text-xs font-medium text-accent hover:underline"
+                                    @onclick="() => replyTo = item.Message">↩ Reply</button>
+                        </div>
                     </li>
                 }
             </ul>
@@ -170,6 +199,27 @@ else
     private string? nextCursor;
     private int total;
 
+    // The email a Reply was pressed on (the shared composer opens above the list; replying from a
+    // record page sends immediately) and the confirmation left behind by the last send.
+    private MailboxMessage? replyTo;
+    private string? replySent;
+
+    private async Task OnReplySent(Jewel.JPMS.Contracts.MailboxCompose.ComposeOutcome outcome)
+    {
+        replyTo = null;
+        replySent = outcome.Sent
+            ? $"Reply sent to {string.Join("; ", outcome.To)} — it joins the thread and files back into this list."
+            : "The reply was saved to the mailbox's Drafts — review and send it from Outlook.";
+        // The sent copy self-files by the thread's tags; re-read so it appears straight away.
+        await LoadAsync(reset: true);
+    }
+
+    private async Task LoadProjectListAsync()
+    {
+        try { await ProjectList.RefreshAsync(CancellationToken.None); }
+        catch { /* reported by the query client; the picker's project sources render empty */ }
+    }
+
     // Every linkable record type, labelled in canonical UI terms — RecordType.Scheduling is the
     // programme's bucket, so it reads "Relevant Events" here (never "Scheduling" in UI copy;
     // "Relevant Event" per the 2026-08-07 rename).
@@ -192,6 +242,8 @@ else
         await Session.EnsureLoadedAsync();
         if (!Auth.IsSignedIn) { Nav.NavigateTo("/login", forceLoad: true); return; }
         sessionReady = true;
+        // The project list only feeds the reply composer's attachment picker — background warm.
+        _ = LoadProjectListAsync();
         await LoadAsync(reset: true);
     }
 

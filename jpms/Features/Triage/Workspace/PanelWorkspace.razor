@@ -12,8 +12,8 @@
 *@
 
 <div @ref="root" class="panel-workspace h-full" style="--left-w: @LeftWidthCss">
-    <div class="col-start-1 row-start-1 min-w-0 pb-2"><PanelRail State="State" Side="PanelSide.Left" EmailAvailable="EmailAvailable" PreviewAvailable="PreviewAvailable" TagsBadge="TagsBadge" ActionsBadge="ActionsBadge" /></div>
-    <div class="col-start-3 row-start-1 min-w-0 pb-2 hidden lg:block"><PanelRail State="State" Side="PanelSide.Right" EmailAvailable="EmailAvailable" PreviewAvailable="PreviewAvailable" TagsBadge="TagsBadge" ActionsBadge="ActionsBadge" /></div>
+    <div class="col-start-1 row-start-1 min-w-0 pb-2"><PanelRail State="State" Side="PanelSide.Left" EmailAvailable="EmailAvailable" PreviewAvailable="PreviewAvailable" TagsBadge="TagsBadge" ActionsBadge="ActionsBadge" OutboxBadge="OutboxBadge" /></div>
+    <div class="col-start-3 row-start-1 min-w-0 pb-2 hidden lg:block"><PanelRail State="State" Side="PanelSide.Right" EmailAvailable="EmailAvailable" PreviewAvailable="PreviewAvailable" TagsBadge="TagsBadge" ActionsBadge="ActionsBadge" OutboxBadge="OutboxBadge" /></div>
 
     @* The divider column: a 6px hit area with a hairline drawn down its middle. *@
     <div @ref="divider" class="col-start-2 row-start-1 row-span-2 hidden lg:flex justify-center cursor-col-resize select-none group"
@@ -36,6 +36,7 @@
     [Parameter] public bool PreviewAvailable { get; set; }
     [Parameter] public int TagsBadge { get; set; }
     [Parameter] public int ActionsBadge { get; set; }
+    [Parameter] public int OutboxBadge { get; set; }
 
     [Parameter] public RenderFragment? InboxContent { get; set; }
     [Parameter] public RenderFragment? EmailContent { get; set; }
@@ -46,6 +47,7 @@
     [Parameter] public RenderFragment? XeroContent { get; set; }
     [Parameter] public RenderFragment? ComposeContent { get; set; }
     [Parameter] public RenderFragment? SubcontractorCommsContent { get; set; }
+    [Parameter] public RenderFragment? OutboxContent { get; set; }
 
     private ElementReference root;
     private ElementReference divider;
@@ -65,6 +67,7 @@
         PanelKind.Xero => XeroContent,
         PanelKind.Compose => ComposeContent,
         PanelKind.SubcontractorComms => SubcontractorCommsContent,
+        PanelKind.Outbox => OutboxContent,
         _ => null
     };
 

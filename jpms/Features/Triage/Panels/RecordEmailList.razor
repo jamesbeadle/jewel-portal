@@ -8,8 +8,9 @@
     association the record's own page shows, in the same card style as every other communications
     section. Browsable: threads group into one card, any email opens in place to its full body,
     and attachments preview into the workspace's Preview pane (or download) — gathering context
-    and copy/paste material while working an email in the other window. Acting on the mail
-    (tagging, replying) stays in triage.
+    and copy/paste material while working an email in the other window. With OnReply wired, each
+    email also offers Reply (lined up in the Control Centre's Outbox; sent directly on record
+    pages). Tagging stays in triage.
 *@
 
 @if (emails is null)
@@ -22,7 +23,7 @@ else if (emails.Count > 0)
         <p class="text-xs uppercase tracking-wider text-content-subtle font-semibold mb-2">
             Correspondence · @emails.Count
         </p>
-        <CorrespondenceThreadList Emails="emails" ExcludeTag="@ExcludeTag" OnPreview="OnPreview" />
+        <CorrespondenceThreadList Emails="emails" ExcludeTag="@ExcludeTag" OnPreview="OnPreview" OnReply="OnReply" />
     </div>
 }
 
@@ -36,6 +37,10 @@ else if (emails.Count > 0)
 
     /// <summary>Opens an email attachment in the workspace Preview pane, opposite this window.</summary>
     [Parameter] public EventCallback<PreviewRequest> OnPreview { get; set; }
+
+    /// <summary>Start a reply to one of the record's emails — passed through to the thread list;
+    /// the host decides what replying means.</summary>
+    [Parameter] public EventCallback<MailboxMessage> OnReply { get; set; }
 
     private IReadOnlyList<MailboxMessage>? emails;
     private string loadedRecordId = "";

@@ -23,7 +23,10 @@ public enum PanelKind
     /// <summary>Compose a fresh outbound email from the projects mailbox (was the New email modal).</summary>
     Compose,
     /// <summary>The subcontractor communications browser: every "JPMS/SubComms" thread, read live.</summary>
-    SubcontractorComms
+    SubcontractorComms,
+    /// <summary>Replies lined up to send when Apply runs — the open email's reply plus replies to
+    /// older emails, each of those also tagged with this triage's records.</summary>
+    Outbox
 }
 
 /// <summary>Which of the two workspace panes — the divider between them is user-draggable.</summary>

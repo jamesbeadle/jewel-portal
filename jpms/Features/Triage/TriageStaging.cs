@@ -153,3 +153,48 @@ public sealed class StagedWorkOrderLine
 }
 
 public enum StagedRecordKind { Request, BidPackage, WorkOrder, Defect }
+
+/// <summary>
+/// A reply LINED UP IN THE OUTBOX: written against an older email read in the Control Centre
+/// (a record's correspondence, the subcontractor comms browser) and sent when the page's Apply
+/// runs. The apply first tags the anchor email to the records picked in System Tags for this
+/// triage — one triage decision covers the open email and every email being answered — then sends
+/// the reply, whose sent copy self-files by inheriting the anchor's tags (new ones included).
+/// The anchor fields are a snapshot for the Outbox card; the envelope is editable until Apply.
+/// </summary>
+public sealed class StagedOutboxReply
+{
+    // ---- The anchor: which email this reply answers, as the Outbox card shows it. ----
+    public required string MessageId { get; init; }
+    public string? InternetMessageId { get; init; }
+    public string AnchorSubject { get; init; } = "";
+    public string AnchorFrom { get; init; } = "";
+    public DateTimeOffset AnchorReceivedAt { get; init; }
+    /// <summary>The workflow tags the anchor already carries (its record chips on the card) —
+    /// display only; Apply reads the live message, not this snapshot.</summary>
+    public IReadOnlyList<string> AnchorTags { get; init; } = Array.Empty<string>();
+
+    // ---- The envelope, exactly as the composer showed it (semicolon/comma-separated fields). ----
+    public string ToField { get; set; } = "";
+    public string CcField { get; set; } = "";
+    public string BccField { get; set; } = "";
+    public string Subject { get; set; } = "";
+    public string Body { get; set; } = "";
+    public IReadOnlyList<ComposeDraftAttachment> Attachments { get; set; } = Array.Empty<ComposeDraftAttachment>();
+
+    /// <summary>
+    /// What still stops this reply being sent — null when it is complete. Shared by the composer
+    /// (inline hint) and the page's Apply (hard gate), so the wording is decided once — the same
+    /// "decision not yet made" rule as the staged work order and defect.
+    /// </summary>
+    public string? Problem
+    {
+        get
+        {
+            if (MailCompose.ParseRecipients(ToField).Count == 0) return "Add a To recipient.";
+            if (string.IsNullOrWhiteSpace(Subject)) return "Write a subject.";
+            if (!MailCompose.HtmlHasContent(Body)) return "Write the reply.";
+            return null;
+        }
+    }
+}

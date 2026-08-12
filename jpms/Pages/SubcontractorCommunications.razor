@@ -1,18 +1,22 @@
 @page "/subcontractors/communications"
 @using Jewel.JPMS.Contracts.RecordLinks
-@using Jewel.JPMS.Features.Subcontractors
+@using Jewel.JPMS.Features.Triage
+@using Jewel.JPMS.Features.Triage.Panels
 @inject AuthService Auth
 @inject SessionService Session
 @inject NavigationManager Nav
 @inject IIntakeQueue Intake
+@inject Jewel.JPMS.Features.Projects.ProjectListReadModel ProjectList
 
 <PageTitle>Communications · JPMS</PageTitle>
 
 @*
     The Subcontractor folder's Communications page: every email tagged "JPMS/SubComms" — general
     subcontractor correspondence filed at triage with the Subcontractor tab's communication tick —
-    read live from the mailbox, newest first. Informational only: tagging (and untagging, from the
-    Control Centre's Tagged view) stays in mailbox triage.
+    read live from the mailbox, newest first, in the shared thread list (threads group, any email
+    expands to its full body, and every email carries the consistent Reply widget — replying from
+    here SENDS there and then; the sent copy inherits the thread's tags and files back into this
+    list). Tagging (and untagging, from the Control Centre's Tagged view) stays in mailbox triage.
 *@
 
 @if (!sessionReady)
@@ -61,12 +65,29 @@ else
         }
         else
         {
-            <ul class="space-y-2">
-                @foreach (var message in items)
-                {
-                    <SubcontractorCommunicationRow @key="message.Id" Message="message" />
-                }
-            </ul>
+            @if (replySent is not null)
+            {
+                <div class="rounded-lg border border-positive/40 bg-positive/5 px-3 py-2 mb-3 flex items-center justify-between gap-2">
+                    <p class="text-sm text-content">@replySent</p>
+                    <button type="button" class="text-content-subtle hover:text-content text-xs" title="Dismiss"
+                            @onclick="() => replySent = null">✕</button>
+                </div>
+            }
+            @if (replyTo is { } replyingTo)
+            {
+                <div class="mb-4 space-y-2">
+                    <p class="text-sm text-content-muted">
+                        Replying to <span class="text-content font-medium">@(string.IsNullOrWhiteSpace(replyingTo.FromName) ? replyingTo.FromEmail : replyingTo.FromName)</span> —
+                        <span class="italic">@replyingTo.Subject</span>
+                    </p>
+                    <MailReplyComposer @key="replyingTo.Id" ReplyTo="replyingTo"
+                                       Projects="@(ProjectList.Current ?? Array.Empty<Project>())"
+                                       FooterNote="The reply sends now from the projects mailbox and files itself back into this list."
+                                       OnSent="OnReplySent" OnCancel="() => replyTo = null" />
+                </div>
+            }
+            <CorrespondenceThreadList Emails="items" ExcludeTag="@SubcontractorComms.Tag"
+                                      OnReply="email => replyTo = email" />
 
             @if (nextCursor is not null)
             {

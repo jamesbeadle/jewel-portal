@@ -8,8 +8,9 @@
     subcontractor correspondence filed at triage with the Subcontractor tab's communication tick —
     read live from the mailbox, newest thread first. A workspace pane rather than the standalone
     page so it reads SIDE BY SIDE with a compose or an open email: browse a subbie's thread one
-    window, copy and paste into the reply the other. Read-only over the mail itself — tagging
-    (and untagging, from the Tagged view) stays in mailbox triage.
+    window, copy and paste into the reply the other. Each email offers Reply, lined up in the
+    Outbox and sent by the triage's Apply. Tagging (and untagging, from the Tagged view) stays
+    in mailbox triage.
 *@
 
 <div class="space-y-3">
@@ -59,7 +60,7 @@
         }
         else
         {
-            <CorrespondenceThreadList Emails="Filtered" ExcludeTag="@SubcontractorComms.Tag" OnPreview="OnPreview" />
+            <CorrespondenceThreadList Emails="Filtered" ExcludeTag="@SubcontractorComms.Tag" OnPreview="OnPreview" OnReply="OnReply" />
         }
 
         @if (nextCursor is not null)
@@ -78,6 +79,9 @@
 
     /// <summary>Opens an email attachment in the workspace Preview pane, opposite this window.</summary>
     [Parameter] public EventCallback<PreviewRequest> OnPreview { get; set; }
+
+    /// <summary>Start a reply to a listed email — the page lines it up in the Outbox.</summary>
+    [Parameter] public EventCallback<MailboxMessage> OnReply { get; set; }
 
     // `loaded` opens the gate whether the fetch landed or failed (the banner says which);
     // the list itself accumulates pages like the Tagged view does.

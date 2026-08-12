@@ -1,77 +1,35 @@
 @namespace Jewel.JPMS.Features.Todos.Detail
 @using Jewel.JPMS.Features.Triage
-@inject IIntakeQueue Intake
 
 @* The item's composer, in both shapes the Control Centre sends: a REPLY inside a linked email's
    conversation (the whole thread quoted behind it), or a brand-new outbound email filed to this
    item. Either way the sent copy carries the item's "JPMS/TODO-####" tag — a reply inherits the
    inbound thread's tags, a new email is stamped with the record link — so what is sent from here
-   appears in this same communications list. Sending is real, from the projects mailbox. *@
+   appears in this same communications list. The widget itself is the shared MailReplyComposer in
+   send mode; this wrapper only supplies the to-do's filing and phrasing. *@
 
-<div class="rounded-lg border border-line bg-surface-raised p-4 space-y-3">
-    <div class="flex items-center justify-between">
-        <p class="text-xs uppercase tracking-wider text-content-subtle font-semibold">
-            @(IsReply ? "Reply — sends from the projects mailbox" : "New email — sends from the projects mailbox")
-        </p>
-        <button type="button" class="text-xs text-content-subtle hover:text-negative underline"
-                @onclick="() => OnCancel.InvokeAsync()">Discard draft</button>
-    </div>
+<MailReplyComposer ReplyTo="ReplyTo"
+                   Projects="Projects"
+                   ProjectId="@ProjectIdOrNull"
+                   MarkThreadHandled="false"
+                   LinkRecordType="@(IsReply ? (RecordType?)null : RecordType.Todo)"
+                   LinkRecordId="@(IsReply ? null : Todo.TodoItemId)"
+                   FooterNote="@(IsReply
+                       ? "The sent reply joins this thread and files itself under this to-do, so it appears in this list."
+                       : $"The sent email files itself under {Todo.Reference}, so it appears in this list.")"
+                   OnSent="OnSent"
+                   OnCancel="OnCancel" />
 
-    @if (error is not null)
-    {
-        <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@error</p>
-    }
+@code {
+    [Parameter, EditorRequired] public TodoItem Todo { get; set; } = default!;
+    /// <summary>The linked email being replied to — null composes a brand-new outbound email.</summary>
+    [Parameter] public MailboxMessage? ReplyTo { get; set; }
+    /// <summary>Project pool for the attachment picker's drawing / photo sources.</summary>
+    [Parameter] public IReadOnlyList<Project> Projects { get; set; } = Array.Empty<Project>();
+    [Parameter] public EventCallback<Jewel.JPMS.Contracts.MailboxCompose.ComposeOutcome> OnSent { get; set; }
+    [Parameter] public EventCallback OnCancel { get; set; }
 
-    <div>
-        <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">To *</label>
-        <input class="field" type="text" placeholder="name@example.com; other@example.com"
-               value="@toField" @oninput="e => toField = e.Value?.ToString() ?? string.Empty" />
-    </div>
-    <div>
-        <div class="flex items-center justify-between">
-            <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Cc</label>
-            @if (!showBcc)
-            {
-                <button type="button" class="text-xs text-content-subtle hover:text-content underline"
-                        @onclick="() => showBcc = true">Bcc</button>
-            }
-        </div>
-        <input class="field" type="text" placeholder="Copied recipients — separated by ;"
-               value="@ccField" @oninput="e => ccField = e.Value?.ToString() ?? string.Empty" />
-    </div>
-    @if (showBcc)
-    {
-        <div>
-            <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Bcc</label>
-            <input class="field" type="text" placeholder="Blind-copied recipients — separated by ;"
-                   value="@bccField" @oninput="e => bccField = e.Value?.ToString() ?? string.Empty" />
-        </div>
-    }
-    <div>
-        <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Subject *</label>
-        <input class="field" type="text" value="@subject"
-               @oninput="e => subject = e.Value?.ToString() ?? string.Empty" />
-    </div>
-    <div>
-        <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">
-            @(IsReply ? "Your reply *" : "Your email *")
-        </label>
-        <RichTextEditor @bind-Value="body" MinHeight="180"
-                        Placeholder="@(IsReply ? "Write the reply — the whole thread is quoted behind it…" : "Write the email…")" />
-    </div>
+    private bool IsReply => ReplyTo is not null;
 
-    <AttachmentPicker Attachments="attachments" AttachmentsChanged="picked => attachments = picked"
-                      Projects="@Projects" ProjectId="@ProjectIdOrNull"
-                      OriginalAttachments="@replyToDetail?.Attachments" OriginalMessageId="@ReplyTo?.Id" />
-
-    <div class="flex items-center justify-between gap-3 pt-1">
-        <p class="text-xs text-content-subtle">
-            @(IsReply
-                ? "The sent reply joins this thread and files itself under this to-do, so it appears in this list."
-                : $"The sent email files itself under {Todo.Reference}, so it appears in this list.")
-        </p>
-        <button type="button" class="btn-primary" disabled="@(sending || !IsSendable)" @onclick="SendAsync">
-            @(sending ? "Sending…" : "Send")
-        </button>
-    </div>
-</div>
+    private string? ProjectIdOrNull => string.IsNullOrWhiteSpace(Todo.ProjectId) ? null : Todo.ProjectId;
+}

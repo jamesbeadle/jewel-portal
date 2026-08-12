@@ -1,0 +1,181 @@
+@namespace Jewel.JPMS.Features.Triage.Panels
+@using Jewel.JPMS.Features.Triage
+@using Jewel.JPMS.Features.Triage.Workspace
+
+@*
+    The Outbox — every email lined up to send when the page's Apply runs, in one list: the open
+    email's own reply (written in the Email window) and the replies lined up against OLDER emails
+    (started from a Reply button on a record's correspondence or the subcontractor comms browser;
+    composed here). Nothing in this pane has been sent. The lined-up replies are workspace-level:
+    they survive moving between inbox emails, and each anchor email is ALSO tagged to the records
+    picked in System Tags when Apply runs — one triage decision covering every email answered.
+*@
+
+<div class="panel p-5 space-y-4">
+    <div>
+        <p class="eyebrow mb-1">Outbox</p>
+        <h2 class="text-base font-semibold text-content">Emails lined up to send with Apply</h2>
+    </div>
+
+    @if (ComposeAnchor is { } anchor)
+    {
+        <div class="space-y-2">
+            <p class="text-sm text-content-muted">
+                Replying to <span class="text-content font-medium">@DisplayFrom(anchor)</span> —
+                <span class="italic">@anchor.Subject</span>
+                <span class="text-content-subtle">(@anchor.ReceivedAt.LocalDateTime.ToString("d MMM yyyy, HH:mm"))</span>
+            </p>
+            <MailReplyComposer @key="anchor.Id" ReplyTo="anchor" Projects="@Projects" ProjectId="@ProjectId"
+                               OnStage="StageNewAsync" OnCancel="CancelComposeAsync" />
+        </div>
+    }
+
+    @if (CurrentReplyPending || QueuedReplies.Count > 0)
+    {
+        <div class="space-y-1.5">
+            @if (CurrentReplyPending)
+            {
+                <div class="flex items-center justify-between gap-3 rounded-lg border border-accent/40 bg-accent/5 px-3 py-2">
+                    <p class="text-sm text-content min-w-0">
+                        <span class="text-xs uppercase tracking-wider text-accent font-semibold mr-2">↩ reply · open email</span>
+                        <span class="text-content-muted truncate" title="@CurrentReplySubject">@CurrentReplySubject</span>
+                    </p>
+                    <span class="flex items-center gap-3 shrink-0">
+                        <button type="button" class="text-xs text-accent hover:underline"
+                                @onclick="() => OnEditCurrentReply.InvokeAsync()">Edit in Email window</button>
+                        <button type="button" class="text-xs text-content-subtle hover:text-negative"
+                                @onclick="() => OnDiscardCurrentReply.InvokeAsync()">Remove</button>
+                    </span>
+                </div>
+            }
+            @foreach (var reply in QueuedReplies.ToList())
+            {
+                var entry = reply;
+                var isEditing = ReferenceEquals(editing, entry);
+                <div @key="entry" class="rounded-lg border border-accent/40 bg-accent/5 px-3 py-2 space-y-1">
+                    <div class="flex items-center justify-between gap-3">
+                        <p class="text-sm text-content min-w-0">
+                            <span class="text-xs uppercase tracking-wider text-accent font-semibold mr-2">↩ reply</span>
+                            <span class="text-content font-medium">@entry.AnchorFrom</span>
+                            <span class="text-content-muted"> — @entry.AnchorSubject</span>
+                            <span class="text-xs text-content-subtle ml-1">(@entry.AnchorReceivedAt.LocalDateTime.ToString("d MMM yyyy"))</span>
+                        </p>
+                        <span class="flex items-center gap-3 shrink-0">
+                            @if (!isEditing)
+                            {
+                                <button type="button" class="text-xs text-accent hover:underline"
+                                        @onclick="() => editing = entry">Edit</button>
+                            }
+                            <button type="button" class="text-xs text-content-subtle hover:text-negative"
+                                    @onclick="() => RemoveAsync(entry)">Remove</button>
+                        </span>
+                    </div>
+                    @if (WorkflowTags(entry) is { Count: > 0 } chips)
+                    {
+                        <div class="flex flex-wrap items-center gap-1">
+                            @foreach (var tag in chips)
+                            {
+                                <span class="inline-flex items-center rounded-full bg-accent/10 text-accent text-[10px] font-medium px-2 py-0.5">@TagStem(tag)</span>
+                            }
+                        </div>
+                    }
+                    @if (isEditing)
+                    {
+                        <div class="pt-1">
+                            <MailReplyComposer @key="entry" Draft="entry" Projects="@Projects" ProjectId="@ProjectId"
+                                               OnStage="UpdatedAsync" OnCancel="() => editing = null" />
+                        </div>
+                    }
+                    else
+                    {
+                        <p class="text-xs text-content-subtle truncate">To: @entry.ToField</p>
+                        @if (entry.Problem is { } problem)
+                        {
+                            <p class="text-xs text-negative">Not ready — @problem</p>
+                        }
+                    }
+                </div>
+            }
+        </div>
+    }
+    else if (ComposeAnchor is null)
+    {
+        <div class="rounded-lg bg-surface-raised border border-line p-5 text-center">
+            <p class="text-sm text-content">Nothing is lined up to send.</p>
+            <p class="text-xs text-content-subtle mt-1">
+                Write a reply under the open email, or press Reply on an older email in a record's
+                correspondence or the subcontractor communications — it lines up here and sends
+                with the triage's Apply.
+            </p>
+        </div>
+    }
+
+    <p class="text-xs text-content-subtle pt-2 border-t border-line">
+        Everything here sends from the projects mailbox when Apply runs. An older email being
+        replied to is also tagged to the records picked in System Tags at that moment, and its
+        sent reply files itself the same way. Lined-up replies stay put while you move between
+        inbox emails.
+    </p>
+</div>
+
+@code {
+    /// <summary>Page-owned queue of replies to older emails, sent (and removed) by Apply.</summary>
+    [Parameter, EditorRequired] public List<StagedOutboxReply> QueuedReplies { get; set; } = new();
+    [Parameter] public EventCallback OnChanged { get; set; }
+
+    /// <summary>The older email a Reply button just chose — the pane opens the stage-mode
+    /// composer for it. Cleared (two-way) when the reply is lined up or the composer discarded.</summary>
+    [Parameter] public MailboxMessage? ComposeAnchor { get; set; }
+    [Parameter] public EventCallback<MailboxMessage?> ComposeAnchorChanged { get; set; }
+
+    /// <summary>The open email's own reply, listed here so the Outbox shows everything Apply will
+    /// send — composing it stays in the Email window.</summary>
+    [Parameter] public bool CurrentReplyPending { get; set; }
+    [Parameter] public string CurrentReplySubject { get; set; } = "";
+    [Parameter] public EventCallback OnEditCurrentReply { get; set; }
+    [Parameter] public EventCallback OnDiscardCurrentReply { get; set; }
+
+    /// <summary>Project pool + the triage bar's project for the composer's attachment picker.</summary>
+    [Parameter] public IReadOnlyList<Project> Projects { get; set; } = Array.Empty<Project>();
+    [Parameter] public string? ProjectId { get; set; }
+
+    private StagedOutboxReply? editing;
+
+    private async Task StageNewAsync(StagedOutboxReply entry)
+    {
+        // One lined-up reply per anchor email: staging again replaces the earlier draft rather
+        // than queuing a second send into the same thread.
+        QueuedReplies.RemoveAll(existing => existing.MessageId == entry.MessageId);
+        QueuedReplies.Add(entry);
+        await ComposeAnchorChanged.InvokeAsync(null);
+        await OnChanged.InvokeAsync();
+    }
+
+    private async Task UpdatedAsync(StagedOutboxReply entry)
+    {
+        editing = null;
+        await OnChanged.InvokeAsync();
+    }
+
+    private async Task RemoveAsync(StagedOutboxReply entry)
+    {
+        if (ReferenceEquals(editing, entry)) editing = null;
+        QueuedReplies.Remove(entry);
+        await OnChanged.InvokeAsync();
+    }
+
+    private async Task CancelComposeAsync()
+    {
+        await ComposeAnchorChanged.InvokeAsync(null);
+        await OnChanged.InvokeAsync();
+    }
+
+    private static string DisplayFrom(MailboxMessage email) =>
+        string.IsNullOrWhiteSpace(email.FromName) ? email.FromEmail : email.FromName;
+
+    // The anchor's record chips — the JPMS workflow tags it already carries (where it is filed).
+    private static IReadOnlyList<string> WorkflowTags(StagedOutboxReply entry) => entry.AnchorTags;
+
+    private static string TagStem(string tag) =>
+        tag.StartsWith("JPMS/", StringComparison.OrdinalIgnoreCase) ? tag["JPMS/".Length..] : tag;
+}
