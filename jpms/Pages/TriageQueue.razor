@@ -2211,7 +2211,11 @@ else
         || createTodoRows.Any(row => !string.IsNullOrWhiteSpace(row.Title) || !string.IsNullOrWhiteSpace(row.Notes))
         || relevantEventStaged
         || triageEntireThread
-        || !string.IsNullOrWhiteSpace(triageProjectId);
+        // The project counts only when the triager chose it themselves. An auto-matched project
+        // (TryPrefillProjectFromEmailAsync's guess from the email text) is the page's doing, not
+        // theirs — parking it made untouched emails show a "✎ draft" badge after a mere click-through.
+        // Reopening the email re-runs the same auto-match anyway, so nothing is lost by not parking it.
+        || (!projectAutoMatched && !string.IsNullOrWhiteSpace(triageProjectId));
 
     private void ParkSelectedTriage()
     {

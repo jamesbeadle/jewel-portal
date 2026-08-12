@@ -108,6 +108,7 @@ builder.Services.AddScoped<IMobilisationStore, HttpMobilisationStore>();
 builder.Services.AddScoped<IRequestRegister, HttpRequestRegister>();
 builder.Services.AddScoped<IRequestAttachmentStore, HttpRequestAttachmentStore>();
 builder.Services.AddScoped<IWorkOrderAttachmentStore, HttpWorkOrderAttachmentStore>();
+builder.Services.AddScoped<IBidPackageAttachmentStore, HttpBidPackageAttachmentStore>();
 builder.Services.AddScoped<IArchitectInstructionStore, HttpArchitectInstructionStore>();
 builder.Services.AddScoped<IClientStore, HttpClientStore>();
 builder.Services.AddScoped<IArchitectStore, HttpArchitectStore>();

@@ -32,6 +32,10 @@ public sealed class BidPackageEntity
     // cleared on reopen. No reason is stored — closing without incident needs no paperwork.
     public DateTimeOffset? ClosedAt { get; set; }
 
+    // The specification summary printed in the tender documents — the short "what this package
+    // covers, to what standard" bullets at the top of the pricing schedule workbook. Optional.
+    [MaxLength(4000)]    public string SpecificationSummary { get; set; } = "";
+
     // Canonical reference this package's emails are tagged with ("JPMS/BPI-0001"). Falls back to an
     // id-derived stem for legacy rows that predate numbering. Computed, not stored.
     [System.ComponentModel.DataAnnotations.Schema.NotMapped]
@@ -85,6 +89,28 @@ public sealed class QuoteEntity
     [MaxLength(1024)]    public string Notes { get; set; } = "";
     public DateTimeOffset ReceivedAt { get; set; }
     public bool IsDeclined { get; set; }
+}
+
+// A file kept on a bid package as part of its tender documents — a specification extract, a
+// schedule of finishes, anything a tenderer needs that isn't a drawing in the register. Supplier-
+// facing: PrepareBidPackageInviteDraft attaches these to the invite email alongside the linked
+// drawings. Bytes live in the bid-package-attachments blob container (BlobRef); the row is the
+// register entry the Documents section reads.
+public sealed class BidPackageAttachmentEntity
+{
+    [Key, MaxLength(64)] public string BidPackageAttachmentId { get; set; } = "";
+    [MaxLength(64)]      public string BidPackageId { get; set; } = "";
+    [MaxLength(64)]      public string ProjectId { get; set; } = "";
+    [MaxLength(256)]     public string FileName { get; set; } = "";
+    [MaxLength(128)]     public string ContentType { get; set; } = "";
+    public long FileSizeBytes { get; set; }
+    [MaxLength(1024)]    public string BlobRef { get; set; } = "";
+
+    // Maps to BidPackageAttachmentSource (0 = uploaded from a computer; 1 = reserved for
+    // copy-off-a-triaged-email, not produced yet).
+    public int Source { get; set; }
+    public DateTimeOffset AddedAt { get; set; }
+    [MaxLength(256)]     public string AddedByEmail { get; set; } = "";
 }
 
 // A project drawing linked to a bid package — the tender documents. One row per (package, drawing);

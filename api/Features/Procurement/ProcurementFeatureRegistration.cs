@@ -14,12 +14,20 @@ public static class ProcurementFeatureRegistration
     public static IServiceCollection AddProcurementFeature(this IServiceCollection services, IConfiguration configuration)
     {
         RegisterAttachmentStore(services, configuration);
+        RegisterBidPackageAttachmentStore(services, configuration);
 
         // Attachments kept on a work order for record keeping (never sent to the supplier).
         services.AddScoped<IQueryHandler<ListWorkOrderAttachments, IReadOnlyList<WorkOrderAttachment>>,
             ListWorkOrderAttachmentsHandler>();
         services.AddScoped<ICommandHandler<RemoveWorkOrderAttachment, IReadOnlyList<WorkOrderAttachment>>,
             RemoveWorkOrderAttachmentHandler>();
+
+        // Tender-document attachments on a bid package (supplier-facing — they travel with the
+        // invite draft alongside the linked drawings).
+        services.AddScoped<IQueryHandler<ListBidPackageAttachments, IReadOnlyList<BidPackageAttachment>>,
+            ListBidPackageAttachmentsHandler>();
+        services.AddScoped<ICommandHandler<RemoveBidPackageAttachment, IReadOnlyList<BidPackageAttachment>>,
+            RemoveBidPackageAttachmentHandler>();
 
         services.AddScoped<IQueryHandler<ListBidPackagesForProject, IReadOnlyList<BidPackage>>, ListBidPackagesForProjectHandler>();
         services.AddScoped<IQueryHandler<GetBidPackageById, BidPackage?>, GetBidPackageByIdHandler>();
@@ -164,5 +172,20 @@ public static class ProcurementFeatureRegistration
         else
             services.AddSingleton<IWorkOrderAttachmentStore>(
                 _ => new AzureBlobWorkOrderAttachmentStore(connectionString));
+    }
+
+    // Bid-package attachments follow the same chain, with their own key first so they can be
+    // split onto a different account if tender-document volume ever warrants it.
+    private static void RegisterBidPackageAttachmentStore(IServiceCollection services, IConfiguration configuration)
+    {
+        var connectionString = configuration["BidPackageAttachmentsStorage:ConnectionString"]
+            ?? configuration["DrawingsStorage:ConnectionString"]
+            ?? configuration["AzureWebJobsStorage"];
+
+        if (string.IsNullOrWhiteSpace(connectionString))
+            services.AddSingleton<Attachments.IBidPackageAttachmentStore, Attachments.NullBidPackageAttachmentStore>();
+        else
+            services.AddSingleton<Attachments.IBidPackageAttachmentStore>(
+                _ => new Attachments.AzureBlobBidPackageAttachmentStore(connectionString));
     }
 }

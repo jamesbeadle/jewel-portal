@@ -206,6 +206,11 @@ namespace Jewel.JPMS.Api.Migrations
                         .HasMaxLength(64)
                         .HasColumnType("nvarchar(64)");
 
+                    b.Property<string>("SpecificationSummary")
+                        .IsRequired()
+                        .HasMaxLength(4000)
+                        .HasColumnType("nvarchar(4000)");
+
                     b.Property<int>("Status")
                         .HasColumnType("int");
 
@@ -2680,6 +2685,59 @@ namespace Jewel.JPMS.Api.Migrations
                         .HasDatabaseName("IX_Quotes_BidPackageId");
 
                     b.ToTable("Quotes");
+                });
+
+            modelBuilder.Entity("Jewel.JPMS.Api.Data.Entities.BidPackageAttachmentEntity", b =>
+                {
+                    b.Property<string>("BidPackageAttachmentId")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<DateTimeOffset>("AddedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("AddedByEmail")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<string>("BidPackageId")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<string>("BlobRef")
+                        .IsRequired()
+                        .HasMaxLength(1024)
+                        .HasColumnType("nvarchar(1024)");
+
+                    b.Property<string>("ContentType")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.Property<string>("FileName")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<long>("FileSizeBytes")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("ProjectId")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<int>("Source")
+                        .HasColumnType("int");
+
+                    b.HasKey("BidPackageAttachmentId");
+
+                    b.HasIndex("BidPackageId")
+                        .HasDatabaseName("IX_BidPackageAttachments_BidPackageId");
+
+                    b.ToTable("BidPackageAttachments");
                 });
 
             modelBuilder.Entity("Jewel.JPMS.Api.Data.Entities.BidPackageDrawingEntity", b =>

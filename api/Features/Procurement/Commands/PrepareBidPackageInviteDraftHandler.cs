@@ -14,8 +14,11 @@ namespace Jewel.JPMS.Api.Features.Procurement.Commands;
 // itself is the To (subcontractors must not see each other), every recipient with a directory email
 // goes in BCC, and the draft carries the package's tag ("JPMS/BPI-0001") so the copy that is
 // eventually sent from Outlook — and the replies triaged onto the same tag — group under the
-// package. The package's linked drawings are attached (latest approved revision, or the newest
-// upload when none is approved) — except when they would push the email past the ~25 MB Exchange
+// package. Three kinds of file travel with the invite: the generated pricing schedule workbook
+// (the sheet each tenderer completes and returns — always first, always small), the package's own
+// attachments (specification extracts, schedules of finishes — the supplier-facing register), and
+// the linked drawings (latest approved revision, or the newest upload when none is approved) —
+// except when they would push the email past the ~25 MB Exchange
 // ceiling, in which case the largest files are copied to the email-shares container and travel as
 // 7-day download links in the body instead (an oversized draft would otherwise stage fine and only
 // fail when a person presses Send in Outlook). Package status is untouched: inviting recipients
@@ -27,13 +30,16 @@ public sealed class PrepareBidPackageInviteDraftHandler : ICommandHandler<Prepar
     private readonly MailboxIntakeOptions options;
     private readonly IDrawingBlobStore blobStore;
     private readonly IEmailFileShareStore shareStore;
+    private readonly Attachments.IBidPackageAttachmentStore attachmentStore;
 
     public PrepareBidPackageInviteDraftHandler(
         JpmsContext context, IMailboxGraphClient mailbox, MailboxIntakeOptions options,
-        IDrawingBlobStore blobStore, IEmailFileShareStore shareStore)
+        IDrawingBlobStore blobStore, IEmailFileShareStore shareStore,
+        Attachments.IBidPackageAttachmentStore attachmentStore)
     {
         this.context = context; this.mailbox = mailbox; this.options = options;
         this.blobStore = blobStore; this.shareStore = shareStore;
+        this.attachmentStore = attachmentStore;
     }
 
     public async Task<BidPackageInviteDraft> HandleAsync(PrepareBidPackageInviteDraft command, CancellationToken cancellationToken)
@@ -60,9 +66,16 @@ public sealed class PrepareBidPackageInviteDraftHandler : ICommandHandler<Prepar
             .ToList();
 
         // Attach what fits; anything that would push the email past the ceiling goes out as a
-        // 7-day download link in the body instead.
-        var drawings = await LoadDrawingAttachmentsAsync(command.BidPackageId, cancellationToken);
-        var plan = EmailAttachmentPlanner.Split(drawings);
+        // 7-day download link in the body instead. The pricing schedule leads the list — the
+        // planner attaches in order, and the one file the tender can't run without must never be
+        // the one that overflows into a link.
+        var files = new List<MailboxDraftAttachment>
+        {
+            await BuildPricingScheduleAsync(package, cancellationToken)
+        };
+        files.AddRange(await LoadPackageAttachmentsAsync(command.BidPackageId, cancellationToken));
+        files.AddRange(await LoadDrawingAttachmentsAsync(command.BidPackageId, cancellationToken));
+        var plan = EmailAttachmentPlanner.Split(files);
         var htmlBody = command.HtmlBody;
         var linkedFiles = new List<string>();
 
@@ -70,9 +83,9 @@ public sealed class PrepareBidPackageInviteDraftHandler : ICommandHandler<Prepar
         {
             if (!shareStore.IsConfigured)
                 throw new InvalidOperationException(
-                    $"The linked drawings total {EmailAttachmentPlanner.FormatSize(drawings.Sum(a => a.Content.LongLength))} — " +
+                    $"The tender documents total {EmailAttachmentPlanner.FormatSize(files.Sum(a => a.Content.LongLength))} — " +
                     "more than fits one email — and the file-share store isn't configured, so download links can't be " +
-                    "created. Unlink some drawings, or configure DrawingsStorage:ConnectionString.");
+                    "created. Unlink some drawings or remove attachments, or configure DrawingsStorage:ConnectionString.");
 
             var links = new List<EmailFileShareLink>();
             foreach (var file in plan.ToLink)
@@ -140,6 +153,89 @@ public sealed class PrepareBidPackageInviteDraftHandler : ICommandHandler<Prepar
             attachments.Add(new MailboxDraftAttachment(
                 chosen.FileName,
                 string.IsNullOrWhiteSpace(chosen.ContentType) ? "application/octet-stream" : chosen.ContentType!,
+                buffer.ToArray()));
+        }
+        return attachments;
+    }
+
+    // The pricing schedule the tenderer completes and returns: the package's line items grouped by
+    // trade, each carrying the cost-code / VO reference of its commercial home (the same column the
+    // firm's hand-built tender sheets lead with). Generated fresh on every draft so it always
+    // matches the current scope.
+    private async Task<MailboxDraftAttachment> BuildPricingScheduleAsync(
+        Data.Entities.BidPackageEntity package, CancellationToken cancellationToken)
+    {
+        var lines = await context.BidPackageLineItems
+            .Where(line => line.BidPackageId == package.BidPackageId)
+            .OrderBy(line => line.SortOrder)
+            .ToListAsync(cancellationToken);
+
+        // Variation-covered lines show the variation's reference (V18) rather than a cost code —
+        // exactly how the hand-built sheets mix "0012" and "V05" in one column.
+        var variationIds = lines
+            .Where(line => !string.IsNullOrWhiteSpace(line.VariationOrderId))
+            .Select(line => line.VariationOrderId!)
+            .Distinct()
+            .ToList();
+        var variationRefs = variationIds.Count == 0
+            ? new Dictionary<string, string>()
+            : await context.VariationOrders
+                .Where(order => variationIds.Contains(order.VariationOrderId))
+                .ToDictionaryAsync(
+                    order => order.VariationOrderId,
+                    order => !string.IsNullOrWhiteSpace(order.VariationRef)
+                        ? order.VariationRef!
+                        : order.Number > 0 ? $"V{order.Number}" : "",
+                    cancellationToken);
+
+        var sections = lines
+            .GroupBy(line => string.IsNullOrWhiteSpace(line.Trade) ? package.Trade : line.Trade.Trim(),
+                StringComparer.OrdinalIgnoreCase)
+            .Select(group => new PricingScheduleWorkbook.ScheduleSection(
+                group.Key,
+                group.Select(line => new PricingScheduleWorkbook.ScheduleLine(
+                        line.VariationOrderId is not null && variationRefs.TryGetValue(line.VariationOrderId, out var vRef)
+                            ? vRef
+                            : line.CostCode,
+                        line.Description, line.Quantity, line.Unit))
+                    .ToList()))
+            .ToList();
+
+        var project = await context.Projects.FindAsync(new object[] { package.ProjectId }, cancellationToken);
+        var bytes = PricingScheduleWorkbook.Write(
+            package.Reference, package.Title, project?.Name ?? "",
+            package.SpecificationSummary, package.MaterialsApplicable, sections);
+
+        return new MailboxDraftAttachment(
+            $"{package.Reference} - Pricing Schedule.xlsx",
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            bytes);
+    }
+
+    // The package's own tender documents — the supplier-facing attachment register. A file whose
+    // blob can't be opened is skipped rather than blocking the draft, same as drawings.
+    private async Task<IReadOnlyList<MailboxDraftAttachment>> LoadPackageAttachmentsAsync(
+        string bidPackageId, CancellationToken cancellationToken)
+    {
+        var rows = await context.BidPackageAttachments
+            .AsNoTracking()
+            .Where(row => row.BidPackageId == bidPackageId)
+            .OrderBy(row => row.AddedAt)
+            .ToListAsync(cancellationToken);
+
+        var attachments = new List<MailboxDraftAttachment>();
+        foreach (var row in rows)
+        {
+            if (string.IsNullOrWhiteSpace(row.BlobRef)) continue;
+            var blob = await attachmentStore.OpenAsync(row.BlobRef, cancellationToken);
+            if (blob is null) continue;
+
+            await using var stream = blob.Content;
+            using var buffer = new MemoryStream();
+            await stream.CopyToAsync(buffer, cancellationToken);
+            attachments.Add(new MailboxDraftAttachment(
+                row.FileName,
+                string.IsNullOrWhiteSpace(row.ContentType) ? "application/octet-stream" : row.ContentType,
                 buffer.ToArray()));
         }
         return attachments;

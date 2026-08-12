@@ -22,6 +22,10 @@ public sealed class UpdateBidPackageScopeHandler
         entity.Status = (int)command.Status;
         entity.OwnerEmail = command.OwnerEmail;
         entity.MaterialsApplicable = command.MaterialsApplicable;
+        if (command.SpecificationSummary is not null)
+            entity.SpecificationSummary = command.SpecificationSummary.Length > 4000
+                ? command.SpecificationSummary[..4000]
+                : command.SpecificationSummary;
         await context.SaveChangesAsync(cancellationToken);
         return entity.ToModel();
     }

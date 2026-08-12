@@ -60,6 +60,7 @@ public sealed class JpmsContext : DbContext
     public DbSet<QuoteEntity> Quotes => Set<QuoteEntity>();
     public DbSet<QuoteLineItemEntity> QuoteLineItems => Set<QuoteLineItemEntity>();
     public DbSet<BidPackageDrawingEntity> BidPackageDrawings => Set<BidPackageDrawingEntity>();
+    public DbSet<BidPackageAttachmentEntity> BidPackageAttachments => Set<BidPackageAttachmentEntity>();
     public DbSet<WorkOrderEntity> WorkOrders => Set<WorkOrderEntity>();
     public DbSet<WorkOrderLineEntity> WorkOrderLines => Set<WorkOrderLineEntity>();
     public DbSet<WorkOrderAttachmentEntity> WorkOrderAttachments => Set<WorkOrderAttachmentEntity>();
@@ -368,6 +369,10 @@ public sealed class JpmsContext : DbContext
         modelBuilder.Entity<WorkOrderAttachmentEntity>()
             .HasIndex(row => row.WorkOrderId)
             .HasDatabaseName("IX_WorkOrderAttachments_WorkOrderId");
+        // Bid-package attachments are read per package (the Documents section and the invite draft).
+        modelBuilder.Entity<BidPackageAttachmentEntity>()
+            .HasIndex(row => row.BidPackageId)
+            .HasDatabaseName("IX_BidPackageAttachments_BidPackageId");
 
         // ---- Audit trail ---------------------------------------------------------------------------
         // The register is read per record (a request's own History panel) as well as per project.

@@ -12,6 +12,7 @@
 @inject ICommandSender Commands
 @inject CostCentersReadModel CostCenters
 @inject ISubcontractorStore Subs
+@inject IBidPackageAttachmentStore PackageAttachments
 @inject Jewel.JPMS.Features.Subcontractors.SubcontractorsReadModel SubsReadModel
 @inject NavigationManager Nav
 @implements IDisposable
@@ -195,6 +196,45 @@ else
                     </p>
                 }
                 </LoadGate>
+            </section>
+
+            @* ---- Specification summary: the "what this package covers" bullets printed at the
+                   top of the pricing schedule workbook that travels with the invite. ---- *@
+            <section class="mb-8">
+                <div class="flex items-center justify-between mb-3">
+                    <h3 class="eyebrow">Specification summary</h3>
+                    @if (CanEdit && !editingSpec)
+                    {
+                        <button type="button" class="text-xs text-content-muted hover:text-content" @onclick="EditSpec">Edit</button>
+                    }
+                </div>
+
+                @if (editingSpec)
+                {
+                    <textarea class="field w-full min-h-28" rows="5"
+                              placeholder="One point per line — e.g. All flat roofing to BS 6229:2018."
+                              @bind="specDraft"></textarea>
+                    <div class="flex gap-2 mt-2">
+                        <button type="button" class="btn-primary" disabled="@busy" @onclick="SaveSpec">@(busy ? "Saving…" : "Save summary")</button>
+                        <button type="button" class="btn-secondary" disabled="@busy" @onclick="CancelSpec">Cancel</button>
+                    </div>
+                }
+                else if (!string.IsNullOrWhiteSpace(package.SpecificationSummary))
+                {
+                    <ul class="space-y-1">
+                        @foreach (var line in package.SpecificationSummary.Split('\n', StringSplitOptions.RemoveEmptyEntries))
+                        {
+                            <li class="text-sm text-content-muted">• @line.Trim().TrimStart('•', '-', ' ')</li>
+                        }
+                    </ul>
+                }
+                else
+                {
+                    <p class="text-sm text-content-subtle italic">
+                        No summary yet. One line per point — it prints at the top of the pricing schedule
+                        each tenderer receives, so say what the package covers and to what standard.
+                    </p>
+                }
             </section>
 
             @* ---- Line items, grouped by trade ---- *@
@@ -485,24 +525,51 @@ else
                     <h3 class="eyebrow">Documents</h3>
                     @if (CanEdit)
                     {
-                        <button type="button" class="text-xs text-accent hover:underline" @onclick="OpenDrawingsModal">Link drawings</button>
+                        <div class="flex items-center gap-4">
+                            <label class="text-xs text-accent hover:underline cursor-pointer @(busy ? "opacity-50 pointer-events-none" : "")">
+                                + Add files
+                                <InputFile OnChange="OnAttachmentFilesSelected" multiple class="hidden" />
+                            </label>
+                            <button type="button" class="text-xs text-accent hover:underline" @onclick="OpenDrawingsModal">Link drawings</button>
+                        </div>
                     }
                 </div>
 
                 <LoadGate IsLoading="@(!DrawingsReady)" Label="Loading documents">
-                @if (packageDrawings.Count == 0)
+                @if (packageAttachments.Count > 0)
+                {
+                    <ul class="space-y-2 mb-3">
+                        @foreach (var attachment in packageAttachments)
+                        {
+                            <li class="rounded-lg border border-line bg-surface px-4 py-3 flex flex-wrap items-center justify-between gap-2">
+                                <div>
+                                    <a class="text-sm font-medium text-content hover:underline"
+                                       href="@PackageAttachments.FileUrl(BidPackageId, attachment.BidPackageAttachmentId)" download>@attachment.DisplayName</a>
+                                    <span class="text-xs text-content-subtle ml-2">@FormatFileSize(attachment.FileSizeBytes)</span>
+                                </div>
+                                @if (CanEdit)
+                                {
+                                    <button type="button" class="text-xs text-content-muted hover:text-negative" disabled="@busy"
+                                            @onclick="() => RemoveAttachment(attachment)">Remove</button>
+                                }
+                            </li>
+                        }
+                    </ul>
+                }
+                @if (packageDrawings.Count == 0 && packageAttachments.Count == 0)
                 {
                     @* Only once the fetch has answered — the banner above carries a failure. *@
                     @if (fetchedPackageDrawings is not null)
                     {
                         <div class="rounded-xl border border-dashed border-line bg-surface-raised px-4 py-5 text-sm text-content-subtle">
-                            No drawings linked yet. Link drawings from the project's Drawings section — they're attached
-                            to the invite email when it's sent (files too large for one email go out as 7-day download
-                            links instead). (Save drawings out of any email from Triage.)
+                            No tender documents yet. Upload files with “+ Add files”, or link drawings from the
+                            project's Drawings section — everything here is attached to the invite email when it's
+                            drafted, along with the generated pricing schedule (files too large for one email go
+                            out as 7-day download links instead).
                         </div>
                     }
                 }
-                else
+                else if (packageDrawings.Count > 0)
                 {
                     <ul class="space-y-2">
                         @foreach (var drawing in packageDrawings)
@@ -815,9 +882,10 @@ else
             it from Outlook. Every recipient goes in BCC, so subcontractors never see each other.
             The email is tagged to this package, and tagged replies appear under
             Tender responses below.
-            @if (packageDrawings.Count > 0)
+            <span> The pricing schedule (@(package?.Reference ?? "BPI")&nbsp;- Pricing Schedule.xlsx) is generated from the line items and attached automatically.</span>
+            @if (packageAttachments.Count > 0 || packageDrawings.Count > 0)
             {
-                <span> The @packageDrawings.Count linked drawing@(packageDrawings.Count == 1 ? "" : "s") will be attached — any that would push the email over the 25&nbsp;MB limit go out as 7-day download links instead.</span>
+                <span> @(packageAttachments.Count + packageDrawings.Count) tender document@(packageAttachments.Count + packageDrawings.Count == 1 ? "" : "s") will be attached — any that would push the email over the 25&nbsp;MB limit go out as 7-day download links instead.</span>
             }
         </p>
 
@@ -968,6 +1036,7 @@ else
     private IReadOnlyList<Quote>? fetchedQuotes;
     private IReadOnlyList<QuoteLineItem>? fetchedQuoteLines;
     private IReadOnlyList<Drawing>? fetchedPackageDrawings;
+    private IReadOnlyList<BidPackageAttachment>? fetchedAttachments;
 
     private IReadOnlyList<BidPackageRecipient> recipients => fetchedRecipients ?? Array.Empty<BidPackageRecipient>();
     private IReadOnlyList<BidPackageLineItem> lineItems => fetchedLineItems ?? Array.Empty<BidPackageLineItem>();
@@ -975,6 +1044,7 @@ else
     private IReadOnlyList<Quote> quotes => fetchedQuotes ?? Array.Empty<Quote>();
     private IReadOnlyList<QuoteLineItem> quoteLines => fetchedQuoteLines ?? Array.Empty<QuoteLineItem>();
     private IReadOnlyList<Drawing> packageDrawings => fetchedPackageDrawings ?? Array.Empty<Drawing>();
+    private IReadOnlyList<BidPackageAttachment> packageAttachments => fetchedAttachments ?? Array.Empty<BidPackageAttachment>();
 
     private IReadOnlyList<ProjectWorkOrderDetail> projectOrders = Array.Empty<ProjectWorkOrderDetail>();
     private IReadOnlyList<BoqLineItem> boqLines = Array.Empty<BoqLineItem>();
@@ -987,7 +1057,8 @@ else
     private bool EmailsReady => fetchedEmails is not null || loadAttempted;
     // The comparison table reads the quote lines alongside the quotes, so it waits for both.
     private bool QuotesReady => (fetchedQuotes is not null && fetchedQuoteLines is not null) || loadAttempted;
-    private bool DrawingsReady => fetchedPackageDrawings is not null || loadAttempted;
+    // The Documents panel reads drawings AND uploaded attachments — it reveals in one piece.
+    private bool DrawingsReady => (fetchedPackageDrawings is not null && fetchedAttachments is not null) || loadAttempted;
 
     private bool showInviteModal;
     private string subSearch = "";
@@ -1059,6 +1130,9 @@ else
         catch { /* comparison simply shows totals only */ }
 
         try { fetchedPackageDrawings = await Queries.AskAsync(new ListBidPackageDrawings(BidPackageId), CancellationToken.None); }
+        catch { /* documents section simply shows none */ }
+
+        try { fetchedAttachments = await PackageAttachments.ListAsync(BidPackageId); }
         catch { /* documents section simply shows none */ }
 
         // The order this package's award raised — drives the persistent award summary. Best-effort:
@@ -1785,6 +1859,74 @@ else
             package = await Commands.SendAsync(new ReopenBidPackage(BidPackageId), CancellationToken.None);
         }
         catch { error = "Couldn't reopen the bid package. Please try again."; }
+        finally { busy = false; }
+    }
+
+    // ---- Tender-document attachments: uploaded files that travel with the invite. ----
+
+    private async Task OnAttachmentFilesSelected(InputFileChangeEventArgs e)
+    {
+        if (busy || !CanEdit) return;
+        var files = e.GetMultipleFiles(20);
+        if (files.Count == 0) return;
+        error = null;
+        try
+        {
+            busy = true;
+            fetchedAttachments = await PackageAttachments.UploadFilesAsync(BidPackageId, files);
+        }
+        catch (Exception ex) { error = $"Couldn't upload: {ex.Message}"; }
+        finally { busy = false; }
+    }
+
+    private async Task RemoveAttachment(BidPackageAttachment attachment)
+    {
+        if (busy || !CanEdit) return;
+        error = null;
+        try
+        {
+            busy = true;
+            fetchedAttachments = await PackageAttachments.RemoveAsync(BidPackageId, attachment.BidPackageAttachmentId);
+        }
+        catch { error = "Couldn't remove the attachment. Please try again."; }
+        finally { busy = false; }
+    }
+
+    private static string FormatFileSize(long bytes) => bytes switch
+    {
+        >= 1024 * 1024 => $"{bytes / (1024d * 1024d):0.#} MB",
+        >= 1024 => $"{bytes / 1024d:0.#} KB",
+        _ => $"{bytes} B"
+    };
+
+    // ---- Specification summary: prints at the top of the pricing schedule workbook. ----
+
+    private bool editingSpec;
+    private string specDraft = "";
+
+    private void EditSpec()
+    {
+        if (!CanEdit || package is null) return;
+        specDraft = package.SpecificationSummary;
+        editingSpec = true;
+    }
+
+    private void CancelSpec() => editingSpec = false;
+
+    private async Task SaveSpec()
+    {
+        if (busy || package is null || !CanEdit) return;
+        error = null;
+        try
+        {
+            busy = true;
+            package = await Commands.SendAsync(
+                new UpdateBidPackageScope(package.BidPackageId, package.Title, package.Trade, package.Status,
+                    package.OwnerEmail, package.MaterialsApplicable, specDraft.Trim()),
+                CancellationToken.None);
+            editingSpec = false;
+        }
+        catch { error = "Couldn't save the specification summary. Please try again."; }
         finally { busy = false; }
     }
 

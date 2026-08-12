@@ -9,4 +9,6 @@ public sealed record UpdateBidPackageScope(
     string Trade,
     BidPackageStatus Status,
     string OwnerEmail,
-    bool MaterialsApplicable = false) : ICommand<BidPackage>;
+    bool MaterialsApplicable = false,
+    // Null means "leave unchanged" — a caller that doesn't carry the field can never blank it.
+    string? SpecificationSummary = null) : ICommand<BidPackage>;

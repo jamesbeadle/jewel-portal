@@ -80,8 +80,10 @@ public sealed record BidPackage(
     int Number = 0,                          // sequential; rendered BPI-0001 via Reference
     bool MaterialsApplicable = false,        // materials matter to this scope — the tender invite asks
                                              // whether the subcontractor will supply their own
-    DateTimeOffset? ClosedAt = null)         // when the package was closed without a winner; null
+    DateTimeOffset? ClosedAt = null,         // when the package was closed without a winner; null
                                              // unless Status is Closed (cleared on reopen)
+    string SpecificationSummary = "")        // the "what this package covers" bullets printed at the
+                                             // top of the pricing schedule workbook; optional
 {
     // Human, collision-safe reference and the stem tagged on the package's emails ("JPMS/BPI-0001"),
     // so RFT responses group under the package in the Bid Package Invites section. Blank until numbered.

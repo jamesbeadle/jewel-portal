@@ -69,6 +69,20 @@ public static class ProcurementRouteRegistration
             new QueryRoute("/api/bid-packages/{bidPackageId}/drawings",
                 query => $"/api/bid-packages/{((ListBidPackageDrawings)query).BidPackageId}/drawings"));
 
+        // Tender-document attachments (uploads travel as multipart through
+        // HttpBidPackageAttachmentStore, not through this table).
+        queries.Register<ListBidPackageAttachments, IReadOnlyList<BidPackageAttachment>>(
+            new QueryRoute("/api/bid-packages/{bidPackageId}/attachments",
+                query => $"/api/bid-packages/{((ListBidPackageAttachments)query).BidPackageId}/attachments"));
+
+        commands.Register<RemoveBidPackageAttachment, IReadOnlyList<BidPackageAttachment>>(
+            new CommandRoute("DELETE", "/api/bid-packages/{bidPackageId}/attachments/{attachmentId}",
+                command =>
+                {
+                    var c = (RemoveBidPackageAttachment)command;
+                    return $"/api/bid-packages/{c.BidPackageId}/attachments/{c.BidPackageAttachmentId}";
+                }));
+
         commands.Register<RemoveWorkOrderAttachment, IReadOnlyList<WorkOrderAttachment>>(
             new CommandRoute("DELETE", "/api/work-orders/{workOrderId}/attachments/{attachmentId}",
                 command =>
